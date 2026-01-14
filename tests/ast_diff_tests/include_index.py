@@ -6,7 +6,7 @@
 Add new test suite imports here as they are created.
 """
 
-from tests.diff_tests.select.tests import SelectBasic
+from tests.ast_diff_tests.select.tests import SelectBasic
 
 
 def fetch_all_diff_tests():

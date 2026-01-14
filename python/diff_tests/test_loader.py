@@ -17,7 +17,7 @@ def load_all_tests(
 ) -> Tuple[List[Tuple[str, AstTestBlueprint]], List[str]]:
     """Load all tests from the test directory.
 
-    Dynamically imports tests/diff_tests/include_index.py and collects
+    Dynamically imports tests/ast_diff_tests/include_index.py and collects
     all registered test suites.
 
     Args:
@@ -34,7 +34,7 @@ def load_all_tests(
         sys.path.insert(0, str(root_dir))
 
     # Import the test index
-    from tests.diff_tests.include_index import fetch_all_diff_tests
+    from tests.ast_diff_tests.include_index import fetch_all_diff_tests
 
     # Collect all tests from all suites
     all_tests = []
