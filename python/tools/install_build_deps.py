@@ -19,7 +19,7 @@ THIRD_PARTY_DIR = os.path.join(ROOT_DIR, "third_party")
 THIRD_PARTY_BIN_DIR = os.path.join(THIRD_PARTY_DIR, "bin")
 THIRD_PARTY_SRC_DIR = os.path.join(THIRD_PARTY_DIR, "src")
 
-GN_VERSION = "9673115bc14c8630da5b7f6fe07e0b362ac49dcb"
+GN_VERSION = "5550ba0f4053c3cbb0bff3d60ded9d867b6fa371"
 NINJA_VERSION = "1.13.2"
 SQLITE_VERSION = "3510200"  # 3.51.2
 SQLITE_YEAR = "2026"
@@ -43,26 +43,30 @@ class SourceDep:
     name: str
     version: str
     url: str
-    sha3_256: str  # SQLite uses SHA3-256
+    checksum: str
     strip_prefix: str  # Directory prefix to strip from archive
     format: str = "zip"
+    hash_type: str = "sha3_256"  # sha256 or sha3_256
 
 
 # fmt: off
 BINARY_DEPS = [
-    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-amd64/+/git_revision:{GN_VERSION}", "388d837b6f0d7e93ffed4f5458533a1833ec9a6e87615349ef2fc18c6849a058", "darwin", "x64"),
-    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-arm64/+/git_revision:{GN_VERSION}", "f76fed9e3d0265da47c30b174f928317521f644bb0cb99269862e2eb8d7d152d", "darwin", "arm64"),
-    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/git_revision:{GN_VERSION}", "5fb33009129ba68f68b9f86a1a8679a192d7786e8a5751453afbef2f984d98a9", "linux", "x64"),
-    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-arm64/+/git_revision:{GN_VERSION}", "92af30c58394742fb11d6852db486bcf9b0e2edbf59403f9c111ce8a6f117847", "linux", "arm64"),
-    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/windows-amd64/+/git_revision:{GN_VERSION}", "64cd63417cc1813dccd4e06f0145e62dc0236a696c183e587ebaaeb1cbfc50b2", "windows", "x64"),
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-amd64/+/git_revision:{GN_VERSION}", "68c9ad9456dd93090c39134781833ee7865d19627541cb9ba9003aeea9ce4e26", "darwin", "x64"),
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-arm64/+/git_revision:{GN_VERSION}", "2e55c4f65ce690fef9c03af8abe2b76e01e0017fc040c2d7529c089abbe48309", "darwin", "arm64"),
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/git_revision:{GN_VERSION}", "be32d9e5a79d52145baf22f83a5e4aa83724d6bdcdf53370fa00e5eba45596fa", "linux", "x64"),
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-arm64/+/git_revision:{GN_VERSION}", "bbd8bab058398a005d240c09c17ce0af4fab69ae8d022a40ac7d0a218681de73", "linux", "arm64"),
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/windows-amd64/+/git_revision:{GN_VERSION}", "c10f4622abd995a1c070e46b0df8bbe7b83278b9ff2b05ae8245dabf7cb02b8c", "windows", "x64"),
     BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-mac.zip", "c99048673aa765960a99cf10c6ddb9f1fad506099ff0a0e137ad8960a88f321b", "darwin", "all"),
     BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-linux.zip", "5749cbc4e668273514150a80e387a957f933c6ed3f5f11e03fb30955e2bbead6", "linux", "x64"),
     BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-linux-aarch64.zip", "fd2cacc8050a7f12a16a2e48f9e06fca5c14fc4c2bee2babb67b58be17a607fc", "linux", "arm64"),
     BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-win.zip", "07fc8261b42b20e71d1720b39068c2e14ffcee6396b76fb7a795fb460b78dc65", "windows", "x64"),
 ]
 
+GOOGLETEST_VERSION = "1.17.0"
+
 SOURCE_DEPS = [
     SourceDep("sqlite", SQLITE_VERSION, f"https://sqlite.org/{SQLITE_YEAR}/sqlite-src-{SQLITE_VERSION}.zip", "e436bb919850445ce5168fb033d2d0d5c53a9d8c9602c7fa62b3e0025541d481", f"sqlite-src-{SQLITE_VERSION}"),
+    SourceDep("googletest", GOOGLETEST_VERSION, f"https://github.com/google/googletest/releases/download/v{GOOGLETEST_VERSION}/googletest-{GOOGLETEST_VERSION}.tar.gz", "65fab701d9829d38cb77c14acdc431d2108bfdbf8979e40eb8ae567edf10b27c", f"googletest-{GOOGLETEST_VERSION}", "tar.gz", "sha256"),
 ]
 # fmt: on
 
@@ -179,9 +183,12 @@ def install_source_dep(dep, target_dir):
             print(f"Download failed: {result.stderr.decode()}", file=sys.stderr)
             return False
 
-        actual_hash = sha3_256_file(tmp_path)
-        if actual_hash != dep.sha3_256:
-            print(f"SHA3-256 mismatch for {dep.name}: expected {dep.sha3_256}, got {actual_hash}", file=sys.stderr)
+        if dep.hash_type == "sha256":
+            actual_hash = sha256_file(tmp_path)
+        else:
+            actual_hash = sha3_256_file(tmp_path)
+        if actual_hash != dep.checksum:
+            print(f"Checksum mismatch for {dep.name}: expected {dep.checksum}, got {actual_hash}", file=sys.stderr)
             return False
 
         # Extract to temp dir first, then move stripped prefix to final location

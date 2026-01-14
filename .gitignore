@@ -2,5 +2,7 @@
 /third_party/src/
 /out/
 /.claude/
+/.cache/
+/compile_commands.json
 
 *.pyc
