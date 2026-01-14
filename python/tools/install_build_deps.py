@@ -1,11 +1,12 @@
 # Copyright 2025 The syntaqlite Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0.
 
-"""Installs build dependencies (gn, ninja) to third_party/<platform>/."""
+"""Installs build dependencies to third_party/bin/ and third_party/src/."""
 
 import hashlib
 import os
 import platform
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -15,33 +16,53 @@ from dataclasses import dataclass
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 THIRD_PARTY_DIR = os.path.join(ROOT_DIR, "third_party")
+THIRD_PARTY_BIN_DIR = os.path.join(THIRD_PARTY_DIR, "bin")
+THIRD_PARTY_SRC_DIR = os.path.join(THIRD_PARTY_DIR, "src")
 
 GN_VERSION = "9673115bc14c8630da5b7f6fe07e0b362ac49dcb"
 NINJA_VERSION = "1.13.2"
+SQLITE_VERSION = "3510200"  # 3.51.2
+SQLITE_YEAR = "2026"
 
 
 @dataclass
-class Dep:
+class BinaryDep:
+    """Binary dependency (platform-specific)."""
     name: str
     version: str
     url: str
     sha256: str
     target_os: str  # darwin, linux, windows, or all
     target_arch: str  # x64, arm64, or all
-    format: str = "zip"  # zip or tar.gz
+    format: str = "zip"
+
+
+@dataclass
+class SourceDep:
+    """Source dependency (platform-independent)."""
+    name: str
+    version: str
+    url: str
+    sha3_256: str  # SQLite uses SHA3-256
+    strip_prefix: str  # Directory prefix to strip from archive
+    format: str = "zip"
 
 
 # fmt: off
-DEPS = [
-    Dep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-amd64/+/git_revision:{GN_VERSION}", "388d837b6f0d7e93ffed4f5458533a1833ec9a6e87615349ef2fc18c6849a058", "darwin", "x64"),
-    Dep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-arm64/+/git_revision:{GN_VERSION}", "f76fed9e3d0265da47c30b174f928317521f644bb0cb99269862e2eb8d7d152d", "darwin", "arm64"),
-    Dep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/git_revision:{GN_VERSION}", "5fb33009129ba68f68b9f86a1a8679a192d7786e8a5751453afbef2f984d98a9", "linux", "x64"),
-    Dep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-arm64/+/git_revision:{GN_VERSION}", "92af30c58394742fb11d6852db486bcf9b0e2edbf59403f9c111ce8a6f117847", "linux", "arm64"),
-    Dep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/windows-amd64/+/git_revision:{GN_VERSION}", "64cd63417cc1813dccd4e06f0145e62dc0236a696c183e587ebaaeb1cbfc50b2", "windows", "x64"),
-    Dep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-mac.zip", "c99048673aa765960a99cf10c6ddb9f1fad506099ff0a0e137ad8960a88f321b", "darwin", "all"),
-    Dep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-linux.zip", "5749cbc4e668273514150a80e387a957f933c6ed3f5f11e03fb30955e2bbead6", "linux", "x64"),
-    Dep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-linux-aarch64.zip", "fd2cacc8050a7f12a16a2e48f9e06fca5c14fc4c2bee2babb67b58be17a607fc", "linux", "arm64"),
-    Dep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-win.zip", "07fc8261b42b20e71d1720b39068c2e14ffcee6396b76fb7a795fb460b78dc65", "windows", "x64"),
+BINARY_DEPS = [
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-amd64/+/git_revision:{GN_VERSION}", "388d837b6f0d7e93ffed4f5458533a1833ec9a6e87615349ef2fc18c6849a058", "darwin", "x64"),
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/mac-arm64/+/git_revision:{GN_VERSION}", "f76fed9e3d0265da47c30b174f928317521f644bb0cb99269862e2eb8d7d152d", "darwin", "arm64"),
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-amd64/+/git_revision:{GN_VERSION}", "5fb33009129ba68f68b9f86a1a8679a192d7786e8a5751453afbef2f984d98a9", "linux", "x64"),
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/linux-arm64/+/git_revision:{GN_VERSION}", "92af30c58394742fb11d6852db486bcf9b0e2edbf59403f9c111ce8a6f117847", "linux", "arm64"),
+    BinaryDep("gn", GN_VERSION, f"https://chrome-infra-packages.appspot.com/dl/gn/gn/windows-amd64/+/git_revision:{GN_VERSION}", "64cd63417cc1813dccd4e06f0145e62dc0236a696c183e587ebaaeb1cbfc50b2", "windows", "x64"),
+    BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-mac.zip", "c99048673aa765960a99cf10c6ddb9f1fad506099ff0a0e137ad8960a88f321b", "darwin", "all"),
+    BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-linux.zip", "5749cbc4e668273514150a80e387a957f933c6ed3f5f11e03fb30955e2bbead6", "linux", "x64"),
+    BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-linux-aarch64.zip", "fd2cacc8050a7f12a16a2e48f9e06fca5c14fc4c2bee2babb67b58be17a607fc", "linux", "arm64"),
+    BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-win.zip", "07fc8261b42b20e71d1720b39068c2e14ffcee6396b76fb7a795fb460b78dc65", "windows", "x64"),
+]
+
+SOURCE_DEPS = [
+    SourceDep("sqlite", SQLITE_VERSION, f"https://sqlite.org/{SQLITE_YEAR}/sqlite-src-{SQLITE_VERSION}.zip", "e436bb919850445ce5168fb033d2d0d5c53a9d8c9602c7fa62b3e0025541d481", f"sqlite-src-{SQLITE_VERSION}"),
 ]
 # fmt: on
 
@@ -74,19 +95,27 @@ def sha256_file(path):
     return h.hexdigest()
 
 
-def extract(archive_path, dest_dir, format):
-    if format == "zip":
+def sha3_256_file(path):
+    h = hashlib.sha3_256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(8192), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def extract(archive_path, dest_dir, fmt):
+    if fmt == "zip":
         with zipfile.ZipFile(archive_path) as zf:
             zf.extractall(dest_dir)
-    elif format == "tar.gz":
+    elif fmt == "tar.gz":
         with tarfile.open(archive_path, "r:gz") as tf:
             tf.extractall(dest_dir)
     else:
-        sys.exit(f"Unsupported format: {format}")
+        sys.exit(f"Unsupported format: {fmt}")
 
 
-def install_dep(dep, target_dir):
-    """Install a dependency. Returns True on success."""
+def install_binary_dep(dep, target_dir):
+    """Install a binary dependency. Returns True on success."""
     stamp_path = os.path.join(target_dir, f".{dep.name}.stamp")
 
     if os.path.exists(stamp_path):
@@ -127,16 +156,77 @@ def install_dep(dep, target_dir):
             os.unlink(tmp_path)
 
 
+def install_source_dep(dep, target_dir):
+    """Install a source dependency. Returns True on success."""
+    dest_dir = os.path.join(target_dir, dep.name)
+    stamp_path = os.path.join(target_dir, f".{dep.name}.stamp")
+
+    if os.path.exists(stamp_path):
+        with open(stamp_path) as f:
+            if f.read().strip() == dep.version:
+                return True
+
+    print(f"Downloading {dep.name} source...")
+    os.makedirs(target_dir, exist_ok=True)
+
+    suffix = ".tar.gz" if dep.format == "tar.gz" else ".zip"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        result = subprocess.run(["curl", "-fsSL", "-o", tmp_path, dep.url], capture_output=True)
+        if result.returncode != 0:
+            print(f"Download failed: {result.stderr.decode()}", file=sys.stderr)
+            return False
+
+        actual_hash = sha3_256_file(tmp_path)
+        if actual_hash != dep.sha3_256:
+            print(f"SHA3-256 mismatch for {dep.name}: expected {dep.sha3_256}, got {actual_hash}", file=sys.stderr)
+            return False
+
+        # Extract to temp dir first, then move stripped prefix to final location
+        with tempfile.TemporaryDirectory() as extract_dir:
+            extract(tmp_path, extract_dir, dep.format)
+
+            # Remove existing destination if present
+            if os.path.exists(dest_dir):
+                shutil.rmtree(dest_dir)
+
+            # Move the stripped prefix directory to final location
+            src_path = os.path.join(extract_dir, dep.strip_prefix)
+            shutil.move(src_path, dest_dir)
+
+        with open(stamp_path, "w") as f:
+            f.write(dep.version)
+
+        print(f"Installed {dep.name} to {dest_dir}")
+        return True
+    finally:
+        if os.path.exists(tmp_path):
+            os.unlink(tmp_path)
+
+
 def main():
     host_os, host_arch, platform_dir = get_platform()
-    target_dir = os.path.join(THIRD_PARTY_DIR, platform_dir)
+    bin_target_dir = os.path.join(THIRD_PARTY_BIN_DIR, platform_dir)
 
     success = True
-    for dep in DEPS:
+
+    # Install binary dependencies
+    for dep in BINARY_DEPS:
         os_match = dep.target_os == "all" or dep.target_os == host_os
         arch_match = dep.target_arch == "all" or dep.target_arch == host_arch
         if os_match and arch_match:
-            if not install_dep(dep, target_dir):
+            if not install_binary_dep(dep, bin_target_dir):
                 success = False
 
+    # Install source dependencies
+    for dep in SOURCE_DEPS:
+        if not install_source_dep(dep, THIRD_PARTY_SRC_DIR):
+            success = False
+
     return 0 if success else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

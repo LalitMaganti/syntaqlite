@@ -40,7 +40,7 @@ def run_third_party_binary(args):
     cmd = args[0]
     args = args[1:]
 
-    exe_path = os.path.join(ROOT_DIR, "third_party", os_dir, cmd) + ext
+    exe_path = os.path.join(ROOT_DIR, "third_party", "bin", os_dir, cmd) + ext
 
     if not os.path.exists(exe_path):
         print("Binary not found: %s" % exe_path)

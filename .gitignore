@@ -1,4 +1,5 @@
-/third_party/
+/third_party/bin/
+/third_party/src/
 /out/
 /.claude/
 

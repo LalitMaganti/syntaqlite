@@ -15,5 +15,5 @@
 
 # Default target
 group("default") {
-  deps = []
+  deps = [ "//third_party:lemon" ]
 }
