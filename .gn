@@ -1,0 +1,3 @@
+# Root GN configuration for syntaqlite
+
+buildconfig = "//gn/config/BUILDCONFIG.gn"

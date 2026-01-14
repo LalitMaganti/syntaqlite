@@ -1,0 +1,19 @@
+# Main BUILD.gn for syntaqlite
+
+# Example library
+# source_set("syntaqlite") {
+#   sources = [
+#     "src/main.c",
+#   ]
+# }
+
+# Example executable
+# executable("syntaqlite_cli") {
+#   sources = [ "src/cli.c" ]
+#   deps = [ ":syntaqlite" ]
+# }
+
+# Default target
+group("default") {
+  deps = []
+}

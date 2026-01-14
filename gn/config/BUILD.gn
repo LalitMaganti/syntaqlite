@@ -1,0 +1,49 @@
+# Default build config for syntaqlite
+
+config("default") {
+  cflags = [
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+  ]
+
+  cflags_c = [ "-std=c11" ]
+  cflags_cc = [ "-std=c++17" ]
+
+  if (is_debug) {
+    cflags += [
+      "-g",
+      "-O0",
+    ]
+    defines = [ "DEBUG" ]
+  } else {
+    cflags += [ "-O2" ]
+    defines = [ "NDEBUG" ]
+  }
+
+  if (is_asan) {
+    cflags += [
+      "-fsanitize=address",
+      "-fno-omit-frame-pointer",
+    ]
+    ldflags = [ "-fsanitize=address" ]
+  }
+
+  if (is_tsan) {
+    cflags += [ "-fsanitize=thread" ]
+    ldflags = [ "-fsanitize=thread" ]
+  }
+
+  if (is_msan) {
+    cflags += [
+      "-fsanitize=memory",
+      "-fno-omit-frame-pointer",
+    ]
+    ldflags = [ "-fsanitize=memory" ]
+  }
+
+  include_dirs = [
+    "//include",
+    "//src",
+  ]
+}

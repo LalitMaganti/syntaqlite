@@ -1,0 +1,28 @@
+# Build configuration for syntaqlite
+
+# Declare build arguments
+declare_args() {
+  is_debug = true
+  is_asan = false
+  is_tsan = false
+  is_msan = false
+  cc_wrapper = ""
+}
+
+set_default_toolchain("//gn/toolchain:clang")
+
+set_defaults("executable") {
+  configs = [ "//gn/config:default" ]
+}
+
+set_defaults("static_library") {
+  configs = [ "//gn/config:default" ]
+}
+
+set_defaults("source_set") {
+  configs = [ "//gn/config:default" ]
+}
+
+set_defaults("shared_library") {
+  configs = [ "//gn/config:default" ]
+}
