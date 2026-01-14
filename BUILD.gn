@@ -13,19 +13,21 @@
 #   deps = [ ":syntaqlite" ]
 # }
 
-# Default target
-group("default") {
-  deps = [ "third_party:lemon" ]
-}
-
 # Unit tests
 executable("syntaqlite_unittests") {
   testonly = true
-  sources = [
-    "src/smoke_unittest.cc",
-  ]
+  sources = [ "src/smoke_unittest.cc" ]
   deps = [
     "third_party:googletest",
     "third_party:googletest_main",
   ]
+}
+
+# Default target
+group("default") {
+  deps = [
+    ":syntaqlite_unittests",
+    "third_party:lemon",
+  ]
+  testonly = true
 }

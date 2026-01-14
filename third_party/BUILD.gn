@@ -17,8 +17,8 @@ config("googletest_config") {
 
 source_set("googletest") {
   sources = [
-    "src/googletest/googletest/src/gtest-all.cc",
     "src/googletest/googlemock/src/gmock-all.cc",
+    "src/googletest/googletest/src/gtest-all.cc",
   ]
 
   public_configs = [ ":googletest_config" ]
@@ -29,23 +29,14 @@ source_set("googletest") {
   ]
 
   # Suppress warnings in third-party code
-  configs -= [ "//gn/config:default" ]
   configs += [ ":googletest_internal_config" ]
 }
 
 config("googletest_internal_config") {
-  cflags_cc = [ "-std=c++17" ]
-  if (is_debug) {
-    cflags = [ "-g", "-O0" ]
-  } else {
-    cflags = [ "-O2" ]
-  }
 }
 
 # GoogleTest main() for tests that don't define their own
 source_set("googletest_main") {
-  sources = [
-    "src/googletest/googletest/src/gtest_main.cc",
-  ]
+  sources = [ "src/googletest/googletest/src/gtest_main.cc" ]
   deps = [ ":googletest" ]
 }

@@ -1,0 +1,43 @@
+# Build configuration for syntaqlite
+
+# Declare build arguments
+declare_args() {
+  is_debug = true
+  is_asan = false
+  is_tsan = false
+  is_msan = false
+  is_ubsan = false
+  cc_wrapper = ""
+}
+
+is_linux = current_os == "linux"
+is_linux_host = host_os == "linux"
+is_mac = current_os == "mac"
+is_mac_host = host_os == "mac"
+is_win = current_os == "win"
+is_win_host = host_os == "win"
+
+set_default_toolchain("//gn/standalone:clang")
+
+default_configs = [
+  "//gn/standalone:default",
+  "//gn/standalone:no_exceptions",
+  "//gn/standalone:rtti_cflags",
+  "//gn/standalone:visibility_hidden",
+]
+
+set_defaults("executable") {
+  configs = default_configs
+}
+
+set_defaults("static_library") {
+  configs = default_configs
+}
+
+set_defaults("source_set") {
+  configs = default_configs
+}
+
+set_defaults("shared_library") {
+  configs = default_configs
+}
