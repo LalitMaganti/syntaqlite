@@ -1,0 +1,16 @@
+# SQLite tokenizer extracted from SQLite source code.
+# Regenerate with: python3 python/tools/extract_tokenizer.py
+
+source_set("sqlite") {
+  sources = [
+    # Extracted/generated from SQLite source
+    "sqlite_keywordhash.h",
+    "sqlite_tables.h",
+    "sqlite_tokenize.c",
+    "sqlite_tokens.h",
+
+    # Our helper headers
+    "syntaqlite_defs.h",
+    "syntaqlite_tokenize_helper.h",
+  ]
+}

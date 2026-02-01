@@ -7,6 +7,10 @@ executable("lemon") {
   sources = [ "src/sqlite/tool/lemon.c" ]
 }
 
+executable("mkkeywordhash") {
+  sources = [ "src/sqlite/tool/mkkeywordhash.c" ]
+}
+
 # GoogleTest library
 config("googletest_config") {
   include_dirs = [

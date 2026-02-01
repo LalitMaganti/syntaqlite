@@ -1,0 +1,10 @@
+# Unit tests
+executable("syntaqlite_unittests") {
+  testonly = true
+  sources = [ "smoke_unittest.cc" ]
+  deps = [
+    "../third_party:googletest",
+    "../third_party:googletest_main",
+    "tokenizer/sqlite",
+  ]
+}
