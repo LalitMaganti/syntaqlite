@@ -46,7 +46,7 @@ def ensure_build_dir() -> None:
         subprocess.run(
             [str(gn), "gen", str(TOOLS_BUILD_DIR), "--args=is_debug=false"],
             capture_output=True,
-            text=True
+            text=True,
         )
         if not build_ninja.exists():
             print("Failed to configure build", file=sys.stderr)

@@ -109,6 +109,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     test_args = [(str(binary), name, blueprint) for name, blueprint in tests]
 
+    # TODO - harmonize these two branches.
     if args.jobs == 1:
         for binary_str, name, blueprint in test_args:
             print_run(name)
