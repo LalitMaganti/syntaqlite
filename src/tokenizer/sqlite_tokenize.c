@@ -4,8 +4,8 @@
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
 */
 
-#include "src/tokenizer/sqlite/syntaqlite_tokenize_helper.h"
-#include "src/tokenizer/sqlite/sqlite_keywordhash.h"
+#include "src/tokenizer/syntaqlite_tokenize_helper.h"
+#include "src/tokenizer/sqlite_keywordhash.h"
 
 /* Character classes for tokenizing
 **

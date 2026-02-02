@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).parent.parent.parent
 SQLITE_SRC = ROOT_DIR / "third_party" / "src" / "sqlite" / "src"
 SQLITE_TOOL = ROOT_DIR / "third_party" / "src" / "sqlite" / "tool"
-OUTPUT_DIR = ROOT_DIR / "src" / "tokenizer" / "sqlite"
+OUTPUT_DIR = ROOT_DIR / "src" / "tokenizer"
 
 # Dedicated build directory for this script
 TOOLS_BUILD_DIR = ROOT_DIR / "out" / ".extract_tokenizer"
@@ -148,7 +148,7 @@ def generate_keyword_table_end(extra_keywords: list[str]) -> str:
 def build_keywordhash(extra_keywords: list[str], output_path: Path, prefix: str, include_dir: str) -> None:
     """Build mkkeywordhash and generate keywordhash.h."""
     sqlite3_prefix = f"{prefix}_sqlite3"
-    guard = f"{prefix.upper()}_SRC_TOKENIZER_SQLITE_KEYWORDHASH_H"
+    guard = f"{prefix.upper()}_SRC_TOKENIZER_KEYWORDHASH_H"
 
     # Build using ninja
     exe = build_tool("mkkeywordhash")
@@ -306,7 +306,7 @@ def generate_token_defs(output_path: Path, prefix: str, extension_grammar: Path 
     If extension_grammar is provided, its %token declarations will be
     appended to generate additional TK_* definitions.
     """
-    guard = f"{prefix.upper()}_SRC_TOKENIZER_SQLITE_TOKENS_H"
+    guard = f"{prefix.upper()}_SRC_TOKENIZER_TOKENS_H"
 
     # Build lemon using ninja
     lemon_exe = build_tool("lemon")
@@ -368,7 +368,7 @@ def generate_token_defs(output_path: Path, prefix: str, extension_grammar: Path 
 def copy_global_tables(output_path: Path, prefix: str) -> None:
     """Extract character tables from global.c."""
     sqlite3_prefix = f"{prefix}_sqlite3"
-    guard = f"{prefix.upper()}_SRC_TOKENIZER_SQLITE_TABLES_H"
+    guard = f"{prefix.upper()}_SRC_TOKENIZER_TABLES_H"
 
     src = SQLITE_SRC / "global.c"
     content = src.read_text()
@@ -447,7 +447,7 @@ static const unsigned char {sqlite3_prefix}UpperToLower[] = {{
 def generate_defs_h(output_path: Path, prefix: str) -> None:
     """Generate the {prefix}_defs.h header with type definitions and macros."""
     sqlite3_prefix = f"{prefix}_sqlite3"
-    guard = f"{prefix.upper()}_SRC_TOKENIZER_SQLITE_{prefix.upper()}_DEFS_H"
+    guard = f"{prefix.upper()}_SRC_TOKENIZER_{prefix.upper()}_DEFS_H"
 
     content = f"""/*
 ** Type definitions and macros for {prefix} tokenizer.
@@ -493,7 +493,7 @@ typedef uint32_t u32;
 def generate_tokenize_helper_h(output_path: Path, prefix: str, include_dir: str) -> None:
     """Generate the {prefix}_tokenize_helper.h header with forward declarations."""
     sqlite3_prefix = f"{prefix}_sqlite3"
-    guard = f"{prefix.upper()}_SRC_TOKENIZER_SQLITE_{prefix.upper()}_TOKENIZE_HELPER_H"
+    guard = f"{prefix.upper()}_SRC_TOKENIZER_{prefix.upper()}_TOKENIZE_HELPER_H"
 
     content = f"""/*
 ** Helper header for {prefix} tokenizer.
@@ -502,7 +502,7 @@ def generate_tokenize_helper_h(output_path: Path, prefix: str, include_dir: str)
 #ifndef {guard}
 #define {guard}
 
-#include "{include_dir}/sqlite_keywordhash.h" // IWYU pragma: export
+#include "{include_dir}/syntaqlite_defs.h"
 
 /* Forward declarations for functions defined in sqlite_tokenize.c */
 i64 {sqlite3_prefix}GetToken(const unsigned char *z, int *tokenType);

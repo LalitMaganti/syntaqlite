@@ -5,6 +5,6 @@ executable("syntaqlite_unittests") {
   deps = [
     "../third_party:googletest",
     "../third_party:googletest_main",
-    "tokenizer/sqlite",
+    "tokenizer",
   ]
 }

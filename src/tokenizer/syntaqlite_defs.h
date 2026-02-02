@@ -2,8 +2,8 @@
 ** Type definitions and macros for syntaqlite tokenizer.
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
 */
-#ifndef SYNTAQLITE_SRC_TOKENIZER_SQLITE_SYNTAQLITE_DEFS_H
-#define SYNTAQLITE_SRC_TOKENIZER_SQLITE_SYNTAQLITE_DEFS_H
+#ifndef SYNTAQLITE_SRC_TOKENIZER_SYNTAQLITE_DEFS_H
+#define SYNTAQLITE_SRC_TOKENIZER_SYNTAQLITE_DEFS_H
 
 #include <assert.h>
 #include <stdint.h>
@@ -33,4 +33,4 @@ typedef uint32_t u32;
 #define deliberate_fall_through
 #endif
 
-#endif /* SYNTAQLITE_SRC_TOKENIZER_SQLITE_SYNTAQLITE_DEFS_H */
+#endif /* SYNTAQLITE_SRC_TOKENIZER_SYNTAQLITE_DEFS_H */

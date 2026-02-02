@@ -2,8 +2,8 @@
 ** Character tables extracted from SQLite's global.c
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
 */
-#ifndef SYNTAQLITE_SRC_TOKENIZER_SQLITE_TABLES_H
-#define SYNTAQLITE_SRC_TOKENIZER_SQLITE_TABLES_H
+#ifndef SYNTAQLITE_SRC_TOKENIZER_TABLES_H
+#define SYNTAQLITE_SRC_TOKENIZER_TABLES_H
 
 /*
 ** Upper-to-lower case conversion table.
@@ -109,4 +109,4 @@ static const unsigned char syntaqlite_sqlite3CtypeMap[256] = {
 # define syntaqlite_sqlite3JsonId1(x)   (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x42)
 # define syntaqlite_sqlite3JsonId2(x)   (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x46)
 
-#endif /* SYNTAQLITE_SRC_TOKENIZER_SQLITE_TABLES_H */
+#endif /* SYNTAQLITE_SRC_TOKENIZER_TABLES_H */

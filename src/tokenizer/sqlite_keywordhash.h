@@ -2,12 +2,12 @@
 ** Keyword hash extracted from SQLite's mkkeywordhash.c
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
 */
-#ifndef SYNTAQLITE_SRC_TOKENIZER_SQLITE_KEYWORDHASH_H
-#define SYNTAQLITE_SRC_TOKENIZER_SQLITE_KEYWORDHASH_H
+#ifndef SYNTAQLITE_SRC_TOKENIZER_KEYWORDHASH_H
+#define SYNTAQLITE_SRC_TOKENIZER_KEYWORDHASH_H
 
-#include "src/tokenizer/sqlite/syntaqlite_defs.h"
-#include "src/tokenizer/sqlite/sqlite_tables.h"
-#include "src/tokenizer/sqlite/sqlite_tokens.h"
+#include "src/tokenizer/syntaqlite_defs.h"
+#include "src/tokenizer/sqlite_tables.h"
+#include "src/tokenizer/sqlite_tokens.h"
 
 /*
 ** Character mapping macro for keyword hash lookup.
@@ -486,4 +486,4 @@ int syntaqlite_sqlite3_keyword_check(const char *zName, int nName){
   return TK_ID!=syntaqlite_sqlite3KeywordCode((const u8*)zName, nName);
 }
 
-#endif /* SYNTAQLITE_SRC_TOKENIZER_SQLITE_KEYWORDHASH_H */
+#endif /* SYNTAQLITE_SRC_TOKENIZER_KEYWORDHASH_H */
