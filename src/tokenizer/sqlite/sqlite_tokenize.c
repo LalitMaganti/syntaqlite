@@ -5,6 +5,7 @@
 */
 
 #include "src/tokenizer/sqlite/syntaqlite_tokenize_helper.h"
+#include "src/tokenizer/sqlite/sqlite_keywordhash.h"
 
 /* Character classes for tokenizing
 **

@@ -1,3 +1,7 @@
+/*
+** Type definitions and macros for syntaqlite tokenizer.
+** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
+*/
 #ifndef SYNTAQLITE_SRC_TOKENIZER_SQLITE_SYNTAQLITE_DEFS_H
 #define SYNTAQLITE_SRC_TOKENIZER_SQLITE_SYNTAQLITE_DEFS_H
 

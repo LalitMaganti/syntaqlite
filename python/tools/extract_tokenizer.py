@@ -65,7 +65,8 @@ def build_tool(name: str) -> Path:
     print(f"Building {name}...")
     result = subprocess.run(
         [str(ninja), "-C", str(TOOLS_BUILD_DIR), name],
-        capture_output=True, text=True
+        capture_output=True,
+        text=True
     )
     if result.returncode != 0:
         print(f"Build failed:\n{result.stderr}", file=sys.stderr)
@@ -216,6 +217,9 @@ def build_keywordhash(extra_keywords: list[str], output_path: Path, prefix: str,
         if start == -1:
             start = 0
 
+        # TODO(lalitm): remove the functions starting at syntaqlite_sqlite3KeywordCode
+        # and afterwards.
+
         # Rename sqlite3* symbols to avoid clashes
         generated = rename_sqlite3_symbols(output[start:], prefix)
 
@@ -245,7 +249,7 @@ def copy_tokenize_c(output_path: Path, prefix: str, include_dir: str) -> None:
     # Replace the SQLite internal header with our helper
     content = content.replace(
         '#include "sqliteInt.h"',
-        f'#include "{include_dir}/{prefix}_tokenize_helper.h"'
+        f'#include "{include_dir}/{prefix}_tokenize_helper.h"\n#include "{include_dir}/sqlite_keywordhash.h"'
     )
 
     # Remove keywordhash.h include - it's included by the helper
@@ -525,13 +529,7 @@ def main():
         "--extend-grammar",
         type=Path,
         default=None,
-        help="Extension grammar file (.y) with additional %token declarations"
-    )
-    parser.add_argument(
-        "--extra-keywords",
-        type=str,
-        default="",
-        help="Comma-separated extra keywords (e.g., MACRO,MODULE) - deprecated, use --extend-grammar"
+        help="Extension grammar file (.y) with additional token declarations"
     )
     parser.add_argument(
         "--prefix",
@@ -560,10 +558,6 @@ def main():
 
     # Collect extra keywords from both sources
     extra = []
-
-    # From --extra-keywords (deprecated)
-    if args.extra_keywords:
-        extra.extend(k.strip() for k in args.extra_keywords.split(",") if k.strip())
 
     # From --extend-grammar file
     if args.extend_grammar:

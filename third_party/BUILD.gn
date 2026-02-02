@@ -7,8 +7,16 @@ executable("lemon") {
   sources = [ "src/sqlite/tool/lemon.c" ]
 }
 
+config("mkkeywordhash_config") {
+  cflags = [
+    "-Wno-missing-field-initializers",
+    "-Wno-unused-parameter",
+  ]
+}
+
 executable("mkkeywordhash") {
   sources = [ "src/sqlite/tool/mkkeywordhash.c" ]
+  configs += [ ":mkkeywordhash_config" ]
 }
 
 # GoogleTest library

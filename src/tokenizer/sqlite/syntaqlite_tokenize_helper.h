@@ -1,3 +1,7 @@
+/*
+** Helper header for syntaqlite tokenizer.
+** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
+*/
 #ifndef SYNTAQLITE_SRC_TOKENIZER_SQLITE_SYNTAQLITE_TOKENIZE_HELPER_H
 #define SYNTAQLITE_SRC_TOKENIZER_SQLITE_SYNTAQLITE_TOKENIZE_HELPER_H
 
