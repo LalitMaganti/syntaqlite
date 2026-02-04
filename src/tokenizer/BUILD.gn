@@ -4,13 +4,14 @@
 source_set("tokenizer") {
   sources = [
     # Extracted/generated from SQLite source
-    "sqlite_keywordhash.h",
     "sqlite_tables.h",
     "sqlite_tokenize.c",
+
+    # All the keywords and tokens but can be overwritten via injected code.
+    "sqlite_keywordhash_data.h",
     "sqlite_tokens.h",
 
-    # Our helper headers
+    # Manually maintained.
     "syntaqlite_defs.h",
-    "syntaqlite_tokenize_helper.h",
   ]
 }

@@ -1,20 +1,19 @@
 /*
-** Keyword hash extracted from SQLite's mkkeywordhash.c
+**
+** The author disclaims copyright to this source code.  In place of
+** a legal notice, here is a blessing:
+**
+**    May you do good and not evil.
+**    May you find forgiveness for yourself and forgive others.
+**    May you share freely, never taking more than you give.
+**
+** Keyword hash data for syntaqlite tokenizer.
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
 */
-#ifndef SYNTAQLITE_SRC_TOKENIZER_KEYWORDHASH_H
-#define SYNTAQLITE_SRC_TOKENIZER_KEYWORDHASH_H
+#ifndef SYNTAQLITE_SRC_TOKENIZER_KEYWORDHASH_DATA_H
+#define SYNTAQLITE_SRC_TOKENIZER_KEYWORDHASH_DATA_H
 
-#include "src/tokenizer/syntaqlite_defs.h"
-#include "src/tokenizer/sqlite_tables.h"
 #include "src/tokenizer/sqlite_tokens.h"
-
-/*
-** Character mapping macro for keyword hash lookup.
-** Maps characters to lowercase using the extracted table.
-*/
-#define syntaqlite_sqlite3CharMap(X) \
-    syntaqlite_sqlite3UpperToLower[(unsigned char)(X)]
 
 /* Hash score: 231 */
 /* zKWText[] encodes 1007 bytes of keyword text in 667 bytes */
@@ -295,195 +294,5 @@ static const unsigned char aKWCode[148] = {0,
 /* Check to see if z[0..n-1] is a keyword. If it is, write the
 ** parser symbol code for that keyword into *pType.  Always
 ** return the integer n (the length of the token). */
-static int keywordCode(const char *z, int n, int *pType){
-  int i, j;
-  const char *zKW;
-  assert( n>=2 );
-  i = ((syntaqlite_sqlite3CharMap(z[0])*4) ^ (syntaqlite_sqlite3CharMap(z[n-1])*3) ^ n*1) % 127;
-  for(i=(int)aKWHash[i]; i>0; i=aKWNext[i]){
-    if( aKWLen[i]!=n ) continue;
-    zKW = &zKWText[aKWOffset[i]];
-#ifdef SQLITE_ASCII
-    if( (z[0]&~0x20)!=zKW[0] ) continue;
-    if( (z[1]&~0x20)!=zKW[1] ) continue;
-    j = 2;
-    while( j<n && (z[j]&~0x20)==zKW[j] ){ j++; }
-#endif
-#ifdef SQLITE_EBCDIC
-    if( toupper(z[0])!=zKW[0] ) continue;
-    if( toupper(z[1])!=zKW[1] ) continue;
-    j = 2;
-    while( j<n && toupper(z[j])==zKW[j] ){ j++; }
-#endif
-    if( j<n ) continue;
-    syntaqlite_sqlite3Testcase( i==1 ); /* REINDEX */
-    syntaqlite_sqlite3Testcase( i==2 ); /* INDEXED */
-    syntaqlite_sqlite3Testcase( i==3 ); /* INDEX */
-    syntaqlite_sqlite3Testcase( i==4 ); /* DESC */
-    syntaqlite_sqlite3Testcase( i==5 ); /* ESCAPE */
-    syntaqlite_sqlite3Testcase( i==6 ); /* EACH */
-    syntaqlite_sqlite3Testcase( i==7 ); /* CHECK */
-    syntaqlite_sqlite3Testcase( i==8 ); /* KEY */
-    syntaqlite_sqlite3Testcase( i==9 ); /* BEFORE */
-    syntaqlite_sqlite3Testcase( i==10 ); /* FOREIGN */
-    syntaqlite_sqlite3Testcase( i==11 ); /* FOR */
-    syntaqlite_sqlite3Testcase( i==12 ); /* IGNORE */
-    syntaqlite_sqlite3Testcase( i==13 ); /* REGEXP */
-    syntaqlite_sqlite3Testcase( i==14 ); /* EXPLAIN */
-    syntaqlite_sqlite3Testcase( i==15 ); /* INSTEAD */
-    syntaqlite_sqlite3Testcase( i==16 ); /* ADD */
-    syntaqlite_sqlite3Testcase( i==17 ); /* DATABASE */
-    syntaqlite_sqlite3Testcase( i==18 ); /* AS */
-    syntaqlite_sqlite3Testcase( i==19 ); /* SELECT */
-    syntaqlite_sqlite3Testcase( i==20 ); /* TABLE */
-    syntaqlite_sqlite3Testcase( i==21 ); /* LEFT */
-    syntaqlite_sqlite3Testcase( i==22 ); /* THEN */
-    syntaqlite_sqlite3Testcase( i==23 ); /* END */
-    syntaqlite_sqlite3Testcase( i==24 ); /* DEFERRABLE */
-    syntaqlite_sqlite3Testcase( i==25 ); /* ELSE */
-    syntaqlite_sqlite3Testcase( i==26 ); /* EXCLUDE */
-    syntaqlite_sqlite3Testcase( i==27 ); /* DELETE */
-    syntaqlite_sqlite3Testcase( i==28 ); /* TEMPORARY */
-    syntaqlite_sqlite3Testcase( i==29 ); /* TEMP */
-    syntaqlite_sqlite3Testcase( i==30 ); /* OR */
-    syntaqlite_sqlite3Testcase( i==31 ); /* ISNULL */
-    syntaqlite_sqlite3Testcase( i==32 ); /* NULLS */
-    syntaqlite_sqlite3Testcase( i==33 ); /* SAVEPOINT */
-    syntaqlite_sqlite3Testcase( i==34 ); /* INTERSECT */
-    syntaqlite_sqlite3Testcase( i==35 ); /* TIES */
-    syntaqlite_sqlite3Testcase( i==36 ); /* NOTNULL */
-    syntaqlite_sqlite3Testcase( i==37 ); /* NOT */
-    syntaqlite_sqlite3Testcase( i==38 ); /* NO */
-    syntaqlite_sqlite3Testcase( i==39 ); /* NULL */
-    syntaqlite_sqlite3Testcase( i==40 ); /* LIKE */
-    syntaqlite_sqlite3Testcase( i==41 ); /* EXCEPT */
-    syntaqlite_sqlite3Testcase( i==42 ); /* TRANSACTION */
-    syntaqlite_sqlite3Testcase( i==43 ); /* ACTION */
-    syntaqlite_sqlite3Testcase( i==44 ); /* ON */
-    syntaqlite_sqlite3Testcase( i==45 ); /* NATURAL */
-    syntaqlite_sqlite3Testcase( i==46 ); /* ALTER */
-    syntaqlite_sqlite3Testcase( i==47 ); /* RAISE */
-    syntaqlite_sqlite3Testcase( i==48 ); /* EXCLUSIVE */
-    syntaqlite_sqlite3Testcase( i==49 ); /* EXISTS */
-    syntaqlite_sqlite3Testcase( i==50 ); /* CONSTRAINT */
-    syntaqlite_sqlite3Testcase( i==51 ); /* INTO */
-    syntaqlite_sqlite3Testcase( i==52 ); /* OFFSET */
-    syntaqlite_sqlite3Testcase( i==53 ); /* OF */
-    syntaqlite_sqlite3Testcase( i==54 ); /* SET */
-    syntaqlite_sqlite3Testcase( i==55 ); /* TRIGGER */
-    syntaqlite_sqlite3Testcase( i==56 ); /* RANGE */
-    syntaqlite_sqlite3Testcase( i==57 ); /* GENERATED */
-    syntaqlite_sqlite3Testcase( i==58 ); /* DETACH */
-    syntaqlite_sqlite3Testcase( i==59 ); /* HAVING */
-    syntaqlite_sqlite3Testcase( i==60 ); /* GLOB */
-    syntaqlite_sqlite3Testcase( i==61 ); /* BEGIN */
-    syntaqlite_sqlite3Testcase( i==62 ); /* INNER */
-    syntaqlite_sqlite3Testcase( i==63 ); /* REFERENCES */
-    syntaqlite_sqlite3Testcase( i==64 ); /* UNIQUE */
-    syntaqlite_sqlite3Testcase( i==65 ); /* QUERY */
-    syntaqlite_sqlite3Testcase( i==66 ); /* WITHOUT */
-    syntaqlite_sqlite3Testcase( i==67 ); /* WITH */
-    syntaqlite_sqlite3Testcase( i==68 ); /* OUTER */
-    syntaqlite_sqlite3Testcase( i==69 ); /* RELEASE */
-    syntaqlite_sqlite3Testcase( i==70 ); /* ATTACH */
-    syntaqlite_sqlite3Testcase( i==71 ); /* BETWEEN */
-    syntaqlite_sqlite3Testcase( i==72 ); /* NOTHING */
-    syntaqlite_sqlite3Testcase( i==73 ); /* GROUPS */
-    syntaqlite_sqlite3Testcase( i==74 ); /* GROUP */
-    syntaqlite_sqlite3Testcase( i==75 ); /* CASCADE */
-    syntaqlite_sqlite3Testcase( i==76 ); /* ASC */
-    syntaqlite_sqlite3Testcase( i==77 ); /* DEFAULT */
-    syntaqlite_sqlite3Testcase( i==78 ); /* CASE */
-    syntaqlite_sqlite3Testcase( i==79 ); /* COLLATE */
-    syntaqlite_sqlite3Testcase( i==80 ); /* CREATE */
-    syntaqlite_sqlite3Testcase( i==81 ); /* CURRENT_DATE */
-    syntaqlite_sqlite3Testcase( i==82 ); /* IMMEDIATE */
-    syntaqlite_sqlite3Testcase( i==83 ); /* JOIN */
-    syntaqlite_sqlite3Testcase( i==84 ); /* INSERT */
-    syntaqlite_sqlite3Testcase( i==85 ); /* MATCH */
-    syntaqlite_sqlite3Testcase( i==86 ); /* PLAN */
-    syntaqlite_sqlite3Testcase( i==87 ); /* ANALYZE */
-    syntaqlite_sqlite3Testcase( i==88 ); /* PRAGMA */
-    syntaqlite_sqlite3Testcase( i==89 ); /* MATERIALIZED */
-    syntaqlite_sqlite3Testcase( i==90 ); /* DEFERRED */
-    syntaqlite_sqlite3Testcase( i==91 ); /* DISTINCT */
-    syntaqlite_sqlite3Testcase( i==92 ); /* IS */
-    syntaqlite_sqlite3Testcase( i==93 ); /* UPDATE */
-    syntaqlite_sqlite3Testcase( i==94 ); /* VALUES */
-    syntaqlite_sqlite3Testcase( i==95 ); /* VIRTUAL */
-    syntaqlite_sqlite3Testcase( i==96 ); /* ALWAYS */
-    syntaqlite_sqlite3Testcase( i==97 ); /* WHEN */
-    syntaqlite_sqlite3Testcase( i==98 ); /* WHERE */
-    syntaqlite_sqlite3Testcase( i==99 ); /* RECURSIVE */
-    syntaqlite_sqlite3Testcase( i==100 ); /* ABORT */
-    syntaqlite_sqlite3Testcase( i==101 ); /* AFTER */
-    syntaqlite_sqlite3Testcase( i==102 ); /* RENAME */
-    syntaqlite_sqlite3Testcase( i==103 ); /* AND */
-    syntaqlite_sqlite3Testcase( i==104 ); /* DROP */
-    syntaqlite_sqlite3Testcase( i==105 ); /* PARTITION */
-    syntaqlite_sqlite3Testcase( i==106 ); /* AUTOINCREMENT */
-    syntaqlite_sqlite3Testcase( i==107 ); /* TO */
-    syntaqlite_sqlite3Testcase( i==108 ); /* IN */
-    syntaqlite_sqlite3Testcase( i==109 ); /* CAST */
-    syntaqlite_sqlite3Testcase( i==110 ); /* COLUMN */
-    syntaqlite_sqlite3Testcase( i==111 ); /* COMMIT */
-    syntaqlite_sqlite3Testcase( i==112 ); /* CONFLICT */
-    syntaqlite_sqlite3Testcase( i==113 ); /* CROSS */
-    syntaqlite_sqlite3Testcase( i==114 ); /* CURRENT_TIMESTAMP */
-    syntaqlite_sqlite3Testcase( i==115 ); /* CURRENT_TIME */
-    syntaqlite_sqlite3Testcase( i==116 ); /* CURRENT */
-    syntaqlite_sqlite3Testcase( i==117 ); /* PRECEDING */
-    syntaqlite_sqlite3Testcase( i==118 ); /* FAIL */
-    syntaqlite_sqlite3Testcase( i==119 ); /* LAST */
-    syntaqlite_sqlite3Testcase( i==120 ); /* FILTER */
-    syntaqlite_sqlite3Testcase( i==121 ); /* REPLACE */
-    syntaqlite_sqlite3Testcase( i==122 ); /* FIRST */
-    syntaqlite_sqlite3Testcase( i==123 ); /* FOLLOWING */
-    syntaqlite_sqlite3Testcase( i==124 ); /* FROM */
-    syntaqlite_sqlite3Testcase( i==125 ); /* FULL */
-    syntaqlite_sqlite3Testcase( i==126 ); /* LIMIT */
-    syntaqlite_sqlite3Testcase( i==127 ); /* IF */
-    syntaqlite_sqlite3Testcase( i==128 ); /* ORDER */
-    syntaqlite_sqlite3Testcase( i==129 ); /* RESTRICT */
-    syntaqlite_sqlite3Testcase( i==130 ); /* OTHERS */
-    syntaqlite_sqlite3Testcase( i==131 ); /* OVER */
-    syntaqlite_sqlite3Testcase( i==132 ); /* RETURNING */
-    syntaqlite_sqlite3Testcase( i==133 ); /* RIGHT */
-    syntaqlite_sqlite3Testcase( i==134 ); /* ROLLBACK */
-    syntaqlite_sqlite3Testcase( i==135 ); /* ROWS */
-    syntaqlite_sqlite3Testcase( i==136 ); /* ROW */
-    syntaqlite_sqlite3Testcase( i==137 ); /* UNBOUNDED */
-    syntaqlite_sqlite3Testcase( i==138 ); /* UNION */
-    syntaqlite_sqlite3Testcase( i==139 ); /* USING */
-    syntaqlite_sqlite3Testcase( i==140 ); /* VACUUM */
-    syntaqlite_sqlite3Testcase( i==141 ); /* VIEW */
-    syntaqlite_sqlite3Testcase( i==142 ); /* WINDOW */
-    syntaqlite_sqlite3Testcase( i==143 ); /* DO */
-    syntaqlite_sqlite3Testcase( i==144 ); /* BY */
-    syntaqlite_sqlite3Testcase( i==145 ); /* INITIALLY */
-    syntaqlite_sqlite3Testcase( i==146 ); /* ALL */
-    syntaqlite_sqlite3Testcase( i==147 ); /* PRIMARY */
-    *pType = aKWCode[i];
-    break;
-  }
-  return n;
-}
-int syntaqlite_sqlite3KeywordCode(const unsigned char *z, int n){
-  int id = TK_ID;
-  if( n>=2 ) keywordCode((char*)z, n, &id);
-  return id;
-}
-#define SQLITE_N_KEYWORD 147
-int syntaqlite_sqlite3_keyword_name(int i,const char **pzName,int *pnName){
-  if( i<0 || i>=SQLITE_N_KEYWORD ) return SQLITE_ERROR;
-  i++;
-  *pzName = zKWText + aKWOffset[i];
-  *pnName = aKWLen[i];
-  return SQLITE_OK;
-}
-int syntaqlite_sqlite3_keyword_count(void){ return SQLITE_N_KEYWORD; }
-int syntaqlite_sqlite3_keyword_check(const char *zName, int nName){
-  return TK_ID!=syntaqlite_sqlite3KeywordCode((const u8*)zName, nName);
-}
 
-#endif /* SYNTAQLITE_SRC_TOKENIZER_KEYWORDHASH_H */
+#endif /* SYNTAQLITE_SRC_TOKENIZER_KEYWORDHASH_DATA_H */

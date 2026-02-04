@@ -109,43 +109,30 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     test_args = [(str(binary), name, blueprint) for name, blueprint in tests]
 
-    # TODO - harmonize these two branches.
-    if args.jobs == 1:
-        for binary_str, name, blueprint in test_args:
+    # Use ProcessPoolExecutor for both serial and parallel execution.
+    # For serial (jobs=1), this maintains consistent behavior and output ordering.
+    max_workers = args.jobs if args.jobs else (os.cpu_count() or 1)
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+        future_to_info = {
+            executor.submit(_run_single_test, arg): (arg[1], time.time())
+            for arg in test_args
+        }
+
+        # Print RUN markers for all tests upfront
+        for name, _ in tests:
             print_run(name)
-            test_start = time.time()
-            result = execute_test(Path(binary_str), name, blueprint)
+
+        for future in as_completed(future_to_info):
+            name, test_start = future_to_info[future]
+            result = future.result()
             elapsed_ms = int((time.time() - test_start) * 1000)
             results.append(result)
             if result.passed:
-                print_ok(name, elapsed_ms)
+                print_ok(result.name, elapsed_ms)
             else:
-                print_failed(name, elapsed_ms)
+                print_failed(result.name, elapsed_ms)
                 print_failure_details(result, args.rebaseline)
-                failed_tests.append(name)
-    else:
-        max_workers = args.jobs or os.cpu_count() or 1
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            future_to_info = {
-                executor.submit(_run_single_test, arg): (arg[1], time.time())
-                for arg in test_args
-            }
-
-            # Print RUN for all tests upfront in parallel mode
-            for name, _ in tests:
-                print_run(name)
-
-            for future in as_completed(future_to_info):
-                name, test_start = future_to_info[future]
-                result = future.result()
-                elapsed_ms = int((time.time() - test_start) * 1000)
-                results.append(result)
-                if result.passed:
-                    print_ok(result.name, elapsed_ms)
-                else:
-                    print_failed(result.name, elapsed_ms)
-                    print_failure_details(result, args.rebaseline)
-                    failed_tests.append(result.name)
+                failed_tests.append(result.name)
 
     elapsed_ms = int((time.time() - start_time) * 1000)
 

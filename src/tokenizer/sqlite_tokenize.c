@@ -1,11 +1,64 @@
 /*
+**
+** The author disclaims copyright to this source code.  In place of
+** a legal notice, here is a blessing:
+**
+**    May you do good and not evil.
+**    May you find forgiveness for yourself and forgive others.
+**    May you share freely, never taking more than you give.
+**
 ** SQLite tokenizer for syntaqlite.
 ** Extracted from SQLite's tokenize.c with minimal modifications.
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
 */
 
-#include "src/tokenizer/syntaqlite_tokenize_helper.h"
-#include "src/tokenizer/sqlite_keywordhash.h"
+#include "src/tokenizer/syntaqlite_defs.h"
+#include "src/tokenizer/sqlite_tables.h"
+
+/* Keyword hash data - injectable via compile flag */
+#ifndef SYNTAQLITE_KEYWORDHASH_DATA_FILE
+#include "src/tokenizer/sqlite_keywordhash_data.h"
+#else
+#include SYNTAQLITE_KEYWORDHASH_DATA_FILE
+#endif
+
+/* Stub for parser fallback - not needed for pure tokenization */
+static inline int syntaqlite_sqlite3ParserFallback(int token) {
+  (void)token;
+  return 0;
+}
+
+/* Forward declaration */
+i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType);
+
+/* Keyword lookup function */
+int syntaqlite_keywordCode(const char *z, int n, int *pType){
+  int i, j;
+  const char *zKW;
+  assert( n>=2 );
+  i = ((syntaqlite_sqlite3Tolower(z[0])*4) ^ (syntaqlite_sqlite3Tolower(z[n-1])*3) ^ n*1) % 127;
+  for(i=(int)aKWHash[i]; i>0; i=aKWNext[i]){
+    if( aKWLen[i]!=n ) continue;
+    zKW = &zKWText[aKWOffset[i]];
+#ifdef SQLITE_ASCII
+    if( (z[0]&~0x20)!=zKW[0] ) continue;
+    if( (z[1]&~0x20)!=zKW[1] ) continue;
+    j = 2;
+    while( j<n && (z[j]&~0x20)==zKW[j] ){ j++; }
+#endif
+#ifdef SQLITE_EBCDIC
+    if( toupper(z[0])!=zKW[0] ) continue;
+    if( toupper(z[1])!=zKW[1] ) continue;
+    j = 2;
+    while( j<n && toupper(z[j])==zKW[j] ){ j++; }
+#endif
+    if( j<n ) continue;
+    *pType = aKWCode[i];
+    break;
+  }
+  return n;
+}
+
 
 /* Character classes for tokenizing
 **
@@ -89,7 +142,7 @@ static const unsigned char aiClass[] = {
 };
 
 /*
-** The syntaqlite_sqlite3CharMap() macro maps alphabetic characters (only) into their
+** The syntaqlite_sqlite3Tolower() macro maps alphabetic characters (only) into their
 ** lower-case ASCII equivalent.  On ASCII machines, this is just
 ** an upper-to-lower case map.  On EBCDIC machines we also need
 ** to adjust the encoding.  The mapping is only valid for alphabetics
@@ -263,11 +316,6 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
                           ** of the token. See the comment on the CC_ defines
                           ** above. */
     case CC_SPACE: {
-      syntaqlite_sqlite3Testcase( z[0]==' ' );
-      syntaqlite_sqlite3Testcase( z[0]=='\t' );
-      syntaqlite_sqlite3Testcase( z[0]=='\n' );
-      syntaqlite_sqlite3Testcase( z[0]=='\f' );
-      syntaqlite_sqlite3Testcase( z[0]=='\r' );
       for(i=1; syntaqlite_sqlite3Isspace(z[i]); i++){}
       *tokenType = TK_SPACE;
       return i;
@@ -381,9 +429,6 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
     }
     case CC_QUOTE: {
       int delim = z[0];
-      syntaqlite_sqlite3Testcase( delim=='`' );
-      syntaqlite_sqlite3Testcase( delim=='\'' );
-      syntaqlite_sqlite3Testcase( delim=='"' );
       for(i=1; (c=z[i])!=0; i++){
         if( c==delim ){
           if( z[i+1]==delim ){
@@ -417,10 +462,6 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
       /* no break */ deliberate_fall_through
     }
     case CC_DIGIT: {
-      syntaqlite_sqlite3Testcase( z[0]=='0' );  syntaqlite_sqlite3Testcase( z[0]=='1' );  syntaqlite_sqlite3Testcase( z[0]=='2' );
-      syntaqlite_sqlite3Testcase( z[0]=='3' );  syntaqlite_sqlite3Testcase( z[0]=='4' );  syntaqlite_sqlite3Testcase( z[0]=='5' );
-      syntaqlite_sqlite3Testcase( z[0]=='6' );  syntaqlite_sqlite3Testcase( z[0]=='7' );  syntaqlite_sqlite3Testcase( z[0]=='8' );
-      syntaqlite_sqlite3Testcase( z[0]=='9' );  syntaqlite_sqlite3Testcase( z[0]=='.' );
       *tokenType = TK_INTEGER;
 #ifndef SQLITE_OMIT_HEX_INTEGER
       if( z[0]=='0' && (z[1]=='x' || z[1]=='X') && syntaqlite_sqlite3Isxdigit(z[2]) ){
@@ -495,8 +536,6 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
     case CC_DOLLAR:
     case CC_VARALPHA: {
       int n = 0;
-      syntaqlite_sqlite3Testcase( z[0]=='$' );  syntaqlite_sqlite3Testcase( z[0]=='@' );
-      syntaqlite_sqlite3Testcase( z[0]==':' );  syntaqlite_sqlite3Testcase( z[0]=='#' );
       *tokenType = TK_VARIABLE;
       for(i=1; (c=z[i])!=0; i++){
         if( IdChar(c) ){
@@ -533,11 +572,10 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
         break;
       }
       *tokenType = TK_ID;
-      return keywordCode((char*)z, i, tokenType);
+      return syntaqlite_keywordCode((char*)z, i, tokenType);
     }
     case CC_X: {
 #ifndef SQLITE_OMIT_BLOB_LITERAL
-      syntaqlite_sqlite3Testcase( z[0]=='x' ); syntaqlite_sqlite3Testcase( z[0]=='X' );
       if( z[1]=='\'' ){
         *tokenType = TK_BLOB;
         for(i=2; syntaqlite_sqlite3Isxdigit(z[i]); i++){}
