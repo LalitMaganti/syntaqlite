@@ -62,7 +62,7 @@ int syntaqlite_keywordCode(const char *z, int n, int *pType){
 
 /* Character classes for tokenizing
 **
-** In the syntaqlite_sqlite3GetToken() function, a switch() on aiClass[c] is implemented
+** In the sqlite3GetToken() function, a switch() on aiClass[c] is implemented
 ** using a lookup table, whereas a switch() directly on c uses a binary search.
 ** The lookup table is much faster.  To maximize speed, and to ensure that
 ** a lookup table is used, all of the classes need to be small integers and
@@ -142,7 +142,7 @@ static const unsigned char aiClass[] = {
 };
 
 /*
-** The syntaqlite_sqlite3Tolower() macro maps alphabetic characters (only) into their
+** The charMap() macro maps alphabetic characters (only) into their
 ** lower-case ASCII equivalent.  On ASCII machines, this is just
 ** an upper-to-lower case map.  On EBCDIC machines we also need
 ** to adjust the encoding.  The mapping is only valid for alphabetics
@@ -175,7 +175,7 @@ const unsigned char ebcdicToAscii[] = {
 #endif
 
 /*
-** The syntaqlite_sqlite3KeywordCode function looks up an identifier to determine if
+** The sqlite3KeywordCode function looks up an identifier to determine if
 ** it is a keyword.  If it is a keyword, the token code of that keyword is 
 ** returned.  If the input is not a keyword, TK_ID is returned.
 **
@@ -193,7 +193,7 @@ const unsigned char ebcdicToAscii[] = {
 **
 ** For ASCII, any character with the high-order bit set is
 ** allowed in an identifier.  For 7-bit characters, 
-** syntaqlite_sqlite3IsIdChar[X] must be 1.
+** sqlite3IsIdChar[X] must be 1.
 **
 ** For EBCDIC, the rules are more complex but have the same
 ** end result.
@@ -617,4 +617,3 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
   *tokenType = TK_ID;
   return i;
 }
-

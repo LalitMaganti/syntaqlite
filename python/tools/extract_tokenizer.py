@@ -11,179 +11,159 @@ Following Perfetto's approach:
 
 Usage:
     python3 python/tools/extract_tokenizer.py
+
+For SQLite dialects with custom keywords:
+    python3 python/tools/extract_tokenizer.py --extend-grammar my_dialect.y
 """
 import argparse
-import os
 import re
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+# Add project root to path for imports
+ROOT_DIR = Path(__file__).parent.parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from python.sqlite_extractor import (
+    SourceFile,
+    Pipeline,
+    ReplaceText,
+    TruncateAt,
+    RemoveRegex,
+    SymbolRename,
+    SymbolRenameExact,
+    RemoveFunctionCalls,
+    StripBlessingComment,
+    HeaderGenerator,
+    SourceFileGenerator,
+    ToolRunner,
+    SQLITE_BLESSING,
+)
+from python.sqlite_extractor.generators import extract_tk_defines
+
 ROOT_DIR = Path(__file__).parent.parent.parent
 SQLITE_SRC = ROOT_DIR / "third_party" / "src" / "sqlite" / "src"
-SQLITE_TOOL = ROOT_DIR / "third_party" / "src" / "sqlite" / "tool"
 OUTPUT_DIR = ROOT_DIR / "src" / "tokenizer"
-
-# Dedicated build directory for this script
-TOOLS_BUILD_DIR = ROOT_DIR / "out" / ".extract_tokenizer"
 
 # Default prefix for renamed sqlite3 symbols to avoid clashes
 DEFAULT_PREFIX = "syntaqlite"
 
-# SQLite's blessing comment for generated files
-SQLITE_BLESSING = """**
-** The author disclaims copyright to this source code.  In place of
-** a legal notice, here is a blessing:
-**
-**    May you do good and not evil.
-**    May you find forgiveness for yourself and forgive others.
-**    May you share freely, never taking more than you give.
-**
-"""
+REGENERATE_CMD = "python3 python/tools/extract_tokenizer.py"
 
 
-def build_tool(name: str) -> Path:
-    """Build a tool and return its path."""
-    build_ninja = TOOLS_BUILD_DIR / "build.ninja"
-    if not build_ninja.exists():
-        print(f"Configuring build in {TOOLS_BUILD_DIR}...")
-        TOOLS_BUILD_DIR.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            [str(ROOT_DIR / "tools" / "dev" / "gn"), "gen", str(TOOLS_BUILD_DIR), "--args=is_debug=false"],
-            capture_output=True, text=True,
-        )
-        if not build_ninja.exists():
-            print("Failed to configure build", file=sys.stderr)
-            sys.exit(1)
+def create_symbol_rename_pipeline(prefix: str) -> Pipeline:
+    """Create a pipeline for renaming sqlite3 symbols.
 
-    print(f"Building {name}...")
-    result = subprocess.run(
-        [str(ROOT_DIR / "tools" / "dev" / "ninja"), "-C", str(TOOLS_BUILD_DIR), name],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        print(f"Build failed:\n{result.stderr}", file=sys.stderr)
-        sys.exit(1)
-
-    return TOOLS_BUILD_DIR / (f"{name}.exe" if os.name == "nt" else name)
-
-
-def find_blessing_end(content: str) -> int:
-    marker = content.find("May you share freely")
-    if marker == -1:
-        return 0
-    end = content.find("*/", marker)
-    return end + 2 if end != -1 else 0
-
-
-def rename_sqlite3_symbols(content: str, prefix: str) -> str:
+    This uses the C tokenizer for safe renaming that preserves comments/strings.
+    """
     sqlite3_prefix = f"{prefix}_sqlite3"
 
-    # Rename sqlite3XxxYyy -> {prefix}_sqlite3XxxYyy
-    content = re.sub(r'\bsqlite3([A-Z_][A-Za-z0-9_]*)', f'{sqlite3_prefix}\\1', content)
-
-    # Rename testcase() which doesn't have sqlite3 prefix
-    content = content.replace('testcase(', f'{sqlite3_prefix}Testcase(')
-
-    # Remove the charMap macro and use Tolower from sqlite_tables.h instead
-    content = re.sub(r'#\s*define\s+charMap\(X\)[^\n]*\n', '', content)
-    content = content.replace('charMap(', f'{sqlite3_prefix}Tolower(')
-
-    # Rename keywordCode to have proper prefix and remove static
-    # Use word boundary to avoid double replacement
-    content = re.sub(r'\bstatic int keywordCode\b', f'int {prefix}_keywordCode', content)
-    content = re.sub(r'\bkeywordCode\b', f'{prefix}_keywordCode', content)
-
-    # Remove Testcase calls from keywordCode function (including the entire line)
-    content = re.sub(rf'[ \t]*{sqlite3_prefix}Testcase\([^)]*\);[^\n]*\n', '', content)
-
-    return content
+    return Pipeline([
+        # Rename sqlite3XxxYyy -> {prefix}_sqlite3XxxYyy
+        SymbolRename("sqlite3", sqlite3_prefix),
+        # Rename testcase() which doesn't have sqlite3 prefix
+        SymbolRenameExact("testcase", f"{sqlite3_prefix}Testcase"),
+        # Remove the charMap macro - we'll use Tolower from sqlite_tables.h
+        RemoveRegex(r'#\s*define\s+charMap\(X\)[^\n]*\n'),
+        # Rename charMap -> Tolower
+        SymbolRenameExact("charMap", f"{sqlite3_prefix}Tolower"),
+    ])
 
 
-def build_keywordhash(output_dir: Path, prefix: str, include_dir: str) -> str:
+def process_keywordhash_output(output: str, prefix: str) -> tuple[str, str]:
+    """Process mkkeywordhash output and split into data and function sections.
+
+    Args:
+        output: Raw output from mkkeywordhash.
+        prefix: Symbol prefix.
+
+    Returns:
+        Tuple of (data_section, keyword_code_function).
+    """
+    sqlite3_prefix = f"{prefix}_sqlite3"
+
+    # Rename symbols in the output using safe C tokenizer
+    pipeline = create_symbol_rename_pipeline(prefix)
+    output = pipeline.apply(output)
+
+    # Remove renamed Testcase calls (entire lines)
+    output = RemoveFunctionCalls(f"{sqlite3_prefix}Testcase").apply(output)
+
+    # Find start of actual generated content (skip the SQLite header comment)
+    start_marker = "/* Hash score:"
+    start = output.find(start_marker)
+    if start == -1:
+        start = 0
+
+    generated = output[start:]
+
+    # Find keywordCode function - it starts with "static int keywordCode("
+    keyword_code_marker = "static int keywordCode("
+    keyword_code_start = generated.find(keyword_code_marker)
+    if keyword_code_start == -1:
+        raise ValueError("Could not find keywordCode function in mkkeywordhash output")
+
+    # Get data section (everything before keywordCode)
+    data_section = generated[:keyword_code_start].strip()
+
+    # Get logic section (keywordCode function only)
+    logic_section = generated[keyword_code_start:]
+    keyword_code_end = logic_section.find('\n}\n')
+    if keyword_code_end != -1:
+        logic_section = logic_section[:keyword_code_end + 3]
+
+    # Rename keywordCode to have our prefix and remove static
+    logic_section = logic_section.replace("static int keywordCode(", f"int {prefix}_keywordCode(")
+
+    return data_section, logic_section.strip()
+
+
+def build_keywordhash(
+    runner: ToolRunner,
+    output_dir: Path,
+    prefix: str,
+    include_dir: str,
+    extra_keywords: list[str] | None = None,
+) -> str:
     """Build keyword hash data file.
 
     Returns the keywordCode function source to be inlined into sqlite_tokenize.c.
     """
-    sqlite3_prefix = f"{prefix}_sqlite3"
     data_guard = f"{prefix.upper()}_SRC_TOKENIZER_KEYWORDHASH_DATA_H"
 
-    # Build using ninja
-    exe = build_tool("mkkeywordhash")
+    # Run mkkeywordhash (with extra keywords if provided)
+    output = runner.run_mkkeywordhash(extra_keywords=extra_keywords)
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
+    # Process output
+    data_section, keyword_code_func = process_keywordhash_output(output, prefix)
 
-        # Run and capture output
-        print(f"Running mkkeywordhash...")
-        result = subprocess.run([str(exe)], capture_output=True, text=True)
-        if result.returncode != 0:
-            print(f"Run failed: {result.stderr}", file=sys.stderr)
-            sys.exit(1)
+    # Write data file
+    gen = HeaderGenerator(
+        guard=data_guard,
+        description=f"Keyword hash data for {prefix} tokenizer.",
+        regenerate_cmd=REGENERATE_CMD,
+        includes=[f"{include_dir}/sqlite_tokens.h"],
+    )
+    gen.write(output_dir / "sqlite_keywordhash_data.h", data_section)
 
-        # Process output - rename sqlite3* symbols
-        output = rename_sqlite3_symbols(result.stdout, prefix)
-
-        # Find start of actual generated content (skip the SQLite header comment)
-        start_marker = "/* Hash score:"
-        start = output.find(start_marker)
-        if start == -1:
-            start = 0
-
-        generated = output[start:]
-
-        # Find keywordCode function
-        keyword_code_marker = f"int {prefix}_keywordCode("
-        keyword_code_start = generated.find(keyword_code_marker)
-        if keyword_code_start == -1:
-            print("Error: Could not find keywordCode function", file=sys.stderr)
-            sys.exit(1)
-
-        # Get data section (everything before keywordCode)
-        data_section = generated[:keyword_code_start]
-
-        # Get logic section (keywordCode function only)
-        logic_section = generated[keyword_code_start:]
-        keyword_code_end = logic_section.find('\n}\n')
-        if keyword_code_end != -1:
-            logic_section = logic_section[:keyword_code_end + 3]
-
-        # Write data file (data arrays only)
-        data_header = f"""/*
-{SQLITE_BLESSING}** Keyword hash data for {prefix} tokenizer.
-** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
-*/
-#ifndef {data_guard}
-#define {data_guard}
-
-#include "{include_dir}/sqlite_tokens.h"
-
-"""
-        data_footer = f"\n#endif /* {data_guard} */\n"
-
-        data_path = output_dir / "sqlite_keywordhash_data.h"
-        data_path.write_text(data_header + data_section.strip() + "\n" + data_footer)
-        print(f"  Written: {data_path}")
-
-        return logic_section.strip()
+    return keyword_code_func
 
 
-def copy_tokenize_c(output_path: Path, prefix: str, include_dir: str, keyword_code_func: str) -> None:
+def copy_tokenize_c(
+    runner: ToolRunner,
+    output_path: Path,
+    prefix: str,
+    include_dir: str,
+    keyword_code_func: str,
+) -> None:
+    """Copy and transform tokenize.c."""
     sqlite3_prefix = f"{prefix}_sqlite3"
-    src = SQLITE_SRC / "tokenize.c"
-    content = src.read_text()
+    source = SourceFile.from_path(runner.sqlite_src / "tokenize.c")
 
-    # Truncate at parser code - we only want the tokenization functions
-    parser_comment = "/*\n** Run the parser on the given SQL string."
-    parser_start = content.find(parser_comment)
-    if parser_start != -1:
-        content = content[:parser_start]
-    else:
-        print("Warning: Could not find parser comment, keeping full file", file=sys.stderr)
-
-    # Replace the SQLite internal header with our includes and inlined code
-    inlined_header = f"""#include "{include_dir}/{prefix}_defs.h"
+    # Build the inlined header that replaces sqliteInt.h
+    inlined_header = f'''#include "{include_dir}/{prefix}_defs.h"
 #include "{include_dir}/sqlite_tables.h"
 
 /* Keyword hash data - injectable via compile flag */
@@ -204,107 +184,101 @@ i64 {sqlite3_prefix}GetToken(const unsigned char *z, int *tokenType);
 
 /* Keyword lookup function */
 {keyword_code_func}
-"""
-    content = content.replace('#include "sqliteInt.h"', inlined_header)
+'''
 
-    # Remove keywordhash.h include - already included above
-    content = content.replace('#include "keywordhash.h"\n', '')
+    # Build the transformation pipeline
+    pipeline = Pipeline([
+        # Truncate at parser code - we only want the tokenization functions
+        TruncateAt("/*\n** Run the parser on the given SQL string."),
 
-    # Remove #include <stdlib.h> - not needed for tokenization
-    content = content.replace('#include <stdlib.h>\n', '')
+        # Replace the SQLite internal header with our includes
+        ReplaceText('#include "sqliteInt.h"', inlined_header),
 
-    # Rename static analyze functions to be non-static with our prefix
-    # (forward declarations are in the helper)
-    content = content.replace(
-        'static int analyzeWindowKeyword',
-        f'int {sqlite3_prefix}AnalyzeWindowKeyword'
+        # Remove includes we don't need
+        ReplaceText('#include "keywordhash.h"\n', ''),
+        ReplaceText('#include <stdlib.h>\n', ''),
+
+        # Rename static analyze functions to be non-static with our prefix
+        ReplaceText('static int analyzeWindowKeyword', f'int {sqlite3_prefix}AnalyzeWindowKeyword'),
+        ReplaceText('static int analyzeOverKeyword', f'int {sqlite3_prefix}AnalyzeOverKeyword'),
+        ReplaceText('static int analyzeFilterKeyword', f'int {sqlite3_prefix}AnalyzeFilterKeyword'),
+
+        # Update call sites
+        ReplaceText('analyzeWindowKeyword(', f'{sqlite3_prefix}AnalyzeWindowKeyword('),
+        ReplaceText('analyzeOverKeyword(', f'{sqlite3_prefix}AnalyzeOverKeyword('),
+        ReplaceText('analyzeFilterKeyword(', f'{sqlite3_prefix}AnalyzeFilterKeyword('),
+
+        # Strip the SQLite blessing - we'll add our own header
+        StripBlessingComment(),
+    ])
+
+    content = pipeline.apply(source.content)
+
+    # Rename sqlite3* symbols (using safe C tokenizer)
+    content = create_symbol_rename_pipeline(prefix).apply(content)
+
+    # Rename keywordCode to have our prefix
+    content = SymbolRenameExact("keywordCode", f"{prefix}_keywordCode").apply(content)
+
+    # Remove Testcase calls
+    content = RemoveFunctionCalls(f"{sqlite3_prefix}Testcase").apply(content)
+
+    # Generate the final file
+    gen = SourceFileGenerator(
+        description=f"SQLite tokenizer for {prefix}.\n** Extracted from SQLite's tokenize.c with minimal modifications.",
+        regenerate_cmd=REGENERATE_CMD,
     )
-    content = content.replace(
-        'static int analyzeOverKeyword',
-        f'int {sqlite3_prefix}AnalyzeOverKeyword'
-    )
-    content = content.replace(
-        'static int analyzeFilterKeyword',
-        f'int {sqlite3_prefix}AnalyzeFilterKeyword'
-    )
-    # Also update the call sites
-    content = content.replace('analyzeWindowKeyword(', f'{sqlite3_prefix}AnalyzeWindowKeyword(')
-    content = content.replace('analyzeOverKeyword(', f'{sqlite3_prefix}AnalyzeOverKeyword(')
-    content = content.replace('analyzeFilterKeyword(', f'{sqlite3_prefix}AnalyzeFilterKeyword(')
-
-    # Add header comment
-    header = f"""/*
-{SQLITE_BLESSING}** SQLite tokenizer for {prefix}.
-** Extracted from SQLite's tokenize.c with minimal modifications.
-** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
-*/
-
-"""
-
-    # Find the SQLite blessing comment and replace it
-    blessing_end = find_blessing_end(content)
-    if blessing_end > 0:
-        content = header + content[blessing_end:].lstrip()
-    else:
-        content = header + content
-
-    # Rename sqlite3* symbols to avoid clashes
-    content = rename_sqlite3_symbols(content, prefix)
-
-    output_path.write_text(content)
-    print(f"  Written: {output_path}")
+    gen.write(output_path, content)
 
 
-def generate_token_defs(output_path: Path, prefix: str) -> None:
+def generate_token_defs(
+    runner: ToolRunner,
+    output_path: Path,
+    prefix: str,
+    extension_grammar: Path | None = None,
+) -> None:
+    """Generate token definitions from SQLite's parse.y via Lemon."""
     guard = f"{prefix.upper()}_SRC_TOKENIZER_TOKENS_H"
-
-    # Build lemon using ninja
-    lemon_exe = build_tool("lemon")
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
 
-        # Copy parse.y
-        (tmpdir / "parse.y").write_text((SQLITE_SRC / "parse.y").read_text())
-        (tmpdir / "lempar.c").write_bytes((SQLITE_TOOL / "lempar.c").read_bytes())
+        # Get grammar content
+        base_grammar = runner.get_base_grammar()
+
+        if extension_grammar:
+            # Concatenate: extension grammar + base grammar
+            # Extension goes first because SQLite requires SPACE/COMMENT/ILLEGAL
+            # to be the last tokens (they appear at the end of parse.y)
+            ext_grammar = extension_grammar.read_text()
+            combined = ext_grammar + "\n" + base_grammar
+            (tmpdir / "parse.y").write_text(combined)
+        else:
+            (tmpdir / "parse.y").write_text(base_grammar)
 
         # Run lemon
-        print("Running lemon to generate parse.h...")
-        result = subprocess.run(
-            [str(lemon_exe), str(tmpdir / "parse.y")],
-            cwd=tmpdir,
-            capture_output=True, text=True
+        parse_h = runner.run_lemon(tmpdir / "parse.y")
+        parse_h_content = parse_h.read_text()
+
+        # Extract TK_* defines
+        defines = extract_tk_defines(parse_h_content)
+
+        # Generate header
+        gen = HeaderGenerator(
+            guard=guard,
+            description="Token definitions from SQLite's parse.y via Lemon.",
+            regenerate_cmd=REGENERATE_CMD,
         )
-        if result.returncode != 0:
-            print(f"Lemon failed: {result.stderr}", file=sys.stderr)
-            sys.exit(1)
-
-        # Read generated parse.h and extract TK_* defines
-        parse_h = (tmpdir / "parse.h").read_text()
-
-        header = f"""/*
-{SQLITE_BLESSING}** Token definitions from SQLite's parse.y via Lemon.
-** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
-*/
-#ifndef {guard}
-#define {guard}
-
-"""
-        # Extract all #define TK_* lines
-        defines = re.findall(r'^#define TK_\w+\s+\d+', parse_h, re.MULTILINE)
-
-        footer = f"\n\n#endif /* {guard} */\n"
-
-        output_path.write_text(header + "\n".join(defines) + footer)
-        print(f"  Written: {output_path}")
+        gen.write(output_path, "\n".join(defines))
 
 
-def copy_global_tables(output_path: Path, prefix: str) -> None:
+def copy_global_tables(runner: ToolRunner, output_path: Path, prefix: str) -> None:
+    """Copy character tables from SQLite's global.c."""
     sqlite3_prefix = f"{prefix}_sqlite3"
     guard = f"{prefix.upper()}_SRC_TOKENIZER_TABLES_H"
 
-    src = SQLITE_SRC / "global.c"
-    content = src.read_text()
+    source = SourceFile.from_path(runner.sqlite_src / "global.c")
+    content = source.content
 
     # Find sqlite3UpperToLower array - extract only ASCII version
     upper_start = content.find("const unsigned char sqlite3UpperToLower[]")
@@ -325,21 +299,13 @@ def copy_global_tables(output_path: Path, prefix: str) -> None:
     ctype_comment_end = content.find("*/", ctype_comment_start) + 2
     ctype_comment = content[ctype_comment_start:ctype_comment_end]
 
-    header = f"""/*
-{SQLITE_BLESSING}** Character tables extracted from SQLite's global.c
-** DO NOT EDIT - regenerate with: python3 python/tools/extract_tokenizer.py
-*/
-#ifndef {guard}
-#define {guard}
-
-/*
+    # Build the tables content
+    tables = f"""/*
 ** Upper-to-lower case conversion table.
 ** SQLite only considers US-ASCII characters.
 */
 static const unsigned char {sqlite3_prefix}UpperToLower[] = {{
 """
-
-    tables = ""
     if upper_values:
         tables += upper_values.group(1).strip()
 
@@ -351,41 +317,72 @@ static const unsigned char {sqlite3_prefix}UpperToLower[] = {{
     tables += "static " + ctype_renamed + "\n"
 
     # Extract character classification macros from sqliteInt.h
-    sqliteint = (SQLITE_SRC / "sqliteInt.h").read_text()
+    sqliteint = SourceFile.from_path(runner.sqlite_src / "sqliteInt.h")
 
     # Find the ASCII block of macros
-    ascii_start = sqliteint.find("/*\n** The following macros mimic the standard library functions")
+    ascii_start = sqliteint.content.find("/*\n** The following macros mimic the standard library functions")
     if ascii_start == -1:
         print("Warning: Could not find character classification macros in sqliteInt.h", file=sys.stderr)
     else:
         # Find the #ifdef SQLITE_ASCII block
-        ifdef_start = sqliteint.find("#ifdef SQLITE_ASCII", ascii_start)
-        else_start = sqliteint.find("#else", ifdef_start)
+        ifdef_start = sqliteint.content.find("#ifdef SQLITE_ASCII", ascii_start)
+        else_start = sqliteint.content.find("#else", ifdef_start)
 
         # Extract the comment and the ASCII macros
-        macro_comment = sqliteint[ascii_start:sqliteint.find("*/", ascii_start) + 2]
-        ascii_macros = sqliteint[ifdef_start + len("#ifdef SQLITE_ASCII"):else_start].strip()
+        macro_comment = sqliteint.content[ascii_start:sqliteint.content.find("*/", ascii_start) + 2]
+        ascii_macros = sqliteint.content[ifdef_start + len("#ifdef SQLITE_ASCII"):else_start].strip()
 
         tables += "\n" + macro_comment + "\n"
-        # Rename sqlite3 -> {prefix}_sqlite3 in the macros
-        ascii_macros_renamed = rename_sqlite3_symbols(ascii_macros, prefix)
+        # Rename sqlite3 -> {prefix}_sqlite3 in the macros (safe renaming)
+        ascii_macros_renamed = create_symbol_rename_pipeline(prefix).apply(ascii_macros)
         tables += ascii_macros_renamed + "\n"
 
-    footer = f"\n#endif /* {guard} */\n"
+    # Generate header
+    gen = HeaderGenerator(
+        guard=guard,
+        description="Character tables extracted from SQLite's global.c",
+        regenerate_cmd=REGENERATE_CMD,
+    )
+    gen.write(output_path, tables)
 
-    output_path.write_text(header + tables + footer)
-    print(f"  Written: {output_path}")
+
+def parse_extension_keywords(grammar_path: Path) -> list[str]:
+    """Parse %token declarations from an extension grammar file."""
+    content = grammar_path.read_text()
+    keywords = []
+    for match in re.finditer(r'%token\s+([^%{]+?)(?=\n(?:%|\s*$)|$)', content, re.DOTALL):
+        keywords.extend(re.findall(r'\b([A-Z][A-Z0-9_]*)\b', match.group(1)))
+    # Dedupe preserving order
+    return list(dict.fromkeys(keywords))
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract SQLite tokenizer")
+    parser = argparse.ArgumentParser(
+        description="Extract SQLite tokenizer",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+For SQLite dialects with custom keywords:
+    python3 python/tools/extract_tokenizer.py --extend-grammar my_dialect.y
+
+Then compile with:
+    clang -c sqlite_tokenize.c \\
+        -DSYNTAQLITE_TOKENS_FILE=\\"my_dialect/tokens.h\\" \\
+        -DSYNTAQLITE_KEYWORDHASH_DATA_FILE=\\"my_dialect/keywordhash_data.h\\"
+""",
+    )
     parser.add_argument("--prefix", default=DEFAULT_PREFIX, help=f"Symbol prefix (default: {DEFAULT_PREFIX})")
     parser.add_argument("--include-dir", help="Include path prefix (default: derived from output)")
     parser.add_argument("--output", type=Path, default=OUTPUT_DIR, help="Output directory")
+    parser.add_argument(
+        "--extend-grammar", type=Path,
+        help="Grammar file (.y) with %%token declarations for extra keywords",
+    )
     args = parser.parse_args()
 
-    if not SQLITE_SRC.exists():
-        print(f"SQLite not found at {SQLITE_SRC}. Run tools/dev/install-build-deps first", file=sys.stderr)
+    runner = ToolRunner(root_dir=ROOT_DIR)
+
+    if not runner.sqlite_src.exists():
+        print(f"SQLite not found at {runner.sqlite_src}. Run tools/dev/install-build-deps first", file=sys.stderr)
         return 1
 
     args.output.mkdir(parents=True, exist_ok=True)
@@ -398,12 +395,31 @@ def main():
     print(f"Using prefix: {prefix}")
     print(f"Using include dir: {include_dir}")
 
-    generate_token_defs(args.output / "sqlite_tokens.h", prefix)
-    copy_global_tables(args.output / "sqlite_tables.h", prefix)
-    keyword_code_func = build_keywordhash(args.output, prefix, include_dir)
+    # Parse extension grammar if provided
+    extra_keywords = None
+    if args.extend_grammar:
+        if not args.extend_grammar.exists():
+            print(f"Extension grammar not found: {args.extend_grammar}", file=sys.stderr)
+            return 1
+        extra_keywords = parse_extension_keywords(args.extend_grammar)
+        if extra_keywords:
+            print(f"Extension grammar: {args.extend_grammar}")
+            print(f"  Extra keywords: {extra_keywords}")
+        else:
+            print(f"Warning: No %token declarations found in {args.extend_grammar}", file=sys.stderr)
 
-    copy_tokenize_c(args.output / "sqlite_tokenize.c", prefix, include_dir, keyword_code_func)
+    generate_token_defs(runner, args.output / "sqlite_tokens.h", prefix, args.extend_grammar)
+    copy_global_tables(runner, args.output / "sqlite_tables.h", prefix)
+    keyword_code_func = build_keywordhash(runner, args.output, prefix, include_dir, extra_keywords)
+    copy_tokenize_c(runner, args.output / "sqlite_tokenize.c", prefix, include_dir, keyword_code_func)
+
     print(f"\nDone! Generated files in {args.output}")
+
+    if args.extend_grammar:
+        print("\nTo use with syntaqlite, compile with:")
+        print(f'  -DSYNTAQLITE_TOKENS_FILE=\\"{args.output}/tokens.h\\"')
+        print(f'  -DSYNTAQLITE_KEYWORDHASH_DATA_FILE=\\"{args.output}/keywordhash_data.h\\"')
+
     return 0
 
 
