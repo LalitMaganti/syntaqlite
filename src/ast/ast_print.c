@@ -157,6 +157,119 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       break;
     }
 
+    case SYNTAQLITE_NODE_IS_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "IsExpr\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", syntaqlite_is_op_names[node->is_expr.op]);
+      print_node(out, ast, node->is_expr.left, source, depth + 1);
+      print_node(out, ast, node->is_expr.right, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_BETWEEN_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "BetweenExpr\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "negated: %u\n", node->between_expr.negated);
+      print_node(out, ast, node->between_expr.operand, source, depth + 1);
+      print_node(out, ast, node->between_expr.low, source, depth + 1);
+      print_node(out, ast, node->between_expr.high, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_LIKE_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "LikeExpr\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "negated: %u\n", node->like_expr.negated);
+      print_node(out, ast, node->like_expr.operand, source, depth + 1);
+      print_node(out, ast, node->like_expr.pattern, source, depth + 1);
+      print_node(out, ast, node->like_expr.escape, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CASE_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CaseExpr\n");
+      print_node(out, ast, node->case_expr.operand, source, depth + 1);
+      print_node(out, ast, node->case_expr.else_expr, source, depth + 1);
+      print_node(out, ast, node->case_expr.whens, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CASE_WHEN: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CaseWhen\n");
+      print_node(out, ast, node->case_when.when_expr, source, depth + 1);
+      print_node(out, ast, node->case_when.then_expr, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CASE_WHEN_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CaseWhenList[%u]\n", node->case_when_list.count);
+      for (uint32_t i = 0; i < node->case_when_list.count; i++) {
+        print_node(out, ast, node->case_when_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_COMPOUND_SELECT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CompoundSelect\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", syntaqlite_compound_op_names[node->compound_select.op]);
+      print_node(out, ast, node->compound_select.left, source, depth + 1);
+      print_node(out, ast, node->compound_select.right, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_SUBQUERY_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "SubqueryExpr\n");
+      print_node(out, ast, node->subquery_expr.select, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_EXISTS_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ExistsExpr\n");
+      print_node(out, ast, node->exists_expr.select, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_IN_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "InExpr\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "negated: %u\n", node->in_expr.negated);
+      print_node(out, ast, node->in_expr.operand, source, depth + 1);
+      print_node(out, ast, node->in_expr.source, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_VARIABLE: {
+      ast_print_indent(out, depth);
+      fprintf(out, "Variable\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "source: ");
+      ast_print_source_span(out, source, node->variable.source);
+      fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_COLLATE_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CollateExpr\n");
+      print_node(out, ast, node->collate_expr.expr, source, depth + 1);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "collation: ");
+      ast_print_source_span(out, source, node->collate_expr.collation);
+      fprintf(out, "\n");
+      break;
+    }
+
     default:
       ast_print_indent(out, depth);
       fprintf(out, "Unknown(tag=%d)\n", node->tag);

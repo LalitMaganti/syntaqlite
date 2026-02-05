@@ -22,6 +22,7 @@ typedef enum {
     SYNTAQLITE_LITERAL_TYPE_STRING = 2,
     SYNTAQLITE_LITERAL_TYPE_BLOB = 3,
     SYNTAQLITE_LITERAL_TYPE_NULL = 4,
+    SYNTAQLITE_LITERAL_TYPE_CURRENT = 5,
 } SyntaqliteLiteralType;
 
 typedef enum {
@@ -63,12 +64,29 @@ typedef enum {
     SYNTAQLITE_NULLS_ORDER_LAST = 2,
 } SyntaqliteNullsOrder;
 
+typedef enum {
+    SYNTAQLITE_IS_OP_IS = 0,
+    SYNTAQLITE_IS_OP_IS_NOT = 1,
+    SYNTAQLITE_IS_OP_ISNULL = 2,
+    SYNTAQLITE_IS_OP_NOTNULL = 3,
+    SYNTAQLITE_IS_OP_IS_NOT_DISTINCT = 4,
+    SYNTAQLITE_IS_OP_IS_DISTINCT = 5,
+} SyntaqliteIsOp;
+
+typedef enum {
+    SYNTAQLITE_COMPOUND_OP_UNION = 0,
+    SYNTAQLITE_COMPOUND_OP_UNION_ALL = 1,
+    SYNTAQLITE_COMPOUND_OP_INTERSECT = 2,
+    SYNTAQLITE_COMPOUND_OP_EXCEPT = 3,
+} SyntaqliteCompoundOp;
+
 static const char* const syntaqlite_literal_type_names[] = {
     "INTEGER",
     "FLOAT",
     "STRING",
     "BLOB",
     "NULL",
+    "CURRENT",
 };
 
 static const char* const syntaqlite_binary_op_names[] = {
@@ -110,6 +128,22 @@ static const char* const syntaqlite_nulls_order_names[] = {
     "LAST",
 };
 
+static const char* const syntaqlite_is_op_names[] = {
+    "IS",
+    "IS_NOT",
+    "ISNULL",
+    "NOTNULL",
+    "IS_NOT_DISTINCT",
+    "IS_DISTINCT",
+};
+
+static const char* const syntaqlite_compound_op_names[] = {
+    "UNION",
+    "UNION_ALL",
+    "INTERSECT",
+    "EXCEPT",
+};
+
 // ============ Node Tags ============
 
 typedef enum {
@@ -126,6 +160,18 @@ typedef enum {
     SYNTAQLITE_NODE_LIMIT_CLAUSE,
     SYNTAQLITE_NODE_COLUMN_REF,
     SYNTAQLITE_NODE_FUNCTION_CALL,
+    SYNTAQLITE_NODE_IS_EXPR,
+    SYNTAQLITE_NODE_BETWEEN_EXPR,
+    SYNTAQLITE_NODE_LIKE_EXPR,
+    SYNTAQLITE_NODE_CASE_EXPR,
+    SYNTAQLITE_NODE_CASE_WHEN,
+    SYNTAQLITE_NODE_CASE_WHEN_LIST,
+    SYNTAQLITE_NODE_COMPOUND_SELECT,
+    SYNTAQLITE_NODE_SUBQUERY_EXPR,
+    SYNTAQLITE_NODE_EXISTS_EXPR,
+    SYNTAQLITE_NODE_IN_EXPR,
+    SYNTAQLITE_NODE_VARIABLE,
+    SYNTAQLITE_NODE_COLLATE_EXPR,
     SYNTAQLITE_NODE_COUNT
 } SyntaqliteNodeTag;
 
@@ -219,6 +265,85 @@ typedef struct SyntaqliteFunctionCall {
     uint32_t args;
 } SyntaqliteFunctionCall;
 
+typedef struct SyntaqliteIsExpr {
+    uint8_t tag;
+    SyntaqliteIsOp op;
+    uint32_t left;
+    uint32_t right;
+} SyntaqliteIsExpr;
+
+typedef struct SyntaqliteBetweenExpr {
+    uint8_t tag;
+    uint8_t negated;
+    uint32_t operand;
+    uint32_t low;
+    uint32_t high;
+} SyntaqliteBetweenExpr;
+
+typedef struct SyntaqliteLikeExpr {
+    uint8_t tag;
+    uint8_t negated;
+    uint32_t operand;
+    uint32_t pattern;
+    uint32_t escape;
+} SyntaqliteLikeExpr;
+
+typedef struct SyntaqliteCaseExpr {
+    uint8_t tag;
+    uint32_t operand;
+    uint32_t else_expr;
+    uint32_t whens;
+} SyntaqliteCaseExpr;
+
+typedef struct SyntaqliteCaseWhen {
+    uint8_t tag;
+    uint32_t when_expr;
+    uint32_t then_expr;
+} SyntaqliteCaseWhen;
+
+// List of CaseWhen
+typedef struct SyntaqliteCaseWhenList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteCaseWhenList;
+
+typedef struct SyntaqliteCompoundSelect {
+    uint8_t tag;
+    SyntaqliteCompoundOp op;
+    uint32_t left;
+    uint32_t right;
+} SyntaqliteCompoundSelect;
+
+typedef struct SyntaqliteSubqueryExpr {
+    uint8_t tag;
+    uint32_t select;
+} SyntaqliteSubqueryExpr;
+
+typedef struct SyntaqliteExistsExpr {
+    uint8_t tag;
+    uint32_t select;
+} SyntaqliteExistsExpr;
+
+typedef struct SyntaqliteInExpr {
+    uint8_t tag;
+    uint8_t negated;
+    uint32_t operand;
+    uint32_t source;
+} SyntaqliteInExpr;
+
+typedef struct SyntaqliteVariable {
+    uint8_t tag;
+    SyntaqliteSourceSpan source;
+} SyntaqliteVariable;
+
+typedef struct SyntaqliteCollateExpr {
+    uint8_t tag;
+    uint32_t expr;
+    SyntaqliteSourceSpan collation;
+} SyntaqliteCollateExpr;
+
 // ============ Node Union ============
 
 typedef union SyntaqliteNode {
@@ -235,6 +360,18 @@ typedef union SyntaqliteNode {
     SyntaqliteLimitClause limit_clause;
     SyntaqliteColumnRef column_ref;
     SyntaqliteFunctionCall function_call;
+    SyntaqliteIsExpr is_expr;
+    SyntaqliteBetweenExpr between_expr;
+    SyntaqliteLikeExpr like_expr;
+    SyntaqliteCaseExpr case_expr;
+    SyntaqliteCaseWhen case_when;
+    SyntaqliteCaseWhenList case_when_list;
+    SyntaqliteCompoundSelect compound_select;
+    SyntaqliteSubqueryExpr subquery_expr;
+    SyntaqliteExistsExpr exists_expr;
+    SyntaqliteInExpr in_expr;
+    SyntaqliteVariable variable;
+    SyntaqliteCollateExpr collate_expr;
 } SyntaqliteNode;
 
 // Access node by ID

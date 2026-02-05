@@ -66,8 +66,14 @@ def _parse_actions_file(actions_path: Path) -> dict[str, str]:
             i = rule_start + 3
             continue
 
-        # Find the RHS (between ::= and {), excluding the .
+        # Find the RHS (between ::= and {), excluding the . and precedence marker
         rhs_text = content[rule_start + 3:action_start].strip()
+        # Extract and preserve precedence marker like [IN], [BITNOT]
+        prec_marker = ""
+        prec_match = re.search(r'\[(\w+)\]\s*$', rhs_text)
+        if prec_match:
+            prec_marker = f" [{prec_match.group(1)}]"
+            rhs_text = rhs_text[:prec_match.start()].strip()
         if rhs_text.endswith('.'):
             rhs_text = rhs_text[:-1].strip()
 
@@ -84,7 +90,7 @@ def _parse_actions_file(actions_path: Path) -> dict[str, str]:
         action_code = content[action_start:j].strip()
 
         # Build full rule text with type annotations and action code
-        full_rule = f"{lhs} ::= {rhs_text}. {action_code}"
+        full_rule = f"{lhs} ::= {rhs_text}.{prec_marker} {action_code}"
 
         # Build signature without type annotations for matching
         # "lhs(A)" -> "lhs", "rhs1(B) rhs2(C)" -> "rhs1 rhs2"
@@ -236,8 +242,16 @@ def extract_fallback_from_grammar(grammar_content: str, valid_tokens: set[str]) 
     fallback_id = match.group(1)
     tokens_text = match.group(2)
 
-    # Remove SQLite conditional directives
-    tokens_text = re.sub(r"%ifdef\s+\w+", "", tokens_text)
+    # Process SQLite conditional directives properly.
+    # We never define SQLITE_OMIT_* macros, so:
+    #   %ifdef SQLITE_OMIT_X ... %endif  -> EXCLUDE (condition is false)
+    #   %ifndef SQLITE_OMIT_X ... %endif -> INCLUDE (condition is true)
+    # For %ifndef SQLITE_ENABLE_* (not defined) -> EXCLUDE
+    # For %ifdef SQLITE_ENABLE_* (not defined) -> EXCLUDE
+    # Simple approach: remove %ifdef blocks, keep %ifndef blocks (strip directives only)
+    tokens_text = re.sub(
+        r"%ifdef\s+\w+\s*([\s\S]*?)%endif\s+\w+", "", tokens_text
+    )
     tokens_text = re.sub(r"%ifndef\s+\w+", "", tokens_text)
     tokens_text = re.sub(r"%endif\s+\w+", "", tokens_text)
 
@@ -419,6 +433,10 @@ def _generate_grammar_file(
 %type ids {{SyntaqliteToken}}
 %type as {{SyntaqliteToken}}
 %type scanpt {{SyntaqliteToken}}
+%type likeop {{SyntaqliteToken}}
+%type dbnm {{SyntaqliteToken}}
+%type multiselect_op {{int}}
+%type in_op {{int}}
 
 %syntax_error {{
   (void)yymajor;

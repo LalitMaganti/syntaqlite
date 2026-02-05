@@ -32,3 +32,9 @@ term(A) ::= NULL|FLOAT|BLOB(B). {
     }
     A = ast_literal(pCtx->astCtx, lit_type, syntaqlite_span(pCtx, B));
 }
+
+// ============ Date/Time Keywords ============
+
+term(A) ::= CTIME_KW(B). {
+    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_CURRENT, syntaqlite_span(pCtx, B));
+}

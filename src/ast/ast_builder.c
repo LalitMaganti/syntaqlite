@@ -25,6 +25,18 @@ static const size_t node_base_sizes[] = {
     [SYNTAQLITE_NODE_LIMIT_CLAUSE] = sizeof(SyntaqliteLimitClause),
     [SYNTAQLITE_NODE_COLUMN_REF] = sizeof(SyntaqliteColumnRef),
     [SYNTAQLITE_NODE_FUNCTION_CALL] = sizeof(SyntaqliteFunctionCall),
+    [SYNTAQLITE_NODE_IS_EXPR] = sizeof(SyntaqliteIsExpr),
+    [SYNTAQLITE_NODE_BETWEEN_EXPR] = sizeof(SyntaqliteBetweenExpr),
+    [SYNTAQLITE_NODE_LIKE_EXPR] = sizeof(SyntaqliteLikeExpr),
+    [SYNTAQLITE_NODE_CASE_EXPR] = sizeof(SyntaqliteCaseExpr),
+    [SYNTAQLITE_NODE_CASE_WHEN] = sizeof(SyntaqliteCaseWhen),
+    [SYNTAQLITE_NODE_CASE_WHEN_LIST] = sizeof(SyntaqliteCaseWhenList),
+    [SYNTAQLITE_NODE_COMPOUND_SELECT] = sizeof(SyntaqliteCompoundSelect),
+    [SYNTAQLITE_NODE_SUBQUERY_EXPR] = sizeof(SyntaqliteSubqueryExpr),
+    [SYNTAQLITE_NODE_EXISTS_EXPR] = sizeof(SyntaqliteExistsExpr),
+    [SYNTAQLITE_NODE_IN_EXPR] = sizeof(SyntaqliteInExpr),
+    [SYNTAQLITE_NODE_VARIABLE] = sizeof(SyntaqliteVariable),
+    [SYNTAQLITE_NODE_COLLATE_EXPR] = sizeof(SyntaqliteCollateExpr),
 };
 
 size_t syntaqlite_node_base_size(uint8_t tag) {
@@ -326,6 +338,200 @@ uint32_t ast_function_call(
     node->func_name = func_name;
     node->flags = flags;
     node->args = args;
+    return id;
+}
+
+uint32_t ast_is_expr(SyntaqliteAstContext *ctx, SyntaqliteIsOp op, uint32_t left, uint32_t right) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_IS_EXPR, sizeof(SyntaqliteIsExpr));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteIsExpr *node = (SyntaqliteIsExpr*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->op = op;
+    node->left = left;
+    node->right = right;
+    return id;
+}
+
+uint32_t ast_between_expr(
+    SyntaqliteAstContext *ctx,
+    uint8_t negated,
+    uint32_t operand,
+    uint32_t low,
+    uint32_t high
+) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_BETWEEN_EXPR, sizeof(SyntaqliteBetweenExpr));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteBetweenExpr *node = (SyntaqliteBetweenExpr*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->negated = negated;
+    node->operand = operand;
+    node->low = low;
+    node->high = high;
+    return id;
+}
+
+uint32_t ast_like_expr(
+    SyntaqliteAstContext *ctx,
+    uint8_t negated,
+    uint32_t operand,
+    uint32_t pattern,
+    uint32_t escape
+) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_LIKE_EXPR, sizeof(SyntaqliteLikeExpr));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteLikeExpr *node = (SyntaqliteLikeExpr*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->negated = negated;
+    node->operand = operand;
+    node->pattern = pattern;
+    node->escape = escape;
+    return id;
+}
+
+uint32_t ast_case_expr(SyntaqliteAstContext *ctx, uint32_t operand, uint32_t else_expr, uint32_t whens) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_EXPR, sizeof(SyntaqliteCaseExpr));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteCaseExpr *node = (SyntaqliteCaseExpr*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->operand = operand;
+    node->else_expr = else_expr;
+    node->whens = whens;
+    return id;
+}
+
+uint32_t ast_case_when(SyntaqliteAstContext *ctx, uint32_t when_expr, uint32_t then_expr) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_WHEN, sizeof(SyntaqliteCaseWhen));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteCaseWhen *node = (SyntaqliteCaseWhen*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->when_expr = when_expr;
+    node->then_expr = then_expr;
+    return id;
+}
+
+uint32_t ast_case_when_list_empty(SyntaqliteAstContext *ctx) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_WHEN_LIST, sizeof(SyntaqliteCaseWhenList));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteCaseWhenList *node = (SyntaqliteCaseWhenList*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->count = 0;
+    return id;
+}
+
+uint32_t ast_case_when_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_WHEN_LIST, sizeof(SyntaqliteCaseWhenList) + sizeof(uint32_t));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteCaseWhenList *node = (SyntaqliteCaseWhenList*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->count = 1;
+    node->children[0] = first_child;
+    return id;
+}
+
+uint32_t ast_case_when_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
+    if (list_id == SYNTAQLITE_NULL_NODE) {
+        return ast_case_when_list(ctx, child);
+    }
+
+    // Get current list
+    SyntaqliteCaseWhenList *old_node = (SyntaqliteCaseWhenList*)
+        (ctx->ast->arena + ctx->ast->offsets[list_id]);
+    uint32_t old_count = old_node->count;
+
+    // Allocate new list with space for one more child
+    size_t new_size = sizeof(SyntaqliteCaseWhenList) + (old_count + 1) * sizeof(uint32_t);
+    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_WHEN_LIST, new_size);
+    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
+
+    // Re-fetch old node pointer (may have moved due to realloc)
+    old_node = (SyntaqliteCaseWhenList*)
+        (ctx->ast->arena + ctx->ast->offsets[list_id]);
+
+    SyntaqliteCaseWhenList *new_node = (SyntaqliteCaseWhenList*)
+        (ctx->ast->arena + ctx->ast->offsets[new_id]);
+
+    // Copy old children and add new one
+    new_node->count = old_count + 1;
+    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
+    new_node->children[old_count] = child;
+
+    return new_id;
+}
+
+uint32_t ast_compound_select(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteCompoundOp op,
+    uint32_t left,
+    uint32_t right
+) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COMPOUND_SELECT, sizeof(SyntaqliteCompoundSelect));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteCompoundSelect *node = (SyntaqliteCompoundSelect*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->op = op;
+    node->left = left;
+    node->right = right;
+    return id;
+}
+
+uint32_t ast_subquery_expr(SyntaqliteAstContext *ctx, uint32_t select) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_SUBQUERY_EXPR, sizeof(SyntaqliteSubqueryExpr));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteSubqueryExpr *node = (SyntaqliteSubqueryExpr*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->select = select;
+    return id;
+}
+
+uint32_t ast_exists_expr(SyntaqliteAstContext *ctx, uint32_t select) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_EXISTS_EXPR, sizeof(SyntaqliteExistsExpr));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteExistsExpr *node = (SyntaqliteExistsExpr*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->select = select;
+    return id;
+}
+
+uint32_t ast_in_expr(SyntaqliteAstContext *ctx, uint8_t negated, uint32_t operand, uint32_t source) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_IN_EXPR, sizeof(SyntaqliteInExpr));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteInExpr *node = (SyntaqliteInExpr*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->negated = negated;
+    node->operand = operand;
+    node->source = source;
+    return id;
+}
+
+uint32_t ast_variable(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan source) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_VARIABLE, sizeof(SyntaqliteVariable));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteVariable *node = (SyntaqliteVariable*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->source = source;
+    return id;
+}
+
+uint32_t ast_collate_expr(SyntaqliteAstContext *ctx, uint32_t expr, SyntaqliteSourceSpan collation) {
+    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COLLATE_EXPR, sizeof(SyntaqliteCollateExpr));
+    if (id == SYNTAQLITE_NULL_NODE) return id;
+
+    SyntaqliteCollateExpr *node = (SyntaqliteCollateExpr*)
+        (ctx->ast->arena + ctx->ast->offsets[id]);
+    node->expr = expr;
+    node->collation = collation;
     return id;
 }
 

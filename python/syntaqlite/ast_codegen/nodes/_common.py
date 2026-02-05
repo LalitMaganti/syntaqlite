@@ -13,6 +13,7 @@ ENUMS = [
         "STRING",    # 2
         "BLOB",      # 3
         "NULL",      # 4
+        "CURRENT",   # 5 - CURRENT_TIME, CURRENT_DATE, CURRENT_TIMESTAMP
     ),
 
     # Binary operators
