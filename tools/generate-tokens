@@ -3,10 +3,9 @@
 # Licensed under the Apache License, Version 2.0.
 
 # Generate custom token and keyword hash files for SQLite dialects.
-# This is now part of extract_tokenizer.py with --extend-grammar flag.
-# See python/tools/extract_tokenizer.py for details.
+# See python/tools/generate_tokens.py for details.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
-exec python3 "$ROOT_DIR/python/tools/extract_tokenizer.py" "$@"
+exec python3 "$ROOT_DIR/python/tools/generate_tokens.py" "$@"

@@ -37,9 +37,9 @@ int syntaqlite_keywordCode(const char *z, int n, int *pType){
   const char *zKW;
   assert( n>=2 );
   i = ((syntaqlite_sqlite3Tolower(z[0])*4) ^ (syntaqlite_sqlite3Tolower(z[n-1])*3) ^ n*1) % 127;
-  for(i=(int)aKWHash[i]; i>0; i=aKWNext[i]){
-    if( aKWLen[i]!=n ) continue;
-    zKW = &zKWText[aKWOffset[i]];
+  for(i=(int)syntaqlite_aKWHash[i]; i>0; i=syntaqlite_aKWNext[i]){
+    if( syntaqlite_aKWLen[i]!=n ) continue;
+    zKW = &syntaqlite_zKWText[syntaqlite_aKWOffset[i]];
 #ifdef SQLITE_ASCII
     if( (z[0]&~0x20)!=zKW[0] ) continue;
     if( (z[1]&~0x20)!=zKW[1] ) continue;
@@ -53,7 +53,7 @@ int syntaqlite_keywordCode(const char *z, int n, int *pType){
     while( j<n && toupper(z[j])==zKW[j] ){ j++; }
 #endif
     if( j<n ) continue;
-    *pType = aKWCode[i];
+    *pType = syntaqlite_aKWCode[i];
     break;
   }
   return n;

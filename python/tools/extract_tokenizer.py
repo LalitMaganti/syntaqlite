@@ -1,7 +1,7 @@
 # Copyright 2025 The syntaqlite Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0.
 
-"""Extract SQLite tokenization code.
+"""Extract SQLite tokenization code for syntaqlite.
 
 Following Perfetto's approach:
 1. Build mkkeywordhash using GN/ninja
@@ -12,8 +12,8 @@ Following Perfetto's approach:
 Usage:
     python3 python/tools/extract_tokenizer.py
 
-For SQLite dialects with custom keywords:
-    python3 python/tools/extract_tokenizer.py --extend-grammar my_dialect.y
+For external users who want custom keywords for SQLite dialects,
+use tools/generate-tokens instead.
 """
 import argparse
 import re
@@ -88,6 +88,10 @@ def process_keywordhash_output(output: str, prefix: str) -> tuple[str, str]:
     pipeline = create_symbol_rename_pipeline(prefix)
     output = pipeline.apply(output)
 
+    # Rename keywordhash arrays to have our prefix
+    for symbol in ["zKWText", "aKWHash", "aKWNext", "aKWLen", "aKWOffset", "aKWCode"]:
+        output = SymbolRenameExact(symbol, f"{prefix}_{symbol}").apply(output)
+
     # Remove renamed Testcase calls (entire lines)
     output = RemoveFunctionCalls(f"{sqlite3_prefix}Testcase").apply(output)
 
@@ -125,7 +129,6 @@ def build_keywordhash(
     output_dir: Path,
     prefix: str,
     include_dir: str,
-    extra_keywords: list[str] | None = None,
 ) -> str:
     """Build keyword hash data file.
 
@@ -133,8 +136,8 @@ def build_keywordhash(
     """
     data_guard = f"{prefix.upper()}_SRC_TOKENIZER_KEYWORDHASH_DATA_H"
 
-    # Run mkkeywordhash (with extra keywords if provided)
-    output = runner.run_mkkeywordhash(extra_keywords=extra_keywords)
+    # Run mkkeywordhash
+    output = runner.run_mkkeywordhash()
 
     # Process output
     data_section, keyword_code_func = process_keywordhash_output(output, prefix)
@@ -235,7 +238,6 @@ def generate_token_defs(
     runner: ToolRunner,
     output_path: Path,
     prefix: str,
-    extension_grammar: Path | None = None,
 ) -> None:
     """Generate token definitions from SQLite's parse.y via Lemon."""
     guard = f"{prefix.upper()}_SRC_TOKENIZER_TOKENS_H"
@@ -245,16 +247,7 @@ def generate_token_defs(
 
         # Get grammar content
         base_grammar = runner.get_base_grammar()
-
-        if extension_grammar:
-            # Concatenate: extension grammar + base grammar
-            # Extension goes first because SQLite requires SPACE/COMMENT/ILLEGAL
-            # to be the last tokens (they appear at the end of parse.y)
-            ext_grammar = extension_grammar.read_text()
-            combined = ext_grammar + "\n" + base_grammar
-            (tmpdir / "parse.y").write_text(combined)
-        else:
-            (tmpdir / "parse.y").write_text(base_grammar)
+        (tmpdir / "parse.y").write_text(base_grammar)
 
         # Run lemon
         parse_h = runner.run_lemon(tmpdir / "parse.y")
@@ -346,37 +339,11 @@ static const unsigned char {sqlite3_prefix}UpperToLower[] = {{
     gen.write(output_path, tables)
 
 
-def parse_extension_keywords(grammar_path: Path) -> list[str]:
-    """Parse %token declarations from an extension grammar file."""
-    content = grammar_path.read_text()
-    keywords = []
-    for match in re.finditer(r'%token\s+([^%{]+?)(?=\n(?:%|\s*$)|$)', content, re.DOTALL):
-        keywords.extend(re.findall(r'\b([A-Z][A-Z0-9_]*)\b', match.group(1)))
-    # Dedupe preserving order
-    return list(dict.fromkeys(keywords))
-
-
 def main():
-    parser = argparse.ArgumentParser(
-        description="Extract SQLite tokenizer",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-For SQLite dialects with custom keywords:
-    python3 python/tools/extract_tokenizer.py --extend-grammar my_dialect.y
-
-Then compile with:
-    clang -c sqlite_tokenize.c \\
-        -DSYNTAQLITE_TOKENS_FILE=\\"my_dialect/tokens.h\\" \\
-        -DSYNTAQLITE_KEYWORDHASH_DATA_FILE=\\"my_dialect/keywordhash_data.h\\"
-""",
-    )
+    parser = argparse.ArgumentParser(description="Extract SQLite tokenizer for syntaqlite")
     parser.add_argument("--prefix", default=DEFAULT_PREFIX, help=f"Symbol prefix (default: {DEFAULT_PREFIX})")
     parser.add_argument("--include-dir", help="Include path prefix (default: derived from output)")
     parser.add_argument("--output", type=Path, default=OUTPUT_DIR, help="Output directory")
-    parser.add_argument(
-        "--extend-grammar", type=Path,
-        help="Grammar file (.y) with %%token declarations for extra keywords",
-    )
     args = parser.parse_args()
 
     runner = ToolRunner(root_dir=ROOT_DIR)
@@ -395,31 +362,12 @@ Then compile with:
     print(f"Using prefix: {prefix}")
     print(f"Using include dir: {include_dir}")
 
-    # Parse extension grammar if provided
-    extra_keywords = None
-    if args.extend_grammar:
-        if not args.extend_grammar.exists():
-            print(f"Extension grammar not found: {args.extend_grammar}", file=sys.stderr)
-            return 1
-        extra_keywords = parse_extension_keywords(args.extend_grammar)
-        if extra_keywords:
-            print(f"Extension grammar: {args.extend_grammar}")
-            print(f"  Extra keywords: {extra_keywords}")
-        else:
-            print(f"Warning: No %token declarations found in {args.extend_grammar}", file=sys.stderr)
-
-    generate_token_defs(runner, args.output / "sqlite_tokens.h", prefix, args.extend_grammar)
+    generate_token_defs(runner, args.output / "sqlite_tokens.h", prefix)
     copy_global_tables(runner, args.output / "sqlite_tables.h", prefix)
-    keyword_code_func = build_keywordhash(runner, args.output, prefix, include_dir, extra_keywords)
+    keyword_code_func = build_keywordhash(runner, args.output, prefix, include_dir)
     copy_tokenize_c(runner, args.output / "sqlite_tokenize.c", prefix, include_dir, keyword_code_func)
 
     print(f"\nDone! Generated files in {args.output}")
-
-    if args.extend_grammar:
-        print("\nTo use with syntaqlite, compile with:")
-        print(f'  -DSYNTAQLITE_TOKENS_FILE=\\"{args.output}/tokens.h\\"')
-        print(f'  -DSYNTAQLITE_KEYWORDHASH_DATA_FILE=\\"{args.output}/keywordhash_data.h\\"')
-
     return 0
 
 

@@ -29,7 +29,7 @@
 /*   EPLACEFIRSTFOLLOWINGFROMFULLIMITIFORDERESTRICTOTHERSOVER           */
 /*   ETURNINGRIGHTROLLBACKROWSUNBOUNDEDUNIONUSINGVACUUMVIEWINDOWBY      */
 /*   INITIALLYPRIMARY                                                   */
-static const char zKWText[666] = {
+static const char syntaqlite_zKWText[666] = {
   'R','E','I','N','D','E','X','E','D','E','S','C','A','P','E','A','C','H',
   'E','C','K','E','Y','B','E','F','O','R','E','I','G','N','O','R','E','G',
   'E','X','P','L','A','I','N','S','T','E','A','D','D','A','T','A','B','A',
@@ -69,7 +69,7 @@ static const char zKWText[666] = {
   'B','Y','I','N','I','T','I','A','L','L','Y','P','R','I','M','A','R','Y',
 };
 /* aKWHash[i] is the hash value for the i-th keyword */
-static const unsigned char aKWHash[127] = {
+static const unsigned char syntaqlite_aKWHash[127] = {
     84,  92, 134,  82, 105,  29,   0,   0,  94,   0,  85,  72,   0,
     53,  35,  86,  15,   0,  42,  97,  54,  89, 135,  19,   0,   0,
    140,   0,  40, 129,   0,  22, 107,   0,   9,   0,   0, 123,  80,
@@ -84,7 +84,7 @@ static const unsigned char aKWHash[127] = {
 /* aKWNext[] forms the hash collision chain.  If aKWHash[i]==0
 ** then the i-th keyword has no more hash collisions.  Otherwise,
 ** the next keyword with the same hash is aKWHash[i]-1. */
-static const unsigned char aKWNext[148] = {0,
+static const unsigned char syntaqlite_aKWNext[148] = {0,
      0,   0,   0,   0,   4,   0,  43,   0,   0, 106, 114,   0,   0,
      0,   2,   0,   0, 143,   0,   0,   0,  13,   0,   0,   0,   0,
    141,   0,   0, 119,  52,   0,   0, 137,  12,   0,   0,  62,   0,
@@ -99,7 +99,7 @@ static const unsigned char aKWNext[148] = {0,
    102,   0,   0,  87,
 };
 /* aKWLen[i] is the length (in bytes) of the i-th keyword */
-static const unsigned char aKWLen[148] = {0,
+static const unsigned char syntaqlite_aKWLen[148] = {0,
      7,   7,   5,   4,   6,   4,   5,   3,   6,   7,   3,   6,   6,
      7,   7,   3,   8,   2,   6,   5,   4,   4,   3,  10,   4,   7,
      6,   9,   4,   2,   6,   5,   9,   9,   4,   7,   3,   2,   4,
@@ -115,7 +115,7 @@ static const unsigned char aKWLen[148] = {0,
 };
 /* aKWOffset[i] is the index into zKWText[] of the start of
 ** the text for the i-th keyword. */
-static const unsigned short int aKWOffset[148] = {0,
+static const unsigned short int syntaqlite_aKWOffset[148] = {0,
      0,   2,   2,   8,   9,  14,  16,  20,  23,  25,  25,  29,  33,
     36,  41,  46,  48,  53,  54,  59,  62,  65,  67,  69,  78,  81,
     86,  90,  90,  94,  99, 101, 105, 111, 119, 123, 123, 123, 126,
@@ -130,7 +130,7 @@ static const unsigned short int aKWOffset[148] = {0,
    648, 650, 655, 659,
 };
 /* aKWCode[i] is the parser symbol code for the i-th keyword */
-static const unsigned char aKWCode[148] = {0,
+static const unsigned char syntaqlite_aKWCode[148] = {0,
   TK_REINDEX,    TK_INDEXED,    TK_INDEX,      TK_DESC,       TK_ESCAPE,     
   TK_EACH,       TK_CHECK,      TK_KEY,        TK_BEFORE,     TK_FOREIGN,    
   TK_FOR,        TK_IGNORE,     TK_LIKE_KW,    TK_EXPLAIN,    TK_INSTEAD,    
