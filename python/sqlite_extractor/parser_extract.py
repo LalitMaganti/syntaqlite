@@ -276,30 +276,3 @@ static void syntaqlite_extension_reduce(
 '''
 
 
-def generate_extension_parser_header(data: ParserData) -> str:
-    """Generate complete extension parser header content.
-
-    This creates the content for a header file that can be included
-    when SYNTAQLITE_PARSER_DATA_FILE is defined.
-
-    Args:
-        data: Extracted parser data.
-
-    Returns:
-        Complete header file content.
-    """
-    parts = []
-
-    # Header comment
-    parts.append("/*\n")
-    parts.append("** Extension parser data for syntaqlite.\n")
-    parts.append("** Include this file via -DSYNTAQLITE_PARSER_DATA_FILE\n")
-    parts.append("*/\n\n")
-
-    # All the data
-    parts.append(format_parser_data_header(data))
-
-    # The reduce function
-    parts.append(format_extension_reduce_function(data))
-
-    return "".join(parts)

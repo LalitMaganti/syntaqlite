@@ -21,40 +21,6 @@ SQLITE_BLESSING = """**
 """
 
 
-def guard_from_path(path: Path, prefix: str = "SYNTAQLITE") -> str:
-    """Convert a file path to an include guard name.
-
-    Args:
-        path: The file path (relative or absolute).
-        prefix: Prefix for the guard (default: SYNTAQLITE).
-
-    Returns:
-        An include guard string like SYNTAQLITE_SRC_FOO_H.
-
-    Examples:
-        >>> guard_from_path(Path("src/tokenizer/tokens.h"))
-        'SYNTAQLITE_SRC_TOKENIZER_TOKENS_H'
-        >>> guard_from_path(Path("include/foo.h"), prefix="MY_PREFIX")
-        'MY_PREFIX_INCLUDE_FOO_H'
-    """
-    # Get just the relative parts we care about
-    parts = path.parts
-
-    # Convert to uppercase and replace separators
-    name = "_".join(parts).upper()
-
-    # Replace non-alphanumeric chars with underscore
-    name = re.sub(r"[^A-Z0-9]", "_", name)
-
-    # Remove consecutive underscores
-    name = re.sub(r"_+", "_", name)
-
-    # Remove leading/trailing underscores
-    name = name.strip("_")
-
-    return f"{prefix}_{name}"
-
-
 @dataclass
 class FileGenerator:
     """Generator for C files with optional include guards.

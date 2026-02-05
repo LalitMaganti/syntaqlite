@@ -83,6 +83,37 @@ def parse_lemon_g_output(output: str) -> LemonGrammarOutput:
     return result
 
 
+def split_extension_grammar(extension_grammar: str) -> tuple[str, str]:
+    """Split extension grammar into directives and rules.
+
+    Extension grammars need special handling:
+    - %token and other directives go BEFORE base grammar (for token ordering)
+    - Rules (containing ::=) go AFTER base grammar (to reference its nonterminals)
+
+    Args:
+        extension_grammar: Extension grammar content.
+
+    Returns:
+        Tuple of (directives, rules).
+    """
+    directives = []
+    rules = []
+
+    for line in extension_grammar.split('\n'):
+        stripped = line.strip()
+        # Skip empty lines and comments
+        if not stripped or stripped.startswith('//'):
+            continue
+        # Rules contain ::=
+        if '::=' in line:
+            rules.append(line)
+        # Directives start with %
+        elif stripped.startswith('%'):
+            directives.append(line)
+
+    return '\n'.join(directives), '\n'.join(rules)
+
+
 def extract_fallback_from_grammar(grammar_content: str, valid_tokens: set[str]) -> tuple[str, list[str]]:
     """Extract fallback declaration from grammar, filtering to valid tokens.
 
@@ -185,8 +216,13 @@ def build_syntaqlite_grammar(
     base_grammar = runner.get_base_grammar()
 
     # If we have an extension grammar, merge it with the base
+    # Directives (like %token) go first for proper token ordering
+    # Rules go last so they can reference base grammar nonterminals
     if extension_grammar:
-        combined_grammar = extension_grammar + "\n" + base_grammar
+        ext_directives, ext_rules = split_extension_grammar(extension_grammar)
+        combined_grammar = ext_directives + "\n" + base_grammar
+        if ext_rules:
+            combined_grammar += "\n" + ext_rules
     else:
         combined_grammar = base_grammar
 
@@ -340,18 +376,3 @@ def _generate_grammar_file(
     return "".join(parts)
 
 
-def merge_extension_grammar(base_grammar: str, extension_grammar: str) -> str:
-    """Merge an extension grammar with SQLite's base grammar.
-
-    The extension grammar's %token declarations are placed first so they
-    get lower token numbers. SQLite requires SPACE/COMMENT/ILLEGAL to be
-    the last tokens.
-
-    Args:
-        base_grammar: SQLite's parse.y content.
-        extension_grammar: Extension grammar content.
-
-    Returns:
-        Merged grammar content.
-    """
-    return extension_grammar + "\n" + base_grammar

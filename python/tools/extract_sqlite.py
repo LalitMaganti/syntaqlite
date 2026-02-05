@@ -35,7 +35,6 @@ if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
 from python.sqlite_extractor import (
-    SourceFile,
     Pipeline,
     ReplaceText,
     TruncateAt,
@@ -166,7 +165,7 @@ def copy_tokenize_c(
 ) -> None:
     """Copy and transform tokenize.c."""
     sqlite3_prefix = f"{prefix}_sqlite3"
-    source = SourceFile.from_path(runner.sqlite_src / "tokenize.c")
+    content = (runner.sqlite_src / "tokenize.c").read_text()
 
     # Build the inlined header that replaces sqliteInt.h
     inlined_header = f'''#include "src/syntaqlite_sqlite_defs.h"
@@ -225,7 +224,7 @@ i64 {sqlite3_prefix}GetToken(const unsigned char *z, int *tokenType);
         StripBlessingComment(),
     ])
 
-    content = pipeline.apply(source.content)
+    content = pipeline.apply(content)
 
     # Rename sqlite3* symbols (using safe C tokenizer)
     content = create_symbol_rename_pipeline(prefix).apply(content)
@@ -292,8 +291,7 @@ def copy_global_tables(runner: ToolRunner, output_path: Path, prefix: str) -> No
     sqlite3_prefix = f"{prefix}_sqlite3"
     guard = f"{prefix.upper()}_SRC_SQLITE_CHARMAP_H"
 
-    source = SourceFile.from_path(runner.sqlite_src / "global.c")
-    content = source.content
+    content = (runner.sqlite_src / "global.c").read_text()
 
     # Find sqlite3UpperToLower array - extract only ASCII version
     upper_start = content.find("const unsigned char sqlite3UpperToLower[]")
@@ -332,20 +330,20 @@ static const unsigned char {sqlite3_prefix}UpperToLower[] = {{
     tables += "static " + ctype_renamed + "\n"
 
     # Extract character classification macros from sqliteInt.h
-    sqliteint = SourceFile.from_path(runner.sqlite_src / "sqliteInt.h")
+    sqliteint_content = (runner.sqlite_src / "sqliteInt.h").read_text()
 
     # Find the ASCII block of macros
-    ascii_start = sqliteint.content.find("/*\n** The following macros mimic the standard library functions")
+    ascii_start = sqliteint_content.find("/*\n** The following macros mimic the standard library functions")
     if ascii_start == -1:
         print("Warning: Could not find character classification macros in sqliteInt.h", file=sys.stderr)
     else:
         # Find the #ifdef SQLITE_ASCII block
-        ifdef_start = sqliteint.content.find("#ifdef SQLITE_ASCII", ascii_start)
-        else_start = sqliteint.content.find("#else", ifdef_start)
+        ifdef_start = sqliteint_content.find("#ifdef SQLITE_ASCII", ascii_start)
+        else_start = sqliteint_content.find("#else", ifdef_start)
 
         # Extract the comment and the ASCII macros
-        macro_comment = sqliteint.content[ascii_start:sqliteint.content.find("*/", ascii_start) + 2]
-        ascii_macros = sqliteint.content[ifdef_start + len("#ifdef SQLITE_ASCII"):else_start].strip()
+        macro_comment = sqliteint_content[ascii_start:sqliteint_content.find("*/", ascii_start) + 2]
+        ascii_macros = sqliteint_content[ifdef_start + len("#ifdef SQLITE_ASCII"):else_start].strip()
 
         tables += "\n" + macro_comment + "\n"
         # Rename sqlite3 -> {prefix}_sqlite3 in the macros (safe renaming)

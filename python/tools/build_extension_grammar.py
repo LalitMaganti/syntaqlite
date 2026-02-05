@@ -40,6 +40,7 @@ from python.sqlite_extractor import (
     HeaderGenerator,
     SQLITE_BLESSING,
     build_syntaqlite_grammar,
+    split_extension_grammar,
     transform_to_base_template,
     extract_parser_data,
     format_parser_data_header,
@@ -72,12 +73,16 @@ def generate_token_defines(runner: ToolRunner, extension_grammar: Path) -> str:
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir = Path(tmpdir)
 
-        # Concatenate: extension grammar + base grammar
-        # Extension goes first because SQLite requires SPACE/COMMENT/ILLEGAL
-        # to be the last tokens (they appear at the end of parse.y)
+        # Split extension grammar: directives go first, rules go last
+        # This ensures extension tokens get low numbers while rules can
+        # reference base grammar nonterminals
         base_grammar = runner.get_base_grammar()
         ext_grammar = extension_grammar.read_text()
-        combined = ext_grammar + "\n" + base_grammar
+        ext_directives, ext_rules = split_extension_grammar(ext_grammar)
+
+        combined = ext_directives + "\n" + base_grammar
+        if ext_rules:
+            combined += "\n" + ext_rules
 
         (tmpdir / "parse.y").write_text(combined)
 
