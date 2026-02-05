@@ -41,116 +41,81 @@ class Token:
 def tokenize_c(content: str) -> Iterator[Token]:
     """Tokenize C code for safe text manipulation.
 
-    This is a simplified tokenizer that focuses on correctly identifying:
-    - Identifiers (for symbol renaming)
-    - String and character literals (to preserve)
-    - Comments (to preserve)
-
-    It doesn't handle all C syntax perfectly but is sufficient for
-    safe symbol renaming operations.
-
-    Args:
-        content: The C source code to tokenize.
-
-    Yields:
-        Token objects for each token found.
+    Focuses on correctly identifying identifiers, string/char literals,
+    and comments. Sufficient for safe symbol renaming operations.
     """
-    i = 0
     n = len(content)
+    i = 0
+
+    def scan_quoted(quote: str) -> int:
+        """Scan a quoted literal, returning end position."""
+        pos = i + 1
+        while pos < n:
+            if content[pos] == "\\":
+                pos += 2
+            elif content[pos] == quote:
+                return pos + 1
+            elif content[pos] == "\n":
+                return pos
+            else:
+                pos += 1
+        return pos
 
     while i < n:
-        # Skip whitespace
-        if content[i] in " \t\n\r":
-            start = i
+        start = i
+        ch = content[i]
+
+        # Whitespace
+        if ch in " \t\n\r":
             while i < n and content[i] in " \t\n\r":
                 i += 1
             yield Token(TokenType.WHITESPACE, content[start:i], start, i)
-            continue
 
         # Line comment
-        if content[i : i + 2] == "//":
-            start = i
+        elif content[i:i + 2] == "//":
             i += 2
             while i < n and content[i] != "\n":
                 i += 1
             yield Token(TokenType.LINE_COMMENT, content[start:i], start, i)
-            continue
 
         # Block comment
-        if content[i : i + 2] == "/*":
-            start = i
+        elif content[i:i + 2] == "/*":
             i += 2
-            while i < n - 1 and content[i : i + 2] != "*/":
+            while i < n - 1 and content[i:i + 2] != "*/":
                 i += 1
             if i < n - 1:
-                i += 2  # Include closing */
+                i += 2
             yield Token(TokenType.BLOCK_COMMENT, content[start:i], start, i)
-            continue
 
-        # String literal
-        if content[i] == '"':
-            start = i
-            i += 1
-            while i < n:
-                if content[i] == "\\":
-                    i += 2  # Skip escape sequence
-                elif content[i] == '"':
-                    i += 1
-                    break
-                elif content[i] == "\n":
-                    # Unterminated string, stop here
-                    break
-                else:
-                    i += 1
-            yield Token(TokenType.STRING, content[start:i], start, i)
-            continue
+        # String or char literal
+        elif ch in '"\'':
+            i = scan_quoted(ch)
+            tok_type = TokenType.STRING if ch == '"' else TokenType.CHAR
+            yield Token(tok_type, content[start:i], start, i)
 
-        # Character literal
-        if content[i] == "'":
-            start = i
-            i += 1
-            while i < n:
-                if content[i] == "\\":
-                    i += 2  # Skip escape sequence
-                elif content[i] == "'":
-                    i += 1
-                    break
-                elif content[i] == "\n":
-                    # Unterminated char, stop here
-                    break
-                else:
-                    i += 1
-            yield Token(TokenType.CHAR, content[start:i], start, i)
-            continue
-
-        # Identifier (starts with letter or underscore)
-        if content[i].isalpha() or content[i] == "_":
-            start = i
+        # Identifier
+        elif ch.isalpha() or ch == "_":
             while i < n and (content[i].isalnum() or content[i] == "_"):
                 i += 1
             yield Token(TokenType.IDENTIFIER, content[start:i], start, i)
-            continue
 
-        # Number (including hex, octal, float)
-        if content[i].isdigit():
-            start = i
-            # Handle hex
-            if content[i] == "0" and i + 1 < n and content[i + 1] in "xX":
+        # Number
+        elif ch.isdigit():
+            if ch == "0" and i + 1 < n and content[i + 1] in "xX":
                 i += 2
-                while i < n and (content[i].isdigit() or content[i] in "abcdefABCDEF"):
+                while i < n and content[i] in "0123456789abcdefABCDEF":
                     i += 1
             else:
-                while i < n and (content[i].isdigit() or content[i] in ".eEfFlLuU+-"):
-                    # Check for valid float/exponent notation
-                    if content[i] in "+-" and i > 0 and content[i - 1] not in "eE":
+                while i < n and content[i] in "0123456789.eEfFlLuU+-":
+                    if content[i] in "+-" and content[i - 1] not in "eE":
                         break
                     i += 1
             yield Token(TokenType.OTHER, content[start:i], start, i)
-            continue
 
-        # Everything else (operators, punctuation)
-        yield Token(TokenType.OTHER, content[i], i, i + 1)
-        i += 1
+        # Everything else
+        else:
+            i += 1
+            yield Token(TokenType.OTHER, content[start:i], start, i)
 
 
 def rename_symbols_safe(
@@ -179,24 +144,17 @@ def rename_symbols_safe(
         >>> rename_symbols_safe(code, "sqlite3", "my_sqlite3")
         'my_sqlite3Init(); // calls sqlite3Init'
     """
-    result_parts: list[str] = []
+    def rename_identifier(value: str) -> str:
+        if whole_word:
+            if value.startswith(old_prefix):
+                return new_prefix + value[len(old_prefix):]
+            return value
+        return value.replace(old_prefix, new_prefix)
 
-    for token in tokenize_c(content):
-        if token.type == TokenType.IDENTIFIER:
-            # Only rename identifiers
-            if whole_word:
-                # Check if the identifier starts with the prefix
-                if token.value.startswith(old_prefix):
-                    result_parts.append(new_prefix + token.value[len(old_prefix) :])
-                else:
-                    result_parts.append(token.value)
-            else:
-                result_parts.append(token.value.replace(old_prefix, new_prefix))
-        else:
-            # Preserve everything else unchanged
-            result_parts.append(token.value)
-
-    return "".join(result_parts)
+    return "".join(
+        rename_identifier(tok.value) if tok.type == TokenType.IDENTIFIER else tok.value
+        for tok in tokenize_c(content)
+    )
 
 
 def rename_symbol_exact(content: str, old_name: str, new_name: str) -> str:

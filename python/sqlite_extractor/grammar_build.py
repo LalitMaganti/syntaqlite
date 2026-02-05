@@ -27,6 +27,20 @@ class LemonGrammarOutput:
     rules: list[str] = field(default_factory=list)
 
 
+def _parse_symbol_line(line: str) -> list[tuple[int, str]]:
+    """Parse a symbol line from lemon -g output.
+
+    Lines look like: "//   0 $                      162 INDEX"
+    Each line has pairs of (id, name).
+    """
+    parts = line[2:].split()  # Strip leading "//"
+    symbols = []
+    for i in range(0, len(parts) - 1, 2):
+        if parts[i].isdigit():
+            symbols.append((int(parts[i]), parts[i + 1]))
+    return symbols
+
+
 def parse_lemon_g_output(output: str) -> LemonGrammarOutput:
     """Parse the output of lemon -g.
 
@@ -37,47 +51,23 @@ def parse_lemon_g_output(output: str) -> LemonGrammarOutput:
         LemonGrammarOutput with terminals, nonterminals, and rules.
     """
     result = LemonGrammarOutput()
-    lines = output.strip().split("\n")
-
     in_symbols = False
-    in_rules = False
 
-    for line in lines:
-        # Symbol table section
+    for line in output.strip().split("\n"):
         if line.startswith("// Symbols:"):
             in_symbols = True
-            continue
-
-        if in_symbols and line.startswith("//"):
-            # Parse symbol line like: "//   0 $                      162 INDEX"
-            # Each line has two columns of symbols
-            parts = line[2:].split()
-            i = 0
-            while i < len(parts):
-                if i + 1 < len(parts) and parts[i].isdigit():
-                    sym_id = int(parts[i])
-                    sym_name = parts[i + 1]
-                    # Terminals have IDs < first nonterminal
-                    # The $ symbol (ID 0) is special, skip it
-                    # Nonterminals are lowercase, terminals are uppercase or symbols
-                    if sym_name != "$":
-                        if sym_name[0].islower():
-                            result.nonterminals.append(sym_name)
-                        else:
-                            result.terminals.append(sym_name)
-                    i += 2
+        elif in_symbols and line.startswith("//"):
+            for _, name in _parse_symbol_line(line):
+                if name == "$":
+                    continue
+                if name[0].islower():
+                    result.nonterminals.append(name)
                 else:
-                    i += 1
-            continue
-
-        # Rules section (lines with ::=)
-        if "::=" in line:
+                    result.terminals.append(name)
+        elif "::=" in line:
             in_symbols = False
-            in_rules = True
             result.rules.append(line.strip())
-            continue
-
-        if in_rules and line.strip() and not line.startswith("//"):
+        elif result.rules and line.strip() and not line.startswith("//"):
             result.rules.append(line.strip())
 
     return result
@@ -96,21 +86,11 @@ def split_extension_grammar(extension_grammar: str) -> tuple[str, str]:
     Returns:
         Tuple of (directives, rules).
     """
-    directives = []
-    rules = []
-
-    for line in extension_grammar.split('\n'):
-        stripped = line.strip()
-        # Skip empty lines and comments
-        if not stripped or stripped.startswith('//'):
-            continue
-        # Rules contain ::=
-        if '::=' in line:
-            rules.append(line)
-        # Directives start with %
-        elif stripped.startswith('%'):
-            directives.append(line)
-
+    lines = extension_grammar.split('\n')
+    # Filter out empty lines and comments
+    meaningful = [ln for ln in lines if ln.strip() and not ln.strip().startswith('//')]
+    directives = [ln for ln in meaningful if ln.strip().startswith('%') and '::=' not in ln]
+    rules = [ln for ln in meaningful if '::=' in ln]
     return '\n'.join(directives), '\n'.join(rules)
 
 

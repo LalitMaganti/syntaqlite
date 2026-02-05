@@ -89,27 +89,19 @@ def extract_array(content: str, array_pattern: str) -> str:
         return ""
 
     start = match.start()
-    # Find the closing }; for the array
     brace_count = 0
-    in_array = False
-    end = start
 
     for i, char in enumerate(content[start:], start):
         if char == "{":
             brace_count += 1
-            in_array = True
         elif char == "}":
             brace_count -= 1
-            if in_array and brace_count == 0:
-                # Find the semicolon
+            if brace_count == 0:
                 semicolon = content.find(";", i)
-                if semicolon != -1:
-                    end = semicolon + 1
-                else:
-                    end = i + 1
-                break
+                end = semicolon + 1 if semicolon != -1 else i + 1
+                return content[start:end].strip()
 
-    return content[start:end].strip()
+    return ""
 
 
 def extract_parser_data(parse_c_content: str) -> ParserData:
@@ -121,74 +113,22 @@ def extract_parser_data(parse_c_content: str) -> ParserData:
     Returns:
         ParserData containing all extracted sections.
     """
-    data = ParserData()
+    # Array patterns: (field_name, regex_pattern)
+    arrays = [
+        ("fallback_table", r"static const YYCODETYPE yyFallback\[\]"),
+        ("token_names", r"static const char \*const yyTokenName\[\]"),
+        ("rule_names", r"static const char \*const yyRuleName\[\]"),
+        ("rule_info_lhs", r"static const YYCODETYPE yyRuleInfoLhs\[\]"),
+        ("rule_info_nrhs", r"static const signed char yyRuleInfoNRhs\[\]"),
+    ]
 
-    # Extract token definitions (#define TK_*)
-    token_defines = []
-    for match in re.finditer(r"^#define TK_\w+\s+\d+", parse_c_content, re.MULTILINE):
-        token_defines.append(match.group(0))
-    data.token_defines = "\n".join(token_defines)
-
-    # Extract control #defines
-    control_section = extract_section(
-        parse_c_content,
-        CONTROL_DEFS_START,
-        CONTROL_DEFS_END,
+    return ParserData(
+        token_defines="\n".join(re.findall(r"^#define TK_\w+\s+\d+", parse_c_content, re.MULTILINE)),
+        control_defines=extract_section(parse_c_content, CONTROL_DEFS_START, CONTROL_DEFS_END),
+        parsing_tables=extract_section(parse_c_content, PARSING_TABLES_START, PARSING_TABLES_END),
+        reduce_actions=extract_section(parse_c_content, REDUCE_ACTIONS_START, REDUCE_ACTIONS_END),
+        **{name: extract_array(parse_c_content, pattern) for name, pattern in arrays},
     )
-    data.control_defines = control_section
-
-    # Extract parsing tables
-    tables_section = extract_section(
-        parse_c_content,
-        PARSING_TABLES_START,
-        PARSING_TABLES_END,
-    )
-    data.parsing_tables = tables_section
-
-    # Extract fallback table
-    fallback = extract_array(
-        parse_c_content,
-        r"static const YYCODETYPE yyFallback\[\]",
-    )
-    data.fallback_table = fallback
-
-    # Extract token names
-    token_names = extract_array(
-        parse_c_content,
-        r"static const char \*const yyTokenName\[\]",
-    )
-    data.token_names = token_names
-
-    # Extract rule names
-    rule_names = extract_array(
-        parse_c_content,
-        r"static const char \*const yyRuleName\[\]",
-    )
-    data.rule_names = rule_names
-
-    # Extract rule info LHS
-    rule_lhs = extract_array(
-        parse_c_content,
-        r"static const YYCODETYPE yyRuleInfoLhs\[\]",
-    )
-    data.rule_info_lhs = rule_lhs
-
-    # Extract rule info NRhs
-    rule_nrhs = extract_array(
-        parse_c_content,
-        r"static const signed char yyRuleInfoNRhs\[\]",
-    )
-    data.rule_info_nrhs = rule_nrhs
-
-    # Extract reduce actions (the switch cases)
-    reduce_section = extract_section(
-        parse_c_content,
-        REDUCE_ACTIONS_START,
-        REDUCE_ACTIONS_END,
-    )
-    data.reduce_actions = reduce_section
-
-    return data
 
 
 def format_parser_data_header(data: ParserData) -> str:

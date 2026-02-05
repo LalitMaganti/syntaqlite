@@ -168,7 +168,7 @@ def generate_parser_data(
         grammar_path.write_text(grammar_content)
 
         # Generate modified lempar.c template
-        lempar_content = runner.get_lempar_template().decode("utf-8")
+        lempar_content = runner.get_lempar_path().read_text()
         modified_lempar = transform_to_base_template(lempar_content)
         lempar_path = tmpdir_path / "lempar.c"
         lempar_path.write_text(modified_lempar)

@@ -26,16 +26,6 @@ class FileGenerator:
     """Generator for C files with optional include guards.
 
     For headers, provide a guard name. For source files, leave guard as None.
-
-    Example:
-        # Header file
-        gen = FileGenerator(
-            guard="SYNTAQLITE_SRC_TOKENS_H",
-            description="Token definitions",
-        )
-
-        # Source file
-        gen = FileGenerator(description="Implementation")
     """
 
     guard: str | None = None
@@ -46,10 +36,7 @@ class FileGenerator:
 
     def generate(self, content: str) -> str:
         """Generate a complete file with optional guards."""
-        parts = []
-
-        # Opening comment block
-        parts.append("/*\n")
+        parts = ["/*\n"]
         if self.use_blessing:
             parts.append(SQLITE_BLESSING)
         if self.description:
@@ -58,29 +45,21 @@ class FileGenerator:
             parts.append(f"** DO NOT EDIT - regenerate with: {self.regenerate_cmd}\n")
         parts.append("*/\n")
 
-        # Include guard (headers only)
         if self.guard:
-            parts.append(f"#ifndef {self.guard}\n")
-            parts.append(f"#define {self.guard}\n\n")
+            parts.append(f"#ifndef {self.guard}\n#define {self.guard}\n\n")
         else:
             parts.append("\n")
 
-        # Includes
         for inc in self.includes:
-            if inc.startswith("<"):
-                parts.append(f"#include {inc}\n")
-            else:
-                parts.append(f'#include "{inc}"\n')
+            fmt = "#include {}\n" if inc.startswith("<") else '#include "{}"\n'
+            parts.append(fmt.format(inc))
         if self.includes:
             parts.append("\n")
 
-        # Main content
         content = content.strip()
         if content:
-            parts.append(content)
-            parts.append("\n")
+            parts.append(f"{content}\n")
 
-        # Close guard (headers only)
         if self.guard:
             parts.append(f"\n#endif /* {self.guard} */\n")
 

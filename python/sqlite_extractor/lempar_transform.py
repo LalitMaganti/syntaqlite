@@ -183,85 +183,49 @@ def _wrap_section(
 def _transform_reduce_switch(content: str) -> str:
     """Transform the reduce switch to add extension fallthrough.
 
-    Changes:
-    ```
-    switch( yyruleno ){
-    /********** Begin reduce actions ***********/
-    %%
-    /********** End reduce actions *************/
-    };
-    ```
-
-    To:
-    ```
-    switch( yyruleno ){
-    #ifndef _SYNTAQLITE_EXTERNAL_PARSER
-    /********** Begin reduce actions ***********/
-    %%
-    /********** End reduce actions *************/
-    #else
-      default:
-        syntaqlite_extension_reduce(yypParser, yyruleno, yymsp, yyLookahead,
-                                    yyLookaheadToken ParseCTX_PARAM);
-        break;
-    #endif
-    };
-    ```
+    Wraps the reduce actions section with preprocessor guards and adds
+    a default case that calls syntaqlite_extension_reduce() when using
+    external parser data.
     """
-    # Find the reduce actions section
-    begin_marker = REDUCE_ACTIONS_START
-    end_marker = REDUCE_ACTIONS_END
-
-    begin_pos = content.find(begin_marker)
+    begin_pos = content.find(REDUCE_ACTIONS_START)
     if begin_pos == -1:
         return content
 
-    end_pos = content.find(end_marker, begin_pos)
+    end_pos = content.find(REDUCE_ACTIONS_END, begin_pos)
     if end_pos == -1:
         return content
 
-    # Find the switch statement before begin_marker
+    # Verify we're inside a switch(yyruleno) statement
     switch_search_start = max(0, begin_pos - 200)
-    switch_pattern = r"switch\s*\(\s*yyruleno\s*\)\s*\{"
-    switch_match = re.search(switch_pattern, content[switch_search_start:begin_pos])
-    if not switch_match:
+    if not re.search(r"switch\s*\(\s*yyruleno\s*\)\s*\{", content[switch_search_start:begin_pos]):
         return content
 
-    # Find the closing brace and semicolon after end_marker
-    close_search_start = end_pos + len(end_marker)
-    # Look for }; pattern that closes the switch
+    # Find the closing }; after the reduce section
+    close_search_start = end_pos + len(REDUCE_ACTIONS_END)
     close_match = re.search(r"\s*\};", content[close_search_start:close_search_start + 50])
     if not close_match:
         return content
 
-    # Calculate actual positions
-    switch_pos = switch_search_start + switch_match.end()  # After the {
-    close_pos = close_search_start + close_match.start()  # Before the };
-
-    # Find start of line containing begin_marker
+    # Find line boundaries around the reduce section
     line_start = content.rfind("\n", 0, begin_pos) + 1
-
-    # Find end of line containing end_marker
     line_end = content.find("\n", end_pos)
     if line_end == -1:
         line_end = len(content)
 
-    # Build the transformed section
-    before = content[:line_start]
-    reduce_section = content[line_start : line_end + 1]
-    after = content[close_pos:]  # Includes the };
-
+    # Extract the reduce section and wrap it
+    reduce_section = content[line_start:line_end + 1]
     transformed = (
         f"#ifndef {EXTERNAL_PARSER_GUARD}\n"
-        + reduce_section
-        + "#else\n"
-        + "  default:\n"
-        + "    syntaqlite_extension_reduce(yypParser, yyruleno, yymsp, yyLookahead,\n"
-        + "                                yyLookaheadToken ParseCTX_PARAM);\n"
-        + "    break;\n"
-        + f"#endif /* {EXTERNAL_PARSER_GUARD} */\n"
+        f"{reduce_section}"
+        f"#else\n"
+        f"  default:\n"
+        f"    syntaqlite_extension_reduce(yypParser, yyruleno, yymsp, yyLookahead,\n"
+        f"                                yyLookaheadToken ParseCTX_PARAM);\n"
+        f"    break;\n"
+        f"#endif /* {EXTERNAL_PARSER_GUARD} */\n"
     )
 
-    return before + transformed + after
+    close_pos = close_search_start + close_match.start()
+    return content[:line_start] + transformed + content[close_pos:]
 
 
