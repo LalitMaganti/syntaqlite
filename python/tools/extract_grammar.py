@@ -4,62 +4,25 @@
 """Extract grammar rules from SQLite parse.y using Lemon.
 
 This script:
-1. Builds lemon into out/.extract_grammar/ if needed
+1. Builds lemon using the shared ToolRunner
 2. Runs lemon -g on parse.y to preprocess the grammar
 3. Extracts the grammar rules to a clean output file
 """
 import argparse
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent.parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from python.sqlite_extractor import ToolRunner
+
 THIRD_PARTY_DIR = ROOT_DIR / "third_party"
 SQLITE_SRC_DIR = THIRD_PARTY_DIR / "src" / "sqlite"
 PARSE_Y_PATH = SQLITE_SRC_DIR / "src" / "parse.y"
 OUTPUT_DIR = THIRD_PARTY_DIR / "src" / "sqlite_grammar"
-
-# Dedicated build directory for this script
-TOOLS_BUILD_DIR = ROOT_DIR / "out" / ".extract_grammar"
-
-
-def build_lemon() -> Path:
-    """Build lemon into out/.extract_grammar/ and return its path."""
-    lemon_path = TOOLS_BUILD_DIR / "lemon"
-    if os.name == "nt":
-        lemon_path = TOOLS_BUILD_DIR / "lemon.exe"
-
-    gn = ROOT_DIR / "tools" / "dev" / "gn"
-    ninja = ROOT_DIR / "tools" / "dev" / "ninja"
-
-    # Run gn gen if build.ninja doesn't exist
-    build_ninja = TOOLS_BUILD_DIR / "build.ninja"
-    if not build_ninja.exists():
-        print(f"Configuring build in {TOOLS_BUILD_DIR}...")
-        TOOLS_BUILD_DIR.mkdir(parents=True, exist_ok=True)
-        subprocess.run(
-            [str(gn), "gen", str(TOOLS_BUILD_DIR), "--args=is_debug=false"],
-            capture_output=True,
-            text=True
-        )
-        # Check if build.ninja was created (gn may return non-zero even on success)
-        if not build_ninja.exists():
-            print("Failed to configure build", file=sys.stderr)
-            sys.exit(1)
-
-    # Build lemon
-    print("Building lemon...")
-    result = subprocess.run(
-        [str(ninja), "-C", str(TOOLS_BUILD_DIR), "lemon"],
-        capture_output=True,
-        text=True
-    )
-    if result.returncode != 0:
-        print(f"Failed to build lemon: {result.stderr}", file=sys.stderr)
-        sys.exit(1)
-
-    return lemon_path
 
 
 def preprocess_grammar(lemon_path: Path, grammar_path: Path, defines: list = None) -> str:
@@ -130,8 +93,9 @@ def main():
         print("Run tools/dev/install-build-deps first.", file=sys.stderr)
         return 1
 
-    # Build lemon
-    lemon_path = build_lemon()
+    # Build lemon using shared ToolRunner
+    runner = ToolRunner(root_dir=ROOT_DIR)
+    lemon_path = runner.build("lemon")
 
     # Preprocess grammar
     print(f"Extracting grammar from {args.grammar}...")
