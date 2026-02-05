@@ -48,11 +48,13 @@ from python.sqlite_extractor import (
     SourceFileGenerator,
     ToolRunner,
     SQLITE_BLESSING,
-    KEYWORDHASH_SCORE_MARKER,
-    KEYWORD_CODE_FUNC_MARKER,
     create_parser_symbol_rename_pipeline,
     create_keywordhash_rename_pipeline,
 )
+
+# Keywordhash processing markers
+KEYWORDHASH_SCORE_MARKER = "/* Hash score:"
+KEYWORD_CODE_FUNC_MARKER = "static int keywordCode("
 from python.sqlite_extractor.generators import extract_tk_defines
 from python.sqlite_extractor.grammar_build import (
     build_syntaqlite_grammar,

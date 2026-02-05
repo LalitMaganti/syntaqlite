@@ -44,11 +44,13 @@ from python.sqlite_extractor import (
     extract_parser_data,
     format_parser_data_header,
     format_extension_reduce_function,
-    KEYWORDHASH_SCORE_MARKER,
-    KEYWORD_CODE_FUNC_MARKER,
     create_parser_symbol_rename_pipeline,
     create_keywordhash_rename_pipeline,
 )
+
+# Keywordhash processing markers
+KEYWORDHASH_SCORE_MARKER = "/* Hash score:"
+KEYWORD_CODE_FUNC_MARKER = "static int keywordCode("
 from python.sqlite_extractor.generators import extract_tk_defines
 
 

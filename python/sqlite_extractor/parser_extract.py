@@ -12,14 +12,13 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from .constants import (
-    CONTROL_DEFS_START,
-    CONTROL_DEFS_END,
-    PARSING_TABLES_START,
-    PARSING_TABLES_END,
-    REDUCE_ACTIONS_START,
-    REDUCE_ACTIONS_END,
-)
+# Lemon-generated section markers
+CONTROL_DEFS_START = "/************* Begin control #defines *****************************************/"
+CONTROL_DEFS_END = "/************* End control #defines *******************************************/"
+PARSING_TABLES_START = "/*********** Begin parsing tables **********************************************/"
+PARSING_TABLES_END = "/********** End of lemon-generated parsing tables *****************************/"
+REDUCE_ACTIONS_START = "/********** Begin reduce actions **********************************************/"
+REDUCE_ACTIONS_END = "/********** End reduce actions ************************************************/"
 
 
 @dataclass

@@ -16,26 +16,31 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .constants import (
-    TOKEN_DEFS_START,
-    TOKEN_DEFS_END,
-    CONTROL_DEFS_START,
-    CONTROL_DEFS_END,
-    PARSING_TABLES_START,
-    PARSING_TABLES_END,
-    REDUCE_ACTIONS_START,
-    REDUCE_ACTIONS_END,
-    FALLBACK_ARRAY_DECL,
-    TOKEN_NAMES_ARRAY_DECL,
-    RULE_NAMES_ARRAY_DECL,
-    RULE_INFO_LHS_ARRAY_DECL,
-    RULE_INFO_NRHS_ARRAY_DECL,
-    EXTERNAL_PARSER_GUARD,
-    PARSER_DATA_FILE_MACRO,
-    YYFALLBACK_IFDEF,
-    YYCOVERAGE_NDEBUG_IFDEF,
-    NDEBUG_IFNDEF,
-)
+# Lemon-generated section markers
+TOKEN_DEFS_START = "/* These constants specify the various numeric values for terminal symbols."
+TOKEN_DEFS_END = "/**************** End token definitions ***************************************/"
+CONTROL_DEFS_START = "/************* Begin control #defines *****************************************/"
+CONTROL_DEFS_END = "/************* End control #defines *******************************************/"
+PARSING_TABLES_START = "/*********** Begin parsing tables **********************************************/"
+PARSING_TABLES_END = "/********** End of lemon-generated parsing tables *****************************/"
+REDUCE_ACTIONS_START = "/********** Begin reduce actions **********************************************/"
+REDUCE_ACTIONS_END = "/********** End reduce actions ************************************************/"
+
+# Array declarations
+FALLBACK_ARRAY_DECL = "static const YYCODETYPE yyFallback[] = {"
+TOKEN_NAMES_ARRAY_DECL = "static const char *const yyTokenName[] = {"
+RULE_NAMES_ARRAY_DECL = "static const char *const yyRuleName[] = {"
+RULE_INFO_LHS_ARRAY_DECL = "static const YYCODETYPE yyRuleInfoLhs[] = {"
+RULE_INFO_NRHS_ARRAY_DECL = "static const signed char yyRuleInfoNRhs[] = {"
+
+# Preprocessor guards and macros
+EXTERNAL_PARSER_GUARD = "_SYNTAQLITE_EXTERNAL_PARSER"
+PARSER_DATA_FILE_MACRO = "SYNTAQLITE_PARSER_DATA_FILE"
+
+# Conditional compilation markers
+YYFALLBACK_IFDEF = "#ifdef YYFALLBACK"
+YYCOVERAGE_NDEBUG_IFDEF = "#if defined(YYCOVERAGE) || !defined(NDEBUG)"
+NDEBUG_IFNDEF = "#ifndef NDEBUG"
 
 
 def transform_to_base_template(lempar_content: str) -> str:

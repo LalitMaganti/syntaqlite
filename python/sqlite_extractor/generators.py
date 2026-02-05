@@ -56,33 +56,30 @@ def guard_from_path(path: Path, prefix: str = "SYNTAQLITE") -> str:
 
 
 @dataclass
-class HeaderGenerator:
-    """Generator for C header files with proper guards and formatting.
+class FileGenerator:
+    """Generator for C files with optional include guards.
+
+    For headers, provide a guard name. For source files, leave guard as None.
 
     Example:
-        gen = HeaderGenerator(
+        # Header file
+        gen = FileGenerator(
             guard="SYNTAQLITE_SRC_TOKENS_H",
-            description="Token definitions for SQLite parser",
-            regenerate_cmd="python3 python/tools/extract_tokenizer.py",
+            description="Token definitions",
         )
-        gen.write(output_path, token_defines)
+
+        # Source file
+        gen = FileGenerator(description="Implementation")
     """
 
-    guard: str
+    guard: str | None = None
     description: str = ""
     regenerate_cmd: str = ""
     includes: list[str] = field(default_factory=list)
     use_blessing: bool = True
 
     def generate(self, content: str) -> str:
-        """Generate a complete header file with guards.
-
-        Args:
-            content: The main content of the header.
-
-        Returns:
-            The complete header file content.
-        """
+        """Generate a complete file with optional guards."""
         parts = []
 
         # Opening comment block
@@ -95,9 +92,12 @@ class HeaderGenerator:
             parts.append(f"** DO NOT EDIT - regenerate with: {self.regenerate_cmd}\n")
         parts.append("*/\n")
 
-        # Include guard
-        parts.append(f"#ifndef {self.guard}\n")
-        parts.append(f"#define {self.guard}\n\n")
+        # Include guard (headers only)
+        if self.guard:
+            parts.append(f"#ifndef {self.guard}\n")
+            parts.append(f"#define {self.guard}\n\n")
+        else:
+            parts.append("\n")
 
         # Includes
         for inc in self.includes:
@@ -114,71 +114,48 @@ class HeaderGenerator:
             parts.append(content)
             parts.append("\n")
 
-        # Close guard
-        parts.append(f"\n#endif /* {self.guard} */\n")
+        # Close guard (headers only)
+        if self.guard:
+            parts.append(f"\n#endif /* {self.guard} */\n")
 
         return "".join(parts)
 
     def write(self, path: Path, content: str) -> None:
-        """Generate and write header to a file.
-
-        Args:
-            path: Output file path.
-            content: The main content of the header.
-        """
+        """Generate and write to a file."""
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.generate(content))
         print(f"  Written: {path}")
 
 
-@dataclass
-class SourceFileGenerator:
-    """Generator for C source files.
+def HeaderGenerator(
+    guard: str,
+    description: str = "",
+    regenerate_cmd: str = "",
+    includes: list[str] | None = None,
+    use_blessing: bool = True,
+) -> FileGenerator:
+    """Create a FileGenerator configured for header files."""
+    return FileGenerator(
+        guard=guard,
+        description=description,
+        regenerate_cmd=regenerate_cmd,
+        includes=includes or [],
+        use_blessing=use_blessing,
+    )
 
-    Similar to HeaderGenerator but without include guards.
-    """
 
-    description: str = ""
-    regenerate_cmd: str = ""
-    use_blessing: bool = True
-
-    def generate(self, content: str) -> str:
-        """Generate a complete source file.
-
-        Args:
-            content: The main content of the source file.
-
-        Returns:
-            The complete source file content.
-        """
-        parts = []
-
-        # Opening comment block
-        parts.append("/*\n")
-        if self.use_blessing:
-            parts.append(SQLITE_BLESSING)
-        if self.description:
-            parts.append(f"** {self.description}\n")
-        if self.regenerate_cmd:
-            parts.append(f"** DO NOT EDIT - regenerate with: {self.regenerate_cmd}\n")
-        parts.append("*/\n\n")
-
-        # Main content
-        parts.append(content.strip())
-        parts.append("\n")
-
-        return "".join(parts)
-
-    def write(self, path: Path, content: str) -> None:
-        """Generate and write source file.
-
-        Args:
-            path: Output file path.
-            content: The main content of the source file.
-        """
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(self.generate(content))
-        print(f"  Written: {path}")
+def SourceFileGenerator(
+    description: str = "",
+    regenerate_cmd: str = "",
+    use_blessing: bool = True,
+) -> FileGenerator:
+    """Create a FileGenerator configured for source files."""
+    return FileGenerator(
+        guard=None,
+        description=description,
+        regenerate_cmd=regenerate_cmd,
+        use_blessing=use_blessing,
+    )
 
 
 def format_keyword_table_entry(keyword: str, padding: int = 18) -> str:

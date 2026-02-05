@@ -12,6 +12,55 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from .transforms import Pipeline, SymbolRenameExact
+
+# Keywordhash array symbols that need renaming
+KEYWORDHASH_ARRAY_SYMBOLS = [
+    "zKWText",
+    "aKWHash",
+    "aKWNext",
+    "aKWLen",
+    "aKWOffset",
+    "aKWCode",
+]
+
+
+def create_parser_symbol_rename_pipeline(prefix: str) -> Pipeline:
+    """Create a pipeline for renaming Lemon-generated parser symbols.
+
+    This pipeline renames the public API symbols (Parse*, etc.) and
+    internal symbols (yyParser, yyStackEntry) to use the specified prefix.
+    """
+    sqlite3_prefix = f"{prefix}_sqlite3"
+
+    return Pipeline([
+        # Public API symbols: Parse -> {prefix}_sqlite3Parser
+        SymbolRenameExact("Parse", f"{sqlite3_prefix}Parser"),
+        SymbolRenameExact("ParseAlloc", f"{sqlite3_prefix}ParserAlloc"),
+        SymbolRenameExact("ParseFree", f"{sqlite3_prefix}ParserFree"),
+        SymbolRenameExact("ParseInit", f"{sqlite3_prefix}ParserInit"),
+        SymbolRenameExact("ParseFinalize", f"{sqlite3_prefix}ParserFinalize"),
+        SymbolRenameExact("ParseTrace", f"{sqlite3_prefix}ParserTrace"),
+        SymbolRenameExact("ParseFallback", f"{sqlite3_prefix}ParserFallback"),
+        SymbolRenameExact("ParseCoverage", f"{sqlite3_prefix}ParserCoverage"),
+        SymbolRenameExact("ParseStackPeak", f"{sqlite3_prefix}ParserStackPeak"),
+        # Internal symbols: yyParser -> {prefix}_yyParser
+        SymbolRenameExact("yyParser", f"{prefix}_yyParser"),
+        SymbolRenameExact("yyStackEntry", f"{prefix}_yyStackEntry"),
+    ])
+
+
+def create_keywordhash_rename_pipeline(prefix: str) -> Pipeline:
+    """Create a pipeline for renaming keywordhash array symbols.
+
+    This pipeline renames the six keywordhash arrays (zKWText, aKWHash, etc.)
+    to use the specified prefix.
+    """
+    return Pipeline([
+        SymbolRenameExact(symbol, f"{prefix}_{symbol}")
+        for symbol in KEYWORDHASH_ARRAY_SYMBOLS
+    ])
+
 
 @dataclass
 class ToolRunner:
