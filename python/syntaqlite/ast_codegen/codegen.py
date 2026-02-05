@@ -96,6 +96,9 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef], 
     lines = []
 
     # Header
+    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
+    lines.append("// Licensed under the Apache License, Version 2.0.")
+    lines.append("")
     lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
     lines.append("")
@@ -217,6 +220,9 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines = []
 
     # Header
+    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
+    lines.append("// Licensed under the Apache License, Version 2.0.")
+    lines.append("")
     lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
     lines.append("")
@@ -268,6 +274,9 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines = []
 
     # Header
+    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
+    lines.append("// Licensed under the Apache License, Version 2.0.")
+    lines.append("")
     lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
     lines.append("")
@@ -396,6 +405,9 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef], 
 
     lines = []
 
+    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
+    lines.append("// Licensed under the Apache License, Version 2.0.")
+    lines.append("")
     lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
     lines.append("")

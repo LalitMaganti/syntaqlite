@@ -6,14 +6,13 @@
 //
 // Reads SQL from stdin, parses it using the real parser, and prints the AST.
 
-#include "src/ast/ast_builder.h"
-#include "src/ast/ast_print.h"
-#include "src/syntaqlite_sqlite_defs.h"
-#include "src/sqlite_tokens.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "src/ast/ast_print.h"
+#include "src/syntaqlite_sqlite_defs.h"
+#include "src/sqlite_tokens.h"
 
 // External parser functions (defined in sqlite_parse.c)
 void *syntaqlite_sqlite3ParserAlloc(void *(*mallocProc)(size_t),

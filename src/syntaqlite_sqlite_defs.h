@@ -1,15 +1,9 @@
-/*
-**
-** The author disclaims copyright to this source code.  In place of
-** a legal notice, here is a blessing:
-**
-**    May you do good and not evil.
-**    May you find forgiveness for yourself and forgive others.
-**    May you share freely, never taking more than you give.
-**
-** SQLite compatibility definitions for syntaqlite.
-** Provides type aliases, macros, and structures needed by tokenizer and parser.
-*/
+// Copyright 2025 The syntaqlite Authors. All rights reserved.
+// Licensed under the Apache License, Version 2.0.
+//
+// SQLite compatibility definitions for syntaqlite.
+// Provides type aliases, macros, and structures needed by tokenizer and parser.
+
 #ifndef SYNTAQLITE_SRC_SQLITE_DEFS_H
 #define SYNTAQLITE_SRC_SQLITE_DEFS_H
 

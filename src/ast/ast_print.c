@@ -1,3 +1,6 @@
+// Copyright 2025 The syntaqlite Authors. All rights reserved.
+// Licensed under the Apache License, Version 2.0.
+
 // Generated from data/ast_nodes.py - DO NOT EDIT
 // Regenerate with: python3 python/tools/generate_ast.py
 
