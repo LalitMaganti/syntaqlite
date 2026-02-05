@@ -46,7 +46,6 @@ from python.sqlite_extractor import (
     HeaderGenerator,
     SourceFileGenerator,
     ToolRunner,
-    SQLITE_BLESSING,
     create_parser_symbol_rename_pipeline,
     create_keywordhash_rename_pipeline,
 )

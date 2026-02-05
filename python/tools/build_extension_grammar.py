@@ -38,7 +38,6 @@ if str(ROOT_DIR) not in sys.path:
 from python.sqlite_extractor import (
     ToolRunner,
     HeaderGenerator,
-    SQLITE_BLESSING,
     build_syntaqlite_grammar,
     split_extension_grammar,
     transform_to_base_template,
