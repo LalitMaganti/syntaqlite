@@ -3,12 +3,47 @@
 
 """Test discovery and loading."""
 
+import importlib
+import inspect
 import re
 import sys
+from glob import glob
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from python.syntaqlite.diff_tests.testing import AstTestBlueprint
+from python.syntaqlite.diff_tests.testing import AstTestBlueprint, TestSuite
+
+
+def _discover_test_suites(root_dir: Path) -> List[TestSuite]:
+    """Auto-discover all TestSuite subclasses in tests/ast_diff_tests/*/tests.py.
+
+    Scans for tests.py files in immediate subdirectories of
+    tests/ast_diff_tests/, sorted by directory name for deterministic order.
+
+    Args:
+        root_dir: The project root directory.
+
+    Returns:
+        List of TestSuite instances found across all test modules.
+    """
+    test_base = root_dir / "tests" / "ast_diff_tests"
+    pattern = str(test_base / "*" / "tests.py")
+    suites = []
+
+    for test_file in sorted(glob(pattern)):
+        test_path = Path(test_file)
+        # Convert filesystem path to Python module path:
+        #   tests/ast_diff_tests/select/tests.py -> tests.ast_diff_tests.select.tests
+        relative = test_path.relative_to(root_dir)
+        module_name = str(relative.with_suffix("")).replace("/", ".")
+
+        module = importlib.import_module(module_name)
+
+        for _name, obj in inspect.getmembers(module, inspect.isclass):
+            if issubclass(obj, TestSuite) and obj is not TestSuite:
+                suites.append(obj())
+
+    return suites
 
 
 def load_all_tests(
@@ -17,8 +52,8 @@ def load_all_tests(
 ) -> List[Tuple[str, AstTestBlueprint]]:
     """Load all tests from the test directory.
 
-    Dynamically imports tests/ast_diff_tests/include_index.py and collects
-    all registered test suites.
+    Auto-discovers test suites by scanning tests/ast_diff_tests/*/tests.py
+    for TestSuite subclasses.
 
     Args:
         root_dir: The project root directory.
@@ -31,12 +66,9 @@ def load_all_tests(
     if str(root_dir) not in sys.path:
         sys.path.insert(0, str(root_dir))
 
-    # Import the test index
-    from tests.ast_diff_tests.include_index import fetch_all_diff_tests
-
-    # Collect all tests from all suites
+    # Collect all tests from all auto-discovered suites
     all_tests = []
-    for suite in fetch_all_diff_tests():
+    for suite in _discover_test_suites(root_dir):
         all_tests.extend(suite.fetch())
 
     # Filter if pattern provided

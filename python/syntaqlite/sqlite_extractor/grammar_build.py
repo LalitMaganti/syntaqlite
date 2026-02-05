@@ -105,8 +105,37 @@ def _parse_actions_file(actions_path: Path) -> dict[str, str]:
     return rules
 
 
-# Path to the actions file
-_ACTIONS_PATH = Path(__file__).parent.parent / "ast_codegen" / "ast_actions.y"
+# Directory containing action rule files
+_ACTIONS_DIR = Path(__file__).parent.parent / "ast_codegen" / "ast_actions"
+
+
+def _load_all_actions(actions_dir: Path) -> dict[str, str]:
+    """Load and merge action rules from all .y files in a directory.
+
+    Args:
+        actions_dir: Path to directory containing .y action files.
+
+    Returns:
+        Dict mapping rule signatures to full rule text.
+
+    Raises:
+        ValueError: If duplicate rule signatures are found across files.
+    """
+    merged: dict[str, str] = {}
+    if not actions_dir.is_dir():
+        return merged
+
+    for path in sorted(actions_dir.glob("*.y")):
+        file_rules = _parse_actions_file(path)
+        for sig, text in file_rules.items():
+            if sig in merged:
+                raise ValueError(
+                    f"Duplicate rule signature {sig!r} in {path.name} "
+                    f"(already defined in a previous file)"
+                )
+            merged[sig] = text
+
+    return merged
 
 
 @dataclass
@@ -443,8 +472,8 @@ def _generate_grammar_file(
     if wildcard:
         parts.append(f"%wildcard {wildcard}.\n\n")
 
-    # Load rules with action code from ast_actions.y
-    action_rules = _parse_actions_file(_ACTIONS_PATH)
+    # Load rules with action code from ast_actions/ directory
+    action_rules = _load_all_actions(_ACTIONS_DIR)
 
     # Grammar rules - use action version if available, otherwise bare rule
     parts.append("// Grammar rules\n")

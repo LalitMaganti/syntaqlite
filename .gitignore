@@ -6,3 +6,6 @@
 /compile_commands.json
 
 *.pyc
+
+# Build lock file used by tools/dev/build-lock
+out/.build.lock

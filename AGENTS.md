@@ -24,7 +24,8 @@ tools/dev/setup-all-configs --config mac_debug  # Generate build config
 
 ### Building
 ```bash
-tools/dev/ninja -C out/mac_debug                # Build all targets
+tools/dev/ninja -C out/mac_debug                # Build all targets (single developer)
+tools/dev/build-lock -C out/mac_debug           # Build with file lock (multi-agent)
 out/mac_debug/syntaqlite_unittests              # Run C++ unit tests
 ```
 
@@ -53,7 +54,7 @@ tools/tests/run-ast-diff-tests --filter select --jobs 4   # Filter + parallel
 tools/tests/run-ast-diff-tests --rebaseline               # Print expected outputs
 ```
 
-Test suites live in `tests/ast_diff_tests/` and must be registered in `tests/ast_diff_tests/include_index.py`.
+Test suites are auto-discovered by scanning `tests/ast_diff_tests/*/tests.py` for `TestSuite` subclasses. No registration is needed — just create a directory with a `tests.py` file.
 
 ## Code Style
 
@@ -90,6 +91,7 @@ Strict: `-Wall -Wextra -Werror`, no exceptions, no RTTI by default.
 | `python/tools/check_includes.py` | Validate include paths |
 | `python/tools/fix_include_guards.py` | Fix include guard format |
 | `python/tools/update_gn_version.py` | Update GN binary |
+| `tools/dev/build-lock` | Ninja wrapper with file lock for concurrent agents |
 
 ## Architecture Notes
 

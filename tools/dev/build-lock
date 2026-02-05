@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+# Copyright 2025 The syntaqlite Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+
+"""Wraps ninja with a file lock so concurrent builds queue rather than collide.
+
+Acquires an exclusive lock on out/.build.lock before invoking ninja, with a
+5-minute timeout. All arguments are forwarded to ninja as-is:
+
+    tools/dev/build-lock -C out/mac_debug [targets...]
+"""
+
+import fcntl
+import os
+import signal
+import subprocess
+import sys
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+LOCK_PATH = os.path.join(ROOT_DIR, "out", ".build.lock")
+LOCK_TIMEOUT_SECS = 5 * 60
+
+sys.path.insert(0, ROOT_DIR)
+
+from python.tools.run_third_party_binary import get_platform_dir
+
+
+def _timeout_handler(signum, frame):
+    raise TimeoutError(
+        f"Timed out after {LOCK_TIMEOUT_SECS}s waiting for build lock: {LOCK_PATH}"
+    )
+
+
+def _find_ninja():
+    os_dir, ext = get_platform_dir()
+    if os_dir is None:
+        print("OS not supported")
+        sys.exit(1)
+    path = os.path.join(ROOT_DIR, "third_party", "bin", os_dir, "ninja") + ext
+    if not os.path.exists(path):
+        print("ninja not found: %s" % path)
+        print("Run tools/dev/install-build-deps to install build dependencies.")
+        sys.exit(1)
+    return path
+
+
+def main():
+    ninja = _find_ninja()
+    os.makedirs(os.path.dirname(LOCK_PATH), exist_ok=True)
+    lock_fd = open(LOCK_PATH, "w")
+    try:
+        old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
+        signal.alarm(LOCK_TIMEOUT_SECS)
+        try:
+            fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        finally:
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, old_handler)
+
+        result = subprocess.run([ninja] + sys.argv[1:])
+        sys.exit(result.returncode)
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        lock_fd.close()
+
+
+if __name__ == "__main__":
+    main()
