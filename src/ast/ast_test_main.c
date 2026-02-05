@@ -2,9 +2,10 @@
 // Licensed under the Apache License, Version 2.0.
 
 // Test binary for AST diff tests.
-// Usage: ast_test < input.sql
+// Usage: ast_test [--trace] < input.sql
 //
 // Reads SQL from stdin, parses it using the real parser, and prints the AST.
+// Use --trace to enable Lemon parser tracing on stderr.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,6 +21,9 @@ void *syntaqlite_sqlite3ParserAlloc(void *(*mallocProc)(size_t),
 void syntaqlite_sqlite3Parser(void *parser, int tokenType, SyntaqliteToken token,
                                SyntaqliteParseContext *pCtx);
 void syntaqlite_sqlite3ParserFree(void *parser, void (*freeProc)(void *));
+#ifndef NDEBUG
+void syntaqlite_sqlite3ParserTrace(FILE *TraceFILE, char *zTracePrompt);
+#endif
 
 // External tokenizer function (defined in sqlite_tokenize.c)
 i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType);
@@ -61,7 +65,18 @@ static void on_stack_overflow(SyntaqliteParseContext *ctx) {
   fprintf(stderr, "Error: Parser stack overflow\n");
 }
 
-int main(void) {
+int main(int argc, char **argv) {
+  // Check for --trace flag
+  int trace = 0;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "--trace") == 0) {
+      trace = 1;
+    } else {
+      fprintf(stderr, "Usage: %s [--trace] < input.sql\n", argv[0]);
+      return 1;
+    }
+  }
+
   // Read input
   size_t len;
   char *sql = read_stdin(&len);
@@ -103,6 +118,14 @@ int main(void) {
     free(sql);
     return 1;
   }
+
+#ifndef NDEBUG
+  if (trace) {
+    syntaqlite_sqlite3ParserTrace(stderr, "PARSER: ");
+  }
+#else
+  (void)trace;
+#endif
 
   // Tokenize and parse
   // Following Perfetto's approach: synthesize SEMI at EOF if needed
