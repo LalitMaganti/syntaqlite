@@ -35,7 +35,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from python.sqlite_extractor import (
+from python.syntaqlite.sqlite_extractor import (
     ToolRunner,
     HeaderGenerator,
     build_syntaqlite_grammar,
@@ -51,7 +51,7 @@ from python.sqlite_extractor import (
 # Keywordhash processing markers
 KEYWORDHASH_SCORE_MARKER = "/* Hash score:"
 KEYWORD_CODE_FUNC_MARKER = "static int keywordCode("
-from python.sqlite_extractor.generators import extract_tk_defines
+from python.syntaqlite.sqlite_extractor.generators import extract_tk_defines
 
 
 def parse_extension_keywords(grammar_path: Path) -> list[str]:

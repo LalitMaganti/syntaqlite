@@ -18,6 +18,97 @@ if TYPE_CHECKING:
     from .tools import ToolRunner
 
 
+def _parse_actions_file(actions_path: Path) -> dict[str, str]:
+    """Parse a .y file with action code and extract rules with their full text.
+
+    Args:
+        actions_path: Path to .y file with action code.
+
+    Returns:
+        Dict mapping rule signatures (without type annotations) to full rule text
+        (including type annotations and action code).
+    """
+    if not actions_path.exists():
+        return {}
+
+    content = actions_path.read_text()
+    rules = {}
+
+    # Parse rules with action blocks
+    # Pattern: rule(A) ::= rhs. { action code }
+    # Need to handle multi-line action blocks
+
+    i = 0
+    while i < len(content):
+        # Skip comments
+        if content[i:i+2] == '//':
+            end = content.find('\n', i)
+            i = end + 1 if end != -1 else len(content)
+            continue
+
+        # Look for ::=
+        rule_start = content.find('::=', i)
+        if rule_start == -1:
+            break
+
+        # Find the LHS (before ::=)
+        lhs_start = content.rfind('\n', 0, rule_start)
+        if lhs_start == -1:
+            lhs_start = 0
+        else:
+            lhs_start += 1
+
+        lhs = content[lhs_start:rule_start].strip()
+
+        # Find the action block { ... }
+        action_start = content.find('{', rule_start)
+        if action_start == -1:
+            i = rule_start + 3
+            continue
+
+        # Find the RHS (between ::= and {), excluding the .
+        rhs_text = content[rule_start + 3:action_start].strip()
+        if rhs_text.endswith('.'):
+            rhs_text = rhs_text[:-1].strip()
+
+        # Find matching closing brace
+        brace_depth = 1
+        j = action_start + 1
+        while j < len(content) and brace_depth > 0:
+            if content[j] == '{':
+                brace_depth += 1
+            elif content[j] == '}':
+                brace_depth -= 1
+            j += 1
+
+        action_code = content[action_start:j].strip()
+
+        # Build full rule text with type annotations and action code
+        full_rule = f"{lhs} ::= {rhs_text}. {action_code}"
+
+        # Build signature without type annotations for matching
+        # "lhs(A)" -> "lhs", "rhs1(B) rhs2(C)" -> "rhs1 rhs2"
+        def strip_annotations(s):
+            return re.sub(r'\([A-Z]\)', '', s).strip()
+
+        lhs_clean = strip_annotations(lhs)
+        rhs_clean = ' '.join(strip_annotations(tok) for tok in rhs_text.split())
+
+        signature = f"{lhs_clean} ::= {rhs_clean}".strip()
+        if signature.endswith(' ::='):
+            signature = signature[:-4] + ' ::='  # Handle empty RHS
+
+        rules[signature] = full_rule
+
+        i = j
+
+    return rules
+
+
+# Path to the actions file
+_ACTIONS_PATH = Path(__file__).parent.parent / "ast_codegen" / "ast_actions.y"
+
+
 @dataclass
 class LemonGrammarOutput:
     """Parsed output from lemon -g."""
@@ -279,6 +370,7 @@ def _generate_grammar_file(
     # Include section with our defs and critical defines
     parts.append(f"""%include {{
 #include "src/syntaqlite_sqlite_defs.h"
+#include "src/ast/ast_builder.h"
 
 #define YYNOERRORRECOVERY 1
 #define YYPARSEFREENEVERNULL 1
@@ -287,8 +379,9 @@ def _generate_grammar_file(
 """)
 
     # Token type and extra context
+    # Terminals are SyntaqliteToken, non-terminals are u32 (node IDs)
     parts.append(f"""%token_type {{SyntaqliteToken}}
-%default_type {{SyntaqliteToken}}
+%default_type {{u32}}
 %extra_context {{{prefix.capitalize()}ParseContext *pCtx}}
 
 %syntax_error {{
@@ -343,10 +436,18 @@ def _generate_grammar_file(
     if wildcard:
         parts.append(f"%wildcard {wildcard}.\n\n")
 
-    # Grammar rules
+    # Load rules with action code from ast_actions.y
+    action_rules = _parse_actions_file(_ACTIONS_PATH)
+
+    # Grammar rules - use action version if available, otherwise bare rule
     parts.append("// Grammar rules\n")
     for rule in rules:
-        parts.append(rule + "\n")
+        # Extract signature from the bare rule (remove trailing .)
+        bare_sig = rule.rstrip('.')
+        if bare_sig in action_rules:
+            parts.append(action_rules[bare_sig] + "\n")
+        else:
+            parts.append(rule + "\n")
 
     # Tokenizer-only tokens that must be declared but aren't used in rules
     # These must be at the end per SQLite's requirements

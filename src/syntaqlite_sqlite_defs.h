@@ -46,6 +46,12 @@ typedef struct SyntaqliteToken {
 } SyntaqliteToken;
 
 /*
+** Forward declarations for AST types.
+*/
+struct SyntaqliteAst;
+struct SyntaqliteAstContext;
+
+/*
 ** Parse context passed to the parser.
 ** Users can set callbacks for error handling.
 */
@@ -54,6 +60,9 @@ struct SyntaqliteParseContext {
   void *userData;                                  /* User-defined data */
   void (*onSyntaxError)(SyntaqliteParseContext *); /* Syntax error callback */
   void (*onStackOverflow)(SyntaqliteParseContext *); /* Stack overflow callback */
+  struct SyntaqliteAstContext *astCtx;             /* AST building context */
+  const char *zSql;                                /* Original SQL text */
+  u32 root;                                        /* Root AST node ID */
 };
 
 /*

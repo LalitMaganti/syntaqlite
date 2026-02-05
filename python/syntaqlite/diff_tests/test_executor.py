@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from python.diff_tests.testing import AstTestBlueprint
+from python.syntaqlite.diff_tests.testing import AstTestBlueprint
 
 
 def normalize_output(text: str) -> str:

@@ -3,24 +3,72 @@
 
 """SELECT statement AST tests."""
 
-from python.diff_tests.testing import AstTestBlueprint, TestSuite
+from python.syntaqlite.diff_tests.testing import AstTestBlueprint, TestSuite
 
 
 class SelectBasic(TestSuite):
     """Basic SELECT statement tests."""
 
-    def test_simple(self):
+    def test_integer_literal(self):
         return AstTestBlueprint(
-            sql="SELECT id FROM users",
-            out="""
-                SelectStmt
-                  columns:
-                    ResultColumn
-                      expr:
-                        ColumnRef
-                          name: "id"
-                  from:
-                    TableRef
-                      name: "users"
-            """,
+            sql="SELECT 1",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      Literal
+        literal_type: 0
+        source: "1"
+""",
+        )
+
+    def test_float_literal(self):
+        return AstTestBlueprint(
+            sql="SELECT 3.14",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      Literal
+        literal_type: 1
+        source: "3.14"
+""",
+        )
+
+    def test_string_literal(self):
+        return AstTestBlueprint(
+            sql="SELECT 'hello'",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      Literal
+        literal_type: 2
+        source: "'hello'"
+""",
+        )
+
+    def test_null_literal(self):
+        return AstTestBlueprint(
+            sql="SELECT NULL",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      Literal
+        literal_type: 4
+        source: "NULL"
+""",
         )

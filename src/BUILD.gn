@@ -24,12 +24,27 @@ source_set("sqlite") {
   configs += [ ":lemon_generated" ]
 }
 
-executable("syntaqlite_unittests") {
+# AST node types, builder functions, and printer.
+# Regenerate with: python3 python/tools/extract_sqlite.py
+source_set("ast") {
+  sources = [
+    "ast/ast_builder.c",
+    "ast/ast_builder.h",
+    "ast/ast_nodes.h",
+    "ast/ast_print.c",
+    "ast/ast_print.h",
+  ]
+}
+
+# Test binary for AST diff tests
+executable("ast_test") {
   testonly = true
-  sources = []
+  sources = [
+    "ast/ast_test_main.c",
+  ]
   deps = [
-    "../third_party:googletest",
-    "../third_party:googletest_main",
+    ":ast",
     ":sqlite",
   ]
+  configs += [ ":lemon_generated" ]
 }

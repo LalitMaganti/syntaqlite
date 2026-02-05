@@ -34,7 +34,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from python.sqlite_extractor import (
+from python.syntaqlite.sqlite_extractor import (
     Pipeline,
     ReplaceText,
     TruncateAt,
@@ -53,13 +53,16 @@ from python.sqlite_extractor import (
 # Keywordhash processing markers
 KEYWORDHASH_SCORE_MARKER = "/* Hash score:"
 KEYWORD_CODE_FUNC_MARKER = "static int keywordCode("
-from python.sqlite_extractor.generators import extract_tk_defines
-from python.sqlite_extractor.grammar_build import (
+from python.syntaqlite.sqlite_extractor.generators import extract_tk_defines
+from python.syntaqlite.sqlite_extractor.grammar_build import (
     build_syntaqlite_grammar,
 )
-from python.sqlite_extractor.lempar_transform import (
+from python.syntaqlite.sqlite_extractor.lempar_transform import (
     transform_to_base_template,
 )
+from python.syntaqlite.ast_codegen import codegen as ast_codegen
+from python.syntaqlite.ast_codegen import validator as ast_validator
+from python.syntaqlite.ast_codegen.nodes import NODES as AST_NODES
 
 ROOT_DIR = Path(__file__).parent.parent.parent
 SQLITE_SRC = ROOT_DIR / "third_party" / "src" / "sqlite" / "src"
@@ -434,6 +437,29 @@ def generate_parser(
         return parse_h_content
 
 
+def generate_ast(output_dir: Path) -> None:
+    """Generate AST code from node definitions.
+
+    Args:
+        output_dir: Directory to write output files.
+    """
+    print(f"  {len(AST_NODES)} node types")
+
+    # Validate
+    errors = ast_validator.validate_node_references(AST_NODES)
+    if errors:
+        print("  Validation errors:")
+        for error in errors:
+            print(f"    - {error}")
+        raise RuntimeError("AST validation failed")
+
+    # Generate
+    ast_dir = output_dir / "ast"
+    ast_codegen.generate_all(AST_NODES, ast_dir)
+
+    print("  Generated: ast_nodes.h, ast_builder.h, ast_builder.c, ast_print.h, ast_print.c")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Extract SQLite tokenizer and parser for syntaqlite")
     parser.add_argument("--prefix", default=DEFAULT_PREFIX, help=f"Symbol prefix (default: {DEFAULT_PREFIX})")
@@ -466,6 +492,10 @@ def main():
     print("\n=== Generating Tokenizer ===")
     keywordhash_data, keyword_code_func = build_keywordhash(runner, prefix)
     copy_tokenize_c(runner, output_dir / "sqlite_tokenize.c", prefix, keywordhash_data, keyword_code_func)
+
+    # Generate AST code
+    print("\n=== Generating AST ===")
+    generate_ast(output_dir)
 
     print(f"\nAll files written to {output_dir}")
 

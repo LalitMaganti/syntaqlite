@@ -9,5 +9,5 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 sys.path.insert(0, ROOT_DIR)
 
 if __name__ == '__main__':
-    from python.diff_tests.runner import main
+    from python.syntaqlite.diff_tests.runner import main
     sys.exit(main())

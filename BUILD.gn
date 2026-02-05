@@ -1,7 +1,7 @@
 # Default target
 group("default") {
   deps = [
-    "src:syntaqlite_unittests",
+    "src:ast_test",
     "third_party:lemon",
   ]
   testonly = true

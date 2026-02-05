@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from python.diff_tests.testing import AstTestBlueprint
+from python.syntaqlite.diff_tests.testing import AstTestBlueprint
 
 
 def load_all_tests(

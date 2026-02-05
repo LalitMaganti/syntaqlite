@@ -11,9 +11,9 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import List, Optional
 
-from python.diff_tests.test_executor import TestResult, execute_test
-from python.diff_tests.test_loader import load_all_tests
-from python.diff_tests.utils import Colors, colorize, format_diff
+from python.syntaqlite.diff_tests.test_executor import TestResult, execute_test
+from python.syntaqlite.diff_tests.test_loader import load_all_tests
+from python.syntaqlite.diff_tests.utils import Colors, colorize, format_diff
 
 
 def _run_single_test(args: tuple) -> TestResult:
