@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 // Test binary for AST diff tests.
-// Usage: ast_test [--trace] < input.sql
+// Usage: ast_test [--trace] [--help] < input.sql
 //
 // Reads SQL from stdin, parses it using the real parser, and prints the AST.
 // Use --trace to enable Lemon parser tracing on stderr.
@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "src/sq_getopt.h"
 #include "src/ast/ast_print.h"
 #include "src/syntaqlite_sqlite_defs.h"
 #include "src/sqlite_tokens.h"
@@ -66,14 +67,36 @@ static void on_stack_overflow(SyntaqliteParseContext *ctx) {
 }
 
 int main(int argc, char **argv) {
-  // Check for --trace flag
   int trace = 0;
-  for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "--trace") == 0) {
-      trace = 1;
-    } else {
-      fprintf(stderr, "Usage: %s [--trace] < input.sql\n", argv[0]);
-      return 1;
+
+  static const struct sq_option long_options[] = {
+      {"trace", SQ_NO_ARGUMENT, NULL, 'T'},
+      {"help", SQ_NO_ARGUMENT, NULL, 'h'},
+      {NULL, 0, NULL, 0},
+  };
+
+  struct sq_getopt_state opt = SQ_GETOPT_INIT;
+  int c;
+  while ((c = sq_getopt_long(&opt, argc, argv, "h", long_options, NULL)) !=
+         -1) {
+    switch (c) {
+      case 'T':
+        trace = 1;
+        break;
+      case 'h':
+        fprintf(stdout,
+                "Usage: %s [OPTIONS] < input.sql\n"
+                "\n"
+                "Reads SQL from stdin, parses it, and prints the AST.\n"
+                "\n"
+                "Options:\n"
+                "  --trace  Enable Lemon parser trace output on stderr (debug builds only)\n"
+                "  --help   Show this help message and exit\n",
+                argv[0]);
+        return 0;
+      default:
+        fprintf(stderr, "Try '%s --help' for usage information.\n", argv[0]);
+        return 1;
     }
   }
 
