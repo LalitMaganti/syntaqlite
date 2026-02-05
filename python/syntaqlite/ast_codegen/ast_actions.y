@@ -184,6 +184,49 @@ expr(A) ::= expr(L) LT|GT|GE|LE(OP) expr(R). {
     A = ast_binary_expr(pCtx->astCtx, op, L, R);
 }
 
+expr(A) ::= expr(L) EQ|NE(OP) expr(R). {
+    SyntaqliteBinaryOp op = (OP.type == TK_EQ) ? SYNTAQLITE_BINARY_OP_EQ : SYNTAQLITE_BINARY_OP_NE;
+    A = ast_binary_expr(pCtx->astCtx, op, L, R);
+}
+
+expr(A) ::= expr(L) AND expr(R). {
+    A = ast_binary_expr(pCtx->astCtx, SYNTAQLITE_BINARY_OP_AND, L, R);
+}
+
+expr(A) ::= expr(L) OR expr(R). {
+    A = ast_binary_expr(pCtx->astCtx, SYNTAQLITE_BINARY_OP_OR, L, R);
+}
+
+expr(A) ::= expr(L) BITAND|BITOR|LSHIFT|RSHIFT(OP) expr(R). {
+    SyntaqliteBinaryOp op;
+    switch (OP.type) {
+        case TK_BITAND: op = SYNTAQLITE_BINARY_OP_BITAND; break;
+        case TK_BITOR:  op = SYNTAQLITE_BINARY_OP_BITOR; break;
+        case TK_LSHIFT: op = SYNTAQLITE_BINARY_OP_LSHIFT; break;
+        default:        op = SYNTAQLITE_BINARY_OP_RSHIFT; break;
+    }
+    A = ast_binary_expr(pCtx->astCtx, op, L, R);
+}
+
+expr(A) ::= expr(L) CONCAT expr(R). {
+    A = ast_binary_expr(pCtx->astCtx, SYNTAQLITE_BINARY_OP_CONCAT, L, R);
+}
+
+// ============ Unary Expressions ============
+
+expr(A) ::= PLUS|MINUS(OP) expr(B). {
+    SyntaqliteUnaryOp op = (OP.type == TK_MINUS) ? SYNTAQLITE_UNARY_OP_MINUS : SYNTAQLITE_UNARY_OP_PLUS;
+    A = ast_unary_expr(pCtx->astCtx, op, B);
+}
+
+expr(A) ::= BITNOT expr(B). {
+    A = ast_unary_expr(pCtx->astCtx, SYNTAQLITE_UNARY_OP_BITNOT, B);
+}
+
+expr(A) ::= NOT expr(B). {
+    A = ast_unary_expr(pCtx->astCtx, SYNTAQLITE_UNARY_OP_NOT, B);
+}
+
 // ============ Literals ============
 
 term(A) ::= INTEGER(B). {

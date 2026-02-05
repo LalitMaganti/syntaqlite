@@ -88,7 +88,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # Load tests
     try:
-        tests, skipped = load_all_tests(root_dir, args.filter)
+        tests = load_all_tests(root_dir, args.filter)
     except ImportError as e:
         print(f"Error loading tests: {e}", file=sys.stderr)
         return 1

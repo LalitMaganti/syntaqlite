@@ -37,7 +37,7 @@ uint32_t ast_binary_expr(SyntaqliteAstContext *ctx, SyntaqliteBinaryOp op, uint3
     return id;
 }
 
-uint32_t ast_unary_expr(SyntaqliteAstContext *ctx, uint8_t op, uint32_t operand) {
+uint32_t ast_unary_expr(SyntaqliteAstContext *ctx, SyntaqliteUnaryOp op, uint32_t operand) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_UNARY_EXPR, sizeof(SyntaqliteUnaryExpr));
     if (id == SYNTAQLITE_NULL_NODE) return id;
 

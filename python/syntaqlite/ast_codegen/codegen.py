@@ -37,11 +37,14 @@ TYPE_MAP = {
 }
 
 
-def _c_type(type_name: str, enum_names: set[str] = None) -> str:
-    """Convert our type name to C type."""
+def _field_c_type(field_type, enum_names: set[str]) -> str:
+    """Get the C type string for an inline or index field."""
+    if isinstance(field_type, IndexField):
+        return "uint32_t"
+    type_name = field_type.type_name
     if type_name in TYPE_MAP:
         return TYPE_MAP[type_name]
-    if enum_names and type_name in enum_names:
+    if type_name in enum_names:
         return f"Syntaqlite{type_name}"
     return type_name
 
@@ -64,6 +67,28 @@ def _builder_name(node_name: str) -> str:
 def _enum_prefix(enum_name: str) -> str:
     """Generate enum value prefix from enum name."""
     return f"SYNTAQLITE_{pascal_to_snake(enum_name).upper()}"
+
+
+def _build_node_params(node: NodeDef, enum_names: set[str]) -> list[str]:
+    """Build C parameter list for a node builder function."""
+    params = ["SyntaqliteAstContext *ctx"]
+    for field_name, field_type in node.fields.items():
+        c_type = _field_c_type(field_type, enum_names)
+        params.append(f"{c_type} {field_name}")
+    return params
+
+
+def _emit_func_signature(lines: list[str], func_name: str, params: list[str], end: str = ";") -> None:
+    """Emit a function signature, wrapping long parameter lists."""
+    params_str = ", ".join(params)
+    if len(params_str) > 80:
+        lines.append(f"uint32_t {func_name}(")
+        for i, param in enumerate(params):
+            comma = "," if i < len(params) - 1 else ""
+            lines.append(f"    {param}{comma}")
+        lines.append(f"){end}")
+    else:
+        lines.append(f"uint32_t {func_name}({params_str}){end}")
 
 
 def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef], output: Path) -> None:
@@ -131,11 +156,7 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef], 
             lines.append("    uint8_t tag;")
 
             for field_name, field_type in node.fields.items():
-                if isinstance(field_type, InlineField):
-                    c_type = _c_type(field_type.type_name, enum_names)
-                else:
-                    c_type = "uint32_t"
-
+                c_type = _field_c_type(field_type, enum_names)
                 lines.append(f"    {c_type} {field_name};")
 
             lines.append(f"}} {struct_name};")
@@ -216,27 +237,8 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     for node in node_defs:
         if isinstance(node, NodeDef):
             func_name = _builder_name(node.name)
-
-            # Build parameter list
-            params = ["SyntaqliteAstContext *ctx"]
-            for field_name, field_type in node.fields.items():
-                if isinstance(field_type, InlineField):
-                    c_type = _c_type(field_type.type_name, enum_names)
-                else:
-                    c_type = "uint32_t"
-                params.append(f"{c_type} {field_name}")
-
-            params_str = ", ".join(params)
-
-            # If too long, split across lines
-            if len(params_str) > 80:
-                lines.append(f"uint32_t {func_name}(")
-                for i, param in enumerate(params):
-                    comma = "," if i < len(params) - 1 else ""
-                    lines.append(f"    {param}{comma}")
-                lines.append(");")
-            else:
-                lines.append(f"uint32_t {func_name}({params_str});")
+            params = _build_node_params(node, enum_names)
+            _emit_func_signature(lines, func_name, params)
             lines.append("")
 
         elif isinstance(node, ListDef):
@@ -283,11 +285,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     for node in node_defs:
         tag = _tag_name(node.name)
         struct_name = _struct_name(node.name)
-        if isinstance(node, ListDef):
-            # Lists have variable size, base size is header only
-            lines.append(f"    [{tag}] = sizeof({struct_name}),")
-        else:
-            lines.append(f"    [{tag}] = sizeof({struct_name}),")
+        lines.append(f"    [{tag}] = sizeof({struct_name}),")
     lines.append("};")
     lines.append("")
 
@@ -307,26 +305,8 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             struct_name = _struct_name(node.name)
             tag = _tag_name(node.name)
 
-            # Build parameter list
-            params = ["SyntaqliteAstContext *ctx"]
-            for field_name, field_type in node.fields.items():
-                if isinstance(field_type, InlineField):
-                    c_type = _c_type(field_type.type_name, enum_names)
-                else:
-                    c_type = "uint32_t"
-                params.append(f"{c_type} {field_name}")
-
-            params_str = ", ".join(params)
-
-            # Function signature
-            if len(params_str) > 80:
-                lines.append(f"uint32_t {func_name}(")
-                for i, param in enumerate(params):
-                    comma = "," if i < len(params) - 1 else ""
-                    lines.append(f"    {param}{comma}")
-                lines.append(") {")
-            else:
-                lines.append(f"uint32_t {func_name}({params_str}) {{")
+            params = _build_node_params(node, enum_names)
+            _emit_func_signature(lines, func_name, params, " {")
 
             # Allocate node
             lines.append(f"    uint32_t id = ast_alloc(ctx, {tag}, sizeof({struct_name}));")

@@ -33,7 +33,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth);
       fprintf(out, "UnaryExpr\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "op: %u\n", node->unary_expr.op);
+      fprintf(out, "op: %s\n", syntaqlite_unary_op_names[node->unary_expr.op]);
       print_node(out, ast, node->unary_expr.operand, source, depth + 1);
       break;
     }

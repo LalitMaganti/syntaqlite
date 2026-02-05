@@ -36,10 +36,6 @@ def get_gn_path():
     return os.path.join(ROOT_DIR, "tools", "dev", "gn")
 
 
-def get_ninja_path():
-    return os.path.join(ROOT_DIR, "tools", "dev", "ninja")
-
-
 def run_gn_gen(out_dir, gn_args):
     gn = get_gn_path()
     cmd = [gn, "gen", out_dir, "--args=" + gn_args]

@@ -449,8 +449,16 @@ def _generate_grammar_file(
     # Grammar rules - use action version if available, otherwise bare rule
     parts.append("// Grammar rules\n")
     for rule in rules:
-        # Extract signature from the bare rule (remove trailing .)
-        bare_sig = rule.rstrip('.')
+        # Extract signature from the bare rule:
+        # - Remove trailing . (if present)
+        # - Remove precedence markers like [BITNOT]
+        # Example: "expr ::= PLUS|MINUS expr. [BITNOT]" -> "expr ::= PLUS|MINUS expr"
+        bare_sig = rule
+        # Remove precedence marker if present
+        if ' [' in bare_sig:
+            bare_sig = bare_sig[:bare_sig.rfind(' [')]
+        # Remove trailing dot
+        bare_sig = bare_sig.rstrip('. ')
         if bare_sig in action_rules:
             parts.append(action_rules[bare_sig] + "\n")
         else:

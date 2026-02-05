@@ -31,7 +31,23 @@ typedef enum {
     SYNTAQLITE_BINARY_OP_GT = 6,
     SYNTAQLITE_BINARY_OP_LE = 7,
     SYNTAQLITE_BINARY_OP_GE = 8,
+    SYNTAQLITE_BINARY_OP_EQ = 9,
+    SYNTAQLITE_BINARY_OP_NE = 10,
+    SYNTAQLITE_BINARY_OP_AND = 11,
+    SYNTAQLITE_BINARY_OP_OR = 12,
+    SYNTAQLITE_BINARY_OP_BITAND = 13,
+    SYNTAQLITE_BINARY_OP_BITOR = 14,
+    SYNTAQLITE_BINARY_OP_LSHIFT = 15,
+    SYNTAQLITE_BINARY_OP_RSHIFT = 16,
+    SYNTAQLITE_BINARY_OP_CONCAT = 17,
 } SyntaqliteBinaryOp;
+
+typedef enum {
+    SYNTAQLITE_UNARY_OP_MINUS = 0,
+    SYNTAQLITE_UNARY_OP_PLUS = 1,
+    SYNTAQLITE_UNARY_OP_BITNOT = 2,
+    SYNTAQLITE_UNARY_OP_NOT = 3,
+} SyntaqliteUnaryOp;
 
 static const char* const syntaqlite_literal_type_names[] = {
     "INTEGER",
@@ -51,6 +67,22 @@ static const char* const syntaqlite_binary_op_names[] = {
     "GT",
     "LE",
     "GE",
+    "EQ",
+    "NE",
+    "AND",
+    "OR",
+    "BITAND",
+    "BITOR",
+    "LSHIFT",
+    "RSHIFT",
+    "CONCAT",
+};
+
+static const char* const syntaqlite_unary_op_names[] = {
+    "MINUS",
+    "PLUS",
+    "BITNOT",
+    "NOT",
 };
 
 // ============ Node Tags ============
@@ -77,7 +109,7 @@ typedef struct SyntaqliteBinaryExpr {
 
 typedef struct SyntaqliteUnaryExpr {
     uint8_t tag;
-    uint8_t op;
+    SyntaqliteUnaryOp op;
     uint32_t operand;
 } SyntaqliteUnaryExpr;
 

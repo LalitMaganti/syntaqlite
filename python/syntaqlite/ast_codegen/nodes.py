@@ -39,6 +39,23 @@ ENUMS = [
         "GT",        # 6
         "LE",        # 7
         "GE",        # 8
+        "EQ",        # 9
+        "NE",        # 10
+        "AND",       # 11
+        "OR",        # 12
+        "BITAND",    # 13
+        "BITOR",     # 14
+        "LSHIFT",    # 15
+        "RSHIFT",    # 16
+        "CONCAT",    # 17
+    ),
+
+    # Unary operators
+    Enum("UnaryOp",
+        "MINUS",     # 0 (negation)
+        "PLUS",      # 1 (no-op)
+        "BITNOT",    # 2 (~)
+        "NOT",       # 3
     ),
 ]
 
@@ -56,8 +73,8 @@ NODES = [
 
     # Unary expression: OP operand
     Node("UnaryExpr",
-        op=inline("u8"),             # UNARY_OP_* code
-        operand=index("Expr"),       # Operand (cyclic)
+        op=inline("UnaryOp"),
+        operand=index("Expr"),
     ),
 
     # Literal value (integer, float, string, blob, null)

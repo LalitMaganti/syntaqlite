@@ -14,7 +14,7 @@ from python.syntaqlite.diff_tests.testing import AstTestBlueprint
 def load_all_tests(
     root_dir: Path,
     filter_pattern: Optional[str] = None
-) -> Tuple[List[Tuple[str, AstTestBlueprint]], List[str]]:
+) -> List[Tuple[str, AstTestBlueprint]]:
     """Load all tests from the test directory.
 
     Dynamically imports tests/ast_diff_tests/include_index.py and collects
@@ -25,9 +25,7 @@ def load_all_tests(
         filter_pattern: Optional regex pattern to filter test names.
 
     Returns:
-        Tuple of (tests_to_run, skipped_test_names).
-        tests_to_run is a list of (test_name, blueprint) tuples.
-        skipped_test_names is a list of test names that were filtered out.
+        List of (test_name, blueprint) tuples to run.
     """
     # Add root to path so imports work
     if str(root_dir) not in sys.path:
@@ -44,13 +42,6 @@ def load_all_tests(
     # Filter if pattern provided
     if filter_pattern:
         pattern = re.compile(filter_pattern, re.IGNORECASE)
-        tests_to_run = []
-        skipped = []
-        for name, blueprint in all_tests:
-            if pattern.search(name):
-                tests_to_run.append((name, blueprint))
-            else:
-                skipped.append(name)
-        return tests_to_run, skipped
+        return [(name, bp) for name, bp in all_tests if pattern.search(name)]
 
-    return all_tests, []
+    return all_tests

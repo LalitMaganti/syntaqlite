@@ -14,7 +14,7 @@ extern "C" {
 
 uint32_t ast_binary_expr(SyntaqliteAstContext *ctx, SyntaqliteBinaryOp op, uint32_t left, uint32_t right);
 
-uint32_t ast_unary_expr(SyntaqliteAstContext *ctx, uint8_t op, uint32_t operand);
+uint32_t ast_unary_expr(SyntaqliteAstContext *ctx, SyntaqliteUnaryOp op, uint32_t operand);
 
 uint32_t ast_literal(
     SyntaqliteAstContext *ctx,

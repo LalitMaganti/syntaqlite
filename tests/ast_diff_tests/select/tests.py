@@ -135,3 +135,123 @@ SelectStmt
           source: "2"
 """,
         )
+
+    def test_binary_eq(self):
+        return AstTestBlueprint(
+            sql="SELECT 1 = 2",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      BinaryExpr
+        op: EQ
+        Literal
+          literal_type: INTEGER
+          source: "1"
+        Literal
+          literal_type: INTEGER
+          source: "2"
+""",
+        )
+
+    def test_binary_and(self):
+        return AstTestBlueprint(
+            sql="SELECT 1 AND 0",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      BinaryExpr
+        op: AND
+        Literal
+          literal_type: INTEGER
+          source: "1"
+        Literal
+          literal_type: INTEGER
+          source: "0"
+""",
+        )
+
+    def test_binary_or(self):
+        return AstTestBlueprint(
+            sql="SELECT 1 OR 0",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      BinaryExpr
+        op: OR
+        Literal
+          literal_type: INTEGER
+          source: "1"
+        Literal
+          literal_type: INTEGER
+          source: "0"
+""",
+        )
+
+    def test_binary_concat(self):
+        return AstTestBlueprint(
+            sql="SELECT 'a' || 'b'",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      BinaryExpr
+        op: CONCAT
+        Literal
+          literal_type: STRING
+          source: "'a'"
+        Literal
+          literal_type: STRING
+          source: "'b'"
+""",
+        )
+
+    def test_unary_minus(self):
+        return AstTestBlueprint(
+            sql="SELECT -5",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      UnaryExpr
+        op: MINUS
+        Literal
+          literal_type: INTEGER
+          source: "5"
+""",
+        )
+
+    def test_unary_not(self):
+        return AstTestBlueprint(
+            sql="SELECT NOT 1",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      UnaryExpr
+        op: NOT
+        Literal
+          literal_type: INTEGER
+          source: "1"
+""",
+        )
