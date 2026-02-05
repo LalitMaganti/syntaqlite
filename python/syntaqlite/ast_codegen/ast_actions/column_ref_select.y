@@ -12,20 +12,10 @@
 // - Terminals are SyntaqliteToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
-// ============ Identifiers ============
+// ============ Table-qualified star in result columns ============
 
-nm(A) ::= ID|INDEXED|JOIN_KW(B). {
-    A = B;
-}
-
-nm(A) ::= STRING(B). {
-    A = B;
-}
-
-ids(A) ::= ID(B). {
-    A = B;
-}
-
-ids(A) ::= STRING(B). {
-    A = B;
+// table.* in result columns
+selcollist(A) ::= sclp(B) scanpt nm(C) DOT STAR. {
+    uint32_t col = ast_result_column(pCtx->astCtx, 1, syntaqlite_span(pCtx, C), SYNTAQLITE_NULL_NODE);
+    A = ast_result_column_list_append(pCtx->astCtx, B, col);
 }

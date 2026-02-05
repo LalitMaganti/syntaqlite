@@ -12,20 +12,20 @@
 // - Terminals are SyntaqliteToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
-// ============ Identifiers ============
+// ============ Function Calls ============
 
-nm(A) ::= ID|INDEXED|JOIN_KW(B). {
-    A = B;
+// Function call with arguments: func(args) or func(DISTINCT args)
+expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) RP. {
+    A = ast_function_call(pCtx->astCtx,
+        syntaqlite_span(pCtx, B),
+        (uint8_t)C,
+        D);
 }
 
-nm(A) ::= STRING(B). {
-    A = B;
-}
-
-ids(A) ::= ID(B). {
-    A = B;
-}
-
-ids(A) ::= STRING(B). {
-    A = B;
+// Function call with star: COUNT(*)
+expr(A) ::= ID|INDEXED|JOIN_KW(B) LP STAR RP. {
+    A = ast_function_call(pCtx->astCtx,
+        syntaqlite_span(pCtx, B),
+        2,
+        SYNTAQLITE_NULL_NODE);
 }

@@ -53,6 +53,15 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       break;
     }
 
+    case SYNTAQLITE_NODE_EXPR_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ExprList[%u]\n", node->expr_list.count);
+      for (uint32_t i = 0; i < node->expr_list.count; i++) {
+        print_node(out, ast, node->expr_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
     case SYNTAQLITE_NODE_RESULT_COLUMN: {
       ast_print_indent(out, depth);
       fprintf(out, "ResultColumn\n");
@@ -81,6 +90,70 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth + 1);
       fprintf(out, "flags: %u\n", node->select_stmt.flags);
       print_node(out, ast, node->select_stmt.columns, source, depth + 1);
+      print_node(out, ast, node->select_stmt.where, source, depth + 1);
+      print_node(out, ast, node->select_stmt.groupby, source, depth + 1);
+      print_node(out, ast, node->select_stmt.having, source, depth + 1);
+      print_node(out, ast, node->select_stmt.orderby, source, depth + 1);
+      print_node(out, ast, node->select_stmt.limit_clause, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_ORDERING_TERM: {
+      ast_print_indent(out, depth);
+      fprintf(out, "OrderingTerm\n");
+      print_node(out, ast, node->ordering_term.expr, source, depth + 1);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "sort_order: %s\n", syntaqlite_sort_order_names[node->ordering_term.sort_order]);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "nulls_order: %s\n", syntaqlite_nulls_order_names[node->ordering_term.nulls_order]);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_ORDER_BY_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "OrderByList[%u]\n", node->order_by_list.count);
+      for (uint32_t i = 0; i < node->order_by_list.count; i++) {
+        print_node(out, ast, node->order_by_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_LIMIT_CLAUSE: {
+      ast_print_indent(out, depth);
+      fprintf(out, "LimitClause\n");
+      print_node(out, ast, node->limit_clause.limit, source, depth + 1);
+      print_node(out, ast, node->limit_clause.offset, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_COLUMN_REF: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ColumnRef\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "column: ");
+      ast_print_source_span(out, source, node->column_ref.column);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "table: ");
+      ast_print_source_span(out, source, node->column_ref.table);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->column_ref.schema);
+      fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_FUNCTION_CALL: {
+      ast_print_indent(out, depth);
+      fprintf(out, "FunctionCall\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "func_name: ");
+      ast_print_source_span(out, source, node->function_call.func_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "flags: %u\n", node->function_call.flags);
+      print_node(out, ast, node->function_call.args, source, depth + 1);
       break;
     }
 

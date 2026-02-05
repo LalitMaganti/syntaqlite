@@ -3,9 +3,20 @@
 
 """SELECT statement AST node definitions."""
 
-from ..defs import Node, List, inline, index
+from ..defs import Node, List, Enum, inline, index
 
-ENUMS = []
+ENUMS = [
+    Enum("SortOrder",
+        "ASC",        # 0
+        "DESC",       # 1
+    ),
+
+    Enum("NullsOrder",
+        "NONE",       # 0 - no explicit NULLS keyword
+        "FIRST",      # 1
+        "LAST",       # 2
+    ),
+]
 
 NODES = [
     # Result column: expr [AS alias] or *
@@ -18,9 +29,30 @@ NODES = [
     # List of result columns
     List("ResultColumnList", child_type="ResultColumn"),
 
-    # SELECT statement (minimal version)
+    # SELECT statement
     Node("SelectStmt",
-        flags=inline("u8"),          # DISTINCT, ALL
-        columns=index("ResultColumnList"), # Result columns
+        flags=inline("u8"),                    # DISTINCT, ALL
+        columns=index("ResultColumnList"),     # Result columns
+        where=index("Expr"),                   # WHERE clause expression
+        groupby=index("ExprList"),             # GROUP BY expressions
+        having=index("Expr"),                  # HAVING clause expression
+        orderby=index("OrderByList"),          # ORDER BY clause
+        limit_clause=index("LimitClause"),     # LIMIT/OFFSET clause
+    ),
+
+    # Ordering term: expr [ASC|DESC] [NULLS FIRST|LAST]
+    Node("OrderingTerm",
+        expr=index("Expr"),
+        sort_order=inline("SortOrder"),
+        nulls_order=inline("NullsOrder"),
+    ),
+
+    # List of ordering terms (ORDER BY clause)
+    List("OrderByList", child_type="OrderingTerm"),
+
+    # LIMIT clause with optional OFFSET
+    Node("LimitClause",
+        limit=index("Expr"),
+        offset=index("Expr"),
     ),
 ]

@@ -52,6 +52,17 @@ typedef enum {
     SYNTAQLITE_UNARY_OP_NOT = 3,
 } SyntaqliteUnaryOp;
 
+typedef enum {
+    SYNTAQLITE_SORT_ORDER_ASC = 0,
+    SYNTAQLITE_SORT_ORDER_DESC = 1,
+} SyntaqliteSortOrder;
+
+typedef enum {
+    SYNTAQLITE_NULLS_ORDER_NONE = 0,
+    SYNTAQLITE_NULLS_ORDER_FIRST = 1,
+    SYNTAQLITE_NULLS_ORDER_LAST = 2,
+} SyntaqliteNullsOrder;
+
 static const char* const syntaqlite_literal_type_names[] = {
     "INTEGER",
     "FLOAT",
@@ -88,6 +99,17 @@ static const char* const syntaqlite_unary_op_names[] = {
     "NOT",
 };
 
+static const char* const syntaqlite_sort_order_names[] = {
+    "ASC",
+    "DESC",
+};
+
+static const char* const syntaqlite_nulls_order_names[] = {
+    "NONE",
+    "FIRST",
+    "LAST",
+};
+
 // ============ Node Tags ============
 
 typedef enum {
@@ -95,9 +117,15 @@ typedef enum {
     SYNTAQLITE_NODE_BINARY_EXPR,
     SYNTAQLITE_NODE_UNARY_EXPR,
     SYNTAQLITE_NODE_LITERAL,
+    SYNTAQLITE_NODE_EXPR_LIST,
     SYNTAQLITE_NODE_RESULT_COLUMN,
     SYNTAQLITE_NODE_RESULT_COLUMN_LIST,
     SYNTAQLITE_NODE_SELECT_STMT,
+    SYNTAQLITE_NODE_ORDERING_TERM,
+    SYNTAQLITE_NODE_ORDER_BY_LIST,
+    SYNTAQLITE_NODE_LIMIT_CLAUSE,
+    SYNTAQLITE_NODE_COLUMN_REF,
+    SYNTAQLITE_NODE_FUNCTION_CALL,
     SYNTAQLITE_NODE_COUNT
 } SyntaqliteNodeTag;
 
@@ -122,6 +150,14 @@ typedef struct SyntaqliteLiteral {
     SyntaqliteSourceSpan source;
 } SyntaqliteLiteral;
 
+// List of Expr
+typedef struct SyntaqliteExprList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteExprList;
+
 typedef struct SyntaqliteResultColumn {
     uint8_t tag;
     uint8_t flags;
@@ -141,7 +177,47 @@ typedef struct SyntaqliteSelectStmt {
     uint8_t tag;
     uint8_t flags;
     uint32_t columns;
+    uint32_t where;
+    uint32_t groupby;
+    uint32_t having;
+    uint32_t orderby;
+    uint32_t limit_clause;
 } SyntaqliteSelectStmt;
+
+typedef struct SyntaqliteOrderingTerm {
+    uint8_t tag;
+    uint32_t expr;
+    SyntaqliteSortOrder sort_order;
+    SyntaqliteNullsOrder nulls_order;
+} SyntaqliteOrderingTerm;
+
+// List of OrderingTerm
+typedef struct SyntaqliteOrderByList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteOrderByList;
+
+typedef struct SyntaqliteLimitClause {
+    uint8_t tag;
+    uint32_t limit;
+    uint32_t offset;
+} SyntaqliteLimitClause;
+
+typedef struct SyntaqliteColumnRef {
+    uint8_t tag;
+    SyntaqliteSourceSpan column;
+    SyntaqliteSourceSpan table;
+    SyntaqliteSourceSpan schema;
+} SyntaqliteColumnRef;
+
+typedef struct SyntaqliteFunctionCall {
+    uint8_t tag;
+    SyntaqliteSourceSpan func_name;
+    uint8_t flags;
+    uint32_t args;
+} SyntaqliteFunctionCall;
 
 // ============ Node Union ============
 
@@ -150,9 +226,15 @@ typedef union SyntaqliteNode {
     SyntaqliteBinaryExpr binary_expr;
     SyntaqliteUnaryExpr unary_expr;
     SyntaqliteLiteral literal;
+    SyntaqliteExprList expr_list;
     SyntaqliteResultColumn result_column;
     SyntaqliteResultColumnList result_column_list;
     SyntaqliteSelectStmt select_stmt;
+    SyntaqliteOrderingTerm ordering_term;
+    SyntaqliteOrderByList order_by_list;
+    SyntaqliteLimitClause limit_clause;
+    SyntaqliteColumnRef column_ref;
+    SyntaqliteFunctionCall function_call;
 } SyntaqliteNode;
 
 // Access node by ID

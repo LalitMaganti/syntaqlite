@@ -3,7 +3,7 @@
 
 """Expression AST node definitions: binary, unary, and literal."""
 
-from ..defs import Node, inline, index
+from ..defs import Node, List, inline, index
 
 ENUMS = []
 
@@ -26,4 +26,7 @@ NODES = [
         literal_type=inline("LiteralType"),
         source=inline("SyntaqliteSourceSpan"),
     ),
+
+    # List of expressions (used by GROUP BY, function args, etc.)
+    List("ExprList", child_type="Expr"),
 ]

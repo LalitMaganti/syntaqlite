@@ -25,6 +25,15 @@ uint32_t ast_literal(
     SyntaqliteSourceSpan source
 );
 
+// Create empty ExprList
+uint32_t ast_expr_list_empty(SyntaqliteAstContext *ctx);
+
+// Create ExprList with single child
+uint32_t ast_expr_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to ExprList (may reallocate, returns new list ID)
+uint32_t ast_expr_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
 uint32_t ast_result_column(
     SyntaqliteAstContext *ctx,
     uint8_t flags,
@@ -41,7 +50,48 @@ uint32_t ast_result_column_list(SyntaqliteAstContext *ctx, uint32_t first_child)
 // Append child to ResultColumnList (may reallocate, returns new list ID)
 uint32_t ast_result_column_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
 
-uint32_t ast_select_stmt(SyntaqliteAstContext *ctx, uint8_t flags, uint32_t columns);
+uint32_t ast_select_stmt(
+    SyntaqliteAstContext *ctx,
+    uint8_t flags,
+    uint32_t columns,
+    uint32_t where,
+    uint32_t groupby,
+    uint32_t having,
+    uint32_t orderby,
+    uint32_t limit_clause
+);
+
+uint32_t ast_ordering_term(
+    SyntaqliteAstContext *ctx,
+    uint32_t expr,
+    SyntaqliteSortOrder sort_order,
+    SyntaqliteNullsOrder nulls_order
+);
+
+// Create empty OrderByList
+uint32_t ast_order_by_list_empty(SyntaqliteAstContext *ctx);
+
+// Create OrderByList with single child
+uint32_t ast_order_by_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to OrderByList (may reallocate, returns new list ID)
+uint32_t ast_order_by_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_limit_clause(SyntaqliteAstContext *ctx, uint32_t limit, uint32_t offset);
+
+uint32_t ast_column_ref(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan column,
+    SyntaqliteSourceSpan table,
+    SyntaqliteSourceSpan schema
+);
+
+uint32_t ast_function_call(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan func_name,
+    uint8_t flags,
+    uint32_t args
+);
 
 #ifdef __cplusplus
 }

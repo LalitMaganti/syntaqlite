@@ -12,20 +12,20 @@
 // - Terminals are SyntaqliteToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
-// ============ Identifiers ============
+// ============ Expression Lists ============
 
-nm(A) ::= ID|INDEXED|JOIN_KW(B). {
+exprlist(A) ::= nexprlist(B). {
     A = B;
 }
 
-nm(A) ::= STRING(B). {
-    A = B;
+exprlist(A) ::= . {
+    A = SYNTAQLITE_NULL_NODE;
 }
 
-ids(A) ::= ID(B). {
-    A = B;
+nexprlist(A) ::= nexprlist(B) COMMA expr(C). {
+    A = ast_expr_list_append(pCtx->astCtx, B, C);
 }
 
-ids(A) ::= STRING(B). {
-    A = B;
+nexprlist(A) ::= expr(B). {
+    A = ast_expr_list(pCtx->astCtx, B);
 }

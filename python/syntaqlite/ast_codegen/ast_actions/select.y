@@ -26,8 +26,8 @@ selectnowith(A) ::= oneselect(B). {
     A = B;
 }
 
-oneselect(A) ::= SELECT distinct(B) selcollist(C) from where_opt groupby_opt having_opt orderby_opt limit_opt. {
-    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C);
+oneselect(A) ::= SELECT distinct(B) selcollist(C) from where_opt(E) groupby_opt(F) having_opt(G) orderby_opt(H) limit_opt(I). {
+    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C, E, F, G, H, I);
 }
 
 // ============ Result columns ============
@@ -106,14 +106,38 @@ groupby_opt(A) ::= . {
     A = SYNTAQLITE_NULL_NODE;
 }
 
+groupby_opt(A) ::= GROUP BY nexprlist(B). {
+    A = B;
+}
+
 having_opt(A) ::= . {
     A = SYNTAQLITE_NULL_NODE;
+}
+
+having_opt(A) ::= HAVING expr(B). {
+    A = B;
 }
 
 orderby_opt(A) ::= . {
     A = SYNTAQLITE_NULL_NODE;
 }
 
+orderby_opt(A) ::= ORDER BY sortlist(B). {
+    A = B;
+}
+
 limit_opt(A) ::= . {
     A = SYNTAQLITE_NULL_NODE;
+}
+
+limit_opt(A) ::= LIMIT expr(B). {
+    A = ast_limit_clause(pCtx->astCtx, B, SYNTAQLITE_NULL_NODE);
+}
+
+limit_opt(A) ::= LIMIT expr(B) OFFSET expr(C). {
+    A = ast_limit_clause(pCtx->astCtx, B, C);
+}
+
+limit_opt(A) ::= LIMIT expr(B) COMMA expr(C). {
+    A = ast_limit_clause(pCtx->astCtx, C, B);
 }
