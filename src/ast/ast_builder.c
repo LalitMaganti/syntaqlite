@@ -23,70 +23,9 @@ size_t syntaqlite_node_base_size(uint8_t tag) {
     return node_base_sizes[tag];
 }
 
-// ============ Initialize/Free ============
-
-void syntaqlite_ast_init(SyntaqliteAst *ast) {
-    ast->arena = NULL;
-    ast->arena_size = 0;
-    ast->arena_capacity = 0;
-    ast->offsets = NULL;
-    ast->node_count = 0;
-    ast->node_capacity = 0;
-}
-
-void syntaqlite_ast_free(SyntaqliteAst *ast) {
-    free(ast->arena);
-    free(ast->offsets);
-    ast->arena = NULL;
-    ast->offsets = NULL;
-    ast->arena_size = 0;
-    ast->arena_capacity = 0;
-    ast->node_count = 0;
-    ast->node_capacity = 0;
-}
-
-// ============ Generic Allocator ============
-
-uint32_t ast_alloc(SyntaqliteAstContext *ctx, uint8_t tag, size_t size) {
-    SyntaqliteAst *ast = ctx->ast;
-
-    // Grow arena if needed
-    if (ast->arena_size + size > ast->arena_capacity) {
-        size_t new_capacity = ast->arena_capacity * 2 + size + 1024;
-        uint8_t *new_arena = (uint8_t*)realloc(ast->arena, new_capacity);
-        if (!new_arena) {
-            ctx->error_code = 1;
-            ctx->error_msg = "Out of memory (arena)";
-            return SYNTAQLITE_NULL_NODE;
-        }
-        ast->arena = new_arena;
-        ast->arena_capacity = (uint32_t)new_capacity;
-    }
-
-    // Grow offset table if needed
-    if (ast->node_count >= ast->node_capacity) {
-        size_t new_capacity = ast->node_capacity * 2 + 64;
-        uint32_t *new_offsets = (uint32_t*)realloc(ast->offsets, new_capacity * sizeof(uint32_t));
-        if (!new_offsets) {
-            ctx->error_code = 1;
-            ctx->error_msg = "Out of memory (offsets)";
-            return SYNTAQLITE_NULL_NODE;
-        }
-        ast->offsets = new_offsets;
-        ast->node_capacity = (uint32_t)new_capacity;
-    }
-
-    uint32_t node_id = ast->node_count++;
-    ast->offsets[node_id] = ast->arena_size;
-    ast->arena[ast->arena_size] = tag;  // Set tag byte
-    ast->arena_size += (uint32_t)size;
-
-    return node_id;
-}
-
 // ============ Builder Functions ============
 
-uint32_t ast_binary_expr(SyntaqliteAstContext *ctx, uint8_t op, uint32_t left, uint32_t right) {
+uint32_t ast_binary_expr(SyntaqliteAstContext *ctx, SyntaqliteBinaryOp op, uint32_t left, uint32_t right) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_BINARY_EXPR, sizeof(SyntaqliteBinaryExpr));
     if (id == SYNTAQLITE_NULL_NODE) return id;
 
@@ -109,7 +48,11 @@ uint32_t ast_unary_expr(SyntaqliteAstContext *ctx, uint8_t op, uint32_t operand)
     return id;
 }
 
-uint32_t ast_literal(SyntaqliteAstContext *ctx, uint8_t literal_type, SyntaqliteSourceSpan source) {
+uint32_t ast_literal(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteLiteralType literal_type,
+    SyntaqliteSourceSpan source
+) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_LITERAL, sizeof(SyntaqliteLiteral));
     if (id == SYNTAQLITE_NULL_NODE) return id;
 

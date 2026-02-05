@@ -1,35 +1,15 @@
 // Generated from data/ast_nodes.py - DO NOT EDIT
-// Regenerate with: python3 python/tools/generate_ast.py
+// Regenerate with: python3 python/tools/extract_sqlite.py
 
 #ifndef SYNTAQLITE_AST_NODES_H
 #define SYNTAQLITE_AST_NODES_H
 
-#include <stddef.h>
-#include <stdint.h>
+// Base types (SyntaqliteSourceSpan, SyntaqliteAst, etc.)
+#include "src/ast/ast_base.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// Null node ID (used for nullable fields)
-#define SYNTAQLITE_NULL_NODE 0xFFFFFFFFu
-
-// ============ Helper Types ============
-
-// Source location span (offset + length into source text)
-typedef struct SyntaqliteSourceSpan {
-    uint32_t offset;
-    uint16_t length;
-} SyntaqliteSourceSpan;
-
-// Create a source span from offset and length
-static inline SyntaqliteSourceSpan syntaqlite_span(uint32_t offset, uint16_t length) {
-    SyntaqliteSourceSpan span = {offset, length};
-    return span;
-}
-
-// Empty source span (no location)
-#define SYNTAQLITE_NO_SPAN ((SyntaqliteSourceSpan){0, 0})
 
 // ============ Value Enums ============
 
@@ -40,6 +20,38 @@ typedef enum {
     SYNTAQLITE_LITERAL_TYPE_BLOB = 3,
     SYNTAQLITE_LITERAL_TYPE_NULL = 4,
 } SyntaqliteLiteralType;
+
+typedef enum {
+    SYNTAQLITE_BINARY_OP_PLUS = 0,
+    SYNTAQLITE_BINARY_OP_MINUS = 1,
+    SYNTAQLITE_BINARY_OP_STAR = 2,
+    SYNTAQLITE_BINARY_OP_SLASH = 3,
+    SYNTAQLITE_BINARY_OP_REM = 4,
+    SYNTAQLITE_BINARY_OP_LT = 5,
+    SYNTAQLITE_BINARY_OP_GT = 6,
+    SYNTAQLITE_BINARY_OP_LE = 7,
+    SYNTAQLITE_BINARY_OP_GE = 8,
+} SyntaqliteBinaryOp;
+
+static const char* const syntaqlite_literal_type_names[] = {
+    "INTEGER",
+    "FLOAT",
+    "STRING",
+    "BLOB",
+    "NULL",
+};
+
+static const char* const syntaqlite_binary_op_names[] = {
+    "PLUS",
+    "MINUS",
+    "STAR",
+    "SLASH",
+    "REM",
+    "LT",
+    "GT",
+    "LE",
+    "GE",
+};
 
 // ============ Node Tags ============
 
@@ -58,28 +70,28 @@ typedef enum {
 
 typedef struct SyntaqliteBinaryExpr {
     uint8_t tag;
-    uint8_t op;  // inline
-    uint32_t left;  // index -> Expr
-    uint32_t right;  // index -> Expr
+    SyntaqliteBinaryOp op;
+    uint32_t left;
+    uint32_t right;
 } SyntaqliteBinaryExpr;
 
 typedef struct SyntaqliteUnaryExpr {
     uint8_t tag;
-    uint8_t op;  // inline
-    uint32_t operand;  // index -> Expr
+    uint8_t op;
+    uint32_t operand;
 } SyntaqliteUnaryExpr;
 
 typedef struct SyntaqliteLiteral {
     uint8_t tag;
-    uint8_t literal_type;  // inline
-    SyntaqliteSourceSpan source;  // inline
+    SyntaqliteLiteralType literal_type;
+    SyntaqliteSourceSpan source;
 } SyntaqliteLiteral;
 
 typedef struct SyntaqliteResultColumn {
     uint8_t tag;
-    uint8_t flags;  // inline
-    SyntaqliteSourceSpan alias;  // inline
-    uint32_t expr;  // index -> Expr
+    uint8_t flags;
+    SyntaqliteSourceSpan alias;
+    uint32_t expr;
 } SyntaqliteResultColumn;
 
 // List of ResultColumn
@@ -92,12 +104,11 @@ typedef struct SyntaqliteResultColumnList {
 
 typedef struct SyntaqliteSelectStmt {
     uint8_t tag;
-    uint8_t flags;  // inline
-    uint32_t columns;  // index -> ResultColumnList
+    uint8_t flags;
+    uint32_t columns;
 } SyntaqliteSelectStmt;
 
-// ============ Union for Ergonomic Access ============
-// Note: This is for type-punning convenience, NOT for storage sizing
+// ============ Node Union ============
 
 typedef union SyntaqliteNode {
     uint8_t tag;
@@ -108,17 +119,6 @@ typedef union SyntaqliteNode {
     SyntaqliteResultColumnList result_column_list;
     SyntaqliteSelectStmt select_stmt;
 } SyntaqliteNode;
-
-// ============ Arena Storage ============
-
-typedef struct SyntaqliteAst {
-    uint8_t *arena;           // Packed nodes of varying sizes
-    uint32_t arena_size;
-    uint32_t arena_capacity;
-    uint32_t *offsets;        // offsets[node_id] = byte position in arena
-    uint32_t node_count;
-    uint32_t node_capacity;
-} SyntaqliteAst;
 
 // Access node by ID
 static inline SyntaqliteNode* syntaqlite_ast_node(SyntaqliteAst *ast, uint32_t id) {

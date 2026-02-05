@@ -1,10 +1,13 @@
-// Generated from data/ast_nodes.py - DO NOT EDIT
-// Regenerate with: python3 python/tools/generate_ast.py
+// Copyright 2025 The syntaqlite Authors. All rights reserved.
+// Licensed under the Apache License, Version 2.0.
+
+// AST print function declarations.
+// Implementations are generated in ast_print.c.
 
 #ifndef SYNTAQLITE_AST_PRINT_H
 #define SYNTAQLITE_AST_PRINT_H
 
-#include "src/ast/ast_nodes.h"
+#include "src/ast/ast_base.h"
 
 #include <stdio.h>
 
@@ -12,14 +15,9 @@
 extern "C" {
 #endif
 
-// Print AST node and its children to a file stream.
-// Uses a simple indented text format suitable for diff tests.
+// Print AST node and its children to a file stream
 void syntaqlite_ast_print(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
                           const char *source);
-
-// Print AST to stdout
-void syntaqlite_ast_dump(SyntaqliteAst *ast, uint32_t root_id,
-                         const char *source);
 
 #ifdef __cplusplus
 }

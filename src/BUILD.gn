@@ -28,6 +28,11 @@ source_set("sqlite") {
 # Regenerate with: python3 python/tools/extract_sqlite.py
 source_set("ast") {
   sources = [
+    # Base types (manually maintained)
+    "ast/ast_base.c",
+    "ast/ast_base.h",
+
+    # Generated files
     "ast/ast_builder.c",
     "ast/ast_builder.h",
     "ast/ast_nodes.h",

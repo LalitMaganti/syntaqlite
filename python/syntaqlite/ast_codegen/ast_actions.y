@@ -158,25 +158,51 @@ expr(A) ::= LP expr(B) RP. {
     A = B;
 }
 
+expr(A) ::= expr(L) PLUS|MINUS(OP) expr(R). {
+    SyntaqliteBinaryOp op = (OP.type == TK_PLUS) ? SYNTAQLITE_BINARY_OP_PLUS : SYNTAQLITE_BINARY_OP_MINUS;
+    A = ast_binary_expr(pCtx->astCtx, op, L, R);
+}
+
+expr(A) ::= expr(L) STAR|SLASH|REM(OP) expr(R). {
+    SyntaqliteBinaryOp op;
+    switch (OP.type) {
+        case TK_STAR:  op = SYNTAQLITE_BINARY_OP_STAR; break;
+        case TK_SLASH: op = SYNTAQLITE_BINARY_OP_SLASH; break;
+        default:       op = SYNTAQLITE_BINARY_OP_REM; break;
+    }
+    A = ast_binary_expr(pCtx->astCtx, op, L, R);
+}
+
+expr(A) ::= expr(L) LT|GT|GE|LE(OP) expr(R). {
+    SyntaqliteBinaryOp op;
+    switch (OP.type) {
+        case TK_LT: op = SYNTAQLITE_BINARY_OP_LT; break;
+        case TK_GT: op = SYNTAQLITE_BINARY_OP_GT; break;
+        case TK_LE: op = SYNTAQLITE_BINARY_OP_LE; break;
+        default:    op = SYNTAQLITE_BINARY_OP_GE; break;
+    }
+    A = ast_binary_expr(pCtx->astCtx, op, L, R);
+}
+
 // ============ Literals ============
 
 term(A) ::= INTEGER(B). {
-    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_INTEGER, token_span(pCtx, B));
+    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_INTEGER, syntaqlite_span(pCtx, B));
 }
 
 term(A) ::= STRING(B). {
-    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_STRING, token_span(pCtx, B));
+    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_STRING, syntaqlite_span(pCtx, B));
 }
 
 term(A) ::= NULL|FLOAT|BLOB(B). {
     SyntaqliteLiteralType lit_type;
-    switch (yymsp[0].major) {
+    switch (B.type) {
         case TK_NULL:  lit_type = SYNTAQLITE_LITERAL_TYPE_NULL; break;
         case TK_FLOAT: lit_type = SYNTAQLITE_LITERAL_TYPE_FLOAT; break;
         case TK_BLOB:  lit_type = SYNTAQLITE_LITERAL_TYPE_BLOB; break;
         default:       lit_type = SYNTAQLITE_LITERAL_TYPE_NULL; break;
     }
-    A = ast_literal(pCtx->astCtx, lit_type, token_span(pCtx, B));
+    A = ast_literal(pCtx->astCtx, lit_type, syntaqlite_span(pCtx, B));
 }
 
 // ============ Identifiers ============

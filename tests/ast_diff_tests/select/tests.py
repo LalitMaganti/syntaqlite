@@ -20,7 +20,7 @@ SelectStmt
       flags: 0
       alias: null
       Literal
-        literal_type: 0
+        literal_type: INTEGER
         source: "1"
 """,
         )
@@ -36,7 +36,7 @@ SelectStmt
       flags: 0
       alias: null
       Literal
-        literal_type: 1
+        literal_type: FLOAT
         source: "3.14"
 """,
         )
@@ -52,7 +52,7 @@ SelectStmt
       flags: 0
       alias: null
       Literal
-        literal_type: 2
+        literal_type: STRING
         source: "'hello'"
 """,
         )
@@ -68,7 +68,70 @@ SelectStmt
       flags: 0
       alias: null
       Literal
-        literal_type: 4
+        literal_type: NULL
         source: "NULL"
+""",
+        )
+
+    def test_binary_plus(self):
+        return AstTestBlueprint(
+            sql="SELECT 1 + 2",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      BinaryExpr
+        op: PLUS
+        Literal
+          literal_type: INTEGER
+          source: "1"
+        Literal
+          literal_type: INTEGER
+          source: "2"
+""",
+        )
+
+    def test_binary_star(self):
+        return AstTestBlueprint(
+            sql="SELECT 3 * 4",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      BinaryExpr
+        op: STAR
+        Literal
+          literal_type: INTEGER
+          source: "3"
+        Literal
+          literal_type: INTEGER
+          source: "4"
+""",
+        )
+
+    def test_binary_lt(self):
+        return AstTestBlueprint(
+            sql="SELECT 1 < 2",
+            out="""\
+SelectStmt
+  flags: 0
+  ResultColumnList[1]
+    ResultColumn
+      flags: 0
+      alias: null
+      BinaryExpr
+        op: LT
+        Literal
+          literal_type: INTEGER
+          source: "1"
+        Literal
+          literal_type: INTEGER
+          source: "2"
 """,
         )

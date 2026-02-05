@@ -458,7 +458,7 @@ def generate_ast(output_dir: Path) -> None:
     ast_codegen.generate_all(AST_NODES, AST_ENUMS, ast_dir)
 
     print(f"  {len(AST_NODES)} node types, {len(AST_ENUMS)} enums")
-    print("  Generated: ast_nodes.h, ast_builder.h, ast_builder.c, ast_print.h, ast_print.c")
+    print("  Generated: ast_nodes.h, ast_builder.h, ast_builder.c, ast_print.c")
 
 
 def main():

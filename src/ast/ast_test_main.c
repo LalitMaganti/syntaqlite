@@ -125,6 +125,7 @@ int main(void) {
     SyntaqliteToken token;
     token.z = (const char *)z;
     token.n = (int)tokenLen;
+    token.type = tokenType;
 
     syntaqlite_sqlite3Parser(parser, tokenType, token, &parseCtx);
     lastTokenType = tokenType;
@@ -142,12 +143,12 @@ int main(void) {
 
   // If the statement didn't end with SEMI, synthesize one (like Perfetto does)
   if (lastTokenType != TK_SEMI) {
-    SyntaqliteToken semiToken = {NULL, 0};
+    SyntaqliteToken semiToken = {NULL, 0, TK_SEMI};
     syntaqlite_sqlite3Parser(parser, TK_SEMI, semiToken, &parseCtx);
   }
 
   // Send end-of-input (token 0)
-  SyntaqliteToken endToken = {NULL, 0};
+  SyntaqliteToken endToken = {NULL, 0, 0};
   syntaqlite_sqlite3Parser(parser, 0, endToken, &parseCtx);
 
   // Check for syntax error

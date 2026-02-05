@@ -27,6 +27,19 @@ ENUMS = [
         "BLOB",      # 3
         "NULL",      # 4
     ),
+
+    # Binary operators
+    Enum("BinaryOp",
+        "PLUS",      # 0
+        "MINUS",     # 1
+        "STAR",      # 2
+        "SLASH",     # 3
+        "REM",       # 4
+        "LT",        # 5
+        "GT",        # 6
+        "LE",        # 7
+        "GE",        # 8
+    ),
 ]
 
 # ============================================================================
@@ -36,9 +49,9 @@ ENUMS = [
 NODES = [
     # Binary expression: left OP right
     Node("BinaryExpr",
-        op=inline("u8"),             # BINARY_OP_* code
-        left=index("Expr"),          # Left operand (cyclic - Expr can contain BinaryExpr)
-        right=index("Expr"),         # Right operand (cyclic)
+        op=inline("BinaryOp"),
+        left=index("Expr"),
+        right=index("Expr"),
     ),
 
     # Unary expression: OP operand
@@ -48,10 +61,9 @@ NODES = [
     ),
 
     # Literal value (integer, float, string, blob, null)
-    # Uses SyntaqliteSourceSpan for source location
     Node("Literal",
-        literal_type=inline("u8"),         # SyntaqliteLiteralType
-        source=inline("SyntaqliteSourceSpan"),  # Location in source text
+        literal_type=inline("LiteralType"),
+        source=inline("SyntaqliteSourceSpan"),
     ),
 
     # Result column: expr [AS alias] or *

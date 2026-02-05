@@ -89,7 +89,7 @@ def _parse_actions_file(actions_path: Path) -> dict[str, str]:
         # Build signature without type annotations for matching
         # "lhs(A)" -> "lhs", "rhs1(B) rhs2(C)" -> "rhs1 rhs2"
         def strip_annotations(s):
-            return re.sub(r'\([A-Z]\)', '', s).strip()
+            return re.sub(r'\([A-Z]+\)', '', s).strip()
 
         lhs_clean = strip_annotations(lhs)
         rhs_clean = ' '.join(strip_annotations(tok) for tok in rhs_text.split())
@@ -372,7 +372,6 @@ def _generate_grammar_file(
 #include "src/syntaqlite_sqlite_defs.h"
 #include "src/sqlite_tokens.h"
 #include "src/ast/ast_builder.h"
-#include "src/ast/ast_helpers.h"
 
 #define YYNOERRORRECOVERY 1
 #define YYPARSEFREENEVERNULL 1

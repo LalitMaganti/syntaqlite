@@ -43,6 +43,7 @@ typedef uint32_t u32;
 typedef struct SyntaqliteToken {
   const char *z;  /* Text of the token */
   int n;          /* Length of the token */
+  int type;       /* Token type (TK_* constant) */
 } SyntaqliteToken;
 
 /*

@@ -26,6 +26,16 @@ from dataclasses import dataclass
 from typing import Literal as TypingLiteral
 
 
+def pascal_to_snake(name: str) -> str:
+    """Convert PascalCase to snake_case."""
+    result = []
+    for i, c in enumerate(name):
+        if c.isupper() and i > 0:
+            result.append("_")
+        result.append(c.lower())
+    return "".join(result)
+
+
 @dataclass(frozen=True)
 class FieldType:
     """Base class for field type specifications."""

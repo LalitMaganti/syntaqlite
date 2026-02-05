@@ -3,10 +3,10 @@
 
 """AST code generation tools for syntaqlite.
 
-This module provides helpers for defining AST node types and generating
-C code from those definitions.
+Usage:
+    from python.syntaqlite.ast_codegen import codegen, validator
+    from python.syntaqlite.ast_codegen.nodes import NODES, ENUMS
+
+    errors = validator.validate_node_references(NODES)
+    codegen.generate_all(NODES, ENUMS, output_dir)
 """
-
-from .defs import Node, List, inline, index
-
-__all__ = ["Node", "List", "inline", "index"]
