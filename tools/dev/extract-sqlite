@@ -9,5 +9,5 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fil
 sys.path.insert(0, ROOT_DIR)
 
 if __name__ == "__main__":
-    from python.tools.extract_tokenizer import main
+    from python.tools.extract_sqlite import main
     sys.exit(main())

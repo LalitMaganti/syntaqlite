@@ -1,10 +1,35 @@
-# Unit tests
+# SQLite tokenizer and parser for syntaqlite.
+# Regenerate with: python3 python/tools/extract_sqlite.py
+
+# Lemon-generated code has unused variables when semantic actions are empty
+config("lemon_generated") {
+  cflags = [
+    "-Wno-unused-parameter",
+    "-Wno-unused-variable",
+  ]
+}
+
+source_set("sqlite") {
+  sources = [
+    # Generated files
+    "sqlite_charmap.h",
+    "sqlite_parse.c",
+    "sqlite_tokenize.c",
+    "sqlite_tokens.h",
+
+    # Manually maintained
+    "syntaqlite_sqlite_defs.h",
+  ]
+
+  configs += [ ":lemon_generated" ]
+}
+
 executable("syntaqlite_unittests") {
   testonly = true
   sources = []
   deps = [
     "../third_party:googletest",
     "../third_party:googletest_main",
-    "tokenizer",
+    ":sqlite",
   ]
 }

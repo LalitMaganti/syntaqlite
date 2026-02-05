@@ -25,7 +25,6 @@ from .transforms import (
     Pipeline,
     ReplaceText,
     TruncateAt,
-    RemoveLines,
     RemoveRegex,
     SymbolRename,
     SymbolRenameExact,
@@ -45,6 +44,35 @@ from .generators import (
     SQLITE_BLESSING,
 )
 from .tools import ToolRunner
+from .constants import (
+    KEYWORDHASH_ARRAY_SYMBOLS,
+    KEYWORDHASH_SCORE_MARKER,
+    KEYWORD_CODE_FUNC_MARKER,
+    LEMON_PUBLIC_SYMBOLS,
+    LEMON_INTERNAL_SYMBOLS,
+)
+from .pipelines import (
+    create_parser_symbol_rename_pipeline,
+    create_keywordhash_rename_pipeline,
+)
+from .grammar_build import (
+    LemonGrammarOutput,
+    parse_lemon_g_output,
+    build_syntaqlite_grammar,
+    merge_extension_grammar,
+)
+from .lempar_transform import (
+    transform_to_base_template,
+    transform_to_extension_template,
+    generate_templates,
+)
+from .parser_extract import (
+    ParserData,
+    extract_parser_data,
+    format_parser_data_header,
+    format_extension_reduce_function,
+    generate_extension_parser_header,
+)
 
 __all__ = [
     # source.py
@@ -54,7 +82,6 @@ __all__ = [
     "Pipeline",
     "ReplaceText",
     "TruncateAt",
-    "RemoveLines",
     "RemoveRegex",
     "SymbolRename",
     "SymbolRenameExact",
@@ -72,4 +99,28 @@ __all__ = [
     "SQLITE_BLESSING",
     # tools.py
     "ToolRunner",
+    # constants.py
+    "KEYWORDHASH_ARRAY_SYMBOLS",
+    "KEYWORDHASH_SCORE_MARKER",
+    "KEYWORD_CODE_FUNC_MARKER",
+    "LEMON_PUBLIC_SYMBOLS",
+    "LEMON_INTERNAL_SYMBOLS",
+    # pipelines.py
+    "create_parser_symbol_rename_pipeline",
+    "create_keywordhash_rename_pipeline",
+    # grammar_build.py
+    "LemonGrammarOutput",
+    "parse_lemon_g_output",
+    "build_syntaqlite_grammar",
+    "merge_extension_grammar",
+    # lempar_transform.py
+    "transform_to_base_template",
+    "transform_to_extension_template",
+    "generate_templates",
+    # parser_extract.py
+    "ParserData",
+    "extract_parser_data",
+    "format_parser_data_header",
+    "format_extension_reduce_function",
+    "generate_extension_parser_header",
 ]

@@ -46,12 +46,6 @@ class Pipeline:
             content = transform.apply(content)
         return content
 
-    def add(self, transform: Transform) -> Pipeline:
-        """Add a transform and return self for chaining."""
-        self.transforms.append(transform)
-        return self
-
-
 @dataclass
 class ReplaceText(Transform):
     """Simple text replacement transform."""
@@ -64,18 +58,6 @@ class ReplaceText(Transform):
         if self.count == -1:
             return content.replace(self.old, self.new)
         return content.replace(self.old, self.new, self.count)
-
-
-@dataclass
-class ReplaceRegex(Transform):
-    """Regex-based text replacement."""
-
-    pattern: str
-    replacement: str
-    flags: int = 0
-
-    def apply(self, content: str) -> str:
-        return re.sub(self.pattern, self.replacement, content, flags=self.flags)
 
 
 @dataclass
@@ -95,35 +77,6 @@ class TruncateAt(Transform):
         if self.include_marker:
             return content[: idx + len(self.marker)]
         return content[:idx]
-
-
-@dataclass
-class TruncateAfter(Transform):
-    """Truncate content after a marker.
-
-    Keeps the marker and removes everything after.
-    """
-
-    marker: str
-
-    def apply(self, content: str) -> str:
-        idx = content.find(self.marker)
-        if idx == -1:
-            return content
-        return content[: idx + len(self.marker)]
-
-
-@dataclass
-class RemoveLines(Transform):
-    """Remove lines matching a pattern."""
-
-    pattern: str
-    flags: int = 0
-
-    def apply(self, content: str) -> str:
-        regex = re.compile(self.pattern, self.flags)
-        lines = content.splitlines(keepends=True)
-        return "".join(line for line in lines if not regex.search(line))
 
 
 @dataclass
@@ -180,26 +133,6 @@ class RemoveFunctionCalls(Transform):
 
 
 @dataclass
-class PrependText(Transform):
-    """Prepend text to content."""
-
-    text: str
-
-    def apply(self, content: str) -> str:
-        return self.text + content
-
-
-@dataclass
-class AppendText(Transform):
-    """Append text to content."""
-
-    text: str
-
-    def apply(self, content: str) -> str:
-        return content + self.text
-
-
-@dataclass
 class StripBlessingComment(Transform):
     """Remove SQLite's blessing comment from the start of content.
 
@@ -224,50 +157,3 @@ class StripBlessingComment(Transform):
             end += 1
 
         return content[end:]
-
-
-@dataclass
-class ExtractBetween(Transform):
-    """Extract content between two markers, discarding the rest."""
-
-    start: str
-    end: str | None = None
-    include_start: bool = False
-    include_end: bool = False
-
-    def apply(self, content: str) -> str:
-        start_idx = content.find(self.start)
-        if start_idx == -1:
-            raise ValueError(f"Start marker not found: {self.start!r}")
-
-        if self.include_start:
-            extract_start = start_idx
-        else:
-            extract_start = start_idx + len(self.start)
-
-        if self.end is None:
-            return content[extract_start:]
-
-        end_idx = content.find(self.end, start_idx + len(self.start))
-        if end_idx == -1:
-            raise ValueError(f"End marker not found: {self.end!r}")
-
-        if self.include_end:
-            extract_end = end_idx + len(self.end)
-        else:
-            extract_end = end_idx
-
-        return content[extract_start:extract_end]
-
-
-@dataclass
-class ConditionalTransform(Transform):
-    """Apply a transform only if a condition is met."""
-
-    condition: callable  # Takes content, returns bool
-    transform: Transform
-
-    def apply(self, content: str) -> str:
-        if self.condition(content):
-            return self.transform.apply(content)
-        return content

@@ -144,7 +144,7 @@ class ToolRunner:
 
         print("Running lemon to generate parse.h...")
         result = subprocess.run(
-            [str(lemon_exe), str(grammar_path)],
+            [str(lemon_exe), "-l", str(grammar_path)],
             cwd=output_dir,
             capture_output=True,
             text=True,
@@ -270,3 +270,92 @@ class ToolRunner:
     def get_lempar_template(self) -> bytes:
         """Get lemon's lempar.c template."""
         return (self.sqlite_tool / "lempar.c").read_bytes()
+
+    def get_lempar_path(self) -> Path:
+        """Get path to lemon's lempar.c template."""
+        return self.sqlite_tool / "lempar.c"
+
+    def run_lemon_grammar_only(self, grammar_path: Path) -> str:
+        """Run lemon with -g flag to get clean grammar rules.
+
+        Args:
+            grammar_path: Path to the .y grammar file.
+
+        Returns:
+            String containing clean grammar rules without semantic actions.
+
+        Raises:
+            RuntimeError: If lemon fails.
+        """
+        lemon_exe = self.build("lemon")
+
+        print("Running lemon -g to extract clean grammar rules...")
+        result = subprocess.run(
+            [str(lemon_exe), "-g", str(grammar_path)],
+            capture_output=True,
+            text=True,
+        )
+
+        if result.returncode != 0:
+            if self.verbose:
+                print(f"Lemon output: {result.stdout}")
+            print(f"Lemon -g failed: {result.stderr}", file=sys.stderr)
+            raise RuntimeError("Lemon -g failed")
+
+        return result.stdout
+
+    def run_lemon_with_template(
+        self,
+        grammar_path: Path,
+        template_path: Path,
+        output_dir: Path | None = None,
+    ) -> tuple[Path, Path]:
+        """Run lemon parser generator with a custom template.
+
+        Args:
+            grammar_path: Path to the .y grammar file.
+            template_path: Path to custom lempar.c template.
+            output_dir: Directory for output files. If None, uses grammar_path's dir.
+
+        Returns:
+            Tuple of (parse.c path, parse.h path).
+
+        Raises:
+            RuntimeError: If lemon fails.
+        """
+        lemon_exe = self.build("lemon")
+
+        if output_dir is None:
+            output_dir = grammar_path.parent
+
+        # Copy template to output directory as lempar.c
+        lempar_dst = output_dir / "lempar.c"
+        if template_path != lempar_dst:
+            lempar_dst.write_bytes(template_path.read_bytes())
+
+        print(f"Running lemon with custom template...")
+        result = subprocess.run(
+            [str(lemon_exe), "-l", str(grammar_path)],
+            cwd=output_dir,
+            capture_output=True,
+            text=True,
+        )
+
+        # Determine output file names based on grammar file name
+        base_name = grammar_path.stem
+        parse_c = output_dir / f"{base_name}.c"
+        parse_h = output_dir / f"{base_name}.h"
+
+        # Lemon returns non-zero on conflicts, but still generates output.
+        # Check if files exist rather than relying on exit code.
+        if not parse_c.exists() or not parse_h.exists():
+            if self.verbose:
+                print(f"Lemon output: {result.stdout}")
+            print(f"Lemon failed: {result.stderr}", file=sys.stderr)
+            raise RuntimeError("Lemon parser generator failed")
+
+        # Print any warnings (like conflicts)
+        if result.stderr:
+            print(f"Lemon warnings: {result.stderr}")
+
+        return parse_c, parse_h

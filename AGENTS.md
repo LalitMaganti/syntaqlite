@@ -72,7 +72,7 @@ Strict: `-Wall -Wextra -Werror`, no exceptions, no RTTI by default.
 
 ## Key Directories
 
-- `src/` - C/C++ source code
+- `src/` - C/C++ source (tokenizer, parser, shared defs)
 - `include/` - Public headers
 - `tests/ast_diff_tests/` - Python-based AST validation tests
 - `python/tools/` - Development tooling
@@ -86,7 +86,7 @@ Strict: `-Wall -Wextra -Werror`, no exceptions, no RTTI by default.
 
 | Tool | Purpose |
 |------|---------|
-| `python/tools/extract_grammar.py` | Extract SQLite grammar using Lemon |
+| `python/tools/extract_sqlite.py` | Extract SQLite tokenizer and parser |
 | `python/tools/check_includes.py` | Validate include paths |
 | `python/tools/fix_include_guards.py` | Fix include guard format |
 | `python/tools/update_gn_version.py` | Update GN binary |
@@ -98,7 +98,7 @@ The codebase is designed to minimize maintenance by:
 2. Human-written CST→AST folding decisions in isolation
 3. Tools that detect when upstream SQLite grammar changes require attention
 
-When SQLite updates their grammar, the extract_grammar.py tool regenerates parser code, and only AST folding decisions may need manual updates.
+When SQLite updates their grammar, the `extract_sqlite.py` tool regenerates tokenizer and parser code, and only AST folding decisions may need manual updates.
 
 ### Dialect Extensibility
 

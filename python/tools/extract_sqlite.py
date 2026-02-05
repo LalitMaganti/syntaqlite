@@ -1,19 +1,27 @@
 # Copyright 2025 The syntaqlite Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0.
 
-"""Extract SQLite tokenization code for syntaqlite.
+"""Extract SQLite code for syntaqlite.
+
+This script extracts and transforms SQLite source code for use in syntaqlite.
+Handles both the tokenizer and parser extraction.
 
 Following Perfetto's approach:
-1. Build mkkeywordhash using GN/ninja
-2. Run mkkeywordhash to generate keywordhash data
-3. Copy tokenize.c with minimal changes
+1. Build SQLite tools (lemon, mkkeywordhash) using GN/ninja
+2. Run tools to generate token definitions and keyword hash data
+3. Copy and transform SQLite source files with minimal modifications
 4. Generate helper header files
 
+For the parser:
+1. Extract clean grammar rules using lemon -g
+2. Transform lempar.c to add injection points
+3. Generate parser with dialect extensibility support
+
 Usage:
-    python3 python/tools/extract_tokenizer.py
+    python3 python/tools/extract_sqlite.py
 
 For external users who want custom keywords for SQLite dialects,
-use tools/generate-tokens instead.
+use tools/build-extension-grammar instead.
 """
 import argparse
 import re
@@ -40,17 +48,27 @@ from python.sqlite_extractor import (
     SourceFileGenerator,
     ToolRunner,
     SQLITE_BLESSING,
+    KEYWORDHASH_SCORE_MARKER,
+    KEYWORD_CODE_FUNC_MARKER,
+    create_parser_symbol_rename_pipeline,
+    create_keywordhash_rename_pipeline,
 )
 from python.sqlite_extractor.generators import extract_tk_defines
+from python.sqlite_extractor.grammar_build import (
+    build_syntaqlite_grammar,
+)
+from python.sqlite_extractor.lempar_transform import (
+    transform_to_base_template,
+)
 
 ROOT_DIR = Path(__file__).parent.parent.parent
 SQLITE_SRC = ROOT_DIR / "third_party" / "src" / "sqlite" / "src"
-OUTPUT_DIR = ROOT_DIR / "src" / "tokenizer"
+OUTPUT_DIR = ROOT_DIR / "src"
 
 # Default prefix for renamed sqlite3 symbols to avoid clashes
 DEFAULT_PREFIX = "syntaqlite"
 
-REGENERATE_CMD = "python3 python/tools/extract_tokenizer.py"
+REGENERATE_CMD = "python3 python/tools/extract_sqlite.py"
 
 
 def create_symbol_rename_pipeline(prefix: str) -> Pipeline:
@@ -89,23 +107,20 @@ def process_keywordhash_output(output: str, prefix: str) -> tuple[str, str]:
     output = pipeline.apply(output)
 
     # Rename keywordhash arrays to have our prefix
-    for symbol in ["zKWText", "aKWHash", "aKWNext", "aKWLen", "aKWOffset", "aKWCode"]:
-        output = SymbolRenameExact(symbol, f"{prefix}_{symbol}").apply(output)
+    output = create_keywordhash_rename_pipeline(prefix).apply(output)
 
     # Remove renamed Testcase calls (entire lines)
     output = RemoveFunctionCalls(f"{sqlite3_prefix}Testcase").apply(output)
 
     # Find start of actual generated content (skip the SQLite header comment)
-    start_marker = "/* Hash score:"
-    start = output.find(start_marker)
+    start = output.find(KEYWORDHASH_SCORE_MARKER)
     if start == -1:
         start = 0
 
     generated = output[start:]
 
     # Find keywordCode function - it starts with "static int keywordCode("
-    keyword_code_marker = "static int keywordCode("
-    keyword_code_start = generated.find(keyword_code_marker)
+    keyword_code_start = generated.find(KEYWORD_CODE_FUNC_MARKER)
     if keyword_code_start == -1:
         raise ValueError("Could not find keywordCode function in mkkeywordhash output")
 
@@ -126,39 +141,25 @@ def process_keywordhash_output(output: str, prefix: str) -> tuple[str, str]:
 
 def build_keywordhash(
     runner: ToolRunner,
-    output_dir: Path,
     prefix: str,
-    include_dir: str,
-) -> str:
-    """Build keyword hash data file.
+) -> tuple[str, str]:
+    """Build keyword hash data.
 
-    Returns the keywordCode function source to be inlined into sqlite_tokenize.c.
+    Returns:
+        Tuple of (data_section, keyword_code_func) to be inlined into sqlite_tokenize.c.
     """
-    data_guard = f"{prefix.upper()}_SRC_TOKENIZER_KEYWORDHASH_DATA_H"
-
     # Run mkkeywordhash
     output = runner.run_mkkeywordhash()
 
     # Process output
-    data_section, keyword_code_func = process_keywordhash_output(output, prefix)
-
-    # Write data file
-    gen = HeaderGenerator(
-        guard=data_guard,
-        description=f"Keyword hash data for {prefix} tokenizer.",
-        regenerate_cmd=REGENERATE_CMD,
-        includes=[f"{include_dir}/sqlite_tokens.h"],
-    )
-    gen.write(output_dir / "sqlite_keywordhash_data.h", data_section)
-
-    return keyword_code_func
+    return process_keywordhash_output(output, prefix)
 
 
 def copy_tokenize_c(
     runner: ToolRunner,
     output_path: Path,
     prefix: str,
-    include_dir: str,
+    keywordhash_data: str,
     keyword_code_func: str,
 ) -> None:
     """Copy and transform tokenize.c."""
@@ -166,15 +167,22 @@ def copy_tokenize_c(
     source = SourceFile.from_path(runner.sqlite_src / "tokenize.c")
 
     # Build the inlined header that replaces sqliteInt.h
-    inlined_header = f'''#include "{include_dir}/{prefix}_defs.h"
-#include "{include_dir}/sqlite_tables.h"
+    inlined_header = f'''#include "src/syntaqlite_sqlite_defs.h"
+#include "src/sqlite_charmap.h"
 
-/* Keyword hash data - injectable via compile flag */
-#ifndef SYNTAQLITE_KEYWORDHASH_DATA_FILE
-#include "{include_dir}/sqlite_keywordhash_data.h"
-#else
+/*
+** Syntaqlite tokenizer injection support.
+** When SYNTAQLITE_KEYWORDHASH_DATA_FILE is defined, external keyword data is used.
+*/
+#ifdef SYNTAQLITE_KEYWORDHASH_DATA_FILE
 #include SYNTAQLITE_KEYWORDHASH_DATA_FILE
+#define _SYNTAQLITE_EXTERNAL_KEYWORDHASH 1
 #endif
+
+#ifndef _SYNTAQLITE_EXTERNAL_KEYWORDHASH
+#include "src/sqlite_tokens.h"
+{keywordhash_data}
+#endif /* _SYNTAQLITE_EXTERNAL_KEYWORDHASH */
 
 /* Stub for parser fallback - not needed for pure tokenization */
 static inline int {sqlite3_prefix}ParserFallback(int token) {{
@@ -238,37 +246,49 @@ def generate_token_defs(
     runner: ToolRunner,
     output_path: Path,
     prefix: str,
+    parse_h_content: str | None = None,
 ) -> None:
-    """Generate token definitions from SQLite's parse.y via Lemon."""
-    guard = f"{prefix.upper()}_SRC_TOKENIZER_TOKENS_H"
+    """Generate token definitions from SQLite's parse.y via Lemon.
 
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir = Path(tmpdir)
+    Args:
+        runner: ToolRunner instance.
+        output_path: Path to write sqlite_tokens.h.
+        prefix: Symbol prefix.
+        parse_h_content: Optional parse.h content from parser generation.
+            If provided, uses these tokens directly. If None, runs Lemon
+            on base grammar (for tokenizer-only extraction).
+    """
+    guard = f"{prefix.upper()}_SRC_SQLITE_TOKENS_H"
 
-        # Get grammar content
-        base_grammar = runner.get_base_grammar()
-        (tmpdir / "parse.y").write_text(base_grammar)
+    if parse_h_content is None:
+        # Tokenizer-only mode: run Lemon on base grammar
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir = Path(tmpdir)
 
-        # Run lemon
-        parse_h = runner.run_lemon(tmpdir / "parse.y")
-        parse_h_content = parse_h.read_text()
+            # Get grammar content
+            base_grammar = runner.get_base_grammar()
+            (tmpdir / "parse.y").write_text(base_grammar)
 
-        # Extract TK_* defines
-        defines = extract_tk_defines(parse_h_content)
+            # Run lemon
+            parse_h = runner.run_lemon(tmpdir / "parse.y")
+            parse_h_content = parse_h.read_text()
 
-        # Generate header
-        gen = HeaderGenerator(
-            guard=guard,
-            description="Token definitions from SQLite's parse.y via Lemon.",
-            regenerate_cmd=REGENERATE_CMD,
-        )
-        gen.write(output_path, "\n".join(defines))
+    # Extract TK_* defines
+    defines = extract_tk_defines(parse_h_content)
+
+    # Generate header
+    gen = HeaderGenerator(
+        guard=guard,
+        description="Token definitions from SQLite's parse.y via Lemon.",
+        regenerate_cmd=REGENERATE_CMD,
+    )
+    gen.write(output_path, "\n".join(defines))
 
 
 def copy_global_tables(runner: ToolRunner, output_path: Path, prefix: str) -> None:
     """Copy character tables from SQLite's global.c."""
     sqlite3_prefix = f"{prefix}_sqlite3"
-    guard = f"{prefix.upper()}_SRC_TOKENIZER_TABLES_H"
+    guard = f"{prefix.upper()}_SRC_SQLITE_CHARMAP_H"
 
     source = SourceFile.from_path(runner.sqlite_src / "global.c")
     content = source.content
@@ -339,10 +359,85 @@ static const unsigned char {sqlite3_prefix}UpperToLower[] = {{
     gen.write(output_path, tables)
 
 
+def generate_parser(
+    runner: ToolRunner,
+    output_dir: Path,
+    prefix: str,
+) -> str:
+    """Generate the SQLite parser with injection points.
+
+    This function:
+    1. Builds a clean grammar from SQLite's parse.y
+    2. Generates a modified lempar.c template with injection points
+    3. Runs Lemon with the custom template
+    4. Applies symbol renaming
+
+    Args:
+        runner: ToolRunner instance for running tools.
+        output_dir: Directory to write output files.
+        prefix: Symbol prefix.
+
+    Returns:
+        The parse.h content from Lemon (for token generation).
+    """
+    sqlite3_prefix = f"{prefix}_sqlite3"
+
+    print("\n=== Extracting Parser ===")
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+
+        # Step 1: Build the clean grammar
+        print("Building clean grammar from SQLite's parse.y...")
+        grammar_content = build_syntaqlite_grammar(runner, prefix)
+        grammar_path = tmpdir_path / "syntaqlite_parse.y"
+        grammar_path.write_text(grammar_content)
+
+        # Step 2: Generate the modified lempar.c template
+        print("Generating syntaqlite_lempar.c template...")
+        lempar_content = runner.get_lempar_template().decode("utf-8")
+        modified_lempar = transform_to_base_template(lempar_content)
+        lempar_path = tmpdir_path / "lempar.c"
+        lempar_path.write_text(modified_lempar)
+
+        # Step 3: Run Lemon with the custom template
+        print("Running Lemon to generate parser...")
+        parse_c_path, parse_h_path = runner.run_lemon_with_template(
+            grammar_path, lempar_path, tmpdir_path
+        )
+        parse_c_content = parse_c_path.read_text()
+        parse_h_content = parse_h_path.read_text()
+
+        # Step 4: Apply symbol renaming to the generated parser
+        print("Applying symbol renaming...")
+        rename_pipeline = create_parser_symbol_rename_pipeline(prefix)
+        parse_c_content = rename_pipeline.apply(parse_c_content)
+
+        # Step 5: Remove Lemon's source file comment (contains temp path)
+        parse_c_content = re.sub(
+            r'/\* This file is automatically generated by Lemon from input grammar\n'
+            r'\*\* source file "[^"]+"\.\n'
+            r'\*/\n',
+            '',
+            parse_c_content
+        )
+
+        # Step 6: Write output files
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Write the parser source
+        gen = SourceFileGenerator(
+            description=f"SQLite parser for {prefix}.\n** Generated from SQLite's parse.y via Lemon with injection points.",
+            regenerate_cmd=REGENERATE_CMD,
+        )
+        gen.write(output_dir / "sqlite_parse.c", parse_c_content)
+
+        return parse_h_content
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Extract SQLite tokenizer for syntaqlite")
+    parser = argparse.ArgumentParser(description="Extract SQLite tokenizer and parser for syntaqlite")
     parser.add_argument("--prefix", default=DEFAULT_PREFIX, help=f"Symbol prefix (default: {DEFAULT_PREFIX})")
-    parser.add_argument("--include-dir", help="Include path prefix (default: derived from output)")
     parser.add_argument("--output", type=Path, default=OUTPUT_DIR, help="Output directory")
     args = parser.parse_args()
 
@@ -352,22 +447,30 @@ def main():
         print(f"SQLite not found at {runner.sqlite_src}. Run tools/dev/install-build-deps first", file=sys.stderr)
         return 1
 
-    args.output.mkdir(parents=True, exist_ok=True)
-    try:
-        include_dir = args.include_dir or str(args.output.relative_to(ROOT_DIR))
-    except ValueError:
-        include_dir = args.include_dir or str(args.output)
-
     prefix = args.prefix
+    output_dir = args.output
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     print(f"Using prefix: {prefix}")
-    print(f"Using include dir: {include_dir}")
+    print(f"Output directory: {output_dir}")
 
-    generate_token_defs(runner, args.output / "sqlite_tokens.h", prefix)
-    copy_global_tables(runner, args.output / "sqlite_tables.h", prefix)
-    keyword_code_func = build_keywordhash(runner, args.output, prefix, include_dir)
-    copy_tokenize_c(runner, args.output / "sqlite_tokenize.c", prefix, include_dir, keyword_code_func)
+    # Generate parser first to get parse.h for consistent token values
+    print("\n=== Generating Parser ===")
+    parse_h_content = generate_parser(runner, output_dir, prefix)
 
-    print(f"\nDone! Generated files in {args.output}")
+    # Generate token definitions and character map
+    print("\n=== Generating Tokens and Charmap ===")
+    generate_token_defs(runner, output_dir / "sqlite_tokens.h", prefix, parse_h_content)
+    copy_global_tables(runner, output_dir / "sqlite_charmap.h", prefix)
+
+    # Generate tokenizer
+    print("\n=== Generating Tokenizer ===")
+    keywordhash_data, keyword_code_func = build_keywordhash(runner, prefix)
+    copy_tokenize_c(runner, output_dir / "sqlite_tokenize.c", prefix, keywordhash_data, keyword_code_func)
+
+    print(f"\nAll files written to {output_dir}")
+
+    print("\nDone!")
     return 0
 
 
