@@ -109,28 +109,21 @@ uint32_t ast_unary_expr(SyntaqliteAstContext *ctx, uint8_t op, uint32_t operand)
     return id;
 }
 
-uint32_t ast_literal(
-    SyntaqliteAstContext *ctx,
-    uint8_t literal_type,
-    uint32_t source_offset,
-    uint16_t source_length
-) {
+uint32_t ast_literal(SyntaqliteAstContext *ctx, uint8_t literal_type, SyntaqliteSourceSpan source) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_LITERAL, sizeof(SyntaqliteLiteral));
     if (id == SYNTAQLITE_NULL_NODE) return id;
 
     SyntaqliteLiteral *node = (SyntaqliteLiteral*)
         (ctx->ast->arena + ctx->ast->offsets[id]);
     node->literal_type = literal_type;
-    node->source_offset = source_offset;
-    node->source_length = source_length;
+    node->source = source;
     return id;
 }
 
 uint32_t ast_result_column(
     SyntaqliteAstContext *ctx,
     uint8_t flags,
-    uint32_t alias_offset,
-    uint16_t alias_length,
+    SyntaqliteSourceSpan alias,
     uint32_t expr
 ) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_RESULT_COLUMN, sizeof(SyntaqliteResultColumn));
@@ -139,8 +132,7 @@ uint32_t ast_result_column(
     SyntaqliteResultColumn *node = (SyntaqliteResultColumn*)
         (ctx->ast->arena + ctx->ast->offsets[id]);
     node->flags = flags;
-    node->alias_offset = alias_offset;
-    node->alias_length = alias_length;
+    node->alias = alias;
     node->expr = expr;
     return id;
 }

@@ -370,7 +370,9 @@ def _generate_grammar_file(
     # Include section with our defs and critical defines
     parts.append(f"""%include {{
 #include "src/syntaqlite_sqlite_defs.h"
+#include "src/sqlite_tokens.h"
 #include "src/ast/ast_builder.h"
+#include "src/ast/ast_helpers.h"
 
 #define YYNOERRORRECOVERY 1
 #define YYPARSEFREENEVERNULL 1
@@ -379,10 +381,16 @@ def _generate_grammar_file(
 """)
 
     # Token type and extra context
-    # Terminals are SyntaqliteToken, non-terminals are u32 (node IDs)
+    # Terminals are SyntaqliteToken, non-terminals default to u32 (node IDs)
     parts.append(f"""%token_type {{SyntaqliteToken}}
 %default_type {{u32}}
 %extra_context {{{prefix.capitalize()}ParseContext *pCtx}}
+
+// Non-terminals that pass through token info (not node IDs)
+%type nm {{SyntaqliteToken}}
+%type ids {{SyntaqliteToken}}
+%type as {{SyntaqliteToken}}
+%type scanpt {{SyntaqliteToken}}
 
 %syntax_error {{
   (void)yymajor;

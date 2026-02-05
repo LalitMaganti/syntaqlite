@@ -146,5 +146,33 @@ def List(name: str, child_type: str) -> ListDef:
     return ListDef(name=name, child_type=child_type)
 
 
+@dataclass(frozen=True)
+class EnumDef:
+    """Definition of an enum type for AST fields."""
+
+    kind: TypingLiteral["enum"] = "enum"
+    name: str = ""
+    values: tuple[str, ...] = ()
+
+
+def Enum(name: str, *values: str) -> EnumDef:
+    """Define an enum type for AST fields.
+
+    Args:
+        name: The enum type name (e.g., "LiteralType").
+        *values: Enum value names in order (e.g., "INTEGER", "FLOAT", ...).
+
+    Returns:
+        An EnumDef specification.
+
+    Example:
+        Enum("LiteralType", "INTEGER", "FLOAT", "STRING", "BLOB", "NULL")
+    """
+    return EnumDef(name=name, values=values)
+
+
 # Type alias for any node definition
 AnyNodeDef = NodeDef | ListDef
+
+# Type alias for any definition (nodes, lists, enums)
+AnyDef = NodeDef | ListDef | EnumDef

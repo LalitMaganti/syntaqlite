@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .defs import AnyNodeDef, NodeDef, ListDef, InlineField, IndexField
+from .defs import AnyNodeDef, NodeDef, ListDef, EnumDef, InlineField, IndexField
 
 
 # Mapping from our type names to C types
@@ -101,7 +101,12 @@ def _calculate_struct_size(node: NodeDef) -> tuple[int, list[tuple[str, str, int
     return offset, fields
 
 
-def generate_ast_nodes_h(node_defs: list[AnyNodeDef], output: Path) -> None:
+def _enum_prefix(enum_name: str) -> str:
+    """Generate enum value prefix from enum name."""
+    return f"SYNTAQLITE_{_pascal_to_snake(enum_name).upper()}"
+
+
+def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef], output: Path) -> None:
     """Generate src/ast/ast_nodes.h with structs, union, arena types."""
     lines = []
 
@@ -124,6 +129,37 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], output: Path) -> None:
     lines.append("// Null node ID (used for nullable fields)")
     lines.append("#define SYNTAQLITE_NULL_NODE 0xFFFFFFFFu")
     lines.append("")
+
+    # Helper structs
+    lines.append("// ============ Helper Types ============")
+    lines.append("")
+    lines.append("// Source location span (offset + length into source text)")
+    lines.append("typedef struct SyntaqliteSourceSpan {")
+    lines.append("    uint32_t offset;")
+    lines.append("    uint16_t length;")
+    lines.append("} SyntaqliteSourceSpan;")
+    lines.append("")
+    lines.append("// Create a source span from offset and length")
+    lines.append("static inline SyntaqliteSourceSpan syntaqlite_span(uint32_t offset, uint16_t length) {")
+    lines.append("    SyntaqliteSourceSpan span = {offset, length};")
+    lines.append("    return span;")
+    lines.append("}")
+    lines.append("")
+    lines.append("// Empty source span (no location)")
+    lines.append("#define SYNTAQLITE_NO_SPAN ((SyntaqliteSourceSpan){0, 0})")
+    lines.append("")
+
+    # User-defined enums
+    if enum_defs:
+        lines.append("// ============ Value Enums ============")
+        lines.append("")
+        for enum in enum_defs:
+            prefix = _enum_prefix(enum.name)
+            lines.append(f"typedef enum {{")
+            for i, value in enumerate(enum.values):
+                lines.append(f"    {prefix}_{value} = {i},")
+            lines.append(f"}} Syntaqlite{enum.name};")
+            lines.append("")
 
     # Node tag enum
     lines.append("// ============ Node Tags ============")
@@ -185,10 +221,10 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], output: Path) -> None:
     lines.append("} SyntaqliteNode;")
     lines.append("")
 
-    # Arena storage
+    # Arena storage - uses named struct to match forward declaration
     lines.append("// ============ Arena Storage ============")
     lines.append("")
-    lines.append("typedef struct {")
+    lines.append("typedef struct SyntaqliteAst {")
     lines.append("    uint8_t *arena;           // Packed nodes of varying sizes")
     lines.append("    uint32_t arena_size;")
     lines.append("    uint32_t arena_capacity;")
@@ -586,12 +622,11 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], output: Path) -> None:
     lines.append("}")
     lines.append("")
 
-    lines.append("static void print_source_span(FILE *out, const char *source, uint32_t offset,")
-    lines.append("                              uint16_t length) {")
-    lines.append("  if (source && length > 0) {")
+    lines.append("static void print_source_span(FILE *out, const char *source, SyntaqliteSourceSpan span) {")
+    lines.append("  if (source && span.length > 0) {")
     lines.append('    fprintf(out, "\\"");')
-    lines.append("    for (uint16_t i = 0; i < length; i++) {")
-    lines.append("      char c = source[offset + i];")
+    lines.append("    for (uint16_t i = 0; i < span.length; i++) {")
+    lines.append("      char c = source[span.offset + i];")
     lines.append("      if (c == '\"') {")
     lines.append('        fprintf(out, "\\\\\\"");')
     lines.append("      } else if (c == '\\\\') {")
@@ -645,20 +680,12 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], output: Path) -> None:
                     # Recursively print child node
                     lines.append(f"      print_node(out, ast, node->{snake_name}.{field_name}, source, depth + 1);")
                 elif isinstance(field_type, InlineField):
-                    # Check if this looks like a source span (offset + length pattern)
-                    if field_name.endswith("_offset"):
-                        # Look for corresponding _length field
-                        base_name = field_name[:-7]  # Remove "_offset"
-                        length_field = f"{base_name}_length"
-                        if length_field in node.fields:
-                            # This is a source span - print it specially
-                            lines.append("      print_indent(out, depth + 1);")
-                            lines.append(f'      fprintf(out, "{base_name}: ");')
-                            lines.append(f"      print_source_span(out, source, node->{snake_name}.{field_name}, node->{snake_name}.{length_field});")
-                            lines.append('      fprintf(out, "\\n");')
-                    elif field_name.endswith("_length"):
-                        # Skip - handled with _offset
-                        pass
+                    if field_type.type_name == "SyntaqliteSourceSpan":
+                        # Source span - print quoted text or "null"
+                        lines.append("      print_indent(out, depth + 1);")
+                        lines.append(f'      fprintf(out, "{field_name}: ");')
+                        lines.append(f"      print_source_span(out, source, node->{snake_name}.{field_name});")
+                        lines.append('      fprintf(out, "\\n");')
                     else:
                         # Regular inline field - print name and value
                         lines.append("      print_indent(out, depth + 1);")
@@ -705,16 +732,17 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], output: Path) -> None:
     output.write_text("\n".join(lines) + "\n")
 
 
-def generate_all(node_defs: list[AnyNodeDef], output_dir: Path) -> None:
+def generate_all(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef], output_dir: Path) -> None:
     """Generate all AST C code files.
 
     Args:
         node_defs: List of node definitions.
+        enum_defs: List of enum definitions.
         output_dir: Directory to write output files (typically src/ast/).
     """
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    generate_ast_nodes_h(node_defs, output_dir / "ast_nodes.h")
+    generate_ast_nodes_h(node_defs, enum_defs, output_dir / "ast_nodes.h")
     generate_ast_builder_h(node_defs, output_dir / "ast_builder.h")
     generate_ast_builder_c(node_defs, output_dir / "ast_builder.c")
     generate_ast_print_h(node_defs, output_dir / "ast_print.h")

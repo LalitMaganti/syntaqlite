@@ -11,12 +11,11 @@ static void print_indent(FILE *out, int depth) {
   }
 }
 
-static void print_source_span(FILE *out, const char *source, uint32_t offset,
-                              uint16_t length) {
-  if (source && length > 0) {
+static void print_source_span(FILE *out, const char *source, SyntaqliteSourceSpan span) {
+  if (source && span.length > 0) {
     fprintf(out, "\"");
-    for (uint16_t i = 0; i < length; i++) {
-      char c = source[offset + i];
+    for (uint16_t i = 0; i < span.length; i++) {
+      char c = source[span.offset + i];
       if (c == '"') {
         fprintf(out, "\\\"");
       } else if (c == '\\') {
@@ -74,7 +73,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "literal_type: %u\n", node->literal.literal_type);
       print_indent(out, depth + 1);
       fprintf(out, "source: ");
-      print_source_span(out, source, node->literal.source_offset, node->literal.source_length);
+      print_source_span(out, source, node->literal.source);
       fprintf(out, "\n");
       break;
     }
@@ -86,7 +85,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "flags: %u\n", node->result_column.flags);
       print_indent(out, depth + 1);
       fprintf(out, "alias: ");
-      print_source_span(out, source, node->result_column.alias_offset, node->result_column.alias_length);
+      print_source_span(out, source, node->result_column.alias);
       fprintf(out, "\n");
       print_node(out, ast, node->result_column.expr, source, depth + 1);
       break;

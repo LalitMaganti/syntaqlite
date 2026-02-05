@@ -76,7 +76,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.root:
         root_dir = Path(args.root)
     else:
-        root_dir = Path(__file__).parent.parent.parent
+        root_dir = Path(__file__).parent.parent.parent.parent
         if not (root_dir / '.gn').exists():
             print(f"Error: Could not find project root.", file=sys.stderr)
             return 1

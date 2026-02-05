@@ -14,6 +14,33 @@ extern "C" {
 // Null node ID (used for nullable fields)
 #define SYNTAQLITE_NULL_NODE 0xFFFFFFFFu
 
+// ============ Helper Types ============
+
+// Source location span (offset + length into source text)
+typedef struct SyntaqliteSourceSpan {
+    uint32_t offset;
+    uint16_t length;
+} SyntaqliteSourceSpan;
+
+// Create a source span from offset and length
+static inline SyntaqliteSourceSpan syntaqlite_span(uint32_t offset, uint16_t length) {
+    SyntaqliteSourceSpan span = {offset, length};
+    return span;
+}
+
+// Empty source span (no location)
+#define SYNTAQLITE_NO_SPAN ((SyntaqliteSourceSpan){0, 0})
+
+// ============ Value Enums ============
+
+typedef enum {
+    SYNTAQLITE_LITERAL_TYPE_INTEGER = 0,
+    SYNTAQLITE_LITERAL_TYPE_FLOAT = 1,
+    SYNTAQLITE_LITERAL_TYPE_STRING = 2,
+    SYNTAQLITE_LITERAL_TYPE_BLOB = 3,
+    SYNTAQLITE_LITERAL_TYPE_NULL = 4,
+} SyntaqliteLiteralType;
+
 // ============ Node Tags ============
 
 typedef enum {
@@ -45,15 +72,13 @@ typedef struct SyntaqliteUnaryExpr {
 typedef struct SyntaqliteLiteral {
     uint8_t tag;
     uint8_t literal_type;  // inline
-    uint32_t source_offset;  // inline
-    uint16_t source_length;  // inline
+    SyntaqliteSourceSpan source;  // inline
 } SyntaqliteLiteral;
 
 typedef struct SyntaqliteResultColumn {
     uint8_t tag;
     uint8_t flags;  // inline
-    uint32_t alias_offset;  // inline
-    uint16_t alias_length;  // inline
+    SyntaqliteSourceSpan alias;  // inline
     uint32_t expr;  // index -> Expr
 } SyntaqliteResultColumn;
 
@@ -86,7 +111,7 @@ typedef union SyntaqliteNode {
 
 // ============ Arena Storage ============
 
-typedef struct {
+typedef struct SyntaqliteAst {
     uint8_t *arena;           // Packed nodes of varying sizes
     uint32_t arena_size;
     uint32_t arena_capacity;

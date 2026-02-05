@@ -12,7 +12,22 @@ Design rules:
 For nullable index fields, use SYNTAQLITE_NULL_NODE (0xFFFFFFFF).
 """
 
-from .defs import Node, List, inline, index
+from .defs import Node, List, Enum, inline, index
+
+# ============================================================================
+# Enums
+# ============================================================================
+
+ENUMS = [
+    # Literal value types
+    Enum("LiteralType",
+        "INTEGER",   # 0
+        "FLOAT",     # 1
+        "STRING",    # 2
+        "BLOB",      # 3
+        "NULL",      # 4
+    ),
+]
 
 # ============================================================================
 # Nodes
@@ -33,18 +48,17 @@ NODES = [
     ),
 
     # Literal value (integer, float, string, blob, null)
+    # Uses SyntaqliteSourceSpan for source location
     Node("Literal",
-        literal_type=inline("u8"),   # LITERAL_TYPE_* code
-        source_offset=inline("u32"), # Offset into source text
-        source_length=inline("u16"), # Length in source
+        literal_type=inline("u8"),         # SyntaqliteLiteralType
+        source=inline("SyntaqliteSourceSpan"),  # Location in source text
     ),
 
     # Result column: expr [AS alias] or *
     Node("ResultColumn",
-        flags=inline("u8"),          # Is star, has alias, etc.
-        alias_offset=inline("u32"),  # Alias offset (0 if none)
-        alias_length=inline("u16"),  # Alias length
-        expr=index("Expr"),          # Expression (nullable for table.*)
+        flags=inline("u8"),                # Is star, has alias, etc.
+        alias=inline("SyntaqliteSourceSpan"),  # Alias (empty if none)
+        expr=index("Expr"),                # Expression (nullable for table.*)
     ),
 
     # List of result columns

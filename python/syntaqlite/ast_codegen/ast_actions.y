@@ -57,18 +57,18 @@ selectnowith(A) ::= oneselect(B). {
 }
 
 oneselect(A) ::= SELECT distinct(B) selcollist(C) from where_opt groupby_opt having_opt orderby_opt limit_opt. {
-    A = ast_select_stmt(pCtx->astCtx, (u8)B, C);
+    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C);
 }
 
 // ============ Result columns ============
 
 selcollist(A) ::= sclp(B) scanpt expr(C) scanpt as. {
-    u32 col = ast_result_column(pCtx->astCtx, 0, 0, 0, C);
+    uint32_t col = ast_result_column(pCtx->astCtx, 0, SYNTAQLITE_NO_SPAN, C);
     A = ast_result_column_list_append(pCtx->astCtx, B, col);
 }
 
 selcollist(A) ::= sclp(B) scanpt STAR. {
-    u32 col = ast_result_column(pCtx->astCtx, 1, 0, 0, SYNTAQLITE_NULL_NODE);
+    uint32_t col = ast_result_column(pCtx->astCtx, 1, SYNTAQLITE_NO_SPAN, SYNTAQLITE_NULL_NODE);
     A = ast_result_column_list_append(pCtx->astCtx, B, col);
 }
 
@@ -160,24 +160,23 @@ expr(A) ::= LP expr(B) RP. {
 
 // ============ Literals ============
 
-term(A) ::= NULL(B). {
-    A = ast_literal(pCtx->astCtx, 4, (u32)(B.z - pCtx->zSql), (u16)B.n);
-}
-
 term(A) ::= INTEGER(B). {
-    A = ast_literal(pCtx->astCtx, 0, (u32)(B.z - pCtx->zSql), (u16)B.n);
-}
-
-term(A) ::= FLOAT(B). {
-    A = ast_literal(pCtx->astCtx, 1, (u32)(B.z - pCtx->zSql), (u16)B.n);
+    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_INTEGER, token_span(pCtx, B));
 }
 
 term(A) ::= STRING(B). {
-    A = ast_literal(pCtx->astCtx, 2, (u32)(B.z - pCtx->zSql), (u16)B.n);
+    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_STRING, token_span(pCtx, B));
 }
 
-term(A) ::= BLOB(B). {
-    A = ast_literal(pCtx->astCtx, 3, (u32)(B.z - pCtx->zSql), (u16)B.n);
+term(A) ::= NULL|FLOAT|BLOB(B). {
+    SyntaqliteLiteralType lit_type;
+    switch (yymsp[0].major) {
+        case TK_NULL:  lit_type = SYNTAQLITE_LITERAL_TYPE_NULL; break;
+        case TK_FLOAT: lit_type = SYNTAQLITE_LITERAL_TYPE_FLOAT; break;
+        case TK_BLOB:  lit_type = SYNTAQLITE_LITERAL_TYPE_BLOB; break;
+        default:       lit_type = SYNTAQLITE_LITERAL_TYPE_NULL; break;
+    }
+    A = ast_literal(pCtx->astCtx, lit_type, token_span(pCtx, B));
 }
 
 // ============ Identifiers ============

@@ -106,8 +106,10 @@ int main(void) {
   }
 
   // Tokenize and parse
+  // Following Perfetto's approach: synthesize SEMI at EOF if needed
   const unsigned char *z = (const unsigned char *)sql;
   int tokenType;
+  int lastTokenType = 0;
 
   while (*z) {
     i64 tokenLen = syntaqlite_sqlite3GetToken(z, &tokenType);
@@ -125,6 +127,7 @@ int main(void) {
     token.n = (int)tokenLen;
 
     syntaqlite_sqlite3Parser(parser, tokenType, token, &parseCtx);
+    lastTokenType = tokenType;
 
     if (g_syntax_error) {
       fprintf(stderr, "Error: Syntax error near '%.*s'\n", (int)tokenLen, z);
@@ -135,6 +138,12 @@ int main(void) {
     }
 
     z += tokenLen;
+  }
+
+  // If the statement didn't end with SEMI, synthesize one (like Perfetto does)
+  if (lastTokenType != TK_SEMI) {
+    SyntaqliteToken semiToken = {NULL, 0};
+    syntaqlite_sqlite3Parser(parser, TK_SEMI, semiToken, &parseCtx);
   }
 
   // Send end-of-input (token 0)
