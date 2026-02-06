@@ -1,16 +1,14 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// Formatter helpers: context struct, inline builders, and helper declarations.
-// Used by both the hand-written helpers (fmt_helpers.c) and the generated
-// node formatters (fmt.c).
+// Formatter context, comment attachment, and helper functions.
 
 #ifndef SYNQ_SRC_FMT_FMT_HELPERS_H
 #define SYNQ_SRC_FMT_FMT_HELPERS_H
 
 #include "src/ast/ast_base.h"
-#include "src/fmt/comment_attach.h"
 #include "src/fmt/doc.h"
+#include "src/fmt/fmt_ops.h"
 #include "src/fmt/fmt_options.h"
 #include "src/fmt/token_list.h"
 
@@ -20,16 +18,39 @@
 extern "C" {
 #endif
 
+// ============ Comment Attachment ============
+
+// Comment placement relative to adjacent real tokens.
+typedef enum {
+    SYNQ_COMMENT_LEADING = 0,   // Before the next real token
+    SYNQ_COMMENT_TRAILING = 1,  // After the previous real token, same line
+} SynqCommentKind;
+
+// Comment attachment: maps each comment token to its owning AST node.
+typedef struct {
+    uint32_t *owner_node;  // owner_node[tok_idx] = AST node_id (or SYNQ_NULL_NODE)
+    uint8_t *position;     // SynqCommentKind (LEADING or TRAILING)
+    uint32_t count;        // = token_list->count
+} SynqCommentAttachment;
+
+// Build comment attachment using neighbor-based matching on AST node ranges.
+// Returns NULL if no comments exist.
+SynqCommentAttachment *synq_comment_attach(
+    SynqAstContext *astCtx, uint32_t root_id,
+    const char *source, SynqTokenList *token_list);
+
+void synq_comment_attachment_free(SynqCommentAttachment *att);
+
 // ============ Formatter Context ============
 
-typedef struct {
+struct SynqFmtCtx {
     SynqDocContext docs;
     SynqArena *ast;
     const char *source;
     SynqTokenList *token_list;
     SynqFmtOptions *options;
     SynqCommentAttachment *comment_att;
-} SynqFmtCtx;
+};
 
 // ============ Inline Helpers ============
 
@@ -51,8 +72,6 @@ inline uint32_t synq_emit_single_comment(SynqFmtCtx *ctx, uint32_t tok_idx) {
 
 uint32_t synq_emit_owned_comments(SynqFmtCtx *ctx, uint32_t node_id, uint8_t kind);
 uint32_t synq_format_node(SynqFmtCtx *ctx, uint32_t node_id);
-uint32_t synq_dispatch_format(SynqFmtCtx *ctx, uint32_t node_id);
-uint32_t synq_format_comma_list(SynqFmtCtx *ctx, uint32_t *children, uint32_t count);
 uint32_t synq_format_clause(SynqFmtCtx *ctx, const char *keyword, uint32_t body_id);
 
 #ifdef __cplusplus

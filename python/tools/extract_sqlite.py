@@ -473,7 +473,7 @@ def generate_ast(output_dir: Path) -> None:
 
     # Generate formatter
     fmt_output = output_dir / "fmt" / "fmt_gen.c"
-    ast_fmt_codegen.generate_fmt_c(AST_NODES, AST_ENUMS, AST_FLAGS, fmt_output)
+    ast_fmt_codegen.generate_fmt_c(AST_NODES, AST_FLAGS, fmt_output)
 
     print(f"  {len(AST_NODES)} node types, {len(AST_ENUMS)} enums")
     print("  Generated: ast_nodes_gen.h (public + internal), ast_builder_gen.h, ast_builder_gen.c, ast_print_gen.c, fmt_gen.c")

@@ -4,1867 +4,1264 @@
 // Generated from ast_codegen node definitions - DO NOT EDIT
 // Regenerate with: python3 python/tools/extract_sqlite.py
 
-#include "src/fmt/fmt_helpers.h"
+#include "src/fmt/fmt_ops.h"
 
 #include "src/ast/ast_nodes_gen.h"
 
-// ============ Node Formatters ============
-
-static uint32_t format_binary_expr(SynqFmtCtx *ctx, SynqBinaryExpr *node) {
-    uint32_t sw_1 = SYNQ_NULL_DOC;
-    switch (node->op) {
-        case SYNQ_BINARY_OP_AND: {
-            uint32_t ch_2 = synq_format_node(ctx, node->left);
-            uint32_t ln_3 = synq_doc_line(&ctx->docs);
-            uint32_t kw_4 = synq_kw(ctx, "AND ");
-            uint32_t ch_5 = synq_format_node(ctx, node->right);
-            uint32_t cat_6_items[] = { ch_2, ln_3, kw_4, ch_5 };
-            uint32_t cat_6 = synq_doc_concat(&ctx->docs, cat_6_items, 4);
-            sw_1 = cat_6;
-            break;
-        }
-        case SYNQ_BINARY_OP_OR: {
-            uint32_t ch_7 = synq_format_node(ctx, node->left);
-            uint32_t ln_8 = synq_doc_line(&ctx->docs);
-            uint32_t kw_9 = synq_kw(ctx, "OR ");
-            uint32_t ch_10 = synq_format_node(ctx, node->right);
-            uint32_t cat_11_items[] = { ch_7, ln_8, kw_9, ch_10 };
-            uint32_t cat_11 = synq_doc_concat(&ctx->docs, cat_11_items, 4);
-            sw_1 = cat_11;
-            break;
-        }
-        default: {
-            uint32_t ch_12 = synq_format_node(ctx, node->left);
-            uint32_t ln_13 = synq_doc_line(&ctx->docs);
-            uint32_t ed_14 = SYNQ_NULL_DOC;
-            switch (node->op) {
-                case SYNQ_BINARY_OP_PLUS: ed_14 = synq_kw(ctx, "+"); break;
-                case SYNQ_BINARY_OP_MINUS: ed_14 = synq_kw(ctx, "-"); break;
-                case SYNQ_BINARY_OP_STAR: ed_14 = synq_kw(ctx, "*"); break;
-                case SYNQ_BINARY_OP_SLASH: ed_14 = synq_kw(ctx, "/"); break;
-                case SYNQ_BINARY_OP_REM: ed_14 = synq_kw(ctx, "%"); break;
-                case SYNQ_BINARY_OP_LT: ed_14 = synq_kw(ctx, "<"); break;
-                case SYNQ_BINARY_OP_GT: ed_14 = synq_kw(ctx, ">"); break;
-                case SYNQ_BINARY_OP_LE: ed_14 = synq_kw(ctx, "<="); break;
-                case SYNQ_BINARY_OP_GE: ed_14 = synq_kw(ctx, ">="); break;
-                case SYNQ_BINARY_OP_EQ: ed_14 = synq_kw(ctx, "="); break;
-                case SYNQ_BINARY_OP_NE: ed_14 = synq_kw(ctx, "!="); break;
-                case SYNQ_BINARY_OP_AND: ed_14 = synq_kw(ctx, "AND"); break;
-                case SYNQ_BINARY_OP_OR: ed_14 = synq_kw(ctx, "OR"); break;
-                case SYNQ_BINARY_OP_BITAND: ed_14 = synq_kw(ctx, "&"); break;
-                case SYNQ_BINARY_OP_BITOR: ed_14 = synq_kw(ctx, "|"); break;
-                case SYNQ_BINARY_OP_LSHIFT: ed_14 = synq_kw(ctx, "<<"); break;
-                case SYNQ_BINARY_OP_RSHIFT: ed_14 = synq_kw(ctx, ">>"); break;
-                case SYNQ_BINARY_OP_CONCAT: ed_14 = synq_kw(ctx, "||"); break;
-                case SYNQ_BINARY_OP_PTR: ed_14 = synq_kw(ctx, "->"); break;
-                default: break;
-            }
-            uint32_t kw_15 = synq_kw(ctx, " ");
-            uint32_t ch_16 = synq_format_node(ctx, node->right);
-            uint32_t cat_17_items[] = { ch_12, ln_13, ed_14, kw_15, ch_16 };
-            uint32_t cat_17 = synq_doc_concat(&ctx->docs, cat_17_items, 5);
-            uint32_t grp_18 = synq_doc_group(&ctx->docs, cat_17);
-            sw_1 = grp_18;
-            break;
-        }
-    }
-    return sw_1;
-}
-
-static uint32_t format_unary_expr(SynqFmtCtx *ctx, SynqUnaryExpr *node) {
-    uint32_t ed_1 = SYNQ_NULL_DOC;
-    switch (node->op) {
-        case SYNQ_UNARY_OP_MINUS: ed_1 = synq_kw(ctx, "-"); break;
-        case SYNQ_UNARY_OP_PLUS: ed_1 = synq_kw(ctx, "+"); break;
-        case SYNQ_UNARY_OP_BITNOT: ed_1 = synq_kw(ctx, "~"); break;
-        case SYNQ_UNARY_OP_NOT: ed_1 = synq_kw(ctx, "NOT "); break;
-        default: break;
-    }
-    uint32_t ch_2 = synq_format_node(ctx, node->operand);
-    uint32_t cat_3_items[] = { ed_1, ch_2 };
-    return synq_doc_concat(&ctx->docs, cat_3_items, 2);
-}
-
-static uint32_t format_literal(SynqFmtCtx *ctx, SynqLiteral *node) {
-    return synq_span_text(ctx, node->source);
-}
-
-static uint32_t format_result_column(SynqFmtCtx *ctx, SynqResultColumn *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->flags.star) {
-        uint32_t cond_2 = SYNQ_NULL_DOC;
-        if (node->expr != SYNQ_NULL_NODE) {
-            uint32_t ch_3 = synq_format_node(ctx, node->expr);
-            uint32_t kw_4 = synq_kw(ctx, ".*");
-            uint32_t cat_5_items[] = { ch_3, kw_4 };
-            uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 2);
-            cond_2 = cat_5;
-        } else {
-            cond_2 = synq_kw(ctx, "*");
-        }
-        cond_1 = cond_2;
-    } else {
-        cond_1 = synq_format_node(ctx, node->expr);
-    }
-    uint32_t cond_8 = SYNQ_NULL_DOC;
-    if (node->alias.length > 0) {
-        uint32_t kw_9 = synq_kw(ctx, " AS ");
-        uint32_t sp_10 = synq_span_text(ctx, node->alias);
-        uint32_t cat_11_items[] = { kw_9, sp_10 };
-        uint32_t cat_11 = synq_doc_concat(&ctx->docs, cat_11_items, 2);
-        cond_8 = cat_11;
-    }
-    uint32_t cat_12_items[] = { cond_1, cond_8 };
-    return synq_doc_concat(&ctx->docs, cat_12_items, 2);
-}
-
-static uint32_t format_select_stmt(SynqFmtCtx *ctx, SynqSelectStmt *node) {
-    uint32_t cond_1 = node->flags.distinct ? synq_kw(ctx, "SELECT DISTINCT") : synq_kw(ctx, "SELECT");
-    uint32_t cond_4 = SYNQ_NULL_DOC;
-    if (node->columns != SYNQ_NULL_NODE) {
-        uint32_t ln_5 = synq_doc_line(&ctx->docs);
-        uint32_t ch_6 = synq_format_node(ctx, node->columns);
-        uint32_t cat_7_items[] = { ln_5, ch_6 };
-        uint32_t cat_7 = synq_doc_concat(&ctx->docs, cat_7_items, 2);
-        uint32_t nst_8 = synq_doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_7);
-        uint32_t grp_9 = synq_doc_group(&ctx->docs, nst_8);
-        cond_4 = grp_9;
-    }
-    uint32_t cl_10 = synq_format_clause(ctx, "FROM", node->from_clause);
-    uint32_t cl_11 = synq_format_clause(ctx, "WHERE", node->where);
-    uint32_t cl_12 = synq_format_clause(ctx, "GROUP BY", node->groupby);
-    uint32_t cl_13 = synq_format_clause(ctx, "HAVING", node->having);
-    uint32_t cl_14 = synq_format_clause(ctx, "ORDER BY", node->orderby);
-    uint32_t cl_15 = synq_format_clause(ctx, "LIMIT", node->limit_clause);
-    uint32_t cl_16 = synq_format_clause(ctx, "WINDOW", node->window_clause);
-    uint32_t cat_17_items[] = { cond_1, cond_4, cl_10, cl_11, cl_12, cl_13, cl_14, cl_15, cl_16 };
-    uint32_t cat_17 = synq_doc_concat(&ctx->docs, cat_17_items, 9);
-    return synq_doc_group(&ctx->docs, cat_17);
-}
-
-static uint32_t format_ordering_term(SynqFmtCtx *ctx, SynqOrderingTerm *node) {
-    uint32_t ch_1 = synq_format_node(ctx, node->expr);
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->sort_order == SYNQ_SORT_ORDER_DESC) cond_2 = synq_kw(ctx, " DESC");
-    uint32_t cond_4 = SYNQ_NULL_DOC;
-    if (node->nulls_order == SYNQ_NULLS_ORDER_FIRST) cond_4 = synq_kw(ctx, " NULLS FIRST");
-    uint32_t cond_6 = SYNQ_NULL_DOC;
-    if (node->nulls_order == SYNQ_NULLS_ORDER_LAST) cond_6 = synq_kw(ctx, " NULLS LAST");
-    uint32_t cat_8_items[] = { ch_1, cond_2, cond_4, cond_6 };
-    return synq_doc_concat(&ctx->docs, cat_8_items, 4);
-}
-
-static uint32_t format_limit_clause(SynqFmtCtx *ctx, SynqLimitClause *node) {
-    uint32_t ch_1 = synq_format_node(ctx, node->limit);
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->offset != SYNQ_NULL_NODE) {
-        uint32_t kw_3 = synq_kw(ctx, " OFFSET ");
-        uint32_t ch_4 = synq_format_node(ctx, node->offset);
-        uint32_t cat_5_items[] = { kw_3, ch_4 };
-        uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 2);
-        cond_2 = cat_5;
-    }
-    uint32_t cat_6_items[] = { ch_1, cond_2 };
-    return synq_doc_concat(&ctx->docs, cat_6_items, 2);
-}
-
-static uint32_t format_column_ref(SynqFmtCtx *ctx, SynqColumnRef *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t sp_2 = synq_span_text(ctx, node->schema);
-        uint32_t kw_3 = synq_kw(ctx, ".");
-        uint32_t cat_4_items[] = { sp_2, kw_3 };
-        uint32_t cat_4 = synq_doc_concat(&ctx->docs, cat_4_items, 2);
-        cond_1 = cat_4;
-    }
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->table.length > 0) {
-        uint32_t sp_6 = synq_span_text(ctx, node->table);
-        uint32_t kw_7 = synq_kw(ctx, ".");
-        uint32_t cat_8_items[] = { sp_6, kw_7 };
-        uint32_t cat_8 = synq_doc_concat(&ctx->docs, cat_8_items, 2);
-        cond_5 = cat_8;
-    }
-    uint32_t sp_9 = synq_span_text(ctx, node->column);
-    uint32_t cat_10_items[] = { cond_1, cond_5, sp_9 };
-    return synq_doc_concat(&ctx->docs, cat_10_items, 3);
-}
-
-static uint32_t format_function_call(SynqFmtCtx *ctx, SynqFunctionCall *node) {
-    uint32_t sp_1 = synq_span_text(ctx, node->func_name);
-    uint32_t kw_2 = synq_kw(ctx, "(");
-    uint32_t cond_3 = SYNQ_NULL_DOC;
-    if (node->flags.distinct) cond_3 = synq_kw(ctx, "DISTINCT ");
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->flags.star) {
-        cond_5 = synq_kw(ctx, "*");
-    } else {
-        uint32_t cond_7 = SYNQ_NULL_DOC;
-        if (node->args != SYNQ_NULL_NODE) {
-            uint32_t sl_8 = synq_doc_softline(&ctx->docs);
-            uint32_t ch_9 = synq_format_node(ctx, node->args);
-            uint32_t cat_10_items[] = { sl_8, ch_9 };
-            uint32_t cat_10 = synq_doc_concat(&ctx->docs, cat_10_items, 2);
-            uint32_t nst_11 = synq_doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_10);
-            cond_7 = nst_11;
-        }
-        cond_5 = cond_7;
-    }
-    uint32_t sl_12 = synq_doc_softline(&ctx->docs);
-    uint32_t kw_13 = synq_kw(ctx, ")");
-    uint32_t cat_14_items[] = { kw_2, cond_3, cond_5, sl_12, kw_13 };
-    uint32_t cat_14 = synq_doc_concat(&ctx->docs, cat_14_items, 5);
-    uint32_t grp_15 = synq_doc_group(&ctx->docs, cat_14);
-    uint32_t cond_16 = SYNQ_NULL_DOC;
-    if (node->filter_clause != SYNQ_NULL_NODE) {
-        uint32_t kw_17 = synq_kw(ctx, " FILTER (WHERE ");
-        uint32_t ch_18 = synq_format_node(ctx, node->filter_clause);
-        uint32_t kw_19 = synq_kw(ctx, ")");
-        uint32_t cat_20_items[] = { kw_17, ch_18, kw_19 };
-        uint32_t cat_20 = synq_doc_concat(&ctx->docs, cat_20_items, 3);
-        cond_16 = cat_20;
-    }
-    uint32_t cond_21 = SYNQ_NULL_DOC;
-    if (node->over_clause != SYNQ_NULL_NODE) {
-        uint32_t kw_22 = synq_kw(ctx, " OVER ");
-        uint32_t ch_23 = synq_format_node(ctx, node->over_clause);
-        uint32_t cat_24_items[] = { kw_22, ch_23 };
-        uint32_t cat_24 = synq_doc_concat(&ctx->docs, cat_24_items, 2);
-        cond_21 = cat_24;
-    }
-    uint32_t cat_25_items[] = { sp_1, grp_15, cond_16, cond_21 };
-    return synq_doc_concat(&ctx->docs, cat_25_items, 4);
-}
-
-static uint32_t format_is_expr(SynqFmtCtx *ctx, SynqIsExpr *node) {
-    uint32_t sw_1 = SYNQ_NULL_DOC;
-    switch (node->op) {
-        case SYNQ_IS_OP_ISNULL: {
-            uint32_t ch_2 = synq_format_node(ctx, node->left);
-            uint32_t kw_3 = synq_kw(ctx, " ISNULL");
-            uint32_t cat_4_items[] = { ch_2, kw_3 };
-            uint32_t cat_4 = synq_doc_concat(&ctx->docs, cat_4_items, 2);
-            sw_1 = cat_4;
-            break;
-        }
-        case SYNQ_IS_OP_NOTNULL: {
-            uint32_t ch_5 = synq_format_node(ctx, node->left);
-            uint32_t kw_6 = synq_kw(ctx, " NOTNULL");
-            uint32_t cat_7_items[] = { ch_5, kw_6 };
-            uint32_t cat_7 = synq_doc_concat(&ctx->docs, cat_7_items, 2);
-            sw_1 = cat_7;
-            break;
-        }
-        case SYNQ_IS_OP_IS: {
-            uint32_t ch_8 = synq_format_node(ctx, node->left);
-            uint32_t kw_9 = synq_kw(ctx, " IS ");
-            uint32_t ch_10 = synq_format_node(ctx, node->right);
-            uint32_t cat_11_items[] = { ch_8, kw_9, ch_10 };
-            uint32_t cat_11 = synq_doc_concat(&ctx->docs, cat_11_items, 3);
-            sw_1 = cat_11;
-            break;
-        }
-        case SYNQ_IS_OP_IS_NOT: {
-            uint32_t ch_12 = synq_format_node(ctx, node->left);
-            uint32_t kw_13 = synq_kw(ctx, " IS NOT ");
-            uint32_t ch_14 = synq_format_node(ctx, node->right);
-            uint32_t cat_15_items[] = { ch_12, kw_13, ch_14 };
-            uint32_t cat_15 = synq_doc_concat(&ctx->docs, cat_15_items, 3);
-            sw_1 = cat_15;
-            break;
-        }
-        case SYNQ_IS_OP_IS_NOT_DISTINCT: {
-            uint32_t ch_16 = synq_format_node(ctx, node->left);
-            uint32_t kw_17 = synq_kw(ctx, " IS NOT DISTINCT FROM ");
-            uint32_t ch_18 = synq_format_node(ctx, node->right);
-            uint32_t cat_19_items[] = { ch_16, kw_17, ch_18 };
-            uint32_t cat_19 = synq_doc_concat(&ctx->docs, cat_19_items, 3);
-            sw_1 = cat_19;
-            break;
-        }
-        case SYNQ_IS_OP_IS_DISTINCT: {
-            uint32_t ch_20 = synq_format_node(ctx, node->left);
-            uint32_t kw_21 = synq_kw(ctx, " IS DISTINCT FROM ");
-            uint32_t ch_22 = synq_format_node(ctx, node->right);
-            uint32_t cat_23_items[] = { ch_20, kw_21, ch_22 };
-            uint32_t cat_23 = synq_doc_concat(&ctx->docs, cat_23_items, 3);
-            sw_1 = cat_23;
-            break;
-        }
-        default: break;
-    }
-    return sw_1;
-}
-
-static uint32_t format_between_expr(SynqFmtCtx *ctx, SynqBetweenExpr *node) {
-    uint32_t ch_1 = synq_format_node(ctx, node->operand);
-    uint32_t cond_2 = node->negated ? synq_kw(ctx, " NOT BETWEEN ") : synq_kw(ctx, " BETWEEN ");
-    uint32_t ch_5 = synq_format_node(ctx, node->low);
-    uint32_t kw_6 = synq_kw(ctx, " AND ");
-    uint32_t ch_7 = synq_format_node(ctx, node->high);
-    uint32_t cat_8_items[] = { ch_1, cond_2, ch_5, kw_6, ch_7 };
-    return synq_doc_concat(&ctx->docs, cat_8_items, 5);
-}
-
-static uint32_t format_like_expr(SynqFmtCtx *ctx, SynqLikeExpr *node) {
-    uint32_t ch_1 = synq_format_node(ctx, node->operand);
-    uint32_t cond_2 = node->negated ? synq_kw(ctx, " NOT LIKE ") : synq_kw(ctx, " LIKE ");
-    uint32_t ch_5 = synq_format_node(ctx, node->pattern);
-    uint32_t cond_6 = SYNQ_NULL_DOC;
-    if (node->escape != SYNQ_NULL_NODE) {
-        uint32_t kw_7 = synq_kw(ctx, " ESCAPE ");
-        uint32_t ch_8 = synq_format_node(ctx, node->escape);
-        uint32_t cat_9_items[] = { kw_7, ch_8 };
-        uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 2);
-        cond_6 = cat_9;
-    }
-    uint32_t cat_10_items[] = { ch_1, cond_2, ch_5, cond_6 };
-    return synq_doc_concat(&ctx->docs, cat_10_items, 4);
-}
-
-static uint32_t format_case_expr(SynqFmtCtx *ctx, SynqCaseExpr *node) {
-    uint32_t kw_1 = synq_kw(ctx, "CASE");
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->operand != SYNQ_NULL_NODE) {
-        uint32_t kw_3 = synq_kw(ctx, " ");
-        uint32_t ch_4 = synq_format_node(ctx, node->operand);
-        uint32_t cat_5_items[] = { kw_3, ch_4 };
-        uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 2);
-        cond_2 = cat_5;
-    }
-    uint32_t ch_6 = synq_format_node(ctx, node->whens);
-    uint32_t cond_7 = SYNQ_NULL_DOC;
-    if (node->else_expr != SYNQ_NULL_NODE) {
-        uint32_t kw_8 = synq_kw(ctx, " ELSE ");
-        uint32_t ch_9 = synq_format_node(ctx, node->else_expr);
-        uint32_t cat_10_items[] = { kw_8, ch_9 };
-        uint32_t cat_10 = synq_doc_concat(&ctx->docs, cat_10_items, 2);
-        cond_7 = cat_10;
-    }
-    uint32_t kw_11 = synq_kw(ctx, " END");
-    uint32_t cat_12_items[] = { kw_1, cond_2, ch_6, cond_7, kw_11 };
-    return synq_doc_concat(&ctx->docs, cat_12_items, 5);
-}
-
-static uint32_t format_case_when(SynqFmtCtx *ctx, SynqCaseWhen *node) {
-    uint32_t kw_1 = synq_kw(ctx, " WHEN ");
-    uint32_t ch_2 = synq_format_node(ctx, node->when_expr);
-    uint32_t kw_3 = synq_kw(ctx, " THEN ");
-    uint32_t ch_4 = synq_format_node(ctx, node->then_expr);
-    uint32_t cat_5_items[] = { kw_1, ch_2, kw_3, ch_4 };
-    return synq_doc_concat(&ctx->docs, cat_5_items, 4);
-}
-
-static uint32_t format_case_when_list(SynqFmtCtx *ctx, SynqCaseWhenList *node) {
-    uint32_t _buf_1[node->count > 0 ? node->count : 1];
-    uint32_t _n_2 = 0;
-    for (uint32_t _i = 0; _i < node->count; _i++) {
-        uint32_t _child_id = node->children[_i];
-        uint32_t item_4 = synq_format_node(ctx, _child_id);
-        _buf_1[_n_2++] = item_4;
-    }
-    return synq_doc_concat(&ctx->docs, _buf_1, _n_2);
-}
-
-static uint32_t format_compound_select(SynqFmtCtx *ctx, SynqCompoundSelect *node) {
-    uint32_t ch_1 = synq_format_node(ctx, node->left);
-    uint32_t hl_2 = synq_doc_hardline(&ctx->docs);
-    uint32_t ed_3 = SYNQ_NULL_DOC;
-    switch (node->op) {
-        case SYNQ_COMPOUND_OP_UNION: ed_3 = synq_kw(ctx, "UNION"); break;
-        case SYNQ_COMPOUND_OP_UNION_ALL: ed_3 = synq_kw(ctx, "UNION ALL"); break;
-        case SYNQ_COMPOUND_OP_INTERSECT: ed_3 = synq_kw(ctx, "INTERSECT"); break;
-        case SYNQ_COMPOUND_OP_EXCEPT: ed_3 = synq_kw(ctx, "EXCEPT"); break;
-        default: break;
-    }
-    uint32_t hl_4 = synq_doc_hardline(&ctx->docs);
-    uint32_t ch_5 = synq_format_node(ctx, node->right);
-    uint32_t cat_6_items[] = { ch_1, hl_2, ed_3, hl_4, ch_5 };
-    return synq_doc_concat(&ctx->docs, cat_6_items, 5);
-}
-
-static uint32_t format_subquery_expr(SynqFmtCtx *ctx, SynqSubqueryExpr *node) {
-    uint32_t kw_1 = synq_kw(ctx, "(");
-    uint32_t ch_2 = synq_format_node(ctx, node->select);
-    uint32_t kw_3 = synq_kw(ctx, ")");
-    uint32_t cat_4_items[] = { kw_1, ch_2, kw_3 };
-    return synq_doc_concat(&ctx->docs, cat_4_items, 3);
-}
-
-static uint32_t format_exists_expr(SynqFmtCtx *ctx, SynqExistsExpr *node) {
-    uint32_t kw_1 = synq_kw(ctx, "EXISTS (");
-    uint32_t ch_2 = synq_format_node(ctx, node->select);
-    uint32_t kw_3 = synq_kw(ctx, ")");
-    uint32_t cat_4_items[] = { kw_1, ch_2, kw_3 };
-    return synq_doc_concat(&ctx->docs, cat_4_items, 3);
-}
-
-static uint32_t format_in_expr(SynqFmtCtx *ctx, SynqInExpr *node) {
-    uint32_t ch_1 = synq_format_node(ctx, node->operand);
-    uint32_t cond_2 = node->negated ? synq_kw(ctx, " NOT IN ") : synq_kw(ctx, " IN ");
-    uint32_t kw_5 = synq_kw(ctx, "(");
-    uint32_t ch_6 = synq_format_node(ctx, node->source);
-    uint32_t kw_7 = synq_kw(ctx, ")");
-    uint32_t cat_8_items[] = { ch_1, cond_2, kw_5, ch_6, kw_7 };
-    return synq_doc_concat(&ctx->docs, cat_8_items, 5);
-}
-
-static uint32_t format_variable(SynqFmtCtx *ctx, SynqVariable *node) {
-    return synq_span_text(ctx, node->source);
-}
-
-static uint32_t format_collate_expr(SynqFmtCtx *ctx, SynqCollateExpr *node) {
-    uint32_t ch_1 = synq_format_node(ctx, node->expr);
-    uint32_t kw_2 = synq_kw(ctx, " COLLATE ");
-    uint32_t sp_3 = synq_span_text(ctx, node->collation);
-    uint32_t cat_4_items[] = { ch_1, kw_2, sp_3 };
-    return synq_doc_concat(&ctx->docs, cat_4_items, 3);
-}
-
-static uint32_t format_cast_expr(SynqFmtCtx *ctx, SynqCastExpr *node) {
-    uint32_t kw_1 = synq_kw(ctx, "CAST(");
-    uint32_t ch_2 = synq_format_node(ctx, node->expr);
-    uint32_t kw_3 = synq_kw(ctx, " AS ");
-    uint32_t sp_4 = synq_span_text(ctx, node->type_name);
-    uint32_t kw_5 = synq_kw(ctx, ")");
-    uint32_t cat_6_items[] = { kw_1, ch_2, kw_3, sp_4, kw_5 };
-    return synq_doc_concat(&ctx->docs, cat_6_items, 5);
-}
-
-static uint32_t format_values_row_list(SynqFmtCtx *ctx, SynqValuesRowList *node) {
-    uint32_t _buf_1[node->count * 2 > 0 ? node->count * 2 : 1];
-    uint32_t _n_2 = 0;
-    for (uint32_t _i = 0; _i < node->count; _i++) {
-        uint32_t _child_id = node->children[_i];
-        if (_i > 0) {
-            uint32_t kw_4 = synq_kw(ctx, ",");
-            uint32_t ln_5 = synq_doc_line(&ctx->docs);
-            uint32_t cat_6_items[] = { kw_4, ln_5 };
-            uint32_t cat_6 = synq_doc_concat(&ctx->docs, cat_6_items, 2);
-            _buf_1[_n_2++] = cat_6;
-        }
-        uint32_t kw_7 = synq_kw(ctx, "(");
-        uint32_t item_8 = synq_format_node(ctx, _child_id);
-        uint32_t kw_9 = synq_kw(ctx, ")");
-        uint32_t cat_10_items[] = { kw_7, item_8, kw_9 };
-        uint32_t cat_10 = synq_doc_concat(&ctx->docs, cat_10_items, 3);
-        _buf_1[_n_2++] = cat_10;
-    }
-    return synq_doc_concat(&ctx->docs, _buf_1, _n_2);
-}
-
-static uint32_t format_values_clause(SynqFmtCtx *ctx, SynqValuesClause *node) {
-    uint32_t kw_1 = synq_kw(ctx, "VALUES");
-    uint32_t hl_2 = synq_doc_hardline(&ctx->docs);
-    uint32_t ch_3 = synq_format_node(ctx, node->rows);
-    uint32_t cat_4_items[] = { hl_2, ch_3 };
-    uint32_t cat_4 = synq_doc_concat(&ctx->docs, cat_4_items, 2);
-    uint32_t nst_5 = synq_doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_4);
-    uint32_t cat_6_items[] = { kw_1, nst_5 };
-    return synq_doc_concat(&ctx->docs, cat_6_items, 2);
-}
-
-static uint32_t format_cte_definition(SynqFmtCtx *ctx, SynqCteDefinition *node) {
-    uint32_t sp_1 = synq_span_text(ctx, node->cte_name);
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->columns != SYNQ_NULL_NODE) {
-        uint32_t kw_3 = synq_kw(ctx, "(");
-        uint32_t ch_4 = synq_format_node(ctx, node->columns);
-        uint32_t kw_5 = synq_kw(ctx, ")");
-        uint32_t cat_6_items[] = { kw_3, ch_4, kw_5 };
-        uint32_t cat_6 = synq_doc_concat(&ctx->docs, cat_6_items, 3);
-        cond_2 = cat_6;
-    }
-    uint32_t kw_7 = synq_kw(ctx, " AS ");
-    uint32_t cond_8 = SYNQ_NULL_DOC;
-    if (node->materialized == SYNQ_MATERIALIZED_MATERIALIZED) cond_8 = synq_kw(ctx, "MATERIALIZED ");
-    uint32_t cond_10 = SYNQ_NULL_DOC;
-    if (node->materialized == SYNQ_MATERIALIZED_NOT_MATERIALIZED) cond_10 = synq_kw(ctx, "NOT MATERIALIZED ");
-    uint32_t kw_12 = synq_kw(ctx, "(");
-    uint32_t ch_13 = synq_format_node(ctx, node->select);
-    uint32_t kw_14 = synq_kw(ctx, ")");
-    uint32_t cat_15_items[] = { sp_1, cond_2, kw_7, cond_8, cond_10, kw_12, ch_13, kw_14 };
-    return synq_doc_concat(&ctx->docs, cat_15_items, 8);
-}
-
-static uint32_t format_with_clause(SynqFmtCtx *ctx, SynqWithClause *node) {
-    uint32_t cond_1 = node->recursive ? synq_kw(ctx, "WITH RECURSIVE ") : synq_kw(ctx, "WITH ");
-    uint32_t ch_4 = synq_format_node(ctx, node->ctes);
-    uint32_t hl_5 = synq_doc_hardline(&ctx->docs);
-    uint32_t ch_6 = synq_format_node(ctx, node->select);
-    uint32_t cat_7_items[] = { cond_1, ch_4, hl_5, ch_6 };
-    return synq_doc_concat(&ctx->docs, cat_7_items, 4);
-}
-
-static uint32_t format_aggregate_function_call(SynqFmtCtx *ctx, SynqAggregateFunctionCall *node) {
-    uint32_t sp_1 = synq_span_text(ctx, node->func_name);
-    uint32_t kw_2 = synq_kw(ctx, "(");
-    uint32_t cond_3 = SYNQ_NULL_DOC;
-    if (node->flags.distinct) cond_3 = synq_kw(ctx, "DISTINCT ");
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->args != SYNQ_NULL_NODE) {
-        uint32_t sl_6 = synq_doc_softline(&ctx->docs);
-        uint32_t ch_7 = synq_format_node(ctx, node->args);
-        uint32_t cat_8_items[] = { sl_6, ch_7 };
-        uint32_t cat_8 = synq_doc_concat(&ctx->docs, cat_8_items, 2);
-        uint32_t nst_9 = synq_doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_8);
-        cond_5 = nst_9;
-    }
-    uint32_t cond_10 = SYNQ_NULL_DOC;
-    if (node->orderby != SYNQ_NULL_NODE) {
-        uint32_t kw_11 = synq_kw(ctx, " ORDER BY ");
-        uint32_t ch_12 = synq_format_node(ctx, node->orderby);
-        uint32_t cat_13_items[] = { kw_11, ch_12 };
-        uint32_t cat_13 = synq_doc_concat(&ctx->docs, cat_13_items, 2);
-        cond_10 = cat_13;
-    }
-    uint32_t sl_14 = synq_doc_softline(&ctx->docs);
-    uint32_t kw_15 = synq_kw(ctx, ")");
-    uint32_t cat_16_items[] = { kw_2, cond_3, cond_5, cond_10, sl_14, kw_15 };
-    uint32_t cat_16 = synq_doc_concat(&ctx->docs, cat_16_items, 6);
-    uint32_t grp_17 = synq_doc_group(&ctx->docs, cat_16);
-    uint32_t cond_18 = SYNQ_NULL_DOC;
-    if (node->filter_clause != SYNQ_NULL_NODE) {
-        uint32_t kw_19 = synq_kw(ctx, " FILTER (WHERE ");
-        uint32_t ch_20 = synq_format_node(ctx, node->filter_clause);
-        uint32_t kw_21 = synq_kw(ctx, ")");
-        uint32_t cat_22_items[] = { kw_19, ch_20, kw_21 };
-        uint32_t cat_22 = synq_doc_concat(&ctx->docs, cat_22_items, 3);
-        cond_18 = cat_22;
-    }
-    uint32_t cond_23 = SYNQ_NULL_DOC;
-    if (node->over_clause != SYNQ_NULL_NODE) {
-        uint32_t kw_24 = synq_kw(ctx, " OVER ");
-        uint32_t ch_25 = synq_format_node(ctx, node->over_clause);
-        uint32_t cat_26_items[] = { kw_24, ch_25 };
-        uint32_t cat_26 = synq_doc_concat(&ctx->docs, cat_26_items, 2);
-        cond_23 = cat_26;
-    }
-    uint32_t cat_27_items[] = { sp_1, grp_17, cond_18, cond_23 };
-    return synq_doc_concat(&ctx->docs, cat_27_items, 4);
-}
-
-static uint32_t format_raise_expr(SynqFmtCtx *ctx, SynqRaiseExpr *node) {
-    uint32_t kw_1 = synq_kw(ctx, "RAISE(");
-    uint32_t sw_2 = SYNQ_NULL_DOC;
-    switch (node->raise_type) {
-        case SYNQ_RAISE_TYPE_IGNORE: sw_2 = synq_kw(ctx, "IGNORE"); break;
-        case SYNQ_RAISE_TYPE_ROLLBACK: sw_2 = synq_kw(ctx, "ROLLBACK"); break;
-        case SYNQ_RAISE_TYPE_ABORT: sw_2 = synq_kw(ctx, "ABORT"); break;
-        case SYNQ_RAISE_TYPE_FAIL: sw_2 = synq_kw(ctx, "FAIL"); break;
-        default: break;
-    }
-    uint32_t cond_7 = SYNQ_NULL_DOC;
-    if (node->error_message != SYNQ_NULL_NODE) {
-        uint32_t kw_8 = synq_kw(ctx, ", ");
-        uint32_t ch_9 = synq_format_node(ctx, node->error_message);
-        uint32_t cat_10_items[] = { kw_8, ch_9 };
-        uint32_t cat_10 = synq_doc_concat(&ctx->docs, cat_10_items, 2);
-        cond_7 = cat_10;
-    }
-    uint32_t kw_11 = synq_kw(ctx, ")");
-    uint32_t cat_12_items[] = { kw_1, sw_2, cond_7, kw_11 };
-    return synq_doc_concat(&ctx->docs, cat_12_items, 4);
-}
-
-static uint32_t format_table_ref(SynqFmtCtx *ctx, SynqTableRef *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t sp_2 = synq_span_text(ctx, node->schema);
-        uint32_t kw_3 = synq_kw(ctx, ".");
-        uint32_t cat_4_items[] = { sp_2, kw_3 };
-        uint32_t cat_4 = synq_doc_concat(&ctx->docs, cat_4_items, 2);
-        cond_1 = cat_4;
-    }
-    uint32_t sp_5 = synq_span_text(ctx, node->table_name);
-    uint32_t cond_6 = SYNQ_NULL_DOC;
-    if (node->alias.length > 0) {
-        uint32_t kw_7 = synq_kw(ctx, " AS ");
-        uint32_t sp_8 = synq_span_text(ctx, node->alias);
-        uint32_t cat_9_items[] = { kw_7, sp_8 };
-        uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 2);
-        cond_6 = cat_9;
-    }
-    uint32_t cat_10_items[] = { cond_1, sp_5, cond_6 };
-    return synq_doc_concat(&ctx->docs, cat_10_items, 3);
-}
-
-static uint32_t format_subquery_table_source(SynqFmtCtx *ctx, SynqSubqueryTableSource *node) {
-    uint32_t kw_1 = synq_kw(ctx, "(");
-    uint32_t ch_2 = synq_format_node(ctx, node->select);
-    uint32_t kw_3 = synq_kw(ctx, ")");
-    uint32_t cond_4 = SYNQ_NULL_DOC;
-    if (node->alias.length > 0) {
-        uint32_t kw_5 = synq_kw(ctx, " AS ");
-        uint32_t sp_6 = synq_span_text(ctx, node->alias);
-        uint32_t cat_7_items[] = { kw_5, sp_6 };
-        uint32_t cat_7 = synq_doc_concat(&ctx->docs, cat_7_items, 2);
-        cond_4 = cat_7;
-    }
-    uint32_t cat_8_items[] = { kw_1, ch_2, kw_3, cond_4 };
-    return synq_doc_concat(&ctx->docs, cat_8_items, 4);
-}
-
-static uint32_t format_join_clause(SynqFmtCtx *ctx, SynqJoinClause *node) {
-    uint32_t sw_1 = SYNQ_NULL_DOC;
-    switch (node->join_type) {
-        case SYNQ_JOIN_TYPE_COMMA: {
-            uint32_t ch_2 = synq_format_node(ctx, node->left);
-            uint32_t kw_3 = synq_kw(ctx, ", ");
-            uint32_t ch_4 = synq_format_node(ctx, node->right);
-            uint32_t cond_5 = SYNQ_NULL_DOC;
-            if (node->on_expr != SYNQ_NULL_NODE) {
-                uint32_t hl_6 = synq_doc_hardline(&ctx->docs);
-                uint32_t kw_7 = synq_kw(ctx, "ON ");
-                uint32_t ch_8 = synq_format_node(ctx, node->on_expr);
-                uint32_t cat_9_items[] = { hl_6, kw_7, ch_8 };
-                uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 3);
-                cond_5 = cat_9;
-            }
-            uint32_t cond_10 = SYNQ_NULL_DOC;
-            if (node->using_columns != SYNQ_NULL_NODE) {
-                uint32_t kw_11 = synq_kw(ctx, " USING (");
-                uint32_t ch_12 = synq_format_node(ctx, node->using_columns);
-                uint32_t kw_13 = synq_kw(ctx, ")");
-                uint32_t cat_14_items[] = { kw_11, ch_12, kw_13 };
-                uint32_t cat_14 = synq_doc_concat(&ctx->docs, cat_14_items, 3);
-                cond_10 = cat_14;
-            }
-            uint32_t cat_15_items[] = { ch_2, kw_3, ch_4, cond_5, cond_10 };
-            uint32_t cat_15 = synq_doc_concat(&ctx->docs, cat_15_items, 5);
-            sw_1 = cat_15;
-            break;
-        }
-        default: {
-            uint32_t ch_16 = synq_format_node(ctx, node->left);
-            uint32_t hl_17 = synq_doc_hardline(&ctx->docs);
-            uint32_t ed_18 = SYNQ_NULL_DOC;
-            switch (node->join_type) {
-                case SYNQ_JOIN_TYPE_INNER: ed_18 = synq_kw(ctx, "JOIN"); break;
-                case SYNQ_JOIN_TYPE_LEFT: ed_18 = synq_kw(ctx, "LEFT JOIN"); break;
-                case SYNQ_JOIN_TYPE_RIGHT: ed_18 = synq_kw(ctx, "RIGHT JOIN"); break;
-                case SYNQ_JOIN_TYPE_FULL: ed_18 = synq_kw(ctx, "FULL JOIN"); break;
-                case SYNQ_JOIN_TYPE_CROSS: ed_18 = synq_kw(ctx, "CROSS JOIN"); break;
-                case SYNQ_JOIN_TYPE_NATURAL_INNER: ed_18 = synq_kw(ctx, "NATURAL JOIN"); break;
-                case SYNQ_JOIN_TYPE_NATURAL_LEFT: ed_18 = synq_kw(ctx, "NATURAL LEFT JOIN"); break;
-                case SYNQ_JOIN_TYPE_NATURAL_RIGHT: ed_18 = synq_kw(ctx, "NATURAL RIGHT JOIN"); break;
-                case SYNQ_JOIN_TYPE_NATURAL_FULL: ed_18 = synq_kw(ctx, "NATURAL FULL JOIN"); break;
-                case SYNQ_JOIN_TYPE_COMMA: ed_18 = synq_kw(ctx, ","); break;
-                default: break;
-            }
-            uint32_t kw_19 = synq_kw(ctx, " ");
-            uint32_t ch_20 = synq_format_node(ctx, node->right);
-            uint32_t cond_21 = SYNQ_NULL_DOC;
-            if (node->on_expr != SYNQ_NULL_NODE) {
-                uint32_t hl_22 = synq_doc_hardline(&ctx->docs);
-                uint32_t kw_23 = synq_kw(ctx, "ON ");
-                uint32_t ch_24 = synq_format_node(ctx, node->on_expr);
-                uint32_t cat_25_items[] = { hl_22, kw_23, ch_24 };
-                uint32_t cat_25 = synq_doc_concat(&ctx->docs, cat_25_items, 3);
-                cond_21 = cat_25;
-            }
-            uint32_t cond_26 = SYNQ_NULL_DOC;
-            if (node->using_columns != SYNQ_NULL_NODE) {
-                uint32_t kw_27 = synq_kw(ctx, " USING (");
-                uint32_t ch_28 = synq_format_node(ctx, node->using_columns);
-                uint32_t kw_29 = synq_kw(ctx, ")");
-                uint32_t cat_30_items[] = { kw_27, ch_28, kw_29 };
-                uint32_t cat_30 = synq_doc_concat(&ctx->docs, cat_30_items, 3);
-                cond_26 = cat_30;
-            }
-            uint32_t cat_31_items[] = { ch_16, hl_17, ed_18, kw_19, ch_20, cond_21, cond_26 };
-            uint32_t cat_31 = synq_doc_concat(&ctx->docs, cat_31_items, 7);
-            sw_1 = cat_31;
-            break;
-        }
-    }
-    return sw_1;
-}
-
-static uint32_t format_join_prefix(SynqFmtCtx *ctx, SynqJoinPrefix *node) {
-    return synq_format_node(ctx, node->source);
-}
-
-static uint32_t format_delete_stmt(SynqFmtCtx *ctx, SynqDeleteStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "DELETE");
-    uint32_t cl_2 = synq_format_clause(ctx, "FROM", node->table);
-    uint32_t cl_3 = synq_format_clause(ctx, "WHERE", node->where);
-    uint32_t cat_4_items[] = { kw_1, cl_2, cl_3 };
-    uint32_t cat_4 = synq_doc_concat(&ctx->docs, cat_4_items, 3);
-    return synq_doc_group(&ctx->docs, cat_4);
-}
-
-static uint32_t format_set_clause(SynqFmtCtx *ctx, SynqSetClause *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->column.length > 0) {
-        cond_1 = synq_span_text(ctx, node->column);
-    } else {
-        uint32_t cond_3 = SYNQ_NULL_DOC;
-        if (node->columns != SYNQ_NULL_NODE) {
-            uint32_t kw_4 = synq_kw(ctx, "(");
-            uint32_t ch_5 = synq_format_node(ctx, node->columns);
-            uint32_t kw_6 = synq_kw(ctx, ")");
-            uint32_t cat_7_items[] = { kw_4, ch_5, kw_6 };
-            uint32_t cat_7 = synq_doc_concat(&ctx->docs, cat_7_items, 3);
-            cond_3 = cat_7;
-        }
-        cond_1 = cond_3;
-    }
-    uint32_t kw_8 = synq_kw(ctx, " = ");
-    uint32_t ch_9 = synq_format_node(ctx, node->value);
-    uint32_t cat_10_items[] = { cond_1, kw_8, ch_9 };
-    return synq_doc_concat(&ctx->docs, cat_10_items, 3);
-}
-
-static uint32_t format_update_stmt(SynqFmtCtx *ctx, SynqUpdateStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "UPDATE");
-    uint32_t sw_2 = SYNQ_NULL_DOC;
-    switch (node->conflict_action) {
-        case SYNQ_CONFLICT_ACTION_ROLLBACK: sw_2 = synq_kw(ctx, " OR ROLLBACK"); break;
-        case SYNQ_CONFLICT_ACTION_ABORT: sw_2 = synq_kw(ctx, " OR ABORT"); break;
-        case SYNQ_CONFLICT_ACTION_FAIL: sw_2 = synq_kw(ctx, " OR FAIL"); break;
-        case SYNQ_CONFLICT_ACTION_IGNORE: sw_2 = synq_kw(ctx, " OR IGNORE"); break;
-        case SYNQ_CONFLICT_ACTION_REPLACE: sw_2 = synq_kw(ctx, " OR REPLACE"); break;
-        default: break;
-    }
-    uint32_t kw_8 = synq_kw(ctx, " ");
-    uint32_t ch_9 = synq_format_node(ctx, node->table);
-    uint32_t cl_10 = synq_format_clause(ctx, "SET", node->setlist);
-    uint32_t cl_11 = synq_format_clause(ctx, "FROM", node->from_clause);
-    uint32_t cl_12 = synq_format_clause(ctx, "WHERE", node->where);
-    uint32_t cat_13_items[] = { kw_1, sw_2, kw_8, ch_9, cl_10, cl_11, cl_12 };
-    uint32_t cat_13 = synq_doc_concat(&ctx->docs, cat_13_items, 7);
-    return synq_doc_group(&ctx->docs, cat_13);
-}
-
-static uint32_t format_insert_stmt(SynqFmtCtx *ctx, SynqInsertStmt *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->conflict_action == SYNQ_CONFLICT_ACTION_REPLACE) {
-        cond_1 = synq_kw(ctx, "REPLACE");
-    } else {
-        uint32_t kw_3 = synq_kw(ctx, "INSERT");
-        uint32_t sw_4 = SYNQ_NULL_DOC;
-        switch (node->conflict_action) {
-            case SYNQ_CONFLICT_ACTION_ROLLBACK: sw_4 = synq_kw(ctx, " OR ROLLBACK"); break;
-            case SYNQ_CONFLICT_ACTION_ABORT: sw_4 = synq_kw(ctx, " OR ABORT"); break;
-            case SYNQ_CONFLICT_ACTION_FAIL: sw_4 = synq_kw(ctx, " OR FAIL"); break;
-            case SYNQ_CONFLICT_ACTION_IGNORE: sw_4 = synq_kw(ctx, " OR IGNORE"); break;
-            default: break;
-        }
-        uint32_t cat_9_items[] = { kw_3, sw_4 };
-        uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 2);
-        cond_1 = cat_9;
-    }
-    uint32_t kw_10 = synq_kw(ctx, " INTO ");
-    uint32_t ch_11 = synq_format_node(ctx, node->table);
-    uint32_t cond_12 = SYNQ_NULL_DOC;
-    if (node->columns != SYNQ_NULL_NODE) {
-        uint32_t kw_13 = synq_kw(ctx, " (");
-        uint32_t ch_14 = synq_format_node(ctx, node->columns);
-        uint32_t kw_15 = synq_kw(ctx, ")");
-        uint32_t cat_16_items[] = { kw_13, ch_14, kw_15 };
-        uint32_t cat_16 = synq_doc_concat(&ctx->docs, cat_16_items, 3);
-        cond_12 = cat_16;
-    }
-    uint32_t cond_17 = SYNQ_NULL_DOC;
-    if (node->source != SYNQ_NULL_NODE) {
-        uint32_t hl_18 = synq_doc_hardline(&ctx->docs);
-        uint32_t ch_19 = synq_format_node(ctx, node->source);
-        uint32_t cat_20_items[] = { hl_18, ch_19 };
-        uint32_t cat_20 = synq_doc_concat(&ctx->docs, cat_20_items, 2);
-        cond_17 = cat_20;
-    }
-    uint32_t cat_21_items[] = { cond_1, kw_10, ch_11, cond_12, cond_17 };
-    return synq_doc_concat(&ctx->docs, cat_21_items, 5);
-}
-
-static uint32_t format_qualified_name(SynqFmtCtx *ctx, SynqQualifiedName *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t sp_2 = synq_span_text(ctx, node->schema);
-        uint32_t kw_3 = synq_kw(ctx, ".");
-        uint32_t cat_4_items[] = { sp_2, kw_3 };
-        uint32_t cat_4 = synq_doc_concat(&ctx->docs, cat_4_items, 2);
-        cond_1 = cat_4;
-    }
-    uint32_t sp_5 = synq_span_text(ctx, node->object_name);
-    uint32_t cat_6_items[] = { cond_1, sp_5 };
-    return synq_doc_concat(&ctx->docs, cat_6_items, 2);
-}
-
-static uint32_t format_drop_stmt(SynqFmtCtx *ctx, SynqDropStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "DROP ");
-    uint32_t ed_2 = SYNQ_NULL_DOC;
-    switch (node->object_type) {
-        case SYNQ_DROP_OBJECT_TYPE_TABLE: ed_2 = synq_kw(ctx, "TABLE"); break;
-        case SYNQ_DROP_OBJECT_TYPE_INDEX: ed_2 = synq_kw(ctx, "INDEX"); break;
-        case SYNQ_DROP_OBJECT_TYPE_VIEW: ed_2 = synq_kw(ctx, "VIEW"); break;
-        case SYNQ_DROP_OBJECT_TYPE_TRIGGER: ed_2 = synq_kw(ctx, "TRIGGER"); break;
-        default: break;
-    }
-    uint32_t cond_3 = SYNQ_NULL_DOC;
-    if (node->if_exists) cond_3 = synq_kw(ctx, " IF EXISTS");
-    uint32_t kw_5 = synq_kw(ctx, " ");
-    uint32_t ch_6 = synq_format_node(ctx, node->target);
-    uint32_t cat_7_items[] = { kw_1, ed_2, cond_3, kw_5, ch_6 };
-    return synq_doc_concat(&ctx->docs, cat_7_items, 5);
-}
-
-static uint32_t format_alter_table_stmt(SynqFmtCtx *ctx, SynqAlterTableStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "ALTER TABLE ");
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->target != SYNQ_NULL_NODE) {
-        uint32_t ch_3 = synq_format_node(ctx, node->target);
-        uint32_t kw_4 = synq_kw(ctx, " ");
-        uint32_t cat_5_items[] = { ch_3, kw_4 };
-        uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 2);
-        cond_2 = cat_5;
-    }
-    uint32_t sw_6 = SYNQ_NULL_DOC;
-    switch (node->op) {
-        case SYNQ_ALTER_OP_RENAME_TABLE: {
-            uint32_t kw_7 = synq_kw(ctx, "RENAME TO ");
-            uint32_t sp_8 = synq_span_text(ctx, node->new_name);
-            uint32_t cat_9_items[] = { kw_7, sp_8 };
-            uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 2);
-            sw_6 = cat_9;
-            break;
-        }
-        case SYNQ_ALTER_OP_RENAME_COLUMN: {
-            uint32_t kw_10 = synq_kw(ctx, "RENAME COLUMN ");
-            uint32_t sp_11 = synq_span_text(ctx, node->old_name);
-            uint32_t kw_12 = synq_kw(ctx, " TO ");
-            uint32_t sp_13 = synq_span_text(ctx, node->new_name);
-            uint32_t cat_14_items[] = { kw_10, sp_11, kw_12, sp_13 };
-            uint32_t cat_14 = synq_doc_concat(&ctx->docs, cat_14_items, 4);
-            sw_6 = cat_14;
-            break;
-        }
-        case SYNQ_ALTER_OP_DROP_COLUMN: {
-            uint32_t kw_15 = synq_kw(ctx, "DROP COLUMN ");
-            uint32_t sp_16 = synq_span_text(ctx, node->old_name);
-            uint32_t cat_17_items[] = { kw_15, sp_16 };
-            uint32_t cat_17 = synq_doc_concat(&ctx->docs, cat_17_items, 2);
-            sw_6 = cat_17;
-            break;
-        }
-        case SYNQ_ALTER_OP_ADD_COLUMN: {
-            uint32_t kw_18 = synq_kw(ctx, "ADD COLUMN ");
-            uint32_t sp_19 = synq_span_text(ctx, node->old_name);
-            uint32_t cat_20_items[] = { kw_18, sp_19 };
-            uint32_t cat_20 = synq_doc_concat(&ctx->docs, cat_20_items, 2);
-            sw_6 = cat_20;
-            break;
-        }
-        default: break;
-    }
-    uint32_t cat_21_items[] = { kw_1, cond_2, sw_6 };
-    return synq_doc_concat(&ctx->docs, cat_21_items, 3);
-}
-
-static uint32_t format_transaction_stmt(SynqFmtCtx *ctx, SynqTransactionStmt *node) {
-    uint32_t sw_1 = SYNQ_NULL_DOC;
-    switch (node->op) {
-        case SYNQ_TRANSACTION_OP_BEGIN: {
-            uint32_t kw_2 = synq_kw(ctx, "BEGIN");
-            uint32_t ed_3 = SYNQ_NULL_DOC;
-            switch (node->trans_type) {
-                case SYNQ_TRANSACTION_TYPE_IMMEDIATE: ed_3 = synq_kw(ctx, " IMMEDIATE"); break;
-                case SYNQ_TRANSACTION_TYPE_EXCLUSIVE: ed_3 = synq_kw(ctx, " EXCLUSIVE"); break;
-                default: break;
-            }
-            uint32_t cat_4_items[] = { kw_2, ed_3 };
-            uint32_t cat_4 = synq_doc_concat(&ctx->docs, cat_4_items, 2);
-            sw_1 = cat_4;
-            break;
-        }
-        case SYNQ_TRANSACTION_OP_COMMIT: sw_1 = synq_kw(ctx, "COMMIT"); break;
-        case SYNQ_TRANSACTION_OP_ROLLBACK: sw_1 = synq_kw(ctx, "ROLLBACK"); break;
-        default: break;
-    }
-    return sw_1;
-}
-
-static uint32_t format_savepoint_stmt(SynqFmtCtx *ctx, SynqSavepointStmt *node) {
-    uint32_t sw_1 = SYNQ_NULL_DOC;
-    switch (node->op) {
-        case SYNQ_SAVEPOINT_OP_SAVEPOINT: {
-            uint32_t kw_2 = synq_kw(ctx, "SAVEPOINT ");
-            uint32_t sp_3 = synq_span_text(ctx, node->savepoint_name);
-            uint32_t cat_4_items[] = { kw_2, sp_3 };
-            uint32_t cat_4 = synq_doc_concat(&ctx->docs, cat_4_items, 2);
-            sw_1 = cat_4;
-            break;
-        }
-        case SYNQ_SAVEPOINT_OP_RELEASE: {
-            uint32_t kw_5 = synq_kw(ctx, "RELEASE SAVEPOINT ");
-            uint32_t sp_6 = synq_span_text(ctx, node->savepoint_name);
-            uint32_t cat_7_items[] = { kw_5, sp_6 };
-            uint32_t cat_7 = synq_doc_concat(&ctx->docs, cat_7_items, 2);
-            sw_1 = cat_7;
-            break;
-        }
-        case SYNQ_SAVEPOINT_OP_ROLLBACK_TO: {
-            uint32_t kw_8 = synq_kw(ctx, "ROLLBACK TO SAVEPOINT ");
-            uint32_t sp_9 = synq_span_text(ctx, node->savepoint_name);
-            uint32_t cat_10_items[] = { kw_8, sp_9 };
-            uint32_t cat_10 = synq_doc_concat(&ctx->docs, cat_10_items, 2);
-            sw_1 = cat_10;
-            break;
-        }
-        default: break;
-    }
-    return sw_1;
-}
-
-static uint32_t format_pragma_stmt(SynqFmtCtx *ctx, SynqPragmaStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "PRAGMA ");
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t sp_3 = synq_span_text(ctx, node->schema);
-        uint32_t kw_4 = synq_kw(ctx, ".");
-        uint32_t cat_5_items[] = { sp_3, kw_4 };
-        uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 2);
-        cond_2 = cat_5;
-    }
-    uint32_t sp_6 = synq_span_text(ctx, node->pragma_name);
-    uint32_t sw_7 = SYNQ_NULL_DOC;
-    switch (node->pragma_form) {
-        case SYNQ_PRAGMA_FORM_EQ: {
-            uint32_t kw_8 = synq_kw(ctx, " = ");
-            uint32_t sp_9 = synq_span_text(ctx, node->value);
-            uint32_t cat_10_items[] = { kw_8, sp_9 };
-            uint32_t cat_10 = synq_doc_concat(&ctx->docs, cat_10_items, 2);
-            sw_7 = cat_10;
-            break;
-        }
-        case SYNQ_PRAGMA_FORM_CALL: {
-            uint32_t kw_11 = synq_kw(ctx, "(");
-            uint32_t sp_12 = synq_span_text(ctx, node->value);
-            uint32_t kw_13 = synq_kw(ctx, ")");
-            uint32_t cat_14_items[] = { kw_11, sp_12, kw_13 };
-            uint32_t cat_14 = synq_doc_concat(&ctx->docs, cat_14_items, 3);
-            sw_7 = cat_14;
-            break;
-        }
-        default: break;
-    }
-    uint32_t cat_15_items[] = { kw_1, cond_2, sp_6, sw_7 };
-    return synq_doc_concat(&ctx->docs, cat_15_items, 4);
-}
-
-static uint32_t format_analyze_stmt(SynqFmtCtx *ctx, SynqAnalyzeStmt *node) {
-    uint32_t cond_1 = node->kind == SYNQ_ANALYZE_KIND_REINDEX ? synq_kw(ctx, "REINDEX") : synq_kw(ctx, "ANALYZE");
-    uint32_t cond_4 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t kw_5 = synq_kw(ctx, " ");
-        uint32_t sp_6 = synq_span_text(ctx, node->schema);
-        uint32_t kw_7 = synq_kw(ctx, ".");
-        uint32_t sp_8 = synq_span_text(ctx, node->target_name);
-        uint32_t cat_9_items[] = { kw_5, sp_6, kw_7, sp_8 };
-        uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 4);
-        cond_4 = cat_9;
-    } else {
-        uint32_t cond_10 = SYNQ_NULL_DOC;
-        if (node->target_name.length > 0) {
-            uint32_t kw_11 = synq_kw(ctx, " ");
-            uint32_t sp_12 = synq_span_text(ctx, node->target_name);
-            uint32_t cat_13_items[] = { kw_11, sp_12 };
-            uint32_t cat_13 = synq_doc_concat(&ctx->docs, cat_13_items, 2);
-            cond_10 = cat_13;
-        }
-        cond_4 = cond_10;
-    }
-    uint32_t cat_14_items[] = { cond_1, cond_4 };
-    return synq_doc_concat(&ctx->docs, cat_14_items, 2);
-}
-
-static uint32_t format_attach_stmt(SynqFmtCtx *ctx, SynqAttachStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "ATTACH ");
-    uint32_t ch_2 = synq_format_node(ctx, node->filename);
-    uint32_t kw_3 = synq_kw(ctx, " AS ");
-    uint32_t ch_4 = synq_format_node(ctx, node->db_name);
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->key != SYNQ_NULL_NODE) {
-        uint32_t kw_6 = synq_kw(ctx, " KEY ");
-        uint32_t ch_7 = synq_format_node(ctx, node->key);
-        uint32_t cat_8_items[] = { kw_6, ch_7 };
-        uint32_t cat_8 = synq_doc_concat(&ctx->docs, cat_8_items, 2);
-        cond_5 = cat_8;
-    }
-    uint32_t cat_9_items[] = { kw_1, ch_2, kw_3, ch_4, cond_5 };
-    return synq_doc_concat(&ctx->docs, cat_9_items, 5);
-}
-
-static uint32_t format_detach_stmt(SynqFmtCtx *ctx, SynqDetachStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "DETACH ");
-    uint32_t ch_2 = synq_format_node(ctx, node->db_name);
-    uint32_t cat_3_items[] = { kw_1, ch_2 };
-    return synq_doc_concat(&ctx->docs, cat_3_items, 2);
-}
-
-static uint32_t format_vacuum_stmt(SynqFmtCtx *ctx, SynqVacuumStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "VACUUM");
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t kw_3 = synq_kw(ctx, " ");
-        uint32_t sp_4 = synq_span_text(ctx, node->schema);
-        uint32_t cat_5_items[] = { kw_3, sp_4 };
-        uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 2);
-        cond_2 = cat_5;
-    }
-    uint32_t cond_6 = SYNQ_NULL_DOC;
-    if (node->into_expr != SYNQ_NULL_NODE) {
-        uint32_t kw_7 = synq_kw(ctx, " INTO ");
-        uint32_t ch_8 = synq_format_node(ctx, node->into_expr);
-        uint32_t cat_9_items[] = { kw_7, ch_8 };
-        uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 2);
-        cond_6 = cat_9;
-    }
-    uint32_t cat_10_items[] = { kw_1, cond_2, cond_6 };
-    return synq_doc_concat(&ctx->docs, cat_10_items, 3);
-}
-
-static uint32_t format_explain_stmt(SynqFmtCtx *ctx, SynqExplainStmt *node) {
-    uint32_t cond_1 = node->explain_mode == SYNQ_EXPLAIN_MODE_QUERY_PLAN ? synq_kw(ctx, "EXPLAIN QUERY PLAN") : synq_kw(ctx, "EXPLAIN");
-    uint32_t hl_4 = synq_doc_hardline(&ctx->docs);
-    uint32_t ch_5 = synq_format_node(ctx, node->stmt);
-    uint32_t cat_6_items[] = { cond_1, hl_4, ch_5 };
-    return synq_doc_concat(&ctx->docs, cat_6_items, 3);
-}
-
-static uint32_t format_create_index_stmt(SynqFmtCtx *ctx, SynqCreateIndexStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "CREATE");
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->is_unique) cond_2 = synq_kw(ctx, " UNIQUE");
-    uint32_t kw_4 = synq_kw(ctx, " INDEX");
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->if_not_exists) cond_5 = synq_kw(ctx, " IF NOT EXISTS");
-    uint32_t kw_7 = synq_kw(ctx, " ");
-    uint32_t cond_8 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t sp_9 = synq_span_text(ctx, node->schema);
-        uint32_t kw_10 = synq_kw(ctx, ".");
-        uint32_t cat_11_items[] = { sp_9, kw_10 };
-        uint32_t cat_11 = synq_doc_concat(&ctx->docs, cat_11_items, 2);
-        cond_8 = cat_11;
-    }
-    uint32_t sp_12 = synq_span_text(ctx, node->index_name);
-    uint32_t kw_13 = synq_kw(ctx, " ON ");
-    uint32_t sp_14 = synq_span_text(ctx, node->table_name);
-    uint32_t kw_15 = synq_kw(ctx, " (");
-    uint32_t ch_16 = synq_format_node(ctx, node->columns);
-    uint32_t kw_17 = synq_kw(ctx, ")");
-    uint32_t cl_18 = synq_format_clause(ctx, "WHERE", node->where);
-    uint32_t cat_19_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, kw_13, sp_14, kw_15, ch_16, kw_17, cl_18 };
-    uint32_t cat_19 = synq_doc_concat(&ctx->docs, cat_19_items, 13);
-    return synq_doc_group(&ctx->docs, cat_19);
-}
-
-static uint32_t format_create_view_stmt(SynqFmtCtx *ctx, SynqCreateViewStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "CREATE");
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->is_temp) cond_2 = synq_kw(ctx, " TEMP");
-    uint32_t kw_4 = synq_kw(ctx, " VIEW");
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->if_not_exists) cond_5 = synq_kw(ctx, " IF NOT EXISTS");
-    uint32_t kw_7 = synq_kw(ctx, " ");
-    uint32_t cond_8 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t sp_9 = synq_span_text(ctx, node->schema);
-        uint32_t kw_10 = synq_kw(ctx, ".");
-        uint32_t cat_11_items[] = { sp_9, kw_10 };
-        uint32_t cat_11 = synq_doc_concat(&ctx->docs, cat_11_items, 2);
-        cond_8 = cat_11;
-    }
-    uint32_t sp_12 = synq_span_text(ctx, node->view_name);
-    uint32_t cond_13 = SYNQ_NULL_DOC;
-    if (node->column_names != SYNQ_NULL_NODE) {
-        uint32_t kw_14 = synq_kw(ctx, "(");
-        uint32_t ch_15 = synq_format_node(ctx, node->column_names);
-        uint32_t kw_16 = synq_kw(ctx, ")");
-        uint32_t cat_17_items[] = { kw_14, ch_15, kw_16 };
-        uint32_t cat_17 = synq_doc_concat(&ctx->docs, cat_17_items, 3);
-        uint32_t grp_18 = synq_doc_group(&ctx->docs, cat_17);
-        cond_13 = grp_18;
-    }
-    uint32_t kw_19 = synq_kw(ctx, " AS");
-    uint32_t hl_20 = synq_doc_hardline(&ctx->docs);
-    uint32_t ch_21 = synq_format_node(ctx, node->select);
-    uint32_t cat_22_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, cond_13, kw_19, hl_20, ch_21 };
-    return synq_doc_concat(&ctx->docs, cat_22_items, 11);
-}
-
-static uint32_t format_foreign_key_clause(SynqFmtCtx *ctx, SynqForeignKeyClause *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->ref_table.length > 0) {
-        uint32_t kw_2 = synq_kw(ctx, "REFERENCES ");
-        uint32_t sp_3 = synq_span_text(ctx, node->ref_table);
-        uint32_t cat_4_items[] = { kw_2, sp_3 };
-        uint32_t cat_4 = synq_doc_concat(&ctx->docs, cat_4_items, 2);
-        cond_1 = cat_4;
-    }
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->ref_columns != SYNQ_NULL_NODE) {
-        uint32_t kw_6 = synq_kw(ctx, "(");
-        uint32_t ch_7 = synq_format_node(ctx, node->ref_columns);
-        uint32_t kw_8 = synq_kw(ctx, ")");
-        uint32_t cat_9_items[] = { kw_6, ch_7, kw_8 };
-        uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 3);
-        cond_5 = cat_9;
-    }
-    uint32_t sw_10 = SYNQ_NULL_DOC;
-    switch (node->on_delete) {
-        case SYNQ_FOREIGN_KEY_ACTION_SET_NULL: sw_10 = synq_kw(ctx, " ON DELETE SET NULL"); break;
-        case SYNQ_FOREIGN_KEY_ACTION_SET_DEFAULT: sw_10 = synq_kw(ctx, " ON DELETE SET DEFAULT"); break;
-        case SYNQ_FOREIGN_KEY_ACTION_CASCADE: sw_10 = synq_kw(ctx, " ON DELETE CASCADE"); break;
-        case SYNQ_FOREIGN_KEY_ACTION_RESTRICT: sw_10 = synq_kw(ctx, " ON DELETE RESTRICT"); break;
-        default: break;
-    }
-    uint32_t sw_15 = SYNQ_NULL_DOC;
-    switch (node->on_update) {
-        case SYNQ_FOREIGN_KEY_ACTION_SET_NULL: sw_15 = synq_kw(ctx, " ON UPDATE SET NULL"); break;
-        case SYNQ_FOREIGN_KEY_ACTION_SET_DEFAULT: sw_15 = synq_kw(ctx, " ON UPDATE SET DEFAULT"); break;
-        case SYNQ_FOREIGN_KEY_ACTION_CASCADE: sw_15 = synq_kw(ctx, " ON UPDATE CASCADE"); break;
-        case SYNQ_FOREIGN_KEY_ACTION_RESTRICT: sw_15 = synq_kw(ctx, " ON UPDATE RESTRICT"); break;
-        default: break;
-    }
-    uint32_t cond_20 = SYNQ_NULL_DOC;
-    if (node->is_deferred) cond_20 = synq_kw(ctx, "DEFERRABLE INITIALLY DEFERRED");
-    uint32_t cat_22_items[] = { cond_1, cond_5, sw_10, sw_15, cond_20 };
-    return synq_doc_concat(&ctx->docs, cat_22_items, 5);
-}
-
-static uint32_t format_column_constraint(SynqFmtCtx *ctx, SynqColumnConstraint *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->constraint_name.length > 0) {
-        uint32_t kw_2 = synq_kw(ctx, "CONSTRAINT ");
-        uint32_t sp_3 = synq_span_text(ctx, node->constraint_name);
-        uint32_t kw_4 = synq_kw(ctx, " ");
-        uint32_t cat_5_items[] = { kw_2, sp_3, kw_4 };
-        uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 3);
-        cond_1 = cat_5;
-    }
-    uint32_t sw_6 = SYNQ_NULL_DOC;
-    switch (node->kind) {
-        case SYNQ_COLUMN_CONSTRAINT_KIND_PRIMARY_KEY: {
-            uint32_t kw_7 = synq_kw(ctx, "PRIMARY KEY");
-            uint32_t cond_8 = SYNQ_NULL_DOC;
-            if (node->sort_order == SYNQ_SORT_ORDER_DESC) cond_8 = synq_kw(ctx, " DESC");
-            uint32_t cond_10 = SYNQ_NULL_DOC;
-            if (node->is_autoincrement) cond_10 = synq_kw(ctx, " AUTOINCREMENT");
-            uint32_t sw_12 = SYNQ_NULL_DOC;
-            switch (node->onconf) {
-                case SYNQ_CONFLICT_ACTION_ROLLBACK: sw_12 = synq_kw(ctx, " ON CONFLICT ROLLBACK"); break;
-                case SYNQ_CONFLICT_ACTION_ABORT: sw_12 = synq_kw(ctx, " ON CONFLICT ABORT"); break;
-                case SYNQ_CONFLICT_ACTION_FAIL: sw_12 = synq_kw(ctx, " ON CONFLICT FAIL"); break;
-                case SYNQ_CONFLICT_ACTION_IGNORE: sw_12 = synq_kw(ctx, " ON CONFLICT IGNORE"); break;
-                case SYNQ_CONFLICT_ACTION_REPLACE: sw_12 = synq_kw(ctx, " ON CONFLICT REPLACE"); break;
-                default: break;
-            }
-            uint32_t cat_18_items[] = { kw_7, cond_8, cond_10, sw_12 };
-            uint32_t cat_18 = synq_doc_concat(&ctx->docs, cat_18_items, 4);
-            sw_6 = cat_18;
-            break;
-        }
-        case SYNQ_COLUMN_CONSTRAINT_KIND_NOT_NULL: {
-            uint32_t kw_19 = synq_kw(ctx, "NOT NULL");
-            uint32_t sw_20 = SYNQ_NULL_DOC;
-            switch (node->onconf) {
-                case SYNQ_CONFLICT_ACTION_ROLLBACK: sw_20 = synq_kw(ctx, " ON CONFLICT ROLLBACK"); break;
-                case SYNQ_CONFLICT_ACTION_ABORT: sw_20 = synq_kw(ctx, " ON CONFLICT ABORT"); break;
-                case SYNQ_CONFLICT_ACTION_FAIL: sw_20 = synq_kw(ctx, " ON CONFLICT FAIL"); break;
-                case SYNQ_CONFLICT_ACTION_IGNORE: sw_20 = synq_kw(ctx, " ON CONFLICT IGNORE"); break;
-                case SYNQ_CONFLICT_ACTION_REPLACE: sw_20 = synq_kw(ctx, " ON CONFLICT REPLACE"); break;
-                default: break;
-            }
-            uint32_t cat_26_items[] = { kw_19, sw_20 };
-            uint32_t cat_26 = synq_doc_concat(&ctx->docs, cat_26_items, 2);
-            sw_6 = cat_26;
-            break;
-        }
-        case SYNQ_COLUMN_CONSTRAINT_KIND_UNIQUE: {
-            uint32_t kw_27 = synq_kw(ctx, "UNIQUE");
-            uint32_t sw_28 = SYNQ_NULL_DOC;
-            switch (node->onconf) {
-                case SYNQ_CONFLICT_ACTION_ROLLBACK: sw_28 = synq_kw(ctx, " ON CONFLICT ROLLBACK"); break;
-                case SYNQ_CONFLICT_ACTION_ABORT: sw_28 = synq_kw(ctx, " ON CONFLICT ABORT"); break;
-                case SYNQ_CONFLICT_ACTION_FAIL: sw_28 = synq_kw(ctx, " ON CONFLICT FAIL"); break;
-                case SYNQ_CONFLICT_ACTION_IGNORE: sw_28 = synq_kw(ctx, " ON CONFLICT IGNORE"); break;
-                case SYNQ_CONFLICT_ACTION_REPLACE: sw_28 = synq_kw(ctx, " ON CONFLICT REPLACE"); break;
-                default: break;
-            }
-            uint32_t cat_34_items[] = { kw_27, sw_28 };
-            uint32_t cat_34 = synq_doc_concat(&ctx->docs, cat_34_items, 2);
-            sw_6 = cat_34;
-            break;
-        }
-        case SYNQ_COLUMN_CONSTRAINT_KIND_CHECK: {
-            uint32_t kw_35 = synq_kw(ctx, "CHECK(");
-            uint32_t ch_36 = synq_format_node(ctx, node->check_expr);
-            uint32_t kw_37 = synq_kw(ctx, ")");
-            uint32_t cat_38_items[] = { kw_35, ch_36, kw_37 };
-            uint32_t cat_38 = synq_doc_concat(&ctx->docs, cat_38_items, 3);
-            sw_6 = cat_38;
-            break;
-        }
-        case SYNQ_COLUMN_CONSTRAINT_KIND_DEFAULT: {
-            uint32_t kw_39 = synq_kw(ctx, "DEFAULT ");
-            uint32_t ch_40 = synq_format_node(ctx, node->default_expr);
-            uint32_t cat_41_items[] = { kw_39, ch_40 };
-            uint32_t cat_41 = synq_doc_concat(&ctx->docs, cat_41_items, 2);
-            sw_6 = cat_41;
-            break;
-        }
-        case SYNQ_COLUMN_CONSTRAINT_KIND_COLLATE: {
-            uint32_t kw_42 = synq_kw(ctx, "COLLATE ");
-            uint32_t sp_43 = synq_span_text(ctx, node->collation_name);
-            uint32_t cat_44_items[] = { kw_42, sp_43 };
-            uint32_t cat_44 = synq_doc_concat(&ctx->docs, cat_44_items, 2);
-            sw_6 = cat_44;
-            break;
-        }
-        case SYNQ_COLUMN_CONSTRAINT_KIND_REFERENCES: sw_6 = synq_format_node(ctx, node->fk_clause); break;
-        case SYNQ_COLUMN_CONSTRAINT_KIND_GENERATED: {
-            uint32_t kw_46 = synq_kw(ctx, "AS (");
-            uint32_t ch_47 = synq_format_node(ctx, node->generated_expr);
-            uint32_t kw_48 = synq_kw(ctx, ")");
-            uint32_t cond_49 = SYNQ_NULL_DOC;
-            if (node->generated_storage == SYNQ_GENERATED_COLUMN_STORAGE_STORED) cond_49 = synq_kw(ctx, " STORED");
-            uint32_t cat_51_items[] = { kw_46, ch_47, kw_48, cond_49 };
-            uint32_t cat_51 = synq_doc_concat(&ctx->docs, cat_51_items, 4);
-            sw_6 = cat_51;
-            break;
-        }
-        case SYNQ_COLUMN_CONSTRAINT_KIND_NULL: sw_6 = synq_kw(ctx, "NULL"); break;
-        default: break;
-    }
-    uint32_t cat_53_items[] = { cond_1, sw_6 };
-    return synq_doc_concat(&ctx->docs, cat_53_items, 2);
-}
-
-static uint32_t format_column_constraint_list(SynqFmtCtx *ctx, SynqColumnConstraintList *node) {
-    uint32_t _buf_1[node->count * 2 > 0 ? node->count * 2 : 1];
-    uint32_t _n_2 = 0;
-    for (uint32_t _i = 0; _i < node->count; _i++) {
-        uint32_t _child_id = node->children[_i];
-        if (_i > 0) {
-            uint32_t kw_4 = synq_kw(ctx, " ");
-            _buf_1[_n_2++] = kw_4;
-        }
-        uint32_t item_5 = synq_format_node(ctx, _child_id);
-        _buf_1[_n_2++] = item_5;
-    }
-    return synq_doc_concat(&ctx->docs, _buf_1, _n_2);
-}
-
-static uint32_t format_column_def(SynqFmtCtx *ctx, SynqColumnDef *node) {
-    uint32_t sp_1 = synq_span_text(ctx, node->column_name);
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->type_name.length > 0) {
-        uint32_t kw_3 = synq_kw(ctx, " ");
-        uint32_t sp_4 = synq_span_text(ctx, node->type_name);
-        uint32_t cat_5_items[] = { kw_3, sp_4 };
-        uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 2);
-        cond_2 = cat_5;
-    }
-    uint32_t cond_6 = SYNQ_NULL_DOC;
-    if (node->constraints != SYNQ_NULL_NODE) {
-        uint32_t kw_7 = synq_kw(ctx, " ");
-        uint32_t ch_8 = synq_format_node(ctx, node->constraints);
-        uint32_t cat_9_items[] = { kw_7, ch_8 };
-        uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 2);
-        cond_6 = cat_9;
-    }
-    uint32_t cat_10_items[] = { sp_1, cond_2, cond_6 };
-    return synq_doc_concat(&ctx->docs, cat_10_items, 3);
-}
-
-static uint32_t format_column_def_list(SynqFmtCtx *ctx, SynqColumnDefList *node) {
-    uint32_t _buf_1[node->count * 2 > 0 ? node->count * 2 : 1];
-    uint32_t _n_2 = 0;
-    for (uint32_t _i = 0; _i < node->count; _i++) {
-        uint32_t _child_id = node->children[_i];
-        if (_i > 0) {
-            uint32_t kw_4 = synq_kw(ctx, ",");
-            uint32_t ln_5 = synq_doc_line(&ctx->docs);
-            uint32_t cat_6_items[] = { kw_4, ln_5 };
-            uint32_t cat_6 = synq_doc_concat(&ctx->docs, cat_6_items, 2);
-            _buf_1[_n_2++] = cat_6;
-        }
-        uint32_t item_7 = synq_format_node(ctx, _child_id);
-        _buf_1[_n_2++] = item_7;
-    }
-    return synq_doc_concat(&ctx->docs, _buf_1, _n_2);
-}
-
-static uint32_t format_table_constraint(SynqFmtCtx *ctx, SynqTableConstraint *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->constraint_name.length > 0) {
-        uint32_t kw_2 = synq_kw(ctx, "CONSTRAINT ");
-        uint32_t sp_3 = synq_span_text(ctx, node->constraint_name);
-        uint32_t kw_4 = synq_kw(ctx, " ");
-        uint32_t cat_5_items[] = { kw_2, sp_3, kw_4 };
-        uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 3);
-        cond_1 = cat_5;
-    }
-    uint32_t sw_6 = SYNQ_NULL_DOC;
-    switch (node->kind) {
-        case SYNQ_TABLE_CONSTRAINT_KIND_PRIMARY_KEY: {
-            uint32_t kw_7 = synq_kw(ctx, "PRIMARY KEY(");
-            uint32_t ch_8 = synq_format_node(ctx, node->columns);
-            uint32_t kw_9 = synq_kw(ctx, ")");
-            uint32_t sw_10 = SYNQ_NULL_DOC;
-            switch (node->onconf) {
-                case SYNQ_CONFLICT_ACTION_ROLLBACK: sw_10 = synq_kw(ctx, " ON CONFLICT ROLLBACK"); break;
-                case SYNQ_CONFLICT_ACTION_ABORT: sw_10 = synq_kw(ctx, " ON CONFLICT ABORT"); break;
-                case SYNQ_CONFLICT_ACTION_FAIL: sw_10 = synq_kw(ctx, " ON CONFLICT FAIL"); break;
-                case SYNQ_CONFLICT_ACTION_IGNORE: sw_10 = synq_kw(ctx, " ON CONFLICT IGNORE"); break;
-                case SYNQ_CONFLICT_ACTION_REPLACE: sw_10 = synq_kw(ctx, " ON CONFLICT REPLACE"); break;
-                default: break;
-            }
-            uint32_t cat_16_items[] = { kw_7, ch_8, kw_9, sw_10 };
-            uint32_t cat_16 = synq_doc_concat(&ctx->docs, cat_16_items, 4);
-            sw_6 = cat_16;
-            break;
-        }
-        case SYNQ_TABLE_CONSTRAINT_KIND_UNIQUE: {
-            uint32_t kw_17 = synq_kw(ctx, "UNIQUE(");
-            uint32_t ch_18 = synq_format_node(ctx, node->columns);
-            uint32_t kw_19 = synq_kw(ctx, ")");
-            uint32_t sw_20 = SYNQ_NULL_DOC;
-            switch (node->onconf) {
-                case SYNQ_CONFLICT_ACTION_ROLLBACK: sw_20 = synq_kw(ctx, " ON CONFLICT ROLLBACK"); break;
-                case SYNQ_CONFLICT_ACTION_ABORT: sw_20 = synq_kw(ctx, " ON CONFLICT ABORT"); break;
-                case SYNQ_CONFLICT_ACTION_FAIL: sw_20 = synq_kw(ctx, " ON CONFLICT FAIL"); break;
-                case SYNQ_CONFLICT_ACTION_IGNORE: sw_20 = synq_kw(ctx, " ON CONFLICT IGNORE"); break;
-                case SYNQ_CONFLICT_ACTION_REPLACE: sw_20 = synq_kw(ctx, " ON CONFLICT REPLACE"); break;
-                default: break;
-            }
-            uint32_t cat_26_items[] = { kw_17, ch_18, kw_19, sw_20 };
-            uint32_t cat_26 = synq_doc_concat(&ctx->docs, cat_26_items, 4);
-            sw_6 = cat_26;
-            break;
-        }
-        case SYNQ_TABLE_CONSTRAINT_KIND_CHECK: {
-            uint32_t kw_27 = synq_kw(ctx, "CHECK(");
-            uint32_t ch_28 = synq_format_node(ctx, node->check_expr);
-            uint32_t kw_29 = synq_kw(ctx, ")");
-            uint32_t cat_30_items[] = { kw_27, ch_28, kw_29 };
-            uint32_t cat_30 = synq_doc_concat(&ctx->docs, cat_30_items, 3);
-            sw_6 = cat_30;
-            break;
-        }
-        case SYNQ_TABLE_CONSTRAINT_KIND_FOREIGN_KEY: {
-            uint32_t kw_31 = synq_kw(ctx, "FOREIGN KEY(");
-            uint32_t ch_32 = synq_format_node(ctx, node->columns);
-            uint32_t kw_33 = synq_kw(ctx, ") ");
-            uint32_t ch_34 = synq_format_node(ctx, node->fk_clause);
-            uint32_t cat_35_items[] = { kw_31, ch_32, kw_33, ch_34 };
-            uint32_t cat_35 = synq_doc_concat(&ctx->docs, cat_35_items, 4);
-            sw_6 = cat_35;
-            break;
-        }
-        default: break;
-    }
-    uint32_t cat_36_items[] = { cond_1, sw_6 };
-    return synq_doc_concat(&ctx->docs, cat_36_items, 2);
-}
-
-static uint32_t format_table_constraint_list(SynqFmtCtx *ctx, SynqTableConstraintList *node) {
-    uint32_t _buf_1[node->count * 2 > 0 ? node->count * 2 : 1];
-    uint32_t _n_2 = 0;
-    for (uint32_t _i = 0; _i < node->count; _i++) {
-        uint32_t _child_id = node->children[_i];
-        if (_i > 0) {
-            uint32_t kw_4 = synq_kw(ctx, ",");
-            uint32_t ln_5 = synq_doc_line(&ctx->docs);
-            uint32_t cat_6_items[] = { kw_4, ln_5 };
-            uint32_t cat_6 = synq_doc_concat(&ctx->docs, cat_6_items, 2);
-            _buf_1[_n_2++] = cat_6;
-        }
-        uint32_t item_7 = synq_format_node(ctx, _child_id);
-        _buf_1[_n_2++] = item_7;
-    }
-    return synq_doc_concat(&ctx->docs, _buf_1, _n_2);
-}
-
-static uint32_t format_create_table_stmt(SynqFmtCtx *ctx, SynqCreateTableStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "CREATE");
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->is_temp) cond_2 = synq_kw(ctx, " TEMP");
-    uint32_t kw_4 = synq_kw(ctx, " TABLE");
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->if_not_exists) cond_5 = synq_kw(ctx, " IF NOT EXISTS");
-    uint32_t kw_7 = synq_kw(ctx, " ");
-    uint32_t cond_8 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t sp_9 = synq_span_text(ctx, node->schema);
-        uint32_t kw_10 = synq_kw(ctx, ".");
-        uint32_t cat_11_items[] = { sp_9, kw_10 };
-        uint32_t cat_11 = synq_doc_concat(&ctx->docs, cat_11_items, 2);
-        cond_8 = cat_11;
-    }
-    uint32_t sp_12 = synq_span_text(ctx, node->table_name);
-    uint32_t cond_13 = SYNQ_NULL_DOC;
-    if (node->columns != SYNQ_NULL_NODE) {
-        uint32_t kw_14 = synq_kw(ctx, "(");
-        uint32_t sl_15 = synq_doc_softline(&ctx->docs);
-        uint32_t ch_16 = synq_format_node(ctx, node->columns);
-        uint32_t cond_17 = SYNQ_NULL_DOC;
-        if (node->table_constraints != SYNQ_NULL_NODE) {
-            uint32_t kw_18 = synq_kw(ctx, ",");
-            uint32_t ln_19 = synq_doc_line(&ctx->docs);
-            uint32_t ch_20 = synq_format_node(ctx, node->table_constraints);
-            uint32_t cat_21_items[] = { kw_18, ln_19, ch_20 };
-            uint32_t cat_21 = synq_doc_concat(&ctx->docs, cat_21_items, 3);
-            cond_17 = cat_21;
-        }
-        uint32_t cat_22_items[] = { sl_15, ch_16, cond_17 };
-        uint32_t cat_22 = synq_doc_concat(&ctx->docs, cat_22_items, 3);
-        uint32_t nst_23 = synq_doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_22);
-        uint32_t grp_24 = synq_doc_group(&ctx->docs, nst_23);
-        uint32_t sl_25 = synq_doc_softline(&ctx->docs);
-        uint32_t kw_26 = synq_kw(ctx, ")");
-        uint32_t cat_27_items[] = { kw_14, grp_24, sl_25, kw_26 };
-        uint32_t cat_27 = synq_doc_concat(&ctx->docs, cat_27_items, 4);
-        cond_13 = cat_27;
-    }
-    uint32_t cond_28 = SYNQ_NULL_DOC;
-    if (node->as_select != SYNQ_NULL_NODE) {
-        uint32_t kw_29 = synq_kw(ctx, " AS");
-        uint32_t hl_30 = synq_doc_hardline(&ctx->docs);
-        uint32_t ch_31 = synq_format_node(ctx, node->as_select);
-        uint32_t cat_32_items[] = { kw_29, hl_30, ch_31 };
-        uint32_t cat_32 = synq_doc_concat(&ctx->docs, cat_32_items, 3);
-        cond_28 = cat_32;
-    }
-    uint32_t cond_33 = SYNQ_NULL_DOC;
-    if (node->flags.without_rowid) cond_33 = synq_kw(ctx, " WITHOUT ROWID");
-    uint32_t cond_35 = SYNQ_NULL_DOC;
-    if (node->flags.strict) cond_35 = synq_kw(ctx, " STRICT");
-    uint32_t cat_37_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, cond_13, cond_28, cond_33, cond_35 };
-    uint32_t cat_37 = synq_doc_concat(&ctx->docs, cat_37_items, 11);
-    return synq_doc_group(&ctx->docs, cat_37);
-}
-
-static uint32_t format_frame_bound(SynqFmtCtx *ctx, SynqFrameBound *node) {
-    uint32_t sw_1 = SYNQ_NULL_DOC;
-    switch (node->bound_type) {
-        case SYNQ_FRAME_BOUND_TYPE_UNBOUNDED_PRECEDING: sw_1 = synq_kw(ctx, "UNBOUNDED PRECEDING"); break;
-        case SYNQ_FRAME_BOUND_TYPE_EXPR_PRECEDING: {
-            uint32_t ch_3 = synq_format_node(ctx, node->expr);
-            uint32_t kw_4 = synq_kw(ctx, " PRECEDING");
-            uint32_t cat_5_items[] = { ch_3, kw_4 };
-            uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 2);
-            sw_1 = cat_5;
-            break;
-        }
-        case SYNQ_FRAME_BOUND_TYPE_CURRENT_ROW: sw_1 = synq_kw(ctx, "CURRENT ROW"); break;
-        case SYNQ_FRAME_BOUND_TYPE_EXPR_FOLLOWING: {
-            uint32_t ch_7 = synq_format_node(ctx, node->expr);
-            uint32_t kw_8 = synq_kw(ctx, " FOLLOWING");
-            uint32_t cat_9_items[] = { ch_7, kw_8 };
-            uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 2);
-            sw_1 = cat_9;
-            break;
-        }
-        case SYNQ_FRAME_BOUND_TYPE_UNBOUNDED_FOLLOWING: sw_1 = synq_kw(ctx, "UNBOUNDED FOLLOWING"); break;
-        default: break;
-    }
-    return sw_1;
-}
-
-static uint32_t format_frame_spec(SynqFmtCtx *ctx, SynqFrameSpec *node) {
-    uint32_t sw_1 = SYNQ_NULL_DOC;
-    switch (node->frame_type) {
-        case SYNQ_FRAME_TYPE_RANGE: sw_1 = synq_kw(ctx, "RANGE"); break;
-        case SYNQ_FRAME_TYPE_ROWS: sw_1 = synq_kw(ctx, "ROWS"); break;
-        case SYNQ_FRAME_TYPE_GROUPS: sw_1 = synq_kw(ctx, "GROUPS"); break;
-        default: break;
-    }
-    uint32_t kw_5 = synq_kw(ctx, " BETWEEN ");
-    uint32_t ch_6 = synq_format_node(ctx, node->start_bound);
-    uint32_t kw_7 = synq_kw(ctx, " AND ");
-    uint32_t ch_8 = synq_format_node(ctx, node->end_bound);
-    uint32_t sw_9 = SYNQ_NULL_DOC;
-    switch (node->exclude) {
-        case SYNQ_FRAME_EXCLUDE_NO_OTHERS: sw_9 = synq_kw(ctx, " EXCLUDE NO OTHERS"); break;
-        case SYNQ_FRAME_EXCLUDE_CURRENT_ROW: sw_9 = synq_kw(ctx, " EXCLUDE CURRENT ROW"); break;
-        case SYNQ_FRAME_EXCLUDE_GROUP: sw_9 = synq_kw(ctx, " EXCLUDE GROUP"); break;
-        case SYNQ_FRAME_EXCLUDE_TIES: sw_9 = synq_kw(ctx, " EXCLUDE TIES"); break;
-        default: break;
-    }
-    uint32_t cat_14_items[] = { sw_1, kw_5, ch_6, kw_7, ch_8, sw_9 };
-    return synq_doc_concat(&ctx->docs, cat_14_items, 6);
-}
-
-static uint32_t format_window_def(SynqFmtCtx *ctx, SynqWindowDef *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->base_window_name.length > 0) {
-        cond_1 = synq_span_text(ctx, node->base_window_name);
-    } else {
-        uint32_t kw_3 = synq_kw(ctx, "(");
-        uint32_t cond_4 = SYNQ_NULL_DOC;
-        if (node->partition_by != SYNQ_NULL_NODE) {
-            uint32_t kw_5 = synq_kw(ctx, "PARTITION BY ");
-            uint32_t ch_6 = synq_format_node(ctx, node->partition_by);
-            uint32_t cat_7_items[] = { kw_5, ch_6 };
-            uint32_t cat_7 = synq_doc_concat(&ctx->docs, cat_7_items, 2);
-            cond_4 = cat_7;
-        }
-        uint32_t cond_8 = SYNQ_NULL_DOC;
-        if (node->orderby != SYNQ_NULL_NODE) {
-            uint32_t cond_9 = SYNQ_NULL_DOC;
-            if (node->partition_by != SYNQ_NULL_NODE) cond_9 = synq_kw(ctx, " ");
-            uint32_t kw_11 = synq_kw(ctx, "ORDER BY ");
-            uint32_t ch_12 = synq_format_node(ctx, node->orderby);
-            uint32_t cat_13_items[] = { cond_9, kw_11, ch_12 };
-            uint32_t cat_13 = synq_doc_concat(&ctx->docs, cat_13_items, 3);
-            cond_8 = cat_13;
-        }
-        uint32_t cond_14 = SYNQ_NULL_DOC;
-        if (node->frame != SYNQ_NULL_NODE) {
-            uint32_t cond_15 = SYNQ_NULL_DOC;
-            if (node->partition_by != SYNQ_NULL_NODE) {
-                cond_15 = synq_kw(ctx, " ");
-            } else {
-                uint32_t cond_17 = SYNQ_NULL_DOC;
-                if (node->orderby != SYNQ_NULL_NODE) cond_17 = synq_kw(ctx, " ");
-                cond_15 = cond_17;
-            }
-            uint32_t ch_19 = synq_format_node(ctx, node->frame);
-            uint32_t cat_20_items[] = { cond_15, ch_19 };
-            uint32_t cat_20 = synq_doc_concat(&ctx->docs, cat_20_items, 2);
-            cond_14 = cat_20;
-        }
-        uint32_t kw_21 = synq_kw(ctx, ")");
-        uint32_t cat_22_items[] = { kw_3, cond_4, cond_8, cond_14, kw_21 };
-        uint32_t cat_22 = synq_doc_concat(&ctx->docs, cat_22_items, 5);
-        cond_1 = cat_22;
-    }
-    return cond_1;
-}
-
-static uint32_t format_named_window_def(SynqFmtCtx *ctx, SynqNamedWindowDef *node) {
-    uint32_t sp_1 = synq_span_text(ctx, node->window_name);
-    uint32_t kw_2 = synq_kw(ctx, " AS ");
-    uint32_t ch_3 = synq_format_node(ctx, node->window_def);
-    uint32_t cat_4_items[] = { sp_1, kw_2, ch_3 };
-    return synq_doc_concat(&ctx->docs, cat_4_items, 3);
-}
-
-static uint32_t format_filter_over(SynqFmtCtx *ctx, SynqFilterOver *node) {
-    uint32_t cond_1 = SYNQ_NULL_DOC;
-    if (node->filter_expr != SYNQ_NULL_NODE) {
-        uint32_t kw_2 = synq_kw(ctx, "FILTER (WHERE ");
-        uint32_t ch_3 = synq_format_node(ctx, node->filter_expr);
-        uint32_t kw_4 = synq_kw(ctx, ")");
-        uint32_t cat_5_items[] = { kw_2, ch_3, kw_4 };
-        uint32_t cat_5 = synq_doc_concat(&ctx->docs, cat_5_items, 3);
-        cond_1 = cat_5;
-    }
-    uint32_t cond_6 = SYNQ_NULL_DOC;
-    if (node->over_def != SYNQ_NULL_NODE) {
-        uint32_t kw_7 = synq_kw(ctx, " OVER ");
-        uint32_t ch_8 = synq_format_node(ctx, node->over_def);
-        uint32_t cat_9_items[] = { kw_7, ch_8 };
-        uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 2);
-        cond_6 = cat_9;
-    }
-    uint32_t cond_10 = SYNQ_NULL_DOC;
-    if (node->over_name.length > 0) {
-        uint32_t kw_11 = synq_kw(ctx, " OVER ");
-        uint32_t sp_12 = synq_span_text(ctx, node->over_name);
-        uint32_t cat_13_items[] = { kw_11, sp_12 };
-        uint32_t cat_13 = synq_doc_concat(&ctx->docs, cat_13_items, 2);
-        cond_10 = cat_13;
-    }
-    uint32_t cat_14_items[] = { cond_1, cond_6, cond_10 };
-    return synq_doc_concat(&ctx->docs, cat_14_items, 3);
-}
-
-static uint32_t format_trigger_event(SynqFmtCtx *ctx, SynqTriggerEvent *node) {
-    uint32_t sw_1 = SYNQ_NULL_DOC;
-    switch (node->event_type) {
-        case SYNQ_TRIGGER_EVENT_TYPE_DELETE: sw_1 = synq_kw(ctx, "DELETE"); break;
-        case SYNQ_TRIGGER_EVENT_TYPE_INSERT: sw_1 = synq_kw(ctx, "INSERT"); break;
-        case SYNQ_TRIGGER_EVENT_TYPE_UPDATE: {
-            uint32_t kw_4 = synq_kw(ctx, "UPDATE");
-            uint32_t cond_5 = SYNQ_NULL_DOC;
-            if (node->columns != SYNQ_NULL_NODE) {
-                uint32_t kw_6 = synq_kw(ctx, " OF ");
-                uint32_t ch_7 = synq_format_node(ctx, node->columns);
-                uint32_t cat_8_items[] = { kw_6, ch_7 };
-                uint32_t cat_8 = synq_doc_concat(&ctx->docs, cat_8_items, 2);
-                cond_5 = cat_8;
-            }
-            uint32_t cat_9_items[] = { kw_4, cond_5 };
-            uint32_t cat_9 = synq_doc_concat(&ctx->docs, cat_9_items, 2);
-            sw_1 = cat_9;
-            break;
-        }
-        default: break;
-    }
-    return sw_1;
-}
-
-static uint32_t format_trigger_cmd_list(SynqFmtCtx *ctx, SynqTriggerCmdList *node) {
-    uint32_t _buf_1[node->count * 2 > 0 ? node->count * 2 : 1];
-    uint32_t _n_2 = 0;
-    for (uint32_t _i = 0; _i < node->count; _i++) {
-        uint32_t _child_id = node->children[_i];
-        if (_i > 0) {
-            uint32_t hl_4 = synq_doc_hardline(&ctx->docs);
-            _buf_1[_n_2++] = hl_4;
-        }
-        uint32_t item_5 = synq_format_node(ctx, _child_id);
-        uint32_t kw_6 = synq_kw(ctx, ";");
-        uint32_t cat_7_items[] = { item_5, kw_6 };
-        uint32_t cat_7 = synq_doc_concat(&ctx->docs, cat_7_items, 2);
-        _buf_1[_n_2++] = cat_7;
-    }
-    return synq_doc_concat(&ctx->docs, _buf_1, _n_2);
-}
-
-static uint32_t format_create_trigger_stmt(SynqFmtCtx *ctx, SynqCreateTriggerStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "CREATE");
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->is_temp) cond_2 = synq_kw(ctx, " TEMP");
-    uint32_t kw_4 = synq_kw(ctx, " TRIGGER");
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->if_not_exists) cond_5 = synq_kw(ctx, " IF NOT EXISTS");
-    uint32_t kw_7 = synq_kw(ctx, " ");
-    uint32_t cond_8 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t sp_9 = synq_span_text(ctx, node->schema);
-        uint32_t kw_10 = synq_kw(ctx, ".");
-        uint32_t cat_11_items[] = { sp_9, kw_10 };
-        uint32_t cat_11 = synq_doc_concat(&ctx->docs, cat_11_items, 2);
-        cond_8 = cat_11;
-    }
-    uint32_t sp_12 = synq_span_text(ctx, node->trigger_name);
-    uint32_t kw_13 = synq_kw(ctx, " ");
-    uint32_t sw_14 = SYNQ_NULL_DOC;
-    switch (node->timing) {
-        case SYNQ_TRIGGER_TIMING_BEFORE: sw_14 = synq_kw(ctx, "BEFORE"); break;
-        case SYNQ_TRIGGER_TIMING_AFTER: sw_14 = synq_kw(ctx, "AFTER"); break;
-        case SYNQ_TRIGGER_TIMING_INSTEAD_OF: sw_14 = synq_kw(ctx, "INSTEAD OF"); break;
-        default: break;
-    }
-    uint32_t kw_18 = synq_kw(ctx, " ");
-    uint32_t ch_19 = synq_format_node(ctx, node->event);
-    uint32_t kw_20 = synq_kw(ctx, " ON ");
-    uint32_t ch_21 = synq_format_node(ctx, node->table);
-    uint32_t cond_22 = SYNQ_NULL_DOC;
-    if (node->when_expr != SYNQ_NULL_NODE) {
-        uint32_t hl_23 = synq_doc_hardline(&ctx->docs);
-        uint32_t kw_24 = synq_kw(ctx, "WHEN ");
-        uint32_t ch_25 = synq_format_node(ctx, node->when_expr);
-        uint32_t cat_26_items[] = { hl_23, kw_24, ch_25 };
-        uint32_t cat_26 = synq_doc_concat(&ctx->docs, cat_26_items, 3);
-        cond_22 = cat_26;
-    }
-    uint32_t hl_27 = synq_doc_hardline(&ctx->docs);
-    uint32_t kw_28 = synq_kw(ctx, "BEGIN");
-    uint32_t cond_29 = SYNQ_NULL_DOC;
-    if (node->body != SYNQ_NULL_NODE) {
-        uint32_t hl_30 = synq_doc_hardline(&ctx->docs);
-        uint32_t ch_31 = synq_format_node(ctx, node->body);
-        uint32_t cat_32_items[] = { hl_30, ch_31 };
-        uint32_t cat_32 = synq_doc_concat(&ctx->docs, cat_32_items, 2);
-        uint32_t nst_33 = synq_doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_32);
-        cond_29 = nst_33;
-    }
-    uint32_t hl_34 = synq_doc_hardline(&ctx->docs);
-    uint32_t kw_35 = synq_kw(ctx, "END");
-    uint32_t cat_36_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, kw_13, sw_14, kw_18, ch_19, kw_20, ch_21, cond_22, hl_27, kw_28, cond_29, hl_34, kw_35 };
-    return synq_doc_concat(&ctx->docs, cat_36_items, 19);
-}
-
-static uint32_t format_create_virtual_table_stmt(SynqFmtCtx *ctx, SynqCreateVirtualTableStmt *node) {
-    uint32_t kw_1 = synq_kw(ctx, "CREATE VIRTUAL TABLE");
-    uint32_t cond_2 = SYNQ_NULL_DOC;
-    if (node->if_not_exists) cond_2 = synq_kw(ctx, " IF NOT EXISTS");
-    uint32_t kw_4 = synq_kw(ctx, " ");
-    uint32_t cond_5 = SYNQ_NULL_DOC;
-    if (node->schema.length > 0) {
-        uint32_t sp_6 = synq_span_text(ctx, node->schema);
-        uint32_t kw_7 = synq_kw(ctx, ".");
-        uint32_t cat_8_items[] = { sp_6, kw_7 };
-        uint32_t cat_8 = synq_doc_concat(&ctx->docs, cat_8_items, 2);
-        cond_5 = cat_8;
-    }
-    uint32_t sp_9 = synq_span_text(ctx, node->table_name);
-    uint32_t kw_10 = synq_kw(ctx, " USING ");
-    uint32_t sp_11 = synq_span_text(ctx, node->module_name);
-    uint32_t cond_12 = SYNQ_NULL_DOC;
-    if (node->module_args.length > 0) {
-        uint32_t kw_13 = synq_kw(ctx, "(");
-        uint32_t sp_14 = synq_span_text(ctx, node->module_args);
-        uint32_t kw_15 = synq_kw(ctx, ")");
-        uint32_t cat_16_items[] = { kw_13, sp_14, kw_15 };
-        uint32_t cat_16 = synq_doc_concat(&ctx->docs, cat_16_items, 3);
-        cond_12 = cat_16;
-    }
-    uint32_t cat_17_items[] = { kw_1, cond_2, kw_4, cond_5, sp_9, kw_10, sp_11, cond_12 };
-    return synq_doc_concat(&ctx->docs, cat_17_items, 8);
-}
-
-// ============ Dispatch ============
-
-uint32_t synq_dispatch_format(SynqFmtCtx *ctx, uint32_t node_id) {
-    SynqNode *node = AST_NODE(ctx->ast, node_id);
-    if (!node) return SYNQ_NULL_DOC;
-
-    switch (node->tag) {
-        case SYNQ_NODE_BINARY_EXPR:
-            return format_binary_expr(ctx, &node->binary_expr);
-        case SYNQ_NODE_UNARY_EXPR:
-            return format_unary_expr(ctx, &node->unary_expr);
-        case SYNQ_NODE_LITERAL:
-            return format_literal(ctx, &node->literal);
-        case SYNQ_NODE_EXPR_LIST:
-            return synq_format_comma_list(ctx, node->expr_list.children, node->expr_list.count);
-        case SYNQ_NODE_RESULT_COLUMN:
-            return format_result_column(ctx, &node->result_column);
-        case SYNQ_NODE_RESULT_COLUMN_LIST:
-            return synq_format_comma_list(ctx, node->result_column_list.children, node->result_column_list.count);
-        case SYNQ_NODE_SELECT_STMT:
-            return format_select_stmt(ctx, &node->select_stmt);
-        case SYNQ_NODE_ORDERING_TERM:
-            return format_ordering_term(ctx, &node->ordering_term);
-        case SYNQ_NODE_ORDER_BY_LIST:
-            return synq_format_comma_list(ctx, node->order_by_list.children, node->order_by_list.count);
-        case SYNQ_NODE_LIMIT_CLAUSE:
-            return format_limit_clause(ctx, &node->limit_clause);
-        case SYNQ_NODE_COLUMN_REF:
-            return format_column_ref(ctx, &node->column_ref);
-        case SYNQ_NODE_FUNCTION_CALL:
-            return format_function_call(ctx, &node->function_call);
-        case SYNQ_NODE_IS_EXPR:
-            return format_is_expr(ctx, &node->is_expr);
-        case SYNQ_NODE_BETWEEN_EXPR:
-            return format_between_expr(ctx, &node->between_expr);
-        case SYNQ_NODE_LIKE_EXPR:
-            return format_like_expr(ctx, &node->like_expr);
-        case SYNQ_NODE_CASE_EXPR:
-            return format_case_expr(ctx, &node->case_expr);
-        case SYNQ_NODE_CASE_WHEN:
-            return format_case_when(ctx, &node->case_when);
-        case SYNQ_NODE_CASE_WHEN_LIST:
-            return format_case_when_list(ctx, &node->case_when_list);
-        case SYNQ_NODE_COMPOUND_SELECT:
-            return format_compound_select(ctx, &node->compound_select);
-        case SYNQ_NODE_SUBQUERY_EXPR:
-            return format_subquery_expr(ctx, &node->subquery_expr);
-        case SYNQ_NODE_EXISTS_EXPR:
-            return format_exists_expr(ctx, &node->exists_expr);
-        case SYNQ_NODE_IN_EXPR:
-            return format_in_expr(ctx, &node->in_expr);
-        case SYNQ_NODE_VARIABLE:
-            return format_variable(ctx, &node->variable);
-        case SYNQ_NODE_COLLATE_EXPR:
-            return format_collate_expr(ctx, &node->collate_expr);
-        case SYNQ_NODE_CAST_EXPR:
-            return format_cast_expr(ctx, &node->cast_expr);
-        case SYNQ_NODE_VALUES_ROW_LIST:
-            return format_values_row_list(ctx, &node->values_row_list);
-        case SYNQ_NODE_VALUES_CLAUSE:
-            return format_values_clause(ctx, &node->values_clause);
-        case SYNQ_NODE_CTE_DEFINITION:
-            return format_cte_definition(ctx, &node->cte_definition);
-        case SYNQ_NODE_CTE_LIST:
-            return synq_format_comma_list(ctx, node->cte_list.children, node->cte_list.count);
-        case SYNQ_NODE_WITH_CLAUSE:
-            return format_with_clause(ctx, &node->with_clause);
-        case SYNQ_NODE_AGGREGATE_FUNCTION_CALL:
-            return format_aggregate_function_call(ctx, &node->aggregate_function_call);
-        case SYNQ_NODE_RAISE_EXPR:
-            return format_raise_expr(ctx, &node->raise_expr);
-        case SYNQ_NODE_TABLE_REF:
-            return format_table_ref(ctx, &node->table_ref);
-        case SYNQ_NODE_SUBQUERY_TABLE_SOURCE:
-            return format_subquery_table_source(ctx, &node->subquery_table_source);
-        case SYNQ_NODE_JOIN_CLAUSE:
-            return format_join_clause(ctx, &node->join_clause);
-        case SYNQ_NODE_JOIN_PREFIX:
-            return format_join_prefix(ctx, &node->join_prefix);
-        case SYNQ_NODE_DELETE_STMT:
-            return format_delete_stmt(ctx, &node->delete_stmt);
-        case SYNQ_NODE_SET_CLAUSE:
-            return format_set_clause(ctx, &node->set_clause);
-        case SYNQ_NODE_SET_CLAUSE_LIST:
-            return synq_format_comma_list(ctx, node->set_clause_list.children, node->set_clause_list.count);
-        case SYNQ_NODE_UPDATE_STMT:
-            return format_update_stmt(ctx, &node->update_stmt);
-        case SYNQ_NODE_INSERT_STMT:
-            return format_insert_stmt(ctx, &node->insert_stmt);
-        case SYNQ_NODE_QUALIFIED_NAME:
-            return format_qualified_name(ctx, &node->qualified_name);
-        case SYNQ_NODE_DROP_STMT:
-            return format_drop_stmt(ctx, &node->drop_stmt);
-        case SYNQ_NODE_ALTER_TABLE_STMT:
-            return format_alter_table_stmt(ctx, &node->alter_table_stmt);
-        case SYNQ_NODE_TRANSACTION_STMT:
-            return format_transaction_stmt(ctx, &node->transaction_stmt);
-        case SYNQ_NODE_SAVEPOINT_STMT:
-            return format_savepoint_stmt(ctx, &node->savepoint_stmt);
-        case SYNQ_NODE_PRAGMA_STMT:
-            return format_pragma_stmt(ctx, &node->pragma_stmt);
-        case SYNQ_NODE_ANALYZE_STMT:
-            return format_analyze_stmt(ctx, &node->analyze_stmt);
-        case SYNQ_NODE_ATTACH_STMT:
-            return format_attach_stmt(ctx, &node->attach_stmt);
-        case SYNQ_NODE_DETACH_STMT:
-            return format_detach_stmt(ctx, &node->detach_stmt);
-        case SYNQ_NODE_VACUUM_STMT:
-            return format_vacuum_stmt(ctx, &node->vacuum_stmt);
-        case SYNQ_NODE_EXPLAIN_STMT:
-            return format_explain_stmt(ctx, &node->explain_stmt);
-        case SYNQ_NODE_CREATE_INDEX_STMT:
-            return format_create_index_stmt(ctx, &node->create_index_stmt);
-        case SYNQ_NODE_CREATE_VIEW_STMT:
-            return format_create_view_stmt(ctx, &node->create_view_stmt);
-        case SYNQ_NODE_FOREIGN_KEY_CLAUSE:
-            return format_foreign_key_clause(ctx, &node->foreign_key_clause);
-        case SYNQ_NODE_COLUMN_CONSTRAINT:
-            return format_column_constraint(ctx, &node->column_constraint);
-        case SYNQ_NODE_COLUMN_CONSTRAINT_LIST:
-            return format_column_constraint_list(ctx, &node->column_constraint_list);
-        case SYNQ_NODE_COLUMN_DEF:
-            return format_column_def(ctx, &node->column_def);
-        case SYNQ_NODE_COLUMN_DEF_LIST:
-            return format_column_def_list(ctx, &node->column_def_list);
-        case SYNQ_NODE_TABLE_CONSTRAINT:
-            return format_table_constraint(ctx, &node->table_constraint);
-        case SYNQ_NODE_TABLE_CONSTRAINT_LIST:
-            return format_table_constraint_list(ctx, &node->table_constraint_list);
-        case SYNQ_NODE_CREATE_TABLE_STMT:
-            return format_create_table_stmt(ctx, &node->create_table_stmt);
-        case SYNQ_NODE_FRAME_BOUND:
-            return format_frame_bound(ctx, &node->frame_bound);
-        case SYNQ_NODE_FRAME_SPEC:
-            return format_frame_spec(ctx, &node->frame_spec);
-        case SYNQ_NODE_WINDOW_DEF:
-            return format_window_def(ctx, &node->window_def);
-        case SYNQ_NODE_WINDOW_DEF_LIST:
-            return synq_format_comma_list(ctx, node->window_def_list.children, node->window_def_list.count);
-        case SYNQ_NODE_NAMED_WINDOW_DEF:
-            return format_named_window_def(ctx, &node->named_window_def);
-        case SYNQ_NODE_NAMED_WINDOW_DEF_LIST:
-            return synq_format_comma_list(ctx, node->named_window_def_list.children, node->named_window_def_list.count);
-        case SYNQ_NODE_FILTER_OVER:
-            return format_filter_over(ctx, &node->filter_over);
-        case SYNQ_NODE_TRIGGER_EVENT:
-            return format_trigger_event(ctx, &node->trigger_event);
-        case SYNQ_NODE_TRIGGER_CMD_LIST:
-            return format_trigger_cmd_list(ctx, &node->trigger_cmd_list);
-        case SYNQ_NODE_CREATE_TRIGGER_STMT:
-            return format_create_trigger_stmt(ctx, &node->create_trigger_stmt);
-        case SYNQ_NODE_CREATE_VIRTUAL_TABLE_STMT:
-            return format_create_virtual_table_stmt(ctx, &node->create_virtual_table_stmt);
-        default:
-            return synq_kw(ctx, "/* UNSUPPORTED */");
-    }
-}
+// ============ Format Recipes ============
+
+static const SynqFmtEnumEntry fmt_binary_expr_entries_1[] = {
+    { SYNQ_BINARY_OP_PLUS, "+" },
+    { SYNQ_BINARY_OP_MINUS, "-" },
+    { SYNQ_BINARY_OP_STAR, "*" },
+    { SYNQ_BINARY_OP_SLASH, "/" },
+    { SYNQ_BINARY_OP_REM, "%" },
+    { SYNQ_BINARY_OP_LT, "<" },
+    { SYNQ_BINARY_OP_GT, ">" },
+    { SYNQ_BINARY_OP_LE, "<=" },
+    { SYNQ_BINARY_OP_GE, ">=" },
+    { SYNQ_BINARY_OP_EQ, "=" },
+    { SYNQ_BINARY_OP_NE, "!=" },
+    { SYNQ_BINARY_OP_AND, "AND" },
+    { SYNQ_BINARY_OP_OR, "OR" },
+    { SYNQ_BINARY_OP_BITAND, "&" },
+    { SYNQ_BINARY_OP_BITOR, "|" },
+    { SYNQ_BINARY_OP_LSHIFT, "<<" },
+    { SYNQ_BINARY_OP_RSHIFT, ">>" },
+    { SYNQ_BINARY_OP_CONCAT, "||" },
+    { SYNQ_BINARY_OP_PTR, "->" },
+};
+
+static const SynqFmtOp fmt_binary_expr[] = {
+    FOP_SWITCH_DEFAULT(BinaryExpr, op, 2),
+    FOP_CASE(SYNQ_BINARY_OP_AND),
+    FOP_SEQ(4),
+    FOP_CHILD(BinaryExpr, left),
+    FOP_LINE,
+    FOP_KW("AND "),
+    FOP_CHILD(BinaryExpr, right),
+    FOP_CASE(SYNQ_BINARY_OP_OR),
+    FOP_SEQ(4),
+    FOP_CHILD(BinaryExpr, left),
+    FOP_LINE,
+    FOP_KW("OR "),
+    FOP_CHILD(BinaryExpr, right),
+    FOP_GROUP,
+    FOP_SEQ(5),
+    FOP_CHILD(BinaryExpr, left),
+    FOP_LINE,
+    FOP_ENUM_DISPLAY(BinaryExpr, op, fmt_binary_expr_entries_1, 19),
+    FOP_KW(" "),
+    FOP_CHILD(BinaryExpr, right),
+};
+
+static const SynqFmtEnumEntry fmt_unary_expr_entries_1[] = {
+    { SYNQ_UNARY_OP_MINUS, "-" },
+    { SYNQ_UNARY_OP_PLUS, "+" },
+    { SYNQ_UNARY_OP_BITNOT, "~" },
+    { SYNQ_UNARY_OP_NOT, "NOT " },
+};
+
+static const SynqFmtOp fmt_unary_expr[] = {
+    FOP_SEQ(2),
+    FOP_ENUM_DISPLAY(UnaryExpr, op, fmt_unary_expr_entries_1, 4),
+    FOP_CHILD(UnaryExpr, operand),
+};
+
+static const SynqFmtOp fmt_literal[] = {
+    FOP_SPAN(Literal, source),
+};
+
+static const SynqFmtOp fmt_result_column[] = {
+    FOP_SEQ(2),
+    FOP_IF_FLAG_ELSE(ResultColumn, flags, 0x01),
+    FOP_IF_SET_ELSE(ResultColumn, expr),
+    FOP_SEQ(2),
+    FOP_CHILD(ResultColumn, expr),
+    FOP_KW(".*"),
+    FOP_KW("*"),
+    FOP_CHILD(ResultColumn, expr),
+    FOP_IF_SPAN(ResultColumn, alias),
+    FOP_SEQ(2),
+    FOP_KW(" AS "),
+    FOP_SPAN(ResultColumn, alias),
+};
+
+static const SynqFmtOp fmt_select_stmt[] = {
+    FOP_GROUP,
+    FOP_SEQ(9),
+    FOP_IF_FLAG_ELSE(SelectStmt, flags, 0x01),
+    FOP_KW("SELECT DISTINCT"),
+    FOP_KW("SELECT"),
+    FOP_IF_SET(SelectStmt, columns),
+    FOP_GROUP,
+    FOP_NEST,
+    FOP_SEQ(2),
+    FOP_LINE,
+    FOP_CHILD(SelectStmt, columns),
+    FOP_CLAUSE(SelectStmt, from_clause, "FROM"),
+    FOP_CLAUSE(SelectStmt, where, "WHERE"),
+    FOP_CLAUSE(SelectStmt, groupby, "GROUP BY"),
+    FOP_CLAUSE(SelectStmt, having, "HAVING"),
+    FOP_CLAUSE(SelectStmt, orderby, "ORDER BY"),
+    FOP_CLAUSE(SelectStmt, limit_clause, "LIMIT"),
+    FOP_CLAUSE(SelectStmt, window_clause, "WINDOW"),
+};
+
+static const SynqFmtOp fmt_ordering_term[] = {
+    FOP_SEQ(4),
+    FOP_CHILD(OrderingTerm, expr),
+    FOP_IF_ENUM(OrderingTerm, sort_order, SYNQ_SORT_ORDER_DESC),
+    FOP_KW(" DESC"),
+    FOP_IF_ENUM(OrderingTerm, nulls_order, SYNQ_NULLS_ORDER_FIRST),
+    FOP_KW(" NULLS FIRST"),
+    FOP_IF_ENUM(OrderingTerm, nulls_order, SYNQ_NULLS_ORDER_LAST),
+    FOP_KW(" NULLS LAST"),
+};
+
+static const SynqFmtOp fmt_limit_clause[] = {
+    FOP_SEQ(2),
+    FOP_CHILD(LimitClause, limit),
+    FOP_IF_SET(LimitClause, offset),
+    FOP_SEQ(2),
+    FOP_KW(" OFFSET "),
+    FOP_CHILD(LimitClause, offset),
+};
+
+static const SynqFmtOp fmt_column_ref[] = {
+    FOP_SEQ(3),
+    FOP_IF_SPAN(ColumnRef, schema),
+    FOP_SEQ(2),
+    FOP_SPAN(ColumnRef, schema),
+    FOP_KW("."),
+    FOP_IF_SPAN(ColumnRef, table),
+    FOP_SEQ(2),
+    FOP_SPAN(ColumnRef, table),
+    FOP_KW("."),
+    FOP_SPAN(ColumnRef, column),
+};
+
+static const SynqFmtOp fmt_function_call[] = {
+    FOP_SEQ(4),
+    FOP_SPAN(FunctionCall, func_name),
+    FOP_GROUP,
+    FOP_SEQ(5),
+    FOP_KW("("),
+    FOP_IF_FLAG(FunctionCall, flags, 0x01),
+    FOP_KW("DISTINCT "),
+    FOP_IF_FLAG_ELSE(FunctionCall, flags, 0x02),
+    FOP_KW("*"),
+    FOP_IF_SET(FunctionCall, args),
+    FOP_NEST,
+    FOP_SEQ(2),
+    FOP_SOFTLINE,
+    FOP_CHILD(FunctionCall, args),
+    FOP_SOFTLINE,
+    FOP_KW(")"),
+    FOP_IF_SET(FunctionCall, filter_clause),
+    FOP_SEQ(3),
+    FOP_KW(" FILTER (WHERE "),
+    FOP_CHILD(FunctionCall, filter_clause),
+    FOP_KW(")"),
+    FOP_IF_SET(FunctionCall, over_clause),
+    FOP_SEQ(2),
+    FOP_KW(" OVER "),
+    FOP_CHILD(FunctionCall, over_clause),
+};
+
+static const SynqFmtOp fmt_is_expr[] = {
+    FOP_SWITCH(IsExpr, op, 6),
+    FOP_CASE(SYNQ_IS_OP_ISNULL),
+    FOP_SEQ(2),
+    FOP_CHILD(IsExpr, left),
+    FOP_KW(" ISNULL"),
+    FOP_CASE(SYNQ_IS_OP_NOTNULL),
+    FOP_SEQ(2),
+    FOP_CHILD(IsExpr, left),
+    FOP_KW(" NOTNULL"),
+    FOP_CASE(SYNQ_IS_OP_IS),
+    FOP_SEQ(3),
+    FOP_CHILD(IsExpr, left),
+    FOP_KW(" IS "),
+    FOP_CHILD(IsExpr, right),
+    FOP_CASE(SYNQ_IS_OP_IS_NOT),
+    FOP_SEQ(3),
+    FOP_CHILD(IsExpr, left),
+    FOP_KW(" IS NOT "),
+    FOP_CHILD(IsExpr, right),
+    FOP_CASE(SYNQ_IS_OP_IS_NOT_DISTINCT),
+    FOP_SEQ(3),
+    FOP_CHILD(IsExpr, left),
+    FOP_KW(" IS NOT DISTINCT FROM "),
+    FOP_CHILD(IsExpr, right),
+    FOP_CASE(SYNQ_IS_OP_IS_DISTINCT),
+    FOP_SEQ(3),
+    FOP_CHILD(IsExpr, left),
+    FOP_KW(" IS DISTINCT FROM "),
+    FOP_CHILD(IsExpr, right),
+};
+
+static const SynqFmtOp fmt_between_expr[] = {
+    FOP_SEQ(5),
+    FOP_CHILD(BetweenExpr, operand),
+    FOP_IF_ENUM_ELSE(BetweenExpr, negated, SYNQ_BOOL_TRUE),
+    FOP_KW(" NOT BETWEEN "),
+    FOP_KW(" BETWEEN "),
+    FOP_CHILD(BetweenExpr, low),
+    FOP_KW(" AND "),
+    FOP_CHILD(BetweenExpr, high),
+};
+
+static const SynqFmtOp fmt_like_expr[] = {
+    FOP_SEQ(4),
+    FOP_CHILD(LikeExpr, operand),
+    FOP_IF_ENUM_ELSE(LikeExpr, negated, SYNQ_BOOL_TRUE),
+    FOP_KW(" NOT LIKE "),
+    FOP_KW(" LIKE "),
+    FOP_CHILD(LikeExpr, pattern),
+    FOP_IF_SET(LikeExpr, escape),
+    FOP_SEQ(2),
+    FOP_KW(" ESCAPE "),
+    FOP_CHILD(LikeExpr, escape),
+};
+
+static const SynqFmtOp fmt_case_expr[] = {
+    FOP_SEQ(5),
+    FOP_KW("CASE"),
+    FOP_IF_SET(CaseExpr, operand),
+    FOP_SEQ(2),
+    FOP_KW(" "),
+    FOP_CHILD(CaseExpr, operand),
+    FOP_CHILD(CaseExpr, whens),
+    FOP_IF_SET(CaseExpr, else_expr),
+    FOP_SEQ(2),
+    FOP_KW(" ELSE "),
+    FOP_CHILD(CaseExpr, else_expr),
+    FOP_KW(" END"),
+};
+
+static const SynqFmtOp fmt_case_when[] = {
+    FOP_SEQ(4),
+    FOP_KW(" WHEN "),
+    FOP_CHILD(CaseWhen, when_expr),
+    FOP_KW(" THEN "),
+    FOP_CHILD(CaseWhen, then_expr),
+};
+
+static const SynqFmtOp fmt_case_when_list[] = {
+    FOP_FOR_EACH,
+    FOP_CHILD_ITEM,
+};
+
+static const SynqFmtEnumEntry fmt_compound_select_entries_1[] = {
+    { SYNQ_COMPOUND_OP_UNION, "UNION" },
+    { SYNQ_COMPOUND_OP_UNION_ALL, "UNION ALL" },
+    { SYNQ_COMPOUND_OP_INTERSECT, "INTERSECT" },
+    { SYNQ_COMPOUND_OP_EXCEPT, "EXCEPT" },
+};
+
+static const SynqFmtOp fmt_compound_select[] = {
+    FOP_SEQ(5),
+    FOP_CHILD(CompoundSelect, left),
+    FOP_HARDLINE,
+    FOP_ENUM_DISPLAY(CompoundSelect, op, fmt_compound_select_entries_1, 4),
+    FOP_HARDLINE,
+    FOP_CHILD(CompoundSelect, right),
+};
+
+static const SynqFmtOp fmt_subquery_expr[] = {
+    FOP_SEQ(3),
+    FOP_KW("("),
+    FOP_CHILD(SubqueryExpr, select),
+    FOP_KW(")"),
+};
+
+static const SynqFmtOp fmt_exists_expr[] = {
+    FOP_SEQ(3),
+    FOP_KW("EXISTS ("),
+    FOP_CHILD(ExistsExpr, select),
+    FOP_KW(")"),
+};
+
+static const SynqFmtOp fmt_in_expr[] = {
+    FOP_SEQ(5),
+    FOP_CHILD(InExpr, operand),
+    FOP_IF_ENUM_ELSE(InExpr, negated, SYNQ_BOOL_TRUE),
+    FOP_KW(" NOT IN "),
+    FOP_KW(" IN "),
+    FOP_KW("("),
+    FOP_CHILD(InExpr, source),
+    FOP_KW(")"),
+};
+
+static const SynqFmtOp fmt_variable[] = {
+    FOP_SPAN(Variable, source),
+};
+
+static const SynqFmtOp fmt_collate_expr[] = {
+    FOP_SEQ(3),
+    FOP_CHILD(CollateExpr, expr),
+    FOP_KW(" COLLATE "),
+    FOP_SPAN(CollateExpr, collation),
+};
+
+static const SynqFmtOp fmt_cast_expr[] = {
+    FOP_SEQ(5),
+    FOP_KW("CAST("),
+    FOP_CHILD(CastExpr, expr),
+    FOP_KW(" AS "),
+    FOP_SPAN(CastExpr, type_name),
+    FOP_KW(")"),
+};
+
+static const SynqFmtOp fmt_values_row_list[] = {
+    FOP_FOR_EACH_SEP,
+    FOP_SEQ(3),
+    FOP_KW("("),
+    FOP_CHILD_ITEM,
+    FOP_KW(")"),
+    FOP_SEQ(2),
+    FOP_KW(","),
+    FOP_LINE,
+};
+
+static const SynqFmtOp fmt_values_clause[] = {
+    FOP_SEQ(2),
+    FOP_KW("VALUES"),
+    FOP_NEST,
+    FOP_SEQ(2),
+    FOP_HARDLINE,
+    FOP_CHILD(ValuesClause, rows),
+};
+
+static const SynqFmtOp fmt_cte_definition[] = {
+    FOP_SEQ(8),
+    FOP_SPAN(CteDefinition, cte_name),
+    FOP_IF_SET(CteDefinition, columns),
+    FOP_SEQ(3),
+    FOP_KW("("),
+    FOP_CHILD(CteDefinition, columns),
+    FOP_KW(")"),
+    FOP_KW(" AS "),
+    FOP_IF_ENUM(CteDefinition, materialized, SYNQ_MATERIALIZED_MATERIALIZED),
+    FOP_KW("MATERIALIZED "),
+    FOP_IF_ENUM(CteDefinition, materialized, SYNQ_MATERIALIZED_NOT_MATERIALIZED),
+    FOP_KW("NOT MATERIALIZED "),
+    FOP_KW("("),
+    FOP_CHILD(CteDefinition, select),
+    FOP_KW(")"),
+};
+
+static const SynqFmtOp fmt_with_clause[] = {
+    FOP_SEQ(4),
+    FOP_IF_ENUM_ELSE(WithClause, recursive, SYNQ_BOOL_TRUE),
+    FOP_KW("WITH RECURSIVE "),
+    FOP_KW("WITH "),
+    FOP_CHILD(WithClause, ctes),
+    FOP_HARDLINE,
+    FOP_CHILD(WithClause, select),
+};
+
+static const SynqFmtOp fmt_aggregate_function_call[] = {
+    FOP_SEQ(4),
+    FOP_SPAN(AggregateFunctionCall, func_name),
+    FOP_GROUP,
+    FOP_SEQ(6),
+    FOP_KW("("),
+    FOP_IF_FLAG(AggregateFunctionCall, flags, 0x01),
+    FOP_KW("DISTINCT "),
+    FOP_IF_SET(AggregateFunctionCall, args),
+    FOP_NEST,
+    FOP_SEQ(2),
+    FOP_SOFTLINE,
+    FOP_CHILD(AggregateFunctionCall, args),
+    FOP_IF_SET(AggregateFunctionCall, orderby),
+    FOP_SEQ(2),
+    FOP_KW(" ORDER BY "),
+    FOP_CHILD(AggregateFunctionCall, orderby),
+    FOP_SOFTLINE,
+    FOP_KW(")"),
+    FOP_IF_SET(AggregateFunctionCall, filter_clause),
+    FOP_SEQ(3),
+    FOP_KW(" FILTER (WHERE "),
+    FOP_CHILD(AggregateFunctionCall, filter_clause),
+    FOP_KW(")"),
+    FOP_IF_SET(AggregateFunctionCall, over_clause),
+    FOP_SEQ(2),
+    FOP_KW(" OVER "),
+    FOP_CHILD(AggregateFunctionCall, over_clause),
+};
+
+static const SynqFmtOp fmt_raise_expr[] = {
+    FOP_SEQ(4),
+    FOP_KW("RAISE("),
+    FOP_SWITCH(RaiseExpr, raise_type, 4),
+    FOP_CASE(SYNQ_RAISE_TYPE_IGNORE),
+    FOP_KW("IGNORE"),
+    FOP_CASE(SYNQ_RAISE_TYPE_ROLLBACK),
+    FOP_KW("ROLLBACK"),
+    FOP_CASE(SYNQ_RAISE_TYPE_ABORT),
+    FOP_KW("ABORT"),
+    FOP_CASE(SYNQ_RAISE_TYPE_FAIL),
+    FOP_KW("FAIL"),
+    FOP_IF_SET(RaiseExpr, error_message),
+    FOP_SEQ(2),
+    FOP_KW(", "),
+    FOP_CHILD(RaiseExpr, error_message),
+    FOP_KW(")"),
+};
+
+static const SynqFmtOp fmt_table_ref[] = {
+    FOP_SEQ(3),
+    FOP_IF_SPAN(TableRef, schema),
+    FOP_SEQ(2),
+    FOP_SPAN(TableRef, schema),
+    FOP_KW("."),
+    FOP_SPAN(TableRef, table_name),
+    FOP_IF_SPAN(TableRef, alias),
+    FOP_SEQ(2),
+    FOP_KW(" AS "),
+    FOP_SPAN(TableRef, alias),
+};
+
+static const SynqFmtOp fmt_subquery_table_source[] = {
+    FOP_SEQ(4),
+    FOP_KW("("),
+    FOP_CHILD(SubqueryTableSource, select),
+    FOP_KW(")"),
+    FOP_IF_SPAN(SubqueryTableSource, alias),
+    FOP_SEQ(2),
+    FOP_KW(" AS "),
+    FOP_SPAN(SubqueryTableSource, alias),
+};
+
+static const SynqFmtEnumEntry fmt_join_clause_entries_1[] = {
+    { SYNQ_JOIN_TYPE_INNER, "JOIN" },
+    { SYNQ_JOIN_TYPE_LEFT, "LEFT JOIN" },
+    { SYNQ_JOIN_TYPE_RIGHT, "RIGHT JOIN" },
+    { SYNQ_JOIN_TYPE_FULL, "FULL JOIN" },
+    { SYNQ_JOIN_TYPE_CROSS, "CROSS JOIN" },
+    { SYNQ_JOIN_TYPE_NATURAL_INNER, "NATURAL JOIN" },
+    { SYNQ_JOIN_TYPE_NATURAL_LEFT, "NATURAL LEFT JOIN" },
+    { SYNQ_JOIN_TYPE_NATURAL_RIGHT, "NATURAL RIGHT JOIN" },
+    { SYNQ_JOIN_TYPE_NATURAL_FULL, "NATURAL FULL JOIN" },
+    { SYNQ_JOIN_TYPE_COMMA, "," },
+};
+
+static const SynqFmtOp fmt_join_clause[] = {
+    FOP_SWITCH_DEFAULT(JoinClause, join_type, 1),
+    FOP_CASE(SYNQ_JOIN_TYPE_COMMA),
+    FOP_SEQ(5),
+    FOP_CHILD(JoinClause, left),
+    FOP_KW(", "),
+    FOP_CHILD(JoinClause, right),
+    FOP_IF_SET(JoinClause, on_expr),
+    FOP_SEQ(3),
+    FOP_HARDLINE,
+    FOP_KW("ON "),
+    FOP_CHILD(JoinClause, on_expr),
+    FOP_IF_SET(JoinClause, using_columns),
+    FOP_SEQ(3),
+    FOP_KW(" USING ("),
+    FOP_CHILD(JoinClause, using_columns),
+    FOP_KW(")"),
+    FOP_SEQ(7),
+    FOP_CHILD(JoinClause, left),
+    FOP_HARDLINE,
+    FOP_ENUM_DISPLAY(JoinClause, join_type, fmt_join_clause_entries_1, 10),
+    FOP_KW(" "),
+    FOP_CHILD(JoinClause, right),
+    FOP_IF_SET(JoinClause, on_expr),
+    FOP_SEQ(3),
+    FOP_HARDLINE,
+    FOP_KW("ON "),
+    FOP_CHILD(JoinClause, on_expr),
+    FOP_IF_SET(JoinClause, using_columns),
+    FOP_SEQ(3),
+    FOP_KW(" USING ("),
+    FOP_CHILD(JoinClause, using_columns),
+    FOP_KW(")"),
+};
+
+static const SynqFmtOp fmt_join_prefix[] = {
+    FOP_CHILD(JoinPrefix, source),
+};
+
+static const SynqFmtOp fmt_delete_stmt[] = {
+    FOP_GROUP,
+    FOP_SEQ(3),
+    FOP_KW("DELETE"),
+    FOP_CLAUSE(DeleteStmt, table, "FROM"),
+    FOP_CLAUSE(DeleteStmt, where, "WHERE"),
+};
+
+static const SynqFmtOp fmt_set_clause[] = {
+    FOP_SEQ(3),
+    FOP_IF_SPAN_ELSE(SetClause, column),
+    FOP_SPAN(SetClause, column),
+    FOP_IF_SET(SetClause, columns),
+    FOP_SEQ(3),
+    FOP_KW("("),
+    FOP_CHILD(SetClause, columns),
+    FOP_KW(")"),
+    FOP_KW(" = "),
+    FOP_CHILD(SetClause, value),
+};
+
+static const SynqFmtOp fmt_update_stmt[] = {
+    FOP_GROUP,
+    FOP_SEQ(7),
+    FOP_KW("UPDATE"),
+    FOP_SWITCH(UpdateStmt, conflict_action, 5),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ROLLBACK),
+    FOP_KW(" OR ROLLBACK"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ABORT),
+    FOP_KW(" OR ABORT"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_FAIL),
+    FOP_KW(" OR FAIL"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_IGNORE),
+    FOP_KW(" OR IGNORE"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_REPLACE),
+    FOP_KW(" OR REPLACE"),
+    FOP_KW(" "),
+    FOP_CHILD(UpdateStmt, table),
+    FOP_CLAUSE(UpdateStmt, setlist, "SET"),
+    FOP_CLAUSE(UpdateStmt, from_clause, "FROM"),
+    FOP_CLAUSE(UpdateStmt, where, "WHERE"),
+};
+
+static const SynqFmtOp fmt_insert_stmt[] = {
+    FOP_SEQ(5),
+    FOP_IF_ENUM_ELSE(InsertStmt, conflict_action, SYNQ_CONFLICT_ACTION_REPLACE),
+    FOP_KW("REPLACE"),
+    FOP_SEQ(2),
+    FOP_KW("INSERT"),
+    FOP_SWITCH(InsertStmt, conflict_action, 4),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ROLLBACK),
+    FOP_KW(" OR ROLLBACK"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ABORT),
+    FOP_KW(" OR ABORT"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_FAIL),
+    FOP_KW(" OR FAIL"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_IGNORE),
+    FOP_KW(" OR IGNORE"),
+    FOP_KW(" INTO "),
+    FOP_CHILD(InsertStmt, table),
+    FOP_IF_SET(InsertStmt, columns),
+    FOP_SEQ(3),
+    FOP_KW(" ("),
+    FOP_CHILD(InsertStmt, columns),
+    FOP_KW(")"),
+    FOP_IF_SET(InsertStmt, source),
+    FOP_SEQ(2),
+    FOP_HARDLINE,
+    FOP_CHILD(InsertStmt, source),
+};
+
+static const SynqFmtOp fmt_qualified_name[] = {
+    FOP_SEQ(2),
+    FOP_IF_SPAN(QualifiedName, schema),
+    FOP_SEQ(2),
+    FOP_SPAN(QualifiedName, schema),
+    FOP_KW("."),
+    FOP_SPAN(QualifiedName, object_name),
+};
+
+static const SynqFmtEnumEntry fmt_drop_stmt_entries_1[] = {
+    { SYNQ_DROP_OBJECT_TYPE_TABLE, "TABLE" },
+    { SYNQ_DROP_OBJECT_TYPE_INDEX, "INDEX" },
+    { SYNQ_DROP_OBJECT_TYPE_VIEW, "VIEW" },
+    { SYNQ_DROP_OBJECT_TYPE_TRIGGER, "TRIGGER" },
+};
+
+static const SynqFmtOp fmt_drop_stmt[] = {
+    FOP_SEQ(5),
+    FOP_KW("DROP "),
+    FOP_ENUM_DISPLAY(DropStmt, object_type, fmt_drop_stmt_entries_1, 4),
+    FOP_IF_ENUM(DropStmt, if_exists, SYNQ_BOOL_TRUE),
+    FOP_KW(" IF EXISTS"),
+    FOP_KW(" "),
+    FOP_CHILD(DropStmt, target),
+};
+
+static const SynqFmtOp fmt_alter_table_stmt[] = {
+    FOP_SEQ(3),
+    FOP_KW("ALTER TABLE "),
+    FOP_IF_SET(AlterTableStmt, target),
+    FOP_SEQ(2),
+    FOP_CHILD(AlterTableStmt, target),
+    FOP_KW(" "),
+    FOP_SWITCH(AlterTableStmt, op, 4),
+    FOP_CASE(SYNQ_ALTER_OP_RENAME_TABLE),
+    FOP_SEQ(2),
+    FOP_KW("RENAME TO "),
+    FOP_SPAN(AlterTableStmt, new_name),
+    FOP_CASE(SYNQ_ALTER_OP_RENAME_COLUMN),
+    FOP_SEQ(4),
+    FOP_KW("RENAME COLUMN "),
+    FOP_SPAN(AlterTableStmt, old_name),
+    FOP_KW(" TO "),
+    FOP_SPAN(AlterTableStmt, new_name),
+    FOP_CASE(SYNQ_ALTER_OP_DROP_COLUMN),
+    FOP_SEQ(2),
+    FOP_KW("DROP COLUMN "),
+    FOP_SPAN(AlterTableStmt, old_name),
+    FOP_CASE(SYNQ_ALTER_OP_ADD_COLUMN),
+    FOP_SEQ(2),
+    FOP_KW("ADD COLUMN "),
+    FOP_SPAN(AlterTableStmt, old_name),
+};
+
+static const SynqFmtEnumEntry fmt_transaction_stmt_entries_1[] = {
+    { SYNQ_TRANSACTION_TYPE_IMMEDIATE, " IMMEDIATE" },
+    { SYNQ_TRANSACTION_TYPE_EXCLUSIVE, " EXCLUSIVE" },
+};
+
+static const SynqFmtOp fmt_transaction_stmt[] = {
+    FOP_SWITCH(TransactionStmt, op, 3),
+    FOP_CASE(SYNQ_TRANSACTION_OP_BEGIN),
+    FOP_SEQ(2),
+    FOP_KW("BEGIN"),
+    FOP_ENUM_DISPLAY(TransactionStmt, trans_type, fmt_transaction_stmt_entries_1, 2),
+    FOP_CASE(SYNQ_TRANSACTION_OP_COMMIT),
+    FOP_KW("COMMIT"),
+    FOP_CASE(SYNQ_TRANSACTION_OP_ROLLBACK),
+    FOP_KW("ROLLBACK"),
+};
+
+static const SynqFmtOp fmt_savepoint_stmt[] = {
+    FOP_SWITCH(SavepointStmt, op, 3),
+    FOP_CASE(SYNQ_SAVEPOINT_OP_SAVEPOINT),
+    FOP_SEQ(2),
+    FOP_KW("SAVEPOINT "),
+    FOP_SPAN(SavepointStmt, savepoint_name),
+    FOP_CASE(SYNQ_SAVEPOINT_OP_RELEASE),
+    FOP_SEQ(2),
+    FOP_KW("RELEASE SAVEPOINT "),
+    FOP_SPAN(SavepointStmt, savepoint_name),
+    FOP_CASE(SYNQ_SAVEPOINT_OP_ROLLBACK_TO),
+    FOP_SEQ(2),
+    FOP_KW("ROLLBACK TO SAVEPOINT "),
+    FOP_SPAN(SavepointStmt, savepoint_name),
+};
+
+static const SynqFmtOp fmt_pragma_stmt[] = {
+    FOP_SEQ(4),
+    FOP_KW("PRAGMA "),
+    FOP_IF_SPAN(PragmaStmt, schema),
+    FOP_SEQ(2),
+    FOP_SPAN(PragmaStmt, schema),
+    FOP_KW("."),
+    FOP_SPAN(PragmaStmt, pragma_name),
+    FOP_SWITCH(PragmaStmt, pragma_form, 2),
+    FOP_CASE(SYNQ_PRAGMA_FORM_EQ),
+    FOP_SEQ(2),
+    FOP_KW(" = "),
+    FOP_SPAN(PragmaStmt, value),
+    FOP_CASE(SYNQ_PRAGMA_FORM_CALL),
+    FOP_SEQ(3),
+    FOP_KW("("),
+    FOP_SPAN(PragmaStmt, value),
+    FOP_KW(")"),
+};
+
+static const SynqFmtOp fmt_analyze_stmt[] = {
+    FOP_SEQ(2),
+    FOP_IF_ENUM_ELSE(AnalyzeStmt, kind, SYNQ_ANALYZE_KIND_REINDEX),
+    FOP_KW("REINDEX"),
+    FOP_KW("ANALYZE"),
+    FOP_IF_SPAN_ELSE(AnalyzeStmt, schema),
+    FOP_SEQ(4),
+    FOP_KW(" "),
+    FOP_SPAN(AnalyzeStmt, schema),
+    FOP_KW("."),
+    FOP_SPAN(AnalyzeStmt, target_name),
+    FOP_IF_SPAN(AnalyzeStmt, target_name),
+    FOP_SEQ(2),
+    FOP_KW(" "),
+    FOP_SPAN(AnalyzeStmt, target_name),
+};
+
+static const SynqFmtOp fmt_attach_stmt[] = {
+    FOP_SEQ(5),
+    FOP_KW("ATTACH "),
+    FOP_CHILD(AttachStmt, filename),
+    FOP_KW(" AS "),
+    FOP_CHILD(AttachStmt, db_name),
+    FOP_IF_SET(AttachStmt, key),
+    FOP_SEQ(2),
+    FOP_KW(" KEY "),
+    FOP_CHILD(AttachStmt, key),
+};
+
+static const SynqFmtOp fmt_detach_stmt[] = {
+    FOP_SEQ(2),
+    FOP_KW("DETACH "),
+    FOP_CHILD(DetachStmt, db_name),
+};
+
+static const SynqFmtOp fmt_vacuum_stmt[] = {
+    FOP_SEQ(3),
+    FOP_KW("VACUUM"),
+    FOP_IF_SPAN(VacuumStmt, schema),
+    FOP_SEQ(2),
+    FOP_KW(" "),
+    FOP_SPAN(VacuumStmt, schema),
+    FOP_IF_SET(VacuumStmt, into_expr),
+    FOP_SEQ(2),
+    FOP_KW(" INTO "),
+    FOP_CHILD(VacuumStmt, into_expr),
+};
+
+static const SynqFmtOp fmt_explain_stmt[] = {
+    FOP_SEQ(3),
+    FOP_IF_ENUM_ELSE(ExplainStmt, explain_mode, SYNQ_EXPLAIN_MODE_QUERY_PLAN),
+    FOP_KW("EXPLAIN QUERY PLAN"),
+    FOP_KW("EXPLAIN"),
+    FOP_HARDLINE,
+    FOP_CHILD(ExplainStmt, stmt),
+};
+
+static const SynqFmtOp fmt_create_index_stmt[] = {
+    FOP_GROUP,
+    FOP_SEQ(13),
+    FOP_KW("CREATE"),
+    FOP_IF_ENUM(CreateIndexStmt, is_unique, SYNQ_BOOL_TRUE),
+    FOP_KW(" UNIQUE"),
+    FOP_KW(" INDEX"),
+    FOP_IF_ENUM(CreateIndexStmt, if_not_exists, SYNQ_BOOL_TRUE),
+    FOP_KW(" IF NOT EXISTS"),
+    FOP_KW(" "),
+    FOP_IF_SPAN(CreateIndexStmt, schema),
+    FOP_SEQ(2),
+    FOP_SPAN(CreateIndexStmt, schema),
+    FOP_KW("."),
+    FOP_SPAN(CreateIndexStmt, index_name),
+    FOP_KW(" ON "),
+    FOP_SPAN(CreateIndexStmt, table_name),
+    FOP_KW(" ("),
+    FOP_CHILD(CreateIndexStmt, columns),
+    FOP_KW(")"),
+    FOP_CLAUSE(CreateIndexStmt, where, "WHERE"),
+};
+
+static const SynqFmtOp fmt_create_view_stmt[] = {
+    FOP_SEQ(11),
+    FOP_KW("CREATE"),
+    FOP_IF_ENUM(CreateViewStmt, is_temp, SYNQ_BOOL_TRUE),
+    FOP_KW(" TEMP"),
+    FOP_KW(" VIEW"),
+    FOP_IF_ENUM(CreateViewStmt, if_not_exists, SYNQ_BOOL_TRUE),
+    FOP_KW(" IF NOT EXISTS"),
+    FOP_KW(" "),
+    FOP_IF_SPAN(CreateViewStmt, schema),
+    FOP_SEQ(2),
+    FOP_SPAN(CreateViewStmt, schema),
+    FOP_KW("."),
+    FOP_SPAN(CreateViewStmt, view_name),
+    FOP_IF_SET(CreateViewStmt, column_names),
+    FOP_GROUP,
+    FOP_SEQ(3),
+    FOP_KW("("),
+    FOP_CHILD(CreateViewStmt, column_names),
+    FOP_KW(")"),
+    FOP_KW(" AS"),
+    FOP_HARDLINE,
+    FOP_CHILD(CreateViewStmt, select),
+};
+
+static const SynqFmtOp fmt_foreign_key_clause[] = {
+    FOP_SEQ(5),
+    FOP_IF_SPAN(ForeignKeyClause, ref_table),
+    FOP_SEQ(2),
+    FOP_KW("REFERENCES "),
+    FOP_SPAN(ForeignKeyClause, ref_table),
+    FOP_IF_SET(ForeignKeyClause, ref_columns),
+    FOP_SEQ(3),
+    FOP_KW("("),
+    FOP_CHILD(ForeignKeyClause, ref_columns),
+    FOP_KW(")"),
+    FOP_SWITCH(ForeignKeyClause, on_delete, 4),
+    FOP_CASE(SYNQ_FOREIGN_KEY_ACTION_SET_NULL),
+    FOP_KW(" ON DELETE SET NULL"),
+    FOP_CASE(SYNQ_FOREIGN_KEY_ACTION_SET_DEFAULT),
+    FOP_KW(" ON DELETE SET DEFAULT"),
+    FOP_CASE(SYNQ_FOREIGN_KEY_ACTION_CASCADE),
+    FOP_KW(" ON DELETE CASCADE"),
+    FOP_CASE(SYNQ_FOREIGN_KEY_ACTION_RESTRICT),
+    FOP_KW(" ON DELETE RESTRICT"),
+    FOP_SWITCH(ForeignKeyClause, on_update, 4),
+    FOP_CASE(SYNQ_FOREIGN_KEY_ACTION_SET_NULL),
+    FOP_KW(" ON UPDATE SET NULL"),
+    FOP_CASE(SYNQ_FOREIGN_KEY_ACTION_SET_DEFAULT),
+    FOP_KW(" ON UPDATE SET DEFAULT"),
+    FOP_CASE(SYNQ_FOREIGN_KEY_ACTION_CASCADE),
+    FOP_KW(" ON UPDATE CASCADE"),
+    FOP_CASE(SYNQ_FOREIGN_KEY_ACTION_RESTRICT),
+    FOP_KW(" ON UPDATE RESTRICT"),
+    FOP_IF_ENUM(ForeignKeyClause, is_deferred, SYNQ_BOOL_TRUE),
+    FOP_KW("DEFERRABLE INITIALLY DEFERRED"),
+};
+
+static const SynqFmtOp fmt_column_constraint[] = {
+    FOP_SEQ(2),
+    FOP_IF_SPAN(ColumnConstraint, constraint_name),
+    FOP_SEQ(3),
+    FOP_KW("CONSTRAINT "),
+    FOP_SPAN(ColumnConstraint, constraint_name),
+    FOP_KW(" "),
+    FOP_SWITCH(ColumnConstraint, kind, 9),
+    FOP_CASE(SYNQ_COLUMN_CONSTRAINT_KIND_PRIMARY_KEY),
+    FOP_SEQ(4),
+    FOP_KW("PRIMARY KEY"),
+    FOP_IF_ENUM(ColumnConstraint, sort_order, SYNQ_SORT_ORDER_DESC),
+    FOP_KW(" DESC"),
+    FOP_IF_ENUM(ColumnConstraint, is_autoincrement, SYNQ_BOOL_TRUE),
+    FOP_KW(" AUTOINCREMENT"),
+    FOP_SWITCH(ColumnConstraint, onconf, 5),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ROLLBACK),
+    FOP_KW(" ON CONFLICT ROLLBACK"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ABORT),
+    FOP_KW(" ON CONFLICT ABORT"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_FAIL),
+    FOP_KW(" ON CONFLICT FAIL"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_IGNORE),
+    FOP_KW(" ON CONFLICT IGNORE"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_REPLACE),
+    FOP_KW(" ON CONFLICT REPLACE"),
+    FOP_CASE(SYNQ_COLUMN_CONSTRAINT_KIND_NOT_NULL),
+    FOP_SEQ(2),
+    FOP_KW("NOT NULL"),
+    FOP_SWITCH(ColumnConstraint, onconf, 5),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ROLLBACK),
+    FOP_KW(" ON CONFLICT ROLLBACK"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ABORT),
+    FOP_KW(" ON CONFLICT ABORT"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_FAIL),
+    FOP_KW(" ON CONFLICT FAIL"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_IGNORE),
+    FOP_KW(" ON CONFLICT IGNORE"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_REPLACE),
+    FOP_KW(" ON CONFLICT REPLACE"),
+    FOP_CASE(SYNQ_COLUMN_CONSTRAINT_KIND_UNIQUE),
+    FOP_SEQ(2),
+    FOP_KW("UNIQUE"),
+    FOP_SWITCH(ColumnConstraint, onconf, 5),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ROLLBACK),
+    FOP_KW(" ON CONFLICT ROLLBACK"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ABORT),
+    FOP_KW(" ON CONFLICT ABORT"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_FAIL),
+    FOP_KW(" ON CONFLICT FAIL"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_IGNORE),
+    FOP_KW(" ON CONFLICT IGNORE"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_REPLACE),
+    FOP_KW(" ON CONFLICT REPLACE"),
+    FOP_CASE(SYNQ_COLUMN_CONSTRAINT_KIND_CHECK),
+    FOP_SEQ(3),
+    FOP_KW("CHECK("),
+    FOP_CHILD(ColumnConstraint, check_expr),
+    FOP_KW(")"),
+    FOP_CASE(SYNQ_COLUMN_CONSTRAINT_KIND_DEFAULT),
+    FOP_SEQ(2),
+    FOP_KW("DEFAULT "),
+    FOP_CHILD(ColumnConstraint, default_expr),
+    FOP_CASE(SYNQ_COLUMN_CONSTRAINT_KIND_COLLATE),
+    FOP_SEQ(2),
+    FOP_KW("COLLATE "),
+    FOP_SPAN(ColumnConstraint, collation_name),
+    FOP_CASE(SYNQ_COLUMN_CONSTRAINT_KIND_REFERENCES),
+    FOP_CHILD(ColumnConstraint, fk_clause),
+    FOP_CASE(SYNQ_COLUMN_CONSTRAINT_KIND_GENERATED),
+    FOP_SEQ(4),
+    FOP_KW("AS ("),
+    FOP_CHILD(ColumnConstraint, generated_expr),
+    FOP_KW(")"),
+    FOP_IF_ENUM(ColumnConstraint, generated_storage, SYNQ_GENERATED_COLUMN_STORAGE_STORED),
+    FOP_KW(" STORED"),
+    FOP_CASE(SYNQ_COLUMN_CONSTRAINT_KIND_NULL),
+    FOP_KW("NULL"),
+};
+
+static const SynqFmtOp fmt_column_constraint_list[] = {
+    FOP_FOR_EACH_SEP,
+    FOP_CHILD_ITEM,
+    FOP_KW(" "),
+};
+
+static const SynqFmtOp fmt_column_def[] = {
+    FOP_SEQ(3),
+    FOP_SPAN(ColumnDef, column_name),
+    FOP_IF_SPAN(ColumnDef, type_name),
+    FOP_SEQ(2),
+    FOP_KW(" "),
+    FOP_SPAN(ColumnDef, type_name),
+    FOP_IF_SET(ColumnDef, constraints),
+    FOP_SEQ(2),
+    FOP_KW(" "),
+    FOP_CHILD(ColumnDef, constraints),
+};
+
+static const SynqFmtOp fmt_column_def_list[] = {
+    FOP_FOR_EACH_SEP,
+    FOP_CHILD_ITEM,
+    FOP_SEQ(2),
+    FOP_KW(","),
+    FOP_LINE,
+};
+
+static const SynqFmtOp fmt_table_constraint[] = {
+    FOP_SEQ(2),
+    FOP_IF_SPAN(TableConstraint, constraint_name),
+    FOP_SEQ(3),
+    FOP_KW("CONSTRAINT "),
+    FOP_SPAN(TableConstraint, constraint_name),
+    FOP_KW(" "),
+    FOP_SWITCH(TableConstraint, kind, 4),
+    FOP_CASE(SYNQ_TABLE_CONSTRAINT_KIND_PRIMARY_KEY),
+    FOP_SEQ(4),
+    FOP_KW("PRIMARY KEY("),
+    FOP_CHILD(TableConstraint, columns),
+    FOP_KW(")"),
+    FOP_SWITCH(TableConstraint, onconf, 5),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ROLLBACK),
+    FOP_KW(" ON CONFLICT ROLLBACK"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ABORT),
+    FOP_KW(" ON CONFLICT ABORT"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_FAIL),
+    FOP_KW(" ON CONFLICT FAIL"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_IGNORE),
+    FOP_KW(" ON CONFLICT IGNORE"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_REPLACE),
+    FOP_KW(" ON CONFLICT REPLACE"),
+    FOP_CASE(SYNQ_TABLE_CONSTRAINT_KIND_UNIQUE),
+    FOP_SEQ(4),
+    FOP_KW("UNIQUE("),
+    FOP_CHILD(TableConstraint, columns),
+    FOP_KW(")"),
+    FOP_SWITCH(TableConstraint, onconf, 5),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ROLLBACK),
+    FOP_KW(" ON CONFLICT ROLLBACK"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_ABORT),
+    FOP_KW(" ON CONFLICT ABORT"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_FAIL),
+    FOP_KW(" ON CONFLICT FAIL"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_IGNORE),
+    FOP_KW(" ON CONFLICT IGNORE"),
+    FOP_CASE(SYNQ_CONFLICT_ACTION_REPLACE),
+    FOP_KW(" ON CONFLICT REPLACE"),
+    FOP_CASE(SYNQ_TABLE_CONSTRAINT_KIND_CHECK),
+    FOP_SEQ(3),
+    FOP_KW("CHECK("),
+    FOP_CHILD(TableConstraint, check_expr),
+    FOP_KW(")"),
+    FOP_CASE(SYNQ_TABLE_CONSTRAINT_KIND_FOREIGN_KEY),
+    FOP_SEQ(4),
+    FOP_KW("FOREIGN KEY("),
+    FOP_CHILD(TableConstraint, columns),
+    FOP_KW(") "),
+    FOP_CHILD(TableConstraint, fk_clause),
+};
+
+static const SynqFmtOp fmt_table_constraint_list[] = {
+    FOP_FOR_EACH_SEP,
+    FOP_CHILD_ITEM,
+    FOP_SEQ(2),
+    FOP_KW(","),
+    FOP_LINE,
+};
+
+static const SynqFmtOp fmt_create_table_stmt[] = {
+    FOP_GROUP,
+    FOP_SEQ(11),
+    FOP_KW("CREATE"),
+    FOP_IF_ENUM(CreateTableStmt, is_temp, SYNQ_BOOL_TRUE),
+    FOP_KW(" TEMP"),
+    FOP_KW(" TABLE"),
+    FOP_IF_ENUM(CreateTableStmt, if_not_exists, SYNQ_BOOL_TRUE),
+    FOP_KW(" IF NOT EXISTS"),
+    FOP_KW(" "),
+    FOP_IF_SPAN(CreateTableStmt, schema),
+    FOP_SEQ(2),
+    FOP_SPAN(CreateTableStmt, schema),
+    FOP_KW("."),
+    FOP_SPAN(CreateTableStmt, table_name),
+    FOP_IF_SET(CreateTableStmt, columns),
+    FOP_SEQ(4),
+    FOP_KW("("),
+    FOP_GROUP,
+    FOP_NEST,
+    FOP_SEQ(3),
+    FOP_SOFTLINE,
+    FOP_CHILD(CreateTableStmt, columns),
+    FOP_IF_SET(CreateTableStmt, table_constraints),
+    FOP_SEQ(3),
+    FOP_KW(","),
+    FOP_LINE,
+    FOP_CHILD(CreateTableStmt, table_constraints),
+    FOP_SOFTLINE,
+    FOP_KW(")"),
+    FOP_IF_SET(CreateTableStmt, as_select),
+    FOP_SEQ(3),
+    FOP_KW(" AS"),
+    FOP_HARDLINE,
+    FOP_CHILD(CreateTableStmt, as_select),
+    FOP_IF_FLAG(CreateTableStmt, flags, 0x01),
+    FOP_KW(" WITHOUT ROWID"),
+    FOP_IF_FLAG(CreateTableStmt, flags, 0x02),
+    FOP_KW(" STRICT"),
+};
+
+static const SynqFmtOp fmt_frame_bound[] = {
+    FOP_SWITCH(FrameBound, bound_type, 5),
+    FOP_CASE(SYNQ_FRAME_BOUND_TYPE_UNBOUNDED_PRECEDING),
+    FOP_KW("UNBOUNDED PRECEDING"),
+    FOP_CASE(SYNQ_FRAME_BOUND_TYPE_EXPR_PRECEDING),
+    FOP_SEQ(2),
+    FOP_CHILD(FrameBound, expr),
+    FOP_KW(" PRECEDING"),
+    FOP_CASE(SYNQ_FRAME_BOUND_TYPE_CURRENT_ROW),
+    FOP_KW("CURRENT ROW"),
+    FOP_CASE(SYNQ_FRAME_BOUND_TYPE_EXPR_FOLLOWING),
+    FOP_SEQ(2),
+    FOP_CHILD(FrameBound, expr),
+    FOP_KW(" FOLLOWING"),
+    FOP_CASE(SYNQ_FRAME_BOUND_TYPE_UNBOUNDED_FOLLOWING),
+    FOP_KW("UNBOUNDED FOLLOWING"),
+};
+
+static const SynqFmtOp fmt_frame_spec[] = {
+    FOP_SEQ(6),
+    FOP_SWITCH(FrameSpec, frame_type, 3),
+    FOP_CASE(SYNQ_FRAME_TYPE_RANGE),
+    FOP_KW("RANGE"),
+    FOP_CASE(SYNQ_FRAME_TYPE_ROWS),
+    FOP_KW("ROWS"),
+    FOP_CASE(SYNQ_FRAME_TYPE_GROUPS),
+    FOP_KW("GROUPS"),
+    FOP_KW(" BETWEEN "),
+    FOP_CHILD(FrameSpec, start_bound),
+    FOP_KW(" AND "),
+    FOP_CHILD(FrameSpec, end_bound),
+    FOP_SWITCH(FrameSpec, exclude, 4),
+    FOP_CASE(SYNQ_FRAME_EXCLUDE_NO_OTHERS),
+    FOP_KW(" EXCLUDE NO OTHERS"),
+    FOP_CASE(SYNQ_FRAME_EXCLUDE_CURRENT_ROW),
+    FOP_KW(" EXCLUDE CURRENT ROW"),
+    FOP_CASE(SYNQ_FRAME_EXCLUDE_GROUP),
+    FOP_KW(" EXCLUDE GROUP"),
+    FOP_CASE(SYNQ_FRAME_EXCLUDE_TIES),
+    FOP_KW(" EXCLUDE TIES"),
+};
+
+static const SynqFmtOp fmt_window_def[] = {
+    FOP_IF_SPAN_ELSE(WindowDef, base_window_name),
+    FOP_SPAN(WindowDef, base_window_name),
+    FOP_SEQ(5),
+    FOP_KW("("),
+    FOP_IF_SET(WindowDef, partition_by),
+    FOP_SEQ(2),
+    FOP_KW("PARTITION BY "),
+    FOP_CHILD(WindowDef, partition_by),
+    FOP_IF_SET(WindowDef, orderby),
+    FOP_SEQ(3),
+    FOP_IF_SET(WindowDef, partition_by),
+    FOP_KW(" "),
+    FOP_KW("ORDER BY "),
+    FOP_CHILD(WindowDef, orderby),
+    FOP_IF_SET(WindowDef, frame),
+    FOP_SEQ(2),
+    FOP_IF_SET_ELSE(WindowDef, partition_by),
+    FOP_KW(" "),
+    FOP_IF_SET(WindowDef, orderby),
+    FOP_KW(" "),
+    FOP_CHILD(WindowDef, frame),
+    FOP_KW(")"),
+};
+
+static const SynqFmtOp fmt_named_window_def[] = {
+    FOP_SEQ(3),
+    FOP_SPAN(NamedWindowDef, window_name),
+    FOP_KW(" AS "),
+    FOP_CHILD(NamedWindowDef, window_def),
+};
+
+static const SynqFmtOp fmt_filter_over[] = {
+    FOP_SEQ(3),
+    FOP_IF_SET(FilterOver, filter_expr),
+    FOP_SEQ(3),
+    FOP_KW("FILTER (WHERE "),
+    FOP_CHILD(FilterOver, filter_expr),
+    FOP_KW(")"),
+    FOP_IF_SET(FilterOver, over_def),
+    FOP_SEQ(2),
+    FOP_KW(" OVER "),
+    FOP_CHILD(FilterOver, over_def),
+    FOP_IF_SPAN(FilterOver, over_name),
+    FOP_SEQ(2),
+    FOP_KW(" OVER "),
+    FOP_SPAN(FilterOver, over_name),
+};
+
+static const SynqFmtOp fmt_trigger_event[] = {
+    FOP_SWITCH(TriggerEvent, event_type, 3),
+    FOP_CASE(SYNQ_TRIGGER_EVENT_TYPE_DELETE),
+    FOP_KW("DELETE"),
+    FOP_CASE(SYNQ_TRIGGER_EVENT_TYPE_INSERT),
+    FOP_KW("INSERT"),
+    FOP_CASE(SYNQ_TRIGGER_EVENT_TYPE_UPDATE),
+    FOP_SEQ(2),
+    FOP_KW("UPDATE"),
+    FOP_IF_SET(TriggerEvent, columns),
+    FOP_SEQ(2),
+    FOP_KW(" OF "),
+    FOP_CHILD(TriggerEvent, columns),
+};
+
+static const SynqFmtOp fmt_trigger_cmd_list[] = {
+    FOP_FOR_EACH_SEP,
+    FOP_SEQ(2),
+    FOP_CHILD_ITEM,
+    FOP_KW(";"),
+    FOP_HARDLINE,
+};
+
+static const SynqFmtOp fmt_create_trigger_stmt[] = {
+    FOP_SEQ(19),
+    FOP_KW("CREATE"),
+    FOP_IF_ENUM(CreateTriggerStmt, is_temp, SYNQ_BOOL_TRUE),
+    FOP_KW(" TEMP"),
+    FOP_KW(" TRIGGER"),
+    FOP_IF_ENUM(CreateTriggerStmt, if_not_exists, SYNQ_BOOL_TRUE),
+    FOP_KW(" IF NOT EXISTS"),
+    FOP_KW(" "),
+    FOP_IF_SPAN(CreateTriggerStmt, schema),
+    FOP_SEQ(2),
+    FOP_SPAN(CreateTriggerStmt, schema),
+    FOP_KW("."),
+    FOP_SPAN(CreateTriggerStmt, trigger_name),
+    FOP_KW(" "),
+    FOP_SWITCH(CreateTriggerStmt, timing, 3),
+    FOP_CASE(SYNQ_TRIGGER_TIMING_BEFORE),
+    FOP_KW("BEFORE"),
+    FOP_CASE(SYNQ_TRIGGER_TIMING_AFTER),
+    FOP_KW("AFTER"),
+    FOP_CASE(SYNQ_TRIGGER_TIMING_INSTEAD_OF),
+    FOP_KW("INSTEAD OF"),
+    FOP_KW(" "),
+    FOP_CHILD(CreateTriggerStmt, event),
+    FOP_KW(" ON "),
+    FOP_CHILD(CreateTriggerStmt, table),
+    FOP_IF_SET(CreateTriggerStmt, when_expr),
+    FOP_SEQ(3),
+    FOP_HARDLINE,
+    FOP_KW("WHEN "),
+    FOP_CHILD(CreateTriggerStmt, when_expr),
+    FOP_HARDLINE,
+    FOP_KW("BEGIN"),
+    FOP_IF_SET(CreateTriggerStmt, body),
+    FOP_NEST,
+    FOP_SEQ(2),
+    FOP_HARDLINE,
+    FOP_CHILD(CreateTriggerStmt, body),
+    FOP_HARDLINE,
+    FOP_KW("END"),
+};
+
+static const SynqFmtOp fmt_create_virtual_table_stmt[] = {
+    FOP_SEQ(8),
+    FOP_KW("CREATE VIRTUAL TABLE"),
+    FOP_IF_ENUM(CreateVirtualTableStmt, if_not_exists, SYNQ_BOOL_TRUE),
+    FOP_KW(" IF NOT EXISTS"),
+    FOP_KW(" "),
+    FOP_IF_SPAN(CreateVirtualTableStmt, schema),
+    FOP_SEQ(2),
+    FOP_SPAN(CreateVirtualTableStmt, schema),
+    FOP_KW("."),
+    FOP_SPAN(CreateVirtualTableStmt, table_name),
+    FOP_KW(" USING "),
+    FOP_SPAN(CreateVirtualTableStmt, module_name),
+    FOP_IF_SPAN(CreateVirtualTableStmt, module_args),
+    FOP_SEQ(3),
+    FOP_KW("("),
+    FOP_SPAN(CreateVirtualTableStmt, module_args),
+    FOP_KW(")"),
+};
+
+// ============ Recipe Table ============
+
+const SynqFmtOp *synq_fmt_recipes[SYNQ_NODE_COUNT] = {
+    [SYNQ_NODE_BINARY_EXPR] = fmt_binary_expr,
+    [SYNQ_NODE_UNARY_EXPR] = fmt_unary_expr,
+    [SYNQ_NODE_LITERAL] = fmt_literal,
+    [SYNQ_NODE_EXPR_LIST] = synq_fmt_default_comma_list,
+    [SYNQ_NODE_RESULT_COLUMN] = fmt_result_column,
+    [SYNQ_NODE_RESULT_COLUMN_LIST] = synq_fmt_default_comma_list,
+    [SYNQ_NODE_SELECT_STMT] = fmt_select_stmt,
+    [SYNQ_NODE_ORDERING_TERM] = fmt_ordering_term,
+    [SYNQ_NODE_ORDER_BY_LIST] = synq_fmt_default_comma_list,
+    [SYNQ_NODE_LIMIT_CLAUSE] = fmt_limit_clause,
+    [SYNQ_NODE_COLUMN_REF] = fmt_column_ref,
+    [SYNQ_NODE_FUNCTION_CALL] = fmt_function_call,
+    [SYNQ_NODE_IS_EXPR] = fmt_is_expr,
+    [SYNQ_NODE_BETWEEN_EXPR] = fmt_between_expr,
+    [SYNQ_NODE_LIKE_EXPR] = fmt_like_expr,
+    [SYNQ_NODE_CASE_EXPR] = fmt_case_expr,
+    [SYNQ_NODE_CASE_WHEN] = fmt_case_when,
+    [SYNQ_NODE_CASE_WHEN_LIST] = fmt_case_when_list,
+    [SYNQ_NODE_COMPOUND_SELECT] = fmt_compound_select,
+    [SYNQ_NODE_SUBQUERY_EXPR] = fmt_subquery_expr,
+    [SYNQ_NODE_EXISTS_EXPR] = fmt_exists_expr,
+    [SYNQ_NODE_IN_EXPR] = fmt_in_expr,
+    [SYNQ_NODE_VARIABLE] = fmt_variable,
+    [SYNQ_NODE_COLLATE_EXPR] = fmt_collate_expr,
+    [SYNQ_NODE_CAST_EXPR] = fmt_cast_expr,
+    [SYNQ_NODE_VALUES_ROW_LIST] = fmt_values_row_list,
+    [SYNQ_NODE_VALUES_CLAUSE] = fmt_values_clause,
+    [SYNQ_NODE_CTE_DEFINITION] = fmt_cte_definition,
+    [SYNQ_NODE_CTE_LIST] = synq_fmt_default_comma_list,
+    [SYNQ_NODE_WITH_CLAUSE] = fmt_with_clause,
+    [SYNQ_NODE_AGGREGATE_FUNCTION_CALL] = fmt_aggregate_function_call,
+    [SYNQ_NODE_RAISE_EXPR] = fmt_raise_expr,
+    [SYNQ_NODE_TABLE_REF] = fmt_table_ref,
+    [SYNQ_NODE_SUBQUERY_TABLE_SOURCE] = fmt_subquery_table_source,
+    [SYNQ_NODE_JOIN_CLAUSE] = fmt_join_clause,
+    [SYNQ_NODE_JOIN_PREFIX] = fmt_join_prefix,
+    [SYNQ_NODE_DELETE_STMT] = fmt_delete_stmt,
+    [SYNQ_NODE_SET_CLAUSE] = fmt_set_clause,
+    [SYNQ_NODE_SET_CLAUSE_LIST] = synq_fmt_default_comma_list,
+    [SYNQ_NODE_UPDATE_STMT] = fmt_update_stmt,
+    [SYNQ_NODE_INSERT_STMT] = fmt_insert_stmt,
+    [SYNQ_NODE_QUALIFIED_NAME] = fmt_qualified_name,
+    [SYNQ_NODE_DROP_STMT] = fmt_drop_stmt,
+    [SYNQ_NODE_ALTER_TABLE_STMT] = fmt_alter_table_stmt,
+    [SYNQ_NODE_TRANSACTION_STMT] = fmt_transaction_stmt,
+    [SYNQ_NODE_SAVEPOINT_STMT] = fmt_savepoint_stmt,
+    [SYNQ_NODE_PRAGMA_STMT] = fmt_pragma_stmt,
+    [SYNQ_NODE_ANALYZE_STMT] = fmt_analyze_stmt,
+    [SYNQ_NODE_ATTACH_STMT] = fmt_attach_stmt,
+    [SYNQ_NODE_DETACH_STMT] = fmt_detach_stmt,
+    [SYNQ_NODE_VACUUM_STMT] = fmt_vacuum_stmt,
+    [SYNQ_NODE_EXPLAIN_STMT] = fmt_explain_stmt,
+    [SYNQ_NODE_CREATE_INDEX_STMT] = fmt_create_index_stmt,
+    [SYNQ_NODE_CREATE_VIEW_STMT] = fmt_create_view_stmt,
+    [SYNQ_NODE_FOREIGN_KEY_CLAUSE] = fmt_foreign_key_clause,
+    [SYNQ_NODE_COLUMN_CONSTRAINT] = fmt_column_constraint,
+    [SYNQ_NODE_COLUMN_CONSTRAINT_LIST] = fmt_column_constraint_list,
+    [SYNQ_NODE_COLUMN_DEF] = fmt_column_def,
+    [SYNQ_NODE_COLUMN_DEF_LIST] = fmt_column_def_list,
+    [SYNQ_NODE_TABLE_CONSTRAINT] = fmt_table_constraint,
+    [SYNQ_NODE_TABLE_CONSTRAINT_LIST] = fmt_table_constraint_list,
+    [SYNQ_NODE_CREATE_TABLE_STMT] = fmt_create_table_stmt,
+    [SYNQ_NODE_FRAME_BOUND] = fmt_frame_bound,
+    [SYNQ_NODE_FRAME_SPEC] = fmt_frame_spec,
+    [SYNQ_NODE_WINDOW_DEF] = fmt_window_def,
+    [SYNQ_NODE_WINDOW_DEF_LIST] = synq_fmt_default_comma_list,
+    [SYNQ_NODE_NAMED_WINDOW_DEF] = fmt_named_window_def,
+    [SYNQ_NODE_NAMED_WINDOW_DEF_LIST] = synq_fmt_default_comma_list,
+    [SYNQ_NODE_FILTER_OVER] = fmt_filter_over,
+    [SYNQ_NODE_TRIGGER_EVENT] = fmt_trigger_event,
+    [SYNQ_NODE_TRIGGER_CMD_LIST] = fmt_trigger_cmd_list,
+    [SYNQ_NODE_CREATE_TRIGGER_STMT] = fmt_create_trigger_stmt,
+    [SYNQ_NODE_CREATE_VIRTUAL_TABLE_STMT] = fmt_create_virtual_table_stmt,
+};

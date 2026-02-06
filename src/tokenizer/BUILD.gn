@@ -11,3 +11,15 @@ source_set("tokenizer") {
   ]
   configs += [ "..:lemon_generated" ]
 }
+
+# Public tokenizer API.
+source_set("tokenizer_api") {
+  sources = [
+    "tokenizer_api.c",
+  ]
+  deps = [
+    "../common",
+    "../../include/syntaqlite:headers",
+    ":tokenizer",
+  ]
+}

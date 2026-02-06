@@ -11,8 +11,7 @@
 #include <stdlib.h>
 
 #include "src/base/synq_getopt.h"
-#include "src/ast/ast_print.h"
-#include "src/parser_internal.h"
+#include "syntaqlite/parser.h"
 
 #ifndef NDEBUG
 void synq_sqlite3ParserTrace(FILE *TraceFILE, char *zTracePrompt);
@@ -99,12 +98,13 @@ int main(int argc, char **argv) {
 #endif
 
   // Create parser
-  SyntaqliteParser *parser = syntaqlite_parser_create(sql, (uint32_t)len, NULL);
+  SyntaqliteParser *parser = syntaqlite_parser_create(NULL);
   if (!parser) {
     fprintf(stderr, "Error: Failed to allocate parser\n");
     free(sql);
     return 1;
   }
+  syntaqlite_parser_reset(parser, sql, (uint32_t)len);
 
   // Parse and print each statement
   SyntaqliteParseResult result;
@@ -115,7 +115,7 @@ int main(int argc, char **argv) {
       free(sql);
       return 1;
     }
-    synq_ast_print(stdout, syntaqlite_parser_arena(parser), result.root, sql);
+    syntaqlite_parser_print_ast(parser, result.root, stdout);
   }
 
   if (result.error) {

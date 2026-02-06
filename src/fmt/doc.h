@@ -120,6 +120,12 @@ uint32_t synq_doc_break_parent(SynqDocContext *ctx);
 void synq_doc_debug_print(SynqDocContext *ctx, uint32_t doc_id,
                                  FILE *out, int depth);
 
+// ============ Layout Engine ============
+
+// Render a document tree to a formatted string.
+// Returns malloc'd string (caller frees), or NULL on error.
+char *synq_doc_layout(SynqDocContext *ctx, uint32_t root_id, uint32_t target_width);
+
 #ifdef __cplusplus
 }
 #endif

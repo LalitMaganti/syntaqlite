@@ -12,9 +12,7 @@
 #include <stdlib.h>
 
 #include "src/base/synq_getopt.h"
-#include "src/fmt/fmt.h"
-#include "src/fmt/fmt_options.h"
-#include "src/parser_internal.h"
+#include "syntaqlite/formatter.h"
 
 #ifndef NDEBUG
 void synq_sqlite3ParserTrace(FILE *TraceFILE, char *zTracePrompt);
@@ -114,12 +112,13 @@ int main(int argc, char **argv) {
 
   // Create parser with token collection enabled
   SyntaqliteParserConfig config = {.collect_tokens = 1};
-  SyntaqliteParser *parser = syntaqlite_parser_create(sql, (uint32_t)len, &config);
+  SyntaqliteParser *parser = syntaqlite_parser_create(&config);
   if (!parser) {
     fprintf(stderr, "Error: Failed to allocate parser\n");
     free(sql);
     return 1;
   }
+  syntaqlite_parser_reset(parser, sql, (uint32_t)len);
 
   // Parse and format each statement
   SyntaqliteParseResult result;
@@ -131,14 +130,12 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    SynqFmtOptions fmtOpts = {.target_width = width, .indent_width = 2};
-    SynqAstContext *astCtx = syntaqlite_parser_ast_context(parser);
-    SynqTokenList *tokenList = syntaqlite_parser_token_list(parser);
+    SyntaqliteFormatOptions fmtOpts = {.target_width = width, .indent_width = 2};
     char *formatted;
     if (debug_ir) {
-      formatted = synq_format_debug_ir(astCtx, result.root, sql, tokenList, &fmtOpts);
+      formatted = syntaqlite_format_debug_ir(parser, result.root, &fmtOpts);
     } else {
-      formatted = synq_format(astCtx, result.root, sql, tokenList, &fmtOpts);
+      formatted = syntaqlite_format(parser, result.root, &fmtOpts);
     }
     if (formatted) {
       fputs(formatted, stdout);

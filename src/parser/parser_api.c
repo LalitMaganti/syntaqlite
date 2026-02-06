@@ -4,6 +4,7 @@
 #include "syntaqlite/parser.h"
 
 #include "src/ast/ast_nodes_gen.h"
+#include "src/ast/ast_print.h"
 #include "src/common/synq_sqlite_defs.h"
 #include "syntaqlite/sqlite_tokens_gen.h"
 #include "src/fmt/token_list.h"
@@ -57,21 +58,16 @@ static void on_stack_overflow(SynqParseContext *ctx) {
     snprintf(p->error_msg, sizeof(p->error_msg), "Parser stack overflow");
 }
 
-SyntaqliteParser *syntaqlite_parser_create(const char *source, uint32_t len,
-                                           const SyntaqliteParserConfig *config) {
+// External Lemon parser functions for reset support.
+void synq_sqlite3ParserFinalize(void *p);
+void synq_sqlite3ParserInit(void *yypRawParser, SynqParseContext *pCtx);
+
+SyntaqliteParser *syntaqlite_parser_create(const SyntaqliteParserConfig *config) {
     SyntaqliteParser *p = (SyntaqliteParser *)calloc(1, sizeof(SyntaqliteParser));
     if (!p) return NULL;
 
-    p->source = source;
-    p->length = len;
-    p->pos = 0;
-    p->last_token_type = 0;
-    p->had_error = 0;
-    p->finished = 0;
-    p->error_msg[0] = '\0';
-
-    // Initialize AST context
-    synq_ast_context_init(&p->astCtx, source, len);
+    // Initialize AST context to valid empty state (reset will reinit)
+    synq_ast_context_init(&p->astCtx, NULL, 0);
 
     // Token collection
     if (config && config->collect_tokens) {
@@ -81,26 +77,54 @@ SyntaqliteParser *syntaqlite_parser_create(const char *source, uint32_t len,
         p->token_list = NULL;
     }
 
-    // Initialize parse context
+    // Initialize parse context (stable pointers that survive reset)
     p->parseCtx.userData = p;
     p->parseCtx.onSyntaxError = on_syntax_error;
     p->parseCtx.onStackOverflow = on_stack_overflow;
     p->parseCtx.astCtx = &p->astCtx;
-    p->parseCtx.zSql = source;
-    p->parseCtx.root = SYNQ_NULL_NODE;
     p->parseCtx.token_list = p->token_list;
-    p->parseCtx.stmt_completed = 0;
 
     // Create Lemon parser
     p->lemon = synq_sqlite3ParserAlloc(malloc, &p->parseCtx);
     if (!p->lemon) {
-        synq_ast_context_cleanup(&p->astCtx);
         if (p->token_list) synq_vec_free(&p->token_list_storage);
         free(p);
         return NULL;
     }
 
     return p;
+}
+
+void syntaqlite_parser_reset(SyntaqliteParser *p, const char *source,
+                              uint32_t len) {
+    // Clean up previous parse state
+    synq_ast_context_cleanup(&p->astCtx);
+    synq_sqlite3ParserFinalize(p->lemon);
+
+    // Reset source
+    p->source = source;
+    p->length = len;
+    p->pos = 0;
+    p->last_token_type = 0;
+    p->had_error = 0;
+    p->finished = 0;
+    p->error_msg[0] = '\0';
+
+    // Re-initialize AST context with new source
+    synq_ast_context_init(&p->astCtx, source, len);
+
+    // Reset token list
+    if (p->token_list) {
+        synq_vec_clear(&p->token_list_storage);
+    }
+
+    // Reset parse context per-statement state
+    p->parseCtx.zSql = source;
+    p->parseCtx.root = SYNQ_NULL_NODE;
+    p->parseCtx.stmt_completed = 0;
+
+    // Re-initialize Lemon parser (reuse allocation)
+    synq_sqlite3ParserInit(p->lemon, &p->parseCtx);
 }
 
 SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
@@ -240,6 +264,11 @@ SynqArena *syntaqlite_parser_arena(SyntaqliteParser *p) {
 
 struct SynqTokenList *syntaqlite_parser_token_list(SyntaqliteParser *p) {
     return p->token_list;
+}
+
+void syntaqlite_parser_print_ast(SyntaqliteParser *p, uint32_t node_id,
+                                 FILE *out) {
+    synq_ast_print(out, &p->astCtx.ast, node_id, p->source);
 }
 
 void syntaqlite_parser_destroy(SyntaqliteParser *p) {

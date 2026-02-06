@@ -4,10 +4,11 @@
 // Streaming parser for SQLite SQL.
 //
 // Usage:
-//   SyntaqliteParser *p = syntaqlite_parser_create(sql, len, NULL);
+//   SyntaqliteParser *p = syntaqlite_parser_create(NULL);
+//   syntaqlite_parser_reset(p, sql, len);
 //   SyntaqliteParseResult result;
-//   while ((result = syntaqlite_parser_next(p)).root != SYNQ_NULL_NODE) {
-//     const SynqNode *node = syntaqlite_parser_node(p, result.root);
+//   while ((result = syntaqlite_parser_next(p)).root != SYNTAQLITE_NULL_NODE) {
+//     const SyntaqliteNode *node = syntaqlite_parser_node(p, result.root);
 //     // process node
 //   }
 //   if (result.error) { /* handle error */ }
@@ -17,6 +18,7 @@
 #define SYNTAQLITE_PARSER_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 // AST node types (public, self-contained).
 #include "syntaqlite/ast_nodes_gen.h"
@@ -40,10 +42,14 @@ typedef struct SyntaqliteParseResult {
     const char *error_msg;  // Error message (owned by parser), or NULL.
 } SyntaqliteParseResult;
 
-// Create a parser for the given source text.
+// Create a parser. Call reset() to bind a source buffer before use.
 // config may be NULL for defaults (no token collection).
-SyntaqliteParser *syntaqlite_parser_create(const char *source, uint32_t len,
-                                           const SyntaqliteParserConfig *config);
+SyntaqliteParser *syntaqlite_parser_create(const SyntaqliteParserConfig *config);
+
+// Bind (or rebind) a source buffer and reset parser state.
+// The source must remain valid until the next reset or destroy.
+void syntaqlite_parser_reset(SyntaqliteParser *p, const char *source,
+                              uint32_t len);
 
 // Parse the next statement. Returns the root node ID.
 // Returns SYNQ_NULL_NODE with error=0 at end-of-input.
@@ -53,11 +59,15 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p);
 // Access a node by ID (valid for lifetime of parser).
 const SynqNode *syntaqlite_parser_node(SyntaqliteParser *p, uint32_t node_id);
 
-// Access the source text that was passed to syntaqlite_parser_create().
+// Access the source text that was passed to syntaqlite_parser_reset().
 const char *syntaqlite_parser_source(SyntaqliteParser *p);
 
 // Length of the source text.
 uint32_t syntaqlite_parser_source_length(SyntaqliteParser *p);
+
+// Print AST node tree to a file stream (for debugging/inspection).
+void syntaqlite_parser_print_ast(SyntaqliteParser *p, uint32_t node_id,
+                                 FILE *out);
 
 // Destroy the parser and free all resources.
 // All nodes are invalidated.

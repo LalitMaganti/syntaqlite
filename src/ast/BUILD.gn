@@ -1,0 +1,39 @@
+# AST node types, builder functions, and printer.
+# Regenerate with: python3 python/tools/extract_sqlite.py
+
+source_set("ast") {
+  sources = [
+    # Base types (manually maintained)
+    "ast_base.c",
+    "ast_base.h",
+
+    # Generated files
+    "ast_builder_gen.c",
+    "ast_builder_gen.h",
+    "ast_nodes_gen.h",
+    "ast_print_gen.c",
+    "ast_print.h",
+  ]
+  deps = [
+    "../base:arena",
+    "../base:vec",
+    "../common",
+  ]
+}
+
+# Test binary for AST diff tests
+executable("ast_test") {
+  testonly = true
+  sources = [
+    "ast_test_main.c",
+  ]
+  deps = [
+    "../base:getopt",
+    "../../include/syntaqlite:headers",
+    "../parser:parser_api",
+  ]
+  if (is_asan) {
+    deps += [ "//gn/standalone:asan_defaults" ]
+  }
+  configs += [ "..:lemon_generated" ]
+}

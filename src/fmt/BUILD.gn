@@ -1,0 +1,75 @@
+# Raw token list (shared between parser API and formatter).
+source_set("token_list") {
+  sources = [
+    "token_list.c",
+    "token_list.h",
+  ]
+  deps = [
+    "../base:vec",
+    "../../include/syntaqlite:headers",
+  ]
+}
+
+# Document model, layout engine, and formatter.
+source_set("fmt") {
+  sources = [
+    "doc.c",
+    "doc.h",
+    "fmt_gen.c",
+    "fmt_helpers.c",
+    "fmt_helpers.h",
+    "fmt_interpret.c",
+    "fmt_ops.h",
+  ]
+  deps = [
+    "../base:arena",
+    "../base:vec",
+    "../common",
+    "../ast",
+    ":token_list",
+    "../tokenizer",
+  ]
+}
+
+# Public formatter API bridging parser and formatter internals.
+source_set("formatter_api") {
+  sources = [ "formatter_api.c" ]
+  deps = [
+    "../../include/syntaqlite:headers",
+    "../parser:parser_api",
+    ":fmt",
+  ]
+}
+
+# Test binary for format interpreter
+executable("fmt_interpret_test") {
+  testonly = true
+  sources = [
+    "fmt_interpret_test.cc",
+  ]
+  deps = [
+    "../../include/syntaqlite:headers",
+    "../../third_party:googletest",
+    "../../third_party:googletest_main",
+    "../ast",
+    ":fmt",
+  ]
+}
+
+# Test binary for formatter diff tests
+executable("fmt_test") {
+  testonly = true
+  sources = [
+    "fmt_test_main.c",
+  ]
+  deps = [
+    "../base:getopt",
+    "../../include/syntaqlite:headers",
+    ":formatter_api",
+    "../parser:parser_api",
+  ]
+  if (is_asan) {
+    deps += [ "//gn/standalone:asan_defaults" ]
+  }
+  configs += [ "..:lemon_generated" ]
+}

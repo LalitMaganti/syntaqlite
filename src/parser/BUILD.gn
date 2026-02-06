@@ -11,3 +11,19 @@ source_set("parser") {
   ]
   configs += [ "..:lemon_generated" ]
 }
+
+# Parser streaming API implementation.
+source_set("parser_api") {
+  sources = [
+    "parser_api.c",
+  ]
+  deps = [
+    "../common",
+    "../../include/syntaqlite:headers",
+    "../ast",
+    "../fmt:token_list",
+    ":parser",
+    "../tokenizer:tokenizer_api",
+  ]
+  configs += [ "..:lemon_generated" ]
+}
