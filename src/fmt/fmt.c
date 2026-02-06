@@ -63,8 +63,14 @@ static uint32_t emit_owned_comments(FmtCtx *ctx, uint32_t node_id, uint8_t kind)
             sp_parts[0] = doc_text(&ctx->docs, " ", 1);
             sp_parts[1] = emit_single_comment(ctx, i);
             uint32_t inner = doc_concat(&ctx->docs, sp_parts, 2);
-            parts[n++] = doc_line_suffix(&ctx->docs, inner);
-            if (n < 62) parts[n++] = doc_break_parent(&ctx->docs);
+            if (is_line) {
+                // Line comments consume the rest of the line.
+                parts[n++] = doc_line_suffix(&ctx->docs, inner);
+                if (n < 62) parts[n++] = doc_break_parent(&ctx->docs);
+            } else {
+                // Block comments are inline.
+                parts[n++] = inner;
+            }
         }
     }
     if (n == 0) return SYNTAQLITE_NULL_DOC;
@@ -94,17 +100,23 @@ static uint32_t format_comma_list(FmtCtx *ctx, uint32_t *children, uint32_t coun
 
 static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_id) {
     if (body_id == SYNTAQLITE_NULL_NODE) return SYNTAQLITE_NULL_DOC;
+    // Extract body's leading comments so they appear before the keyword.
+    uint32_t leading = emit_owned_comments(ctx, body_id, SYNTAQLITE_COMMENT_LEADING);
     uint32_t kw_doc = kw(ctx, keyword);
-    uint32_t body_doc = format_node(ctx, body_id);
+    uint32_t body_doc = dispatch_format(ctx, body_id);
+    uint32_t trailing = emit_owned_comments(ctx, body_id, SYNTAQLITE_COMMENT_TRAILING);
     if (body_doc == SYNTAQLITE_NULL_DOC) return SYNTAQLITE_NULL_DOC;
-    uint32_t inner_items[] = { doc_line(&ctx->docs), body_doc };
+    uint32_t body_parts[] = { body_doc, trailing };
+    uint32_t body_trail = doc_concat(&ctx->docs, body_parts, 2);
+    uint32_t inner_items[] = { doc_line(&ctx->docs), body_trail };
     uint32_t inner = doc_concat(&ctx->docs, inner_items, 2);
     uint32_t items[] = {
         doc_line(&ctx->docs),
+        leading,
         kw_doc,
         doc_group(&ctx->docs, doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner)),
     };
-    return doc_concat(&ctx->docs, items, 3);
+    return doc_concat(&ctx->docs, items, 4);
 }
 
 // ============ Node Formatters ============

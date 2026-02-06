@@ -1,6 +1,6 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
-//
+
 // SQLite compatibility definitions for syntaqlite.
 // Provides type aliases, macros, and structures needed by tokenizer and parser.
 

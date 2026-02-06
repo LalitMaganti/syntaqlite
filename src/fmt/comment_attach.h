@@ -30,8 +30,7 @@ typedef struct {
     uint32_t count;        // = token_list->count
 } SyntaqliteCommentAttachment;
 
-// Build comment attachment by walking the AST with source ranges.
-// Uses ranges from astCtx to find the innermost enclosing node for each comment.
+// Build comment attachment using neighbor-based matching on AST node ranges.
 // Returns NULL if no comments exist.
 SyntaqliteCommentAttachment *syntaqlite_comment_attach(
     SyntaqliteAstContext *astCtx, uint32_t root_id,
