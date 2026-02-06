@@ -42,8 +42,8 @@ NODES = [
     Node("CreateTriggerStmt",
         trigger_name=inline("SyntaqliteSourceSpan"),
         schema=inline("SyntaqliteSourceSpan"),
-        is_temp=inline("u8"),
-        if_not_exists=inline("u8"),
+        is_temp=inline("Bool"),
+        if_not_exists=inline("Bool"),
         timing=inline("TriggerTiming"),
         event=index("TriggerEvent"),
         table=index("Expr"),          # fullname -> QualifiedName
@@ -56,7 +56,7 @@ NODES = [
         table_name=inline("SyntaqliteSourceSpan"),
         schema=inline("SyntaqliteSourceSpan"),
         module_name=inline("SyntaqliteSourceSpan"),
-        if_not_exists=inline("u8"),
+        if_not_exists=inline("Bool"),
         module_args=inline("SyntaqliteSourceSpan"),
     ),
 ]

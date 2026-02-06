@@ -14,11 +14,11 @@ class WithClause(TestSuite):
             sql="WITH t AS (SELECT 1) SELECT * FROM t",
             out="""\
 WithClause
-  recursive: 0
+  recursive: FALSE
   ctes: CteList[1]
     CteDefinition
       cte_name: "t"
-      materialized: 0
+      materialized: DEFAULT
       columns: null
       select: SelectStmt
         flags: (none)
@@ -61,11 +61,11 @@ WithClause
             sql="WITH t(a, b) AS (SELECT 1, 2) SELECT * FROM t",
             out="""\
 WithClause
-  recursive: 0
+  recursive: FALSE
   ctes: CteList[1]
     CteDefinition
       cte_name: "t"
-      materialized: 0
+      materialized: DEFAULT
       columns: ExprList[2]
         ColumnRef
           column: "a"
@@ -122,11 +122,11 @@ WithClause
             sql="WITH RECURSIVE cnt(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM cnt) SELECT x FROM cnt",
             out="""\
 WithClause
-  recursive: 1
+  recursive: TRUE
   ctes: CteList[1]
     CteDefinition
       cte_name: "cnt"
-      materialized: 0
+      materialized: DEFAULT
       columns: ExprList[1]
         ColumnRef
           column: "x"
@@ -203,11 +203,11 @@ WithClause
             sql="WITH a AS (SELECT 1), b AS (SELECT 2) SELECT * FROM a",
             out="""\
 WithClause
-  recursive: 0
+  recursive: FALSE
   ctes: CteList[2]
     CteDefinition
       cte_name: "a"
-      materialized: 0
+      materialized: DEFAULT
       columns: null
       select: SelectStmt
         flags: (none)
@@ -227,7 +227,7 @@ WithClause
         window_clause: null
     CteDefinition
       cte_name: "b"
-      materialized: 0
+      materialized: DEFAULT
       columns: null
       select: SelectStmt
         flags: (none)
@@ -270,11 +270,11 @@ WithClause
             sql="WITH t AS MATERIALIZED (SELECT 1) SELECT * FROM t",
             out="""\
 WithClause
-  recursive: 0
+  recursive: FALSE
   ctes: CteList[1]
     CteDefinition
       cte_name: "t"
-      materialized: 1
+      materialized: MATERIALIZED
       columns: null
       select: SelectStmt
         flags: (none)
@@ -317,11 +317,11 @@ WithClause
             sql="WITH t AS NOT MATERIALIZED (SELECT 1) SELECT * FROM t",
             out="""\
 WithClause
-  recursive: 0
+  recursive: FALSE
   ctes: CteList[1]
     CteDefinition
       cte_name: "t"
-      materialized: 2
+      materialized: NOT_MATERIALIZED
       columns: null
       select: SelectStmt
         flags: (none)

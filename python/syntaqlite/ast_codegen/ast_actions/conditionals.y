@@ -50,7 +50,7 @@ between_op(A) ::= NOT BETWEEN. {
 }
 
 expr(A) ::= expr(B) between_op(C) expr(D) AND expr(E). [BETWEEN] {
-    A = ast_between_expr(pCtx->astCtx, (uint8_t)C, B, D, E);
+    A = ast_between_expr(pCtx->astCtx, (SyntaqliteBool)C, B, D, E);
 }
 
 // ============ LIKE / GLOB / MATCH ============
@@ -65,12 +65,12 @@ likeop(A) ::= NOT LIKE_KW|MATCH(B). {
 }
 
 expr(A) ::= expr(B) likeop(C) expr(D). [LIKE_KW] {
-    uint8_t negated = (C.n & 0x80000000) ? 1 : 0;
+    SyntaqliteBool negated = (C.n & 0x80000000) ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
     A = ast_like_expr(pCtx->astCtx, negated, B, D, SYNTAQLITE_NULL_NODE);
 }
 
 expr(A) ::= expr(B) likeop(C) expr(D) ESCAPE expr(E). [LIKE_KW] {
-    uint8_t negated = (C.n & 0x80000000) ? 1 : 0;
+    SyntaqliteBool negated = (C.n & 0x80000000) ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
     A = ast_like_expr(pCtx->astCtx, negated, B, D, E);
 }
 

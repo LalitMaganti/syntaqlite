@@ -40,7 +40,7 @@ create_vtab(A) ::= createkw VIRTUAL TABLE ifnotexists(E) nm(X) dbnm(Y) USING nm(
         tbl_name,
         tbl_schema,
         syntaqlite_span(pCtx, Z),
-        (uint8_t)E,
+        (SyntaqliteBool)E,
         SYNTAQLITE_NO_SPAN);  // module_args = none by default
 }
 

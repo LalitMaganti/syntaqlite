@@ -3,16 +3,21 @@
 
 """Common Table Expression (CTE / WITH clause) AST node definitions."""
 
-from ..defs import Node, List, inline, index
+from ..defs import Node, List, Enum, inline, index
 
-ENUMS = []
+ENUMS = [
+    Enum("Materialized",
+        "DEFAULT",           # 0 - AS (no hint)
+        "MATERIALIZED",      # 1 - AS MATERIALIZED
+        "NOT_MATERIALIZED",  # 2 - AS NOT MATERIALIZED
+    ),
+]
 
 NODES = [
     # Single CTE definition: name [(columns)] AS [MATERIALIZED|NOT MATERIALIZED] (select)
-    # materialized: 0 = default (AS), 1 = AS MATERIALIZED, 2 = AS NOT MATERIALIZED
     Node("CteDefinition",
         cte_name=inline("SyntaqliteSourceSpan"),
-        materialized=inline("u8"),
+        materialized=inline("Materialized"),
         columns=index("ExprList"),     # nullable - column name list
         select=index("Stmt"),          # the CTE subquery
     ),
@@ -22,7 +27,7 @@ NODES = [
 
     # WITH clause: WITH [RECURSIVE] cte1, cte2, ... select
     Node("WithClause",
-        recursive=inline("u8"),        # 0 = non-recursive, 1 = RECURSIVE
+        recursive=inline("Bool"),      # FALSE = non-recursive, TRUE = RECURSIVE
         ctes=index("CteList"),
         select=index("Stmt"),          # the main select
     ),

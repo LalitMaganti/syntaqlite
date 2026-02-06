@@ -233,7 +233,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       else
         fprintf(out, "BetweenExpr\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "negated: %u\n", node->between_expr.negated);
+      fprintf(out, "negated: %s\n", syntaqlite_bool_names[node->between_expr.negated]);
       print_node(out, ast, node->between_expr.operand, source, depth + 1, "operand");
       print_node(out, ast, node->between_expr.low, source, depth + 1, "low");
       print_node(out, ast, node->between_expr.high, source, depth + 1, "high");
@@ -247,7 +247,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       else
         fprintf(out, "LikeExpr\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "negated: %u\n", node->like_expr.negated);
+      fprintf(out, "negated: %s\n", syntaqlite_bool_names[node->like_expr.negated]);
       print_node(out, ast, node->like_expr.operand, source, depth + 1, "operand");
       print_node(out, ast, node->like_expr.pattern, source, depth + 1, "pattern");
       print_node(out, ast, node->like_expr.escape, source, depth + 1, "escape");
@@ -329,7 +329,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       else
         fprintf(out, "InExpr\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "negated: %u\n", node->in_expr.negated);
+      fprintf(out, "negated: %s\n", syntaqlite_bool_names[node->in_expr.negated]);
       print_node(out, ast, node->in_expr.operand, source, depth + 1, "operand");
       print_node(out, ast, node->in_expr.source, source, depth + 1, "source");
       break;
@@ -409,7 +409,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->cte_definition.cte_name);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "materialized: %u\n", node->cte_definition.materialized);
+      fprintf(out, "materialized: %s\n", syntaqlite_materialized_names[node->cte_definition.materialized]);
       print_node(out, ast, node->cte_definition.columns, source, depth + 1, "columns");
       print_node(out, ast, node->cte_definition.select, source, depth + 1, "select");
       break;
@@ -434,7 +434,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       else
         fprintf(out, "WithClause\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "recursive: %u\n", node->with_clause.recursive);
+      fprintf(out, "recursive: %s\n", syntaqlite_bool_names[node->with_clause.recursive]);
       print_node(out, ast, node->with_clause.ctes, source, depth + 1, "ctes");
       print_node(out, ast, node->with_clause.select, source, depth + 1, "select");
       break;
@@ -629,7 +629,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth + 1);
       fprintf(out, "object_type: %s\n", syntaqlite_drop_object_type_names[node->drop_stmt.object_type]);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "if_exists: %u\n", node->drop_stmt.if_exists);
+      fprintf(out, "if_exists: %s\n", syntaqlite_bool_names[node->drop_stmt.if_exists]);
       print_node(out, ast, node->drop_stmt.target, source, depth + 1, "target");
       break;
     }
@@ -701,7 +701,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->pragma_stmt.value);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "pragma_form: %u\n", node->pragma_stmt.pragma_form);
+      fprintf(out, "pragma_form: %s\n", syntaqlite_pragma_form_names[node->pragma_stmt.pragma_form]);
       break;
     }
 
@@ -720,7 +720,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->analyze_stmt.schema);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "is_reindex: %u\n", node->analyze_stmt.is_reindex);
+      fprintf(out, "kind: %s\n", syntaqlite_analyze_kind_names[node->analyze_stmt.kind]);
       break;
     }
 
@@ -791,9 +791,9 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->create_index_stmt.table_name);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "is_unique: %u\n", node->create_index_stmt.is_unique);
+      fprintf(out, "is_unique: %s\n", syntaqlite_bool_names[node->create_index_stmt.is_unique]);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %u\n", node->create_index_stmt.if_not_exists);
+      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_index_stmt.if_not_exists]);
       print_node(out, ast, node->create_index_stmt.columns, source, depth + 1, "columns");
       print_node(out, ast, node->create_index_stmt.where, source, depth + 1, "where");
       break;
@@ -814,9 +814,9 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->create_view_stmt.schema);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "is_temp: %u\n", node->create_view_stmt.is_temp);
+      fprintf(out, "is_temp: %s\n", syntaqlite_bool_names[node->create_view_stmt.is_temp]);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %u\n", node->create_view_stmt.if_not_exists);
+      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_view_stmt.if_not_exists]);
       print_node(out, ast, node->create_view_stmt.column_names, source, depth + 1, "column_names");
       print_node(out, ast, node->create_view_stmt.select, source, depth + 1, "select");
       break;
@@ -838,7 +838,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth + 1);
       fprintf(out, "on_update: %s\n", syntaqlite_foreign_key_action_names[node->foreign_key_clause.on_update]);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "is_deferred: %u\n", node->foreign_key_clause.is_deferred);
+      fprintf(out, "is_deferred: %s\n", syntaqlite_bool_names[node->foreign_key_clause.is_deferred]);
       break;
     }
 
@@ -855,11 +855,11 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->column_constraint.constraint_name);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "onconf: %u\n", node->column_constraint.onconf);
+      fprintf(out, "onconf: %s\n", syntaqlite_conflict_action_names[node->column_constraint.onconf]);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "sort_order: %u\n", node->column_constraint.sort_order);
+      fprintf(out, "sort_order: %s\n", syntaqlite_sort_order_names[node->column_constraint.sort_order]);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "is_autoincrement: %u\n", node->column_constraint.is_autoincrement);
+      fprintf(out, "is_autoincrement: %s\n", syntaqlite_bool_names[node->column_constraint.is_autoincrement]);
       ast_print_indent(out, depth + 1);
       fprintf(out, "collation_name: ");
       ast_print_source_span(out, source, node->column_constraint.collation_name);
@@ -928,9 +928,9 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->table_constraint.constraint_name);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "onconf: %u\n", node->table_constraint.onconf);
+      fprintf(out, "onconf: %s\n", syntaqlite_conflict_action_names[node->table_constraint.onconf]);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "is_autoincrement: %u\n", node->table_constraint.is_autoincrement);
+      fprintf(out, "is_autoincrement: %s\n", syntaqlite_bool_names[node->table_constraint.is_autoincrement]);
       print_node(out, ast, node->table_constraint.columns, source, depth + 1, "columns");
       print_node(out, ast, node->table_constraint.check_expr, source, depth + 1, "check_expr");
       print_node(out, ast, node->table_constraint.fk_clause, source, depth + 1, "fk_clause");
@@ -964,9 +964,9 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->create_table_stmt.schema);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "is_temp: %u\n", node->create_table_stmt.is_temp);
+      fprintf(out, "is_temp: %s\n", syntaqlite_bool_names[node->create_table_stmt.is_temp]);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %u\n", node->create_table_stmt.if_not_exists);
+      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_table_stmt.if_not_exists]);
       ast_print_indent(out, depth + 1);
       fprintf(out, "flags:");
       if (node->create_table_stmt.flags.without_rowid) fprintf(out, " WITHOUT_ROWID");
@@ -1114,9 +1114,9 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->create_trigger_stmt.schema);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "is_temp: %u\n", node->create_trigger_stmt.is_temp);
+      fprintf(out, "is_temp: %s\n", syntaqlite_bool_names[node->create_trigger_stmt.is_temp]);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %u\n", node->create_trigger_stmt.if_not_exists);
+      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_trigger_stmt.if_not_exists]);
       ast_print_indent(out, depth + 1);
       fprintf(out, "timing: %s\n", syntaqlite_trigger_timing_names[node->create_trigger_stmt.timing]);
       print_node(out, ast, node->create_trigger_stmt.event, source, depth + 1, "event");
@@ -1145,7 +1145,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->create_virtual_table_stmt.module_name);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %u\n", node->create_virtual_table_stmt.if_not_exists);
+      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_virtual_table_stmt.if_not_exists]);
       ast_print_indent(out, depth + 1);
       fprintf(out, "module_args: ");
       ast_print_source_span(out, source, node->create_virtual_table_stmt.module_args);

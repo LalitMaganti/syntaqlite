@@ -27,7 +27,7 @@ NODES = [
 
     # BETWEEN expression: expr [NOT] BETWEEN expr AND expr
     Node("BetweenExpr",
-        negated=inline("u8"),      # 0 = BETWEEN, 1 = NOT BETWEEN
+        negated=inline("Bool"),    # FALSE = BETWEEN, TRUE = NOT BETWEEN
         operand=index("Expr"),
         low=index("Expr"),
         high=index("Expr"),
@@ -35,7 +35,7 @@ NODES = [
 
     # LIKE/GLOB/MATCH expression: expr [NOT] LIKE expr [ESCAPE expr]
     Node("LikeExpr",
-        negated=inline("u8"),      # 0 = LIKE, 1 = NOT LIKE
+        negated=inline("Bool"),    # FALSE = LIKE, TRUE = NOT LIKE
         operand=index("Expr"),
         pattern=index("Expr"),
         escape=index("Expr"),      # nullable - only with ESCAPE clause

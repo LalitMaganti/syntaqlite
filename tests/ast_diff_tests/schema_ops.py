@@ -15,7 +15,7 @@ class DropTable(TestSuite):
             out="""\
 DropStmt
   object_type: TABLE
-  if_exists: 0
+  if_exists: FALSE
   target: QualifiedName
     object_name: "t"
     schema: null
@@ -28,7 +28,7 @@ DropStmt
             out="""\
 DropStmt
   object_type: TABLE
-  if_exists: 1
+  if_exists: TRUE
   target: QualifiedName
     object_name: "t"
     schema: null
@@ -41,7 +41,7 @@ DropStmt
             out="""\
 DropStmt
   object_type: TABLE
-  if_exists: 0
+  if_exists: FALSE
   target: QualifiedName
     object_name: "t"
     schema: "main"
@@ -58,7 +58,7 @@ class DropOther(TestSuite):
             out="""\
 DropStmt
   object_type: INDEX
-  if_exists: 0
+  if_exists: FALSE
   target: QualifiedName
     object_name: "idx"
     schema: null
@@ -71,7 +71,7 @@ DropStmt
             out="""\
 DropStmt
   object_type: VIEW
-  if_exists: 0
+  if_exists: FALSE
   target: QualifiedName
     object_name: "v"
     schema: null
@@ -84,7 +84,7 @@ DropStmt
             out="""\
 DropStmt
   object_type: TRIGGER
-  if_exists: 0
+  if_exists: FALSE
   target: QualifiedName
     object_name: "tr"
     schema: null

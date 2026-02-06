@@ -380,11 +380,11 @@ class DmlWithCte(TestSuite):
             sql="WITH cte AS (SELECT 1) INSERT INTO t SELECT * FROM cte",
             out="""\
 WithClause
-  recursive: 0
+  recursive: FALSE
   ctes: CteList[1]
     CteDefinition
       cte_name: "cte"
-      materialized: 0
+      materialized: DEFAULT
       columns: null
       select: SelectStmt
         flags: (none)

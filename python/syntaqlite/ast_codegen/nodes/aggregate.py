@@ -8,7 +8,7 @@ from ..defs import Node, Flags, inline, index
 ENUMS = []
 
 FLAGS = [
-    Flags("AggregateFunctionCall", DISTINCT=0x01),
+    Flags("AggregateFunctionCallFlags", DISTINCT=0x01),
 ]
 
 NODES = [
@@ -16,7 +16,7 @@ NODES = [
     # Separate from FunctionCall to preserve ABI compatibility.
     Node("AggregateFunctionCall",
         func_name=inline("SyntaqliteSourceSpan"),
-        flags=inline("u8"),
+        flags=inline("AggregateFunctionCallFlags"),
         args=index("ExprList"),
         orderby=index("OrderByList"),
         filter_clause=index("Expr"),        # FILTER (WHERE expr), or null

@@ -54,7 +54,7 @@ NODES = [
     # DROP TABLE|INDEX|VIEW|TRIGGER [IF EXISTS] [schema.]name
     Node("DropStmt",
         object_type=inline("DropObjectType"),
-        if_exists=inline("u8"),
+        if_exists=inline("Bool"),
         target=index("Expr"),   # QualifiedName node
     ),
 

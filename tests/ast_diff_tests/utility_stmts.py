@@ -17,7 +17,7 @@ PragmaStmt
   pragma_name: "journal_mode"
   schema: null
   value: null
-  pragma_form: 0
+  pragma_form: BARE
 """,
         )
 
@@ -29,7 +29,7 @@ PragmaStmt
   pragma_name: "journal_mode"
   schema: "main"
   value: null
-  pragma_form: 0
+  pragma_form: BARE
 """,
         )
 
@@ -41,7 +41,7 @@ PragmaStmt
   pragma_name: "journal_mode"
   schema: null
   value: "wal"
-  pragma_form: 1
+  pragma_form: EQ
 """,
         )
 
@@ -53,7 +53,7 @@ PragmaStmt
   pragma_name: "table_info"
   schema: null
   value: "t"
-  pragma_form: 2
+  pragma_form: CALL
 """,
         )
 
@@ -65,7 +65,7 @@ PragmaStmt
   pragma_name: "cache_size"
   schema: null
   value: "-2000"
-  pragma_form: 1
+  pragma_form: EQ
 """,
         )
 
@@ -80,7 +80,7 @@ class AnalyzeReindexStmts(TestSuite):
 AnalyzeStmt
   target_name: null
   schema: null
-  is_reindex: 0
+  kind: ANALYZE
 """,
         )
 
@@ -91,7 +91,7 @@ AnalyzeStmt
 AnalyzeStmt
   target_name: "t"
   schema: null
-  is_reindex: 0
+  kind: ANALYZE
 """,
         )
 
@@ -102,7 +102,7 @@ AnalyzeStmt
 AnalyzeStmt
   target_name: "t"
   schema: "main"
-  is_reindex: 0
+  kind: ANALYZE
 """,
         )
 
@@ -113,7 +113,7 @@ AnalyzeStmt
 AnalyzeStmt
   target_name: null
   schema: null
-  is_reindex: 1
+  kind: REINDEX
 """,
         )
 
@@ -124,7 +124,7 @@ AnalyzeStmt
 AnalyzeStmt
   target_name: "t"
   schema: null
-  is_reindex: 1
+  kind: REINDEX
 """,
         )
 
@@ -291,8 +291,8 @@ CreateIndexStmt
   index_name: "idx"
   schema: null
   table_name: "t"
-  is_unique: 0
-  if_not_exists: 0
+  is_unique: FALSE
+  if_not_exists: FALSE
   columns: OrderByList[1]
     OrderingTerm
       expr: ColumnRef
@@ -313,8 +313,8 @@ CreateIndexStmt
   index_name: "idx"
   schema: null
   table_name: "t"
-  is_unique: 1
-  if_not_exists: 0
+  is_unique: TRUE
+  if_not_exists: FALSE
   columns: OrderByList[1]
     OrderingTerm
       expr: ColumnRef
@@ -335,8 +335,8 @@ CreateIndexStmt
   index_name: "idx"
   schema: null
   table_name: "t"
-  is_unique: 0
-  if_not_exists: 1
+  is_unique: FALSE
+  if_not_exists: TRUE
   columns: OrderByList[1]
     OrderingTerm
       expr: ColumnRef
@@ -357,8 +357,8 @@ CreateIndexStmt
   index_name: "idx"
   schema: null
   table_name: "t"
-  is_unique: 0
-  if_not_exists: 0
+  is_unique: FALSE
+  if_not_exists: FALSE
   columns: OrderByList[1]
     OrderingTerm
       expr: ColumnRef
@@ -387,8 +387,8 @@ CreateIndexStmt
   index_name: "idx"
   schema: "main"
   table_name: "t"
-  is_unique: 0
-  if_not_exists: 0
+  is_unique: FALSE
+  if_not_exists: FALSE
   columns: OrderByList[1]
     OrderingTerm
       expr: ColumnRef
@@ -409,8 +409,8 @@ CreateIndexStmt
   index_name: "idx"
   schema: null
   table_name: "t"
-  is_unique: 0
-  if_not_exists: 0
+  is_unique: FALSE
+  if_not_exists: FALSE
   columns: OrderByList[2]
     OrderingTerm
       expr: ColumnRef
@@ -441,8 +441,8 @@ class CreateViewStmts(TestSuite):
 CreateViewStmt
   view_name: "v"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   column_names: null
   select: SelectStmt
     flags: (none)
@@ -471,8 +471,8 @@ CreateViewStmt
 CreateViewStmt
   view_name: "v"
   schema: null
-  is_temp: 1
-  if_not_exists: 0
+  is_temp: TRUE
+  if_not_exists: FALSE
   column_names: null
   select: SelectStmt
     flags: (none)
@@ -501,8 +501,8 @@ CreateViewStmt
 CreateViewStmt
   view_name: "v"
   schema: null
-  is_temp: 0
-  if_not_exists: 1
+  is_temp: FALSE
+  if_not_exists: TRUE
   column_names: null
   select: SelectStmt
     flags: (none)
@@ -531,8 +531,8 @@ CreateViewStmt
 CreateViewStmt
   view_name: "v"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   column_names: ExprList[2]
     ColumnRef
       column: "a"

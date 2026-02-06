@@ -15,7 +15,7 @@
 // ============ Compound SELECT ============
 
 selectnowith(A) ::= selectnowith(A) multiselect_op(Y) oneselect(Z). {
-    A = ast_compound_select(pCtx->astCtx, (uint8_t)Y, A, Z);
+    A = ast_compound_select(pCtx->astCtx, (SyntaqliteCompoundOp)Y, A, Z);
 }
 
 multiselect_op(A) ::= UNION(OP). { A = 0; UNUSED_PARAMETER(OP); }
@@ -40,18 +40,18 @@ in_op(A) ::= IN. { A = 0; }
 in_op(A) ::= NOT IN. { A = 1; }
 
 expr(A) ::= expr(A) in_op(N) LP exprlist(Y) RP. [IN] {
-    A = ast_in_expr(pCtx->astCtx, (uint8_t)N, A, Y);
+    A = ast_in_expr(pCtx->astCtx, (SyntaqliteBool)N, A, Y);
 }
 
 expr(A) ::= expr(A) in_op(N) LP select(Y) RP. [IN] {
     uint32_t sub = ast_subquery_expr(pCtx->astCtx, Y);
-    A = ast_in_expr(pCtx->astCtx, (uint8_t)N, A, sub);
+    A = ast_in_expr(pCtx->astCtx, (SyntaqliteBool)N, A, sub);
 }
 
 expr(A) ::= expr(A) in_op(N) nm(Y) dbnm(Z) paren_exprlist(E). [IN] {
     // Table-valued function IN expression - stub for now
     (void)Y; (void)Z; (void)E;
-    A = ast_in_expr(pCtx->astCtx, (uint8_t)N, A, SYNTAQLITE_NULL_NODE);
+    A = ast_in_expr(pCtx->astCtx, (SyntaqliteBool)N, A, SYNTAQLITE_NULL_NODE);
 }
 
 // ============ Helper rules ============

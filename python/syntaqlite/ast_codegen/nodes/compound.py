@@ -34,7 +34,7 @@ NODES = [
 
     # expr [NOT] IN (exprlist) or expr [NOT] IN (SELECT ...)
     Node("InExpr",
-        negated=inline("u8"),
+        negated=inline("Bool"),
         operand=index("Expr"),
         source=index("Expr"),  # ExprList for (1,2,3) or SubqueryExpr for (SELECT...)
     ),

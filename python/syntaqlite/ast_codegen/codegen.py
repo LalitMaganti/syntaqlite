@@ -38,12 +38,12 @@ TYPE_MAP = {
 }
 
 
-def _flags_type_name(node_name: str) -> str:
-    """Generate flags union type name from node name."""
-    return f"Syntaqlite{node_name}Flags"
+def _flags_type_name(flags_name: str) -> str:
+    """Generate C union type name from flags name."""
+    return f"Syntaqlite{flags_name}"
 
 
-def _field_c_type(field_type, enum_names: set[str]) -> str:
+def _field_c_type(field_type, enum_names: set[str], flags_names: set[str] | None = None) -> str:
     """Get the C type string for an inline or index field."""
     if isinstance(field_type, IndexField):
         return "uint32_t"
@@ -52,6 +52,8 @@ def _field_c_type(field_type, enum_names: set[str]) -> str:
         return TYPE_MAP[type_name]
     if type_name in enum_names:
         return f"Syntaqlite{type_name}"
+    if flags_names and type_name in flags_names:
+        return _flags_type_name(type_name)
     return type_name
 
 
@@ -75,14 +77,11 @@ def _enum_prefix(enum_name: str) -> str:
     return f"SYNTAQLITE_{pascal_to_snake(enum_name).upper()}"
 
 
-def _build_node_params(node: NodeDef, enum_names: set[str], flags_lookup: dict[str, FlagsDef] | None = None) -> list[str]:
+def _build_node_params(node: NodeDef, enum_names: set[str], flags_names: set[str] | None = None) -> list[str]:
     """Build C parameter list for a node builder function."""
     params = ["SyntaqliteAstContext *ctx"]
     for field_name, field_type in node.fields.items():
-        if field_name == "flags" and flags_lookup and node.name in flags_lookup:
-            c_type = _flags_type_name(node.name)
-        else:
-            c_type = _field_c_type(field_type, enum_names)
+        c_type = _field_c_type(field_type, enum_names, flags_names)
         params.append(f"{c_type} {field_name}")
     return params
 
@@ -103,7 +102,7 @@ def _emit_func_signature(lines: list[str], func_name: str, params: list[str], en
 def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
                          flags_defs: list[FlagsDef], output: Path) -> None:
     """Generate src/ast/ast_nodes.h with structs, union, arena types."""
-    flags_lookup = {f.node_name: f for f in flags_defs}
+    flags_lookup = {f.name: f for f in flags_defs}
     lines = []
 
     # Header
@@ -150,7 +149,7 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
         lines.append("// ============ Flags Types ============")
         lines.append("")
         for fdef in flags_defs:
-            type_name = _flags_type_name(fdef.node_name)
+            type_name = _flags_type_name(fdef.name)
             lines.append(f"typedef union {type_name} {{")
             lines.append("    uint8_t raw;")
             lines.append("    struct {")
@@ -179,8 +178,9 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("} SyntaqliteNodeTag;")
     lines.append("")
 
-    # Build enum name set for type lookups
+    # Build name sets for type lookups
     enum_names = {e.name for e in enum_defs}
+    flags_names = set(flags_lookup.keys())
 
     # Node structs
     lines.append("// ============ Node Structs (variable sizes) ============")
@@ -193,10 +193,7 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
             lines.append("    uint8_t tag;")
 
             for field_name, field_type in node.fields.items():
-                if field_name == "flags" and node.name in flags_lookup:
-                    c_type = _flags_type_name(node.name)
-                else:
-                    c_type = _field_c_type(field_type, enum_names)
+                c_type = _field_c_type(field_type, enum_names, flags_names)
                 lines.append(f"    {c_type} {field_name};")
 
             lines.append(f"}} {struct_name};")
@@ -255,7 +252,7 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
                            flags_defs: list[FlagsDef], output: Path) -> None:
     """Generate src/ast/ast_builder.h with builder function declarations."""
     enum_names = {e.name for e in enum_defs}
-    flags_lookup = {f.node_name: f for f in flags_defs}
+    flags_names = {f.name for f in flags_defs}
     lines = []
 
     # Header
@@ -282,7 +279,7 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     for node in node_defs:
         if isinstance(node, NodeDef):
             func_name = _builder_name(node.name)
-            params = _build_node_params(node, enum_names, flags_lookup)
+            params = _build_node_params(node, enum_names, flags_names)
             _emit_func_signature(lines, func_name, params)
             lines.append("")
 
@@ -311,7 +308,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
                            flags_defs: list[FlagsDef], output: Path) -> None:
     """Generate src/ast/ast_builder.c with builder implementations."""
     enum_names = {e.name for e in enum_defs}
-    flags_lookup = {f.node_name: f for f in flags_defs}
+    flags_names = {f.name for f in flags_defs}
     lines = []
 
     # Header
@@ -355,7 +352,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             struct_name = _struct_name(node.name)
             tag = _tag_name(node.name)
 
-            params = _build_node_params(node, enum_names, flags_lookup)
+            params = _build_node_params(node, enum_names, flags_names)
             _emit_func_signature(lines, func_name, params, " {")
 
             # Allocate node
@@ -442,9 +439,9 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
 def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
                          flags_defs: list[FlagsDef], output: Path) -> None:
     """Generate src/ast/ast_print.c with printer implementations."""
-    # Build set of enum type names for lookup
+    # Build name sets for type lookups
     enum_names = {e.name for e in enum_defs}
-    flags_lookup = {f.node_name: f for f in flags_defs}
+    flags_lookup = {f.name: f for f in flags_defs}
 
     lines = []
 
@@ -514,9 +511,9 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
                         names_var = f"syntaqlite_{pascal_to_snake(field_type.type_name)}_names"
                         lines.append("      ast_print_indent(out, depth + 1);")
                         lines.append(f'      fprintf(out, "{field_name}: %s\\n", {names_var}[node->{snake_name}.{field_name}]);')
-                    elif field_name == "flags" and node.name in flags_lookup:
+                    elif field_type.type_name in flags_lookup:
                         # Flags union - print individual flag names
-                        fdef = flags_lookup[node.name]
+                        fdef = flags_lookup[field_type.type_name]
                         accessor = f"node->{snake_name}.{field_name}"
                         lines.append("      ast_print_indent(out, depth + 1);")
                         lines.append(f'      fprintf(out, "{field_name}:");')

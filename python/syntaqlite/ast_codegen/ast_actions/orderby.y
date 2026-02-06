@@ -15,12 +15,12 @@
 // ============ Sort List (ORDER BY) ============
 
 sortlist(A) ::= sortlist(B) COMMA expr(C) sortorder(D) nulls(E). {
-    uint32_t term = ast_ordering_term(pCtx->astCtx, C, (uint8_t)D, (uint8_t)E);
+    uint32_t term = ast_ordering_term(pCtx->astCtx, C, (SyntaqliteSortOrder)D, (SyntaqliteNullsOrder)E);
     A = ast_order_by_list_append(pCtx->astCtx, B, term);
 }
 
 sortlist(A) ::= expr(B) sortorder(C) nulls(D). {
-    uint32_t term = ast_ordering_term(pCtx->astCtx, B, (uint8_t)C, (uint8_t)D);
+    uint32_t term = ast_ordering_term(pCtx->astCtx, B, (SyntaqliteSortOrder)C, (SyntaqliteNullsOrder)D);
     A = ast_order_by_list(pCtx->astCtx, term);
 }
 

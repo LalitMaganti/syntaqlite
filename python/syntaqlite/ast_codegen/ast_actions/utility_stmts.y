@@ -20,31 +20,31 @@
 cmd(A) ::= PRAGMA nm(X) dbnm(Z). {
     SyntaqliteSourceSpan name_span = Z.z ? syntaqlite_span(pCtx, Z) : syntaqlite_span(pCtx, X);
     SyntaqliteSourceSpan schema_span = Z.z ? syntaqlite_span(pCtx, X) : SYNTAQLITE_NO_SPAN;
-    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, SYNTAQLITE_NO_SPAN, 0);
+    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, SYNTAQLITE_NO_SPAN, SYNTAQLITE_PRAGMA_FORM_BARE);
 }
 
 cmd(A) ::= PRAGMA nm(X) dbnm(Z) EQ nmnum(Y). {
     SyntaqliteSourceSpan name_span = Z.z ? syntaqlite_span(pCtx, Z) : syntaqlite_span(pCtx, X);
     SyntaqliteSourceSpan schema_span = Z.z ? syntaqlite_span(pCtx, X) : SYNTAQLITE_NO_SPAN;
-    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, syntaqlite_span(pCtx, Y), 1);
+    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, syntaqlite_span(pCtx, Y), SYNTAQLITE_PRAGMA_FORM_EQ);
 }
 
 cmd(A) ::= PRAGMA nm(X) dbnm(Z) LP nmnum(Y) RP. {
     SyntaqliteSourceSpan name_span = Z.z ? syntaqlite_span(pCtx, Z) : syntaqlite_span(pCtx, X);
     SyntaqliteSourceSpan schema_span = Z.z ? syntaqlite_span(pCtx, X) : SYNTAQLITE_NO_SPAN;
-    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, syntaqlite_span(pCtx, Y), 2);
+    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, syntaqlite_span(pCtx, Y), SYNTAQLITE_PRAGMA_FORM_CALL);
 }
 
 cmd(A) ::= PRAGMA nm(X) dbnm(Z) EQ minus_num(Y). {
     SyntaqliteSourceSpan name_span = Z.z ? syntaqlite_span(pCtx, Z) : syntaqlite_span(pCtx, X);
     SyntaqliteSourceSpan schema_span = Z.z ? syntaqlite_span(pCtx, X) : SYNTAQLITE_NO_SPAN;
-    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, syntaqlite_span(pCtx, Y), 1);
+    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, syntaqlite_span(pCtx, Y), SYNTAQLITE_PRAGMA_FORM_EQ);
 }
 
 cmd(A) ::= PRAGMA nm(X) dbnm(Z) LP minus_num(Y) RP. {
     SyntaqliteSourceSpan name_span = Z.z ? syntaqlite_span(pCtx, Z) : syntaqlite_span(pCtx, X);
     SyntaqliteSourceSpan schema_span = Z.z ? syntaqlite_span(pCtx, X) : SYNTAQLITE_NO_SPAN;
-    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, syntaqlite_span(pCtx, Y), 2);
+    A = ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, syntaqlite_span(pCtx, Y), SYNTAQLITE_PRAGMA_FORM_CALL);
 }
 
 // ============ NMNUM / PLUS_NUM / MINUS_NUM / SIGNED ============
@@ -98,13 +98,13 @@ cmd(A) ::= ANALYZE. {
     A = ast_analyze_stmt(pCtx->astCtx,
         SYNTAQLITE_NO_SPAN,
         SYNTAQLITE_NO_SPAN,
-        0);
+        SYNTAQLITE_ANALYZE_KIND_ANALYZE);
 }
 
 cmd(A) ::= ANALYZE nm(X) dbnm(Y). {
     SyntaqliteSourceSpan name_span = Y.z ? syntaqlite_span(pCtx, Y) : syntaqlite_span(pCtx, X);
     SyntaqliteSourceSpan schema_span = Y.z ? syntaqlite_span(pCtx, X) : SYNTAQLITE_NO_SPAN;
-    A = ast_analyze_stmt(pCtx->astCtx, name_span, schema_span, 0);
+    A = ast_analyze_stmt(pCtx->astCtx, name_span, schema_span, SYNTAQLITE_ANALYZE_KIND_ANALYZE);
 }
 
 // ============ REINDEX ============
@@ -113,7 +113,7 @@ cmd(A) ::= REINDEX. {
     A = ast_analyze_stmt(pCtx->astCtx,
         SYNTAQLITE_NO_SPAN,
         SYNTAQLITE_NO_SPAN,
-        1);
+        SYNTAQLITE_ANALYZE_KIND_REINDEX);
 }
 
 cmd(A) ::= REINDEX nm(X) dbnm(Y). {
@@ -173,7 +173,7 @@ vinto(A) ::= . {
 // ============ EXPLAIN ============
 
 ecmd(A) ::= explain(E) cmdx(B) SEMI. {
-    A = ast_explain_stmt(pCtx->astCtx, (uint8_t)(E - 1), B);
+    A = ast_explain_stmt(pCtx->astCtx, (SyntaqliteExplainMode)(E - 1), B);
 }
 
 explain(A) ::= EXPLAIN. {
@@ -193,8 +193,8 @@ cmd(A) ::= createkw uniqueflag(U) INDEX ifnotexists(NE) nm(X) dbnm(D) ON nm(Y) L
         idx_name,
         idx_schema,
         syntaqlite_span(pCtx, Y),
-        (uint8_t)U,
-        (uint8_t)NE,
+        (SyntaqliteBool)U,
+        (SyntaqliteBool)NE,
         Z,
         W);
 }
@@ -223,8 +223,8 @@ cmd(A) ::= createkw temp(T) VIEW ifnotexists(E) nm(Y) dbnm(Z) eidlist_opt(C) AS 
     A = ast_create_view_stmt(pCtx->astCtx,
         view_name,
         view_schema,
-        (uint8_t)T,
-        (uint8_t)E,
+        (SyntaqliteBool)T,
+        (SyntaqliteBool)E,
         C,
         S);
 }

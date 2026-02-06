@@ -17,6 +17,11 @@ extern "C" {
 // ============ Value Enums ============
 
 typedef enum {
+    SYNTAQLITE_BOOL_FALSE = 0,
+    SYNTAQLITE_BOOL_TRUE = 1,
+} SyntaqliteBool;
+
+typedef enum {
     SYNTAQLITE_LITERAL_TYPE_INTEGER = 0,
     SYNTAQLITE_LITERAL_TYPE_FLOAT = 1,
     SYNTAQLITE_LITERAL_TYPE_STRING = 2,
@@ -81,6 +86,12 @@ typedef enum {
     SYNTAQLITE_COMPOUND_OP_INTERSECT = 2,
     SYNTAQLITE_COMPOUND_OP_EXCEPT = 3,
 } SyntaqliteCompoundOp;
+
+typedef enum {
+    SYNTAQLITE_MATERIALIZED_DEFAULT = 0,
+    SYNTAQLITE_MATERIALIZED_MATERIALIZED = 1,
+    SYNTAQLITE_MATERIALIZED_NOT_MATERIALIZED = 2,
+} SyntaqliteMaterialized;
 
 typedef enum {
     SYNTAQLITE_RAISE_TYPE_IGNORE = 0,
@@ -149,6 +160,17 @@ typedef enum {
 } SyntaqliteExplainMode;
 
 typedef enum {
+    SYNTAQLITE_PRAGMA_FORM_BARE = 0,
+    SYNTAQLITE_PRAGMA_FORM_EQ = 1,
+    SYNTAQLITE_PRAGMA_FORM_CALL = 2,
+} SyntaqlitePragmaForm;
+
+typedef enum {
+    SYNTAQLITE_ANALYZE_KIND_ANALYZE = 0,
+    SYNTAQLITE_ANALYZE_KIND_REINDEX = 1,
+} SyntaqliteAnalyzeKind;
+
+typedef enum {
     SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION = 0,
     SYNTAQLITE_FOREIGN_KEY_ACTION_SET_NULL = 1,
     SYNTAQLITE_FOREIGN_KEY_ACTION_SET_DEFAULT = 2,
@@ -214,6 +236,11 @@ typedef enum {
     SYNTAQLITE_TRIGGER_EVENT_TYPE_INSERT = 1,
     SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE = 2,
 } SyntaqliteTriggerEventType;
+
+static const char* const syntaqlite_bool_names[] = {
+    "FALSE",
+    "TRUE",
+};
 
 static const char* const syntaqlite_literal_type_names[] = {
     "INTEGER",
@@ -281,6 +308,12 @@ static const char* const syntaqlite_compound_op_names[] = {
     "EXCEPT",
 };
 
+static const char* const syntaqlite_materialized_names[] = {
+    "DEFAULT",
+    "MATERIALIZED",
+    "NOT_MATERIALIZED",
+};
+
 static const char* const syntaqlite_raise_type_names[] = {
     "IGNORE",
     "ROLLBACK",
@@ -345,6 +378,17 @@ static const char* const syntaqlite_savepoint_op_names[] = {
 static const char* const syntaqlite_explain_mode_names[] = {
     "EXPLAIN",
     "QUERY_PLAN",
+};
+
+static const char* const syntaqlite_pragma_form_names[] = {
+    "BARE",
+    "EQ",
+    "CALL",
+};
+
+static const char* const syntaqlite_analyze_kind_names[] = {
+    "ANALYZE",
+    "REINDEX",
 };
 
 static const char* const syntaqlite_foreign_key_action_names[] = {
@@ -636,7 +680,7 @@ typedef struct SyntaqliteIsExpr {
 
 typedef struct SyntaqliteBetweenExpr {
     uint8_t tag;
-    uint8_t negated;
+    SyntaqliteBool negated;
     uint32_t operand;
     uint32_t low;
     uint32_t high;
@@ -644,7 +688,7 @@ typedef struct SyntaqliteBetweenExpr {
 
 typedef struct SyntaqliteLikeExpr {
     uint8_t tag;
-    uint8_t negated;
+    SyntaqliteBool negated;
     uint32_t operand;
     uint32_t pattern;
     uint32_t escape;
@@ -690,7 +734,7 @@ typedef struct SyntaqliteExistsExpr {
 
 typedef struct SyntaqliteInExpr {
     uint8_t tag;
-    uint8_t negated;
+    SyntaqliteBool negated;
     uint32_t operand;
     uint32_t source;
 } SyntaqliteInExpr;
@@ -728,7 +772,7 @@ typedef struct SyntaqliteValuesClause {
 typedef struct SyntaqliteCteDefinition {
     uint8_t tag;
     SyntaqliteSourceSpan cte_name;
-    uint8_t materialized;
+    SyntaqliteMaterialized materialized;
     uint32_t columns;
     uint32_t select;
 } SyntaqliteCteDefinition;
@@ -743,7 +787,7 @@ typedef struct SyntaqliteCteList {
 
 typedef struct SyntaqliteWithClause {
     uint8_t tag;
-    uint8_t recursive;
+    SyntaqliteBool recursive;
     uint32_t ctes;
     uint32_t select;
 } SyntaqliteWithClause;
@@ -839,7 +883,7 @@ typedef struct SyntaqliteQualifiedName {
 typedef struct SyntaqliteDropStmt {
     uint8_t tag;
     SyntaqliteDropObjectType object_type;
-    uint8_t if_exists;
+    SyntaqliteBool if_exists;
     uint32_t target;
 } SyntaqliteDropStmt;
 
@@ -868,14 +912,14 @@ typedef struct SyntaqlitePragmaStmt {
     SyntaqliteSourceSpan pragma_name;
     SyntaqliteSourceSpan schema;
     SyntaqliteSourceSpan value;
-    uint8_t pragma_form;
+    SyntaqlitePragmaForm pragma_form;
 } SyntaqlitePragmaStmt;
 
 typedef struct SyntaqliteAnalyzeStmt {
     uint8_t tag;
     SyntaqliteSourceSpan target_name;
     SyntaqliteSourceSpan schema;
-    uint8_t is_reindex;
+    SyntaqliteAnalyzeKind kind;
 } SyntaqliteAnalyzeStmt;
 
 typedef struct SyntaqliteAttachStmt {
@@ -907,8 +951,8 @@ typedef struct SyntaqliteCreateIndexStmt {
     SyntaqliteSourceSpan index_name;
     SyntaqliteSourceSpan schema;
     SyntaqliteSourceSpan table_name;
-    uint8_t is_unique;
-    uint8_t if_not_exists;
+    SyntaqliteBool is_unique;
+    SyntaqliteBool if_not_exists;
     uint32_t columns;
     uint32_t where;
 } SyntaqliteCreateIndexStmt;
@@ -917,8 +961,8 @@ typedef struct SyntaqliteCreateViewStmt {
     uint8_t tag;
     SyntaqliteSourceSpan view_name;
     SyntaqliteSourceSpan schema;
-    uint8_t is_temp;
-    uint8_t if_not_exists;
+    SyntaqliteBool is_temp;
+    SyntaqliteBool if_not_exists;
     uint32_t column_names;
     uint32_t select;
 } SyntaqliteCreateViewStmt;
@@ -929,16 +973,16 @@ typedef struct SyntaqliteForeignKeyClause {
     uint32_t ref_columns;
     SyntaqliteForeignKeyAction on_delete;
     SyntaqliteForeignKeyAction on_update;
-    uint8_t is_deferred;
+    SyntaqliteBool is_deferred;
 } SyntaqliteForeignKeyClause;
 
 typedef struct SyntaqliteColumnConstraint {
     uint8_t tag;
     SyntaqliteColumnConstraintKind kind;
     SyntaqliteSourceSpan constraint_name;
-    uint8_t onconf;
-    uint8_t sort_order;
-    uint8_t is_autoincrement;
+    SyntaqliteConflictAction onconf;
+    SyntaqliteSortOrder sort_order;
+    SyntaqliteBool is_autoincrement;
     SyntaqliteSourceSpan collation_name;
     SyntaqliteGeneratedColumnStorage generated_storage;
     uint32_t default_expr;
@@ -974,8 +1018,8 @@ typedef struct SyntaqliteTableConstraint {
     uint8_t tag;
     SyntaqliteTableConstraintKind kind;
     SyntaqliteSourceSpan constraint_name;
-    uint8_t onconf;
-    uint8_t is_autoincrement;
+    SyntaqliteConflictAction onconf;
+    SyntaqliteBool is_autoincrement;
     uint32_t columns;
     uint32_t check_expr;
     uint32_t fk_clause;
@@ -993,8 +1037,8 @@ typedef struct SyntaqliteCreateTableStmt {
     uint8_t tag;
     SyntaqliteSourceSpan table_name;
     SyntaqliteSourceSpan schema;
-    uint8_t is_temp;
-    uint8_t if_not_exists;
+    SyntaqliteBool is_temp;
+    SyntaqliteBool if_not_exists;
     SyntaqliteCreateTableStmtFlags flags;
     uint32_t columns;
     uint32_t table_constraints;
@@ -1070,8 +1114,8 @@ typedef struct SyntaqliteCreateTriggerStmt {
     uint8_t tag;
     SyntaqliteSourceSpan trigger_name;
     SyntaqliteSourceSpan schema;
-    uint8_t is_temp;
-    uint8_t if_not_exists;
+    SyntaqliteBool is_temp;
+    SyntaqliteBool if_not_exists;
     SyntaqliteTriggerTiming timing;
     uint32_t event;
     uint32_t table;
@@ -1084,7 +1128,7 @@ typedef struct SyntaqliteCreateVirtualTableStmt {
     SyntaqliteSourceSpan table_name;
     SyntaqliteSourceSpan schema;
     SyntaqliteSourceSpan module_name;
-    uint8_t if_not_exists;
+    SyntaqliteBool if_not_exists;
     SyntaqliteSourceSpan module_args;
 } SyntaqliteCreateVirtualTableStmt;
 

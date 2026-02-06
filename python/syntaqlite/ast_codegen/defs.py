@@ -69,12 +69,15 @@ class EnumDef:
 
 @dataclass(frozen=True)
 class FlagsDef:
-    """Bitflag constants for a node's flags field.
+    """Bitflag type for AST fields, referenced by name like enums.
 
-    Generates #define constants like SYNTAQLITE_FUNCTION_CALL_DISTINCT 0x01.
+    Usage: Flags("MyFlags", FOO=0x01, BAR=0x02)
+    Then:  some_field=inline("MyFlags")
+
+    Generates a C union type SyntaqliteMyFlags with bitfield members.
     """
 
-    node_name: str
+    name: str
     flags: dict[str, int]
 
 
@@ -108,9 +111,9 @@ def Enum(name: str, *values: str) -> EnumDef:
     return EnumDef(name=name, values=values)
 
 
-def Flags(node_name: str, **flags: int) -> FlagsDef:
-    """Define bitflag constants for a node's flags field."""
-    return FlagsDef(node_name=node_name, flags=flags)
+def Flags(name: str, **flags: int) -> FlagsDef:
+    """Define a bitflag type, referenced by name in inline() fields."""
+    return FlagsDef(name=name, flags=flags)
 
 
 AnyNodeDef = NodeDef | ListDef

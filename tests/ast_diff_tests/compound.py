@@ -266,7 +266,7 @@ SelectStmt
       flags: (none)
       alias: null
       expr: InExpr
-        negated: 0
+        negated: FALSE
         operand: Literal
           literal_type: INTEGER
           source: "1"
@@ -301,7 +301,7 @@ SelectStmt
       flags: (none)
       alias: null
       expr: InExpr
-        negated: 1
+        negated: TRUE
         operand: Literal
           literal_type: INTEGER
           source: "1"
@@ -336,7 +336,7 @@ SelectStmt
       flags: (none)
       alias: null
       expr: InExpr
-        negated: 0
+        negated: FALSE
         operand: Literal
           literal_type: INTEGER
           source: "1"

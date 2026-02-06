@@ -270,7 +270,7 @@ SelectStmt
       flags: (none)
       alias: null
       expr: BetweenExpr
-        negated: 0
+        negated: FALSE
         operand: Literal
           literal_type: INTEGER
           source: "1"
@@ -301,7 +301,7 @@ SelectStmt
       flags: (none)
       alias: null
       expr: BetweenExpr
-        negated: 1
+        negated: TRUE
         operand: Literal
           literal_type: INTEGER
           source: "1"
@@ -336,7 +336,7 @@ SelectStmt
       flags: (none)
       alias: null
       expr: LikeExpr
-        negated: 0
+        negated: FALSE
         operand: Literal
           literal_type: STRING
           source: "'abc'"
@@ -365,7 +365,7 @@ SelectStmt
       flags: (none)
       alias: null
       expr: LikeExpr
-        negated: 1
+        negated: TRUE
         operand: Literal
           literal_type: STRING
           source: "'abc'"
@@ -394,7 +394,7 @@ SelectStmt
       flags: (none)
       alias: null
       expr: LikeExpr
-        negated: 0
+        negated: FALSE
         operand: Literal
           literal_type: STRING
           source: "'abc'"

@@ -25,7 +25,7 @@ select(A) ::= WITH RECURSIVE wqlist(W) selectnowith(X). {
 // ============ CTE item ============
 
 wqitem(A) ::= withnm(X) eidlist_opt(Y) wqas(M) LP select(Z) RP. {
-    A = ast_cte_definition(pCtx->astCtx, syntaqlite_span(pCtx, X), (uint8_t)M, Y, Z);
+    A = ast_cte_definition(pCtx->astCtx, syntaqlite_span(pCtx, X), (SyntaqliteMaterialized)M, Y, Z);
 }
 
 // ============ CTE list ============
@@ -47,15 +47,15 @@ withnm(A) ::= nm(A). {
 // ============ AS materialization hint ============
 
 wqas(A) ::= AS. {
-    A = 0;
+    A = (int)SYNTAQLITE_MATERIALIZED_DEFAULT;
 }
 
 wqas(A) ::= AS MATERIALIZED. {
-    A = 1;
+    A = (int)SYNTAQLITE_MATERIALIZED_MATERIALIZED;
 }
 
 wqas(A) ::= AS NOT MATERIALIZED. {
-    A = 2;
+    A = (int)SYNTAQLITE_MATERIALIZED_NOT_MATERIALIZED;
 }
 
 // ============ Column list (eidlist) ============

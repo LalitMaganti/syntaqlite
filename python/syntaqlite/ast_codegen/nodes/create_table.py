@@ -48,7 +48,7 @@ ENUMS = [
 ]
 
 FLAGS = [
-    Flags("CreateTableStmt", WITHOUT_ROWID=0x01, STRICT=0x02),
+    Flags("CreateTableStmtFlags", WITHOUT_ROWID=0x01, STRICT=0x02),
 ]
 
 NODES = [
@@ -58,7 +58,7 @@ NODES = [
         ref_columns=index("ExprList"),          # nullable - referenced column list
         on_delete=inline("ForeignKeyAction"),    # NO_ACTION if not specified
         on_update=inline("ForeignKeyAction"),    # NO_ACTION if not specified
-        is_deferred=inline("u8"),                # 0=not deferrable/immediate, 1=deferred
+        is_deferred=inline("Bool"),               # FALSE=not deferrable/immediate, TRUE=deferred
     ),
 
     # Column constraint
@@ -74,9 +74,9 @@ NODES = [
     Node("ColumnConstraint",
         kind=inline("ColumnConstraintKind"),
         constraint_name=inline("SyntaqliteSourceSpan"),  # CONSTRAINT name (optional)
-        onconf=inline("u8"),                    # conflict resolution action (ConflictAction cast)
-        sort_order=inline("u8"),                # for PRIMARY KEY: ASC(0)/DESC(1)
-        is_autoincrement=inline("u8"),          # for PRIMARY KEY
+        onconf=inline("ConflictAction"),        # conflict resolution action
+        sort_order=inline("SortOrder"),         # for PRIMARY KEY: ASC/DESC
+        is_autoincrement=inline("Bool"),        # for PRIMARY KEY
         collation_name=inline("SyntaqliteSourceSpan"),   # for COLLATE
         generated_storage=inline("GeneratedColumnStorage"),  # for GENERATED
         default_expr=index("Expr"),             # for DEFAULT
@@ -107,8 +107,8 @@ NODES = [
     Node("TableConstraint",
         kind=inline("TableConstraintKind"),
         constraint_name=inline("SyntaqliteSourceSpan"),
-        onconf=inline("u8"),
-        is_autoincrement=inline("u8"),
+        onconf=inline("ConflictAction"),
+        is_autoincrement=inline("Bool"),
         columns=index("Expr"),              # OrderByList (for PK/UNIQUE) or ExprList (for FK local columns)
         check_expr=index("Expr"),           # for CHECK
         fk_clause=index("Expr"),            # for FOREIGN KEY -> ForeignKeyClause node
@@ -123,9 +123,9 @@ NODES = [
     Node("CreateTableStmt",
         table_name=inline("SyntaqliteSourceSpan"),
         schema=inline("SyntaqliteSourceSpan"),
-        is_temp=inline("u8"),
-        if_not_exists=inline("u8"),
-        flags=inline("u8"),                   # WITHOUT_ROWID | STRICT
+        is_temp=inline("Bool"),
+        if_not_exists=inline("Bool"),
+        flags=inline("CreateTableStmtFlags"),   # WITHOUT_ROWID | STRICT
         columns=index("Expr"),               # ColumnDefList (nullable for AS SELECT)
         table_constraints=index("Expr"),     # TableConstraintList (nullable)
         as_select=index("Stmt"),             # for CREATE TABLE ... AS SELECT (nullable)

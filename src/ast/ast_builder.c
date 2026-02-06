@@ -412,7 +412,7 @@ uint32_t ast_is_expr(SyntaqliteAstContext *ctx, SyntaqliteIsOp op, uint32_t left
 
 uint32_t ast_between_expr(
     SyntaqliteAstContext *ctx,
-    uint8_t negated,
+    SyntaqliteBool negated,
     uint32_t operand,
     uint32_t low,
     uint32_t high
@@ -431,7 +431,7 @@ uint32_t ast_between_expr(
 
 uint32_t ast_like_expr(
     SyntaqliteAstContext *ctx,
-    uint8_t negated,
+    SyntaqliteBool negated,
     uint32_t operand,
     uint32_t pattern,
     uint32_t escape
@@ -559,7 +559,12 @@ uint32_t ast_exists_expr(SyntaqliteAstContext *ctx, uint32_t select) {
     return id;
 }
 
-uint32_t ast_in_expr(SyntaqliteAstContext *ctx, uint8_t negated, uint32_t operand, uint32_t source) {
+uint32_t ast_in_expr(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteBool negated,
+    uint32_t operand,
+    uint32_t source
+) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_IN_EXPR, sizeof(SyntaqliteInExpr));
     if (id == SYNTAQLITE_NULL_NODE) return id;
 
@@ -667,7 +672,7 @@ uint32_t ast_values_clause(SyntaqliteAstContext *ctx, uint32_t rows) {
 uint32_t ast_cte_definition(
     SyntaqliteAstContext *ctx,
     SyntaqliteSourceSpan cte_name,
-    uint8_t materialized,
+    SyntaqliteMaterialized materialized,
     uint32_t columns,
     uint32_t select
 ) {
@@ -734,7 +739,12 @@ uint32_t ast_cte_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32
     return new_id;
 }
 
-uint32_t ast_with_clause(SyntaqliteAstContext *ctx, uint8_t recursive, uint32_t ctes, uint32_t select) {
+uint32_t ast_with_clause(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteBool recursive,
+    uint32_t ctes,
+    uint32_t select
+) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_WITH_CLAUSE, sizeof(SyntaqliteWithClause));
     if (id == SYNTAQLITE_NULL_NODE) return id;
 
@@ -981,7 +991,7 @@ uint32_t ast_qualified_name(
 uint32_t ast_drop_stmt(
     SyntaqliteAstContext *ctx,
     SyntaqliteDropObjectType object_type,
-    uint8_t if_exists,
+    SyntaqliteBool if_exists,
     uint32_t target
 ) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_DROP_STMT, sizeof(SyntaqliteDropStmt));
@@ -1049,7 +1059,7 @@ uint32_t ast_pragma_stmt(
     SyntaqliteSourceSpan pragma_name,
     SyntaqliteSourceSpan schema,
     SyntaqliteSourceSpan value,
-    uint8_t pragma_form
+    SyntaqlitePragmaForm pragma_form
 ) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_PRAGMA_STMT, sizeof(SyntaqlitePragmaStmt));
     if (id == SYNTAQLITE_NULL_NODE) return id;
@@ -1067,7 +1077,7 @@ uint32_t ast_analyze_stmt(
     SyntaqliteAstContext *ctx,
     SyntaqliteSourceSpan target_name,
     SyntaqliteSourceSpan schema,
-    uint8_t is_reindex
+    SyntaqliteAnalyzeKind kind
 ) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_ANALYZE_STMT, sizeof(SyntaqliteAnalyzeStmt));
     if (id == SYNTAQLITE_NULL_NODE) return id;
@@ -1076,7 +1086,7 @@ uint32_t ast_analyze_stmt(
         (ctx->ast->arena + ctx->ast->offsets[id]);
     node->target_name = target_name;
     node->schema = schema;
-    node->is_reindex = is_reindex;
+    node->kind = kind;
     return id;
 }
 
@@ -1129,8 +1139,8 @@ uint32_t ast_create_index_stmt(
     SyntaqliteSourceSpan index_name,
     SyntaqliteSourceSpan schema,
     SyntaqliteSourceSpan table_name,
-    uint8_t is_unique,
-    uint8_t if_not_exists,
+    SyntaqliteBool is_unique,
+    SyntaqliteBool if_not_exists,
     uint32_t columns,
     uint32_t where
 ) {
@@ -1153,8 +1163,8 @@ uint32_t ast_create_view_stmt(
     SyntaqliteAstContext *ctx,
     SyntaqliteSourceSpan view_name,
     SyntaqliteSourceSpan schema,
-    uint8_t is_temp,
-    uint8_t if_not_exists,
+    SyntaqliteBool is_temp,
+    SyntaqliteBool if_not_exists,
     uint32_t column_names,
     uint32_t select
 ) {
@@ -1178,7 +1188,7 @@ uint32_t ast_foreign_key_clause(
     uint32_t ref_columns,
     SyntaqliteForeignKeyAction on_delete,
     SyntaqliteForeignKeyAction on_update,
-    uint8_t is_deferred
+    SyntaqliteBool is_deferred
 ) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE, sizeof(SyntaqliteForeignKeyClause));
     if (id == SYNTAQLITE_NULL_NODE) return id;
@@ -1197,9 +1207,9 @@ uint32_t ast_column_constraint(
     SyntaqliteAstContext *ctx,
     SyntaqliteColumnConstraintKind kind,
     SyntaqliteSourceSpan constraint_name,
-    uint8_t onconf,
-    uint8_t sort_order,
-    uint8_t is_autoincrement,
+    SyntaqliteConflictAction onconf,
+    SyntaqliteSortOrder sort_order,
+    SyntaqliteBool is_autoincrement,
     SyntaqliteSourceSpan collation_name,
     SyntaqliteGeneratedColumnStorage generated_storage,
     uint32_t default_expr,
@@ -1349,8 +1359,8 @@ uint32_t ast_table_constraint(
     SyntaqliteAstContext *ctx,
     SyntaqliteTableConstraintKind kind,
     SyntaqliteSourceSpan constraint_name,
-    uint8_t onconf,
-    uint8_t is_autoincrement,
+    SyntaqliteConflictAction onconf,
+    SyntaqliteBool is_autoincrement,
     uint32_t columns,
     uint32_t check_expr,
     uint32_t fk_clause
@@ -1425,8 +1435,8 @@ uint32_t ast_create_table_stmt(
     SyntaqliteAstContext *ctx,
     SyntaqliteSourceSpan table_name,
     SyntaqliteSourceSpan schema,
-    uint8_t is_temp,
-    uint8_t if_not_exists,
+    SyntaqliteBool is_temp,
+    SyntaqliteBool if_not_exists,
     SyntaqliteCreateTableStmtFlags flags,
     uint32_t columns,
     uint32_t table_constraints,
@@ -1697,8 +1707,8 @@ uint32_t ast_create_trigger_stmt(
     SyntaqliteAstContext *ctx,
     SyntaqliteSourceSpan trigger_name,
     SyntaqliteSourceSpan schema,
-    uint8_t is_temp,
-    uint8_t if_not_exists,
+    SyntaqliteBool is_temp,
+    SyntaqliteBool if_not_exists,
     SyntaqliteTriggerTiming timing,
     uint32_t event,
     uint32_t table,
@@ -1727,7 +1737,7 @@ uint32_t ast_create_virtual_table_stmt(
     SyntaqliteSourceSpan table_name,
     SyntaqliteSourceSpan schema,
     SyntaqliteSourceSpan module_name,
-    uint8_t if_not_exists,
+    SyntaqliteBool if_not_exists,
     SyntaqliteSourceSpan module_args
 ) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT, sizeof(SyntaqliteCreateVirtualTableStmt));

@@ -6,6 +6,12 @@
 from ..defs import Enum
 
 ENUMS = [
+    # Boolean (for fields that are 0/1)
+    Enum("Bool",
+        "FALSE",     # 0
+        "TRUE",      # 1
+    ),
+
     # Literal value types
     Enum("LiteralType",
         "INTEGER",   # 0

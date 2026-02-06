@@ -8,7 +8,7 @@ from ..defs import Node, List, Flags, inline, index
 ENUMS = []
 
 FLAGS = [
-    Flags("FunctionCall", DISTINCT=0x01, STAR=0x02),
+    Flags("FunctionCallFlags", DISTINCT=0x01, STAR=0x02),
 ]
 
 NODES = [
@@ -17,7 +17,7 @@ NODES = [
     # args is an ExprList (or SYNTAQLITE_NULL_NODE for no args)
     Node("FunctionCall",
         func_name=inline("SyntaqliteSourceSpan"),
-        flags=inline("u8"),
+        flags=inline("FunctionCallFlags"),
         args=index("ExprList"),
         filter_clause=index("Expr"),        # FILTER (WHERE expr), or null
         over_clause=index("WindowDef"),     # OVER (...) or OVER name, or null

@@ -16,8 +16,8 @@ class CreateTriggerBasic(TestSuite):
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT
@@ -53,8 +53,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: AFTER
   event: TriggerEvent
     event_type: DELETE
@@ -90,8 +90,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: INSTEAD_OF
   event: TriggerEvent
     event_type: INSERT
@@ -127,8 +127,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT
@@ -168,8 +168,8 @@ class CreateTriggerOptions(TestSuite):
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 1
-  if_not_exists: 0
+  is_temp: TRUE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT
@@ -205,8 +205,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 1
+  is_temp: FALSE
+  if_not_exists: TRUE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT
@@ -242,8 +242,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: "main"
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT
@@ -279,8 +279,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: UPDATE
@@ -324,8 +324,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: UPDATE
@@ -365,8 +365,8 @@ class CreateTriggerWhen(TestSuite):
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT
@@ -410,8 +410,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT
@@ -451,8 +451,8 @@ class CreateTriggerBody(TestSuite):
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT
@@ -487,8 +487,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: DELETE
@@ -521,8 +521,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT
@@ -556,8 +556,8 @@ CreateTriggerStmt
 CreateTriggerStmt
   trigger_name: "tr"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   timing: BEFORE
   event: TriggerEvent
     event_type: INSERT

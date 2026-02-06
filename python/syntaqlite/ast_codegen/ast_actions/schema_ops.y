@@ -39,19 +39,19 @@ ifexists(A) ::= . {
 // ============ DROP statements ============
 
 cmd(A) ::= DROP TABLE ifexists(E) fullname(X). {
-    A = ast_drop_stmt(pCtx->astCtx, SYNTAQLITE_DROP_OBJECT_TYPE_TABLE, (uint8_t)E, X);
+    A = ast_drop_stmt(pCtx->astCtx, SYNTAQLITE_DROP_OBJECT_TYPE_TABLE, (SyntaqliteBool)E, X);
 }
 
 cmd(A) ::= DROP VIEW ifexists(E) fullname(X). {
-    A = ast_drop_stmt(pCtx->astCtx, SYNTAQLITE_DROP_OBJECT_TYPE_VIEW, (uint8_t)E, X);
+    A = ast_drop_stmt(pCtx->astCtx, SYNTAQLITE_DROP_OBJECT_TYPE_VIEW, (SyntaqliteBool)E, X);
 }
 
 cmd(A) ::= DROP INDEX ifexists(E) fullname(X). {
-    A = ast_drop_stmt(pCtx->astCtx, SYNTAQLITE_DROP_OBJECT_TYPE_INDEX, (uint8_t)E, X);
+    A = ast_drop_stmt(pCtx->astCtx, SYNTAQLITE_DROP_OBJECT_TYPE_INDEX, (SyntaqliteBool)E, X);
 }
 
 cmd(A) ::= DROP TRIGGER ifexists(NOERR) fullname(X). {
-    A = ast_drop_stmt(pCtx->astCtx, SYNTAQLITE_DROP_OBJECT_TYPE_TRIGGER, (uint8_t)NOERR, X);
+    A = ast_drop_stmt(pCtx->astCtx, SYNTAQLITE_DROP_OBJECT_TYPE_TRIGGER, (SyntaqliteBool)NOERR, X);
 }
 
 // ============ ALTER TABLE ============

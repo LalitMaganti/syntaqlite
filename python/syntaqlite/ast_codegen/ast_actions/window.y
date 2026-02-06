@@ -92,16 +92,16 @@ frame_opt(A) ::= range_or_rows(B) frame_bound_s(C) frame_exclude_opt(D). {
         SYNTAQLITE_FRAME_BOUND_TYPE_CURRENT_ROW,
         SYNTAQLITE_NULL_NODE);
     A = ast_frame_spec(pCtx->astCtx,
-        (uint8_t)B,
-        (uint8_t)D,
+        (SyntaqliteFrameType)B,
+        (SyntaqliteFrameExclude)D,
         C,
         end_bound);
 }
 
 frame_opt(A) ::= range_or_rows(B) BETWEEN frame_bound_s(C) AND frame_bound_e(D) frame_exclude_opt(E). {
     A = ast_frame_spec(pCtx->astCtx,
-        (uint8_t)B,
-        (uint8_t)E,
+        (SyntaqliteFrameType)B,
+        (SyntaqliteFrameExclude)E,
         C,
         D);
 }

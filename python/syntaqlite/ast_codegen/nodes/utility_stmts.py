@@ -6,30 +6,40 @@
 from ..defs import Node, List, Enum, inline, index
 
 ENUMS = [
-    # EXPLAIN mode: 1 = EXPLAIN, 2 = EXPLAIN QUERY PLAN
+    # EXPLAIN mode
     Enum("ExplainMode",
         "EXPLAIN",         # 0
         "QUERY_PLAN",      # 1
+    ),
+
+    # PRAGMA value form
+    Enum("PragmaForm",
+        "BARE",            # 0 - no value
+        "EQ",              # 1 - = value
+        "CALL",            # 2 - (value)
+    ),
+
+    # ANALYZE vs REINDEX (they share a node)
+    Enum("AnalyzeKind",
+        "ANALYZE",         # 0
+        "REINDEX",         # 1
     ),
 ]
 
 NODES = [
     # PRAGMA statement: PRAGMA [schema.]name [= value | (value)]
-    # pragma_form: 0 = bare (no value), 1 = EQ form, 2 = function call form
-    # value: source span of the value (nmnum or minus_num), null if bare
     Node("PragmaStmt",
         pragma_name=inline("SyntaqliteSourceSpan"),
         schema=inline("SyntaqliteSourceSpan"),
         value=inline("SyntaqliteSourceSpan"),
-        pragma_form=inline("u8"),
+        pragma_form=inline("PragmaForm"),
     ),
 
     # ANALYZE / REINDEX statement
-    # is_reindex: 0 = ANALYZE, 1 = REINDEX
     Node("AnalyzeStmt",
         target_name=inline("SyntaqliteSourceSpan"),
         schema=inline("SyntaqliteSourceSpan"),
-        is_reindex=inline("u8"),
+        kind=inline("AnalyzeKind"),
     ),
 
     # ATTACH statement: ATTACH [DATABASE] expr AS expr [KEY expr]
@@ -62,8 +72,8 @@ NODES = [
         index_name=inline("SyntaqliteSourceSpan"),
         schema=inline("SyntaqliteSourceSpan"),
         table_name=inline("SyntaqliteSourceSpan"),
-        is_unique=inline("u8"),
-        if_not_exists=inline("u8"),
+        is_unique=inline("Bool"),
+        if_not_exists=inline("Bool"),
         columns=index("OrderByList"),
         where=index("Expr"),
     ),
@@ -73,8 +83,8 @@ NODES = [
     Node("CreateViewStmt",
         view_name=inline("SyntaqliteSourceSpan"),
         schema=inline("SyntaqliteSourceSpan"),
-        is_temp=inline("u8"),
-        if_not_exists=inline("u8"),
+        is_temp=inline("Bool"),
+        if_not_exists=inline("Bool"),
         column_names=index("ExprList"),
         select=index("Stmt"),
     ),

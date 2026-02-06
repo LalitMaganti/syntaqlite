@@ -16,8 +16,8 @@ class CreateTableBasic(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -36,8 +36,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[3]
     ColumnDef
@@ -64,8 +64,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[3]
     ColumnDef
@@ -92,8 +92,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[2]
     ColumnDef
@@ -120,8 +120,8 @@ class CreateTableModifiers(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 1
-  if_not_exists: 0
+  is_temp: TRUE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -140,8 +140,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 1
+  is_temp: FALSE
+  if_not_exists: TRUE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -160,8 +160,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: "main"
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -184,8 +184,8 @@ class CreateTableOptions(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: WITHOUT_ROWID
   columns: ColumnDefList[1]
     ColumnDef
@@ -195,9 +195,9 @@ CreateTableStmt
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -216,8 +216,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: STRICT
   columns: ColumnDefList[1]
     ColumnDef
@@ -236,8 +236,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: WITHOUT_ROWID STRICT
   columns: ColumnDefList[1]
     ColumnDef
@@ -247,9 +247,9 @@ CreateTableStmt
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -272,8 +272,8 @@ class CreateTableAsSelect(TestSuite):
 CreateTableStmt
   table_name: "t2"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: null
   table_constraints: null
@@ -308,8 +308,8 @@ class ColumnConstraintDefault(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -319,9 +319,9 @@ CreateTableStmt
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: Literal
@@ -342,8 +342,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -353,9 +353,9 @@ CreateTableStmt
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: Literal
@@ -376,8 +376,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -387,9 +387,9 @@ CreateTableStmt
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: UnaryExpr
@@ -412,8 +412,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -423,9 +423,9 @@ CreateTableStmt
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: BinaryExpr
@@ -451,8 +451,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -462,9 +462,9 @@ CreateTableStmt
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: Literal
@@ -489,8 +489,8 @@ class ColumnConstraintKeys(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -500,9 +500,9 @@ CreateTableStmt
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -521,8 +521,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -532,9 +532,9 @@ CreateTableStmt
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 1
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: TRUE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -553,8 +553,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -564,9 +564,9 @@ CreateTableStmt
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
-          onconf: 0
-          sort_order: 1
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: DESC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -585,8 +585,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -596,9 +596,9 @@ CreateTableStmt
         ColumnConstraint
           kind: NOT_NULL
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -617,8 +617,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -628,9 +628,9 @@ CreateTableStmt
         ColumnConstraint
           kind: UNIQUE
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -653,8 +653,8 @@ class ColumnConstraintCheck(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -664,9 +664,9 @@ CreateTableStmt
         ColumnConstraint
           kind: CHECK
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -697,8 +697,8 @@ class ColumnConstraintReferences(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -708,9 +708,9 @@ CreateTableStmt
         ColumnConstraint
           kind: REFERENCES
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -725,7 +725,7 @@ CreateTableStmt
                 schema: null
             on_delete: NO_ACTION
             on_update: NO_ACTION
-            is_deferred: 0
+            is_deferred: FALSE
   table_constraints: null
   as_select: null
 """,
@@ -738,8 +738,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -749,9 +749,9 @@ CreateTableStmt
         ColumnConstraint
           kind: REFERENCES
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -766,7 +766,7 @@ CreateTableStmt
                 schema: null
             on_delete: CASCADE
             on_update: NO_ACTION
-            is_deferred: 0
+            is_deferred: FALSE
   table_constraints: null
   as_select: null
 """,
@@ -779,8 +779,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -790,9 +790,9 @@ CreateTableStmt
         ColumnConstraint
           kind: REFERENCES
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -807,7 +807,7 @@ CreateTableStmt
                 schema: null
             on_delete: NO_ACTION
             on_update: SET_NULL
-            is_deferred: 0
+            is_deferred: FALSE
   table_constraints: null
   as_select: null
 """,
@@ -824,8 +824,8 @@ class ColumnConstraintCollate(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -835,9 +835,9 @@ CreateTableStmt
         ColumnConstraint
           kind: COLLATE
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: "NOCASE"
           generated_storage: VIRTUAL
           default_expr: null
@@ -860,8 +860,8 @@ class ColumnConstraintGenerated(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[2]
     ColumnDef
@@ -875,9 +875,9 @@ CreateTableStmt
         ColumnConstraint
           kind: GENERATED
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: STORED
           default_expr: null
@@ -904,8 +904,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[2]
     ColumnDef
@@ -919,9 +919,9 @@ CreateTableStmt
         ColumnConstraint
           kind: GENERATED
           constraint_name: null
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -952,8 +952,8 @@ class ColumnConstraintName(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -963,9 +963,9 @@ CreateTableStmt
         ColumnConstraint
           kind: NOT_NULL
           constraint_name: "nn"
-          onconf: 0
-          sort_order: 0
-          is_autoincrement: 0
+          onconf: DEFAULT
+          sort_order: ASC
+          is_autoincrement: FALSE
           collation_name: null
           generated_storage: VIRTUAL
           default_expr: null
@@ -988,8 +988,8 @@ class TableConstraintPrimaryKey(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[2]
     ColumnDef
@@ -1004,8 +1004,8 @@ CreateTableStmt
     TableConstraint
       kind: PRIMARY_KEY
       constraint_name: null
-      onconf: 0
-      is_autoincrement: 0
+      onconf: DEFAULT
+      is_autoincrement: FALSE
       columns: OrderByList[2]
         OrderingTerm
           expr: ColumnRef
@@ -1034,8 +1034,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -1046,8 +1046,8 @@ CreateTableStmt
     TableConstraint
       kind: PRIMARY_KEY
       constraint_name: "pk"
-      onconf: 0
-      is_autoincrement: 0
+      onconf: DEFAULT
+      is_autoincrement: FALSE
       columns: OrderByList[1]
         OrderingTerm
           expr: ColumnRef
@@ -1073,8 +1073,8 @@ class TableConstraintUnique(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[2]
     ColumnDef
@@ -1089,8 +1089,8 @@ CreateTableStmt
     TableConstraint
       kind: UNIQUE
       constraint_name: null
-      onconf: 0
-      is_autoincrement: 0
+      onconf: DEFAULT
+      is_autoincrement: FALSE
       columns: OrderByList[2]
         OrderingTerm
           expr: ColumnRef
@@ -1123,8 +1123,8 @@ class TableConstraintCheck(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[2]
     ColumnDef
@@ -1139,8 +1139,8 @@ CreateTableStmt
     TableConstraint
       kind: CHECK
       constraint_name: null
-      onconf: 0
-      is_autoincrement: 0
+      onconf: DEFAULT
+      is_autoincrement: FALSE
       columns: null
       check_expr: BinaryExpr
         op: GT
@@ -1168,8 +1168,8 @@ class TableConstraintForeignKey(TestSuite):
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -1180,8 +1180,8 @@ CreateTableStmt
     TableConstraint
       kind: FOREIGN_KEY
       constraint_name: null
-      onconf: 0
-      is_autoincrement: 0
+      onconf: DEFAULT
+      is_autoincrement: FALSE
       columns: ExprList[1]
         ColumnRef
           column: "a"
@@ -1197,7 +1197,7 @@ CreateTableStmt
             schema: null
         on_delete: NO_ACTION
         on_update: NO_ACTION
-        is_deferred: 0
+        is_deferred: FALSE
   as_select: null
 """,
         )
@@ -1209,8 +1209,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -1221,8 +1221,8 @@ CreateTableStmt
     TableConstraint
       kind: FOREIGN_KEY
       constraint_name: null
-      onconf: 0
-      is_autoincrement: 0
+      onconf: DEFAULT
+      is_autoincrement: FALSE
       columns: ExprList[1]
         ColumnRef
           column: "a"
@@ -1238,7 +1238,7 @@ CreateTableStmt
             schema: null
         on_delete: CASCADE
         on_update: SET_NULL
-        is_deferred: 0
+        is_deferred: FALSE
   as_select: null
 """,
         )
@@ -1250,8 +1250,8 @@ CreateTableStmt
 CreateTableStmt
   table_name: "t"
   schema: null
-  is_temp: 0
-  if_not_exists: 0
+  is_temp: FALSE
+  if_not_exists: FALSE
   flags: (none)
   columns: ColumnDefList[1]
     ColumnDef
@@ -1262,8 +1262,8 @@ CreateTableStmt
     TableConstraint
       kind: FOREIGN_KEY
       constraint_name: null
-      onconf: 0
-      is_autoincrement: 0
+      onconf: DEFAULT
+      is_autoincrement: FALSE
       columns: ExprList[1]
         ColumnRef
           column: "a"
@@ -1279,7 +1279,7 @@ CreateTableStmt
             schema: null
         on_delete: NO_ACTION
         on_update: NO_ACTION
-        is_deferred: 1
+        is_deferred: TRUE
   as_select: null
 """,
         )

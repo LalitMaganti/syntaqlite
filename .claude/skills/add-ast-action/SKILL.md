@@ -33,25 +33,42 @@ Create or edit a Python node definition file in `python/syntaqlite/ast_codegen/n
 
 ```python
 # python/syntaqlite/ast_codegen/nodes/your_module.py
-from ..defs import Node, List, Enum, inline, index
+from ..defs import Node, List, Enum, Flags, inline, index
 
 ENUMS = [
     Enum("YourEnum", "VALUE_A", "VALUE_B"),
 ]
 
+FLAGS = [
+    Flags("YourNodeFlags", OPTION_A=0x01, OPTION_B=0x02),
+]
+
 NODES = [
     Node("YourNode",
-        field1=inline("u8"),                    # Scalars, enums, source spans
-        field2=inline("SyntaqliteSourceSpan"),  # Source text reference
-        field3=index("Expr"),                   # Node reference (nullable)
+        kind=inline("YourEnum"),                # Enum field (prints as VALUE_A, VALUE_B)
+        flags=inline("YourNodeFlags"),          # Flags field (prints as OPTION_A|OPTION_B)
+        is_active=inline("Bool"),               # Boolean field (prints as FALSE/TRUE)
+        name=inline("SyntaqliteSourceSpan"),    # Source text reference
+        child=index("Expr"),                    # Node reference (nullable)
     ),
     List("YourList", child_type="YourNode"),    # Variable-length list
 ]
 ```
 
-**Storage rules**:
-- `inline()`: Scalars, enums, flags, source spans (non-cyclic data)
-- `index()`: Node IDs for references to other AST nodes (nullable via `SYNTAQLITE_NULL_NODE`)
+**Type system**:
+- **Enums**: `Enum("Name", "VAL_A", "VAL_B")` — values are sequential (0, 1, 2...). Referenced as `inline("Name")`. Printed as `VAL_A`, `VAL_B`.
+- **Flags**: `Flags("Name", BIT_A=0x01, BIT_B=0x02)` — bitfield flags. Referenced as `inline("Name")`. Printed as `BIT_A|BIT_B` or `(none)`.
+- **Bool**: Shared `Enum("Bool", "FALSE", "TRUE")` in `_common.py`. Use `inline("Bool")` for all boolean fields. Printed as `FALSE`/`TRUE`.
+- **Source spans**: `inline("SyntaqliteSourceSpan")` for text references.
+- **Node references**: `index("Expr")` etc. — nullable via `SYNTAQLITE_NULL_NODE`.
+
+**Do not use `inline("u8")`** — all integer-like fields should be typed enums, flags, or Bool.
+
+Register the module in `python/syntaqlite/ast_codegen/nodes/__init__.py`:
+```python
+from .your_module import ENUMS as _YOUR_ENUMS, NODES as _YOUR_NODES, FLAGS as _YOUR_FLAGS
+# Append to ENUMS, NODES, and FLAGS lists
+```
 
 **Abstract types** (for index fields): `Expr`, `Stmt`, `TableSource`, `InsertSource`
 
@@ -89,6 +106,10 @@ your_rule(A) ::= SOME_TOKEN(B) expr(C). {
 - Folding away: `expr(A) ::= LP expr(B) RP. { A = B; }` — discard wrapper
 - Multi-token dispatch: `expr(A) ::= expr(L) PLUS|MINUS(OP) expr(R). { ... switch(OP.type) ... }`
 - List building: `list_append(ctx, list_id, child)` — pass `SYNTAQLITE_NULL_NODE` as list_id for first element
+- Enum casts: `(SyntaqliteYourEnum)R` to cast integer nonterminals to enum types
+- Bool values: `SYNTAQLITE_BOOL_FALSE`, `SYNTAQLITE_BOOL_TRUE`, or `(SyntaqliteBool)X` for cast
+- Enum defaults: Use named constants like `SYNTAQLITE_CONFLICT_ACTION_DEFAULT`, `SYNTAQLITE_SORT_ORDER_ASC`
+- Flags: `(SyntaqliteYourFlags){.raw = (uint8_t)F}` for flags compound literals, `{.raw = 0}` for empty
 
 **Precedence annotations**: If the upstream rule has a precedence marker like `[BITNOT]` or `[IN]`, include it in the action file between the `.` and `{`:
 ```c
@@ -130,13 +151,13 @@ class YourTests(TestSuite):
             sql="SELECT your_syntax_here",
             out="""\
 SelectStmt
-  flags: 0
-  ResultColumnList[1]
+  flags: (none)
+  columns: ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
-      YourNode
-        field1: VALUE_A
+      expr: YourNode
+        kind: VALUE_A
         ...
 """,
         )

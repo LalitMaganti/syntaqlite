@@ -19,14 +19,14 @@ ENUMS = [
 ]
 
 FLAGS = [
-    Flags("ResultColumn", STAR=0x01),
-    Flags("SelectStmt", DISTINCT=0x01),
+    Flags("ResultColumnFlags", STAR=0x01),
+    Flags("SelectStmtFlags", DISTINCT=0x01),
 ]
 
 NODES = [
     # Result column: expr [AS alias] or *
     Node("ResultColumn",
-        flags=inline("u8"),
+        flags=inline("ResultColumnFlags"),
         alias=inline("SyntaqliteSourceSpan"),  # Alias (empty if none)
         expr=index("Expr"),                # Expression (nullable for table.*)
     ),
@@ -36,7 +36,7 @@ NODES = [
 
     # SELECT statement
     Node("SelectStmt",
-        flags=inline("u8"),                    # DISTINCT, ALL
+        flags=inline("SelectStmtFlags"),        # DISTINCT, ALL
         columns=index("ResultColumnList"),     # Result columns
         from_clause=index("Expr"),             # FROM clause (TableRef, JoinClause, etc.)
         where=index("Expr"),                   # WHERE clause expression
