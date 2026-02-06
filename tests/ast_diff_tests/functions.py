@@ -15,13 +15,23 @@ class FunctionCallBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "random"
         flags: (none)
+        args: null
+        filter_clause: null
+        over_clause: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -31,17 +41,26 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "abs"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           Literal
             literal_type: INTEGER
             source: "1"
+        filter_clause: null
+        over_clause: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -51,14 +70,14 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "max"
         flags: (none)
-        ExprList[3]
+        args: ExprList[3]
           Literal
             literal_type: INTEGER
             source: "1"
@@ -68,6 +87,15 @@ SelectStmt
           Literal
             literal_type: INTEGER
             source: "3"
+        filter_clause: null
+        over_clause: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -77,13 +105,23 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "count"
         flags: STAR
+        args: null
+        filter_clause: null
+        over_clause: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -93,17 +131,26 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "count"
         flags: DISTINCT
-        ExprList[1]
+        args: ExprList[1]
           Literal
             literal_type: INTEGER
             source: "1"
+        filter_clause: null
+        over_clause: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -113,23 +160,34 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "abs"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           FunctionCall
             func_name: "max"
             flags: (none)
-            ExprList[2]
+            args: ExprList[2]
               Literal
                 literal_type: INTEGER
                 source: "1"
               Literal
                 literal_type: INTEGER
                 source: "2"
+            filter_clause: null
+            over_clause: null
+        filter_clause: null
+        over_clause: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

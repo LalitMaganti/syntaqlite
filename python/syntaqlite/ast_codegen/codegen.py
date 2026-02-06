@@ -460,13 +460,19 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
 
     # Forward declaration
     lines.append("static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,")
-    lines.append("                       const char *source, int depth);")
+    lines.append("                       const char *source, int depth,")
+    lines.append("                       const char *field_name);")
     lines.append("")
 
     # Main print_node function
     lines.append("static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,")
-    lines.append("                       const char *source, int depth) {")
+    lines.append("                       const char *source, int depth,")
+    lines.append("                       const char *field_name) {")
     lines.append("  if (node_id == SYNTAQLITE_NULL_NODE) {")
+    lines.append("    if (field_name) {")
+    lines.append("      ast_print_indent(out, depth);")
+    lines.append('      fprintf(out, "%s: null\\n", field_name);')
+    lines.append("    }")
     lines.append("    return;")
     lines.append("  }")
     lines.append("")
@@ -485,14 +491,17 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
         lines.append("      ast_print_indent(out, depth);")
 
         if isinstance(node, NodeDef):
-            # Print node name
-            lines.append(f'      fprintf(out, "{node.name}\\n");')
+            # Print node name (with field name prefix if provided)
+            lines.append("      if (field_name)")
+            lines.append(f'        fprintf(out, "%s: {node.name}\\n", field_name);')
+            lines.append("      else")
+            lines.append(f'        fprintf(out, "{node.name}\\n");')
 
             # Print each field
             for field_name, field_type in node.fields.items():
                 if isinstance(field_type, IndexField):
-                    # Recursively print child node
-                    lines.append(f"      print_node(out, ast, node->{snake_name}.{field_name}, source, depth + 1);")
+                    # Recursively print child node with field name
+                    lines.append(f'      print_node(out, ast, node->{snake_name}.{field_name}, source, depth + 1, "{field_name}");')
                 elif isinstance(field_type, InlineField):
                     if field_type.type_name == "SyntaqliteSourceSpan":
                         # Source span - print quoted text or "null"
@@ -521,10 +530,13 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
                         lines.append(f'      fprintf(out, "{field_name}: %u\\n", node->{snake_name}.{field_name});')
 
         elif isinstance(node, ListDef):
-            # Print list with count and children
-            lines.append(f'      fprintf(out, "{node.name}[%u]\\n", node->{snake_name}.count);')
+            # Print list with count and children (with field name prefix if provided)
+            lines.append("      if (field_name)")
+            lines.append(f'        fprintf(out, "%s: {node.name}[%u]\\n", field_name, node->{snake_name}.count);')
+            lines.append("      else")
+            lines.append(f'        fprintf(out, "{node.name}[%u]\\n", node->{snake_name}.count);')
             lines.append(f"      for (uint32_t i = 0; i < node->{snake_name}.count; i++) {{")
-            lines.append(f"        print_node(out, ast, node->{snake_name}.children[i], source, depth + 1);")
+            lines.append(f"        print_node(out, ast, node->{snake_name}.children[i], source, depth + 1, NULL);")
             lines.append("      }")
 
         lines.append("      break;")
@@ -542,7 +554,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     # Public function
     lines.append("void syntaqlite_ast_print(FILE *out, SyntaqliteAst *ast, uint32_t node_id,")
     lines.append("                          const char *source) {")
-    lines.append("  print_node(out, ast, node_id, source, 0);")
+    lines.append("  print_node(out, ast, node_id, source, 0, NULL);")
     lines.append("}")
 
     output.write_text("\n".join(lines) + "\n")

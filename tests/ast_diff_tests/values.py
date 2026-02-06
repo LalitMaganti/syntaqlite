@@ -14,7 +14,7 @@ class ValuesClause(TestSuite):
             sql="VALUES (1, 2, 3)",
             out="""\
 ValuesClause
-  ValuesRowList[1]
+  rows: ValuesRowList[1]
     ExprList[3]
       Literal
         literal_type: INTEGER
@@ -33,7 +33,7 @@ ValuesClause
             sql="VALUES (1, 2), (3, 4)",
             out="""\
 ValuesClause
-  ValuesRowList[2]
+  rows: ValuesRowList[2]
     ExprList[2]
       Literal
         literal_type: INTEGER
@@ -56,7 +56,7 @@ ValuesClause
             sql="VALUES (1), (2), (3)",
             out="""\
 ValuesClause
-  ValuesRowList[3]
+  rows: ValuesRowList[3]
     ExprList[1]
       Literal
         literal_type: INTEGER
@@ -77,14 +77,14 @@ ValuesClause
             sql="VALUES (1+2, 'hello')",
             out="""\
 ValuesClause
-  ValuesRowList[1]
+  rows: ValuesRowList[1]
     ExprList[2]
       BinaryExpr
         op: PLUS
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "2"
       Literal
@@ -99,17 +99,24 @@ ValuesClause
             out="""\
 CompoundSelect
   op: UNION
-  SelectStmt
+  left: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "1"
-  ValuesClause
-    ValuesRowList[1]
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
+  right: ValuesClause
+    rows: ValuesRowList[1]
       ExprList[1]
         Literal
           literal_type: INTEGER

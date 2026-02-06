@@ -8,11 +8,17 @@
 #include "src/ast/ast_print.h"
 
 static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
-                       const char *source, int depth);
+                       const char *source, int depth,
+                       const char *field_name);
 
 static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
-                       const char *source, int depth) {
+                       const char *source, int depth,
+                       const char *field_name) {
   if (node_id == SYNTAQLITE_NULL_NODE) {
+    if (field_name) {
+      ast_print_indent(out, depth);
+      fprintf(out, "%s: null\n", field_name);
+    }
     return;
   }
 
@@ -24,26 +30,35 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
   switch (node->tag) {
     case SYNTAQLITE_NODE_BINARY_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "BinaryExpr\n");
+      if (field_name)
+        fprintf(out, "%s: BinaryExpr\n", field_name);
+      else
+        fprintf(out, "BinaryExpr\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "op: %s\n", syntaqlite_binary_op_names[node->binary_expr.op]);
-      print_node(out, ast, node->binary_expr.left, source, depth + 1);
-      print_node(out, ast, node->binary_expr.right, source, depth + 1);
+      print_node(out, ast, node->binary_expr.left, source, depth + 1, "left");
+      print_node(out, ast, node->binary_expr.right, source, depth + 1, "right");
       break;
     }
 
     case SYNTAQLITE_NODE_UNARY_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "UnaryExpr\n");
+      if (field_name)
+        fprintf(out, "%s: UnaryExpr\n", field_name);
+      else
+        fprintf(out, "UnaryExpr\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "op: %s\n", syntaqlite_unary_op_names[node->unary_expr.op]);
-      print_node(out, ast, node->unary_expr.operand, source, depth + 1);
+      print_node(out, ast, node->unary_expr.operand, source, depth + 1, "operand");
       break;
     }
 
     case SYNTAQLITE_NODE_LITERAL: {
       ast_print_indent(out, depth);
-      fprintf(out, "Literal\n");
+      if (field_name)
+        fprintf(out, "%s: Literal\n", field_name);
+      else
+        fprintf(out, "Literal\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "literal_type: %s\n", syntaqlite_literal_type_names[node->literal.literal_type]);
       ast_print_indent(out, depth + 1);
@@ -55,16 +70,22 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_EXPR_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "ExprList[%u]\n", node->expr_list.count);
+      if (field_name)
+        fprintf(out, "%s: ExprList[%u]\n", field_name, node->expr_list.count);
+      else
+        fprintf(out, "ExprList[%u]\n", node->expr_list.count);
       for (uint32_t i = 0; i < node->expr_list.count; i++) {
-        print_node(out, ast, node->expr_list.children[i], source, depth + 1);
+        print_node(out, ast, node->expr_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_RESULT_COLUMN: {
       ast_print_indent(out, depth);
-      fprintf(out, "ResultColumn\n");
+      if (field_name)
+        fprintf(out, "%s: ResultColumn\n", field_name);
+      else
+        fprintf(out, "ResultColumn\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "flags:");
       if (node->result_column.flags.star) fprintf(out, " STAR");
@@ -74,42 +95,51 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "alias: ");
       ast_print_source_span(out, source, node->result_column.alias);
       fprintf(out, "\n");
-      print_node(out, ast, node->result_column.expr, source, depth + 1);
+      print_node(out, ast, node->result_column.expr, source, depth + 1, "expr");
       break;
     }
 
     case SYNTAQLITE_NODE_RESULT_COLUMN_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "ResultColumnList[%u]\n", node->result_column_list.count);
+      if (field_name)
+        fprintf(out, "%s: ResultColumnList[%u]\n", field_name, node->result_column_list.count);
+      else
+        fprintf(out, "ResultColumnList[%u]\n", node->result_column_list.count);
       for (uint32_t i = 0; i < node->result_column_list.count; i++) {
-        print_node(out, ast, node->result_column_list.children[i], source, depth + 1);
+        print_node(out, ast, node->result_column_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_SELECT_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "SelectStmt\n");
+      if (field_name)
+        fprintf(out, "%s: SelectStmt\n", field_name);
+      else
+        fprintf(out, "SelectStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "flags:");
       if (node->select_stmt.flags.distinct) fprintf(out, " DISTINCT");
       if (!node->select_stmt.flags.raw) fprintf(out, " (none)");
       fprintf(out, "\n");
-      print_node(out, ast, node->select_stmt.columns, source, depth + 1);
-      print_node(out, ast, node->select_stmt.from_clause, source, depth + 1);
-      print_node(out, ast, node->select_stmt.where, source, depth + 1);
-      print_node(out, ast, node->select_stmt.groupby, source, depth + 1);
-      print_node(out, ast, node->select_stmt.having, source, depth + 1);
-      print_node(out, ast, node->select_stmt.orderby, source, depth + 1);
-      print_node(out, ast, node->select_stmt.limit_clause, source, depth + 1);
-      print_node(out, ast, node->select_stmt.window_clause, source, depth + 1);
+      print_node(out, ast, node->select_stmt.columns, source, depth + 1, "columns");
+      print_node(out, ast, node->select_stmt.from_clause, source, depth + 1, "from_clause");
+      print_node(out, ast, node->select_stmt.where, source, depth + 1, "where");
+      print_node(out, ast, node->select_stmt.groupby, source, depth + 1, "groupby");
+      print_node(out, ast, node->select_stmt.having, source, depth + 1, "having");
+      print_node(out, ast, node->select_stmt.orderby, source, depth + 1, "orderby");
+      print_node(out, ast, node->select_stmt.limit_clause, source, depth + 1, "limit_clause");
+      print_node(out, ast, node->select_stmt.window_clause, source, depth + 1, "window_clause");
       break;
     }
 
     case SYNTAQLITE_NODE_ORDERING_TERM: {
       ast_print_indent(out, depth);
-      fprintf(out, "OrderingTerm\n");
-      print_node(out, ast, node->ordering_term.expr, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: OrderingTerm\n", field_name);
+      else
+        fprintf(out, "OrderingTerm\n");
+      print_node(out, ast, node->ordering_term.expr, source, depth + 1, "expr");
       ast_print_indent(out, depth + 1);
       fprintf(out, "sort_order: %s\n", syntaqlite_sort_order_names[node->ordering_term.sort_order]);
       ast_print_indent(out, depth + 1);
@@ -119,24 +149,33 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_ORDER_BY_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "OrderByList[%u]\n", node->order_by_list.count);
+      if (field_name)
+        fprintf(out, "%s: OrderByList[%u]\n", field_name, node->order_by_list.count);
+      else
+        fprintf(out, "OrderByList[%u]\n", node->order_by_list.count);
       for (uint32_t i = 0; i < node->order_by_list.count; i++) {
-        print_node(out, ast, node->order_by_list.children[i], source, depth + 1);
+        print_node(out, ast, node->order_by_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_LIMIT_CLAUSE: {
       ast_print_indent(out, depth);
-      fprintf(out, "LimitClause\n");
-      print_node(out, ast, node->limit_clause.limit, source, depth + 1);
-      print_node(out, ast, node->limit_clause.offset, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: LimitClause\n", field_name);
+      else
+        fprintf(out, "LimitClause\n");
+      print_node(out, ast, node->limit_clause.limit, source, depth + 1, "limit");
+      print_node(out, ast, node->limit_clause.offset, source, depth + 1, "offset");
       break;
     }
 
     case SYNTAQLITE_NODE_COLUMN_REF: {
       ast_print_indent(out, depth);
-      fprintf(out, "ColumnRef\n");
+      if (field_name)
+        fprintf(out, "%s: ColumnRef\n", field_name);
+      else
+        fprintf(out, "ColumnRef\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "column: ");
       ast_print_source_span(out, source, node->column_ref.column);
@@ -154,7 +193,10 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_FUNCTION_CALL: {
       ast_print_indent(out, depth);
-      fprintf(out, "FunctionCall\n");
+      if (field_name)
+        fprintf(out, "%s: FunctionCall\n", field_name);
+      else
+        fprintf(out, "FunctionCall\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "func_name: ");
       ast_print_source_span(out, source, node->function_call.func_name);
@@ -165,107 +207,140 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       if (node->function_call.flags.star) fprintf(out, " STAR");
       if (!node->function_call.flags.raw) fprintf(out, " (none)");
       fprintf(out, "\n");
-      print_node(out, ast, node->function_call.args, source, depth + 1);
-      print_node(out, ast, node->function_call.filter_clause, source, depth + 1);
-      print_node(out, ast, node->function_call.over_clause, source, depth + 1);
+      print_node(out, ast, node->function_call.args, source, depth + 1, "args");
+      print_node(out, ast, node->function_call.filter_clause, source, depth + 1, "filter_clause");
+      print_node(out, ast, node->function_call.over_clause, source, depth + 1, "over_clause");
       break;
     }
 
     case SYNTAQLITE_NODE_IS_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "IsExpr\n");
+      if (field_name)
+        fprintf(out, "%s: IsExpr\n", field_name);
+      else
+        fprintf(out, "IsExpr\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "op: %s\n", syntaqlite_is_op_names[node->is_expr.op]);
-      print_node(out, ast, node->is_expr.left, source, depth + 1);
-      print_node(out, ast, node->is_expr.right, source, depth + 1);
+      print_node(out, ast, node->is_expr.left, source, depth + 1, "left");
+      print_node(out, ast, node->is_expr.right, source, depth + 1, "right");
       break;
     }
 
     case SYNTAQLITE_NODE_BETWEEN_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "BetweenExpr\n");
+      if (field_name)
+        fprintf(out, "%s: BetweenExpr\n", field_name);
+      else
+        fprintf(out, "BetweenExpr\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "negated: %u\n", node->between_expr.negated);
-      print_node(out, ast, node->between_expr.operand, source, depth + 1);
-      print_node(out, ast, node->between_expr.low, source, depth + 1);
-      print_node(out, ast, node->between_expr.high, source, depth + 1);
+      print_node(out, ast, node->between_expr.operand, source, depth + 1, "operand");
+      print_node(out, ast, node->between_expr.low, source, depth + 1, "low");
+      print_node(out, ast, node->between_expr.high, source, depth + 1, "high");
       break;
     }
 
     case SYNTAQLITE_NODE_LIKE_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "LikeExpr\n");
+      if (field_name)
+        fprintf(out, "%s: LikeExpr\n", field_name);
+      else
+        fprintf(out, "LikeExpr\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "negated: %u\n", node->like_expr.negated);
-      print_node(out, ast, node->like_expr.operand, source, depth + 1);
-      print_node(out, ast, node->like_expr.pattern, source, depth + 1);
-      print_node(out, ast, node->like_expr.escape, source, depth + 1);
+      print_node(out, ast, node->like_expr.operand, source, depth + 1, "operand");
+      print_node(out, ast, node->like_expr.pattern, source, depth + 1, "pattern");
+      print_node(out, ast, node->like_expr.escape, source, depth + 1, "escape");
       break;
     }
 
     case SYNTAQLITE_NODE_CASE_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "CaseExpr\n");
-      print_node(out, ast, node->case_expr.operand, source, depth + 1);
-      print_node(out, ast, node->case_expr.else_expr, source, depth + 1);
-      print_node(out, ast, node->case_expr.whens, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: CaseExpr\n", field_name);
+      else
+        fprintf(out, "CaseExpr\n");
+      print_node(out, ast, node->case_expr.operand, source, depth + 1, "operand");
+      print_node(out, ast, node->case_expr.else_expr, source, depth + 1, "else_expr");
+      print_node(out, ast, node->case_expr.whens, source, depth + 1, "whens");
       break;
     }
 
     case SYNTAQLITE_NODE_CASE_WHEN: {
       ast_print_indent(out, depth);
-      fprintf(out, "CaseWhen\n");
-      print_node(out, ast, node->case_when.when_expr, source, depth + 1);
-      print_node(out, ast, node->case_when.then_expr, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: CaseWhen\n", field_name);
+      else
+        fprintf(out, "CaseWhen\n");
+      print_node(out, ast, node->case_when.when_expr, source, depth + 1, "when_expr");
+      print_node(out, ast, node->case_when.then_expr, source, depth + 1, "then_expr");
       break;
     }
 
     case SYNTAQLITE_NODE_CASE_WHEN_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "CaseWhenList[%u]\n", node->case_when_list.count);
+      if (field_name)
+        fprintf(out, "%s: CaseWhenList[%u]\n", field_name, node->case_when_list.count);
+      else
+        fprintf(out, "CaseWhenList[%u]\n", node->case_when_list.count);
       for (uint32_t i = 0; i < node->case_when_list.count; i++) {
-        print_node(out, ast, node->case_when_list.children[i], source, depth + 1);
+        print_node(out, ast, node->case_when_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_COMPOUND_SELECT: {
       ast_print_indent(out, depth);
-      fprintf(out, "CompoundSelect\n");
+      if (field_name)
+        fprintf(out, "%s: CompoundSelect\n", field_name);
+      else
+        fprintf(out, "CompoundSelect\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "op: %s\n", syntaqlite_compound_op_names[node->compound_select.op]);
-      print_node(out, ast, node->compound_select.left, source, depth + 1);
-      print_node(out, ast, node->compound_select.right, source, depth + 1);
+      print_node(out, ast, node->compound_select.left, source, depth + 1, "left");
+      print_node(out, ast, node->compound_select.right, source, depth + 1, "right");
       break;
     }
 
     case SYNTAQLITE_NODE_SUBQUERY_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "SubqueryExpr\n");
-      print_node(out, ast, node->subquery_expr.select, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: SubqueryExpr\n", field_name);
+      else
+        fprintf(out, "SubqueryExpr\n");
+      print_node(out, ast, node->subquery_expr.select, source, depth + 1, "select");
       break;
     }
 
     case SYNTAQLITE_NODE_EXISTS_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "ExistsExpr\n");
-      print_node(out, ast, node->exists_expr.select, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: ExistsExpr\n", field_name);
+      else
+        fprintf(out, "ExistsExpr\n");
+      print_node(out, ast, node->exists_expr.select, source, depth + 1, "select");
       break;
     }
 
     case SYNTAQLITE_NODE_IN_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "InExpr\n");
+      if (field_name)
+        fprintf(out, "%s: InExpr\n", field_name);
+      else
+        fprintf(out, "InExpr\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "negated: %u\n", node->in_expr.negated);
-      print_node(out, ast, node->in_expr.operand, source, depth + 1);
-      print_node(out, ast, node->in_expr.source, source, depth + 1);
+      print_node(out, ast, node->in_expr.operand, source, depth + 1, "operand");
+      print_node(out, ast, node->in_expr.source, source, depth + 1, "source");
       break;
     }
 
     case SYNTAQLITE_NODE_VARIABLE: {
       ast_print_indent(out, depth);
-      fprintf(out, "Variable\n");
+      if (field_name)
+        fprintf(out, "%s: Variable\n", field_name);
+      else
+        fprintf(out, "Variable\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "source: ");
       ast_print_source_span(out, source, node->variable.source);
@@ -275,8 +350,11 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_COLLATE_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "CollateExpr\n");
-      print_node(out, ast, node->collate_expr.expr, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: CollateExpr\n", field_name);
+      else
+        fprintf(out, "CollateExpr\n");
+      print_node(out, ast, node->collate_expr.expr, source, depth + 1, "expr");
       ast_print_indent(out, depth + 1);
       fprintf(out, "collation: ");
       ast_print_source_span(out, source, node->collate_expr.collation);
@@ -286,8 +364,11 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_CAST_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "CastExpr\n");
-      print_node(out, ast, node->cast_expr.expr, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: CastExpr\n", field_name);
+      else
+        fprintf(out, "CastExpr\n");
+      print_node(out, ast, node->cast_expr.expr, source, depth + 1, "expr");
       ast_print_indent(out, depth + 1);
       fprintf(out, "type_name: ");
       ast_print_source_span(out, source, node->cast_expr.type_name);
@@ -297,56 +378,74 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_VALUES_ROW_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "ValuesRowList[%u]\n", node->values_row_list.count);
+      if (field_name)
+        fprintf(out, "%s: ValuesRowList[%u]\n", field_name, node->values_row_list.count);
+      else
+        fprintf(out, "ValuesRowList[%u]\n", node->values_row_list.count);
       for (uint32_t i = 0; i < node->values_row_list.count; i++) {
-        print_node(out, ast, node->values_row_list.children[i], source, depth + 1);
+        print_node(out, ast, node->values_row_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_VALUES_CLAUSE: {
       ast_print_indent(out, depth);
-      fprintf(out, "ValuesClause\n");
-      print_node(out, ast, node->values_clause.rows, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: ValuesClause\n", field_name);
+      else
+        fprintf(out, "ValuesClause\n");
+      print_node(out, ast, node->values_clause.rows, source, depth + 1, "rows");
       break;
     }
 
     case SYNTAQLITE_NODE_CTE_DEFINITION: {
       ast_print_indent(out, depth);
-      fprintf(out, "CteDefinition\n");
+      if (field_name)
+        fprintf(out, "%s: CteDefinition\n", field_name);
+      else
+        fprintf(out, "CteDefinition\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "cte_name: ");
       ast_print_source_span(out, source, node->cte_definition.cte_name);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "materialized: %u\n", node->cte_definition.materialized);
-      print_node(out, ast, node->cte_definition.columns, source, depth + 1);
-      print_node(out, ast, node->cte_definition.select, source, depth + 1);
+      print_node(out, ast, node->cte_definition.columns, source, depth + 1, "columns");
+      print_node(out, ast, node->cte_definition.select, source, depth + 1, "select");
       break;
     }
 
     case SYNTAQLITE_NODE_CTE_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "CteList[%u]\n", node->cte_list.count);
+      if (field_name)
+        fprintf(out, "%s: CteList[%u]\n", field_name, node->cte_list.count);
+      else
+        fprintf(out, "CteList[%u]\n", node->cte_list.count);
       for (uint32_t i = 0; i < node->cte_list.count; i++) {
-        print_node(out, ast, node->cte_list.children[i], source, depth + 1);
+        print_node(out, ast, node->cte_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_WITH_CLAUSE: {
       ast_print_indent(out, depth);
-      fprintf(out, "WithClause\n");
+      if (field_name)
+        fprintf(out, "%s: WithClause\n", field_name);
+      else
+        fprintf(out, "WithClause\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "recursive: %u\n", node->with_clause.recursive);
-      print_node(out, ast, node->with_clause.ctes, source, depth + 1);
-      print_node(out, ast, node->with_clause.select, source, depth + 1);
+      print_node(out, ast, node->with_clause.ctes, source, depth + 1, "ctes");
+      print_node(out, ast, node->with_clause.select, source, depth + 1, "select");
       break;
     }
 
     case SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL: {
       ast_print_indent(out, depth);
-      fprintf(out, "AggregateFunctionCall\n");
+      if (field_name)
+        fprintf(out, "%s: AggregateFunctionCall\n", field_name);
+      else
+        fprintf(out, "AggregateFunctionCall\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "func_name: ");
       ast_print_source_span(out, source, node->aggregate_function_call.func_name);
@@ -356,25 +455,31 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       if (node->aggregate_function_call.flags.distinct) fprintf(out, " DISTINCT");
       if (!node->aggregate_function_call.flags.raw) fprintf(out, " (none)");
       fprintf(out, "\n");
-      print_node(out, ast, node->aggregate_function_call.args, source, depth + 1);
-      print_node(out, ast, node->aggregate_function_call.orderby, source, depth + 1);
-      print_node(out, ast, node->aggregate_function_call.filter_clause, source, depth + 1);
-      print_node(out, ast, node->aggregate_function_call.over_clause, source, depth + 1);
+      print_node(out, ast, node->aggregate_function_call.args, source, depth + 1, "args");
+      print_node(out, ast, node->aggregate_function_call.orderby, source, depth + 1, "orderby");
+      print_node(out, ast, node->aggregate_function_call.filter_clause, source, depth + 1, "filter_clause");
+      print_node(out, ast, node->aggregate_function_call.over_clause, source, depth + 1, "over_clause");
       break;
     }
 
     case SYNTAQLITE_NODE_RAISE_EXPR: {
       ast_print_indent(out, depth);
-      fprintf(out, "RaiseExpr\n");
+      if (field_name)
+        fprintf(out, "%s: RaiseExpr\n", field_name);
+      else
+        fprintf(out, "RaiseExpr\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "raise_type: %s\n", syntaqlite_raise_type_names[node->raise_expr.raise_type]);
-      print_node(out, ast, node->raise_expr.error_message, source, depth + 1);
+      print_node(out, ast, node->raise_expr.error_message, source, depth + 1, "error_message");
       break;
     }
 
     case SYNTAQLITE_NODE_TABLE_REF: {
       ast_print_indent(out, depth);
-      fprintf(out, "TableRef\n");
+      if (field_name)
+        fprintf(out, "%s: TableRef\n", field_name);
+      else
+        fprintf(out, "TableRef\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "table_name: ");
       ast_print_source_span(out, source, node->table_ref.table_name);
@@ -392,8 +497,11 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE: {
       ast_print_indent(out, depth);
-      fprintf(out, "SubqueryTableSource\n");
-      print_node(out, ast, node->subquery_table_source.select, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: SubqueryTableSource\n", field_name);
+      else
+        fprintf(out, "SubqueryTableSource\n");
+      print_node(out, ast, node->subquery_table_source.select, source, depth + 1, "select");
       ast_print_indent(out, depth + 1);
       fprintf(out, "alias: ");
       ast_print_source_span(out, source, node->subquery_table_source.alias);
@@ -403,20 +511,26 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_JOIN_CLAUSE: {
       ast_print_indent(out, depth);
-      fprintf(out, "JoinClause\n");
+      if (field_name)
+        fprintf(out, "%s: JoinClause\n", field_name);
+      else
+        fprintf(out, "JoinClause\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "join_type: %s\n", syntaqlite_join_type_names[node->join_clause.join_type]);
-      print_node(out, ast, node->join_clause.left, source, depth + 1);
-      print_node(out, ast, node->join_clause.right, source, depth + 1);
-      print_node(out, ast, node->join_clause.on_expr, source, depth + 1);
-      print_node(out, ast, node->join_clause.using_columns, source, depth + 1);
+      print_node(out, ast, node->join_clause.left, source, depth + 1, "left");
+      print_node(out, ast, node->join_clause.right, source, depth + 1, "right");
+      print_node(out, ast, node->join_clause.on_expr, source, depth + 1, "on_expr");
+      print_node(out, ast, node->join_clause.using_columns, source, depth + 1, "using_columns");
       break;
     }
 
     case SYNTAQLITE_NODE_JOIN_PREFIX: {
       ast_print_indent(out, depth);
-      fprintf(out, "JoinPrefix\n");
-      print_node(out, ast, node->join_prefix.source, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: JoinPrefix\n", field_name);
+      else
+        fprintf(out, "JoinPrefix\n");
+      print_node(out, ast, node->join_prefix.source, source, depth + 1, "source");
       ast_print_indent(out, depth + 1);
       fprintf(out, "join_type: %s\n", syntaqlite_join_type_names[node->join_prefix.join_type]);
       break;
@@ -424,59 +538,77 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_DELETE_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "DeleteStmt\n");
-      print_node(out, ast, node->delete_stmt.table, source, depth + 1);
-      print_node(out, ast, node->delete_stmt.where, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: DeleteStmt\n", field_name);
+      else
+        fprintf(out, "DeleteStmt\n");
+      print_node(out, ast, node->delete_stmt.table, source, depth + 1, "table");
+      print_node(out, ast, node->delete_stmt.where, source, depth + 1, "where");
       break;
     }
 
     case SYNTAQLITE_NODE_SET_CLAUSE: {
       ast_print_indent(out, depth);
-      fprintf(out, "SetClause\n");
+      if (field_name)
+        fprintf(out, "%s: SetClause\n", field_name);
+      else
+        fprintf(out, "SetClause\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "column: ");
       ast_print_source_span(out, source, node->set_clause.column);
       fprintf(out, "\n");
-      print_node(out, ast, node->set_clause.columns, source, depth + 1);
-      print_node(out, ast, node->set_clause.value, source, depth + 1);
+      print_node(out, ast, node->set_clause.columns, source, depth + 1, "columns");
+      print_node(out, ast, node->set_clause.value, source, depth + 1, "value");
       break;
     }
 
     case SYNTAQLITE_NODE_SET_CLAUSE_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "SetClauseList[%u]\n", node->set_clause_list.count);
+      if (field_name)
+        fprintf(out, "%s: SetClauseList[%u]\n", field_name, node->set_clause_list.count);
+      else
+        fprintf(out, "SetClauseList[%u]\n", node->set_clause_list.count);
       for (uint32_t i = 0; i < node->set_clause_list.count; i++) {
-        print_node(out, ast, node->set_clause_list.children[i], source, depth + 1);
+        print_node(out, ast, node->set_clause_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_UPDATE_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "UpdateStmt\n");
+      if (field_name)
+        fprintf(out, "%s: UpdateStmt\n", field_name);
+      else
+        fprintf(out, "UpdateStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "conflict_action: %s\n", syntaqlite_conflict_action_names[node->update_stmt.conflict_action]);
-      print_node(out, ast, node->update_stmt.table, source, depth + 1);
-      print_node(out, ast, node->update_stmt.setlist, source, depth + 1);
-      print_node(out, ast, node->update_stmt.from_clause, source, depth + 1);
-      print_node(out, ast, node->update_stmt.where, source, depth + 1);
+      print_node(out, ast, node->update_stmt.table, source, depth + 1, "table");
+      print_node(out, ast, node->update_stmt.setlist, source, depth + 1, "setlist");
+      print_node(out, ast, node->update_stmt.from_clause, source, depth + 1, "from_clause");
+      print_node(out, ast, node->update_stmt.where, source, depth + 1, "where");
       break;
     }
 
     case SYNTAQLITE_NODE_INSERT_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "InsertStmt\n");
+      if (field_name)
+        fprintf(out, "%s: InsertStmt\n", field_name);
+      else
+        fprintf(out, "InsertStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "conflict_action: %s\n", syntaqlite_conflict_action_names[node->insert_stmt.conflict_action]);
-      print_node(out, ast, node->insert_stmt.table, source, depth + 1);
-      print_node(out, ast, node->insert_stmt.columns, source, depth + 1);
-      print_node(out, ast, node->insert_stmt.source, source, depth + 1);
+      print_node(out, ast, node->insert_stmt.table, source, depth + 1, "table");
+      print_node(out, ast, node->insert_stmt.columns, source, depth + 1, "columns");
+      print_node(out, ast, node->insert_stmt.source, source, depth + 1, "source");
       break;
     }
 
     case SYNTAQLITE_NODE_QUALIFIED_NAME: {
       ast_print_indent(out, depth);
-      fprintf(out, "QualifiedName\n");
+      if (field_name)
+        fprintf(out, "%s: QualifiedName\n", field_name);
+      else
+        fprintf(out, "QualifiedName\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "object_name: ");
       ast_print_source_span(out, source, node->qualified_name.object_name);
@@ -490,21 +622,27 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_DROP_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "DropStmt\n");
+      if (field_name)
+        fprintf(out, "%s: DropStmt\n", field_name);
+      else
+        fprintf(out, "DropStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "object_type: %s\n", syntaqlite_drop_object_type_names[node->drop_stmt.object_type]);
       ast_print_indent(out, depth + 1);
       fprintf(out, "if_exists: %u\n", node->drop_stmt.if_exists);
-      print_node(out, ast, node->drop_stmt.target, source, depth + 1);
+      print_node(out, ast, node->drop_stmt.target, source, depth + 1, "target");
       break;
     }
 
     case SYNTAQLITE_NODE_ALTER_TABLE_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "AlterTableStmt\n");
+      if (field_name)
+        fprintf(out, "%s: AlterTableStmt\n", field_name);
+      else
+        fprintf(out, "AlterTableStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "op: %s\n", syntaqlite_alter_op_names[node->alter_table_stmt.op]);
-      print_node(out, ast, node->alter_table_stmt.target, source, depth + 1);
+      print_node(out, ast, node->alter_table_stmt.target, source, depth + 1, "target");
       ast_print_indent(out, depth + 1);
       fprintf(out, "new_name: ");
       ast_print_source_span(out, source, node->alter_table_stmt.new_name);
@@ -518,7 +656,10 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_TRANSACTION_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "TransactionStmt\n");
+      if (field_name)
+        fprintf(out, "%s: TransactionStmt\n", field_name);
+      else
+        fprintf(out, "TransactionStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "op: %s\n", syntaqlite_transaction_op_names[node->transaction_stmt.op]);
       ast_print_indent(out, depth + 1);
@@ -528,7 +669,10 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_SAVEPOINT_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "SavepointStmt\n");
+      if (field_name)
+        fprintf(out, "%s: SavepointStmt\n", field_name);
+      else
+        fprintf(out, "SavepointStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "op: %s\n", syntaqlite_savepoint_op_names[node->savepoint_stmt.op]);
       ast_print_indent(out, depth + 1);
@@ -540,7 +684,10 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_PRAGMA_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "PragmaStmt\n");
+      if (field_name)
+        fprintf(out, "%s: PragmaStmt\n", field_name);
+      else
+        fprintf(out, "PragmaStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "pragma_name: ");
       ast_print_source_span(out, source, node->pragma_stmt.pragma_name);
@@ -560,7 +707,10 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_ANALYZE_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "AnalyzeStmt\n");
+      if (field_name)
+        fprintf(out, "%s: AnalyzeStmt\n", field_name);
+      else
+        fprintf(out, "AnalyzeStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "target_name: ");
       ast_print_source_span(out, source, node->analyze_stmt.target_name);
@@ -576,43 +726,58 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_ATTACH_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "AttachStmt\n");
-      print_node(out, ast, node->attach_stmt.filename, source, depth + 1);
-      print_node(out, ast, node->attach_stmt.db_name, source, depth + 1);
-      print_node(out, ast, node->attach_stmt.key, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: AttachStmt\n", field_name);
+      else
+        fprintf(out, "AttachStmt\n");
+      print_node(out, ast, node->attach_stmt.filename, source, depth + 1, "filename");
+      print_node(out, ast, node->attach_stmt.db_name, source, depth + 1, "db_name");
+      print_node(out, ast, node->attach_stmt.key, source, depth + 1, "key");
       break;
     }
 
     case SYNTAQLITE_NODE_DETACH_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "DetachStmt\n");
-      print_node(out, ast, node->detach_stmt.db_name, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: DetachStmt\n", field_name);
+      else
+        fprintf(out, "DetachStmt\n");
+      print_node(out, ast, node->detach_stmt.db_name, source, depth + 1, "db_name");
       break;
     }
 
     case SYNTAQLITE_NODE_VACUUM_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "VacuumStmt\n");
+      if (field_name)
+        fprintf(out, "%s: VacuumStmt\n", field_name);
+      else
+        fprintf(out, "VacuumStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
       ast_print_source_span(out, source, node->vacuum_stmt.schema);
       fprintf(out, "\n");
-      print_node(out, ast, node->vacuum_stmt.into_expr, source, depth + 1);
+      print_node(out, ast, node->vacuum_stmt.into_expr, source, depth + 1, "into_expr");
       break;
     }
 
     case SYNTAQLITE_NODE_EXPLAIN_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "ExplainStmt\n");
+      if (field_name)
+        fprintf(out, "%s: ExplainStmt\n", field_name);
+      else
+        fprintf(out, "ExplainStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "explain_mode: %s\n", syntaqlite_explain_mode_names[node->explain_stmt.explain_mode]);
-      print_node(out, ast, node->explain_stmt.stmt, source, depth + 1);
+      print_node(out, ast, node->explain_stmt.stmt, source, depth + 1, "stmt");
       break;
     }
 
     case SYNTAQLITE_NODE_CREATE_INDEX_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "CreateIndexStmt\n");
+      if (field_name)
+        fprintf(out, "%s: CreateIndexStmt\n", field_name);
+      else
+        fprintf(out, "CreateIndexStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "index_name: ");
       ast_print_source_span(out, source, node->create_index_stmt.index_name);
@@ -629,14 +794,17 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "is_unique: %u\n", node->create_index_stmt.is_unique);
       ast_print_indent(out, depth + 1);
       fprintf(out, "if_not_exists: %u\n", node->create_index_stmt.if_not_exists);
-      print_node(out, ast, node->create_index_stmt.columns, source, depth + 1);
-      print_node(out, ast, node->create_index_stmt.where, source, depth + 1);
+      print_node(out, ast, node->create_index_stmt.columns, source, depth + 1, "columns");
+      print_node(out, ast, node->create_index_stmt.where, source, depth + 1, "where");
       break;
     }
 
     case SYNTAQLITE_NODE_CREATE_VIEW_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "CreateViewStmt\n");
+      if (field_name)
+        fprintf(out, "%s: CreateViewStmt\n", field_name);
+      else
+        fprintf(out, "CreateViewStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "view_name: ");
       ast_print_source_span(out, source, node->create_view_stmt.view_name);
@@ -649,19 +817,22 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "is_temp: %u\n", node->create_view_stmt.is_temp);
       ast_print_indent(out, depth + 1);
       fprintf(out, "if_not_exists: %u\n", node->create_view_stmt.if_not_exists);
-      print_node(out, ast, node->create_view_stmt.column_names, source, depth + 1);
-      print_node(out, ast, node->create_view_stmt.select, source, depth + 1);
+      print_node(out, ast, node->create_view_stmt.column_names, source, depth + 1, "column_names");
+      print_node(out, ast, node->create_view_stmt.select, source, depth + 1, "select");
       break;
     }
 
     case SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE: {
       ast_print_indent(out, depth);
-      fprintf(out, "ForeignKeyClause\n");
+      if (field_name)
+        fprintf(out, "%s: ForeignKeyClause\n", field_name);
+      else
+        fprintf(out, "ForeignKeyClause\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "ref_table: ");
       ast_print_source_span(out, source, node->foreign_key_clause.ref_table);
       fprintf(out, "\n");
-      print_node(out, ast, node->foreign_key_clause.ref_columns, source, depth + 1);
+      print_node(out, ast, node->foreign_key_clause.ref_columns, source, depth + 1, "ref_columns");
       ast_print_indent(out, depth + 1);
       fprintf(out, "on_delete: %s\n", syntaqlite_foreign_key_action_names[node->foreign_key_clause.on_delete]);
       ast_print_indent(out, depth + 1);
@@ -673,7 +844,10 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_COLUMN_CONSTRAINT: {
       ast_print_indent(out, depth);
-      fprintf(out, "ColumnConstraint\n");
+      if (field_name)
+        fprintf(out, "%s: ColumnConstraint\n", field_name);
+      else
+        fprintf(out, "ColumnConstraint\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "kind: %s\n", syntaqlite_column_constraint_kind_names[node->column_constraint.kind]);
       ast_print_indent(out, depth + 1);
@@ -692,25 +866,31 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "generated_storage: %s\n", syntaqlite_generated_column_storage_names[node->column_constraint.generated_storage]);
-      print_node(out, ast, node->column_constraint.default_expr, source, depth + 1);
-      print_node(out, ast, node->column_constraint.check_expr, source, depth + 1);
-      print_node(out, ast, node->column_constraint.generated_expr, source, depth + 1);
-      print_node(out, ast, node->column_constraint.fk_clause, source, depth + 1);
+      print_node(out, ast, node->column_constraint.default_expr, source, depth + 1, "default_expr");
+      print_node(out, ast, node->column_constraint.check_expr, source, depth + 1, "check_expr");
+      print_node(out, ast, node->column_constraint.generated_expr, source, depth + 1, "generated_expr");
+      print_node(out, ast, node->column_constraint.fk_clause, source, depth + 1, "fk_clause");
       break;
     }
 
     case SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "ColumnConstraintList[%u]\n", node->column_constraint_list.count);
+      if (field_name)
+        fprintf(out, "%s: ColumnConstraintList[%u]\n", field_name, node->column_constraint_list.count);
+      else
+        fprintf(out, "ColumnConstraintList[%u]\n", node->column_constraint_list.count);
       for (uint32_t i = 0; i < node->column_constraint_list.count; i++) {
-        print_node(out, ast, node->column_constraint_list.children[i], source, depth + 1);
+        print_node(out, ast, node->column_constraint_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_COLUMN_DEF: {
       ast_print_indent(out, depth);
-      fprintf(out, "ColumnDef\n");
+      if (field_name)
+        fprintf(out, "%s: ColumnDef\n", field_name);
+      else
+        fprintf(out, "ColumnDef\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "column_name: ");
       ast_print_source_span(out, source, node->column_def.column_name);
@@ -719,22 +899,28 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "type_name: ");
       ast_print_source_span(out, source, node->column_def.type_name);
       fprintf(out, "\n");
-      print_node(out, ast, node->column_def.constraints, source, depth + 1);
+      print_node(out, ast, node->column_def.constraints, source, depth + 1, "constraints");
       break;
     }
 
     case SYNTAQLITE_NODE_COLUMN_DEF_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "ColumnDefList[%u]\n", node->column_def_list.count);
+      if (field_name)
+        fprintf(out, "%s: ColumnDefList[%u]\n", field_name, node->column_def_list.count);
+      else
+        fprintf(out, "ColumnDefList[%u]\n", node->column_def_list.count);
       for (uint32_t i = 0; i < node->column_def_list.count; i++) {
-        print_node(out, ast, node->column_def_list.children[i], source, depth + 1);
+        print_node(out, ast, node->column_def_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_TABLE_CONSTRAINT: {
       ast_print_indent(out, depth);
-      fprintf(out, "TableConstraint\n");
+      if (field_name)
+        fprintf(out, "%s: TableConstraint\n", field_name);
+      else
+        fprintf(out, "TableConstraint\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "kind: %s\n", syntaqlite_table_constraint_kind_names[node->table_constraint.kind]);
       ast_print_indent(out, depth + 1);
@@ -745,24 +931,30 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "onconf: %u\n", node->table_constraint.onconf);
       ast_print_indent(out, depth + 1);
       fprintf(out, "is_autoincrement: %u\n", node->table_constraint.is_autoincrement);
-      print_node(out, ast, node->table_constraint.columns, source, depth + 1);
-      print_node(out, ast, node->table_constraint.check_expr, source, depth + 1);
-      print_node(out, ast, node->table_constraint.fk_clause, source, depth + 1);
+      print_node(out, ast, node->table_constraint.columns, source, depth + 1, "columns");
+      print_node(out, ast, node->table_constraint.check_expr, source, depth + 1, "check_expr");
+      print_node(out, ast, node->table_constraint.fk_clause, source, depth + 1, "fk_clause");
       break;
     }
 
     case SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "TableConstraintList[%u]\n", node->table_constraint_list.count);
+      if (field_name)
+        fprintf(out, "%s: TableConstraintList[%u]\n", field_name, node->table_constraint_list.count);
+      else
+        fprintf(out, "TableConstraintList[%u]\n", node->table_constraint_list.count);
       for (uint32_t i = 0; i < node->table_constraint_list.count; i++) {
-        print_node(out, ast, node->table_constraint_list.children[i], source, depth + 1);
+        print_node(out, ast, node->table_constraint_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_CREATE_TABLE_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "CreateTableStmt\n");
+      if (field_name)
+        fprintf(out, "%s: CreateTableStmt\n", field_name);
+      else
+        fprintf(out, "CreateTableStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "table_name: ");
       ast_print_source_span(out, source, node->create_table_stmt.table_name);
@@ -776,81 +968,106 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth + 1);
       fprintf(out, "if_not_exists: %u\n", node->create_table_stmt.if_not_exists);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "table_options: %u\n", node->create_table_stmt.table_options);
-      print_node(out, ast, node->create_table_stmt.columns, source, depth + 1);
-      print_node(out, ast, node->create_table_stmt.table_constraints, source, depth + 1);
-      print_node(out, ast, node->create_table_stmt.as_select, source, depth + 1);
+      fprintf(out, "flags:");
+      if (node->create_table_stmt.flags.without_rowid) fprintf(out, " WITHOUT_ROWID");
+      if (node->create_table_stmt.flags.strict) fprintf(out, " STRICT");
+      if (!node->create_table_stmt.flags.raw) fprintf(out, " (none)");
+      fprintf(out, "\n");
+      print_node(out, ast, node->create_table_stmt.columns, source, depth + 1, "columns");
+      print_node(out, ast, node->create_table_stmt.table_constraints, source, depth + 1, "table_constraints");
+      print_node(out, ast, node->create_table_stmt.as_select, source, depth + 1, "as_select");
       break;
     }
 
     case SYNTAQLITE_NODE_FRAME_BOUND: {
       ast_print_indent(out, depth);
-      fprintf(out, "FrameBound\n");
+      if (field_name)
+        fprintf(out, "%s: FrameBound\n", field_name);
+      else
+        fprintf(out, "FrameBound\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "bound_type: %s\n", syntaqlite_frame_bound_type_names[node->frame_bound.bound_type]);
-      print_node(out, ast, node->frame_bound.expr, source, depth + 1);
+      print_node(out, ast, node->frame_bound.expr, source, depth + 1, "expr");
       break;
     }
 
     case SYNTAQLITE_NODE_FRAME_SPEC: {
       ast_print_indent(out, depth);
-      fprintf(out, "FrameSpec\n");
+      if (field_name)
+        fprintf(out, "%s: FrameSpec\n", field_name);
+      else
+        fprintf(out, "FrameSpec\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "frame_type: %s\n", syntaqlite_frame_type_names[node->frame_spec.frame_type]);
       ast_print_indent(out, depth + 1);
       fprintf(out, "exclude: %s\n", syntaqlite_frame_exclude_names[node->frame_spec.exclude]);
-      print_node(out, ast, node->frame_spec.start_bound, source, depth + 1);
-      print_node(out, ast, node->frame_spec.end_bound, source, depth + 1);
+      print_node(out, ast, node->frame_spec.start_bound, source, depth + 1, "start_bound");
+      print_node(out, ast, node->frame_spec.end_bound, source, depth + 1, "end_bound");
       break;
     }
 
     case SYNTAQLITE_NODE_WINDOW_DEF: {
       ast_print_indent(out, depth);
-      fprintf(out, "WindowDef\n");
+      if (field_name)
+        fprintf(out, "%s: WindowDef\n", field_name);
+      else
+        fprintf(out, "WindowDef\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "base_window_name: ");
       ast_print_source_span(out, source, node->window_def.base_window_name);
       fprintf(out, "\n");
-      print_node(out, ast, node->window_def.partition_by, source, depth + 1);
-      print_node(out, ast, node->window_def.orderby, source, depth + 1);
-      print_node(out, ast, node->window_def.frame, source, depth + 1);
+      print_node(out, ast, node->window_def.partition_by, source, depth + 1, "partition_by");
+      print_node(out, ast, node->window_def.orderby, source, depth + 1, "orderby");
+      print_node(out, ast, node->window_def.frame, source, depth + 1, "frame");
       break;
     }
 
     case SYNTAQLITE_NODE_WINDOW_DEF_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "WindowDefList[%u]\n", node->window_def_list.count);
+      if (field_name)
+        fprintf(out, "%s: WindowDefList[%u]\n", field_name, node->window_def_list.count);
+      else
+        fprintf(out, "WindowDefList[%u]\n", node->window_def_list.count);
       for (uint32_t i = 0; i < node->window_def_list.count; i++) {
-        print_node(out, ast, node->window_def_list.children[i], source, depth + 1);
+        print_node(out, ast, node->window_def_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_NAMED_WINDOW_DEF: {
       ast_print_indent(out, depth);
-      fprintf(out, "NamedWindowDef\n");
+      if (field_name)
+        fprintf(out, "%s: NamedWindowDef\n", field_name);
+      else
+        fprintf(out, "NamedWindowDef\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "window_name: ");
       ast_print_source_span(out, source, node->named_window_def.window_name);
       fprintf(out, "\n");
-      print_node(out, ast, node->named_window_def.window_def, source, depth + 1);
+      print_node(out, ast, node->named_window_def.window_def, source, depth + 1, "window_def");
       break;
     }
 
     case SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "NamedWindowDefList[%u]\n", node->named_window_def_list.count);
+      if (field_name)
+        fprintf(out, "%s: NamedWindowDefList[%u]\n", field_name, node->named_window_def_list.count);
+      else
+        fprintf(out, "NamedWindowDefList[%u]\n", node->named_window_def_list.count);
       for (uint32_t i = 0; i < node->named_window_def_list.count; i++) {
-        print_node(out, ast, node->named_window_def_list.children[i], source, depth + 1);
+        print_node(out, ast, node->named_window_def_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_FILTER_OVER: {
       ast_print_indent(out, depth);
-      fprintf(out, "FilterOver\n");
-      print_node(out, ast, node->filter_over.filter_expr, source, depth + 1);
-      print_node(out, ast, node->filter_over.over_def, source, depth + 1);
+      if (field_name)
+        fprintf(out, "%s: FilterOver\n", field_name);
+      else
+        fprintf(out, "FilterOver\n");
+      print_node(out, ast, node->filter_over.filter_expr, source, depth + 1, "filter_expr");
+      print_node(out, ast, node->filter_over.over_def, source, depth + 1, "over_def");
       ast_print_indent(out, depth + 1);
       fprintf(out, "over_name: ");
       ast_print_source_span(out, source, node->filter_over.over_name);
@@ -860,25 +1077,34 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
     case SYNTAQLITE_NODE_TRIGGER_EVENT: {
       ast_print_indent(out, depth);
-      fprintf(out, "TriggerEvent\n");
+      if (field_name)
+        fprintf(out, "%s: TriggerEvent\n", field_name);
+      else
+        fprintf(out, "TriggerEvent\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "event_type: %s\n", syntaqlite_trigger_event_type_names[node->trigger_event.event_type]);
-      print_node(out, ast, node->trigger_event.columns, source, depth + 1);
+      print_node(out, ast, node->trigger_event.columns, source, depth + 1, "columns");
       break;
     }
 
     case SYNTAQLITE_NODE_TRIGGER_CMD_LIST: {
       ast_print_indent(out, depth);
-      fprintf(out, "TriggerCmdList[%u]\n", node->trigger_cmd_list.count);
+      if (field_name)
+        fprintf(out, "%s: TriggerCmdList[%u]\n", field_name, node->trigger_cmd_list.count);
+      else
+        fprintf(out, "TriggerCmdList[%u]\n", node->trigger_cmd_list.count);
       for (uint32_t i = 0; i < node->trigger_cmd_list.count; i++) {
-        print_node(out, ast, node->trigger_cmd_list.children[i], source, depth + 1);
+        print_node(out, ast, node->trigger_cmd_list.children[i], source, depth + 1, NULL);
       }
       break;
     }
 
     case SYNTAQLITE_NODE_CREATE_TRIGGER_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "CreateTriggerStmt\n");
+      if (field_name)
+        fprintf(out, "%s: CreateTriggerStmt\n", field_name);
+      else
+        fprintf(out, "CreateTriggerStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "trigger_name: ");
       ast_print_source_span(out, source, node->create_trigger_stmt.trigger_name);
@@ -893,16 +1119,19 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "if_not_exists: %u\n", node->create_trigger_stmt.if_not_exists);
       ast_print_indent(out, depth + 1);
       fprintf(out, "timing: %s\n", syntaqlite_trigger_timing_names[node->create_trigger_stmt.timing]);
-      print_node(out, ast, node->create_trigger_stmt.event, source, depth + 1);
-      print_node(out, ast, node->create_trigger_stmt.table, source, depth + 1);
-      print_node(out, ast, node->create_trigger_stmt.when_expr, source, depth + 1);
-      print_node(out, ast, node->create_trigger_stmt.body, source, depth + 1);
+      print_node(out, ast, node->create_trigger_stmt.event, source, depth + 1, "event");
+      print_node(out, ast, node->create_trigger_stmt.table, source, depth + 1, "table");
+      print_node(out, ast, node->create_trigger_stmt.when_expr, source, depth + 1, "when_expr");
+      print_node(out, ast, node->create_trigger_stmt.body, source, depth + 1, "body");
       break;
     }
 
     case SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT: {
       ast_print_indent(out, depth);
-      fprintf(out, "CreateVirtualTableStmt\n");
+      if (field_name)
+        fprintf(out, "%s: CreateVirtualTableStmt\n", field_name);
+      else
+        fprintf(out, "CreateVirtualTableStmt\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "table_name: ");
       ast_print_source_span(out, source, node->create_virtual_table_stmt.table_name);
@@ -933,5 +1162,5 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
 
 void syntaqlite_ast_print(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
                           const char *source) {
-  print_node(out, ast, node_id, source, 0);
+  print_node(out, ast, node_id, source, 0, NULL);
 }

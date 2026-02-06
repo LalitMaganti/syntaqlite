@@ -15,12 +15,19 @@ class BindParameters(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Variable
+      expr: Variable
         source: "?"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -30,12 +37,19 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Variable
+      expr: Variable
         source: "?1"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -45,12 +59,19 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Variable
+      expr: Variable
         source: ":name"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -60,12 +81,19 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Variable
+      expr: Variable
         source: "@name"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -75,12 +103,19 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Variable
+      expr: Variable
         source: "$name"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -94,15 +129,22 @@ class CollateExpressions(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CollateExpr
-        Literal
+      expr: CollateExpr
+        expr: Literal
           literal_type: INTEGER
           source: "1"
         collation: "NOCASE"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -112,15 +154,22 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CollateExpr
-        Literal
+      expr: CollateExpr
+        expr: Literal
           literal_type: STRING
           source: "'hello'"
         collation: "BINARY"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -134,13 +183,20 @@ class DateTimeKeywords(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: CURRENT
         source: "CURRENT_TIME"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -150,13 +206,20 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: CURRENT
         source: "CURRENT_DATE"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -166,12 +229,19 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: CURRENT
         source: "CURRENT_TIMESTAMP"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

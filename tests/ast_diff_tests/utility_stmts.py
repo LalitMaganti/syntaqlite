@@ -137,13 +137,14 @@ class AttachDetachStmts(TestSuite):
             sql="ATTACH 'file.db' AS db2",
             out="""\
 AttachStmt
-  Literal
+  filename: Literal
     literal_type: STRING
     source: "'file.db'"
-  ColumnRef
+  db_name: ColumnRef
     column: "db2"
     table: null
     schema: null
+  key: null
 """,
         )
 
@@ -152,13 +153,14 @@ AttachStmt
             sql="ATTACH DATABASE 'file.db' AS db2",
             out="""\
 AttachStmt
-  Literal
+  filename: Literal
     literal_type: STRING
     source: "'file.db'"
-  ColumnRef
+  db_name: ColumnRef
     column: "db2"
     table: null
     schema: null
+  key: null
 """,
         )
 
@@ -167,7 +169,7 @@ AttachStmt
             sql="DETACH db2",
             out="""\
 DetachStmt
-  ColumnRef
+  db_name: ColumnRef
     column: "db2"
     table: null
     schema: null
@@ -179,7 +181,7 @@ DetachStmt
             sql="DETACH DATABASE db2",
             out="""\
 DetachStmt
-  ColumnRef
+  db_name: ColumnRef
     column: "db2"
     table: null
     schema: null
@@ -196,6 +198,7 @@ class VacuumStmts(TestSuite):
             out="""\
 VacuumStmt
   schema: null
+  into_expr: null
 """,
         )
 
@@ -205,7 +208,7 @@ VacuumStmt
             out="""\
 VacuumStmt
   schema: null
-  Literal
+  into_expr: Literal
     literal_type: STRING
     source: "'backup.db'"
 """,
@@ -217,6 +220,7 @@ VacuumStmt
             out="""\
 VacuumStmt
   schema: "main"
+  into_expr: null
 """,
         )
 
@@ -230,15 +234,22 @@ class ExplainStmts(TestSuite):
             out="""\
 ExplainStmt
   explain_mode: EXPLAIN
-  SelectStmt
+  stmt: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "1"
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -248,16 +259,23 @@ ExplainStmt
             out="""\
 ExplainStmt
   explain_mode: QUERY_PLAN
-  SelectStmt
+  stmt: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "t"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -275,14 +293,15 @@ CreateIndexStmt
   table_name: "t"
   is_unique: 0
   if_not_exists: 0
-  OrderByList[1]
+  columns: OrderByList[1]
     OrderingTerm
-      ColumnRef
+      expr: ColumnRef
         column: "x"
         table: null
         schema: null
       sort_order: ASC
       nulls_order: NONE
+  where: null
 """,
         )
 
@@ -296,14 +315,15 @@ CreateIndexStmt
   table_name: "t"
   is_unique: 1
   if_not_exists: 0
-  OrderByList[1]
+  columns: OrderByList[1]
     OrderingTerm
-      ColumnRef
+      expr: ColumnRef
         column: "x"
         table: null
         schema: null
       sort_order: ASC
       nulls_order: NONE
+  where: null
 """,
         )
 
@@ -317,14 +337,15 @@ CreateIndexStmt
   table_name: "t"
   is_unique: 0
   if_not_exists: 1
-  OrderByList[1]
+  columns: OrderByList[1]
     OrderingTerm
-      ColumnRef
+      expr: ColumnRef
         column: "x"
         table: null
         schema: null
       sort_order: ASC
       nulls_order: NONE
+  where: null
 """,
         )
 
@@ -338,21 +359,21 @@ CreateIndexStmt
   table_name: "t"
   is_unique: 0
   if_not_exists: 0
-  OrderByList[1]
+  columns: OrderByList[1]
     OrderingTerm
-      ColumnRef
+      expr: ColumnRef
         column: "x"
         table: null
         schema: null
       sort_order: ASC
       nulls_order: NONE
-  BinaryExpr
+  where: BinaryExpr
     op: GT
-    ColumnRef
+    left: ColumnRef
       column: "x"
       table: null
       schema: null
-    Literal
+    right: Literal
       literal_type: INTEGER
       source: "0"
 """,
@@ -368,14 +389,15 @@ CreateIndexStmt
   table_name: "t"
   is_unique: 0
   if_not_exists: 0
-  OrderByList[1]
+  columns: OrderByList[1]
     OrderingTerm
-      ColumnRef
+      expr: ColumnRef
         column: "x"
         table: null
         schema: null
       sort_order: ASC
       nulls_order: NONE
+  where: null
 """,
         )
 
@@ -389,21 +411,22 @@ CreateIndexStmt
   table_name: "t"
   is_unique: 0
   if_not_exists: 0
-  OrderByList[2]
+  columns: OrderByList[2]
     OrderingTerm
-      ColumnRef
+      expr: ColumnRef
         column: "x"
         table: null
         schema: null
       sort_order: ASC
       nulls_order: NONE
     OrderingTerm
-      ColumnRef
+      expr: ColumnRef
         column: "y"
         table: null
         schema: null
       sort_order: DESC
       nulls_order: NONE
+  where: null
 """,
         )
 
@@ -420,16 +443,24 @@ CreateViewStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  SelectStmt
+  column_names: null
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "t"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -442,16 +473,24 @@ CreateViewStmt
   schema: null
   is_temp: 1
   if_not_exists: 0
-  SelectStmt
+  column_names: null
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "t"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -464,16 +503,24 @@ CreateViewStmt
   schema: null
   is_temp: 0
   if_not_exists: 1
-  SelectStmt
+  column_names: null
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "t"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -486,7 +533,7 @@ CreateViewStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  ExprList[2]
+  column_names: ExprList[2]
     ColumnRef
       column: "a"
       table: null
@@ -495,26 +542,32 @@ CreateViewStmt
       column: "b"
       table: null
       schema: null
-  SelectStmt
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[2]
+    columns: ResultColumnList[2]
       ResultColumn
         flags: (none)
         alias: null
-        ColumnRef
+        expr: ColumnRef
           column: "x"
           table: null
           schema: null
       ResultColumn
         flags: (none)
         alias: null
-        ColumnRef
+        expr: ColumnRef
           column: "y"
           table: null
           schema: null
-    TableRef
+    from_clause: TableRef
       table_name: "t"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )

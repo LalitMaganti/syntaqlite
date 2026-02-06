@@ -19,21 +19,30 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -47,21 +56,30 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: AFTER
-  TriggerEvent
+  event: TriggerEvent
     event_type: DELETE
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -75,21 +93,30 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: INSTEAD_OF
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "v"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -103,21 +130,30 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -135,21 +171,30 @@ CreateTriggerStmt
   is_temp: 1
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -163,21 +208,30 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 1
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -191,21 +245,30 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -219,9 +282,9 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: UPDATE
-    ExprList[2]
+    columns: ExprList[2]
       ColumnRef
         column: "col1"
         table: null
@@ -230,19 +293,27 @@ CreateTriggerStmt
         column: "col2"
         table: null
         schema: null
-  QualifiedName
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -256,21 +327,30 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: UPDATE
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -288,30 +368,38 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  BinaryExpr
+  when_expr: BinaryExpr
     op: GT
-    ColumnRef
+    left: ColumnRef
       column: "x"
       table: "new"
       schema: null
-    Literal
+    right: Literal
       literal_type: INTEGER
       source: "0"
-  TriggerCmdList[1]
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -325,21 +413,30 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )
 
@@ -357,24 +454,29 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     UpdateStmt
       conflict_action: DEFAULT
-      TableRef
+      table: TableRef
         table_name: "t2"
         schema: null
         alias: null
-      SetClauseList[1]
+      setlist: SetClauseList[1]
         SetClause
           column: "a"
-          Literal
+          columns: null
+          value: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
 """,
         )
 
@@ -388,20 +490,23 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: DELETE
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     InsertStmt
       conflict_action: DEFAULT
-      TableRef
+      table: TableRef
         table_name: "t2"
         schema: null
         alias: null
-      ValuesClause
-        ValuesRowList[1]
+      columns: null
+      source: ValuesClause
+        rows: ValuesRowList[1]
           ExprList[1]
             Literal
               literal_type: INTEGER
@@ -419,24 +524,26 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[1]
+  when_expr: null
+  body: TriggerCmdList[1]
     DeleteStmt
-      TableRef
+      table: TableRef
         table_name: "t2"
         schema: null
         alias: null
-      BinaryExpr
+      where: BinaryExpr
         op: EQ
-        ColumnRef
+        left: ColumnRef
           column: "x"
           table: null
           schema: null
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "1"
 """,
@@ -452,29 +559,45 @@ CreateTriggerStmt
   is_temp: 0
   if_not_exists: 0
   timing: BEFORE
-  TriggerEvent
+  event: TriggerEvent
     event_type: INSERT
-  QualifiedName
+    columns: null
+  table: QualifiedName
     object_name: "t"
     schema: null
-  TriggerCmdList[2]
+  when_expr: null
+  body: TriggerCmdList[2]
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
     SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "2"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )

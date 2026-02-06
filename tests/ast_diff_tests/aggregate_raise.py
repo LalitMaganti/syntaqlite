@@ -15,30 +15,38 @@ class AggregateFunctionOrderBy(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      AggregateFunctionCall
+      expr: AggregateFunctionCall
         func_name: "GROUP_CONCAT"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "name"
             table: null
             schema: null
-        OrderByList[1]
+        orderby: OrderByList[1]
           OrderingTerm
-            ColumnRef
+            expr: ColumnRef
               column: "name"
               table: null
               schema: null
             sort_order: ASC
             nulls_order: NONE
-  TableRef
+        filter_clause: null
+        over_clause: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -48,14 +56,14 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      AggregateFunctionCall
+      expr: AggregateFunctionCall
         func_name: "GROUP_CONCAT"
         flags: (none)
-        ExprList[2]
+        args: ExprList[2]
           ColumnRef
             column: "name"
             table: null
@@ -63,18 +71,26 @@ SelectStmt
           Literal
             literal_type: STRING
             source: "','"
-        OrderByList[1]
+        orderby: OrderByList[1]
           OrderingTerm
-            ColumnRef
+            expr: ColumnRef
               column: "name"
               table: null
               schema: null
             sort_order: DESC
             nulls_order: NONE
-  TableRef
+        filter_clause: null
+        over_clause: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -84,30 +100,38 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      AggregateFunctionCall
+      expr: AggregateFunctionCall
         func_name: "GROUP_CONCAT"
         flags: DISTINCT
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "name"
             table: null
             schema: null
-        OrderByList[1]
+        orderby: OrderByList[1]
           OrderingTerm
-            ColumnRef
+            expr: ColumnRef
               column: "name"
               table: null
               schema: null
             sort_order: ASC
             nulls_order: NONE
-  TableRef
+        filter_clause: null
+        over_clause: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -121,12 +145,20 @@ class RaiseExpression(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      RaiseExpr
+      expr: RaiseExpr
         raise_type: IGNORE
+        error_message: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -136,15 +168,22 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      RaiseExpr
+      expr: RaiseExpr
         raise_type: ROLLBACK
-        Literal
+        error_message: Literal
           literal_type: STRING
           source: "'error message'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -154,15 +193,22 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      RaiseExpr
+      expr: RaiseExpr
         raise_type: ABORT
-        Literal
+        error_message: Literal
           literal_type: STRING
           source: "'constraint failed'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -172,14 +218,21 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      RaiseExpr
+      expr: RaiseExpr
         raise_type: FAIL
-        Literal
+        error_message: Literal
           literal_type: STRING
           source: "'error'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

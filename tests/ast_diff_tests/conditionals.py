@@ -15,15 +15,23 @@ class IsExprBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      IsExpr
+      expr: IsExpr
         op: ISNULL
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
+        right: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -33,15 +41,23 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      IsExpr
+      expr: IsExpr
         op: NOTNULL
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
+        right: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -51,15 +67,23 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      IsExpr
+      expr: IsExpr
         op: NOTNULL
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
+        right: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -69,18 +93,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      IsExpr
+      expr: IsExpr
         op: IS
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: NULL
           source: "NULL"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -90,18 +121,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      IsExpr
+      expr: IsExpr
         op: IS_NOT
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: NULL
           source: "NULL"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -111,18 +149,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      IsExpr
+      expr: IsExpr
         op: IS
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "2"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -132,18 +177,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      IsExpr
+      expr: IsExpr
         op: IS_NOT
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "2"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -153,18 +205,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      IsExpr
+      expr: IsExpr
         op: IS_NOT_DISTINCT
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "2"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -174,18 +233,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      IsExpr
+      expr: IsExpr
         op: IS_DISTINCT
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "2"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -199,21 +265,28 @@ class BetweenExprBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BetweenExpr
+      expr: BetweenExpr
         negated: 0
-        Literal
+        operand: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        low: Literal
           literal_type: INTEGER
           source: "0"
-        Literal
+        high: Literal
           literal_type: INTEGER
           source: "10"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -223,21 +296,28 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BetweenExpr
+      expr: BetweenExpr
         negated: 1
-        Literal
+        operand: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        low: Literal
           literal_type: INTEGER
           source: "0"
-        Literal
+        high: Literal
           literal_type: INTEGER
           source: "10"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -251,18 +331,26 @@ class LikeExprBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      LikeExpr
+      expr: LikeExpr
         negated: 0
-        Literal
+        operand: Literal
           literal_type: STRING
           source: "'abc'"
-        Literal
+        pattern: Literal
           literal_type: STRING
           source: "'a%'"
+        escape: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -272,18 +360,26 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      LikeExpr
+      expr: LikeExpr
         negated: 1
-        Literal
+        operand: Literal
           literal_type: STRING
           source: "'abc'"
-        Literal
+        pattern: Literal
           literal_type: STRING
           source: "'a%'"
+        escape: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -293,21 +389,28 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      LikeExpr
+      expr: LikeExpr
         negated: 0
-        Literal
+        operand: Literal
           literal_type: STRING
           source: "'abc'"
-        Literal
+        pattern: Literal
           literal_type: STRING
           source: "'a%'"
-        Literal
+        escape: Literal
           literal_type: STRING
           source: "'\\\\'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -321,22 +424,30 @@ class CaseExprBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CaseExpr
-        Literal
+      expr: CaseExpr
+        operand: null
+        else_expr: Literal
           literal_type: STRING
           source: "'b'"
-        CaseWhenList[1]
+        whens: CaseWhenList[1]
           CaseWhen
-            Literal
+            when_expr: Literal
               literal_type: INTEGER
               source: "1"
-            Literal
+            then_expr: Literal
               literal_type: STRING
               source: "'a'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -346,29 +457,37 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CaseExpr
-        Literal
+      expr: CaseExpr
+        operand: Literal
           literal_type: INTEGER
           source: "1"
-        CaseWhenList[2]
+        else_expr: null
+        whens: CaseWhenList[2]
           CaseWhen
-            Literal
+            when_expr: Literal
               literal_type: INTEGER
               source: "1"
-            Literal
+            then_expr: Literal
               literal_type: STRING
               source: "'yes'"
           CaseWhen
-            Literal
+            when_expr: Literal
               literal_type: INTEGER
               source: "2"
-            Literal
+            then_expr: Literal
               literal_type: STRING
               source: "'no'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -378,18 +497,27 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CaseExpr
-        CaseWhenList[1]
+      expr: CaseExpr
+        operand: null
+        else_expr: null
+        whens: CaseWhenList[1]
           CaseWhen
-            Literal
+            when_expr: Literal
               literal_type: INTEGER
               source: "1"
-            Literal
+            then_expr: Literal
               literal_type: STRING
               source: "'a'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

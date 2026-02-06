@@ -3492,7 +3492,7 @@ static YYACTIONTYPE yy_reduce(
     SyntaqliteSourceSpan tbl_schema = yymsp[0].minor.yy0.z ? syntaqlite_span(pCtx, yymsp[-1].minor.yy0) : SYNTAQLITE_NO_SPAN;
     yymsp[-5].minor.yy391 = ast_create_table_stmt(pCtx->astCtx,
         tbl_name, tbl_schema, (uint8_t)yymsp[-4].minor.yy144, (uint8_t)yymsp[-2].minor.yy144,
-        0, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+        (SyntaqliteCreateTableStmtFlags){.raw = 0}, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
 }
         break;
       case 14: /* createkw ::= CREATE */
@@ -3535,14 +3535,14 @@ static YYACTIONTYPE yy_reduce(
 {
     yymsp[-4].minor.yy391 = ast_create_table_stmt(pCtx->astCtx,
         SYNTAQLITE_NO_SPAN, SYNTAQLITE_NO_SPAN, 0, 0,
-        (uint8_t)yymsp[0].minor.yy144, yymsp[-3].minor.yy391, yymsp[-2].minor.yy391, SYNTAQLITE_NULL_NODE);
+        (SyntaqliteCreateTableStmtFlags){.raw = (uint8_t)yymsp[0].minor.yy144}, yymsp[-3].minor.yy391, yymsp[-2].minor.yy391, SYNTAQLITE_NULL_NODE);
 }
         break;
       case 20: /* create_table_args ::= AS select */
 {
     yymsp[-1].minor.yy391 = ast_create_table_stmt(pCtx->astCtx,
         SYNTAQLITE_NO_SPAN, SYNTAQLITE_NO_SPAN, 0, 0,
-        0, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy391);
+        (SyntaqliteCreateTableStmtFlags){.raw = 0}, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy391);
 }
         break;
       case 22: /* table_option_set ::= table_option_set COMMA table_option */

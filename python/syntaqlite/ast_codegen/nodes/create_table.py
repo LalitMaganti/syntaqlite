@@ -7,7 +7,7 @@ Covers: CREATE TABLE, column definitions, column constraints,
 table constraints, foreign keys, generated columns, table options.
 """
 
-from ..defs import Node, List, Enum, inline, index
+from ..defs import Node, List, Enum, Flags, inline, index
 
 ENUMS = [
     # Foreign key action for ON DELETE / ON UPDATE
@@ -45,6 +45,10 @@ ENUMS = [
         "CHECK",        # 2
         "FOREIGN_KEY",  # 3
     ),
+]
+
+FLAGS = [
+    Flags("CreateTableStmt", WITHOUT_ROWID=0x01, STRICT=0x02),
 ]
 
 NODES = [
@@ -121,7 +125,7 @@ NODES = [
         schema=inline("SyntaqliteSourceSpan"),
         is_temp=inline("u8"),
         if_not_exists=inline("u8"),
-        table_options=inline("u8"),          # bit flags: 1=WITHOUT ROWID, 2=STRICT
+        flags=inline("u8"),                   # WITHOUT_ROWID | STRICT
         columns=index("Expr"),               # ColumnDefList (nullable for AS SELECT)
         table_constraints=index("Expr"),     # TableConstraintList (nullable)
         as_select=index("Stmt"),             # for CREATE TABLE ... AS SELECT (nullable)

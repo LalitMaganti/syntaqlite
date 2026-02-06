@@ -34,7 +34,7 @@ create_table(A) ::= createkw temp(T) TABLE ifnotexists(E) nm(Y) dbnm(Z). {
     SyntaqliteSourceSpan tbl_schema = Z.z ? syntaqlite_span(pCtx, Y) : SYNTAQLITE_NO_SPAN;
     A = ast_create_table_stmt(pCtx->astCtx,
         tbl_name, tbl_schema, (uint8_t)T, (uint8_t)E,
-        0, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+        (SyntaqliteCreateTableStmtFlags){.raw = 0}, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
 }
 
 // ============ CREATE TABLE args ============
@@ -42,13 +42,13 @@ create_table(A) ::= createkw temp(T) TABLE ifnotexists(E) nm(Y) dbnm(Z). {
 create_table_args(A) ::= LP columnlist(CL) conslist_opt(CO) RP table_option_set(F). {
     A = ast_create_table_stmt(pCtx->astCtx,
         SYNTAQLITE_NO_SPAN, SYNTAQLITE_NO_SPAN, 0, 0,
-        (uint8_t)F, CL, CO, SYNTAQLITE_NULL_NODE);
+        (SyntaqliteCreateTableStmtFlags){.raw = (uint8_t)F}, CL, CO, SYNTAQLITE_NULL_NODE);
 }
 
 create_table_args(A) ::= AS select(S). {
     A = ast_create_table_stmt(pCtx->astCtx,
         SYNTAQLITE_NO_SPAN, SYNTAQLITE_NO_SPAN, 0, 0,
-        0, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, S);
+        (SyntaqliteCreateTableStmtFlags){.raw = 0}, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, S);
 }
 
 // ============ Table options ============

@@ -15,27 +15,37 @@ class WindowFunctionBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "row_number"
         flags: (none)
-        WindowDef
+        args: null
+        filter_clause: null
+        over_clause: WindowDef
           base_window_name: null
-          OrderByList[1]
+          partition_by: null
+          orderby: OrderByList[1]
             OrderingTerm
-              ColumnRef
+              expr: ColumnRef
                 column: "id"
                 table: null
                 schema: null
               sort_order: ASC
               nulls_order: NONE
-  TableRef
+          frame: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -45,24 +55,34 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "count"
         flags: STAR
-        WindowDef
+        args: null
+        filter_clause: null
+        over_clause: WindowDef
           base_window_name: null
-          ExprList[1]
+          partition_by: ExprList[1]
             ColumnRef
               column: "a"
               table: null
               schema: null
-  TableRef
+          orderby: null
+          frame: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -72,37 +92,48 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "sum"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "x"
             table: null
             schema: null
-        WindowDef
+        filter_clause: null
+        over_clause: WindowDef
           base_window_name: "w"
-  TableRef
+          partition_by: null
+          orderby: null
+          frame: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
-  NamedWindowDefList[1]
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: NamedWindowDefList[1]
     NamedWindowDef
       window_name: "w"
-      WindowDef
+      window_def: WindowDef
         base_window_name: null
-        OrderByList[1]
+        partition_by: null
+        orderby: OrderByList[1]
           OrderingTerm
-            ColumnRef
+            expr: ColumnRef
               column: "x"
               table: null
               schema: null
             sort_order: ASC
             nulls_order: NONE
+        frame: null
 """,
         )
 
@@ -116,31 +147,38 @@ class FilterClause(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "sum"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "x"
             table: null
             schema: null
-        BinaryExpr
+        filter_clause: BinaryExpr
           op: GT
-          ColumnRef
+          left: ColumnRef
             column: "x"
             table: null
             schema: null
-          Literal
+          right: Literal
             literal_type: INTEGER
             source: "0"
-  TableRef
+        over_clause: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -150,41 +188,49 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "sum"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "x"
             table: null
             schema: null
-        BinaryExpr
+        filter_clause: BinaryExpr
           op: GT
-          ColumnRef
+          left: ColumnRef
             column: "x"
             table: null
             schema: null
-          Literal
+          right: Literal
             literal_type: INTEGER
             source: "0"
-        WindowDef
+        over_clause: WindowDef
           base_window_name: null
-          OrderByList[1]
+          partition_by: null
+          orderby: OrderByList[1]
             OrderingTerm
-              ColumnRef
+              expr: ColumnRef
                 column: "y"
                 table: null
                 schema: null
               sort_order: ASC
               nulls_order: NONE
-  TableRef
+          frame: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -198,45 +244,53 @@ class FrameSpecification(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "sum"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "x"
             table: null
             schema: null
-        WindowDef
+        filter_clause: null
+        over_clause: WindowDef
           base_window_name: null
-          OrderByList[1]
+          partition_by: null
+          orderby: OrderByList[1]
             OrderingTerm
-              ColumnRef
+              expr: ColumnRef
                 column: "y"
                 table: null
                 schema: null
               sort_order: ASC
               nulls_order: NONE
-          FrameSpec
+          frame: FrameSpec
             frame_type: ROWS
             exclude: NONE
-            FrameBound
+            start_bound: FrameBound
               bound_type: EXPR_PRECEDING
-              Literal
+              expr: Literal
                 literal_type: INTEGER
                 source: "1"
-            FrameBound
+            end_bound: FrameBound
               bound_type: EXPR_FOLLOWING
-              Literal
+              expr: Literal
                 literal_type: INTEGER
                 source: "1"
-  TableRef
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -246,39 +300,49 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "sum"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "x"
             table: null
             schema: null
-        WindowDef
+        filter_clause: null
+        over_clause: WindowDef
           base_window_name: null
-          OrderByList[1]
+          partition_by: null
+          orderby: OrderByList[1]
             OrderingTerm
-              ColumnRef
+              expr: ColumnRef
                 column: "y"
                 table: null
                 schema: null
               sort_order: ASC
               nulls_order: NONE
-          FrameSpec
+          frame: FrameSpec
             frame_type: RANGE
             exclude: NONE
-            FrameBound
+            start_bound: FrameBound
               bound_type: UNBOUNDED_PRECEDING
-            FrameBound
+              expr: null
+            end_bound: FrameBound
               bound_type: CURRENT_ROW
-  TableRef
+              expr: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -288,39 +352,49 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "sum"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "x"
             table: null
             schema: null
-        WindowDef
+        filter_clause: null
+        over_clause: WindowDef
           base_window_name: null
-          OrderByList[1]
+          partition_by: null
+          orderby: OrderByList[1]
             OrderingTerm
-              ColumnRef
+              expr: ColumnRef
                 column: "y"
                 table: null
                 schema: null
               sort_order: ASC
               nulls_order: NONE
-          FrameSpec
+          frame: FrameSpec
             frame_type: GROUPS
             exclude: TIES
-            FrameBound
+            start_bound: FrameBound
               bound_type: UNBOUNDED_PRECEDING
-            FrameBound
+              expr: null
+            end_bound: FrameBound
               bound_type: UNBOUNDED_FOLLOWING
-  TableRef
+              expr: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -330,42 +404,51 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "sum"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "x"
             table: null
             schema: null
-        WindowDef
+        filter_clause: null
+        over_clause: WindowDef
           base_window_name: null
-          OrderByList[1]
+          partition_by: null
+          orderby: OrderByList[1]
             OrderingTerm
-              ColumnRef
+              expr: ColumnRef
                 column: "y"
                 table: null
                 schema: null
               sort_order: ASC
               nulls_order: NONE
-          FrameSpec
+          frame: FrameSpec
             frame_type: ROWS
             exclude: NONE
-            FrameBound
+            start_bound: FrameBound
               bound_type: EXPR_PRECEDING
-              Literal
+              expr: Literal
                 literal_type: INTEGER
                 source: "2"
-            FrameBound
+            end_bound: FrameBound
               bound_type: CURRENT_ROW
-  TableRef
+              expr: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -379,27 +462,35 @@ class WindowClause(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  TableRef
+      expr: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
-  NamedWindowDefList[1]
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: NamedWindowDefList[1]
     NamedWindowDef
       window_name: "w"
-      WindowDef
+      window_def: WindowDef
         base_window_name: null
-        OrderByList[1]
+        partition_by: null
+        orderby: OrderByList[1]
           OrderingTerm
-            ColumnRef
+            expr: ColumnRef
               column: "x"
               table: null
               schema: null
             sort_order: ASC
             nulls_order: NONE
+        frame: null
 """,
         )
 
@@ -409,67 +500,83 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[2]
+  columns: ResultColumnList[2]
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "sum"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "x"
             table: null
             schema: null
-        WindowDef
+        filter_clause: null
+        over_clause: WindowDef
           base_window_name: "w1"
+          partition_by: null
+          orderby: null
+          frame: null
     ResultColumn
       flags: (none)
       alias: null
-      FunctionCall
+      expr: FunctionCall
         func_name: "avg"
         flags: (none)
-        ExprList[1]
+        args: ExprList[1]
           ColumnRef
             column: "y"
             table: null
             schema: null
-        WindowDef
+        filter_clause: null
+        over_clause: WindowDef
           base_window_name: "w2"
-  TableRef
+          partition_by: null
+          orderby: null
+          frame: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
-  NamedWindowDefList[2]
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: NamedWindowDefList[2]
     NamedWindowDef
       window_name: "w1"
-      WindowDef
+      window_def: WindowDef
         base_window_name: null
-        OrderByList[1]
+        partition_by: null
+        orderby: OrderByList[1]
           OrderingTerm
-            ColumnRef
+            expr: ColumnRef
               column: "a"
               table: null
               schema: null
             sort_order: ASC
             nulls_order: NONE
+        frame: null
     NamedWindowDef
       window_name: "w2"
-      WindowDef
+      window_def: WindowDef
         base_window_name: null
-        ExprList[1]
+        partition_by: ExprList[1]
           ColumnRef
             column: "b"
             table: null
             schema: null
-        OrderByList[1]
+        orderby: OrderByList[1]
           OrderingTerm
-            ColumnRef
+            expr: ColumnRef
               column: "c"
               table: null
               schema: null
             sort_order: ASC
             nulls_order: NONE
+        frame: null
 """,
         )
 
@@ -483,14 +590,14 @@ class AggregateWithWindowFunction(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      AggregateFunctionCall
+      expr: AggregateFunctionCall
         func_name: "group_concat"
         flags: (none)
-        ExprList[2]
+        args: ExprList[2]
           ColumnRef
             column: "x"
             table: null
@@ -498,33 +605,41 @@ SelectStmt
           Literal
             literal_type: STRING
             source: "','"
-        OrderByList[1]
+        orderby: OrderByList[1]
           OrderingTerm
-            ColumnRef
+            expr: ColumnRef
               column: "y"
               table: null
               schema: null
             sort_order: ASC
             nulls_order: NONE
-        BinaryExpr
+        filter_clause: BinaryExpr
           op: GT
-          ColumnRef
+          left: ColumnRef
             column: "z"
             table: null
             schema: null
-          Literal
+          right: Literal
             literal_type: INTEGER
             source: "0"
-        WindowDef
+        over_clause: WindowDef
           base_window_name: null
-          ExprList[1]
+          partition_by: ExprList[1]
             ColumnRef
               column: "a"
               table: null
               schema: null
-  TableRef
+          orderby: null
+          frame: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

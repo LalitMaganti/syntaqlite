@@ -15,21 +15,27 @@ class SelectWhere(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  BinaryExpr
+  from_clause: null
+  where: BinaryExpr
     op: GT
-    Literal
+    left: Literal
       literal_type: INTEGER
       source: "1"
-    Literal
+    right: Literal
       literal_type: INTEGER
       source: "0"
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -43,17 +49,23 @@ class SelectGroupBy(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  ExprList[1]
+  from_clause: null
+  where: null
+  groupby: ExprList[1]
     Literal
       literal_type: INTEGER
       source: "1"
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -63,25 +75,30 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  ExprList[1]
+  from_clause: null
+  where: null
+  groupby: ExprList[1]
     Literal
       literal_type: INTEGER
       source: "1"
-  BinaryExpr
+  having: BinaryExpr
     op: GT
-    Literal
+    left: Literal
       literal_type: INTEGER
       source: "1"
-    Literal
+    right: Literal
       literal_type: INTEGER
       source: "0"
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -95,20 +112,26 @@ class SelectOrderBy(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  OrderByList[1]
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: OrderByList[1]
     OrderingTerm
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
       sort_order: ASC
       nulls_order: NONE
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -118,20 +141,26 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  OrderByList[1]
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: OrderByList[1]
     OrderingTerm
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
       sort_order: DESC
       nulls_order: NONE
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -141,20 +170,26 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  OrderByList[1]
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: OrderByList[1]
     OrderingTerm
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
       sort_order: ASC
       nulls_order: FIRST
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -164,20 +199,26 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  OrderByList[1]
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: OrderByList[1]
     OrderingTerm
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
       sort_order: DESC
       nulls_order: LAST
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -187,26 +228,32 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  OrderByList[2]
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: OrderByList[2]
     OrderingTerm
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
       sort_order: ASC
       nulls_order: NONE
     OrderingTerm
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "2"
       sort_order: DESC
       nulls_order: NONE
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -220,17 +267,24 @@ class SelectLimit(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  LimitClause
-    Literal
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: LimitClause
+    limit: Literal
       literal_type: INTEGER
       source: "10"
+    offset: null
+  window_clause: null
 """,
         )
 
@@ -240,20 +294,26 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  LimitClause
-    Literal
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: LimitClause
+    limit: Literal
       literal_type: INTEGER
       source: "10"
-    Literal
+    offset: Literal
       literal_type: INTEGER
       source: "5"
+  window_clause: null
 """,
         )
 
@@ -263,20 +323,26 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  LimitClause
-    Literal
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: LimitClause
+    limit: Literal
       literal_type: INTEGER
       source: "10"
-    Literal
+    offset: Literal
       literal_type: INTEGER
       source: "5"
+  window_clause: null
 """,
         )
 
@@ -290,31 +356,36 @@ class SelectCombined(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
-  BinaryExpr
+  from_clause: null
+  where: BinaryExpr
     op: GT
-    Literal
+    left: Literal
       literal_type: INTEGER
       source: "1"
-    Literal
+    right: Literal
       literal_type: INTEGER
       source: "0"
-  OrderByList[1]
+  groupby: null
+  having: null
+  orderby: OrderByList[1]
     OrderingTerm
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
       sort_order: ASC
       nulls_order: NONE
-  LimitClause
-    Literal
+  limit_clause: LimitClause
+    limit: Literal
       literal_type: INTEGER
       source: "10"
+    offset: null
+  window_clause: null
 """,
         )

@@ -14,10 +14,11 @@ class DeleteBasic(TestSuite):
             sql="DELETE FROM t",
             out="""\
 DeleteStmt
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
 """,
         )
 
@@ -26,17 +27,17 @@ DeleteStmt
             sql="DELETE FROM t WHERE x = 1",
             out="""\
 DeleteStmt
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  BinaryExpr
+  where: BinaryExpr
     op: EQ
-    ColumnRef
+    left: ColumnRef
       column: "x"
       table: null
       schema: null
-    Literal
+    right: Literal
       literal_type: INTEGER
       source: "1"
 """,
@@ -47,10 +48,11 @@ DeleteStmt
             sql="DELETE FROM main.t",
             out="""\
 DeleteStmt
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: "main"
     alias: null
+  where: null
 """,
         )
 
@@ -64,12 +66,13 @@ class InsertBasic(TestSuite):
             out="""\
 InsertStmt
   conflict_action: DEFAULT
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  ValuesClause
-    ValuesRowList[1]
+  columns: null
+  source: ValuesClause
+    rows: ValuesRowList[1]
       ExprList[3]
         Literal
           literal_type: INTEGER
@@ -89,11 +92,11 @@ InsertStmt
             out="""\
 InsertStmt
   conflict_action: DEFAULT
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  ExprList[2]
+  columns: ExprList[2]
     ColumnRef
       column: "a"
       table: null
@@ -102,8 +105,8 @@ InsertStmt
       column: "b"
       table: null
       schema: null
-  ValuesClause
-    ValuesRowList[1]
+  source: ValuesClause
+    rows: ValuesRowList[1]
       ExprList[2]
         Literal
           literal_type: INTEGER
@@ -120,20 +123,28 @@ InsertStmt
             out="""\
 InsertStmt
   conflict_action: DEFAULT
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  SelectStmt
+  columns: null
+  source: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "s"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -143,10 +154,12 @@ InsertStmt
             out="""\
 InsertStmt
   conflict_action: DEFAULT
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
+  columns: null
+  source: null
 """,
         )
 
@@ -160,12 +173,13 @@ class InsertConflict(TestSuite):
             out="""\
 InsertStmt
   conflict_action: REPLACE
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  ValuesClause
-    ValuesRowList[1]
+  columns: null
+  source: ValuesClause
+    rows: ValuesRowList[1]
       ExprList[1]
         Literal
           literal_type: INTEGER
@@ -179,12 +193,13 @@ InsertStmt
             out="""\
 InsertStmt
   conflict_action: REPLACE
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  ValuesClause
-    ValuesRowList[1]
+  columns: null
+  source: ValuesClause
+    rows: ValuesRowList[1]
       ExprList[1]
         Literal
           literal_type: INTEGER
@@ -198,12 +213,13 @@ InsertStmt
             out="""\
 InsertStmt
   conflict_action: ROLLBACK
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  ValuesClause
-    ValuesRowList[1]
+  columns: null
+  source: ValuesClause
+    rows: ValuesRowList[1]
       ExprList[1]
         Literal
           literal_type: INTEGER
@@ -217,12 +233,13 @@ InsertStmt
             out="""\
 InsertStmt
   conflict_action: ABORT
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  ValuesClause
-    ValuesRowList[1]
+  columns: null
+  source: ValuesClause
+    rows: ValuesRowList[1]
       ExprList[1]
         Literal
           literal_type: INTEGER
@@ -236,12 +253,13 @@ InsertStmt
             out="""\
 InsertStmt
   conflict_action: FAIL
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  ValuesClause
-    ValuesRowList[1]
+  columns: null
+  source: ValuesClause
+    rows: ValuesRowList[1]
       ExprList[1]
         Literal
           literal_type: INTEGER
@@ -255,12 +273,13 @@ InsertStmt
             out="""\
 InsertStmt
   conflict_action: IGNORE
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  ValuesClause
-    ValuesRowList[1]
+  columns: null
+  source: ValuesClause
+    rows: ValuesRowList[1]
       ExprList[1]
         Literal
           literal_type: INTEGER
@@ -278,16 +297,19 @@ class UpdateBasic(TestSuite):
             out="""\
 UpdateStmt
   conflict_action: DEFAULT
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  SetClauseList[1]
+  setlist: SetClauseList[1]
     SetClause
       column: "x"
-      Literal
+      columns: null
+      value: Literal
         literal_type: INTEGER
         source: "1"
+  from_clause: null
+  where: null
 """,
         )
 
@@ -297,28 +319,31 @@ UpdateStmt
             out="""\
 UpdateStmt
   conflict_action: DEFAULT
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  SetClauseList[2]
+  setlist: SetClauseList[2]
     SetClause
       column: "x"
-      Literal
+      columns: null
+      value: Literal
         literal_type: INTEGER
         source: "1"
     SetClause
       column: "y"
-      Literal
+      columns: null
+      value: Literal
         literal_type: INTEGER
         source: "2"
-  BinaryExpr
+  from_clause: null
+  where: BinaryExpr
     op: EQ
-    ColumnRef
+    left: ColumnRef
       column: "id"
       table: null
       schema: null
-    Literal
+    right: Literal
       literal_type: INTEGER
       source: "3"
 """,
@@ -330,16 +355,19 @@ UpdateStmt
             out="""\
 UpdateStmt
   conflict_action: IGNORE
-  TableRef
+  table: TableRef
     table_name: "t"
     schema: null
     alias: null
-  SetClauseList[1]
+  setlist: SetClauseList[1]
     SetClause
       column: "x"
-      Literal
+      columns: null
+      value: Literal
         literal_type: INTEGER
         source: "1"
+  from_clause: null
+  where: null
 """,
         )
 
@@ -353,34 +381,50 @@ class DmlWithCte(TestSuite):
             out="""\
 WithClause
   recursive: 0
-  CteList[1]
+  ctes: CteList[1]
     CteDefinition
       cte_name: "cte"
       materialized: 0
-      SelectStmt
+      columns: null
+      select: SelectStmt
         flags: (none)
-        ResultColumnList[1]
+        columns: ResultColumnList[1]
           ResultColumn
             flags: (none)
             alias: null
-            Literal
+            expr: Literal
               literal_type: INTEGER
               source: "1"
-  InsertStmt
+        from_clause: null
+        where: null
+        groupby: null
+        having: null
+        orderby: null
+        limit_clause: null
+        window_clause: null
+  select: InsertStmt
     conflict_action: DEFAULT
-    TableRef
+    table: TableRef
       table_name: "t"
       schema: null
       alias: null
-    SelectStmt
+    columns: null
+    source: SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: STAR
           alias: null
-      TableRef
+          expr: null
+      from_clause: TableRef
         table_name: "cte"
         schema: null
         alias: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
 """,
         )

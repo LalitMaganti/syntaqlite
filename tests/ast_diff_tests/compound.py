@@ -15,24 +15,38 @@ class CompoundSelect(TestSuite):
             out="""\
 CompoundSelect
   op: UNION
-  SelectStmt
+  left: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "1"
-  SelectStmt
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
+  right: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "2"
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -42,24 +56,38 @@ CompoundSelect
             out="""\
 CompoundSelect
   op: UNION_ALL
-  SelectStmt
+  left: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "1"
-  SelectStmt
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
+  right: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "2"
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -69,24 +97,38 @@ CompoundSelect
             out="""\
 CompoundSelect
   op: INTERSECT
-  SelectStmt
+  left: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "1"
-  SelectStmt
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
+  right: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "2"
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -96,24 +138,38 @@ CompoundSelect
             out="""\
 CompoundSelect
   op: EXCEPT
-  SelectStmt
+  left: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "1"
-  SelectStmt
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
+  right: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        Literal
+        expr: Literal
           literal_type: INTEGER
           source: "2"
+    from_clause: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -127,20 +183,34 @@ class SubqueryExpr(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      SubqueryExpr
-        SelectStmt
+      expr: SubqueryExpr
+        select: SelectStmt
           flags: (none)
-          ResultColumnList[1]
+          columns: ResultColumnList[1]
             ResultColumn
               flags: (none)
               alias: null
-              Literal
+              expr: Literal
                 literal_type: INTEGER
                 source: "1"
+          from_clause: null
+          where: null
+          groupby: null
+          having: null
+          orderby: null
+          limit_clause: null
+          window_clause: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -150,20 +220,34 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      ExistsExpr
-        SelectStmt
+      expr: ExistsExpr
+        select: SelectStmt
           flags: (none)
-          ResultColumnList[1]
+          columns: ResultColumnList[1]
             ResultColumn
               flags: (none)
               alias: null
-              Literal
+              expr: Literal
                 literal_type: INTEGER
                 source: "1"
+          from_clause: null
+          where: null
+          groupby: null
+          having: null
+          orderby: null
+          limit_clause: null
+          window_clause: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -177,16 +261,16 @@ class InExpr(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      InExpr
+      expr: InExpr
         negated: 0
-        Literal
+        operand: Literal
           literal_type: INTEGER
           source: "1"
-        ExprList[3]
+        source: ExprList[3]
           Literal
             literal_type: INTEGER
             source: "1"
@@ -196,6 +280,13 @@ SelectStmt
           Literal
             literal_type: INTEGER
             source: "3"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -205,16 +296,16 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      InExpr
+      expr: InExpr
         negated: 1
-        Literal
+        operand: Literal
           literal_type: INTEGER
           source: "1"
-        ExprList[3]
+        source: ExprList[3]
           Literal
             literal_type: INTEGER
             source: "1"
@@ -224,6 +315,13 @@ SelectStmt
           Literal
             literal_type: INTEGER
             source: "3"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -233,24 +331,38 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      InExpr
+      expr: InExpr
         negated: 0
-        Literal
+        operand: Literal
           literal_type: INTEGER
           source: "1"
-        SubqueryExpr
-          SelectStmt
+        source: SubqueryExpr
+          select: SelectStmt
             flags: (none)
-            ResultColumnList[1]
+            columns: ResultColumnList[1]
               ResultColumn
                 flags: (none)
                 alias: null
-                Literal
+                expr: Literal
                   literal_type: INTEGER
                   source: "1"
+            from_clause: null
+            where: null
+            groupby: null
+            having: null
+            orderby: null
+            limit_clause: null
+            window_clause: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

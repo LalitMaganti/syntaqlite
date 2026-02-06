@@ -16,7 +16,7 @@ class DropTable(TestSuite):
 DropStmt
   object_type: TABLE
   if_exists: 0
-  QualifiedName
+  target: QualifiedName
     object_name: "t"
     schema: null
 """,
@@ -29,7 +29,7 @@ DropStmt
 DropStmt
   object_type: TABLE
   if_exists: 1
-  QualifiedName
+  target: QualifiedName
     object_name: "t"
     schema: null
 """,
@@ -42,7 +42,7 @@ DropStmt
 DropStmt
   object_type: TABLE
   if_exists: 0
-  QualifiedName
+  target: QualifiedName
     object_name: "t"
     schema: "main"
 """,
@@ -59,7 +59,7 @@ class DropOther(TestSuite):
 DropStmt
   object_type: INDEX
   if_exists: 0
-  QualifiedName
+  target: QualifiedName
     object_name: "idx"
     schema: null
 """,
@@ -72,7 +72,7 @@ DropStmt
 DropStmt
   object_type: VIEW
   if_exists: 0
-  QualifiedName
+  target: QualifiedName
     object_name: "v"
     schema: null
 """,
@@ -85,7 +85,7 @@ DropStmt
 DropStmt
   object_type: TRIGGER
   if_exists: 0
-  QualifiedName
+  target: QualifiedName
     object_name: "tr"
     schema: null
 """,
@@ -101,7 +101,7 @@ class AlterTableRename(TestSuite):
             out="""\
 AlterTableStmt
   op: RENAME_TABLE
-  QualifiedName
+  target: QualifiedName
     object_name: "t"
     schema: null
   new_name: "t2"
@@ -115,7 +115,7 @@ AlterTableStmt
             out="""\
 AlterTableStmt
   op: RENAME_COLUMN
-  QualifiedName
+  target: QualifiedName
     object_name: "t"
     schema: null
   new_name: "c2"
@@ -129,7 +129,7 @@ AlterTableStmt
             out="""\
 AlterTableStmt
   op: RENAME_COLUMN
-  QualifiedName
+  target: QualifiedName
     object_name: "t"
     schema: null
   new_name: "c2"
@@ -147,7 +147,7 @@ class AlterTableDropAdd(TestSuite):
             out="""\
 AlterTableStmt
   op: DROP_COLUMN
-  QualifiedName
+  target: QualifiedName
     object_name: "t"
     schema: null
   new_name: null
@@ -161,6 +161,7 @@ AlterTableStmt
             out="""\
 AlterTableStmt
   op: ADD_COLUMN
+  target: null
   new_name: null
   old_name: "c1"
 """,

@@ -15,13 +15,20 @@ class SelectBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: INTEGER
         source: "1"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -31,13 +38,20 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: FLOAT
         source: "3.14"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -47,13 +61,20 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: STRING
         source: "'hello'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -63,13 +84,20 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: NULL
         source: "NULL"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -79,18 +107,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: PLUS
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "2"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -100,18 +135,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: STAR
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "3"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "4"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -121,18 +163,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: LT
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "2"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -142,18 +191,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: EQ
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "2"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -163,18 +219,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: AND
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "0"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -184,18 +247,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: OR
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        Literal
+        right: Literal
           literal_type: INTEGER
           source: "0"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -205,18 +275,25 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: CONCAT
-        Literal
+        left: Literal
           literal_type: STRING
           source: "'a'"
-        Literal
+        right: Literal
           literal_type: STRING
           source: "'b'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -226,15 +303,22 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      UnaryExpr
+      expr: UnaryExpr
         op: MINUS
-        Literal
+        operand: Literal
           literal_type: INTEGER
           source: "5"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -244,14 +328,21 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      UnaryExpr
+      expr: UnaryExpr
         op: NOT
-        Literal
+        operand: Literal
           literal_type: INTEGER
           source: "1"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

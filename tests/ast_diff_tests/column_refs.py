@@ -15,14 +15,21 @@ class ColumnRefBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      ColumnRef
+      expr: ColumnRef
         column: "x"
         table: null
         schema: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -32,14 +39,21 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      ColumnRef
+      expr: ColumnRef
         column: "x"
         table: "t"
         schema: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -49,14 +63,21 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      ColumnRef
+      expr: ColumnRef
         column: "x"
         table: "t"
         schema: "s"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -66,28 +87,35 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[3]
+  columns: ResultColumnList[3]
     ResultColumn
       flags: (none)
       alias: null
-      ColumnRef
+      expr: ColumnRef
         column: "a"
         table: null
         schema: null
     ResultColumn
       flags: (none)
       alias: null
-      ColumnRef
+      expr: ColumnRef
         column: "b"
         table: null
         schema: null
     ResultColumn
       flags: (none)
       alias: null
-      ColumnRef
+      expr: ColumnRef
         column: "c"
         table: null
         schema: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -97,10 +125,18 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: "t"
+      expr: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -110,32 +146,39 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[3]
+  columns: ResultColumnList[3]
     ResultColumn
       flags: (none)
       alias: null
-      ColumnRef
+      expr: ColumnRef
         column: "a"
         table: null
         schema: null
     ResultColumn
       flags: (none)
       alias: null
-      ColumnRef
+      expr: ColumnRef
         column: "b"
         table: "t"
         schema: null
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: PLUS
-        Literal
+        left: Literal
           literal_type: INTEGER
           source: "1"
-        ColumnRef
+        right: ColumnRef
           column: "x"
           table: null
           schema: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

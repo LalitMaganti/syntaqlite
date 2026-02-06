@@ -15,14 +15,21 @@ class TableRefBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  TableRef
+      expr: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -32,14 +39,21 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  TableRef
+      expr: null
+  from_clause: TableRef
     table_name: "t"
     schema: null
     alias: "x"
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -49,14 +63,21 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  TableRef
+      expr: null
+  from_clause: TableRef
     table_name: "t"
     schema: "main"
     alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -66,14 +87,21 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  TableRef
+      expr: null
+  from_clause: TableRef
     table_name: "t"
     schema: "main"
     alias: "x"
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -87,20 +115,29 @@ class JoinBasic(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: COMMA
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
+    on_expr: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -110,30 +147,38 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: INNER
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
-    BinaryExpr
+    on_expr: BinaryExpr
       op: EQ
-      ColumnRef
+      left: ColumnRef
         column: "id"
         table: "a"
         schema: null
-      ColumnRef
+      right: ColumnRef
         column: "id"
         table: "b"
         schema: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -143,30 +188,38 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: LEFT
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
-    BinaryExpr
+    on_expr: BinaryExpr
       op: EQ
-      ColumnRef
+      left: ColumnRef
         column: "id"
         table: "a"
         schema: null
-      ColumnRef
+      right: ColumnRef
         column: "id"
         table: "b"
         schema: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -176,30 +229,38 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: RIGHT
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
-    BinaryExpr
+    on_expr: BinaryExpr
       op: EQ
-      ColumnRef
+      left: ColumnRef
         column: "id"
         table: "a"
         schema: null
-      ColumnRef
+      right: ColumnRef
         column: "id"
         table: "b"
         schema: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -209,20 +270,29 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: CROSS
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
+    on_expr: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -232,30 +302,38 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: FULL
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
-    BinaryExpr
+    on_expr: BinaryExpr
       op: EQ
-      ColumnRef
+      left: ColumnRef
         column: "id"
         table: "a"
         schema: null
-      ColumnRef
+      right: ColumnRef
         column: "id"
         table: "b"
         schema: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -265,30 +343,38 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: LEFT
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
-    BinaryExpr
+    on_expr: BinaryExpr
       op: EQ
-      ColumnRef
+      left: ColumnRef
         column: "id"
         table: "a"
         schema: null
-      ColumnRef
+      right: ColumnRef
         column: "id"
         table: "b"
         schema: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -302,20 +388,29 @@ class JoinNatural(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: NATURAL_INNER
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
+    on_expr: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -325,20 +420,29 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: NATURAL_LEFT
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
+    on_expr: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -352,25 +456,33 @@ class JoinUsing(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: INNER
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
-    ExprList[1]
+    on_expr: null
+    using_columns: ExprList[1]
       ColumnRef
         column: "id"
         table: null
         schema: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -380,21 +492,23 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: INNER
-    TableRef
+    left: TableRef
       table_name: "a"
       schema: null
       alias: null
-    TableRef
+    right: TableRef
       table_name: "b"
       schema: null
       alias: null
-    ExprList[2]
+    on_expr: null
+    using_columns: ExprList[2]
       ColumnRef
         column: "id"
         table: null
@@ -403,6 +517,12 @@ SelectStmt
         column: "name"
         table: null
         schema: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -416,46 +536,55 @@ class JoinMultiple(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  JoinClause
+      expr: null
+  from_clause: JoinClause
     join_type: LEFT
-    JoinClause
+    left: JoinClause
       join_type: INNER
-      TableRef
+      left: TableRef
         table_name: "a"
         schema: null
         alias: null
-      TableRef
+      right: TableRef
         table_name: "b"
         schema: null
         alias: null
-      BinaryExpr
+      on_expr: BinaryExpr
         op: EQ
-        ColumnRef
+        left: ColumnRef
           column: "id"
           table: "a"
           schema: null
-        ColumnRef
+        right: ColumnRef
           column: "id"
           table: "b"
           schema: null
-    TableRef
+      using_columns: null
+    right: TableRef
       table_name: "c"
       schema: null
       alias: null
-    BinaryExpr
+    on_expr: BinaryExpr
       op: EQ
-      ColumnRef
+      left: ColumnRef
         column: "id"
         table: "b"
         schema: null
-      ColumnRef
+      right: ColumnRef
         column: "id"
         table: "c"
         schema: null
+    using_columns: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -469,20 +598,34 @@ class SubqueryTableSource(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: STAR
       alias: null
-  SubqueryTableSource
-    SelectStmt
+      expr: null
+  from_clause: SubqueryTableSource
+    select: SelectStmt
       flags: (none)
-      ResultColumnList[1]
+      columns: ResultColumnList[1]
         ResultColumn
           flags: (none)
           alias: null
-          Literal
+          expr: Literal
             literal_type: INTEGER
             source: "1"
+      from_clause: null
+      where: null
+      groupby: null
+      having: null
+      orderby: null
+      limit_clause: null
+      window_clause: null
     alias: "t"
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

@@ -15,29 +15,44 @@ class WithClause(TestSuite):
             out="""\
 WithClause
   recursive: 0
-  CteList[1]
+  ctes: CteList[1]
     CteDefinition
       cte_name: "t"
       materialized: 0
-      SelectStmt
+      columns: null
+      select: SelectStmt
         flags: (none)
-        ResultColumnList[1]
+        columns: ResultColumnList[1]
           ResultColumn
             flags: (none)
             alias: null
-            Literal
+            expr: Literal
               literal_type: INTEGER
               source: "1"
-  SelectStmt
+        from_clause: null
+        where: null
+        groupby: null
+        having: null
+        orderby: null
+        limit_clause: null
+        window_clause: null
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "t"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -47,11 +62,11 @@ WithClause
             out="""\
 WithClause
   recursive: 0
-  CteList[1]
+  ctes: CteList[1]
     CteDefinition
       cte_name: "t"
       materialized: 0
-      ExprList[2]
+      columns: ExprList[2]
         ColumnRef
           column: "a"
           table: null
@@ -60,31 +75,45 @@ WithClause
           column: "b"
           table: null
           schema: null
-      SelectStmt
+      select: SelectStmt
         flags: (none)
-        ResultColumnList[2]
+        columns: ResultColumnList[2]
           ResultColumn
             flags: (none)
             alias: null
-            Literal
+            expr: Literal
               literal_type: INTEGER
               source: "1"
           ResultColumn
             flags: (none)
             alias: null
-            Literal
+            expr: Literal
               literal_type: INTEGER
               source: "2"
-  SelectStmt
+        from_clause: null
+        where: null
+        groupby: null
+        having: null
+        orderby: null
+        limit_clause: null
+        window_clause: null
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "t"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -94,59 +123,78 @@ WithClause
             out="""\
 WithClause
   recursive: 1
-  CteList[1]
+  ctes: CteList[1]
     CteDefinition
       cte_name: "cnt"
       materialized: 0
-      ExprList[1]
+      columns: ExprList[1]
         ColumnRef
           column: "x"
           table: null
           schema: null
-      CompoundSelect
+      select: CompoundSelect
         op: UNION_ALL
-        SelectStmt
+        left: SelectStmt
           flags: (none)
-          ResultColumnList[1]
+          columns: ResultColumnList[1]
             ResultColumn
               flags: (none)
               alias: null
-              Literal
+              expr: Literal
                 literal_type: INTEGER
                 source: "1"
-        SelectStmt
+          from_clause: null
+          where: null
+          groupby: null
+          having: null
+          orderby: null
+          limit_clause: null
+          window_clause: null
+        right: SelectStmt
           flags: (none)
-          ResultColumnList[1]
+          columns: ResultColumnList[1]
             ResultColumn
               flags: (none)
               alias: null
-              BinaryExpr
+              expr: BinaryExpr
                 op: PLUS
-                ColumnRef
+                left: ColumnRef
                   column: "x"
                   table: null
                   schema: null
-                Literal
+                right: Literal
                   literal_type: INTEGER
                   source: "1"
-          TableRef
+          from_clause: TableRef
             table_name: "cnt"
             schema: null
             alias: null
-  SelectStmt
+          where: null
+          groupby: null
+          having: null
+          orderby: null
+          limit_clause: null
+          window_clause: null
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: (none)
         alias: null
-        ColumnRef
+        expr: ColumnRef
           column: "x"
           table: null
           schema: null
-    TableRef
+    from_clause: TableRef
       table_name: "cnt"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -156,41 +204,64 @@ WithClause
             out="""\
 WithClause
   recursive: 0
-  CteList[2]
+  ctes: CteList[2]
     CteDefinition
       cte_name: "a"
       materialized: 0
-      SelectStmt
+      columns: null
+      select: SelectStmt
         flags: (none)
-        ResultColumnList[1]
+        columns: ResultColumnList[1]
           ResultColumn
             flags: (none)
             alias: null
-            Literal
+            expr: Literal
               literal_type: INTEGER
               source: "1"
+        from_clause: null
+        where: null
+        groupby: null
+        having: null
+        orderby: null
+        limit_clause: null
+        window_clause: null
     CteDefinition
       cte_name: "b"
       materialized: 0
-      SelectStmt
+      columns: null
+      select: SelectStmt
         flags: (none)
-        ResultColumnList[1]
+        columns: ResultColumnList[1]
           ResultColumn
             flags: (none)
             alias: null
-            Literal
+            expr: Literal
               literal_type: INTEGER
               source: "2"
-  SelectStmt
+        from_clause: null
+        where: null
+        groupby: null
+        having: null
+        orderby: null
+        limit_clause: null
+        window_clause: null
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "a"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -200,29 +271,44 @@ WithClause
             out="""\
 WithClause
   recursive: 0
-  CteList[1]
+  ctes: CteList[1]
     CteDefinition
       cte_name: "t"
       materialized: 1
-      SelectStmt
+      columns: null
+      select: SelectStmt
         flags: (none)
-        ResultColumnList[1]
+        columns: ResultColumnList[1]
           ResultColumn
             flags: (none)
             alias: null
-            Literal
+            expr: Literal
               literal_type: INTEGER
               source: "1"
-  SelectStmt
+        from_clause: null
+        where: null
+        groupby: null
+        having: null
+        orderby: null
+        limit_clause: null
+        window_clause: null
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "t"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -232,28 +318,43 @@ WithClause
             out="""\
 WithClause
   recursive: 0
-  CteList[1]
+  ctes: CteList[1]
     CteDefinition
       cte_name: "t"
       materialized: 2
-      SelectStmt
+      columns: null
+      select: SelectStmt
         flags: (none)
-        ResultColumnList[1]
+        columns: ResultColumnList[1]
           ResultColumn
             flags: (none)
             alias: null
-            Literal
+            expr: Literal
               literal_type: INTEGER
               source: "1"
-  SelectStmt
+        from_clause: null
+        where: null
+        groupby: null
+        having: null
+        orderby: null
+        limit_clause: null
+        window_clause: null
+  select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "t"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )

@@ -445,6 +445,14 @@ typedef union SyntaqliteAggregateFunctionCallFlags {
     };
 } SyntaqliteAggregateFunctionCallFlags;
 
+typedef union SyntaqliteCreateTableStmtFlags {
+    uint8_t raw;
+    struct {
+        uint8_t without_rowid : 1;
+        uint8_t strict : 1;
+    };
+} SyntaqliteCreateTableStmtFlags;
+
 // ============ Node Tags ============
 
 typedef enum {
@@ -987,7 +995,7 @@ typedef struct SyntaqliteCreateTableStmt {
     SyntaqliteSourceSpan schema;
     uint8_t is_temp;
     uint8_t if_not_exists;
-    uint8_t table_options;
+    SyntaqliteCreateTableStmtFlags flags;
     uint32_t columns;
     uint32_t table_constraints;
     uint32_t as_select;

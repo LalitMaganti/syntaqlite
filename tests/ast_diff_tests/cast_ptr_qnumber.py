@@ -15,15 +15,22 @@ class CastExpr(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CastExpr
-        Literal
+      expr: CastExpr
+        expr: Literal
           literal_type: INTEGER
           source: "1"
         type_name: "INTEGER"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -33,15 +40,22 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CastExpr
-        Literal
+      expr: CastExpr
+        expr: Literal
           literal_type: STRING
           source: "'hello'"
         type_name: "TEXT"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -51,15 +65,22 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CastExpr
-        Literal
+      expr: CastExpr
+        expr: Literal
           literal_type: FLOAT
           source: "3.14"
         type_name: "REAL"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -69,16 +90,23 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CastExpr
-        ColumnRef
+      expr: CastExpr
+        expr: ColumnRef
           column: "x"
           table: null
           schema: null
         type_name: "VARCHAR(100)"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -88,16 +116,23 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CastExpr
-        ColumnRef
+      expr: CastExpr
+        expr: ColumnRef
           column: "x"
           table: null
           schema: null
         type_name: "DECIMAL(10,2)"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -107,16 +142,23 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CastExpr
-        ColumnRef
+      expr: CastExpr
+        expr: ColumnRef
           column: "x"
           table: null
           schema: null
         type_name: "DOUBLE PRECISION"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -126,15 +168,22 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      CastExpr
-        Literal
+      expr: CastExpr
+        expr: Literal
           literal_type: INTEGER
           source: "1"
         type_name: null
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -148,18 +197,25 @@ class PtrExpr(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: PTR
-        Literal
+        left: Literal
           literal_type: STRING
           source: "'{\\"a\\":1}'"
-        Literal
+        right: Literal
           literal_type: STRING
           source: "'$.a'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -169,19 +225,26 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      BinaryExpr
+      expr: BinaryExpr
         op: PTR
-        ColumnRef
+        left: ColumnRef
           column: "j"
           table: null
           schema: null
-        Literal
+        right: Literal
           literal_type: STRING
           source: "'$.name'"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -195,13 +258,20 @@ class QnumberLiteral(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: QNUMBER
         source: "1_000_000"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -211,13 +281,20 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      Literal
+      expr: Literal
         literal_type: QNUMBER
         source: "1_000.50"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -231,17 +308,24 @@ class RowValue(TestSuite):
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      ExprList[2]
+      expr: ExprList[2]
         Literal
           literal_type: INTEGER
           source: "1"
         Literal
           literal_type: INTEGER
           source: "2"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )
 
@@ -251,11 +335,11 @@ SelectStmt
             out="""\
 SelectStmt
   flags: (none)
-  ResultColumnList[1]
+  columns: ResultColumnList[1]
     ResultColumn
       flags: (none)
       alias: null
-      ExprList[3]
+      expr: ExprList[3]
         Literal
           literal_type: INTEGER
           source: "1"
@@ -265,5 +349,12 @@ SelectStmt
         Literal
           literal_type: INTEGER
           source: "3"
+  from_clause: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
 """,
         )

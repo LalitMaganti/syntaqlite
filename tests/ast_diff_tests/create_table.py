@@ -18,11 +18,14 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -35,17 +38,22 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[3]
+  flags: (none)
+  columns: ColumnDefList[3]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
     ColumnDef
       column_name: "b"
       type_name: "TEXT"
+      constraints: null
     ColumnDef
       column_name: "c"
       type_name: "REAL"
+      constraints: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -58,17 +66,22 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[3]
+  flags: (none)
+  columns: ColumnDefList[3]
     ColumnDef
       column_name: "a"
       type_name: null
+      constraints: null
     ColumnDef
       column_name: "b"
       type_name: null
+      constraints: null
     ColumnDef
       column_name: "c"
       type_name: null
+      constraints: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -81,14 +94,18 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[2]
+  flags: (none)
+  columns: ColumnDefList[2]
     ColumnDef
       column_name: "a"
       type_name: "VARCHAR(255)"
+      constraints: null
     ColumnDef
       column_name: "b"
       type_name: "DECIMAL(10, 2)"
+      constraints: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -105,11 +122,14 @@ CreateTableStmt
   schema: null
   is_temp: 1
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -122,11 +142,14 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 1
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -139,11 +162,14 @@ CreateTableStmt
   schema: "main"
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -160,12 +186,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 1
-  ColumnDefList[1]
+  flags: WITHOUT_ROWID
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
@@ -174,6 +200,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -186,11 +218,14 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 2
-  ColumnDefList[1]
+  flags: STRICT
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -203,12 +238,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 3
-  ColumnDefList[1]
+  flags: WITHOUT_ROWID STRICT
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
@@ -217,6 +252,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -233,17 +274,26 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  SelectStmt
+  flags: (none)
+  columns: null
+  table_constraints: null
+  as_select: SelectStmt
     flags: (none)
-    ResultColumnList[1]
+    columns: ResultColumnList[1]
       ResultColumn
         flags: STAR
         alias: null
-    TableRef
+        expr: null
+    from_clause: TableRef
       table_name: "t1"
       schema: null
       alias: null
+    where: null
+    groupby: null
+    having: null
+    orderby: null
+    limit_clause: null
+    window_clause: null
 """,
         )
 
@@ -260,12 +310,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
@@ -274,9 +324,14 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          Literal
+          default_expr: Literal
             literal_type: INTEGER
             source: "42"
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -289,12 +344,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "TEXT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
@@ -303,9 +358,14 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          Literal
+          default_expr: Literal
             literal_type: STRING
             source: "'hello'"
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -318,12 +378,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
@@ -332,11 +392,16 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          UnaryExpr
+          default_expr: UnaryExpr
             op: MINUS
-            Literal
+            operand: Literal
               literal_type: INTEGER
               source: "1"
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -349,12 +414,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
@@ -363,14 +428,19 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          BinaryExpr
+          default_expr: BinaryExpr
             op: PLUS
-            Literal
+            left: Literal
               literal_type: INTEGER
               source: "1"
-            Literal
+            right: Literal
               literal_type: INTEGER
               source: "2"
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -383,12 +453,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: DEFAULT
           constraint_name: null
@@ -397,9 +467,14 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          Literal
+          default_expr: Literal
             literal_type: STRING
             source: "TRUE"
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -416,12 +491,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
@@ -430,6 +505,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -442,12 +523,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INTEGER"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
@@ -456,6 +537,12 @@ CreateTableStmt
           is_autoincrement: 1
           collation_name: null
           generated_storage: VIRTUAL
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -468,12 +555,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: PRIMARY_KEY
           constraint_name: null
@@ -482,6 +569,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -494,12 +587,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "TEXT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: NOT_NULL
           constraint_name: null
@@ -508,6 +601,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -520,12 +619,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "TEXT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: UNIQUE
           constraint_name: null
@@ -534,6 +633,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -550,12 +655,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: CHECK
           constraint_name: null
@@ -564,15 +669,20 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          BinaryExpr
+          default_expr: null
+          check_expr: BinaryExpr
             op: GT
-            ColumnRef
+            left: ColumnRef
               column: "a"
               table: null
               schema: null
-            Literal
+            right: Literal
               literal_type: INTEGER
               source: "0"
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -589,12 +699,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: REFERENCES
           constraint_name: null
@@ -603,9 +713,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          ForeignKeyClause
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: ForeignKeyClause
             ref_table: "other"
-            ExprList[1]
+            ref_columns: ExprList[1]
               ColumnRef
                 column: "id"
                 table: null
@@ -613,6 +726,8 @@ CreateTableStmt
             on_delete: NO_ACTION
             on_update: NO_ACTION
             is_deferred: 0
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -625,12 +740,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: REFERENCES
           constraint_name: null
@@ -639,9 +754,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          ForeignKeyClause
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: ForeignKeyClause
             ref_table: "other"
-            ExprList[1]
+            ref_columns: ExprList[1]
               ColumnRef
                 column: "id"
                 table: null
@@ -649,6 +767,8 @@ CreateTableStmt
             on_delete: CASCADE
             on_update: NO_ACTION
             is_deferred: 0
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -661,12 +781,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: REFERENCES
           constraint_name: null
@@ -675,9 +795,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          ForeignKeyClause
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: ForeignKeyClause
             ref_table: "other"
-            ExprList[1]
+            ref_columns: ExprList[1]
               ColumnRef
                 column: "id"
                 table: null
@@ -685,6 +808,8 @@ CreateTableStmt
             on_delete: NO_ACTION
             on_update: SET_NULL
             is_deferred: 0
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -701,12 +826,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "TEXT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: COLLATE
           constraint_name: null
@@ -715,6 +840,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: "NOCASE"
           generated_storage: VIRTUAL
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -731,15 +862,16 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[2]
+  flags: (none)
+  columns: ColumnDefList[2]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
     ColumnDef
       column_name: "b"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: GENERATED
           constraint_name: null
@@ -748,15 +880,20 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: STORED
-          BinaryExpr
+          default_expr: null
+          check_expr: null
+          generated_expr: BinaryExpr
             op: STAR
-            ColumnRef
+            left: ColumnRef
               column: "a"
               table: null
               schema: null
-            Literal
+            right: Literal
               literal_type: INTEGER
               source: "2"
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -769,15 +906,16 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[2]
+  flags: (none)
+  columns: ColumnDefList[2]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
     ColumnDef
       column_name: "b"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: GENERATED
           constraint_name: null
@@ -786,15 +924,20 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
-          BinaryExpr
+          default_expr: null
+          check_expr: null
+          generated_expr: BinaryExpr
             op: PLUS
-            ColumnRef
+            left: ColumnRef
               column: "a"
               table: null
               schema: null
-            Literal
+            right: Literal
               literal_type: INTEGER
               source: "1"
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -811,12 +954,12 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-      ColumnConstraintList[1]
+      constraints: ColumnConstraintList[1]
         ColumnConstraint
           kind: NOT_NULL
           constraint_name: "nn"
@@ -825,6 +968,12 @@ CreateTableStmt
           is_autoincrement: 0
           collation_name: null
           generated_storage: VIRTUAL
+          default_expr: null
+          check_expr: null
+          generated_expr: null
+          fk_clause: null
+  table_constraints: null
+  as_select: null
 """,
         )
 
@@ -841,35 +990,40 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[2]
+  flags: (none)
+  columns: ColumnDefList[2]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
     ColumnDef
       column_name: "b"
       type_name: "INT"
-  TableConstraintList[1]
+      constraints: null
+  table_constraints: TableConstraintList[1]
     TableConstraint
       kind: PRIMARY_KEY
       constraint_name: null
       onconf: 0
       is_autoincrement: 0
-      OrderByList[2]
+      columns: OrderByList[2]
         OrderingTerm
-          ColumnRef
+          expr: ColumnRef
             column: "a"
             table: null
             schema: null
           sort_order: ASC
           nulls_order: NONE
         OrderingTerm
-          ColumnRef
+          expr: ColumnRef
             column: "b"
             table: null
             schema: null
           sort_order: ASC
           nulls_order: NONE
+      check_expr: null
+      fk_clause: null
+  as_select: null
 """,
         )
 
@@ -882,25 +1036,29 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-  TableConstraintList[1]
+      constraints: null
+  table_constraints: TableConstraintList[1]
     TableConstraint
       kind: PRIMARY_KEY
       constraint_name: "pk"
       onconf: 0
       is_autoincrement: 0
-      OrderByList[1]
+      columns: OrderByList[1]
         OrderingTerm
-          ColumnRef
+          expr: ColumnRef
             column: "a"
             table: null
             schema: null
           sort_order: ASC
           nulls_order: NONE
+      check_expr: null
+      fk_clause: null
+  as_select: null
 """,
         )
 
@@ -917,35 +1075,40 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[2]
+  flags: (none)
+  columns: ColumnDefList[2]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
     ColumnDef
       column_name: "b"
       type_name: "INT"
-  TableConstraintList[1]
+      constraints: null
+  table_constraints: TableConstraintList[1]
     TableConstraint
       kind: UNIQUE
       constraint_name: null
       onconf: 0
       is_autoincrement: 0
-      OrderByList[2]
+      columns: OrderByList[2]
         OrderingTerm
-          ColumnRef
+          expr: ColumnRef
             column: "a"
             table: null
             schema: null
           sort_order: ASC
           nulls_order: NONE
         OrderingTerm
-          ColumnRef
+          expr: ColumnRef
             column: "b"
             table: null
             schema: null
           sort_order: ASC
           nulls_order: NONE
+      check_expr: null
+      fk_clause: null
+  as_select: null
 """,
         )
 
@@ -962,30 +1125,35 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[2]
+  flags: (none)
+  columns: ColumnDefList[2]
     ColumnDef
       column_name: "a"
       type_name: "INT"
+      constraints: null
     ColumnDef
       column_name: "b"
       type_name: "INT"
-  TableConstraintList[1]
+      constraints: null
+  table_constraints: TableConstraintList[1]
     TableConstraint
       kind: CHECK
       constraint_name: null
       onconf: 0
       is_autoincrement: 0
-      BinaryExpr
+      columns: null
+      check_expr: BinaryExpr
         op: GT
-        ColumnRef
+        left: ColumnRef
           column: "a"
           table: null
           schema: null
-        ColumnRef
+        right: ColumnRef
           column: "b"
           table: null
           schema: null
+      fk_clause: null
+  as_select: null
 """,
         )
 
@@ -1002,25 +1170,27 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-  TableConstraintList[1]
+      constraints: null
+  table_constraints: TableConstraintList[1]
     TableConstraint
       kind: FOREIGN_KEY
       constraint_name: null
       onconf: 0
       is_autoincrement: 0
-      ExprList[1]
+      columns: ExprList[1]
         ColumnRef
           column: "a"
           table: null
           schema: null
-      ForeignKeyClause
+      check_expr: null
+      fk_clause: ForeignKeyClause
         ref_table: "other"
-        ExprList[1]
+        ref_columns: ExprList[1]
           ColumnRef
             column: "id"
             table: null
@@ -1028,6 +1198,7 @@ CreateTableStmt
         on_delete: NO_ACTION
         on_update: NO_ACTION
         is_deferred: 0
+  as_select: null
 """,
         )
 
@@ -1040,25 +1211,27 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-  TableConstraintList[1]
+      constraints: null
+  table_constraints: TableConstraintList[1]
     TableConstraint
       kind: FOREIGN_KEY
       constraint_name: null
       onconf: 0
       is_autoincrement: 0
-      ExprList[1]
+      columns: ExprList[1]
         ColumnRef
           column: "a"
           table: null
           schema: null
-      ForeignKeyClause
+      check_expr: null
+      fk_clause: ForeignKeyClause
         ref_table: "other"
-        ExprList[1]
+        ref_columns: ExprList[1]
           ColumnRef
             column: "id"
             table: null
@@ -1066,6 +1239,7 @@ CreateTableStmt
         on_delete: CASCADE
         on_update: SET_NULL
         is_deferred: 0
+  as_select: null
 """,
         )
 
@@ -1078,25 +1252,27 @@ CreateTableStmt
   schema: null
   is_temp: 0
   if_not_exists: 0
-  table_options: 0
-  ColumnDefList[1]
+  flags: (none)
+  columns: ColumnDefList[1]
     ColumnDef
       column_name: "a"
       type_name: "INT"
-  TableConstraintList[1]
+      constraints: null
+  table_constraints: TableConstraintList[1]
     TableConstraint
       kind: FOREIGN_KEY
       constraint_name: null
       onconf: 0
       is_autoincrement: 0
-      ExprList[1]
+      columns: ExprList[1]
         ColumnRef
           column: "a"
           table: null
           schema: null
-      ForeignKeyClause
+      check_expr: null
+      fk_clause: ForeignKeyClause
         ref_table: "other"
-        ExprList[1]
+        ref_columns: ExprList[1]
           ColumnRef
             column: "id"
             table: null
@@ -1104,5 +1280,6 @@ CreateTableStmt
         on_delete: NO_ACTION
         on_update: NO_ACTION
         is_deferred: 1
+  as_select: null
 """,
         )
