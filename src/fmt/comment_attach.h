@@ -1,20 +1,27 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// Comment attachment: maps each comment token to its owning AST node
-// based on source ranges computed during AST construction.
+// Comment attachment: pre-classifies comment tokens (LEADING vs TRAILING)
+// and maps each to its owning AST node based on source ranges.
 
 #ifndef SYNTAQLITE_SRC_FMT_COMMENT_ATTACH_H
 #define SYNTAQLITE_SRC_FMT_COMMENT_ATTACH_H
 
 #include "src/ast/ast_base.h"
 #include "src/ast/ast_nodes.h"
-#include "src/fmt/comment_map.h"
 #include "src/token_list.h"
+
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// Comment placement relative to adjacent real tokens.
+typedef enum {
+    SYNTAQLITE_COMMENT_LEADING = 0,   // Before the next real token
+    SYNTAQLITE_COMMENT_TRAILING = 1,  // After the previous real token, same line
+} SyntaqliteCommentKind;
 
 // Comment attachment: maps each comment token to its owning AST node.
 typedef struct {

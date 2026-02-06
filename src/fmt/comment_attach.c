@@ -1,14 +1,88 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// Comment attachment implementation: assigns each comment token to its
-// owning AST node based on source ranges and neighboring-node proximity.
+// Comment attachment implementation: pre-classifies comment tokens and
+// assigns each to its owning AST node based on source ranges and
+// neighboring-node proximity.
 
 #include "src/fmt/comment_attach.h"
 
 #include "src/sqlite_tokens.h"
 
 #include <stdlib.h>
+
+// ---------------------------------------------------------------------------
+// Comment classification (LEADING vs TRAILING)
+// ---------------------------------------------------------------------------
+
+typedef struct {
+    uint8_t *kinds;    // SyntaqliteCommentKind per token position
+    uint32_t count;    // Equal to token_list->count
+} CommentMap;
+
+// Build a comment map by pre-classifying each TK_COMMENT token.
+// Returns NULL if token_list is NULL, empty, or has no comments.
+static CommentMap *comment_map_build(
+    const char *source, SyntaqliteTokenList *token_list) {
+    if (!token_list || token_list->count == 0) return NULL;
+
+    // Check if there are any comments.
+    int has_comments = 0;
+    for (uint32_t i = 0; i < token_list->count; i++) {
+        if (token_list->data[i].type == TK_COMMENT) {
+            has_comments = 1;
+            break;
+        }
+    }
+    if (!has_comments) return NULL;
+
+    CommentMap *map = malloc(sizeof(CommentMap));
+    if (!map) return NULL;
+
+    map->count = token_list->count;
+    map->kinds = calloc(token_list->count, sizeof(uint8_t));
+    if (!map->kinds) {
+        free(map);
+        return NULL;
+    }
+
+    // Classify each comment as LEADING or TRAILING.
+    // TRAILING: no newline between previous real token's end and comment start.
+    uint32_t prev_real_end = 0;
+    int seen_real = 0;
+
+    for (uint32_t i = 0; i < token_list->count; i++) {
+        SyntaqliteRawToken *tok = &token_list->data[i];
+
+        if (tok->type == TK_COMMENT) {
+            uint8_t kind = SYNTAQLITE_COMMENT_LEADING;
+            if (seen_real) {
+                int has_newline = 0;
+                for (uint32_t j = prev_real_end; j < tok->offset; j++) {
+                    if (source[j] == '\n') { has_newline = 1; break; }
+                }
+                if (!has_newline) kind = SYNTAQLITE_COMMENT_TRAILING;
+            }
+            map->kinds[i] = kind;
+        } else if (tok->type != TK_SPACE) {
+            // Real token
+            prev_real_end = tok->offset + tok->length;
+            seen_real = 1;
+        }
+    }
+
+    return map;
+}
+
+static void comment_map_free(CommentMap *map) {
+    if (!map) return;
+    free(map->kinds);
+    free(map);
+}
+
+// ---------------------------------------------------------------------------
+// Node-to-comment ownership
+// ---------------------------------------------------------------------------
 
 // Find the innermost node whose range contains `offset`.
 // Returns SYNTAQLITE_NULL_NODE if none found.
@@ -92,7 +166,7 @@ SyntaqliteCommentAttachment *syntaqlite_comment_attach(
     if (!has_comments) return NULL;
 
     // Build comment map for LEADING/TRAILING classification
-    SyntaqliteCommentMap *map = syntaqlite_comment_map_build(source, token_list);
+    CommentMap *map = comment_map_build(source, token_list);
 
     SyntaqliteCommentAttachment *att = malloc(sizeof(SyntaqliteCommentAttachment));
     att->count = token_list->count;
@@ -130,7 +204,7 @@ SyntaqliteCommentAttachment *syntaqlite_comment_attach(
         att->owner_node[i] = (owner != SYNTAQLITE_NULL_NODE) ? owner : root_id;
     }
 
-    syntaqlite_comment_map_free(map);
+    comment_map_free(map);
     return att;
 }
 

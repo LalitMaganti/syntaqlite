@@ -86,8 +86,6 @@ source_set("fmt") {
   sources = [
     "fmt/comment_attach.c",
     "fmt/comment_attach.h",
-    "fmt/comment_map.c",
-    "fmt/comment_map.h",
     "fmt/doc.c",
     "fmt/doc.h",
     "fmt/doc_layout.c",
