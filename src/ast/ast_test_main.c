@@ -132,6 +132,7 @@ int main(int argc, char **argv) {
   parseCtx.astCtx = &astCtx;
   parseCtx.zSql = sql;
   parseCtx.root = SYNTAQLITE_NULL_NODE;
+  parseCtx.token_list = NULL;
 
   // Create parser
   void *parser = syntaqlite_sqlite3ParserAlloc(malloc, &parseCtx);

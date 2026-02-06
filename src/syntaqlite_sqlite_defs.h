@@ -45,6 +45,7 @@ typedef struct SyntaqliteToken {
 */
 struct SyntaqliteAst;
 struct SyntaqliteAstContext;
+struct SyntaqliteTokenList;
 
 /*
 ** Parse context passed to the parser.
@@ -58,6 +59,7 @@ struct SyntaqliteParseContext {
   struct SyntaqliteAstContext *astCtx;             /* AST building context */
   const char *zSql;                                /* Original SQL text */
   u32 root;                                        /* Root AST node ID */
+  struct SyntaqliteTokenList *token_list;           /* Optional token collector */
 };
 
 /*

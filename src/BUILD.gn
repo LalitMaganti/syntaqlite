@@ -24,6 +24,14 @@ source_set("sqlite") {
   configs += [ ":lemon_generated" ]
 }
 
+# Token list for collecting raw tokens during parsing.
+source_set("token_list") {
+  sources = [
+    "token_list.c",
+    "token_list.h",
+  ]
+}
+
 # AST node types, builder functions, and printer.
 # Regenerate with: python3 python/tools/extract_sqlite.py
 source_set("ast") {
