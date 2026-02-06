@@ -20,11 +20,13 @@ void syntaqlite_ast_context_init(SyntaqliteAstContext *ctx,
     syntaqlite_vec_init(&ctx->list_acc);
     ctx->list_acc_node_id = SYNTAQLITE_NULL_NODE;
     ctx->list_acc_tag = 0;
+    syntaqlite_vec_init(&ctx->ranges);
 }
 
 void syntaqlite_ast_context_cleanup(SyntaqliteAstContext *ctx) {
     ast_list_flush(ctx);
     syntaqlite_vec_free(&ctx->list_acc);
+    syntaqlite_vec_free(&ctx->ranges);
     syntaqlite_arena_free(&ctx->ast);
 }
 
@@ -55,6 +57,16 @@ void ast_list_flush(SyntaqliteAstContext *ctx) {
     }
     ast->size += (uint32_t)size;
 
+    // Compute source range as union of all children's ranges
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange list_range = {UINT32_MAX, 0};
+    for (uint32_t i = 0; i < count; i++) {
+        ast_range_union(ctx, &list_range, ctx->list_acc.data[i]);
+    }
+    if (list_range.first != UINT32_MAX) {
+        ctx->ranges.data[ctx->list_acc_node_id] = list_range;
+    }
+
     ctx->list_acc_node_id = SYNTAQLITE_NULL_NODE;
     ctx->list_acc.count = 0;
 }
@@ -65,6 +77,7 @@ uint32_t ast_list_start(SyntaqliteAstContext *ctx, uint8_t tag,
     ast_list_flush(ctx);
 
     uint32_t node_id = syntaqlite_arena_reserve_id(&ctx->ast);
+    ast_ranges_sync(ctx);
 
     syntaqlite_vec_ensure(&ctx->list_acc, 1);
     ctx->list_acc.data[0] = first_child;

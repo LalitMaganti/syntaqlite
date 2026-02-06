@@ -103,6 +103,12 @@ uint32_t ast_binary_expr(SyntaqliteAstContext *ctx, SyntaqliteBinaryOp op, uint3
     node->op = op;
     node->left = left;
     node->right = right;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, left);
+    ast_range_union(ctx, &_r, right);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -113,6 +119,11 @@ uint32_t ast_unary_expr(SyntaqliteAstContext *ctx, SyntaqliteUnaryOp op, uint32_
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->op = op;
     node->operand = operand;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, operand);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -127,6 +138,11 @@ uint32_t ast_literal(
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->literal_type = literal_type;
     node->source = source;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union_span(&_r, source);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -136,6 +152,7 @@ uint32_t ast_expr_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteExprList *node = (SyntaqliteExprList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -163,6 +180,12 @@ uint32_t ast_result_column(
     node->flags = flags;
     node->alias = alias;
     node->expr = expr;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, expr);
+    ast_range_union_span(&_r, alias);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -172,6 +195,7 @@ uint32_t ast_result_column_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteResultColumnList *node = (SyntaqliteResultColumnList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -211,6 +235,18 @@ uint32_t ast_select_stmt(
     node->orderby = orderby;
     node->limit_clause = limit_clause;
     node->window_clause = window_clause;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, columns);
+    ast_range_union(ctx, &_r, from_clause);
+    ast_range_union(ctx, &_r, where);
+    ast_range_union(ctx, &_r, groupby);
+    ast_range_union(ctx, &_r, having);
+    ast_range_union(ctx, &_r, orderby);
+    ast_range_union(ctx, &_r, limit_clause);
+    ast_range_union(ctx, &_r, window_clause);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -227,6 +263,11 @@ uint32_t ast_ordering_term(
     node->expr = expr;
     node->sort_order = sort_order;
     node->nulls_order = nulls_order;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, expr);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -236,6 +277,7 @@ uint32_t ast_order_by_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteOrderByList *node = (SyntaqliteOrderByList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -257,6 +299,12 @@ uint32_t ast_limit_clause(SyntaqliteAstContext *ctx, uint32_t limit, uint32_t of
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->limit = limit;
     node->offset = offset;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, limit);
+    ast_range_union(ctx, &_r, offset);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -273,6 +321,13 @@ uint32_t ast_column_ref(
     node->column = column;
     node->table = table;
     node->schema = schema;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union_span(&_r, column);
+    ast_range_union_span(&_r, table);
+    ast_range_union_span(&_r, schema);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -293,6 +348,14 @@ uint32_t ast_function_call(
     node->args = args;
     node->filter_clause = filter_clause;
     node->over_clause = over_clause;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, args);
+    ast_range_union(ctx, &_r, filter_clause);
+    ast_range_union(ctx, &_r, over_clause);
+    ast_range_union_span(&_r, func_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -304,6 +367,12 @@ uint32_t ast_is_expr(SyntaqliteAstContext *ctx, SyntaqliteIsOp op, uint32_t left
     node->op = op;
     node->left = left;
     node->right = right;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, left);
+    ast_range_union(ctx, &_r, right);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -322,6 +391,13 @@ uint32_t ast_between_expr(
     node->operand = operand;
     node->low = low;
     node->high = high;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, operand);
+    ast_range_union(ctx, &_r, low);
+    ast_range_union(ctx, &_r, high);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -340,6 +416,13 @@ uint32_t ast_like_expr(
     node->operand = operand;
     node->pattern = pattern;
     node->escape = escape;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, operand);
+    ast_range_union(ctx, &_r, pattern);
+    ast_range_union(ctx, &_r, escape);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -351,6 +434,13 @@ uint32_t ast_case_expr(SyntaqliteAstContext *ctx, uint32_t operand, uint32_t els
     node->operand = operand;
     node->else_expr = else_expr;
     node->whens = whens;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, operand);
+    ast_range_union(ctx, &_r, else_expr);
+    ast_range_union(ctx, &_r, whens);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -361,6 +451,12 @@ uint32_t ast_case_when(SyntaqliteAstContext *ctx, uint32_t when_expr, uint32_t t
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->when_expr = when_expr;
     node->then_expr = then_expr;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, when_expr);
+    ast_range_union(ctx, &_r, then_expr);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -370,6 +466,7 @@ uint32_t ast_case_when_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteCaseWhenList *node = (SyntaqliteCaseWhenList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -397,6 +494,12 @@ uint32_t ast_compound_select(
     node->op = op;
     node->left = left;
     node->right = right;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, left);
+    ast_range_union(ctx, &_r, right);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -406,6 +509,11 @@ uint32_t ast_subquery_expr(SyntaqliteAstContext *ctx, uint32_t select) {
     SyntaqliteSubqueryExpr *node = (SyntaqliteSubqueryExpr*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->select = select;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, select);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -415,6 +523,11 @@ uint32_t ast_exists_expr(SyntaqliteAstContext *ctx, uint32_t select) {
     SyntaqliteExistsExpr *node = (SyntaqliteExistsExpr*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->select = select;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, select);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -431,6 +544,12 @@ uint32_t ast_in_expr(
     node->negated = negated;
     node->operand = operand;
     node->source = source;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, operand);
+    ast_range_union(ctx, &_r, source);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -440,6 +559,11 @@ uint32_t ast_variable(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan source) {
     SyntaqliteVariable *node = (SyntaqliteVariable*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->source = source;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union_span(&_r, source);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -450,6 +574,12 @@ uint32_t ast_collate_expr(SyntaqliteAstContext *ctx, uint32_t expr, SyntaqliteSo
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->expr = expr;
     node->collation = collation;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, expr);
+    ast_range_union_span(&_r, collation);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -460,6 +590,12 @@ uint32_t ast_cast_expr(SyntaqliteAstContext *ctx, uint32_t expr, SyntaqliteSourc
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->expr = expr;
     node->type_name = type_name;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, expr);
+    ast_range_union_span(&_r, type_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -469,6 +605,7 @@ uint32_t ast_values_row_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteValuesRowList *node = (SyntaqliteValuesRowList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -489,6 +626,11 @@ uint32_t ast_values_clause(SyntaqliteAstContext *ctx, uint32_t rows) {
     SyntaqliteValuesClause *node = (SyntaqliteValuesClause*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->rows = rows;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, rows);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -507,6 +649,13 @@ uint32_t ast_cte_definition(
     node->materialized = materialized;
     node->columns = columns;
     node->select = select;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, columns);
+    ast_range_union(ctx, &_r, select);
+    ast_range_union_span(&_r, cte_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -516,6 +665,7 @@ uint32_t ast_cte_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteCteList *node = (SyntaqliteCteList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -543,6 +693,12 @@ uint32_t ast_with_clause(
     node->recursive = recursive;
     node->ctes = ctes;
     node->select = select;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, ctes);
+    ast_range_union(ctx, &_r, select);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -565,6 +721,15 @@ uint32_t ast_aggregate_function_call(
     node->orderby = orderby;
     node->filter_clause = filter_clause;
     node->over_clause = over_clause;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, args);
+    ast_range_union(ctx, &_r, orderby);
+    ast_range_union(ctx, &_r, filter_clause);
+    ast_range_union(ctx, &_r, over_clause);
+    ast_range_union_span(&_r, func_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -579,6 +744,11 @@ uint32_t ast_raise_expr(
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->raise_type = raise_type;
     node->error_message = error_message;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, error_message);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -595,6 +765,13 @@ uint32_t ast_table_ref(
     node->table_name = table_name;
     node->schema = schema;
     node->alias = alias;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union_span(&_r, table_name);
+    ast_range_union_span(&_r, schema);
+    ast_range_union_span(&_r, alias);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -605,6 +782,12 @@ uint32_t ast_subquery_table_source(SyntaqliteAstContext *ctx, uint32_t select, S
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->select = select;
     node->alias = alias;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, select);
+    ast_range_union_span(&_r, alias);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -625,6 +808,14 @@ uint32_t ast_join_clause(
     node->right = right;
     node->on_expr = on_expr;
     node->using_columns = using_columns;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, left);
+    ast_range_union(ctx, &_r, right);
+    ast_range_union(ctx, &_r, on_expr);
+    ast_range_union(ctx, &_r, using_columns);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -635,6 +826,11 @@ uint32_t ast_join_prefix(SyntaqliteAstContext *ctx, uint32_t source, SyntaqliteJ
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->source = source;
     node->join_type = join_type;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, source);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -645,6 +841,12 @@ uint32_t ast_delete_stmt(SyntaqliteAstContext *ctx, uint32_t table, uint32_t whe
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->table = table;
     node->where = where;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, table);
+    ast_range_union(ctx, &_r, where);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -661,6 +863,13 @@ uint32_t ast_set_clause(
     node->column = column;
     node->columns = columns;
     node->value = value;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, columns);
+    ast_range_union(ctx, &_r, value);
+    ast_range_union_span(&_r, column);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -670,6 +879,7 @@ uint32_t ast_set_clause_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteSetClauseList *node = (SyntaqliteSetClauseList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -701,6 +911,14 @@ uint32_t ast_update_stmt(
     node->setlist = setlist;
     node->from_clause = from_clause;
     node->where = where;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, table);
+    ast_range_union(ctx, &_r, setlist);
+    ast_range_union(ctx, &_r, from_clause);
+    ast_range_union(ctx, &_r, where);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -719,6 +937,13 @@ uint32_t ast_insert_stmt(
     node->table = table;
     node->columns = columns;
     node->source = source;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, table);
+    ast_range_union(ctx, &_r, columns);
+    ast_range_union(ctx, &_r, source);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -733,6 +958,12 @@ uint32_t ast_qualified_name(
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->object_name = object_name;
     node->schema = schema;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union_span(&_r, object_name);
+    ast_range_union_span(&_r, schema);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -749,6 +980,11 @@ uint32_t ast_drop_stmt(
     node->object_type = object_type;
     node->if_exists = if_exists;
     node->target = target;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, target);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -767,6 +1003,13 @@ uint32_t ast_alter_table_stmt(
     node->target = target;
     node->new_name = new_name;
     node->old_name = old_name;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, target);
+    ast_range_union_span(&_r, new_name);
+    ast_range_union_span(&_r, old_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -795,6 +1038,11 @@ uint32_t ast_savepoint_stmt(
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->op = op;
     node->savepoint_name = savepoint_name;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union_span(&_r, savepoint_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -813,6 +1061,13 @@ uint32_t ast_pragma_stmt(
     node->schema = schema;
     node->value = value;
     node->pragma_form = pragma_form;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union_span(&_r, pragma_name);
+    ast_range_union_span(&_r, schema);
+    ast_range_union_span(&_r, value);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -829,6 +1084,12 @@ uint32_t ast_analyze_stmt(
     node->target_name = target_name;
     node->schema = schema;
     node->kind = kind;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union_span(&_r, target_name);
+    ast_range_union_span(&_r, schema);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -840,6 +1101,13 @@ uint32_t ast_attach_stmt(SyntaqliteAstContext *ctx, uint32_t filename, uint32_t 
     node->filename = filename;
     node->db_name = db_name;
     node->key = key;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, filename);
+    ast_range_union(ctx, &_r, db_name);
+    ast_range_union(ctx, &_r, key);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -849,6 +1117,11 @@ uint32_t ast_detach_stmt(SyntaqliteAstContext *ctx, uint32_t db_name) {
     SyntaqliteDetachStmt *node = (SyntaqliteDetachStmt*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->db_name = db_name;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, db_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -859,6 +1132,12 @@ uint32_t ast_vacuum_stmt(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan schema,
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->schema = schema;
     node->into_expr = into_expr;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, into_expr);
+    ast_range_union_span(&_r, schema);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -869,6 +1148,11 @@ uint32_t ast_explain_stmt(SyntaqliteAstContext *ctx, SyntaqliteExplainMode expla
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->explain_mode = explain_mode;
     node->stmt = stmt;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, stmt);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -893,6 +1177,15 @@ uint32_t ast_create_index_stmt(
     node->if_not_exists = if_not_exists;
     node->columns = columns;
     node->where = where;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, columns);
+    ast_range_union(ctx, &_r, where);
+    ast_range_union_span(&_r, index_name);
+    ast_range_union_span(&_r, schema);
+    ast_range_union_span(&_r, table_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -915,6 +1208,14 @@ uint32_t ast_create_view_stmt(
     node->if_not_exists = if_not_exists;
     node->column_names = column_names;
     node->select = select;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, column_names);
+    ast_range_union(ctx, &_r, select);
+    ast_range_union_span(&_r, view_name);
+    ast_range_union_span(&_r, schema);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -935,6 +1236,12 @@ uint32_t ast_foreign_key_clause(
     node->on_delete = on_delete;
     node->on_update = on_update;
     node->is_deferred = is_deferred;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, ref_columns);
+    ast_range_union_span(&_r, ref_table);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -967,6 +1274,16 @@ uint32_t ast_column_constraint(
     node->check_expr = check_expr;
     node->generated_expr = generated_expr;
     node->fk_clause = fk_clause;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, default_expr);
+    ast_range_union(ctx, &_r, check_expr);
+    ast_range_union(ctx, &_r, generated_expr);
+    ast_range_union(ctx, &_r, fk_clause);
+    ast_range_union_span(&_r, constraint_name);
+    ast_range_union_span(&_r, collation_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -976,6 +1293,7 @@ uint32_t ast_column_constraint_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteColumnConstraintList *node = (SyntaqliteColumnConstraintList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -1003,6 +1321,13 @@ uint32_t ast_column_def(
     node->column_name = column_name;
     node->type_name = type_name;
     node->constraints = constraints;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, constraints);
+    ast_range_union_span(&_r, column_name);
+    ast_range_union_span(&_r, type_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1012,6 +1337,7 @@ uint32_t ast_column_def_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteColumnDefList *node = (SyntaqliteColumnDefList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -1047,6 +1373,14 @@ uint32_t ast_table_constraint(
     node->columns = columns;
     node->check_expr = check_expr;
     node->fk_clause = fk_clause;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, columns);
+    ast_range_union(ctx, &_r, check_expr);
+    ast_range_union(ctx, &_r, fk_clause);
+    ast_range_union_span(&_r, constraint_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1056,6 +1390,7 @@ uint32_t ast_table_constraint_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteTableConstraintList *node = (SyntaqliteTableConstraintList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -1093,6 +1428,15 @@ uint32_t ast_create_table_stmt(
     node->columns = columns;
     node->table_constraints = table_constraints;
     node->as_select = as_select;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, columns);
+    ast_range_union(ctx, &_r, table_constraints);
+    ast_range_union(ctx, &_r, as_select);
+    ast_range_union_span(&_r, table_name);
+    ast_range_union_span(&_r, schema);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1103,6 +1447,11 @@ uint32_t ast_frame_bound(SyntaqliteAstContext *ctx, SyntaqliteFrameBoundType bou
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->bound_type = bound_type;
     node->expr = expr;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, expr);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1121,6 +1470,12 @@ uint32_t ast_frame_spec(
     node->exclude = exclude;
     node->start_bound = start_bound;
     node->end_bound = end_bound;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, start_bound);
+    ast_range_union(ctx, &_r, end_bound);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1139,6 +1494,14 @@ uint32_t ast_window_def(
     node->partition_by = partition_by;
     node->orderby = orderby;
     node->frame = frame;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, partition_by);
+    ast_range_union(ctx, &_r, orderby);
+    ast_range_union(ctx, &_r, frame);
+    ast_range_union_span(&_r, base_window_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1148,6 +1511,7 @@ uint32_t ast_window_def_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteWindowDefList *node = (SyntaqliteWindowDefList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -1169,6 +1533,12 @@ uint32_t ast_named_window_def(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan wi
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->window_name = window_name;
     node->window_def = window_def;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, window_def);
+    ast_range_union_span(&_r, window_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1178,6 +1548,7 @@ uint32_t ast_named_window_def_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteNamedWindowDefList *node = (SyntaqliteNamedWindowDefList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -1205,6 +1576,13 @@ uint32_t ast_filter_over(
     node->filter_expr = filter_expr;
     node->over_def = over_def;
     node->over_name = over_name;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, filter_expr);
+    ast_range_union(ctx, &_r, over_def);
+    ast_range_union_span(&_r, over_name);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1219,6 +1597,11 @@ uint32_t ast_trigger_event(
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->event_type = event_type;
     node->columns = columns;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, columns);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1228,6 +1611,7 @@ uint32_t ast_trigger_cmd_list_empty(SyntaqliteAstContext *ctx) {
     SyntaqliteTriggerCmdList *node = (SyntaqliteTriggerCmdList*)
         (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
+    ast_ranges_sync(ctx);
     return id;
 }
 
@@ -1267,6 +1651,16 @@ uint32_t ast_create_trigger_stmt(
     node->table = table;
     node->when_expr = when_expr;
     node->body = body;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union(ctx, &_r, event);
+    ast_range_union(ctx, &_r, table);
+    ast_range_union(ctx, &_r, when_expr);
+    ast_range_union(ctx, &_r, body);
+    ast_range_union_span(&_r, trigger_name);
+    ast_range_union_span(&_r, schema);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 
@@ -1287,6 +1681,14 @@ uint32_t ast_create_virtual_table_stmt(
     node->module_name = module_name;
     node->if_not_exists = if_not_exists;
     node->module_args = module_args;
+
+    ast_ranges_sync(ctx);
+    SyntaqliteSourceRange _r = {UINT32_MAX, 0};
+    ast_range_union_span(&_r, table_name);
+    ast_range_union_span(&_r, schema);
+    ast_range_union_span(&_r, module_name);
+    ast_range_union_span(&_r, module_args);
+    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;
     return id;
 }
 

@@ -366,6 +366,25 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             for field_name in node.fields:
                 lines.append(f"    node->{field_name} = {field_name};")
 
+            # Auto-compute source range from IndexField children and SourceSpan fields
+            index_fields = [
+                (fn, ft) for fn, ft in node.fields.items()
+                if isinstance(ft, IndexField)
+            ]
+            span_fields = [
+                (fn, ft) for fn, ft in node.fields.items()
+                if isinstance(ft, InlineField) and ft.type_name == "SyntaqliteSourceSpan"
+            ]
+            if index_fields or span_fields:
+                lines.append("")
+                lines.append("    ast_ranges_sync(ctx);")
+                lines.append("    SyntaqliteSourceRange _r = {UINT32_MAX, 0};")
+                for fn, _ft in index_fields:
+                    lines.append(f"    ast_range_union(ctx, &_r, {fn});")
+                for fn, _ft in span_fields:
+                    lines.append(f"    ast_range_union_span(&_r, {fn});")
+                lines.append("    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;")
+
             lines.append("    return id;")
             lines.append("}")
             lines.append("")
@@ -382,6 +401,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             lines.append(f"    {struct_name} *node = ({struct_name}*)")
             lines.append("        (ctx->ast.data + ctx->ast.offsets[id]);")
             lines.append("    node->count = 0;")
+            lines.append("    ast_ranges_sync(ctx);")
             lines.append("    return id;")
             lines.append("}")
             lines.append("")

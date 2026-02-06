@@ -6,8 +6,9 @@
 
 #include "src/fmt/fmt.h"
 
+#include "src/ast/ast_base.h"
 #include "src/ast/ast_nodes.h"
-#include "src/fmt/comment_map.h"
+#include "src/fmt/comment_attach.h"
 #include "src/fmt/doc.h"
 #include "src/fmt/doc_layout.h"
 #include "src/sqlite_tokens.h"
@@ -23,142 +24,55 @@ typedef struct {
     const char *source;
     SyntaqliteTokenList *token_list;
     SyntaqliteFmtOptions *options;
-    SyntaqliteCommentMap *comment_map;
-    uint32_t token_cursor;
+    SyntaqliteCommentAttachment *comment_att;
 } FmtCtx;
 
 // ============ Helpers ============
 
-// Emit a single comment token as a doc using pre-classified kind.
-static uint32_t emit_comment_doc(FmtCtx *ctx, uint32_t tok_idx) {
-    SyntaqliteRawToken *tok = &ctx->token_list->data[tok_idx];
-    int is_line = (ctx->source[tok->offset] == '-' &&
-                   tok->length >= 2 && ctx->source[tok->offset + 1] == '-');
-    if (ctx->comment_map->kinds[tok_idx] == SYNTAQLITE_COMMENT_TRAILING) {
-        // Trailing comments use line_suffix so they don't force
-        // enclosing groups to break. The suffix is flushed before
-        // the next line break in the layout engine.
-        uint32_t parts[2];
-        parts[0] = doc_text(&ctx->docs, " ", 1);
-        parts[1] = doc_text(&ctx->docs, ctx->source + tok->offset, tok->length);
-        uint32_t inner = doc_concat(&ctx->docs, parts, 2);
-        if (is_line) return doc_line_suffix(&ctx->docs, inner);
-        return inner;
-    } else {
-        uint32_t items[2];
-        uint32_t k = 0;
-        items[k++] = doc_text(&ctx->docs, ctx->source + tok->offset, tok->length);
-        if (is_line)
-            items[k++] = doc_hardline(&ctx->docs);
-        else
-            items[k++] = doc_text(&ctx->docs, " ", 1);
-        return doc_concat(&ctx->docs, items, k);
-    }
-}
-
-// Advance cursor past comments and one real token.
-// Returns leading comments (before real token). Sets *out_trailing to
-// trailing comments (after real token). Either may be SYNTAQLITE_NULL_DOC.
-static uint32_t advance_with_comments(FmtCtx *ctx, uint32_t *out_trailing) {
-    *out_trailing = SYNTAQLITE_NULL_DOC;
-    if (!ctx->token_list) return SYNTAQLITE_NULL_DOC;
-    uint32_t lead[24], trail[24];
-    uint32_t nl = 0, nt = 0;
-    while (ctx->token_cursor < ctx->token_list->count) {
-        SyntaqliteRawToken *tok = &ctx->token_list->data[ctx->token_cursor];
-        if (tok->type == TK_SPACE) { ctx->token_cursor++; continue; }
-        if (tok->type == TK_COMMENT) {
-            if (ctx->comment_map && nl < 24)
-                lead[nl++] = emit_comment_doc(ctx, ctx->token_cursor);
-            ctx->token_cursor++;
-            continue;
-        }
-        // Real token - advance past it
-        ctx->token_cursor++;
-        // Collect trailing comments after this real token
-        while (ctx->token_cursor < ctx->token_list->count) {
-            SyntaqliteRawToken *next = &ctx->token_list->data[ctx->token_cursor];
-            if (next->type == TK_SPACE) { ctx->token_cursor++; continue; }
-            if (next->type == TK_COMMENT && ctx->comment_map &&
-                ctx->comment_map->kinds[ctx->token_cursor] == SYNTAQLITE_COMMENT_TRAILING) {
-                if (nt < 24) trail[nt++] = emit_comment_doc(ctx, ctx->token_cursor);
-                ctx->token_cursor++;
-                continue;
-            }
-            break;
-        }
-        break;
-    }
-    if (nt > 0) *out_trailing = (nt == 1) ? trail[0] : doc_concat(&ctx->docs, trail, nt);
-    if (nl == 0) return SYNTAQLITE_NULL_DOC;
-    return (nl == 1) ? lead[0] : doc_concat(&ctx->docs, lead, nl);
-}
-
-// Count how many source tokens a keyword string consumes.
-// Each word (letters/digits) and each punctuation char is one token.
-static int count_kw_tokens(const char *text) {
-    int n = 0;
-    const char *p = text;
-    while (*p) {
-        if (*p == ' ') { p++; continue; }
-        if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') || *p == '_') {
-            n++;
-            while (*p && ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
-                          *p == '_' || (*p >= '0' && *p <= '9'))) p++;
-        } else {
-            n++; p++;
-        }
-    }
-    return n;
-}
-
 static uint32_t kw(FmtCtx *ctx, const char *text) {
-    int n = count_kw_tokens(text);
-    uint32_t pre = SYNTAQLITE_NULL_DOC;
-    uint32_t post = SYNTAQLITE_NULL_DOC;
-    for (int i = 0; i < n; i++) {
-        uint32_t trailing;
-        uint32_t c = advance_with_comments(ctx, &trailing);
-        if (c != SYNTAQLITE_NULL_DOC) {
-            if (pre == SYNTAQLITE_NULL_DOC) { pre = c; }
-            else {
-                uint32_t pair[] = { pre, c };
-                pre = doc_concat(&ctx->docs, pair, 2);
-            }
-        }
-        if (trailing != SYNTAQLITE_NULL_DOC) {
-            if (post == SYNTAQLITE_NULL_DOC) { post = trailing; }
-            else {
-                uint32_t pair[] = { post, trailing };
-                post = doc_concat(&ctx->docs, pair, 2);
-            }
-        }
-    }
-    uint32_t txt = doc_text(&ctx->docs, text, (uint32_t)strlen(text));
-    uint32_t parts[3];
-    uint32_t np = 0;
-    if (pre != SYNTAQLITE_NULL_DOC) parts[np++] = pre;
-    parts[np++] = txt;
-    if (post != SYNTAQLITE_NULL_DOC) parts[np++] = post;
-    if (np == 1) return parts[0];
-    return doc_concat(&ctx->docs, parts, np);
+    return doc_text(&ctx->docs, text, (uint32_t)strlen(text));
 }
 
 static uint32_t span_text(FmtCtx *ctx, SyntaqliteSourceSpan span) {
     if (span.length == 0) return SYNTAQLITE_NULL_DOC;
-    uint32_t trailing;
-    uint32_t pre = advance_with_comments(ctx, &trailing);
-    uint32_t txt = doc_text(&ctx->docs, ctx->source + span.offset, span.length);
-    uint32_t parts[3];
-    uint32_t np = 0;
-    if (pre != SYNTAQLITE_NULL_DOC) parts[np++] = pre;
-    parts[np++] = txt;
-    if (trailing != SYNTAQLITE_NULL_DOC) parts[np++] = trailing;
-    if (np == 1) return parts[0];
-    return doc_concat(&ctx->docs, parts, np);
+    return doc_text(&ctx->docs, ctx->source + span.offset, span.length);
+}
+
+// ============ Comment Helpers ============
+
+static uint32_t emit_single_comment(FmtCtx *ctx, uint32_t tok_idx) {
+    SyntaqliteRawToken *tok = &ctx->token_list->data[tok_idx];
+    return doc_text(&ctx->docs, ctx->source + tok->offset, tok->length);
+}
+
+static uint32_t emit_owned_comments(FmtCtx *ctx, uint32_t node_id, uint8_t kind) {
+    if (!ctx->comment_att) return SYNTAQLITE_NULL_DOC;
+    uint32_t parts[64];
+    uint32_t n = 0;
+    for (uint32_t i = 0; i < ctx->comment_att->count && n < 62; i++) {
+        if (ctx->comment_att->owner_node[i] != node_id) continue;
+        if (ctx->comment_att->position[i] != kind) continue;
+
+        int is_line = (ctx->source[ctx->token_list->data[i].offset] == '-');
+        if (kind == SYNTAQLITE_COMMENT_LEADING) {
+            parts[n++] = emit_single_comment(ctx, i);
+            if (n < 62) parts[n++] = is_line ? doc_hardline(&ctx->docs)
+                : doc_text(&ctx->docs, " ", 1);
+        } else {
+            uint32_t sp_parts[2];
+            sp_parts[0] = doc_text(&ctx->docs, " ", 1);
+            sp_parts[1] = emit_single_comment(ctx, i);
+            uint32_t inner = doc_concat(&ctx->docs, sp_parts, 2);
+            parts[n++] = doc_line_suffix(&ctx->docs, inner);
+            if (n < 62) parts[n++] = doc_break_parent(&ctx->docs);
+        }
+    }
+    if (n == 0) return SYNTAQLITE_NULL_DOC;
+    return doc_concat(&ctx->docs, parts, n);
 }
 
 static uint32_t format_node(FmtCtx *ctx, uint32_t node_id);
+static uint32_t dispatch_format(FmtCtx *ctx, uint32_t node_id);
 
 // ============ Comma-Separated List ============
 
@@ -193,18 +107,6 @@ static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_id
     return doc_concat(&ctx->docs, items, 3);
 }
 
-// ============ Nullable Concat Helper ============
-
-static uint32_t doc_concat_nullable(SyntaqliteDocContext *docs, uint32_t *items, uint32_t count) {
-    uint32_t buf[count > 0 ? count : 1];
-    uint32_t n = 0;
-    for (uint32_t i = 0; i < count; i++) {
-        if (items[i] != SYNTAQLITE_NULL_DOC) buf[n++] = items[i];
-    }
-    if (n == 0) return SYNTAQLITE_NULL_DOC;
-    return doc_concat(docs, buf, n);
-}
-
 // ============ Node Formatters ============
 
 static uint32_t format_binary_expr(FmtCtx *ctx, SyntaqliteBinaryExpr *node) {
@@ -216,7 +118,7 @@ static uint32_t format_binary_expr(FmtCtx *ctx, SyntaqliteBinaryExpr *node) {
             uint32_t kw_4 = kw(ctx, "AND ");
             uint32_t ch_5 = format_node(ctx, node->right);
             uint32_t cat_6_items[] = { ch_2, ln_3, kw_4, ch_5 };
-            uint32_t cat_6 = doc_concat_nullable(&ctx->docs, cat_6_items, 4);
+            uint32_t cat_6 = doc_concat(&ctx->docs, cat_6_items, 4);
             sw_1 = cat_6;
             break;
         }
@@ -226,7 +128,7 @@ static uint32_t format_binary_expr(FmtCtx *ctx, SyntaqliteBinaryExpr *node) {
             uint32_t kw_9 = kw(ctx, "OR ");
             uint32_t ch_10 = format_node(ctx, node->right);
             uint32_t cat_11_items[] = { ch_7, ln_8, kw_9, ch_10 };
-            uint32_t cat_11 = doc_concat_nullable(&ctx->docs, cat_11_items, 4);
+            uint32_t cat_11 = doc_concat(&ctx->docs, cat_11_items, 4);
             sw_1 = cat_11;
             break;
         }
@@ -259,7 +161,7 @@ static uint32_t format_binary_expr(FmtCtx *ctx, SyntaqliteBinaryExpr *node) {
             uint32_t kw_15 = kw(ctx, " ");
             uint32_t ch_16 = format_node(ctx, node->right);
             uint32_t cat_17_items[] = { ch_12, ln_13, ed_14, kw_15, ch_16 };
-            uint32_t cat_17 = doc_concat_nullable(&ctx->docs, cat_17_items, 5);
+            uint32_t cat_17 = doc_concat(&ctx->docs, cat_17_items, 5);
             uint32_t grp_18 = doc_group(&ctx->docs, cat_17);
             sw_1 = grp_18;
             break;
@@ -279,7 +181,7 @@ static uint32_t format_unary_expr(FmtCtx *ctx, SyntaqliteUnaryExpr *node) {
     }
     uint32_t ch_2 = format_node(ctx, node->operand);
     uint32_t cat_3_items[] = { ed_1, ch_2 };
-    return doc_concat_nullable(&ctx->docs, cat_3_items, 2);
+    return doc_concat(&ctx->docs, cat_3_items, 2);
 }
 
 static uint32_t format_literal(FmtCtx *ctx, SyntaqliteLiteral *node) {
@@ -294,7 +196,7 @@ static uint32_t format_result_column(FmtCtx *ctx, SyntaqliteResultColumn *node) 
             uint32_t ch_3 = format_node(ctx, node->expr);
             uint32_t kw_4 = kw(ctx, ".*");
             uint32_t cat_5_items[] = { ch_3, kw_4 };
-            uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
+            uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 2);
             cond_2 = cat_5;
         } else {
             cond_2 = kw(ctx, "*");
@@ -308,11 +210,11 @@ static uint32_t format_result_column(FmtCtx *ctx, SyntaqliteResultColumn *node) 
         uint32_t kw_9 = kw(ctx, " AS ");
         uint32_t sp_10 = span_text(ctx, node->alias);
         uint32_t cat_11_items[] = { kw_9, sp_10 };
-        uint32_t cat_11 = doc_concat_nullable(&ctx->docs, cat_11_items, 2);
+        uint32_t cat_11 = doc_concat(&ctx->docs, cat_11_items, 2);
         cond_8 = cat_11;
     }
     uint32_t cat_12_items[] = { cond_1, cond_8 };
-    return doc_concat_nullable(&ctx->docs, cat_12_items, 2);
+    return doc_concat(&ctx->docs, cat_12_items, 2);
 }
 
 static uint32_t format_select_stmt(FmtCtx *ctx, SyntaqliteSelectStmt *node) {
@@ -322,7 +224,7 @@ static uint32_t format_select_stmt(FmtCtx *ctx, SyntaqliteSelectStmt *node) {
         uint32_t ln_5 = doc_line(&ctx->docs);
         uint32_t ch_6 = format_node(ctx, node->columns);
         uint32_t cat_7_items[] = { ln_5, ch_6 };
-        uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 2);
+        uint32_t cat_7 = doc_concat(&ctx->docs, cat_7_items, 2);
         uint32_t nst_8 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_7);
         uint32_t grp_9 = doc_group(&ctx->docs, nst_8);
         cond_4 = grp_9;
@@ -335,7 +237,7 @@ static uint32_t format_select_stmt(FmtCtx *ctx, SyntaqliteSelectStmt *node) {
     uint32_t cl_15 = format_clause(ctx, "LIMIT", node->limit_clause);
     uint32_t cl_16 = format_clause(ctx, "WINDOW", node->window_clause);
     uint32_t cat_17_items[] = { cond_1, cond_4, cl_10, cl_11, cl_12, cl_13, cl_14, cl_15, cl_16 };
-    uint32_t cat_17 = doc_concat_nullable(&ctx->docs, cat_17_items, 9);
+    uint32_t cat_17 = doc_concat(&ctx->docs, cat_17_items, 9);
     return doc_group(&ctx->docs, cat_17);
 }
 
@@ -348,7 +250,7 @@ static uint32_t format_ordering_term(FmtCtx *ctx, SyntaqliteOrderingTerm *node) 
     uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
     if (node->nulls_order == SYNTAQLITE_NULLS_ORDER_LAST) cond_6 = kw(ctx, " NULLS LAST");
     uint32_t cat_8_items[] = { ch_1, cond_2, cond_4, cond_6 };
-    return doc_concat_nullable(&ctx->docs, cat_8_items, 4);
+    return doc_concat(&ctx->docs, cat_8_items, 4);
 }
 
 static uint32_t format_limit_clause(FmtCtx *ctx, SyntaqliteLimitClause *node) {
@@ -358,11 +260,11 @@ static uint32_t format_limit_clause(FmtCtx *ctx, SyntaqliteLimitClause *node) {
         uint32_t kw_3 = kw(ctx, " OFFSET ");
         uint32_t ch_4 = format_node(ctx, node->offset);
         uint32_t cat_5_items[] = { kw_3, ch_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
+        uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 2);
         cond_2 = cat_5;
     }
     uint32_t cat_6_items[] = { ch_1, cond_2 };
-    return doc_concat_nullable(&ctx->docs, cat_6_items, 2);
+    return doc_concat(&ctx->docs, cat_6_items, 2);
 }
 
 static uint32_t format_column_ref(FmtCtx *ctx, SyntaqliteColumnRef *node) {
@@ -371,7 +273,7 @@ static uint32_t format_column_ref(FmtCtx *ctx, SyntaqliteColumnRef *node) {
         uint32_t sp_2 = span_text(ctx, node->schema);
         uint32_t kw_3 = kw(ctx, ".");
         uint32_t cat_4_items[] = { sp_2, kw_3 };
-        uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 2);
+        uint32_t cat_4 = doc_concat(&ctx->docs, cat_4_items, 2);
         cond_1 = cat_4;
     }
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
@@ -379,12 +281,12 @@ static uint32_t format_column_ref(FmtCtx *ctx, SyntaqliteColumnRef *node) {
         uint32_t sp_6 = span_text(ctx, node->table);
         uint32_t kw_7 = kw(ctx, ".");
         uint32_t cat_8_items[] = { sp_6, kw_7 };
-        uint32_t cat_8 = doc_concat_nullable(&ctx->docs, cat_8_items, 2);
+        uint32_t cat_8 = doc_concat(&ctx->docs, cat_8_items, 2);
         cond_5 = cat_8;
     }
     uint32_t sp_9 = span_text(ctx, node->column);
     uint32_t cat_10_items[] = { cond_1, cond_5, sp_9 };
-    return doc_concat_nullable(&ctx->docs, cat_10_items, 3);
+    return doc_concat(&ctx->docs, cat_10_items, 3);
 }
 
 static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) {
@@ -401,7 +303,7 @@ static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) 
             uint32_t sl_8 = doc_softline(&ctx->docs);
             uint32_t ch_9 = format_node(ctx, node->args);
             uint32_t cat_10_items[] = { sl_8, ch_9 };
-            uint32_t cat_10 = doc_concat_nullable(&ctx->docs, cat_10_items, 2);
+            uint32_t cat_10 = doc_concat(&ctx->docs, cat_10_items, 2);
             uint32_t nst_11 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_10);
             cond_7 = nst_11;
         }
@@ -410,7 +312,7 @@ static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) 
     uint32_t sl_12 = doc_softline(&ctx->docs);
     uint32_t kw_13 = kw(ctx, ")");
     uint32_t cat_14_items[] = { kw_2, cond_3, cond_5, sl_12, kw_13 };
-    uint32_t cat_14 = doc_concat_nullable(&ctx->docs, cat_14_items, 5);
+    uint32_t cat_14 = doc_concat(&ctx->docs, cat_14_items, 5);
     uint32_t grp_15 = doc_group(&ctx->docs, cat_14);
     uint32_t cond_16 = SYNTAQLITE_NULL_DOC;
     if (node->filter_clause != SYNTAQLITE_NULL_NODE) {
@@ -418,7 +320,7 @@ static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) 
         uint32_t ch_18 = format_node(ctx, node->filter_clause);
         uint32_t kw_19 = kw(ctx, ")");
         uint32_t cat_20_items[] = { kw_17, ch_18, kw_19 };
-        uint32_t cat_20 = doc_concat_nullable(&ctx->docs, cat_20_items, 3);
+        uint32_t cat_20 = doc_concat(&ctx->docs, cat_20_items, 3);
         cond_16 = cat_20;
     }
     uint32_t cond_21 = SYNTAQLITE_NULL_DOC;
@@ -426,11 +328,11 @@ static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) 
         uint32_t kw_22 = kw(ctx, " OVER ");
         uint32_t ch_23 = format_node(ctx, node->over_clause);
         uint32_t cat_24_items[] = { kw_22, ch_23 };
-        uint32_t cat_24 = doc_concat_nullable(&ctx->docs, cat_24_items, 2);
+        uint32_t cat_24 = doc_concat(&ctx->docs, cat_24_items, 2);
         cond_21 = cat_24;
     }
     uint32_t cat_25_items[] = { sp_1, grp_15, cond_16, cond_21 };
-    return doc_concat_nullable(&ctx->docs, cat_25_items, 4);
+    return doc_concat(&ctx->docs, cat_25_items, 4);
 }
 
 static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
@@ -440,7 +342,7 @@ static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
             uint32_t ch_2 = format_node(ctx, node->left);
             uint32_t kw_3 = kw(ctx, " ISNULL");
             uint32_t cat_4_items[] = { ch_2, kw_3 };
-            uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 2);
+            uint32_t cat_4 = doc_concat(&ctx->docs, cat_4_items, 2);
             sw_1 = cat_4;
             break;
         }
@@ -448,7 +350,7 @@ static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
             uint32_t ch_5 = format_node(ctx, node->left);
             uint32_t kw_6 = kw(ctx, " NOTNULL");
             uint32_t cat_7_items[] = { ch_5, kw_6 };
-            uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 2);
+            uint32_t cat_7 = doc_concat(&ctx->docs, cat_7_items, 2);
             sw_1 = cat_7;
             break;
         }
@@ -457,7 +359,7 @@ static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
             uint32_t kw_9 = kw(ctx, " IS ");
             uint32_t ch_10 = format_node(ctx, node->right);
             uint32_t cat_11_items[] = { ch_8, kw_9, ch_10 };
-            uint32_t cat_11 = doc_concat_nullable(&ctx->docs, cat_11_items, 3);
+            uint32_t cat_11 = doc_concat(&ctx->docs, cat_11_items, 3);
             sw_1 = cat_11;
             break;
         }
@@ -466,7 +368,7 @@ static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
             uint32_t kw_13 = kw(ctx, " IS NOT ");
             uint32_t ch_14 = format_node(ctx, node->right);
             uint32_t cat_15_items[] = { ch_12, kw_13, ch_14 };
-            uint32_t cat_15 = doc_concat_nullable(&ctx->docs, cat_15_items, 3);
+            uint32_t cat_15 = doc_concat(&ctx->docs, cat_15_items, 3);
             sw_1 = cat_15;
             break;
         }
@@ -475,7 +377,7 @@ static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
             uint32_t kw_17 = kw(ctx, " IS NOT DISTINCT FROM ");
             uint32_t ch_18 = format_node(ctx, node->right);
             uint32_t cat_19_items[] = { ch_16, kw_17, ch_18 };
-            uint32_t cat_19 = doc_concat_nullable(&ctx->docs, cat_19_items, 3);
+            uint32_t cat_19 = doc_concat(&ctx->docs, cat_19_items, 3);
             sw_1 = cat_19;
             break;
         }
@@ -484,7 +386,7 @@ static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
             uint32_t kw_21 = kw(ctx, " IS DISTINCT FROM ");
             uint32_t ch_22 = format_node(ctx, node->right);
             uint32_t cat_23_items[] = { ch_20, kw_21, ch_22 };
-            uint32_t cat_23 = doc_concat_nullable(&ctx->docs, cat_23_items, 3);
+            uint32_t cat_23 = doc_concat(&ctx->docs, cat_23_items, 3);
             sw_1 = cat_23;
             break;
         }
@@ -500,7 +402,7 @@ static uint32_t format_between_expr(FmtCtx *ctx, SyntaqliteBetweenExpr *node) {
     uint32_t kw_6 = kw(ctx, " AND ");
     uint32_t ch_7 = format_node(ctx, node->high);
     uint32_t cat_8_items[] = { ch_1, cond_2, ch_5, kw_6, ch_7 };
-    return doc_concat_nullable(&ctx->docs, cat_8_items, 5);
+    return doc_concat(&ctx->docs, cat_8_items, 5);
 }
 
 static uint32_t format_like_expr(FmtCtx *ctx, SyntaqliteLikeExpr *node) {
@@ -512,11 +414,11 @@ static uint32_t format_like_expr(FmtCtx *ctx, SyntaqliteLikeExpr *node) {
         uint32_t kw_7 = kw(ctx, " ESCAPE ");
         uint32_t ch_8 = format_node(ctx, node->escape);
         uint32_t cat_9_items[] = { kw_7, ch_8 };
-        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+        uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 2);
         cond_6 = cat_9;
     }
     uint32_t cat_10_items[] = { ch_1, cond_2, ch_5, cond_6 };
-    return doc_concat_nullable(&ctx->docs, cat_10_items, 4);
+    return doc_concat(&ctx->docs, cat_10_items, 4);
 }
 
 static uint32_t format_case_expr(FmtCtx *ctx, SyntaqliteCaseExpr *node) {
@@ -526,7 +428,7 @@ static uint32_t format_case_expr(FmtCtx *ctx, SyntaqliteCaseExpr *node) {
         uint32_t kw_3 = kw(ctx, " ");
         uint32_t ch_4 = format_node(ctx, node->operand);
         uint32_t cat_5_items[] = { kw_3, ch_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
+        uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 2);
         cond_2 = cat_5;
     }
     uint32_t ch_6 = format_node(ctx, node->whens);
@@ -535,12 +437,12 @@ static uint32_t format_case_expr(FmtCtx *ctx, SyntaqliteCaseExpr *node) {
         uint32_t kw_8 = kw(ctx, " ELSE ");
         uint32_t ch_9 = format_node(ctx, node->else_expr);
         uint32_t cat_10_items[] = { kw_8, ch_9 };
-        uint32_t cat_10 = doc_concat_nullable(&ctx->docs, cat_10_items, 2);
+        uint32_t cat_10 = doc_concat(&ctx->docs, cat_10_items, 2);
         cond_7 = cat_10;
     }
     uint32_t kw_11 = kw(ctx, " END");
     uint32_t cat_12_items[] = { kw_1, cond_2, ch_6, cond_7, kw_11 };
-    return doc_concat_nullable(&ctx->docs, cat_12_items, 5);
+    return doc_concat(&ctx->docs, cat_12_items, 5);
 }
 
 static uint32_t format_case_when(FmtCtx *ctx, SyntaqliteCaseWhen *node) {
@@ -549,7 +451,7 @@ static uint32_t format_case_when(FmtCtx *ctx, SyntaqliteCaseWhen *node) {
     uint32_t kw_3 = kw(ctx, " THEN ");
     uint32_t ch_4 = format_node(ctx, node->then_expr);
     uint32_t cat_5_items[] = { kw_1, ch_2, kw_3, ch_4 };
-    return doc_concat_nullable(&ctx->docs, cat_5_items, 4);
+    return doc_concat(&ctx->docs, cat_5_items, 4);
 }
 
 static uint32_t format_case_when_list(FmtCtx *ctx, SyntaqliteCaseWhenList *node) {
@@ -577,7 +479,7 @@ static uint32_t format_compound_select(FmtCtx *ctx, SyntaqliteCompoundSelect *no
     uint32_t hl_4 = doc_hardline(&ctx->docs);
     uint32_t ch_5 = format_node(ctx, node->right);
     uint32_t cat_6_items[] = { ch_1, hl_2, ed_3, hl_4, ch_5 };
-    return doc_concat_nullable(&ctx->docs, cat_6_items, 5);
+    return doc_concat(&ctx->docs, cat_6_items, 5);
 }
 
 static uint32_t format_subquery_expr(FmtCtx *ctx, SyntaqliteSubqueryExpr *node) {
@@ -585,7 +487,7 @@ static uint32_t format_subquery_expr(FmtCtx *ctx, SyntaqliteSubqueryExpr *node) 
     uint32_t ch_2 = format_node(ctx, node->select);
     uint32_t kw_3 = kw(ctx, ")");
     uint32_t cat_4_items[] = { kw_1, ch_2, kw_3 };
-    return doc_concat_nullable(&ctx->docs, cat_4_items, 3);
+    return doc_concat(&ctx->docs, cat_4_items, 3);
 }
 
 static uint32_t format_exists_expr(FmtCtx *ctx, SyntaqliteExistsExpr *node) {
@@ -593,7 +495,7 @@ static uint32_t format_exists_expr(FmtCtx *ctx, SyntaqliteExistsExpr *node) {
     uint32_t ch_2 = format_node(ctx, node->select);
     uint32_t kw_3 = kw(ctx, ")");
     uint32_t cat_4_items[] = { kw_1, ch_2, kw_3 };
-    return doc_concat_nullable(&ctx->docs, cat_4_items, 3);
+    return doc_concat(&ctx->docs, cat_4_items, 3);
 }
 
 static uint32_t format_in_expr(FmtCtx *ctx, SyntaqliteInExpr *node) {
@@ -603,7 +505,7 @@ static uint32_t format_in_expr(FmtCtx *ctx, SyntaqliteInExpr *node) {
     uint32_t ch_6 = format_node(ctx, node->source);
     uint32_t kw_7 = kw(ctx, ")");
     uint32_t cat_8_items[] = { ch_1, cond_2, kw_5, ch_6, kw_7 };
-    return doc_concat_nullable(&ctx->docs, cat_8_items, 5);
+    return doc_concat(&ctx->docs, cat_8_items, 5);
 }
 
 static uint32_t format_variable(FmtCtx *ctx, SyntaqliteVariable *node) {
@@ -615,7 +517,7 @@ static uint32_t format_collate_expr(FmtCtx *ctx, SyntaqliteCollateExpr *node) {
     uint32_t kw_2 = kw(ctx, " COLLATE ");
     uint32_t sp_3 = span_text(ctx, node->collation);
     uint32_t cat_4_items[] = { ch_1, kw_2, sp_3 };
-    return doc_concat_nullable(&ctx->docs, cat_4_items, 3);
+    return doc_concat(&ctx->docs, cat_4_items, 3);
 }
 
 static uint32_t format_cast_expr(FmtCtx *ctx, SyntaqliteCastExpr *node) {
@@ -625,7 +527,7 @@ static uint32_t format_cast_expr(FmtCtx *ctx, SyntaqliteCastExpr *node) {
     uint32_t sp_4 = span_text(ctx, node->type_name);
     uint32_t kw_5 = kw(ctx, ")");
     uint32_t cat_6_items[] = { kw_1, ch_2, kw_3, sp_4, kw_5 };
-    return doc_concat_nullable(&ctx->docs, cat_6_items, 5);
+    return doc_concat(&ctx->docs, cat_6_items, 5);
 }
 
 static uint32_t format_values_row_list(FmtCtx *ctx, SyntaqliteValuesRowList *node) {
@@ -644,7 +546,7 @@ static uint32_t format_values_row_list(FmtCtx *ctx, SyntaqliteValuesRowList *nod
         uint32_t item_8 = format_node(ctx, _child_id);
         uint32_t kw_9 = kw(ctx, ")");
         uint32_t cat_10_items[] = { kw_7, item_8, kw_9 };
-        uint32_t cat_10 = doc_concat_nullable(&ctx->docs, cat_10_items, 3);
+        uint32_t cat_10 = doc_concat(&ctx->docs, cat_10_items, 3);
         _buf_1[_n_2++] = cat_10;
     }
     return doc_concat(&ctx->docs, _buf_1, _n_2);
@@ -655,7 +557,7 @@ static uint32_t format_values_clause(FmtCtx *ctx, SyntaqliteValuesClause *node) 
     uint32_t hl_2 = doc_hardline(&ctx->docs);
     uint32_t ch_3 = format_node(ctx, node->rows);
     uint32_t cat_4_items[] = { hl_2, ch_3 };
-    uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 2);
+    uint32_t cat_4 = doc_concat(&ctx->docs, cat_4_items, 2);
     uint32_t nst_5 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_4);
     uint32_t cat_6_items[] = { kw_1, nst_5 };
     return doc_concat(&ctx->docs, cat_6_items, 2);
@@ -669,7 +571,7 @@ static uint32_t format_cte_definition(FmtCtx *ctx, SyntaqliteCteDefinition *node
         uint32_t ch_4 = format_node(ctx, node->columns);
         uint32_t kw_5 = kw(ctx, ")");
         uint32_t cat_6_items[] = { kw_3, ch_4, kw_5 };
-        uint32_t cat_6 = doc_concat_nullable(&ctx->docs, cat_6_items, 3);
+        uint32_t cat_6 = doc_concat(&ctx->docs, cat_6_items, 3);
         cond_2 = cat_6;
     }
     uint32_t kw_7 = kw(ctx, " AS ");
@@ -681,7 +583,7 @@ static uint32_t format_cte_definition(FmtCtx *ctx, SyntaqliteCteDefinition *node
     uint32_t ch_13 = format_node(ctx, node->select);
     uint32_t kw_14 = kw(ctx, ")");
     uint32_t cat_15_items[] = { sp_1, cond_2, kw_7, cond_8, cond_10, kw_12, ch_13, kw_14 };
-    return doc_concat_nullable(&ctx->docs, cat_15_items, 8);
+    return doc_concat(&ctx->docs, cat_15_items, 8);
 }
 
 static uint32_t format_with_clause(FmtCtx *ctx, SyntaqliteWithClause *node) {
@@ -690,7 +592,7 @@ static uint32_t format_with_clause(FmtCtx *ctx, SyntaqliteWithClause *node) {
     uint32_t hl_5 = doc_hardline(&ctx->docs);
     uint32_t ch_6 = format_node(ctx, node->select);
     uint32_t cat_7_items[] = { cond_1, ch_4, hl_5, ch_6 };
-    return doc_concat_nullable(&ctx->docs, cat_7_items, 4);
+    return doc_concat(&ctx->docs, cat_7_items, 4);
 }
 
 static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateFunctionCall *node) {
@@ -703,7 +605,7 @@ static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateF
         uint32_t sl_6 = doc_softline(&ctx->docs);
         uint32_t ch_7 = format_node(ctx, node->args);
         uint32_t cat_8_items[] = { sl_6, ch_7 };
-        uint32_t cat_8 = doc_concat_nullable(&ctx->docs, cat_8_items, 2);
+        uint32_t cat_8 = doc_concat(&ctx->docs, cat_8_items, 2);
         uint32_t nst_9 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_8);
         cond_5 = nst_9;
     }
@@ -712,13 +614,13 @@ static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateF
         uint32_t kw_11 = kw(ctx, " ORDER BY ");
         uint32_t ch_12 = format_node(ctx, node->orderby);
         uint32_t cat_13_items[] = { kw_11, ch_12 };
-        uint32_t cat_13 = doc_concat_nullable(&ctx->docs, cat_13_items, 2);
+        uint32_t cat_13 = doc_concat(&ctx->docs, cat_13_items, 2);
         cond_10 = cat_13;
     }
     uint32_t sl_14 = doc_softline(&ctx->docs);
     uint32_t kw_15 = kw(ctx, ")");
     uint32_t cat_16_items[] = { kw_2, cond_3, cond_5, cond_10, sl_14, kw_15 };
-    uint32_t cat_16 = doc_concat_nullable(&ctx->docs, cat_16_items, 6);
+    uint32_t cat_16 = doc_concat(&ctx->docs, cat_16_items, 6);
     uint32_t grp_17 = doc_group(&ctx->docs, cat_16);
     uint32_t cond_18 = SYNTAQLITE_NULL_DOC;
     if (node->filter_clause != SYNTAQLITE_NULL_NODE) {
@@ -726,7 +628,7 @@ static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateF
         uint32_t ch_20 = format_node(ctx, node->filter_clause);
         uint32_t kw_21 = kw(ctx, ")");
         uint32_t cat_22_items[] = { kw_19, ch_20, kw_21 };
-        uint32_t cat_22 = doc_concat_nullable(&ctx->docs, cat_22_items, 3);
+        uint32_t cat_22 = doc_concat(&ctx->docs, cat_22_items, 3);
         cond_18 = cat_22;
     }
     uint32_t cond_23 = SYNTAQLITE_NULL_DOC;
@@ -734,11 +636,11 @@ static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateF
         uint32_t kw_24 = kw(ctx, " OVER ");
         uint32_t ch_25 = format_node(ctx, node->over_clause);
         uint32_t cat_26_items[] = { kw_24, ch_25 };
-        uint32_t cat_26 = doc_concat_nullable(&ctx->docs, cat_26_items, 2);
+        uint32_t cat_26 = doc_concat(&ctx->docs, cat_26_items, 2);
         cond_23 = cat_26;
     }
     uint32_t cat_27_items[] = { sp_1, grp_17, cond_18, cond_23 };
-    return doc_concat_nullable(&ctx->docs, cat_27_items, 4);
+    return doc_concat(&ctx->docs, cat_27_items, 4);
 }
 
 static uint32_t format_raise_expr(FmtCtx *ctx, SyntaqliteRaiseExpr *node) {
@@ -756,12 +658,12 @@ static uint32_t format_raise_expr(FmtCtx *ctx, SyntaqliteRaiseExpr *node) {
         uint32_t kw_8 = kw(ctx, ", ");
         uint32_t ch_9 = format_node(ctx, node->error_message);
         uint32_t cat_10_items[] = { kw_8, ch_9 };
-        uint32_t cat_10 = doc_concat_nullable(&ctx->docs, cat_10_items, 2);
+        uint32_t cat_10 = doc_concat(&ctx->docs, cat_10_items, 2);
         cond_7 = cat_10;
     }
     uint32_t kw_11 = kw(ctx, ")");
     uint32_t cat_12_items[] = { kw_1, sw_2, cond_7, kw_11 };
-    return doc_concat_nullable(&ctx->docs, cat_12_items, 4);
+    return doc_concat(&ctx->docs, cat_12_items, 4);
 }
 
 static uint32_t format_table_ref(FmtCtx *ctx, SyntaqliteTableRef *node) {
@@ -770,7 +672,7 @@ static uint32_t format_table_ref(FmtCtx *ctx, SyntaqliteTableRef *node) {
         uint32_t sp_2 = span_text(ctx, node->schema);
         uint32_t kw_3 = kw(ctx, ".");
         uint32_t cat_4_items[] = { sp_2, kw_3 };
-        uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 2);
+        uint32_t cat_4 = doc_concat(&ctx->docs, cat_4_items, 2);
         cond_1 = cat_4;
     }
     uint32_t sp_5 = span_text(ctx, node->table_name);
@@ -779,11 +681,11 @@ static uint32_t format_table_ref(FmtCtx *ctx, SyntaqliteTableRef *node) {
         uint32_t kw_7 = kw(ctx, " AS ");
         uint32_t sp_8 = span_text(ctx, node->alias);
         uint32_t cat_9_items[] = { kw_7, sp_8 };
-        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+        uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 2);
         cond_6 = cat_9;
     }
     uint32_t cat_10_items[] = { cond_1, sp_5, cond_6 };
-    return doc_concat_nullable(&ctx->docs, cat_10_items, 3);
+    return doc_concat(&ctx->docs, cat_10_items, 3);
 }
 
 static uint32_t format_subquery_table_source(FmtCtx *ctx, SyntaqliteSubqueryTableSource *node) {
@@ -795,11 +697,11 @@ static uint32_t format_subquery_table_source(FmtCtx *ctx, SyntaqliteSubqueryTabl
         uint32_t kw_5 = kw(ctx, " AS ");
         uint32_t sp_6 = span_text(ctx, node->alias);
         uint32_t cat_7_items[] = { kw_5, sp_6 };
-        uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 2);
+        uint32_t cat_7 = doc_concat(&ctx->docs, cat_7_items, 2);
         cond_4 = cat_7;
     }
     uint32_t cat_8_items[] = { kw_1, ch_2, kw_3, cond_4 };
-    return doc_concat_nullable(&ctx->docs, cat_8_items, 4);
+    return doc_concat(&ctx->docs, cat_8_items, 4);
 }
 
 static uint32_t format_join_clause(FmtCtx *ctx, SyntaqliteJoinClause *node) {
@@ -815,7 +717,7 @@ static uint32_t format_join_clause(FmtCtx *ctx, SyntaqliteJoinClause *node) {
                 uint32_t kw_7 = kw(ctx, "ON ");
                 uint32_t ch_8 = format_node(ctx, node->on_expr);
                 uint32_t cat_9_items[] = { hl_6, kw_7, ch_8 };
-                uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 3);
+                uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 3);
                 cond_5 = cat_9;
             }
             uint32_t cond_10 = SYNTAQLITE_NULL_DOC;
@@ -824,11 +726,11 @@ static uint32_t format_join_clause(FmtCtx *ctx, SyntaqliteJoinClause *node) {
                 uint32_t ch_12 = format_node(ctx, node->using_columns);
                 uint32_t kw_13 = kw(ctx, ")");
                 uint32_t cat_14_items[] = { kw_11, ch_12, kw_13 };
-                uint32_t cat_14 = doc_concat_nullable(&ctx->docs, cat_14_items, 3);
+                uint32_t cat_14 = doc_concat(&ctx->docs, cat_14_items, 3);
                 cond_10 = cat_14;
             }
             uint32_t cat_15_items[] = { ch_2, kw_3, ch_4, cond_5, cond_10 };
-            uint32_t cat_15 = doc_concat_nullable(&ctx->docs, cat_15_items, 5);
+            uint32_t cat_15 = doc_concat(&ctx->docs, cat_15_items, 5);
             sw_1 = cat_15;
             break;
         }
@@ -857,7 +759,7 @@ static uint32_t format_join_clause(FmtCtx *ctx, SyntaqliteJoinClause *node) {
                 uint32_t kw_23 = kw(ctx, "ON ");
                 uint32_t ch_24 = format_node(ctx, node->on_expr);
                 uint32_t cat_25_items[] = { hl_22, kw_23, ch_24 };
-                uint32_t cat_25 = doc_concat_nullable(&ctx->docs, cat_25_items, 3);
+                uint32_t cat_25 = doc_concat(&ctx->docs, cat_25_items, 3);
                 cond_21 = cat_25;
             }
             uint32_t cond_26 = SYNTAQLITE_NULL_DOC;
@@ -866,11 +768,11 @@ static uint32_t format_join_clause(FmtCtx *ctx, SyntaqliteJoinClause *node) {
                 uint32_t ch_28 = format_node(ctx, node->using_columns);
                 uint32_t kw_29 = kw(ctx, ")");
                 uint32_t cat_30_items[] = { kw_27, ch_28, kw_29 };
-                uint32_t cat_30 = doc_concat_nullable(&ctx->docs, cat_30_items, 3);
+                uint32_t cat_30 = doc_concat(&ctx->docs, cat_30_items, 3);
                 cond_26 = cat_30;
             }
             uint32_t cat_31_items[] = { ch_16, hl_17, ed_18, kw_19, ch_20, cond_21, cond_26 };
-            uint32_t cat_31 = doc_concat_nullable(&ctx->docs, cat_31_items, 7);
+            uint32_t cat_31 = doc_concat(&ctx->docs, cat_31_items, 7);
             sw_1 = cat_31;
             break;
         }
@@ -887,7 +789,7 @@ static uint32_t format_delete_stmt(FmtCtx *ctx, SyntaqliteDeleteStmt *node) {
     uint32_t cl_2 = format_clause(ctx, "FROM", node->table);
     uint32_t cl_3 = format_clause(ctx, "WHERE", node->where);
     uint32_t cat_4_items[] = { kw_1, cl_2, cl_3 };
-    uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 3);
+    uint32_t cat_4 = doc_concat(&ctx->docs, cat_4_items, 3);
     return doc_group(&ctx->docs, cat_4);
 }
 
@@ -902,7 +804,7 @@ static uint32_t format_set_clause(FmtCtx *ctx, SyntaqliteSetClause *node) {
             uint32_t ch_5 = format_node(ctx, node->columns);
             uint32_t kw_6 = kw(ctx, ")");
             uint32_t cat_7_items[] = { kw_4, ch_5, kw_6 };
-            uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 3);
+            uint32_t cat_7 = doc_concat(&ctx->docs, cat_7_items, 3);
             cond_3 = cat_7;
         }
         cond_1 = cond_3;
@@ -910,7 +812,7 @@ static uint32_t format_set_clause(FmtCtx *ctx, SyntaqliteSetClause *node) {
     uint32_t kw_8 = kw(ctx, " = ");
     uint32_t ch_9 = format_node(ctx, node->value);
     uint32_t cat_10_items[] = { cond_1, kw_8, ch_9 };
-    return doc_concat_nullable(&ctx->docs, cat_10_items, 3);
+    return doc_concat(&ctx->docs, cat_10_items, 3);
 }
 
 static uint32_t format_update_stmt(FmtCtx *ctx, SyntaqliteUpdateStmt *node) {
@@ -930,7 +832,7 @@ static uint32_t format_update_stmt(FmtCtx *ctx, SyntaqliteUpdateStmt *node) {
     uint32_t cl_11 = format_clause(ctx, "FROM", node->from_clause);
     uint32_t cl_12 = format_clause(ctx, "WHERE", node->where);
     uint32_t cat_13_items[] = { kw_1, sw_2, kw_8, ch_9, cl_10, cl_11, cl_12 };
-    uint32_t cat_13 = doc_concat_nullable(&ctx->docs, cat_13_items, 7);
+    uint32_t cat_13 = doc_concat(&ctx->docs, cat_13_items, 7);
     return doc_group(&ctx->docs, cat_13);
 }
 
@@ -949,7 +851,7 @@ static uint32_t format_insert_stmt(FmtCtx *ctx, SyntaqliteInsertStmt *node) {
             default: break;
         }
         uint32_t cat_9_items[] = { kw_3, sw_4 };
-        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+        uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 2);
         cond_1 = cat_9;
     }
     uint32_t kw_10 = kw(ctx, " INTO ");
@@ -960,7 +862,7 @@ static uint32_t format_insert_stmt(FmtCtx *ctx, SyntaqliteInsertStmt *node) {
         uint32_t ch_14 = format_node(ctx, node->columns);
         uint32_t kw_15 = kw(ctx, ")");
         uint32_t cat_16_items[] = { kw_13, ch_14, kw_15 };
-        uint32_t cat_16 = doc_concat_nullable(&ctx->docs, cat_16_items, 3);
+        uint32_t cat_16 = doc_concat(&ctx->docs, cat_16_items, 3);
         cond_12 = cat_16;
     }
     uint32_t cond_17 = SYNTAQLITE_NULL_DOC;
@@ -968,11 +870,11 @@ static uint32_t format_insert_stmt(FmtCtx *ctx, SyntaqliteInsertStmt *node) {
         uint32_t hl_18 = doc_hardline(&ctx->docs);
         uint32_t ch_19 = format_node(ctx, node->source);
         uint32_t cat_20_items[] = { hl_18, ch_19 };
-        uint32_t cat_20 = doc_concat_nullable(&ctx->docs, cat_20_items, 2);
+        uint32_t cat_20 = doc_concat(&ctx->docs, cat_20_items, 2);
         cond_17 = cat_20;
     }
     uint32_t cat_21_items[] = { cond_1, kw_10, ch_11, cond_12, cond_17 };
-    return doc_concat_nullable(&ctx->docs, cat_21_items, 5);
+    return doc_concat(&ctx->docs, cat_21_items, 5);
 }
 
 static uint32_t format_qualified_name(FmtCtx *ctx, SyntaqliteQualifiedName *node) {
@@ -981,12 +883,12 @@ static uint32_t format_qualified_name(FmtCtx *ctx, SyntaqliteQualifiedName *node
         uint32_t sp_2 = span_text(ctx, node->schema);
         uint32_t kw_3 = kw(ctx, ".");
         uint32_t cat_4_items[] = { sp_2, kw_3 };
-        uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 2);
+        uint32_t cat_4 = doc_concat(&ctx->docs, cat_4_items, 2);
         cond_1 = cat_4;
     }
     uint32_t sp_5 = span_text(ctx, node->object_name);
     uint32_t cat_6_items[] = { cond_1, sp_5 };
-    return doc_concat_nullable(&ctx->docs, cat_6_items, 2);
+    return doc_concat(&ctx->docs, cat_6_items, 2);
 }
 
 static uint32_t format_drop_stmt(FmtCtx *ctx, SyntaqliteDropStmt *node) {
@@ -1004,7 +906,7 @@ static uint32_t format_drop_stmt(FmtCtx *ctx, SyntaqliteDropStmt *node) {
     uint32_t kw_5 = kw(ctx, " ");
     uint32_t ch_6 = format_node(ctx, node->target);
     uint32_t cat_7_items[] = { kw_1, ed_2, cond_3, kw_5, ch_6 };
-    return doc_concat_nullable(&ctx->docs, cat_7_items, 5);
+    return doc_concat(&ctx->docs, cat_7_items, 5);
 }
 
 static uint32_t format_alter_table_stmt(FmtCtx *ctx, SyntaqliteAlterTableStmt *node) {
@@ -1014,7 +916,7 @@ static uint32_t format_alter_table_stmt(FmtCtx *ctx, SyntaqliteAlterTableStmt *n
         uint32_t ch_3 = format_node(ctx, node->target);
         uint32_t kw_4 = kw(ctx, " ");
         uint32_t cat_5_items[] = { ch_3, kw_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
+        uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 2);
         cond_2 = cat_5;
     }
     uint32_t sw_6 = SYNTAQLITE_NULL_DOC;
@@ -1023,7 +925,7 @@ static uint32_t format_alter_table_stmt(FmtCtx *ctx, SyntaqliteAlterTableStmt *n
             uint32_t kw_7 = kw(ctx, "RENAME TO ");
             uint32_t sp_8 = span_text(ctx, node->new_name);
             uint32_t cat_9_items[] = { kw_7, sp_8 };
-            uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+            uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 2);
             sw_6 = cat_9;
             break;
         }
@@ -1033,7 +935,7 @@ static uint32_t format_alter_table_stmt(FmtCtx *ctx, SyntaqliteAlterTableStmt *n
             uint32_t kw_12 = kw(ctx, " TO ");
             uint32_t sp_13 = span_text(ctx, node->new_name);
             uint32_t cat_14_items[] = { kw_10, sp_11, kw_12, sp_13 };
-            uint32_t cat_14 = doc_concat_nullable(&ctx->docs, cat_14_items, 4);
+            uint32_t cat_14 = doc_concat(&ctx->docs, cat_14_items, 4);
             sw_6 = cat_14;
             break;
         }
@@ -1041,7 +943,7 @@ static uint32_t format_alter_table_stmt(FmtCtx *ctx, SyntaqliteAlterTableStmt *n
             uint32_t kw_15 = kw(ctx, "DROP COLUMN ");
             uint32_t sp_16 = span_text(ctx, node->old_name);
             uint32_t cat_17_items[] = { kw_15, sp_16 };
-            uint32_t cat_17 = doc_concat_nullable(&ctx->docs, cat_17_items, 2);
+            uint32_t cat_17 = doc_concat(&ctx->docs, cat_17_items, 2);
             sw_6 = cat_17;
             break;
         }
@@ -1049,14 +951,14 @@ static uint32_t format_alter_table_stmt(FmtCtx *ctx, SyntaqliteAlterTableStmt *n
             uint32_t kw_18 = kw(ctx, "ADD COLUMN ");
             uint32_t sp_19 = span_text(ctx, node->old_name);
             uint32_t cat_20_items[] = { kw_18, sp_19 };
-            uint32_t cat_20 = doc_concat_nullable(&ctx->docs, cat_20_items, 2);
+            uint32_t cat_20 = doc_concat(&ctx->docs, cat_20_items, 2);
             sw_6 = cat_20;
             break;
         }
         default: break;
     }
     uint32_t cat_21_items[] = { kw_1, cond_2, sw_6 };
-    return doc_concat_nullable(&ctx->docs, cat_21_items, 3);
+    return doc_concat(&ctx->docs, cat_21_items, 3);
 }
 
 static uint32_t format_transaction_stmt(FmtCtx *ctx, SyntaqliteTransactionStmt *node) {
@@ -1071,7 +973,7 @@ static uint32_t format_transaction_stmt(FmtCtx *ctx, SyntaqliteTransactionStmt *
                 default: break;
             }
             uint32_t cat_4_items[] = { kw_2, ed_3 };
-            uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 2);
+            uint32_t cat_4 = doc_concat(&ctx->docs, cat_4_items, 2);
             sw_1 = cat_4;
             break;
         }
@@ -1089,7 +991,7 @@ static uint32_t format_savepoint_stmt(FmtCtx *ctx, SyntaqliteSavepointStmt *node
             uint32_t kw_2 = kw(ctx, "SAVEPOINT ");
             uint32_t sp_3 = span_text(ctx, node->savepoint_name);
             uint32_t cat_4_items[] = { kw_2, sp_3 };
-            uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 2);
+            uint32_t cat_4 = doc_concat(&ctx->docs, cat_4_items, 2);
             sw_1 = cat_4;
             break;
         }
@@ -1097,7 +999,7 @@ static uint32_t format_savepoint_stmt(FmtCtx *ctx, SyntaqliteSavepointStmt *node
             uint32_t kw_5 = kw(ctx, "RELEASE SAVEPOINT ");
             uint32_t sp_6 = span_text(ctx, node->savepoint_name);
             uint32_t cat_7_items[] = { kw_5, sp_6 };
-            uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 2);
+            uint32_t cat_7 = doc_concat(&ctx->docs, cat_7_items, 2);
             sw_1 = cat_7;
             break;
         }
@@ -1105,7 +1007,7 @@ static uint32_t format_savepoint_stmt(FmtCtx *ctx, SyntaqliteSavepointStmt *node
             uint32_t kw_8 = kw(ctx, "ROLLBACK TO SAVEPOINT ");
             uint32_t sp_9 = span_text(ctx, node->savepoint_name);
             uint32_t cat_10_items[] = { kw_8, sp_9 };
-            uint32_t cat_10 = doc_concat_nullable(&ctx->docs, cat_10_items, 2);
+            uint32_t cat_10 = doc_concat(&ctx->docs, cat_10_items, 2);
             sw_1 = cat_10;
             break;
         }
@@ -1121,7 +1023,7 @@ static uint32_t format_pragma_stmt(FmtCtx *ctx, SyntaqlitePragmaStmt *node) {
         uint32_t sp_3 = span_text(ctx, node->schema);
         uint32_t kw_4 = kw(ctx, ".");
         uint32_t cat_5_items[] = { sp_3, kw_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
+        uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 2);
         cond_2 = cat_5;
     }
     uint32_t sp_6 = span_text(ctx, node->pragma_name);
@@ -1131,7 +1033,7 @@ static uint32_t format_pragma_stmt(FmtCtx *ctx, SyntaqlitePragmaStmt *node) {
             uint32_t kw_8 = kw(ctx, " = ");
             uint32_t sp_9 = span_text(ctx, node->value);
             uint32_t cat_10_items[] = { kw_8, sp_9 };
-            uint32_t cat_10 = doc_concat_nullable(&ctx->docs, cat_10_items, 2);
+            uint32_t cat_10 = doc_concat(&ctx->docs, cat_10_items, 2);
             sw_7 = cat_10;
             break;
         }
@@ -1140,14 +1042,14 @@ static uint32_t format_pragma_stmt(FmtCtx *ctx, SyntaqlitePragmaStmt *node) {
             uint32_t sp_12 = span_text(ctx, node->value);
             uint32_t kw_13 = kw(ctx, ")");
             uint32_t cat_14_items[] = { kw_11, sp_12, kw_13 };
-            uint32_t cat_14 = doc_concat_nullable(&ctx->docs, cat_14_items, 3);
+            uint32_t cat_14 = doc_concat(&ctx->docs, cat_14_items, 3);
             sw_7 = cat_14;
             break;
         }
         default: break;
     }
     uint32_t cat_15_items[] = { kw_1, cond_2, sp_6, sw_7 };
-    return doc_concat_nullable(&ctx->docs, cat_15_items, 4);
+    return doc_concat(&ctx->docs, cat_15_items, 4);
 }
 
 static uint32_t format_analyze_stmt(FmtCtx *ctx, SyntaqliteAnalyzeStmt *node) {
@@ -1159,7 +1061,7 @@ static uint32_t format_analyze_stmt(FmtCtx *ctx, SyntaqliteAnalyzeStmt *node) {
         uint32_t kw_7 = kw(ctx, ".");
         uint32_t sp_8 = span_text(ctx, node->target_name);
         uint32_t cat_9_items[] = { kw_5, sp_6, kw_7, sp_8 };
-        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 4);
+        uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 4);
         cond_4 = cat_9;
     } else {
         uint32_t cond_10 = SYNTAQLITE_NULL_DOC;
@@ -1167,13 +1069,13 @@ static uint32_t format_analyze_stmt(FmtCtx *ctx, SyntaqliteAnalyzeStmt *node) {
             uint32_t kw_11 = kw(ctx, " ");
             uint32_t sp_12 = span_text(ctx, node->target_name);
             uint32_t cat_13_items[] = { kw_11, sp_12 };
-            uint32_t cat_13 = doc_concat_nullable(&ctx->docs, cat_13_items, 2);
+            uint32_t cat_13 = doc_concat(&ctx->docs, cat_13_items, 2);
             cond_10 = cat_13;
         }
         cond_4 = cond_10;
     }
     uint32_t cat_14_items[] = { cond_1, cond_4 };
-    return doc_concat_nullable(&ctx->docs, cat_14_items, 2);
+    return doc_concat(&ctx->docs, cat_14_items, 2);
 }
 
 static uint32_t format_attach_stmt(FmtCtx *ctx, SyntaqliteAttachStmt *node) {
@@ -1186,18 +1088,18 @@ static uint32_t format_attach_stmt(FmtCtx *ctx, SyntaqliteAttachStmt *node) {
         uint32_t kw_6 = kw(ctx, " KEY ");
         uint32_t ch_7 = format_node(ctx, node->key);
         uint32_t cat_8_items[] = { kw_6, ch_7 };
-        uint32_t cat_8 = doc_concat_nullable(&ctx->docs, cat_8_items, 2);
+        uint32_t cat_8 = doc_concat(&ctx->docs, cat_8_items, 2);
         cond_5 = cat_8;
     }
     uint32_t cat_9_items[] = { kw_1, ch_2, kw_3, ch_4, cond_5 };
-    return doc_concat_nullable(&ctx->docs, cat_9_items, 5);
+    return doc_concat(&ctx->docs, cat_9_items, 5);
 }
 
 static uint32_t format_detach_stmt(FmtCtx *ctx, SyntaqliteDetachStmt *node) {
     uint32_t kw_1 = kw(ctx, "DETACH ");
     uint32_t ch_2 = format_node(ctx, node->db_name);
     uint32_t cat_3_items[] = { kw_1, ch_2 };
-    return doc_concat_nullable(&ctx->docs, cat_3_items, 2);
+    return doc_concat(&ctx->docs, cat_3_items, 2);
 }
 
 static uint32_t format_vacuum_stmt(FmtCtx *ctx, SyntaqliteVacuumStmt *node) {
@@ -1207,7 +1109,7 @@ static uint32_t format_vacuum_stmt(FmtCtx *ctx, SyntaqliteVacuumStmt *node) {
         uint32_t kw_3 = kw(ctx, " ");
         uint32_t sp_4 = span_text(ctx, node->schema);
         uint32_t cat_5_items[] = { kw_3, sp_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
+        uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 2);
         cond_2 = cat_5;
     }
     uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
@@ -1215,11 +1117,11 @@ static uint32_t format_vacuum_stmt(FmtCtx *ctx, SyntaqliteVacuumStmt *node) {
         uint32_t kw_7 = kw(ctx, " INTO ");
         uint32_t ch_8 = format_node(ctx, node->into_expr);
         uint32_t cat_9_items[] = { kw_7, ch_8 };
-        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+        uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 2);
         cond_6 = cat_9;
     }
     uint32_t cat_10_items[] = { kw_1, cond_2, cond_6 };
-    return doc_concat_nullable(&ctx->docs, cat_10_items, 3);
+    return doc_concat(&ctx->docs, cat_10_items, 3);
 }
 
 static uint32_t format_explain_stmt(FmtCtx *ctx, SyntaqliteExplainStmt *node) {
@@ -1227,7 +1129,7 @@ static uint32_t format_explain_stmt(FmtCtx *ctx, SyntaqliteExplainStmt *node) {
     uint32_t hl_4 = doc_hardline(&ctx->docs);
     uint32_t ch_5 = format_node(ctx, node->stmt);
     uint32_t cat_6_items[] = { cond_1, hl_4, ch_5 };
-    return doc_concat_nullable(&ctx->docs, cat_6_items, 3);
+    return doc_concat(&ctx->docs, cat_6_items, 3);
 }
 
 static uint32_t format_create_index_stmt(FmtCtx *ctx, SyntaqliteCreateIndexStmt *node) {
@@ -1243,7 +1145,7 @@ static uint32_t format_create_index_stmt(FmtCtx *ctx, SyntaqliteCreateIndexStmt 
         uint32_t sp_9 = span_text(ctx, node->schema);
         uint32_t kw_10 = kw(ctx, ".");
         uint32_t cat_11_items[] = { sp_9, kw_10 };
-        uint32_t cat_11 = doc_concat_nullable(&ctx->docs, cat_11_items, 2);
+        uint32_t cat_11 = doc_concat(&ctx->docs, cat_11_items, 2);
         cond_8 = cat_11;
     }
     uint32_t sp_12 = span_text(ctx, node->index_name);
@@ -1254,7 +1156,7 @@ static uint32_t format_create_index_stmt(FmtCtx *ctx, SyntaqliteCreateIndexStmt 
     uint32_t kw_17 = kw(ctx, ")");
     uint32_t cl_18 = format_clause(ctx, "WHERE", node->where);
     uint32_t cat_19_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, kw_13, sp_14, kw_15, ch_16, kw_17, cl_18 };
-    uint32_t cat_19 = doc_concat_nullable(&ctx->docs, cat_19_items, 13);
+    uint32_t cat_19 = doc_concat(&ctx->docs, cat_19_items, 13);
     return doc_group(&ctx->docs, cat_19);
 }
 
@@ -1271,7 +1173,7 @@ static uint32_t format_create_view_stmt(FmtCtx *ctx, SyntaqliteCreateViewStmt *n
         uint32_t sp_9 = span_text(ctx, node->schema);
         uint32_t kw_10 = kw(ctx, ".");
         uint32_t cat_11_items[] = { sp_9, kw_10 };
-        uint32_t cat_11 = doc_concat_nullable(&ctx->docs, cat_11_items, 2);
+        uint32_t cat_11 = doc_concat(&ctx->docs, cat_11_items, 2);
         cond_8 = cat_11;
     }
     uint32_t sp_12 = span_text(ctx, node->view_name);
@@ -1281,7 +1183,7 @@ static uint32_t format_create_view_stmt(FmtCtx *ctx, SyntaqliteCreateViewStmt *n
         uint32_t ch_15 = format_node(ctx, node->column_names);
         uint32_t kw_16 = kw(ctx, ")");
         uint32_t cat_17_items[] = { kw_14, ch_15, kw_16 };
-        uint32_t cat_17 = doc_concat_nullable(&ctx->docs, cat_17_items, 3);
+        uint32_t cat_17 = doc_concat(&ctx->docs, cat_17_items, 3);
         uint32_t grp_18 = doc_group(&ctx->docs, cat_17);
         cond_13 = grp_18;
     }
@@ -1289,7 +1191,7 @@ static uint32_t format_create_view_stmt(FmtCtx *ctx, SyntaqliteCreateViewStmt *n
     uint32_t hl_20 = doc_hardline(&ctx->docs);
     uint32_t ch_21 = format_node(ctx, node->select);
     uint32_t cat_22_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, cond_13, kw_19, hl_20, ch_21 };
-    return doc_concat_nullable(&ctx->docs, cat_22_items, 11);
+    return doc_concat(&ctx->docs, cat_22_items, 11);
 }
 
 static uint32_t format_foreign_key_clause(FmtCtx *ctx, SyntaqliteForeignKeyClause *node) {
@@ -1298,7 +1200,7 @@ static uint32_t format_foreign_key_clause(FmtCtx *ctx, SyntaqliteForeignKeyClaus
         uint32_t kw_2 = kw(ctx, "REFERENCES ");
         uint32_t sp_3 = span_text(ctx, node->ref_table);
         uint32_t cat_4_items[] = { kw_2, sp_3 };
-        uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 2);
+        uint32_t cat_4 = doc_concat(&ctx->docs, cat_4_items, 2);
         cond_1 = cat_4;
     }
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
@@ -1307,7 +1209,7 @@ static uint32_t format_foreign_key_clause(FmtCtx *ctx, SyntaqliteForeignKeyClaus
         uint32_t ch_7 = format_node(ctx, node->ref_columns);
         uint32_t kw_8 = kw(ctx, ")");
         uint32_t cat_9_items[] = { kw_6, ch_7, kw_8 };
-        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 3);
+        uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 3);
         cond_5 = cat_9;
     }
     uint32_t sw_10 = SYNTAQLITE_NULL_DOC;
@@ -1329,7 +1231,7 @@ static uint32_t format_foreign_key_clause(FmtCtx *ctx, SyntaqliteForeignKeyClaus
     uint32_t cond_20 = SYNTAQLITE_NULL_DOC;
     if (node->is_deferred) cond_20 = kw(ctx, "DEFERRABLE INITIALLY DEFERRED");
     uint32_t cat_22_items[] = { cond_1, cond_5, sw_10, sw_15, cond_20 };
-    return doc_concat_nullable(&ctx->docs, cat_22_items, 5);
+    return doc_concat(&ctx->docs, cat_22_items, 5);
 }
 
 static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint *node) {
@@ -1339,7 +1241,7 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
         uint32_t sp_3 = span_text(ctx, node->constraint_name);
         uint32_t kw_4 = kw(ctx, " ");
         uint32_t cat_5_items[] = { kw_2, sp_3, kw_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 3);
+        uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 3);
         cond_1 = cat_5;
     }
     uint32_t sw_6 = SYNTAQLITE_NULL_DOC;
@@ -1360,7 +1262,7 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
                 default: break;
             }
             uint32_t cat_18_items[] = { kw_7, cond_8, cond_10, sw_12 };
-            uint32_t cat_18 = doc_concat_nullable(&ctx->docs, cat_18_items, 4);
+            uint32_t cat_18 = doc_concat(&ctx->docs, cat_18_items, 4);
             sw_6 = cat_18;
             break;
         }
@@ -1376,7 +1278,7 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
                 default: break;
             }
             uint32_t cat_26_items[] = { kw_19, sw_20 };
-            uint32_t cat_26 = doc_concat_nullable(&ctx->docs, cat_26_items, 2);
+            uint32_t cat_26 = doc_concat(&ctx->docs, cat_26_items, 2);
             sw_6 = cat_26;
             break;
         }
@@ -1392,7 +1294,7 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
                 default: break;
             }
             uint32_t cat_34_items[] = { kw_27, sw_28 };
-            uint32_t cat_34 = doc_concat_nullable(&ctx->docs, cat_34_items, 2);
+            uint32_t cat_34 = doc_concat(&ctx->docs, cat_34_items, 2);
             sw_6 = cat_34;
             break;
         }
@@ -1401,7 +1303,7 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
             uint32_t ch_36 = format_node(ctx, node->check_expr);
             uint32_t kw_37 = kw(ctx, ")");
             uint32_t cat_38_items[] = { kw_35, ch_36, kw_37 };
-            uint32_t cat_38 = doc_concat_nullable(&ctx->docs, cat_38_items, 3);
+            uint32_t cat_38 = doc_concat(&ctx->docs, cat_38_items, 3);
             sw_6 = cat_38;
             break;
         }
@@ -1409,7 +1311,7 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
             uint32_t kw_39 = kw(ctx, "DEFAULT ");
             uint32_t ch_40 = format_node(ctx, node->default_expr);
             uint32_t cat_41_items[] = { kw_39, ch_40 };
-            uint32_t cat_41 = doc_concat_nullable(&ctx->docs, cat_41_items, 2);
+            uint32_t cat_41 = doc_concat(&ctx->docs, cat_41_items, 2);
             sw_6 = cat_41;
             break;
         }
@@ -1417,7 +1319,7 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
             uint32_t kw_42 = kw(ctx, "COLLATE ");
             uint32_t sp_43 = span_text(ctx, node->collation_name);
             uint32_t cat_44_items[] = { kw_42, sp_43 };
-            uint32_t cat_44 = doc_concat_nullable(&ctx->docs, cat_44_items, 2);
+            uint32_t cat_44 = doc_concat(&ctx->docs, cat_44_items, 2);
             sw_6 = cat_44;
             break;
         }
@@ -1429,7 +1331,7 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
             uint32_t cond_49 = SYNTAQLITE_NULL_DOC;
             if (node->generated_storage == SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED) cond_49 = kw(ctx, " STORED");
             uint32_t cat_51_items[] = { kw_46, ch_47, kw_48, cond_49 };
-            uint32_t cat_51 = doc_concat_nullable(&ctx->docs, cat_51_items, 4);
+            uint32_t cat_51 = doc_concat(&ctx->docs, cat_51_items, 4);
             sw_6 = cat_51;
             break;
         }
@@ -1437,7 +1339,7 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
         default: break;
     }
     uint32_t cat_53_items[] = { cond_1, sw_6 };
-    return doc_concat_nullable(&ctx->docs, cat_53_items, 2);
+    return doc_concat(&ctx->docs, cat_53_items, 2);
 }
 
 static uint32_t format_column_constraint_list(FmtCtx *ctx, SyntaqliteColumnConstraintList *node) {
@@ -1462,7 +1364,7 @@ static uint32_t format_column_def(FmtCtx *ctx, SyntaqliteColumnDef *node) {
         uint32_t kw_3 = kw(ctx, " ");
         uint32_t sp_4 = span_text(ctx, node->type_name);
         uint32_t cat_5_items[] = { kw_3, sp_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
+        uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 2);
         cond_2 = cat_5;
     }
     uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
@@ -1470,11 +1372,11 @@ static uint32_t format_column_def(FmtCtx *ctx, SyntaqliteColumnDef *node) {
         uint32_t kw_7 = kw(ctx, " ");
         uint32_t ch_8 = format_node(ctx, node->constraints);
         uint32_t cat_9_items[] = { kw_7, ch_8 };
-        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+        uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 2);
         cond_6 = cat_9;
     }
     uint32_t cat_10_items[] = { sp_1, cond_2, cond_6 };
-    return doc_concat_nullable(&ctx->docs, cat_10_items, 3);
+    return doc_concat(&ctx->docs, cat_10_items, 3);
 }
 
 static uint32_t format_column_def_list(FmtCtx *ctx, SyntaqliteColumnDefList *node) {
@@ -1502,7 +1404,7 @@ static uint32_t format_table_constraint(FmtCtx *ctx, SyntaqliteTableConstraint *
         uint32_t sp_3 = span_text(ctx, node->constraint_name);
         uint32_t kw_4 = kw(ctx, " ");
         uint32_t cat_5_items[] = { kw_2, sp_3, kw_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 3);
+        uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 3);
         cond_1 = cat_5;
     }
     uint32_t sw_6 = SYNTAQLITE_NULL_DOC;
@@ -1521,7 +1423,7 @@ static uint32_t format_table_constraint(FmtCtx *ctx, SyntaqliteTableConstraint *
                 default: break;
             }
             uint32_t cat_16_items[] = { kw_7, ch_8, kw_9, sw_10 };
-            uint32_t cat_16 = doc_concat_nullable(&ctx->docs, cat_16_items, 4);
+            uint32_t cat_16 = doc_concat(&ctx->docs, cat_16_items, 4);
             sw_6 = cat_16;
             break;
         }
@@ -1539,7 +1441,7 @@ static uint32_t format_table_constraint(FmtCtx *ctx, SyntaqliteTableConstraint *
                 default: break;
             }
             uint32_t cat_26_items[] = { kw_17, ch_18, kw_19, sw_20 };
-            uint32_t cat_26 = doc_concat_nullable(&ctx->docs, cat_26_items, 4);
+            uint32_t cat_26 = doc_concat(&ctx->docs, cat_26_items, 4);
             sw_6 = cat_26;
             break;
         }
@@ -1548,7 +1450,7 @@ static uint32_t format_table_constraint(FmtCtx *ctx, SyntaqliteTableConstraint *
             uint32_t ch_28 = format_node(ctx, node->check_expr);
             uint32_t kw_29 = kw(ctx, ")");
             uint32_t cat_30_items[] = { kw_27, ch_28, kw_29 };
-            uint32_t cat_30 = doc_concat_nullable(&ctx->docs, cat_30_items, 3);
+            uint32_t cat_30 = doc_concat(&ctx->docs, cat_30_items, 3);
             sw_6 = cat_30;
             break;
         }
@@ -1558,14 +1460,14 @@ static uint32_t format_table_constraint(FmtCtx *ctx, SyntaqliteTableConstraint *
             uint32_t kw_33 = kw(ctx, ") ");
             uint32_t ch_34 = format_node(ctx, node->fk_clause);
             uint32_t cat_35_items[] = { kw_31, ch_32, kw_33, ch_34 };
-            uint32_t cat_35 = doc_concat_nullable(&ctx->docs, cat_35_items, 4);
+            uint32_t cat_35 = doc_concat(&ctx->docs, cat_35_items, 4);
             sw_6 = cat_35;
             break;
         }
         default: break;
     }
     uint32_t cat_36_items[] = { cond_1, sw_6 };
-    return doc_concat_nullable(&ctx->docs, cat_36_items, 2);
+    return doc_concat(&ctx->docs, cat_36_items, 2);
 }
 
 static uint32_t format_table_constraint_list(FmtCtx *ctx, SyntaqliteTableConstraintList *node) {
@@ -1599,7 +1501,7 @@ static uint32_t format_create_table_stmt(FmtCtx *ctx, SyntaqliteCreateTableStmt 
         uint32_t sp_9 = span_text(ctx, node->schema);
         uint32_t kw_10 = kw(ctx, ".");
         uint32_t cat_11_items[] = { sp_9, kw_10 };
-        uint32_t cat_11 = doc_concat_nullable(&ctx->docs, cat_11_items, 2);
+        uint32_t cat_11 = doc_concat(&ctx->docs, cat_11_items, 2);
         cond_8 = cat_11;
     }
     uint32_t sp_12 = span_text(ctx, node->table_name);
@@ -1614,11 +1516,11 @@ static uint32_t format_create_table_stmt(FmtCtx *ctx, SyntaqliteCreateTableStmt 
             uint32_t ln_19 = doc_line(&ctx->docs);
             uint32_t ch_20 = format_node(ctx, node->table_constraints);
             uint32_t cat_21_items[] = { kw_18, ln_19, ch_20 };
-            uint32_t cat_21 = doc_concat_nullable(&ctx->docs, cat_21_items, 3);
+            uint32_t cat_21 = doc_concat(&ctx->docs, cat_21_items, 3);
             cond_17 = cat_21;
         }
         uint32_t cat_22_items[] = { sl_15, ch_16, cond_17 };
-        uint32_t cat_22 = doc_concat_nullable(&ctx->docs, cat_22_items, 3);
+        uint32_t cat_22 = doc_concat(&ctx->docs, cat_22_items, 3);
         uint32_t nst_23 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_22);
         uint32_t grp_24 = doc_group(&ctx->docs, nst_23);
         uint32_t sl_25 = doc_softline(&ctx->docs);
@@ -1633,7 +1535,7 @@ static uint32_t format_create_table_stmt(FmtCtx *ctx, SyntaqliteCreateTableStmt 
         uint32_t hl_30 = doc_hardline(&ctx->docs);
         uint32_t ch_31 = format_node(ctx, node->as_select);
         uint32_t cat_32_items[] = { kw_29, hl_30, ch_31 };
-        uint32_t cat_32 = doc_concat_nullable(&ctx->docs, cat_32_items, 3);
+        uint32_t cat_32 = doc_concat(&ctx->docs, cat_32_items, 3);
         cond_28 = cat_32;
     }
     uint32_t cond_33 = SYNTAQLITE_NULL_DOC;
@@ -1641,7 +1543,7 @@ static uint32_t format_create_table_stmt(FmtCtx *ctx, SyntaqliteCreateTableStmt 
     uint32_t cond_35 = SYNTAQLITE_NULL_DOC;
     if (node->flags.strict) cond_35 = kw(ctx, " STRICT");
     uint32_t cat_37_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, cond_13, cond_28, cond_33, cond_35 };
-    uint32_t cat_37 = doc_concat_nullable(&ctx->docs, cat_37_items, 11);
+    uint32_t cat_37 = doc_concat(&ctx->docs, cat_37_items, 11);
     return doc_group(&ctx->docs, cat_37);
 }
 
@@ -1653,7 +1555,7 @@ static uint32_t format_frame_bound(FmtCtx *ctx, SyntaqliteFrameBound *node) {
             uint32_t ch_3 = format_node(ctx, node->expr);
             uint32_t kw_4 = kw(ctx, " PRECEDING");
             uint32_t cat_5_items[] = { ch_3, kw_4 };
-            uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
+            uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 2);
             sw_1 = cat_5;
             break;
         }
@@ -1662,7 +1564,7 @@ static uint32_t format_frame_bound(FmtCtx *ctx, SyntaqliteFrameBound *node) {
             uint32_t ch_7 = format_node(ctx, node->expr);
             uint32_t kw_8 = kw(ctx, " FOLLOWING");
             uint32_t cat_9_items[] = { ch_7, kw_8 };
-            uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+            uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 2);
             sw_1 = cat_9;
             break;
         }
@@ -1693,7 +1595,7 @@ static uint32_t format_frame_spec(FmtCtx *ctx, SyntaqliteFrameSpec *node) {
         default: break;
     }
     uint32_t cat_14_items[] = { sw_1, kw_5, ch_6, kw_7, ch_8, sw_9 };
-    return doc_concat_nullable(&ctx->docs, cat_14_items, 6);
+    return doc_concat(&ctx->docs, cat_14_items, 6);
 }
 
 static uint32_t format_window_def(FmtCtx *ctx, SyntaqliteWindowDef *node) {
@@ -1707,7 +1609,7 @@ static uint32_t format_window_def(FmtCtx *ctx, SyntaqliteWindowDef *node) {
             uint32_t kw_5 = kw(ctx, "PARTITION BY ");
             uint32_t ch_6 = format_node(ctx, node->partition_by);
             uint32_t cat_7_items[] = { kw_5, ch_6 };
-            uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 2);
+            uint32_t cat_7 = doc_concat(&ctx->docs, cat_7_items, 2);
             cond_4 = cat_7;
         }
         uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
@@ -1717,7 +1619,7 @@ static uint32_t format_window_def(FmtCtx *ctx, SyntaqliteWindowDef *node) {
             uint32_t kw_11 = kw(ctx, "ORDER BY ");
             uint32_t ch_12 = format_node(ctx, node->orderby);
             uint32_t cat_13_items[] = { cond_9, kw_11, ch_12 };
-            uint32_t cat_13 = doc_concat_nullable(&ctx->docs, cat_13_items, 3);
+            uint32_t cat_13 = doc_concat(&ctx->docs, cat_13_items, 3);
             cond_8 = cat_13;
         }
         uint32_t cond_14 = SYNTAQLITE_NULL_DOC;
@@ -1732,12 +1634,12 @@ static uint32_t format_window_def(FmtCtx *ctx, SyntaqliteWindowDef *node) {
             }
             uint32_t ch_19 = format_node(ctx, node->frame);
             uint32_t cat_20_items[] = { cond_15, ch_19 };
-            uint32_t cat_20 = doc_concat_nullable(&ctx->docs, cat_20_items, 2);
+            uint32_t cat_20 = doc_concat(&ctx->docs, cat_20_items, 2);
             cond_14 = cat_20;
         }
         uint32_t kw_21 = kw(ctx, ")");
         uint32_t cat_22_items[] = { kw_3, cond_4, cond_8, cond_14, kw_21 };
-        uint32_t cat_22 = doc_concat_nullable(&ctx->docs, cat_22_items, 5);
+        uint32_t cat_22 = doc_concat(&ctx->docs, cat_22_items, 5);
         cond_1 = cat_22;
     }
     return cond_1;
@@ -1748,7 +1650,7 @@ static uint32_t format_named_window_def(FmtCtx *ctx, SyntaqliteNamedWindowDef *n
     uint32_t kw_2 = kw(ctx, " AS ");
     uint32_t ch_3 = format_node(ctx, node->window_def);
     uint32_t cat_4_items[] = { sp_1, kw_2, ch_3 };
-    return doc_concat_nullable(&ctx->docs, cat_4_items, 3);
+    return doc_concat(&ctx->docs, cat_4_items, 3);
 }
 
 static uint32_t format_filter_over(FmtCtx *ctx, SyntaqliteFilterOver *node) {
@@ -1758,7 +1660,7 @@ static uint32_t format_filter_over(FmtCtx *ctx, SyntaqliteFilterOver *node) {
         uint32_t ch_3 = format_node(ctx, node->filter_expr);
         uint32_t kw_4 = kw(ctx, ")");
         uint32_t cat_5_items[] = { kw_2, ch_3, kw_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 3);
+        uint32_t cat_5 = doc_concat(&ctx->docs, cat_5_items, 3);
         cond_1 = cat_5;
     }
     uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
@@ -1766,7 +1668,7 @@ static uint32_t format_filter_over(FmtCtx *ctx, SyntaqliteFilterOver *node) {
         uint32_t kw_7 = kw(ctx, " OVER ");
         uint32_t ch_8 = format_node(ctx, node->over_def);
         uint32_t cat_9_items[] = { kw_7, ch_8 };
-        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+        uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 2);
         cond_6 = cat_9;
     }
     uint32_t cond_10 = SYNTAQLITE_NULL_DOC;
@@ -1774,11 +1676,11 @@ static uint32_t format_filter_over(FmtCtx *ctx, SyntaqliteFilterOver *node) {
         uint32_t kw_11 = kw(ctx, " OVER ");
         uint32_t sp_12 = span_text(ctx, node->over_name);
         uint32_t cat_13_items[] = { kw_11, sp_12 };
-        uint32_t cat_13 = doc_concat_nullable(&ctx->docs, cat_13_items, 2);
+        uint32_t cat_13 = doc_concat(&ctx->docs, cat_13_items, 2);
         cond_10 = cat_13;
     }
     uint32_t cat_14_items[] = { cond_1, cond_6, cond_10 };
-    return doc_concat_nullable(&ctx->docs, cat_14_items, 3);
+    return doc_concat(&ctx->docs, cat_14_items, 3);
 }
 
 static uint32_t format_trigger_event(FmtCtx *ctx, SyntaqliteTriggerEvent *node) {
@@ -1793,11 +1695,11 @@ static uint32_t format_trigger_event(FmtCtx *ctx, SyntaqliteTriggerEvent *node) 
                 uint32_t kw_6 = kw(ctx, " OF ");
                 uint32_t ch_7 = format_node(ctx, node->columns);
                 uint32_t cat_8_items[] = { kw_6, ch_7 };
-                uint32_t cat_8 = doc_concat_nullable(&ctx->docs, cat_8_items, 2);
+                uint32_t cat_8 = doc_concat(&ctx->docs, cat_8_items, 2);
                 cond_5 = cat_8;
             }
             uint32_t cat_9_items[] = { kw_4, cond_5 };
-            uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+            uint32_t cat_9 = doc_concat(&ctx->docs, cat_9_items, 2);
             sw_1 = cat_9;
             break;
         }
@@ -1818,7 +1720,7 @@ static uint32_t format_trigger_cmd_list(FmtCtx *ctx, SyntaqliteTriggerCmdList *n
         uint32_t item_5 = format_node(ctx, _child_id);
         uint32_t kw_6 = kw(ctx, ";");
         uint32_t cat_7_items[] = { item_5, kw_6 };
-        uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 2);
+        uint32_t cat_7 = doc_concat(&ctx->docs, cat_7_items, 2);
         _buf_1[_n_2++] = cat_7;
     }
     return doc_concat(&ctx->docs, _buf_1, _n_2);
@@ -1837,7 +1739,7 @@ static uint32_t format_create_trigger_stmt(FmtCtx *ctx, SyntaqliteCreateTriggerS
         uint32_t sp_9 = span_text(ctx, node->schema);
         uint32_t kw_10 = kw(ctx, ".");
         uint32_t cat_11_items[] = { sp_9, kw_10 };
-        uint32_t cat_11 = doc_concat_nullable(&ctx->docs, cat_11_items, 2);
+        uint32_t cat_11 = doc_concat(&ctx->docs, cat_11_items, 2);
         cond_8 = cat_11;
     }
     uint32_t sp_12 = span_text(ctx, node->trigger_name);
@@ -1859,7 +1761,7 @@ static uint32_t format_create_trigger_stmt(FmtCtx *ctx, SyntaqliteCreateTriggerS
         uint32_t kw_24 = kw(ctx, "WHEN ");
         uint32_t ch_25 = format_node(ctx, node->when_expr);
         uint32_t cat_26_items[] = { hl_23, kw_24, ch_25 };
-        uint32_t cat_26 = doc_concat_nullable(&ctx->docs, cat_26_items, 3);
+        uint32_t cat_26 = doc_concat(&ctx->docs, cat_26_items, 3);
         cond_22 = cat_26;
     }
     uint32_t hl_27 = doc_hardline(&ctx->docs);
@@ -1869,14 +1771,14 @@ static uint32_t format_create_trigger_stmt(FmtCtx *ctx, SyntaqliteCreateTriggerS
         uint32_t hl_30 = doc_hardline(&ctx->docs);
         uint32_t ch_31 = format_node(ctx, node->body);
         uint32_t cat_32_items[] = { hl_30, ch_31 };
-        uint32_t cat_32 = doc_concat_nullable(&ctx->docs, cat_32_items, 2);
+        uint32_t cat_32 = doc_concat(&ctx->docs, cat_32_items, 2);
         uint32_t nst_33 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_32);
         cond_29 = nst_33;
     }
     uint32_t hl_34 = doc_hardline(&ctx->docs);
     uint32_t kw_35 = kw(ctx, "END");
     uint32_t cat_36_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, kw_13, sw_14, kw_18, ch_19, kw_20, ch_21, cond_22, hl_27, kw_28, cond_29, hl_34, kw_35 };
-    return doc_concat_nullable(&ctx->docs, cat_36_items, 19);
+    return doc_concat(&ctx->docs, cat_36_items, 19);
 }
 
 static uint32_t format_create_virtual_table_stmt(FmtCtx *ctx, SyntaqliteCreateVirtualTableStmt *node) {
@@ -1889,7 +1791,7 @@ static uint32_t format_create_virtual_table_stmt(FmtCtx *ctx, SyntaqliteCreateVi
         uint32_t sp_6 = span_text(ctx, node->schema);
         uint32_t kw_7 = kw(ctx, ".");
         uint32_t cat_8_items[] = { sp_6, kw_7 };
-        uint32_t cat_8 = doc_concat_nullable(&ctx->docs, cat_8_items, 2);
+        uint32_t cat_8 = doc_concat(&ctx->docs, cat_8_items, 2);
         cond_5 = cat_8;
     }
     uint32_t sp_9 = span_text(ctx, node->table_name);
@@ -1901,18 +1803,16 @@ static uint32_t format_create_virtual_table_stmt(FmtCtx *ctx, SyntaqliteCreateVi
         uint32_t sp_14 = span_text(ctx, node->module_args);
         uint32_t kw_15 = kw(ctx, ")");
         uint32_t cat_16_items[] = { kw_13, sp_14, kw_15 };
-        uint32_t cat_16 = doc_concat_nullable(&ctx->docs, cat_16_items, 3);
+        uint32_t cat_16 = doc_concat(&ctx->docs, cat_16_items, 3);
         cond_12 = cat_16;
     }
     uint32_t cat_17_items[] = { kw_1, cond_2, kw_4, cond_5, sp_9, kw_10, sp_11, cond_12 };
-    return doc_concat_nullable(&ctx->docs, cat_17_items, 8);
+    return doc_concat(&ctx->docs, cat_17_items, 8);
 }
 
-// ============ Main Dispatcher ============
+// ============ Dispatch ============
 
-static uint32_t format_node(FmtCtx *ctx, uint32_t node_id) {
-    if (node_id == SYNTAQLITE_NULL_NODE) return SYNTAQLITE_NULL_DOC;
-
+static uint32_t dispatch_format(FmtCtx *ctx, uint32_t node_id) {
     SyntaqliteNode *node = AST_NODE(ctx->ast, node_id);
     if (!node) return SYNTAQLITE_NULL_DOC;
 
@@ -2068,9 +1968,22 @@ static uint32_t format_node(FmtCtx *ctx, uint32_t node_id) {
     }
 }
 
+// ============ Main Dispatcher ============
+
+static uint32_t format_node(FmtCtx *ctx, uint32_t node_id) {
+    if (node_id == SYNTAQLITE_NULL_NODE) return SYNTAQLITE_NULL_DOC;
+
+    uint32_t leading = emit_owned_comments(ctx, node_id, SYNTAQLITE_COMMENT_LEADING);
+    uint32_t body = dispatch_format(ctx, node_id);
+    uint32_t trailing = emit_owned_comments(ctx, node_id, SYNTAQLITE_COMMENT_TRAILING);
+
+    uint32_t parts[3] = { leading, body, trailing };
+    return doc_concat(&ctx->docs, parts, 3);
+}
+
 // ============ Public API ============
 
-char *syntaqlite_format(SyntaqliteArena *ast, uint32_t root_id,
+char *syntaqlite_format(SyntaqliteAstContext *astCtx, uint32_t root_id,
                         const char *source, SyntaqliteTokenList *token_list,
                         SyntaqliteFmtOptions *options) {
     SyntaqliteFmtOptions default_options = SYNTAQLITE_FMT_OPTIONS_DEFAULT;
@@ -2078,56 +1991,15 @@ char *syntaqlite_format(SyntaqliteArena *ast, uint32_t root_id,
 
     FmtCtx ctx;
     syntaqlite_doc_context_init(&ctx.docs);
-    ctx.ast = ast;
+    ctx.ast = &astCtx->ast;
     ctx.source = source;
     ctx.token_list = token_list;
     ctx.options = options;
-    ctx.comment_map = syntaqlite_comment_map_build(source, token_list);
-    ctx.token_cursor = 0;
-
-    // Flush any leading comments before the first real token so they
-    // don't end up inside the statement's group (where a hardline
-    // from a -- comment would force the group to break).
-    uint32_t _pre_comments = SYNTAQLITE_NULL_DOC;
-    {
-        uint32_t _pre[24];
-        uint32_t _pn = 0;
-        while (ctx.token_cursor < ctx.token_list->count) {
-            SyntaqliteRawToken *_pt = &ctx.token_list->data[ctx.token_cursor];
-            if (_pt->type == TK_SPACE) { ctx.token_cursor++; continue; }
-            if (_pt->type == TK_COMMENT && ctx.comment_map &&
-                ctx.comment_map->kinds[ctx.token_cursor] == SYNTAQLITE_COMMENT_LEADING) {
-                if (_pn < 24) _pre[_pn++] = emit_comment_doc(&ctx, ctx.token_cursor);
-                ctx.token_cursor++;
-                continue;
-            }
-            break;
-        }
-        if (_pn > 0) _pre_comments = (_pn == 1) ? _pre[0] : doc_concat(&ctx.docs, _pre, _pn);
-    }
+    ctx.comment_att = syntaqlite_comment_attach(astCtx, root_id, source, token_list);
 
     uint32_t root_doc = format_node(&ctx, root_id);
 
-    // Prepend leading comments outside the statement group
-    if (_pre_comments != SYNTAQLITE_NULL_DOC && root_doc != SYNTAQLITE_NULL_DOC) {
-        uint32_t items[] = { _pre_comments, root_doc };
-        root_doc = doc_concat(&ctx.docs, items, 2);
-    }
-
-    // Flush any remaining comments (trailing after last token)
-    uint32_t _rem_trailing;
-    uint32_t _rem_leading = advance_with_comments(&ctx, &_rem_trailing);
-    uint32_t _flush[2];
-    uint32_t _fn = 0;
-    if (_rem_leading != SYNTAQLITE_NULL_DOC) _flush[_fn++] = _rem_leading;
-    if (_rem_trailing != SYNTAQLITE_NULL_DOC) _flush[_fn++] = _rem_trailing;
-    if (_fn > 0 && root_doc != SYNTAQLITE_NULL_DOC) {
-        uint32_t _flush_doc = (_fn == 1) ? _flush[0] : doc_concat(&ctx.docs, _flush, 2);
-        uint32_t items[] = { root_doc, _flush_doc };
-        root_doc = doc_concat(&ctx.docs, items, 2);
-    }
-
-    syntaqlite_comment_map_free(ctx.comment_map);
+    syntaqlite_comment_attachment_free(ctx.comment_att);
 
     if (root_doc == SYNTAQLITE_NULL_DOC) {
         syntaqlite_doc_context_cleanup(&ctx.docs);
@@ -2139,4 +2011,35 @@ char *syntaqlite_format(SyntaqliteArena *ast, uint32_t root_id,
     char *result = syntaqlite_doc_layout(&ctx.docs, root_doc, options->target_width);
     syntaqlite_doc_context_cleanup(&ctx.docs);
     return result;
+}
+
+char *syntaqlite_format_debug_ir(SyntaqliteAstContext *astCtx, uint32_t root_id,
+                                  const char *source, SyntaqliteTokenList *token_list,
+                                  SyntaqliteFmtOptions *options) {
+    SyntaqliteFmtOptions default_options = SYNTAQLITE_FMT_OPTIONS_DEFAULT;
+    if (!options) options = &default_options;
+
+    FmtCtx ctx;
+    syntaqlite_doc_context_init(&ctx.docs);
+    ctx.ast = &astCtx->ast;
+    ctx.source = source;
+    ctx.token_list = token_list;
+    ctx.options = options;
+    ctx.comment_att = syntaqlite_comment_attach(astCtx, root_id, source, token_list);
+
+    uint32_t root_doc = format_node(&ctx, root_id);
+
+    syntaqlite_comment_attachment_free(ctx.comment_att);
+
+    // Print debug IR to a temporary file and read it back
+    char *buf = NULL;
+    size_t buf_size = 0;
+    FILE *mem = open_memstream(&buf, &buf_size);
+    if (mem) {
+        syntaqlite_doc_debug_print(&ctx.docs, root_doc, mem, 0);
+        fclose(mem);
+    }
+
+    syntaqlite_doc_context_cleanup(&ctx.docs);
+    return buf;
 }

@@ -2,10 +2,11 @@
 // Licensed under the Apache License, Version 2.0.
 
 // Test binary for formatter diff tests.
-// Usage: fmt_test [--trace] [--width=N] [--help] < input.sql
+// Usage: fmt_test [--trace] [--debug-ir] [--width=N] [--help] < input.sql
 //
 // Reads SQL from stdin, parses it, formats it, and prints the result.
 // Use --trace to enable Lemon parser tracing on stderr.
+// Use --debug-ir to print the doc IR tree instead of formatted output.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,10 +72,12 @@ static void on_stack_overflow(SyntaqliteParseContext *ctx) {
 
 int main(int argc, char **argv) {
   int trace = 0;
+  int debug_ir = 0;
   uint32_t width = 80;
 
   static const struct sq_option long_options[] = {
       {"trace", SQ_NO_ARGUMENT, NULL, 'T'},
+      {"debug-ir", SQ_NO_ARGUMENT, NULL, 'D'},
       {"width", SQ_REQUIRED_ARGUMENT, NULL, 'w'},
       {"help", SQ_NO_ARGUMENT, NULL, 'h'},
       {NULL, 0, NULL, 0},
@@ -88,6 +91,9 @@ int main(int argc, char **argv) {
       case 'T':
         trace = 1;
         break;
+      case 'D':
+        debug_ir = 1;
+        break;
       case 'w':
         width = (uint32_t)atoi(opt.arg);
         break;
@@ -98,9 +104,10 @@ int main(int argc, char **argv) {
                 "Reads SQL from stdin, formats it, and prints the result.\n"
                 "\n"
                 "Options:\n"
-                "  --trace    Enable Lemon parser trace output on stderr (debug builds only)\n"
-                "  --width=N  Target line width (default: 80)\n"
-                "  --help     Show this help message and exit\n",
+                "  --trace      Enable Lemon parser trace output on stderr (debug builds only)\n"
+                "  --debug-ir   Print doc IR tree instead of formatted output\n"
+                "  --width=N    Target line width (default: 80)\n"
+                "  --help       Show this help message and exit\n",
                 argv[0]);
         return 0;
       default:
@@ -239,7 +246,12 @@ int main(int argc, char **argv) {
 
   // Format and print
   SyntaqliteFmtOptions fmtOpts = {.target_width = width, .indent_width = 2};
-  char *formatted = syntaqlite_format(&astCtx.ast, root_id, sql, &tokenList, &fmtOpts);
+  char *formatted;
+  if (debug_ir) {
+    formatted = syntaqlite_format_debug_ir(&astCtx, root_id, sql, &tokenList, &fmtOpts);
+  } else {
+    formatted = syntaqlite_format(&astCtx, root_id, sql, &tokenList, &fmtOpts);
+  }
   if (formatted) {
     fputs(formatted, stdout);
     free(formatted);

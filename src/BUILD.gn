@@ -84,6 +84,8 @@ source_set("ast") {
 # Document model, layout engine, and formatter.
 source_set("fmt") {
   sources = [
+    "fmt/comment_attach.c",
+    "fmt/comment_attach.h",
     "fmt/comment_map.c",
     "fmt/comment_map.h",
     "fmt/doc.c",
@@ -96,6 +98,7 @@ source_set("fmt") {
   ]
   deps = [
     ":arena",
+    ":ast",
     ":token_list",
     ":tokenizer",
     ":vec",

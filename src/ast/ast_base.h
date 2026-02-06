@@ -33,6 +33,12 @@ typedef struct SyntaqliteSourceSpan {
 // Empty source span
 #define SYNTAQLITE_NO_SPAN ((SyntaqliteSourceSpan){0, 0})
 
+// Source range: byte offsets [first, last) covering a full AST node
+typedef struct SyntaqliteSourceRange {
+    uint32_t first;  // byte offset of first token
+    uint32_t last;   // byte offset past last token
+} SyntaqliteSourceRange;
+
 // Grammar stack value: column name + type token (threaded through columnname rule)
 typedef struct SyntaqliteColumnNameValue {
     SyntaqliteSourceSpan name;
@@ -75,6 +81,8 @@ typedef struct SyntaqliteAstContext {
     SYNTAQLITE_VEC(uint32_t) list_acc;
     uint32_t list_acc_node_id;   // node ID of the list being built
     uint8_t  list_acc_tag;       // tag of the list being built
+    // Source ranges parallel array (indexed by node ID)
+    SYNTAQLITE_VEC(SyntaqliteSourceRange) ranges;
 } SyntaqliteAstContext;
 
 // AST context lifecycle
@@ -95,6 +103,55 @@ void ast_print_source_span(FILE *out, const char *source, SyntaqliteSourceSpan s
 // Create source span from token
 SyntaqliteSourceSpan syntaqlite_span(struct SyntaqliteParseContext *ctx,
                                      struct SyntaqliteToken tok);
+
+// ============ Source Range Helpers ============
+
+// Sync ranges vec to match arena node count
+static inline void ast_ranges_sync(SyntaqliteAstContext *ctx) {
+    while (ctx->ranges.count < ctx->ast.count) {
+        SyntaqliteSourceRange zero = {0, 0};
+        syntaqlite_vec_push(&ctx->ranges, zero);
+    }
+}
+
+// Set source range for a node
+static inline void ast_set_range(SyntaqliteAstContext *ctx, uint32_t node_id,
+                                 uint32_t first, uint32_t last) {
+    if (node_id == SYNTAQLITE_NULL_NODE) return;
+    ast_ranges_sync(ctx);
+    if (node_id < ctx->ranges.count) {
+        ctx->ranges.data[node_id].first = first;
+        ctx->ranges.data[node_id].last = last;
+    }
+}
+
+// Get source range of a node
+static inline SyntaqliteSourceRange ast_get_range(SyntaqliteAstContext *ctx,
+                                                   uint32_t node_id) {
+    if (node_id == SYNTAQLITE_NULL_NODE || node_id >= ctx->ranges.count)
+        return (SyntaqliteSourceRange){0, 0};
+    return ctx->ranges.data[node_id];
+}
+
+// Union a child node's range into an accumulator
+static inline void ast_range_union(SyntaqliteAstContext *ctx,
+                                   SyntaqliteSourceRange *acc,
+                                   uint32_t child_id) {
+    if (child_id == SYNTAQLITE_NULL_NODE) return;
+    SyntaqliteSourceRange child = ast_get_range(ctx, child_id);
+    if (child.first == 0 && child.last == 0) return;
+    if (child.first < acc->first) acc->first = child.first;
+    if (child.last > acc->last) acc->last = child.last;
+}
+
+// Union a SyntaqliteSourceSpan into an accumulator
+static inline void ast_range_union_span(SyntaqliteSourceRange *acc,
+                                        SyntaqliteSourceSpan span) {
+    if (span.length == 0) return;
+    if (span.offset < acc->first) acc->first = span.offset;
+    uint32_t end = span.offset + span.length;
+    if (end > acc->last) acc->last = end;
+}
 
 #ifdef __cplusplus
 }

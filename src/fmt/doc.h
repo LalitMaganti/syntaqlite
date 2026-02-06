@@ -10,6 +10,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +29,7 @@ typedef enum {
     SYNTAQLITE_DOC_GROUP,      // try flat, break if doesn't fit
     SYNTAQLITE_DOC_CONCAT,     // sequence of children
     SYNTAQLITE_DOC_LINE_SUFFIX,// buffered until next line break (for trailing comments)
+    SYNTAQLITE_DOC_BREAK_PARENT,// forces containing group into break mode
 } SyntaqliteDocTag;
 
 // ============ Node Structs ============
@@ -110,6 +112,13 @@ uint32_t doc_concat(SyntaqliteDocContext *ctx, uint32_t *children, uint32_t coun
 
 // Line suffix: content buffered until the next line break (for trailing comments)
 uint32_t doc_line_suffix(SyntaqliteDocContext *ctx, uint32_t child);
+
+// Break parent: forces the containing group into break mode (no visible output)
+uint32_t doc_break_parent(SyntaqliteDocContext *ctx);
+
+// Debug: print doc tree in a human-readable format
+void syntaqlite_doc_debug_print(SyntaqliteDocContext *ctx, uint32_t doc_id,
+                                 FILE *out, int depth);
 
 #ifdef __cplusplus
 }

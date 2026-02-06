@@ -11,8 +11,6 @@
 
 // ============ Flat Width Measurement ============
 
-static int suffix_needs_break(SyntaqliteDocContext *ctx, uint32_t doc_id);
-
 // Returns the width if the doc were rendered flat.
 // Returns UINT32_MAX if it contains a hardline or line_suffix (won't fit flat).
 static uint32_t measure_flat(SyntaqliteDocContext *ctx, uint32_t doc_id) {
@@ -37,18 +35,15 @@ static uint32_t measure_flat(SyntaqliteDocContext *ctx, uint32_t doc_id) {
         case SYNTAQLITE_DOC_LINE_SUFFIX:
             return measure_flat(ctx, doc->line_suffix.child);
 
+        case SYNTAQLITE_DOC_BREAK_PARENT:
+            return UINT32_MAX;
+
         case SYNTAQLITE_DOC_NEST: {
             return measure_flat(ctx, doc->nest.child);
         }
 
-        case SYNTAQLITE_DOC_GROUP: {
-            // If the nested group will be forced to break due to a trailing
-            // comment (LINE_SUFFIX followed by LINE/SOFTLINE), propagate
-            // UINT32_MAX so outer groups also know they can't be flat.
-            if (suffix_needs_break(ctx, doc->group.child))
-                return UINT32_MAX;
+        case SYNTAQLITE_DOC_GROUP:
             return measure_flat(ctx, doc->group.child);
-        }
 
         case SYNTAQLITE_DOC_CONCAT: {
             uint32_t total = 0;
@@ -64,45 +59,6 @@ static uint32_t measure_flat(SyntaqliteDocContext *ctx, uint32_t doc_id) {
         default:
             return 0;
     }
-}
-
-// Scan for the pattern: LINE_SUFFIX followed by LINE/SOFTLINE at the same
-// group level. Returns flags: bit 0 = subtree has LINE_SUFFIX,
-// bit 1 = needs break (suffix followed by line separator).
-#define SCAN_HAS_SUFFIX 1
-#define SCAN_NEEDS_BREAK 2
-static int scan_suffix(SyntaqliteDocContext *ctx, uint32_t doc_id) {
-    if (doc_id == SYNTAQLITE_NULL_DOC) return 0;
-    SyntaqliteDoc *doc = DOC_NODE(ctx, doc_id);
-    if (!doc) return 0;
-    switch (doc->tag) {
-        case SYNTAQLITE_DOC_LINE_SUFFIX: return SCAN_HAS_SUFFIX;
-        case SYNTAQLITE_DOC_NEST: return scan_suffix(ctx, doc->nest.child);
-        case SYNTAQLITE_DOC_GROUP: return 0;  // stop at nested groups
-        case SYNTAQLITE_DOC_CONCAT: {
-            int flags = 0;
-            for (uint32_t i = 0; i < doc->concat.count; i++) {
-                uint32_t cid = doc->concat.children[i];
-                if (cid == SYNTAQLITE_NULL_DOC) continue;
-                SyntaqliteDoc *ch = DOC_NODE(ctx, cid);
-                if (!ch) continue;
-                // If we already saw a suffix, check if this child is a line break
-                if ((flags & SCAN_HAS_SUFFIX) &&
-                    (ch->tag == SYNTAQLITE_DOC_LINE || ch->tag == SYNTAQLITE_DOC_SOFTLINE))
-                    return SCAN_NEEDS_BREAK;
-                // Recurse into child and accumulate flags
-                int child_flags = scan_suffix(ctx, cid);
-                if (child_flags & SCAN_NEEDS_BREAK) return SCAN_NEEDS_BREAK;
-                flags |= child_flags;
-            }
-            return flags;
-        }
-        default: return 0;
-    }
-}
-
-static int suffix_needs_break(SyntaqliteDocContext *ctx, uint32_t doc_id) {
-    return (scan_suffix(ctx, doc_id) & SCAN_NEEDS_BREAK) != 0;
 }
 
 // ============ Layout Stack ============
@@ -234,6 +190,11 @@ char *syntaqlite_doc_layout(SyntaqliteDocContext *ctx, uint32_t root_id, uint32_
                 break;
             }
 
+            case SYNTAQLITE_DOC_BREAK_PARENT: {
+                // No output; forces group to break via measure_flat returning UINT32_MAX
+                break;
+            }
+
             case SYNTAQLITE_DOC_NEST: {
                 LayoutEntry e = {indent + doc->nest.indent, mode, doc->nest.child};
                 syntaqlite_vec_push(&stack, e);
@@ -241,12 +202,7 @@ char *syntaqlite_doc_layout(SyntaqliteDocContext *ctx, uint32_t root_id, uint32_
             }
 
             case SYNTAQLITE_DOC_GROUP: {
-                // A group directly containing a line_suffix (trailing --
-                // comment) must always break, even if the parent is flat.
-                if (suffix_needs_break(ctx, doc->group.child)) {
-                    LayoutEntry e = {indent, LAYOUT_MODE_BREAK, doc->group.child};
-                    syntaqlite_vec_push(&stack, e);
-                } else if (mode == LAYOUT_MODE_FLAT) {
+                if (mode == LAYOUT_MODE_FLAT) {
                     LayoutEntry e = {indent, LAYOUT_MODE_FLAT, doc->group.child};
                     syntaqlite_vec_push(&stack, e);
                 } else {

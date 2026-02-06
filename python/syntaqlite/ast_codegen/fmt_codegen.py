@@ -75,7 +75,6 @@ class _Compiler:
         self.node_def = node_def
         self.var_counter = 0
         self.lines: list[str] = []
-        self.needs_concat_nullable = False
 
     def _var(self, prefix: str = "d") -> str:
         self.var_counter += 1
@@ -160,7 +159,7 @@ class _Compiler:
             return _Result(v, False)
 
         if isinstance(doc, FmtIfSet):
-            # Optimization: if_set(field, clause(kw, child(field))) → format_clause(ctx, kw, format_node(...))
+            # Optimization: if_set(field, clause(kw, child(field))) -> format_clause(ctx, kw, format_node(...))
             opt = self._try_optimize_if_set(doc, ind)
             if opt is not None:
                 return opt
@@ -185,8 +184,6 @@ class _Compiler:
                 doc.then, doc.else_)
 
         if isinstance(doc, FmtClause):
-            # format_clause takes a node_id directly (not a pre-formatted doc)
-            # to ensure kw() runs before format_node() for correct cursor order.
             if isinstance(doc.body, FmtChild) and doc.body.field != "_item":
                 v = self._var("cl")
                 self.lines.append(
@@ -213,33 +210,23 @@ class _Compiler:
         raise TypeError(f"Unknown FmtDoc type: {type(doc)}")
 
     def _compile_seq(self, doc: FmtSeq, ind: str) -> _Result:
-        """Compile FmtSeq with nullability-aware optimization."""
+        """Compile FmtSeq - doc_concat filters NULLs so always use it directly."""
         n = len(doc.items)
         item_results = [self.compile(item, ind) for item in doc.items]
         any_nullable = any(r.nullable for r in item_results)
 
-        if not any_nullable:
-            # All children non-nullable: direct array initializer
-            v = self._var("cat")
-            items_str = ", ".join(r.var for r in item_results)
-            self.lines.append(f"{ind}uint32_t {v}_items[] = {{ {items_str} }};")
-            self.lines.append(f"{ind}uint32_t {v} = doc_concat(&ctx->docs, {v}_items, {n});")
-            return _Result(v, False)
-        else:
-            # Some children nullable: use doc_concat_nullable helper
-            self.needs_concat_nullable = True
-            v = self._var("cat")
-            items_str = ", ".join(r.var for r in item_results)
-            self.lines.append(f"{ind}uint32_t {v}_items[] = {{ {items_str} }};")
-            self.lines.append(f"{ind}uint32_t {v} = doc_concat_nullable(&ctx->docs, {v}_items, {n});")
-            return _Result(v, True)
+        v = self._var("cat")
+        items_str = ", ".join(r.var for r in item_results)
+        self.lines.append(f"{ind}uint32_t {v}_items[] = {{ {items_str} }};")
+        self.lines.append(f"{ind}uint32_t {v} = doc_concat(&ctx->docs, {v}_items, {n});")
+        return _Result(v, any_nullable)
 
     def _try_optimize_if_set(self, doc: FmtIfSet, ind: str) -> _Result | None:
         """Try to optimize if_set patterns into direct calls."""
         if doc.else_ is not None:
             return None
 
-        # if_set(field, clause(kw, child(field))) → format_clause(ctx, kw, node->field)
+        # if_set(field, clause(kw, child(field))) -> format_clause(ctx, kw, node->field)
         if (isinstance(doc.then, FmtClause)
                 and isinstance(doc.then.body, FmtChild)
                 and doc.then.body.field == doc.field):
@@ -250,7 +237,7 @@ class _Compiler:
                 f" {self._accessor(doc.field)});")
             return _Result(v, True)
 
-        # if_set(field, child(field)) → format_node(ctx, node->field)
+        # if_set(field, child(field)) -> format_node(ctx, node->field)
         if (isinstance(doc.then, FmtChild)
                 and doc.then.field == doc.field):
             v = self._var("ch")
@@ -277,7 +264,7 @@ class _Compiler:
             else_lines = []
             else_expr = None
 
-        # Both branches are single expressions → ternary.
+        # Both branches are single expressions -> ternary.
         if then_expr is not None and else_expr is not None:
             nullable = then_result.nullable or else_result.nullable
             self.lines.append(
@@ -285,7 +272,7 @@ class _Compiler:
                 f" ? {then_expr} : {else_expr};")
             return _Result(v, nullable)
 
-        # Single-expression then, no else → one-line if.
+        # Single-expression then, no else -> one-line if.
         if then_expr is not None and else_doc is None:
             self.lines.append(f"{ind}uint32_t {v} = SYNTAQLITE_NULL_DOC;")
             self.lines.append(f"{ind}if ({condition}) {v} = {then_expr};")
@@ -424,8 +411,9 @@ def generate_fmt_c(
     lines.append("")
     lines.append('#include "src/fmt/fmt.h"')
     lines.append("")
+    lines.append('#include "src/ast/ast_base.h"')
     lines.append('#include "src/ast/ast_nodes.h"')
-    lines.append('#include "src/fmt/comment_map.h"')
+    lines.append('#include "src/fmt/comment_attach.h"')
     lines.append('#include "src/fmt/doc.h"')
     lines.append('#include "src/fmt/doc_layout.h"')
     lines.append('#include "src/sqlite_tokens.h"')
@@ -443,146 +431,61 @@ def generate_fmt_c(
     lines.append("    const char *source;")
     lines.append("    SyntaqliteTokenList *token_list;")
     lines.append("    SyntaqliteFmtOptions *options;")
-    lines.append("    SyntaqliteCommentMap *comment_map;")
-    lines.append("    uint32_t token_cursor;")
+    lines.append("    SyntaqliteCommentAttachment *comment_att;")
     lines.append("} FmtCtx;")
     lines.append("")
 
     # Helper functions
     lines.append("// ============ Helpers ============")
     lines.append("")
-    lines.append("// Emit a single comment token as a doc using pre-classified kind.")
-    lines.append("static uint32_t emit_comment_doc(FmtCtx *ctx, uint32_t tok_idx) {")
-    lines.append("    SyntaqliteRawToken *tok = &ctx->token_list->data[tok_idx];")
-    lines.append("    int is_line = (ctx->source[tok->offset] == '-' &&")
-    lines.append("                   tok->length >= 2 && ctx->source[tok->offset + 1] == '-');")
-    lines.append("    if (ctx->comment_map->kinds[tok_idx] == SYNTAQLITE_COMMENT_TRAILING) {")
-    lines.append("        // Trailing comments use line_suffix so they don't force")
-    lines.append("        // enclosing groups to break. The suffix is flushed before")
-    lines.append("        // the next line break in the layout engine.")
-    lines.append('        uint32_t parts[2];')
-    lines.append('        parts[0] = doc_text(&ctx->docs, " ", 1);')
-    lines.append("        parts[1] = doc_text(&ctx->docs, ctx->source + tok->offset, tok->length);")
-    lines.append("        uint32_t inner = doc_concat(&ctx->docs, parts, 2);")
-    lines.append("        if (is_line) return doc_line_suffix(&ctx->docs, inner);")
-    lines.append("        return inner;")
-    lines.append("    } else {")
-    lines.append("        uint32_t items[2];")
-    lines.append("        uint32_t k = 0;")
-    lines.append("        items[k++] = doc_text(&ctx->docs, ctx->source + tok->offset, tok->length);")
-    lines.append("        if (is_line)")
-    lines.append("            items[k++] = doc_hardline(&ctx->docs);")
-    lines.append("        else")
-    lines.append('            items[k++] = doc_text(&ctx->docs, " ", 1);')
-    lines.append("        return doc_concat(&ctx->docs, items, k);")
-    lines.append("    }")
-    lines.append("}")
-    lines.append("")
-    lines.append("// Advance cursor past comments and one real token.")
-    lines.append("// Returns leading comments (before real token). Sets *out_trailing to")
-    lines.append("// trailing comments (after real token). Either may be SYNTAQLITE_NULL_DOC.")
-    lines.append("static uint32_t advance_with_comments(FmtCtx *ctx, uint32_t *out_trailing) {")
-    lines.append("    *out_trailing = SYNTAQLITE_NULL_DOC;")
-    lines.append("    if (!ctx->token_list) return SYNTAQLITE_NULL_DOC;")
-    lines.append("    uint32_t lead[24], trail[24];")
-    lines.append("    uint32_t nl = 0, nt = 0;")
-    lines.append("    while (ctx->token_cursor < ctx->token_list->count) {")
-    lines.append("        SyntaqliteRawToken *tok = &ctx->token_list->data[ctx->token_cursor];")
-    lines.append("        if (tok->type == TK_SPACE) { ctx->token_cursor++; continue; }")
-    lines.append("        if (tok->type == TK_COMMENT) {")
-    lines.append("            if (ctx->comment_map && nl < 24)")
-    lines.append("                lead[nl++] = emit_comment_doc(ctx, ctx->token_cursor);")
-    lines.append("            ctx->token_cursor++;")
-    lines.append("            continue;")
-    lines.append("        }")
-    lines.append("        // Real token - advance past it")
-    lines.append("        ctx->token_cursor++;")
-    lines.append("        // Collect trailing comments after this real token")
-    lines.append("        while (ctx->token_cursor < ctx->token_list->count) {")
-    lines.append("            SyntaqliteRawToken *next = &ctx->token_list->data[ctx->token_cursor];")
-    lines.append("            if (next->type == TK_SPACE) { ctx->token_cursor++; continue; }")
-    lines.append("            if (next->type == TK_COMMENT && ctx->comment_map &&")
-    lines.append("                ctx->comment_map->kinds[ctx->token_cursor] == SYNTAQLITE_COMMENT_TRAILING) {")
-    lines.append("                if (nt < 24) trail[nt++] = emit_comment_doc(ctx, ctx->token_cursor);")
-    lines.append("                ctx->token_cursor++;")
-    lines.append("                continue;")
-    lines.append("            }")
-    lines.append("            break;")
-    lines.append("        }")
-    lines.append("        break;")
-    lines.append("    }")
-    lines.append("    if (nt > 0) *out_trailing = (nt == 1) ? trail[0] : doc_concat(&ctx->docs, trail, nt);")
-    lines.append("    if (nl == 0) return SYNTAQLITE_NULL_DOC;")
-    lines.append("    return (nl == 1) ? lead[0] : doc_concat(&ctx->docs, lead, nl);")
-    lines.append("}")
-    lines.append("")
-    lines.append("// Count how many source tokens a keyword string consumes.")
-    lines.append("// Each word (letters/digits) and each punctuation char is one token.")
-    lines.append("static int count_kw_tokens(const char *text) {")
-    lines.append("    int n = 0;")
-    lines.append("    const char *p = text;")
-    lines.append("    while (*p) {")
-    lines.append("        if (*p == ' ') { p++; continue; }")
-    lines.append("        if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') || *p == '_') {")
-    lines.append("            n++;")
-    lines.append("            while (*p && ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||")
-    lines.append("                          *p == '_' || (*p >= '0' && *p <= '9'))) p++;")
-    lines.append("        } else {")
-    lines.append("            n++; p++;")
-    lines.append("        }")
-    lines.append("    }")
-    lines.append("    return n;")
-    lines.append("}")
-    lines.append("")
     lines.append("static uint32_t kw(FmtCtx *ctx, const char *text) {")
-    lines.append("    int n = count_kw_tokens(text);")
-    lines.append("    uint32_t pre = SYNTAQLITE_NULL_DOC;")
-    lines.append("    uint32_t post = SYNTAQLITE_NULL_DOC;")
-    lines.append("    for (int i = 0; i < n; i++) {")
-    lines.append("        uint32_t trailing;")
-    lines.append("        uint32_t c = advance_with_comments(ctx, &trailing);")
-    lines.append("        if (c != SYNTAQLITE_NULL_DOC) {")
-    lines.append("            if (pre == SYNTAQLITE_NULL_DOC) { pre = c; }")
-    lines.append("            else {")
-    lines.append("                uint32_t pair[] = { pre, c };")
-    lines.append("                pre = doc_concat(&ctx->docs, pair, 2);")
-    lines.append("            }")
-    lines.append("        }")
-    lines.append("        if (trailing != SYNTAQLITE_NULL_DOC) {")
-    lines.append("            if (post == SYNTAQLITE_NULL_DOC) { post = trailing; }")
-    lines.append("            else {")
-    lines.append("                uint32_t pair[] = { post, trailing };")
-    lines.append("                post = doc_concat(&ctx->docs, pair, 2);")
-    lines.append("            }")
-    lines.append("        }")
-    lines.append("    }")
-    lines.append("    uint32_t txt = doc_text(&ctx->docs, text, (uint32_t)strlen(text));")
-    lines.append("    uint32_t parts[3];")
-    lines.append("    uint32_t np = 0;")
-    lines.append("    if (pre != SYNTAQLITE_NULL_DOC) parts[np++] = pre;")
-    lines.append("    parts[np++] = txt;")
-    lines.append("    if (post != SYNTAQLITE_NULL_DOC) parts[np++] = post;")
-    lines.append("    if (np == 1) return parts[0];")
-    lines.append("    return doc_concat(&ctx->docs, parts, np);")
+    lines.append("    return doc_text(&ctx->docs, text, (uint32_t)strlen(text));")
     lines.append("}")
     lines.append("")
     lines.append("static uint32_t span_text(FmtCtx *ctx, SyntaqliteSourceSpan span) {")
     lines.append("    if (span.length == 0) return SYNTAQLITE_NULL_DOC;")
-    lines.append("    uint32_t trailing;")
-    lines.append("    uint32_t pre = advance_with_comments(ctx, &trailing);")
-    lines.append("    uint32_t txt = doc_text(&ctx->docs, ctx->source + span.offset, span.length);")
-    lines.append("    uint32_t parts[3];")
-    lines.append("    uint32_t np = 0;")
-    lines.append("    if (pre != SYNTAQLITE_NULL_DOC) parts[np++] = pre;")
-    lines.append("    parts[np++] = txt;")
-    lines.append("    if (trailing != SYNTAQLITE_NULL_DOC) parts[np++] = trailing;")
-    lines.append("    if (np == 1) return parts[0];")
-    lines.append("    return doc_concat(&ctx->docs, parts, np);")
+    lines.append("    return doc_text(&ctx->docs, ctx->source + span.offset, span.length);")
     lines.append("}")
     lines.append("")
 
-    # Forward declaration
+    # Comment emission helpers
+    lines.append("// ============ Comment Helpers ============")
+    lines.append("")
+    lines.append("static uint32_t emit_single_comment(FmtCtx *ctx, uint32_t tok_idx) {")
+    lines.append("    SyntaqliteRawToken *tok = &ctx->token_list->data[tok_idx];")
+    lines.append("    return doc_text(&ctx->docs, ctx->source + tok->offset, tok->length);")
+    lines.append("}")
+    lines.append("")
+    lines.append("static uint32_t emit_owned_comments(FmtCtx *ctx, uint32_t node_id, uint8_t kind) {")
+    lines.append("    if (!ctx->comment_att) return SYNTAQLITE_NULL_DOC;")
+    lines.append("    uint32_t parts[64];")
+    lines.append("    uint32_t n = 0;")
+    lines.append("    for (uint32_t i = 0; i < ctx->comment_att->count && n < 62; i++) {")
+    lines.append("        if (ctx->comment_att->owner_node[i] != node_id) continue;")
+    lines.append("        if (ctx->comment_att->position[i] != kind) continue;")
+    lines.append("")
+    lines.append("        int is_line = (ctx->source[ctx->token_list->data[i].offset] == '-');")
+    lines.append("        if (kind == SYNTAQLITE_COMMENT_LEADING) {")
+    lines.append("            parts[n++] = emit_single_comment(ctx, i);")
+    lines.append("            if (n < 62) parts[n++] = is_line ? doc_hardline(&ctx->docs)")
+    lines.append('                : doc_text(&ctx->docs, " ", 1);')
+    lines.append("        } else {")
+    lines.append("            uint32_t sp_parts[2];")
+    lines.append('            sp_parts[0] = doc_text(&ctx->docs, " ", 1);')
+    lines.append("            sp_parts[1] = emit_single_comment(ctx, i);")
+    lines.append("            uint32_t inner = doc_concat(&ctx->docs, sp_parts, 2);")
+    lines.append("            parts[n++] = doc_line_suffix(&ctx->docs, inner);")
+    lines.append("            if (n < 62) parts[n++] = doc_break_parent(&ctx->docs);")
+    lines.append("        }")
+    lines.append("    }")
+    lines.append("    if (n == 0) return SYNTAQLITE_NULL_DOC;")
+    lines.append("    return doc_concat(&ctx->docs, parts, n);")
+    lines.append("}")
+    lines.append("")
+
+    # Forward declarations
     lines.append("static uint32_t format_node(FmtCtx *ctx, uint32_t node_id);")
+    lines.append("static uint32_t dispatch_format(FmtCtx *ctx, uint32_t node_id);")
     lines.append("")
 
     # Comma-separated list helper
@@ -622,9 +525,8 @@ def generate_fmt_c(
     lines.append("}")
     lines.append("")
 
-    # Compile all node formatters first to check if we need doc_concat_nullable
+    # Compile all node formatters
     compiled_nodes: list[tuple[str, str, _Compiler, _Result]] = []
-    needs_concat_nullable = False
 
     for node in node_defs:
         if node.fmt is None:
@@ -636,23 +538,6 @@ def generate_fmt_c(
         compiler = _Compiler(node)
         result = compiler.compile(node.fmt)
         compiled_nodes.append((snake, struct, compiler, result))
-        if compiler.needs_concat_nullable:
-            needs_concat_nullable = True
-
-    # Emit concat_nullable helper if needed
-    if needs_concat_nullable:
-        lines.append("// ============ Nullable Concat Helper ============")
-        lines.append("")
-        lines.append("static uint32_t doc_concat_nullable(SyntaqliteDocContext *docs, uint32_t *items, uint32_t count) {")
-        lines.append("    uint32_t buf[count > 0 ? count : 1];")
-        lines.append("    uint32_t n = 0;")
-        lines.append("    for (uint32_t i = 0; i < count; i++) {")
-        lines.append("        if (items[i] != SYNTAQLITE_NULL_DOC) buf[n++] = items[i];")
-        lines.append("    }")
-        lines.append("    if (n == 0) return SYNTAQLITE_NULL_DOC;")
-        lines.append("    return doc_concat(docs, buf, n);")
-        lines.append("}")
-        lines.append("")
 
     # Node formatters
     lines.append("// ============ Node Formatters ============")
@@ -684,12 +569,10 @@ def generate_fmt_c(
         lines.append("}")
         lines.append("")
 
-    # Main dispatcher
-    lines.append("// ============ Main Dispatcher ============")
+    # Dispatch function (pure switch, no comment handling)
+    lines.append("// ============ Dispatch ============")
     lines.append("")
-    lines.append("static uint32_t format_node(FmtCtx *ctx, uint32_t node_id) {")
-    lines.append("    if (node_id == SYNTAQLITE_NULL_NODE) return SYNTAQLITE_NULL_DOC;")
-    lines.append("")
+    lines.append("static uint32_t dispatch_format(FmtCtx *ctx, uint32_t node_id) {")
     lines.append("    SyntaqliteNode *node = AST_NODE(ctx->ast, node_id);")
     lines.append("    if (!node) return SYNTAQLITE_NULL_DOC;")
     lines.append("")
@@ -715,10 +598,25 @@ def generate_fmt_c(
     lines.append("}")
     lines.append("")
 
+    # format_node wrapper: leading comments + body + trailing comments
+    lines.append("// ============ Main Dispatcher ============")
+    lines.append("")
+    lines.append("static uint32_t format_node(FmtCtx *ctx, uint32_t node_id) {")
+    lines.append("    if (node_id == SYNTAQLITE_NULL_NODE) return SYNTAQLITE_NULL_DOC;")
+    lines.append("")
+    lines.append("    uint32_t leading = emit_owned_comments(ctx, node_id, SYNTAQLITE_COMMENT_LEADING);")
+    lines.append("    uint32_t body = dispatch_format(ctx, node_id);")
+    lines.append("    uint32_t trailing = emit_owned_comments(ctx, node_id, SYNTAQLITE_COMMENT_TRAILING);")
+    lines.append("")
+    lines.append("    uint32_t parts[3] = { leading, body, trailing };")
+    lines.append("    return doc_concat(&ctx->docs, parts, 3);")
+    lines.append("}")
+    lines.append("")
+
     # Public API
     lines.append("// ============ Public API ============")
     lines.append("")
-    lines.append("char *syntaqlite_format(SyntaqliteArena *ast, uint32_t root_id,")
+    lines.append("char *syntaqlite_format(SyntaqliteAstContext *astCtx, uint32_t root_id,")
     lines.append("                        const char *source, SyntaqliteTokenList *token_list,")
     lines.append("                        SyntaqliteFmtOptions *options) {")
     lines.append("    SyntaqliteFmtOptions default_options = SYNTAQLITE_FMT_OPTIONS_DEFAULT;")
@@ -726,56 +624,15 @@ def generate_fmt_c(
     lines.append("")
     lines.append("    FmtCtx ctx;")
     lines.append("    syntaqlite_doc_context_init(&ctx.docs);")
-    lines.append("    ctx.ast = ast;")
+    lines.append("    ctx.ast = &astCtx->ast;")
     lines.append("    ctx.source = source;")
     lines.append("    ctx.token_list = token_list;")
     lines.append("    ctx.options = options;")
-    lines.append("    ctx.comment_map = syntaqlite_comment_map_build(source, token_list);")
-    lines.append("    ctx.token_cursor = 0;")
-    lines.append("")
-    lines.append("    // Flush any leading comments before the first real token so they")
-    lines.append("    // don't end up inside the statement's group (where a hardline")
-    lines.append("    // from a -- comment would force the group to break).")
-    lines.append("    uint32_t _pre_comments = SYNTAQLITE_NULL_DOC;")
-    lines.append("    {")
-    lines.append("        uint32_t _pre[24];")
-    lines.append("        uint32_t _pn = 0;")
-    lines.append("        while (ctx.token_cursor < ctx.token_list->count) {")
-    lines.append("            SyntaqliteRawToken *_pt = &ctx.token_list->data[ctx.token_cursor];")
-    lines.append("            if (_pt->type == TK_SPACE) { ctx.token_cursor++; continue; }")
-    lines.append("            if (_pt->type == TK_COMMENT && ctx.comment_map &&")
-    lines.append("                ctx.comment_map->kinds[ctx.token_cursor] == SYNTAQLITE_COMMENT_LEADING) {")
-    lines.append("                if (_pn < 24) _pre[_pn++] = emit_comment_doc(&ctx, ctx.token_cursor);")
-    lines.append("                ctx.token_cursor++;")
-    lines.append("                continue;")
-    lines.append("            }")
-    lines.append("            break;")
-    lines.append("        }")
-    lines.append("        if (_pn > 0) _pre_comments = (_pn == 1) ? _pre[0] : doc_concat(&ctx.docs, _pre, _pn);")
-    lines.append("    }")
+    lines.append("    ctx.comment_att = syntaqlite_comment_attach(astCtx, root_id, source, token_list);")
     lines.append("")
     lines.append("    uint32_t root_doc = format_node(&ctx, root_id);")
     lines.append("")
-    lines.append("    // Prepend leading comments outside the statement group")
-    lines.append("    if (_pre_comments != SYNTAQLITE_NULL_DOC && root_doc != SYNTAQLITE_NULL_DOC) {")
-    lines.append("        uint32_t items[] = { _pre_comments, root_doc };")
-    lines.append("        root_doc = doc_concat(&ctx.docs, items, 2);")
-    lines.append("    }")
-    lines.append("")
-    lines.append("    // Flush any remaining comments (trailing after last token)")
-    lines.append("    uint32_t _rem_trailing;")
-    lines.append("    uint32_t _rem_leading = advance_with_comments(&ctx, &_rem_trailing);")
-    lines.append("    uint32_t _flush[2];")
-    lines.append("    uint32_t _fn = 0;")
-    lines.append("    if (_rem_leading != SYNTAQLITE_NULL_DOC) _flush[_fn++] = _rem_leading;")
-    lines.append("    if (_rem_trailing != SYNTAQLITE_NULL_DOC) _flush[_fn++] = _rem_trailing;")
-    lines.append("    if (_fn > 0 && root_doc != SYNTAQLITE_NULL_DOC) {")
-    lines.append("        uint32_t _flush_doc = (_fn == 1) ? _flush[0] : doc_concat(&ctx.docs, _flush, 2);")
-    lines.append("        uint32_t items[] = { root_doc, _flush_doc };")
-    lines.append("        root_doc = doc_concat(&ctx.docs, items, 2);")
-    lines.append("    }")
-    lines.append("")
-    lines.append("    syntaqlite_comment_map_free(ctx.comment_map);")
+    lines.append("    syntaqlite_comment_attachment_free(ctx.comment_att);")
     lines.append("")
     lines.append("    if (root_doc == SYNTAQLITE_NULL_DOC) {")
     lines.append("        syntaqlite_doc_context_cleanup(&ctx.docs);")
@@ -787,6 +644,39 @@ def generate_fmt_c(
     lines.append("    char *result = syntaqlite_doc_layout(&ctx.docs, root_doc, options->target_width);")
     lines.append("    syntaqlite_doc_context_cleanup(&ctx.docs);")
     lines.append("    return result;")
+    lines.append("}")
+    lines.append("")
+
+    # Debug IR function
+    lines.append("char *syntaqlite_format_debug_ir(SyntaqliteAstContext *astCtx, uint32_t root_id,")
+    lines.append("                                  const char *source, SyntaqliteTokenList *token_list,")
+    lines.append("                                  SyntaqliteFmtOptions *options) {")
+    lines.append("    SyntaqliteFmtOptions default_options = SYNTAQLITE_FMT_OPTIONS_DEFAULT;")
+    lines.append("    if (!options) options = &default_options;")
+    lines.append("")
+    lines.append("    FmtCtx ctx;")
+    lines.append("    syntaqlite_doc_context_init(&ctx.docs);")
+    lines.append("    ctx.ast = &astCtx->ast;")
+    lines.append("    ctx.source = source;")
+    lines.append("    ctx.token_list = token_list;")
+    lines.append("    ctx.options = options;")
+    lines.append("    ctx.comment_att = syntaqlite_comment_attach(astCtx, root_id, source, token_list);")
+    lines.append("")
+    lines.append("    uint32_t root_doc = format_node(&ctx, root_id);")
+    lines.append("")
+    lines.append("    syntaqlite_comment_attachment_free(ctx.comment_att);")
+    lines.append("")
+    lines.append("    // Print debug IR to a temporary file and read it back")
+    lines.append("    char *buf = NULL;")
+    lines.append("    size_t buf_size = 0;")
+    lines.append("    FILE *mem = open_memstream(&buf, &buf_size);")
+    lines.append("    if (mem) {")
+    lines.append("        syntaqlite_doc_debug_print(&ctx.docs, root_doc, mem, 0);")
+    lines.append("        fclose(mem);")
+    lines.append("    }")
+    lines.append("")
+    lines.append("    syntaqlite_doc_context_cleanup(&ctx.docs);")
+    lines.append("    return buf;")
     lines.append("}")
     lines.append("")
 
