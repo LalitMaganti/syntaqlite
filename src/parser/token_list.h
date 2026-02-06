@@ -16,20 +16,22 @@ extern "C" {
 
 // Compact token for internal storage: 8 bytes, offset-based.
 typedef struct SynqRawToken {
-    uint32_t offset;  // Byte offset into source text
-    uint16_t length;  // Token length in bytes
-    uint16_t type;    // SYNTAQLITE_TOKEN_* token type
+  uint32_t offset;  // Byte offset into source text
+  uint16_t length;  // Token length in bytes
+  uint16_t type;    // SYNTAQLITE_TOKEN_* token type
 } SynqRawToken;
 
 // Growable array of raw tokens.
 typedef struct SynqTokenList {
-    SynqRawToken *data;
-    uint32_t count;
-    uint32_t capacity;
+  SynqRawToken* data;
+  uint32_t count;
+  uint32_t capacity;
 } SynqTokenList;
 
-void synq_token_list_append(SynqTokenList *list, uint32_t offset,
-                                  uint16_t length, uint16_t type);
+void synq_token_list_append(SynqTokenList* list,
+                            uint32_t offset,
+                            uint16_t length,
+                            uint16_t type);
 
 #ifdef __cplusplus
 }

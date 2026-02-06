@@ -60,6 +60,12 @@ BINARY_DEPS = [
     BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-linux.zip", "5749cbc4e668273514150a80e387a957f933c6ed3f5f11e03fb30955e2bbead6", "linux", "x64"),
     BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-linux-aarch64.zip", "fd2cacc8050a7f12a16a2e48f9e06fca5c14fc4c2bee2babb67b58be17a607fc", "linux", "arm64"),
     BinaryDep("ninja", NINJA_VERSION, f"https://github.com/ninja-build/ninja/releases/download/v{NINJA_VERSION}/ninja-win.zip", "07fc8261b42b20e71d1720b39068c2e14ffcee6396b76fb7a795fb460b78dc65", "windows", "x64"),
+    # clang-format: raw binaries from Chromium's cloud storage.
+    # SHA1s from https://chromium.googlesource.com/chromium/src/buildtools/+/refs/heads/master/{mac,linux64,win}/
+    BinaryDep("clang-format", "8503422f", "https://storage.googleapis.com/chromium-clang-format/8503422f469ae56cc74f0ea2c03f2d872f4a2303", "dabf93691361e8bd1d07466d67584072ece5c24e2b812c16458b8ff801c33e29", "darwin", "arm64", "raw"),
+    BinaryDep("clang-format", "7d46d237", "https://storage.googleapis.com/chromium-clang-format/7d46d237f9664f41ef46b10c1392dcb559250f25", "0c3c13febeb0495ef0086509c24605ecae9e3d968ff9669d12514b8a55c7824e", "darwin", "x64", "raw"),
+    BinaryDep("clang-format", "79a7b4e5", "https://storage.googleapis.com/chromium-clang-format/79a7b4e5336339c17b828de10d80611ff0f85961", "889266a51681d55bd4b9e02c9a104fa6ee22ecdfa7e8253532e5ea47e2e4cb4a", "linux", "x64", "raw"),
+    BinaryDep("clang-format", "565cab9c", "https://storage.googleapis.com/chromium-clang-format/565cab9c66d61360c27c7d4df5defe1a78ab56d3", "5557943a174e3b67cdc389c10b0ceea2195f318c5c665dd77a427ed01a094557", "windows", "x64", "raw"),
 ]
 
 GOOGLETEST_VERSION = "1.17.0"
@@ -130,7 +136,7 @@ def install_binary_dep(dep, target_dir):
     print(f"Downloading {dep.name}...")
     os.makedirs(target_dir, exist_ok=True)
 
-    suffix = ".tar.gz" if dep.format == "tar.gz" else ".zip"
+    suffix = {"tar.gz": ".tar.gz", "zip": ".zip", "raw": ""}.get(dep.format, ".zip")
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
         tmp_path = tmp.name
 
@@ -145,11 +151,15 @@ def install_binary_dep(dep, target_dir):
             print(f"SHA256 mismatch for {dep.name}: expected {dep.sha256}, got {actual_sha256}", file=sys.stderr)
             return False
 
-        extract(tmp_path, target_dir, dep.format)
-
-        exe_path = os.path.join(target_dir, dep.name)
-        if os.path.exists(exe_path):
+        if dep.format == "raw":
+            exe_path = os.path.join(target_dir, dep.name)
+            shutil.copy2(tmp_path, exe_path)
             os.chmod(exe_path, 0o755)
+        else:
+            extract(tmp_path, target_dir, dep.format)
+            exe_path = os.path.join(target_dir, dep.name)
+            if os.path.exists(exe_path):
+                os.chmod(exe_path, 0o755)
 
         with open(stamp_path, "w") as f:
             f.write(dep.version)

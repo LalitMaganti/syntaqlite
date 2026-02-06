@@ -13,8 +13,8 @@ extern "C" {
 #endif  // SYNQ_SRC_FORMATTER_FMT_OPTIONS_H
 
 typedef struct SynqFmtOptions {
-    uint32_t target_width;   // default 80
-    uint32_t indent_width;   // default 2
+  uint32_t target_width;  // default 80
+  uint32_t indent_width;  // default 2
 } SynqFmtOptions;
 
 #define SYNQ_FMT_OPTIONS_DEFAULT {80, 2}

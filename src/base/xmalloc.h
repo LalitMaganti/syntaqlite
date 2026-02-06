@@ -13,10 +13,11 @@
 extern "C" {
 #endif
 
-static inline void *synq_xrealloc(void *ptr, size_t size) {
-    void *p = realloc(ptr, size);
-    if (!p) abort();
-    return p;
+static inline void* synq_xrealloc(void* ptr, size_t size) {
+  void* p = realloc(ptr, size);
+  if (!p)
+    abort();
+  return p;
 }
 
 #ifdef __cplusplus

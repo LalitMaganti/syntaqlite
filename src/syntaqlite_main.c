@@ -25,17 +25,18 @@ enum synq_mode {
   SYNQ_MODE_DOC,
 };
 
-static char *read_stdin(size_t *out_len) {
+static char* read_stdin(size_t* out_len) {
   size_t capacity = 4096;
   size_t len = 0;
-  char *buf = (char *)malloc(capacity);
-  if (!buf) return NULL;
+  char* buf = (char*)malloc(capacity);
+  if (!buf)
+    return NULL;
 
   int c;
   while ((c = getchar()) != EOF) {
     if (len + 1 >= capacity) {
       capacity *= 2;
-      char *new_buf = (char *)realloc(buf, capacity);
+      char* new_buf = (char*)realloc(buf, capacity);
       if (!new_buf) {
         free(buf);
         return NULL;
@@ -49,7 +50,7 @@ static char *read_stdin(size_t *out_len) {
   return buf;
 }
 
-static void print_usage(const char *prog, int is_synqfmt) {
+static void print_usage(const char* prog, int is_synqfmt) {
   if (is_synqfmt) {
     fprintf(stdout,
             "Usage: %s [options] < input.sql\n"
@@ -83,16 +84,18 @@ static void print_usage(const char *prog, int is_synqfmt) {
   }
 }
 
-int main(int argc, char **argv) {
-  const char *prog = argv[0];
+int main(int argc, char** argv) {
+  const char* prog = argv[0];
 
   // Detect basename to check if invoked as synqfmt
-  const char *basename = prog;
-  const char *slash = strrchr(prog, '/');
-  if (slash) basename = slash + 1;
+  const char* basename = prog;
+  const char* slash = strrchr(prog, '/');
+  if (slash)
+    basename = slash + 1;
 #ifdef _WIN32
-  const char *bslash = strrchr(basename, '\\');
-  if (bslash) basename = bslash + 1;
+  const char* bslash = strrchr(basename, '\\');
+  if (bslash)
+    basename = bslash + 1;
 #endif
   int is_synqfmt = strcmp(basename, "synqfmt") == 0;
 
@@ -163,7 +166,7 @@ int main(int argc, char **argv) {
 
   // Read input
   size_t len;
-  char *sql = read_stdin(&len);
+  char* sql = read_stdin(&len);
   if (!sql) {
     fprintf(stderr, "Error: Failed to read input\n");
     return 1;
@@ -176,7 +179,7 @@ int main(int argc, char **argv) {
 
   // Create parser (enable token collection for fmt/doc)
   int collect = (mode == SYNQ_MODE_FMT || mode == SYNQ_MODE_DOC);
-  SyntaqliteParser *parser = syntaqlite_parser_create(
+  SyntaqliteParser* parser = syntaqlite_parser_create(
       (SyntaqliteParserConfig){.collect_tokens = collect, .trace = trace});
   if (!parser) {
     fprintf(stderr, "Error: Failed to allocate parser\n");
@@ -187,7 +190,8 @@ int main(int argc, char **argv) {
 
   // Parse and process each statement
   SyntaqliteParseResult result;
-  while ((result = syntaqlite_parser_next(parser)).root != SYNTAQLITE_NULL_NODE) {
+  while ((result = syntaqlite_parser_next(parser)).root !=
+         SYNTAQLITE_NULL_NODE) {
     if (result.error) {
       fprintf(stderr, "Error: %s\n",
               result.error_msg ? result.error_msg : "Parse error");
@@ -203,7 +207,8 @@ int main(int argc, char **argv) {
       case SYNQ_MODE_FMT: {
         SyntaqliteFormatOptions fmt_opts = {.target_width = width,
                                             .indent_width = 2};
-        char *formatted = syntaqlite_format_stmt(parser, result.root, &fmt_opts);
+        char* formatted =
+            syntaqlite_format_stmt(parser, result.root, &fmt_opts);
         if (formatted) {
           fputs(formatted, stdout);
           free(formatted);
@@ -213,7 +218,7 @@ int main(int argc, char **argv) {
       case SYNQ_MODE_DOC: {
         SyntaqliteFormatOptions fmt_opts = {.target_width = width,
                                             .indent_width = 2};
-        char *formatted =
+        char* formatted =
             syntaqlite_format_stmt_debug_ir(parser, result.root, &fmt_opts);
         if (formatted) {
           fputs(formatted, stdout);

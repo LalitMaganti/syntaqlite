@@ -12,28 +12,28 @@
 #include "src/parser/token_list.h"
 
 struct SyntaqliteParser {
-    const char *source;
-    uint32_t length;
+  const char* source;
+  uint32_t length;
 
-    // Tokenizer cursor
-    uint32_t pos;
-    int last_token_type;
+  // Tokenizer cursor
+  uint32_t pos;
+  int last_token_type;
 
-    // Lemon parser
-    void *lemon;
-    SynqParseContext parseCtx;
-    SynqAstContext astCtx;
+  // Lemon parser
+  void* lemon;
+  SynqParseContext parseCtx;
+  SynqAstContext astCtx;
 
-    // Optional token collection
-    SynqTokenList *token_list;
-    SynqTokenList token_list_storage;
+  // Optional token collection
+  SynqTokenList* token_list;
+  SynqTokenList token_list_storage;
 
-    // Error state
-    int had_error;
-    char error_msg[256];
+  // Error state
+  int had_error;
+  char error_msg[256];
 
-    // EOF tracking
-    int finished;
+  // EOF tracking
+  int finished;
 };
 
-#endif // SYNTAQLITE_SRC_PARSER_PARSER_H
+#endif  // SYNTAQLITE_SRC_PARSER_PARSER_H

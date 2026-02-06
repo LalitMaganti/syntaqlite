@@ -16,8 +16,10 @@ extern "C" {
 #endif  // SYNQ_SRC_AST_AST_PRINT_H
 
 // Print AST node and its children to a file stream
-void synq_ast_print(FILE *out, SynqArena *ast, uint32_t node_id,
-                          const char *source);
+void synq_ast_print(FILE* out,
+                    SynqArena* ast,
+                    uint32_t node_id,
+                    const char* source);
 
 #ifdef __cplusplus
 }

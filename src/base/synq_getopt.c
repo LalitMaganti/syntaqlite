@@ -7,16 +7,18 @@
 
 #include <string.h>
 
-int synq_getopt_long(struct synq_getopt_state *st, int argc,
-                     char *const *argv, const char *shortopts,
-                     const struct synq_option *longopts,
-                     int *longindex) {
+int synq_getopt_long(struct synq_getopt_state* st,
+                     int argc,
+                     char* const* argv,
+                     const char* shortopts,
+                     const struct synq_option* longopts,
+                     int* longindex) {
   st->arg = NULL;
 
   if (st->optind >= argc)
     return -1;
 
-  const char *cur = argv[st->optind];
+  const char* cur = argv[st->optind];
 
   // Not an option — stop.
   if (cur[0] != '-' || cur[1] == '\0')
@@ -30,8 +32,8 @@ int synq_getopt_long(struct synq_getopt_state *st, int argc,
 
   // Long option: --name or --name=value
   if (cur[1] == '-') {
-    const char *name = cur + 2;
-    const char *eq = strchr(name, '=');
+    const char* name = cur + 2;
+    const char* eq = strchr(name, '=');
     size_t namelen = eq ? (size_t)(eq - name) : strlen(name);
 
     for (int i = 0; longopts && longopts[i].name; i++) {
@@ -78,7 +80,7 @@ int synq_getopt_long(struct synq_getopt_state *st, int argc,
     st->pos = 1;
 
   char c = cur[st->pos];
-  const char *spec = shortopts ? strchr(shortopts, c) : NULL;
+  const char* spec = shortopts ? strchr(shortopts, c) : NULL;
   if (!spec || c == ':') {
     // Advance past this cluster.
     if (!cur[++st->pos]) {

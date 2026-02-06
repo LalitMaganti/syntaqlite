@@ -35,9 +35,9 @@ typedef uint32_t u32;
 ** This is the minor type for terminal symbols in the parser.
 */
 typedef struct SynqToken {
-  const char *z;  /* Text of the token */
-  int n;          /* Length of the token */
-  int type;       /* Token type (SYNTAQLITE_TOKEN_* constant) */
+  const char* z; /* Text of the token */
+  int n;         /* Length of the token */
+  int type;      /* Token type (SYNTAQLITE_TOKEN_* constant) */
 } SynqToken;
 
 /*
@@ -53,13 +53,13 @@ struct SynqTokenList;
 */
 typedef struct SynqParseContext SynqParseContext;
 struct SynqParseContext {
-  void *userData;                                  /* User-defined data */
-  void (*onSyntaxError)(SynqParseContext *); /* Syntax error callback */
-  void (*onStackOverflow)(SynqParseContext *); /* Stack overflow callback */
-  struct SynqAstContext *astCtx;             /* AST building context */
-  const char *zSql;                                /* Original SQL text */
-  u32 root;                                        /* Root AST node ID */
-  struct SynqTokenList *token_list;           /* Optional token collector */
+  void* userData;                             /* User-defined data */
+  void (*onSyntaxError)(SynqParseContext*);   /* Syntax error callback */
+  void (*onStackOverflow)(SynqParseContext*); /* Stack overflow callback */
+  struct SynqAstContext* astCtx;              /* AST building context */
+  const char* zSql;                           /* Original SQL text */
+  u32 root;                                   /* Root AST node ID */
+  struct SynqTokenList* token_list;           /* Optional token collector */
   int stmt_completed;                         /* Set by ecmd reduction */
 };
 
