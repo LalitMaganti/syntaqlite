@@ -71,6 +71,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                         help='Increase verbosity (-v for results, -vv for RUN markers)')
     parser.add_argument('--root', default=None,
                         help='Project root directory')
+    parser.add_argument('--test-dir', default='tests/ast_diff_tests',
+                        help='Relative path to test directory (default: tests/ast_diff_tests)')
 
     args = parser.parse_args(argv)
 
@@ -90,7 +92,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # Load tests
     try:
-        tests = load_all_tests(root_dir, args.filter)
+        tests = load_all_tests(root_dir, args.filter, args.test_dir)
     except ImportError as e:
         print(f"Error loading tests: {e}", file=sys.stderr)
         return 1

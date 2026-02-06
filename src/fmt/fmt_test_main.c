@@ -1,10 +1,10 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// Test binary for AST diff tests.
-// Usage: ast_test [--trace] [--help] < input.sql
+// Test binary for formatter diff tests.
+// Usage: fmt_test [--trace] [--width=N] [--help] < input.sql
 //
-// Reads SQL from stdin, parses it using the real parser, and prints the AST.
+// Reads SQL from stdin, parses it, formats it, and prints the result.
 // Use --trace to enable Lemon parser tracing on stderr.
 
 #include <stdio.h>
@@ -12,9 +12,11 @@
 #include <string.h>
 
 #include "src/sq_getopt.h"
-#include "src/ast/ast_print.h"
 #include "src/syntaqlite_sqlite_defs.h"
 #include "src/sqlite_tokens.h"
+#include "src/token_list.h"
+#include "src/fmt/fmt.h"
+#include "src/fmt/fmt_options.h"
 
 // External parser functions (defined in sqlite_parse.c)
 void *syntaqlite_sqlite3ParserAlloc(void *(*mallocProc)(size_t),
@@ -68,30 +70,36 @@ static void on_stack_overflow(SyntaqliteParseContext *ctx) {
 
 int main(int argc, char **argv) {
   int trace = 0;
+  uint32_t width = 80;
 
   static const struct sq_option long_options[] = {
       {"trace", SQ_NO_ARGUMENT, NULL, 'T'},
+      {"width", SQ_REQUIRED_ARGUMENT, NULL, 'w'},
       {"help", SQ_NO_ARGUMENT, NULL, 'h'},
       {NULL, 0, NULL, 0},
   };
 
   struct sq_getopt_state opt = SQ_GETOPT_INIT;
   int c;
-  while ((c = sq_getopt_long(&opt, argc, argv, "h", long_options, NULL)) !=
+  while ((c = sq_getopt_long(&opt, argc, argv, "hw:", long_options, NULL)) !=
          -1) {
     switch (c) {
       case 'T':
         trace = 1;
         break;
+      case 'w':
+        width = (uint32_t)atoi(opt.arg);
+        break;
       case 'h':
         fprintf(stdout,
                 "Usage: %s [OPTIONS] < input.sql\n"
                 "\n"
-                "Reads SQL from stdin, parses it, and prints the AST.\n"
+                "Reads SQL from stdin, formats it, and prints the result.\n"
                 "\n"
                 "Options:\n"
-                "  --trace  Enable Lemon parser trace output on stderr (debug builds only)\n"
-                "  --help   Show this help message and exit\n",
+                "  --trace    Enable Lemon parser trace output on stderr (debug builds only)\n"
+                "  --width=N  Target line width (default: 80)\n"
+                "  --help     Show this help message and exit\n",
                 argv[0]);
         return 0;
       default:
@@ -118,7 +126,15 @@ int main(int argc, char **argv) {
   syntaqlite_ast_init(&ast);
 
   SyntaqliteAstContext astCtx;
-  syntaqlite_ast_context_init(&astCtx, &ast, sql, (uint32_t)len);
+  astCtx.ast = &ast;
+  astCtx.source = sql;
+  astCtx.source_length = (uint32_t)len;
+  astCtx.error_code = 0;
+  astCtx.error_msg = NULL;
+
+  // Initialize token list
+  SyntaqliteTokenList tokenList;
+  syntaqlite_token_list_init(&tokenList);
 
   // Initialize parse context
   SyntaqliteParseContext parseCtx;
@@ -128,13 +144,13 @@ int main(int argc, char **argv) {
   parseCtx.astCtx = &astCtx;
   parseCtx.zSql = sql;
   parseCtx.root = SYNTAQLITE_NULL_NODE;
-  parseCtx.token_list = NULL;
+  parseCtx.token_list = &tokenList;
 
   // Create parser
   void *parser = syntaqlite_sqlite3ParserAlloc(malloc, &parseCtx);
   if (!parser) {
     fprintf(stderr, "Error: Failed to allocate parser\n");
-    syntaqlite_ast_context_cleanup(&astCtx);
+    syntaqlite_token_list_free(&tokenList);
     syntaqlite_ast_free(&ast);
     free(sql);
     return 1;
@@ -149,7 +165,6 @@ int main(int argc, char **argv) {
 #endif
 
   // Tokenize and parse
-  // Following Perfetto's approach: synthesize SEMI at EOF if needed
   const unsigned char *z = (const unsigned char *)sql;
   int tokenType;
   int lastTokenType = 0;
@@ -158,7 +173,12 @@ int main(int argc, char **argv) {
     i64 tokenLen = syntaqlite_sqlite3GetToken(z, &tokenType);
     if (tokenLen <= 0) break;
 
-    // Skip whitespace and comments
+    // Collect all tokens (including whitespace and comments)
+    syntaqlite_token_list_append(&tokenList,
+                                 (uint32_t)((const char *)z - sql),
+                                 (uint16_t)tokenLen, (uint16_t)tokenType);
+
+    // Skip whitespace and comments for parser
     if (tokenType == TK_SPACE || tokenType == TK_COMMENT) {
       z += tokenLen;
       continue;
@@ -176,7 +196,7 @@ int main(int argc, char **argv) {
     if (g_syntax_error) {
       fprintf(stderr, "Error: Syntax error near '%.*s'\n", (int)tokenLen, z);
       syntaqlite_sqlite3ParserFree(parser, free);
-      syntaqlite_ast_context_cleanup(&astCtx);
+      syntaqlite_token_list_free(&tokenList);
       syntaqlite_ast_free(&ast);
       free(sql);
       return 1;
@@ -185,7 +205,7 @@ int main(int argc, char **argv) {
     z += tokenLen;
   }
 
-  // If the statement didn't end with SEMI, synthesize one (like Perfetto does)
+  // If the statement didn't end with SEMI, synthesize one
   if (lastTokenType != TK_SEMI) {
     SyntaqliteToken semiToken = {NULL, 0, TK_SEMI};
     syntaqlite_sqlite3Parser(parser, TK_SEMI, semiToken, &parseCtx);
@@ -195,14 +215,11 @@ int main(int argc, char **argv) {
   SyntaqliteToken endToken = {NULL, 0, 0};
   syntaqlite_sqlite3Parser(parser, 0, endToken, &parseCtx);
 
-  // Flush any pending list accumulator before reading the AST
-  ast_list_flush(&astCtx);
-
   // Check for syntax error
   if (g_syntax_error) {
     fprintf(stderr, "Error: Incomplete statement\n");
     syntaqlite_sqlite3ParserFree(parser, free);
-    syntaqlite_ast_context_cleanup(&astCtx);
+    syntaqlite_token_list_free(&tokenList);
     syntaqlite_ast_free(&ast);
     free(sql);
     return 1;
@@ -212,20 +229,24 @@ int main(int argc, char **argv) {
   uint32_t root_id = parseCtx.root;
 
   if (root_id == SYNTAQLITE_NULL_NODE) {
-    // No AST produced (empty input or semicolon only)
     syntaqlite_sqlite3ParserFree(parser, free);
-    syntaqlite_ast_context_cleanup(&astCtx);
+    syntaqlite_token_list_free(&tokenList);
     syntaqlite_ast_free(&ast);
     free(sql);
     return 0;
   }
 
-  // Print AST
-  syntaqlite_ast_print(stdout, &ast, root_id, sql);
+  // Format and print
+  SyntaqliteFmtOptions fmtOpts = {.target_width = width, .indent_width = 2};
+  char *formatted = syntaqlite_format(&ast, root_id, sql, &tokenList, &fmtOpts);
+  if (formatted) {
+    fputs(formatted, stdout);
+    free(formatted);
+  }
 
   // Cleanup
   syntaqlite_sqlite3ParserFree(parser, free);
-  syntaqlite_ast_context_cleanup(&astCtx);
+  syntaqlite_token_list_free(&tokenList);
   syntaqlite_ast_free(&ast);
   free(sql);
 

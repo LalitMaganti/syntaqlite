@@ -14,19 +14,20 @@ from typing import List, Optional, Tuple
 from python.syntaqlite.diff_tests.testing import AstTestBlueprint, TestSuite
 
 
-def _discover_test_suites(root_dir: Path) -> List[TestSuite]:
-    """Auto-discover all TestSuite subclasses in tests/ast_diff_tests/*.py.
+def _discover_test_suites(root_dir: Path, test_dir: str = "tests/ast_diff_tests") -> List[TestSuite]:
+    """Auto-discover all TestSuite subclasses in the given test directory.
 
-    Scans for .py files (excluding __init__.py) in tests/ast_diff_tests/,
+    Scans for .py files (excluding __init__.py) in the test directory,
     sorted by filename for deterministic order.
 
     Args:
         root_dir: The project root directory.
+        test_dir: Relative path to the test directory (default: tests/ast_diff_tests).
 
     Returns:
         List of TestSuite instances found across all test modules.
     """
-    test_base = root_dir / "tests" / "ast_diff_tests"
+    test_base = root_dir / test_dir
     pattern = str(test_base / "*.py")
     suites = []
 
@@ -50,16 +51,18 @@ def _discover_test_suites(root_dir: Path) -> List[TestSuite]:
 
 def load_all_tests(
     root_dir: Path,
-    filter_pattern: Optional[str] = None
+    filter_pattern: Optional[str] = None,
+    test_dir: str = "tests/ast_diff_tests"
 ) -> List[Tuple[str, AstTestBlueprint]]:
     """Load all tests from the test directory.
 
-    Auto-discovers test suites by scanning tests/ast_diff_tests/*.py
+    Auto-discovers test suites by scanning the given test directory
     for TestSuite subclasses.
 
     Args:
         root_dir: The project root directory.
         filter_pattern: Optional regex pattern to filter test names.
+        test_dir: Relative path to the test directory (default: tests/ast_diff_tests).
 
     Returns:
         List of (test_name, blueprint) tuples to run.
@@ -70,7 +73,7 @@ def load_all_tests(
 
     # Collect all tests from all auto-discovered suites
     all_tests = []
-    for suite in _discover_test_suites(root_dir):
+    for suite in _discover_test_suites(root_dir, test_dir):
         all_tests.extend(suite.fetch())
 
     # Filter if pattern provided

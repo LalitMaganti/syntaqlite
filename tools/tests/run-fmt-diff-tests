@@ -1,0 +1,21 @@
+#!/usr/bin/env python3
+# Copyright 2025 The syntaqlite Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+
+import os
+import sys
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, ROOT_DIR)
+
+if __name__ == '__main__':
+    from python.syntaqlite.diff_tests.runner import main
+    # Default to fmt_test binary and fmt_diff_tests directory
+    argv = sys.argv[1:]
+    has_binary = any(a.startswith('--binary') for a in argv)
+    has_test_dir = any(a.startswith('--test-dir') for a in argv)
+    if not has_binary:
+        argv = ['--binary', 'out/mac_debug/fmt_test'] + argv
+    if not has_test_dir:
+        argv = ['--test-dir', 'tests/fmt_diff_tests'] + argv
+    sys.exit(main(argv))

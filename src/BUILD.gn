@@ -49,6 +49,19 @@ source_set("ast") {
   ]
 }
 
+# Document model, layout engine, and formatter.
+source_set("fmt") {
+  sources = [
+    "fmt/doc.c",
+    "fmt/doc.h",
+    "fmt/doc_layout.c",
+    "fmt/doc_layout.h",
+    "fmt/fmt.c",
+    "fmt/fmt.h",
+    "fmt/fmt_options.h",
+  ]
+}
+
 # Test binary for AST diff tests
 executable("ast_test") {
   testonly = true
@@ -58,6 +71,24 @@ executable("ast_test") {
   deps = [
     ":ast",
     ":sqlite",
+  ]
+  if (is_asan) {
+    deps += [ "//gn/standalone:asan_defaults" ]
+  }
+  configs += [ ":lemon_generated" ]
+}
+
+# Test binary for formatter diff tests
+executable("fmt_test") {
+  testonly = true
+  sources = [
+    "fmt/fmt_test_main.c",
+  ]
+  deps = [
+    ":ast",
+    ":fmt",
+    ":sqlite",
+    ":token_list",
   ]
   if (is_asan) {
     deps += [ "//gn/standalone:asan_defaults" ]

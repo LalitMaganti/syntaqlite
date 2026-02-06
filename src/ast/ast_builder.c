@@ -144,44 +144,14 @@ uint32_t ast_expr_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_expr_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_EXPR_LIST, sizeof(SyntaqliteExprList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteExprList *node = (SyntaqliteExprList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_EXPR_LIST, first_child);
 }
 
 uint32_t ast_expr_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_expr_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteExprList *old_node = (SyntaqliteExprList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteExprList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_EXPR_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteExprList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteExprList *new_node = (SyntaqliteExprList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_EXPR_LIST);
 }
 
 uint32_t ast_result_column(
@@ -212,44 +182,14 @@ uint32_t ast_result_column_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_result_column_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_RESULT_COLUMN_LIST, sizeof(SyntaqliteResultColumnList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteResultColumnList *node = (SyntaqliteResultColumnList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_RESULT_COLUMN_LIST, first_child);
 }
 
 uint32_t ast_result_column_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_result_column_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteResultColumnList *old_node = (SyntaqliteResultColumnList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteResultColumnList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_RESULT_COLUMN_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteResultColumnList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteResultColumnList *new_node = (SyntaqliteResultColumnList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_RESULT_COLUMN_LIST);
 }
 
 uint32_t ast_select_stmt(
@@ -309,44 +249,14 @@ uint32_t ast_order_by_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_order_by_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_ORDER_BY_LIST, sizeof(SyntaqliteOrderByList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteOrderByList *node = (SyntaqliteOrderByList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_ORDER_BY_LIST, first_child);
 }
 
 uint32_t ast_order_by_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_order_by_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteOrderByList *old_node = (SyntaqliteOrderByList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteOrderByList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_ORDER_BY_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteOrderByList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteOrderByList *new_node = (SyntaqliteOrderByList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_ORDER_BY_LIST);
 }
 
 uint32_t ast_limit_clause(SyntaqliteAstContext *ctx, uint32_t limit, uint32_t offset) {
@@ -482,44 +392,14 @@ uint32_t ast_case_when_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_case_when_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_WHEN_LIST, sizeof(SyntaqliteCaseWhenList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteCaseWhenList *node = (SyntaqliteCaseWhenList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_CASE_WHEN_LIST, first_child);
 }
 
 uint32_t ast_case_when_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_case_when_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteCaseWhenList *old_node = (SyntaqliteCaseWhenList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteCaseWhenList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_WHEN_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteCaseWhenList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteCaseWhenList *new_node = (SyntaqliteCaseWhenList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_CASE_WHEN_LIST);
 }
 
 uint32_t ast_compound_select(
@@ -619,44 +499,14 @@ uint32_t ast_values_row_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_values_row_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_VALUES_ROW_LIST, sizeof(SyntaqliteValuesRowList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteValuesRowList *node = (SyntaqliteValuesRowList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_VALUES_ROW_LIST, first_child);
 }
 
 uint32_t ast_values_row_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_values_row_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteValuesRowList *old_node = (SyntaqliteValuesRowList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteValuesRowList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_VALUES_ROW_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteValuesRowList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteValuesRowList *new_node = (SyntaqliteValuesRowList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_VALUES_ROW_LIST);
 }
 
 uint32_t ast_values_clause(SyntaqliteAstContext *ctx, uint32_t rows) {
@@ -699,44 +549,14 @@ uint32_t ast_cte_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_cte_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CTE_LIST, sizeof(SyntaqliteCteList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteCteList *node = (SyntaqliteCteList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_CTE_LIST, first_child);
 }
 
 uint32_t ast_cte_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_cte_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteCteList *old_node = (SyntaqliteCteList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteCteList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_CTE_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteCteList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteCteList *new_node = (SyntaqliteCteList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_CTE_LIST);
 }
 
 uint32_t ast_with_clause(
@@ -893,44 +713,14 @@ uint32_t ast_set_clause_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_set_clause_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_SET_CLAUSE_LIST, sizeof(SyntaqliteSetClauseList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteSetClauseList *node = (SyntaqliteSetClauseList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_SET_CLAUSE_LIST, first_child);
 }
 
 uint32_t ast_set_clause_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_set_clause_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteSetClauseList *old_node = (SyntaqliteSetClauseList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteSetClauseList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_SET_CLAUSE_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteSetClauseList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteSetClauseList *new_node = (SyntaqliteSetClauseList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_SET_CLAUSE_LIST);
 }
 
 uint32_t ast_update_stmt(
@@ -1247,44 +1037,14 @@ uint32_t ast_column_constraint_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_column_constraint_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST, sizeof(SyntaqliteColumnConstraintList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteColumnConstraintList *node = (SyntaqliteColumnConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST, first_child);
 }
 
 uint32_t ast_column_constraint_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_column_constraint_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteColumnConstraintList *old_node = (SyntaqliteColumnConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteColumnConstraintList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteColumnConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteColumnConstraintList *new_node = (SyntaqliteColumnConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST);
 }
 
 uint32_t ast_column_def(
@@ -1315,44 +1075,14 @@ uint32_t ast_column_def_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_column_def_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COLUMN_DEF_LIST, sizeof(SyntaqliteColumnDefList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteColumnDefList *node = (SyntaqliteColumnDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_COLUMN_DEF_LIST, first_child);
 }
 
 uint32_t ast_column_def_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_column_def_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteColumnDefList *old_node = (SyntaqliteColumnDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteColumnDefList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_COLUMN_DEF_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteColumnDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteColumnDefList *new_node = (SyntaqliteColumnDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_COLUMN_DEF_LIST);
 }
 
 uint32_t ast_table_constraint(
@@ -1391,44 +1121,14 @@ uint32_t ast_table_constraint_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_table_constraint_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST, sizeof(SyntaqliteTableConstraintList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteTableConstraintList *node = (SyntaqliteTableConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST, first_child);
 }
 
 uint32_t ast_table_constraint_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_table_constraint_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteTableConstraintList *old_node = (SyntaqliteTableConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteTableConstraintList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteTableConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteTableConstraintList *new_node = (SyntaqliteTableConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST);
 }
 
 uint32_t ast_create_table_stmt(
@@ -1518,44 +1218,14 @@ uint32_t ast_window_def_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_window_def_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_WINDOW_DEF_LIST, sizeof(SyntaqliteWindowDefList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteWindowDefList *node = (SyntaqliteWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_WINDOW_DEF_LIST, first_child);
 }
 
 uint32_t ast_window_def_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_window_def_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteWindowDefList *old_node = (SyntaqliteWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteWindowDefList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_WINDOW_DEF_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteWindowDefList *new_node = (SyntaqliteWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_WINDOW_DEF_LIST);
 }
 
 uint32_t ast_named_window_def(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan window_name, uint32_t window_def) {
@@ -1580,44 +1250,14 @@ uint32_t ast_named_window_def_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_named_window_def_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST, sizeof(SyntaqliteNamedWindowDefList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteNamedWindowDefList *node = (SyntaqliteNamedWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST, first_child);
 }
 
 uint32_t ast_named_window_def_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_named_window_def_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteNamedWindowDefList *old_node = (SyntaqliteNamedWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteNamedWindowDefList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteNamedWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteNamedWindowDefList *new_node = (SyntaqliteNamedWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST);
 }
 
 uint32_t ast_filter_over(
@@ -1663,44 +1303,14 @@ uint32_t ast_trigger_cmd_list_empty(SyntaqliteAstContext *ctx) {
 }
 
 uint32_t ast_trigger_cmd_list(SyntaqliteAstContext *ctx, uint32_t first_child) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_TRIGGER_CMD_LIST, sizeof(SyntaqliteTriggerCmdList) + sizeof(uint32_t));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
-
-    SyntaqliteTriggerCmdList *node = (SyntaqliteTriggerCmdList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
-    node->count = 1;
-    node->children[0] = first_child;
-    return id;
+    return ast_list_start(ctx, SYNTAQLITE_NODE_TRIGGER_CMD_LIST, first_child);
 }
 
 uint32_t ast_trigger_cmd_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {
     if (list_id == SYNTAQLITE_NULL_NODE) {
         return ast_trigger_cmd_list(ctx, child);
     }
-
-    // Get current list
-    SyntaqliteTriggerCmdList *old_node = (SyntaqliteTriggerCmdList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-    uint32_t old_count = old_node->count;
-
-    // Allocate new list with space for one more child
-    size_t new_size = sizeof(SyntaqliteTriggerCmdList) + (old_count + 1) * sizeof(uint32_t);
-    uint32_t new_id = ast_alloc(ctx, SYNTAQLITE_NODE_TRIGGER_CMD_LIST, new_size);
-    if (new_id == SYNTAQLITE_NULL_NODE) return new_id;
-
-    // Re-fetch old node pointer (may have moved due to realloc)
-    old_node = (SyntaqliteTriggerCmdList*)
-        (ctx->ast->arena + ctx->ast->offsets[list_id]);
-
-    SyntaqliteTriggerCmdList *new_node = (SyntaqliteTriggerCmdList*)
-        (ctx->ast->arena + ctx->ast->offsets[new_id]);
-
-    // Copy old children and add new one
-    new_node->count = old_count + 1;
-    memcpy(new_node->children, old_node->children, old_count * sizeof(uint32_t));
-    new_node->children[old_count] = child;
-
-    return new_id;
+    return ast_list_append(ctx, list_id, child, SYNTAQLITE_NODE_TRIGGER_CMD_LIST);
 }
 
 uint32_t ast_create_trigger_stmt(

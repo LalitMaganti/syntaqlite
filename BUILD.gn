@@ -2,6 +2,7 @@
 group("default") {
   deps = [
     "src:ast_test",
+    "src:fmt_test",
     "third_party:lemon",
   ]
   testonly = true
