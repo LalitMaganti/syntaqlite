@@ -17,7 +17,7 @@
 
 #include <stdint.h>
 
-// Token type constants (TK_SELECT, TK_SEMI, etc.)
+// Token type constants (SYNTAQLITE_TOKEN_SELECT, SYNTAQLITE_TOKEN_SEMI, etc.)
 // When SYNTAQLITE_CUSTOM_TOKENS is defined, the generated header
 // automatically includes the dialect-specific tokens instead.
 #include "syntaqlite/sqlite_tokens_gen.h"
@@ -30,7 +30,7 @@ extern "C" {
 typedef struct SyntaqliteToken {
     const char *text;   // Pointer into source text (not null-terminated)
     uint32_t length;    // Token length in bytes
-    uint16_t type;      // TK_* token type
+    uint16_t type;      // SYNTAQLITE_TOKEN_* token type
 } SyntaqliteToken;
 
 // Opaque tokenizer handle.
@@ -45,7 +45,7 @@ void syntaqlite_tokenizer_reset(SyntaqliteTokenizer *tok, const char *source,
                                 uint32_t len);
 
 // Get the next token. Returns 1 if a token was produced, 0 at EOF.
-// All tokens are returned including TK_SPACE and TK_COMMENT.
+// All tokens are returned including SYNTAQLITE_TOKEN_SPACE and SYNTAQLITE_TOKEN_COMMENT.
 int syntaqlite_tokenizer_next(SyntaqliteTokenizer *tok, SyntaqliteToken *out);
 
 // Destroy the tokenizer and free resources.

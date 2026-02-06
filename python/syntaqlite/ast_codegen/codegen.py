@@ -234,22 +234,11 @@ def generate_public_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[Enu
     lines.append("#include <stddef.h>")
     lines.append("#include <stdint.h>")
     lines.append("")
+    lines.append('#include "syntaqlite/ast_defs.h"')
+    lines.append("")
     lines.append("#ifdef __cplusplus")
     lines.append('extern "C" {')
     lines.append("#endif")
-    lines.append("")
-
-    # SYNTAQLITE_NULL_NODE
-    lines.append("// Null node ID (used for nullable fields)")
-    lines.append("#define SYNTAQLITE_NULL_NODE 0xFFFFFFFFu")
-    lines.append("")
-
-    # SyntaqliteSourceSpan
-    lines.append("// Source location span (offset + length into source text)")
-    lines.append("typedef struct SyntaqliteSourceSpan {")
-    lines.append("    uint32_t offset;")
-    lines.append("    uint16_t length;")
-    lines.append("} SyntaqliteSourceSpan;")
     lines.append("")
 
     _emit_enums(lines, enum_defs)
@@ -573,7 +562,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
                     # Recursively print child node with field name
                     lines.append(f'      print_node(out, ast, node->{snake_name}.{field_name}, source, depth + 1, "{field_name}");')
                 elif isinstance(field_type, InlineField):
-                    if field_type.type_name == "SynqSourceSpan":
+                    if field_type.type_name == "SyntaqliteSourceSpan":
                         # Source span - print quoted text or "null"
                         lines.append("      synq_ast_print_indent(out, depth + 1);")
                         lines.append(f'      fprintf(out, "{field_name}: ");')

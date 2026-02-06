@@ -18,29 +18,29 @@
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) RP. {
     A = synq_ast_function_call(pCtx->astCtx,
         synq_span(pCtx, B),
-        (SynqFunctionCallFlags){.raw = (uint8_t)C},
+        (SyntaqliteFunctionCallFlags){.raw = (uint8_t)C},
         D,
-        SYNQ_NULL_NODE,
-        SYNQ_NULL_NODE);
+        SYNTAQLITE_NULL_NODE,
+        SYNTAQLITE_NULL_NODE);
 }
 
 // Function call with star: COUNT(*)
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP STAR RP. {
     A = synq_ast_function_call(pCtx->astCtx,
         synq_span(pCtx, B),
-        (SynqFunctionCallFlags){.star = 1},
-        SYNQ_NULL_NODE,
-        SYNQ_NULL_NODE,
-        SYNQ_NULL_NODE);
+        (SyntaqliteFunctionCallFlags){.star = 1},
+        SYNTAQLITE_NULL_NODE,
+        SYNTAQLITE_NULL_NODE,
+        SYNTAQLITE_NULL_NODE);
 }
 
 // Function call with arguments and filter/over: func(args) FILTER/OVER
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) RP filter_over(E). {
-    SynqFilterOver *fo = (SynqFilterOver*)
+    SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
         (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[E]);
     A = synq_ast_function_call(pCtx->astCtx,
         synq_span(pCtx, B),
-        (SynqFunctionCallFlags){.raw = (uint8_t)C},
+        (SyntaqliteFunctionCallFlags){.raw = (uint8_t)C},
         D,
         fo->filter_expr,
         fo->over_def);
@@ -48,12 +48,12 @@ expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) RP filter_over(E). 
 
 // Function call with star and filter/over: COUNT(*) FILTER/OVER
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP STAR RP filter_over(C). {
-    SynqFilterOver *fo = (SynqFilterOver*)
+    SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
         (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[C]);
     A = synq_ast_function_call(pCtx->astCtx,
         synq_span(pCtx, B),
-        (SynqFunctionCallFlags){.star = 1},
-        SYNQ_NULL_NODE,
+        (SyntaqliteFunctionCallFlags){.star = 1},
+        SYNTAQLITE_NULL_NODE,
         fo->filter_expr,
         fo->over_def);
 }

@@ -23,7 +23,7 @@ char *syntaqlite_format(const char *sql, uint32_t len,
     size_t out_len = 0;
 
     SyntaqliteParseResult result;
-    while ((result = syntaqlite_parser_next(parser)).root != SYNQ_NULL_NODE) {
+    while ((result = syntaqlite_parser_next(parser)).root != SYNTAQLITE_NULL_NODE) {
         if (result.error) {
             free(out);
             syntaqlite_parser_destroy(parser);

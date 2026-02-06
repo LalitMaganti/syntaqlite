@@ -142,36 +142,36 @@ static const unsigned short int synq_aKWOffset[148] = {0,
 };
 /* aKWCode[i] is the parser symbol code for the i-th keyword */
 static const unsigned char synq_aKWCode[148] = {0,
-  TK_REINDEX,    TK_INDEXED,    TK_INDEX,      TK_DESC,       TK_ESCAPE,     
-  TK_EACH,       TK_CHECK,      TK_KEY,        TK_BEFORE,     TK_FOREIGN,    
-  TK_FOR,        TK_IGNORE,     TK_LIKE_KW,    TK_EXPLAIN,    TK_INSTEAD,    
-  TK_ADD,        TK_DATABASE,   TK_AS,         TK_SELECT,     TK_TABLE,      
-  TK_JOIN_KW,    TK_THEN,       TK_END,        TK_DEFERRABLE, TK_ELSE,       
-  TK_EXCLUDE,    TK_DELETE,     TK_TEMP,       TK_TEMP,       TK_OR,         
-  TK_ISNULL,     TK_NULLS,      TK_SAVEPOINT,  TK_INTERSECT,  TK_TIES,       
-  TK_NOTNULL,    TK_NOT,        TK_NO,         TK_NULL,       TK_LIKE_KW,    
-  TK_EXCEPT,     TK_TRANSACTION,TK_ACTION,     TK_ON,         TK_JOIN_KW,    
-  TK_ALTER,      TK_RAISE,      TK_EXCLUSIVE,  TK_EXISTS,     TK_CONSTRAINT, 
-  TK_INTO,       TK_OFFSET,     TK_OF,         TK_SET,        TK_TRIGGER,    
-  TK_RANGE,      TK_GENERATED,  TK_DETACH,     TK_HAVING,     TK_LIKE_KW,    
-  TK_BEGIN,      TK_JOIN_KW,    TK_REFERENCES, TK_UNIQUE,     TK_QUERY,      
-  TK_WITHOUT,    TK_WITH,       TK_JOIN_KW,    TK_RELEASE,    TK_ATTACH,     
-  TK_BETWEEN,    TK_NOTHING,    TK_GROUPS,     TK_GROUP,      TK_CASCADE,    
-  TK_ASC,        TK_DEFAULT,    TK_CASE,       TK_COLLATE,    TK_CREATE,     
-  TK_CTIME_KW,   TK_IMMEDIATE,  TK_JOIN,       TK_INSERT,     TK_MATCH,      
-  TK_PLAN,       TK_ANALYZE,    TK_PRAGMA,     TK_MATERIALIZED, TK_DEFERRED,   
-  TK_DISTINCT,   TK_IS,         TK_UPDATE,     TK_VALUES,     TK_VIRTUAL,    
-  TK_ALWAYS,     TK_WHEN,       TK_WHERE,      TK_RECURSIVE,  TK_ABORT,      
-  TK_AFTER,      TK_RENAME,     TK_AND,        TK_DROP,       TK_PARTITION,  
-  TK_AUTOINCR,   TK_TO,         TK_IN,         TK_CAST,       TK_COLUMNKW,   
-  TK_COMMIT,     TK_CONFLICT,   TK_JOIN_KW,    TK_CTIME_KW,   TK_CTIME_KW,   
-  TK_CURRENT,    TK_PRECEDING,  TK_FAIL,       TK_LAST,       TK_FILTER,     
-  TK_REPLACE,    TK_FIRST,      TK_FOLLOWING,  TK_FROM,       TK_JOIN_KW,    
-  TK_LIMIT,      TK_IF,         TK_ORDER,      TK_RESTRICT,   TK_OTHERS,     
-  TK_OVER,       TK_RETURNING,  TK_JOIN_KW,    TK_ROLLBACK,   TK_ROWS,       
-  TK_ROW,        TK_UNBOUNDED,  TK_UNION,      TK_USING,      TK_VACUUM,     
-  TK_VIEW,       TK_WINDOW,     TK_DO,         TK_BY,         TK_INITIALLY,  
-  TK_ALL,        TK_PRIMARY,    
+  SYNTAQLITE_TOKEN_REINDEX,    SYNTAQLITE_TOKEN_INDEXED,    SYNTAQLITE_TOKEN_INDEX,      SYNTAQLITE_TOKEN_DESC,       SYNTAQLITE_TOKEN_ESCAPE,     
+  SYNTAQLITE_TOKEN_EACH,       SYNTAQLITE_TOKEN_CHECK,      SYNTAQLITE_TOKEN_KEY,        SYNTAQLITE_TOKEN_BEFORE,     SYNTAQLITE_TOKEN_FOREIGN,    
+  SYNTAQLITE_TOKEN_FOR,        SYNTAQLITE_TOKEN_IGNORE,     SYNTAQLITE_TOKEN_LIKE_KW,    SYNTAQLITE_TOKEN_EXPLAIN,    SYNTAQLITE_TOKEN_INSTEAD,    
+  SYNTAQLITE_TOKEN_ADD,        SYNTAQLITE_TOKEN_DATABASE,   SYNTAQLITE_TOKEN_AS,         SYNTAQLITE_TOKEN_SELECT,     SYNTAQLITE_TOKEN_TABLE,      
+  SYNTAQLITE_TOKEN_JOIN_KW,    SYNTAQLITE_TOKEN_THEN,       SYNTAQLITE_TOKEN_END,        SYNTAQLITE_TOKEN_DEFERRABLE, SYNTAQLITE_TOKEN_ELSE,       
+  SYNTAQLITE_TOKEN_EXCLUDE,    SYNTAQLITE_TOKEN_DELETE,     SYNTAQLITE_TOKEN_TEMP,       SYNTAQLITE_TOKEN_TEMP,       SYNTAQLITE_TOKEN_OR,         
+  SYNTAQLITE_TOKEN_ISNULL,     SYNTAQLITE_TOKEN_NULLS,      SYNTAQLITE_TOKEN_SAVEPOINT,  SYNTAQLITE_TOKEN_INTERSECT,  SYNTAQLITE_TOKEN_TIES,       
+  SYNTAQLITE_TOKEN_NOTNULL,    SYNTAQLITE_TOKEN_NOT,        SYNTAQLITE_TOKEN_NO,         SYNTAQLITE_TOKEN_NULL,       SYNTAQLITE_TOKEN_LIKE_KW,    
+  SYNTAQLITE_TOKEN_EXCEPT,     SYNTAQLITE_TOKEN_TRANSACTION,SYNTAQLITE_TOKEN_ACTION,     SYNTAQLITE_TOKEN_ON,         SYNTAQLITE_TOKEN_JOIN_KW,    
+  SYNTAQLITE_TOKEN_ALTER,      SYNTAQLITE_TOKEN_RAISE,      SYNTAQLITE_TOKEN_EXCLUSIVE,  SYNTAQLITE_TOKEN_EXISTS,     SYNTAQLITE_TOKEN_CONSTRAINT, 
+  SYNTAQLITE_TOKEN_INTO,       SYNTAQLITE_TOKEN_OFFSET,     SYNTAQLITE_TOKEN_OF,         SYNTAQLITE_TOKEN_SET,        SYNTAQLITE_TOKEN_TRIGGER,    
+  SYNTAQLITE_TOKEN_RANGE,      SYNTAQLITE_TOKEN_GENERATED,  SYNTAQLITE_TOKEN_DETACH,     SYNTAQLITE_TOKEN_HAVING,     SYNTAQLITE_TOKEN_LIKE_KW,    
+  SYNTAQLITE_TOKEN_BEGIN,      SYNTAQLITE_TOKEN_JOIN_KW,    SYNTAQLITE_TOKEN_REFERENCES, SYNTAQLITE_TOKEN_UNIQUE,     SYNTAQLITE_TOKEN_QUERY,      
+  SYNTAQLITE_TOKEN_WITHOUT,    SYNTAQLITE_TOKEN_WITH,       SYNTAQLITE_TOKEN_JOIN_KW,    SYNTAQLITE_TOKEN_RELEASE,    SYNTAQLITE_TOKEN_ATTACH,     
+  SYNTAQLITE_TOKEN_BETWEEN,    SYNTAQLITE_TOKEN_NOTHING,    SYNTAQLITE_TOKEN_GROUPS,     SYNTAQLITE_TOKEN_GROUP,      SYNTAQLITE_TOKEN_CASCADE,    
+  SYNTAQLITE_TOKEN_ASC,        SYNTAQLITE_TOKEN_DEFAULT,    SYNTAQLITE_TOKEN_CASE,       SYNTAQLITE_TOKEN_COLLATE,    SYNTAQLITE_TOKEN_CREATE,     
+  SYNTAQLITE_TOKEN_CTIME_KW,   SYNTAQLITE_TOKEN_IMMEDIATE,  SYNTAQLITE_TOKEN_JOIN,       SYNTAQLITE_TOKEN_INSERT,     SYNTAQLITE_TOKEN_MATCH,      
+  SYNTAQLITE_TOKEN_PLAN,       SYNTAQLITE_TOKEN_ANALYZE,    SYNTAQLITE_TOKEN_PRAGMA,     SYNTAQLITE_TOKEN_MATERIALIZED, SYNTAQLITE_TOKEN_DEFERRED,   
+  SYNTAQLITE_TOKEN_DISTINCT,   SYNTAQLITE_TOKEN_IS,         SYNTAQLITE_TOKEN_UPDATE,     SYNTAQLITE_TOKEN_VALUES,     SYNTAQLITE_TOKEN_VIRTUAL,    
+  SYNTAQLITE_TOKEN_ALWAYS,     SYNTAQLITE_TOKEN_WHEN,       SYNTAQLITE_TOKEN_WHERE,      SYNTAQLITE_TOKEN_RECURSIVE,  SYNTAQLITE_TOKEN_ABORT,      
+  SYNTAQLITE_TOKEN_AFTER,      SYNTAQLITE_TOKEN_RENAME,     SYNTAQLITE_TOKEN_AND,        SYNTAQLITE_TOKEN_DROP,       SYNTAQLITE_TOKEN_PARTITION,  
+  SYNTAQLITE_TOKEN_AUTOINCR,   SYNTAQLITE_TOKEN_TO,         SYNTAQLITE_TOKEN_IN,         SYNTAQLITE_TOKEN_CAST,       SYNTAQLITE_TOKEN_COLUMNKW,   
+  SYNTAQLITE_TOKEN_COMMIT,     SYNTAQLITE_TOKEN_CONFLICT,   SYNTAQLITE_TOKEN_JOIN_KW,    SYNTAQLITE_TOKEN_CTIME_KW,   SYNTAQLITE_TOKEN_CTIME_KW,   
+  SYNTAQLITE_TOKEN_CURRENT,    SYNTAQLITE_TOKEN_PRECEDING,  SYNTAQLITE_TOKEN_FAIL,       SYNTAQLITE_TOKEN_LAST,       SYNTAQLITE_TOKEN_FILTER,     
+  SYNTAQLITE_TOKEN_REPLACE,    SYNTAQLITE_TOKEN_FIRST,      SYNTAQLITE_TOKEN_FOLLOWING,  SYNTAQLITE_TOKEN_FROM,       SYNTAQLITE_TOKEN_JOIN_KW,    
+  SYNTAQLITE_TOKEN_LIMIT,      SYNTAQLITE_TOKEN_IF,         SYNTAQLITE_TOKEN_ORDER,      SYNTAQLITE_TOKEN_RESTRICT,   SYNTAQLITE_TOKEN_OTHERS,     
+  SYNTAQLITE_TOKEN_OVER,       SYNTAQLITE_TOKEN_RETURNING,  SYNTAQLITE_TOKEN_JOIN_KW,    SYNTAQLITE_TOKEN_ROLLBACK,   SYNTAQLITE_TOKEN_ROWS,       
+  SYNTAQLITE_TOKEN_ROW,        SYNTAQLITE_TOKEN_UNBOUNDED,  SYNTAQLITE_TOKEN_UNION,      SYNTAQLITE_TOKEN_USING,      SYNTAQLITE_TOKEN_VACUUM,     
+  SYNTAQLITE_TOKEN_VIEW,       SYNTAQLITE_TOKEN_WINDOW,     SYNTAQLITE_TOKEN_DO,         SYNTAQLITE_TOKEN_BY,         SYNTAQLITE_TOKEN_INITIALLY,  
+  SYNTAQLITE_TOKEN_ALL,        SYNTAQLITE_TOKEN_PRIMARY,    
 };
 /* Hash table decoded:
 **   0: INSERT
@@ -523,15 +523,15 @@ static int getToken(const unsigned char **pz){
   int t;                          /* Token type to return */
   do {
     z += synq_sqlite3GetToken(z, &t);
-  }while( t==TK_SPACE || t==TK_COMMENT );
-  if( t==TK_ID 
-   || t==TK_STRING 
-   || t==TK_JOIN_KW 
-   || t==TK_WINDOW 
-   || t==TK_OVER 
-   || synq_sqlite3ParserFallback(t)==TK_ID 
+  }while( t==SYNTAQLITE_TOKEN_SPACE || t==SYNTAQLITE_TOKEN_COMMENT );
+  if( t==SYNTAQLITE_TOKEN_ID 
+   || t==SYNTAQLITE_TOKEN_STRING 
+   || t==SYNTAQLITE_TOKEN_JOIN_KW 
+   || t==SYNTAQLITE_TOKEN_WINDOW 
+   || t==SYNTAQLITE_TOKEN_OVER 
+   || synq_sqlite3ParserFallback(t)==SYNTAQLITE_TOKEN_ID 
   ){
-    t = TK_ID;
+    t = SYNTAQLITE_TOKEN_ID;
   }
   *pz = z;
   return t;
@@ -570,23 +570,23 @@ static int getToken(const unsigned char **pz){
 int synq_sqlite3AnalyzeWindowKeyword(const unsigned char *z){
   int t;
   t = getToken(&z);
-  if( t!=TK_ID ) return TK_ID;
+  if( t!=SYNTAQLITE_TOKEN_ID ) return SYNTAQLITE_TOKEN_ID;
   t = getToken(&z);
-  if( t!=TK_AS ) return TK_ID;
-  return TK_WINDOW;
+  if( t!=SYNTAQLITE_TOKEN_AS ) return SYNTAQLITE_TOKEN_ID;
+  return SYNTAQLITE_TOKEN_WINDOW;
 }
 int synq_sqlite3AnalyzeOverKeyword(const unsigned char *z, int lastToken){
-  if( lastToken==TK_RP ){
+  if( lastToken==SYNTAQLITE_TOKEN_RP ){
     int t = getToken(&z);
-    if( t==TK_LP || t==TK_ID ) return TK_OVER;
+    if( t==SYNTAQLITE_TOKEN_LP || t==SYNTAQLITE_TOKEN_ID ) return SYNTAQLITE_TOKEN_OVER;
   }
-  return TK_ID;
+  return SYNTAQLITE_TOKEN_ID;
 }
 int synq_sqlite3AnalyzeFilterKeyword(const unsigned char *z, int lastToken){
-  if( lastToken==TK_RP && getToken(&z)==TK_LP ){
-    return TK_FILTER;
+  if( lastToken==SYNTAQLITE_TOKEN_RP && getToken(&z)==SYNTAQLITE_TOKEN_LP ){
+    return SYNTAQLITE_TOKEN_FILTER;
   }
-  return TK_ID;
+  return SYNTAQLITE_TOKEN_ID;
 }
 #endif /* SQLITE_OMIT_WINDOWFUNC */
 
@@ -602,114 +602,114 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
                           ** above. */
     case CC_SPACE: {
       for(i=1; synq_sqlite3Isspace(z[i]); i++){}
-      *tokenType = TK_SPACE;
+      *tokenType = SYNTAQLITE_TOKEN_SPACE;
       return i;
     }
     case CC_MINUS: {
       if( z[1]=='-' ){
         for(i=2; (c=z[i])!=0 && c!='\n'; i++){}
-        *tokenType = TK_COMMENT;
+        *tokenType = SYNTAQLITE_TOKEN_COMMENT;
         return i;
       }else if( z[1]=='>' ){
-        *tokenType = TK_PTR;
+        *tokenType = SYNTAQLITE_TOKEN_PTR;
         return 2 + (z[2]=='>');
       }
-      *tokenType = TK_MINUS;
+      *tokenType = SYNTAQLITE_TOKEN_MINUS;
       return 1;
     }
     case CC_LP: {
-      *tokenType = TK_LP;
+      *tokenType = SYNTAQLITE_TOKEN_LP;
       return 1;
     }
     case CC_RP: {
-      *tokenType = TK_RP;
+      *tokenType = SYNTAQLITE_TOKEN_RP;
       return 1;
     }
     case CC_SEMI: {
-      *tokenType = TK_SEMI;
+      *tokenType = SYNTAQLITE_TOKEN_SEMI;
       return 1;
     }
     case CC_PLUS: {
-      *tokenType = TK_PLUS;
+      *tokenType = SYNTAQLITE_TOKEN_PLUS;
       return 1;
     }
     case CC_STAR: {
-      *tokenType = TK_STAR;
+      *tokenType = SYNTAQLITE_TOKEN_STAR;
       return 1;
     }
     case CC_SLASH: {
       if( z[1]!='*' || z[2]==0 ){
-        *tokenType = TK_SLASH;
+        *tokenType = SYNTAQLITE_TOKEN_SLASH;
         return 1;
       }
       for(i=3, c=z[2]; (c!='*' || z[i]!='/') && (c=z[i])!=0; i++){}
       if( c ) i++;
-      *tokenType = TK_COMMENT;
+      *tokenType = SYNTAQLITE_TOKEN_COMMENT;
       return i;
     }
     case CC_PERCENT: {
-      *tokenType = TK_REM;
+      *tokenType = SYNTAQLITE_TOKEN_REM;
       return 1;
     }
     case CC_EQ: {
-      *tokenType = TK_EQ;
+      *tokenType = SYNTAQLITE_TOKEN_EQ;
       return 1 + (z[1]=='=');
     }
     case CC_LT: {
       if( (c=z[1])=='=' ){
-        *tokenType = TK_LE;
+        *tokenType = SYNTAQLITE_TOKEN_LE;
         return 2;
       }else if( c=='>' ){
-        *tokenType = TK_NE;
+        *tokenType = SYNTAQLITE_TOKEN_NE;
         return 2;
       }else if( c=='<' ){
-        *tokenType = TK_LSHIFT;
+        *tokenType = SYNTAQLITE_TOKEN_LSHIFT;
         return 2;
       }else{
-        *tokenType = TK_LT;
+        *tokenType = SYNTAQLITE_TOKEN_LT;
         return 1;
       }
     }
     case CC_GT: {
       if( (c=z[1])=='=' ){
-        *tokenType = TK_GE;
+        *tokenType = SYNTAQLITE_TOKEN_GE;
         return 2;
       }else if( c=='>' ){
-        *tokenType = TK_RSHIFT;
+        *tokenType = SYNTAQLITE_TOKEN_RSHIFT;
         return 2;
       }else{
-        *tokenType = TK_GT;
+        *tokenType = SYNTAQLITE_TOKEN_GT;
         return 1;
       }
     }
     case CC_BANG: {
       if( z[1]!='=' ){
-        *tokenType = TK_ILLEGAL;
+        *tokenType = SYNTAQLITE_TOKEN_ILLEGAL;
         return 1;
       }else{
-        *tokenType = TK_NE;
+        *tokenType = SYNTAQLITE_TOKEN_NE;
         return 2;
       }
     }
     case CC_PIPE: {
       if( z[1]!='|' ){
-        *tokenType = TK_BITOR;
+        *tokenType = SYNTAQLITE_TOKEN_BITOR;
         return 1;
       }else{
-        *tokenType = TK_CONCAT;
+        *tokenType = SYNTAQLITE_TOKEN_CONCAT;
         return 2;
       }
     }
     case CC_COMMA: {
-      *tokenType = TK_COMMA;
+      *tokenType = SYNTAQLITE_TOKEN_COMMA;
       return 1;
     }
     case CC_AND: {
-      *tokenType = TK_BITAND;
+      *tokenType = SYNTAQLITE_TOKEN_BITAND;
       return 1;
     }
     case CC_TILDA: {
-      *tokenType = TK_BITNOT;
+      *tokenType = SYNTAQLITE_TOKEN_BITNOT;
       return 1;
     }
     case CC_QUOTE: {
@@ -724,13 +724,13 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
         }
       }
       if( c=='\'' ){
-        *tokenType = TK_STRING;
+        *tokenType = SYNTAQLITE_TOKEN_STRING;
         return i+1;
       }else if( c!=0 ){
-        *tokenType = TK_ID;
+        *tokenType = SYNTAQLITE_TOKEN_ID;
         return i+1;
       }else{
-        *tokenType = TK_ILLEGAL;
+        *tokenType = SYNTAQLITE_TOKEN_ILLEGAL;
         return i;
       }
     }
@@ -739,7 +739,7 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
       if( !synq_sqlite3Isdigit(z[1]) )
 #endif
       {
-        *tokenType = TK_DOT;
+        *tokenType = SYNTAQLITE_TOKEN_DOT;
         return 1;
       }
       /* If the next character is a digit, this is a floating point
@@ -747,13 +747,13 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
       /* no break */ deliberate_fall_through
     }
     case CC_DIGIT: {
-      *tokenType = TK_INTEGER;
+      *tokenType = SYNTAQLITE_TOKEN_INTEGER;
 #ifndef SQLITE_OMIT_HEX_INTEGER
       if( z[0]=='0' && (z[1]=='x' || z[1]=='X') && synq_sqlite3Isxdigit(z[2]) ){
         for(i=3; 1; i++){
           if( synq_sqlite3Isxdigit(z[i])==0 ){
             if( z[i]==SQLITE_DIGIT_SEPARATOR ){
-              *tokenType = TK_QNUMBER;
+              *tokenType = SYNTAQLITE_TOKEN_QNUMBER;
             }else{
               break;
             }
@@ -765,7 +765,7 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
         for(i=0; 1; i++){
           if( synq_sqlite3Isdigit(z[i])==0 ){
             if( z[i]==SQLITE_DIGIT_SEPARATOR ){
-              *tokenType = TK_QNUMBER;
+              *tokenType = SYNTAQLITE_TOKEN_QNUMBER;
             }else{
               break;
             }
@@ -773,11 +773,11 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
         }
 #ifndef SQLITE_OMIT_FLOATING_POINT
         if( z[i]=='.' ){
-          if( *tokenType==TK_INTEGER ) *tokenType = TK_FLOAT;
+          if( *tokenType==SYNTAQLITE_TOKEN_INTEGER ) *tokenType = SYNTAQLITE_TOKEN_FLOAT;
           for(i++; 1; i++){
             if( synq_sqlite3Isdigit(z[i])==0 ){
               if( z[i]==SQLITE_DIGIT_SEPARATOR ){
-                *tokenType = TK_QNUMBER;
+                *tokenType = SYNTAQLITE_TOKEN_QNUMBER;
               }else{
                 break;
               }
@@ -789,11 +789,11 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
               || ((z[i+1]=='+' || z[i+1]=='-') && synq_sqlite3Isdigit(z[i+2]))
              )
         ){
-          if( *tokenType==TK_INTEGER ) *tokenType = TK_FLOAT;
+          if( *tokenType==SYNTAQLITE_TOKEN_INTEGER ) *tokenType = SYNTAQLITE_TOKEN_FLOAT;
           for(i+=2; 1; i++){
             if( synq_sqlite3Isdigit(z[i])==0 ){
               if( z[i]==SQLITE_DIGIT_SEPARATOR ){
-                *tokenType = TK_QNUMBER;
+                *tokenType = SYNTAQLITE_TOKEN_QNUMBER;
               }else{
                 break;
               }
@@ -803,25 +803,25 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
 #endif
       }
       while( IdChar(z[i]) ){
-        *tokenType = TK_ILLEGAL;
+        *tokenType = SYNTAQLITE_TOKEN_ILLEGAL;
         i++;
       }
       return i;
     }
     case CC_QUOTE2: {
       for(i=1, c=z[0]; c!=']' && (c=z[i])!=0; i++){}
-      *tokenType = c==']' ? TK_ID : TK_ILLEGAL;
+      *tokenType = c==']' ? SYNTAQLITE_TOKEN_ID : SYNTAQLITE_TOKEN_ILLEGAL;
       return i;
     }
     case CC_VARNUM: {
-      *tokenType = TK_VARIABLE;
+      *tokenType = SYNTAQLITE_TOKEN_VARIABLE;
       for(i=1; synq_sqlite3Isdigit(z[i]); i++){}
       return i;
     }
     case CC_DOLLAR:
     case CC_VARALPHA: {
       int n = 0;
-      *tokenType = TK_VARIABLE;
+      *tokenType = SYNTAQLITE_TOKEN_VARIABLE;
       for(i=1; (c=z[i])!=0; i++){
         if( IdChar(c) ){
           n++;
@@ -833,7 +833,7 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
           if( c==')' ){
             i++;
           }else{
-            *tokenType = TK_ILLEGAL;
+            *tokenType = SYNTAQLITE_TOKEN_ILLEGAL;
           }
           break;
         }else if( c==':' && z[i+1]==':' ){
@@ -843,7 +843,7 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
           break;
         }
       }
-      if( n==0 ) *tokenType = TK_ILLEGAL;
+      if( n==0 ) *tokenType = SYNTAQLITE_TOKEN_ILLEGAL;
       return i;
     }
     case CC_KYWD0: {
@@ -856,16 +856,16 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
         i++;
         break;
       }
-      *tokenType = TK_ID;
+      *tokenType = SYNTAQLITE_TOKEN_ID;
       return synq_keywordCode((char*)z, i, tokenType);
     }
     case CC_X: {
 #ifndef SQLITE_OMIT_BLOB_LITERAL
       if( z[1]=='\'' ){
-        *tokenType = TK_BLOB;
+        *tokenType = SYNTAQLITE_TOKEN_BLOB;
         for(i=2; synq_sqlite3Isxdigit(z[i]); i++){}
         if( z[i]!='\'' || i%2 ){
-          *tokenType = TK_ILLEGAL;
+          *tokenType = SYNTAQLITE_TOKEN_ILLEGAL;
           while( z[i] && z[i]!='\'' ){ i++; }
         }
         if( z[i] ) i++;
@@ -883,22 +883,22 @@ i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
     }
     case CC_BOM: {
       if( z[1]==0xbb && z[2]==0xbf ){
-        *tokenType = TK_SPACE;
+        *tokenType = SYNTAQLITE_TOKEN_SPACE;
         return 3;
       }
       i = 1;
       break;
     }
     case CC_NUL: {
-      *tokenType = TK_ILLEGAL;
+      *tokenType = SYNTAQLITE_TOKEN_ILLEGAL;
       return 0;
     }
     default: {
-      *tokenType = TK_ILLEGAL;
+      *tokenType = SYNTAQLITE_TOKEN_ILLEGAL;
       return 1;
     }
   }
   while( IdChar(z[i]) ){ i++; }
-  *tokenType = TK_ID;
+  *tokenType = SYNTAQLITE_TOKEN_ID;
   return i;
 }

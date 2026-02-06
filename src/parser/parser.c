@@ -89,7 +89,7 @@ void syntaqlite_parser_reset(SyntaqliteParser *p, const char *source,
 
     // Reset parse context per-statement state
     p->parseCtx.zSql = source;
-    p->parseCtx.root = SYNQ_NULL_NODE;
+    p->parseCtx.root = SYNTAQLITE_NULL_NODE;
     p->parseCtx.stmt_completed = 0;
 
     // Re-initialize Lemon parser (reuse allocation)
@@ -97,7 +97,7 @@ void syntaqlite_parser_reset(SyntaqliteParser *p, const char *source,
 }
 
 SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
-    SyntaqliteParseResult result = {SYNQ_NULL_NODE, 0, NULL};
+    SyntaqliteParseResult result = {SYNTAQLITE_NULL_NODE, 0, NULL};
 
     if (p->finished || p->had_error) {
         result.error = p->had_error;
@@ -107,7 +107,7 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
 
     // Reset statement state
     p->parseCtx.stmt_completed = 0;
-    p->parseCtx.root = SYNQ_NULL_NODE;
+    p->parseCtx.root = SYNTAQLITE_NULL_NODE;
 
     const unsigned char *z = (const unsigned char *)p->source;
 
@@ -123,7 +123,7 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
         }
 
         // Skip whitespace and comments for parser
-        if (tokenType == TK_SPACE || tokenType == TK_COMMENT) {
+        if (tokenType == SYNTAQLITE_TOKEN_SPACE || tokenType == SYNTAQLITE_TOKEN_COMMENT) {
             p->pos += (uint32_t)tokenLen;
             continue;
         }
@@ -153,19 +153,19 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
         if (p->parseCtx.stmt_completed) {
             p->parseCtx.stmt_completed = 0;
             uint32_t root = p->parseCtx.root;
-            if (root != SYNQ_NULL_NODE) {
+            if (root != SYNTAQLITE_NULL_NODE) {
                 result.root = root;
                 return result;
             }
             // Bare semicolon — skip and continue
-            p->parseCtx.root = SYNQ_NULL_NODE;
+            p->parseCtx.root = SYNTAQLITE_NULL_NODE;
         }
     }
 
     // Reached end of input. Synthesize SEMI if last token wasn't one.
-    if (p->last_token_type != 0 && p->last_token_type != TK_SEMI) {
-        SynqToken semiToken = {NULL, 0, TK_SEMI};
-        synq_sqlite3Parser(p->lemon, TK_SEMI, semiToken);
+    if (p->last_token_type != 0 && p->last_token_type != SYNTAQLITE_TOKEN_SEMI) {
+        SynqToken semiToken = {NULL, 0, SYNTAQLITE_TOKEN_SEMI};
+        synq_sqlite3Parser(p->lemon, SYNTAQLITE_TOKEN_SEMI, semiToken);
 
         if (p->had_error) {
             if (p->error_msg[0] == '\0') {
@@ -177,7 +177,7 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
             return result;
         }
 
-        if (p->parseCtx.stmt_completed && p->parseCtx.root != SYNQ_NULL_NODE) {
+        if (p->parseCtx.stmt_completed && p->parseCtx.root != SYNTAQLITE_NULL_NODE) {
             result.root = p->parseCtx.root;
             p->finished = 1;
             return result;
@@ -200,14 +200,14 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
     }
 
     // Check if the final reduction produced a root
-    if (p->parseCtx.root != SYNQ_NULL_NODE) {
+    if (p->parseCtx.root != SYNTAQLITE_NULL_NODE) {
         result.root = p->parseCtx.root;
     }
 
     return result;
 }
 
-const SynqNode *syntaqlite_parser_node(SyntaqliteParser *p, uint32_t node_id) {
+const SyntaqliteNode *syntaqlite_parser_node(SyntaqliteParser *p, uint32_t node_id) {
     return synq_ast_node(&p->astCtx.ast, node_id);
 }
 

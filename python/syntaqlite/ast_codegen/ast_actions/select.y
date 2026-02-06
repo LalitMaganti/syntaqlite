@@ -27,23 +27,23 @@ selectnowith(A) ::= oneselect(B). {
 }
 
 oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_opt(F) having_opt(G) orderby_opt(H) limit_opt(I). {
-    A = synq_ast_select_stmt(pCtx->astCtx, (SynqSelectStmtFlags){.raw = (uint8_t)B}, C, D, E, F, G, H, I, SYNQ_NULL_NODE);
+    A = synq_ast_select_stmt(pCtx->astCtx, (SyntaqliteSelectStmtFlags){.raw = (uint8_t)B}, C, D, E, F, G, H, I, SYNTAQLITE_NULL_NODE);
 }
 
 oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_opt(F) having_opt(G) window_clause(R) orderby_opt(H) limit_opt(I). {
-    A = synq_ast_select_stmt(pCtx->astCtx, (SynqSelectStmtFlags){.raw = (uint8_t)B}, C, D, E, F, G, H, I, R);
+    A = synq_ast_select_stmt(pCtx->astCtx, (SyntaqliteSelectStmtFlags){.raw = (uint8_t)B}, C, D, E, F, G, H, I, R);
 }
 
 // ============ Result columns ============
 
 selcollist(A) ::= sclp(B) scanpt expr(C) scanpt as(D). {
-    SynqSourceSpan alias = (D.z) ? synq_span(pCtx, D) : SYNQ_NO_SPAN;
-    uint32_t col = synq_ast_result_column(pCtx->astCtx, (SynqResultColumnFlags){0}, alias, C);
+    SyntaqliteSourceSpan alias = (D.z) ? synq_span(pCtx, D) : SYNQ_NO_SPAN;
+    uint32_t col = synq_ast_result_column(pCtx->astCtx, (SyntaqliteResultColumnFlags){0}, alias, C);
     A = synq_ast_result_column_list_append(pCtx->astCtx, B, col);
 }
 
 selcollist(A) ::= sclp(B) scanpt STAR. {
-    uint32_t col = synq_ast_result_column(pCtx->astCtx, (SynqResultColumnFlags){.star = 1}, SYNQ_NO_SPAN, SYNQ_NULL_NODE);
+    uint32_t col = synq_ast_result_column(pCtx->astCtx, (SyntaqliteResultColumnFlags){.star = 1}, SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE);
     A = synq_ast_result_column_list_append(pCtx->astCtx, B, col);
 }
 
@@ -52,7 +52,7 @@ sclp(A) ::= selcollist(B) COMMA. {
 }
 
 sclp(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 // scanpt captures position - not needed for AST
@@ -90,7 +90,7 @@ distinct(A) ::= . {
 // ============ FROM clause ============
 
 from(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 from(A) ::= FROM seltablist(B). {
@@ -100,7 +100,7 @@ from(A) ::= FROM seltablist(B). {
 // ============ WHERE/GROUP BY/HAVING/ORDER BY/LIMIT stubs ============
 
 where_opt(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 where_opt(A) ::= WHERE expr(B). {
@@ -108,7 +108,7 @@ where_opt(A) ::= WHERE expr(B). {
 }
 
 groupby_opt(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 groupby_opt(A) ::= GROUP BY nexprlist(B). {
@@ -116,7 +116,7 @@ groupby_opt(A) ::= GROUP BY nexprlist(B). {
 }
 
 having_opt(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 having_opt(A) ::= HAVING expr(B). {
@@ -124,7 +124,7 @@ having_opt(A) ::= HAVING expr(B). {
 }
 
 orderby_opt(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 orderby_opt(A) ::= ORDER BY sortlist(B). {
@@ -132,11 +132,11 @@ orderby_opt(A) ::= ORDER BY sortlist(B). {
 }
 
 limit_opt(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 limit_opt(A) ::= LIMIT expr(B). {
-    A = synq_ast_limit_clause(pCtx->astCtx, B, SYNQ_NULL_NODE);
+    A = synq_ast_limit_clause(pCtx->astCtx, B, SYNTAQLITE_NULL_NODE);
 }
 
 limit_opt(A) ::= LIMIT expr(B) OFFSET expr(C). {

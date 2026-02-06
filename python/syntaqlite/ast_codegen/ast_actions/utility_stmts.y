@@ -18,33 +18,33 @@
 // We swap so pragma_name always has the pragma name, schema always has the schema.
 
 cmd(A) ::= PRAGMA nm(X) dbnm(Z). {
-    SynqSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
-    SynqSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
-    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, SYNQ_NO_SPAN, SYNQ_PRAGMA_FORM_BARE);
+    SyntaqliteSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
+    SyntaqliteSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, SYNQ_NO_SPAN, SYNTAQLITE_PRAGMA_FORM_BARE);
 }
 
 cmd(A) ::= PRAGMA nm(X) dbnm(Z) EQ nmnum(Y). {
-    SynqSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
-    SynqSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
-    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, synq_span(pCtx, Y), SYNQ_PRAGMA_FORM_EQ);
+    SyntaqliteSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
+    SyntaqliteSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, synq_span(pCtx, Y), SYNTAQLITE_PRAGMA_FORM_EQ);
 }
 
 cmd(A) ::= PRAGMA nm(X) dbnm(Z) LP nmnum(Y) RP. {
-    SynqSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
-    SynqSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
-    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, synq_span(pCtx, Y), SYNQ_PRAGMA_FORM_CALL);
+    SyntaqliteSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
+    SyntaqliteSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, synq_span(pCtx, Y), SYNTAQLITE_PRAGMA_FORM_CALL);
 }
 
 cmd(A) ::= PRAGMA nm(X) dbnm(Z) EQ minus_num(Y). {
-    SynqSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
-    SynqSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
-    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, synq_span(pCtx, Y), SYNQ_PRAGMA_FORM_EQ);
+    SyntaqliteSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
+    SyntaqliteSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, synq_span(pCtx, Y), SYNTAQLITE_PRAGMA_FORM_EQ);
 }
 
 cmd(A) ::= PRAGMA nm(X) dbnm(Z) LP minus_num(Y) RP. {
-    SynqSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
-    SynqSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
-    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, synq_span(pCtx, Y), SYNQ_PRAGMA_FORM_CALL);
+    SyntaqliteSourceSpan name_span = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, X);
+    SyntaqliteSourceSpan schema_span = Z.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    A = synq_ast_pragma_stmt(pCtx->astCtx, name_span, schema_span, synq_span(pCtx, Y), SYNTAQLITE_PRAGMA_FORM_CALL);
 }
 
 // ============ NMNUM / PLUS_NUM / MINUS_NUM / SIGNED ============
@@ -98,13 +98,13 @@ cmd(A) ::= ANALYZE. {
     A = synq_ast_analyze_stmt(pCtx->astCtx,
         SYNQ_NO_SPAN,
         SYNQ_NO_SPAN,
-        SYNQ_ANALYZE_KIND_ANALYZE);
+        SYNTAQLITE_ANALYZE_KIND_ANALYZE);
 }
 
 cmd(A) ::= ANALYZE nm(X) dbnm(Y). {
-    SynqSourceSpan name_span = Y.z ? synq_span(pCtx, Y) : synq_span(pCtx, X);
-    SynqSourceSpan schema_span = Y.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
-    A = synq_ast_analyze_stmt(pCtx->astCtx, name_span, schema_span, SYNQ_ANALYZE_KIND_ANALYZE);
+    SyntaqliteSourceSpan name_span = Y.z ? synq_span(pCtx, Y) : synq_span(pCtx, X);
+    SyntaqliteSourceSpan schema_span = Y.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    A = synq_ast_analyze_stmt(pCtx->astCtx, name_span, schema_span, SYNTAQLITE_ANALYZE_KIND_ANALYZE);
 }
 
 // ============ REINDEX ============
@@ -113,12 +113,12 @@ cmd(A) ::= REINDEX. {
     A = synq_ast_analyze_stmt(pCtx->astCtx,
         SYNQ_NO_SPAN,
         SYNQ_NO_SPAN,
-        SYNQ_ANALYZE_KIND_REINDEX);
+        SYNTAQLITE_ANALYZE_KIND_REINDEX);
 }
 
 cmd(A) ::= REINDEX nm(X) dbnm(Y). {
-    SynqSourceSpan name_span = Y.z ? synq_span(pCtx, Y) : synq_span(pCtx, X);
-    SynqSourceSpan schema_span = Y.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    SyntaqliteSourceSpan name_span = Y.z ? synq_span(pCtx, Y) : synq_span(pCtx, X);
+    SyntaqliteSourceSpan schema_span = Y.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
     A = synq_ast_analyze_stmt(pCtx->astCtx, name_span, schema_span, 1);
 }
 
@@ -141,7 +141,7 @@ database_kw_opt ::= . {
 }
 
 key_opt(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 key_opt(A) ::= KEY expr(X). {
@@ -167,13 +167,13 @@ vinto(A) ::= INTO expr(X). {
 }
 
 vinto(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 // ============ EXPLAIN ============
 
 ecmd(A) ::= explain(E) cmdx(B) SEMI. {
-    A = synq_ast_explain_stmt(pCtx->astCtx, (SynqExplainMode)(E - 1), B);
+    A = synq_ast_explain_stmt(pCtx->astCtx, (SyntaqliteExplainMode)(E - 1), B);
     pCtx->root = A;
     synq_ast_list_flush(pCtx->astCtx);
     pCtx->stmt_completed = 1;
@@ -190,14 +190,14 @@ explain(A) ::= EXPLAIN QUERY PLAN. {
 // ============ CREATE INDEX ============
 
 cmd(A) ::= createkw uniqueflag(U) INDEX ifnotexists(NE) nm(X) dbnm(D) ON nm(Y) LP sortlist(Z) RP where_opt(W). {
-    SynqSourceSpan idx_name = D.z ? synq_span(pCtx, D) : synq_span(pCtx, X);
-    SynqSourceSpan idx_schema = D.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    SyntaqliteSourceSpan idx_name = D.z ? synq_span(pCtx, D) : synq_span(pCtx, X);
+    SyntaqliteSourceSpan idx_schema = D.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
     A = synq_ast_create_index_stmt(pCtx->astCtx,
         idx_name,
         idx_schema,
         synq_span(pCtx, Y),
-        (SynqBool)U,
-        (SynqBool)NE,
+        (SyntaqliteBool)U,
+        (SyntaqliteBool)NE,
         Z,
         W);
 }
@@ -221,13 +221,13 @@ ifnotexists(A) ::= IF NOT EXISTS. {
 // ============ CREATE VIEW ============
 
 cmd(A) ::= createkw temp(T) VIEW ifnotexists(E) nm(Y) dbnm(Z) eidlist_opt(C) AS select(S). {
-    SynqSourceSpan view_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, Y);
-    SynqSourceSpan view_schema = Z.z ? synq_span(pCtx, Y) : SYNQ_NO_SPAN;
+    SyntaqliteSourceSpan view_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, Y);
+    SyntaqliteSourceSpan view_schema = Z.z ? synq_span(pCtx, Y) : SYNQ_NO_SPAN;
     A = synq_ast_create_view_stmt(pCtx->astCtx,
         view_name,
         view_schema,
-        (SynqBool)T,
-        (SynqBool)E,
+        (SyntaqliteBool)T,
+        (SyntaqliteBool)E,
         C,
         S);
 }

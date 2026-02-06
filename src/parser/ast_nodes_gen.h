@@ -239,9 +239,9 @@ static const char* const synq_trigger_event_type_names[] = {
 };
 
 // Access node by ID
-inline SynqNode* synq_ast_node(SynqArena *ast, uint32_t id) {
-    if (id == SYNQ_NULL_NODE) return NULL;
-    return (SynqNode*)(ast->data + ast->offsets[id]);
+inline SyntaqliteNode* synq_ast_node(SynqArena *ast, uint32_t id) {
+    if (id == SYNTAQLITE_NULL_NODE) return NULL;
+    return (SyntaqliteNode*)(ast->data + ast->offsets[id]);
 }
 
 #define AST_NODE(ast, id) synq_ast_node(ast, id)

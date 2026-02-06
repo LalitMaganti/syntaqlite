@@ -15,28 +15,28 @@
 // ============ IS / ISNULL / NOTNULL ============
 
 expr(A) ::= expr(B) ISNULL|NOTNULL(E). {
-    SynqIsOp op = (E.type == TK_ISNULL) ? SYNQ_IS_OP_ISNULL : SYNQ_IS_OP_NOTNULL;
-    A = synq_ast_is_expr(pCtx->astCtx, op, B, SYNQ_NULL_NODE);
+    SyntaqliteIsOp op = (E.type == SYNTAQLITE_TOKEN_ISNULL) ? SYNTAQLITE_IS_OP_ISNULL : SYNTAQLITE_IS_OP_NOTNULL;
+    A = synq_ast_is_expr(pCtx->astCtx, op, B, SYNTAQLITE_NULL_NODE);
 }
 
 expr(A) ::= expr(B) NOT NULL. {
-    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_NOTNULL, B, SYNQ_NULL_NODE);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_NOTNULL, B, SYNTAQLITE_NULL_NODE);
 }
 
 expr(A) ::= expr(B) IS expr(C). {
-    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_IS, B, C);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_IS, B, C);
 }
 
 expr(A) ::= expr(B) IS NOT expr(C). {
-    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_IS_NOT, B, C);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_IS_NOT, B, C);
 }
 
 expr(A) ::= expr(B) IS NOT DISTINCT FROM expr(C). {
-    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_IS_NOT_DISTINCT, B, C);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_IS_NOT_DISTINCT, B, C);
 }
 
 expr(A) ::= expr(B) IS DISTINCT FROM expr(C). {
-    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_IS_DISTINCT, B, C);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_IS_DISTINCT, B, C);
 }
 
 // ============ BETWEEN ============
@@ -50,7 +50,7 @@ between_op(A) ::= NOT BETWEEN. {
 }
 
 expr(A) ::= expr(B) between_op(C) expr(D) AND expr(E). [BETWEEN] {
-    A = synq_ast_between_expr(pCtx->astCtx, (SynqBool)C, B, D, E);
+    A = synq_ast_between_expr(pCtx->astCtx, (SyntaqliteBool)C, B, D, E);
 }
 
 // ============ LIKE / GLOB / MATCH ============
@@ -65,12 +65,12 @@ likeop(A) ::= NOT LIKE_KW|MATCH(B). {
 }
 
 expr(A) ::= expr(B) likeop(C) expr(D). [LIKE_KW] {
-    SynqBool negated = (C.n & 0x80000000) ? SYNQ_BOOL_TRUE : SYNQ_BOOL_FALSE;
-    A = synq_ast_like_expr(pCtx->astCtx, negated, B, D, SYNQ_NULL_NODE);
+    SyntaqliteBool negated = (C.n & 0x80000000) ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
+    A = synq_ast_like_expr(pCtx->astCtx, negated, B, D, SYNTAQLITE_NULL_NODE);
 }
 
 expr(A) ::= expr(B) likeop(C) expr(D) ESCAPE expr(E). [LIKE_KW] {
-    SynqBool negated = (C.n & 0x80000000) ? SYNQ_BOOL_TRUE : SYNQ_BOOL_FALSE;
+    SyntaqliteBool negated = (C.n & 0x80000000) ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
     A = synq_ast_like_expr(pCtx->astCtx, negated, B, D, E);
 }
 
@@ -95,7 +95,7 @@ case_else(A) ::= ELSE expr(B). {
 }
 
 case_else(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 case_operand(A) ::= expr(B). {
@@ -103,5 +103,5 @@ case_operand(A) ::= expr(B). {
 }
 
 case_operand(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }

@@ -22,10 +22,10 @@ cmd(A) ::= create_vtab(X). {
 // With arguments in parentheses
 cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
     // Capture module arguments span (content between parens)
-    SynqNode *vtab = AST_NODE(&pCtx->astCtx->ast, X);
+    SyntaqliteNode *vtab = AST_NODE(&pCtx->astCtx->ast, X);
     const char *args_start = L.z + L.n;
     const char *args_end = R.z;
-    vtab->create_virtual_table_stmt.module_args = (SynqSourceSpan){
+    vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
         (uint32_t)(args_start - pCtx->zSql),
         (uint16_t)(args_end - args_start)
     };
@@ -34,13 +34,13 @@ cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
 
 // create_vtab builds the node with table name, schema, module name
 create_vtab(A) ::= createkw VIRTUAL TABLE ifnotexists(E) nm(X) dbnm(Y) USING nm(Z). {
-    SynqSourceSpan tbl_name = Y.z ? synq_span(pCtx, Y) : synq_span(pCtx, X);
-    SynqSourceSpan tbl_schema = Y.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    SyntaqliteSourceSpan tbl_name = Y.z ? synq_span(pCtx, Y) : synq_span(pCtx, X);
+    SyntaqliteSourceSpan tbl_schema = Y.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
     A = synq_ast_create_virtual_table_stmt(pCtx->astCtx,
         tbl_name,
         tbl_schema,
         synq_span(pCtx, Z),
-        (SynqBool)E,
+        (SyntaqliteBool)E,
         SYNQ_NO_SPAN);  // module_args = none by default
 }
 

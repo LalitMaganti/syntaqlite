@@ -34,7 +34,7 @@ NODES = [
 
     # SET clause assignment: column = expr (or (col1, col2) = expr)
     Node("SetClause",
-        column=inline("SynqSourceSpan"),
+        column=inline("SyntaqliteSourceSpan"),
         columns=index("ExprList"),
         value=index("Expr"),
         fmt=seq(

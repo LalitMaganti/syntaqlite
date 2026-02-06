@@ -313,9 +313,14 @@ def build_synq_grammar(
     """Build a syntaqlite grammar from SQLite's parse.y using lemon -g.
 
     This function:
-    1. Runs lemon -g to get clean rules and symbol table
-    2. Extracts fallback/precedence from original grammar
-    3. Generates a new grammar file with our customizations
+    1. Runs lemon -g on the base grammar to get stable base terminal ordering
+    2. If extensions exist, runs lemon -g on combined grammar to get extension
+       terminals and combined rules
+    3. Extracts fallback/precedence from original grammar
+    4. Generates a new grammar file with our customizations
+
+    Extension tokens are always assigned IDs after all base tokens, so adding
+    an extension never shifts base token numbers.
 
     Args:
         runner: ToolRunner instance for running tools.
@@ -330,31 +335,46 @@ def build_synq_grammar(
     # Get SQLite's base grammar
     base_grammar = runner.get_base_grammar()
 
-    # If we have an extension grammar, merge it with the base
-    # Directives (like %token) go first for proper token ordering
-    # Rules go last so they can reference base grammar nonterminals
+    # Always run lemon -g on the base grammar first to get stable base terminals
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        grammar_path = tmpdir_path / "parse.y"
+        grammar_path.write_text(base_grammar)
+        base_lemon_output = runner.run_lemon_grammar_only(grammar_path)
+
+    base_parsed = parse_lemon_g_output(base_lemon_output)
+    base_terminals = base_parsed.terminals
+
     if extension_grammar:
         ext_directives, ext_rules = split_extension_grammar(extension_grammar)
         combined_grammar = ext_directives + "\n" + base_grammar
         if ext_rules:
             combined_grammar += "\n" + ext_rules
+
+        # Run lemon -g on combined grammar for rules and combined terminal list
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            grammar_path = tmpdir_path / "parse.y"
+            grammar_path.write_text(combined_grammar)
+            combined_lemon_output = runner.run_lemon_grammar_only(grammar_path)
+
+        combined_parsed = parse_lemon_g_output(combined_lemon_output)
+
+        # Extension terminals = terminals in combined but not in base
+        base_set = set(base_terminals)
+        extension_terminals = [t for t in combined_parsed.terminals if t not in base_set]
+
+        # Use base ordering + extension terminals appended, combined rules
+        terminals = base_terminals
+        rules = combined_parsed.rules
     else:
         combined_grammar = base_grammar
-
-    # Write grammar to temp file and run lemon -g
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
-        grammar_path = tmpdir_path / "parse.y"
-        grammar_path.write_text(combined_grammar)
-
-        # Get clean grammar output
-        lemon_output = runner.run_lemon_grammar_only(grammar_path)
-
-    # Parse the lemon -g output
-    parsed = parse_lemon_g_output(lemon_output)
+        extension_terminals = []
+        terminals = base_terminals
+        rules = base_parsed.rules
 
     # Extract fallback, precedence, and wildcard from original grammar
-    valid_tokens = set(parsed.terminals)
+    valid_tokens = set(terminals) | set(extension_terminals)
     fallback_id, fallback_tokens = extract_fallback_from_grammar(combined_grammar, valid_tokens)
     precedence_rules = extract_precedence_from_grammar(combined_grammar)
     wildcard = extract_wildcard_from_grammar(combined_grammar)
@@ -362,12 +382,13 @@ def build_synq_grammar(
     # Generate the grammar file
     return _generate_grammar_file(
         prefix=prefix,
-        terminals=parsed.terminals,
-        rules=parsed.rules,
+        terminals=terminals,
+        rules=rules,
         fallback_id=fallback_id,
         fallback_tokens=fallback_tokens,
         precedence_rules=precedence_rules,
         wildcard=wildcard,
+        extension_terminals=extension_terminals,
     )
 
 
@@ -379,17 +400,20 @@ def _generate_grammar_file(
     fallback_tokens: list[str],
     precedence_rules: list[str],
     wildcard: str | None = None,
+    extension_terminals: list[str] | None = None,
 ) -> str:
     """Generate the grammar file content.
 
     Args:
         prefix: Symbol prefix.
-        terminals: List of terminal (token) names.
+        terminals: List of base terminal (token) names.
         rules: List of grammar rules.
         fallback_id: Fallback target token (e.g., "ID").
         fallback_tokens: List of tokens that fall back.
         precedence_rules: List of precedence rules.
         wildcard: Optional wildcard token name.
+        extension_terminals: Optional list of extension terminal names.
+            These are emitted after base terminals to ensure stable numbering.
 
     Returns:
         Generated grammar file content.
@@ -406,7 +430,7 @@ def _generate_grammar_file(
 
     # Parser name and token prefix first
     parts.append(f"""%name {sqlite3_prefix}Parser
-%token_prefix TK_
+%token_prefix SYNTAQLITE_TOKEN_
 %start_symbol input
 
 """)
@@ -534,11 +558,21 @@ def _generate_grammar_file(
     declarable_tokens = [t for t in terminals if t not in skip_tokens]
 
     if declarable_tokens:
-        parts.append("// Token declarations\n")
+        parts.append("// Base token declarations\n")
         for i in range(0, len(declarable_tokens), 10):
             chunk = declarable_tokens[i:i + 10]
             parts.append(f"%token {' '.join(chunk)}.\n")
         parts.append("\n")
+
+    # Extension token declarations (always after base tokens for stable numbering)
+    if extension_terminals:
+        ext_declarable = [t for t in extension_terminals if t not in skip_tokens]
+        if ext_declarable:
+            parts.append("// Extension token declarations\n")
+            for i in range(0, len(ext_declarable), 10):
+                chunk = ext_declarable[i:i + 10]
+                parts.append(f"%token {' '.join(chunk)}.\n")
+            parts.append("\n")
 
     # Precedence rules (before fallback, per Perfetto's example)
     if precedence_rules:

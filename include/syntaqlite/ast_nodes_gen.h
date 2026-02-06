@@ -14,408 +14,401 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "syntaqlite/ast_defs.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Null node ID (used for nullable fields)
-#define SYNQ_NULL_NODE 0xFFFFFFFFu
-
-// Source location span (offset + length into source text)
-typedef struct SynqSourceSpan {
-    uint32_t offset;
-    uint16_t length;
-} SynqSourceSpan;
-
 // ============ Value Enums ============
 
 typedef enum {
-    SYNQ_BOOL_FALSE = 0,
-    SYNQ_BOOL_TRUE = 1,
-} SynqBool;
+    SYNTAQLITE_BOOL_FALSE = 0,
+    SYNTAQLITE_BOOL_TRUE = 1,
+} SyntaqliteBool;
 
 typedef enum {
-    SYNQ_LITERAL_TYPE_INTEGER = 0,
-    SYNQ_LITERAL_TYPE_FLOAT = 1,
-    SYNQ_LITERAL_TYPE_STRING = 2,
-    SYNQ_LITERAL_TYPE_BLOB = 3,
-    SYNQ_LITERAL_TYPE_NULL = 4,
-    SYNQ_LITERAL_TYPE_CURRENT = 5,
-    SYNQ_LITERAL_TYPE_QNUMBER = 6,
-} SynqLiteralType;
+    SYNTAQLITE_LITERAL_TYPE_INTEGER = 0,
+    SYNTAQLITE_LITERAL_TYPE_FLOAT = 1,
+    SYNTAQLITE_LITERAL_TYPE_STRING = 2,
+    SYNTAQLITE_LITERAL_TYPE_BLOB = 3,
+    SYNTAQLITE_LITERAL_TYPE_NULL = 4,
+    SYNTAQLITE_LITERAL_TYPE_CURRENT = 5,
+    SYNTAQLITE_LITERAL_TYPE_QNUMBER = 6,
+} SyntaqliteLiteralType;
 
 typedef enum {
-    SYNQ_BINARY_OP_PLUS = 0,
-    SYNQ_BINARY_OP_MINUS = 1,
-    SYNQ_BINARY_OP_STAR = 2,
-    SYNQ_BINARY_OP_SLASH = 3,
-    SYNQ_BINARY_OP_REM = 4,
-    SYNQ_BINARY_OP_LT = 5,
-    SYNQ_BINARY_OP_GT = 6,
-    SYNQ_BINARY_OP_LE = 7,
-    SYNQ_BINARY_OP_GE = 8,
-    SYNQ_BINARY_OP_EQ = 9,
-    SYNQ_BINARY_OP_NE = 10,
-    SYNQ_BINARY_OP_AND = 11,
-    SYNQ_BINARY_OP_OR = 12,
-    SYNQ_BINARY_OP_BITAND = 13,
-    SYNQ_BINARY_OP_BITOR = 14,
-    SYNQ_BINARY_OP_LSHIFT = 15,
-    SYNQ_BINARY_OP_RSHIFT = 16,
-    SYNQ_BINARY_OP_CONCAT = 17,
-    SYNQ_BINARY_OP_PTR = 18,
-} SynqBinaryOp;
+    SYNTAQLITE_BINARY_OP_PLUS = 0,
+    SYNTAQLITE_BINARY_OP_MINUS = 1,
+    SYNTAQLITE_BINARY_OP_STAR = 2,
+    SYNTAQLITE_BINARY_OP_SLASH = 3,
+    SYNTAQLITE_BINARY_OP_REM = 4,
+    SYNTAQLITE_BINARY_OP_LT = 5,
+    SYNTAQLITE_BINARY_OP_GT = 6,
+    SYNTAQLITE_BINARY_OP_LE = 7,
+    SYNTAQLITE_BINARY_OP_GE = 8,
+    SYNTAQLITE_BINARY_OP_EQ = 9,
+    SYNTAQLITE_BINARY_OP_NE = 10,
+    SYNTAQLITE_BINARY_OP_AND = 11,
+    SYNTAQLITE_BINARY_OP_OR = 12,
+    SYNTAQLITE_BINARY_OP_BITAND = 13,
+    SYNTAQLITE_BINARY_OP_BITOR = 14,
+    SYNTAQLITE_BINARY_OP_LSHIFT = 15,
+    SYNTAQLITE_BINARY_OP_RSHIFT = 16,
+    SYNTAQLITE_BINARY_OP_CONCAT = 17,
+    SYNTAQLITE_BINARY_OP_PTR = 18,
+} SyntaqliteBinaryOp;
 
 typedef enum {
-    SYNQ_UNARY_OP_MINUS = 0,
-    SYNQ_UNARY_OP_PLUS = 1,
-    SYNQ_UNARY_OP_BITNOT = 2,
-    SYNQ_UNARY_OP_NOT = 3,
-} SynqUnaryOp;
+    SYNTAQLITE_UNARY_OP_MINUS = 0,
+    SYNTAQLITE_UNARY_OP_PLUS = 1,
+    SYNTAQLITE_UNARY_OP_BITNOT = 2,
+    SYNTAQLITE_UNARY_OP_NOT = 3,
+} SyntaqliteUnaryOp;
 
 typedef enum {
-    SYNQ_SORT_ORDER_ASC = 0,
-    SYNQ_SORT_ORDER_DESC = 1,
-} SynqSortOrder;
+    SYNTAQLITE_SORT_ORDER_ASC = 0,
+    SYNTAQLITE_SORT_ORDER_DESC = 1,
+} SyntaqliteSortOrder;
 
 typedef enum {
-    SYNQ_NULLS_ORDER_NONE = 0,
-    SYNQ_NULLS_ORDER_FIRST = 1,
-    SYNQ_NULLS_ORDER_LAST = 2,
-} SynqNullsOrder;
+    SYNTAQLITE_NULLS_ORDER_NONE = 0,
+    SYNTAQLITE_NULLS_ORDER_FIRST = 1,
+    SYNTAQLITE_NULLS_ORDER_LAST = 2,
+} SyntaqliteNullsOrder;
 
 typedef enum {
-    SYNQ_IS_OP_IS = 0,
-    SYNQ_IS_OP_IS_NOT = 1,
-    SYNQ_IS_OP_ISNULL = 2,
-    SYNQ_IS_OP_NOTNULL = 3,
-    SYNQ_IS_OP_IS_NOT_DISTINCT = 4,
-    SYNQ_IS_OP_IS_DISTINCT = 5,
-} SynqIsOp;
+    SYNTAQLITE_IS_OP_IS = 0,
+    SYNTAQLITE_IS_OP_IS_NOT = 1,
+    SYNTAQLITE_IS_OP_ISNULL = 2,
+    SYNTAQLITE_IS_OP_NOTNULL = 3,
+    SYNTAQLITE_IS_OP_IS_NOT_DISTINCT = 4,
+    SYNTAQLITE_IS_OP_IS_DISTINCT = 5,
+} SyntaqliteIsOp;
 
 typedef enum {
-    SYNQ_COMPOUND_OP_UNION = 0,
-    SYNQ_COMPOUND_OP_UNION_ALL = 1,
-    SYNQ_COMPOUND_OP_INTERSECT = 2,
-    SYNQ_COMPOUND_OP_EXCEPT = 3,
-} SynqCompoundOp;
+    SYNTAQLITE_COMPOUND_OP_UNION = 0,
+    SYNTAQLITE_COMPOUND_OP_UNION_ALL = 1,
+    SYNTAQLITE_COMPOUND_OP_INTERSECT = 2,
+    SYNTAQLITE_COMPOUND_OP_EXCEPT = 3,
+} SyntaqliteCompoundOp;
 
 typedef enum {
-    SYNQ_MATERIALIZED_DEFAULT = 0,
-    SYNQ_MATERIALIZED_MATERIALIZED = 1,
-    SYNQ_MATERIALIZED_NOT_MATERIALIZED = 2,
-} SynqMaterialized;
+    SYNTAQLITE_MATERIALIZED_DEFAULT = 0,
+    SYNTAQLITE_MATERIALIZED_MATERIALIZED = 1,
+    SYNTAQLITE_MATERIALIZED_NOT_MATERIALIZED = 2,
+} SyntaqliteMaterialized;
 
 typedef enum {
-    SYNQ_RAISE_TYPE_IGNORE = 0,
-    SYNQ_RAISE_TYPE_ROLLBACK = 1,
-    SYNQ_RAISE_TYPE_ABORT = 2,
-    SYNQ_RAISE_TYPE_FAIL = 3,
-} SynqRaiseType;
+    SYNTAQLITE_RAISE_TYPE_IGNORE = 0,
+    SYNTAQLITE_RAISE_TYPE_ROLLBACK = 1,
+    SYNTAQLITE_RAISE_TYPE_ABORT = 2,
+    SYNTAQLITE_RAISE_TYPE_FAIL = 3,
+} SyntaqliteRaiseType;
 
 typedef enum {
-    SYNQ_JOIN_TYPE_COMMA = 0,
-    SYNQ_JOIN_TYPE_INNER = 1,
-    SYNQ_JOIN_TYPE_LEFT = 2,
-    SYNQ_JOIN_TYPE_RIGHT = 3,
-    SYNQ_JOIN_TYPE_FULL = 4,
-    SYNQ_JOIN_TYPE_CROSS = 5,
-    SYNQ_JOIN_TYPE_NATURAL_INNER = 6,
-    SYNQ_JOIN_TYPE_NATURAL_LEFT = 7,
-    SYNQ_JOIN_TYPE_NATURAL_RIGHT = 8,
-    SYNQ_JOIN_TYPE_NATURAL_FULL = 9,
-} SynqJoinType;
+    SYNTAQLITE_JOIN_TYPE_COMMA = 0,
+    SYNTAQLITE_JOIN_TYPE_INNER = 1,
+    SYNTAQLITE_JOIN_TYPE_LEFT = 2,
+    SYNTAQLITE_JOIN_TYPE_RIGHT = 3,
+    SYNTAQLITE_JOIN_TYPE_FULL = 4,
+    SYNTAQLITE_JOIN_TYPE_CROSS = 5,
+    SYNTAQLITE_JOIN_TYPE_NATURAL_INNER = 6,
+    SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT = 7,
+    SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT = 8,
+    SYNTAQLITE_JOIN_TYPE_NATURAL_FULL = 9,
+} SyntaqliteJoinType;
 
 typedef enum {
-    SYNQ_CONFLICT_ACTION_DEFAULT = 0,
-    SYNQ_CONFLICT_ACTION_ROLLBACK = 1,
-    SYNQ_CONFLICT_ACTION_ABORT = 2,
-    SYNQ_CONFLICT_ACTION_FAIL = 3,
-    SYNQ_CONFLICT_ACTION_IGNORE = 4,
-    SYNQ_CONFLICT_ACTION_REPLACE = 5,
-} SynqConflictAction;
+    SYNTAQLITE_CONFLICT_ACTION_DEFAULT = 0,
+    SYNTAQLITE_CONFLICT_ACTION_ROLLBACK = 1,
+    SYNTAQLITE_CONFLICT_ACTION_ABORT = 2,
+    SYNTAQLITE_CONFLICT_ACTION_FAIL = 3,
+    SYNTAQLITE_CONFLICT_ACTION_IGNORE = 4,
+    SYNTAQLITE_CONFLICT_ACTION_REPLACE = 5,
+} SyntaqliteConflictAction;
 
 typedef enum {
-    SYNQ_DROP_OBJECT_TYPE_TABLE = 0,
-    SYNQ_DROP_OBJECT_TYPE_INDEX = 1,
-    SYNQ_DROP_OBJECT_TYPE_VIEW = 2,
-    SYNQ_DROP_OBJECT_TYPE_TRIGGER = 3,
-} SynqDropObjectType;
+    SYNTAQLITE_DROP_OBJECT_TYPE_TABLE = 0,
+    SYNTAQLITE_DROP_OBJECT_TYPE_INDEX = 1,
+    SYNTAQLITE_DROP_OBJECT_TYPE_VIEW = 2,
+    SYNTAQLITE_DROP_OBJECT_TYPE_TRIGGER = 3,
+} SyntaqliteDropObjectType;
 
 typedef enum {
-    SYNQ_ALTER_OP_RENAME_TABLE = 0,
-    SYNQ_ALTER_OP_RENAME_COLUMN = 1,
-    SYNQ_ALTER_OP_DROP_COLUMN = 2,
-    SYNQ_ALTER_OP_ADD_COLUMN = 3,
-} SynqAlterOp;
+    SYNTAQLITE_ALTER_OP_RENAME_TABLE = 0,
+    SYNTAQLITE_ALTER_OP_RENAME_COLUMN = 1,
+    SYNTAQLITE_ALTER_OP_DROP_COLUMN = 2,
+    SYNTAQLITE_ALTER_OP_ADD_COLUMN = 3,
+} SyntaqliteAlterOp;
 
 typedef enum {
-    SYNQ_TRANSACTION_TYPE_DEFERRED = 0,
-    SYNQ_TRANSACTION_TYPE_IMMEDIATE = 1,
-    SYNQ_TRANSACTION_TYPE_EXCLUSIVE = 2,
-} SynqTransactionType;
+    SYNTAQLITE_TRANSACTION_TYPE_DEFERRED = 0,
+    SYNTAQLITE_TRANSACTION_TYPE_IMMEDIATE = 1,
+    SYNTAQLITE_TRANSACTION_TYPE_EXCLUSIVE = 2,
+} SyntaqliteTransactionType;
 
 typedef enum {
-    SYNQ_TRANSACTION_OP_BEGIN = 0,
-    SYNQ_TRANSACTION_OP_COMMIT = 1,
-    SYNQ_TRANSACTION_OP_ROLLBACK = 2,
-} SynqTransactionOp;
+    SYNTAQLITE_TRANSACTION_OP_BEGIN = 0,
+    SYNTAQLITE_TRANSACTION_OP_COMMIT = 1,
+    SYNTAQLITE_TRANSACTION_OP_ROLLBACK = 2,
+} SyntaqliteTransactionOp;
 
 typedef enum {
-    SYNQ_SAVEPOINT_OP_SAVEPOINT = 0,
-    SYNQ_SAVEPOINT_OP_RELEASE = 1,
-    SYNQ_SAVEPOINT_OP_ROLLBACK_TO = 2,
-} SynqSavepointOp;
+    SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT = 0,
+    SYNTAQLITE_SAVEPOINT_OP_RELEASE = 1,
+    SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO = 2,
+} SyntaqliteSavepointOp;
 
 typedef enum {
-    SYNQ_EXPLAIN_MODE_EXPLAIN = 0,
-    SYNQ_EXPLAIN_MODE_QUERY_PLAN = 1,
-} SynqExplainMode;
+    SYNTAQLITE_EXPLAIN_MODE_EXPLAIN = 0,
+    SYNTAQLITE_EXPLAIN_MODE_QUERY_PLAN = 1,
+} SyntaqliteExplainMode;
 
 typedef enum {
-    SYNQ_PRAGMA_FORM_BARE = 0,
-    SYNQ_PRAGMA_FORM_EQ = 1,
-    SYNQ_PRAGMA_FORM_CALL = 2,
-} SynqPragmaForm;
+    SYNTAQLITE_PRAGMA_FORM_BARE = 0,
+    SYNTAQLITE_PRAGMA_FORM_EQ = 1,
+    SYNTAQLITE_PRAGMA_FORM_CALL = 2,
+} SyntaqlitePragmaForm;
 
 typedef enum {
-    SYNQ_ANALYZE_KIND_ANALYZE = 0,
-    SYNQ_ANALYZE_KIND_REINDEX = 1,
-} SynqAnalyzeKind;
+    SYNTAQLITE_ANALYZE_KIND_ANALYZE = 0,
+    SYNTAQLITE_ANALYZE_KIND_REINDEX = 1,
+} SyntaqliteAnalyzeKind;
 
 typedef enum {
-    SYNQ_FOREIGN_KEY_ACTION_NO_ACTION = 0,
-    SYNQ_FOREIGN_KEY_ACTION_SET_NULL = 1,
-    SYNQ_FOREIGN_KEY_ACTION_SET_DEFAULT = 2,
-    SYNQ_FOREIGN_KEY_ACTION_CASCADE = 3,
-    SYNQ_FOREIGN_KEY_ACTION_RESTRICT = 4,
-} SynqForeignKeyAction;
+    SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION = 0,
+    SYNTAQLITE_FOREIGN_KEY_ACTION_SET_NULL = 1,
+    SYNTAQLITE_FOREIGN_KEY_ACTION_SET_DEFAULT = 2,
+    SYNTAQLITE_FOREIGN_KEY_ACTION_CASCADE = 3,
+    SYNTAQLITE_FOREIGN_KEY_ACTION_RESTRICT = 4,
+} SyntaqliteForeignKeyAction;
 
 typedef enum {
-    SYNQ_GENERATED_COLUMN_STORAGE_VIRTUAL = 0,
-    SYNQ_GENERATED_COLUMN_STORAGE_STORED = 1,
-} SynqGeneratedColumnStorage;
+    SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL = 0,
+    SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED = 1,
+} SyntaqliteGeneratedColumnStorage;
 
 typedef enum {
-    SYNQ_COLUMN_CONSTRAINT_KIND_DEFAULT = 0,
-    SYNQ_COLUMN_CONSTRAINT_KIND_NOT_NULL = 1,
-    SYNQ_COLUMN_CONSTRAINT_KIND_PRIMARY_KEY = 2,
-    SYNQ_COLUMN_CONSTRAINT_KIND_UNIQUE = 3,
-    SYNQ_COLUMN_CONSTRAINT_KIND_CHECK = 4,
-    SYNQ_COLUMN_CONSTRAINT_KIND_REFERENCES = 5,
-    SYNQ_COLUMN_CONSTRAINT_KIND_COLLATE = 6,
-    SYNQ_COLUMN_CONSTRAINT_KIND_GENERATED = 7,
-    SYNQ_COLUMN_CONSTRAINT_KIND_NULL = 8,
-} SynqColumnConstraintKind;
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_DEFAULT = 0,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_NOT_NULL = 1,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_PRIMARY_KEY = 2,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_UNIQUE = 3,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_CHECK = 4,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_REFERENCES = 5,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_COLLATE = 6,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_GENERATED = 7,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_NULL = 8,
+} SyntaqliteColumnConstraintKind;
 
 typedef enum {
-    SYNQ_TABLE_CONSTRAINT_KIND_PRIMARY_KEY = 0,
-    SYNQ_TABLE_CONSTRAINT_KIND_UNIQUE = 1,
-    SYNQ_TABLE_CONSTRAINT_KIND_CHECK = 2,
-    SYNQ_TABLE_CONSTRAINT_KIND_FOREIGN_KEY = 3,
-} SynqTableConstraintKind;
+    SYNTAQLITE_TABLE_CONSTRAINT_KIND_PRIMARY_KEY = 0,
+    SYNTAQLITE_TABLE_CONSTRAINT_KIND_UNIQUE = 1,
+    SYNTAQLITE_TABLE_CONSTRAINT_KIND_CHECK = 2,
+    SYNTAQLITE_TABLE_CONSTRAINT_KIND_FOREIGN_KEY = 3,
+} SyntaqliteTableConstraintKind;
 
 typedef enum {
-    SYNQ_FRAME_TYPE_NONE = 0,
-    SYNQ_FRAME_TYPE_RANGE = 1,
-    SYNQ_FRAME_TYPE_ROWS = 2,
-    SYNQ_FRAME_TYPE_GROUPS = 3,
-} SynqFrameType;
+    SYNTAQLITE_FRAME_TYPE_NONE = 0,
+    SYNTAQLITE_FRAME_TYPE_RANGE = 1,
+    SYNTAQLITE_FRAME_TYPE_ROWS = 2,
+    SYNTAQLITE_FRAME_TYPE_GROUPS = 3,
+} SyntaqliteFrameType;
 
 typedef enum {
-    SYNQ_FRAME_BOUND_TYPE_UNBOUNDED_PRECEDING = 0,
-    SYNQ_FRAME_BOUND_TYPE_EXPR_PRECEDING = 1,
-    SYNQ_FRAME_BOUND_TYPE_CURRENT_ROW = 2,
-    SYNQ_FRAME_BOUND_TYPE_EXPR_FOLLOWING = 3,
-    SYNQ_FRAME_BOUND_TYPE_UNBOUNDED_FOLLOWING = 4,
-} SynqFrameBoundType;
+    SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_PRECEDING = 0,
+    SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_PRECEDING = 1,
+    SYNTAQLITE_FRAME_BOUND_TYPE_CURRENT_ROW = 2,
+    SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_FOLLOWING = 3,
+    SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_FOLLOWING = 4,
+} SyntaqliteFrameBoundType;
 
 typedef enum {
-    SYNQ_FRAME_EXCLUDE_NONE = 0,
-    SYNQ_FRAME_EXCLUDE_NO_OTHERS = 1,
-    SYNQ_FRAME_EXCLUDE_CURRENT_ROW = 2,
-    SYNQ_FRAME_EXCLUDE_GROUP = 3,
-    SYNQ_FRAME_EXCLUDE_TIES = 4,
-} SynqFrameExclude;
+    SYNTAQLITE_FRAME_EXCLUDE_NONE = 0,
+    SYNTAQLITE_FRAME_EXCLUDE_NO_OTHERS = 1,
+    SYNTAQLITE_FRAME_EXCLUDE_CURRENT_ROW = 2,
+    SYNTAQLITE_FRAME_EXCLUDE_GROUP = 3,
+    SYNTAQLITE_FRAME_EXCLUDE_TIES = 4,
+} SyntaqliteFrameExclude;
 
 typedef enum {
-    SYNQ_TRIGGER_TIMING_BEFORE = 0,
-    SYNQ_TRIGGER_TIMING_AFTER = 1,
-    SYNQ_TRIGGER_TIMING_INSTEAD_OF = 2,
-} SynqTriggerTiming;
+    SYNTAQLITE_TRIGGER_TIMING_BEFORE = 0,
+    SYNTAQLITE_TRIGGER_TIMING_AFTER = 1,
+    SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF = 2,
+} SyntaqliteTriggerTiming;
 
 typedef enum {
-    SYNQ_TRIGGER_EVENT_TYPE_DELETE = 0,
-    SYNQ_TRIGGER_EVENT_TYPE_INSERT = 1,
-    SYNQ_TRIGGER_EVENT_TYPE_UPDATE = 2,
-} SynqTriggerEventType;
+    SYNTAQLITE_TRIGGER_EVENT_TYPE_DELETE = 0,
+    SYNTAQLITE_TRIGGER_EVENT_TYPE_INSERT = 1,
+    SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE = 2,
+} SyntaqliteTriggerEventType;
 
 // ============ Flags Types ============
 
-typedef union SynqResultColumnFlags {
+typedef union SyntaqliteResultColumnFlags {
     uint8_t raw;
     struct {
         uint8_t star : 1;
     };
-} SynqResultColumnFlags;
+} SyntaqliteResultColumnFlags;
 
-typedef union SynqSelectStmtFlags {
+typedef union SyntaqliteSelectStmtFlags {
     uint8_t raw;
     struct {
         uint8_t distinct : 1;
     };
-} SynqSelectStmtFlags;
+} SyntaqliteSelectStmtFlags;
 
-typedef union SynqFunctionCallFlags {
+typedef union SyntaqliteFunctionCallFlags {
     uint8_t raw;
     struct {
         uint8_t distinct : 1;
         uint8_t star : 1;
     };
-} SynqFunctionCallFlags;
+} SyntaqliteFunctionCallFlags;
 
-typedef union SynqAggregateFunctionCallFlags {
+typedef union SyntaqliteAggregateFunctionCallFlags {
     uint8_t raw;
     struct {
         uint8_t distinct : 1;
     };
-} SynqAggregateFunctionCallFlags;
+} SyntaqliteAggregateFunctionCallFlags;
 
-typedef union SynqCreateTableStmtFlags {
+typedef union SyntaqliteCreateTableStmtFlags {
     uint8_t raw;
     struct {
         uint8_t without_rowid : 1;
         uint8_t strict : 1;
     };
-} SynqCreateTableStmtFlags;
+} SyntaqliteCreateTableStmtFlags;
 
 // ============ Node Tags ============
 
 typedef enum {
-    SYNQ_NODE_NULL = 0,
-    SYNQ_NODE_BINARY_EXPR,
-    SYNQ_NODE_UNARY_EXPR,
-    SYNQ_NODE_LITERAL,
-    SYNQ_NODE_EXPR_LIST,
-    SYNQ_NODE_RESULT_COLUMN,
-    SYNQ_NODE_RESULT_COLUMN_LIST,
-    SYNQ_NODE_SELECT_STMT,
-    SYNQ_NODE_ORDERING_TERM,
-    SYNQ_NODE_ORDER_BY_LIST,
-    SYNQ_NODE_LIMIT_CLAUSE,
-    SYNQ_NODE_COLUMN_REF,
-    SYNQ_NODE_FUNCTION_CALL,
-    SYNQ_NODE_IS_EXPR,
-    SYNQ_NODE_BETWEEN_EXPR,
-    SYNQ_NODE_LIKE_EXPR,
-    SYNQ_NODE_CASE_EXPR,
-    SYNQ_NODE_CASE_WHEN,
-    SYNQ_NODE_CASE_WHEN_LIST,
-    SYNQ_NODE_COMPOUND_SELECT,
-    SYNQ_NODE_SUBQUERY_EXPR,
-    SYNQ_NODE_EXISTS_EXPR,
-    SYNQ_NODE_IN_EXPR,
-    SYNQ_NODE_VARIABLE,
-    SYNQ_NODE_COLLATE_EXPR,
-    SYNQ_NODE_CAST_EXPR,
-    SYNQ_NODE_VALUES_ROW_LIST,
-    SYNQ_NODE_VALUES_CLAUSE,
-    SYNQ_NODE_CTE_DEFINITION,
-    SYNQ_NODE_CTE_LIST,
-    SYNQ_NODE_WITH_CLAUSE,
-    SYNQ_NODE_AGGREGATE_FUNCTION_CALL,
-    SYNQ_NODE_RAISE_EXPR,
-    SYNQ_NODE_TABLE_REF,
-    SYNQ_NODE_SUBQUERY_TABLE_SOURCE,
-    SYNQ_NODE_JOIN_CLAUSE,
-    SYNQ_NODE_JOIN_PREFIX,
-    SYNQ_NODE_DELETE_STMT,
-    SYNQ_NODE_SET_CLAUSE,
-    SYNQ_NODE_SET_CLAUSE_LIST,
-    SYNQ_NODE_UPDATE_STMT,
-    SYNQ_NODE_INSERT_STMT,
-    SYNQ_NODE_QUALIFIED_NAME,
-    SYNQ_NODE_DROP_STMT,
-    SYNQ_NODE_ALTER_TABLE_STMT,
-    SYNQ_NODE_TRANSACTION_STMT,
-    SYNQ_NODE_SAVEPOINT_STMT,
-    SYNQ_NODE_PRAGMA_STMT,
-    SYNQ_NODE_ANALYZE_STMT,
-    SYNQ_NODE_ATTACH_STMT,
-    SYNQ_NODE_DETACH_STMT,
-    SYNQ_NODE_VACUUM_STMT,
-    SYNQ_NODE_EXPLAIN_STMT,
-    SYNQ_NODE_CREATE_INDEX_STMT,
-    SYNQ_NODE_CREATE_VIEW_STMT,
-    SYNQ_NODE_FOREIGN_KEY_CLAUSE,
-    SYNQ_NODE_COLUMN_CONSTRAINT,
-    SYNQ_NODE_COLUMN_CONSTRAINT_LIST,
-    SYNQ_NODE_COLUMN_DEF,
-    SYNQ_NODE_COLUMN_DEF_LIST,
-    SYNQ_NODE_TABLE_CONSTRAINT,
-    SYNQ_NODE_TABLE_CONSTRAINT_LIST,
-    SYNQ_NODE_CREATE_TABLE_STMT,
-    SYNQ_NODE_FRAME_BOUND,
-    SYNQ_NODE_FRAME_SPEC,
-    SYNQ_NODE_WINDOW_DEF,
-    SYNQ_NODE_WINDOW_DEF_LIST,
-    SYNQ_NODE_NAMED_WINDOW_DEF,
-    SYNQ_NODE_NAMED_WINDOW_DEF_LIST,
-    SYNQ_NODE_FILTER_OVER,
-    SYNQ_NODE_TRIGGER_EVENT,
-    SYNQ_NODE_TRIGGER_CMD_LIST,
-    SYNQ_NODE_CREATE_TRIGGER_STMT,
-    SYNQ_NODE_CREATE_VIRTUAL_TABLE_STMT,
-    SYNQ_NODE_COUNT
-} SynqNodeTag;
+    SYNTAQLITE_NODE_NULL = 0,
+    SYNTAQLITE_NODE_BINARY_EXPR,
+    SYNTAQLITE_NODE_UNARY_EXPR,
+    SYNTAQLITE_NODE_LITERAL,
+    SYNTAQLITE_NODE_EXPR_LIST,
+    SYNTAQLITE_NODE_RESULT_COLUMN,
+    SYNTAQLITE_NODE_RESULT_COLUMN_LIST,
+    SYNTAQLITE_NODE_SELECT_STMT,
+    SYNTAQLITE_NODE_ORDERING_TERM,
+    SYNTAQLITE_NODE_ORDER_BY_LIST,
+    SYNTAQLITE_NODE_LIMIT_CLAUSE,
+    SYNTAQLITE_NODE_COLUMN_REF,
+    SYNTAQLITE_NODE_FUNCTION_CALL,
+    SYNTAQLITE_NODE_IS_EXPR,
+    SYNTAQLITE_NODE_BETWEEN_EXPR,
+    SYNTAQLITE_NODE_LIKE_EXPR,
+    SYNTAQLITE_NODE_CASE_EXPR,
+    SYNTAQLITE_NODE_CASE_WHEN,
+    SYNTAQLITE_NODE_CASE_WHEN_LIST,
+    SYNTAQLITE_NODE_COMPOUND_SELECT,
+    SYNTAQLITE_NODE_SUBQUERY_EXPR,
+    SYNTAQLITE_NODE_EXISTS_EXPR,
+    SYNTAQLITE_NODE_IN_EXPR,
+    SYNTAQLITE_NODE_VARIABLE,
+    SYNTAQLITE_NODE_COLLATE_EXPR,
+    SYNTAQLITE_NODE_CAST_EXPR,
+    SYNTAQLITE_NODE_VALUES_ROW_LIST,
+    SYNTAQLITE_NODE_VALUES_CLAUSE,
+    SYNTAQLITE_NODE_CTE_DEFINITION,
+    SYNTAQLITE_NODE_CTE_LIST,
+    SYNTAQLITE_NODE_WITH_CLAUSE,
+    SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL,
+    SYNTAQLITE_NODE_RAISE_EXPR,
+    SYNTAQLITE_NODE_TABLE_REF,
+    SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE,
+    SYNTAQLITE_NODE_JOIN_CLAUSE,
+    SYNTAQLITE_NODE_JOIN_PREFIX,
+    SYNTAQLITE_NODE_DELETE_STMT,
+    SYNTAQLITE_NODE_SET_CLAUSE,
+    SYNTAQLITE_NODE_SET_CLAUSE_LIST,
+    SYNTAQLITE_NODE_UPDATE_STMT,
+    SYNTAQLITE_NODE_INSERT_STMT,
+    SYNTAQLITE_NODE_QUALIFIED_NAME,
+    SYNTAQLITE_NODE_DROP_STMT,
+    SYNTAQLITE_NODE_ALTER_TABLE_STMT,
+    SYNTAQLITE_NODE_TRANSACTION_STMT,
+    SYNTAQLITE_NODE_SAVEPOINT_STMT,
+    SYNTAQLITE_NODE_PRAGMA_STMT,
+    SYNTAQLITE_NODE_ANALYZE_STMT,
+    SYNTAQLITE_NODE_ATTACH_STMT,
+    SYNTAQLITE_NODE_DETACH_STMT,
+    SYNTAQLITE_NODE_VACUUM_STMT,
+    SYNTAQLITE_NODE_EXPLAIN_STMT,
+    SYNTAQLITE_NODE_CREATE_INDEX_STMT,
+    SYNTAQLITE_NODE_CREATE_VIEW_STMT,
+    SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE,
+    SYNTAQLITE_NODE_COLUMN_CONSTRAINT,
+    SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST,
+    SYNTAQLITE_NODE_COLUMN_DEF,
+    SYNTAQLITE_NODE_COLUMN_DEF_LIST,
+    SYNTAQLITE_NODE_TABLE_CONSTRAINT,
+    SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST,
+    SYNTAQLITE_NODE_CREATE_TABLE_STMT,
+    SYNTAQLITE_NODE_FRAME_BOUND,
+    SYNTAQLITE_NODE_FRAME_SPEC,
+    SYNTAQLITE_NODE_WINDOW_DEF,
+    SYNTAQLITE_NODE_WINDOW_DEF_LIST,
+    SYNTAQLITE_NODE_NAMED_WINDOW_DEF,
+    SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST,
+    SYNTAQLITE_NODE_FILTER_OVER,
+    SYNTAQLITE_NODE_TRIGGER_EVENT,
+    SYNTAQLITE_NODE_TRIGGER_CMD_LIST,
+    SYNTAQLITE_NODE_CREATE_TRIGGER_STMT,
+    SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT,
+    SYNTAQLITE_NODE_COUNT
+} SyntaqliteNodeTag;
 
 // ============ Node Structs (variable sizes) ============
 
-typedef struct SynqBinaryExpr {
+typedef struct SyntaqliteBinaryExpr {
     uint8_t tag;
-    SynqBinaryOp op;
+    SyntaqliteBinaryOp op;
     uint32_t left;
     uint32_t right;
-} SynqBinaryExpr;
+} SyntaqliteBinaryExpr;
 
-typedef struct SynqUnaryExpr {
+typedef struct SyntaqliteUnaryExpr {
     uint8_t tag;
-    SynqUnaryOp op;
+    SyntaqliteUnaryOp op;
     uint32_t operand;
-} SynqUnaryExpr;
+} SyntaqliteUnaryExpr;
 
-typedef struct SynqLiteral {
+typedef struct SyntaqliteLiteral {
     uint8_t tag;
-    SynqLiteralType literal_type;
-    SynqSourceSpan source;
-} SynqLiteral;
+    SyntaqliteLiteralType literal_type;
+    SyntaqliteSourceSpan source;
+} SyntaqliteLiteral;
 
 // List of Expr
-typedef struct SynqExprList {
+typedef struct SyntaqliteExprList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqExprList;
+} SyntaqliteExprList;
 
-typedef struct SynqResultColumn {
+typedef struct SyntaqliteResultColumn {
     uint8_t tag;
-    SynqResultColumnFlags flags;
-    SynqSourceSpan alias;
+    SyntaqliteResultColumnFlags flags;
+    SyntaqliteSourceSpan alias;
     uint32_t expr;
-} SynqResultColumn;
+} SyntaqliteResultColumn;
 
 // List of ResultColumn
-typedef struct SynqResultColumnList {
+typedef struct SyntaqliteResultColumnList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqResultColumnList;
+} SyntaqliteResultColumnList;
 
-typedef struct SynqSelectStmt {
+typedef struct SyntaqliteSelectStmt {
     uint8_t tag;
-    SynqSelectStmtFlags flags;
+    SyntaqliteSelectStmtFlags flags;
     uint32_t columns;
     uint32_t from_clause;
     uint32_t where;
@@ -424,584 +417,584 @@ typedef struct SynqSelectStmt {
     uint32_t orderby;
     uint32_t limit_clause;
     uint32_t window_clause;
-} SynqSelectStmt;
+} SyntaqliteSelectStmt;
 
-typedef struct SynqOrderingTerm {
+typedef struct SyntaqliteOrderingTerm {
     uint8_t tag;
     uint32_t expr;
-    SynqSortOrder sort_order;
-    SynqNullsOrder nulls_order;
-} SynqOrderingTerm;
+    SyntaqliteSortOrder sort_order;
+    SyntaqliteNullsOrder nulls_order;
+} SyntaqliteOrderingTerm;
 
 // List of OrderingTerm
-typedef struct SynqOrderByList {
+typedef struct SyntaqliteOrderByList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqOrderByList;
+} SyntaqliteOrderByList;
 
-typedef struct SynqLimitClause {
+typedef struct SyntaqliteLimitClause {
     uint8_t tag;
     uint32_t limit;
     uint32_t offset;
-} SynqLimitClause;
+} SyntaqliteLimitClause;
 
-typedef struct SynqColumnRef {
+typedef struct SyntaqliteColumnRef {
     uint8_t tag;
-    SynqSourceSpan column;
-    SynqSourceSpan table;
-    SynqSourceSpan schema;
-} SynqColumnRef;
+    SyntaqliteSourceSpan column;
+    SyntaqliteSourceSpan table;
+    SyntaqliteSourceSpan schema;
+} SyntaqliteColumnRef;
 
-typedef struct SynqFunctionCall {
+typedef struct SyntaqliteFunctionCall {
     uint8_t tag;
-    SynqSourceSpan func_name;
-    SynqFunctionCallFlags flags;
+    SyntaqliteSourceSpan func_name;
+    SyntaqliteFunctionCallFlags flags;
     uint32_t args;
     uint32_t filter_clause;
     uint32_t over_clause;
-} SynqFunctionCall;
+} SyntaqliteFunctionCall;
 
-typedef struct SynqIsExpr {
+typedef struct SyntaqliteIsExpr {
     uint8_t tag;
-    SynqIsOp op;
+    SyntaqliteIsOp op;
     uint32_t left;
     uint32_t right;
-} SynqIsExpr;
+} SyntaqliteIsExpr;
 
-typedef struct SynqBetweenExpr {
+typedef struct SyntaqliteBetweenExpr {
     uint8_t tag;
-    SynqBool negated;
+    SyntaqliteBool negated;
     uint32_t operand;
     uint32_t low;
     uint32_t high;
-} SynqBetweenExpr;
+} SyntaqliteBetweenExpr;
 
-typedef struct SynqLikeExpr {
+typedef struct SyntaqliteLikeExpr {
     uint8_t tag;
-    SynqBool negated;
+    SyntaqliteBool negated;
     uint32_t operand;
     uint32_t pattern;
     uint32_t escape;
-} SynqLikeExpr;
+} SyntaqliteLikeExpr;
 
-typedef struct SynqCaseExpr {
+typedef struct SyntaqliteCaseExpr {
     uint8_t tag;
     uint32_t operand;
     uint32_t else_expr;
     uint32_t whens;
-} SynqCaseExpr;
+} SyntaqliteCaseExpr;
 
-typedef struct SynqCaseWhen {
+typedef struct SyntaqliteCaseWhen {
     uint8_t tag;
     uint32_t when_expr;
     uint32_t then_expr;
-} SynqCaseWhen;
+} SyntaqliteCaseWhen;
 
 // List of CaseWhen
-typedef struct SynqCaseWhenList {
+typedef struct SyntaqliteCaseWhenList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqCaseWhenList;
+} SyntaqliteCaseWhenList;
 
-typedef struct SynqCompoundSelect {
+typedef struct SyntaqliteCompoundSelect {
     uint8_t tag;
-    SynqCompoundOp op;
+    SyntaqliteCompoundOp op;
     uint32_t left;
     uint32_t right;
-} SynqCompoundSelect;
+} SyntaqliteCompoundSelect;
 
-typedef struct SynqSubqueryExpr {
+typedef struct SyntaqliteSubqueryExpr {
     uint8_t tag;
     uint32_t select;
-} SynqSubqueryExpr;
+} SyntaqliteSubqueryExpr;
 
-typedef struct SynqExistsExpr {
+typedef struct SyntaqliteExistsExpr {
     uint8_t tag;
     uint32_t select;
-} SynqExistsExpr;
+} SyntaqliteExistsExpr;
 
-typedef struct SynqInExpr {
+typedef struct SyntaqliteInExpr {
     uint8_t tag;
-    SynqBool negated;
+    SyntaqliteBool negated;
     uint32_t operand;
     uint32_t source;
-} SynqInExpr;
+} SyntaqliteInExpr;
 
-typedef struct SynqVariable {
+typedef struct SyntaqliteVariable {
     uint8_t tag;
-    SynqSourceSpan source;
-} SynqVariable;
+    SyntaqliteSourceSpan source;
+} SyntaqliteVariable;
 
-typedef struct SynqCollateExpr {
-    uint8_t tag;
-    uint32_t expr;
-    SynqSourceSpan collation;
-} SynqCollateExpr;
-
-typedef struct SynqCastExpr {
+typedef struct SyntaqliteCollateExpr {
     uint8_t tag;
     uint32_t expr;
-    SynqSourceSpan type_name;
-} SynqCastExpr;
+    SyntaqliteSourceSpan collation;
+} SyntaqliteCollateExpr;
+
+typedef struct SyntaqliteCastExpr {
+    uint8_t tag;
+    uint32_t expr;
+    SyntaqliteSourceSpan type_name;
+} SyntaqliteCastExpr;
 
 // List of ExprList
-typedef struct SynqValuesRowList {
+typedef struct SyntaqliteValuesRowList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqValuesRowList;
+} SyntaqliteValuesRowList;
 
-typedef struct SynqValuesClause {
+typedef struct SyntaqliteValuesClause {
     uint8_t tag;
     uint32_t rows;
-} SynqValuesClause;
+} SyntaqliteValuesClause;
 
-typedef struct SynqCteDefinition {
+typedef struct SyntaqliteCteDefinition {
     uint8_t tag;
-    SynqSourceSpan cte_name;
-    SynqMaterialized materialized;
+    SyntaqliteSourceSpan cte_name;
+    SyntaqliteMaterialized materialized;
     uint32_t columns;
     uint32_t select;
-} SynqCteDefinition;
+} SyntaqliteCteDefinition;
 
 // List of CteDefinition
-typedef struct SynqCteList {
+typedef struct SyntaqliteCteList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqCteList;
+} SyntaqliteCteList;
 
-typedef struct SynqWithClause {
+typedef struct SyntaqliteWithClause {
     uint8_t tag;
-    SynqBool recursive;
+    SyntaqliteBool recursive;
     uint32_t ctes;
     uint32_t select;
-} SynqWithClause;
+} SyntaqliteWithClause;
 
-typedef struct SynqAggregateFunctionCall {
+typedef struct SyntaqliteAggregateFunctionCall {
     uint8_t tag;
-    SynqSourceSpan func_name;
-    SynqAggregateFunctionCallFlags flags;
+    SyntaqliteSourceSpan func_name;
+    SyntaqliteAggregateFunctionCallFlags flags;
     uint32_t args;
     uint32_t orderby;
     uint32_t filter_clause;
     uint32_t over_clause;
-} SynqAggregateFunctionCall;
+} SyntaqliteAggregateFunctionCall;
 
-typedef struct SynqRaiseExpr {
+typedef struct SyntaqliteRaiseExpr {
     uint8_t tag;
-    SynqRaiseType raise_type;
+    SyntaqliteRaiseType raise_type;
     uint32_t error_message;
-} SynqRaiseExpr;
+} SyntaqliteRaiseExpr;
 
-typedef struct SynqTableRef {
+typedef struct SyntaqliteTableRef {
     uint8_t tag;
-    SynqSourceSpan table_name;
-    SynqSourceSpan schema;
-    SynqSourceSpan alias;
-} SynqTableRef;
+    SyntaqliteSourceSpan table_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteSourceSpan alias;
+} SyntaqliteTableRef;
 
-typedef struct SynqSubqueryTableSource {
+typedef struct SyntaqliteSubqueryTableSource {
     uint8_t tag;
     uint32_t select;
-    SynqSourceSpan alias;
-} SynqSubqueryTableSource;
+    SyntaqliteSourceSpan alias;
+} SyntaqliteSubqueryTableSource;
 
-typedef struct SynqJoinClause {
+typedef struct SyntaqliteJoinClause {
     uint8_t tag;
-    SynqJoinType join_type;
+    SyntaqliteJoinType join_type;
     uint32_t left;
     uint32_t right;
     uint32_t on_expr;
     uint32_t using_columns;
-} SynqJoinClause;
+} SyntaqliteJoinClause;
 
-typedef struct SynqJoinPrefix {
+typedef struct SyntaqliteJoinPrefix {
     uint8_t tag;
     uint32_t source;
-    SynqJoinType join_type;
-} SynqJoinPrefix;
+    SyntaqliteJoinType join_type;
+} SyntaqliteJoinPrefix;
 
-typedef struct SynqDeleteStmt {
+typedef struct SyntaqliteDeleteStmt {
     uint8_t tag;
     uint32_t table;
     uint32_t where;
-} SynqDeleteStmt;
+} SyntaqliteDeleteStmt;
 
-typedef struct SynqSetClause {
+typedef struct SyntaqliteSetClause {
     uint8_t tag;
-    SynqSourceSpan column;
+    SyntaqliteSourceSpan column;
     uint32_t columns;
     uint32_t value;
-} SynqSetClause;
+} SyntaqliteSetClause;
 
 // List of SetClause
-typedef struct SynqSetClauseList {
+typedef struct SyntaqliteSetClauseList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqSetClauseList;
+} SyntaqliteSetClauseList;
 
-typedef struct SynqUpdateStmt {
+typedef struct SyntaqliteUpdateStmt {
     uint8_t tag;
-    SynqConflictAction conflict_action;
+    SyntaqliteConflictAction conflict_action;
     uint32_t table;
     uint32_t setlist;
     uint32_t from_clause;
     uint32_t where;
-} SynqUpdateStmt;
+} SyntaqliteUpdateStmt;
 
-typedef struct SynqInsertStmt {
+typedef struct SyntaqliteInsertStmt {
     uint8_t tag;
-    SynqConflictAction conflict_action;
+    SyntaqliteConflictAction conflict_action;
     uint32_t table;
     uint32_t columns;
     uint32_t source;
-} SynqInsertStmt;
+} SyntaqliteInsertStmt;
 
-typedef struct SynqQualifiedName {
+typedef struct SyntaqliteQualifiedName {
     uint8_t tag;
-    SynqSourceSpan object_name;
-    SynqSourceSpan schema;
-} SynqQualifiedName;
+    SyntaqliteSourceSpan object_name;
+    SyntaqliteSourceSpan schema;
+} SyntaqliteQualifiedName;
 
-typedef struct SynqDropStmt {
+typedef struct SyntaqliteDropStmt {
     uint8_t tag;
-    SynqDropObjectType object_type;
-    SynqBool if_exists;
+    SyntaqliteDropObjectType object_type;
+    SyntaqliteBool if_exists;
     uint32_t target;
-} SynqDropStmt;
+} SyntaqliteDropStmt;
 
-typedef struct SynqAlterTableStmt {
+typedef struct SyntaqliteAlterTableStmt {
     uint8_t tag;
-    SynqAlterOp op;
+    SyntaqliteAlterOp op;
     uint32_t target;
-    SynqSourceSpan new_name;
-    SynqSourceSpan old_name;
-} SynqAlterTableStmt;
+    SyntaqliteSourceSpan new_name;
+    SyntaqliteSourceSpan old_name;
+} SyntaqliteAlterTableStmt;
 
-typedef struct SynqTransactionStmt {
+typedef struct SyntaqliteTransactionStmt {
     uint8_t tag;
-    SynqTransactionOp op;
-    SynqTransactionType trans_type;
-} SynqTransactionStmt;
+    SyntaqliteTransactionOp op;
+    SyntaqliteTransactionType trans_type;
+} SyntaqliteTransactionStmt;
 
-typedef struct SynqSavepointStmt {
+typedef struct SyntaqliteSavepointStmt {
     uint8_t tag;
-    SynqSavepointOp op;
-    SynqSourceSpan savepoint_name;
-} SynqSavepointStmt;
+    SyntaqliteSavepointOp op;
+    SyntaqliteSourceSpan savepoint_name;
+} SyntaqliteSavepointStmt;
 
-typedef struct SynqPragmaStmt {
+typedef struct SyntaqlitePragmaStmt {
     uint8_t tag;
-    SynqSourceSpan pragma_name;
-    SynqSourceSpan schema;
-    SynqSourceSpan value;
-    SynqPragmaForm pragma_form;
-} SynqPragmaStmt;
+    SyntaqliteSourceSpan pragma_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteSourceSpan value;
+    SyntaqlitePragmaForm pragma_form;
+} SyntaqlitePragmaStmt;
 
-typedef struct SynqAnalyzeStmt {
+typedef struct SyntaqliteAnalyzeStmt {
     uint8_t tag;
-    SynqSourceSpan target_name;
-    SynqSourceSpan schema;
-    SynqAnalyzeKind kind;
-} SynqAnalyzeStmt;
+    SyntaqliteSourceSpan target_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteAnalyzeKind kind;
+} SyntaqliteAnalyzeStmt;
 
-typedef struct SynqAttachStmt {
+typedef struct SyntaqliteAttachStmt {
     uint8_t tag;
     uint32_t filename;
     uint32_t db_name;
     uint32_t key;
-} SynqAttachStmt;
+} SyntaqliteAttachStmt;
 
-typedef struct SynqDetachStmt {
+typedef struct SyntaqliteDetachStmt {
     uint8_t tag;
     uint32_t db_name;
-} SynqDetachStmt;
+} SyntaqliteDetachStmt;
 
-typedef struct SynqVacuumStmt {
+typedef struct SyntaqliteVacuumStmt {
     uint8_t tag;
-    SynqSourceSpan schema;
+    SyntaqliteSourceSpan schema;
     uint32_t into_expr;
-} SynqVacuumStmt;
+} SyntaqliteVacuumStmt;
 
-typedef struct SynqExplainStmt {
+typedef struct SyntaqliteExplainStmt {
     uint8_t tag;
-    SynqExplainMode explain_mode;
+    SyntaqliteExplainMode explain_mode;
     uint32_t stmt;
-} SynqExplainStmt;
+} SyntaqliteExplainStmt;
 
-typedef struct SynqCreateIndexStmt {
+typedef struct SyntaqliteCreateIndexStmt {
     uint8_t tag;
-    SynqSourceSpan index_name;
-    SynqSourceSpan schema;
-    SynqSourceSpan table_name;
-    SynqBool is_unique;
-    SynqBool if_not_exists;
+    SyntaqliteSourceSpan index_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteSourceSpan table_name;
+    SyntaqliteBool is_unique;
+    SyntaqliteBool if_not_exists;
     uint32_t columns;
     uint32_t where;
-} SynqCreateIndexStmt;
+} SyntaqliteCreateIndexStmt;
 
-typedef struct SynqCreateViewStmt {
+typedef struct SyntaqliteCreateViewStmt {
     uint8_t tag;
-    SynqSourceSpan view_name;
-    SynqSourceSpan schema;
-    SynqBool is_temp;
-    SynqBool if_not_exists;
+    SyntaqliteSourceSpan view_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteBool is_temp;
+    SyntaqliteBool if_not_exists;
     uint32_t column_names;
     uint32_t select;
-} SynqCreateViewStmt;
+} SyntaqliteCreateViewStmt;
 
-typedef struct SynqForeignKeyClause {
+typedef struct SyntaqliteForeignKeyClause {
     uint8_t tag;
-    SynqSourceSpan ref_table;
+    SyntaqliteSourceSpan ref_table;
     uint32_t ref_columns;
-    SynqForeignKeyAction on_delete;
-    SynqForeignKeyAction on_update;
-    SynqBool is_deferred;
-} SynqForeignKeyClause;
+    SyntaqliteForeignKeyAction on_delete;
+    SyntaqliteForeignKeyAction on_update;
+    SyntaqliteBool is_deferred;
+} SyntaqliteForeignKeyClause;
 
-typedef struct SynqColumnConstraint {
+typedef struct SyntaqliteColumnConstraint {
     uint8_t tag;
-    SynqColumnConstraintKind kind;
-    SynqSourceSpan constraint_name;
-    SynqConflictAction onconf;
-    SynqSortOrder sort_order;
-    SynqBool is_autoincrement;
-    SynqSourceSpan collation_name;
-    SynqGeneratedColumnStorage generated_storage;
+    SyntaqliteColumnConstraintKind kind;
+    SyntaqliteSourceSpan constraint_name;
+    SyntaqliteConflictAction onconf;
+    SyntaqliteSortOrder sort_order;
+    SyntaqliteBool is_autoincrement;
+    SyntaqliteSourceSpan collation_name;
+    SyntaqliteGeneratedColumnStorage generated_storage;
     uint32_t default_expr;
     uint32_t check_expr;
     uint32_t generated_expr;
     uint32_t fk_clause;
-} SynqColumnConstraint;
+} SyntaqliteColumnConstraint;
 
 // List of ColumnConstraint
-typedef struct SynqColumnConstraintList {
+typedef struct SyntaqliteColumnConstraintList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqColumnConstraintList;
+} SyntaqliteColumnConstraintList;
 
-typedef struct SynqColumnDef {
+typedef struct SyntaqliteColumnDef {
     uint8_t tag;
-    SynqSourceSpan column_name;
-    SynqSourceSpan type_name;
+    SyntaqliteSourceSpan column_name;
+    SyntaqliteSourceSpan type_name;
     uint32_t constraints;
-} SynqColumnDef;
+} SyntaqliteColumnDef;
 
 // List of ColumnDef
-typedef struct SynqColumnDefList {
+typedef struct SyntaqliteColumnDefList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqColumnDefList;
+} SyntaqliteColumnDefList;
 
-typedef struct SynqTableConstraint {
+typedef struct SyntaqliteTableConstraint {
     uint8_t tag;
-    SynqTableConstraintKind kind;
-    SynqSourceSpan constraint_name;
-    SynqConflictAction onconf;
-    SynqBool is_autoincrement;
+    SyntaqliteTableConstraintKind kind;
+    SyntaqliteSourceSpan constraint_name;
+    SyntaqliteConflictAction onconf;
+    SyntaqliteBool is_autoincrement;
     uint32_t columns;
     uint32_t check_expr;
     uint32_t fk_clause;
-} SynqTableConstraint;
+} SyntaqliteTableConstraint;
 
 // List of TableConstraint
-typedef struct SynqTableConstraintList {
+typedef struct SyntaqliteTableConstraintList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqTableConstraintList;
+} SyntaqliteTableConstraintList;
 
-typedef struct SynqCreateTableStmt {
+typedef struct SyntaqliteCreateTableStmt {
     uint8_t tag;
-    SynqSourceSpan table_name;
-    SynqSourceSpan schema;
-    SynqBool is_temp;
-    SynqBool if_not_exists;
-    SynqCreateTableStmtFlags flags;
+    SyntaqliteSourceSpan table_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteBool is_temp;
+    SyntaqliteBool if_not_exists;
+    SyntaqliteCreateTableStmtFlags flags;
     uint32_t columns;
     uint32_t table_constraints;
     uint32_t as_select;
-} SynqCreateTableStmt;
+} SyntaqliteCreateTableStmt;
 
-typedef struct SynqFrameBound {
+typedef struct SyntaqliteFrameBound {
     uint8_t tag;
-    SynqFrameBoundType bound_type;
+    SyntaqliteFrameBoundType bound_type;
     uint32_t expr;
-} SynqFrameBound;
+} SyntaqliteFrameBound;
 
-typedef struct SynqFrameSpec {
+typedef struct SyntaqliteFrameSpec {
     uint8_t tag;
-    SynqFrameType frame_type;
-    SynqFrameExclude exclude;
+    SyntaqliteFrameType frame_type;
+    SyntaqliteFrameExclude exclude;
     uint32_t start_bound;
     uint32_t end_bound;
-} SynqFrameSpec;
+} SyntaqliteFrameSpec;
 
-typedef struct SynqWindowDef {
+typedef struct SyntaqliteWindowDef {
     uint8_t tag;
-    SynqSourceSpan base_window_name;
+    SyntaqliteSourceSpan base_window_name;
     uint32_t partition_by;
     uint32_t orderby;
     uint32_t frame;
-} SynqWindowDef;
+} SyntaqliteWindowDef;
 
 // List of WindowDef
-typedef struct SynqWindowDefList {
+typedef struct SyntaqliteWindowDefList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqWindowDefList;
+} SyntaqliteWindowDefList;
 
-typedef struct SynqNamedWindowDef {
+typedef struct SyntaqliteNamedWindowDef {
     uint8_t tag;
-    SynqSourceSpan window_name;
+    SyntaqliteSourceSpan window_name;
     uint32_t window_def;
-} SynqNamedWindowDef;
+} SyntaqliteNamedWindowDef;
 
 // List of NamedWindowDef
-typedef struct SynqNamedWindowDefList {
+typedef struct SyntaqliteNamedWindowDefList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqNamedWindowDefList;
+} SyntaqliteNamedWindowDefList;
 
-typedef struct SynqFilterOver {
+typedef struct SyntaqliteFilterOver {
     uint8_t tag;
     uint32_t filter_expr;
     uint32_t over_def;
-    SynqSourceSpan over_name;
-} SynqFilterOver;
+    SyntaqliteSourceSpan over_name;
+} SyntaqliteFilterOver;
 
-typedef struct SynqTriggerEvent {
+typedef struct SyntaqliteTriggerEvent {
     uint8_t tag;
-    SynqTriggerEventType event_type;
+    SyntaqliteTriggerEventType event_type;
     uint32_t columns;
-} SynqTriggerEvent;
+} SyntaqliteTriggerEvent;
 
 // List of Stmt
-typedef struct SynqTriggerCmdList {
+typedef struct SyntaqliteTriggerCmdList {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of indices
-} SynqTriggerCmdList;
+} SyntaqliteTriggerCmdList;
 
-typedef struct SynqCreateTriggerStmt {
+typedef struct SyntaqliteCreateTriggerStmt {
     uint8_t tag;
-    SynqSourceSpan trigger_name;
-    SynqSourceSpan schema;
-    SynqBool is_temp;
-    SynqBool if_not_exists;
-    SynqTriggerTiming timing;
+    SyntaqliteSourceSpan trigger_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteBool is_temp;
+    SyntaqliteBool if_not_exists;
+    SyntaqliteTriggerTiming timing;
     uint32_t event;
     uint32_t table;
     uint32_t when_expr;
     uint32_t body;
-} SynqCreateTriggerStmt;
+} SyntaqliteCreateTriggerStmt;
 
-typedef struct SynqCreateVirtualTableStmt {
+typedef struct SyntaqliteCreateVirtualTableStmt {
     uint8_t tag;
-    SynqSourceSpan table_name;
-    SynqSourceSpan schema;
-    SynqSourceSpan module_name;
-    SynqBool if_not_exists;
-    SynqSourceSpan module_args;
-} SynqCreateVirtualTableStmt;
+    SyntaqliteSourceSpan table_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteSourceSpan module_name;
+    SyntaqliteBool if_not_exists;
+    SyntaqliteSourceSpan module_args;
+} SyntaqliteCreateVirtualTableStmt;
 
 // ============ Node Union ============
 
-typedef union SynqNode {
+typedef union SyntaqliteNode {
     uint8_t tag;
-    SynqBinaryExpr binary_expr;
-    SynqUnaryExpr unary_expr;
-    SynqLiteral literal;
-    SynqExprList expr_list;
-    SynqResultColumn result_column;
-    SynqResultColumnList result_column_list;
-    SynqSelectStmt select_stmt;
-    SynqOrderingTerm ordering_term;
-    SynqOrderByList order_by_list;
-    SynqLimitClause limit_clause;
-    SynqColumnRef column_ref;
-    SynqFunctionCall function_call;
-    SynqIsExpr is_expr;
-    SynqBetweenExpr between_expr;
-    SynqLikeExpr like_expr;
-    SynqCaseExpr case_expr;
-    SynqCaseWhen case_when;
-    SynqCaseWhenList case_when_list;
-    SynqCompoundSelect compound_select;
-    SynqSubqueryExpr subquery_expr;
-    SynqExistsExpr exists_expr;
-    SynqInExpr in_expr;
-    SynqVariable variable;
-    SynqCollateExpr collate_expr;
-    SynqCastExpr cast_expr;
-    SynqValuesRowList values_row_list;
-    SynqValuesClause values_clause;
-    SynqCteDefinition cte_definition;
-    SynqCteList cte_list;
-    SynqWithClause with_clause;
-    SynqAggregateFunctionCall aggregate_function_call;
-    SynqRaiseExpr raise_expr;
-    SynqTableRef table_ref;
-    SynqSubqueryTableSource subquery_table_source;
-    SynqJoinClause join_clause;
-    SynqJoinPrefix join_prefix;
-    SynqDeleteStmt delete_stmt;
-    SynqSetClause set_clause;
-    SynqSetClauseList set_clause_list;
-    SynqUpdateStmt update_stmt;
-    SynqInsertStmt insert_stmt;
-    SynqQualifiedName qualified_name;
-    SynqDropStmt drop_stmt;
-    SynqAlterTableStmt alter_table_stmt;
-    SynqTransactionStmt transaction_stmt;
-    SynqSavepointStmt savepoint_stmt;
-    SynqPragmaStmt pragma_stmt;
-    SynqAnalyzeStmt analyze_stmt;
-    SynqAttachStmt attach_stmt;
-    SynqDetachStmt detach_stmt;
-    SynqVacuumStmt vacuum_stmt;
-    SynqExplainStmt explain_stmt;
-    SynqCreateIndexStmt create_index_stmt;
-    SynqCreateViewStmt create_view_stmt;
-    SynqForeignKeyClause foreign_key_clause;
-    SynqColumnConstraint column_constraint;
-    SynqColumnConstraintList column_constraint_list;
-    SynqColumnDef column_def;
-    SynqColumnDefList column_def_list;
-    SynqTableConstraint table_constraint;
-    SynqTableConstraintList table_constraint_list;
-    SynqCreateTableStmt create_table_stmt;
-    SynqFrameBound frame_bound;
-    SynqFrameSpec frame_spec;
-    SynqWindowDef window_def;
-    SynqWindowDefList window_def_list;
-    SynqNamedWindowDef named_window_def;
-    SynqNamedWindowDefList named_window_def_list;
-    SynqFilterOver filter_over;
-    SynqTriggerEvent trigger_event;
-    SynqTriggerCmdList trigger_cmd_list;
-    SynqCreateTriggerStmt create_trigger_stmt;
-    SynqCreateVirtualTableStmt create_virtual_table_stmt;
-} SynqNode;
+    SyntaqliteBinaryExpr binary_expr;
+    SyntaqliteUnaryExpr unary_expr;
+    SyntaqliteLiteral literal;
+    SyntaqliteExprList expr_list;
+    SyntaqliteResultColumn result_column;
+    SyntaqliteResultColumnList result_column_list;
+    SyntaqliteSelectStmt select_stmt;
+    SyntaqliteOrderingTerm ordering_term;
+    SyntaqliteOrderByList order_by_list;
+    SyntaqliteLimitClause limit_clause;
+    SyntaqliteColumnRef column_ref;
+    SyntaqliteFunctionCall function_call;
+    SyntaqliteIsExpr is_expr;
+    SyntaqliteBetweenExpr between_expr;
+    SyntaqliteLikeExpr like_expr;
+    SyntaqliteCaseExpr case_expr;
+    SyntaqliteCaseWhen case_when;
+    SyntaqliteCaseWhenList case_when_list;
+    SyntaqliteCompoundSelect compound_select;
+    SyntaqliteSubqueryExpr subquery_expr;
+    SyntaqliteExistsExpr exists_expr;
+    SyntaqliteInExpr in_expr;
+    SyntaqliteVariable variable;
+    SyntaqliteCollateExpr collate_expr;
+    SyntaqliteCastExpr cast_expr;
+    SyntaqliteValuesRowList values_row_list;
+    SyntaqliteValuesClause values_clause;
+    SyntaqliteCteDefinition cte_definition;
+    SyntaqliteCteList cte_list;
+    SyntaqliteWithClause with_clause;
+    SyntaqliteAggregateFunctionCall aggregate_function_call;
+    SyntaqliteRaiseExpr raise_expr;
+    SyntaqliteTableRef table_ref;
+    SyntaqliteSubqueryTableSource subquery_table_source;
+    SyntaqliteJoinClause join_clause;
+    SyntaqliteJoinPrefix join_prefix;
+    SyntaqliteDeleteStmt delete_stmt;
+    SyntaqliteSetClause set_clause;
+    SyntaqliteSetClauseList set_clause_list;
+    SyntaqliteUpdateStmt update_stmt;
+    SyntaqliteInsertStmt insert_stmt;
+    SyntaqliteQualifiedName qualified_name;
+    SyntaqliteDropStmt drop_stmt;
+    SyntaqliteAlterTableStmt alter_table_stmt;
+    SyntaqliteTransactionStmt transaction_stmt;
+    SyntaqliteSavepointStmt savepoint_stmt;
+    SyntaqlitePragmaStmt pragma_stmt;
+    SyntaqliteAnalyzeStmt analyze_stmt;
+    SyntaqliteAttachStmt attach_stmt;
+    SyntaqliteDetachStmt detach_stmt;
+    SyntaqliteVacuumStmt vacuum_stmt;
+    SyntaqliteExplainStmt explain_stmt;
+    SyntaqliteCreateIndexStmt create_index_stmt;
+    SyntaqliteCreateViewStmt create_view_stmt;
+    SyntaqliteForeignKeyClause foreign_key_clause;
+    SyntaqliteColumnConstraint column_constraint;
+    SyntaqliteColumnConstraintList column_constraint_list;
+    SyntaqliteColumnDef column_def;
+    SyntaqliteColumnDefList column_def_list;
+    SyntaqliteTableConstraint table_constraint;
+    SyntaqliteTableConstraintList table_constraint_list;
+    SyntaqliteCreateTableStmt create_table_stmt;
+    SyntaqliteFrameBound frame_bound;
+    SyntaqliteFrameSpec frame_spec;
+    SyntaqliteWindowDef window_def;
+    SyntaqliteWindowDefList window_def_list;
+    SyntaqliteNamedWindowDef named_window_def;
+    SyntaqliteNamedWindowDefList named_window_def_list;
+    SyntaqliteFilterOver filter_over;
+    SyntaqliteTriggerEvent trigger_event;
+    SyntaqliteTriggerCmdList trigger_cmd_list;
+    SyntaqliteCreateTriggerStmt create_trigger_stmt;
+    SyntaqliteCreateVirtualTableStmt create_virtual_table_stmt;
+} SyntaqliteNode;
 
 #ifdef __cplusplus
 }

@@ -14,7 +14,7 @@ extern inline void synq_ast_ranges_sync(SynqAstContext *ctx);
 extern inline void synq_ast_set_range(SynqAstContext *ctx, uint32_t node_id, uint32_t first, uint32_t last);
 extern inline SynqSourceRange synq_ast_get_range(SynqAstContext *ctx, uint32_t node_id);
 extern inline void synq_ast_range_union(SynqAstContext *ctx, SynqSourceRange *acc, uint32_t child_id);
-extern inline void synq_ast_range_union_span(SynqSourceRange *acc, SynqSourceSpan span);
+extern inline void synq_ast_range_union_span(SynqSourceRange *acc, SyntaqliteSourceSpan span);
 
 // ============ AST Context Lifecycle ============
 
@@ -26,7 +26,7 @@ void synq_ast_context_init(SynqAstContext *ctx,
     ctx->error_code = 0;
     ctx->error_msg = NULL;
     synq_vec_init(&ctx->list_acc);
-    ctx->list_acc_node_id = SYNQ_NULL_NODE;
+    ctx->list_acc_node_id = SYNTAQLITE_NULL_NODE;
     ctx->list_acc_tag = 0;
     synq_vec_init(&ctx->ranges);
 }
@@ -41,7 +41,7 @@ void synq_ast_context_cleanup(SynqAstContext *ctx) {
 // ============ List Accumulator ============
 
 void synq_ast_list_flush(SynqAstContext *ctx) {
-    if (ctx->list_acc_node_id == SYNQ_NULL_NODE) return;
+    if (ctx->list_acc_node_id == SYNTAQLITE_NULL_NODE) return;
 
     SynqArena *ast = &ctx->ast;
     uint32_t count = ctx->list_acc.count;
@@ -75,7 +75,7 @@ void synq_ast_list_flush(SynqAstContext *ctx) {
         ctx->ranges.data[ctx->list_acc_node_id] = list_range;
     }
 
-    ctx->list_acc_node_id = SYNQ_NULL_NODE;
+    ctx->list_acc_node_id = SYNTAQLITE_NULL_NODE;
     ctx->list_acc.count = 0;
 }
 
@@ -134,7 +134,7 @@ void synq_ast_print_indent(FILE *out, int depth) {
     }
 }
 
-void synq_ast_print_source_span(FILE *out, const char *source, SynqSourceSpan span) {
+void synq_ast_print_source_span(FILE *out, const char *source, SyntaqliteSourceSpan span) {
     if (source && span.length > 0) {
         fprintf(out, "\"");
         for (uint16_t i = 0; i < span.length; i++) {
@@ -155,8 +155,8 @@ void synq_ast_print_source_span(FILE *out, const char *source, SynqSourceSpan sp
     }
 }
 
-SynqSourceSpan synq_span(SynqParseContext *ctx, SynqToken tok) {
-    return (SynqSourceSpan){
+SyntaqliteSourceSpan synq_span(SynqParseContext *ctx, SynqToken tok) {
+    return (SyntaqliteSourceSpan){
         (uint32_t)(tok.z - ctx->zSql),
         (uint16_t)tok.n
     };

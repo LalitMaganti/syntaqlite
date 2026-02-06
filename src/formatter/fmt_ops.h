@@ -29,7 +29,7 @@ extern "C" {
 typedef enum {
     // Leaves (0 children in prefix stream)
     SYNQ_FOP_KW,           // keyword string: data = text
-    SYNQ_FOP_SPAN,         // source span field: field_offset -> SynqSourceSpan
+    SYNQ_FOP_SPAN,         // source span field: field_offset -> SyntaqliteSourceSpan
     SYNQ_FOP_CHILD,        // format child node: field_offset -> uint32_t node_id
     SYNQ_FOP_CHILD_ITEM,   // current loop child (inside FOR_EACH)
     SYNQ_FOP_LINE,         // space when flat, newline when broken
@@ -46,7 +46,7 @@ typedef enum {
     SYNQ_FOP_SEQ,          // concat count children
 
     // Conditionals (1 or 2 children depending on HAS_ELSE)
-    SYNQ_FOP_IF_SET,       // if index field != SYNQ_NULL_NODE
+    SYNQ_FOP_IF_SET,       // if index field != SYNTAQLITE_NULL_NODE
     SYNQ_FOP_IF_FLAG,      // if uint8_t field & mask (for flags unions)
     SYNQ_FOP_IF_ENUM,      // if enum field == value
     SYNQ_FOP_IF_SPAN,      // if source span has non-zero length
@@ -95,9 +95,9 @@ typedef struct SynqFmtOp {
 
 // ============ Helper Macros ============
 //
-// Node type T is PascalCase without the Synq prefix (e.g., SelectStmt).
+// Node type T is PascalCase without the Syntaqlite prefix (e.g., SelectStmt).
 // Field f is the struct member name (e.g., columns).
-// The macro adds the Synq prefix for offsetof.
+// The macro adds the Syntaqlite prefix for offsetof.
 
 // --- Leaves ---
 
@@ -105,10 +105,10 @@ typedef struct SynqFmtOp {
     { .kind = SYNQ_FOP_KW, .data = (s) }
 
 #define FOP_SPAN(T, f) \
-    { .kind = SYNQ_FOP_SPAN, .field_offset = offsetof(Synq##T, f) }
+    { .kind = SYNQ_FOP_SPAN, .field_offset = offsetof(Syntaqlite##T, f) }
 
 #define FOP_CHILD(T, f) \
-    { .kind = SYNQ_FOP_CHILD, .field_offset = offsetof(Synq##T, f) }
+    { .kind = SYNQ_FOP_CHILD, .field_offset = offsetof(Syntaqlite##T, f) }
 
 #define FOP_CHILD_ITEM \
     { .kind = SYNQ_FOP_CHILD_ITEM }
@@ -123,16 +123,16 @@ typedef struct SynqFmtOp {
     { .kind = SYNQ_FOP_HARDLINE }
 
 // CLAUSE: reads node_id from field, calls synq_format_clause(ctx, kw, id).
-// Returns SYNQ_NULL_DOC when the field is SYNQ_NULL_NODE.
+// Returns SYNQ_NULL_DOC when the field is SYNTAQLITE_NULL_NODE.
 #define FOP_CLAUSE(T, f, kw) \
-    { .kind = SYNQ_FOP_CLAUSE, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_CLAUSE, .field_offset = offsetof(Syntaqlite##T, f), \
       .data = (kw) }
 
 // ENUM_DISPLAY: maps enum field to display strings via lookup table.
 //   entries: pointer to static SynqFmtEnumEntry array
 //   n:       number of entries
 #define FOP_ENUM_DISPLAY(T, f, entries, n) \
-    { .kind = SYNQ_FOP_ENUM_DISPLAY, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_ENUM_DISPLAY, .field_offset = offsetof(Syntaqlite##T, f), \
       .count = (n), .data = (entries) }
 
 // --- Wrappers (1 child follows) ---
@@ -150,43 +150,43 @@ typedef struct SynqFmtOp {
 
 // --- Conditionals ---
 //
-// IF_SET: tests uint32_t index field != SYNQ_NULL_NODE.
+// IF_SET: tests uint32_t index field != SYNTAQLITE_NULL_NODE.
 // IF_FLAG: reads uint8_t at field_offset, tests (raw & mask) != 0.
 //   Use mask=0 to test raw != 0 (any flag set / Bool truthy).
 // IF_ENUM: reads int (C enum) at field_offset, tests == value.
-// IF_SPAN: reads SynqSourceSpan at field_offset, tests length > 0.
+// IF_SPAN: reads SyntaqliteSourceSpan at field_offset, tests length > 0.
 //
 // Each has a plain variant (1 child: then) and _ELSE variant (2 children:
 // then, else).
 
 #define FOP_IF_SET(T, f) \
-    { .kind = SYNQ_FOP_IF_SET, .field_offset = offsetof(Synq##T, f) }
+    { .kind = SYNQ_FOP_IF_SET, .field_offset = offsetof(Syntaqlite##T, f) }
 
 #define FOP_IF_SET_ELSE(T, f) \
-    { .kind = SYNQ_FOP_IF_SET, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_IF_SET, .field_offset = offsetof(Syntaqlite##T, f), \
       .flags = SYNQ_FOP_HAS_ELSE }
 
 #define FOP_IF_FLAG(T, f, mask) \
-    { .kind = SYNQ_FOP_IF_FLAG, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_IF_FLAG, .field_offset = offsetof(Syntaqlite##T, f), \
       .enum_value = (mask) }
 
 #define FOP_IF_FLAG_ELSE(T, f, mask) \
-    { .kind = SYNQ_FOP_IF_FLAG, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_IF_FLAG, .field_offset = offsetof(Syntaqlite##T, f), \
       .enum_value = (mask), .flags = SYNQ_FOP_HAS_ELSE }
 
 #define FOP_IF_ENUM(T, f, v) \
-    { .kind = SYNQ_FOP_IF_ENUM, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_IF_ENUM, .field_offset = offsetof(Syntaqlite##T, f), \
       .enum_value = (v) }
 
 #define FOP_IF_ENUM_ELSE(T, f, v) \
-    { .kind = SYNQ_FOP_IF_ENUM, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_IF_ENUM, .field_offset = offsetof(Syntaqlite##T, f), \
       .enum_value = (v), .flags = SYNQ_FOP_HAS_ELSE }
 
 #define FOP_IF_SPAN(T, f) \
-    { .kind = SYNQ_FOP_IF_SPAN, .field_offset = offsetof(Synq##T, f) }
+    { .kind = SYNQ_FOP_IF_SPAN, .field_offset = offsetof(Syntaqlite##T, f) }
 
 #define FOP_IF_SPAN_ELSE(T, f) \
-    { .kind = SYNQ_FOP_IF_SPAN, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_IF_SPAN, .field_offset = offsetof(Syntaqlite##T, f), \
       .flags = SYNQ_FOP_HAS_ELSE }
 
 // --- Switch ---
@@ -196,11 +196,11 @@ typedef struct SynqFmtOp {
 // body after all cases.
 
 #define FOP_SWITCH(T, f, n) \
-    { .kind = SYNQ_FOP_SWITCH, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_SWITCH, .field_offset = offsetof(Syntaqlite##T, f), \
       .count = (n) }
 
 #define FOP_SWITCH_DEFAULT(T, f, n) \
-    { .kind = SYNQ_FOP_SWITCH, .field_offset = offsetof(Synq##T, f), \
+    { .kind = SYNQ_FOP_SWITCH, .field_offset = offsetof(Syntaqlite##T, f), \
       .count = (n), .flags = SYNQ_FOP_HAS_DEFAULT }
 
 #define FOP_CASE(v) \
@@ -233,7 +233,7 @@ uint32_t synq_fmt_interpret_ops(SynqFmtCtx *ctx, const void *node_ptr,
 // Default recipe for list nodes without explicit format annotations.
 extern const SynqFmtOp synq_fmt_default_comma_list[];
 
-// Generated table mapping node tags to format recipes (indexed by SynqNodeTag).
+// Generated table mapping node tags to format recipes (indexed by SyntaqliteNodeTag).
 // NULL entries mean the node type has no formatter.
 extern const SynqFmtOp *synq_fmt_recipes[];
 

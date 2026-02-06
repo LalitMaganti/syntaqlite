@@ -31,7 +31,7 @@ NODES = [
     # Result column: expr [AS alias] or *
     Node("ResultColumn",
         flags=inline("ResultColumnFlags"),
-        alias=inline("SynqSourceSpan"),
+        alias=inline("SyntaqliteSourceSpan"),
         expr=index("Expr"),
         fmt=seq(
             if_flag("flags.star",

@@ -99,7 +99,7 @@ static uint32_t interpret_op(SynqFmtCtx *ctx, const void *node_ptr,
         return synq_kw(ctx, (const char *)op->data);
 
     case SYNQ_FOP_SPAN: {
-        SynqSourceSpan span;
+        SyntaqliteSourceSpan span;
         memcpy(&span, base + op->field_offset, sizeof(span));
         return synq_span_text(ctx, span);
     }
@@ -161,7 +161,7 @@ static uint32_t interpret_op(SynqFmtCtx *ctx, const void *node_ptr,
     case SYNQ_FOP_IF_SET: {
         uint32_t field_val;
         memcpy(&field_val, base + op->field_offset, sizeof(field_val));
-        if (field_val != SYNQ_NULL_NODE) {
+        if (field_val != SYNTAQLITE_NULL_NODE) {
             uint32_t then_doc = interpret_op(ctx, node_ptr, ops, pos,
                                              loop_child_id);
             if (op->flags & SYNQ_FOP_HAS_ELSE) skip_op(ops, pos);
@@ -206,7 +206,7 @@ static uint32_t interpret_op(SynqFmtCtx *ctx, const void *node_ptr,
     }
 
     case SYNQ_FOP_IF_SPAN: {
-        SynqSourceSpan span;
+        SyntaqliteSourceSpan span;
         memcpy(&span, base + op->field_offset, sizeof(span));
         if (span.length > 0) {
             uint32_t then_doc = interpret_op(ctx, node_ptr, ops, pos,
@@ -299,19 +299,19 @@ static uint32_t interpret_op(SynqFmtCtx *ctx, const void *node_ptr,
 uint32_t synq_fmt_interpret_ops(SynqFmtCtx *ctx, const void *node_ptr,
                                 const SynqFmtOp *ops) {
     uint32_t pos = 0;
-    return interpret_op(ctx, node_ptr, ops, &pos, SYNQ_NULL_NODE);
+    return interpret_op(ctx, node_ptr, ops, &pos, SYNTAQLITE_NULL_NODE);
 }
 
 uint32_t synq_fmt_interpret(SynqFmtCtx *ctx, uint32_t node_id) {
-    SynqNode *node = AST_NODE(ctx->ast, node_id);
+    SyntaqliteNode *node = AST_NODE(ctx->ast, node_id);
     if (!node) return SYNQ_NULL_DOC;
 
-    const SynqFmtOp *ops = node->tag < SYNQ_NODE_COUNT
+    const SynqFmtOp *ops = node->tag < SYNTAQLITE_NODE_COUNT
         ? synq_fmt_recipes[node->tag] : NULL;
     if (!ops) return synq_kw(ctx, "/* UNSUPPORTED */");
 
     uint32_t pos = 0;
-    return interpret_op(ctx, node, ops, &pos, SYNQ_NULL_NODE);
+    return interpret_op(ctx, node, ops, &pos, SYNTAQLITE_NULL_NODE);
 }
 
 // ============ Default Comma List Recipe ============

@@ -17,7 +17,7 @@ ENUMS = [
 NODES = [
     # Single CTE definition: name [(columns)] AS [MATERIALIZED|NOT MATERIALIZED] (select)
     Node("CteDefinition",
-        cte_name=inline("SynqSourceSpan"),
+        cte_name=inline("SyntaqliteSourceSpan"),
         materialized=inline("Materialized"),
         columns=index("ExprList"),
         select=index("Stmt"),

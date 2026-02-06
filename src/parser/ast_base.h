@@ -23,7 +23,7 @@ struct SynqToken;
 struct SynqParseContext;
 
 // Empty source span
-#define SYNQ_NO_SPAN ((SynqSourceSpan){0, 0})
+#define SYNQ_NO_SPAN ((SyntaqliteSourceSpan){0, 0})
 
 // Source range: byte offsets [first, last) covering a full AST node
 typedef struct SynqSourceRange {
@@ -33,20 +33,20 @@ typedef struct SynqSourceRange {
 
 // Grammar stack value: column name + type token (threaded through columnname rule)
 typedef struct SynqColumnNameValue {
-    SynqSourceSpan name;
-    SynqSourceSpan typetoken;
+    SyntaqliteSourceSpan name;
+    SyntaqliteSourceSpan typetoken;
 } SynqColumnNameValue;
 
 // Grammar stack value: constraint node + optional pending CONSTRAINT name
 typedef struct SynqConstraintValue {
     uint32_t node;
-    SynqSourceSpan pending_name;
+    SyntaqliteSourceSpan pending_name;
 } SynqConstraintValue;
 
 // Grammar stack value: constraint list + pending CONSTRAINT name
 typedef struct SynqConstraintListValue {
     uint32_t list;
-    SynqSourceSpan pending_name;
+    SyntaqliteSourceSpan pending_name;
 } SynqConstraintListValue;
 
 // Grammar stack value: ON expr / USING column-list discriminator
@@ -90,10 +90,10 @@ void synq_ast_list_flush(SynqAstContext *ctx);
 
 // Print helpers
 void synq_ast_print_indent(FILE *out, int depth);
-void synq_ast_print_source_span(FILE *out, const char *source, SynqSourceSpan span);
+void synq_ast_print_source_span(FILE *out, const char *source, SyntaqliteSourceSpan span);
 
 // Create source span from token
-SynqSourceSpan synq_span(struct SynqParseContext *ctx,
+SyntaqliteSourceSpan synq_span(struct SynqParseContext *ctx,
                                      struct SynqToken tok);
 
 // ============ Source Range Helpers ============
@@ -109,7 +109,7 @@ inline void synq_ast_ranges_sync(SynqAstContext *ctx) {
 // Set source range for a node
 inline void synq_ast_set_range(SynqAstContext *ctx, uint32_t node_id,
                                  uint32_t first, uint32_t last) {
-    if (node_id == SYNQ_NULL_NODE) return;
+    if (node_id == SYNTAQLITE_NULL_NODE) return;
     synq_ast_ranges_sync(ctx);
     if (node_id < ctx->ranges.count) {
         ctx->ranges.data[node_id].first = first;
@@ -120,7 +120,7 @@ inline void synq_ast_set_range(SynqAstContext *ctx, uint32_t node_id,
 // Get source range of a node
 inline SynqSourceRange synq_ast_get_range(SynqAstContext *ctx,
                                                    uint32_t node_id) {
-    if (node_id == SYNQ_NULL_NODE || node_id >= ctx->ranges.count)
+    if (node_id == SYNTAQLITE_NULL_NODE || node_id >= ctx->ranges.count)
         return (SynqSourceRange){0, 0};
     return ctx->ranges.data[node_id];
 }
@@ -129,16 +129,16 @@ inline SynqSourceRange synq_ast_get_range(SynqAstContext *ctx,
 inline void synq_ast_range_union(SynqAstContext *ctx,
                                    SynqSourceRange *acc,
                                    uint32_t child_id) {
-    if (child_id == SYNQ_NULL_NODE) return;
+    if (child_id == SYNTAQLITE_NULL_NODE) return;
     SynqSourceRange child = synq_ast_get_range(ctx, child_id);
     if (child.first == 0 && child.last == 0) return;
     if (child.first < acc->first) acc->first = child.first;
     if (child.last > acc->last) acc->last = child.last;
 }
 
-// Union a SynqSourceSpan into an accumulator
+// Union a SyntaqliteSourceSpan into an accumulator
 inline void synq_ast_range_union_span(SynqSourceRange *acc,
-                                        SynqSourceSpan span) {
+                                        SyntaqliteSourceSpan span) {
     if (span.length == 0) return;
     if (span.offset < acc->first) acc->first = span.offset;
     uint32_t end = span.offset + span.length;

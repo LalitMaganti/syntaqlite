@@ -123,7 +123,7 @@ def extract_parser_data(parse_c_content: str) -> ParserData:
     ]
 
     return ParserData(
-        token_defines="\n".join(re.findall(r"^#define TK_\w+\s+\d+", parse_c_content, re.MULTILINE)),
+        token_defines="\n".join(re.findall(r"^#define SYNTAQLITE_TOKEN_\w+\s+\d+", parse_c_content, re.MULTILINE)),
         control_defines=extract_section(parse_c_content, CONTROL_DEFS_START, CONTROL_DEFS_END),
         parsing_tables=extract_section(parse_c_content, PARSING_TABLES_START, PARSING_TABLES_END),
         reduce_actions=extract_section(parse_c_content, REDUCE_ACTIONS_START, REDUCE_ACTIONS_END),

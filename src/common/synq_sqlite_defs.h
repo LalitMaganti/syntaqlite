@@ -37,7 +37,7 @@ typedef uint32_t u32;
 typedef struct SynqToken {
   const char *z;  /* Text of the token */
   int n;          /* Length of the token */
-  int type;       /* Token type (TK_* constant) */
+  int type;       /* Token type (SYNTAQLITE_TOKEN_* constant) */
 } SynqToken;
 
 /*

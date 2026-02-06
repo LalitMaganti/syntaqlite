@@ -28,7 +28,7 @@ typedef enum {
 
 // Comment attachment: maps each comment token to its owning AST node.
 typedef struct {
-    uint32_t *owner_node;  // owner_node[tok_idx] = AST node_id (or SYNQ_NULL_NODE)
+    uint32_t *owner_node;  // owner_node[tok_idx] = AST node_id (or SYNTAQLITE_NULL_NODE)
     uint8_t *position;     // SynqCommentKind (LEADING or TRAILING)
     uint32_t count;        // = token_list->count
 } SynqCommentAttachment;
@@ -58,7 +58,7 @@ inline uint32_t synq_kw(SynqFmtCtx *ctx, const char *text) {
     return synq_doc_text(&ctx->docs, text, (uint32_t)strlen(text));
 }
 
-inline uint32_t synq_span_text(SynqFmtCtx *ctx, SynqSourceSpan span) {
+inline uint32_t synq_span_text(SynqFmtCtx *ctx, SyntaqliteSourceSpan span) {
     if (span.length == 0) return SYNQ_NULL_DOC;
     return synq_doc_text(&ctx->docs, ctx->source + span.offset, span.length);
 }

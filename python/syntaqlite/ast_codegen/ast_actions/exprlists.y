@@ -19,7 +19,7 @@ exprlist(A) ::= nexprlist(B). {
 }
 
 exprlist(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 nexprlist(A) ::= nexprlist(B) COMMA expr(C). {

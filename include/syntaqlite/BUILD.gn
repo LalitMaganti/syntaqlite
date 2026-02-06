@@ -2,6 +2,7 @@
 
 source_set("headers") {
   sources = [
+    "ast_defs.h",
     "ast_nodes_gen.h",
     "formatter.h",
     "sqlite_tokens_gen.h",

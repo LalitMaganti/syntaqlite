@@ -8,7 +8,7 @@ all the data needed to extend syntaqlite with custom keywords and grammar rules.
 The generated file can be injected at compile time.
 
 The amalgamated file includes:
-1. Token definitions (#define TK_*)
+1. Token definitions (#define SYNTAQLITE_TOKEN_*)
 2. Keyword hash data (for tokenizer)
 3. Parser tables and data (for parser)
 4. Extension reduce function (for parser)
@@ -51,7 +51,7 @@ from python.syntaqlite.sqlite_extractor import (
 # Keywordhash processing markers
 KEYWORDHASH_SCORE_MARKER = "/* Hash score:"
 KEYWORD_CODE_FUNC_MARKER = "static int keywordCode("
-from python.syntaqlite.sqlite_extractor.generators import extract_tk_defines
+from python.syntaqlite.sqlite_extractor.generators import extract_token_defines
 
 
 def parse_extension_keywords(grammar_path: Path) -> list[str]:
@@ -89,8 +89,8 @@ def generate_token_defines(runner: ToolRunner, extension_grammar: Path) -> str:
         parse_h = runner.run_lemon(tmpdir / "parse.y")
         parse_h_content = parse_h.read_text()
 
-        # Extract TK_* defines
-        defines = extract_tk_defines(parse_h_content)
+        # Extract SYNTAQLITE_TOKEN_* defines
+        defines = extract_token_defines(parse_h_content)
         return "\n".join(defines)
 
 

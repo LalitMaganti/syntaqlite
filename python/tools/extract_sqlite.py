@@ -53,7 +53,7 @@ from python.syntaqlite.sqlite_extractor import (
 # Keywordhash processing markers
 KEYWORDHASH_SCORE_MARKER = "/* Hash score:"
 KEYWORD_CODE_FUNC_MARKER = "static int keywordCode("
-from python.syntaqlite.sqlite_extractor.generators import extract_tk_defines
+from python.syntaqlite.sqlite_extractor.generators import extract_token_defines
 from python.syntaqlite.sqlite_extractor.grammar_build import (
     build_synq_grammar,
 )
@@ -108,6 +108,9 @@ def process_keywordhash_output(output: str, prefix: str) -> tuple[str, str]:
     # Rename symbols in the output using safe C tokenizer
     pipeline = create_symbol_rename_pipeline(prefix)
     output = pipeline.apply(output)
+
+    # Rename TK_ token prefix to SYNTAQLITE_TOKEN_
+    output = SymbolRename("TK_", "SYNTAQLITE_TOKEN_").apply(output)
 
     # Rename keywordhash arrays to have our prefix
     output = create_keywordhash_rename_pipeline(prefix).apply(output)
@@ -231,6 +234,9 @@ i64 {sqlite3_prefix}GetToken(const unsigned char *z, int *tokenType);
     # Rename sqlite3* symbols (using safe C tokenizer)
     content = create_symbol_rename_pipeline(prefix).apply(content)
 
+    # Rename TK_ token prefix to SYNTAQLITE_TOKEN_
+    content = SymbolRename("TK_", "SYNTAQLITE_TOKEN_").apply(content)
+
     # Rename keywordCode to have our prefix
     content = SymbolRenameExact("keywordCode", f"{prefix}_keywordCode").apply(content)
 
@@ -276,8 +282,8 @@ def generate_token_defs(
             parse_h = runner.run_lemon(tmpdir / "parse.y")
             parse_h_content = parse_h.read_text()
 
-    # Extract TK_* defines
-    defines = extract_tk_defines(parse_h_content)
+    # Extract SYNTAQLITE_TOKEN_* defines
+    defines = extract_token_defines(parse_h_content)
 
     # Wrap in SYNTAQLITE_CUSTOM_TOKENS ifdef so dialects can substitute
     # their own token definitions and the wrong set can never leak.
@@ -472,7 +478,7 @@ def generate_ast(output_dir: Path) -> None:
                              public_header_dir=include_dir)
 
     # Generate formatter
-    fmt_output = output_dir / "fmt" / "fmt_gen.c"
+    fmt_output = output_dir / "formatter" / "fmt_gen.c"
     ast_fmt_codegen.generate_fmt_c(AST_NODES, AST_FLAGS, fmt_output)
 
     print(f"  {len(AST_NODES)} node types, {len(AST_ENUMS)} enums")

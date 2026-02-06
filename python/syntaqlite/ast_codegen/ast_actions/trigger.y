@@ -17,7 +17,7 @@
 // The main cmd rule: completes the trigger with its body
 cmd(A) ::= createkw trigger_decl(D) BEGIN trigger_cmd_list(S) END. {
     // D is a partially-built CreateTriggerStmt, fill in the body
-    SynqNode *trig = AST_NODE(&pCtx->astCtx->ast, D);
+    SyntaqliteNode *trig = AST_NODE(&pCtx->astCtx->ast, D);
     trig->create_trigger_stmt.body = S;
     A = D;
 }
@@ -26,52 +26,52 @@ cmd(A) ::= createkw trigger_decl(D) BEGIN trigger_cmd_list(S) END. {
 trigger_decl(A) ::= temp(T) TRIGGER ifnotexists(NOERR) nm(B) dbnm(Z)
                     trigger_time(C) trigger_event(D)
                     ON fullname(E) foreach_clause when_clause(G). {
-    SynqSourceSpan trig_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, B);
-    SynqSourceSpan trig_schema = Z.z ? synq_span(pCtx, B) : SYNQ_NO_SPAN;
+    SyntaqliteSourceSpan trig_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, B);
+    SyntaqliteSourceSpan trig_schema = Z.z ? synq_span(pCtx, B) : SYNQ_NO_SPAN;
     A = synq_ast_create_trigger_stmt(pCtx->astCtx,
         trig_name,
         trig_schema,
-        (SynqBool)T,
-        (SynqBool)NOERR,
-        (SynqTriggerTiming)C,
+        (SyntaqliteBool)T,
+        (SyntaqliteBool)NOERR,
+        (SyntaqliteTriggerTiming)C,
         D,
         E,
         G,
-        SYNQ_NULL_NODE);  // body filled in by cmd rule
+        SYNTAQLITE_NULL_NODE);  // body filled in by cmd rule
 }
 
 // ============ Trigger timing ============
 
 trigger_time(A) ::= BEFORE|AFTER(X). {
-    A = (X.type == TK_BEFORE) ? (int)SYNQ_TRIGGER_TIMING_BEFORE
-                               : (int)SYNQ_TRIGGER_TIMING_AFTER;
+    A = (X.type == SYNTAQLITE_TOKEN_BEFORE) ? (int)SYNTAQLITE_TRIGGER_TIMING_BEFORE
+                               : (int)SYNTAQLITE_TRIGGER_TIMING_AFTER;
 }
 
 trigger_time(A) ::= INSTEAD OF. {
-    A = (int)SYNQ_TRIGGER_TIMING_INSTEAD_OF;
+    A = (int)SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF;
 }
 
 trigger_time(A) ::= . {
-    A = (int)SYNQ_TRIGGER_TIMING_BEFORE;
+    A = (int)SYNTAQLITE_TRIGGER_TIMING_BEFORE;
 }
 
 // ============ Trigger event ============
 
 trigger_event(A) ::= DELETE|INSERT(X). {
-    SynqTriggerEventType evt = (X.type == TK_DELETE)
-        ? SYNQ_TRIGGER_EVENT_TYPE_DELETE
-        : SYNQ_TRIGGER_EVENT_TYPE_INSERT;
-    A = synq_ast_trigger_event(pCtx->astCtx, evt, SYNQ_NULL_NODE);
+    SyntaqliteTriggerEventType evt = (X.type == SYNTAQLITE_TOKEN_DELETE)
+        ? SYNTAQLITE_TRIGGER_EVENT_TYPE_DELETE
+        : SYNTAQLITE_TRIGGER_EVENT_TYPE_INSERT;
+    A = synq_ast_trigger_event(pCtx->astCtx, evt, SYNTAQLITE_NULL_NODE);
 }
 
 trigger_event(A) ::= UPDATE. {
     A = synq_ast_trigger_event(pCtx->astCtx,
-        SYNQ_TRIGGER_EVENT_TYPE_UPDATE, SYNQ_NULL_NODE);
+        SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE, SYNTAQLITE_NULL_NODE);
 }
 
 trigger_event(A) ::= UPDATE OF idlist(X). {
     A = synq_ast_trigger_event(pCtx->astCtx,
-        SYNQ_TRIGGER_EVENT_TYPE_UPDATE, X);
+        SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE, X);
 }
 
 // ============ FOR EACH ROW (consumed, no value) ============
@@ -87,7 +87,7 @@ foreach_clause ::= FOR EACH ROW. {
 // ============ WHEN clause ============
 
 when_clause(A) ::= . {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 when_clause(A) ::= WHEN expr(X). {
@@ -135,14 +135,14 @@ tridxby ::= NOT INDEXED. {
 trigger_cmd(A) ::= UPDATE orconf(R) trnm(X) tridxby SET setlist(Y) from(F) where_opt(Z) scanpt. {
     uint32_t tbl = synq_ast_table_ref(pCtx->astCtx,
         synq_span(pCtx, X), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
-    A = synq_ast_update_stmt(pCtx->astCtx, (SynqConflictAction)R, tbl, Y, F, Z);
+    A = synq_ast_update_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, tbl, Y, F, Z);
 }
 
 // INSERT within trigger
 trigger_cmd(A) ::= scanpt insert_cmd(R) INTO trnm(X) idlist_opt(F) select(S) upsert scanpt. {
     uint32_t tbl = synq_ast_table_ref(pCtx->astCtx,
         synq_span(pCtx, X), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
-    A = synq_ast_insert_stmt(pCtx->astCtx, (SynqConflictAction)R, tbl, F, S);
+    A = synq_ast_insert_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, tbl, F, S);
 }
 
 // DELETE within trigger

@@ -18,20 +18,20 @@
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E) RP. {
     A = synq_ast_aggregate_function_call(pCtx->astCtx,
         synq_span(pCtx, B),
-        (SynqAggregateFunctionCallFlags){.raw = (uint8_t)C},
+        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)C},
         D,
         E,
-        SYNQ_NULL_NODE,
-        SYNQ_NULL_NODE);
+        SYNTAQLITE_NULL_NODE,
+        SYNTAQLITE_NULL_NODE);
 }
 
 // Aggregate function call with filter/over
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E) RP filter_over(F). {
-    SynqFilterOver *fo = (SynqFilterOver*)
+    SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
         (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[F]);
     A = synq_ast_aggregate_function_call(pCtx->astCtx,
         synq_span(pCtx, B),
-        (SynqAggregateFunctionCallFlags){.raw = (uint8_t)C},
+        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)C},
         D,
         E,
         fo->filter_expr,

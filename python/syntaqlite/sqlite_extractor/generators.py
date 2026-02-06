@@ -124,13 +124,17 @@ def format_keyword_table_entry(keyword: str, padding: int = 18) -> str:
     return f'  {{ "{keyword}",{" " * name_pad}"{token}",{" " * token_pad}ALWAYS,           1      }},'
 
 
-def extract_tk_defines(parse_h_content: str) -> list[str]:
-    """Extract TK_* define lines from lemon-generated parse.h.
+def extract_token_defines(parse_h_content: str) -> list[str]:
+    """Extract SYNTAQLITE_TOKEN_* define lines from lemon-generated parse.h.
 
     Args:
         parse_h_content: Content of the parse.h file.
 
     Returns:
-        List of #define TK_* lines.
+        List of #define SYNTAQLITE_TOKEN_* lines.
     """
-    return re.findall(r"^#define TK_\w+\s+\d+", parse_h_content, re.MULTILINE)
+    return re.findall(r"^#define SYNTAQLITE_TOKEN_\w+\s+\d+", parse_h_content, re.MULTILINE)
+
+
+# Backward-compatible alias
+extract_tk_defines = extract_token_defines

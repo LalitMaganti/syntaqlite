@@ -7,7 +7,7 @@
 //   SyntaqliteParser *p = syntaqlite_parser_create(NULL);
 //   syntaqlite_parser_reset(p, sql, len);
 //   SyntaqliteParseResult result;
-//   while ((result = syntaqlite_parser_next(p)).root != SYNQ_NULL_NODE) {
+//   while ((result = syntaqlite_parser_next(p)).root != SYNTAQLITE_NULL_NODE) {
 //     // process result.root
 //   }
 //   if (result.error) { /* handle error */ }
@@ -38,7 +38,7 @@ typedef struct SyntaqliteParserConfig {
 
 // Result from syntaqlite_parser_next().
 typedef struct SyntaqliteParseResult {
-    uint32_t root;       // Root node ID, or SYNQ_NULL_NODE at end-of-input.
+    uint32_t root;       // Root node ID, or SYNTAQLITE_NULL_NODE at end-of-input.
     int error;           // Nonzero if a parse error occurred.
     const char *error_msg;  // Error message (owned by parser), or NULL.
 } SyntaqliteParseResult;
@@ -53,12 +53,12 @@ void syntaqlite_parser_reset(SyntaqliteParser *p, const char *source,
                               uint32_t len);
 
 // Parse the next statement. Returns the root node ID.
-// Returns SYNQ_NULL_NODE with error=0 at end-of-input.
+// Returns SYNTAQLITE_NULL_NODE with error=0 at end-of-input.
 // Bare semicolons are skipped automatically.
 SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p);
 
 // Access a node by ID (valid until the next syntaqlite_parser_reset call).
-const SynqNode *syntaqlite_parser_node(SyntaqliteParser *p, uint32_t node_id);
+const SyntaqliteNode *syntaqlite_parser_node(SyntaqliteParser *p, uint32_t node_id);
 
 // Access the source text that was passed to syntaqlite_parser_reset().
 const char *syntaqlite_parser_source(SyntaqliteParser *p);

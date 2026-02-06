@@ -31,7 +31,7 @@ cmdlist(A) ::= ecmd(B). {
 // ============ Command wrapper ============
 
 ecmd(A) ::= SEMI. {
-    A = SYNQ_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
     pCtx->stmt_completed = 1;
 }
 

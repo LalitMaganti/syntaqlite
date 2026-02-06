@@ -15,30 +15,30 @@
 // ============ Literals ============
 
 term(A) ::= INTEGER(B). {
-    A = synq_ast_literal(pCtx->astCtx, SYNQ_LITERAL_TYPE_INTEGER, synq_span(pCtx, B));
+    A = synq_ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_INTEGER, synq_span(pCtx, B));
 }
 
 term(A) ::= STRING(B). {
-    A = synq_ast_literal(pCtx->astCtx, SYNQ_LITERAL_TYPE_STRING, synq_span(pCtx, B));
+    A = synq_ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_STRING, synq_span(pCtx, B));
 }
 
 term(A) ::= NULL|FLOAT|BLOB(B). {
-    SynqLiteralType lit_type;
+    SyntaqliteLiteralType lit_type;
     switch (B.type) {
-        case TK_NULL:  lit_type = SYNQ_LITERAL_TYPE_NULL; break;
-        case TK_FLOAT: lit_type = SYNQ_LITERAL_TYPE_FLOAT; break;
-        case TK_BLOB:  lit_type = SYNQ_LITERAL_TYPE_BLOB; break;
-        default:       lit_type = SYNQ_LITERAL_TYPE_NULL; break;
+        case SYNTAQLITE_TOKEN_NULL:  lit_type = SYNTAQLITE_LITERAL_TYPE_NULL; break;
+        case SYNTAQLITE_TOKEN_FLOAT: lit_type = SYNTAQLITE_LITERAL_TYPE_FLOAT; break;
+        case SYNTAQLITE_TOKEN_BLOB:  lit_type = SYNTAQLITE_LITERAL_TYPE_BLOB; break;
+        default:       lit_type = SYNTAQLITE_LITERAL_TYPE_NULL; break;
     }
     A = synq_ast_literal(pCtx->astCtx, lit_type, synq_span(pCtx, B));
 }
 
 term(A) ::= QNUMBER(B). {
-    A = synq_ast_literal(pCtx->astCtx, SYNQ_LITERAL_TYPE_QNUMBER, synq_span(pCtx, B));
+    A = synq_ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_QNUMBER, synq_span(pCtx, B));
 }
 
 // ============ Date/Time Keywords ============
 
 term(A) ::= CTIME_KW(B). {
-    A = synq_ast_literal(pCtx->astCtx, SYNQ_LITERAL_TYPE_CURRENT, synq_span(pCtx, B));
+    A = synq_ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_CURRENT, synq_span(pCtx, B));
 }

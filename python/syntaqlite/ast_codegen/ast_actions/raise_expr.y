@@ -16,16 +16,16 @@
 
 // RAISE(IGNORE) - no error message
 expr(A) ::= RAISE LP IGNORE RP. {
-    A = synq_ast_raise_expr(pCtx->astCtx, SYNQ_RAISE_TYPE_IGNORE, SYNQ_NULL_NODE);
+    A = synq_ast_raise_expr(pCtx->astCtx, SYNTAQLITE_RAISE_TYPE_IGNORE, SYNTAQLITE_NULL_NODE);
 }
 
 // RAISE(type, error_message)
 expr(A) ::= RAISE LP raisetype(T) COMMA expr(Z) RP. {
-    A = synq_ast_raise_expr(pCtx->astCtx, (SynqRaiseType)T, Z);
+    A = synq_ast_raise_expr(pCtx->astCtx, (SyntaqliteRaiseType)T, Z);
 }
 
 // ============ Raise Type ============
 
-raisetype(A) ::= ROLLBACK. { A = SYNQ_RAISE_TYPE_ROLLBACK; }
-raisetype(A) ::= ABORT. { A = SYNQ_RAISE_TYPE_ABORT; }
-raisetype(A) ::= FAIL. { A = SYNQ_RAISE_TYPE_FAIL; }
+raisetype(A) ::= ROLLBACK. { A = SYNTAQLITE_RAISE_TYPE_ROLLBACK; }
+raisetype(A) ::= ABORT. { A = SYNTAQLITE_RAISE_TYPE_ABORT; }
+raisetype(A) ::= FAIL. { A = SYNTAQLITE_RAISE_TYPE_FAIL; }

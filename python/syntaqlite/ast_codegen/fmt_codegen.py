@@ -44,11 +44,11 @@ from .fmt_dsl import (
 
 
 def _tag_name(node_name: str) -> str:
-    return f"SYNQ_NODE_{pascal_to_snake(node_name).upper()}"
+    return f"SYNTAQLITE_NODE_{pascal_to_snake(node_name).upper()}"
 
 
 def _enum_prefix(enum_name: str) -> str:
-    return f"SYNQ_{pascal_to_snake(enum_name).upper()}"
+    return f"SYNTAQLITE_{pascal_to_snake(enum_name).upper()}"
 
 
 def _c_str(s: str) -> str:
@@ -193,10 +193,10 @@ class _OpCompiler:
             # Bool field: use IF_ENUM (Bool is int-sized, IF_FLAG reads uint8_t).
             if doc.else_ is not None:
                 self.ops.append(
-                    f'FOP_IF_ENUM_ELSE({T}, {doc.field}, SYNQ_BOOL_TRUE)')
+                    f'FOP_IF_ENUM_ELSE({T}, {doc.field}, SYNTAQLITE_BOOL_TRUE)')
             else:
                 self.ops.append(
-                    f'FOP_IF_ENUM({T}, {doc.field}, SYNQ_BOOL_TRUE)')
+                    f'FOP_IF_ENUM({T}, {doc.field}, SYNTAQLITE_BOOL_TRUE)')
 
         self.compile(doc.then)
         if doc.else_ is not None:
@@ -325,7 +325,7 @@ def generate_fmt_c(
     lines.append("// Generated from ast_codegen node definitions - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
     lines.append("")
-    lines.append('#include "src/fmt/fmt_ops.h"')
+    lines.append('#include "src/formatter/fmt_ops.h"')
     lines.append("")
     lines.append('#include "src/parser/ast_nodes_gen.h"')
     lines.append("")
@@ -361,7 +361,7 @@ def generate_fmt_c(
     # Recipe lookup table (indexed by SynqNodeTag).
     lines.append("// ============ Recipe Table ============")
     lines.append("")
-    lines.append("const SynqFmtOp *synq_fmt_recipes[SYNQ_NODE_COUNT] = {")
+    lines.append("const SynqFmtOp *synq_fmt_recipes[SYNTAQLITE_NODE_COUNT] = {")
 
     for node in node_defs:
         tag = _tag_name(node.name)

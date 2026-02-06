@@ -18,7 +18,7 @@ extern "C" {
 typedef struct SynqRawToken {
     uint32_t offset;  // Byte offset into source text
     uint16_t length;  // Token length in bytes
-    uint16_t type;    // TK_* token type
+    uint16_t type;    // SYNTAQLITE_TOKEN_* token type
 } SynqRawToken;
 
 // Growable array of raw tokens.

@@ -35,7 +35,7 @@ static CommentMap *comment_map_build(
 
     int has_comments = 0;
     for (uint32_t i = 0; i < token_list->count; i++) {
-        if (token_list->data[i].type == TK_COMMENT) {
+        if (token_list->data[i].type == SYNTAQLITE_TOKEN_COMMENT) {
             has_comments = 1;
             break;
         }
@@ -58,7 +58,7 @@ static CommentMap *comment_map_build(
     for (uint32_t i = 0; i < token_list->count; i++) {
         SynqRawToken *tok = &token_list->data[i];
 
-        if (tok->type == TK_COMMENT) {
+        if (tok->type == SYNTAQLITE_TOKEN_COMMENT) {
             uint8_t kind = SYNQ_COMMENT_LEADING;
             if (seen_real) {
                 int has_newline = 0;
@@ -68,7 +68,7 @@ static CommentMap *comment_map_build(
                 if (!has_newline) kind = SYNQ_COMMENT_TRAILING;
             }
             map->kinds[i] = kind;
-        } else if (tok->type != TK_SPACE) {
+        } else if (tok->type != SYNTAQLITE_TOKEN_SPACE) {
             prev_real_end = tok->offset + tok->length;
             seen_real = 1;
         }
@@ -91,14 +91,14 @@ static void comment_map_free(CommentMap *map) {
 // Prefers innermost (smallest) when tied on end position.
 static uint32_t find_preceding_node(SynqAstContext *astCtx,
                                      uint32_t offset) {
-    uint32_t best = SYNQ_NULL_NODE;
+    uint32_t best = SYNTAQLITE_NULL_NODE;
     uint32_t best_end = 0;
     for (uint32_t n = 0; n < astCtx->ranges.count; n++) {
         SynqSourceRange r = astCtx->ranges.data[n];
         if (r.first == 0 && r.last == 0) continue;
         if (r.last <= offset && r.last >= best_end) {
             if (r.last > best_end ||
-                (best != SYNQ_NULL_NODE &&
+                (best != SYNTAQLITE_NULL_NODE &&
                  (r.last - r.first) < (astCtx->ranges.data[best].last -
                                         astCtx->ranges.data[best].first))) {
                 best_end = r.last;
@@ -113,14 +113,14 @@ static uint32_t find_preceding_node(SynqAstContext *astCtx,
 // Prefers innermost (smallest) when tied on start position.
 static uint32_t find_following_node(SynqAstContext *astCtx,
                                      uint32_t comment_end) {
-    uint32_t best = SYNQ_NULL_NODE;
+    uint32_t best = SYNTAQLITE_NULL_NODE;
     uint32_t best_start = UINT32_MAX;
     for (uint32_t n = 0; n < astCtx->ranges.count; n++) {
         SynqSourceRange r = astCtx->ranges.data[n];
         if (r.first == 0 && r.last == 0) continue;
         if (r.first >= comment_end && r.first <= best_start) {
             if (r.first < best_start ||
-                (best != SYNQ_NULL_NODE &&
+                (best != SYNTAQLITE_NULL_NODE &&
                  (r.last - r.first) < (astCtx->ranges.data[best].last -
                                         astCtx->ranges.data[best].first))) {
                 best_start = r.first;
@@ -140,7 +140,7 @@ SynqCommentAttachment *synq_comment_attach(
     // Check for comments
     int has_comments = 0;
     for (uint32_t i = 0; i < token_list->count; i++) {
-        if (token_list->data[i].type == TK_COMMENT) {
+        if (token_list->data[i].type == SYNTAQLITE_TOKEN_COMMENT) {
             has_comments = 1;
             break;
         }
@@ -155,10 +155,10 @@ SynqCommentAttachment *synq_comment_attach(
     att->position = calloc(token_list->count, sizeof(uint8_t));
 
     for (uint32_t i = 0; i < att->count; i++)
-        att->owner_node[i] = SYNQ_NULL_NODE;
+        att->owner_node[i] = SYNTAQLITE_NULL_NODE;
 
     for (uint32_t i = 0; i < token_list->count; i++) {
-        if (token_list->data[i].type != TK_COMMENT) continue;
+        if (token_list->data[i].type != SYNTAQLITE_TOKEN_COMMENT) continue;
 
         uint32_t c_offset = token_list->data[i].offset;
         uint32_t c_end = c_offset + token_list->data[i].length;
@@ -170,22 +170,22 @@ SynqCommentAttachment *synq_comment_attach(
         if (kind == SYNQ_COMMENT_TRAILING) {
             owner = find_preceding_node(astCtx, c_offset);
             // End-of-statement: nothing follows → attach to root
-            if (owner != SYNQ_NULL_NODE) {
+            if (owner != SYNTAQLITE_NULL_NODE) {
                 uint32_t following = find_following_node(astCtx, c_end);
-                if (following == SYNQ_NULL_NODE)
+                if (following == SYNTAQLITE_NULL_NODE)
                     owner = root_id;
             }
         } else {
             owner = find_following_node(astCtx, c_end);
             // Start-of-statement: nothing precedes → attach to root
-            if (owner != SYNQ_NULL_NODE) {
+            if (owner != SYNTAQLITE_NULL_NODE) {
                 uint32_t preceding = find_preceding_node(astCtx, c_offset);
-                if (preceding == SYNQ_NULL_NODE)
+                if (preceding == SYNTAQLITE_NULL_NODE)
                     owner = root_id;
             }
         }
 
-        att->owner_node[i] = (owner != SYNQ_NULL_NODE) ? owner : root_id;
+        att->owner_node[i] = (owner != SYNTAQLITE_NULL_NODE) ? owner : root_id;
     }
 
     comment_map_free(map);

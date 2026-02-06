@@ -58,7 +58,7 @@ FLAGS = [
 NODES = [
     # Foreign key clause: REFERENCES table [(columns)] [ON DELETE action] [ON UPDATE action] [deferrable]
     Node("ForeignKeyClause",
-        ref_table=inline("SynqSourceSpan"),
+        ref_table=inline("SyntaqliteSourceSpan"),
         ref_columns=index("ExprList"),          # nullable - referenced column list
         on_delete=inline("ForeignKeyAction"),    # NO_ACTION if not specified
         on_update=inline("ForeignKeyAction"),    # NO_ACTION if not specified
@@ -94,11 +94,11 @@ NODES = [
     #   NULL: onconf (conflict resolution, usually ignored)
     Node("ColumnConstraint",
         kind=inline("ColumnConstraintKind"),
-        constraint_name=inline("SynqSourceSpan"),  # CONSTRAINT name (optional)
+        constraint_name=inline("SyntaqliteSourceSpan"),  # CONSTRAINT name (optional)
         onconf=inline("ConflictAction"),        # conflict resolution action
         sort_order=inline("SortOrder"),         # for PRIMARY KEY: ASC/DESC
         is_autoincrement=inline("Bool"),        # for PRIMARY KEY
-        collation_name=inline("SynqSourceSpan"),   # for COLLATE
+        collation_name=inline("SyntaqliteSourceSpan"),   # for COLLATE
         generated_storage=inline("GeneratedColumnStorage"),  # for GENERATED
         default_expr=index("Expr"),             # for DEFAULT
         check_expr=index("Expr"),               # for CHECK
@@ -159,8 +159,8 @@ NODES = [
 
     # Column definition: name type [constraints]
     Node("ColumnDef",
-        column_name=inline("SynqSourceSpan"),
-        type_name=inline("SynqSourceSpan"),   # type token (may be empty)
+        column_name=inline("SyntaqliteSourceSpan"),
+        type_name=inline("SyntaqliteSourceSpan"),   # type token (may be empty)
         constraints=index("Expr"),                   # ColumnConstraintList (nullable)
         fmt=seq(
             span("column_name"),
@@ -182,7 +182,7 @@ NODES = [
     #   FOREIGN_KEY: columns (local), fk_clause
     Node("TableConstraint",
         kind=inline("TableConstraintKind"),
-        constraint_name=inline("SynqSourceSpan"),
+        constraint_name=inline("SyntaqliteSourceSpan"),
         onconf=inline("ConflictAction"),
         is_autoincrement=inline("Bool"),
         columns=index("Expr"),              # OrderByList (for PK/UNIQUE) or ExprList (for FK local columns)
@@ -229,8 +229,8 @@ NODES = [
     # CREATE [TEMP] TABLE [IF NOT EXISTS] [schema.]name (columns [, constraints]) [options]
     # CREATE [TEMP] TABLE [IF NOT EXISTS] [schema.]name AS select
     Node("CreateTableStmt",
-        table_name=inline("SynqSourceSpan"),
-        schema=inline("SynqSourceSpan"),
+        table_name=inline("SyntaqliteSourceSpan"),
+        schema=inline("SyntaqliteSourceSpan"),
         is_temp=inline("Bool"),
         if_not_exists=inline("Bool"),
         flags=inline("CreateTableStmtFlags"),   # WITHOUT_ROWID | STRICT

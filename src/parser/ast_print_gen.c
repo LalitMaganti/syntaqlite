@@ -14,7 +14,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
 static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
                        const char *source, int depth,
                        const char *field_name) {
-  if (node_id == SYNQ_NULL_NODE) {
+  if (node_id == SYNTAQLITE_NULL_NODE) {
     if (field_name) {
       synq_ast_print_indent(out, depth);
       fprintf(out, "%s: null\n", field_name);
@@ -22,13 +22,13 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
     return;
   }
 
-  SynqNode *node = AST_NODE(ast, node_id);
+  SyntaqliteNode *node = AST_NODE(ast, node_id);
   if (!node) {
     return;
   }
 
   switch (node->tag) {
-    case SYNQ_NODE_BINARY_EXPR: {
+    case SYNTAQLITE_NODE_BINARY_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: BinaryExpr\n", field_name);
@@ -41,7 +41,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_UNARY_EXPR: {
+    case SYNTAQLITE_NODE_UNARY_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: UnaryExpr\n", field_name);
@@ -53,7 +53,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_LITERAL: {
+    case SYNTAQLITE_NODE_LITERAL: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: Literal\n", field_name);
@@ -68,7 +68,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_EXPR_LIST: {
+    case SYNTAQLITE_NODE_EXPR_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ExprList[%u]\n", field_name, node->expr_list.count);
@@ -80,7 +80,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_RESULT_COLUMN: {
+    case SYNTAQLITE_NODE_RESULT_COLUMN: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ResultColumn\n", field_name);
@@ -99,7 +99,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_RESULT_COLUMN_LIST: {
+    case SYNTAQLITE_NODE_RESULT_COLUMN_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ResultColumnList[%u]\n", field_name, node->result_column_list.count);
@@ -111,7 +111,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_SELECT_STMT: {
+    case SYNTAQLITE_NODE_SELECT_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SelectStmt\n", field_name);
@@ -133,7 +133,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_ORDERING_TERM: {
+    case SYNTAQLITE_NODE_ORDERING_TERM: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: OrderingTerm\n", field_name);
@@ -147,7 +147,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_ORDER_BY_LIST: {
+    case SYNTAQLITE_NODE_ORDER_BY_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: OrderByList[%u]\n", field_name, node->order_by_list.count);
@@ -159,7 +159,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_LIMIT_CLAUSE: {
+    case SYNTAQLITE_NODE_LIMIT_CLAUSE: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: LimitClause\n", field_name);
@@ -170,7 +170,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_COLUMN_REF: {
+    case SYNTAQLITE_NODE_COLUMN_REF: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnRef\n", field_name);
@@ -191,7 +191,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_FUNCTION_CALL: {
+    case SYNTAQLITE_NODE_FUNCTION_CALL: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: FunctionCall\n", field_name);
@@ -213,7 +213,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_IS_EXPR: {
+    case SYNTAQLITE_NODE_IS_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: IsExpr\n", field_name);
@@ -226,7 +226,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_BETWEEN_EXPR: {
+    case SYNTAQLITE_NODE_BETWEEN_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: BetweenExpr\n", field_name);
@@ -240,7 +240,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_LIKE_EXPR: {
+    case SYNTAQLITE_NODE_LIKE_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: LikeExpr\n", field_name);
@@ -254,7 +254,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CASE_EXPR: {
+    case SYNTAQLITE_NODE_CASE_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CaseExpr\n", field_name);
@@ -266,7 +266,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CASE_WHEN: {
+    case SYNTAQLITE_NODE_CASE_WHEN: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CaseWhen\n", field_name);
@@ -277,7 +277,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CASE_WHEN_LIST: {
+    case SYNTAQLITE_NODE_CASE_WHEN_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CaseWhenList[%u]\n", field_name, node->case_when_list.count);
@@ -289,7 +289,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_COMPOUND_SELECT: {
+    case SYNTAQLITE_NODE_COMPOUND_SELECT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CompoundSelect\n", field_name);
@@ -302,7 +302,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_SUBQUERY_EXPR: {
+    case SYNTAQLITE_NODE_SUBQUERY_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SubqueryExpr\n", field_name);
@@ -312,7 +312,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_EXISTS_EXPR: {
+    case SYNTAQLITE_NODE_EXISTS_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ExistsExpr\n", field_name);
@@ -322,7 +322,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_IN_EXPR: {
+    case SYNTAQLITE_NODE_IN_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: InExpr\n", field_name);
@@ -335,7 +335,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_VARIABLE: {
+    case SYNTAQLITE_NODE_VARIABLE: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: Variable\n", field_name);
@@ -348,7 +348,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_COLLATE_EXPR: {
+    case SYNTAQLITE_NODE_COLLATE_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CollateExpr\n", field_name);
@@ -362,7 +362,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CAST_EXPR: {
+    case SYNTAQLITE_NODE_CAST_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CastExpr\n", field_name);
@@ -376,7 +376,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_VALUES_ROW_LIST: {
+    case SYNTAQLITE_NODE_VALUES_ROW_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ValuesRowList[%u]\n", field_name, node->values_row_list.count);
@@ -388,7 +388,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_VALUES_CLAUSE: {
+    case SYNTAQLITE_NODE_VALUES_CLAUSE: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ValuesClause\n", field_name);
@@ -398,7 +398,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CTE_DEFINITION: {
+    case SYNTAQLITE_NODE_CTE_DEFINITION: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CteDefinition\n", field_name);
@@ -415,7 +415,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CTE_LIST: {
+    case SYNTAQLITE_NODE_CTE_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CteList[%u]\n", field_name, node->cte_list.count);
@@ -427,7 +427,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_WITH_CLAUSE: {
+    case SYNTAQLITE_NODE_WITH_CLAUSE: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: WithClause\n", field_name);
@@ -440,7 +440,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_AGGREGATE_FUNCTION_CALL: {
+    case SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: AggregateFunctionCall\n", field_name);
@@ -462,7 +462,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_RAISE_EXPR: {
+    case SYNTAQLITE_NODE_RAISE_EXPR: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: RaiseExpr\n", field_name);
@@ -474,7 +474,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_TABLE_REF: {
+    case SYNTAQLITE_NODE_TABLE_REF: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TableRef\n", field_name);
@@ -495,7 +495,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_SUBQUERY_TABLE_SOURCE: {
+    case SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SubqueryTableSource\n", field_name);
@@ -509,7 +509,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_JOIN_CLAUSE: {
+    case SYNTAQLITE_NODE_JOIN_CLAUSE: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: JoinClause\n", field_name);
@@ -524,7 +524,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_JOIN_PREFIX: {
+    case SYNTAQLITE_NODE_JOIN_PREFIX: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: JoinPrefix\n", field_name);
@@ -536,7 +536,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_DELETE_STMT: {
+    case SYNTAQLITE_NODE_DELETE_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: DeleteStmt\n", field_name);
@@ -547,7 +547,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_SET_CLAUSE: {
+    case SYNTAQLITE_NODE_SET_CLAUSE: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SetClause\n", field_name);
@@ -562,7 +562,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_SET_CLAUSE_LIST: {
+    case SYNTAQLITE_NODE_SET_CLAUSE_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SetClauseList[%u]\n", field_name, node->set_clause_list.count);
@@ -574,7 +574,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_UPDATE_STMT: {
+    case SYNTAQLITE_NODE_UPDATE_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: UpdateStmt\n", field_name);
@@ -589,7 +589,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_INSERT_STMT: {
+    case SYNTAQLITE_NODE_INSERT_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: InsertStmt\n", field_name);
@@ -603,7 +603,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_QUALIFIED_NAME: {
+    case SYNTAQLITE_NODE_QUALIFIED_NAME: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: QualifiedName\n", field_name);
@@ -620,7 +620,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_DROP_STMT: {
+    case SYNTAQLITE_NODE_DROP_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: DropStmt\n", field_name);
@@ -634,7 +634,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_ALTER_TABLE_STMT: {
+    case SYNTAQLITE_NODE_ALTER_TABLE_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: AlterTableStmt\n", field_name);
@@ -654,7 +654,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_TRANSACTION_STMT: {
+    case SYNTAQLITE_NODE_TRANSACTION_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TransactionStmt\n", field_name);
@@ -667,7 +667,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_SAVEPOINT_STMT: {
+    case SYNTAQLITE_NODE_SAVEPOINT_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SavepointStmt\n", field_name);
@@ -682,7 +682,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_PRAGMA_STMT: {
+    case SYNTAQLITE_NODE_PRAGMA_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: PragmaStmt\n", field_name);
@@ -705,7 +705,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_ANALYZE_STMT: {
+    case SYNTAQLITE_NODE_ANALYZE_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: AnalyzeStmt\n", field_name);
@@ -724,7 +724,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_ATTACH_STMT: {
+    case SYNTAQLITE_NODE_ATTACH_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: AttachStmt\n", field_name);
@@ -736,7 +736,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_DETACH_STMT: {
+    case SYNTAQLITE_NODE_DETACH_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: DetachStmt\n", field_name);
@@ -746,7 +746,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_VACUUM_STMT: {
+    case SYNTAQLITE_NODE_VACUUM_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: VacuumStmt\n", field_name);
@@ -760,7 +760,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_EXPLAIN_STMT: {
+    case SYNTAQLITE_NODE_EXPLAIN_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ExplainStmt\n", field_name);
@@ -772,7 +772,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CREATE_INDEX_STMT: {
+    case SYNTAQLITE_NODE_CREATE_INDEX_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateIndexStmt\n", field_name);
@@ -799,7 +799,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CREATE_VIEW_STMT: {
+    case SYNTAQLITE_NODE_CREATE_VIEW_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateViewStmt\n", field_name);
@@ -822,7 +822,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_FOREIGN_KEY_CLAUSE: {
+    case SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ForeignKeyClause\n", field_name);
@@ -842,7 +842,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_COLUMN_CONSTRAINT: {
+    case SYNTAQLITE_NODE_COLUMN_CONSTRAINT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnConstraint\n", field_name);
@@ -873,7 +873,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_COLUMN_CONSTRAINT_LIST: {
+    case SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnConstraintList[%u]\n", field_name, node->column_constraint_list.count);
@@ -885,7 +885,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_COLUMN_DEF: {
+    case SYNTAQLITE_NODE_COLUMN_DEF: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnDef\n", field_name);
@@ -903,7 +903,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_COLUMN_DEF_LIST: {
+    case SYNTAQLITE_NODE_COLUMN_DEF_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnDefList[%u]\n", field_name, node->column_def_list.count);
@@ -915,7 +915,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_TABLE_CONSTRAINT: {
+    case SYNTAQLITE_NODE_TABLE_CONSTRAINT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TableConstraint\n", field_name);
@@ -937,7 +937,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_TABLE_CONSTRAINT_LIST: {
+    case SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TableConstraintList[%u]\n", field_name, node->table_constraint_list.count);
@@ -949,7 +949,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CREATE_TABLE_STMT: {
+    case SYNTAQLITE_NODE_CREATE_TABLE_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateTableStmt\n", field_name);
@@ -979,7 +979,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_FRAME_BOUND: {
+    case SYNTAQLITE_NODE_FRAME_BOUND: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: FrameBound\n", field_name);
@@ -991,7 +991,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_FRAME_SPEC: {
+    case SYNTAQLITE_NODE_FRAME_SPEC: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: FrameSpec\n", field_name);
@@ -1006,7 +1006,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_WINDOW_DEF: {
+    case SYNTAQLITE_NODE_WINDOW_DEF: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: WindowDef\n", field_name);
@@ -1022,7 +1022,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_WINDOW_DEF_LIST: {
+    case SYNTAQLITE_NODE_WINDOW_DEF_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: WindowDefList[%u]\n", field_name, node->window_def_list.count);
@@ -1034,7 +1034,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_NAMED_WINDOW_DEF: {
+    case SYNTAQLITE_NODE_NAMED_WINDOW_DEF: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: NamedWindowDef\n", field_name);
@@ -1048,7 +1048,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_NAMED_WINDOW_DEF_LIST: {
+    case SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: NamedWindowDefList[%u]\n", field_name, node->named_window_def_list.count);
@@ -1060,7 +1060,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_FILTER_OVER: {
+    case SYNTAQLITE_NODE_FILTER_OVER: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: FilterOver\n", field_name);
@@ -1075,7 +1075,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_TRIGGER_EVENT: {
+    case SYNTAQLITE_NODE_TRIGGER_EVENT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TriggerEvent\n", field_name);
@@ -1087,7 +1087,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_TRIGGER_CMD_LIST: {
+    case SYNTAQLITE_NODE_TRIGGER_CMD_LIST: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TriggerCmdList[%u]\n", field_name, node->trigger_cmd_list.count);
@@ -1099,7 +1099,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CREATE_TRIGGER_STMT: {
+    case SYNTAQLITE_NODE_CREATE_TRIGGER_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateTriggerStmt\n", field_name);
@@ -1126,7 +1126,7 @@ static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNQ_NODE_CREATE_VIRTUAL_TABLE_STMT: {
+    case SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT: {
       synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateVirtualTableStmt\n", field_name);

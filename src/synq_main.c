@@ -193,7 +193,7 @@ int main(int argc, char **argv) {
 
   // Parse and process each statement
   SyntaqliteParseResult result;
-  while ((result = syntaqlite_parser_next(parser)).root != SYNQ_NULL_NODE) {
+  while ((result = syntaqlite_parser_next(parser)).root != SYNTAQLITE_NULL_NODE) {
     if (result.error) {
       fprintf(stderr, "Error: %s\n",
               result.error_msg ? result.error_msg : "Parse error");
