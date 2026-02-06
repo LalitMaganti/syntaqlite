@@ -7,8 +7,10 @@
 #include "src/fmt/fmt.h"
 
 #include "src/ast/ast_nodes.h"
+#include "src/fmt/comment_map.h"
 #include "src/fmt/doc.h"
 #include "src/fmt/doc_layout.h"
+#include "src/sqlite_tokens.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -21,17 +23,139 @@ typedef struct {
     const char *source;
     SyntaqliteTokenList *token_list;
     SyntaqliteFmtOptions *options;
+    SyntaqliteCommentMap *comment_map;
+    uint32_t token_cursor;
 } FmtCtx;
 
 // ============ Helpers ============
 
+// Emit a single comment token as a doc using pre-classified kind.
+static uint32_t emit_comment_doc(FmtCtx *ctx, uint32_t tok_idx) {
+    SyntaqliteRawToken *tok = &ctx->token_list->data[tok_idx];
+    int is_line = (ctx->source[tok->offset] == '-' &&
+                   tok->length >= 2 && ctx->source[tok->offset + 1] == '-');
+    if (ctx->comment_map->kinds[tok_idx] == SYNTAQLITE_COMMENT_TRAILING) {
+        // Trailing comments use line_suffix so they don't force
+        // enclosing groups to break. The suffix is flushed before
+        // the next line break in the layout engine.
+        uint32_t parts[2];
+        parts[0] = doc_text(&ctx->docs, " ", 1);
+        parts[1] = doc_text(&ctx->docs, ctx->source + tok->offset, tok->length);
+        uint32_t inner = doc_concat(&ctx->docs, parts, 2);
+        if (is_line) return doc_line_suffix(&ctx->docs, inner);
+        return inner;
+    } else {
+        uint32_t items[2];
+        uint32_t k = 0;
+        items[k++] = doc_text(&ctx->docs, ctx->source + tok->offset, tok->length);
+        if (is_line)
+            items[k++] = doc_hardline(&ctx->docs);
+        else
+            items[k++] = doc_text(&ctx->docs, " ", 1);
+        return doc_concat(&ctx->docs, items, k);
+    }
+}
+
+// Advance cursor past comments and one real token.
+// Returns leading comments (before real token). Sets *out_trailing to
+// trailing comments (after real token). Either may be SYNTAQLITE_NULL_DOC.
+static uint32_t advance_with_comments(FmtCtx *ctx, uint32_t *out_trailing) {
+    *out_trailing = SYNTAQLITE_NULL_DOC;
+    if (!ctx->token_list) return SYNTAQLITE_NULL_DOC;
+    uint32_t lead[24], trail[24];
+    uint32_t nl = 0, nt = 0;
+    while (ctx->token_cursor < ctx->token_list->count) {
+        SyntaqliteRawToken *tok = &ctx->token_list->data[ctx->token_cursor];
+        if (tok->type == TK_SPACE) { ctx->token_cursor++; continue; }
+        if (tok->type == TK_COMMENT) {
+            if (ctx->comment_map && nl < 24)
+                lead[nl++] = emit_comment_doc(ctx, ctx->token_cursor);
+            ctx->token_cursor++;
+            continue;
+        }
+        // Real token - advance past it
+        ctx->token_cursor++;
+        // Collect trailing comments after this real token
+        while (ctx->token_cursor < ctx->token_list->count) {
+            SyntaqliteRawToken *next = &ctx->token_list->data[ctx->token_cursor];
+            if (next->type == TK_SPACE) { ctx->token_cursor++; continue; }
+            if (next->type == TK_COMMENT && ctx->comment_map &&
+                ctx->comment_map->kinds[ctx->token_cursor] == SYNTAQLITE_COMMENT_TRAILING) {
+                if (nt < 24) trail[nt++] = emit_comment_doc(ctx, ctx->token_cursor);
+                ctx->token_cursor++;
+                continue;
+            }
+            break;
+        }
+        break;
+    }
+    if (nt > 0) *out_trailing = (nt == 1) ? trail[0] : doc_concat(&ctx->docs, trail, nt);
+    if (nl == 0) return SYNTAQLITE_NULL_DOC;
+    return (nl == 1) ? lead[0] : doc_concat(&ctx->docs, lead, nl);
+}
+
+// Count how many source tokens a keyword string consumes.
+// Each word (letters/digits) and each punctuation char is one token.
+static int count_kw_tokens(const char *text) {
+    int n = 0;
+    const char *p = text;
+    while (*p) {
+        if (*p == ' ') { p++; continue; }
+        if ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') || *p == '_') {
+            n++;
+            while (*p && ((*p >= 'A' && *p <= 'Z') || (*p >= 'a' && *p <= 'z') ||
+                          *p == '_' || (*p >= '0' && *p <= '9'))) p++;
+        } else {
+            n++; p++;
+        }
+    }
+    return n;
+}
+
 static uint32_t kw(FmtCtx *ctx, const char *text) {
-    return doc_text(&ctx->docs, text, (uint32_t)strlen(text));
+    int n = count_kw_tokens(text);
+    uint32_t pre = SYNTAQLITE_NULL_DOC;
+    uint32_t post = SYNTAQLITE_NULL_DOC;
+    for (int i = 0; i < n; i++) {
+        uint32_t trailing;
+        uint32_t c = advance_with_comments(ctx, &trailing);
+        if (c != SYNTAQLITE_NULL_DOC) {
+            if (pre == SYNTAQLITE_NULL_DOC) { pre = c; }
+            else {
+                uint32_t pair[] = { pre, c };
+                pre = doc_concat(&ctx->docs, pair, 2);
+            }
+        }
+        if (trailing != SYNTAQLITE_NULL_DOC) {
+            if (post == SYNTAQLITE_NULL_DOC) { post = trailing; }
+            else {
+                uint32_t pair[] = { post, trailing };
+                post = doc_concat(&ctx->docs, pair, 2);
+            }
+        }
+    }
+    uint32_t txt = doc_text(&ctx->docs, text, (uint32_t)strlen(text));
+    uint32_t parts[3];
+    uint32_t np = 0;
+    if (pre != SYNTAQLITE_NULL_DOC) parts[np++] = pre;
+    parts[np++] = txt;
+    if (post != SYNTAQLITE_NULL_DOC) parts[np++] = post;
+    if (np == 1) return parts[0];
+    return doc_concat(&ctx->docs, parts, np);
 }
 
 static uint32_t span_text(FmtCtx *ctx, SyntaqliteSourceSpan span) {
     if (span.length == 0) return SYNTAQLITE_NULL_DOC;
-    return doc_text(&ctx->docs, ctx->source + span.offset, span.length);
+    uint32_t trailing;
+    uint32_t pre = advance_with_comments(ctx, &trailing);
+    uint32_t txt = doc_text(&ctx->docs, ctx->source + span.offset, span.length);
+    uint32_t parts[3];
+    uint32_t np = 0;
+    if (pre != SYNTAQLITE_NULL_DOC) parts[np++] = pre;
+    parts[np++] = txt;
+    if (trailing != SYNTAQLITE_NULL_DOC) parts[np++] = trailing;
+    if (np == 1) return parts[0];
+    return doc_concat(&ctx->docs, parts, np);
 }
 
 static uint32_t format_node(FmtCtx *ctx, uint32_t node_id);
@@ -54,13 +178,16 @@ static uint32_t format_comma_list(FmtCtx *ctx, uint32_t *children, uint32_t coun
 
 // ============ Clause Helper ============
 
-static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_doc) {
+static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_id) {
+    if (body_id == SYNTAQLITE_NULL_NODE) return SYNTAQLITE_NULL_DOC;
+    uint32_t kw_doc = kw(ctx, keyword);
+    uint32_t body_doc = format_node(ctx, body_id);
     if (body_doc == SYNTAQLITE_NULL_DOC) return SYNTAQLITE_NULL_DOC;
     uint32_t inner_items[] = { doc_line(&ctx->docs), body_doc };
     uint32_t inner = doc_concat(&ctx->docs, inner_items, 2);
     uint32_t items[] = {
         doc_line(&ctx->docs),
-        kw(ctx, keyword),
+        kw_doc,
         doc_group(&ctx->docs, doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner)),
     };
     return doc_concat(&ctx->docs, items, 3);
@@ -200,13 +327,13 @@ static uint32_t format_select_stmt(FmtCtx *ctx, SyntaqliteSelectStmt *node) {
         uint32_t grp_9 = doc_group(&ctx->docs, nst_8);
         cond_4 = grp_9;
     }
-    uint32_t cl_10 = format_clause(ctx, "FROM", format_node(ctx, node->from_clause));
-    uint32_t cl_11 = format_clause(ctx, "WHERE", format_node(ctx, node->where));
-    uint32_t cl_12 = format_clause(ctx, "GROUP BY", format_node(ctx, node->groupby));
-    uint32_t cl_13 = format_clause(ctx, "HAVING", format_node(ctx, node->having));
-    uint32_t cl_14 = format_clause(ctx, "ORDER BY", format_node(ctx, node->orderby));
-    uint32_t cl_15 = format_clause(ctx, "LIMIT", format_node(ctx, node->limit_clause));
-    uint32_t cl_16 = format_clause(ctx, "WINDOW", format_node(ctx, node->window_clause));
+    uint32_t cl_10 = format_clause(ctx, "FROM", node->from_clause);
+    uint32_t cl_11 = format_clause(ctx, "WHERE", node->where);
+    uint32_t cl_12 = format_clause(ctx, "GROUP BY", node->groupby);
+    uint32_t cl_13 = format_clause(ctx, "HAVING", node->having);
+    uint32_t cl_14 = format_clause(ctx, "ORDER BY", node->orderby);
+    uint32_t cl_15 = format_clause(ctx, "LIMIT", node->limit_clause);
+    uint32_t cl_16 = format_clause(ctx, "WINDOW", node->window_clause);
     uint32_t cat_17_items[] = { cond_1, cond_4, cl_10, cl_11, cl_12, cl_13, cl_14, cl_15, cl_16 };
     uint32_t cat_17 = doc_concat_nullable(&ctx->docs, cat_17_items, 9);
     return doc_group(&ctx->docs, cat_17);
@@ -757,8 +884,8 @@ static uint32_t format_join_prefix(FmtCtx *ctx, SyntaqliteJoinPrefix *node) {
 
 static uint32_t format_delete_stmt(FmtCtx *ctx, SyntaqliteDeleteStmt *node) {
     uint32_t kw_1 = kw(ctx, "DELETE");
-    uint32_t cl_2 = format_clause(ctx, "FROM", format_node(ctx, node->table));
-    uint32_t cl_3 = format_clause(ctx, "WHERE", format_node(ctx, node->where));
+    uint32_t cl_2 = format_clause(ctx, "FROM", node->table);
+    uint32_t cl_3 = format_clause(ctx, "WHERE", node->where);
     uint32_t cat_4_items[] = { kw_1, cl_2, cl_3 };
     uint32_t cat_4 = doc_concat_nullable(&ctx->docs, cat_4_items, 3);
     return doc_group(&ctx->docs, cat_4);
@@ -799,9 +926,9 @@ static uint32_t format_update_stmt(FmtCtx *ctx, SyntaqliteUpdateStmt *node) {
     }
     uint32_t kw_8 = kw(ctx, " ");
     uint32_t ch_9 = format_node(ctx, node->table);
-    uint32_t cl_10 = format_clause(ctx, "SET", format_node(ctx, node->setlist));
-    uint32_t cl_11 = format_clause(ctx, "FROM", format_node(ctx, node->from_clause));
-    uint32_t cl_12 = format_clause(ctx, "WHERE", format_node(ctx, node->where));
+    uint32_t cl_10 = format_clause(ctx, "SET", node->setlist);
+    uint32_t cl_11 = format_clause(ctx, "FROM", node->from_clause);
+    uint32_t cl_12 = format_clause(ctx, "WHERE", node->where);
     uint32_t cat_13_items[] = { kw_1, sw_2, kw_8, ch_9, cl_10, cl_11, cl_12 };
     uint32_t cat_13 = doc_concat_nullable(&ctx->docs, cat_13_items, 7);
     return doc_group(&ctx->docs, cat_13);
@@ -1125,7 +1252,7 @@ static uint32_t format_create_index_stmt(FmtCtx *ctx, SyntaqliteCreateIndexStmt 
     uint32_t kw_15 = kw(ctx, " (");
     uint32_t ch_16 = format_node(ctx, node->columns);
     uint32_t kw_17 = kw(ctx, ")");
-    uint32_t cl_18 = format_clause(ctx, "WHERE", format_node(ctx, node->where));
+    uint32_t cl_18 = format_clause(ctx, "WHERE", node->where);
     uint32_t cat_19_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, kw_13, sp_14, kw_15, ch_16, kw_17, cl_18 };
     uint32_t cat_19 = doc_concat_nullable(&ctx->docs, cat_19_items, 13);
     return doc_group(&ctx->docs, cat_19);
@@ -1955,8 +2082,53 @@ char *syntaqlite_format(SyntaqliteArena *ast, uint32_t root_id,
     ctx.source = source;
     ctx.token_list = token_list;
     ctx.options = options;
+    ctx.comment_map = syntaqlite_comment_map_build(source, token_list);
+    ctx.token_cursor = 0;
+
+    // Flush any leading comments before the first real token so they
+    // don't end up inside the statement's group (where a hardline
+    // from a -- comment would force the group to break).
+    uint32_t _pre_comments = SYNTAQLITE_NULL_DOC;
+    {
+        uint32_t _pre[24];
+        uint32_t _pn = 0;
+        while (ctx.token_cursor < ctx.token_list->count) {
+            SyntaqliteRawToken *_pt = &ctx.token_list->data[ctx.token_cursor];
+            if (_pt->type == TK_SPACE) { ctx.token_cursor++; continue; }
+            if (_pt->type == TK_COMMENT && ctx.comment_map &&
+                ctx.comment_map->kinds[ctx.token_cursor] == SYNTAQLITE_COMMENT_LEADING) {
+                if (_pn < 24) _pre[_pn++] = emit_comment_doc(&ctx, ctx.token_cursor);
+                ctx.token_cursor++;
+                continue;
+            }
+            break;
+        }
+        if (_pn > 0) _pre_comments = (_pn == 1) ? _pre[0] : doc_concat(&ctx.docs, _pre, _pn);
+    }
 
     uint32_t root_doc = format_node(&ctx, root_id);
+
+    // Prepend leading comments outside the statement group
+    if (_pre_comments != SYNTAQLITE_NULL_DOC && root_doc != SYNTAQLITE_NULL_DOC) {
+        uint32_t items[] = { _pre_comments, root_doc };
+        root_doc = doc_concat(&ctx.docs, items, 2);
+    }
+
+    // Flush any remaining comments (trailing after last token)
+    uint32_t _rem_trailing;
+    uint32_t _rem_leading = advance_with_comments(&ctx, &_rem_trailing);
+    uint32_t _flush[2];
+    uint32_t _fn = 0;
+    if (_rem_leading != SYNTAQLITE_NULL_DOC) _flush[_fn++] = _rem_leading;
+    if (_rem_trailing != SYNTAQLITE_NULL_DOC) _flush[_fn++] = _rem_trailing;
+    if (_fn > 0 && root_doc != SYNTAQLITE_NULL_DOC) {
+        uint32_t _flush_doc = (_fn == 1) ? _flush[0] : doc_concat(&ctx.docs, _flush, 2);
+        uint32_t items[] = { root_doc, _flush_doc };
+        root_doc = doc_concat(&ctx.docs, items, 2);
+    }
+
+    syntaqlite_comment_map_free(ctx.comment_map);
+
     if (root_doc == SYNTAQLITE_NULL_DOC) {
         syntaqlite_doc_context_cleanup(&ctx.docs);
         char *empty = (char*)malloc(1);

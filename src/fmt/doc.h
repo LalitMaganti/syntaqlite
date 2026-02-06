@@ -27,6 +27,7 @@ typedef enum {
     SYNTAQLITE_DOC_NEST,       // increase indent for child
     SYNTAQLITE_DOC_GROUP,      // try flat, break if doesn't fit
     SYNTAQLITE_DOC_CONCAT,     // sequence of children
+    SYNTAQLITE_DOC_LINE_SUFFIX,// buffered until next line break (for trailing comments)
 } SyntaqliteDocTag;
 
 // ============ Node Structs ============
@@ -62,6 +63,12 @@ typedef struct SyntaqliteDocConcat {
     uint32_t children[];  // flexible array of doc IDs
 } SyntaqliteDocConcat;
 
+typedef struct SyntaqliteDocLineSuffix {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t child;
+} SyntaqliteDocLineSuffix;
+
 // ============ Node Union ============
 
 typedef union SyntaqliteDoc {
@@ -71,6 +78,7 @@ typedef union SyntaqliteDoc {
     SyntaqliteDocNest nest;
     SyntaqliteDocGroup group;
     SyntaqliteDocConcat concat;
+    SyntaqliteDocLineSuffix line_suffix;
 } SyntaqliteDoc;
 
 // ============ Doc Context ============
@@ -99,6 +107,9 @@ uint32_t doc_group(SyntaqliteDocContext *ctx, uint32_t child);
 
 // Concat: create from array of child IDs
 uint32_t doc_concat(SyntaqliteDocContext *ctx, uint32_t *children, uint32_t count);
+
+// Line suffix: content buffered until the next line break (for trailing comments)
+uint32_t doc_line_suffix(SyntaqliteDocContext *ctx, uint32_t child);
 
 #ifdef __cplusplus
 }

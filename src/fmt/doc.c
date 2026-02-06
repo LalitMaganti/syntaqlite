@@ -58,3 +58,10 @@ uint32_t doc_concat(SyntaqliteDocContext *ctx, uint32_t *children, uint32_t coun
     node->count = count;
     return id;
 }
+
+uint32_t doc_line_suffix(SyntaqliteDocContext *ctx, uint32_t child) {
+    uint32_t id = syntaqlite_arena_alloc(&ctx->arena, SYNTAQLITE_DOC_LINE_SUFFIX, sizeof(SyntaqliteDocLineSuffix));
+    SyntaqliteDocLineSuffix *node = &((SyntaqliteDoc*)(ctx->arena.data + ctx->arena.offsets[id]))->line_suffix;
+    node->child = child;
+    return id;
+}

@@ -56,6 +56,16 @@ tools/tests/run-ast-diff-tests --rebaseline               # Print expected outpu
 
 Test suites are auto-discovered by scanning `tests/ast_diff_tests/*.py` for `TestSuite` subclasses. No registration is needed — just create a new `.py` file.
 
+### Formatter Diff Tests (Python)
+```bash
+tools/tests/run-fmt-diff-tests                             # Run all fmt tests
+tools/tests/run-fmt-diff-tests --filter select --jobs 4    # Filter + parallel
+tools/tests/run-fmt-diff-tests --rebaseline                # Print expected outputs
+tools/tests/run-fmt-diff-tests -v                          # Verbose output
+```
+
+Uses `out/mac_debug/fmt_test` binary by default. Test suites are in `tests/fmt_diff_tests/*.py`, same structure as AST diff tests — auto-discovered `TestSuite` subclasses with `AstTestBlueprint(sql=..., out=...)` test methods.
+
 ## Code Style
 
 ### Include Paths
@@ -76,6 +86,7 @@ Strict: `-Wall -Wextra -Werror`, no exceptions, no RTTI by default.
 - `src/` - C/C++ source (tokenizer, parser, shared defs)
 - `include/` - Public headers
 - `tests/ast_diff_tests/` - Python-based AST validation tests
+- `tests/fmt_diff_tests/` - Python-based formatter validation tests
 - `python/tools/` - Development tooling
 - `python/diff_tests/` - Test runner infrastructure
 - `tools/dev/` - Executable wrappers for dev tools

@@ -27,18 +27,25 @@ source_set("arena") {
   ]
 }
 
+# SQLite tokenizer (extracted so :fmt can use it for comment injection).
+source_set("tokenizer") {
+  sources = [
+    "sqlite_charmap.h",
+    "sqlite_tokenize.c",
+    "sqlite_tokens.h",
+    "syntaqlite_sqlite_defs.h",
+  ]
+  configs += [ ":lemon_generated" ]
+}
+
 source_set("sqlite") {
   sources = [
     # Generated files
-    "sqlite_charmap.h",
     "sqlite_parse.c",
-    "sqlite_tokenize.c",
-    "sqlite_tokens.h",
-
-    # Manually maintained
-    "syntaqlite_sqlite_defs.h",
   ]
-
+  deps = [
+    ":tokenizer",
+  ]
   configs += [ ":lemon_generated" ]
 }
 
@@ -77,6 +84,8 @@ source_set("ast") {
 # Document model, layout engine, and formatter.
 source_set("fmt") {
   sources = [
+    "fmt/comment_map.c",
+    "fmt/comment_map.h",
     "fmt/doc.c",
     "fmt/doc.h",
     "fmt/doc_layout.c",
@@ -87,6 +96,8 @@ source_set("fmt") {
   ]
   deps = [
     ":arena",
+    ":token_list",
+    ":tokenizer",
     ":vec",
   ]
 }
