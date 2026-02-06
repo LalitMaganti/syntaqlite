@@ -17,23 +17,18 @@
 // It coexists with the existing CTE-select rules (parser resolves via lookahead).
 
 with(A) ::= . {
-    A = SYNTAQLITE_NULL_NODE;
+    A.cte_list = SYNTAQLITE_NULL_NODE;
+    A.is_recursive = 0;
 }
 
 with(A) ::= WITH wqlist(W). {
-    A = W;
+    A.cte_list = W;
+    A.is_recursive = 0;
 }
 
 with(A) ::= WITH RECURSIVE wqlist(W). {
-    // Tag the CTE list as recursive by wrapping in a marker.
-    // We'll handle this in the cmd rules when building the final statement.
-    // Use high bit to signal recursive: set bit 31.
-    // Actually, we need a cleaner approach. Store the recursive flag
-    // by creating a CteList node and using a convention.
-    // For now, negate the list ID... no, IDs are u32.
-    // Simplest approach: store a sentinel node that wraps (recursive, cte_list).
-    // Use the WithClause node with a null select, then extract in cmd rules.
-    A = ast_with_clause(pCtx->astCtx, 1, W, SYNTAQLITE_NULL_NODE);
+    A.cte_list = W;
+    A.is_recursive = 1;
 }
 
 // ============ DELETE ============
@@ -41,16 +36,8 @@ with(A) ::= WITH RECURSIVE wqlist(W). {
 cmd(A) ::= with(W) DELETE FROM xfullname(X) indexed_opt(I) where_opt_ret(E). {
     (void)I;
     uint32_t del = ast_delete_stmt(pCtx->astCtx, X, E);
-    if (W != SYNTAQLITE_NULL_NODE) {
-        // Check if W is a WithClause (recursive WITH) or a CteList (non-recursive WITH)
-        SyntaqliteNode *wn = AST_NODE(pCtx->astCtx->ast, W);
-        if (wn->tag == SYNTAQLITE_NODE_WITH_CLAUSE) {
-            // Recursive WITH - extract ctes from the wrapper
-            A = ast_with_clause(pCtx->astCtx, 1, wn->with_clause.ctes, del);
-        } else {
-            // Non-recursive WITH - W is a CteList directly
-            A = ast_with_clause(pCtx->astCtx, 0, W, del);
-        }
+    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
+        A = ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, del);
     } else {
         A = del;
     }
@@ -61,13 +48,8 @@ cmd(A) ::= with(W) DELETE FROM xfullname(X) indexed_opt(I) where_opt_ret(E). {
 cmd(A) ::= with(W) UPDATE orconf(R) xfullname(X) indexed_opt(I) SET setlist(Y) from(F) where_opt_ret(E). {
     (void)I;
     uint32_t upd = ast_update_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, X, Y, F, E);
-    if (W != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *wn = AST_NODE(pCtx->astCtx->ast, W);
-        if (wn->tag == SYNTAQLITE_NODE_WITH_CLAUSE) {
-            A = ast_with_clause(pCtx->astCtx, 1, wn->with_clause.ctes, upd);
-        } else {
-            A = ast_with_clause(pCtx->astCtx, 0, W, upd);
-        }
+    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
+        A = ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, upd);
     } else {
         A = upd;
     }
@@ -78,13 +60,8 @@ cmd(A) ::= with(W) UPDATE orconf(R) xfullname(X) indexed_opt(I) SET setlist(Y) f
 cmd(A) ::= with(W) insert_cmd(R) INTO xfullname(X) idlist_opt(F) select(S) upsert(U). {
     (void)U;
     uint32_t ins = ast_insert_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, X, F, S);
-    if (W != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *wn = AST_NODE(pCtx->astCtx->ast, W);
-        if (wn->tag == SYNTAQLITE_NODE_WITH_CLAUSE) {
-            A = ast_with_clause(pCtx->astCtx, 1, wn->with_clause.ctes, ins);
-        } else {
-            A = ast_with_clause(pCtx->astCtx, 0, W, ins);
-        }
+    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
+        A = ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, ins);
     } else {
         A = ins;
     }
@@ -92,13 +69,8 @@ cmd(A) ::= with(W) insert_cmd(R) INTO xfullname(X) idlist_opt(F) select(S) upser
 
 cmd(A) ::= with(W) insert_cmd(R) INTO xfullname(X) idlist_opt(F) DEFAULT VALUES returning. {
     uint32_t ins = ast_insert_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, X, F, SYNTAQLITE_NULL_NODE);
-    if (W != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *wn = AST_NODE(pCtx->astCtx->ast, W);
-        if (wn->tag == SYNTAQLITE_NODE_WITH_CLAUSE) {
-            A = ast_with_clause(pCtx->astCtx, 1, wn->with_clause.ctes, ins);
-        } else {
-            A = ast_with_clause(pCtx->astCtx, 0, W, ins);
-        }
+    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
+        A = ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, ins);
     } else {
         A = ins;
     }

@@ -40,20 +40,10 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
         A = tref;
     } else {
         SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
-        uint32_t on_expr = SYNTAQLITE_NULL_NODE;
-        uint32_t using_cols = SYNTAQLITE_NULL_NODE;
-        if (N != SYNTAQLITE_NULL_NODE) {
-            SyntaqliteNode *n = AST_NODE(pCtx->astCtx->ast, N);
-            if (n->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-                using_cols = N;
-            } else {
-                on_expr = N;
-            }
-        }
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
-            tref, on_expr, using_cols);
+            tref, N.on_expr, N.using_cols);
     }
 }
 
@@ -75,20 +65,10 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
         A = tref;
     } else {
         SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
-        uint32_t on_expr = SYNTAQLITE_NULL_NODE;
-        uint32_t using_cols = SYNTAQLITE_NULL_NODE;
-        if (N != SYNTAQLITE_NULL_NODE) {
-            SyntaqliteNode *n = AST_NODE(pCtx->astCtx->ast, N);
-            if (n->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-                using_cols = N;
-            } else {
-                on_expr = N;
-            }
-        }
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
-            tref, on_expr, using_cols);
+            tref, N.on_expr, N.using_cols);
     }
 }
 
@@ -110,20 +90,10 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N
         A = tref;
     } else {
         SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
-        uint32_t on_expr = SYNTAQLITE_NULL_NODE;
-        uint32_t using_cols = SYNTAQLITE_NULL_NODE;
-        if (N != SYNTAQLITE_NULL_NODE) {
-            SyntaqliteNode *n = AST_NODE(pCtx->astCtx->ast, N);
-            if (n->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-                using_cols = N;
-            } else {
-                on_expr = N;
-            }
-        }
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
-            tref, on_expr, using_cols);
+            tref, N.on_expr, N.using_cols);
     }
 }
 
@@ -135,46 +105,24 @@ seltablist(A) ::= stl_prefix(A) LP select(S) RP as(Z) on_using(N). {
         A = sub;
     } else {
         SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
-        uint32_t on_expr = SYNTAQLITE_NULL_NODE;
-        uint32_t using_cols = SYNTAQLITE_NULL_NODE;
-        if (N != SYNTAQLITE_NULL_NODE) {
-            SyntaqliteNode *n = AST_NODE(pCtx->astCtx->ast, N);
-            if (n->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-                using_cols = N;
-            } else {
-                on_expr = N;
-            }
-        }
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
-            sub, on_expr, using_cols);
+            sub, N.on_expr, N.using_cols);
     }
 }
 
 // Parenthesized seltablist: FROM (a, b) - pass through
 seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
-    (void)Z;
-    if (A == SYNTAQLITE_NULL_NODE && N == SYNTAQLITE_NULL_NODE) {
-        A = F;
-    } else if (A == SYNTAQLITE_NULL_NODE) {
+    (void)Z; (void)N;
+    if (A == SYNTAQLITE_NULL_NODE) {
         A = F;
     } else {
         SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
-        uint32_t on_expr = SYNTAQLITE_NULL_NODE;
-        uint32_t using_cols = SYNTAQLITE_NULL_NODE;
-        if (N != SYNTAQLITE_NULL_NODE) {
-            SyntaqliteNode *n = AST_NODE(pCtx->astCtx->ast, N);
-            if (n->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-                using_cols = N;
-            } else {
-                on_expr = N;
-            }
-        }
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
-            F, on_expr, using_cols);
+            F, N.on_expr, N.using_cols);
     }
 }
 
@@ -263,15 +211,18 @@ joinop(X) ::= JOIN_KW(A) nm(B) nm(C) JOIN. {
 // ============ ON / USING clauses ============
 
 on_using(N) ::= ON expr(E). {
-    N = E;
+    N.on_expr = E;
+    N.using_cols = SYNTAQLITE_NULL_NODE;
 }
 
 on_using(N) ::= USING LP idlist(L) RP. {
-    N = L;
+    N.on_expr = SYNTAQLITE_NULL_NODE;
+    N.using_cols = L;
 }
 
 on_using(N) ::= . [OR] {
-    N = SYNTAQLITE_NULL_NODE;
+    N.on_expr = SYNTAQLITE_NULL_NODE;
+    N.using_cols = SYNTAQLITE_NULL_NODE;
 }
 
 // ============ INDEXED BY (stub - ignore in AST) ============

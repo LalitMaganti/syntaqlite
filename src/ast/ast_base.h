@@ -58,6 +58,18 @@ typedef struct SyntaqliteConstraintListValue {
     SyntaqliteSourceSpan pending_name;
 } SyntaqliteConstraintListValue;
 
+// Grammar stack value: ON expr / USING column-list discriminator
+typedef struct SyntaqliteOnUsingValue {
+    uint32_t on_expr;
+    uint32_t using_cols;
+} SyntaqliteOnUsingValue;
+
+// Grammar stack value: WITH clause (carries recursive flag without a wrapper node)
+typedef struct SyntaqliteWithValue {
+    uint32_t cte_list;
+    uint8_t is_recursive;
+} SyntaqliteWithValue;
+
 // Build context passed through parser
 typedef struct SyntaqliteAstContext {
     SyntaqliteAst *ast;

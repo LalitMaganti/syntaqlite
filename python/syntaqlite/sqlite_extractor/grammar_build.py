@@ -493,6 +493,12 @@ def _generate_grammar_file(
 %type scantok {{SyntaqliteToken}}
 %type generated {{SyntaqliteConstraintValue}}
 
+// JOIN ON/USING discriminator
+%type on_using {{SyntaqliteOnUsingValue}}
+
+// WITH clause (recursive flag + cte list)
+%type with {{SyntaqliteWithValue}}
+
 // Window function support
 %type range_or_rows {{int}}
 %type frame_exclude_opt {{int}}

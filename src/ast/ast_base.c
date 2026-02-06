@@ -154,13 +154,22 @@ uint32_t ast_list_start(SyntaqliteAstContext *ctx, uint8_t tag,
     // Flush any in-progress list
     ast_list_flush(ctx);
 
-    // Allocate a header on the arena so the tag is readable via AST_NODE().
-    // Grammar actions may inspect n->tag before the list is fully built
-    // (e.g. JOIN USING checks tag to distinguish ExprList from ON expr).
-    // The header will be replaced with the full list when the accumulator
-    // is flushed; these 8 bytes become dead space.
-    uint32_t node_id = ast_alloc(ctx, tag, 8);
-    if (node_id == SYNTAQLITE_NULL_NODE) return node_id;
+    SyntaqliteAst *ast = ctx->ast;
+
+    // Reserve a node ID in the offset table (no arena bytes yet).
+    // The actual arena allocation happens when the accumulator is flushed.
+    if (ast->node_count >= ast->node_capacity) {
+        size_t new_capacity = ast->node_capacity * 2 + 64;
+        uint32_t *new_offsets = (uint32_t*)realloc(ast->offsets, new_capacity * sizeof(uint32_t));
+        if (!new_offsets) {
+            ctx->error_code = 1;
+            ctx->error_msg = "Out of memory (offsets)";
+            return SYNTAQLITE_NULL_NODE;
+        }
+        ast->offsets = new_offsets;
+        ast->node_capacity = (uint32_t)new_capacity;
+    }
+    uint32_t node_id = ast->node_count++;
 
     if (ast_list_acc_ensure(ctx, 1) < 0) return SYNTAQLITE_NULL_NODE;
 
