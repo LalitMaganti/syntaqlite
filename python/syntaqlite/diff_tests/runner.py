@@ -7,7 +7,7 @@ import argparse
 import os
 import sys
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import List, Optional
 
@@ -67,6 +67,8 @@ def main(argv: Optional[List[str]] = None) -> int:
                         help='Number of parallel jobs')
     parser.add_argument('--rebaseline', action='store_true',
                         help='Print suggested output for failures')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='Increase verbosity (-v for results, -vv for RUN markers)')
     parser.add_argument('--root', default=None,
                         help='Project root directory')
 
@@ -100,7 +102,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Count test suites
     suites = set(name.split('.')[0] for name, _ in tests)
 
-    print(f"[==========] Running {len(tests)} tests from {len(suites)} test suites.")
+    verbosity = args.verbose
+
+    if verbosity >= 1:
+        print(f"[==========] Running {len(tests)} tests from {len(suites)} test suites.")
 
     # Run tests
     start_time = time.time()
@@ -109,28 +114,25 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     test_args = [(str(binary), name, blueprint) for name, blueprint in tests]
 
-    # Use ProcessPoolExecutor for both serial and parallel execution.
-    # For serial (jobs=1), this maintains consistent behavior and output ordering.
+    # Submit all tests to the pool for parallel execution, then iterate
+    # futures in submission order so output is serialized per-test.
     max_workers = args.jobs if args.jobs else (os.cpu_count() or 1)
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        future_to_info = {
-            executor.submit(_run_single_test, arg): (arg[1], time.time())
-            for arg in test_args
-        }
+        futures = [executor.submit(_run_single_test, arg) for arg in test_args]
 
-        # Print RUN markers for all tests upfront
-        for name, _ in tests:
-            print_run(name)
-
-        for future in as_completed(future_to_info):
-            name, test_start = future_to_info[future]
+        for future in futures:
             result = future.result()
-            elapsed_ms = int((time.time() - test_start) * 1000)
             results.append(result)
             if result.passed:
-                print_ok(result.name, elapsed_ms)
+                if verbosity >= 2:
+                    print_run(result.name)
+                if verbosity >= 1:
+                    print_ok(result.name, result.elapsed_ms)
             else:
-                print_failed(result.name, elapsed_ms)
+                if verbosity >= 2:
+                    print_run(result.name)
+                if verbosity >= 1:
+                    print_failed(result.name, result.elapsed_ms)
                 print_failure_details(result, args.rebaseline)
                 failed_tests.append(result.name)
 
@@ -140,7 +142,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     passed = sum(1 for r in results if r.passed)
     failed = len(failed_tests)
 
-    print(f"[==========] {len(results)} tests from {len(suites)} test suites ran. ({elapsed_ms} ms total)")
+    if verbosity >= 1:
+        print(f"[==========] {len(results)} tests from {len(suites)} test suites ran. ({elapsed_ms} ms total)")
 
     if passed > 0:
         msg = colorize("[  PASSED  ]", Colors.GREEN)

@@ -5,6 +5,7 @@
 
 import subprocess
 import textwrap
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -26,6 +27,7 @@ class TestResult:
     """Result of a single test execution."""
     name: str
     passed: bool
+    elapsed_ms: int = 0
     actual: str = ""
     expected: str = ""
     error: str = ""
@@ -52,6 +54,7 @@ def execute_test(
     Returns:
         TestResult with pass/fail status and details.
     """
+    t0 = time.monotonic()
     try:
         proc = subprocess.run(
             [str(binary)],
@@ -61,24 +64,30 @@ def execute_test(
             timeout=timeout
         )
     except subprocess.TimeoutExpired:
+        elapsed_ms = int((time.monotonic() - t0) * 1000)
         return TestResult(
             name=name,
             passed=False,
+            elapsed_ms=elapsed_ms,
             error=f"Test timed out after {timeout}s",
             sql=blueprint.sql
         )
     except FileNotFoundError:
+        elapsed_ms = int((time.monotonic() - t0) * 1000)
         return TestResult(
             name=name,
             passed=False,
+            elapsed_ms=elapsed_ms,
             error=f"Binary not found: {binary}",
             sql=blueprint.sql
         )
+    elapsed_ms = int((time.monotonic() - t0) * 1000)
 
     if proc.returncode != 0:
         return TestResult(
             name=name,
             passed=False,
+            elapsed_ms=elapsed_ms,
             error=proc.stderr.strip() if proc.stderr else f"Exit code: {proc.returncode}",
             sql=blueprint.sql
         )
@@ -89,6 +98,7 @@ def execute_test(
     return TestResult(
         name=name,
         passed=(actual == expected),
+        elapsed_ms=elapsed_ms,
         actual=actual,
         expected=expected,
         sql=blueprint.sql
