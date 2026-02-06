@@ -4,11 +4,9 @@
 #include "syntaqlite/tokenizer.h"
 
 #include "src/common/synq_sqlite_defs.h"
+#include "src/tokenizer/sqlite_tokenize_gen.h"
 
 #include <stdlib.h>
-
-// External tokenizer function (defined in sqlite_tokenize_gen.c)
-i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType);
 
 struct SyntaqliteTokenizer {
     const unsigned char *source;

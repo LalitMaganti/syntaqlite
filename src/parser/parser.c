@@ -3,43 +3,15 @@
 
 #include "syntaqlite/parser.h"
 
-#include "src/ast/ast_nodes_gen.h"
-#include "src/ast/ast_print.h"
-#include "src/common/synq_sqlite_defs.h"
+#include "src/parser/parser.h"
+#include "src/parser/ast_nodes_gen.h"
+#include "src/parser/ast_print.h"
 #include "src/parser/sqlite_parse_gen.h"
 #include "syntaqlite/sqlite_tokens_gen.h"
-#include "src/parser/token_list.h"
+#include "src/tokenizer/sqlite_tokenize_gen.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-// External tokenizer function (defined in sqlite_tokenize_gen.c)
-i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType);
-
-struct SyntaqliteParser {
-    const char *source;
-    uint32_t length;
-
-    // Tokenizer cursor
-    uint32_t pos;
-    int last_token_type;
-
-    // Lemon parser
-    void *lemon;
-    SynqParseContext parseCtx;
-    SynqAstContext astCtx;
-
-    // Optional token collection
-    SynqTokenList *token_list;
-    SynqTokenList token_list_storage;
-
-    // Error state
-    int had_error;
-    char error_msg[256];
-
-    // EOF tracking
-    int finished;
-};
 
 static void on_syntax_error(SynqParseContext *ctx) {
     SyntaqliteParser *p = (SyntaqliteParser *)ctx->userData;
@@ -235,8 +207,6 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
     return result;
 }
 
-// ============ Public API ============
-
 const SynqNode *syntaqlite_parser_node(SyntaqliteParser *p, uint32_t node_id) {
     return synq_ast_node(&p->astCtx.ast, node_id);
 }
@@ -247,20 +217,6 @@ const char *syntaqlite_parser_source(SyntaqliteParser *p) {
 
 uint32_t syntaqlite_parser_source_length(SyntaqliteParser *p) {
     return p->length;
-}
-
-// ============ Internal API (used by test binaries / formatter) ============
-
-SynqAstContext *syntaqlite_parser_ast_context(SyntaqliteParser *p) {
-    return &p->astCtx;
-}
-
-SynqArena *syntaqlite_parser_arena(SyntaqliteParser *p) {
-    return &p->astCtx.ast;
-}
-
-struct SynqTokenList *syntaqlite_parser_token_list(SyntaqliteParser *p) {
-    return p->token_list;
 }
 
 void syntaqlite_parser_print_ast(SyntaqliteParser *p, uint32_t node_id,

@@ -6,7 +6,7 @@
 #ifndef SYNQ_SRC_FORMATTER_FMT_HELPERS_H
 #define SYNQ_SRC_FORMATTER_FMT_HELPERS_H
 
-#include "src/ast/ast_base.h"
+#include "src/parser/ast_base.h"
 #include "src/formatter/doc.h"
 #include "src/formatter/fmt_ops.h"
 #include "src/formatter/fmt_options.h"

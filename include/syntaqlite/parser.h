@@ -7,9 +7,8 @@
 //   SyntaqliteParser *p = syntaqlite_parser_create(NULL);
 //   syntaqlite_parser_reset(p, sql, len);
 //   SyntaqliteParseResult result;
-//   while ((result = syntaqlite_parser_next(p)).root != SYNTAQLITE_NULL_NODE) {
-//     const SyntaqliteNode *node = syntaqlite_parser_node(p, result.root);
-//     // process node
+//   while ((result = syntaqlite_parser_next(p)).root != SYNQ_NULL_NODE) {
+//     // process result.root
 //   }
 //   if (result.error) { /* handle error */ }
 //   syntaqlite_parser_destroy(p);

@@ -1,5 +1,26 @@
-# SQLite parser (generated from parse.y via Lemon).
+# SQLite parser and AST.
 # Regenerate with: python3 python/tools/extract_sqlite.py
+
+# AST node types, builder functions, and printer.
+source_set("ast") {
+  sources = [
+    # Base types (manually maintained)
+    "ast_base.c",
+    "ast_base.h",
+
+    # Generated files
+    "ast_builder_gen.c",
+    "ast_builder_gen.h",
+    "ast_nodes_gen.h",
+    "ast_print_gen.c",
+    "ast_print.h",
+  ]
+  deps = [
+    "../base:arena",
+    "../base:vec",
+    "../common",
+  ]
+}
 
 # Raw token list (populated by parser, consumed by formatter).
 source_set("token_list") {
@@ -13,6 +34,7 @@ source_set("token_list") {
   ]
 }
 
+# Lemon-generated parser.
 source_set("parser") {
   sources = [
     "sqlite_parse_gen.c",
@@ -28,12 +50,13 @@ source_set("parser") {
 # Parser streaming API implementation.
 source_set("parser_api") {
   sources = [
-    "parser_api.c",
+    "parser.c",
+    "parser.h",
   ]
   deps = [
     "../common",
     "../../include/syntaqlite:headers",
-    "../ast",
+    ":ast",
     ":token_list",
     ":parser",
     "../tokenizer:tokenizer_api",

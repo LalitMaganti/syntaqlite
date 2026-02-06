@@ -5,6 +5,7 @@ source_set("tokenizer") {
   sources = [
     "sqlite_charmap_gen.h",
     "sqlite_tokenize_gen.c",
+    "sqlite_tokenize_gen.h",
   ]
   deps = [
     "../common",

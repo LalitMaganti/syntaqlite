@@ -415,8 +415,8 @@ def _generate_grammar_file(
     parts.append(f"""%include {{
 #include "src/common/synq_sqlite_defs.h"
 #include "syntaqlite/sqlite_tokens_gen.h"
-#include "src/ast/ast_base.h"
-#include "src/ast/ast_builder_gen.h"
+#include "src/parser/ast_base.h"
+#include "src/parser/ast_builder_gen.h"
 
 #define YYNOERRORRECOVERY 1
 #define YYPARSEFREENEVERNULL 1

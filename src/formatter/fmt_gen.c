@@ -6,7 +6,7 @@
 
 #include "src/formatter/fmt_ops.h"
 
-#include "src/ast/ast_nodes_gen.h"
+#include "src/parser/ast_nodes_gen.h"
 
 // ============ Format Recipes ============
 

@@ -7,8 +7,8 @@
 #ifndef SYNQ_SRC_FORMATTER_COMMENT_ATTACH_H
 #define SYNQ_SRC_FORMATTER_COMMENT_ATTACH_H
 
-#include "src/ast/ast_base.h"
-#include "src/ast/ast_nodes_gen.h"
+#include "src/parser/ast_base.h"
+#include "src/parser/ast_nodes_gen.h"
 #include "src/parser/token_list.h"
 
 #include <stdint.h>

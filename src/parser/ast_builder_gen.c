@@ -4,7 +4,7 @@
 // Generated from data/ast_nodes.py - DO NOT EDIT
 // Regenerate with: python3 python/tools/generate_ast.py
 
-#include "src/ast/ast_builder_gen.h"
+#include "src/parser/ast_builder_gen.h"
 
 #include <stdlib.h>
 #include <string.h>

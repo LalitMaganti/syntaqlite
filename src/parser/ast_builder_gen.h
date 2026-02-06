@@ -7,7 +7,7 @@
 #ifndef SYNQ_SRC_AST_AST_BUILDER_GEN_H
 #define SYNQ_SRC_AST_AST_BUILDER_GEN_H
 
-#include "src/ast/ast_nodes_gen.h"
+#include "src/parser/ast_nodes_gen.h"
 
 #ifdef __cplusplus
 extern "C" {

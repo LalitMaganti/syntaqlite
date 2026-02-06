@@ -466,7 +466,7 @@ def generate_ast(output_dir: Path) -> None:
         raise RuntimeError("AST validation failed")
 
     # Generate
-    ast_dir = output_dir / "ast"
+    ast_dir = output_dir / "parser"
     include_dir = output_dir.parent / "include" / "syntaqlite"
     ast_codegen.generate_all(AST_NODES, AST_ENUMS, ast_dir, flags_defs=AST_FLAGS,
                              public_header_dir=include_dir)

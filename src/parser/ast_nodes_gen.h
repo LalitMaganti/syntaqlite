@@ -11,7 +11,7 @@
 #include "syntaqlite/ast_nodes_gen.h"
 
 // Internal dependencies (SynqArena, etc.)
-#include "src/ast/ast_base.h"
+#include "src/parser/ast_base.h"
 
 #ifdef __cplusplus
 extern "C" {

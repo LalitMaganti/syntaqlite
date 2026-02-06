@@ -11,7 +11,7 @@
 
 extern "C" {
 #include "src/formatter/fmt_helpers.h"
-#include "src/ast/ast_builder_gen.h"
+#include "src/parser/ast_builder_gen.h"
 }
 
 #include <cstring>

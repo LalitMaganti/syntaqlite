@@ -6,7 +6,7 @@
 
 #include "src/formatter/fmt_helpers.h"
 
-#include "src/ast/ast_nodes_gen.h"
+#include "src/parser/ast_nodes_gen.h"
 
 #include <stdbool.h>
 #include <string.h>

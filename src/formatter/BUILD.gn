@@ -13,7 +13,7 @@ source_set("fmt") {
     "../base:arena",
     "../base:vec",
     "../common",
-    "../ast",
+    "../parser:ast",
     "../parser:token_list",
     "../tokenizer",
   ]
@@ -39,7 +39,7 @@ executable("fmt_interpret_test") {
     "../../include/syntaqlite:headers",
     "../../third_party:googletest",
     "../../third_party:googletest_main",
-    "../ast",
+    "../parser:ast",
     ":fmt",
   ]
 }

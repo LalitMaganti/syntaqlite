@@ -4,13 +4,10 @@
 #include "syntaqlite/formatter.h"
 
 #include "src/formatter/fmt_helpers.h"
+#include "src/parser/parser.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-// Internal parser accessors (defined in parser_api.c).
-SynqAstContext *syntaqlite_parser_ast_context(SyntaqliteParser *p);
-struct SynqTokenList *syntaqlite_parser_token_list(SyntaqliteParser *p);
 
 // ============ High-level API ============
 
@@ -76,9 +73,9 @@ char *syntaqlite_format_stmt(SyntaqliteParser *parser, uint32_t root_id,
         opts.indent_width = options->indent_width;
     }
 
-    SynqAstContext *astCtx = syntaqlite_parser_ast_context(parser);
-    const char *source = syntaqlite_parser_source(parser);
-    SynqTokenList *token_list = syntaqlite_parser_token_list(parser);
+    SynqAstContext *astCtx = &parser->astCtx;
+    const char *source = parser->source;
+    SynqTokenList *token_list = parser->token_list;
 
     SynqFmtCtx ctx;
     synq_doc_context_init(&ctx.docs);
@@ -112,9 +109,9 @@ char *syntaqlite_format_stmt_debug_ir(SyntaqliteParser *parser, uint32_t root_id
         opts.indent_width = options->indent_width;
     }
 
-    SynqAstContext *astCtx = syntaqlite_parser_ast_context(parser);
-    const char *source = syntaqlite_parser_source(parser);
-    SynqTokenList *token_list = syntaqlite_parser_token_list(parser);
+    SynqAstContext *astCtx = &parser->astCtx;
+    const char *source = parser->source;
+    SynqTokenList *token_list = parser->token_list;
 
     SynqFmtCtx ctx;
     synq_doc_context_init(&ctx.docs);
