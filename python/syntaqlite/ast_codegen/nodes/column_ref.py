@@ -4,17 +4,20 @@
 """Column reference AST node definitions."""
 
 from ..defs import Node, inline, index
+from ..fmt_dsl import seq, kw, span, if_span
 
 ENUMS = []
 
 NODES = [
     # Column reference: name, optionally qualified with table and/or schema
-    # For "col": column=source span, table=no_span, schema=no_span
-    # For "tbl.col": column=source span, table=source span, schema=no_span
-    # For "schema.tbl.col": all three populated
     Node("ColumnRef",
         column=inline("SyntaqliteSourceSpan"),
         table=inline("SyntaqliteSourceSpan"),
         schema=inline("SyntaqliteSourceSpan"),
+        fmt=seq(
+            if_span("schema", seq(span("schema"), kw("."))),
+            if_span("table", seq(span("table"), kw("."))),
+            span("column"),
+        ),
     ),
 ]

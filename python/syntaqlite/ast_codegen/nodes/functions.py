@@ -4,6 +4,10 @@
 """Function call AST node definitions."""
 
 from ..defs import Node, List, Flags, inline, index
+from ..fmt_dsl import (
+    seq, kw, span, child, softline, group, nest,
+    if_set, if_flag,
+)
 
 ENUMS = []
 
@@ -13,13 +17,23 @@ FLAGS = [
 
 NODES = [
     # Function call: name(args)
-    # name is stored as a source span (the function identifier)
-    # args is an ExprList (or SYNTAQLITE_NULL_NODE for no args)
     Node("FunctionCall",
         func_name=inline("SyntaqliteSourceSpan"),
         flags=inline("FunctionCallFlags"),
         args=index("ExprList"),
-        filter_clause=index("Expr"),        # FILTER (WHERE expr), or null
-        over_clause=index("WindowDef"),     # OVER (...) or OVER name, or null
+        filter_clause=index("Expr"),
+        over_clause=index("WindowDef"),
+        fmt=seq(
+            span("func_name"), kw("("),
+            if_flag("flags.distinct", kw("DISTINCT ")),
+            if_flag("flags.star",
+                kw("*"),
+                if_set("args",
+                    seq(group(nest(seq(softline(), child("args")))),
+                        softline()))),
+            kw(")"),
+            if_set("filter_clause", seq(kw(" "), child("filter_clause"))),
+            if_set("over_clause", seq(kw(" "), child("over_clause"))),
+        ),
     ),
 ]

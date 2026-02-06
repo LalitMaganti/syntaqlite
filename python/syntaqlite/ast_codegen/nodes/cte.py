@@ -4,12 +4,13 @@
 """Common Table Expression (CTE / WITH clause) AST node definitions."""
 
 from ..defs import Node, List, Enum, inline, index
+from ..fmt_dsl import seq, kw, span, child, hardline, if_set, if_flag, if_enum
 
 ENUMS = [
     Enum("Materialized",
-        "DEFAULT",           # 0 - AS (no hint)
-        "MATERIALIZED",      # 1 - AS MATERIALIZED
-        "NOT_MATERIALIZED",  # 2 - AS NOT MATERIALIZED
+        "DEFAULT",           # 0
+        "MATERIALIZED",      # 1
+        "NOT_MATERIALIZED",  # 2
     ),
 ]
 
@@ -18,8 +19,16 @@ NODES = [
     Node("CteDefinition",
         cte_name=inline("SyntaqliteSourceSpan"),
         materialized=inline("Materialized"),
-        columns=index("ExprList"),     # nullable - column name list
-        select=index("Stmt"),          # the CTE subquery
+        columns=index("ExprList"),
+        select=index("Stmt"),
+        fmt=seq(
+            span("cte_name"),
+            if_set("columns", seq(kw("("), child("columns"), kw(")"))),
+            kw(" AS "),
+            if_enum("materialized", "MATERIALIZED", kw("MATERIALIZED ")),
+            if_enum("materialized", "NOT_MATERIALIZED", kw("NOT MATERIALIZED ")),
+            kw("("), child("select"), kw(")"),
+        ),
     ),
 
     # List of CTE definitions
@@ -27,8 +36,14 @@ NODES = [
 
     # WITH clause: WITH [RECURSIVE] cte1, cte2, ... select
     Node("WithClause",
-        recursive=inline("Bool"),      # FALSE = non-recursive, TRUE = RECURSIVE
+        recursive=inline("Bool"),
         ctes=index("CteList"),
-        select=index("Stmt"),          # the main select
+        select=index("Stmt"),
+        fmt=seq(
+            if_flag("recursive", kw("WITH RECURSIVE "), kw("WITH ")),
+            if_set("ctes", child("ctes")),
+            hardline(),
+            child("select"),
+        ),
     ),
 ]

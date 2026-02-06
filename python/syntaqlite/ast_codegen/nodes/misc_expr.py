@@ -4,6 +4,7 @@
 """Miscellaneous expression AST node definitions: Variable, CollateExpr."""
 
 from ..defs import Node, inline, index
+from ..fmt_dsl import seq, kw, span, child
 
 ENUMS = []
 
@@ -11,11 +12,13 @@ NODES = [
     # Bind parameter: ?, ?1, :name, @name, $name
     Node("Variable",
         source=inline("SyntaqliteSourceSpan"),
+        fmt=span("source"),
     ),
 
     # COLLATE expression: expr COLLATE collation_name
     Node("CollateExpr",
         expr=index("Expr"),
         collation=inline("SyntaqliteSourceSpan"),
+        fmt=seq(child("expr"), kw(" COLLATE "), span("collation")),
     ),
 ]

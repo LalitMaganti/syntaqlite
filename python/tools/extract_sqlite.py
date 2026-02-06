@@ -61,6 +61,7 @@ from python.syntaqlite.sqlite_extractor.lempar_transform import (
     transform_to_base_template,
 )
 from python.syntaqlite.ast_codegen import codegen as ast_codegen
+from python.syntaqlite.ast_codegen import fmt_codegen as ast_fmt_codegen
 from python.syntaqlite.ast_codegen import validator as ast_validator
 from python.syntaqlite.ast_codegen.nodes import NODES as AST_NODES, ENUMS as AST_ENUMS, FLAGS as AST_FLAGS
 
@@ -456,8 +457,12 @@ def generate_ast(output_dir: Path) -> None:
     ast_dir = output_dir / "ast"
     ast_codegen.generate_all(AST_NODES, AST_ENUMS, ast_dir, flags_defs=AST_FLAGS)
 
+    # Generate formatter
+    fmt_output = output_dir / "fmt" / "fmt.c"
+    ast_fmt_codegen.generate_fmt_c(AST_NODES, AST_ENUMS, AST_FLAGS, fmt_output)
+
     print(f"  {len(AST_NODES)} node types, {len(AST_ENUMS)} enums")
-    print("  Generated: ast_nodes.h, ast_builder.h, ast_builder.c, ast_print.c")
+    print("  Generated: ast_nodes.h, ast_builder.h, ast_builder.c, ast_print.c, fmt.c")
 
 
 def main():

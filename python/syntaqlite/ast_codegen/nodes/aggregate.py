@@ -4,6 +4,7 @@
 """Aggregate function call with ORDER BY AST node definition."""
 
 from ..defs import Node, Flags, inline, index
+from ..fmt_dsl import seq, kw, span, child, group, if_set, if_flag
 
 ENUMS = []
 
@@ -13,13 +14,21 @@ FLAGS = [
 
 NODES = [
     # Aggregate function call with ORDER BY: func(args ORDER BY sortlist)
-    # Separate from FunctionCall to preserve ABI compatibility.
     Node("AggregateFunctionCall",
         func_name=inline("SyntaqliteSourceSpan"),
         flags=inline("AggregateFunctionCallFlags"),
         args=index("ExprList"),
         orderby=index("OrderByList"),
-        filter_clause=index("Expr"),        # FILTER (WHERE expr), or null
-        over_clause=index("WindowDef"),     # OVER (...) or OVER name, or null
+        filter_clause=index("Expr"),
+        over_clause=index("WindowDef"),
+        fmt=seq(
+            span("func_name"), kw("("),
+            if_flag("flags.distinct", kw("DISTINCT ")),
+            if_set("args", group(child("args"))),
+            if_set("orderby", seq(kw(" ORDER BY "), child("orderby"))),
+            kw(")"),
+            if_set("filter_clause", seq(kw(" "), child("filter_clause"))),
+            if_set("over_clause", seq(kw(" "), child("over_clause"))),
+        ),
     ),
 ]

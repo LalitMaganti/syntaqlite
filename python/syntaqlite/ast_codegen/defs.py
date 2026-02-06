@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from .fmt_dsl import FmtDoc
+
 
 def pascal_to_snake(name: str) -> str:
     """Convert PascalCase to snake_case."""
@@ -45,6 +47,7 @@ class NodeDef:
 
     name: str
     fields: dict[str, FieldType] = None
+    fmt: FmtDoc | None = None
 
     def __post_init__(self):
         if self.fields is None:
@@ -57,6 +60,7 @@ class ListDef:
 
     name: str
     child_type: str
+    fmt: FmtDoc | None = None
 
 
 @dataclass(frozen=True)
@@ -96,14 +100,14 @@ def index(type_name: str) -> IndexField:
     return IndexField(type_name=type_name)
 
 
-def Node(name: str, **fields: FieldType) -> NodeDef:
+def Node(name: str, fmt: FmtDoc | None = None, **fields: FieldType) -> NodeDef:
     """Define a fixed-structure AST node with named fields."""
-    return NodeDef(name=name, fields=fields)
+    return NodeDef(name=name, fields=fields, fmt=fmt)
 
 
-def List(name: str, child_type: str) -> ListDef:
+def List(name: str, child_type: str, fmt: FmtDoc | None = None) -> ListDef:
     """Define a variable-length list node."""
-    return ListDef(name=name, child_type=child_type)
+    return ListDef(name=name, child_type=child_type, fmt=fmt)
 
 
 def Enum(name: str, *values: str) -> EnumDef:

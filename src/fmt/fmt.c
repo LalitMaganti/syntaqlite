@@ -1,8 +1,8 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// SQL formatter implementation: walks AST and builds document tree,
-// then renders via the layout engine.
+// Generated from ast_codegen node definitions - DO NOT EDIT
+// Regenerate with: python3 python/tools/extract_sqlite.py
 
 #include "src/fmt/fmt.h"
 
@@ -10,7 +10,6 @@
 #include "src/fmt/doc.h"
 #include "src/fmt/doc_layout.h"
 
-#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -26,165 +25,21 @@ typedef struct {
 
 // ============ Helpers ============
 
-// Emit a static keyword string (not owned by source).
 static uint32_t kw(FmtCtx *ctx, const char *text) {
     return doc_text(&ctx->docs, text, (uint32_t)strlen(text));
 }
 
-// Emit text from a source span.
 static uint32_t span_text(FmtCtx *ctx, SyntaqliteSourceSpan span) {
     if (span.length == 0) return SYNTAQLITE_NULL_DOC;
     return doc_text(&ctx->docs, ctx->source + span.offset, span.length);
 }
 
-// Build a concat from a variable number of doc IDs (terminated by SYNTAQLITE_NULL_DOC).
-// Skips any SYNTAQLITE_NULL_DOC entries in the middle.
-static uint32_t concat_docs(FmtCtx *ctx, uint32_t first, ...) {
-    uint32_t cat = doc_concat_empty(&ctx->docs);
-    if (cat == SYNTAQLITE_NULL_DOC) return cat;
-
-    if (first != SYNTAQLITE_NULL_DOC) {
-        cat = doc_concat_append(&ctx->docs, cat, first);
-    }
-
-    va_list args;
-    va_start(args, first);
-    for (;;) {
-        uint32_t d = va_arg(args, uint32_t);
-        if (d == SYNTAQLITE_NULL_DOC) break;
-        cat = doc_concat_append(&ctx->docs, cat, d);
-        if (cat == SYNTAQLITE_NULL_DOC) break;
-    }
-    va_end(args);
-    return cat;
-}
-
-// Forward declaration
 static uint32_t format_node(FmtCtx *ctx, uint32_t node_id);
-
-// ============ Binary Operator Strings ============
-
-static const char *binary_op_str(SyntaqliteBinaryOp op) {
-    switch (op) {
-        case SYNTAQLITE_BINARY_OP_PLUS: return "+";
-        case SYNTAQLITE_BINARY_OP_MINUS: return "-";
-        case SYNTAQLITE_BINARY_OP_STAR: return "*";
-        case SYNTAQLITE_BINARY_OP_SLASH: return "/";
-        case SYNTAQLITE_BINARY_OP_REM: return "%";
-        case SYNTAQLITE_BINARY_OP_LT: return "<";
-        case SYNTAQLITE_BINARY_OP_GT: return ">";
-        case SYNTAQLITE_BINARY_OP_LE: return "<=";
-        case SYNTAQLITE_BINARY_OP_GE: return ">=";
-        case SYNTAQLITE_BINARY_OP_EQ: return "=";
-        case SYNTAQLITE_BINARY_OP_NE: return "!=";
-        case SYNTAQLITE_BINARY_OP_AND: return "AND";
-        case SYNTAQLITE_BINARY_OP_OR: return "OR";
-        case SYNTAQLITE_BINARY_OP_BITAND: return "&";
-        case SYNTAQLITE_BINARY_OP_BITOR: return "|";
-        case SYNTAQLITE_BINARY_OP_LSHIFT: return "<<";
-        case SYNTAQLITE_BINARY_OP_RSHIFT: return ">>";
-        case SYNTAQLITE_BINARY_OP_CONCAT: return "||";
-        case SYNTAQLITE_BINARY_OP_PTR: return "->";
-        default: return "??";
-    }
-}
-
-static const char *unary_op_str(SyntaqliteUnaryOp op) {
-    switch (op) {
-        case SYNTAQLITE_UNARY_OP_MINUS: return "-";
-        case SYNTAQLITE_UNARY_OP_PLUS: return "+";
-        case SYNTAQLITE_UNARY_OP_BITNOT: return "~";
-        case SYNTAQLITE_UNARY_OP_NOT: return "NOT ";
-        default: return "??";
-    }
-}
-
-static const char *is_op_str(SyntaqliteIsOp op) {
-    switch (op) {
-        case SYNTAQLITE_IS_OP_IS: return "IS";
-        case SYNTAQLITE_IS_OP_IS_NOT: return "IS NOT";
-        case SYNTAQLITE_IS_OP_ISNULL: return "ISNULL";
-        case SYNTAQLITE_IS_OP_NOTNULL: return "NOTNULL";
-        case SYNTAQLITE_IS_OP_IS_NOT_DISTINCT: return "IS NOT DISTINCT FROM";
-        case SYNTAQLITE_IS_OP_IS_DISTINCT: return "IS DISTINCT FROM";
-        default: return "??";
-    }
-}
-
-static int is_op_postfix(SyntaqliteIsOp op) {
-    return op == SYNTAQLITE_IS_OP_ISNULL || op == SYNTAQLITE_IS_OP_NOTNULL;
-}
-
-static const char *compound_op_str(SyntaqliteCompoundOp op) {
-    switch (op) {
-        case SYNTAQLITE_COMPOUND_OP_UNION: return "UNION";
-        case SYNTAQLITE_COMPOUND_OP_UNION_ALL: return "UNION ALL";
-        case SYNTAQLITE_COMPOUND_OP_INTERSECT: return "INTERSECT";
-        case SYNTAQLITE_COMPOUND_OP_EXCEPT: return "EXCEPT";
-        default: return "??";
-    }
-}
-
-static const char *join_type_str(SyntaqliteJoinType jt) {
-    switch (jt) {
-        case SYNTAQLITE_JOIN_TYPE_COMMA: return ",";
-        case SYNTAQLITE_JOIN_TYPE_INNER: return "JOIN";
-        case SYNTAQLITE_JOIN_TYPE_LEFT: return "LEFT JOIN";
-        case SYNTAQLITE_JOIN_TYPE_RIGHT: return "RIGHT JOIN";
-        case SYNTAQLITE_JOIN_TYPE_FULL: return "FULL JOIN";
-        case SYNTAQLITE_JOIN_TYPE_CROSS: return "CROSS JOIN";
-        case SYNTAQLITE_JOIN_TYPE_NATURAL_INNER: return "NATURAL JOIN";
-        case SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT: return "NATURAL LEFT JOIN";
-        case SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT: return "NATURAL RIGHT JOIN";
-        case SYNTAQLITE_JOIN_TYPE_NATURAL_FULL: return "NATURAL FULL JOIN";
-        default: return "JOIN";
-    }
-}
-
-static const char *conflict_action_str(SyntaqliteConflictAction ca) {
-    switch (ca) {
-        case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: return "OR ROLLBACK";
-        case SYNTAQLITE_CONFLICT_ACTION_ABORT: return "OR ABORT";
-        case SYNTAQLITE_CONFLICT_ACTION_FAIL: return "OR FAIL";
-        case SYNTAQLITE_CONFLICT_ACTION_IGNORE: return "OR IGNORE";
-        case SYNTAQLITE_CONFLICT_ACTION_REPLACE: return "OR REPLACE";
-        default: return NULL;
-    }
-}
-
-static const char *sort_order_str(SyntaqliteSortOrder so) {
-    switch (so) {
-        case SYNTAQLITE_SORT_ORDER_ASC: return "ASC";
-        case SYNTAQLITE_SORT_ORDER_DESC: return "DESC";
-        default: return "ASC";
-    }
-}
-
-static const char *frame_type_str(SyntaqliteFrameType ft) {
-    switch (ft) {
-        case SYNTAQLITE_FRAME_TYPE_RANGE: return "RANGE";
-        case SYNTAQLITE_FRAME_TYPE_ROWS: return "ROWS";
-        case SYNTAQLITE_FRAME_TYPE_GROUPS: return "GROUPS";
-        default: return "";
-    }
-}
-
-static const char *frame_exclude_str(SyntaqliteFrameExclude fe) {
-    switch (fe) {
-        case SYNTAQLITE_FRAME_EXCLUDE_NO_OTHERS: return "EXCLUDE NO OTHERS";
-        case SYNTAQLITE_FRAME_EXCLUDE_CURRENT_ROW: return "EXCLUDE CURRENT ROW";
-        case SYNTAQLITE_FRAME_EXCLUDE_GROUP: return "EXCLUDE GROUP";
-        case SYNTAQLITE_FRAME_EXCLUDE_TIES: return "EXCLUDE TIES";
-        default: return NULL;
-    }
-}
 
 // ============ Comma-Separated List ============
 
-// Format a list node's children as comma-separated with line breaks.
 static uint32_t format_comma_list(FmtCtx *ctx, uint32_t *children, uint32_t count) {
     if (count == 0) return kw(ctx, "");
-
     uint32_t cat = doc_concat_empty(&ctx->docs);
     for (uint32_t i = 0; i < count; i++) {
         uint32_t child_doc = format_node(ctx, children[i]);
@@ -199,1438 +54,1337 @@ static uint32_t format_comma_list(FmtCtx *ctx, uint32_t *children, uint32_t coun
 
 // ============ Clause Helper ============
 
-// Emit: line + keyword + nest(indent, line + body)
-// Used for FROM, WHERE, GROUP BY, etc.
-// Uses doc_line so the whole SELECT can collapse to one line when it fits.
 static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_doc) {
     if (body_doc == SYNTAQLITE_NULL_DOC) return SYNTAQLITE_NULL_DOC;
-    uint32_t inner = concat_docs(ctx,
-        doc_line(&ctx->docs),
-        body_doc,
-        SYNTAQLITE_NULL_DOC);
-    return concat_docs(ctx,
-        doc_line(&ctx->docs),
-        kw(ctx, keyword),
-        doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner),
-        SYNTAQLITE_NULL_DOC);
+    uint32_t inner = doc_concat_empty(&ctx->docs);
+    inner = doc_concat_append(&ctx->docs, inner, doc_line(&ctx->docs));
+    inner = doc_concat_append(&ctx->docs, inner, body_doc);
+    uint32_t result = doc_concat_empty(&ctx->docs);
+    result = doc_concat_append(&ctx->docs, result, doc_line(&ctx->docs));
+    result = doc_concat_append(&ctx->docs, result, kw(ctx, keyword));
+    result = doc_concat_append(&ctx->docs, result,
+        doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner));
+    return result;
 }
 
 // ============ Node Formatters ============
 
-static uint32_t format_select(FmtCtx *ctx, SyntaqliteSelectStmt *sel) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-
-    // SELECT [DISTINCT]
-    if (sel->flags.distinct) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "SELECT DISTINCT"));
-    } else {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "SELECT"));
+static uint32_t format_binary_expr(FmtCtx *ctx, SyntaqliteBinaryExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t ch_2 = format_node(ctx, node->left);
+    if (ch_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_2);
+    uint32_t kw_3 = kw(ctx, " ");
+    if (kw_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_3);
+    uint32_t ed_4 = SYNTAQLITE_NULL_DOC;
+    switch (node->op) {
+        case SYNTAQLITE_BINARY_OP_PLUS: ed_4 = kw(ctx, "+"); break;
+        case SYNTAQLITE_BINARY_OP_MINUS: ed_4 = kw(ctx, "-"); break;
+        case SYNTAQLITE_BINARY_OP_STAR: ed_4 = kw(ctx, "*"); break;
+        case SYNTAQLITE_BINARY_OP_SLASH: ed_4 = kw(ctx, "/"); break;
+        case SYNTAQLITE_BINARY_OP_REM: ed_4 = kw(ctx, "%"); break;
+        case SYNTAQLITE_BINARY_OP_LT: ed_4 = kw(ctx, "<"); break;
+        case SYNTAQLITE_BINARY_OP_GT: ed_4 = kw(ctx, ">"); break;
+        case SYNTAQLITE_BINARY_OP_LE: ed_4 = kw(ctx, "<="); break;
+        case SYNTAQLITE_BINARY_OP_GE: ed_4 = kw(ctx, ">="); break;
+        case SYNTAQLITE_BINARY_OP_EQ: ed_4 = kw(ctx, "="); break;
+        case SYNTAQLITE_BINARY_OP_NE: ed_4 = kw(ctx, "!="); break;
+        case SYNTAQLITE_BINARY_OP_AND: ed_4 = kw(ctx, "AND"); break;
+        case SYNTAQLITE_BINARY_OP_OR: ed_4 = kw(ctx, "OR"); break;
+        case SYNTAQLITE_BINARY_OP_BITAND: ed_4 = kw(ctx, "&"); break;
+        case SYNTAQLITE_BINARY_OP_BITOR: ed_4 = kw(ctx, "|"); break;
+        case SYNTAQLITE_BINARY_OP_LSHIFT: ed_4 = kw(ctx, "<<"); break;
+        case SYNTAQLITE_BINARY_OP_RSHIFT: ed_4 = kw(ctx, ">>"); break;
+        case SYNTAQLITE_BINARY_OP_CONCAT: ed_4 = kw(ctx, "||"); break;
+        case SYNTAQLITE_BINARY_OP_PTR: ed_4 = kw(ctx, "->"); break;
+        default: break;
     }
+    if (ed_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ed_4);
+    uint32_t ln_5 = doc_line(&ctx->docs);
+    if (ln_5 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ln_5);
+    uint32_t ch_6 = format_node(ctx, node->right);
+    if (ch_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_6);
+    uint32_t grp_7 = doc_group(&ctx->docs, cat_1);
+    return grp_7;
+}
 
-    // Columns
-    if (sel->columns != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, sel->columns);
-        if (cols && cols->tag == SYNTAQLITE_NODE_RESULT_COLUMN_LIST) {
-            uint32_t col_list = format_comma_list(ctx,
-                cols->result_column_list.children, cols->result_column_list.count);
-            uint32_t col_group = doc_group(&ctx->docs,
-                doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width,
-                    concat_docs(ctx, doc_line(&ctx->docs), col_list, SYNTAQLITE_NULL_DOC)));
-            result = doc_concat_append(&ctx->docs, result, col_group);
-        }
+static uint32_t format_unary_expr(FmtCtx *ctx, SyntaqliteUnaryExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t ed_2 = SYNTAQLITE_NULL_DOC;
+    switch (node->op) {
+        case SYNTAQLITE_UNARY_OP_MINUS: ed_2 = kw(ctx, "-"); break;
+        case SYNTAQLITE_UNARY_OP_PLUS: ed_2 = kw(ctx, "+"); break;
+        case SYNTAQLITE_UNARY_OP_BITNOT: ed_2 = kw(ctx, "~"); break;
+        case SYNTAQLITE_UNARY_OP_NOT: ed_2 = kw(ctx, "NOT "); break;
+        default: break;
     }
+    if (ed_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ed_2);
+    uint32_t ch_3 = format_node(ctx, node->operand);
+    if (ch_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_3);
+    return cat_1;
+}
 
-    // FROM
-    if (sel->from_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t from_body = format_node(ctx, sel->from_clause);
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "FROM", from_body));
-    }
+static uint32_t format_literal(FmtCtx *ctx, SyntaqliteLiteral *node) {
+    uint32_t sp_1 = span_text(ctx, node->source);
+    return sp_1;
+}
 
-    // WHERE
-    if (sel->where != SYNTAQLITE_NULL_NODE) {
-        uint32_t where_body = format_node(ctx, sel->where);
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "WHERE", where_body));
-    }
-
-    // GROUP BY
-    if (sel->groupby != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *gb = AST_NODE(ctx->ast, sel->groupby);
-        uint32_t gb_body;
-        if (gb && gb->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            gb_body = format_comma_list(ctx, gb->expr_list.children, gb->expr_list.count);
+static uint32_t format_result_column(FmtCtx *ctx, SyntaqliteResultColumn *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
+    if (node->flags.star) {
+        uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
+        if (node->expr != SYNTAQLITE_NULL_NODE) {
+            uint32_t cat_4 = doc_concat_empty(&ctx->docs);
+            uint32_t ch_5 = format_node(ctx, node->expr);
+            if (ch_5 != SYNTAQLITE_NULL_DOC)
+                cat_4 = doc_concat_append(&ctx->docs, cat_4, ch_5);
+            uint32_t kw_6 = kw(ctx, ".*");
+            if (kw_6 != SYNTAQLITE_NULL_DOC)
+                cat_4 = doc_concat_append(&ctx->docs, cat_4, kw_6);
+            cond_3 = cat_4;
         } else {
-            gb_body = format_node(ctx, sel->groupby);
+            uint32_t kw_7 = kw(ctx, "*");
+            cond_3 = kw_7;
         }
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "GROUP BY", gb_body));
-    }
-
-    // HAVING
-    if (sel->having != SYNTAQLITE_NULL_NODE) {
-        uint32_t having_body = format_node(ctx, sel->having);
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "HAVING", having_body));
-    }
-
-    // ORDER BY
-    if (sel->orderby != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *ob = AST_NODE(ctx->ast, sel->orderby);
-        uint32_t ob_body;
-        if (ob && ob->tag == SYNTAQLITE_NODE_ORDER_BY_LIST) {
-            ob_body = format_comma_list(ctx, ob->order_by_list.children, ob->order_by_list.count);
-        } else {
-            ob_body = format_node(ctx, sel->orderby);
-        }
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "ORDER BY", ob_body));
-    }
-
-    // LIMIT
-    if (sel->limit_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t limit_body = format_node(ctx, sel->limit_clause);
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "LIMIT", limit_body));
-    }
-
-    // WINDOW
-    if (sel->window_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t window_body = format_node(ctx, sel->window_clause);
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "WINDOW", window_body));
-    }
-
-    return doc_group(&ctx->docs, result);
-}
-
-static uint32_t format_binary_expr(FmtCtx *ctx, SyntaqliteBinaryExpr *expr) {
-    uint32_t left = format_node(ctx, expr->left);
-    uint32_t right = format_node(ctx, expr->right);
-    const char *op = binary_op_str(expr->op);
-
-    return doc_group(&ctx->docs, concat_docs(ctx,
-        left,
-        kw(ctx, " "),
-        kw(ctx, op),
-        doc_line(&ctx->docs),
-        right,
-        SYNTAQLITE_NULL_DOC));
-}
-
-static uint32_t format_unary_expr(FmtCtx *ctx, SyntaqliteUnaryExpr *expr) {
-    uint32_t operand = format_node(ctx, expr->operand);
-    const char *op = unary_op_str(expr->op);
-    return concat_docs(ctx, kw(ctx, op), operand, SYNTAQLITE_NULL_DOC);
-}
-
-static uint32_t format_literal(FmtCtx *ctx, SyntaqliteLiteral *lit) {
-    return span_text(ctx, lit->source);
-}
-
-static uint32_t format_column_ref(FmtCtx *ctx, SyntaqliteColumnRef *ref) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    if (ref->schema.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, ref->schema));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "."));
-    }
-    if (ref->table.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, ref->table));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "."));
-    }
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, ref->column));
-    return result;
-}
-
-static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *func) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, func->func_name));
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "("));
-
-    if (func->flags.distinct) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "DISTINCT "));
-    }
-
-    if (func->flags.star) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "*"));
-    } else if (func->args != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *args = AST_NODE(ctx->ast, func->args);
-        if (args && args->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            uint32_t args_doc = format_comma_list(ctx,
-                args->expr_list.children, args->expr_list.count);
-            uint32_t args_group = doc_group(&ctx->docs,
-                doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width,
-                    concat_docs(ctx, doc_softline(&ctx->docs), args_doc, SYNTAQLITE_NULL_DOC)));
-            result = doc_concat_append(&ctx->docs, result, args_group);
-            result = doc_concat_append(&ctx->docs, result, doc_softline(&ctx->docs));
-        }
-    }
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-
-    // FILTER / OVER clause
-    if (func->filter_clause != SYNTAQLITE_NULL_NODE || func->over_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t fo = format_node(ctx,
-            func->filter_clause != SYNTAQLITE_NULL_NODE ? func->filter_clause : func->over_clause);
-        if (fo != SYNTAQLITE_NULL_DOC) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-            result = doc_concat_append(&ctx->docs, result, fo);
-        }
-    }
-
-    return result;
-}
-
-static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateFunctionCall *func) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, func->func_name));
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "("));
-
-    if (func->flags.distinct) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "DISTINCT "));
-    }
-
-    if (func->args != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *args = AST_NODE(ctx->ast, func->args);
-        if (args && args->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            uint32_t args_doc = format_comma_list(ctx,
-                args->expr_list.children, args->expr_list.count);
-            result = doc_concat_append(&ctx->docs, result, doc_group(&ctx->docs, args_doc));
-        }
-    }
-
-    // ORDER BY inside aggregate
-    if (func->orderby != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " ORDER BY "));
-        SyntaqliteNode *ob = AST_NODE(ctx->ast, func->orderby);
-        if (ob && ob->tag == SYNTAQLITE_NODE_ORDER_BY_LIST) {
-            result = doc_concat_append(&ctx->docs, result,
-                format_comma_list(ctx, ob->order_by_list.children, ob->order_by_list.count));
-        } else {
-            result = doc_concat_append(&ctx->docs, result, format_node(ctx, func->orderby));
-        }
-    }
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-
-    // FILTER / OVER
-    if (func->filter_clause != SYNTAQLITE_NULL_NODE || func->over_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t fo = format_node(ctx,
-            func->filter_clause != SYNTAQLITE_NULL_NODE ? func->filter_clause : func->over_clause);
-        if (fo != SYNTAQLITE_NULL_DOC) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-            result = doc_concat_append(&ctx->docs, result, fo);
-        }
-    }
-
-    return result;
-}
-
-static uint32_t format_result_column(FmtCtx *ctx, SyntaqliteResultColumn *rc) {
-    if (rc->flags.star && rc->expr == SYNTAQLITE_NULL_NODE) {
-        return kw(ctx, "*");
-    }
-
-    uint32_t result = doc_concat_empty(&ctx->docs);
-
-    if (rc->flags.star && rc->expr != SYNTAQLITE_NULL_NODE) {
-        // table.*
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, rc->expr));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, ".*"));
+        cond_2 = cond_3;
     } else {
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, rc->expr));
+        uint32_t ch_8 = format_node(ctx, node->expr);
+        cond_2 = ch_8;
     }
-
-    if (rc->alias.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " AS "));
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, rc->alias));
+    if (cond_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_2);
+    uint32_t cond_9 = SYNTAQLITE_NULL_DOC;
+    if (node->alias.length > 0) {
+        uint32_t cat_10 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_11 = kw(ctx, " AS ");
+        if (kw_11 != SYNTAQLITE_NULL_DOC)
+            cat_10 = doc_concat_append(&ctx->docs, cat_10, kw_11);
+        uint32_t sp_12 = span_text(ctx, node->alias);
+        if (sp_12 != SYNTAQLITE_NULL_DOC)
+            cat_10 = doc_concat_append(&ctx->docs, cat_10, sp_12);
+        cond_9 = cat_10;
     }
-
-    return result;
+    if (cond_9 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_9);
+    return cat_1;
 }
 
-static uint32_t format_ordering_term(FmtCtx *ctx, SyntaqliteOrderingTerm *ot) {
-    uint32_t result = format_node(ctx, ot->expr);
-
-    if (ot->sort_order == SYNTAQLITE_SORT_ORDER_DESC) {
-        result = concat_docs(ctx, result, kw(ctx, " "), kw(ctx, sort_order_str(ot->sort_order)), SYNTAQLITE_NULL_DOC);
-    }
-
-    if (ot->nulls_order == SYNTAQLITE_NULLS_ORDER_FIRST) {
-        result = concat_docs(ctx, result, kw(ctx, " NULLS FIRST"), SYNTAQLITE_NULL_DOC);
-    } else if (ot->nulls_order == SYNTAQLITE_NULLS_ORDER_LAST) {
-        result = concat_docs(ctx, result, kw(ctx, " NULLS LAST"), SYNTAQLITE_NULL_DOC);
-    }
-
-    return result;
-}
-
-static uint32_t format_limit_clause(FmtCtx *ctx, SyntaqliteLimitClause *lim) {
-    uint32_t result = format_node(ctx, lim->limit);
-    if (lim->offset != SYNTAQLITE_NULL_NODE) {
-        result = concat_docs(ctx, result, kw(ctx, " OFFSET "),
-            format_node(ctx, lim->offset), SYNTAQLITE_NULL_DOC);
-    }
-    return result;
-}
-
-static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *expr) {
-    if (is_op_postfix(expr->op)) {
-        return concat_docs(ctx,
-            format_node(ctx, expr->left),
-            kw(ctx, " "),
-            kw(ctx, is_op_str(expr->op)),
-            SYNTAQLITE_NULL_DOC);
-    }
-    return concat_docs(ctx,
-        format_node(ctx, expr->left),
-        kw(ctx, " "),
-        kw(ctx, is_op_str(expr->op)),
-        kw(ctx, " "),
-        format_node(ctx, expr->right),
-        SYNTAQLITE_NULL_DOC);
-}
-
-static uint32_t format_between_expr(FmtCtx *ctx, SyntaqliteBetweenExpr *expr) {
-    uint32_t result = format_node(ctx, expr->operand);
-    if (expr->negated) {
-        result = concat_docs(ctx, result, kw(ctx, " NOT BETWEEN "), SYNTAQLITE_NULL_DOC);
+static uint32_t format_select_stmt(FmtCtx *ctx, SyntaqliteSelectStmt *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
+    if (node->flags.distinct) {
+        uint32_t kw_3 = kw(ctx, "SELECT DISTINCT");
+        cond_2 = kw_3;
     } else {
-        result = concat_docs(ctx, result, kw(ctx, " BETWEEN "), SYNTAQLITE_NULL_DOC);
+        uint32_t kw_4 = kw(ctx, "SELECT");
+        cond_2 = kw_4;
     }
-    result = concat_docs(ctx, result,
-        format_node(ctx, expr->low),
-        kw(ctx, " AND "),
-        format_node(ctx, expr->high),
-        SYNTAQLITE_NULL_DOC);
-    return result;
+    if (cond_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_2);
+    uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
+    if (node->columns != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_6 = doc_concat_empty(&ctx->docs);
+        uint32_t ln_7 = doc_line(&ctx->docs);
+        if (ln_7 != SYNTAQLITE_NULL_DOC)
+            cat_6 = doc_concat_append(&ctx->docs, cat_6, ln_7);
+        uint32_t ch_8 = format_node(ctx, node->columns);
+        if (ch_8 != SYNTAQLITE_NULL_DOC)
+            cat_6 = doc_concat_append(&ctx->docs, cat_6, ch_8);
+        uint32_t nst_9 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_6);
+        uint32_t grp_10 = doc_group(&ctx->docs, nst_9);
+        cond_5 = grp_10;
+    }
+    if (cond_5 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_5);
+    uint32_t cond_11 = SYNTAQLITE_NULL_DOC;
+    if (node->from_clause != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_12 = format_node(ctx, node->from_clause);
+        uint32_t cl_13 = format_clause(ctx, "FROM", ch_12);
+        cond_11 = cl_13;
+    }
+    if (cond_11 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_11);
+    uint32_t cond_14 = SYNTAQLITE_NULL_DOC;
+    if (node->where != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_15 = format_node(ctx, node->where);
+        uint32_t cl_16 = format_clause(ctx, "WHERE", ch_15);
+        cond_14 = cl_16;
+    }
+    if (cond_14 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_14);
+    uint32_t cond_17 = SYNTAQLITE_NULL_DOC;
+    if (node->groupby != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_18 = format_node(ctx, node->groupby);
+        uint32_t cl_19 = format_clause(ctx, "GROUP BY", ch_18);
+        cond_17 = cl_19;
+    }
+    if (cond_17 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_17);
+    uint32_t cond_20 = SYNTAQLITE_NULL_DOC;
+    if (node->having != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_21 = format_node(ctx, node->having);
+        uint32_t cl_22 = format_clause(ctx, "HAVING", ch_21);
+        cond_20 = cl_22;
+    }
+    if (cond_20 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_20);
+    uint32_t cond_23 = SYNTAQLITE_NULL_DOC;
+    if (node->orderby != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_24 = format_node(ctx, node->orderby);
+        uint32_t cl_25 = format_clause(ctx, "ORDER BY", ch_24);
+        cond_23 = cl_25;
+    }
+    if (cond_23 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_23);
+    uint32_t cond_26 = SYNTAQLITE_NULL_DOC;
+    if (node->limit_clause != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_27 = format_node(ctx, node->limit_clause);
+        uint32_t cl_28 = format_clause(ctx, "LIMIT", ch_27);
+        cond_26 = cl_28;
+    }
+    if (cond_26 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_26);
+    uint32_t cond_29 = SYNTAQLITE_NULL_DOC;
+    if (node->window_clause != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_30 = format_node(ctx, node->window_clause);
+        uint32_t cl_31 = format_clause(ctx, "WINDOW", ch_30);
+        cond_29 = cl_31;
+    }
+    if (cond_29 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_29);
+    uint32_t grp_32 = doc_group(&ctx->docs, cat_1);
+    return grp_32;
 }
 
-static uint32_t format_like_expr(FmtCtx *ctx, SyntaqliteLikeExpr *expr) {
-    uint32_t result = format_node(ctx, expr->operand);
-    if (expr->negated) {
-        result = concat_docs(ctx, result, kw(ctx, " NOT LIKE "), SYNTAQLITE_NULL_DOC);
+static uint32_t format_ordering_term(FmtCtx *ctx, SyntaqliteOrderingTerm *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t ch_2 = format_node(ctx, node->expr);
+    if (ch_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_2);
+    uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
+    if (node->sort_order == SYNTAQLITE_SORT_ORDER_DESC) {
+        uint32_t kw_4 = kw(ctx, " DESC");
+        cond_3 = kw_4;
+    }
+    if (cond_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_3);
+    uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
+    if (node->nulls_order == SYNTAQLITE_NULLS_ORDER_FIRST) {
+        uint32_t kw_6 = kw(ctx, " NULLS FIRST");
+        cond_5 = kw_6;
+    }
+    if (cond_5 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_5);
+    uint32_t cond_7 = SYNTAQLITE_NULL_DOC;
+    if (node->nulls_order == SYNTAQLITE_NULLS_ORDER_LAST) {
+        uint32_t kw_8 = kw(ctx, " NULLS LAST");
+        cond_7 = kw_8;
+    }
+    if (cond_7 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_7);
+    return cat_1;
+}
+
+static uint32_t format_limit_clause(FmtCtx *ctx, SyntaqliteLimitClause *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t ch_2 = format_node(ctx, node->limit);
+    if (ch_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_2);
+    uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
+    if (node->offset != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_4 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_5 = kw(ctx, " OFFSET ");
+        if (kw_5 != SYNTAQLITE_NULL_DOC)
+            cat_4 = doc_concat_append(&ctx->docs, cat_4, kw_5);
+        uint32_t ch_6 = format_node(ctx, node->offset);
+        if (ch_6 != SYNTAQLITE_NULL_DOC)
+            cat_4 = doc_concat_append(&ctx->docs, cat_4, ch_6);
+        cond_3 = cat_4;
+    }
+    if (cond_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_3);
+    return cat_1;
+}
+
+static uint32_t format_column_ref(FmtCtx *ctx, SyntaqliteColumnRef *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
+    if (node->schema.length > 0) {
+        uint32_t cat_3 = doc_concat_empty(&ctx->docs);
+        uint32_t sp_4 = span_text(ctx, node->schema);
+        if (sp_4 != SYNTAQLITE_NULL_DOC)
+            cat_3 = doc_concat_append(&ctx->docs, cat_3, sp_4);
+        uint32_t kw_5 = kw(ctx, ".");
+        if (kw_5 != SYNTAQLITE_NULL_DOC)
+            cat_3 = doc_concat_append(&ctx->docs, cat_3, kw_5);
+        cond_2 = cat_3;
+    }
+    if (cond_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_2);
+    uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
+    if (node->table.length > 0) {
+        uint32_t cat_7 = doc_concat_empty(&ctx->docs);
+        uint32_t sp_8 = span_text(ctx, node->table);
+        if (sp_8 != SYNTAQLITE_NULL_DOC)
+            cat_7 = doc_concat_append(&ctx->docs, cat_7, sp_8);
+        uint32_t kw_9 = kw(ctx, ".");
+        if (kw_9 != SYNTAQLITE_NULL_DOC)
+            cat_7 = doc_concat_append(&ctx->docs, cat_7, kw_9);
+        cond_6 = cat_7;
+    }
+    if (cond_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_6);
+    uint32_t sp_10 = span_text(ctx, node->column);
+    if (sp_10 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, sp_10);
+    return cat_1;
+}
+
+static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t sp_2 = span_text(ctx, node->func_name);
+    if (sp_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, sp_2);
+    uint32_t kw_3 = kw(ctx, "(");
+    if (kw_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_3);
+    uint32_t cond_4 = SYNTAQLITE_NULL_DOC;
+    if (node->flags.distinct) {
+        uint32_t kw_5 = kw(ctx, "DISTINCT ");
+        cond_4 = kw_5;
+    }
+    if (cond_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_4);
+    uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
+    if (node->flags.star) {
+        uint32_t kw_7 = kw(ctx, "*");
+        cond_6 = kw_7;
     } else {
-        result = concat_docs(ctx, result, kw(ctx, " LIKE "), SYNTAQLITE_NULL_DOC);
-    }
-    result = concat_docs(ctx, result, format_node(ctx, expr->pattern), SYNTAQLITE_NULL_DOC);
-    if (expr->escape != SYNTAQLITE_NULL_NODE) {
-        result = concat_docs(ctx, result, kw(ctx, " ESCAPE "),
-            format_node(ctx, expr->escape), SYNTAQLITE_NULL_DOC);
-    }
-    return result;
-}
-
-static uint32_t format_case_expr(FmtCtx *ctx, SyntaqliteCaseExpr *expr) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "CASE"));
-
-    if (expr->operand != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, expr->operand));
-    }
-
-    // WHEN clauses
-    if (expr->whens != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *whens = AST_NODE(ctx->ast, expr->whens);
-        if (whens && whens->tag == SYNTAQLITE_NODE_CASE_WHEN_LIST) {
-            for (uint32_t i = 0; i < whens->case_when_list.count; i++) {
-                SyntaqliteNode *w = AST_NODE(ctx->ast, whens->case_when_list.children[i]);
-                if (w && w->tag == SYNTAQLITE_NODE_CASE_WHEN) {
-                    result = doc_concat_append(&ctx->docs, result, kw(ctx, " WHEN "));
-                    result = doc_concat_append(&ctx->docs, result,
-                        format_node(ctx, w->case_when.when_expr));
-                    result = doc_concat_append(&ctx->docs, result, kw(ctx, " THEN "));
-                    result = doc_concat_append(&ctx->docs, result,
-                        format_node(ctx, w->case_when.then_expr));
-                }
-            }
+        uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
+        if (node->args != SYNTAQLITE_NULL_NODE) {
+            uint32_t cat_9 = doc_concat_empty(&ctx->docs);
+            uint32_t cat_10 = doc_concat_empty(&ctx->docs);
+            uint32_t sl_11 = doc_softline(&ctx->docs);
+            if (sl_11 != SYNTAQLITE_NULL_DOC)
+                cat_10 = doc_concat_append(&ctx->docs, cat_10, sl_11);
+            uint32_t ch_12 = format_node(ctx, node->args);
+            if (ch_12 != SYNTAQLITE_NULL_DOC)
+                cat_10 = doc_concat_append(&ctx->docs, cat_10, ch_12);
+            uint32_t nst_13 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_10);
+            uint32_t grp_14 = doc_group(&ctx->docs, nst_13);
+            if (grp_14 != SYNTAQLITE_NULL_DOC)
+                cat_9 = doc_concat_append(&ctx->docs, cat_9, grp_14);
+            uint32_t sl_15 = doc_softline(&ctx->docs);
+            if (sl_15 != SYNTAQLITE_NULL_DOC)
+                cat_9 = doc_concat_append(&ctx->docs, cat_9, sl_15);
+            cond_8 = cat_9;
         }
+        cond_6 = cond_8;
     }
-
-    if (expr->else_expr != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " ELSE "));
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, expr->else_expr));
+    if (cond_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_6);
+    uint32_t kw_16 = kw(ctx, ")");
+    if (kw_16 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_16);
+    uint32_t cond_17 = SYNTAQLITE_NULL_DOC;
+    if (node->filter_clause != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_18 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_19 = kw(ctx, " ");
+        if (kw_19 != SYNTAQLITE_NULL_DOC)
+            cat_18 = doc_concat_append(&ctx->docs, cat_18, kw_19);
+        uint32_t ch_20 = format_node(ctx, node->filter_clause);
+        if (ch_20 != SYNTAQLITE_NULL_DOC)
+            cat_18 = doc_concat_append(&ctx->docs, cat_18, ch_20);
+        cond_17 = cat_18;
     }
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, " END"));
-    return result;
+    if (cond_17 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_17);
+    uint32_t cond_21 = SYNTAQLITE_NULL_DOC;
+    if (node->over_clause != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_22 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_23 = kw(ctx, " ");
+        if (kw_23 != SYNTAQLITE_NULL_DOC)
+            cat_22 = doc_concat_append(&ctx->docs, cat_22, kw_23);
+        uint32_t ch_24 = format_node(ctx, node->over_clause);
+        if (ch_24 != SYNTAQLITE_NULL_DOC)
+            cat_22 = doc_concat_append(&ctx->docs, cat_22, ch_24);
+        cond_21 = cat_22;
+    }
+    if (cond_21 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_21);
+    return cat_1;
 }
 
-static uint32_t format_in_expr(FmtCtx *ctx, SyntaqliteInExpr *expr) {
-    uint32_t result = format_node(ctx, expr->operand);
-    if (expr->negated) {
-        result = concat_docs(ctx, result, kw(ctx, " NOT IN "), SYNTAQLITE_NULL_DOC);
+static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
+    uint32_t sw_1 = SYNTAQLITE_NULL_DOC;
+    switch (node->op) {
+        case SYNTAQLITE_IS_OP_ISNULL: {
+            uint32_t cat_2 = doc_concat_empty(&ctx->docs);
+            uint32_t ch_3 = format_node(ctx, node->left);
+            if (ch_3 != SYNTAQLITE_NULL_DOC)
+                cat_2 = doc_concat_append(&ctx->docs, cat_2, ch_3);
+            uint32_t kw_4 = kw(ctx, " ISNULL");
+            if (kw_4 != SYNTAQLITE_NULL_DOC)
+                cat_2 = doc_concat_append(&ctx->docs, cat_2, kw_4);
+            sw_1 = cat_2;
+            break;
+        }
+        case SYNTAQLITE_IS_OP_NOTNULL: {
+            uint32_t cat_5 = doc_concat_empty(&ctx->docs);
+            uint32_t ch_6 = format_node(ctx, node->left);
+            if (ch_6 != SYNTAQLITE_NULL_DOC)
+                cat_5 = doc_concat_append(&ctx->docs, cat_5, ch_6);
+            uint32_t kw_7 = kw(ctx, " NOTNULL");
+            if (kw_7 != SYNTAQLITE_NULL_DOC)
+                cat_5 = doc_concat_append(&ctx->docs, cat_5, kw_7);
+            sw_1 = cat_5;
+            break;
+        }
+        case SYNTAQLITE_IS_OP_IS: {
+            uint32_t cat_8 = doc_concat_empty(&ctx->docs);
+            uint32_t ch_9 = format_node(ctx, node->left);
+            if (ch_9 != SYNTAQLITE_NULL_DOC)
+                cat_8 = doc_concat_append(&ctx->docs, cat_8, ch_9);
+            uint32_t kw_10 = kw(ctx, " IS ");
+            if (kw_10 != SYNTAQLITE_NULL_DOC)
+                cat_8 = doc_concat_append(&ctx->docs, cat_8, kw_10);
+            uint32_t ch_11 = format_node(ctx, node->right);
+            if (ch_11 != SYNTAQLITE_NULL_DOC)
+                cat_8 = doc_concat_append(&ctx->docs, cat_8, ch_11);
+            sw_1 = cat_8;
+            break;
+        }
+        case SYNTAQLITE_IS_OP_IS_NOT: {
+            uint32_t cat_12 = doc_concat_empty(&ctx->docs);
+            uint32_t ch_13 = format_node(ctx, node->left);
+            if (ch_13 != SYNTAQLITE_NULL_DOC)
+                cat_12 = doc_concat_append(&ctx->docs, cat_12, ch_13);
+            uint32_t kw_14 = kw(ctx, " IS NOT ");
+            if (kw_14 != SYNTAQLITE_NULL_DOC)
+                cat_12 = doc_concat_append(&ctx->docs, cat_12, kw_14);
+            uint32_t ch_15 = format_node(ctx, node->right);
+            if (ch_15 != SYNTAQLITE_NULL_DOC)
+                cat_12 = doc_concat_append(&ctx->docs, cat_12, ch_15);
+            sw_1 = cat_12;
+            break;
+        }
+        case SYNTAQLITE_IS_OP_IS_NOT_DISTINCT: {
+            uint32_t cat_16 = doc_concat_empty(&ctx->docs);
+            uint32_t ch_17 = format_node(ctx, node->left);
+            if (ch_17 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, ch_17);
+            uint32_t kw_18 = kw(ctx, " IS NOT DISTINCT FROM ");
+            if (kw_18 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, kw_18);
+            uint32_t ch_19 = format_node(ctx, node->right);
+            if (ch_19 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, ch_19);
+            sw_1 = cat_16;
+            break;
+        }
+        case SYNTAQLITE_IS_OP_IS_DISTINCT: {
+            uint32_t cat_20 = doc_concat_empty(&ctx->docs);
+            uint32_t ch_21 = format_node(ctx, node->left);
+            if (ch_21 != SYNTAQLITE_NULL_DOC)
+                cat_20 = doc_concat_append(&ctx->docs, cat_20, ch_21);
+            uint32_t kw_22 = kw(ctx, " IS DISTINCT FROM ");
+            if (kw_22 != SYNTAQLITE_NULL_DOC)
+                cat_20 = doc_concat_append(&ctx->docs, cat_20, kw_22);
+            uint32_t ch_23 = format_node(ctx, node->right);
+            if (ch_23 != SYNTAQLITE_NULL_DOC)
+                cat_20 = doc_concat_append(&ctx->docs, cat_20, ch_23);
+            sw_1 = cat_20;
+            break;
+        }
+        default: break;
+    }
+    return sw_1;
+}
+
+static uint32_t format_between_expr(FmtCtx *ctx, SyntaqliteBetweenExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t ch_2 = format_node(ctx, node->operand);
+    if (ch_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_2);
+    uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
+    if (node->negated) {
+        uint32_t kw_4 = kw(ctx, " NOT BETWEEN ");
+        cond_3 = kw_4;
     } else {
-        result = concat_docs(ctx, result, kw(ctx, " IN "), SYNTAQLITE_NULL_DOC);
+        uint32_t kw_5 = kw(ctx, " BETWEEN ");
+        cond_3 = kw_5;
     }
-
-    SyntaqliteNode *source = AST_NODE(ctx->ast, expr->source);
-    if (source) {
-        if (source->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            uint32_t inner = format_comma_list(ctx,
-                source->expr_list.children, source->expr_list.count);
-            result = concat_docs(ctx, result, kw(ctx, "("),
-                doc_group(&ctx->docs, inner), kw(ctx, ")"), SYNTAQLITE_NULL_DOC);
-        } else {
-            result = concat_docs(ctx, result, kw(ctx, "("),
-                format_node(ctx, expr->source), kw(ctx, ")"), SYNTAQLITE_NULL_DOC);
-        }
-    }
-
-    return result;
+    if (cond_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_3);
+    uint32_t ch_6 = format_node(ctx, node->low);
+    if (ch_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_6);
+    uint32_t kw_7 = kw(ctx, " AND ");
+    if (kw_7 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_7);
+    uint32_t ch_8 = format_node(ctx, node->high);
+    if (ch_8 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_8);
+    return cat_1;
 }
 
-static uint32_t format_subquery_expr(FmtCtx *ctx, SyntaqliteSubqueryExpr *expr) {
-    return concat_docs(ctx,
-        kw(ctx, "("),
-        format_node(ctx, expr->select),
-        kw(ctx, ")"),
-        SYNTAQLITE_NULL_DOC);
-}
-
-static uint32_t format_exists_expr(FmtCtx *ctx, SyntaqliteExistsExpr *expr) {
-    return concat_docs(ctx,
-        kw(ctx, "EXISTS ("),
-        format_node(ctx, expr->select),
-        kw(ctx, ")"),
-        SYNTAQLITE_NULL_DOC);
-}
-
-static uint32_t format_cast_expr(FmtCtx *ctx, SyntaqliteCastExpr *expr) {
-    return concat_docs(ctx,
-        kw(ctx, "CAST("),
-        format_node(ctx, expr->expr),
-        kw(ctx, " AS "),
-        span_text(ctx, expr->type_name),
-        kw(ctx, ")"),
-        SYNTAQLITE_NULL_DOC);
-}
-
-static uint32_t format_collate_expr(FmtCtx *ctx, SyntaqliteCollateExpr *expr) {
-    return concat_docs(ctx,
-        format_node(ctx, expr->expr),
-        kw(ctx, " COLLATE "),
-        span_text(ctx, expr->collation),
-        SYNTAQLITE_NULL_DOC);
-}
-
-static uint32_t format_table_ref(FmtCtx *ctx, SyntaqliteTableRef *ref) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    if (ref->schema.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, ref->schema));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "."));
-    }
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, ref->table_name));
-    if (ref->alias.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " AS "));
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, ref->alias));
-    }
-    return result;
-}
-
-static uint32_t format_subquery_table_source(FmtCtx *ctx, SyntaqliteSubqueryTableSource *src) {
-    uint32_t result = concat_docs(ctx,
-        kw(ctx, "("),
-        format_node(ctx, src->select),
-        kw(ctx, ")"),
-        SYNTAQLITE_NULL_DOC);
-    if (src->alias.length > 0) {
-        result = concat_docs(ctx, result, kw(ctx, " AS "),
-            span_text(ctx, src->alias), SYNTAQLITE_NULL_DOC);
-    }
-    return result;
-}
-
-static uint32_t format_join_clause(FmtCtx *ctx, SyntaqliteJoinClause *join) {
-    uint32_t left = format_node(ctx, join->left);
-    uint32_t right = format_node(ctx, join->right);
-
-    uint32_t result;
-    if (join->join_type == SYNTAQLITE_JOIN_TYPE_COMMA) {
-        result = concat_docs(ctx, left, kw(ctx, ", "), right, SYNTAQLITE_NULL_DOC);
+static uint32_t format_like_expr(FmtCtx *ctx, SyntaqliteLikeExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t ch_2 = format_node(ctx, node->operand);
+    if (ch_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_2);
+    uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
+    if (node->negated) {
+        uint32_t kw_4 = kw(ctx, " NOT LIKE ");
+        cond_3 = kw_4;
     } else {
-        result = concat_docs(ctx, left,
-            doc_hardline(&ctx->docs),
-            kw(ctx, join_type_str(join->join_type)),
-            kw(ctx, " "),
-            right,
-            SYNTAQLITE_NULL_DOC);
+        uint32_t kw_5 = kw(ctx, " LIKE ");
+        cond_3 = kw_5;
     }
-
-    if (join->on_expr != SYNTAQLITE_NULL_NODE) {
-        uint32_t on_body = format_node(ctx, join->on_expr);
-        uint32_t on_inner = concat_docs(ctx, doc_line(&ctx->docs), on_body, SYNTAQLITE_NULL_DOC);
-        result = concat_docs(ctx, result,
-            doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width,
-                concat_docs(ctx, doc_hardline(&ctx->docs), kw(ctx, "ON"), on_inner, SYNTAQLITE_NULL_DOC)),
-            SYNTAQLITE_NULL_DOC);
+    if (cond_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_3);
+    uint32_t ch_6 = format_node(ctx, node->pattern);
+    if (ch_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_6);
+    uint32_t cond_7 = SYNTAQLITE_NULL_DOC;
+    if (node->escape != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_8 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_9 = kw(ctx, " ESCAPE ");
+        if (kw_9 != SYNTAQLITE_NULL_DOC)
+            cat_8 = doc_concat_append(&ctx->docs, cat_8, kw_9);
+        uint32_t ch_10 = format_node(ctx, node->escape);
+        if (ch_10 != SYNTAQLITE_NULL_DOC)
+            cat_8 = doc_concat_append(&ctx->docs, cat_8, ch_10);
+        cond_7 = cat_8;
     }
-
-    if (join->using_columns != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, join->using_columns);
-        uint32_t using_inner;
-        if (cols && cols->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            using_inner = format_comma_list(ctx,
-                cols->expr_list.children, cols->expr_list.count);
-        } else {
-            using_inner = format_node(ctx, join->using_columns);
-        }
-        result = concat_docs(ctx, result,
-            kw(ctx, " USING ("), using_inner, kw(ctx, ")"), SYNTAQLITE_NULL_DOC);
-    }
-
-    return result;
+    if (cond_7 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_7);
+    return cat_1;
 }
 
-static uint32_t format_compound_select(FmtCtx *ctx, SyntaqliteCompoundSelect *cs) {
-    uint32_t left = format_node(ctx, cs->left);
-    uint32_t right = format_node(ctx, cs->right);
-    return concat_docs(ctx,
-        left,
-        doc_hardline(&ctx->docs),
-        kw(ctx, compound_op_str(cs->op)),
-        doc_hardline(&ctx->docs),
-        right,
-        SYNTAQLITE_NULL_DOC);
+static uint32_t format_case_expr(FmtCtx *ctx, SyntaqliteCaseExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, "CASE");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
+    if (node->operand != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_4 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_5 = kw(ctx, " ");
+        if (kw_5 != SYNTAQLITE_NULL_DOC)
+            cat_4 = doc_concat_append(&ctx->docs, cat_4, kw_5);
+        uint32_t ch_6 = format_node(ctx, node->operand);
+        if (ch_6 != SYNTAQLITE_NULL_DOC)
+            cat_4 = doc_concat_append(&ctx->docs, cat_4, ch_6);
+        cond_3 = cat_4;
+    }
+    if (cond_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_3);
+    uint32_t cond_7 = SYNTAQLITE_NULL_DOC;
+    if (node->whens != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_8 = format_node(ctx, node->whens);
+        cond_7 = ch_8;
+    }
+    if (cond_7 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_7);
+    uint32_t cond_9 = SYNTAQLITE_NULL_DOC;
+    if (node->else_expr != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_10 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_11 = kw(ctx, " ELSE ");
+        if (kw_11 != SYNTAQLITE_NULL_DOC)
+            cat_10 = doc_concat_append(&ctx->docs, cat_10, kw_11);
+        uint32_t ch_12 = format_node(ctx, node->else_expr);
+        if (ch_12 != SYNTAQLITE_NULL_DOC)
+            cat_10 = doc_concat_append(&ctx->docs, cat_10, ch_12);
+        cond_9 = cat_10;
+    }
+    if (cond_9 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_9);
+    uint32_t kw_13 = kw(ctx, " END");
+    if (kw_13 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_13);
+    return cat_1;
 }
 
-static uint32_t format_with_clause(FmtCtx *ctx, SyntaqliteWithClause *wc) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    if (wc->recursive) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "WITH RECURSIVE "));
+static uint32_t format_case_when(FmtCtx *ctx, SyntaqliteCaseWhen *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, " WHEN ");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t ch_3 = format_node(ctx, node->when_expr);
+    if (ch_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_3);
+    uint32_t kw_4 = kw(ctx, " THEN ");
+    if (kw_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_4);
+    uint32_t ch_5 = format_node(ctx, node->then_expr);
+    if (ch_5 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_5);
+    return cat_1;
+}
+
+static uint32_t format_case_when_list(FmtCtx *ctx, SyntaqliteCaseWhenList *node) {
+    uint32_t lst_1 = doc_concat_empty(&ctx->docs);
+    for (uint32_t _i = 0; _i < node->count; _i++) {
+        uint32_t _child_id = node->children[_i];
+        uint32_t item_2 = format_node(ctx, _child_id);
+        lst_1 = doc_concat_append(&ctx->docs, lst_1, item_2);
+    }
+    return lst_1;
+}
+
+static uint32_t format_compound_select(FmtCtx *ctx, SyntaqliteCompoundSelect *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t ch_2 = format_node(ctx, node->left);
+    if (ch_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_2);
+    uint32_t hl_3 = doc_hardline(&ctx->docs);
+    if (hl_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, hl_3);
+    uint32_t ed_4 = SYNTAQLITE_NULL_DOC;
+    switch (node->op) {
+        case SYNTAQLITE_COMPOUND_OP_UNION: ed_4 = kw(ctx, "UNION"); break;
+        case SYNTAQLITE_COMPOUND_OP_UNION_ALL: ed_4 = kw(ctx, "UNION ALL"); break;
+        case SYNTAQLITE_COMPOUND_OP_INTERSECT: ed_4 = kw(ctx, "INTERSECT"); break;
+        case SYNTAQLITE_COMPOUND_OP_EXCEPT: ed_4 = kw(ctx, "EXCEPT"); break;
+        default: break;
+    }
+    if (ed_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ed_4);
+    uint32_t hl_5 = doc_hardline(&ctx->docs);
+    if (hl_5 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, hl_5);
+    uint32_t ch_6 = format_node(ctx, node->right);
+    if (ch_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_6);
+    return cat_1;
+}
+
+static uint32_t format_subquery_expr(FmtCtx *ctx, SyntaqliteSubqueryExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, "(");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t ch_3 = format_node(ctx, node->select);
+    if (ch_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_3);
+    uint32_t kw_4 = kw(ctx, ")");
+    if (kw_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_4);
+    return cat_1;
+}
+
+static uint32_t format_exists_expr(FmtCtx *ctx, SyntaqliteExistsExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, "EXISTS (");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t ch_3 = format_node(ctx, node->select);
+    if (ch_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_3);
+    uint32_t kw_4 = kw(ctx, ")");
+    if (kw_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_4);
+    return cat_1;
+}
+
+static uint32_t format_in_expr(FmtCtx *ctx, SyntaqliteInExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t ch_2 = format_node(ctx, node->operand);
+    if (ch_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_2);
+    uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
+    if (node->negated) {
+        uint32_t kw_4 = kw(ctx, " NOT IN ");
+        cond_3 = kw_4;
     } else {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "WITH "));
+        uint32_t kw_5 = kw(ctx, " IN ");
+        cond_3 = kw_5;
     }
+    if (cond_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_3);
+    uint32_t kw_6 = kw(ctx, "(");
+    if (kw_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_6);
+    uint32_t ch_7 = format_node(ctx, node->source);
+    if (ch_7 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_7);
+    uint32_t kw_8 = kw(ctx, ")");
+    if (kw_8 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_8);
+    return cat_1;
+}
 
-    // CTE list
-    if (wc->ctes != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *ctes = AST_NODE(ctx->ast, wc->ctes);
-        if (ctes && ctes->tag == SYNTAQLITE_NODE_CTE_LIST) {
-            uint32_t cte_docs = format_comma_list(ctx,
-                ctes->cte_list.children, ctes->cte_list.count);
-            result = doc_concat_append(&ctx->docs, result, cte_docs);
+static uint32_t format_variable(FmtCtx *ctx, SyntaqliteVariable *node) {
+    uint32_t sp_1 = span_text(ctx, node->source);
+    return sp_1;
+}
+
+static uint32_t format_collate_expr(FmtCtx *ctx, SyntaqliteCollateExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t ch_2 = format_node(ctx, node->expr);
+    if (ch_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_2);
+    uint32_t kw_3 = kw(ctx, " COLLATE ");
+    if (kw_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_3);
+    uint32_t sp_4 = span_text(ctx, node->collation);
+    if (sp_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, sp_4);
+    return cat_1;
+}
+
+static uint32_t format_cast_expr(FmtCtx *ctx, SyntaqliteCastExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, "CAST(");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t ch_3 = format_node(ctx, node->expr);
+    if (ch_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_3);
+    uint32_t kw_4 = kw(ctx, " AS ");
+    if (kw_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_4);
+    uint32_t sp_5 = span_text(ctx, node->type_name);
+    if (sp_5 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, sp_5);
+    uint32_t kw_6 = kw(ctx, ")");
+    if (kw_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_6);
+    return cat_1;
+}
+
+static uint32_t format_values_row_list(FmtCtx *ctx, SyntaqliteValuesRowList *node) {
+    uint32_t lst_1 = doc_concat_empty(&ctx->docs);
+    for (uint32_t _i = 0; _i < node->count; _i++) {
+        uint32_t _child_id = node->children[_i];
+        if (_i > 0) {
+            uint32_t cat_2 = doc_concat_empty(&ctx->docs);
+            uint32_t kw_3 = kw(ctx, ",");
+            if (kw_3 != SYNTAQLITE_NULL_DOC)
+                cat_2 = doc_concat_append(&ctx->docs, cat_2, kw_3);
+            uint32_t ln_4 = doc_line(&ctx->docs);
+            if (ln_4 != SYNTAQLITE_NULL_DOC)
+                cat_2 = doc_concat_append(&ctx->docs, cat_2, ln_4);
+            lst_1 = doc_concat_append(&ctx->docs, lst_1, cat_2);
         }
+        uint32_t cat_5 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_6 = kw(ctx, "(");
+        if (kw_6 != SYNTAQLITE_NULL_DOC)
+            cat_5 = doc_concat_append(&ctx->docs, cat_5, kw_6);
+        uint32_t item_7 = format_node(ctx, _child_id);
+        if (item_7 != SYNTAQLITE_NULL_DOC)
+            cat_5 = doc_concat_append(&ctx->docs, cat_5, item_7);
+        uint32_t kw_8 = kw(ctx, ")");
+        if (kw_8 != SYNTAQLITE_NULL_DOC)
+            cat_5 = doc_concat_append(&ctx->docs, cat_5, kw_8);
+        lst_1 = doc_concat_append(&ctx->docs, lst_1, cat_5);
     }
-
-    result = doc_concat_append(&ctx->docs, result, doc_hardline(&ctx->docs));
-    result = doc_concat_append(&ctx->docs, result, format_node(ctx, wc->select));
-    return result;
+    return lst_1;
 }
 
-static uint32_t format_cte_definition(FmtCtx *ctx, SyntaqliteCteDefinition *cte) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, cte->cte_name));
-
-    // Column names
-    if (cte->columns != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, cte->columns);
-        if (cols && cols->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "("));
-            result = doc_concat_append(&ctx->docs, result,
-                format_comma_list(ctx, cols->expr_list.children, cols->expr_list.count));
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-        }
-    }
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, " AS "));
-
-    if (cte->materialized == SYNTAQLITE_MATERIALIZED_MATERIALIZED) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "MATERIALIZED "));
-    } else if (cte->materialized == SYNTAQLITE_MATERIALIZED_NOT_MATERIALIZED) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "NOT MATERIALIZED "));
-    }
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "("));
-    result = doc_concat_append(&ctx->docs, result, format_node(ctx, cte->select));
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-
-    return result;
+static uint32_t format_values_clause(FmtCtx *ctx, SyntaqliteValuesClause *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, "VALUES ");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t ch_3 = format_node(ctx, node->rows);
+    if (ch_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_3);
+    return cat_1;
 }
 
-static uint32_t format_values_clause(FmtCtx *ctx, SyntaqliteValuesClause *vc) {
-    uint32_t result = kw(ctx, "VALUES ");
-    if (vc->rows != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *rows = AST_NODE(ctx->ast, vc->rows);
-        if (rows && rows->tag == SYNTAQLITE_NODE_VALUES_ROW_LIST) {
-            for (uint32_t i = 0; i < rows->values_row_list.count; i++) {
-                if (i > 0) {
-                    result = concat_docs(ctx, result, kw(ctx, ","), doc_line(&ctx->docs), SYNTAQLITE_NULL_DOC);
-                }
-                SyntaqliteNode *row = AST_NODE(ctx->ast, rows->values_row_list.children[i]);
-                if (row && row->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-                    result = concat_docs(ctx, result, kw(ctx, "("),
-                        format_comma_list(ctx, row->expr_list.children, row->expr_list.count),
-                        kw(ctx, ")"), SYNTAQLITE_NULL_DOC);
-                }
-            }
-        }
+static uint32_t format_cte_definition(FmtCtx *ctx, SyntaqliteCteDefinition *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t sp_2 = span_text(ctx, node->cte_name);
+    if (sp_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, sp_2);
+    uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
+    if (node->columns != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_4 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_5 = kw(ctx, "(");
+        if (kw_5 != SYNTAQLITE_NULL_DOC)
+            cat_4 = doc_concat_append(&ctx->docs, cat_4, kw_5);
+        uint32_t ch_6 = format_node(ctx, node->columns);
+        if (ch_6 != SYNTAQLITE_NULL_DOC)
+            cat_4 = doc_concat_append(&ctx->docs, cat_4, ch_6);
+        uint32_t kw_7 = kw(ctx, ")");
+        if (kw_7 != SYNTAQLITE_NULL_DOC)
+            cat_4 = doc_concat_append(&ctx->docs, cat_4, kw_7);
+        cond_3 = cat_4;
     }
-    return result;
+    if (cond_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_3);
+    uint32_t kw_8 = kw(ctx, " AS ");
+    if (kw_8 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_8);
+    uint32_t cond_9 = SYNTAQLITE_NULL_DOC;
+    if (node->materialized == SYNTAQLITE_MATERIALIZED_MATERIALIZED) {
+        uint32_t kw_10 = kw(ctx, "MATERIALIZED ");
+        cond_9 = kw_10;
+    }
+    if (cond_9 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_9);
+    uint32_t cond_11 = SYNTAQLITE_NULL_DOC;
+    if (node->materialized == SYNTAQLITE_MATERIALIZED_NOT_MATERIALIZED) {
+        uint32_t kw_12 = kw(ctx, "NOT MATERIALIZED ");
+        cond_11 = kw_12;
+    }
+    if (cond_11 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_11);
+    uint32_t kw_13 = kw(ctx, "(");
+    if (kw_13 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_13);
+    uint32_t ch_14 = format_node(ctx, node->select);
+    if (ch_14 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_14);
+    uint32_t kw_15 = kw(ctx, ")");
+    if (kw_15 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_15);
+    return cat_1;
 }
 
-static uint32_t format_delete_stmt(FmtCtx *ctx, SyntaqliteDeleteStmt *del) {
-    uint32_t result = kw(ctx, "DELETE");
-
-    if (del->table != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "FROM", format_node(ctx, del->table)));
-    }
-    if (del->where != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "WHERE", format_node(ctx, del->where)));
-    }
-    return result;
-}
-
-static uint32_t format_update_stmt(FmtCtx *ctx, SyntaqliteUpdateStmt *upd) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "UPDATE"));
-
-    const char *ca = conflict_action_str(upd->conflict_action);
-    if (ca) {
-        result = concat_docs(ctx, result, kw(ctx, " "), kw(ctx, ca), SYNTAQLITE_NULL_DOC);
-    }
-
-    result = concat_docs(ctx, result, kw(ctx, " "),
-        format_node(ctx, upd->table), SYNTAQLITE_NULL_DOC);
-
-    // SET
-    if (upd->setlist != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *sl = AST_NODE(ctx->ast, upd->setlist);
-        uint32_t set_body;
-        if (sl && sl->tag == SYNTAQLITE_NODE_SET_CLAUSE_LIST) {
-            set_body = format_comma_list(ctx,
-                sl->set_clause_list.children, sl->set_clause_list.count);
-        } else {
-            set_body = format_node(ctx, upd->setlist);
-        }
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "SET", set_body));
-    }
-
-    if (upd->from_clause != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "FROM", format_node(ctx, upd->from_clause)));
-    }
-    if (upd->where != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "WHERE", format_node(ctx, upd->where)));
-    }
-    return result;
-}
-
-static uint32_t format_set_clause(FmtCtx *ctx, SyntaqliteSetClause *sc) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-
-    if (sc->column.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, sc->column));
-    } else if (sc->columns != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, sc->columns);
-        if (cols && cols->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "("));
-            result = doc_concat_append(&ctx->docs, result,
-                format_comma_list(ctx, cols->expr_list.children, cols->expr_list.count));
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-        }
-    }
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, " = "));
-    result = doc_concat_append(&ctx->docs, result, format_node(ctx, sc->value));
-    return result;
-}
-
-static uint32_t format_insert_stmt(FmtCtx *ctx, SyntaqliteInsertStmt *ins) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-
-    const char *ca = conflict_action_str(ins->conflict_action);
-    if (ca && ins->conflict_action == SYNTAQLITE_CONFLICT_ACTION_REPLACE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "REPLACE"));
+static uint32_t format_with_clause(FmtCtx *ctx, SyntaqliteWithClause *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
+    if (node->recursive) {
+        uint32_t kw_3 = kw(ctx, "WITH RECURSIVE ");
+        cond_2 = kw_3;
     } else {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "INSERT"));
-        if (ca) {
-            result = concat_docs(ctx, result, kw(ctx, " "), kw(ctx, ca), SYNTAQLITE_NULL_DOC);
+        uint32_t kw_4 = kw(ctx, "WITH ");
+        cond_2 = kw_4;
+    }
+    if (cond_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_2);
+    uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
+    if (node->ctes != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_6 = format_node(ctx, node->ctes);
+        cond_5 = ch_6;
+    }
+    if (cond_5 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_5);
+    uint32_t hl_7 = doc_hardline(&ctx->docs);
+    if (hl_7 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, hl_7);
+    uint32_t ch_8 = format_node(ctx, node->select);
+    if (ch_8 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_8);
+    return cat_1;
+}
+
+static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateFunctionCall *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t sp_2 = span_text(ctx, node->func_name);
+    if (sp_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, sp_2);
+    uint32_t kw_3 = kw(ctx, "(");
+    if (kw_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_3);
+    uint32_t cond_4 = SYNTAQLITE_NULL_DOC;
+    if (node->flags.distinct) {
+        uint32_t kw_5 = kw(ctx, "DISTINCT ");
+        cond_4 = kw_5;
+    }
+    if (cond_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_4);
+    uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
+    if (node->args != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_7 = format_node(ctx, node->args);
+        uint32_t grp_8 = doc_group(&ctx->docs, ch_7);
+        cond_6 = grp_8;
+    }
+    if (cond_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_6);
+    uint32_t cond_9 = SYNTAQLITE_NULL_DOC;
+    if (node->orderby != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_10 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_11 = kw(ctx, " ORDER BY ");
+        if (kw_11 != SYNTAQLITE_NULL_DOC)
+            cat_10 = doc_concat_append(&ctx->docs, cat_10, kw_11);
+        uint32_t ch_12 = format_node(ctx, node->orderby);
+        if (ch_12 != SYNTAQLITE_NULL_DOC)
+            cat_10 = doc_concat_append(&ctx->docs, cat_10, ch_12);
+        cond_9 = cat_10;
+    }
+    if (cond_9 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_9);
+    uint32_t kw_13 = kw(ctx, ")");
+    if (kw_13 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_13);
+    uint32_t cond_14 = SYNTAQLITE_NULL_DOC;
+    if (node->filter_clause != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_15 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_16 = kw(ctx, " ");
+        if (kw_16 != SYNTAQLITE_NULL_DOC)
+            cat_15 = doc_concat_append(&ctx->docs, cat_15, kw_16);
+        uint32_t ch_17 = format_node(ctx, node->filter_clause);
+        if (ch_17 != SYNTAQLITE_NULL_DOC)
+            cat_15 = doc_concat_append(&ctx->docs, cat_15, ch_17);
+        cond_14 = cat_15;
+    }
+    if (cond_14 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_14);
+    uint32_t cond_18 = SYNTAQLITE_NULL_DOC;
+    if (node->over_clause != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_19 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_20 = kw(ctx, " ");
+        if (kw_20 != SYNTAQLITE_NULL_DOC)
+            cat_19 = doc_concat_append(&ctx->docs, cat_19, kw_20);
+        uint32_t ch_21 = format_node(ctx, node->over_clause);
+        if (ch_21 != SYNTAQLITE_NULL_DOC)
+            cat_19 = doc_concat_append(&ctx->docs, cat_19, ch_21);
+        cond_18 = cat_19;
+    }
+    if (cond_18 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_18);
+    return cat_1;
+}
+
+static uint32_t format_raise_expr(FmtCtx *ctx, SyntaqliteRaiseExpr *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, "RAISE(");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t sw_3 = SYNTAQLITE_NULL_DOC;
+    switch (node->raise_type) {
+        case SYNTAQLITE_RAISE_TYPE_IGNORE: {
+            uint32_t kw_4 = kw(ctx, "IGNORE");
+            sw_3 = kw_4;
+            break;
+        }
+        case SYNTAQLITE_RAISE_TYPE_ROLLBACK: {
+            uint32_t kw_5 = kw(ctx, "ROLLBACK");
+            sw_3 = kw_5;
+            break;
+        }
+        case SYNTAQLITE_RAISE_TYPE_ABORT: {
+            uint32_t kw_6 = kw(ctx, "ABORT");
+            sw_3 = kw_6;
+            break;
+        }
+        case SYNTAQLITE_RAISE_TYPE_FAIL: {
+            uint32_t kw_7 = kw(ctx, "FAIL");
+            sw_3 = kw_7;
+            break;
+        }
+        default: break;
+    }
+    if (sw_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, sw_3);
+    uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
+    if (node->error_message != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_9 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_10 = kw(ctx, ", ");
+        if (kw_10 != SYNTAQLITE_NULL_DOC)
+            cat_9 = doc_concat_append(&ctx->docs, cat_9, kw_10);
+        uint32_t ch_11 = format_node(ctx, node->error_message);
+        if (ch_11 != SYNTAQLITE_NULL_DOC)
+            cat_9 = doc_concat_append(&ctx->docs, cat_9, ch_11);
+        cond_8 = cat_9;
+    }
+    if (cond_8 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_8);
+    uint32_t kw_12 = kw(ctx, ")");
+    if (kw_12 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_12);
+    return cat_1;
+}
+
+static uint32_t format_table_ref(FmtCtx *ctx, SyntaqliteTableRef *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
+    if (node->schema.length > 0) {
+        uint32_t cat_3 = doc_concat_empty(&ctx->docs);
+        uint32_t sp_4 = span_text(ctx, node->schema);
+        if (sp_4 != SYNTAQLITE_NULL_DOC)
+            cat_3 = doc_concat_append(&ctx->docs, cat_3, sp_4);
+        uint32_t kw_5 = kw(ctx, ".");
+        if (kw_5 != SYNTAQLITE_NULL_DOC)
+            cat_3 = doc_concat_append(&ctx->docs, cat_3, kw_5);
+        cond_2 = cat_3;
+    }
+    if (cond_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_2);
+    uint32_t sp_6 = span_text(ctx, node->table_name);
+    if (sp_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, sp_6);
+    uint32_t cond_7 = SYNTAQLITE_NULL_DOC;
+    if (node->alias.length > 0) {
+        uint32_t cat_8 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_9 = kw(ctx, " AS ");
+        if (kw_9 != SYNTAQLITE_NULL_DOC)
+            cat_8 = doc_concat_append(&ctx->docs, cat_8, kw_9);
+        uint32_t sp_10 = span_text(ctx, node->alias);
+        if (sp_10 != SYNTAQLITE_NULL_DOC)
+            cat_8 = doc_concat_append(&ctx->docs, cat_8, sp_10);
+        cond_7 = cat_8;
+    }
+    if (cond_7 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_7);
+    return cat_1;
+}
+
+static uint32_t format_subquery_table_source(FmtCtx *ctx, SyntaqliteSubqueryTableSource *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, "(");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t ch_3 = format_node(ctx, node->select);
+    if (ch_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_3);
+    uint32_t kw_4 = kw(ctx, ")");
+    if (kw_4 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_4);
+    uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
+    if (node->alias.length > 0) {
+        uint32_t cat_6 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_7 = kw(ctx, " AS ");
+        if (kw_7 != SYNTAQLITE_NULL_DOC)
+            cat_6 = doc_concat_append(&ctx->docs, cat_6, kw_7);
+        uint32_t sp_8 = span_text(ctx, node->alias);
+        if (sp_8 != SYNTAQLITE_NULL_DOC)
+            cat_6 = doc_concat_append(&ctx->docs, cat_6, sp_8);
+        cond_5 = cat_6;
+    }
+    if (cond_5 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_5);
+    return cat_1;
+}
+
+static uint32_t format_join_clause(FmtCtx *ctx, SyntaqliteJoinClause *node) {
+    uint32_t sw_1 = SYNTAQLITE_NULL_DOC;
+    switch (node->join_type) {
+        case SYNTAQLITE_JOIN_TYPE_COMMA: {
+            uint32_t cat_2 = doc_concat_empty(&ctx->docs);
+            uint32_t ch_3 = format_node(ctx, node->left);
+            if (ch_3 != SYNTAQLITE_NULL_DOC)
+                cat_2 = doc_concat_append(&ctx->docs, cat_2, ch_3);
+            uint32_t kw_4 = kw(ctx, ", ");
+            if (kw_4 != SYNTAQLITE_NULL_DOC)
+                cat_2 = doc_concat_append(&ctx->docs, cat_2, kw_4);
+            uint32_t ch_5 = format_node(ctx, node->right);
+            if (ch_5 != SYNTAQLITE_NULL_DOC)
+                cat_2 = doc_concat_append(&ctx->docs, cat_2, ch_5);
+            uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
+            if (node->on_expr != SYNTAQLITE_NULL_NODE) {
+                uint32_t cat_7 = doc_concat_empty(&ctx->docs);
+                uint32_t hl_8 = doc_hardline(&ctx->docs);
+                if (hl_8 != SYNTAQLITE_NULL_DOC)
+                    cat_7 = doc_concat_append(&ctx->docs, cat_7, hl_8);
+                uint32_t kw_9 = kw(ctx, "ON ");
+                if (kw_9 != SYNTAQLITE_NULL_DOC)
+                    cat_7 = doc_concat_append(&ctx->docs, cat_7, kw_9);
+                uint32_t ch_10 = format_node(ctx, node->on_expr);
+                if (ch_10 != SYNTAQLITE_NULL_DOC)
+                    cat_7 = doc_concat_append(&ctx->docs, cat_7, ch_10);
+                cond_6 = cat_7;
+            }
+            if (cond_6 != SYNTAQLITE_NULL_DOC)
+                cat_2 = doc_concat_append(&ctx->docs, cat_2, cond_6);
+            uint32_t cond_11 = SYNTAQLITE_NULL_DOC;
+            if (node->using_columns != SYNTAQLITE_NULL_NODE) {
+                uint32_t cat_12 = doc_concat_empty(&ctx->docs);
+                uint32_t kw_13 = kw(ctx, " USING (");
+                if (kw_13 != SYNTAQLITE_NULL_DOC)
+                    cat_12 = doc_concat_append(&ctx->docs, cat_12, kw_13);
+                uint32_t ch_14 = format_node(ctx, node->using_columns);
+                if (ch_14 != SYNTAQLITE_NULL_DOC)
+                    cat_12 = doc_concat_append(&ctx->docs, cat_12, ch_14);
+                uint32_t kw_15 = kw(ctx, ")");
+                if (kw_15 != SYNTAQLITE_NULL_DOC)
+                    cat_12 = doc_concat_append(&ctx->docs, cat_12, kw_15);
+                cond_11 = cat_12;
+            }
+            if (cond_11 != SYNTAQLITE_NULL_DOC)
+                cat_2 = doc_concat_append(&ctx->docs, cat_2, cond_11);
+            sw_1 = cat_2;
+            break;
+        }
+        default: {
+            uint32_t cat_16 = doc_concat_empty(&ctx->docs);
+            uint32_t ch_17 = format_node(ctx, node->left);
+            if (ch_17 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, ch_17);
+            uint32_t hl_18 = doc_hardline(&ctx->docs);
+            if (hl_18 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, hl_18);
+            uint32_t ed_19 = SYNTAQLITE_NULL_DOC;
+            switch (node->join_type) {
+                case SYNTAQLITE_JOIN_TYPE_INNER: ed_19 = kw(ctx, "JOIN"); break;
+                case SYNTAQLITE_JOIN_TYPE_LEFT: ed_19 = kw(ctx, "LEFT JOIN"); break;
+                case SYNTAQLITE_JOIN_TYPE_RIGHT: ed_19 = kw(ctx, "RIGHT JOIN"); break;
+                case SYNTAQLITE_JOIN_TYPE_FULL: ed_19 = kw(ctx, "FULL JOIN"); break;
+                case SYNTAQLITE_JOIN_TYPE_CROSS: ed_19 = kw(ctx, "CROSS JOIN"); break;
+                case SYNTAQLITE_JOIN_TYPE_NATURAL_INNER: ed_19 = kw(ctx, "NATURAL JOIN"); break;
+                case SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT: ed_19 = kw(ctx, "NATURAL LEFT JOIN"); break;
+                case SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT: ed_19 = kw(ctx, "NATURAL RIGHT JOIN"); break;
+                case SYNTAQLITE_JOIN_TYPE_NATURAL_FULL: ed_19 = kw(ctx, "NATURAL FULL JOIN"); break;
+                case SYNTAQLITE_JOIN_TYPE_COMMA: ed_19 = kw(ctx, ","); break;
+                default: break;
+            }
+            if (ed_19 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, ed_19);
+            uint32_t kw_20 = kw(ctx, " ");
+            if (kw_20 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, kw_20);
+            uint32_t ch_21 = format_node(ctx, node->right);
+            if (ch_21 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, ch_21);
+            uint32_t cond_22 = SYNTAQLITE_NULL_DOC;
+            if (node->on_expr != SYNTAQLITE_NULL_NODE) {
+                uint32_t cat_23 = doc_concat_empty(&ctx->docs);
+                uint32_t hl_24 = doc_hardline(&ctx->docs);
+                if (hl_24 != SYNTAQLITE_NULL_DOC)
+                    cat_23 = doc_concat_append(&ctx->docs, cat_23, hl_24);
+                uint32_t kw_25 = kw(ctx, "ON ");
+                if (kw_25 != SYNTAQLITE_NULL_DOC)
+                    cat_23 = doc_concat_append(&ctx->docs, cat_23, kw_25);
+                uint32_t ch_26 = format_node(ctx, node->on_expr);
+                if (ch_26 != SYNTAQLITE_NULL_DOC)
+                    cat_23 = doc_concat_append(&ctx->docs, cat_23, ch_26);
+                cond_22 = cat_23;
+            }
+            if (cond_22 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, cond_22);
+            uint32_t cond_27 = SYNTAQLITE_NULL_DOC;
+            if (node->using_columns != SYNTAQLITE_NULL_NODE) {
+                uint32_t cat_28 = doc_concat_empty(&ctx->docs);
+                uint32_t kw_29 = kw(ctx, " USING (");
+                if (kw_29 != SYNTAQLITE_NULL_DOC)
+                    cat_28 = doc_concat_append(&ctx->docs, cat_28, kw_29);
+                uint32_t ch_30 = format_node(ctx, node->using_columns);
+                if (ch_30 != SYNTAQLITE_NULL_DOC)
+                    cat_28 = doc_concat_append(&ctx->docs, cat_28, ch_30);
+                uint32_t kw_31 = kw(ctx, ")");
+                if (kw_31 != SYNTAQLITE_NULL_DOC)
+                    cat_28 = doc_concat_append(&ctx->docs, cat_28, kw_31);
+                cond_27 = cat_28;
+            }
+            if (cond_27 != SYNTAQLITE_NULL_DOC)
+                cat_16 = doc_concat_append(&ctx->docs, cat_16, cond_27);
+            sw_1 = cat_16;
+            break;
         }
     }
-
-    result = concat_docs(ctx, result, kw(ctx, " INTO "),
-        format_node(ctx, ins->table), SYNTAQLITE_NULL_DOC);
-
-    // Column list
-    if (ins->columns != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, ins->columns);
-        if (cols && cols->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " ("));
-            result = doc_concat_append(&ctx->docs, result,
-                format_comma_list(ctx, cols->expr_list.children, cols->expr_list.count));
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-        }
-    }
-
-    // Source (VALUES or SELECT)
-    if (ins->source != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, doc_hardline(&ctx->docs));
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, ins->source));
-    }
-
-    return result;
+    return sw_1;
 }
 
-static uint32_t format_qualified_name(FmtCtx *ctx, SyntaqliteQualifiedName *qn) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    if (qn->schema.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, qn->schema));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "."));
-    }
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, qn->object_name));
-    return result;
+static uint32_t format_join_prefix(FmtCtx *ctx, SyntaqliteJoinPrefix *node) {
+    uint32_t ch_1 = format_node(ctx, node->source);
+    return ch_1;
 }
 
-static uint32_t format_drop_stmt(FmtCtx *ctx, SyntaqliteDropStmt *drop) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "DROP "));
-
-    switch (drop->object_type) {
-        case SYNTAQLITE_DROP_OBJECT_TYPE_TABLE: result = doc_concat_append(&ctx->docs, result, kw(ctx, "TABLE")); break;
-        case SYNTAQLITE_DROP_OBJECT_TYPE_INDEX: result = doc_concat_append(&ctx->docs, result, kw(ctx, "INDEX")); break;
-        case SYNTAQLITE_DROP_OBJECT_TYPE_VIEW: result = doc_concat_append(&ctx->docs, result, kw(ctx, "VIEW")); break;
-        case SYNTAQLITE_DROP_OBJECT_TYPE_TRIGGER: result = doc_concat_append(&ctx->docs, result, kw(ctx, "TRIGGER")); break;
+static uint32_t format_delete_stmt(FmtCtx *ctx, SyntaqliteDeleteStmt *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, "DELETE");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
+    if (node->table != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_4 = format_node(ctx, node->table);
+        uint32_t cl_5 = format_clause(ctx, "FROM", ch_4);
+        cond_3 = cl_5;
     }
-
-    if (drop->if_exists) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " IF EXISTS"));
+    if (cond_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_3);
+    uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
+    if (node->where != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_7 = format_node(ctx, node->where);
+        uint32_t cl_8 = format_clause(ctx, "WHERE", ch_7);
+        cond_6 = cl_8;
     }
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-    result = doc_concat_append(&ctx->docs, result, format_node(ctx, drop->target));
-    return result;
+    if (cond_6 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_6);
+    return cat_1;
 }
 
-static uint32_t format_create_table_stmt(FmtCtx *ctx, SyntaqliteCreateTableStmt *ct) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "CREATE "));
-
-    if (ct->is_temp) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "TEMP "));
-    }
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "TABLE "));
-    if (ct->if_not_exists) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "IF NOT EXISTS "));
-    }
-
-    if (ct->schema.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, ct->schema));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "."));
-    }
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, ct->table_name));
-
-    // AS SELECT
-    if (ct->as_select != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " AS "));
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, ct->as_select));
-        return result;
-    }
-
-    // Columns
-    if (ct->columns != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " ("));
-
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, ct->columns);
-        uint32_t col_list = doc_concat_empty(&ctx->docs);
-        if (cols && cols->tag == SYNTAQLITE_NODE_COLUMN_DEF_LIST) {
-            col_list = format_comma_list(ctx,
-                cols->column_def_list.children, cols->column_def_list.count);
-        }
-
-        // Table constraints
-        if (ct->table_constraints != SYNTAQLITE_NULL_NODE) {
-            SyntaqliteNode *tcs = AST_NODE(ctx->ast, ct->table_constraints);
-            if (tcs && tcs->tag == SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST) {
-                for (uint32_t i = 0; i < tcs->table_constraint_list.count; i++) {
-                    col_list = doc_concat_append(&ctx->docs, col_list, kw(ctx, ","));
-                    col_list = doc_concat_append(&ctx->docs, col_list, doc_line(&ctx->docs));
-                    col_list = doc_concat_append(&ctx->docs, col_list,
-                        format_node(ctx, tcs->table_constraint_list.children[i]));
-                }
-            }
-        }
-
-        uint32_t body = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width,
-            concat_docs(ctx, doc_hardline(&ctx->docs), col_list, SYNTAQLITE_NULL_DOC));
-        result = doc_concat_append(&ctx->docs, result, body);
-        result = doc_concat_append(&ctx->docs, result, doc_hardline(&ctx->docs));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-    }
-
-    // WITHOUT ROWID / STRICT
-    if (ct->flags.without_rowid) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " WITHOUT ROWID"));
-    }
-    if (ct->flags.strict) {
-        if (ct->flags.without_rowid) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ","));
-        }
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " STRICT"));
-    }
-
-    return result;
-}
-
-static uint32_t format_column_def(FmtCtx *ctx, SyntaqliteColumnDef *cd) {
-    uint32_t result = span_text(ctx, cd->column_name);
-
-    if (cd->type_name.length > 0) {
-        result = concat_docs(ctx, result, kw(ctx, " "),
-            span_text(ctx, cd->type_name), SYNTAQLITE_NULL_DOC);
-    }
-
-    if (cd->constraints != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *ccs = AST_NODE(ctx->ast, cd->constraints);
-        if (ccs && ccs->tag == SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST) {
-            for (uint32_t i = 0; i < ccs->column_constraint_list.count; i++) {
-                result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-                result = doc_concat_append(&ctx->docs, result,
-                    format_node(ctx, ccs->column_constraint_list.children[i]));
-            }
-        }
-    }
-
-    return result;
-}
-
-static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint *cc) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-
-    if (cc->constraint_name.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "CONSTRAINT "));
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, cc->constraint_name));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-    }
-
-    switch (cc->kind) {
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_PRIMARY_KEY:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "PRIMARY KEY"));
-            if (cc->sort_order == SYNTAQLITE_SORT_ORDER_DESC) {
-                result = doc_concat_append(&ctx->docs, result, kw(ctx, " DESC"));
-            }
-            if (cc->onconf != SYNTAQLITE_CONFLICT_ACTION_DEFAULT) {
-                result = concat_docs(ctx, result, kw(ctx, " ON CONFLICT "),
-                    kw(ctx, syntaqlite_conflict_action_names[cc->onconf]), SYNTAQLITE_NULL_DOC);
-            }
-            if (cc->is_autoincrement) {
-                result = doc_concat_append(&ctx->docs, result, kw(ctx, " AUTOINCREMENT"));
-            }
-            break;
-
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_NOT_NULL:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "NOT NULL"));
-            if (cc->onconf != SYNTAQLITE_CONFLICT_ACTION_DEFAULT) {
-                result = concat_docs(ctx, result, kw(ctx, " ON CONFLICT "),
-                    kw(ctx, syntaqlite_conflict_action_names[cc->onconf]), SYNTAQLITE_NULL_DOC);
-            }
-            break;
-
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_UNIQUE:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "UNIQUE"));
-            if (cc->onconf != SYNTAQLITE_CONFLICT_ACTION_DEFAULT) {
-                result = concat_docs(ctx, result, kw(ctx, " ON CONFLICT "),
-                    kw(ctx, syntaqlite_conflict_action_names[cc->onconf]), SYNTAQLITE_NULL_DOC);
-            }
-            break;
-
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_CHECK:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "CHECK ("));
-            result = doc_concat_append(&ctx->docs, result, format_node(ctx, cc->check_expr));
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-            break;
-
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_DEFAULT:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "DEFAULT "));
-            result = doc_concat_append(&ctx->docs, result, format_node(ctx, cc->default_expr));
-            break;
-
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_REFERENCES:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "REFERENCES "));
-            result = doc_concat_append(&ctx->docs, result, format_node(ctx, cc->fk_clause));
-            break;
-
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_COLLATE:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "COLLATE "));
-            result = doc_concat_append(&ctx->docs, result, span_text(ctx, cc->collation_name));
-            break;
-
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_GENERATED:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "GENERATED ALWAYS AS ("));
-            result = doc_concat_append(&ctx->docs, result, format_node(ctx, cc->generated_expr));
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-            if (cc->generated_storage == SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED) {
-                result = doc_concat_append(&ctx->docs, result, kw(ctx, " STORED"));
-            } else {
-                result = doc_concat_append(&ctx->docs, result, kw(ctx, " VIRTUAL"));
-            }
-            break;
-
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_NULL:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "NULL"));
-            break;
-    }
-
-    return result;
-}
-
-static uint32_t format_table_constraint(FmtCtx *ctx, SyntaqliteTableConstraint *tc) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-
-    if (tc->constraint_name.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "CONSTRAINT "));
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, tc->constraint_name));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-    }
-
-    switch (tc->kind) {
-        case SYNTAQLITE_TABLE_CONSTRAINT_KIND_PRIMARY_KEY:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "PRIMARY KEY ("));
-            if (tc->columns != SYNTAQLITE_NULL_NODE) {
-                SyntaqliteNode *cols = AST_NODE(ctx->ast, tc->columns);
-                if (cols && cols->tag == SYNTAQLITE_NODE_ORDER_BY_LIST) {
-                    result = doc_concat_append(&ctx->docs, result,
-                        format_comma_list(ctx, cols->order_by_list.children, cols->order_by_list.count));
-                }
-            }
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-            if (tc->onconf != SYNTAQLITE_CONFLICT_ACTION_DEFAULT) {
-                result = concat_docs(ctx, result, kw(ctx, " ON CONFLICT "),
-                    kw(ctx, syntaqlite_conflict_action_names[tc->onconf]), SYNTAQLITE_NULL_DOC);
-            }
-            break;
-
-        case SYNTAQLITE_TABLE_CONSTRAINT_KIND_UNIQUE:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "UNIQUE ("));
-            if (tc->columns != SYNTAQLITE_NULL_NODE) {
-                SyntaqliteNode *cols = AST_NODE(ctx->ast, tc->columns);
-                if (cols && cols->tag == SYNTAQLITE_NODE_ORDER_BY_LIST) {
-                    result = doc_concat_append(&ctx->docs, result,
-                        format_comma_list(ctx, cols->order_by_list.children, cols->order_by_list.count));
-                }
-            }
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-            if (tc->onconf != SYNTAQLITE_CONFLICT_ACTION_DEFAULT) {
-                result = concat_docs(ctx, result, kw(ctx, " ON CONFLICT "),
-                    kw(ctx, syntaqlite_conflict_action_names[tc->onconf]), SYNTAQLITE_NULL_DOC);
-            }
-            break;
-
-        case SYNTAQLITE_TABLE_CONSTRAINT_KIND_CHECK:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "CHECK ("));
-            result = doc_concat_append(&ctx->docs, result, format_node(ctx, tc->check_expr));
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-            break;
-
-        case SYNTAQLITE_TABLE_CONSTRAINT_KIND_FOREIGN_KEY:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "FOREIGN KEY ("));
-            if (tc->columns != SYNTAQLITE_NULL_NODE) {
-                SyntaqliteNode *cols = AST_NODE(ctx->ast, tc->columns);
-                if (cols && cols->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-                    result = doc_concat_append(&ctx->docs, result,
-                        format_comma_list(ctx, cols->expr_list.children, cols->expr_list.count));
-                }
-            }
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ") REFERENCES "));
-            result = doc_concat_append(&ctx->docs, result, format_node(ctx, tc->fk_clause));
-            break;
-    }
-
-    return result;
-}
-
-static uint32_t format_foreign_key_clause(FmtCtx *ctx, SyntaqliteForeignKeyClause *fk) {
-    uint32_t result = span_text(ctx, fk->ref_table);
-
-    if (fk->ref_columns != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, fk->ref_columns);
-        if (cols && cols->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            result = concat_docs(ctx, result, kw(ctx, "("),
-                format_comma_list(ctx, cols->expr_list.children, cols->expr_list.count),
-                kw(ctx, ")"), SYNTAQLITE_NULL_DOC);
-        }
-    }
-
-    if (fk->on_delete != SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION) {
-        result = concat_docs(ctx, result, kw(ctx, " ON DELETE "),
-            kw(ctx, syntaqlite_foreign_key_action_names[fk->on_delete]), SYNTAQLITE_NULL_DOC);
-    }
-    if (fk->on_update != SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION) {
-        result = concat_docs(ctx, result, kw(ctx, " ON UPDATE "),
-            kw(ctx, syntaqlite_foreign_key_action_names[fk->on_update]), SYNTAQLITE_NULL_DOC);
-    }
-    if (fk->is_deferred) {
-        result = concat_docs(ctx, result, kw(ctx, " DEFERRABLE INITIALLY DEFERRED"), SYNTAQLITE_NULL_DOC);
-    }
-
-    return result;
-}
-
-static uint32_t format_create_index_stmt(FmtCtx *ctx, SyntaqliteCreateIndexStmt *ci) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "CREATE "));
-    if (ci->is_unique) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "UNIQUE "));
-    }
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "INDEX "));
-    if (ci->if_not_exists) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "IF NOT EXISTS "));
-    }
-    if (ci->schema.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, ci->schema));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "."));
-    }
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, ci->index_name));
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, " ON "));
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, ci->table_name));
-
-    // Columns
-    if (ci->columns != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, ci->columns);
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " ("));
-        if (cols && cols->tag == SYNTAQLITE_NODE_ORDER_BY_LIST) {
-            result = doc_concat_append(&ctx->docs, result,
-                format_comma_list(ctx, cols->order_by_list.children, cols->order_by_list.count));
-        }
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-    }
-
-    if (ci->where != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result,
-            format_clause(ctx, "WHERE", format_node(ctx, ci->where)));
-    }
-
-    return result;
-}
-
-static uint32_t format_create_view_stmt(FmtCtx *ctx, SyntaqliteCreateViewStmt *cv) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "CREATE "));
-    if (cv->is_temp) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "TEMP "));
-    }
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "VIEW "));
-    if (cv->if_not_exists) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "IF NOT EXISTS "));
-    }
-    if (cv->schema.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, cv->schema));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "."));
-    }
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, cv->view_name));
-
-    if (cv->column_names != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, cv->column_names);
-        if (cols && cols->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, "("));
-            result = doc_concat_append(&ctx->docs, result,
-                format_comma_list(ctx, cols->expr_list.children, cols->expr_list.count));
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-        }
-    }
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, " AS"));
-    result = doc_concat_append(&ctx->docs, result, doc_hardline(&ctx->docs));
-    result = doc_concat_append(&ctx->docs, result, format_node(ctx, cv->select));
-
-    return result;
-}
-
-static uint32_t format_transaction_stmt(FmtCtx *ctx, SyntaqliteTransactionStmt *ts) {
-    switch (ts->op) {
-        case SYNTAQLITE_TRANSACTION_OP_BEGIN:
-            if (ts->trans_type == SYNTAQLITE_TRANSACTION_TYPE_IMMEDIATE) {
-                return kw(ctx, "BEGIN IMMEDIATE");
-            } else if (ts->trans_type == SYNTAQLITE_TRANSACTION_TYPE_EXCLUSIVE) {
-                return kw(ctx, "BEGIN EXCLUSIVE");
-            }
-            return kw(ctx, "BEGIN");
-        case SYNTAQLITE_TRANSACTION_OP_COMMIT:
-            return kw(ctx, "COMMIT");
-        case SYNTAQLITE_TRANSACTION_OP_ROLLBACK:
-            return kw(ctx, "ROLLBACK");
-        default:
-            return kw(ctx, "BEGIN");
-    }
-}
-
-static uint32_t format_explain_stmt(FmtCtx *ctx, SyntaqliteExplainStmt *es) {
-    uint32_t result;
-    if (es->explain_mode == SYNTAQLITE_EXPLAIN_MODE_QUERY_PLAN) {
-        result = kw(ctx, "EXPLAIN QUERY PLAN");
+static uint32_t format_set_clause(FmtCtx *ctx, SyntaqliteSetClause *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
+    if (node->column.length > 0) {
+        uint32_t sp_3 = span_text(ctx, node->column);
+        cond_2 = sp_3;
     } else {
-        result = kw(ctx, "EXPLAIN");
+        uint32_t cond_4 = SYNTAQLITE_NULL_DOC;
+        if (node->columns != SYNTAQLITE_NULL_NODE) {
+            uint32_t cat_5 = doc_concat_empty(&ctx->docs);
+            uint32_t kw_6 = kw(ctx, "(");
+            if (kw_6 != SYNTAQLITE_NULL_DOC)
+                cat_5 = doc_concat_append(&ctx->docs, cat_5, kw_6);
+            uint32_t ch_7 = format_node(ctx, node->columns);
+            if (ch_7 != SYNTAQLITE_NULL_DOC)
+                cat_5 = doc_concat_append(&ctx->docs, cat_5, ch_7);
+            uint32_t kw_8 = kw(ctx, ")");
+            if (kw_8 != SYNTAQLITE_NULL_DOC)
+                cat_5 = doc_concat_append(&ctx->docs, cat_5, kw_8);
+            cond_4 = cat_5;
+        }
+        cond_2 = cond_4;
     }
-    return concat_docs(ctx, result, doc_hardline(&ctx->docs),
-        format_node(ctx, es->stmt), SYNTAQLITE_NULL_DOC);
+    if (cond_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_2);
+    uint32_t kw_9 = kw(ctx, " = ");
+    if (kw_9 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_9);
+    uint32_t ch_10 = format_node(ctx, node->value);
+    if (ch_10 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_10);
+    return cat_1;
 }
 
-static uint32_t format_raise_expr(FmtCtx *ctx, SyntaqliteRaiseExpr *expr) {
-    uint32_t result = kw(ctx, "RAISE(");
-    switch (expr->raise_type) {
-        case SYNTAQLITE_RAISE_TYPE_IGNORE: result = concat_docs(ctx, result, kw(ctx, "IGNORE"), SYNTAQLITE_NULL_DOC); break;
-        case SYNTAQLITE_RAISE_TYPE_ROLLBACK: result = concat_docs(ctx, result, kw(ctx, "ROLLBACK"), SYNTAQLITE_NULL_DOC); break;
-        case SYNTAQLITE_RAISE_TYPE_ABORT: result = concat_docs(ctx, result, kw(ctx, "ABORT"), SYNTAQLITE_NULL_DOC); break;
-        case SYNTAQLITE_RAISE_TYPE_FAIL: result = concat_docs(ctx, result, kw(ctx, "FAIL"), SYNTAQLITE_NULL_DOC); break;
+static uint32_t format_update_stmt(FmtCtx *ctx, SyntaqliteUpdateStmt *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t kw_2 = kw(ctx, "UPDATE");
+    if (kw_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_2);
+    uint32_t sw_3 = SYNTAQLITE_NULL_DOC;
+    switch (node->conflict_action) {
+        case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: {
+            uint32_t kw_4 = kw(ctx, " OR ROLLBACK");
+            sw_3 = kw_4;
+            break;
+        }
+        case SYNTAQLITE_CONFLICT_ACTION_ABORT: {
+            uint32_t kw_5 = kw(ctx, " OR ABORT");
+            sw_3 = kw_5;
+            break;
+        }
+        case SYNTAQLITE_CONFLICT_ACTION_FAIL: {
+            uint32_t kw_6 = kw(ctx, " OR FAIL");
+            sw_3 = kw_6;
+            break;
+        }
+        case SYNTAQLITE_CONFLICT_ACTION_IGNORE: {
+            uint32_t kw_7 = kw(ctx, " OR IGNORE");
+            sw_3 = kw_7;
+            break;
+        }
+        case SYNTAQLITE_CONFLICT_ACTION_REPLACE: {
+            uint32_t kw_8 = kw(ctx, " OR REPLACE");
+            sw_3 = kw_8;
+            break;
+        }
+        default: break;
     }
-    if (expr->error_message != SYNTAQLITE_NULL_NODE) {
-        result = concat_docs(ctx, result, kw(ctx, ", "),
-            format_node(ctx, expr->error_message), SYNTAQLITE_NULL_DOC);
+    if (sw_3 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, sw_3);
+    uint32_t kw_9 = kw(ctx, " ");
+    if (kw_9 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_9);
+    uint32_t ch_10 = format_node(ctx, node->table);
+    if (ch_10 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_10);
+    uint32_t cond_11 = SYNTAQLITE_NULL_DOC;
+    if (node->setlist != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_12 = format_node(ctx, node->setlist);
+        uint32_t cl_13 = format_clause(ctx, "SET", ch_12);
+        cond_11 = cl_13;
     }
-    result = concat_docs(ctx, result, kw(ctx, ")"), SYNTAQLITE_NULL_DOC);
-    return result;
+    if (cond_11 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_11);
+    uint32_t cond_14 = SYNTAQLITE_NULL_DOC;
+    if (node->from_clause != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_15 = format_node(ctx, node->from_clause);
+        uint32_t cl_16 = format_clause(ctx, "FROM", ch_15);
+        cond_14 = cl_16;
+    }
+    if (cond_14 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_14);
+    uint32_t cond_17 = SYNTAQLITE_NULL_DOC;
+    if (node->where != SYNTAQLITE_NULL_NODE) {
+        uint32_t ch_18 = format_node(ctx, node->where);
+        uint32_t cl_19 = format_clause(ctx, "WHERE", ch_18);
+        cond_17 = cl_19;
+    }
+    if (cond_17 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_17);
+    return cat_1;
 }
 
-static uint32_t format_frame_bound(FmtCtx *ctx, SyntaqliteFrameBound *fb) {
-    switch (fb->bound_type) {
-        case SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_PRECEDING: return kw(ctx, "UNBOUNDED PRECEDING");
-        case SYNTAQLITE_FRAME_BOUND_TYPE_CURRENT_ROW: return kw(ctx, "CURRENT ROW");
-        case SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_FOLLOWING: return kw(ctx, "UNBOUNDED FOLLOWING");
-        case SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_PRECEDING:
-            return concat_docs(ctx, format_node(ctx, fb->expr), kw(ctx, " PRECEDING"), SYNTAQLITE_NULL_DOC);
-        case SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_FOLLOWING:
-            return concat_docs(ctx, format_node(ctx, fb->expr), kw(ctx, " FOLLOWING"), SYNTAQLITE_NULL_DOC);
-        default: return kw(ctx, "CURRENT ROW");
-    }
-}
-
-static uint32_t format_frame_spec(FmtCtx *ctx, SyntaqliteFrameSpec *fs) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-
-    if (fs->frame_type != SYNTAQLITE_FRAME_TYPE_NONE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, frame_type_str(fs->frame_type)));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-    }
-
-    if (fs->end_bound != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "BETWEEN "));
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, fs->start_bound));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " AND "));
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, fs->end_bound));
+static uint32_t format_insert_stmt(FmtCtx *ctx, SyntaqliteInsertStmt *node) {
+    uint32_t cat_1 = doc_concat_empty(&ctx->docs);
+    uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
+    if (node->conflict_action == SYNTAQLITE_CONFLICT_ACTION_REPLACE) {
+        uint32_t kw_3 = kw(ctx, "REPLACE");
+        cond_2 = kw_3;
     } else {
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, fs->start_bound));
-    }
-
-    const char *excl = frame_exclude_str(fs->exclude);
-    if (excl) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, excl));
-    }
-
-    return result;
-}
-
-static uint32_t format_window_def(FmtCtx *ctx, SyntaqliteWindowDef *wd) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "("));
-
-    if (wd->base_window_name.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, wd->base_window_name));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-    }
-
-    if (wd->partition_by != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "PARTITION BY "));
-        SyntaqliteNode *pb = AST_NODE(ctx->ast, wd->partition_by);
-        if (pb && pb->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            result = doc_concat_append(&ctx->docs, result,
-                format_comma_list(ctx, pb->expr_list.children, pb->expr_list.count));
-        } else {
-            result = doc_concat_append(&ctx->docs, result, format_node(ctx, wd->partition_by));
-        }
-        if (wd->orderby != SYNTAQLITE_NULL_NODE || wd->frame != SYNTAQLITE_NULL_NODE) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-        }
-    }
-
-    if (wd->orderby != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "ORDER BY "));
-        SyntaqliteNode *ob = AST_NODE(ctx->ast, wd->orderby);
-        if (ob && ob->tag == SYNTAQLITE_NODE_ORDER_BY_LIST) {
-            result = doc_concat_append(&ctx->docs, result,
-                format_comma_list(ctx, ob->order_by_list.children, ob->order_by_list.count));
-        } else {
-            result = doc_concat_append(&ctx->docs, result, format_node(ctx, wd->orderby));
-        }
-        if (wd->frame != SYNTAQLITE_NULL_NODE) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-        }
-    }
-
-    if (wd->frame != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, wd->frame));
-    }
-
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-    return result;
-}
-
-static uint32_t format_filter_over(FmtCtx *ctx, SyntaqliteFilterOver *fo) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-
-    if (fo->filter_expr != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "FILTER (WHERE "));
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, fo->filter_expr));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-    }
-
-    if (fo->over_def != SYNTAQLITE_NULL_NODE) {
-        if (fo->filter_expr != SYNTAQLITE_NULL_NODE) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-        }
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "OVER "));
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, fo->over_def));
-    } else if (fo->over_name.length > 0) {
-        if (fo->filter_expr != SYNTAQLITE_NULL_NODE) {
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-        }
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "OVER "));
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, fo->over_name));
-    }
-
-    return result;
-}
-
-static uint32_t format_alter_table_stmt(FmtCtx *ctx, SyntaqliteAlterTableStmt *alt) {
-    uint32_t result = concat_docs(ctx,
-        kw(ctx, "ALTER TABLE "),
-        format_node(ctx, alt->target),
-        SYNTAQLITE_NULL_DOC);
-
-    switch (alt->op) {
-        case SYNTAQLITE_ALTER_OP_RENAME_TABLE:
-            result = concat_docs(ctx, result, kw(ctx, " RENAME TO "),
-                span_text(ctx, alt->new_name), SYNTAQLITE_NULL_DOC);
-            break;
-        case SYNTAQLITE_ALTER_OP_RENAME_COLUMN:
-            result = concat_docs(ctx, result, kw(ctx, " RENAME COLUMN "),
-                span_text(ctx, alt->old_name), kw(ctx, " TO "),
-                span_text(ctx, alt->new_name), SYNTAQLITE_NULL_DOC);
-            break;
-        case SYNTAQLITE_ALTER_OP_DROP_COLUMN:
-            result = concat_docs(ctx, result, kw(ctx, " DROP COLUMN "),
-                span_text(ctx, alt->old_name), SYNTAQLITE_NULL_DOC);
-            break;
-        case SYNTAQLITE_ALTER_OP_ADD_COLUMN:
-            result = concat_docs(ctx, result, kw(ctx, " ADD COLUMN "),
-                span_text(ctx, alt->new_name), SYNTAQLITE_NULL_DOC);
-            break;
-    }
-
-    return result;
-}
-
-static uint32_t format_pragma_stmt(FmtCtx *ctx, SyntaqlitePragmaStmt *ps) {
-    uint32_t result = kw(ctx, "PRAGMA ");
-    if (ps->schema.length > 0) {
-        result = concat_docs(ctx, result, span_text(ctx, ps->schema), kw(ctx, "."), SYNTAQLITE_NULL_DOC);
-    }
-    result = concat_docs(ctx, result, span_text(ctx, ps->pragma_name), SYNTAQLITE_NULL_DOC);
-
-    if (ps->pragma_form == SYNTAQLITE_PRAGMA_FORM_EQ) {
-        result = concat_docs(ctx, result, kw(ctx, " = "),
-            span_text(ctx, ps->value), SYNTAQLITE_NULL_DOC);
-    } else if (ps->pragma_form == SYNTAQLITE_PRAGMA_FORM_CALL) {
-        result = concat_docs(ctx, result, kw(ctx, "("),
-            span_text(ctx, ps->value), kw(ctx, ")"), SYNTAQLITE_NULL_DOC);
-    }
-
-    return result;
-}
-
-static uint32_t format_savepoint_stmt(FmtCtx *ctx, SyntaqliteSavepointStmt *ss) {
-    switch (ss->op) {
-        case SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT:
-            return concat_docs(ctx, kw(ctx, "SAVEPOINT "),
-                span_text(ctx, ss->savepoint_name), SYNTAQLITE_NULL_DOC);
-        case SYNTAQLITE_SAVEPOINT_OP_RELEASE:
-            return concat_docs(ctx, kw(ctx, "RELEASE SAVEPOINT "),
-                span_text(ctx, ss->savepoint_name), SYNTAQLITE_NULL_DOC);
-        case SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO:
-            return concat_docs(ctx, kw(ctx, "ROLLBACK TO SAVEPOINT "),
-                span_text(ctx, ss->savepoint_name), SYNTAQLITE_NULL_DOC);
-        default:
-            return kw(ctx, "SAVEPOINT");
-    }
-}
-
-static uint32_t format_analyze_stmt(FmtCtx *ctx, SyntaqliteAnalyzeStmt *as) {
-    uint32_t result;
-    if (as->kind == SYNTAQLITE_ANALYZE_KIND_REINDEX) {
-        result = kw(ctx, "REINDEX");
-    } else {
-        result = kw(ctx, "ANALYZE");
-    }
-
-    if (as->schema.length > 0) {
-        result = concat_docs(ctx, result, kw(ctx, " "),
-            span_text(ctx, as->schema), SYNTAQLITE_NULL_DOC);
-        if (as->target_name.length > 0) {
-            result = concat_docs(ctx, result, kw(ctx, "."),
-                span_text(ctx, as->target_name), SYNTAQLITE_NULL_DOC);
-        }
-    } else if (as->target_name.length > 0) {
-        result = concat_docs(ctx, result, kw(ctx, " "),
-            span_text(ctx, as->target_name), SYNTAQLITE_NULL_DOC);
-    }
-
-    return result;
-}
-
-static uint32_t format_attach_stmt(FmtCtx *ctx, SyntaqliteAttachStmt *as) {
-    uint32_t result = concat_docs(ctx,
-        kw(ctx, "ATTACH DATABASE "),
-        format_node(ctx, as->filename),
-        kw(ctx, " AS "),
-        format_node(ctx, as->db_name),
-        SYNTAQLITE_NULL_DOC);
-
-    if (as->key != SYNTAQLITE_NULL_NODE) {
-        result = concat_docs(ctx, result, kw(ctx, " KEY "),
-            format_node(ctx, as->key), SYNTAQLITE_NULL_DOC);
-    }
-
-    return result;
-}
-
-static uint32_t format_detach_stmt(FmtCtx *ctx, SyntaqliteDetachStmt *ds) {
-    return concat_docs(ctx, kw(ctx, "DETACH DATABASE "),
-        format_node(ctx, ds->db_name), SYNTAQLITE_NULL_DOC);
-}
-
-static uint32_t format_vacuum_stmt(FmtCtx *ctx, SyntaqliteVacuumStmt *vs) {
-    uint32_t result = kw(ctx, "VACUUM");
-    if (vs->schema.length > 0) {
-        result = concat_docs(ctx, result, kw(ctx, " "),
-            span_text(ctx, vs->schema), SYNTAQLITE_NULL_DOC);
-    }
-    if (vs->into_expr != SYNTAQLITE_NULL_NODE) {
-        result = concat_docs(ctx, result, kw(ctx, " INTO "),
-            format_node(ctx, vs->into_expr), SYNTAQLITE_NULL_DOC);
-    }
-    return result;
-}
-
-static uint32_t format_create_trigger_stmt(FmtCtx *ctx, SyntaqliteCreateTriggerStmt *ct) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "CREATE "));
-    if (ct->is_temp) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "TEMP "));
-    }
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "TRIGGER "));
-    if (ct->if_not_exists) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "IF NOT EXISTS "));
-    }
-    if (ct->schema.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, ct->schema));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "."));
-    }
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, ct->trigger_name));
-
-    // Timing
-    switch (ct->timing) {
-        case SYNTAQLITE_TRIGGER_TIMING_BEFORE:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " BEFORE"));
-            break;
-        case SYNTAQLITE_TRIGGER_TIMING_AFTER:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " AFTER"));
-            break;
-        case SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF:
-            result = doc_concat_append(&ctx->docs, result, kw(ctx, " INSTEAD OF"));
-            break;
-    }
-
-    // Event
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, " "));
-    result = doc_concat_append(&ctx->docs, result, format_node(ctx, ct->event));
-
-    // ON table
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, " ON "));
-    result = doc_concat_append(&ctx->docs, result, format_node(ctx, ct->table));
-
-    // WHEN
-    if (ct->when_expr != SYNTAQLITE_NULL_NODE) {
-        result = doc_concat_append(&ctx->docs, result, doc_hardline(&ctx->docs));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "WHEN "));
-        result = doc_concat_append(&ctx->docs, result, format_node(ctx, ct->when_expr));
-    }
-
-    // BEGIN ... END
-    result = doc_concat_append(&ctx->docs, result, doc_hardline(&ctx->docs));
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "BEGIN"));
-
-    if (ct->body != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *body = AST_NODE(ctx->ast, ct->body);
-        if (body && body->tag == SYNTAQLITE_NODE_TRIGGER_CMD_LIST) {
-            for (uint32_t i = 0; i < body->trigger_cmd_list.count; i++) {
-                uint32_t stmt_doc = format_node(ctx, body->trigger_cmd_list.children[i]);
-                uint32_t stmt_line = concat_docs(ctx, doc_hardline(&ctx->docs),
-                    stmt_doc, kw(ctx, ";"), SYNTAQLITE_NULL_DOC);
-                result = doc_concat_append(&ctx->docs, result,
-                    doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, stmt_line));
+        uint32_t cat_4 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_5 = kw(ctx, "INSERT");
+        if (kw_5 != SYNTAQLITE_NULL_DOC)
+            cat_4 = doc_concat_append(&ctx->docs, cat_4, kw_5);
+        uint32_t sw_6 = SYNTAQLITE_NULL_DOC;
+        switch (node->conflict_action) {
+            case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: {
+                uint32_t kw_7 = kw(ctx, " OR ROLLBACK");
+                sw_6 = kw_7;
+                break;
             }
+            case SYNTAQLITE_CONFLICT_ACTION_ABORT: {
+                uint32_t kw_8 = kw(ctx, " OR ABORT");
+                sw_6 = kw_8;
+                break;
+            }
+            case SYNTAQLITE_CONFLICT_ACTION_FAIL: {
+                uint32_t kw_9 = kw(ctx, " OR FAIL");
+                sw_6 = kw_9;
+                break;
+            }
+            case SYNTAQLITE_CONFLICT_ACTION_IGNORE: {
+                uint32_t kw_10 = kw(ctx, " OR IGNORE");
+                sw_6 = kw_10;
+                break;
+            }
+            default: break;
         }
+        if (sw_6 != SYNTAQLITE_NULL_DOC)
+            cat_4 = doc_concat_append(&ctx->docs, cat_4, sw_6);
+        cond_2 = cat_4;
     }
-
-    result = doc_concat_append(&ctx->docs, result, doc_hardline(&ctx->docs));
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "END"));
-
-    return result;
-}
-
-static uint32_t format_trigger_event(FmtCtx *ctx, SyntaqliteTriggerEvent *te) {
-    uint32_t result;
-    switch (te->event_type) {
-        case SYNTAQLITE_TRIGGER_EVENT_TYPE_DELETE: result = kw(ctx, "DELETE"); break;
-        case SYNTAQLITE_TRIGGER_EVENT_TYPE_INSERT: result = kw(ctx, "INSERT"); break;
-        case SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE: result = kw(ctx, "UPDATE"); break;
-        default: result = kw(ctx, "UPDATE"); break;
+    if (cond_2 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_2);
+    uint32_t kw_11 = kw(ctx, " INTO ");
+    if (kw_11 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, kw_11);
+    uint32_t ch_12 = format_node(ctx, node->table);
+    if (ch_12 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, ch_12);
+    uint32_t cond_13 = SYNTAQLITE_NULL_DOC;
+    if (node->columns != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_14 = doc_concat_empty(&ctx->docs);
+        uint32_t kw_15 = kw(ctx, " (");
+        if (kw_15 != SYNTAQLITE_NULL_DOC)
+            cat_14 = doc_concat_append(&ctx->docs, cat_14, kw_15);
+        uint32_t ch_16 = format_node(ctx, node->columns);
+        if (ch_16 != SYNTAQLITE_NULL_DOC)
+            cat_14 = doc_concat_append(&ctx->docs, cat_14, ch_16);
+        uint32_t kw_17 = kw(ctx, ")");
+        if (kw_17 != SYNTAQLITE_NULL_DOC)
+            cat_14 = doc_concat_append(&ctx->docs, cat_14, kw_17);
+        cond_13 = cat_14;
     }
-
-    if (te->columns != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *cols = AST_NODE(ctx->ast, te->columns);
-        if (cols && cols->tag == SYNTAQLITE_NODE_EXPR_LIST) {
-            result = concat_docs(ctx, result, kw(ctx, " OF "),
-                format_comma_list(ctx, cols->expr_list.children, cols->expr_list.count),
-                SYNTAQLITE_NULL_DOC);
-        }
+    if (cond_13 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_13);
+    uint32_t cond_18 = SYNTAQLITE_NULL_DOC;
+    if (node->source != SYNTAQLITE_NULL_NODE) {
+        uint32_t cat_19 = doc_concat_empty(&ctx->docs);
+        uint32_t hl_20 = doc_hardline(&ctx->docs);
+        if (hl_20 != SYNTAQLITE_NULL_DOC)
+            cat_19 = doc_concat_append(&ctx->docs, cat_19, hl_20);
+        uint32_t ch_21 = format_node(ctx, node->source);
+        if (ch_21 != SYNTAQLITE_NULL_DOC)
+            cat_19 = doc_concat_append(&ctx->docs, cat_19, ch_21);
+        cond_18 = cat_19;
     }
-
-    return result;
-}
-
-static uint32_t format_named_window_def(FmtCtx *ctx, SyntaqliteNamedWindowDef *nwd) {
-    return concat_docs(ctx,
-        span_text(ctx, nwd->window_name),
-        kw(ctx, " AS "),
-        format_node(ctx, nwd->window_def),
-        SYNTAQLITE_NULL_DOC);
-}
-
-static uint32_t format_create_virtual_table_stmt(FmtCtx *ctx, SyntaqliteCreateVirtualTableStmt *cvt) {
-    uint32_t result = doc_concat_empty(&ctx->docs);
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, "CREATE VIRTUAL TABLE "));
-    if (cvt->if_not_exists) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "IF NOT EXISTS "));
-    }
-    if (cvt->schema.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, cvt->schema));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "."));
-    }
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, cvt->table_name));
-    result = doc_concat_append(&ctx->docs, result, kw(ctx, " USING "));
-    result = doc_concat_append(&ctx->docs, result, span_text(ctx, cvt->module_name));
-    if (cvt->module_args.length > 0) {
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, "("));
-        result = doc_concat_append(&ctx->docs, result, span_text(ctx, cvt->module_args));
-        result = doc_concat_append(&ctx->docs, result, kw(ctx, ")"));
-    }
-    return result;
+    if (cond_18 != SYNTAQLITE_NULL_DOC)
+        cat_1 = doc_concat_append(&ctx->docs, cat_1, cond_18);
+    return cat_1;
 }
 
 // ============ Main Dispatcher ============
@@ -1642,26 +1396,30 @@ static uint32_t format_node(FmtCtx *ctx, uint32_t node_id) {
     if (!node) return SYNTAQLITE_NULL_DOC;
 
     switch (node->tag) {
-        case SYNTAQLITE_NODE_SELECT_STMT:
-            return format_select(ctx, &node->select_stmt);
         case SYNTAQLITE_NODE_BINARY_EXPR:
             return format_binary_expr(ctx, &node->binary_expr);
         case SYNTAQLITE_NODE_UNARY_EXPR:
             return format_unary_expr(ctx, &node->unary_expr);
         case SYNTAQLITE_NODE_LITERAL:
             return format_literal(ctx, &node->literal);
+        case SYNTAQLITE_NODE_EXPR_LIST:
+            return format_comma_list(ctx, node->expr_list.children, node->expr_list.count);
+        case SYNTAQLITE_NODE_RESULT_COLUMN:
+            return format_result_column(ctx, &node->result_column);
+        case SYNTAQLITE_NODE_RESULT_COLUMN_LIST:
+            return format_comma_list(ctx, node->result_column_list.children, node->result_column_list.count);
+        case SYNTAQLITE_NODE_SELECT_STMT:
+            return format_select_stmt(ctx, &node->select_stmt);
+        case SYNTAQLITE_NODE_ORDERING_TERM:
+            return format_ordering_term(ctx, &node->ordering_term);
+        case SYNTAQLITE_NODE_ORDER_BY_LIST:
+            return format_comma_list(ctx, node->order_by_list.children, node->order_by_list.count);
+        case SYNTAQLITE_NODE_LIMIT_CLAUSE:
+            return format_limit_clause(ctx, &node->limit_clause);
         case SYNTAQLITE_NODE_COLUMN_REF:
             return format_column_ref(ctx, &node->column_ref);
         case SYNTAQLITE_NODE_FUNCTION_CALL:
             return format_function_call(ctx, &node->function_call);
-        case SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL:
-            return format_aggregate_function_call(ctx, &node->aggregate_function_call);
-        case SYNTAQLITE_NODE_RESULT_COLUMN:
-            return format_result_column(ctx, &node->result_column);
-        case SYNTAQLITE_NODE_ORDERING_TERM:
-            return format_ordering_term(ctx, &node->ordering_term);
-        case SYNTAQLITE_NODE_LIMIT_CLAUSE:
-            return format_limit_clause(ctx, &node->limit_clause);
         case SYNTAQLITE_NODE_IS_EXPR:
             return format_is_expr(ctx, &node->is_expr);
         case SYNTAQLITE_NODE_BETWEEN_EXPR:
@@ -1670,113 +1428,68 @@ static uint32_t format_node(FmtCtx *ctx, uint32_t node_id) {
             return format_like_expr(ctx, &node->like_expr);
         case SYNTAQLITE_NODE_CASE_EXPR:
             return format_case_expr(ctx, &node->case_expr);
-        case SYNTAQLITE_NODE_IN_EXPR:
-            return format_in_expr(ctx, &node->in_expr);
+        case SYNTAQLITE_NODE_CASE_WHEN:
+            return format_case_when(ctx, &node->case_when);
+        case SYNTAQLITE_NODE_CASE_WHEN_LIST:
+            return format_case_when_list(ctx, &node->case_when_list);
+        case SYNTAQLITE_NODE_COMPOUND_SELECT:
+            return format_compound_select(ctx, &node->compound_select);
         case SYNTAQLITE_NODE_SUBQUERY_EXPR:
             return format_subquery_expr(ctx, &node->subquery_expr);
         case SYNTAQLITE_NODE_EXISTS_EXPR:
             return format_exists_expr(ctx, &node->exists_expr);
-        case SYNTAQLITE_NODE_CAST_EXPR:
-            return format_cast_expr(ctx, &node->cast_expr);
+        case SYNTAQLITE_NODE_IN_EXPR:
+            return format_in_expr(ctx, &node->in_expr);
+        case SYNTAQLITE_NODE_VARIABLE:
+            return format_variable(ctx, &node->variable);
         case SYNTAQLITE_NODE_COLLATE_EXPR:
             return format_collate_expr(ctx, &node->collate_expr);
-        case SYNTAQLITE_NODE_VARIABLE:
-            return span_text(ctx, node->variable.source);
+        case SYNTAQLITE_NODE_CAST_EXPR:
+            return format_cast_expr(ctx, &node->cast_expr);
+        case SYNTAQLITE_NODE_VALUES_ROW_LIST:
+            return format_values_row_list(ctx, &node->values_row_list);
+        case SYNTAQLITE_NODE_VALUES_CLAUSE:
+            return format_values_clause(ctx, &node->values_clause);
+        case SYNTAQLITE_NODE_CTE_DEFINITION:
+            return format_cte_definition(ctx, &node->cte_definition);
+        case SYNTAQLITE_NODE_CTE_LIST:
+            return format_comma_list(ctx, node->cte_list.children, node->cte_list.count);
+        case SYNTAQLITE_NODE_WITH_CLAUSE:
+            return format_with_clause(ctx, &node->with_clause);
+        case SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL:
+            return format_aggregate_function_call(ctx, &node->aggregate_function_call);
+        case SYNTAQLITE_NODE_RAISE_EXPR:
+            return format_raise_expr(ctx, &node->raise_expr);
         case SYNTAQLITE_NODE_TABLE_REF:
             return format_table_ref(ctx, &node->table_ref);
         case SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE:
             return format_subquery_table_source(ctx, &node->subquery_table_source);
         case SYNTAQLITE_NODE_JOIN_CLAUSE:
             return format_join_clause(ctx, &node->join_clause);
-        case SYNTAQLITE_NODE_COMPOUND_SELECT:
-            return format_compound_select(ctx, &node->compound_select);
-        case SYNTAQLITE_NODE_WITH_CLAUSE:
-            return format_with_clause(ctx, &node->with_clause);
-        case SYNTAQLITE_NODE_CTE_DEFINITION:
-            return format_cte_definition(ctx, &node->cte_definition);
-        case SYNTAQLITE_NODE_VALUES_CLAUSE:
-            return format_values_clause(ctx, &node->values_clause);
+        case SYNTAQLITE_NODE_JOIN_PREFIX:
+            return format_join_prefix(ctx, &node->join_prefix);
         case SYNTAQLITE_NODE_DELETE_STMT:
             return format_delete_stmt(ctx, &node->delete_stmt);
-        case SYNTAQLITE_NODE_UPDATE_STMT:
-            return format_update_stmt(ctx, &node->update_stmt);
         case SYNTAQLITE_NODE_SET_CLAUSE:
             return format_set_clause(ctx, &node->set_clause);
-        case SYNTAQLITE_NODE_INSERT_STMT:
-            return format_insert_stmt(ctx, &node->insert_stmt);
-        case SYNTAQLITE_NODE_QUALIFIED_NAME:
-            return format_qualified_name(ctx, &node->qualified_name);
-        case SYNTAQLITE_NODE_DROP_STMT:
-            return format_drop_stmt(ctx, &node->drop_stmt);
-        case SYNTAQLITE_NODE_CREATE_TABLE_STMT:
-            return format_create_table_stmt(ctx, &node->create_table_stmt);
-        case SYNTAQLITE_NODE_COLUMN_DEF:
-            return format_column_def(ctx, &node->column_def);
-        case SYNTAQLITE_NODE_COLUMN_CONSTRAINT:
-            return format_column_constraint(ctx, &node->column_constraint);
-        case SYNTAQLITE_NODE_TABLE_CONSTRAINT:
-            return format_table_constraint(ctx, &node->table_constraint);
-        case SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE:
-            return format_foreign_key_clause(ctx, &node->foreign_key_clause);
-        case SYNTAQLITE_NODE_CREATE_INDEX_STMT:
-            return format_create_index_stmt(ctx, &node->create_index_stmt);
-        case SYNTAQLITE_NODE_CREATE_VIEW_STMT:
-            return format_create_view_stmt(ctx, &node->create_view_stmt);
-        case SYNTAQLITE_NODE_TRANSACTION_STMT:
-            return format_transaction_stmt(ctx, &node->transaction_stmt);
-        case SYNTAQLITE_NODE_EXPLAIN_STMT:
-            return format_explain_stmt(ctx, &node->explain_stmt);
-        case SYNTAQLITE_NODE_RAISE_EXPR:
-            return format_raise_expr(ctx, &node->raise_expr);
-        case SYNTAQLITE_NODE_FRAME_BOUND:
-            return format_frame_bound(ctx, &node->frame_bound);
-        case SYNTAQLITE_NODE_FRAME_SPEC:
-            return format_frame_spec(ctx, &node->frame_spec);
-        case SYNTAQLITE_NODE_WINDOW_DEF:
-            return format_window_def(ctx, &node->window_def);
-        case SYNTAQLITE_NODE_FILTER_OVER:
-            return format_filter_over(ctx, &node->filter_over);
-        case SYNTAQLITE_NODE_ALTER_TABLE_STMT:
-            return format_alter_table_stmt(ctx, &node->alter_table_stmt);
-        case SYNTAQLITE_NODE_PRAGMA_STMT:
-            return format_pragma_stmt(ctx, &node->pragma_stmt);
-        case SYNTAQLITE_NODE_SAVEPOINT_STMT:
-            return format_savepoint_stmt(ctx, &node->savepoint_stmt);
-        case SYNTAQLITE_NODE_ANALYZE_STMT:
-            return format_analyze_stmt(ctx, &node->analyze_stmt);
-        case SYNTAQLITE_NODE_ATTACH_STMT:
-            return format_attach_stmt(ctx, &node->attach_stmt);
-        case SYNTAQLITE_NODE_DETACH_STMT:
-            return format_detach_stmt(ctx, &node->detach_stmt);
-        case SYNTAQLITE_NODE_VACUUM_STMT:
-            return format_vacuum_stmt(ctx, &node->vacuum_stmt);
-        case SYNTAQLITE_NODE_CREATE_TRIGGER_STMT:
-            return format_create_trigger_stmt(ctx, &node->create_trigger_stmt);
-        case SYNTAQLITE_NODE_TRIGGER_EVENT:
-            return format_trigger_event(ctx, &node->trigger_event);
-        case SYNTAQLITE_NODE_NAMED_WINDOW_DEF:
-            return format_named_window_def(ctx, &node->named_window_def);
-        case SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT:
-            return format_create_virtual_table_stmt(ctx, &node->create_virtual_table_stmt);
-
-        // List nodes: format children as comma-separated
-        case SYNTAQLITE_NODE_EXPR_LIST:
-            return format_comma_list(ctx, node->expr_list.children, node->expr_list.count);
-        case SYNTAQLITE_NODE_RESULT_COLUMN_LIST:
-            return format_comma_list(ctx, node->result_column_list.children, node->result_column_list.count);
-        case SYNTAQLITE_NODE_ORDER_BY_LIST:
-            return format_comma_list(ctx, node->order_by_list.children, node->order_by_list.count);
         case SYNTAQLITE_NODE_SET_CLAUSE_LIST:
             return format_comma_list(ctx, node->set_clause_list.children, node->set_clause_list.count);
-        case SYNTAQLITE_NODE_CTE_LIST:
-            return format_comma_list(ctx, node->cte_list.children, node->cte_list.count);
+        case SYNTAQLITE_NODE_UPDATE_STMT:
+            return format_update_stmt(ctx, &node->update_stmt);
+        case SYNTAQLITE_NODE_INSERT_STMT:
+            return format_insert_stmt(ctx, &node->insert_stmt);
+        case SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST:
+            return format_comma_list(ctx, node->column_constraint_list.children, node->column_constraint_list.count);
+        case SYNTAQLITE_NODE_COLUMN_DEF_LIST:
+            return format_comma_list(ctx, node->column_def_list.children, node->column_def_list.count);
+        case SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST:
+            return format_comma_list(ctx, node->table_constraint_list.children, node->table_constraint_list.count);
+        case SYNTAQLITE_NODE_WINDOW_DEF_LIST:
+            return format_comma_list(ctx, node->window_def_list.children, node->window_def_list.count);
         case SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST:
             return format_comma_list(ctx, node->named_window_def_list.children, node->named_window_def_list.count);
-
-        // Join prefix: format source
-        case SYNTAQLITE_NODE_JOIN_PREFIX:
-            return format_node(ctx, node->join_prefix.source);
-
+        case SYNTAQLITE_NODE_TRIGGER_CMD_LIST:
+            return format_comma_list(ctx, node->trigger_cmd_list.children, node->trigger_cmd_list.count);
         default:
             return kw(ctx, "/* UNSUPPORTED */");
     }

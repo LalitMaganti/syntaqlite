@@ -4,6 +4,7 @@
 """CAST expression AST node definition."""
 
 from ..defs import Node, inline, index
+from ..fmt_dsl import seq, kw, span, child
 
 ENUMS = []
 
@@ -12,5 +13,6 @@ NODES = [
     Node("CastExpr",
         expr=index("Expr"),
         type_name=inline("SyntaqliteSourceSpan"),
+        fmt=seq(kw("CAST("), child("expr"), kw(" AS "), span("type_name"), kw(")")),
     ),
 ]

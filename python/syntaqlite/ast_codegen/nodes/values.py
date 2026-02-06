@@ -4,15 +4,23 @@
 """VALUES clause AST node definitions."""
 
 from ..defs import Node, List, inline, index
+from ..fmt_dsl import seq, kw, child, line, for_each_child
 
 ENUMS = []
 
 NODES = [
     # List of value rows (each child is an ExprList)
-    List("ValuesRowList", child_type="ExprList"),
+    # Each row formatted as (expr, expr, ...) with comma+line separator
+    List("ValuesRowList", child_type="ExprList",
+        fmt=for_each_child(
+            seq(kw("("), child("_item"), kw(")")),
+            separator=seq(kw(","), line()),
+        ),
+    ),
 
     # VALUES clause: VALUES (row1), (row2), ...
     Node("ValuesClause",
         rows=index("ValuesRowList"),
+        fmt=seq(kw("VALUES "), child("rows")),
     ),
 ]

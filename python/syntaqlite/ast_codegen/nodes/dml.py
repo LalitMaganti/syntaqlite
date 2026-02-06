@@ -4,12 +4,14 @@
 """DML (INSERT/UPDATE/DELETE) AST node definitions."""
 
 from ..defs import Node, List, Enum, inline, index
+from ..fmt_dsl import (
+    seq, kw, span, child, hardline,
+    if_set, if_span, if_enum, clause, switch,
+)
 
 ENUMS = [
-    # Conflict resolution for INSERT OR .../UPDATE OR ...
-    # Matches SQLite OE_ constants: Default=0, Rollback=1, Abort=2, Fail=3, Ignore=4, Replace=5
     Enum("ConflictAction",
-        "DEFAULT",    # 0 - no OR clause
+        "DEFAULT",    # 0
         "ROLLBACK",   # 1
         "ABORT",      # 2
         "FAIL",       # 3
@@ -21,15 +23,27 @@ ENUMS = [
 NODES = [
     # DELETE FROM [schema.]table [WHERE expr]
     Node("DeleteStmt",
-        table=index("Expr"),               # xfullname -> TableRef
-        where=index("Expr"),               # nullable - WHERE clause
+        table=index("Expr"),
+        where=index("Expr"),
+        fmt=seq(
+            kw("DELETE"),
+            if_set("table", clause("FROM", child("table"))),
+            if_set("where", clause("WHERE", child("where"))),
+        ),
     ),
 
     # SET clause assignment: column = expr (or (col1, col2) = expr)
     Node("SetClause",
-        column=inline("SyntaqliteSourceSpan"),  # column name (for simple nm = expr)
-        columns=index("ExprList"),              # nullable - for (col1, col2) = expr
-        value=index("Expr"),                    # right-hand side expression
+        column=inline("SyntaqliteSourceSpan"),
+        columns=index("ExprList"),
+        value=index("Expr"),
+        fmt=seq(
+            if_span("column",
+                span("column"),
+                if_set("columns", seq(kw("("), child("columns"), kw(")")))),
+            kw(" = "),
+            child("value"),
+        ),
     ),
 
     # List of SET clause assignments
@@ -38,18 +52,47 @@ NODES = [
     # UPDATE [OR conflict] [schema.]table SET ... [FROM ...] [WHERE expr]
     Node("UpdateStmt",
         conflict_action=inline("ConflictAction"),
-        table=index("Expr"),               # xfullname -> TableRef
-        setlist=index("SetClauseList"),    # SET assignments
-        from_clause=index("Expr"),         # nullable - FROM clause
-        where=index("Expr"),               # nullable - WHERE clause
+        table=index("Expr"),
+        setlist=index("SetClauseList"),
+        from_clause=index("Expr"),
+        where=index("Expr"),
+        fmt=seq(
+            kw("UPDATE"),
+            switch("conflict_action", {
+                "ROLLBACK": kw(" OR ROLLBACK"),
+                "ABORT": kw(" OR ABORT"),
+                "FAIL": kw(" OR FAIL"),
+                "IGNORE": kw(" OR IGNORE"),
+                "REPLACE": kw(" OR REPLACE"),
+            }),
+            kw(" "), child("table"),
+            if_set("setlist", clause("SET", child("setlist"))),
+            if_set("from_clause", clause("FROM", child("from_clause"))),
+            if_set("where", clause("WHERE", child("where"))),
+        ),
     ),
 
     # INSERT [OR conflict] INTO [schema.]table [(columns)] source
-    # source is either a select (including VALUES) or null for DEFAULT VALUES
     Node("InsertStmt",
         conflict_action=inline("ConflictAction"),
-        table=index("Expr"),               # xfullname -> TableRef
-        columns=index("ExprList"),         # nullable - column list
-        source=index("Stmt"),              # nullable - select/values or null for DEFAULT VALUES
+        table=index("Expr"),
+        columns=index("ExprList"),
+        source=index("Stmt"),
+        fmt=seq(
+            if_enum("conflict_action", "REPLACE",
+                kw("REPLACE"),
+                seq(
+                    kw("INSERT"),
+                    switch("conflict_action", {
+                        "ROLLBACK": kw(" OR ROLLBACK"),
+                        "ABORT": kw(" OR ABORT"),
+                        "FAIL": kw(" OR FAIL"),
+                        "IGNORE": kw(" OR IGNORE"),
+                    }),
+                )),
+            kw(" INTO "), child("table"),
+            if_set("columns", seq(kw(" ("), child("columns"), kw(")"))),
+            if_set("source", seq(hardline(), child("source"))),
+        ),
     ),
 ]

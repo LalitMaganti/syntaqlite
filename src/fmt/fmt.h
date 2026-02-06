@@ -6,7 +6,7 @@
 #ifndef SYNTAQLITE_SRC_FMT_FMT_H
 #define SYNTAQLITE_SRC_FMT_FMT_H
 
-#include "src/ast/ast_base.h"
+#include "src/arena.h"
 #include "src/fmt/fmt_options.h"
 #include "src/token_list.h"
 
@@ -27,4 +27,4 @@ char *syntaqlite_format(SyntaqliteArena *ast, uint32_t root_id,
 }
 #endif
 
-#endif  // SYNTAQLITE_SRC_FMT_FMT_H
+#endif // SYNTAQLITE_SRC_FMT_FMT_H
