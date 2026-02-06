@@ -1,0 +1,10 @@
+# Shared definitions used by tokenizer and parser.
+
+source_set("common") {
+  sources = [
+    "synq_sqlite_defs.h",
+  ]
+  deps = [
+    "../../include/syntaqlite:headers",
+  ]
+}

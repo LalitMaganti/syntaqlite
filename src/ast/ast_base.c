@@ -4,7 +4,7 @@
 // Base AST infrastructure implementations.
 
 #include "src/ast/ast_base.h"
-#include "src/synq_sqlite_defs.h"
+#include "src/common/synq_sqlite_defs.h"
 
 #include <string.h>
 

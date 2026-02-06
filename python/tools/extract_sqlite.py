@@ -170,8 +170,8 @@ def copy_tokenize_c(
     content = (runner.sqlite_src / "tokenize.c").read_text()
 
     # Build the inlined header that replaces sqliteInt.h
-    inlined_header = f'''#include "src/synq_sqlite_defs.h"
-#include "src/sqlite_charmap.h"
+    inlined_header = f'''#include "src/common/synq_sqlite_defs.h"
+#include "src/tokenizer/sqlite_charmap_gen.h"
 
 /*
 ** Synq tokenizer injection support.
@@ -183,7 +183,7 @@ def copy_tokenize_c(
 #endif
 
 #ifndef _SYNQ_EXTERNAL_KEYWORDHASH
-#include "src/sqlite_tokens.h"
+#include "syntaqlite/sqlite_tokens_gen.h"
 {keywordhash_data}
 #endif /* _SYNQ_EXTERNAL_KEYWORDHASH */
 
@@ -261,7 +261,7 @@ def generate_token_defs(
             If provided, uses these tokens directly. If None, runs Lemon
             on base grammar (for tokenizer-only extraction).
     """
-    guard = f"{prefix.upper()}_SRC_SQLITE_TOKENS_H"
+    guard = "SYNTAQLITE_SQLITE_TOKENS_GEN_H"
 
     if parse_h_content is None:
         # Tokenizer-only mode: run Lemon on base grammar
@@ -279,19 +279,31 @@ def generate_token_defs(
     # Extract TK_* defines
     defines = extract_tk_defines(parse_h_content)
 
+    # Wrap in SYNTAQLITE_CUSTOM_TOKENS ifdef so dialects can substitute
+    # their own token definitions and the wrong set can never leak.
+    body_lines = [
+        "#ifdef SYNTAQLITE_CUSTOM_TOKENS",
+        "#include SYNTAQLITE_CUSTOM_TOKENS",
+        "#else",
+        "",
+    ] + defines + [
+        "",
+        "#endif /* SYNTAQLITE_CUSTOM_TOKENS */",
+    ]
+
     # Generate header
     gen = HeaderGenerator(
         guard=guard,
         description="Token definitions from SQLite's parse.y via Lemon.",
         regenerate_cmd=REGENERATE_CMD,
     )
-    gen.write(output_path, "\n".join(defines))
+    gen.write(output_path, "\n".join(body_lines))
 
 
 def copy_global_tables(runner: ToolRunner, output_path: Path, prefix: str) -> None:
     """Copy character tables from SQLite's global.c."""
     sqlite3_prefix = f"{prefix}_sqlite3"
-    guard = f"{prefix.upper()}_SRC_SQLITE_CHARMAP_H"
+    guard = f"{prefix.upper()}_SRC_TOKENIZER_SQLITE_CHARMAP_GEN_H"
 
     content = (runner.sqlite_src / "global.c").read_text()
 
@@ -432,7 +444,7 @@ def generate_parser(
             description=f"SQLite parser for {prefix}.\n** Generated from SQLite's parse.y via Lemon with injection points.",
             regenerate_cmd=REGENERATE_CMD,
         )
-        gen.write(output_dir / "sqlite_parse.c", parse_c_content)
+        gen.write(output_dir / "parser" / "sqlite_parse_gen.c", parse_c_content)
 
         return parse_h_content
 
@@ -455,14 +467,16 @@ def generate_ast(output_dir: Path) -> None:
 
     # Generate
     ast_dir = output_dir / "ast"
-    ast_codegen.generate_all(AST_NODES, AST_ENUMS, ast_dir, flags_defs=AST_FLAGS)
+    include_dir = output_dir.parent / "include" / "syntaqlite"
+    ast_codegen.generate_all(AST_NODES, AST_ENUMS, ast_dir, flags_defs=AST_FLAGS,
+                             public_header_dir=include_dir)
 
     # Generate formatter
-    fmt_output = output_dir / "fmt" / "fmt.c"
+    fmt_output = output_dir / "fmt" / "fmt_gen.c"
     ast_fmt_codegen.generate_fmt_c(AST_NODES, AST_ENUMS, AST_FLAGS, fmt_output)
 
     print(f"  {len(AST_NODES)} node types, {len(AST_ENUMS)} enums")
-    print("  Generated: ast_nodes.h, ast_builder.h, ast_builder.c, ast_print.c, fmt.c")
+    print("  Generated: ast_nodes_gen.h (public + internal), ast_builder_gen.h, ast_builder_gen.c, ast_print_gen.c, fmt_gen.c")
 
 
 def main():
@@ -490,13 +504,14 @@ def main():
 
     # Generate token definitions and character map
     print("\n=== Generating Tokens and Charmap ===")
-    generate_token_defs(runner, output_dir / "sqlite_tokens.h", prefix, parse_h_content)
-    copy_global_tables(runner, output_dir / "sqlite_charmap.h", prefix)
+    include_dir = output_dir.parent / "include" / "syntaqlite"
+    generate_token_defs(runner, include_dir / "sqlite_tokens_gen.h", prefix, parse_h_content)
+    copy_global_tables(runner, output_dir / "tokenizer" / "sqlite_charmap_gen.h", prefix)
 
     # Generate tokenizer
     print("\n=== Generating Tokenizer ===")
     keywordhash_data, keyword_code_func = build_keywordhash(runner, prefix)
-    copy_tokenize_c(runner, output_dir / "sqlite_tokenize.c", prefix, keywordhash_data, keyword_code_func)
+    copy_tokenize_c(runner, output_dir / "tokenizer" / "sqlite_tokenize_gen.c", prefix, keywordhash_data, keyword_code_func)
 
     # Generate AST code
     print("\n=== Generating AST ===")

@@ -3,9 +3,10 @@
 
 // Base types and functions for AST infrastructure.
 
-#ifndef SYNQ_AST_BASE_H
-#define SYNQ_AST_BASE_H
+#ifndef SYNQ_SRC_AST_AST_BASE_H
+#define SYNQ_SRC_AST_AST_BASE_H
 
+#include "syntaqlite/ast_nodes_gen.h"
 #include "src/base/arena.h"
 #include "src/base/vec.h"
 
@@ -15,20 +16,11 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  // SYNQ_SRC_AST_AST_BASE_H
 
 // Forward declarations for token/context types
 struct SynqToken;
 struct SynqParseContext;
-
-// Null node ID (used for nullable fields)
-#define SYNQ_NULL_NODE 0xFFFFFFFFu
-
-// Source location span (offset + length into source text)
-typedef struct SynqSourceSpan {
-    uint32_t offset;
-    uint16_t length;
-} SynqSourceSpan;
 
 // Empty source span
 #define SYNQ_NO_SPAN ((SynqSourceSpan){0, 0})
@@ -155,6 +147,6 @@ inline void synq_ast_range_union_span(SynqSourceRange *acc,
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // SYNQ_SRC_AST_AST_BASE_H
 
-#endif  // SYNQ_AST_BASE_H
+#endif  // SYNQ_SRC_AST_AST_BASE_H

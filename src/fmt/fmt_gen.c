@@ -6,7 +6,7 @@
 
 #include "src/fmt/fmt_helpers.h"
 
-#include "src/ast/ast_nodes.h"
+#include "src/ast/ast_nodes_gen.h"
 
 // ============ Node Formatters ============
 

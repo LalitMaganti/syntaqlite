@@ -13,7 +13,6 @@ tools/dev/ninja -C out/mac_debug
 ## Testing
 
 ```bash
-out/mac_debug/syntaqlite_unittests
 tools/tests/run-ast-diff-tests --binary out/mac_debug/ast_test
 ```
 

@@ -10,8 +10,8 @@
 ** Character tables extracted from SQLite's global.c
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_sqlite.py
 */
-#ifndef SYNQ_SRC_SQLITE_CHARMAP_H
-#define SYNQ_SRC_SQLITE_CHARMAP_H
+#ifndef SYNQ_SRC_TOKENIZER_SQLITE_CHARMAP_GEN_H
+#define SYNQ_SRC_TOKENIZER_SQLITE_CHARMAP_GEN_H
 
 /*
 ** Upper-to-lower case conversion table.
@@ -117,4 +117,4 @@ static const unsigned char synq_sqlite3CtypeMap[256] = {
 # define synq_sqlite3JsonId1(x)   (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x42)
 # define synq_sqlite3JsonId2(x)   (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x46)
 
-#endif /* SYNQ_SRC_SQLITE_CHARMAP_H */
+#endif /* SYNQ_SRC_TOKENIZER_SQLITE_CHARMAP_GEN_H */

@@ -10,28 +10,15 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #include "src/base/synq_getopt.h"
-#include "src/synq_sqlite_defs.h"
-#include "src/sqlite_tokens.h"
-#include "src/token_list.h"
-#include "src/ast/ast_base.h"
 #include "src/fmt/fmt.h"
 #include "src/fmt/fmt_options.h"
+#include "src/parser_internal.h"
 
-// External parser functions (defined in sqlite_parse.c)
-void *synq_sqlite3ParserAlloc(void *(*mallocProc)(size_t),
-                                     SynqParseContext *pCtx);
-void synq_sqlite3Parser(void *parser, int tokenType, SynqToken token,
-                               SynqParseContext *pCtx);
-void synq_sqlite3ParserFree(void *parser, void (*freeProc)(void *));
 #ifndef NDEBUG
 void synq_sqlite3ParserTrace(FILE *TraceFILE, char *zTracePrompt);
 #endif
-
-// External tokenizer function (defined in sqlite_tokenize.c)
-i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType);
 
 // Read entire stdin into a buffer
 static char *read_stdin(size_t *out_len) {
@@ -56,18 +43,6 @@ static char *read_stdin(size_t *out_len) {
   buf[len] = '\0';
   *out_len = len;
   return buf;
-}
-
-// Error handlers
-static int g_syntax_error = 0;
-static void on_syntax_error(SynqParseContext *ctx) {
-  (void)ctx;
-  g_syntax_error = 1;
-}
-
-static void on_stack_overflow(SynqParseContext *ctx) {
-  (void)ctx;
-  fprintf(stderr, "Error: Parser stack overflow\n");
 }
 
 int main(int argc, char **argv) {
@@ -129,35 +104,6 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  // Initialize AST context
-  SynqAstContext astCtx;
-  synq_ast_context_init(&astCtx, sql, (uint32_t)len);
-
-  // Initialize token list
-  SynqTokenList tokenList;
-  synq_vec_init(&tokenList);
-
-  // Initialize parse context
-  SynqParseContext parseCtx;
-  parseCtx.userData = NULL;
-  parseCtx.onSyntaxError = on_syntax_error;
-  parseCtx.onStackOverflow = on_stack_overflow;
-  parseCtx.astCtx = &astCtx;
-  parseCtx.zSql = sql;
-  parseCtx.root = SYNQ_NULL_NODE;
-  parseCtx.token_list = &tokenList;
-
-  // Create parser
-  void *parser = synq_sqlite3ParserAlloc(malloc, &parseCtx);
-  if (!parser) {
-    fprintf(stderr, "Error: Failed to allocate parser\n");
-    synq_vec_free(&tokenList);
-    synq_ast_context_cleanup(&astCtx);
-
-    free(sql);
-    return 1;
-  }
-
 #ifndef NDEBUG
   if (trace) {
     synq_sqlite3ParserTrace(stderr, "PARSER: ");
@@ -166,101 +112,49 @@ int main(int argc, char **argv) {
   (void)trace;
 #endif
 
-  // Tokenize and parse
-  const unsigned char *z = (const unsigned char *)sql;
-  int tokenType;
-  int lastTokenType = 0;
-
-  while (*z) {
-    i64 tokenLen = synq_sqlite3GetToken(z, &tokenType);
-    if (tokenLen <= 0) break;
-
-    // Collect all tokens (including whitespace and comments)
-    synq_token_list_append(&tokenList,
-                                 (uint32_t)((const char *)z - sql),
-                                 (uint16_t)tokenLen, (uint16_t)tokenType);
-
-    // Skip whitespace and comments for parser
-    if (tokenType == TK_SPACE || tokenType == TK_COMMENT) {
-      z += tokenLen;
-      continue;
-    }
-
-    // Feed token to parser
-    SynqToken token;
-    token.z = (const char *)z;
-    token.n = (int)tokenLen;
-    token.type = tokenType;
-
-    synq_sqlite3Parser(parser, tokenType, token, &parseCtx);
-    lastTokenType = tokenType;
-
-    if (g_syntax_error) {
-      fprintf(stderr, "Error: Syntax error near '%.*s'\n", (int)tokenLen, z);
-      synq_sqlite3ParserFree(parser, free);
-      synq_vec_free(&tokenList);
-      synq_ast_context_cleanup(&astCtx);
-  
-      free(sql);
-      return 1;
-    }
-
-    z += tokenLen;
-  }
-
-  // If the statement didn't end with SEMI, synthesize one
-  if (lastTokenType != TK_SEMI) {
-    SynqToken semiToken = {NULL, 0, TK_SEMI};
-    synq_sqlite3Parser(parser, TK_SEMI, semiToken, &parseCtx);
-  }
-
-  // Send end-of-input (token 0)
-  SynqToken endToken = {NULL, 0, 0};
-  synq_sqlite3Parser(parser, 0, endToken, &parseCtx);
-
-  // Flush any pending list accumulator before reading the AST
-  synq_ast_list_flush(&astCtx);
-
-  // Check for syntax error
-  if (g_syntax_error) {
-    fprintf(stderr, "Error: Incomplete statement\n");
-    synq_sqlite3ParserFree(parser, free);
-    synq_vec_free(&tokenList);
-    synq_ast_context_cleanup(&astCtx);
-
+  // Create parser with token collection enabled
+  SyntaqliteParserConfig config = {.collect_tokens = 1};
+  SyntaqliteParser *parser = syntaqlite_parser_create(sql, (uint32_t)len, &config);
+  if (!parser) {
+    fprintf(stderr, "Error: Failed to allocate parser\n");
     free(sql);
     return 1;
   }
 
-  // Get root from parse context
-  uint32_t root_id = parseCtx.root;
+  // Parse and format each statement
+  SyntaqliteParseResult result;
+  while ((result = syntaqlite_parser_next(parser)).root != SYNQ_NULL_NODE) {
+    if (result.error) {
+      fprintf(stderr, "Error: %s\n", result.error_msg ? result.error_msg : "Parse error");
+      syntaqlite_parser_destroy(parser);
+      free(sql);
+      return 1;
+    }
 
-  if (root_id == SYNQ_NULL_NODE) {
-    synq_sqlite3ParserFree(parser, free);
-    synq_vec_free(&tokenList);
-    synq_ast_context_cleanup(&astCtx);
+    SynqFmtOptions fmtOpts = {.target_width = width, .indent_width = 2};
+    SynqAstContext *astCtx = syntaqlite_parser_ast_context(parser);
+    SynqTokenList *tokenList = syntaqlite_parser_token_list(parser);
+    char *formatted;
+    if (debug_ir) {
+      formatted = synq_format_debug_ir(astCtx, result.root, sql, tokenList, &fmtOpts);
+    } else {
+      formatted = synq_format(astCtx, result.root, sql, tokenList, &fmtOpts);
+    }
+    if (formatted) {
+      fputs(formatted, stdout);
+      free(formatted);
+    }
+  }
 
+  if (result.error) {
+    fprintf(stderr, "Error: %s\n", result.error_msg ? result.error_msg : "Parse error");
+    syntaqlite_parser_destroy(parser);
     free(sql);
-    return 0;
-  }
-
-  // Format and print
-  SynqFmtOptions fmtOpts = {.target_width = width, .indent_width = 2};
-  char *formatted;
-  if (debug_ir) {
-    formatted = synq_format_debug_ir(&astCtx, root_id, sql, &tokenList, &fmtOpts);
-  } else {
-    formatted = synq_format(&astCtx, root_id, sql, &tokenList, &fmtOpts);
-  }
-  if (formatted) {
-    fputs(formatted, stdout);
-    free(formatted);
+    return 1;
   }
 
   // Cleanup
-  synq_sqlite3ParserFree(parser, free);
-  synq_vec_free(&tokenList);
-  synq_ast_context_cleanup(&astCtx);
+  syntaqlite_parser_destroy(parser);
   free(sql);
 
   return 0;

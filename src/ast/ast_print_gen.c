@@ -4,7 +4,7 @@
 // Generated from data/ast_nodes.py - DO NOT EDIT
 // Regenerate with: python3 python/tools/generate_ast.py
 
-#include "src/ast/ast_nodes.h"
+#include "src/ast/ast_nodes_gen.h"
 #include "src/ast/ast_print.h"
 
 static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,

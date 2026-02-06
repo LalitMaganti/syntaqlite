@@ -47,10 +47,10 @@
 #endif
 
 /************ Begin %include sections from the grammar ************************/
-#include "src/synq_sqlite_defs.h"
-#include "src/sqlite_tokens.h"
+#include "src/common/synq_sqlite_defs.h"
+#include "syntaqlite/sqlite_tokens_gen.h"
 #include "src/ast/ast_base.h"
-#include "src/ast/ast_builder.h"
+#include "src/ast/ast_builder_gen.h"
 
 #define YYNOERRORRECOVERY 1
 #define YYPARSEFREENEVERNULL 1
@@ -5581,18 +5581,24 @@ static YYACTIONTYPE yy_reduce(
       case 347: /* ecmd ::= SEMI */
 {
     yymsp[0].minor.yy391 = SYNQ_NULL_NODE;
+    pCtx->stmt_completed = 1;
 }
         break;
       case 348: /* ecmd ::= cmdx SEMI */
-      case 378: /* sclp ::= selcollist COMMA */ yytestcase(yyruleno==378);
 {
     yylhsminor.yy391 = yymsp[-1].minor.yy391;
+    pCtx->root = yymsp[-1].minor.yy391;
+    synq_ast_list_flush(pCtx->astCtx);
+    pCtx->stmt_completed = 1;
 }
   yymsp[-1].minor.yy391 = yylhsminor.yy391;
         break;
       case 349: /* ecmd ::= explain cmdx SEMI */
 {
     yylhsminor.yy391 = synq_ast_explain_stmt(pCtx->astCtx, (SynqExplainMode)(yymsp[-2].minor.yy144 - 1), yymsp[-1].minor.yy391);
+    pCtx->root = yylhsminor.yy391;
+    synq_ast_list_flush(pCtx->astCtx);
+    pCtx->stmt_completed = 1;
 }
   yymsp[-2].minor.yy391 = yylhsminor.yy391;
         break;
@@ -5752,6 +5758,12 @@ static YYACTIONTYPE yy_reduce(
     yylhsminor.yy144 = yymsp[0].minor.yy144;
 }
   yymsp[0].minor.yy144 = yylhsminor.yy144;
+        break;
+      case 378: /* sclp ::= selcollist COMMA */
+{
+    yylhsminor.yy391 = yymsp[-1].minor.yy391;
+}
+  yymsp[-1].minor.yy391 = yylhsminor.yy391;
         break;
       case 396: /* database_kw_opt ::= DATABASE */
 {

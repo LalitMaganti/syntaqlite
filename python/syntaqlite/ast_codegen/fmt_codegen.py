@@ -411,7 +411,7 @@ def generate_fmt_c(
     lines.append("")
     lines.append('#include "src/fmt/fmt_helpers.h"')
     lines.append("")
-    lines.append('#include "src/ast/ast_nodes.h"')
+    lines.append('#include "src/ast/ast_nodes_gen.h"')
     lines.append("")
 
     # Compile all node formatters

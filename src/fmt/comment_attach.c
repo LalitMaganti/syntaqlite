@@ -16,7 +16,7 @@
 
 #include "src/fmt/comment_attach.h"
 
-#include "src/sqlite_tokens.h"
+#include "syntaqlite/sqlite_tokens_gen.h"
 
 #include <stdlib.h>
 

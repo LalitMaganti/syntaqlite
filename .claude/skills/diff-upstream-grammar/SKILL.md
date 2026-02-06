@@ -43,7 +43,6 @@ Regenerate extracted code and verify:
 ```bash
 python3 python/tools/extract_sqlite.py --output-dir src
 tools/dev/ninja -C out/mac_debug
-out/mac_debug/syntaqlite_unittests
 tools/tests/run-ast-diff-tests --binary out/mac_debug/ast_test
 ```
 

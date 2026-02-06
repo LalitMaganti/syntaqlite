@@ -12,7 +12,7 @@
 #include "src/fmt/comment_attach.h"
 #include "src/fmt/doc.h"
 #include "src/fmt/fmt_options.h"
-#include "src/token_list.h"
+#include "src/fmt/token_list.h"
 
 #include <string.h>
 

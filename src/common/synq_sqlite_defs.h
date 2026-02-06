@@ -4,8 +4,8 @@
 // SQLite compatibility definitions for syntaqlite.
 // Provides type aliases, macros, and structures needed by tokenizer and parser.
 
-#ifndef SYNQ_SRC_SQLITE_DEFS_H
-#define SYNQ_SRC_SQLITE_DEFS_H
+#ifndef SYNQ_SRC_COMMON_SYNQ_SQLITE_DEFS_H
+#define SYNQ_SRC_COMMON_SYNQ_SQLITE_DEFS_H
 
 #include <assert.h>
 #include <stdint.h>
@@ -60,6 +60,7 @@ struct SynqParseContext {
   const char *zSql;                                /* Original SQL text */
   u32 root;                                        /* Root AST node ID */
   struct SynqTokenList *token_list;           /* Optional token collector */
+  int stmt_completed;                         /* Set by ecmd reduction */
 };
 
 /*
@@ -74,4 +75,4 @@ struct SynqParseContext {
 #define UNUSED_PARAMETER(x) (void)(x)
 #endif
 
-#endif /* SYNQ_SRC_SQLITE_DEFS_H */
+#endif /* SYNQ_SRC_COMMON_SYNQ_SQLITE_DEFS_H */

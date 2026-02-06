@@ -174,6 +174,9 @@ vinto(A) ::= . {
 
 ecmd(A) ::= explain(E) cmdx(B) SEMI. {
     A = synq_ast_explain_stmt(pCtx->astCtx, (SynqExplainMode)(E - 1), B);
+    pCtx->root = A;
+    synq_ast_list_flush(pCtx->astCtx);
+    pCtx->stmt_completed = 1;
 }
 
 explain(A) ::= EXPLAIN. {

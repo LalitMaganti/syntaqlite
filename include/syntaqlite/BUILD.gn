@@ -1,0 +1,10 @@
+# Public API headers for syntaqlite.
+
+source_set("headers") {
+  sources = [
+    "ast_nodes_gen.h",
+    "sqlite_tokens_gen.h",
+    "tokenizer.h",
+    "parser.h",
+  ]
+}

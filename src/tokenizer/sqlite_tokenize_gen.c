@@ -12,8 +12,8 @@
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_sqlite.py
 */
 
-#include "src/synq_sqlite_defs.h"
-#include "src/sqlite_charmap.h"
+#include "src/common/synq_sqlite_defs.h"
+#include "src/tokenizer/sqlite_charmap_gen.h"
 
 /*
 ** Synq tokenizer injection support.
@@ -25,7 +25,7 @@
 #endif
 
 #ifndef _SYNQ_EXTERNAL_KEYWORDHASH
-#include "src/sqlite_tokens.h"
+#include "syntaqlite/sqlite_tokens_gen.h"
 /* Hash score: 231 */
 /* zKWText[] encodes 1007 bytes of keyword text in 667 bytes */
 /*   REINDEXEDESCAPEACHECKEYBEFOREIGNOREGEXPLAINSTEADDATABASELECT       */

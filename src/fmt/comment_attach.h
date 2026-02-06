@@ -8,8 +8,8 @@
 #define SYNQ_SRC_FMT_COMMENT_ATTACH_H
 
 #include "src/ast/ast_base.h"
-#include "src/ast/ast_nodes.h"
-#include "src/token_list.h"
+#include "src/ast/ast_nodes_gen.h"
+#include "src/fmt/token_list.h"
 
 #include <stdint.h>
 

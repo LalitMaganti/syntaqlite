@@ -413,10 +413,10 @@ def _generate_grammar_file(
 
     # Include section with our defs and critical defines
     parts.append(f"""%include {{
-#include "src/synq_sqlite_defs.h"
-#include "src/sqlite_tokens.h"
+#include "src/common/synq_sqlite_defs.h"
+#include "syntaqlite/sqlite_tokens_gen.h"
 #include "src/ast/ast_base.h"
-#include "src/ast/ast_builder.h"
+#include "src/ast/ast_builder_gen.h"
 
 #define YYNOERRORRECOVERY 1
 #define YYPARSEFREENEVERNULL 1

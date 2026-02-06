@@ -26,7 +26,6 @@ tools/dev/setup-all-configs --config mac_debug  # Generate build config
 ```bash
 tools/dev/ninja -C out/mac_debug                # Build all targets (single developer)
 tools/dev/build-lock -C out/mac_debug           # Build with file lock (multi-agent)
-out/mac_debug/syntaqlite_unittests              # Run C++ unit tests
 ```
 
 ### Build Configurations
@@ -40,12 +39,6 @@ tools/dev/gn gen out/mac_asan --args="is_debug=true is_asan=true"
 ```
 
 ## Testing
-
-### C++ Unit Tests (GoogleTest)
-```bash
-out/mac_debug/syntaqlite_unittests              # Run all tests
-out/mac_debug/syntaqlite_unittests --gtest_filter="ClassName.test_name"
-```
 
 ### AST Diff Tests (Python)
 ```bash

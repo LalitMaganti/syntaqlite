@@ -1,0 +1,13 @@
+# SQLite tokenizer (extracted so :fmt can use it for comment injection).
+# Regenerate with: python3 python/tools/extract_sqlite.py
+
+source_set("tokenizer") {
+  sources = [
+    "sqlite_charmap_gen.h",
+    "sqlite_tokenize_gen.c",
+  ]
+  deps = [
+    "../common",
+  ]
+  configs += [ "..:lemon_generated" ]
+}

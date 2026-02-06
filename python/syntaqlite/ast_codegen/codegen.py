@@ -99,75 +99,61 @@ def _emit_func_signature(lines: list[str], func_name: str, params: list[str], en
         lines.append(f"uint32_t {func_name}({params_str}){end}")
 
 
-def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
-                         flags_defs: list[FlagsDef], output: Path) -> None:
-    """Generate src/ast/ast_nodes.h with structs, union, arena types."""
-    flags_lookup = {f.name: f for f in flags_defs}
-    lines = []
-
-    # Header
-    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
-    lines.append("// Licensed under the Apache License, Version 2.0.")
+def _emit_enums(lines: list[str], enum_defs: list[EnumDef]) -> None:
+    """Emit enum typedefs."""
+    if not enum_defs:
+        return
+    lines.append("// ============ Value Enums ============")
     lines.append("")
-    lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
-    lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
-    lines.append("")
-    lines.append("#ifndef SYNQ_AST_NODES_H")
-    lines.append("#define SYNQ_AST_NODES_H")
-    lines.append("")
-    lines.append("// Base types (SynqSourceSpan, SynqArena, etc.)")
-    lines.append('#include "src/ast/ast_base.h"')
-    lines.append("")
-    lines.append("#ifdef __cplusplus")
-    lines.append('extern "C" {')
-    lines.append("#endif")
-    lines.append("")
-
-    # User-defined enums
-    if enum_defs:
-        lines.append("// ============ Value Enums ============")
+    for enum in enum_defs:
+        prefix = _enum_prefix(enum.name)
+        lines.append(f"typedef enum {{")
+        for i, value in enumerate(enum.values):
+            lines.append(f"    {prefix}_{value} = {i},")
+        lines.append(f"}} Synq{enum.name};")
         lines.append("")
-        for enum in enum_defs:
-            prefix = _enum_prefix(enum.name)
-            lines.append(f"typedef enum {{")
-            for i, value in enumerate(enum.values):
-                lines.append(f"    {prefix}_{value} = {i},")
-            lines.append(f"}} Synq{enum.name};")
-            lines.append("")
 
-        # Enum name string arrays
-        for enum in enum_defs:
-            var_name = f"synq_{pascal_to_snake(enum.name)}_names"
-            lines.append(f"static const char* const {var_name}[] = {{")
-            for value in enum.values:
-                lines.append(f'    "{value}",')
-            lines.append("};")
-            lines.append("")
 
-    # Flags union types
-    if flags_defs:
-        lines.append("// ============ Flags Types ============")
+def _emit_enum_name_arrays(lines: list[str], enum_defs: list[EnumDef]) -> None:
+    """Emit static name string arrays for enums (internal only)."""
+    if not enum_defs:
+        return
+    for enum in enum_defs:
+        var_name = f"synq_{pascal_to_snake(enum.name)}_names"
+        lines.append(f"static const char* const {var_name}[] = {{")
+        for value in enum.values:
+            lines.append(f'    "{value}",')
+        lines.append("};")
         lines.append("")
-        for fdef in flags_defs:
-            type_name = _flags_type_name(fdef.name)
-            lines.append(f"typedef union {type_name} {{")
-            lines.append("    uint8_t raw;")
-            lines.append("    struct {")
-            # Sort by bit value and insert padding for gaps
-            sorted_flags = sorted(fdef.flags.items(), key=lambda x: x[1])
-            next_bit = 0
-            for name, value in sorted_flags:
-                bit_pos = value.bit_length() - 1
-                assert value == (1 << bit_pos), f"Flag {name}=0x{value:02x} must be a single bit"
-                if bit_pos > next_bit:
-                    lines.append(f"        uint8_t : {bit_pos - next_bit};")
-                lines.append(f"        uint8_t {name.lower()} : 1;")
-                next_bit = bit_pos + 1
-            lines.append("    };")
-            lines.append(f"}} {type_name};")
-            lines.append("")
 
-    # Node tag enum
+
+def _emit_flags(lines: list[str], flags_defs: list[FlagsDef]) -> None:
+    """Emit flags union typedefs."""
+    if not flags_defs:
+        return
+    lines.append("// ============ Flags Types ============")
+    lines.append("")
+    for fdef in flags_defs:
+        type_name = _flags_type_name(fdef.name)
+        lines.append(f"typedef union {type_name} {{")
+        lines.append("    uint8_t raw;")
+        lines.append("    struct {")
+        sorted_flags = sorted(fdef.flags.items(), key=lambda x: x[1])
+        next_bit = 0
+        for name, value in sorted_flags:
+            bit_pos = value.bit_length() - 1
+            assert value == (1 << bit_pos), f"Flag {name}=0x{value:02x} must be a single bit"
+            if bit_pos > next_bit:
+                lines.append(f"        uint8_t : {bit_pos - next_bit};")
+            lines.append(f"        uint8_t {name.lower()} : 1;")
+            next_bit = bit_pos + 1
+        lines.append("    };")
+        lines.append(f"}} {type_name};")
+        lines.append("")
+
+
+def _emit_node_tags(lines: list[str], node_defs: list[AnyNodeDef]) -> None:
+    """Emit node tag enum."""
     lines.append("// ============ Node Tags ============")
     lines.append("")
     lines.append("typedef enum {")
@@ -178,27 +164,22 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("} SynqNodeTag;")
     lines.append("")
 
-    # Build name sets for type lookups
-    enum_names = {e.name for e in enum_defs}
-    flags_names = set(flags_lookup.keys())
 
-    # Node structs
+def _emit_node_structs(lines: list[str], node_defs: list[AnyNodeDef],
+                       enum_names: set[str], flags_names: set[str]) -> None:
+    """Emit node struct typedefs."""
     lines.append("// ============ Node Structs (variable sizes) ============")
     lines.append("")
-
     for node in node_defs:
         if isinstance(node, NodeDef):
             struct_name = _struct_name(node.name)
             lines.append(f"typedef struct {struct_name} {{")
             lines.append("    uint8_t tag;")
-
             for field_name, field_type in node.fields.items():
                 c_type = _field_c_type(field_type, enum_names, flags_names)
                 lines.append(f"    {c_type} {field_name};")
-
             lines.append(f"}} {struct_name};")
             lines.append("")
-
         elif isinstance(node, ListDef):
             struct_name = _struct_name(node.name)
             lines.append(f"// List of {node.child_type}")
@@ -210,7 +191,9 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
             lines.append(f"}} {struct_name};")
             lines.append("")
 
-    # Union for ergonomic access
+
+def _emit_node_union(lines: list[str], node_defs: list[AnyNodeDef]) -> None:
+    """Emit the SynqNode union."""
     lines.append("// ============ Node Union ============")
     lines.append("")
     lines.append("typedef union SynqNode {")
@@ -222,7 +205,106 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("} SynqNode;")
     lines.append("")
 
-    # Node access
+
+def generate_public_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
+                                flags_defs: list[FlagsDef], output: Path) -> None:
+    """Generate include/syntaqlite/ast_nodes_gen.h (public header).
+
+    Self-contained header with only stdint.h/stddef.h dependencies.
+    Contains: SYNQ_NULL_NODE, SynqSourceSpan, enums, flags, node structs, union.
+    """
+    flags_lookup = {f.name: f for f in flags_defs}
+    enum_names = {e.name for e in enum_defs}
+    flags_names = set(flags_lookup.keys())
+    lines = []
+
+    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
+    lines.append("// Licensed under the Apache License, Version 2.0.")
+    lines.append("")
+    lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
+    lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
+    lines.append("")
+    lines.append("#ifndef SYNTAQLITE_AST_NODES_GEN_H")
+    lines.append("#define SYNTAQLITE_AST_NODES_GEN_H")
+    lines.append("")
+    lines.append("#ifdef SYNTAQLITE_CUSTOM_NODES")
+    lines.append("#include SYNTAQLITE_CUSTOM_NODES")
+    lines.append("#else")
+    lines.append("")
+    lines.append("#include <stddef.h>")
+    lines.append("#include <stdint.h>")
+    lines.append("")
+    lines.append("#ifdef __cplusplus")
+    lines.append('extern "C" {')
+    lines.append("#endif")
+    lines.append("")
+
+    # SYNQ_NULL_NODE
+    lines.append("// Null node ID (used for nullable fields)")
+    lines.append("#define SYNQ_NULL_NODE 0xFFFFFFFFu")
+    lines.append("")
+
+    # SynqSourceSpan
+    lines.append("// Source location span (offset + length into source text)")
+    lines.append("typedef struct SynqSourceSpan {")
+    lines.append("    uint32_t offset;")
+    lines.append("    uint16_t length;")
+    lines.append("} SynqSourceSpan;")
+    lines.append("")
+
+    _emit_enums(lines, enum_defs)
+    _emit_flags(lines, flags_defs)
+    _emit_node_tags(lines, node_defs)
+    _emit_node_structs(lines, node_defs, enum_names, flags_names)
+    _emit_node_union(lines, node_defs)
+
+    lines.append("#ifdef __cplusplus")
+    lines.append("}")
+    lines.append("#endif")
+    lines.append("")
+    lines.append("#endif /* SYNTAQLITE_CUSTOM_NODES */")
+    lines.append("")
+    lines.append("#endif  // SYNTAQLITE_AST_NODES_GEN_H")
+
+    output.write_text("\n".join(lines) + "\n")
+
+
+def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
+                         flags_defs: list[FlagsDef], output: Path) -> None:
+    """Generate src/ast/ast_nodes_gen.h (internal header).
+
+    Thin wrapper that re-exports the public header plus internal additions:
+    - _names[] string arrays (debug/print)
+    - synq_ast_node() inline (needs SynqArena)
+    - AST_NODE macro
+    - synq_node_base_size() declaration
+    """
+    lines = []
+
+    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
+    lines.append("// Licensed under the Apache License, Version 2.0.")
+    lines.append("")
+    lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
+    lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
+    lines.append("")
+    lines.append("#ifndef SYNQ_SRC_AST_AST_NODES_GEN_H")
+    lines.append("#define SYNQ_SRC_AST_AST_NODES_GEN_H")
+    lines.append("")
+    lines.append("// Public types (enums, node structs, union)")
+    lines.append('#include "syntaqlite/ast_nodes_gen.h"')
+    lines.append("")
+    lines.append("// Internal dependencies (SynqArena, etc.)")
+    lines.append('#include "src/ast/ast_base.h"')
+    lines.append("")
+    lines.append("#ifdef __cplusplus")
+    lines.append('extern "C" {')
+    lines.append("#endif")
+    lines.append("")
+
+    # Enum name string arrays (internal only - causes static duplication in public header)
+    _emit_enum_name_arrays(lines, enum_defs)
+
+    # Node access (needs SynqArena from ast_base.h)
     lines.append("// Access node by ID")
     lines.append("inline SynqNode* synq_ast_node(SynqArena *ast, uint32_t id) {")
     lines.append("    if (id == SYNQ_NULL_NODE) return NULL;")
@@ -243,7 +325,7 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("}")
     lines.append("#endif")
     lines.append("")
-    lines.append("#endif  // SYNQ_AST_NODES_H")
+    lines.append("#endif  // SYNQ_SRC_AST_AST_NODES_GEN_H")
 
     output.write_text("\n".join(lines) + "\n")
 
@@ -262,10 +344,10 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
     lines.append("")
-    lines.append("#ifndef SYNQ_AST_BUILDER_H")
-    lines.append("#define SYNQ_AST_BUILDER_H")
+    lines.append("#ifndef SYNQ_SRC_AST_AST_BUILDER_GEN_H")
+    lines.append("#define SYNQ_SRC_AST_AST_BUILDER_GEN_H")
     lines.append("")
-    lines.append('#include "src/ast/ast_nodes.h"')
+    lines.append('#include "src/ast/ast_nodes_gen.h"')
     lines.append("")
     lines.append("#ifdef __cplusplus")
     lines.append('extern "C" {')
@@ -299,7 +381,7 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines.append("}")
     lines.append("#endif")
     lines.append("")
-    lines.append("#endif  // SYNQ_AST_BUILDER_H")
+    lines.append("#endif  // SYNQ_SRC_AST_AST_BUILDER_GEN_H")
 
     output.write_text("\n".join(lines) + "\n")
 
@@ -318,7 +400,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
     lines.append("")
-    lines.append('#include "src/ast/ast_builder.h"')
+    lines.append('#include "src/ast/ast_builder_gen.h"')
     lines.append("")
     lines.append("#include <stdlib.h>")
     lines.append("#include <string.h>")
@@ -442,7 +524,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
     lines.append("")
-    lines.append('#include "src/ast/ast_nodes.h"')
+    lines.append('#include "src/ast/ast_nodes_gen.h"')
     lines.append('#include "src/ast/ast_print.h"')
     lines.append("")
 
@@ -549,7 +631,8 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
 
 
 def generate_all(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef], output_dir: Path,
-                  flags_defs: list[FlagsDef] | None = None) -> None:
+                  flags_defs: list[FlagsDef] | None = None,
+                  public_header_dir: Path | None = None) -> None:
     """Generate all AST C code files.
 
     Args:
@@ -557,13 +640,21 @@ def generate_all(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef], output_d
         enum_defs: List of enum definitions.
         output_dir: Directory to write output files (typically src/ast/).
         flags_defs: List of flags definitions for bitfield unions.
+        public_header_dir: Directory for public headers (typically include/syntaqlite/).
+            If provided, generates the public ast_nodes_gen.h there.
     """
     if flags_defs is None:
         flags_defs = []
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    generate_ast_nodes_h(node_defs, enum_defs, flags_defs, output_dir / "ast_nodes.h")
-    generate_ast_builder_h(node_defs, enum_defs, flags_defs, output_dir / "ast_builder.h")
-    generate_ast_builder_c(node_defs, enum_defs, flags_defs, output_dir / "ast_builder.c")
+    # Generate public header if directory is provided
+    if public_header_dir is not None:
+        public_header_dir.mkdir(parents=True, exist_ok=True)
+        generate_public_ast_nodes_h(node_defs, enum_defs, flags_defs,
+                                    public_header_dir / "ast_nodes_gen.h")
+
+    generate_ast_nodes_h(node_defs, enum_defs, flags_defs, output_dir / "ast_nodes_gen.h")
+    generate_ast_builder_h(node_defs, enum_defs, flags_defs, output_dir / "ast_builder_gen.h")
+    generate_ast_builder_c(node_defs, enum_defs, flags_defs, output_dir / "ast_builder_gen.c")
     # ast_print.h is manually maintained
-    generate_ast_print_c(node_defs, enum_defs, flags_defs, output_dir / "ast_print.c")
+    generate_ast_print_c(node_defs, enum_defs, flags_defs, output_dir / "ast_print_gen.c")

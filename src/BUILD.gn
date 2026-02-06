@@ -9,39 +9,6 @@ config("lemon_generated") {
   ]
 }
 
-# SQLite tokenizer (extracted so :fmt can use it for comment injection).
-source_set("tokenizer") {
-  sources = [
-    "sqlite_charmap.h",
-    "sqlite_tokenize.c",
-    "sqlite_tokens.h",
-    "synq_sqlite_defs.h",
-  ]
-  configs += [ ":lemon_generated" ]
-}
-
-source_set("sqlite") {
-  sources = [
-    # Generated files
-    "sqlite_parse.c",
-  ]
-  deps = [
-    ":tokenizer",
-  ]
-  configs += [ ":lemon_generated" ]
-}
-
-# Token list for collecting raw tokens during parsing.
-source_set("token_list") {
-  sources = [
-    "token_list.c",
-    "token_list.h",
-  ]
-  deps = [
-    "base:vec",
-  ]
-}
-
 # AST node types, builder functions, and printer.
 # Regenerate with: python3 python/tools/extract_sqlite.py
 source_set("ast") {
@@ -51,16 +18,47 @@ source_set("ast") {
     "ast/ast_base.h",
 
     # Generated files
-    "ast/ast_builder.c",
-    "ast/ast_builder.h",
-    "ast/ast_nodes.h",
-    "ast/ast_print.c",
+    "ast/ast_builder_gen.c",
+    "ast/ast_builder_gen.h",
+    "ast/ast_nodes_gen.h",
+    "ast/ast_print_gen.c",
     "ast/ast_print.h",
   ]
   deps = [
     "base:arena",
     "base:vec",
+    "common",
   ]
+}
+
+# Raw token list (shared between parser API and formatter).
+source_set("token_list") {
+  sources = [
+    "fmt/token_list.c",
+    "fmt/token_list.h",
+  ]
+  deps = [
+    "base:vec",
+    "../include/syntaqlite:headers",
+  ]
+}
+
+# Parser streaming API implementation.
+source_set("parser_api") {
+  sources = [
+    "parser_api.c",
+    "parser_internal.h",
+    "tokenizer_api.c",
+  ]
+  deps = [
+    "common",
+    "../include/syntaqlite:headers",
+    ":ast",
+    ":token_list",
+    "parser",
+    "tokenizer",
+  ]
+  configs += [ ":lemon_generated" ]
 }
 
 # Document model, layout engine, and formatter.
@@ -72,7 +70,7 @@ source_set("fmt") {
     "fmt/doc.h",
     "fmt/doc_layout.c",
     "fmt/doc_layout.h",
-    "fmt/fmt.c",
+    "fmt/fmt_gen.c",
     "fmt/fmt.h",
     "fmt/fmt_helpers.c",
     "fmt/fmt_helpers.h",
@@ -81,9 +79,10 @@ source_set("fmt") {
   deps = [
     "base:arena",
     "base:vec",
+    "common",
     ":ast",
     ":token_list",
-    ":tokenizer",
+    "tokenizer",
   ]
 }
 
@@ -95,8 +94,9 @@ executable("ast_test") {
   ]
   deps = [
     "base:getopt",
+    "../include/syntaqlite:headers",
     ":ast",
-    ":sqlite",
+    ":parser_api",
   ]
   if (is_asan) {
     deps += [ "//gn/standalone:asan_defaults" ]
@@ -112,10 +112,10 @@ executable("fmt_test") {
   ]
   deps = [
     "base:getopt",
+    "../include/syntaqlite:headers",
     ":ast",
     ":fmt",
-    ":sqlite",
-    ":token_list",
+    ":parser_api",
   ]
   if (is_asan) {
     deps += [ "//gn/standalone:asan_defaults" ]

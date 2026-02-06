@@ -193,7 +193,7 @@ Files: * except those files noted below
 
 ------------------
 
-Files: src/sqlite_parse.c, src/sqlite_tokenize.c, src/sqlite_tokens.h, src/sqlite_charmap.h
+Files: src/parser/sqlite_parse.c, src/tokenizer/sqlite_tokenize.c, src/common/sqlite_tokens.h, src/tokenizer/sqlite_charmap.h
 
 The author disclaims copyright to this source code. In place of a legal notice, here is a blessing:
 

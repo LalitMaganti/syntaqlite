@@ -3,7 +3,7 @@
 
 // Token list implementation.
 
-#include "src/token_list.h"
+#include "src/fmt/token_list.h"
 
 void synq_token_list_append(SynqTokenList *list, uint32_t offset,
                                   uint16_t length, uint16_t type) {

@@ -10,8 +10,12 @@
 ** Token definitions from SQLite's parse.y via Lemon.
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_sqlite.py
 */
-#ifndef SYNQ_SRC_SQLITE_TOKENS_H
-#define SYNQ_SRC_SQLITE_TOKENS_H
+#ifndef SYNTAQLITE_SQLITE_TOKENS_GEN_H
+#define SYNTAQLITE_SQLITE_TOKENS_GEN_H
+
+#ifdef SYNTAQLITE_CUSTOM_TOKENS
+#include SYNTAQLITE_CUSTOM_TOKENS
+#else
 
 #define TK_INDEX                            1
 #define TK_ALTER                            2
@@ -200,4 +204,6 @@
 #define TK_COMMENT                        185
 #define TK_ILLEGAL                        186
 
-#endif /* SYNQ_SRC_SQLITE_TOKENS_H */
+#endif /* SYNTAQLITE_CUSTOM_TOKENS */
+
+#endif /* SYNTAQLITE_SQLITE_TOKENS_GEN_H */

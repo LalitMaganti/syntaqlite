@@ -4,10 +4,10 @@
 // Generated from data/ast_nodes.py - DO NOT EDIT
 // Regenerate with: python3 python/tools/generate_ast.py
 
-#ifndef SYNQ_AST_BUILDER_H
-#define SYNQ_AST_BUILDER_H
+#ifndef SYNQ_SRC_AST_AST_BUILDER_GEN_H
+#define SYNQ_SRC_AST_AST_BUILDER_GEN_H
 
-#include "src/ast/ast_nodes.h"
+#include "src/ast/ast_nodes_gen.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -458,4 +458,4 @@ uint32_t synq_ast_create_virtual_table_stmt(
 }
 #endif
 
-#endif  // SYNQ_AST_BUILDER_H
+#endif  // SYNQ_SRC_AST_AST_BUILDER_GEN_H

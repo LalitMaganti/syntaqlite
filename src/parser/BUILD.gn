@@ -1,0 +1,13 @@
+# SQLite parser (generated from parse.y via Lemon).
+# Regenerate with: python3 python/tools/extract_sqlite.py
+
+source_set("parser") {
+  sources = [
+    "sqlite_parse_gen.c",
+  ]
+  deps = [
+    "../common",
+    "../tokenizer",
+  ]
+  configs += [ "..:lemon_generated" ]
+}

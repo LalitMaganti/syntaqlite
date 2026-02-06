@@ -32,10 +32,14 @@ cmdlist(A) ::= ecmd(B). {
 
 ecmd(A) ::= SEMI. {
     A = SYNQ_NULL_NODE;
+    pCtx->stmt_completed = 1;
 }
 
 ecmd(A) ::= cmdx(B) SEMI. {
     A = B;
+    pCtx->root = B;
+    synq_ast_list_flush(pCtx->astCtx);
+    pCtx->stmt_completed = 1;
 }
 
 cmdx(A) ::= cmd(B). {

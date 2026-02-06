@@ -8,7 +8,7 @@
 
 #include "src/ast/ast_base.h"
 #include "src/fmt/fmt_options.h"
-#include "src/token_list.h"
+#include "src/fmt/token_list.h"
 
 #include <stdint.h>
 
