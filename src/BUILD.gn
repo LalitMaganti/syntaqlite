@@ -51,5 +51,8 @@ executable("ast_test") {
     ":ast",
     ":sqlite",
   ]
+  if (is_asan) {
+    deps += [ "//gn/standalone:asan_defaults" ]
+  }
   configs += [ ":lemon_generated" ]
 }

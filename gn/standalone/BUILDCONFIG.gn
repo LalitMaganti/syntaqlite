@@ -8,6 +8,8 @@ declare_args() {
   is_msan = false
   is_ubsan = false
   cc_wrapper = ""
+  cc = "clang"
+  cxx = "clang++"
 }
 
 is_linux = current_os == "linux"

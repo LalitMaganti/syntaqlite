@@ -75,10 +75,19 @@ config("visibility_hidden") {
   }
 }
 
+source_set("asan_defaults") {
+  sources = [ "asan_defaults.c" ]
+  configs -= [
+    "//gn/standalone:default",
+    "//gn/standalone:visibility_hidden",
+  ]
+  cflags = [ "-fsanitize=address" ]
+}
+
 toolchain("clang") {
   tool("cc") {
     depfile = "{{output}}.d"
-    command = "$cc_wrapper clang -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
+    command = "$cc_wrapper $cc -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
     depsformat = "gcc"
     description = "CC {{output}}"
     outputs =
@@ -87,7 +96,7 @@ toolchain("clang") {
 
   tool("cxx") {
     depfile = "{{output}}.d"
-    command = "$cc_wrapper clang++ -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
+    command = "$cc_wrapper $cxx -MMD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
     depsformat = "gcc"
     description = "CXX {{output}}"
     outputs =
@@ -104,7 +113,7 @@ toolchain("clang") {
 
   tool("solink") {
     outfile = "{{root_out_dir}}/{{target_output_name}}{{output_extension}}"
-    command = "clang++ -shared {{ldflags}} -o $outfile {{inputs}} {{libs}}"
+    command = "$cxx -shared {{ldflags}} -o $outfile {{inputs}} {{libs}}"
     description = "SOLINK {{output}}"
     outputs = [ outfile ]
     default_output_extension = ".so"
@@ -113,7 +122,7 @@ toolchain("clang") {
 
   tool("link") {
     outfile = "{{root_out_dir}}/{{target_output_name}}{{output_extension}}"
-    command = "clang++ {{ldflags}} -o $outfile {{inputs}} {{libs}}"
+    command = "$cxx {{ldflags}} -o $outfile {{inputs}} {{libs}}"
     description = "LINK {{output}}"
     outputs = [ outfile ]
   }
