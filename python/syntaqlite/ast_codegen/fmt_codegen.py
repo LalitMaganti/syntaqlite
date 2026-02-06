@@ -9,6 +9,7 @@ functions, then emits the format_node dispatcher and public API.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 from .defs import (
@@ -60,6 +61,13 @@ def _c_str(s: str) -> str:
     return '"' + s.replace('\\', '\\\\').replace('"', '\\"') + '"'
 
 
+@dataclass
+class _Result:
+    """Result of compiling a FmtDoc node: C variable name + nullability."""
+    var: str
+    nullable: bool
+
+
 class _Compiler:
     """Compiles a FmtDoc tree into C statements that build a doc tree."""
 
@@ -67,6 +75,7 @@ class _Compiler:
         self.node_def = node_def
         self.var_counter = 0
         self.lines: list[str] = []
+        self.needs_concat_nullable = False
 
     def _var(self, prefix: str = "d") -> str:
         self.var_counter += 1
@@ -76,90 +85,100 @@ class _Compiler:
         """Get C accessor for a field."""
         return f"node->{field}"
 
-    def compile(self, doc: FmtDoc, indent: str = "    ") -> str:
-        """Compile a FmtDoc and return the C variable name holding the doc ID."""
+    def compile(self, doc: FmtDoc, indent: str = "    ") -> _Result:
+        """Compile a FmtDoc and return a _Result with C variable name and nullability."""
         ind = indent
-        inner_ind = indent + "    "
 
         if isinstance(doc, FmtKw):
             v = self._var("kw")
             self.lines.append(f"{ind}uint32_t {v} = kw(ctx, {_c_str(doc.text)});")
-            return v
+            return _Result(v, False)
 
         if isinstance(doc, FmtSpan):
             v = self._var("sp")
             self.lines.append(f"{ind}uint32_t {v} = span_text(ctx, {self._accessor(doc.field)});")
-            return v
+            return _Result(v, True)
 
         if isinstance(doc, FmtChild):
             if doc.field == "_item":
                 v = self._var("item")
                 self.lines.append(f"{ind}uint32_t {v} = format_node(ctx, _child_id);")
-                return v
+                return _Result(v, True)
             v = self._var("ch")
             self.lines.append(f"{ind}uint32_t {v} = format_node(ctx, {self._accessor(doc.field)});")
-            return v
+            return _Result(v, True)
 
         if isinstance(doc, FmtLine):
             v = self._var("ln")
             self.lines.append(f"{ind}uint32_t {v} = doc_line(&ctx->docs);")
-            return v
+            return _Result(v, False)
 
         if isinstance(doc, FmtSoftline):
             v = self._var("sl")
             self.lines.append(f"{ind}uint32_t {v} = doc_softline(&ctx->docs);")
-            return v
+            return _Result(v, False)
 
         if isinstance(doc, FmtHardline):
             v = self._var("hl")
             self.lines.append(f"{ind}uint32_t {v} = doc_hardline(&ctx->docs);")
-            return v
+            return _Result(v, False)
 
         if isinstance(doc, FmtSeq):
-            # Compile children, collect non-NULL into stack array, single alloc.
-            n = len(doc.items)
-            item_vars = [self.compile(item, ind) for item in doc.items]
-            buf = self._var("_buf")
-            cnt = self._var("_n")
-            v = self._var("cat")
-            self.lines.append(f"{ind}uint32_t {buf}[{n}];")
-            self.lines.append(f"{ind}uint32_t {cnt} = 0;")
-            for item_var in item_vars:
-                self.lines.append(f"{ind}if ({item_var} != SYNTAQLITE_NULL_DOC) {buf}[{cnt}++] = {item_var};")
-            self.lines.append(f"{ind}uint32_t {v} = doc_concat(&ctx->docs, {buf}, {cnt});")
-            return v
+            return self._compile_seq(doc, ind)
 
         if isinstance(doc, FmtGroup):
             inner = self.compile(doc.child, ind)
             v = self._var("grp")
-            self.lines.append(f"{ind}uint32_t {v} = doc_group(&ctx->docs, {inner});")
-            return v
+            self.lines.append(f"{ind}uint32_t {v} = doc_group(&ctx->docs, {inner.var});")
+            return _Result(v, False)
 
         if isinstance(doc, FmtNest):
             inner = self.compile(doc.child, ind)
             v = self._var("nst")
             self.lines.append(
                 f"{ind}uint32_t {v} = doc_nest(&ctx->docs,"
-                f" (int32_t)ctx->options->indent_width, {inner});")
-            return v
+                f" (int32_t)ctx->options->indent_width, {inner.var});")
+            return _Result(v, False)
 
         if isinstance(doc, FmtIfSet):
+            # Optimization: if_set(field, clause(kw, child(field))) → format_clause(ctx, kw, format_node(...))
+            opt = self._try_optimize_if_set(doc, ind)
+            if opt is not None:
+                return opt
             return self._compile_if(ind,
                 f"{self._accessor(doc.field)} != SYNTAQLITE_NULL_NODE",
                 doc.then, doc.else_)
 
         if isinstance(doc, FmtIfFlag):
+            # Optimization: if_flag(field, kw(A), kw(B)) → ternary
+            opt = self._try_optimize_ternary(ind,
+                f"{self._accessor(doc.field)}",
+                doc.then, doc.else_)
+            if opt is not None:
+                return opt
             return self._compile_if(ind,
                 f"{self._accessor(doc.field)}",
                 doc.then, doc.else_)
 
         if isinstance(doc, FmtIfEnum):
             enum_value = self._resolve_enum_value(doc.field, doc.value)
+            # Optimization: if_enum(field, val, kw(A), kw(B)) → ternary
+            opt = self._try_optimize_ternary(ind,
+                f"{self._accessor(doc.field)} == {enum_value}",
+                doc.then, doc.else_)
+            if opt is not None:
+                return opt
             return self._compile_if(ind,
                 f"{self._accessor(doc.field)} == {enum_value}",
                 doc.then, doc.else_)
 
         if isinstance(doc, FmtIfSpan):
+            # Optimization: if_span(field, kw(A), kw(B)) → ternary
+            opt = self._try_optimize_ternary(ind,
+                f"{self._accessor(doc.field)}.length > 0",
+                doc.then, doc.else_)
+            if opt is not None:
+                return opt
             return self._compile_if(ind,
                 f"{self._accessor(doc.field)}.length > 0",
                 doc.then, doc.else_)
@@ -169,8 +188,8 @@ class _Compiler:
             v = self._var("cl")
             self.lines.append(
                 f"{ind}uint32_t {v} = format_clause(ctx,"
-                f" {_c_str(doc.keyword)}, {body});")
-            return v
+                f" {_c_str(doc.keyword)}, {body.var});")
+            return _Result(v, True)
 
         if isinstance(doc, FmtEnumDisplay):
             return self._compile_enum_display(doc, ind)
@@ -183,22 +202,88 @@ class _Compiler:
 
         raise TypeError(f"Unknown FmtDoc type: {type(doc)}")
 
+    def _compile_seq(self, doc: FmtSeq, ind: str) -> _Result:
+        """Compile FmtSeq with nullability-aware optimization."""
+        n = len(doc.items)
+        item_results = [self.compile(item, ind) for item in doc.items]
+        any_nullable = any(r.nullable for r in item_results)
+
+        if not any_nullable:
+            # All children non-nullable: direct array initializer
+            v = self._var("cat")
+            items_str = ", ".join(r.var for r in item_results)
+            self.lines.append(f"{ind}uint32_t {v}_items[] = {{ {items_str} }};")
+            self.lines.append(f"{ind}uint32_t {v} = doc_concat(&ctx->docs, {v}_items, {n});")
+            return _Result(v, False)
+        else:
+            # Some children nullable: use doc_concat_nullable helper
+            self.needs_concat_nullable = True
+            v = self._var("cat")
+            items_str = ", ".join(r.var for r in item_results)
+            self.lines.append(f"{ind}uint32_t {v}_items[] = {{ {items_str} }};")
+            self.lines.append(f"{ind}uint32_t {v} = doc_concat_nullable(&ctx->docs, {v}_items, {n});")
+            return _Result(v, True)
+
+    def _try_optimize_if_set(self, doc: FmtIfSet, ind: str) -> _Result | None:
+        """Try to optimize if_set patterns into direct calls."""
+        if doc.else_ is not None:
+            return None
+
+        # if_set(field, clause(kw, child(field))) → format_clause(ctx, kw, format_node(...))
+        if (isinstance(doc.then, FmtClause)
+                and isinstance(doc.then.body, FmtChild)
+                and doc.then.body.field == doc.field):
+            v = self._var("cl")
+            self.lines.append(
+                f"{ind}uint32_t {v} = format_clause(ctx,"
+                f" {_c_str(doc.then.keyword)},"
+                f" format_node(ctx, {self._accessor(doc.field)}));")
+            return _Result(v, True)
+
+        # if_set(field, child(field)) → format_node(ctx, node->field)
+        if (isinstance(doc.then, FmtChild)
+                and doc.then.field == doc.field):
+            v = self._var("ch")
+            self.lines.append(
+                f"{ind}uint32_t {v} = format_node(ctx, {self._accessor(doc.field)});")
+            return _Result(v, True)
+
+        return None
+
+    def _try_optimize_ternary(self, ind: str, condition: str,
+                               then_doc: FmtDoc,
+                               else_doc: FmtDoc | None) -> _Result | None:
+        """Try to optimize if/else with two FmtKw leaves into a ternary."""
+        if else_doc is None:
+            return None
+        if not isinstance(then_doc, FmtKw) or not isinstance(else_doc, FmtKw):
+            return None
+        v = self._var("kw")
+        self.lines.append(
+            f"{ind}uint32_t {v} = {condition}"
+            f" ? kw(ctx, {_c_str(then_doc.text)})"
+            f" : kw(ctx, {_c_str(else_doc.text)});")
+        return _Result(v, False)
+
     def _compile_if(self, ind: str, condition: str,
-                    then_doc: FmtDoc, else_doc: FmtDoc | None) -> str:
+                    then_doc: FmtDoc, else_doc: FmtDoc | None) -> _Result:
         inner_ind = ind + "    "
         v = self._var("cond")
         self.lines.append(f"{ind}uint32_t {v} = SYNTAQLITE_NULL_DOC;")
         self.lines.append(f"{ind}if ({condition}) {{")
-        then_var = self.compile(then_doc, inner_ind)
-        self.lines.append(f"{inner_ind}{v} = {then_var};")
+        then_result = self.compile(then_doc, inner_ind)
+        self.lines.append(f"{inner_ind}{v} = {then_result.var};")
+        nullable = True
         if else_doc:
             self.lines.append(f"{ind}}} else {{")
-            else_var = self.compile(else_doc, inner_ind)
-            self.lines.append(f"{inner_ind}{v} = {else_var};")
+            else_result = self.compile(else_doc, inner_ind)
+            self.lines.append(f"{inner_ind}{v} = {else_result.var};")
+            # If both branches are non-nullable, the result is non-nullable
+            nullable = then_result.nullable or else_result.nullable
         self.lines.append(f"{ind}}}")
-        return v
+        return _Result(v, nullable)
 
-    def _compile_enum_display(self, doc: FmtEnumDisplay, ind: str) -> str:
+    def _compile_enum_display(self, doc: FmtEnumDisplay, ind: str) -> _Result:
         """Switch mapping enum values to kw() display strings."""
         v = self._var("ed")
         self.lines.append(f"{ind}uint32_t {v} = SYNTAQLITE_NULL_DOC;")
@@ -210,9 +295,9 @@ class _Compiler:
                 f" {v} = kw(ctx, {_c_str(display_str)}); break;")
         self.lines.append(f"{ind}    default: break;")
         self.lines.append(f"{ind}}}")
-        return v
+        return _Result(v, True)
 
-    def _compile_switch(self, doc: FmtSwitch, ind: str) -> str:
+    def _compile_switch(self, doc: FmtSwitch, ind: str) -> _Result:
         """Multi-branch on enum field with arbitrary FmtDoc bodies."""
         case_ind = ind + "    "
         body_ind = ind + "        "
@@ -222,22 +307,22 @@ class _Compiler:
         for case_val, case_doc in doc.cases.items():
             c_enum = self._resolve_enum_value(doc.field, case_val)
             self.lines.append(f"{case_ind}case {c_enum}: {{")
-            body_var = self.compile(case_doc, body_ind)
-            self.lines.append(f"{body_ind}{v} = {body_var};")
+            body_result = self.compile(case_doc, body_ind)
+            self.lines.append(f"{body_ind}{v} = {body_result.var};")
             self.lines.append(f"{body_ind}break;")
             self.lines.append(f"{case_ind}}}")
         if doc.default:
             self.lines.append(f"{case_ind}default: {{")
-            def_var = self.compile(doc.default, body_ind)
-            self.lines.append(f"{body_ind}{v} = {def_var};")
+            def_result = self.compile(doc.default, body_ind)
+            self.lines.append(f"{body_ind}{v} = {def_result.var};")
             self.lines.append(f"{body_ind}break;")
             self.lines.append(f"{case_ind}}}")
         else:
             self.lines.append(f"{case_ind}default: break;")
         self.lines.append(f"{ind}}}")
-        return v
+        return _Result(v, True)
 
-    def _compile_for_each_child(self, doc: FmtForEachChild, ind: str) -> str:
+    def _compile_for_each_child(self, doc: FmtForEachChild, ind: str) -> _Result:
         """Iterate list children with per-item formatting."""
         loop_ind = ind + "    "
         max_per = 2 if doc.separator else 1
@@ -253,14 +338,14 @@ class _Compiler:
         if doc.separator:
             sep_ind = loop_ind + "    "
             self.lines.append(f"{loop_ind}if (_i > 0) {{")
-            sep_var = self.compile(doc.separator, sep_ind)
-            self.lines.append(f"{sep_ind}{buf}[{cnt}++] = {sep_var};")
+            sep_result = self.compile(doc.separator, sep_ind)
+            self.lines.append(f"{sep_ind}{buf}[{cnt}++] = {sep_result.var};")
             self.lines.append(f"{loop_ind}}}")
-        template_var = self.compile(doc.template, loop_ind)
-        self.lines.append(f"{loop_ind}{buf}[{cnt}++] = {template_var};")
+        template_result = self.compile(doc.template, loop_ind)
+        self.lines.append(f"{loop_ind}{buf}[{cnt}++] = {template_result.var};")
         self.lines.append(f"{ind}}}")
         self.lines.append(f"{ind}uint32_t {v} = doc_concat(&ctx->docs, {buf}, {cnt});")
-        return v
+        return _Result(v, False)
 
     def _resolve_enum_value(self, field_name: str, value: str) -> str:
         """Resolve an enum value to its C constant name."""
@@ -367,9 +452,9 @@ def generate_fmt_c(
     lines.append("}")
     lines.append("")
 
-    # Node formatters
-    lines.append("// ============ Node Formatters ============")
-    lines.append("")
+    # Compile all node formatters first to check if we need doc_concat_nullable
+    compiled_nodes: list[tuple[str, str, _Compiler, _Result]] = []
+    needs_concat_nullable = False
 
     for node in node_defs:
         if node.fmt is None:
@@ -379,10 +464,52 @@ def generate_fmt_c(
         struct = _struct_name(node.name)
 
         compiler = _Compiler(node)
-        result_var = compiler.compile(node.fmt)
+        result = compiler.compile(node.fmt)
+        compiled_nodes.append((snake, struct, compiler, result))
+        if compiler.needs_concat_nullable:
+            needs_concat_nullable = True
+
+    # Emit concat_nullable helper if needed
+    if needs_concat_nullable:
+        lines.append("// ============ Nullable Concat Helper ============")
+        lines.append("")
+        lines.append("static uint32_t doc_concat_nullable(SyntaqliteDocContext *docs, uint32_t *items, uint32_t count) {")
+        lines.append("    uint32_t buf[count > 0 ? count : 1];")
+        lines.append("    uint32_t n = 0;")
+        lines.append("    for (uint32_t i = 0; i < count; i++) {")
+        lines.append("        if (items[i] != SYNTAQLITE_NULL_DOC) buf[n++] = items[i];")
+        lines.append("    }")
+        lines.append("    if (n == 0) return SYNTAQLITE_NULL_DOC;")
+        lines.append("    return doc_concat(docs, buf, n);")
+        lines.append("}")
+        lines.append("")
+
+    # Node formatters
+    lines.append("// ============ Node Formatters ============")
+    lines.append("")
+
+    for snake, struct, compiler, result in compiled_nodes:
+        func_lines = compiler.lines
+        result_var = result.var
+
+        # Optimization: inline single-use returns
+        # If the last line is a variable assignment and it's the return var,
+        # inline it into the return statement.
+        if func_lines and result_var != "":
+            last_line = func_lines[-1]
+            prefix = f"    uint32_t {result_var} = "
+            if last_line.startswith(prefix) and last_line.endswith(";"):
+                expr = last_line[len(prefix):-1]
+                func_lines = func_lines[:-1]
+                lines.append(f"static uint32_t format_{snake}(FmtCtx *ctx, {struct} *node) {{")
+                lines.extend(func_lines)
+                lines.append(f"    return {expr};")
+                lines.append("}")
+                lines.append("")
+                continue
 
         lines.append(f"static uint32_t format_{snake}(FmtCtx *ctx, {struct} *node) {{")
-        lines.extend(compiler.lines)
+        lines.extend(func_lines)
         lines.append(f"    return {result_var};")
         lines.append("}")
         lines.append("")
