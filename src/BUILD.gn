@@ -9,6 +9,24 @@ config("lemon_generated") {
   ]
 }
 
+# Header-only generic dynamic array.
+source_set("vec") {
+  sources = [
+    "vec.h",
+  ]
+}
+
+# Shared arena allocator with offset table.
+source_set("arena") {
+  sources = [
+    "arena.c",
+    "arena.h",
+  ]
+  deps = [
+    ":vec",
+  ]
+}
+
 source_set("sqlite") {
   sources = [
     # Generated files
@@ -30,6 +48,9 @@ source_set("token_list") {
     "token_list.c",
     "token_list.h",
   ]
+  deps = [
+    ":vec",
+  ]
 }
 
 # AST node types, builder functions, and printer.
@@ -47,6 +68,10 @@ source_set("ast") {
     "ast/ast_print.c",
     "ast/ast_print.h",
   ]
+  deps = [
+    ":arena",
+    ":vec",
+  ]
 }
 
 # Document model, layout engine, and formatter.
@@ -59,6 +84,10 @@ source_set("fmt") {
     "fmt/fmt.c",
     "fmt/fmt.h",
     "fmt/fmt_options.h",
+  ]
+  deps = [
+    ":arena",
+    ":vec",
   ]
 }
 

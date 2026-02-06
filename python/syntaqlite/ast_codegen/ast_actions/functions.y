@@ -37,7 +37,7 @@ expr(A) ::= ID|INDEXED|JOIN_KW(B) LP STAR RP. {
 // Function call with arguments and filter/over: func(args) FILTER/OVER
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) RP filter_over(E). {
     SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
-        (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[E]);
+        (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[E]);
     A = ast_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, B),
         (SyntaqliteFunctionCallFlags){.raw = (uint8_t)C},
@@ -49,7 +49,7 @@ expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) RP filter_over(E). 
 // Function call with star and filter/over: COUNT(*) FILTER/OVER
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP STAR RP filter_over(C). {
     SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
-        (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[C]);
+        (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[C]);
     A = ast_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, B),
         (SyntaqliteFunctionCallFlags){.star = 1},

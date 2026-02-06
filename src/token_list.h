@@ -6,6 +6,8 @@
 #ifndef SYNTAQLITE_SRC_TOKEN_LIST_H
 #define SYNTAQLITE_SRC_TOKEN_LIST_H
 
+#include "src/vec.h"
+
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -21,13 +23,11 @@ typedef struct SyntaqliteRawToken {
 
 // Growable array of raw tokens.
 typedef struct SyntaqliteTokenList {
-    SyntaqliteRawToken *tokens;
+    SyntaqliteRawToken *data;
     uint32_t count;
     uint32_t capacity;
 } SyntaqliteTokenList;
 
-void syntaqlite_token_list_init(SyntaqliteTokenList *list);
-void syntaqlite_token_list_free(SyntaqliteTokenList *list);
 void syntaqlite_token_list_append(SyntaqliteTokenList *list, uint32_t offset,
                                   uint16_t length, uint16_t type);
 

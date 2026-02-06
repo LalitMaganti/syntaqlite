@@ -7,7 +7,7 @@
 #ifndef SYNTAQLITE_AST_NODES_H
 #define SYNTAQLITE_AST_NODES_H
 
-// Base types (SyntaqliteSourceSpan, SyntaqliteAst, etc.)
+// Base types (SyntaqliteSourceSpan, SyntaqliteArena, etc.)
 #include "src/ast/ast_base.h"
 
 #ifdef __cplusplus
@@ -1212,9 +1212,9 @@ typedef union SyntaqliteNode {
 } SyntaqliteNode;
 
 // Access node by ID
-static inline SyntaqliteNode* syntaqlite_ast_node(SyntaqliteAst *ast, uint32_t id) {
+static inline SyntaqliteNode* syntaqlite_ast_node(SyntaqliteArena *ast, uint32_t id) {
     if (id == SYNTAQLITE_NULL_NODE) return NULL;
-    return (SyntaqliteNode*)(ast->arena + ast->offsets[id]);
+    return (SyntaqliteNode*)(ast->data + ast->offsets[id]);
 }
 
 #define AST_NODE(ast, id) syntaqlite_ast_node(ast, id)

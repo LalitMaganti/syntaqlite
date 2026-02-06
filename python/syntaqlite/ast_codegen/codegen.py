@@ -115,7 +115,7 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("#ifndef SYNTAQLITE_AST_NODES_H")
     lines.append("#define SYNTAQLITE_AST_NODES_H")
     lines.append("")
-    lines.append("// Base types (SyntaqliteSourceSpan, SyntaqliteAst, etc.)")
+    lines.append("// Base types (SyntaqliteSourceSpan, SyntaqliteArena, etc.)")
     lines.append('#include "src/ast/ast_base.h"')
     lines.append("")
     lines.append("#ifdef __cplusplus")
@@ -224,9 +224,9 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
 
     # Node access
     lines.append("// Access node by ID")
-    lines.append("static inline SyntaqliteNode* syntaqlite_ast_node(SyntaqliteAst *ast, uint32_t id) {")
+    lines.append("static inline SyntaqliteNode* syntaqlite_ast_node(SyntaqliteArena *ast, uint32_t id) {")
     lines.append("    if (id == SYNTAQLITE_NULL_NODE) return NULL;")
-    lines.append("    return (SyntaqliteNode*)(ast->arena + ast->offsets[id]);")
+    lines.append("    return (SyntaqliteNode*)(ast->data + ast->offsets[id]);")
     lines.append("}")
     lines.append("")
     lines.append("#define AST_NODE(ast, id) syntaqlite_ast_node(ast, id)")
@@ -356,13 +356,12 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             _emit_func_signature(lines, func_name, params, " {")
 
             # Allocate node
-            lines.append(f"    uint32_t id = ast_alloc(ctx, {tag}, sizeof({struct_name}));")
-            lines.append("    if (id == SYNTAQLITE_NULL_NODE) return id;")
+            lines.append(f"    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, {tag}, sizeof({struct_name}));")
             lines.append("")
 
             # Get pointer and set fields
             lines.append(f"    {struct_name} *node = ({struct_name}*)")
-            lines.append("        (ctx->ast->arena + ctx->ast->offsets[id]);")
+            lines.append("        (ctx->ast.data + ctx->ast.offsets[id]);")
 
             for field_name in node.fields:
                 lines.append(f"    node->{field_name} = {field_name};")
@@ -378,11 +377,10 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
 
             # Empty list creator (direct arena allocation, no accumulator needed)
             lines.append(f"uint32_t {func_name}_empty(SyntaqliteAstContext *ctx) {{")
-            lines.append(f"    uint32_t id = ast_alloc(ctx, {tag}, sizeof({struct_name}));")
-            lines.append("    if (id == SYNTAQLITE_NULL_NODE) return id;")
+            lines.append(f"    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, {tag}, sizeof({struct_name}));")
             lines.append("")
             lines.append(f"    {struct_name} *node = ({struct_name}*)")
-            lines.append("        (ctx->ast->arena + ctx->ast->offsets[id]);")
+            lines.append("        (ctx->ast.data + ctx->ast.offsets[id]);")
             lines.append("    node->count = 0;")
             lines.append("    return id;")
             lines.append("}")
@@ -426,13 +424,13 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("")
 
     # Forward declaration
-    lines.append("static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,")
+    lines.append("static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,")
     lines.append("                       const char *source, int depth,")
     lines.append("                       const char *field_name);")
     lines.append("")
 
     # Main print_node function
-    lines.append("static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,")
+    lines.append("static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,")
     lines.append("                       const char *source, int depth,")
     lines.append("                       const char *field_name) {")
     lines.append("  if (node_id == SYNTAQLITE_NULL_NODE) {")
@@ -519,7 +517,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("")
 
     # Public function
-    lines.append("void syntaqlite_ast_print(FILE *out, SyntaqliteAst *ast, uint32_t node_id,")
+    lines.append("void syntaqlite_ast_print(FILE *out, SyntaqliteArena *ast, uint32_t node_id,")
     lines.append("                          const char *source) {")
     lines.append("  print_node(out, ast, node_id, source, 0, NULL);")
     lines.append("}")

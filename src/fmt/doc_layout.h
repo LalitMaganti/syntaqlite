@@ -16,7 +16,7 @@ extern "C" {
 
 // Render a document tree to a formatted string.
 // Returns malloc'd string (caller frees), or NULL on error.
-char *syntaqlite_doc_layout(SyntaqliteDocArena *arena, uint32_t root_id, uint32_t target_width);
+char *syntaqlite_doc_layout(SyntaqliteDocContext *ctx, uint32_t root_id, uint32_t target_width);
 
 #ifdef __cplusplus
 }

@@ -96,11 +96,10 @@ size_t syntaqlite_node_base_size(uint8_t tag) {
 // ============ Builder Functions ============
 
 uint32_t ast_binary_expr(SyntaqliteAstContext *ctx, SyntaqliteBinaryOp op, uint32_t left, uint32_t right) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_BINARY_EXPR, sizeof(SyntaqliteBinaryExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_BINARY_EXPR, sizeof(SyntaqliteBinaryExpr));
 
     SyntaqliteBinaryExpr *node = (SyntaqliteBinaryExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->op = op;
     node->left = left;
     node->right = right;
@@ -108,11 +107,10 @@ uint32_t ast_binary_expr(SyntaqliteAstContext *ctx, SyntaqliteBinaryOp op, uint3
 }
 
 uint32_t ast_unary_expr(SyntaqliteAstContext *ctx, SyntaqliteUnaryOp op, uint32_t operand) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_UNARY_EXPR, sizeof(SyntaqliteUnaryExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_UNARY_EXPR, sizeof(SyntaqliteUnaryExpr));
 
     SyntaqliteUnaryExpr *node = (SyntaqliteUnaryExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->op = op;
     node->operand = operand;
     return id;
@@ -123,22 +121,20 @@ uint32_t ast_literal(
     SyntaqliteLiteralType literal_type,
     SyntaqliteSourceSpan source
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_LITERAL, sizeof(SyntaqliteLiteral));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_LITERAL, sizeof(SyntaqliteLiteral));
 
     SyntaqliteLiteral *node = (SyntaqliteLiteral*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->literal_type = literal_type;
     node->source = source;
     return id;
 }
 
 uint32_t ast_expr_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_EXPR_LIST, sizeof(SyntaqliteExprList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_EXPR_LIST, sizeof(SyntaqliteExprList));
 
     SyntaqliteExprList *node = (SyntaqliteExprList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -160,11 +156,10 @@ uint32_t ast_result_column(
     SyntaqliteSourceSpan alias,
     uint32_t expr
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_RESULT_COLUMN, sizeof(SyntaqliteResultColumn));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_RESULT_COLUMN, sizeof(SyntaqliteResultColumn));
 
     SyntaqliteResultColumn *node = (SyntaqliteResultColumn*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->flags = flags;
     node->alias = alias;
     node->expr = expr;
@@ -172,11 +167,10 @@ uint32_t ast_result_column(
 }
 
 uint32_t ast_result_column_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_RESULT_COLUMN_LIST, sizeof(SyntaqliteResultColumnList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_RESULT_COLUMN_LIST, sizeof(SyntaqliteResultColumnList));
 
     SyntaqliteResultColumnList *node = (SyntaqliteResultColumnList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -204,11 +198,10 @@ uint32_t ast_select_stmt(
     uint32_t limit_clause,
     uint32_t window_clause
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_SELECT_STMT, sizeof(SyntaqliteSelectStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_SELECT_STMT, sizeof(SyntaqliteSelectStmt));
 
     SyntaqliteSelectStmt *node = (SyntaqliteSelectStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->flags = flags;
     node->columns = columns;
     node->from_clause = from_clause;
@@ -227,11 +220,10 @@ uint32_t ast_ordering_term(
     SyntaqliteSortOrder sort_order,
     SyntaqliteNullsOrder nulls_order
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_ORDERING_TERM, sizeof(SyntaqliteOrderingTerm));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_ORDERING_TERM, sizeof(SyntaqliteOrderingTerm));
 
     SyntaqliteOrderingTerm *node = (SyntaqliteOrderingTerm*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->expr = expr;
     node->sort_order = sort_order;
     node->nulls_order = nulls_order;
@@ -239,11 +231,10 @@ uint32_t ast_ordering_term(
 }
 
 uint32_t ast_order_by_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_ORDER_BY_LIST, sizeof(SyntaqliteOrderByList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_ORDER_BY_LIST, sizeof(SyntaqliteOrderByList));
 
     SyntaqliteOrderByList *node = (SyntaqliteOrderByList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -260,11 +251,10 @@ uint32_t ast_order_by_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, u
 }
 
 uint32_t ast_limit_clause(SyntaqliteAstContext *ctx, uint32_t limit, uint32_t offset) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_LIMIT_CLAUSE, sizeof(SyntaqliteLimitClause));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_LIMIT_CLAUSE, sizeof(SyntaqliteLimitClause));
 
     SyntaqliteLimitClause *node = (SyntaqliteLimitClause*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->limit = limit;
     node->offset = offset;
     return id;
@@ -276,11 +266,10 @@ uint32_t ast_column_ref(
     SyntaqliteSourceSpan table,
     SyntaqliteSourceSpan schema
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COLUMN_REF, sizeof(SyntaqliteColumnRef));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_COLUMN_REF, sizeof(SyntaqliteColumnRef));
 
     SyntaqliteColumnRef *node = (SyntaqliteColumnRef*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->column = column;
     node->table = table;
     node->schema = schema;
@@ -295,11 +284,10 @@ uint32_t ast_function_call(
     uint32_t filter_clause,
     uint32_t over_clause
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_FUNCTION_CALL, sizeof(SyntaqliteFunctionCall));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_FUNCTION_CALL, sizeof(SyntaqliteFunctionCall));
 
     SyntaqliteFunctionCall *node = (SyntaqliteFunctionCall*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->func_name = func_name;
     node->flags = flags;
     node->args = args;
@@ -309,11 +297,10 @@ uint32_t ast_function_call(
 }
 
 uint32_t ast_is_expr(SyntaqliteAstContext *ctx, SyntaqliteIsOp op, uint32_t left, uint32_t right) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_IS_EXPR, sizeof(SyntaqliteIsExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_IS_EXPR, sizeof(SyntaqliteIsExpr));
 
     SyntaqliteIsExpr *node = (SyntaqliteIsExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->op = op;
     node->left = left;
     node->right = right;
@@ -327,11 +314,10 @@ uint32_t ast_between_expr(
     uint32_t low,
     uint32_t high
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_BETWEEN_EXPR, sizeof(SyntaqliteBetweenExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_BETWEEN_EXPR, sizeof(SyntaqliteBetweenExpr));
 
     SyntaqliteBetweenExpr *node = (SyntaqliteBetweenExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->negated = negated;
     node->operand = operand;
     node->low = low;
@@ -346,11 +332,10 @@ uint32_t ast_like_expr(
     uint32_t pattern,
     uint32_t escape
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_LIKE_EXPR, sizeof(SyntaqliteLikeExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_LIKE_EXPR, sizeof(SyntaqliteLikeExpr));
 
     SyntaqliteLikeExpr *node = (SyntaqliteLikeExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->negated = negated;
     node->operand = operand;
     node->pattern = pattern;
@@ -359,11 +344,10 @@ uint32_t ast_like_expr(
 }
 
 uint32_t ast_case_expr(SyntaqliteAstContext *ctx, uint32_t operand, uint32_t else_expr, uint32_t whens) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_EXPR, sizeof(SyntaqliteCaseExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CASE_EXPR, sizeof(SyntaqliteCaseExpr));
 
     SyntaqliteCaseExpr *node = (SyntaqliteCaseExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->operand = operand;
     node->else_expr = else_expr;
     node->whens = whens;
@@ -371,22 +355,20 @@ uint32_t ast_case_expr(SyntaqliteAstContext *ctx, uint32_t operand, uint32_t els
 }
 
 uint32_t ast_case_when(SyntaqliteAstContext *ctx, uint32_t when_expr, uint32_t then_expr) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_WHEN, sizeof(SyntaqliteCaseWhen));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CASE_WHEN, sizeof(SyntaqliteCaseWhen));
 
     SyntaqliteCaseWhen *node = (SyntaqliteCaseWhen*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->when_expr = when_expr;
     node->then_expr = then_expr;
     return id;
 }
 
 uint32_t ast_case_when_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CASE_WHEN_LIST, sizeof(SyntaqliteCaseWhenList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CASE_WHEN_LIST, sizeof(SyntaqliteCaseWhenList));
 
     SyntaqliteCaseWhenList *node = (SyntaqliteCaseWhenList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -408,11 +390,10 @@ uint32_t ast_compound_select(
     uint32_t left,
     uint32_t right
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COMPOUND_SELECT, sizeof(SyntaqliteCompoundSelect));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_COMPOUND_SELECT, sizeof(SyntaqliteCompoundSelect));
 
     SyntaqliteCompoundSelect *node = (SyntaqliteCompoundSelect*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->op = op;
     node->left = left;
     node->right = right;
@@ -420,21 +401,19 @@ uint32_t ast_compound_select(
 }
 
 uint32_t ast_subquery_expr(SyntaqliteAstContext *ctx, uint32_t select) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_SUBQUERY_EXPR, sizeof(SyntaqliteSubqueryExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_SUBQUERY_EXPR, sizeof(SyntaqliteSubqueryExpr));
 
     SyntaqliteSubqueryExpr *node = (SyntaqliteSubqueryExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->select = select;
     return id;
 }
 
 uint32_t ast_exists_expr(SyntaqliteAstContext *ctx, uint32_t select) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_EXISTS_EXPR, sizeof(SyntaqliteExistsExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_EXISTS_EXPR, sizeof(SyntaqliteExistsExpr));
 
     SyntaqliteExistsExpr *node = (SyntaqliteExistsExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->select = select;
     return id;
 }
@@ -445,11 +424,10 @@ uint32_t ast_in_expr(
     uint32_t operand,
     uint32_t source
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_IN_EXPR, sizeof(SyntaqliteInExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_IN_EXPR, sizeof(SyntaqliteInExpr));
 
     SyntaqliteInExpr *node = (SyntaqliteInExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->negated = negated;
     node->operand = operand;
     node->source = source;
@@ -457,43 +435,39 @@ uint32_t ast_in_expr(
 }
 
 uint32_t ast_variable(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan source) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_VARIABLE, sizeof(SyntaqliteVariable));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_VARIABLE, sizeof(SyntaqliteVariable));
 
     SyntaqliteVariable *node = (SyntaqliteVariable*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->source = source;
     return id;
 }
 
 uint32_t ast_collate_expr(SyntaqliteAstContext *ctx, uint32_t expr, SyntaqliteSourceSpan collation) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COLLATE_EXPR, sizeof(SyntaqliteCollateExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_COLLATE_EXPR, sizeof(SyntaqliteCollateExpr));
 
     SyntaqliteCollateExpr *node = (SyntaqliteCollateExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->expr = expr;
     node->collation = collation;
     return id;
 }
 
 uint32_t ast_cast_expr(SyntaqliteAstContext *ctx, uint32_t expr, SyntaqliteSourceSpan type_name) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CAST_EXPR, sizeof(SyntaqliteCastExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CAST_EXPR, sizeof(SyntaqliteCastExpr));
 
     SyntaqliteCastExpr *node = (SyntaqliteCastExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->expr = expr;
     node->type_name = type_name;
     return id;
 }
 
 uint32_t ast_values_row_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_VALUES_ROW_LIST, sizeof(SyntaqliteValuesRowList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_VALUES_ROW_LIST, sizeof(SyntaqliteValuesRowList));
 
     SyntaqliteValuesRowList *node = (SyntaqliteValuesRowList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -510,11 +484,10 @@ uint32_t ast_values_row_list_append(SyntaqliteAstContext *ctx, uint32_t list_id,
 }
 
 uint32_t ast_values_clause(SyntaqliteAstContext *ctx, uint32_t rows) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_VALUES_CLAUSE, sizeof(SyntaqliteValuesClause));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_VALUES_CLAUSE, sizeof(SyntaqliteValuesClause));
 
     SyntaqliteValuesClause *node = (SyntaqliteValuesClause*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->rows = rows;
     return id;
 }
@@ -526,11 +499,10 @@ uint32_t ast_cte_definition(
     uint32_t columns,
     uint32_t select
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CTE_DEFINITION, sizeof(SyntaqliteCteDefinition));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CTE_DEFINITION, sizeof(SyntaqliteCteDefinition));
 
     SyntaqliteCteDefinition *node = (SyntaqliteCteDefinition*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->cte_name = cte_name;
     node->materialized = materialized;
     node->columns = columns;
@@ -539,11 +511,10 @@ uint32_t ast_cte_definition(
 }
 
 uint32_t ast_cte_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CTE_LIST, sizeof(SyntaqliteCteList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CTE_LIST, sizeof(SyntaqliteCteList));
 
     SyntaqliteCteList *node = (SyntaqliteCteList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -565,11 +536,10 @@ uint32_t ast_with_clause(
     uint32_t ctes,
     uint32_t select
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_WITH_CLAUSE, sizeof(SyntaqliteWithClause));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_WITH_CLAUSE, sizeof(SyntaqliteWithClause));
 
     SyntaqliteWithClause *node = (SyntaqliteWithClause*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->recursive = recursive;
     node->ctes = ctes;
     node->select = select;
@@ -585,11 +555,10 @@ uint32_t ast_aggregate_function_call(
     uint32_t filter_clause,
     uint32_t over_clause
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL, sizeof(SyntaqliteAggregateFunctionCall));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL, sizeof(SyntaqliteAggregateFunctionCall));
 
     SyntaqliteAggregateFunctionCall *node = (SyntaqliteAggregateFunctionCall*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->func_name = func_name;
     node->flags = flags;
     node->args = args;
@@ -604,11 +573,10 @@ uint32_t ast_raise_expr(
     SyntaqliteRaiseType raise_type,
     uint32_t error_message
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_RAISE_EXPR, sizeof(SyntaqliteRaiseExpr));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_RAISE_EXPR, sizeof(SyntaqliteRaiseExpr));
 
     SyntaqliteRaiseExpr *node = (SyntaqliteRaiseExpr*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->raise_type = raise_type;
     node->error_message = error_message;
     return id;
@@ -620,11 +588,10 @@ uint32_t ast_table_ref(
     SyntaqliteSourceSpan schema,
     SyntaqliteSourceSpan alias
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_TABLE_REF, sizeof(SyntaqliteTableRef));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_TABLE_REF, sizeof(SyntaqliteTableRef));
 
     SyntaqliteTableRef *node = (SyntaqliteTableRef*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->table_name = table_name;
     node->schema = schema;
     node->alias = alias;
@@ -632,11 +599,10 @@ uint32_t ast_table_ref(
 }
 
 uint32_t ast_subquery_table_source(SyntaqliteAstContext *ctx, uint32_t select, SyntaqliteSourceSpan alias) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE, sizeof(SyntaqliteSubqueryTableSource));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE, sizeof(SyntaqliteSubqueryTableSource));
 
     SyntaqliteSubqueryTableSource *node = (SyntaqliteSubqueryTableSource*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->select = select;
     node->alias = alias;
     return id;
@@ -650,11 +616,10 @@ uint32_t ast_join_clause(
     uint32_t on_expr,
     uint32_t using_columns
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_JOIN_CLAUSE, sizeof(SyntaqliteJoinClause));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_JOIN_CLAUSE, sizeof(SyntaqliteJoinClause));
 
     SyntaqliteJoinClause *node = (SyntaqliteJoinClause*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->join_type = join_type;
     node->left = left;
     node->right = right;
@@ -664,22 +629,20 @@ uint32_t ast_join_clause(
 }
 
 uint32_t ast_join_prefix(SyntaqliteAstContext *ctx, uint32_t source, SyntaqliteJoinType join_type) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_JOIN_PREFIX, sizeof(SyntaqliteJoinPrefix));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_JOIN_PREFIX, sizeof(SyntaqliteJoinPrefix));
 
     SyntaqliteJoinPrefix *node = (SyntaqliteJoinPrefix*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->source = source;
     node->join_type = join_type;
     return id;
 }
 
 uint32_t ast_delete_stmt(SyntaqliteAstContext *ctx, uint32_t table, uint32_t where) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_DELETE_STMT, sizeof(SyntaqliteDeleteStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_DELETE_STMT, sizeof(SyntaqliteDeleteStmt));
 
     SyntaqliteDeleteStmt *node = (SyntaqliteDeleteStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->table = table;
     node->where = where;
     return id;
@@ -691,11 +654,10 @@ uint32_t ast_set_clause(
     uint32_t columns,
     uint32_t value
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_SET_CLAUSE, sizeof(SyntaqliteSetClause));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_SET_CLAUSE, sizeof(SyntaqliteSetClause));
 
     SyntaqliteSetClause *node = (SyntaqliteSetClause*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->column = column;
     node->columns = columns;
     node->value = value;
@@ -703,11 +665,10 @@ uint32_t ast_set_clause(
 }
 
 uint32_t ast_set_clause_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_SET_CLAUSE_LIST, sizeof(SyntaqliteSetClauseList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_SET_CLAUSE_LIST, sizeof(SyntaqliteSetClauseList));
 
     SyntaqliteSetClauseList *node = (SyntaqliteSetClauseList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -731,11 +692,10 @@ uint32_t ast_update_stmt(
     uint32_t from_clause,
     uint32_t where
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_UPDATE_STMT, sizeof(SyntaqliteUpdateStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_UPDATE_STMT, sizeof(SyntaqliteUpdateStmt));
 
     SyntaqliteUpdateStmt *node = (SyntaqliteUpdateStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->conflict_action = conflict_action;
     node->table = table;
     node->setlist = setlist;
@@ -751,11 +711,10 @@ uint32_t ast_insert_stmt(
     uint32_t columns,
     uint32_t source
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_INSERT_STMT, sizeof(SyntaqliteInsertStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_INSERT_STMT, sizeof(SyntaqliteInsertStmt));
 
     SyntaqliteInsertStmt *node = (SyntaqliteInsertStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->conflict_action = conflict_action;
     node->table = table;
     node->columns = columns;
@@ -768,11 +727,10 @@ uint32_t ast_qualified_name(
     SyntaqliteSourceSpan object_name,
     SyntaqliteSourceSpan schema
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_QUALIFIED_NAME, sizeof(SyntaqliteQualifiedName));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_QUALIFIED_NAME, sizeof(SyntaqliteQualifiedName));
 
     SyntaqliteQualifiedName *node = (SyntaqliteQualifiedName*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->object_name = object_name;
     node->schema = schema;
     return id;
@@ -784,11 +742,10 @@ uint32_t ast_drop_stmt(
     SyntaqliteBool if_exists,
     uint32_t target
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_DROP_STMT, sizeof(SyntaqliteDropStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_DROP_STMT, sizeof(SyntaqliteDropStmt));
 
     SyntaqliteDropStmt *node = (SyntaqliteDropStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->object_type = object_type;
     node->if_exists = if_exists;
     node->target = target;
@@ -802,11 +759,10 @@ uint32_t ast_alter_table_stmt(
     SyntaqliteSourceSpan new_name,
     SyntaqliteSourceSpan old_name
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_ALTER_TABLE_STMT, sizeof(SyntaqliteAlterTableStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_ALTER_TABLE_STMT, sizeof(SyntaqliteAlterTableStmt));
 
     SyntaqliteAlterTableStmt *node = (SyntaqliteAlterTableStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->op = op;
     node->target = target;
     node->new_name = new_name;
@@ -819,11 +775,10 @@ uint32_t ast_transaction_stmt(
     SyntaqliteTransactionOp op,
     SyntaqliteTransactionType trans_type
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_TRANSACTION_STMT, sizeof(SyntaqliteTransactionStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_TRANSACTION_STMT, sizeof(SyntaqliteTransactionStmt));
 
     SyntaqliteTransactionStmt *node = (SyntaqliteTransactionStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->op = op;
     node->trans_type = trans_type;
     return id;
@@ -834,11 +789,10 @@ uint32_t ast_savepoint_stmt(
     SyntaqliteSavepointOp op,
     SyntaqliteSourceSpan savepoint_name
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_SAVEPOINT_STMT, sizeof(SyntaqliteSavepointStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_SAVEPOINT_STMT, sizeof(SyntaqliteSavepointStmt));
 
     SyntaqliteSavepointStmt *node = (SyntaqliteSavepointStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->op = op;
     node->savepoint_name = savepoint_name;
     return id;
@@ -851,11 +805,10 @@ uint32_t ast_pragma_stmt(
     SyntaqliteSourceSpan value,
     SyntaqlitePragmaForm pragma_form
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_PRAGMA_STMT, sizeof(SyntaqlitePragmaStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_PRAGMA_STMT, sizeof(SyntaqlitePragmaStmt));
 
     SyntaqlitePragmaStmt *node = (SyntaqlitePragmaStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->pragma_name = pragma_name;
     node->schema = schema;
     node->value = value;
@@ -869,11 +822,10 @@ uint32_t ast_analyze_stmt(
     SyntaqliteSourceSpan schema,
     SyntaqliteAnalyzeKind kind
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_ANALYZE_STMT, sizeof(SyntaqliteAnalyzeStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_ANALYZE_STMT, sizeof(SyntaqliteAnalyzeStmt));
 
     SyntaqliteAnalyzeStmt *node = (SyntaqliteAnalyzeStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->target_name = target_name;
     node->schema = schema;
     node->kind = kind;
@@ -881,11 +833,10 @@ uint32_t ast_analyze_stmt(
 }
 
 uint32_t ast_attach_stmt(SyntaqliteAstContext *ctx, uint32_t filename, uint32_t db_name, uint32_t key) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_ATTACH_STMT, sizeof(SyntaqliteAttachStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_ATTACH_STMT, sizeof(SyntaqliteAttachStmt));
 
     SyntaqliteAttachStmt *node = (SyntaqliteAttachStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->filename = filename;
     node->db_name = db_name;
     node->key = key;
@@ -893,32 +844,29 @@ uint32_t ast_attach_stmt(SyntaqliteAstContext *ctx, uint32_t filename, uint32_t 
 }
 
 uint32_t ast_detach_stmt(SyntaqliteAstContext *ctx, uint32_t db_name) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_DETACH_STMT, sizeof(SyntaqliteDetachStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_DETACH_STMT, sizeof(SyntaqliteDetachStmt));
 
     SyntaqliteDetachStmt *node = (SyntaqliteDetachStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->db_name = db_name;
     return id;
 }
 
 uint32_t ast_vacuum_stmt(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan schema, uint32_t into_expr) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_VACUUM_STMT, sizeof(SyntaqliteVacuumStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_VACUUM_STMT, sizeof(SyntaqliteVacuumStmt));
 
     SyntaqliteVacuumStmt *node = (SyntaqliteVacuumStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->schema = schema;
     node->into_expr = into_expr;
     return id;
 }
 
 uint32_t ast_explain_stmt(SyntaqliteAstContext *ctx, SyntaqliteExplainMode explain_mode, uint32_t stmt) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_EXPLAIN_STMT, sizeof(SyntaqliteExplainStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_EXPLAIN_STMT, sizeof(SyntaqliteExplainStmt));
 
     SyntaqliteExplainStmt *node = (SyntaqliteExplainStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->explain_mode = explain_mode;
     node->stmt = stmt;
     return id;
@@ -934,11 +882,10 @@ uint32_t ast_create_index_stmt(
     uint32_t columns,
     uint32_t where
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CREATE_INDEX_STMT, sizeof(SyntaqliteCreateIndexStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CREATE_INDEX_STMT, sizeof(SyntaqliteCreateIndexStmt));
 
     SyntaqliteCreateIndexStmt *node = (SyntaqliteCreateIndexStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->index_name = index_name;
     node->schema = schema;
     node->table_name = table_name;
@@ -958,11 +905,10 @@ uint32_t ast_create_view_stmt(
     uint32_t column_names,
     uint32_t select
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CREATE_VIEW_STMT, sizeof(SyntaqliteCreateViewStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CREATE_VIEW_STMT, sizeof(SyntaqliteCreateViewStmt));
 
     SyntaqliteCreateViewStmt *node = (SyntaqliteCreateViewStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->view_name = view_name;
     node->schema = schema;
     node->is_temp = is_temp;
@@ -980,11 +926,10 @@ uint32_t ast_foreign_key_clause(
     SyntaqliteForeignKeyAction on_update,
     SyntaqliteBool is_deferred
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE, sizeof(SyntaqliteForeignKeyClause));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE, sizeof(SyntaqliteForeignKeyClause));
 
     SyntaqliteForeignKeyClause *node = (SyntaqliteForeignKeyClause*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->ref_table = ref_table;
     node->ref_columns = ref_columns;
     node->on_delete = on_delete;
@@ -1007,11 +952,10 @@ uint32_t ast_column_constraint(
     uint32_t generated_expr,
     uint32_t fk_clause
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COLUMN_CONSTRAINT, sizeof(SyntaqliteColumnConstraint));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_COLUMN_CONSTRAINT, sizeof(SyntaqliteColumnConstraint));
 
     SyntaqliteColumnConstraint *node = (SyntaqliteColumnConstraint*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->kind = kind;
     node->constraint_name = constraint_name;
     node->onconf = onconf;
@@ -1027,11 +971,10 @@ uint32_t ast_column_constraint(
 }
 
 uint32_t ast_column_constraint_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST, sizeof(SyntaqliteColumnConstraintList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST, sizeof(SyntaqliteColumnConstraintList));
 
     SyntaqliteColumnConstraintList *node = (SyntaqliteColumnConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -1053,11 +996,10 @@ uint32_t ast_column_def(
     SyntaqliteSourceSpan type_name,
     uint32_t constraints
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COLUMN_DEF, sizeof(SyntaqliteColumnDef));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_COLUMN_DEF, sizeof(SyntaqliteColumnDef));
 
     SyntaqliteColumnDef *node = (SyntaqliteColumnDef*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->column_name = column_name;
     node->type_name = type_name;
     node->constraints = constraints;
@@ -1065,11 +1007,10 @@ uint32_t ast_column_def(
 }
 
 uint32_t ast_column_def_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_COLUMN_DEF_LIST, sizeof(SyntaqliteColumnDefList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_COLUMN_DEF_LIST, sizeof(SyntaqliteColumnDefList));
 
     SyntaqliteColumnDefList *node = (SyntaqliteColumnDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -1095,11 +1036,10 @@ uint32_t ast_table_constraint(
     uint32_t check_expr,
     uint32_t fk_clause
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_TABLE_CONSTRAINT, sizeof(SyntaqliteTableConstraint));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_TABLE_CONSTRAINT, sizeof(SyntaqliteTableConstraint));
 
     SyntaqliteTableConstraint *node = (SyntaqliteTableConstraint*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->kind = kind;
     node->constraint_name = constraint_name;
     node->onconf = onconf;
@@ -1111,11 +1051,10 @@ uint32_t ast_table_constraint(
 }
 
 uint32_t ast_table_constraint_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST, sizeof(SyntaqliteTableConstraintList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST, sizeof(SyntaqliteTableConstraintList));
 
     SyntaqliteTableConstraintList *node = (SyntaqliteTableConstraintList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -1142,11 +1081,10 @@ uint32_t ast_create_table_stmt(
     uint32_t table_constraints,
     uint32_t as_select
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CREATE_TABLE_STMT, sizeof(SyntaqliteCreateTableStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CREATE_TABLE_STMT, sizeof(SyntaqliteCreateTableStmt));
 
     SyntaqliteCreateTableStmt *node = (SyntaqliteCreateTableStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->table_name = table_name;
     node->schema = schema;
     node->is_temp = is_temp;
@@ -1159,11 +1097,10 @@ uint32_t ast_create_table_stmt(
 }
 
 uint32_t ast_frame_bound(SyntaqliteAstContext *ctx, SyntaqliteFrameBoundType bound_type, uint32_t expr) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_FRAME_BOUND, sizeof(SyntaqliteFrameBound));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_FRAME_BOUND, sizeof(SyntaqliteFrameBound));
 
     SyntaqliteFrameBound *node = (SyntaqliteFrameBound*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->bound_type = bound_type;
     node->expr = expr;
     return id;
@@ -1176,11 +1113,10 @@ uint32_t ast_frame_spec(
     uint32_t start_bound,
     uint32_t end_bound
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_FRAME_SPEC, sizeof(SyntaqliteFrameSpec));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_FRAME_SPEC, sizeof(SyntaqliteFrameSpec));
 
     SyntaqliteFrameSpec *node = (SyntaqliteFrameSpec*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->frame_type = frame_type;
     node->exclude = exclude;
     node->start_bound = start_bound;
@@ -1195,11 +1131,10 @@ uint32_t ast_window_def(
     uint32_t orderby,
     uint32_t frame
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_WINDOW_DEF, sizeof(SyntaqliteWindowDef));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_WINDOW_DEF, sizeof(SyntaqliteWindowDef));
 
     SyntaqliteWindowDef *node = (SyntaqliteWindowDef*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->base_window_name = base_window_name;
     node->partition_by = partition_by;
     node->orderby = orderby;
@@ -1208,11 +1143,10 @@ uint32_t ast_window_def(
 }
 
 uint32_t ast_window_def_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_WINDOW_DEF_LIST, sizeof(SyntaqliteWindowDefList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_WINDOW_DEF_LIST, sizeof(SyntaqliteWindowDefList));
 
     SyntaqliteWindowDefList *node = (SyntaqliteWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -1229,22 +1163,20 @@ uint32_t ast_window_def_list_append(SyntaqliteAstContext *ctx, uint32_t list_id,
 }
 
 uint32_t ast_named_window_def(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan window_name, uint32_t window_def) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_NAMED_WINDOW_DEF, sizeof(SyntaqliteNamedWindowDef));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_NAMED_WINDOW_DEF, sizeof(SyntaqliteNamedWindowDef));
 
     SyntaqliteNamedWindowDef *node = (SyntaqliteNamedWindowDef*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->window_name = window_name;
     node->window_def = window_def;
     return id;
 }
 
 uint32_t ast_named_window_def_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST, sizeof(SyntaqliteNamedWindowDefList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST, sizeof(SyntaqliteNamedWindowDefList));
 
     SyntaqliteNamedWindowDefList *node = (SyntaqliteNamedWindowDefList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -1266,11 +1198,10 @@ uint32_t ast_filter_over(
     uint32_t over_def,
     SyntaqliteSourceSpan over_name
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_FILTER_OVER, sizeof(SyntaqliteFilterOver));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_FILTER_OVER, sizeof(SyntaqliteFilterOver));
 
     SyntaqliteFilterOver *node = (SyntaqliteFilterOver*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->filter_expr = filter_expr;
     node->over_def = over_def;
     node->over_name = over_name;
@@ -1282,22 +1213,20 @@ uint32_t ast_trigger_event(
     SyntaqliteTriggerEventType event_type,
     uint32_t columns
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_TRIGGER_EVENT, sizeof(SyntaqliteTriggerEvent));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_TRIGGER_EVENT, sizeof(SyntaqliteTriggerEvent));
 
     SyntaqliteTriggerEvent *node = (SyntaqliteTriggerEvent*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->event_type = event_type;
     node->columns = columns;
     return id;
 }
 
 uint32_t ast_trigger_cmd_list_empty(SyntaqliteAstContext *ctx) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_TRIGGER_CMD_LIST, sizeof(SyntaqliteTriggerCmdList));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_TRIGGER_CMD_LIST, sizeof(SyntaqliteTriggerCmdList));
 
     SyntaqliteTriggerCmdList *node = (SyntaqliteTriggerCmdList*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->count = 0;
     return id;
 }
@@ -1325,11 +1254,10 @@ uint32_t ast_create_trigger_stmt(
     uint32_t when_expr,
     uint32_t body
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CREATE_TRIGGER_STMT, sizeof(SyntaqliteCreateTriggerStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CREATE_TRIGGER_STMT, sizeof(SyntaqliteCreateTriggerStmt));
 
     SyntaqliteCreateTriggerStmt *node = (SyntaqliteCreateTriggerStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->trigger_name = trigger_name;
     node->schema = schema;
     node->is_temp = is_temp;
@@ -1350,11 +1278,10 @@ uint32_t ast_create_virtual_table_stmt(
     SyntaqliteBool if_not_exists,
     SyntaqliteSourceSpan module_args
 ) {
-    uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT, sizeof(SyntaqliteCreateVirtualTableStmt));
-    if (id == SYNTAQLITE_NULL_NODE) return id;
+    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT, sizeof(SyntaqliteCreateVirtualTableStmt));
 
     SyntaqliteCreateVirtualTableStmt *node = (SyntaqliteCreateVirtualTableStmt*)
-        (ctx->ast->arena + ctx->ast->offsets[id]);
+        (ctx->ast.data + ctx->ast.offsets[id]);
     node->table_name = table_name;
     node->schema = schema;
     node->module_name = module_name;

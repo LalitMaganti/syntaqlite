@@ -22,7 +22,7 @@ cmd(A) ::= create_vtab(X). {
 // With arguments in parentheses
 cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
     // Capture module arguments span (content between parens)
-    SyntaqliteNode *vtab = AST_NODE(pCtx->astCtx->ast, X);
+    SyntaqliteNode *vtab = AST_NODE(&pCtx->astCtx->ast, X);
     const char *args_start = L.z + L.n;
     const char *args_end = R.z;
     vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){

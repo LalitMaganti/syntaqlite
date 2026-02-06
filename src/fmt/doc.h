@@ -6,6 +6,8 @@
 #ifndef SYNTAQLITE_SRC_FMT_DOC_H
 #define SYNTAQLITE_SRC_FMT_DOC_H
 
+#include "src/arena.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -71,39 +73,33 @@ typedef union SyntaqliteDoc {
     SyntaqliteDocConcat concat;
 } SyntaqliteDoc;
 
-// ============ Arena ============
+// ============ Doc Context ============
 
-typedef struct SyntaqliteDocArena {
-    uint8_t *arena;
-    uint32_t arena_size;
-    uint32_t arena_capacity;
-    uint32_t *offsets;
-    uint32_t node_count;
-    uint32_t node_capacity;
-} SyntaqliteDocArena;
+typedef struct SyntaqliteDocContext {
+    SyntaqliteArena arena;
+} SyntaqliteDocContext;
+
+void syntaqlite_doc_context_init(SyntaqliteDocContext *ctx);
+void syntaqlite_doc_context_cleanup(SyntaqliteDocContext *ctx);
 
 // Access node by ID
-static inline SyntaqliteDoc* syntaqlite_doc_node(SyntaqliteDocArena *arena, uint32_t id) {
+static inline SyntaqliteDoc* syntaqlite_doc_node(SyntaqliteDocContext *ctx, uint32_t id) {
     if (id == SYNTAQLITE_NULL_DOC) return NULL;
-    return (SyntaqliteDoc*)(arena->arena + arena->offsets[id]);
+    return (SyntaqliteDoc*)(ctx->arena.data + ctx->arena.offsets[id]);
 }
-#define DOC_NODE(arena, id) syntaqlite_doc_node(arena, id)
+#define DOC_NODE(ctx, id) syntaqlite_doc_node(ctx, id)
 
-// Arena management
-void syntaqlite_doc_arena_init(SyntaqliteDocArena *arena);
-void syntaqlite_doc_arena_free(SyntaqliteDocArena *arena);
-
-// Builder functions - return doc ID (or SYNTAQLITE_NULL_DOC on error)
-uint32_t doc_text(SyntaqliteDocArena *arena, const char *text, uint32_t length);
-uint32_t doc_line(SyntaqliteDocArena *arena);
-uint32_t doc_softline(SyntaqliteDocArena *arena);
-uint32_t doc_hardline(SyntaqliteDocArena *arena);
-uint32_t doc_nest(SyntaqliteDocArena *arena, int32_t indent, uint32_t child);
-uint32_t doc_group(SyntaqliteDocArena *arena, uint32_t child);
+// Builder functions - return doc ID
+uint32_t doc_text(SyntaqliteDocContext *ctx, const char *text, uint32_t length);
+uint32_t doc_line(SyntaqliteDocContext *ctx);
+uint32_t doc_softline(SyntaqliteDocContext *ctx);
+uint32_t doc_hardline(SyntaqliteDocContext *ctx);
+uint32_t doc_nest(SyntaqliteDocContext *ctx, int32_t indent, uint32_t child);
+uint32_t doc_group(SyntaqliteDocContext *ctx, uint32_t child);
 
 // Concat: create empty, then append children one at a time
-uint32_t doc_concat_empty(SyntaqliteDocArena *arena);
-uint32_t doc_concat_append(SyntaqliteDocArena *arena, uint32_t concat_id, uint32_t child);
+uint32_t doc_concat_empty(SyntaqliteDocContext *ctx);
+uint32_t doc_concat_append(SyntaqliteDocContext *ctx, uint32_t concat_id, uint32_t child);
 
 #ifdef __cplusplus
 }

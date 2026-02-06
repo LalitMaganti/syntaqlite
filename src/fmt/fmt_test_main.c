@@ -121,20 +121,13 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  // Initialize AST
-  SyntaqliteAst ast;
-  syntaqlite_ast_init(&ast);
-
+  // Initialize AST context
   SyntaqliteAstContext astCtx;
-  astCtx.ast = &ast;
-  astCtx.source = sql;
-  astCtx.source_length = (uint32_t)len;
-  astCtx.error_code = 0;
-  astCtx.error_msg = NULL;
+  syntaqlite_ast_context_init(&astCtx, sql, (uint32_t)len);
 
   // Initialize token list
   SyntaqliteTokenList tokenList;
-  syntaqlite_token_list_init(&tokenList);
+  syntaqlite_vec_init(&tokenList);
 
   // Initialize parse context
   SyntaqliteParseContext parseCtx;
@@ -150,8 +143,9 @@ int main(int argc, char **argv) {
   void *parser = syntaqlite_sqlite3ParserAlloc(malloc, &parseCtx);
   if (!parser) {
     fprintf(stderr, "Error: Failed to allocate parser\n");
-    syntaqlite_token_list_free(&tokenList);
-    syntaqlite_ast_free(&ast);
+    syntaqlite_vec_free(&tokenList);
+    syntaqlite_ast_context_cleanup(&astCtx);
+
     free(sql);
     return 1;
   }
@@ -196,8 +190,9 @@ int main(int argc, char **argv) {
     if (g_syntax_error) {
       fprintf(stderr, "Error: Syntax error near '%.*s'\n", (int)tokenLen, z);
       syntaqlite_sqlite3ParserFree(parser, free);
-      syntaqlite_token_list_free(&tokenList);
-      syntaqlite_ast_free(&ast);
+      syntaqlite_vec_free(&tokenList);
+      syntaqlite_ast_context_cleanup(&astCtx);
+  
       free(sql);
       return 1;
     }
@@ -219,8 +214,9 @@ int main(int argc, char **argv) {
   if (g_syntax_error) {
     fprintf(stderr, "Error: Incomplete statement\n");
     syntaqlite_sqlite3ParserFree(parser, free);
-    syntaqlite_token_list_free(&tokenList);
-    syntaqlite_ast_free(&ast);
+    syntaqlite_vec_free(&tokenList);
+    syntaqlite_ast_context_cleanup(&astCtx);
+
     free(sql);
     return 1;
   }
@@ -230,15 +226,16 @@ int main(int argc, char **argv) {
 
   if (root_id == SYNTAQLITE_NULL_NODE) {
     syntaqlite_sqlite3ParserFree(parser, free);
-    syntaqlite_token_list_free(&tokenList);
-    syntaqlite_ast_free(&ast);
+    syntaqlite_vec_free(&tokenList);
+    syntaqlite_ast_context_cleanup(&astCtx);
+
     free(sql);
     return 0;
   }
 
   // Format and print
   SyntaqliteFmtOptions fmtOpts = {.target_width = width, .indent_width = 2};
-  char *formatted = syntaqlite_format(&ast, root_id, sql, &tokenList, &fmtOpts);
+  char *formatted = syntaqlite_format(&astCtx.ast, root_id, sql, &tokenList, &fmtOpts);
   if (formatted) {
     fputs(formatted, stdout);
     free(formatted);
@@ -246,8 +243,8 @@ int main(int argc, char **argv) {
 
   // Cleanup
   syntaqlite_sqlite3ParserFree(parser, free);
-  syntaqlite_token_list_free(&tokenList);
-  syntaqlite_ast_free(&ast);
+  syntaqlite_vec_free(&tokenList);
+  syntaqlite_ast_context_cleanup(&astCtx);
   free(sql);
 
   return 0;

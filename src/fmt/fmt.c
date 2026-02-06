@@ -17,8 +17,8 @@
 // ============ Formatter Context ============
 
 typedef struct {
-    SyntaqliteDocArena docs;
-    SyntaqliteAst *ast;
+    SyntaqliteDocContext docs;
+    SyntaqliteArena *ast;
     const char *source;
     SyntaqliteTokenList *token_list;
     SyntaqliteFmtOptions *options;
@@ -1783,14 +1783,14 @@ static uint32_t format_node(FmtCtx *ctx, uint32_t node_id) {
 
 // ============ Public API ============
 
-char *syntaqlite_format(SyntaqliteAst *ast, uint32_t root_id,
+char *syntaqlite_format(SyntaqliteArena *ast, uint32_t root_id,
                         const char *source, SyntaqliteTokenList *token_list,
                         SyntaqliteFmtOptions *options) {
     SyntaqliteFmtOptions default_options = SYNTAQLITE_FMT_OPTIONS_DEFAULT;
     if (!options) options = &default_options;
 
     FmtCtx ctx;
-    syntaqlite_doc_arena_init(&ctx.docs);
+    syntaqlite_doc_context_init(&ctx.docs);
     ctx.ast = ast;
     ctx.source = source;
     ctx.token_list = token_list;
@@ -1798,13 +1798,13 @@ char *syntaqlite_format(SyntaqliteAst *ast, uint32_t root_id,
 
     uint32_t root_doc = format_node(&ctx, root_id);
     if (root_doc == SYNTAQLITE_NULL_DOC) {
-        syntaqlite_doc_arena_free(&ctx.docs);
+        syntaqlite_doc_context_cleanup(&ctx.docs);
         char *empty = (char*)malloc(1);
         if (empty) empty[0] = '\0';
         return empty;
     }
 
     char *result = syntaqlite_doc_layout(&ctx.docs, root_doc, options->target_width);
-    syntaqlite_doc_arena_free(&ctx.docs);
+    syntaqlite_doc_context_cleanup(&ctx.docs);
     return result;
 }

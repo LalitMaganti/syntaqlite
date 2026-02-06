@@ -7,11 +7,11 @@
 #include "src/ast/ast_nodes.h"
 #include "src/ast/ast_print.h"
 
-static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
+static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
                        const char *source, int depth,
                        const char *field_name);
 
-static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
+static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
                        const char *source, int depth,
                        const char *field_name) {
   if (node_id == SYNTAQLITE_NULL_NODE) {
@@ -1160,7 +1160,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
   }
 }
 
-void syntaqlite_ast_print(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
+void syntaqlite_ast_print(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
                           const char *source) {
   print_node(out, ast, node_id, source, 0, NULL);
 }

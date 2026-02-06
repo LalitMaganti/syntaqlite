@@ -4147,7 +4147,7 @@ static YYACTIONTYPE yy_reduce(
     if (yymsp[-4].minor.yy391 == SYNTAQLITE_NULL_NODE) {
         yymsp[-4].minor.yy391 = tref;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, yymsp[-4].minor.yy391);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, yymsp[-4].minor.yy391);
         yymsp[-4].minor.yy391 = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
@@ -4172,7 +4172,7 @@ static YYACTIONTYPE yy_reduce(
     if (yymsp[-5].minor.yy391 == SYNTAQLITE_NULL_NODE) {
         yymsp[-5].minor.yy391 = tref;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, yymsp[-5].minor.yy391);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, yymsp[-5].minor.yy391);
         yymsp[-5].minor.yy391 = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
@@ -4197,7 +4197,7 @@ static YYACTIONTYPE yy_reduce(
     if (yymsp[-7].minor.yy391 == SYNTAQLITE_NULL_NODE) {
         yymsp[-7].minor.yy391 = tref;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, yymsp[-7].minor.yy391);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, yymsp[-7].minor.yy391);
         yymsp[-7].minor.yy391 = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
@@ -4212,7 +4212,7 @@ static YYACTIONTYPE yy_reduce(
     if (yymsp[-5].minor.yy391 == SYNTAQLITE_NULL_NODE) {
         yymsp[-5].minor.yy391 = sub;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, yymsp[-5].minor.yy391);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, yymsp[-5].minor.yy391);
         yymsp[-5].minor.yy391 = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
@@ -4226,7 +4226,7 @@ static YYACTIONTYPE yy_reduce(
     if (yymsp[-5].minor.yy391 == SYNTAQLITE_NULL_NODE) {
         yymsp[-5].minor.yy391 = yymsp[-3].minor.yy391;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, yymsp[-5].minor.yy391);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, yymsp[-5].minor.yy391);
         yymsp[-5].minor.yy391 = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
@@ -4701,7 +4701,7 @@ static YYACTIONTYPE yy_reduce(
       case 192: /* expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist RP filter_over */
 {
     SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
-        (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[yymsp[0].minor.yy391]);
+        (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[yymsp[0].minor.yy391]);
     yylhsminor.yy391 = ast_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, yymsp[-5].minor.yy0),
         (SyntaqliteFunctionCallFlags){.raw = (uint8_t)yymsp[-3].minor.yy391},
@@ -4714,7 +4714,7 @@ static YYACTIONTYPE yy_reduce(
       case 193: /* expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist ORDER BY sortlist RP filter_over */
 {
     SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
-        (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[yymsp[0].minor.yy391]);
+        (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[yymsp[0].minor.yy391]);
     yylhsminor.yy391 = ast_aggregate_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, yymsp[-8].minor.yy0),
         (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)yymsp[-6].minor.yy391},
@@ -4728,7 +4728,7 @@ static YYACTIONTYPE yy_reduce(
       case 194: /* expr ::= ID|INDEXED|JOIN_KW LP STAR RP filter_over */
 {
     SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
-        (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[yymsp[0].minor.yy391]);
+        (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[yymsp[0].minor.yy391]);
     yylhsminor.yy391 = ast_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, yymsp[-4].minor.yy0),
         (SyntaqliteFunctionCallFlags){.star = 1},
@@ -5060,7 +5060,7 @@ static YYACTIONTYPE yy_reduce(
       case 260: /* cmd ::= createkw trigger_decl BEGIN trigger_cmd_list END */
 {
     // yymsp[-3].minor.yy391 is a partially-built CreateTriggerStmt, fill in the body
-    SyntaqliteNode *trig = AST_NODE(pCtx->astCtx->ast, yymsp[-3].minor.yy391);
+    SyntaqliteNode *trig = AST_NODE(&pCtx->astCtx->ast, yymsp[-3].minor.yy391);
     trig->create_trigger_stmt.body = yymsp[-1].minor.yy391;
     yymsp[-4].minor.yy391 = yymsp[-3].minor.yy391;
 }
@@ -5270,7 +5270,7 @@ static YYACTIONTYPE yy_reduce(
       case 299: /* cmd ::= create_vtab LP vtabarglist RP */
 {
     // Capture module arguments span (content between parens)
-    SyntaqliteNode *vtab = AST_NODE(pCtx->astCtx->ast, yymsp[-3].minor.yy391);
+    SyntaqliteNode *vtab = AST_NODE(&pCtx->astCtx->ast, yymsp[-3].minor.yy391);
     const char *args_start = yymsp[-2].minor.yy0.z + yymsp[-2].minor.yy0.n;
     const char *args_end = yymsp[0].minor.yy0.z;
     vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
@@ -5517,7 +5517,7 @@ static YYACTIONTYPE yy_reduce(
 {
     // Unpack the over_clause FilterOver to combine with filter expr
     SyntaqliteFilterOver *fo_over = (SyntaqliteFilterOver*)
-        (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[yymsp[0].minor.yy391]);
+        (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[yymsp[0].minor.yy391]);
     yylhsminor.yy391 = ast_filter_over(pCtx->astCtx,
         yymsp[-1].minor.yy391,
         fo_over->over_def,
@@ -5607,8 +5607,8 @@ static YYACTIONTYPE yy_reduce(
     // or: (2) a CreateTableStmt node with as_select filled in
     // yymsp[-1].minor.yy391 has the table name/schema/temp/ifnotexists info packed as a node.
     // We need to merge yymsp[-1].minor.yy391 info into yymsp[0].minor.yy391.
-    SyntaqliteNode *ct_node = AST_NODE(pCtx->astCtx->ast, yymsp[-1].minor.yy391);
-    SyntaqliteNode *args_node = AST_NODE(pCtx->astCtx->ast, yymsp[0].minor.yy391);
+    SyntaqliteNode *ct_node = AST_NODE(&pCtx->astCtx->ast, yymsp[-1].minor.yy391);
+    SyntaqliteNode *args_node = AST_NODE(&pCtx->astCtx->ast, yymsp[0].minor.yy391);
     args_node->create_table_stmt.table_name = ct_node->create_table_stmt.table_name;
     args_node->create_table_stmt.schema = ct_node->create_table_stmt.schema;
     args_node->create_table_stmt.is_temp = ct_node->create_table_stmt.is_temp;
@@ -5656,7 +5656,7 @@ static YYACTIONTYPE yy_reduce(
 {
     if (yymsp[0].minor.yy117.node != SYNTAQLITE_NULL_NODE) {
         // Apply pending constraint name from the list to this node
-        SyntaqliteNode *node = AST_NODE(pCtx->astCtx->ast, yymsp[0].minor.yy117.node);
+        SyntaqliteNode *node = AST_NODE(&pCtx->astCtx->ast, yymsp[0].minor.yy117.node);
         node->column_constraint.constraint_name = yymsp[-1].minor.yy637.pending_name;
         if (yymsp[-1].minor.yy637.list == SYNTAQLITE_NULL_NODE) {
             yylhsminor.yy637.list = ast_column_constraint_list(pCtx->astCtx, yymsp[0].minor.yy117.node);
@@ -5712,7 +5712,7 @@ static YYACTIONTYPE yy_reduce(
     // If comma separator was present, clear pending constraint name
     SyntaqliteSourceSpan pending = yymsp[-1].minor.yy144 ? SYNTAQLITE_NO_SPAN : yymsp[-2].minor.yy637.pending_name;
     if (yymsp[0].minor.yy117.node != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *node = AST_NODE(pCtx->astCtx->ast, yymsp[0].minor.yy117.node);
+        SyntaqliteNode *node = AST_NODE(&pCtx->astCtx->ast, yymsp[0].minor.yy117.node);
         node->table_constraint.constraint_name = pending;
         if (yymsp[-2].minor.yy637.list == SYNTAQLITE_NULL_NODE) {
             yylhsminor.yy637.list = ast_table_constraint_list(pCtx->astCtx, yymsp[0].minor.yy117.node);

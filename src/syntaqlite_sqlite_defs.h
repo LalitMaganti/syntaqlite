@@ -43,7 +43,7 @@ typedef struct SyntaqliteToken {
 /*
 ** Forward declarations for AST types.
 */
-struct SyntaqliteAst;
+struct SyntaqliteArena;
 struct SyntaqliteAstContext;
 struct SyntaqliteTokenList;
 

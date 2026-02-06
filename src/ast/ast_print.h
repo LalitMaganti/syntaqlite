@@ -7,7 +7,7 @@
 #ifndef SYNTAQLITE_AST_PRINT_H
 #define SYNTAQLITE_AST_PRINT_H
 
-#include "src/ast/ast_base.h"
+#include "src/arena.h"
 
 #include <stdio.h>
 
@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 // Print AST node and its children to a file stream
-void syntaqlite_ast_print(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
+void syntaqlite_ast_print(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
                           const char *source);
 
 #ifdef __cplusplus

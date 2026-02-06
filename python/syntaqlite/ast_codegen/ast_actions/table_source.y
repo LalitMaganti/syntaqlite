@@ -39,7 +39,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
     if (A == SYNTAQLITE_NULL_NODE) {
         A = tref;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, A);
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
@@ -64,7 +64,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
     if (A == SYNTAQLITE_NULL_NODE) {
         A = tref;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, A);
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
@@ -89,7 +89,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N
     if (A == SYNTAQLITE_NULL_NODE) {
         A = tref;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, A);
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
@@ -104,7 +104,7 @@ seltablist(A) ::= stl_prefix(A) LP select(S) RP as(Z) on_using(N). {
     if (A == SYNTAQLITE_NULL_NODE) {
         A = sub;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, A);
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,
@@ -118,7 +118,7 @@ seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
     if (A == SYNTAQLITE_NULL_NODE) {
         A = F;
     } else {
-        SyntaqliteNode *pfx = AST_NODE(pCtx->astCtx->ast, A);
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->astCtx->ast, A);
         A = ast_join_clause(pCtx->astCtx,
             pfx->join_prefix.join_type,
             pfx->join_prefix.source,

@@ -17,7 +17,7 @@
 // The main cmd rule: completes the trigger with its body
 cmd(A) ::= createkw trigger_decl(D) BEGIN trigger_cmd_list(S) END. {
     // D is a partially-built CreateTriggerStmt, fill in the body
-    SyntaqliteNode *trig = AST_NODE(pCtx->astCtx->ast, D);
+    SyntaqliteNode *trig = AST_NODE(&pCtx->astCtx->ast, D);
     trig->create_trigger_stmt.body = S;
     A = D;
 }

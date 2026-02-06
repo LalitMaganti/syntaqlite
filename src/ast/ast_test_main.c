@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "src/sq_getopt.h"
+#include "src/ast/ast_base.h"
 #include "src/ast/ast_print.h"
 #include "src/syntaqlite_sqlite_defs.h"
 #include "src/sqlite_tokens.h"
@@ -113,12 +114,9 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-  // Initialize AST
-  SyntaqliteAst ast;
-  syntaqlite_ast_init(&ast);
-
+  // Initialize AST context
   SyntaqliteAstContext astCtx;
-  syntaqlite_ast_context_init(&astCtx, &ast, sql, (uint32_t)len);
+  syntaqlite_ast_context_init(&astCtx, sql, (uint32_t)len);
 
   // Initialize parse context
   SyntaqliteParseContext parseCtx;
@@ -135,7 +133,7 @@ int main(int argc, char **argv) {
   if (!parser) {
     fprintf(stderr, "Error: Failed to allocate parser\n");
     syntaqlite_ast_context_cleanup(&astCtx);
-    syntaqlite_ast_free(&ast);
+
     free(sql);
     return 1;
   }
@@ -177,7 +175,7 @@ int main(int argc, char **argv) {
       fprintf(stderr, "Error: Syntax error near '%.*s'\n", (int)tokenLen, z);
       syntaqlite_sqlite3ParserFree(parser, free);
       syntaqlite_ast_context_cleanup(&astCtx);
-      syntaqlite_ast_free(&ast);
+  
       free(sql);
       return 1;
     }
@@ -203,7 +201,7 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Error: Incomplete statement\n");
     syntaqlite_sqlite3ParserFree(parser, free);
     syntaqlite_ast_context_cleanup(&astCtx);
-    syntaqlite_ast_free(&ast);
+
     free(sql);
     return 1;
   }
@@ -215,18 +213,17 @@ int main(int argc, char **argv) {
     // No AST produced (empty input or semicolon only)
     syntaqlite_sqlite3ParserFree(parser, free);
     syntaqlite_ast_context_cleanup(&astCtx);
-    syntaqlite_ast_free(&ast);
+
     free(sql);
     return 0;
   }
 
   // Print AST
-  syntaqlite_ast_print(stdout, &ast, root_id, sql);
+  syntaqlite_ast_print(stdout, &astCtx.ast, root_id, sql);
 
   // Cleanup
   syntaqlite_sqlite3ParserFree(parser, free);
   syntaqlite_ast_context_cleanup(&astCtx);
-  syntaqlite_ast_free(&ast);
   free(sql);
 
   return 0;

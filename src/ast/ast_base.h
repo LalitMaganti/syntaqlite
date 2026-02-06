@@ -6,6 +6,9 @@
 #ifndef SYNTAQLITE_AST_BASE_H
 #define SYNTAQLITE_AST_BASE_H
 
+#include "src/arena.h"
+#include "src/vec.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -29,16 +32,6 @@ typedef struct SyntaqliteSourceSpan {
 
 // Empty source span
 #define SYNTAQLITE_NO_SPAN ((SyntaqliteSourceSpan){0, 0})
-
-// Arena-based AST storage
-typedef struct SyntaqliteAst {
-    uint8_t *arena;
-    uint32_t arena_size;
-    uint32_t arena_capacity;
-    uint32_t *offsets;
-    uint32_t node_count;
-    uint32_t node_capacity;
-} SyntaqliteAst;
 
 // Grammar stack value: column name + type token (threaded through columnname rule)
 typedef struct SyntaqliteColumnNameValue {
@@ -72,27 +65,20 @@ typedef struct SyntaqliteWithValue {
 
 // Build context passed through parser
 typedef struct SyntaqliteAstContext {
-    SyntaqliteAst *ast;
+    SyntaqliteArena ast;
     const char *source;
     uint32_t source_length;
     int error_code;
     const char *error_msg;
     // List accumulator: avoids O(n^2) copy-on-every-append.
     // Children are collected here, then flushed to the arena in one shot.
-    uint32_t *list_acc;          // heap-allocated buffer for child node IDs
-    uint32_t list_acc_count;     // number of children in accumulator
-    uint32_t list_acc_cap;       // buffer capacity
+    SYNTAQLITE_VEC(uint32_t) list_acc;
     uint32_t list_acc_node_id;   // node ID of the list being built
     uint8_t  list_acc_tag;       // tag of the list being built
 } SyntaqliteAstContext;
 
-// Arena management
-void syntaqlite_ast_init(SyntaqliteAst *ast);
-void syntaqlite_ast_free(SyntaqliteAst *ast);
-uint32_t ast_alloc(SyntaqliteAstContext *ctx, uint8_t tag, size_t size);
-
 // AST context lifecycle
-void syntaqlite_ast_context_init(SyntaqliteAstContext *ctx, SyntaqliteAst *ast,
+void syntaqlite_ast_context_init(SyntaqliteAstContext *ctx,
                                   const char *source, uint32_t source_length);
 void syntaqlite_ast_context_cleanup(SyntaqliteAstContext *ctx);
 

@@ -20,8 +20,8 @@ cmd(A) ::= create_table(CT) create_table_args(ARGS). {
     // or: (2) a CreateTableStmt node with as_select filled in
     // CT has the table name/schema/temp/ifnotexists info packed as a node.
     // We need to merge CT info into ARGS.
-    SyntaqliteNode *ct_node = AST_NODE(pCtx->astCtx->ast, CT);
-    SyntaqliteNode *args_node = AST_NODE(pCtx->astCtx->ast, ARGS);
+    SyntaqliteNode *ct_node = AST_NODE(&pCtx->astCtx->ast, CT);
+    SyntaqliteNode *args_node = AST_NODE(&pCtx->astCtx->ast, ARGS);
     args_node->create_table_stmt.table_name = ct_node->create_table_stmt.table_name;
     args_node->create_table_stmt.schema = ct_node->create_table_stmt.schema;
     args_node->create_table_stmt.is_temp = ct_node->create_table_stmt.is_temp;
@@ -103,7 +103,7 @@ columnlist(A) ::= columnname(CN) carglist(CG). {
 carglist(A) ::= carglist(L) ccons(C). {
     if (C.node != SYNTAQLITE_NULL_NODE) {
         // Apply pending constraint name from the list to this node
-        SyntaqliteNode *node = AST_NODE(pCtx->astCtx->ast, C.node);
+        SyntaqliteNode *node = AST_NODE(&pCtx->astCtx->ast, C.node);
         node->column_constraint.constraint_name = L.pending_name;
         if (L.list == SYNTAQLITE_NULL_NODE) {
             A.list = ast_column_constraint_list(pCtx->astCtx, C.node);
@@ -448,7 +448,7 @@ conslist(A) ::= conslist(L) tconscomma(SEP) tcons(TC). {
     // If comma separator was present, clear pending constraint name
     SyntaqliteSourceSpan pending = SEP ? SYNTAQLITE_NO_SPAN : L.pending_name;
     if (TC.node != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *node = AST_NODE(pCtx->astCtx->ast, TC.node);
+        SyntaqliteNode *node = AST_NODE(&pCtx->astCtx->ast, TC.node);
         node->table_constraint.constraint_name = pending;
         if (L.list == SYNTAQLITE_NULL_NODE) {
             A.list = ast_table_constraint_list(pCtx->astCtx, TC.node);

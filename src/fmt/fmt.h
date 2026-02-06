@@ -19,7 +19,7 @@ extern "C" {
 // Format an AST node to a SQL string.
 // Returns malloc'd string (caller frees), or NULL on error.
 // token_list may be NULL (comments will be omitted).
-char *syntaqlite_format(SyntaqliteAst *ast, uint32_t root_id,
+char *syntaqlite_format(SyntaqliteArena *ast, uint32_t root_id,
                         const char *source, SyntaqliteTokenList *token_list,
                         SyntaqliteFmtOptions *options);
 

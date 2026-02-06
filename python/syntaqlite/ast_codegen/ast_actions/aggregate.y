@@ -28,7 +28,7 @@ expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E
 // Aggregate function call with filter/over
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E) RP filter_over(F). {
     SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
-        (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[F]);
+        (pCtx->astCtx->ast.data + pCtx->astCtx->ast.offsets[F]);
     A = ast_aggregate_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, B),
         (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)C},
