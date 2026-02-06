@@ -346,3 +346,64 @@ SelectStmt
   window_clause: null
 """,
         )
+
+    def test_column_alias_as(self):
+        return AstTestBlueprint(
+            sql="SELECT a AS x, b AS y FROM t",
+            out="""\
+SelectStmt
+  flags: (none)
+  columns: ResultColumnList[2]
+    ResultColumn
+      flags: (none)
+      alias: "x"
+      expr: ColumnRef
+        column: "a"
+        table: null
+        schema: null
+    ResultColumn
+      flags: (none)
+      alias: "y"
+      expr: ColumnRef
+        column: "b"
+        table: null
+        schema: null
+  from_clause: TableRef
+    table_name: "t"
+    schema: null
+    alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
+""",
+        )
+
+    def test_column_alias_implicit(self):
+        return AstTestBlueprint(
+            sql="SELECT a x FROM t",
+            out="""\
+SelectStmt
+  flags: (none)
+  columns: ResultColumnList[1]
+    ResultColumn
+      flags: (none)
+      alias: "x"
+      expr: ColumnRef
+        column: "a"
+        table: null
+        schema: null
+  from_clause: TableRef
+    table_name: "t"
+    schema: null
+    alias: null
+  where: null
+  groupby: null
+  having: null
+  orderby: null
+  limit_clause: null
+  window_clause: null
+""",
+        )

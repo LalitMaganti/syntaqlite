@@ -53,7 +53,7 @@ class SelectFormat(TestSuite):
     def test_alias(self):
         return AstTestBlueprint(
             sql="select a as x from t",
-            out="SELECT a FROM t",
+            out="SELECT a AS x FROM t",
         )
 
     def test_compound_union_all(self):

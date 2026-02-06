@@ -36,8 +36,9 @@ oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_o
 
 // ============ Result columns ============
 
-selcollist(A) ::= sclp(B) scanpt expr(C) scanpt as. {
-    uint32_t col = ast_result_column(pCtx->astCtx, (SyntaqliteResultColumnFlags){0}, SYNTAQLITE_NO_SPAN, C);
+selcollist(A) ::= sclp(B) scanpt expr(C) scanpt as(D). {
+    SyntaqliteSourceSpan alias = (D.z) ? syntaqlite_span(pCtx, D) : SYNTAQLITE_NO_SPAN;
+    uint32_t col = ast_result_column(pCtx->astCtx, (SyntaqliteResultColumnFlags){0}, alias, C);
     A = ast_result_column_list_append(pCtx->astCtx, B, col);
 }
 

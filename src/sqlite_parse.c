@@ -4088,7 +4088,8 @@ static YYACTIONTYPE yy_reduce(
         break;
       case 102: /* selcollist ::= sclp scanpt expr scanpt as */
 {
-    uint32_t col = ast_result_column(pCtx->astCtx, (SyntaqliteResultColumnFlags){0}, SYNTAQLITE_NO_SPAN, yymsp[-2].minor.yy391);
+    SyntaqliteSourceSpan alias = (yymsp[0].minor.yy0.z) ? syntaqlite_span(pCtx, yymsp[0].minor.yy0) : SYNTAQLITE_NO_SPAN;
+    uint32_t col = ast_result_column(pCtx->astCtx, (SyntaqliteResultColumnFlags){0}, alias, yymsp[-2].minor.yy391);
     yylhsminor.yy391 = ast_result_column_list_append(pCtx->astCtx, yymsp[-4].minor.yy391, col);
 }
   yymsp[-4].minor.yy391 = yylhsminor.yy391;
