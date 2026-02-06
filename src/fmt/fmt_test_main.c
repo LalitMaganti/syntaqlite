@@ -210,6 +210,9 @@ int main(int argc, char **argv) {
   SyntaqliteToken endToken = {NULL, 0, 0};
   syntaqlite_sqlite3Parser(parser, 0, endToken, &parseCtx);
 
+  // Flush any pending list accumulator before reading the AST
+  ast_list_flush(&astCtx);
+
   // Check for syntax error
   if (g_syntax_error) {
     fprintf(stderr, "Error: Incomplete statement\n");
