@@ -54,7 +54,7 @@ tools/tests/run-ast-diff-tests --filter select --jobs 4   # Filter + parallel
 tools/tests/run-ast-diff-tests --rebaseline               # Print expected outputs
 ```
 
-Test suites are auto-discovered by scanning `tests/ast_diff_tests/*/tests.py` for `TestSuite` subclasses. No registration is needed — just create a directory with a `tests.py` file.
+Test suites are auto-discovered by scanning `tests/ast_diff_tests/*.py` for `TestSuite` subclasses. No registration is needed — just create a new `.py` file.
 
 ## Code Style
 

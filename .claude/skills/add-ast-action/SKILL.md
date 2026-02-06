@@ -119,7 +119,7 @@ tools/tests/run-ast-diff-tests --binary out/mac_debug/ast_test  # Run tests
 
 ### 6. Write tests
 
-Create `tests/ast_diff_tests/your_suite/tests.py`:
+Create `tests/ast_diff_tests/your_suite.py`:
 
 ```python
 from python.syntaqlite.diff_tests.testing import AstTestBlueprint, TestSuite
@@ -147,7 +147,7 @@ SelectStmt
 echo "SELECT your_syntax_here;" | out/mac_debug/ast_test
 ```
 
-Test suites are auto-discovered — just create a directory with a `tests.py` file under `tests/ast_diff_tests/`.
+Test suites are auto-discovered — just create a `.py` file under `tests/ast_diff_tests/`.
 
 ## Debugging techniques
 
@@ -218,5 +218,5 @@ Watch for:
 | `python/syntaqlite/sqlite_extractor/grammar_build.py` | Grammar merging + %type declarations |
 | `third_party/src/sqlite/src/parse.y` | Upstream SQLite grammar (ground truth) |
 | `src/ast/ast_test_main.c` | Test binary entry point (add tracing here) |
-| `tests/ast_diff_tests/*/tests.py` | AST diff test suites |
+| `tests/ast_diff_tests/*.py` | AST diff test suites |
 | `python/syntaqlite/diff_tests/testing.py` | Test framework (AstTestBlueprint, TestSuite) |

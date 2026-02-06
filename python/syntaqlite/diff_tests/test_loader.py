@@ -15,10 +15,10 @@ from python.syntaqlite.diff_tests.testing import AstTestBlueprint, TestSuite
 
 
 def _discover_test_suites(root_dir: Path) -> List[TestSuite]:
-    """Auto-discover all TestSuite subclasses in tests/ast_diff_tests/*/tests.py.
+    """Auto-discover all TestSuite subclasses in tests/ast_diff_tests/*.py.
 
-    Scans for tests.py files in immediate subdirectories of
-    tests/ast_diff_tests/, sorted by directory name for deterministic order.
+    Scans for .py files (excluding __init__.py) in tests/ast_diff_tests/,
+    sorted by filename for deterministic order.
 
     Args:
         root_dir: The project root directory.
@@ -27,13 +27,15 @@ def _discover_test_suites(root_dir: Path) -> List[TestSuite]:
         List of TestSuite instances found across all test modules.
     """
     test_base = root_dir / "tests" / "ast_diff_tests"
-    pattern = str(test_base / "*" / "tests.py")
+    pattern = str(test_base / "*.py")
     suites = []
 
     for test_file in sorted(glob(pattern)):
         test_path = Path(test_file)
+        if test_path.name == "__init__.py":
+            continue
         # Convert filesystem path to Python module path:
-        #   tests/ast_diff_tests/select/tests.py -> tests.ast_diff_tests.select.tests
+        #   tests/ast_diff_tests/select.py -> tests.ast_diff_tests.select
         relative = test_path.relative_to(root_dir)
         module_name = str(relative.with_suffix("")).replace("/", ".")
 
@@ -52,7 +54,7 @@ def load_all_tests(
 ) -> List[Tuple[str, AstTestBlueprint]]:
     """Load all tests from the test directory.
 
-    Auto-discovers test suites by scanning tests/ast_diff_tests/*/tests.py
+    Auto-discovers test suites by scanning tests/ast_diff_tests/*.py
     for TestSuite subclasses.
 
     Args:

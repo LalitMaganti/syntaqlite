@@ -11,11 +11,27 @@ import sys
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
+def _brew_llvm_args():
+    """Return GN args to use Homebrew LLVM, or empty string if unavailable."""
+    try:
+        prefix = subprocess.check_output(
+            ["brew", "--prefix", "llvm"], text=True, stderr=subprocess.DEVNULL
+        ).strip()
+        cc = os.path.join(prefix, "bin", "clang")
+        cxx = os.path.join(prefix, "bin", "clang++")
+        if os.path.isfile(cc):
+            return f' cc="{cc}" cxx="{cxx}"'
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass
+    return ""
+
+
 # Build configurations: name -> gn args
 MAC_BUILD_CONFIGS = {
     "mac_debug": "is_debug=true",
     "mac_release": "is_debug=false",
-    "mac_asan": "is_debug=false is_asan=true",
+    "mac_asan": "is_debug=false is_asan=true" + _brew_llvm_args(),
 }
 
 LINUX_BUILD_CONFIGS = {
