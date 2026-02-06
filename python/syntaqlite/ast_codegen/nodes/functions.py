@@ -33,7 +33,7 @@ NODES = [
                         softline()))),
             kw(")"),
             if_set("filter_clause", seq(kw(" "), child("filter_clause"))),
-            if_set("over_clause", seq(kw(" "), child("over_clause"))),
+            if_set("over_clause", seq(kw(" OVER "), child("over_clause"))),
         ),
     ),
 ]

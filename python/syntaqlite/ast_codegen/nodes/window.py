@@ -9,6 +9,10 @@ frame bounds, frame exclusion.
 """
 
 from ..defs import Node, List, Enum, inline, index
+from ..fmt_dsl import (
+    seq, kw, span, child,
+    if_set, if_span, if_enum, switch,
+)
 
 ENUMS = [
     Enum("FrameType",
@@ -40,6 +44,13 @@ NODES = [
     Node("FrameBound",
         bound_type=inline("FrameBoundType"),
         expr=index("Expr"),             # nullable - only for EXPR_PRECEDING/FOLLOWING
+        fmt=switch("bound_type", {
+            "UNBOUNDED_PRECEDING": kw("UNBOUNDED PRECEDING"),
+            "EXPR_PRECEDING": seq(child("expr"), kw(" PRECEDING")),
+            "CURRENT_ROW": kw("CURRENT ROW"),
+            "EXPR_FOLLOWING": seq(child("expr"), kw(" FOLLOWING")),
+            "UNBOUNDED_FOLLOWING": kw("UNBOUNDED FOLLOWING"),
+        }),
     ),
 
     # Frame specification: ROWS/RANGE/GROUPS BETWEEN ... AND ... EXCLUDE ...
@@ -48,6 +59,21 @@ NODES = [
         exclude=inline("FrameExclude"),
         start_bound=index("FrameBound"),
         end_bound=index("FrameBound"),
+        fmt=seq(
+            switch("frame_type", {
+                "RANGE": kw("RANGE"),
+                "ROWS": kw("ROWS"),
+                "GROUPS": kw("GROUPS"),
+            }),
+            kw(" BETWEEN "), child("start_bound"),
+            kw(" AND "), child("end_bound"),
+            switch("exclude", {
+                "NO_OTHERS": kw(" EXCLUDE NO OTHERS"),
+                "CURRENT_ROW": kw(" EXCLUDE CURRENT ROW"),
+                "GROUP": kw(" EXCLUDE GROUP"),
+                "TIES": kw(" EXCLUDE TIES"),
+            }),
+        ),
     ),
 
     # Window definition: base_name PARTITION BY ... ORDER BY ... frame_spec
@@ -56,6 +82,23 @@ NODES = [
         partition_by=index("ExprList"),                    # nullable
         orderby=index("OrderByList"),                      # nullable
         frame=index("FrameSpec"),                          # nullable
+        fmt=if_span("base_window_name",
+            # Named window reference: just the name
+            span("base_window_name"),
+            # Inline window spec: (...)
+            seq(
+                kw("("),
+                if_set("partition_by", seq(kw("PARTITION BY "), child("partition_by"))),
+                if_set("orderby", seq(
+                    if_set("partition_by", kw(" ")),
+                    kw("ORDER BY "), child("orderby"),
+                )),
+                if_set("frame", seq(
+                    if_set("partition_by", kw(" "), if_set("orderby", kw(" "))),
+                    child("frame"),
+                )),
+                kw(")"),
+            )),
     ),
 
     # List of window definitions (for WINDOW clause)
@@ -65,6 +108,7 @@ NODES = [
     Node("NamedWindowDef",
         window_name=inline("SyntaqliteSourceSpan"),
         window_def=index("WindowDef"),
+        fmt=seq(span("window_name"), kw(" AS "), child("window_def")),
     ),
 
     # List of named window definitions
@@ -76,5 +120,10 @@ NODES = [
         filter_expr=index("Expr"),       # FILTER (WHERE expr), nullable
         over_def=index("WindowDef"),     # OVER (...), nullable
         over_name=inline("SyntaqliteSourceSpan"),  # OVER nm (named window ref)
+        fmt=seq(
+            if_set("filter_expr", seq(kw("FILTER (WHERE "), child("filter_expr"), kw(")"))),
+            if_set("over_def", seq(kw(" OVER "), child("over_def"))),
+            if_span("over_name", seq(kw(" OVER "), span("over_name"))),
+        ),
     ),
 ]
