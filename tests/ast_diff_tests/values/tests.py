@@ -100,10 +100,10 @@ ValuesClause
 CompoundSelect
   op: UNION
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER

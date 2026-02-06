@@ -14,10 +14,10 @@ class BindParameters(TestSuite):
             sql="SELECT ?",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Variable
         source: "?"
@@ -29,10 +29,10 @@ SelectStmt
             sql="SELECT ?1",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Variable
         source: "?1"
@@ -44,10 +44,10 @@ SelectStmt
             sql="SELECT :name",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Variable
         source: ":name"
@@ -59,10 +59,10 @@ SelectStmt
             sql="SELECT @name",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Variable
         source: "@name"
@@ -74,10 +74,10 @@ SelectStmt
             sql="SELECT $name",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Variable
         source: "$name"
@@ -93,10 +93,10 @@ class CollateExpressions(TestSuite):
             sql="SELECT 1 COLLATE NOCASE",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CollateExpr
         Literal
@@ -111,10 +111,10 @@ SelectStmt
             sql="SELECT 'hello' COLLATE BINARY",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CollateExpr
         Literal
@@ -133,10 +133,10 @@ class DateTimeKeywords(TestSuite):
             sql="SELECT CURRENT_TIME",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: CURRENT
@@ -149,10 +149,10 @@ SelectStmt
             sql="SELECT CURRENT_DATE",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: CURRENT
@@ -165,10 +165,10 @@ SelectStmt
             sql="SELECT CURRENT_TIMESTAMP",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: CURRENT

@@ -414,6 +414,37 @@ static const char* const syntaqlite_trigger_event_type_names[] = {
     "UPDATE",
 };
 
+// ============ Flags Types ============
+
+typedef union SyntaqliteResultColumnFlags {
+    uint8_t raw;
+    struct {
+        uint8_t star : 1;
+    };
+} SyntaqliteResultColumnFlags;
+
+typedef union SyntaqliteSelectStmtFlags {
+    uint8_t raw;
+    struct {
+        uint8_t distinct : 1;
+    };
+} SyntaqliteSelectStmtFlags;
+
+typedef union SyntaqliteFunctionCallFlags {
+    uint8_t raw;
+    struct {
+        uint8_t distinct : 1;
+        uint8_t star : 1;
+    };
+} SyntaqliteFunctionCallFlags;
+
+typedef union SyntaqliteAggregateFunctionCallFlags {
+    uint8_t raw;
+    struct {
+        uint8_t distinct : 1;
+    };
+} SyntaqliteAggregateFunctionCallFlags;
+
 // ============ Node Tags ============
 
 typedef enum {
@@ -525,7 +556,7 @@ typedef struct SyntaqliteExprList {
 
 typedef struct SyntaqliteResultColumn {
     uint8_t tag;
-    uint8_t flags;
+    SyntaqliteResultColumnFlags flags;
     SyntaqliteSourceSpan alias;
     uint32_t expr;
 } SyntaqliteResultColumn;
@@ -540,7 +571,7 @@ typedef struct SyntaqliteResultColumnList {
 
 typedef struct SyntaqliteSelectStmt {
     uint8_t tag;
-    uint8_t flags;
+    SyntaqliteSelectStmtFlags flags;
     uint32_t columns;
     uint32_t from_clause;
     uint32_t where;
@@ -582,7 +613,7 @@ typedef struct SyntaqliteColumnRef {
 typedef struct SyntaqliteFunctionCall {
     uint8_t tag;
     SyntaqliteSourceSpan func_name;
-    uint8_t flags;
+    SyntaqliteFunctionCallFlags flags;
     uint32_t args;
     uint32_t filter_clause;
     uint32_t over_clause;
@@ -712,7 +743,7 @@ typedef struct SyntaqliteWithClause {
 typedef struct SyntaqliteAggregateFunctionCall {
     uint8_t tag;
     SyntaqliteSourceSpan func_name;
-    uint8_t flags;
+    SyntaqliteAggregateFunctionCallFlags flags;
     uint32_t args;
     uint32_t orderby;
     uint32_t filter_clause;

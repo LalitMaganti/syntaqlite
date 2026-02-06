@@ -14,10 +14,10 @@ class CastExpr(TestSuite):
             sql="SELECT CAST(1 AS INTEGER)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CastExpr
         Literal
@@ -32,10 +32,10 @@ SelectStmt
             sql="SELECT CAST('hello' AS TEXT)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CastExpr
         Literal
@@ -50,10 +50,10 @@ SelectStmt
             sql="SELECT CAST(3.14 AS REAL)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CastExpr
         Literal
@@ -68,10 +68,10 @@ SelectStmt
             sql="SELECT CAST(x AS VARCHAR(100))",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CastExpr
         ColumnRef
@@ -87,10 +87,10 @@ SelectStmt
             sql="SELECT CAST(x AS DECIMAL(10,2))",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CastExpr
         ColumnRef
@@ -106,10 +106,10 @@ SelectStmt
             sql="SELECT CAST(x AS DOUBLE PRECISION)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CastExpr
         ColumnRef
@@ -125,10 +125,10 @@ SelectStmt
             sql="SELECT CAST(1 AS )",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CastExpr
         Literal
@@ -147,10 +147,10 @@ class PtrExpr(TestSuite):
             sql="SELECT '{\"a\":1}' -> '$.a'",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: PTR
@@ -168,10 +168,10 @@ SelectStmt
             sql="SELECT j -> '$.name'",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: PTR
@@ -194,10 +194,10 @@ class QnumberLiteral(TestSuite):
             sql="SELECT 1_000_000",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: QNUMBER
@@ -210,10 +210,10 @@ SelectStmt
             sql="SELECT 1_000.50",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: QNUMBER
@@ -230,10 +230,10 @@ class RowValue(TestSuite):
             sql="SELECT (1, 2)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ExprList[2]
         Literal
@@ -250,10 +250,10 @@ SelectStmt
             sql="SELECT (1, 2, 3)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ExprList[3]
         Literal

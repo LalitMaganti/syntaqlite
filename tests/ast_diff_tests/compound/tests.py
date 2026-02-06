@@ -16,19 +16,19 @@ class CompoundSelect(TestSuite):
 CompoundSelect
   op: UNION
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER
           source: "1"
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER
@@ -43,19 +43,19 @@ CompoundSelect
 CompoundSelect
   op: UNION_ALL
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER
           source: "1"
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER
@@ -70,19 +70,19 @@ CompoundSelect
 CompoundSelect
   op: INTERSECT
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER
           source: "1"
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER
@@ -97,19 +97,19 @@ CompoundSelect
 CompoundSelect
   op: EXCEPT
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER
           source: "1"
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER
@@ -126,17 +126,17 @@ class SubqueryExpr(TestSuite):
             sql="SELECT (SELECT 1)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       SubqueryExpr
         SelectStmt
-          flags: 0
+          flags: (none)
           ResultColumnList[1]
             ResultColumn
-              flags: 0
+              flags: (none)
               alias: null
               Literal
                 literal_type: INTEGER
@@ -149,17 +149,17 @@ SelectStmt
             sql="SELECT EXISTS (SELECT 1)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ExistsExpr
         SelectStmt
-          flags: 0
+          flags: (none)
           ResultColumnList[1]
             ResultColumn
-              flags: 0
+              flags: (none)
               alias: null
               Literal
                 literal_type: INTEGER
@@ -176,10 +176,10 @@ class InExpr(TestSuite):
             sql="SELECT 1 IN (1, 2, 3)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       InExpr
         negated: 0
@@ -204,10 +204,10 @@ SelectStmt
             sql="SELECT 1 NOT IN (1, 2, 3)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       InExpr
         negated: 1
@@ -232,10 +232,10 @@ SelectStmt
             sql="SELECT 1 IN (SELECT 1)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       InExpr
         negated: 0
@@ -244,10 +244,10 @@ SelectStmt
           source: "1"
         SubqueryExpr
           SelectStmt
-            flags: 0
+            flags: (none)
             ResultColumnList[1]
               ResultColumn
-                flags: 0
+                flags: (none)
                 alias: null
                 Literal
                   literal_type: INTEGER

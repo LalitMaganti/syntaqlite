@@ -235,10 +235,10 @@ CreateTableStmt
   if_not_exists: 0
   table_options: 0
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "t1"

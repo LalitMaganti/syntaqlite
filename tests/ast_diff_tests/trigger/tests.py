@@ -26,10 +26,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -54,10 +54,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -82,10 +82,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -110,10 +110,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -142,10 +142,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -170,10 +170,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -198,10 +198,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -235,10 +235,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -263,10 +263,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -304,10 +304,10 @@ CreateTriggerStmt
       source: "0"
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -332,10 +332,10 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[1]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
@@ -459,19 +459,19 @@ CreateTriggerStmt
     schema: null
   TriggerCmdList[2]
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER
             source: "1"
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER

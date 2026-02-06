@@ -231,10 +231,10 @@ class ExplainStmts(TestSuite):
 ExplainStmt
   explain_mode: EXPLAIN
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         Literal
           literal_type: INTEGER
@@ -249,10 +249,10 @@ ExplainStmt
 ExplainStmt
   explain_mode: QUERY_PLAN
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "t"
@@ -421,10 +421,10 @@ CreateViewStmt
   is_temp: 0
   if_not_exists: 0
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "t"
@@ -443,10 +443,10 @@ CreateViewStmt
   is_temp: 1
   if_not_exists: 0
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "t"
@@ -465,10 +465,10 @@ CreateViewStmt
   is_temp: 0
   if_not_exists: 1
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "t"
@@ -496,17 +496,17 @@ CreateViewStmt
       table: null
       schema: null
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[2]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         ColumnRef
           column: "x"
           table: null
           schema: null
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         ColumnRef
           column: "y"

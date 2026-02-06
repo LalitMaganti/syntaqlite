@@ -14,14 +14,14 @@ class WindowFunctionBasic(TestSuite):
             sql="SELECT row_number() OVER (ORDER BY id) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "row_number"
-        flags: 0
+        flags: (none)
         WindowDef
           base_window_name: null
           OrderByList[1]
@@ -44,14 +44,14 @@ SelectStmt
             sql="SELECT count(*) OVER (PARTITION BY a) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "count"
-        flags: 2
+        flags: STAR
         WindowDef
           base_window_name: null
           ExprList[1]
@@ -71,14 +71,14 @@ SelectStmt
             sql="SELECT sum(x) OVER w FROM t WINDOW w AS (ORDER BY x)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "sum"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "x"
@@ -115,14 +115,14 @@ class FilterClause(TestSuite):
             sql="SELECT sum(x) FILTER (WHERE x > 0) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "sum"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "x"
@@ -149,14 +149,14 @@ SelectStmt
             sql="SELECT sum(x) FILTER (WHERE x > 0) OVER (ORDER BY y) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "sum"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "x"
@@ -197,14 +197,14 @@ class FrameSpecification(TestSuite):
             sql="SELECT sum(x) OVER (ORDER BY y ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "sum"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "x"
@@ -245,14 +245,14 @@ SelectStmt
             sql="SELECT sum(x) OVER (ORDER BY y RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "sum"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "x"
@@ -287,14 +287,14 @@ SelectStmt
             sql="SELECT sum(x) OVER (ORDER BY y GROUPS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING EXCLUDE TIES) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "sum"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "x"
@@ -329,14 +329,14 @@ SelectStmt
             sql="SELECT sum(x) OVER (ORDER BY y ROWS 2 PRECEDING) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "sum"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "x"
@@ -378,10 +378,10 @@ class WindowClause(TestSuite):
             sql="SELECT * FROM t WINDOW w AS (ORDER BY x)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   TableRef
     table_name: "t"
@@ -408,14 +408,14 @@ SelectStmt
             sql="SELECT sum(x) OVER w1, avg(y) OVER w2 FROM t WINDOW w1 AS (ORDER BY a), w2 AS (PARTITION BY b ORDER BY c)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[2]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "sum"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "x"
@@ -424,11 +424,11 @@ SelectStmt
         WindowDef
           base_window_name: "w1"
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "avg"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "y"
@@ -482,14 +482,14 @@ class AggregateWithWindowFunction(TestSuite):
             sql="SELECT group_concat(x, ',' ORDER BY y) FILTER (WHERE z > 0) OVER (PARTITION BY a) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       AggregateFunctionCall
         func_name: "group_concat"
-        flags: 0
+        flags: (none)
         ExprList[2]
           ColumnRef
             column: "x"

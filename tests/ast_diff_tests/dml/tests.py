@@ -125,10 +125,10 @@ InsertStmt
     schema: null
     alias: null
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "s"
@@ -358,10 +358,10 @@ WithClause
       cte_name: "cte"
       materialized: 0
       SelectStmt
-        flags: 0
+        flags: (none)
         ResultColumnList[1]
           ResultColumn
-            flags: 0
+            flags: (none)
             alias: null
             Literal
               literal_type: INTEGER
@@ -373,10 +373,10 @@ WithClause
       schema: null
       alias: null
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 1
+          flags: STAR
           alias: null
       TableRef
         table_name: "cte"

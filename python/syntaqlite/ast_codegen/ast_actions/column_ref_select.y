@@ -16,6 +16,6 @@
 
 // table.* in result columns
 selcollist(A) ::= sclp(B) scanpt nm(C) DOT STAR. {
-    uint32_t col = ast_result_column(pCtx->astCtx, 1, syntaqlite_span(pCtx, C), SYNTAQLITE_NULL_NODE);
+    uint32_t col = ast_result_column(pCtx->astCtx, (SyntaqliteResultColumnFlags){.star = 1}, syntaqlite_span(pCtx, C), SYNTAQLITE_NULL_NODE);
     A = ast_result_column_list_append(pCtx->astCtx, B, col);
 }

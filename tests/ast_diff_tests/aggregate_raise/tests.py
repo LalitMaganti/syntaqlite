@@ -14,14 +14,14 @@ class AggregateFunctionOrderBy(TestSuite):
             sql="SELECT GROUP_CONCAT(name ORDER BY name) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       AggregateFunctionCall
         func_name: "GROUP_CONCAT"
-        flags: 0
+        flags: (none)
         ExprList[1]
           ColumnRef
             column: "name"
@@ -47,14 +47,14 @@ SelectStmt
             sql="SELECT GROUP_CONCAT(name, ',' ORDER BY name DESC) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       AggregateFunctionCall
         func_name: "GROUP_CONCAT"
-        flags: 0
+        flags: (none)
         ExprList[2]
           ColumnRef
             column: "name"
@@ -83,14 +83,14 @@ SelectStmt
             sql="SELECT GROUP_CONCAT(DISTINCT name ORDER BY name) FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       AggregateFunctionCall
         func_name: "GROUP_CONCAT"
-        flags: 1
+        flags: DISTINCT
         ExprList[1]
           ColumnRef
             column: "name"
@@ -120,10 +120,10 @@ class RaiseExpression(TestSuite):
             sql="SELECT RAISE(IGNORE)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       RaiseExpr
         raise_type: IGNORE
@@ -135,10 +135,10 @@ SelectStmt
             sql="SELECT RAISE(ROLLBACK, 'error message')",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       RaiseExpr
         raise_type: ROLLBACK
@@ -153,10 +153,10 @@ SelectStmt
             sql="SELECT RAISE(ABORT, 'constraint failed')",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       RaiseExpr
         raise_type: ABORT
@@ -171,10 +171,10 @@ SelectStmt
             sql="SELECT RAISE(FAIL, 'error')",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       RaiseExpr
         raise_type: FAIL

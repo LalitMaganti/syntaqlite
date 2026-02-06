@@ -66,7 +66,10 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth);
       fprintf(out, "ResultColumn\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "flags: %u\n", node->result_column.flags);
+      fprintf(out, "flags:");
+      if (node->result_column.flags.star) fprintf(out, " STAR");
+      if (!node->result_column.flags.raw) fprintf(out, " (none)");
+      fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
       fprintf(out, "alias: ");
       ast_print_source_span(out, source, node->result_column.alias);
@@ -88,7 +91,10 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth);
       fprintf(out, "SelectStmt\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "flags: %u\n", node->select_stmt.flags);
+      fprintf(out, "flags:");
+      if (node->select_stmt.flags.distinct) fprintf(out, " DISTINCT");
+      if (!node->select_stmt.flags.raw) fprintf(out, " (none)");
+      fprintf(out, "\n");
       print_node(out, ast, node->select_stmt.columns, source, depth + 1);
       print_node(out, ast, node->select_stmt.from_clause, source, depth + 1);
       print_node(out, ast, node->select_stmt.where, source, depth + 1);
@@ -154,7 +160,11 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->function_call.func_name);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "flags: %u\n", node->function_call.flags);
+      fprintf(out, "flags:");
+      if (node->function_call.flags.distinct) fprintf(out, " DISTINCT");
+      if (node->function_call.flags.star) fprintf(out, " STAR");
+      if (!node->function_call.flags.raw) fprintf(out, " (none)");
+      fprintf(out, "\n");
       print_node(out, ast, node->function_call.args, source, depth + 1);
       print_node(out, ast, node->function_call.filter_clause, source, depth + 1);
       print_node(out, ast, node->function_call.over_clause, source, depth + 1);
@@ -342,7 +352,10 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_source_span(out, source, node->aggregate_function_call.func_name);
       fprintf(out, "\n");
       ast_print_indent(out, depth + 1);
-      fprintf(out, "flags: %u\n", node->aggregate_function_call.flags);
+      fprintf(out, "flags:");
+      if (node->aggregate_function_call.flags.distinct) fprintf(out, " DISTINCT");
+      if (!node->aggregate_function_call.flags.raw) fprintf(out, " (none)");
+      fprintf(out, "\n");
       print_node(out, ast, node->aggregate_function_call.args, source, depth + 1);
       print_node(out, ast, node->aggregate_function_call.orderby, source, depth + 1);
       print_node(out, ast, node->aggregate_function_call.filter_clause, source, depth + 1);

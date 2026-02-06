@@ -27,22 +27,22 @@ selectnowith(A) ::= oneselect(B). {
 }
 
 oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_opt(F) having_opt(G) orderby_opt(H) limit_opt(I). {
-    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C, D, E, F, G, H, I, SYNTAQLITE_NULL_NODE);
+    A = ast_select_stmt(pCtx->astCtx, (SyntaqliteSelectStmtFlags){.raw = (uint8_t)B}, C, D, E, F, G, H, I, SYNTAQLITE_NULL_NODE);
 }
 
 oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_opt(F) having_opt(G) window_clause(R) orderby_opt(H) limit_opt(I). {
-    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C, D, E, F, G, H, I, R);
+    A = ast_select_stmt(pCtx->astCtx, (SyntaqliteSelectStmtFlags){.raw = (uint8_t)B}, C, D, E, F, G, H, I, R);
 }
 
 // ============ Result columns ============
 
 selcollist(A) ::= sclp(B) scanpt expr(C) scanpt as. {
-    uint32_t col = ast_result_column(pCtx->astCtx, 0, SYNTAQLITE_NO_SPAN, C);
+    uint32_t col = ast_result_column(pCtx->astCtx, (SyntaqliteResultColumnFlags){0}, SYNTAQLITE_NO_SPAN, C);
     A = ast_result_column_list_append(pCtx->astCtx, B, col);
 }
 
 selcollist(A) ::= sclp(B) scanpt STAR. {
-    uint32_t col = ast_result_column(pCtx->astCtx, 1, SYNTAQLITE_NO_SPAN, SYNTAQLITE_NULL_NODE);
+    uint32_t col = ast_result_column(pCtx->astCtx, (SyntaqliteResultColumnFlags){.star = 1}, SYNTAQLITE_NO_SPAN, SYNTAQLITE_NULL_NODE);
     A = ast_result_column_list_append(pCtx->astCtx, B, col);
 }
 

@@ -14,10 +14,10 @@ class IsExprBasic(TestSuite):
             sql="SELECT 1 ISNULL",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       IsExpr
         op: ISNULL
@@ -32,10 +32,10 @@ SelectStmt
             sql="SELECT 1 NOTNULL",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       IsExpr
         op: NOTNULL
@@ -50,10 +50,10 @@ SelectStmt
             sql="SELECT 1 NOT NULL",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       IsExpr
         op: NOTNULL
@@ -68,10 +68,10 @@ SelectStmt
             sql="SELECT 1 IS NULL",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       IsExpr
         op: IS
@@ -89,10 +89,10 @@ SelectStmt
             sql="SELECT 1 IS NOT NULL",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       IsExpr
         op: IS_NOT
@@ -110,10 +110,10 @@ SelectStmt
             sql="SELECT 1 IS 2",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       IsExpr
         op: IS
@@ -131,10 +131,10 @@ SelectStmt
             sql="SELECT 1 IS NOT 2",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       IsExpr
         op: IS_NOT
@@ -152,10 +152,10 @@ SelectStmt
             sql="SELECT 1 IS NOT DISTINCT FROM 2",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       IsExpr
         op: IS_NOT_DISTINCT
@@ -173,10 +173,10 @@ SelectStmt
             sql="SELECT 1 IS DISTINCT FROM 2",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       IsExpr
         op: IS_DISTINCT
@@ -198,10 +198,10 @@ class BetweenExprBasic(TestSuite):
             sql="SELECT 1 BETWEEN 0 AND 10",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BetweenExpr
         negated: 0
@@ -222,10 +222,10 @@ SelectStmt
             sql="SELECT 1 NOT BETWEEN 0 AND 10",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BetweenExpr
         negated: 1
@@ -250,10 +250,10 @@ class LikeExprBasic(TestSuite):
             sql="SELECT 'abc' LIKE 'a%'",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       LikeExpr
         negated: 0
@@ -271,10 +271,10 @@ SelectStmt
             sql="SELECT 'abc' NOT LIKE 'a%'",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       LikeExpr
         negated: 1
@@ -292,10 +292,10 @@ SelectStmt
             sql="SELECT 'abc' LIKE 'a%' ESCAPE '\\'",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       LikeExpr
         negated: 0
@@ -320,10 +320,10 @@ class CaseExprBasic(TestSuite):
             sql="SELECT CASE WHEN 1 THEN 'a' ELSE 'b' END",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CaseExpr
         Literal
@@ -345,10 +345,10 @@ SelectStmt
             sql="SELECT CASE 1 WHEN 1 THEN 'yes' WHEN 2 THEN 'no' END",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CaseExpr
         Literal
@@ -377,10 +377,10 @@ SelectStmt
             sql="SELECT CASE WHEN 1 THEN 'a' END",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       CaseExpr
         CaseWhenList[1]

@@ -14,10 +14,10 @@ class ColumnRefBasic(TestSuite):
             sql="SELECT x",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ColumnRef
         column: "x"
@@ -31,10 +31,10 @@ SelectStmt
             sql="SELECT t.x",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ColumnRef
         column: "x"
@@ -48,10 +48,10 @@ SelectStmt
             sql="SELECT s.t.x",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ColumnRef
         column: "x"
@@ -65,24 +65,24 @@ SelectStmt
             sql="SELECT a, b, c",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[3]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ColumnRef
         column: "a"
         table: null
         schema: null
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ColumnRef
         column: "b"
         table: null
         schema: null
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ColumnRef
         column: "c"
@@ -96,10 +96,10 @@ SelectStmt
             sql="SELECT t.*",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: "t"
 """,
         )
@@ -109,24 +109,24 @@ SelectStmt
             sql="SELECT a, t.b, 1 + x",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[3]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ColumnRef
         column: "a"
         table: null
         schema: null
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       ColumnRef
         column: "b"
         table: "t"
         schema: null
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: PLUS

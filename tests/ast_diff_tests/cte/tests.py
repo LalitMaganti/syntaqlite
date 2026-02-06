@@ -20,19 +20,19 @@ WithClause
       cte_name: "t"
       materialized: 0
       SelectStmt
-        flags: 0
+        flags: (none)
         ResultColumnList[1]
           ResultColumn
-            flags: 0
+            flags: (none)
             alias: null
             Literal
               literal_type: INTEGER
               source: "1"
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "t"
@@ -61,25 +61,25 @@ WithClause
           table: null
           schema: null
       SelectStmt
-        flags: 0
+        flags: (none)
         ResultColumnList[2]
           ResultColumn
-            flags: 0
+            flags: (none)
             alias: null
             Literal
               literal_type: INTEGER
               source: "1"
           ResultColumn
-            flags: 0
+            flags: (none)
             alias: null
             Literal
               literal_type: INTEGER
               source: "2"
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "t"
@@ -106,19 +106,19 @@ WithClause
       CompoundSelect
         op: UNION_ALL
         SelectStmt
-          flags: 0
+          flags: (none)
           ResultColumnList[1]
             ResultColumn
-              flags: 0
+              flags: (none)
               alias: null
               Literal
                 literal_type: INTEGER
                 source: "1"
         SelectStmt
-          flags: 0
+          flags: (none)
           ResultColumnList[1]
             ResultColumn
-              flags: 0
+              flags: (none)
               alias: null
               BinaryExpr
                 op: PLUS
@@ -134,10 +134,10 @@ WithClause
             schema: null
             alias: null
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 0
+        flags: (none)
         alias: null
         ColumnRef
           column: "x"
@@ -161,10 +161,10 @@ WithClause
       cte_name: "a"
       materialized: 0
       SelectStmt
-        flags: 0
+        flags: (none)
         ResultColumnList[1]
           ResultColumn
-            flags: 0
+            flags: (none)
             alias: null
             Literal
               literal_type: INTEGER
@@ -173,19 +173,19 @@ WithClause
       cte_name: "b"
       materialized: 0
       SelectStmt
-        flags: 0
+        flags: (none)
         ResultColumnList[1]
           ResultColumn
-            flags: 0
+            flags: (none)
             alias: null
             Literal
               literal_type: INTEGER
               source: "2"
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "a"
@@ -205,19 +205,19 @@ WithClause
       cte_name: "t"
       materialized: 1
       SelectStmt
-        flags: 0
+        flags: (none)
         ResultColumnList[1]
           ResultColumn
-            flags: 0
+            flags: (none)
             alias: null
             Literal
               literal_type: INTEGER
               source: "1"
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "t"
@@ -237,19 +237,19 @@ WithClause
       cte_name: "t"
       materialized: 2
       SelectStmt
-        flags: 0
+        flags: (none)
         ResultColumnList[1]
           ResultColumn
-            flags: 0
+            flags: (none)
             alias: null
             Literal
               literal_type: INTEGER
               source: "1"
   SelectStmt
-    flags: 0
+    flags: (none)
     ResultColumnList[1]
       ResultColumn
-        flags: 1
+        flags: STAR
         alias: null
     TableRef
       table_name: "t"

@@ -14,10 +14,10 @@ class SelectWhere(TestSuite):
             sql="SELECT 1 WHERE 1 > 0",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -42,10 +42,10 @@ class SelectGroupBy(TestSuite):
             sql="SELECT 1 GROUP BY 1",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -62,10 +62,10 @@ SelectStmt
             sql="SELECT 1 GROUP BY 1 HAVING 1 > 0",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -94,10 +94,10 @@ class SelectOrderBy(TestSuite):
             sql="SELECT 1 ORDER BY 1",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -117,10 +117,10 @@ SelectStmt
             sql="SELECT 1 ORDER BY 1 DESC",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -140,10 +140,10 @@ SelectStmt
             sql="SELECT 1 ORDER BY 1 NULLS FIRST",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -163,10 +163,10 @@ SelectStmt
             sql="SELECT 1 ORDER BY 1 DESC NULLS LAST",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -186,10 +186,10 @@ SelectStmt
             sql="SELECT 1 ORDER BY 1 ASC, 2 DESC",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -219,10 +219,10 @@ class SelectLimit(TestSuite):
             sql="SELECT 1 LIMIT 10",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -239,10 +239,10 @@ SelectStmt
             sql="SELECT 1 LIMIT 10 OFFSET 5",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -262,10 +262,10 @@ SelectStmt
             sql="SELECT 1 LIMIT 5, 10",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -289,10 +289,10 @@ class SelectCombined(TestSuite):
             sql="SELECT 1 WHERE 1 > 0 ORDER BY 1 LIMIT 10",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER

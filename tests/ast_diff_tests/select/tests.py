@@ -14,10 +14,10 @@ class SelectBasic(TestSuite):
             sql="SELECT 1",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: INTEGER
@@ -30,10 +30,10 @@ SelectStmt
             sql="SELECT 3.14",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: FLOAT
@@ -46,10 +46,10 @@ SelectStmt
             sql="SELECT 'hello'",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: STRING
@@ -62,10 +62,10 @@ SelectStmt
             sql="SELECT NULL",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       Literal
         literal_type: NULL
@@ -78,10 +78,10 @@ SelectStmt
             sql="SELECT 1 + 2",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: PLUS
@@ -99,10 +99,10 @@ SelectStmt
             sql="SELECT 3 * 4",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: STAR
@@ -120,10 +120,10 @@ SelectStmt
             sql="SELECT 1 < 2",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: LT
@@ -141,10 +141,10 @@ SelectStmt
             sql="SELECT 1 = 2",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: EQ
@@ -162,10 +162,10 @@ SelectStmt
             sql="SELECT 1 AND 0",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: AND
@@ -183,10 +183,10 @@ SelectStmt
             sql="SELECT 1 OR 0",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: OR
@@ -204,10 +204,10 @@ SelectStmt
             sql="SELECT 'a' || 'b'",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       BinaryExpr
         op: CONCAT
@@ -225,10 +225,10 @@ SelectStmt
             sql="SELECT -5",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       UnaryExpr
         op: MINUS
@@ -243,10 +243,10 @@ SelectStmt
             sql="SELECT NOT 1",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       UnaryExpr
         op: NOT

@@ -14,14 +14,14 @@ class FunctionCallBasic(TestSuite):
             sql="SELECT random()",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "random"
-        flags: 0
+        flags: (none)
 """,
         )
 
@@ -30,14 +30,14 @@ SelectStmt
             sql="SELECT abs(1)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "abs"
-        flags: 0
+        flags: (none)
         ExprList[1]
           Literal
             literal_type: INTEGER
@@ -50,14 +50,14 @@ SelectStmt
             sql="SELECT max(1, 2, 3)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "max"
-        flags: 0
+        flags: (none)
         ExprList[3]
           Literal
             literal_type: INTEGER
@@ -76,14 +76,14 @@ SelectStmt
             sql="SELECT count(*)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "count"
-        flags: 2
+        flags: STAR
 """,
         )
 
@@ -92,14 +92,14 @@ SelectStmt
             sql="SELECT count(DISTINCT 1)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "count"
-        flags: 1
+        flags: DISTINCT
         ExprList[1]
           Literal
             literal_type: INTEGER
@@ -112,18 +112,18 @@ SelectStmt
             sql="SELECT abs(max(1, 2))",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 0
+      flags: (none)
       alias: null
       FunctionCall
         func_name: "abs"
-        flags: 0
+        flags: (none)
         ExprList[1]
           FunctionCall
             func_name: "max"
-            flags: 0
+            flags: (none)
             ExprList[2]
               Literal
                 literal_type: INTEGER

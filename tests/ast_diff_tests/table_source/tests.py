@@ -14,10 +14,10 @@ class TableRefBasic(TestSuite):
             sql="SELECT * FROM t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   TableRef
     table_name: "t"
@@ -31,10 +31,10 @@ SelectStmt
             sql="SELECT * FROM t AS x",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   TableRef
     table_name: "t"
@@ -48,10 +48,10 @@ SelectStmt
             sql="SELECT * FROM main.t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   TableRef
     table_name: "t"
@@ -65,10 +65,10 @@ SelectStmt
             sql="SELECT * FROM main.t AS x",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   TableRef
     table_name: "t"
@@ -86,10 +86,10 @@ class JoinBasic(TestSuite):
             sql="SELECT * FROM a, b",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: COMMA
@@ -109,10 +109,10 @@ SelectStmt
             sql="SELECT * FROM a JOIN b ON a.id = b.id",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: INNER
@@ -142,10 +142,10 @@ SelectStmt
             sql="SELECT * FROM a LEFT JOIN b ON a.id = b.id",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: LEFT
@@ -175,10 +175,10 @@ SelectStmt
             sql="SELECT * FROM a RIGHT JOIN b ON a.id = b.id",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: RIGHT
@@ -208,10 +208,10 @@ SelectStmt
             sql="SELECT * FROM a CROSS JOIN b",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: CROSS
@@ -231,10 +231,10 @@ SelectStmt
             sql="SELECT * FROM a FULL JOIN b ON a.id = b.id",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: FULL
@@ -264,10 +264,10 @@ SelectStmt
             sql="SELECT * FROM a LEFT OUTER JOIN b ON a.id = b.id",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: LEFT
@@ -301,10 +301,10 @@ class JoinNatural(TestSuite):
             sql="SELECT * FROM a NATURAL JOIN b",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: NATURAL_INNER
@@ -324,10 +324,10 @@ SelectStmt
             sql="SELECT * FROM a NATURAL LEFT JOIN b",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: NATURAL_LEFT
@@ -351,10 +351,10 @@ class JoinUsing(TestSuite):
             sql="SELECT * FROM a JOIN b USING(id)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: INNER
@@ -379,10 +379,10 @@ SelectStmt
             sql="SELECT * FROM a JOIN b USING(id, name)",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: INNER
@@ -415,10 +415,10 @@ class JoinMultiple(TestSuite):
             sql="SELECT * FROM a JOIN b ON a.id = b.id LEFT JOIN c ON b.id = c.id",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   JoinClause
     join_type: LEFT
@@ -468,17 +468,17 @@ class SubqueryTableSource(TestSuite):
             sql="SELECT * FROM (SELECT 1) AS t",
             out="""\
 SelectStmt
-  flags: 0
+  flags: (none)
   ResultColumnList[1]
     ResultColumn
-      flags: 1
+      flags: STAR
       alias: null
   SubqueryTableSource
     SelectStmt
-      flags: 0
+      flags: (none)
       ResultColumnList[1]
         ResultColumn
-          flags: 0
+          flags: (none)
           alias: null
           Literal
             literal_type: INTEGER

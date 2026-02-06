@@ -506,9 +506,15 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
                         lines.append("      ast_print_indent(out, depth + 1);")
                         lines.append(f'      fprintf(out, "{field_name}: %s\\n", {names_var}[node->{snake_name}.{field_name}]);')
                     elif field_name == "flags" and node.name in flags_lookup:
-                        # Flags union - print raw value
+                        # Flags union - print individual flag names
+                        fdef = flags_lookup[node.name]
+                        accessor = f"node->{snake_name}.{field_name}"
                         lines.append("      ast_print_indent(out, depth + 1);")
-                        lines.append(f'      fprintf(out, "{field_name}: %u\\n", node->{snake_name}.{field_name}.raw);')
+                        lines.append(f'      fprintf(out, "{field_name}:");')
+                        for fname in fdef.flags:
+                            lines.append(f'      if ({accessor}.{fname.lower()}) fprintf(out, " {fname}");')
+                        lines.append(f'      if (!{accessor}.raw) fprintf(out, " (none)");')
+                        lines.append('      fprintf(out, "\\n");')
                     else:
                         # Regular inline field - print name and value
                         lines.append("      ast_print_indent(out, depth + 1);")

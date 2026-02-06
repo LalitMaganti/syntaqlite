@@ -36,7 +36,7 @@ uint32_t ast_expr_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint3
 
 uint32_t ast_result_column(
     SyntaqliteAstContext *ctx,
-    uint8_t flags,
+    SyntaqliteResultColumnFlags flags,
     SyntaqliteSourceSpan alias,
     uint32_t expr
 );
@@ -52,7 +52,7 @@ uint32_t ast_result_column_list_append(SyntaqliteAstContext *ctx, uint32_t list_
 
 uint32_t ast_select_stmt(
     SyntaqliteAstContext *ctx,
-    uint8_t flags,
+    SyntaqliteSelectStmtFlags flags,
     uint32_t columns,
     uint32_t from_clause,
     uint32_t where,
@@ -91,7 +91,7 @@ uint32_t ast_column_ref(
 uint32_t ast_function_call(
     SyntaqliteAstContext *ctx,
     SyntaqliteSourceSpan func_name,
-    uint8_t flags,
+    SyntaqliteFunctionCallFlags flags,
     uint32_t args,
     uint32_t filter_clause,
     uint32_t over_clause
@@ -180,7 +180,7 @@ uint32_t ast_with_clause(SyntaqliteAstContext *ctx, uint8_t recursive, uint32_t 
 uint32_t ast_aggregate_function_call(
     SyntaqliteAstContext *ctx,
     SyntaqliteSourceSpan func_name,
-    uint8_t flags,
+    SyntaqliteAggregateFunctionCallFlags flags,
     uint32_t args,
     uint32_t orderby,
     uint32_t filter_clause,
