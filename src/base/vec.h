@@ -11,16 +11,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "src/base/xmalloc.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-// Abort-on-failure realloc (like Git's xrealloc).
-inline void *synq_xrealloc(void *ptr, size_t size) {
-    void *p = realloc(ptr, size);
-    if (!p) abort();
-    return p;
-}
 
 // Type constructor
 #define SYNQ_VEC(T) struct { T *data; uint32_t count; uint32_t capacity; }

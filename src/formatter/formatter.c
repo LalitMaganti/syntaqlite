@@ -13,8 +13,8 @@
 
 char *syntaqlite_format(const char *sql, uint32_t len,
                         const SyntaqliteFormatOptions *options) {
-    SyntaqliteParserConfig config = {.collect_tokens = 1};
-    SyntaqliteParser *parser = syntaqlite_parser_create(&config);
+    SyntaqliteParser *parser = syntaqlite_parser_create(
+        (SyntaqliteParserConfig){.collect_tokens = 1});
     if (!parser) return NULL;
     syntaqlite_parser_reset(parser, sql, len);
 

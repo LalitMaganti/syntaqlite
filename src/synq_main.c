@@ -175,15 +175,9 @@ int main(int argc, char **argv) {
   }
 
   // Create parser (enable token collection for fmt/doc)
-  SyntaqliteParserConfig *config_ptr = NULL;
-  SyntaqliteParserConfig config = {.collect_tokens = 1, .trace = trace};
-  if (mode == SYNQ_MODE_FMT || mode == SYNQ_MODE_DOC) {
-    config_ptr = &config;
-  } else if (trace) {
-    config.collect_tokens = 0;
-    config_ptr = &config;
-  }
-  SyntaqliteParser *parser = syntaqlite_parser_create(config_ptr);
+  int collect = (mode == SYNQ_MODE_FMT || mode == SYNQ_MODE_DOC);
+  SyntaqliteParser *parser = syntaqlite_parser_create(
+      (SyntaqliteParserConfig){.collect_tokens = collect, .trace = trace});
   if (!parser) {
     fprintf(stderr, "Error: Failed to allocate parser\n");
     free(sql);
@@ -204,7 +198,7 @@ int main(int argc, char **argv) {
 
     switch (mode) {
       case SYNQ_MODE_AST:
-        syntaqlite_parser_print_ast(parser, result.root, stdout);
+        syntaqlite_ast_print(parser, result.root, stdout);
         break;
       case SYNQ_MODE_FMT: {
         SyntaqliteFormatOptions fmt_opts = {.target_width = width,

@@ -4,13 +4,9 @@
 // Shared arena allocator with offset table.
 
 #include "src/base/arena.h"
-#include "src/base/vec.h"
+#include "src/base/xmalloc.h"
 
 #include <stdlib.h>
-
-
-// External definitions for inline functions (C99/C11).
-extern inline void *synq_xrealloc(void *ptr, size_t size);
 
 void synq_arena_init(SynqArena *a) {
     a->data = NULL;

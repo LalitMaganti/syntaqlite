@@ -11,7 +11,7 @@ sqlite_gen("tokenizer_gen") {
   ]
 }
 
-source_set("tokenizer") {
+source_set("tokenize") {
   sources = [
     "sqlite_tokenize_gen.h",
   ]
@@ -23,13 +23,13 @@ source_set("tokenizer") {
 }
 
 # Public tokenizer API.
-source_set("tokenizer_api") {
+source_set("tokenizer") {
   sources = [
-    "tokenizer_api.c",
+    "tokenizer.c",
   ]
   deps = [
     "../common",
     "../../include/syntaqlite:headers",
-    ":tokenizer",
+    ":tokenize",
   ]
 }

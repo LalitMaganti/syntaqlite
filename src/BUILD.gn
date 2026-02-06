@@ -15,8 +15,8 @@ executable("syntaqlite") {
   deps = [
     "base:getopt",
     "../include/syntaqlite:headers",
-    "parser:parser_api",
-    "formatter:formatter_api",
+    "parser",
+    "formatter",
   ]
   if (is_asan) {
     deps += [ "../gn/standalone:asan_defaults" ]
@@ -31,8 +31,8 @@ executable("synqfmt") {
   deps = [
     "base:getopt",
     "../include/syntaqlite:headers",
-    "parser:parser_api",
-    "formatter:formatter_api",
+    "parser",
+    "formatter",
   ]
   if (is_asan) {
     deps += [ "../gn/standalone:asan_defaults" ]

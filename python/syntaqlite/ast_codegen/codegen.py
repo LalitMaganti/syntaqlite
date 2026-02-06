@@ -234,7 +234,7 @@ def generate_public_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[Enu
     lines.append("#include <stddef.h>")
     lines.append("#include <stdint.h>")
     lines.append("")
-    lines.append('#include "syntaqlite/ast_defs.h"')
+    lines.append('#include "syntaqlite/ast.h"')
     lines.append("")
     lines.append("#ifdef __cplusplus")
     lines.append('extern "C" {')

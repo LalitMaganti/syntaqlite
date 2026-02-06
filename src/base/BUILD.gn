@@ -1,9 +1,19 @@
 # Foundational utility libraries for syntaqlite.
 
+# Abort-on-failure allocation wrappers.
+source_set("xmalloc") {
+  sources = [
+    "xmalloc.h",
+  ]
+}
+
 # Header-only generic dynamic array.
 source_set("vec") {
   sources = [
     "vec.h",
+  ]
+  deps = [
+    ":xmalloc",
   ]
 }
 
@@ -22,6 +32,6 @@ source_set("arena") {
     "arena.h",
   ]
   deps = [
-    ":vec",
+    ":xmalloc",
   ]
 }

@@ -24,7 +24,7 @@ static void on_stack_overflow(SynqParseContext *ctx) {
     snprintf(p->error_msg, sizeof(p->error_msg), "Parser stack overflow");
 }
 
-SyntaqliteParser *syntaqlite_parser_create(const SyntaqliteParserConfig *config) {
+SyntaqliteParser *syntaqlite_parser_create(SyntaqliteParserConfig config) {
     SyntaqliteParser *p = (SyntaqliteParser *)calloc(1, sizeof(SyntaqliteParser));
     if (!p) return NULL;
 
@@ -32,7 +32,7 @@ SyntaqliteParser *syntaqlite_parser_create(const SyntaqliteParserConfig *config)
     synq_ast_context_init(&p->astCtx, NULL, 0);
 
     // Token collection
-    if (config && config->collect_tokens) {
+    if (config.collect_tokens) {
         synq_vec_init(&p->token_list_storage);
         p->token_list = &p->token_list_storage;
     } else {
@@ -56,7 +56,7 @@ SyntaqliteParser *syntaqlite_parser_create(const SyntaqliteParserConfig *config)
 
     // Parser tracing (debug builds only)
 #ifndef NDEBUG
-    if (config && config->trace) {
+    if (config.trace) {
         synq_sqlite3ParserTrace(stderr, "PARSER: ");
     }
 #endif
@@ -224,8 +224,7 @@ uint32_t syntaqlite_parser_source_length(SyntaqliteParser *p) {
     return p->length;
 }
 
-void syntaqlite_parser_print_ast(SyntaqliteParser *p, uint32_t node_id,
-                                 FILE *out) {
+void syntaqlite_ast_print(SyntaqliteParser *p, uint32_t node_id, FILE *out) {
     synq_ast_print(out, &p->astCtx.ast, node_id, p->source);
 }
 

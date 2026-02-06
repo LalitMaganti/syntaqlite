@@ -12,7 +12,7 @@ sqlite_gen("headers_gen") {
 
 source_set("headers") {
   sources = [
-    "ast_defs.h",
+    "ast.h",
     "formatter.h",
     "tokenizer.h",
     "parser.h",

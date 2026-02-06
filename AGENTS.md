@@ -100,6 +100,10 @@ Strict: `-Wall -Wextra -Werror`, no exceptions, no RTTI by default.
 | `python/tools/update_gn_version.py` | Update GN binary |
 | `tools/dev/build-lock` | Ninja wrapper with file lock for concurrent agents |
 
+## Public API Boundary
+
+`src/synq_main.c` (the CLI binary) must depend only on the public headers in `include/syntaqlite/`. It serves as a dogfooding consumer of the library — if the CLI needs something, it must be exposed as public API.
+
 ## Architecture Notes
 
 The codebase is designed to minimize maintenance by:

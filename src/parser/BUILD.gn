@@ -46,20 +46,20 @@ source_set("token_list") {
 }
 
 # Lemon-generated parser.
-source_set("parser") {
+source_set("lemon") {
   sources = [
     "sqlite_parse_gen.h",
   ]
   deps = [
     ":parser_gen",
     "../common",
-    "../tokenizer",
+    "../tokenizer:tokenize",
   ]
   configs += [ "..:lemon_generated" ]
 }
 
-# Parser streaming API implementation.
-source_set("parser_api") {
+# Public parser API.
+source_set("parser") {
   sources = [
     "parser.c",
     "parser.h",
@@ -69,8 +69,8 @@ source_set("parser_api") {
     "../../include/syntaqlite:headers",
     ":ast",
     ":token_list",
-    ":parser",
-    "../tokenizer:tokenizer_api",
+    ":lemon",
+    "../tokenizer",
   ]
   configs += [ "..:lemon_generated" ]
 }

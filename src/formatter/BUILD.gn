@@ -23,16 +23,16 @@ source_set("fmt") {
     "../common",
     "../parser:ast",
     "../parser:token_list",
-    "../tokenizer",
+    "../tokenizer:tokenize",
   ]
 }
 
-# Public formatter API bridging parser and formatter internals.
-source_set("formatter_api") {
+# Public formatter API.
+source_set("formatter") {
   sources = [ "formatter.c" ]
   deps = [
     "../../include/syntaqlite:headers",
-    "../parser:parser_api",
+    "../parser",
     ":fmt",
   ]
 }
