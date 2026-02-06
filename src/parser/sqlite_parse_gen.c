@@ -60,191 +60,191 @@
 ***************** Begin token definitions *************************************/
 #ifndef SYNTAQLITE_TOKEN_INDEX
 #define SYNTAQLITE_TOKEN_INDEX                           1
-#define SYNTAQLITE_TOKEN_ALTER                           2
-#define SYNTAQLITE_TOKEN_EXPLAIN                         3
-#define SYNTAQLITE_TOKEN_ADD                             4
-#define SYNTAQLITE_TOKEN_QUERY                           5
-#define SYNTAQLITE_TOKEN_WINDOW                          6
-#define SYNTAQLITE_TOKEN_PLAN                            7
-#define SYNTAQLITE_TOKEN_OVER                            8
-#define SYNTAQLITE_TOKEN_BEGIN                           9
-#define SYNTAQLITE_TOKEN_FILTER                         10
-#define SYNTAQLITE_TOKEN_TRANSACTION                    11
-#define SYNTAQLITE_TOKEN_COLUMN                         12
-#define SYNTAQLITE_TOKEN_DEFERRED                       13
-#define SYNTAQLITE_TOKEN_AGG_FUNCTION                   14
-#define SYNTAQLITE_TOKEN_IMMEDIATE                      15
-#define SYNTAQLITE_TOKEN_AGG_COLUMN                     16
-#define SYNTAQLITE_TOKEN_EXCLUSIVE                      17
-#define SYNTAQLITE_TOKEN_TRUEFALSE                      18
-#define SYNTAQLITE_TOKEN_COMMIT                         19
-#define SYNTAQLITE_TOKEN_FUNCTION                       20
-#define SYNTAQLITE_TOKEN_END                            21
-#define SYNTAQLITE_TOKEN_UPLUS                          22
-#define SYNTAQLITE_TOKEN_ROLLBACK                       23
-#define SYNTAQLITE_TOKEN_UMINUS                         24
-#define SYNTAQLITE_TOKEN_SAVEPOINT                      25
-#define SYNTAQLITE_TOKEN_TRUTH                          26
-#define SYNTAQLITE_TOKEN_RELEASE                        27
-#define SYNTAQLITE_TOKEN_REGISTER                       28
-#define SYNTAQLITE_TOKEN_TO                             29
-#define SYNTAQLITE_TOKEN_VECTOR                         30
-#define SYNTAQLITE_TOKEN_TABLE                          31
-#define SYNTAQLITE_TOKEN_SELECT_COLUMN                  32
-#define SYNTAQLITE_TOKEN_CREATE                         33
-#define SYNTAQLITE_TOKEN_IF_NULL_ROW                    34
-#define SYNTAQLITE_TOKEN_IF                             35
-#define SYNTAQLITE_TOKEN_ASTERISK                       36
-#define SYNTAQLITE_TOKEN_NOT                            37
-#define SYNTAQLITE_TOKEN_SPAN                           38
-#define SYNTAQLITE_TOKEN_EXISTS                         39
-#define SYNTAQLITE_TOKEN_ERROR                          40
-#define SYNTAQLITE_TOKEN_TEMP                           41
-#define SYNTAQLITE_TOKEN_QNUMBER                        42
-#define SYNTAQLITE_TOKEN_AS                             43
-#define SYNTAQLITE_TOKEN_WITHOUT                        44
-#define SYNTAQLITE_TOKEN_ABORT                          45
-#define SYNTAQLITE_TOKEN_ACTION                         46
-#define SYNTAQLITE_TOKEN_AFTER                          47
-#define SYNTAQLITE_TOKEN_ANALYZE                        48
-#define SYNTAQLITE_TOKEN_ASC                            49
-#define SYNTAQLITE_TOKEN_ATTACH                         50
-#define SYNTAQLITE_TOKEN_BEFORE                         51
-#define SYNTAQLITE_TOKEN_BY                             52
-#define SYNTAQLITE_TOKEN_CASCADE                        53
-#define SYNTAQLITE_TOKEN_CAST                           54
-#define SYNTAQLITE_TOKEN_CONFLICT                       55
-#define SYNTAQLITE_TOKEN_DATABASE                       56
-#define SYNTAQLITE_TOKEN_DESC                           57
-#define SYNTAQLITE_TOKEN_DETACH                         58
-#define SYNTAQLITE_TOKEN_EACH                           59
-#define SYNTAQLITE_TOKEN_FAIL                           60
-#define SYNTAQLITE_TOKEN_OR                             61
-#define SYNTAQLITE_TOKEN_AND                            62
-#define SYNTAQLITE_TOKEN_IS                             63
-#define SYNTAQLITE_TOKEN_ISNOT                          64
-#define SYNTAQLITE_TOKEN_MATCH                          65
-#define SYNTAQLITE_TOKEN_LIKE_KW                        66
-#define SYNTAQLITE_TOKEN_BETWEEN                        67
-#define SYNTAQLITE_TOKEN_IN                             68
-#define SYNTAQLITE_TOKEN_ISNULL                         69
-#define SYNTAQLITE_TOKEN_NOTNULL                        70
-#define SYNTAQLITE_TOKEN_ESCAPE                         71
-#define SYNTAQLITE_TOKEN_COLUMNKW                       72
-#define SYNTAQLITE_TOKEN_DO                             73
-#define SYNTAQLITE_TOKEN_FOR                            74
-#define SYNTAQLITE_TOKEN_IGNORE                         75
-#define SYNTAQLITE_TOKEN_INITIALLY                      76
-#define SYNTAQLITE_TOKEN_INSTEAD                        77
-#define SYNTAQLITE_TOKEN_NO                             78
-#define SYNTAQLITE_TOKEN_KEY                            79
-#define SYNTAQLITE_TOKEN_OF                             80
-#define SYNTAQLITE_TOKEN_OFFSET                         81
-#define SYNTAQLITE_TOKEN_PRAGMA                         82
-#define SYNTAQLITE_TOKEN_RAISE                          83
-#define SYNTAQLITE_TOKEN_RECURSIVE                      84
-#define SYNTAQLITE_TOKEN_REPLACE                        85
-#define SYNTAQLITE_TOKEN_RESTRICT                       86
-#define SYNTAQLITE_TOKEN_ROW                            87
-#define SYNTAQLITE_TOKEN_ROWS                           88
-#define SYNTAQLITE_TOKEN_TRIGGER                        89
-#define SYNTAQLITE_TOKEN_VACUUM                         90
-#define SYNTAQLITE_TOKEN_VIEW                           91
-#define SYNTAQLITE_TOKEN_VIRTUAL                        92
-#define SYNTAQLITE_TOKEN_WITH                           93
-#define SYNTAQLITE_TOKEN_NULLS                          94
-#define SYNTAQLITE_TOKEN_FIRST                          95
-#define SYNTAQLITE_TOKEN_LAST                           96
-#define SYNTAQLITE_TOKEN_CURRENT                        97
-#define SYNTAQLITE_TOKEN_FOLLOWING                      98
-#define SYNTAQLITE_TOKEN_PARTITION                      99
-#define SYNTAQLITE_TOKEN_PRECEDING                      100
-#define SYNTAQLITE_TOKEN_RANGE                          101
-#define SYNTAQLITE_TOKEN_UNBOUNDED                      102
-#define SYNTAQLITE_TOKEN_EXCLUDE                        103
-#define SYNTAQLITE_TOKEN_GROUPS                         104
-#define SYNTAQLITE_TOKEN_OTHERS                         105
-#define SYNTAQLITE_TOKEN_TIES                           106
-#define SYNTAQLITE_TOKEN_GENERATED                      107
-#define SYNTAQLITE_TOKEN_ALWAYS                         108
-#define SYNTAQLITE_TOKEN_MATERIALIZED                   109
-#define SYNTAQLITE_TOKEN_REINDEX                        110
-#define SYNTAQLITE_TOKEN_RENAME                         111
-#define SYNTAQLITE_TOKEN_CTIME_KW                       112
-#define SYNTAQLITE_TOKEN_ANY                            113
-#define SYNTAQLITE_TOKEN_COLLATE                        114
-#define SYNTAQLITE_TOKEN_ON                             115
-#define SYNTAQLITE_TOKEN_INDEXED                        116
-#define SYNTAQLITE_TOKEN_JOIN_KW                        117
-#define SYNTAQLITE_TOKEN_CONSTRAINT                     118
-#define SYNTAQLITE_TOKEN_DEFAULT                        119
-#define SYNTAQLITE_TOKEN_NULL                           120
-#define SYNTAQLITE_TOKEN_PRIMARY                        121
-#define SYNTAQLITE_TOKEN_UNIQUE                         122
-#define SYNTAQLITE_TOKEN_CHECK                          123
-#define SYNTAQLITE_TOKEN_REFERENCES                     124
-#define SYNTAQLITE_TOKEN_AUTOINCR                       125
-#define SYNTAQLITE_TOKEN_INSERT                         126
-#define SYNTAQLITE_TOKEN_DELETE                         127
-#define SYNTAQLITE_TOKEN_UPDATE                         128
-#define SYNTAQLITE_TOKEN_SET                            129
-#define SYNTAQLITE_TOKEN_DEFERRABLE                     130
-#define SYNTAQLITE_TOKEN_FOREIGN                        131
-#define SYNTAQLITE_TOKEN_DROP                           132
-#define SYNTAQLITE_TOKEN_UNION                          133
-#define SYNTAQLITE_TOKEN_ALL                            134
-#define SYNTAQLITE_TOKEN_EXCEPT                         135
-#define SYNTAQLITE_TOKEN_INTERSECT                      136
-#define SYNTAQLITE_TOKEN_SELECT                         137
-#define SYNTAQLITE_TOKEN_VALUES                         138
-#define SYNTAQLITE_TOKEN_DISTINCT                       139
-#define SYNTAQLITE_TOKEN_FROM                           140
-#define SYNTAQLITE_TOKEN_JOIN                           141
-#define SYNTAQLITE_TOKEN_USING                          142
-#define SYNTAQLITE_TOKEN_ORDER                          143
-#define SYNTAQLITE_TOKEN_GROUP                          144
-#define SYNTAQLITE_TOKEN_HAVING                         145
-#define SYNTAQLITE_TOKEN_LIMIT                          146
-#define SYNTAQLITE_TOKEN_WHERE                          147
-#define SYNTAQLITE_TOKEN_RETURNING                      148
-#define SYNTAQLITE_TOKEN_INTO                           149
-#define SYNTAQLITE_TOKEN_NOTHING                        150
-#define SYNTAQLITE_TOKEN_CASE                           151
-#define SYNTAQLITE_TOKEN_WHEN                           152
-#define SYNTAQLITE_TOKEN_THEN                           153
-#define SYNTAQLITE_TOKEN_ELSE                           154
-#define SYNTAQLITE_TOKEN_NE                             155
-#define SYNTAQLITE_TOKEN_EQ                             156
-#define SYNTAQLITE_TOKEN_GT                             157
-#define SYNTAQLITE_TOKEN_LE                             158
-#define SYNTAQLITE_TOKEN_LT                             159
-#define SYNTAQLITE_TOKEN_GE                             160
-#define SYNTAQLITE_TOKEN_BITAND                         161
-#define SYNTAQLITE_TOKEN_BITOR                          162
-#define SYNTAQLITE_TOKEN_LSHIFT                         163
-#define SYNTAQLITE_TOKEN_RSHIFT                         164
-#define SYNTAQLITE_TOKEN_PLUS                           165
-#define SYNTAQLITE_TOKEN_MINUS                          166
-#define SYNTAQLITE_TOKEN_STAR                           167
-#define SYNTAQLITE_TOKEN_SLASH                          168
-#define SYNTAQLITE_TOKEN_REM                            169
-#define SYNTAQLITE_TOKEN_CONCAT                         170
-#define SYNTAQLITE_TOKEN_PTR                            171
-#define SYNTAQLITE_TOKEN_BITNOT                         172
-#define SYNTAQLITE_TOKEN_ID                             173
-#define SYNTAQLITE_TOKEN_LP                             174
-#define SYNTAQLITE_TOKEN_RP                             175
-#define SYNTAQLITE_TOKEN_COMMA                          176
-#define SYNTAQLITE_TOKEN_STRING                         177
-#define SYNTAQLITE_TOKEN_DOT                            178
+#define SYNTAQLITE_TOKEN_SEMI                            2
+#define SYNTAQLITE_TOKEN_ALTER                           3
+#define SYNTAQLITE_TOKEN_EXPLAIN                         4
+#define SYNTAQLITE_TOKEN_ADD                             5
+#define SYNTAQLITE_TOKEN_QUERY                           6
+#define SYNTAQLITE_TOKEN_WINDOW                          7
+#define SYNTAQLITE_TOKEN_PLAN                            8
+#define SYNTAQLITE_TOKEN_OVER                            9
+#define SYNTAQLITE_TOKEN_BEGIN                          10
+#define SYNTAQLITE_TOKEN_FILTER                         11
+#define SYNTAQLITE_TOKEN_TRANSACTION                    12
+#define SYNTAQLITE_TOKEN_COLUMN                         13
+#define SYNTAQLITE_TOKEN_DEFERRED                       14
+#define SYNTAQLITE_TOKEN_AGG_FUNCTION                   15
+#define SYNTAQLITE_TOKEN_IMMEDIATE                      16
+#define SYNTAQLITE_TOKEN_AGG_COLUMN                     17
+#define SYNTAQLITE_TOKEN_EXCLUSIVE                      18
+#define SYNTAQLITE_TOKEN_TRUEFALSE                      19
+#define SYNTAQLITE_TOKEN_COMMIT                         20
+#define SYNTAQLITE_TOKEN_FUNCTION                       21
+#define SYNTAQLITE_TOKEN_END                            22
+#define SYNTAQLITE_TOKEN_UPLUS                          23
+#define SYNTAQLITE_TOKEN_ROLLBACK                       24
+#define SYNTAQLITE_TOKEN_UMINUS                         25
+#define SYNTAQLITE_TOKEN_SAVEPOINT                      26
+#define SYNTAQLITE_TOKEN_TRUTH                          27
+#define SYNTAQLITE_TOKEN_RELEASE                        28
+#define SYNTAQLITE_TOKEN_REGISTER                       29
+#define SYNTAQLITE_TOKEN_TO                             30
+#define SYNTAQLITE_TOKEN_VECTOR                         31
+#define SYNTAQLITE_TOKEN_TABLE                          32
+#define SYNTAQLITE_TOKEN_SELECT_COLUMN                  33
+#define SYNTAQLITE_TOKEN_CREATE                         34
+#define SYNTAQLITE_TOKEN_IF_NULL_ROW                    35
+#define SYNTAQLITE_TOKEN_IF                             36
+#define SYNTAQLITE_TOKEN_ASTERISK                       37
+#define SYNTAQLITE_TOKEN_NOT                            38
+#define SYNTAQLITE_TOKEN_SPAN                           39
+#define SYNTAQLITE_TOKEN_EXISTS                         40
+#define SYNTAQLITE_TOKEN_ERROR                          41
+#define SYNTAQLITE_TOKEN_TEMP                           42
+#define SYNTAQLITE_TOKEN_QNUMBER                        43
+#define SYNTAQLITE_TOKEN_LP                             44
+#define SYNTAQLITE_TOKEN_SPACE                          45
+#define SYNTAQLITE_TOKEN_RP                             46
+#define SYNTAQLITE_TOKEN_COMMENT                        47
+#define SYNTAQLITE_TOKEN_AS                             48
+#define SYNTAQLITE_TOKEN_ILLEGAL                        49
+#define SYNTAQLITE_TOKEN_COMMA                          50
+#define SYNTAQLITE_TOKEN_WITHOUT                        51
+#define SYNTAQLITE_TOKEN_ABORT                          52
+#define SYNTAQLITE_TOKEN_ACTION                         53
+#define SYNTAQLITE_TOKEN_AFTER                          54
+#define SYNTAQLITE_TOKEN_ANALYZE                        55
+#define SYNTAQLITE_TOKEN_ASC                            56
+#define SYNTAQLITE_TOKEN_ATTACH                         57
+#define SYNTAQLITE_TOKEN_BEFORE                         58
+#define SYNTAQLITE_TOKEN_BY                             59
+#define SYNTAQLITE_TOKEN_CASCADE                        60
+#define SYNTAQLITE_TOKEN_CAST                           61
+#define SYNTAQLITE_TOKEN_CONFLICT                       62
+#define SYNTAQLITE_TOKEN_DATABASE                       63
+#define SYNTAQLITE_TOKEN_DESC                           64
+#define SYNTAQLITE_TOKEN_DETACH                         65
+#define SYNTAQLITE_TOKEN_EACH                           66
+#define SYNTAQLITE_TOKEN_FAIL                           67
+#define SYNTAQLITE_TOKEN_OR                             68
+#define SYNTAQLITE_TOKEN_AND                            69
+#define SYNTAQLITE_TOKEN_IS                             70
+#define SYNTAQLITE_TOKEN_ISNOT                          71
+#define SYNTAQLITE_TOKEN_MATCH                          72
+#define SYNTAQLITE_TOKEN_LIKE_KW                        73
+#define SYNTAQLITE_TOKEN_BETWEEN                        74
+#define SYNTAQLITE_TOKEN_IN                             75
+#define SYNTAQLITE_TOKEN_ISNULL                         76
+#define SYNTAQLITE_TOKEN_NOTNULL                        77
+#define SYNTAQLITE_TOKEN_NE                             78
+#define SYNTAQLITE_TOKEN_EQ                             79
+#define SYNTAQLITE_TOKEN_GT                             80
+#define SYNTAQLITE_TOKEN_LE                             81
+#define SYNTAQLITE_TOKEN_LT                             82
+#define SYNTAQLITE_TOKEN_GE                             83
+#define SYNTAQLITE_TOKEN_ESCAPE                         84
+#define SYNTAQLITE_TOKEN_ID                             85
+#define SYNTAQLITE_TOKEN_COLUMNKW                       86
+#define SYNTAQLITE_TOKEN_DO                             87
+#define SYNTAQLITE_TOKEN_FOR                            88
+#define SYNTAQLITE_TOKEN_IGNORE                         89
+#define SYNTAQLITE_TOKEN_INITIALLY                      90
+#define SYNTAQLITE_TOKEN_INSTEAD                        91
+#define SYNTAQLITE_TOKEN_NO                             92
+#define SYNTAQLITE_TOKEN_KEY                            93
+#define SYNTAQLITE_TOKEN_OF                             94
+#define SYNTAQLITE_TOKEN_OFFSET                         95
+#define SYNTAQLITE_TOKEN_PRAGMA                         96
+#define SYNTAQLITE_TOKEN_RAISE                          97
+#define SYNTAQLITE_TOKEN_RECURSIVE                      98
+#define SYNTAQLITE_TOKEN_REPLACE                        99
+#define SYNTAQLITE_TOKEN_RESTRICT                       100
+#define SYNTAQLITE_TOKEN_ROW                            101
+#define SYNTAQLITE_TOKEN_ROWS                           102
+#define SYNTAQLITE_TOKEN_TRIGGER                        103
+#define SYNTAQLITE_TOKEN_VACUUM                         104
+#define SYNTAQLITE_TOKEN_VIEW                           105
+#define SYNTAQLITE_TOKEN_VIRTUAL                        106
+#define SYNTAQLITE_TOKEN_WITH                           107
+#define SYNTAQLITE_TOKEN_NULLS                          108
+#define SYNTAQLITE_TOKEN_FIRST                          109
+#define SYNTAQLITE_TOKEN_LAST                           110
+#define SYNTAQLITE_TOKEN_CURRENT                        111
+#define SYNTAQLITE_TOKEN_FOLLOWING                      112
+#define SYNTAQLITE_TOKEN_PARTITION                      113
+#define SYNTAQLITE_TOKEN_PRECEDING                      114
+#define SYNTAQLITE_TOKEN_RANGE                          115
+#define SYNTAQLITE_TOKEN_UNBOUNDED                      116
+#define SYNTAQLITE_TOKEN_EXCLUDE                        117
+#define SYNTAQLITE_TOKEN_GROUPS                         118
+#define SYNTAQLITE_TOKEN_OTHERS                         119
+#define SYNTAQLITE_TOKEN_TIES                           120
+#define SYNTAQLITE_TOKEN_GENERATED                      121
+#define SYNTAQLITE_TOKEN_ALWAYS                         122
+#define SYNTAQLITE_TOKEN_MATERIALIZED                   123
+#define SYNTAQLITE_TOKEN_REINDEX                        124
+#define SYNTAQLITE_TOKEN_RENAME                         125
+#define SYNTAQLITE_TOKEN_CTIME_KW                       126
+#define SYNTAQLITE_TOKEN_ANY                            127
+#define SYNTAQLITE_TOKEN_BITAND                         128
+#define SYNTAQLITE_TOKEN_BITOR                          129
+#define SYNTAQLITE_TOKEN_LSHIFT                         130
+#define SYNTAQLITE_TOKEN_RSHIFT                         131
+#define SYNTAQLITE_TOKEN_PLUS                           132
+#define SYNTAQLITE_TOKEN_MINUS                          133
+#define SYNTAQLITE_TOKEN_STAR                           134
+#define SYNTAQLITE_TOKEN_SLASH                          135
+#define SYNTAQLITE_TOKEN_REM                            136
+#define SYNTAQLITE_TOKEN_CONCAT                         137
+#define SYNTAQLITE_TOKEN_PTR                            138
+#define SYNTAQLITE_TOKEN_COLLATE                        139
+#define SYNTAQLITE_TOKEN_BITNOT                         140
+#define SYNTAQLITE_TOKEN_ON                             141
+#define SYNTAQLITE_TOKEN_INDEXED                        142
+#define SYNTAQLITE_TOKEN_STRING                         143
+#define SYNTAQLITE_TOKEN_JOIN_KW                        144
+#define SYNTAQLITE_TOKEN_CONSTRAINT                     145
+#define SYNTAQLITE_TOKEN_DEFAULT                        146
+#define SYNTAQLITE_TOKEN_NULL                           147
+#define SYNTAQLITE_TOKEN_PRIMARY                        148
+#define SYNTAQLITE_TOKEN_UNIQUE                         149
+#define SYNTAQLITE_TOKEN_CHECK                          150
+#define SYNTAQLITE_TOKEN_REFERENCES                     151
+#define SYNTAQLITE_TOKEN_AUTOINCR                       152
+#define SYNTAQLITE_TOKEN_INSERT                         153
+#define SYNTAQLITE_TOKEN_DELETE                         154
+#define SYNTAQLITE_TOKEN_UPDATE                         155
+#define SYNTAQLITE_TOKEN_SET                            156
+#define SYNTAQLITE_TOKEN_DEFERRABLE                     157
+#define SYNTAQLITE_TOKEN_FOREIGN                        158
+#define SYNTAQLITE_TOKEN_DROP                           159
+#define SYNTAQLITE_TOKEN_UNION                          160
+#define SYNTAQLITE_TOKEN_ALL                            161
+#define SYNTAQLITE_TOKEN_EXCEPT                         162
+#define SYNTAQLITE_TOKEN_INTERSECT                      163
+#define SYNTAQLITE_TOKEN_SELECT                         164
+#define SYNTAQLITE_TOKEN_VALUES                         165
+#define SYNTAQLITE_TOKEN_DISTINCT                       166
+#define SYNTAQLITE_TOKEN_DOT                            167
+#define SYNTAQLITE_TOKEN_FROM                           168
+#define SYNTAQLITE_TOKEN_JOIN                           169
+#define SYNTAQLITE_TOKEN_USING                          170
+#define SYNTAQLITE_TOKEN_ORDER                          171
+#define SYNTAQLITE_TOKEN_GROUP                          172
+#define SYNTAQLITE_TOKEN_HAVING                         173
+#define SYNTAQLITE_TOKEN_LIMIT                          174
+#define SYNTAQLITE_TOKEN_WHERE                          175
+#define SYNTAQLITE_TOKEN_RETURNING                      176
+#define SYNTAQLITE_TOKEN_INTO                           177
+#define SYNTAQLITE_TOKEN_NOTHING                        178
 #define SYNTAQLITE_TOKEN_FLOAT                          179
 #define SYNTAQLITE_TOKEN_BLOB                           180
 #define SYNTAQLITE_TOKEN_INTEGER                        181
 #define SYNTAQLITE_TOKEN_VARIABLE                       182
-#define SYNTAQLITE_TOKEN_SEMI                           183
-#define SYNTAQLITE_TOKEN_SPACE                          184
-#define SYNTAQLITE_TOKEN_COMMENT                        185
-#define SYNTAQLITE_TOKEN_ILLEGAL                        186
+#define SYNTAQLITE_TOKEN_CASE                           183
+#define SYNTAQLITE_TOKEN_WHEN                           184
+#define SYNTAQLITE_TOKEN_THEN                           185
+#define SYNTAQLITE_TOKEN_ELSE                           186
 #endif
 /**************** End token definitions ***************************************/
 #endif /* !_SYNQ_EXTERNAL_PARSER */
@@ -313,7 +313,7 @@
 #define YYCODETYPE unsigned short int
 #define YYNOCODE 322
 #define YYACTIONTYPE unsigned short int
-#define YYWILDCARD 113
+#define YYWILDCARD 127
 #define synq_sqlite3ParserTOKENTYPE SynqToken
 typedef union {
   int yyinit;
@@ -440,574 +440,624 @@ typedef union {
 **  yy_default[]       Default action for each state.
 **
 *********** Begin parsing tables **********************************************/
-#define YY_ACTTAB_COUNT (2166)
+#define YY_ACTTAB_COUNT (2417)
 static const YYACTIONTYPE yy_action[] = {
- /*     0 */   130,  161,  522,  234,  130, 1281,  574,  234, 1659,  402,
- /*    10 */   574,  290, 1633,  233,  130,  539,  574,  234,  574,  299,
- /*    20 */  1644, 1281,  565,  183,  571,  254,  264,  230,  290, 1633,
- /*    30 */  1345,  464, 1259,  295,  284,  130, 1341,  413,  234,  565,
- /*    40 */   565,  571,  571, 1290,  574,  290, 1633,  462, 1613,  983,
- /*    50 */   574, 1568, 1643,  477,  478, 1637,  565,  984,  571,  481,
- /*    60 */   372,  137,  139,   91, 1279, 1228, 1228, 1063, 1066, 1053,
- /*    70 */  1053,  557, 1639,   84, 1293,  413, 1639,   82,    7,  378,
- /*    80 */   290, 1633, 1639,   51, 1639,   51,  130,  466, 1019,  234,
- /*    90 */  1292,  565,  556,  571,  212,  413,   44,  558,  127,  137,
- /*   100 */   139,   91,  127, 1228, 1228, 1063, 1066, 1053, 1053,  516,
- /*   110 */  1639,   84,  127,  383,  452, 1542, 1639,   51,  407,  137,
- /*   120 */   139,   91, 1277, 1228, 1228, 1063, 1066, 1053, 1053,  359,
- /*   130 */   556,  290, 1633,  127,  532,  523, 1174,  158, 1174,  140,
- /*   140 */   321,  575,  565,  377,  571, 1582,  376, 1584,  530, 1665,
- /*   150 */   452,  379,  452, 1644,  452,  135,  135,  136,  136,  136,
- /*   160 */   136,  134,  134,  134,  134,  133,  133,  132,  132,  132,
- /*   170 */   131,  128,  452, 1570, 1628, 1204, 1204,  547, 1300, 1582,
- /*   180 */  1568, 1541,  574, 1622,  127, 1643, 1513, 1511,  501,  372,
- /*   190 */   452,  419,  510,  135,  135,  136,  136,  136,  136,  134,
- /*   200 */   134,  134,  134,  133,  133,  132,  132,  132,  131,  128,
- /*   210 */   131,  128,  452,  135,  135,  136,  136,  136,  136,  134,
- /*   220 */   134,  134,  134,  133,  133,  132,  132,  132,  131,  128,
- /*   230 */  1147,  413, 1204,  198,  110,  497, 1205,  134,  134,  134,
- /*   240 */   134,  133,  133,  132,  132,  132,  131,  128, 1639,   19,
- /*   250 */  1207,  413,  421,   48, 1207,  137,  139,   91, 1571, 1228,
- /*   260 */  1228, 1063, 1066, 1053, 1053,  132,  132,  132,  131,  128,
- /*   270 */  1204, 1204,  507,   97,  551,  137,  139,   91,  308, 1228,
- /*   280 */  1228, 1063, 1066, 1053, 1053,  409, 1250,  290, 1633,  413,
- /*   290 */  1169, 1149, 1657, 1657,  290, 1633,  499,   45,  565, 1632,
- /*   300 */   571,  543, 1569, 1169, 1331,  565, 1169,  571,  452,  447,
- /*   310 */   446,  413,  573,  137,  139,   91,    7, 1228, 1228, 1063,
- /*   320 */  1066, 1053, 1053, 1236,  373, 1236, 1188, 1204,  452, 1204,
- /*   330 */  1204, 1205, 1147,  237, 1637,  137,  139,   91,  302, 1228,
- /*   340 */  1228, 1063, 1066, 1053, 1053,  542,  452,  401, 1249,  135,
- /*   350 */   135,  136,  136,  136,  136,  134,  134,  134,  134,  133,
- /*   360 */   133,  132,  132,  132,  131,  128,  452,  267,  344,  135,
- /*   370 */   135,  136,  136,  136,  136,  134,  134,  134,  134,  133,
- /*   380 */   133,  132,  132,  132,  131,  128, 1204, 1577,  452,  323,
- /*   390 */  1205,  524,  301, 1149, 1658, 1658, 1040,  133,  133,  132,
- /*   400 */   132,  132,  131,  128, 1028, 1204, 1204,  135,  135,  136,
- /*   410 */   136,  136,  136,  134,  134,  134,  134,  133,  133,  132,
- /*   420 */   132,  132,  131,  128,  321,  575,  413,  467,  516,  135,
- /*   430 */   135,  136,  136,  136,  136,  134,  134,  134,  134,  133,
- /*   440 */   133,  132,  132,  132,  131,  128, 1126,  413,  516,  886,
- /*   450 */   137,  139,   91,   98, 1228, 1228, 1063, 1066, 1053, 1053,
- /*   460 */   527, 1029, 1204, 1028, 1028, 1030, 1205,  183, 1127,  107,
- /*   470 */   525,  137,  139,   91, 1506, 1228, 1228, 1063, 1066, 1053,
- /*   480 */  1053, 1632,  518, 1128,  452,  413, 1333, 1050, 1050, 1064,
- /*   490 */  1067,  290, 1633,   46,  283, 1633,  526, 1224,  922,  499,
- /*   500 */   427, 1224,  565,  452,  571,  565,  429,  571,  923,  137,
- /*   510 */   139,   91,  893, 1228, 1228, 1063, 1066, 1053, 1053, 1307,
- /*   520 */  1505, 1631,    7, 1328,  452, 1204, 1204,  136,  136,  136,
- /*   530 */   136,  134,  134,  134,  134,  133,  133,  132,  132,  132,
- /*   540 */   131,  128, 1054,  474,  135,  135,  136,  136,  136,  136,
- /*   550 */   134,  134,  134,  134,  133,  133,  132,  132,  132,  131,
- /*   560 */   128,  524,  452,  113,  879,  135,  135,  136,  136,  136,
- /*   570 */   136,  134,  134,  134,  134,  133,  133,  132,  132,  132,
- /*   580 */   131,  128, 1204,  370,  532,  505, 1205, 1233, 1204, 1204,
- /*   590 */  1107, 1235,  540, 1665, 1107,  304,  219,  413,  346, 1234,
- /*   600 */  1204, 1204,  574,  135,  135,  136,  136,  136,  136,  134,
- /*   610 */   134,  134,  134,  133,  133,  132,  132,  132,  131,  128,
- /*   620 */   511,  137,  139,   91,  231, 1228, 1228, 1063, 1066, 1053,
- /*   630 */  1053,  321,  575,  100,  413, 1019,  251,  447,  446,  574,
- /*   640 */   525, 1204, 1204,  236,  303, 1204,  461,  458,  457, 1205,
- /*   650 */   129, 1236, 1250, 1236,  420,  413,  456, 1204,  137,  139,
- /*   660 */    91, 1205, 1228, 1228, 1063, 1066, 1053, 1053, 1639,   19,
- /*   670 */   157,  850,  294,  851,  452,  852,  359,  485,  347,  137,
- /*   680 */   139,   91, 1598, 1228, 1228, 1063, 1066, 1053, 1053,  382,
- /*   690 */   559,  236,  505,  452,  461,  458,  457,    6, 1204,  290,
- /*   700 */  1633,  322, 1205, 1451,  456, 1639,   19,  533, 1664,  432,
- /*   710 */   565,  452,  571,  401, 1148,  135,  135,  136,  136,  136,
- /*   720 */   136,  134,  134,  134,  134,  133,  133,  132,  132,  132,
- /*   730 */   131,  128,  452,  380, 1595, 1041,  136,  136,  136,  136,
- /*   740 */   134,  134,  134,  134,  133,  133,  132,  132,  132,  131,
- /*   750 */   128,  358,  135,  135,  136,  136,  136,  136,  134,  134,
- /*   760 */   134,  134,  133,  133,  132,  132,  132,  131,  128,  574,
- /*   770 */   413,  253, 1024,  135,  135,  136,  136,  136,  136,  134,
- /*   780 */   134,  134,  134,  133,  133,  132,  132,  132,  131,  128,
- /*   790 */   413,  490,  361, 1187,  137,  139,   91,  574, 1228, 1228,
- /*   800 */  1063, 1066, 1053, 1053,   44, 1311,   44,  506, 1204, 1204,
- /*   810 */   568, 1620, 1621,  521,  137,  139,   91, 1339, 1228, 1228,
- /*   820 */  1063, 1066, 1053, 1053, 1324, 1169,  290, 1633,  413,  316,
- /*   830 */   479,  291, 1633, 1282,  418, 1639,   84,  565, 1169,  571,
- /*   840 */   499, 1169,  565,  576,  571,  936,  936,  452,  321,  575,
- /*   850 */   321,  575,  137,  139,   91,  528, 1228, 1228, 1063, 1066,
- /*   860 */  1053, 1053,  534, 1639,   60, 1204,  199,  452, 1368, 1205,
- /*   870 */     6,  290, 1633,  944, 1204, 1204, 1204, 1204,  943, 1639,
- /*   880 */    22,  505,  565,  535,  571,  384,  116,  375,  135,  135,
- /*   890 */   136,  136,  136,  136,  134,  134,  134,  134,  133,  133,
- /*   900 */   132,  132,  132,  131,  128,  452,  536, 1188,  135,  135,
- /*   910 */   136,  136,  136,  136,  134,  134,  134,  134,  133,  133,
- /*   920 */   132,  132,  132,  131,  128,  949, 1204, 1204, 1125, 1568,
- /*   930 */  1105, 1204, 1280, 1204,    5, 1205,  307, 1205,  372,  413,
- /*   940 */   310,  574,  567,  418,  120,  215,  135,  135,  136,  136,
- /*   950 */   136,  136,  134,  134,  134,  134,  133,  133,  132,  132,
- /*   960 */   132,  131,  128,  137,  139,   91,  413, 1228, 1228, 1063,
- /*   970 */  1066, 1053, 1053,  448, 1620, 1621,  209, 1040, 1204, 1204,
- /*   980 */   489,  882, 1450, 1204,   42, 1028,  574, 1205,  574,  392,
- /*   990 */   137,  139,   91, 1169, 1228, 1228, 1063, 1066, 1053, 1053,
- /*  1000 */   413,  495,   50,  971,  552,  944, 1169, 1639,   19, 1169,
- /*  1010 */   943,  437,  380, 1595,  406,  405,  452,  232, 1110, 1110,
- /*  1020 */   513, 1204, 1204,   95,  137,  126,   91, 1310, 1228, 1228,
- /*  1030 */  1063, 1066, 1053, 1053,  221, 1204,  490,  361,  882, 1205,
- /*  1040 */  1309,  969, 1029,  452, 1028, 1028, 1030,  368,  541,  390,
- /*  1050 */   574, 1569, 1639,   19, 1639,   84,  442,  135,  135,  136,
- /*  1060 */   136,  136,  136,  134,  134,  134,  134,  133,  133,  132,
- /*  1070 */   132,  132,  131,  128,  556,  286,  969,  452, 1204,  555,
- /*  1080 */   516,  413, 1205,  574,  135,  135,  136,  136,  136,  136,
- /*  1090 */   134,  134,  134,  134,  133,  133,  132,  132,  132,  131,
- /*  1100 */   128,  574, 1204, 1204,  503,  429,  139,   91, 1449, 1228,
- /*  1110 */  1228, 1063, 1066, 1053, 1053,  413, 1639,   84,  135,  135,
- /*  1120 */   136,  136,  136,  136,  134,  134,  134,  134,  133,  133,
- /*  1130 */   132,  132,  132,  131,  128, 1498,  317,  429,  380, 1595,
- /*  1140 */   482,   91,  212, 1228, 1228, 1063, 1066, 1053, 1053, 1639,
- /*  1150 */    84,  412, 1340,  574,  267, 1568,  370,  499,  452, 1204,
- /*  1160 */     3, 1204, 1204, 1205,  372,  574,  399, 1639,   19,  556,
- /*  1170 */  1435,  207,  874,  160,  444,  862,  874, 1169, 1308,  124,
- /*  1180 */  1435,  566, 1435,  504, 1188,  516,  970, 1435, 1629,  293,
- /*  1190 */  1169,  551,  452, 1169,  574,    7,  569,  213,  331,  135,
- /*  1200 */   135,  136,  136,  136,  136,  134,  134,  134,  134,  133,
- /*  1210 */   133,  132,  132,  132,  131,  128,  574,  516, 1204, 1639,
- /*  1220 */    19,    7, 1205,  208,  138,  562,  488,  440,   47,  214,
- /*  1230 */     7, 1639,   84,  135,  135,  136,  136,  136,  136,  134,
- /*  1240 */   134,  134,  134,  133,  133,  132,  132,  132,  131,  128,
- /*  1250 */   124,  318,  566,  309, 1040, 1188, 1085, 1336,  450,  450,
- /*  1260 */  1639,   19, 1028,  434,  550,  113, 1575,  569,  241,  453,
- /*  1270 */  1435,  549, 1289,  435,  124,  436,  566, 1569,  574, 1188,
- /*  1280 */   512,  232, 1639,   84, 1224,   10, 1568,  349, 1224,  366,
- /*  1290 */   548,  569, 1576,   34,  574,  372,  562,  241,  480, 1180,
- /*  1300 */     7, 1574,  445,  336,    9,  969,   44,  122,  122,  948,
- /*  1310 */     2,  161,  212,  335,  123,  450,    4,  351,  417,  572,
- /*  1320 */   562, 1028, 1028, 1030, 1031, 1040,  240,  239,  238,  450,
- /*  1330 */   450,  422,  185, 1028,  545,  254,  398, 1180,  574,  544,
- /*  1340 */   969,  465, 1259,  295, 1639,  145, 1341,  417,  247, 1040,
- /*  1350 */   321,  575,  426,  450,  450,  290, 1633, 1028,  327,   49,
- /*  1360 */  1639,   84,  330,  441,   34, 1552,  565,  124,  571,  566,
- /*  1370 */   483, 1573, 1188,  902,  574,  348,  326,  350,  122,  122,
- /*  1380 */   449,  412, 1627,  911,  569,  123,  450,    4,   34,   14,
- /*  1390 */   572, 1244, 1028, 1028, 1030, 1031,  574,  466,  470,  574,
- /*  1400 */   430,  574,  122,  122, 1639,   84,  903, 1554, 1569,  123,
- /*  1410 */   450,    4,  222,  562,  572, 1602, 1028, 1028, 1030, 1031,
- /*  1420 */   574, 1126,  469,  574,  451,  574,  121,  545,  118,  423,
- /*  1430 */   475,  574,  546,  243,  280,  329,  472,  332,  471,  242,
- /*  1440 */  1639,  147, 1040, 1127,  492,  330,  450,  450,  228,  424,
- /*  1450 */  1028,  288,  230,  983,  124,  412,  566,  574, 1128, 1188,
- /*  1460 */  1550,  984, 1639,   53,  574, 1639,   54, 1639,   55,  496,
- /*  1470 */   339,  569,  574,  561,  574,  340,  574,  222,  574,  107,
- /*  1480 */   412,   34,  574,  908,  574,  909, 1639,   56,  320, 1639,
- /*  1490 */    66, 1639,   67,  491,  574,  122,  122, 1639,   21,  412,
- /*  1500 */   562,   25,  123,  450,    4,  574,  526,  572,  574, 1028,
- /*  1510 */  1028, 1030, 1031, 1223,  545,  356,  101,  218,   39,  544,
- /*  1520 */   155,    2,  161, 1639,   57,  454,  263,  108,  889, 1040,
- /*  1530 */  1639,   68,  889,  450,  450,  574,   38, 1028, 1639,   58,
- /*  1540 */  1639,   69, 1639,   70, 1639,   71,  254,  574, 1639,   72,
- /*  1550 */  1639,   73,  465, 1259,  295,  574,  228, 1341,  324,  113,
- /*  1560 */  1639,   74,  574, 1144,  403,  343,  290, 1633,   34,  901,
- /*  1570 */   900, 1639,   75, 1380, 1639,   76, 1379,  565,  574,  571,
- /*  1580 */   574,  289,  122,  122, 1601, 1616,  476,  582,  493,  123,
- /*  1590 */   450,    4,  574,  292,  572,  298, 1028, 1028, 1030, 1031,
- /*  1600 */   484, 1639,   77,  396,  520,  396, 1557,  395,  466,  277,
- /*  1610 */   305,  393,  574, 1639,   59,  352,  338,  859, 1104,  574,
- /*  1620 */  1104, 1639,   61,  574, 1255,    1, 1603, 1092, 1639,   20,
- /*  1630 */   574, 1092,  248,  574,  342,  124, 1530,  566,  574,  537,
- /*  1640 */  1188, 1103,  341, 1103, 1639,  143, 1639,  144,  357,  113,
- /*  1650 */  1021,  266,  569,  574, 1529,   90,  508,  566, 1639,   79,
- /*  1660 */  1188,  574,  498,  266,  500,  266,  250,  362,  113, 1088,
- /*  1670 */   263,  166,  569,  363,  177,  574, 1153,   43, 1639,   62,
- /*  1680 */   574,  562,  974,  266,  574, 1639,   80, 1376,  574, 1639,
- /*  1690 */    63,  165,  113,  574,  249,  367, 1639,   81,  371, 1639,
- /*  1700 */    64,  562,  941,  138, 1639,  170,  986,  987,  872,  159,
- /*  1710 */  1040,  942,  138, 1032,  450,  450,  414, 1032, 1028, 1639,
- /*  1720 */   171,  321,  575,  939,  138, 1366, 1389, 1639,   88, 1434,
- /*  1730 */  1040, 1362,  459,  205,  450,  450,  560,  554, 1028, 1589,
- /*  1740 */  1439, 1639,   65,  389, 1374,  391, 1639,  146,  574,   34,
- /*  1750 */  1639,   83, 1268, 1267, 1639,  168,  124,  553,  566, 1639,
- /*  1760 */   148, 1188,  574,  122,  122, 1269, 1609, 1192,  224,   34,
- /*  1770 */   123,  450,    4,  569,  574,  572,  517, 1028, 1028, 1030,
- /*  1780 */  1031,  574,  167,  122,  122, 1359,  476,  582,  281,  574,
- /*  1790 */   123,  450,    4,  292,  313,  572,  574, 1028, 1028, 1030,
- /*  1800 */  1031,  574,  562,  396,  314,  396,  397,  395,  315,  277,
- /*  1810 */    12,  393,  574,  227, 1639,  142,  574,  859, 1612, 1307,
- /*  1820 */   574,  354,  246,  574,  334,  300, 1421,  360, 1639,  169,
- /*  1830 */   355, 1040,  248, 1416,  342,  450,  450, 1409,  502, 1028,
- /*  1840 */  1639,  162,  341, 1502, 1426, 1371,  306, 1639,  152,  223,
- /*  1850 */  1372, 1501,  210, 1370,  211, 1639,  151, 1425,  410, 1369,
- /*  1860 */   574,  203, 1639,  149,  400,  387,  250, 1639,  150,  473,
- /*  1870 */    34, 1327, 1326,  563,  177, 1325,   40,   43, 1639,   86,
- /*  1880 */   463,   93, 1639,   78,  122,  122, 1639,   87,  476, 1639,
- /*  1890 */    85,  123,  450,    4,  249,  292,  572, 1626, 1028, 1028,
- /*  1900 */  1030, 1031, 1625, 1624,  425,  396, 1318,  396,  404,  395,
- /*  1910 */   893,  277, 1297,  393, 1296,  333,  414, 1317, 1295,  859,
- /*  1920 */  1244,  321,  575,  187,  244,  274, 1639,   52, 1549, 1547,
- /*  1930 */  1241,   96,   99,  428,  248,  100,  342, 1507,  220, 1422,
- /*  1940 */   196,   13,  182,  189,  341,  486,  487,  191,  579,  192,
- /*  1950 */   193,  194,  108, 1428,  408, 1427,   15,  494,  256, 1430,
- /*  1960 */   411,  200, 1496,  509,  260,  106, 1518, 1192,  250,  515,
- /*  1970 */   282,  365,  262,  438,  519,  439,  177,  369,  311,   43,
- /*  1980 */   312,  141,  268,  551,  443, 1350,  269,  374,  233, 1394,
- /*  1990 */  1393, 1580, 1579,   11, 1594, 1483,  249,  381,  117, 1349,
- /*  2000 */   109,  319,  216,  529,  273,  388,  385,  577, 1270,  275,
- /*  2010 */  1198,  276,  278,  279,  225,  580,  386, 1265,  414, 1260,
- /*  2020 */   172,  173,  154,  321,  575,  226,  174,  296,  415,  186,
- /*  2030 */   416, 1534, 1535, 1533, 1532,  335,   89,  184,  235,  455,
- /*  2040 */    92,   23,  460,  325,   24,  175,  153, 1194, 1193,  217,
- /*  2050 */   891,  328,  468,  904,   94,  297,  176,  337,  245,  156,
- /*  2060 */  1102,  345, 1100,  178,  188, 1223,  252,  190,  255,  925,
- /*  2070 */   353, 1116,  195,  431,  179,  180,  433,  197,  102,  181,
- /*  2080 */   103,  104, 1119,  257,  258,  105, 1115,  163,  259,  364,
- /*  2090 */    26, 1108,  201,  266,  514, 1155, 1238,  261,  202, 1154,
- /*  2100 */   978,  265,  972,   27,  531,   16,   28,   29,   30,  112,
- /*  2110 */   285,  229,  287,  204,  138, 1160,   41,  206, 1069,   31,
- /*  2120 */  1171, 1175,  538,  111,  164, 1173, 1185,    8, 1179, 1178,
- /*  2130 */   113,   32,   33,  114,  115,  119, 1073,  935,   18, 1083,
- /*  2140 */  1070,  861, 1068, 1072, 1124,  270,   35,  578, 1617,   17,
- /*  2150 */   564,  394, 1033,  873,  846,  125,   36,  271,  581, 1256,
- /*  2160 */  1256, 1256,  570,   37, 1256,  272,
+ /*     0 */   522,    2,  161, 1637,  568, 1620, 1621,  481,  299,  290,
+ /*    10 */  1633,  284,  130,  349, 1290,  234, 1644,  290, 1633,  574,
+ /*    20 */   565, 1293,  571, 1281,  264,  230,  254,  574,  565, 1644,
+ /*    30 */   571, 1277,  465, 1259,  295, 1292,  212, 1341,  413,  505,
+ /*    40 */   290, 1633, 1659,  402,  351,  308,  290, 1633, 1643,  477,
+ /*    50 */   478,  565,  316,  571,  290, 1633,  983,  565,  574,  571,
+ /*    60 */   398, 1643, 1513, 1511,  984,  565, 1279,  571,  137,  139,
+ /*    70 */    91, 1628, 1228, 1228, 1063, 1066, 1053, 1053,  135,  135,
+ /*    80 */   136,  136,  136,  136,  212, 1639,   19,  518,  466,  421,
+ /*    90 */  1300, 1368,  557, 1639,   84, 1622,  290, 1633,  303,   10,
+ /*   100 */   326,  290, 1633,  267, 1255,    1, 1603,  565,  407,  571,
+ /*   110 */   127,  413,  565,  556,  571,  348,  501,  350,  558,  136,
+ /*   120 */   136,  136,  136,  129, 1639,   84,  247,  574,  134,  134,
+ /*   130 */   134,  134,  133,  133,  132,  132,  132,  131,  128,  452,
+ /*   140 */  1224,  137,  139,   91,  528, 1228, 1228, 1063, 1066, 1053,
+ /*   150 */  1053,  135,  135,  136,  136,  136,  136,  132,  132,  132,
+ /*   160 */   131,  128,  452,  419,  510,  574,  499,  134,  134,  134,
+ /*   170 */   134,  133,  133,  132,  132,  132,  131,  128,  452,  237,
+ /*   180 */  1019, 1019, 1244,  497,  413, 1174,  236, 1174,   44,  461,
+ /*   190 */   458,  457,  130, 1639,   51,  234,  110,  574, 1224,  456,
+ /*   200 */   505,  134,  134,  134,  134,  133,  133,  132,  132,  132,
+ /*   210 */   131,  128,  452, 1204,  137,  139,   91,  452, 1228, 1228,
+ /*   220 */  1063, 1066, 1053, 1053,  135,  135,  136,  136,  136,  136,
+ /*   230 */   534, 1639,   60,  409,  359,  359,  485,  347,  559,  290,
+ /*   240 */  1633,  140,  290, 1633,  507,  321,  575,  290, 1633,  499,
+ /*   250 */   565,  535,  571,  565,  377,  571, 1582,  413,  565,  358,
+ /*   260 */   571,  574,  301, 1639,   51,  136,  136,  136,  136, 1105,
+ /*   270 */  1204, 1205, 1204,  573,  134,  134,  134,  134,  133,  133,
+ /*   280 */   132,  132,  132,  131,  128,  452,   44,  137,  139,   91,
+ /*   290 */   127, 1228, 1228, 1063, 1066, 1053, 1053,  135,  135,  136,
+ /*   300 */   136,  136,  136,  133,  133,  132,  132,  132,  131,  128,
+ /*   310 */   452,  499,   97,  134,  134,  134,  134,  133,  133,  132,
+ /*   320 */   132,  132,  131,  128,  452,  376, 1584, 1639,   19, 1627,
+ /*   330 */   413,  294, 1188,  911,  233, 1126,  539,  516,  323, 1050,
+ /*   340 */  1050, 1064, 1067,  321,  575,  304,  574,  134,  134,  134,
+ /*   350 */   134,  133,  133,  132,  132,  132,  131,  128,  452,  212,
+ /*   360 */   137,  139,   91, 1127, 1228, 1228, 1063, 1066, 1053, 1053,
+ /*   370 */   135,  135,  136,  136,  136,  136,  130,  524, 1128,  234,
+ /*   380 */   448, 1620, 1621,  399,  574,  298,  134,  134,  134,  134,
+ /*   390 */   133,  133,  132,  132,  132,  131,  128,  452, 1204,  574,
+ /*   400 */   922,  490,  361,  413,  532, 1629,  293,  307,  157,  427,
+ /*   410 */   923,  467, 1639,   51, 1054, 1040,  131,  128,  452,  338,
+ /*   420 */   134,  134,  134,  134,  133,  133,  132,  132,  132,  131,
+ /*   430 */   128,  452, 1029,  137,  139,   91, 1028, 1228, 1228, 1063,
+ /*   440 */  1066, 1053, 1053,  135,  135,  136,  136,  136,  136,  373,
+ /*   450 */  1639,   19,  474,    6,  432, 1204, 1205, 1204,  236,  574,
+ /*   460 */   549,  461,  458,  457,  574, 1639,   84,  574, 1028, 1028,
+ /*   470 */  1030,  456, 1632,  547,  127, 1582,  413, 1331, 1204,  548,
+ /*   480 */   107,  525,  527, 1568,  886,  556, 1204, 1542, 1180, 1204,
+ /*   490 */   523,   45,  372,  134,  134,  134,  134,  133,  133,  132,
+ /*   500 */   132,  132,  131,  128,  452,  429,  137,  139,   91,  526,
+ /*   510 */  1228, 1228, 1063, 1066, 1053, 1053,  135,  135,  136,  136,
+ /*   520 */   136,  136,  321,  575,    6, 1639,   19,  533, 1664,  437,
+ /*   530 */  1639,   84,   95, 1639,   84, 1204, 1205, 1204,  949,  231,
+ /*   540 */  1180, 1204, 1339, 1204, 1205, 1204, 1204, 1205, 1204,  413,
+ /*   550 */   556,  290, 1633,  556,   46,  555,   48,  879,  444,  209,
+ /*   560 */   574, 1598,  565,  489,  571, 1451,  134,  134,  134,  134,
+ /*   570 */   133,  133,  132,  132,  132,  131,  128,  452,  100,  137,
+ /*   580 */   139,   91,  198, 1228, 1228, 1063, 1066, 1053, 1053,  135,
+ /*   590 */   135,  136,  136,  136,  136,  380, 1595,  346, 1204, 1205,
+ /*   600 */  1204, 1169,  283, 1633,  130, 1569,  130,  234,  576,  234,
+ /*   610 */   936,  936,  543,  565, 1169,  571, 1204, 1169,  574, 1204,
+ /*   620 */   406,  405,  413, 1204,  574, 1311, 1639,   19,  228,   44,
+ /*   630 */   442,  574,   98, 1307,  506, 1631,  344, 1328,  453,  134,
+ /*   640 */   134,  134,  134,  133,  133,  132,  132,  132,  131,  128,
+ /*   650 */   452,  499,  137,  139,   91,  183, 1228, 1228, 1063, 1066,
+ /*   660 */  1053, 1053,  135,  135,  136,  136,  136,  136,  479,  378,
+ /*   670 */   542,  379,  241, 1204, 1205, 1204, 1204, 1205, 1204,  574,
+ /*   680 */  1204, 1205, 1204,  574, 1639,   19,  321,  575,  207,  574,
+ /*   690 */  1639,   19,  574, 1169,  208,  413,  574, 1639,   19,  183,
+ /*   700 */   971,  550,  127,  970,  127,  521, 1169, 1107,  382, 1169,
+ /*   710 */     7, 1107,  134,  134,  134,  134,  133,  133,  132,  132,
+ /*   720 */   132,  131,  128,  452, 1281,  137,  139,   91,  322, 1228,
+ /*   730 */  1228, 1063, 1066, 1053, 1053,  135,  135,  136,  136,  136,
+ /*   740 */   136,  417, 1506, 1498,  511, 1639,   84,  309,  574, 1639,
+ /*   750 */    84,  490,  361,  108,    7, 1639,   84,  330, 1639,   84,
+ /*   760 */  1204,    7, 1639,   84,  429,  317,  462, 1613,  413,  318,
+ /*   770 */  1568, 1639,   22,  370, 1568,  445, 1041,  505,  449,  372,
+ /*   780 */   530, 1665,  451,  372,  862,  134,  134,  134,  134,  133,
+ /*   790 */   133,  132,  132,  132,  131,  128,  452,  286,  137,  139,
+ /*   800 */    91,  969, 1228, 1228, 1063, 1066, 1053, 1053,  135,  135,
+ /*   810 */   136,  136,  136,  136, 1639,   82, 1207, 1204, 1205, 1204,
+ /*   820 */  1110, 1110,  513,  532,  540, 1665,  291, 1633, 1149, 1149,
+ /*   830 */  1657, 1658, 1577,  219, 1657, 1658,  310,  565,  113,  571,
+ /*   840 */   520,  413,  574,   50,  420, 1568, 1568,   47,  488, 1024,
+ /*   850 */   574,  383,  447,  446,  372,  372,  213,  574,  134,  134,
+ /*   860 */   134,  134,  133,  133,  132,  132,  132,  131,  128,  452,
+ /*   870 */   902,  137,  139,   91, 1207, 1228, 1228, 1063, 1066, 1053,
+ /*   880 */  1053,  135,  135,  136,  136,  136,  136,  240,  239,  238,
+ /*   890 */  1169, 1085, 1569, 1310,  536,  232, 1569,  969,  574, 1236,
+ /*   900 */  1632, 1236,  470, 1169,  574, 1333, 1169, 1309, 1639,  145,
+ /*   910 */   903, 1147, 1147,  574,  413,  574, 1639,  147,   49,  574,
+ /*   920 */   969,  944, 1187, 1639,   53, 1153,  943,  574,  321,  575,
+ /*   930 */  1450,  134,  134,  134,  134,  133,  133,  132,  132,  132,
+ /*   940 */   131,  128,  452,  524,  137,  139,   91, 1571, 1228, 1228,
+ /*   950 */  1063, 1066, 1053, 1053,  135,  135,  136,  136,  136,  136,
+ /*   960 */   380, 1595, 1345,  392, 1639,   54,  424, 1569, 1570, 1324,
+ /*   970 */  1639,   55,  565,  574,  571,  384,  574,  375,  574, 1639,
+ /*   980 */    56, 1639,   66,  574,  429, 1639,   67,  413,  574, 1282,
+ /*   990 */   418,  232, 1126, 1639,   21,  574, 1435,  850,  574,  851,
+ /*  1000 */   574,  852,  516,  574,  134,  134,  134,  134,  133,  133,
+ /*  1010 */   132,  132,  132,  131,  128,  452,  969,  137,  139,   91,
+ /*  1020 */  1127, 1228, 1228, 1063, 1066, 1053, 1053,  135,  135,  136,
+ /*  1030 */   136,  136,  136, 1637,  368, 1128,  390,  302,  516, 1639,
+ /*  1040 */    57,  574, 1639,   68, 1639,   58,  574,  525,  574, 1639,
+ /*  1050 */    69,  574, 1280,  574, 1639,   70,  574,  561,  574,  516,
+ /*  1060 */   413, 1639,   71,   25, 1639,   72, 1639,   73, 1125, 1639,
+ /*  1070 */    74,  574,  516,  574, 1541,  158,  214,  134,  134,  134,
+ /*  1080 */   134,  133,  133,  132,  132,  132,  131,  128,  452,  434,
+ /*  1090 */   137,  139,   91, 1308, 1228, 1228, 1063, 1066, 1053, 1053,
+ /*  1100 */   135,  135,  136,  136,  136,  136,  430, 1639,   75,  267,
+ /*  1110 */  1505,  516, 1639,   76, 1639,   77,  113, 1639,   59, 1639,
+ /*  1120 */    61,  574, 1639,   20, 1639,  143,  574, 1435,  574, 1435,
+ /*  1130 */   574, 1340,  574,  413,  116,  422,  185, 1639,  144, 1639,
+ /*  1140 */    79,  574, 1435,  574, 1336,  574, 1224,  574,  331, 1449,
+ /*  1150 */   134,  134,  134,  134,  133,  133,  132,  132,  132,  131,
+ /*  1160 */   128,  452,  155,  137,  139,   91,   14, 1228, 1228, 1063,
+ /*  1170 */  1066, 1053, 1053,  135,  135,  136,  136,  136,  136,  380,
+ /*  1180 */  1595,  567,  418,  366,  370,  241,  574, 1639,   62,  288,
+ /*  1190 */   230,  574, 1639,   80, 1639,   63, 1639,   81, 1639,   64,
+ /*  1200 */   574, 1435,  574, 1289, 1224,  574,  413, 1639,  170, 1639,
+ /*  1210 */   171, 1639,   88, 1639,   65,  574,  215,  574,  893,  574,
+ /*  1220 */   435,    7,  436,  134,  134,  134,  134,  133,  133,  132,
+ /*  1230 */   132,  132,  131,  128,  452,  512,  137,  139,   91,  551,
+ /*  1240 */  1228, 1228, 1063, 1066, 1053, 1053,  135,  135,  136,  136,
+ /*  1250 */   136,  136, 1639,  146,  417,  440,  983, 1639,   83,  574,
+ /*  1260 */   401,  574, 1249,    7,  984,  574, 1639,  168, 1639,  148,
+ /*  1270 */   574, 1639,  142,  574,  401,  574, 1148,    7,  574,  413,
+ /*  1280 */   120, 1639,  169, 1639,  162, 1639,  152,  574,    7,  101,
+ /*  1290 */   218, 1552, 1575,  228,  441,  495,  134,  134,  134,  134,
+ /*  1300 */   133,  133,  132,  132,  132,  131,  128,  452,  503,  137,
+ /*  1310 */   139,   91,  138, 1228, 1228, 1063, 1066, 1053, 1053,  135,
+ /*  1320 */   135,  136,  136,  136,  136, 1639,  151, 1639,  149,  107,
+ /*  1330 */   221, 1639,  150, 1554, 1576,  482, 1639,   86, 1223, 1639,
+ /*  1340 */    78, 1639,   87, 1250, 1639,   85,  412,  166, 1574,  483,
+ /*  1350 */   944,  492,  413, 1639,   52,  943,  496, 1250,  526, 1573,
+ /*  1360 */   412,  121,  412,  118,  454,  251,  889,  412,  263,  134,
+ /*  1370 */   134,  134,  134,  133,  133,  132,  132,  132,  131,  128,
+ /*  1380 */   452,  160,  137,  126,   91,   38, 1228, 1228, 1063, 1066,
+ /*  1390 */  1053, 1053,  135,  135,  136,  136,  136,  136,  320,  324,
+ /*  1400 */  1144,  901,  900,  113,  403,  908,  336,  909,  491,  412,
+ /*  1410 */   357,  222,  504,  493,  113, 1021,  335,  498, 1092,  266,
+ /*  1420 */    39,  266,  874,  413,  889,  500,  362,  289, 1088,  266,
+ /*  1430 */   113,  356,  263,  551,  974,  165,  305, 1032,  266,  113,
+ /*  1440 */   480,  199,  134,  134,  134,  134,  133,  133,  132,  132,
+ /*  1450 */   132,  131,  128,  452,  139,   91,  222, 1228, 1228, 1063,
+ /*  1460 */  1066, 1053, 1053,  135,  135,  136,  136,  136,  136,  986,
+ /*  1470 */   987,  941,  537,  475,  939,  138, 1092, 1104,  138, 1104,
+ /*  1480 */   874, 1103, 1204, 1103,  253,  872,  942, 1550, 1589,  159,
+ /*  1490 */   138,  339,  340,  413,  343, 1032,  426, 1380, 1379,  484,
+ /*  1500 */  1557,  224,  352, 1530,  517,  560,  327, 1529,  508,  363,
+ /*  1510 */  1376,  367,  371,  134,  134,  134,  134,  133,  133,  132,
+ /*  1520 */   132,  132,  131,  128,  452,   91, 1366, 1228, 1228, 1063,
+ /*  1530 */  1066, 1053, 1053,  135,  135,  136,  136,  136,  136, 1204,
+ /*  1540 */  1205, 1204, 1389, 1434, 1362,   12,  205,  397, 1439,  389,
+ /*  1550 */  1616,  167,  124, 1374,  566,  391,  459, 1188,    4, 1268,
+ /*  1560 */  1267, 1269, 1609,  227,  281, 1359,  313, 1307, 1421,  314,
+ /*  1570 */  1426, 1416,    5,  246,  315,  569, 1409,   42, 1612,  469,
+ /*  1580 */   354, 1188, 1425,  134,  134,  134,  134,  133,  133,  132,
+ /*  1590 */   132,  132,  131,  128,  452,  300,  124,  423,  566,  450,
+ /*  1600 */   334, 1188,    4,  243,  280,  329,  472,  332,  471,  242,
+ /*  1610 */   355,  562,  306, 1204,  410,  330,  360,  210, 1204,  569,
+ /*  1620 */  1502,   44, 1501,  882, 1371,  203,  473, 1372,  563, 1327,
+ /*  1630 */  1370,  502,    9, 1369,   40, 1326, 1325,  463,   93,  211,
+ /*  1640 */  1040,  387, 1626,  450, 1625, 1624,  122,  122,    3,  425,
+ /*  1650 */   400, 1318, 1297,  893,  123,  562,  450,  572,  450,  223,
+ /*  1660 */   404, 1028, 1317, 1296, 1040, 1244,  333, 1295, 1549,  545,
+ /*  1670 */  1204, 1205, 1204,  187,  544, 1204, 1205, 1204,  321,  575,
+ /*  1680 */   882, 1029,  244,  274, 1040, 1028, 1547, 1241,   96, 1204,
+ /*  1690 */   122,  122, 1204, 1028, 1028, 1030, 1031,   34,  123,   99,
+ /*  1700 */   450,  572,  450,  428,  100, 1028, 1507,  220,  124, 1169,
+ /*  1710 */   566,  196, 1422, 1188,    4,   13,  182, 1028, 1028, 1030,
+ /*  1720 */   552,  189, 1169,  486,  579, 1169, 1204,  191,  192,  193,
+ /*  1730 */   194,  569,  487,  408, 1428,  108, 1427, 1028, 1028, 1030,
+ /*  1740 */  1031,   34,  256,   15,  494, 1430, 1204, 1205, 1204, 1204,
+ /*  1750 */  1205, 1204,  124,  411,  566,  450,  200, 1188,    4, 1496,
+ /*  1760 */   509,  260,  106, 1518,  515,  365,  282,  562,  262,  438,
+ /*  1770 */   519,  439,  311,  447,  446,  569,  369,  268,  541,  141,
+ /*  1780 */   312,  545, 1233, 1204, 1205, 1204,  546, 1235,  551, 1350,
+ /*  1790 */   269, 1580,  443, 1579,  374, 1234, 1040,  233, 1394,  450,
+ /*  1800 */  1594,   11,  122,  122, 1483,  381,  117, 1393,  109, 1349,
+ /*  1810 */   123,  562,  450,  572,  450,  216,  529, 1028,  385,  577,
+ /*  1820 */  1236,  386, 1236,  319,  388,  545, 1198,  273, 1270,  276,
+ /*  1830 */   544,  275,  278,  279,  580, 1265, 1260,  415,  172,  154,
+ /*  1840 */  1040,  173,  416,  174,  296,  186,  122,  122,  225, 1028,
+ /*  1850 */  1028, 1030, 1031,   34,  123, 1534,  450,  572,  450,  335,
+ /*  1860 */  1535, 1028,  235,  226, 1533,  455, 1532,   89,  184,   92,
+ /*  1870 */    23,  460,   24,  325, 1194, 1193,  153,  217,  891,  175,
+ /*  1880 */   328,  468,   94,  297,  904,  176,  124,  337,  566,  245,
+ /*  1890 */   156, 1188,    4, 1028, 1028, 1030, 1031,   34, 1601, 1102,
+ /*  1900 */  1192,  476,  582, 1100,  345,  188,  178,  925,  292,  569,
+ /*  1910 */  1223,    2,  161,  252,  190,  255,  353, 1116,  396,  195,
+ /*  1920 */   396,  179,  395,  180,  277,  433,  393,  431,  102,  197,
+ /*  1930 */   103,  104,  859,  450,  105,  181,  254, 1119,  257, 1115,
+ /*  1940 */   258,  163,  465, 1259,  295,  562,   26, 1341,  259,  364,
+ /*  1950 */  1108,  266,  514,  248,  261,  342,  290, 1633,  201,  202,
+ /*  1960 */  1155,   16, 1238,  341, 1154,  229,  285,  565,  287,  571,
+ /*  1970 */   265,  204,   27,  972, 1040,  138,  978,   41, 1160,  206,
+ /*  1980 */   122,  122,  948,  531, 1069,  164,  111,   28,  123,  112,
+ /*  1990 */   450,  572,  450,  538,  250, 1028, 1185, 1171,  466,   29,
+ /*  2000 */    30,   31,  177, 1173, 1175,   43, 1179, 1178,  113, 1083,
+ /*  2010 */    32,   33,    8,  124,  114,  566, 1602, 1070, 1188,    4,
+ /*  2020 */   161, 1073,  249, 1068, 1072, 1124,  119, 1028, 1028, 1030,
+ /*  2030 */  1031,   34,  270,   90,  115,  566,  569,   35, 1188,    4,
+ /*  2040 */   564,   17, 1033, 1617,  254,  125,  873,   36,  570,   37,
+ /*  2050 */   464, 1259,  295,  578,  271, 1341,  569,  414,  935,  272,
+ /*  2060 */   450,   18,  321,  575,  290, 1633,  861,  394,  846,  581,
+ /*  2070 */  1256, 1256,  562, 1256, 1256,  565, 1256,  571, 1256, 1256,
+ /*  2080 */   450, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256,
+ /*  2090 */  1256, 1256,  562, 1256, 1256, 1256, 1256, 1256, 1256, 1256,
+ /*  2100 */  1256, 1040, 1256, 1256, 1256, 1256,  466,  122,  122, 1256,
+ /*  2110 */  1256, 1256, 1256, 1256, 1256,  123, 1256,  450,  572,  450,
+ /*  2120 */  1256, 1040, 1028, 1256, 1256, 1256, 1256,  122,  122, 1256,
+ /*  2130 */  1256, 1256, 1256, 1256, 1256,  123, 1256,  450,  572,  450,
+ /*  2140 */  1256,  554, 1028, 1256, 1256, 1256,  124, 1256,  566, 1256,
+ /*  2150 */  1256, 1188,    4, 1256, 1028, 1028, 1030, 1031,   34, 1256,
+ /*  2160 */  1256,  553, 1256, 1256, 1192,  476,  582, 1256, 1256,  569,
+ /*  2170 */  1256, 1256,  292, 1256, 1028, 1028, 1030, 1031,   34, 1256,
+ /*  2180 */  1256, 1256,  396, 1256,  396, 1256,  395, 1256,  277, 1256,
+ /*  2190 */   393, 1256, 1256,  450, 1256, 1256,  859, 1256, 1256, 1256,
+ /*  2200 */  1256, 1256, 1256, 1256, 1256,  562, 1256, 1256, 1256, 1256,
+ /*  2210 */  1256, 1256, 1256, 1256, 1256, 1256, 1256,  248, 1256,  342,
+ /*  2220 */  1256, 1256, 1256, 1256, 1256, 1256, 1256,  341, 1256, 1256,
+ /*  2230 */  1256, 1256, 1256, 1256, 1040, 1256, 1256, 1256, 1256, 1256,
+ /*  2240 */   122,  122, 1256, 1256, 1256, 1256, 1256, 1256,  123, 1256,
+ /*  2250 */   450,  572,  450, 1256,  476, 1028, 1256, 1256,  250, 1256,
+ /*  2260 */  1256,  292, 1256, 1256, 1256, 1256,  177, 1256, 1256,   43,
+ /*  2270 */  1256,  396, 1256,  396, 1256,  395, 1256,  277, 1256,  393,
+ /*  2280 */  1256, 1256, 1256, 1256, 1256,  859,  249, 1028, 1028, 1030,
+ /*  2290 */  1031,   34, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256,
+ /*  2300 */  1256, 1256, 1256, 1256, 1256, 1256,  248, 1256,  342, 1256,
+ /*  2310 */  1256, 1256, 1256, 1256, 1256, 1256,  341, 1256, 1256, 1256,
+ /*  2320 */  1256,  414, 1256, 1256, 1256, 1256,  321,  575, 1256, 1256,
+ /*  2330 */  1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256,
+ /*  2340 */  1256, 1256, 1256, 1256, 1256, 1256, 1256,  250, 1256, 1256,
+ /*  2350 */  1256, 1256, 1256, 1256, 1256,  177, 1256, 1256,   43, 1256,
+ /*  2360 */  1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256,
+ /*  2370 */  1256, 1256, 1256, 1256, 1256,  249, 1256, 1256, 1256, 1256,
+ /*  2380 */  1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256,
+ /*  2390 */  1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256,
+ /*  2400 */  1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256, 1256,
+ /*  2410 */   414, 1256, 1256, 1256, 1256,  321,  575,
 };
 static const YYCODETYPE yy_lookahead[] = {
- /*     0 */   190,  217,  252,  193,  190,  187,  187,  193,  306,  307,
- /*    10 */   187,  261,  262,    8,  190,   10,  187,  193,  187,  252,
- /*    20 */   187,  187,  272,  187,  274,  241,  276,  277,  261,  262,
- /*    30 */   262,  247,  248,  249,  189,  190,  252,   37,  193,  272,
- /*    40 */   272,  274,  274,  253,  187,  261,  262,  229,  230,   49,
- /*    50 */   187,  187,  219,  220,  221,  201,  272,   57,  274,  205,
- /*    60 */   196,   61,   62,   63,  230,   65,   66,   67,   68,   69,
- /*    70 */    70,  252,  253,  254,  253,   37,  253,  254,  242,  255,
- /*    80 */   261,  262,  253,  254,  253,  254,  190,  303,   85,  193,
- /*    90 */   253,  272,  273,  274,  187,   37,   93,  278,  288,   61,
- /*   100 */    62,   63,  288,   65,   66,   67,   68,   69,   70,  187,
- /*   110 */   253,  254,  288,  290,  114,  301,  253,  254,  211,   61,
- /*   120 */    62,   63,  252,   65,   66,   67,   68,   69,   70,  126,
- /*   130 */   273,  261,  262,  288,  187,  278,   98,    6,  100,   81,
- /*   140 */   137,  138,  272,  314,  274,  316,  315,  316,  312,  313,
- /*   150 */   114,  255,  114,  187,  114,  155,  156,  157,  158,  159,
- /*   160 */   160,  161,  162,  163,  164,  165,  166,  167,  168,  169,
- /*   170 */   170,  171,  114,  309,  233,  116,  117,  314,  226,  316,
- /*   180 */   187,  259,  187,  231,  288,  219,  220,  221,  187,  196,
- /*   190 */   114,  213,  214,  155,  156,  157,  158,  159,  160,  161,
- /*   200 */   162,  163,  164,  165,  166,  167,  168,  169,  170,  171,
- /*   210 */   170,  171,  114,  155,  156,  157,  158,  159,  160,  161,
- /*   220 */   162,  163,  164,  165,  166,  167,  168,  169,  170,  171,
- /*   230 */   113,   37,  173,  174,  176,  202,  177,  161,  162,  163,
- /*   240 */   164,  165,  166,  167,  168,  169,  170,  171,  253,  254,
- /*   250 */   173,   37,  257,  260,  177,   61,   62,   63,  311,   65,
- /*   260 */    66,   67,   68,   69,   70,  167,  168,  169,  170,  171,
- /*   270 */   116,  117,  294,   79,  143,   61,   62,   63,  252,   65,
- /*   280 */    66,   67,   68,   69,   70,  252,  113,  261,  262,   37,
- /*   290 */    88,  174,  175,  176,  261,  262,  187,   84,  272,  199,
- /*   300 */   274,   99,  309,  101,  204,  272,  104,  274,  114,  165,
- /*   310 */   166,   37,  187,   61,   62,   63,  242,   65,   66,   67,
- /*   320 */    68,   69,   70,  179,  187,  181,   42,  173,  114,  116,
- /*   330 */   117,  177,  113,   44,  201,   61,   62,   63,  205,   65,
- /*   340 */    66,   67,   68,   69,   70,  143,  114,  174,  175,  155,
- /*   350 */   156,  157,  158,  159,  160,  161,  162,  163,  164,  165,
- /*   360 */   166,  167,  168,  169,  170,  171,  114,   43,  187,  155,
- /*   370 */   156,  157,  158,  159,  160,  161,  162,  163,  164,  165,
- /*   380 */   166,  167,  168,  169,  170,  171,  173,  313,  114,  175,
- /*   390 */   177,   37,  283,  174,  175,  176,  112,  165,  166,  167,
- /*   400 */   168,  169,  170,  171,  120,  116,  117,  155,  156,  157,
- /*   410 */   158,  159,  160,  161,  162,  163,  164,  165,  166,  167,
- /*   420 */   168,  169,  170,  171,  137,  138,   37,  175,  187,  155,
- /*   430 */   156,  157,  158,  159,  160,  161,  162,  163,  164,  165,
- /*   440 */   166,  167,  168,  169,  170,  171,   23,   37,  187,  175,
- /*   450 */    61,   62,   63,   43,   65,   66,   67,   68,   69,   70,
- /*   460 */   187,  177,  173,  179,  180,  181,  177,  187,   45,  115,
- /*   470 */   116,   61,   62,   63,  293,   65,   66,   67,   68,   69,
- /*   480 */    70,  199,  252,   60,  114,   37,  204,   65,   66,   67,
- /*   490 */    68,  261,  262,   84,  261,  262,  142,  173,   75,  187,
- /*   500 */   259,  177,  272,  114,  274,  272,  187,  274,   85,   61,
- /*   510 */    62,   63,  125,   65,   66,   67,   68,   69,   70,  224,
- /*   520 */   259,  226,  242,  228,  114,  116,  117,  157,  158,  159,
- /*   530 */   160,  161,  162,  163,  164,  165,  166,  167,  168,  169,
- /*   540 */   170,  171,  120,  302,  155,  156,  157,  158,  159,  160,
- /*   550 */   161,  162,  163,  164,  165,  166,  167,  168,  169,  170,
- /*   560 */   171,   37,  114,  176,  175,  155,  156,  157,  158,  159,
- /*   570 */   160,  161,  162,  163,  164,  165,  166,  167,  168,  169,
- /*   580 */   170,  171,  173,  187,  187,  187,  177,  115,  116,  117,
- /*   590 */    47,  119,  312,  313,   51,  283,  148,   37,  279,  127,
- /*   600 */   116,  117,  187,  155,  156,  157,  158,  159,  160,  161,
- /*   610 */   162,  163,  164,  165,  166,  167,  168,  169,  170,  171,
- /*   620 */    77,   61,   62,   63,  187,   65,   66,   67,   68,   69,
- /*   630 */    70,  137,  138,  149,   37,   85,   43,  165,  166,  187,
- /*   640 */   116,  116,  117,  118,  246,  173,  121,  122,  123,  177,
- /*   650 */    71,  179,  113,  181,  258,   37,  131,  173,   61,   62,
- /*   660 */    63,  177,   65,   66,   67,   68,   69,   70,  253,  254,
- /*   670 */   176,   13,  257,   15,  114,   17,  126,  127,  128,   61,
- /*   680 */    62,   63,  187,   65,   66,   67,   68,   69,   70,  187,
- /*   690 */   252,  118,  187,  114,  121,  122,  123,  189,  173,  261,
- /*   700 */   262,  187,  177,  287,  131,  253,  254,  310,  311,  257,
- /*   710 */   272,  114,  274,  174,  175,  155,  156,  157,  158,  159,
- /*   720 */   160,  161,  162,  163,  164,  165,  166,  167,  168,  169,
- /*   730 */   170,  171,  114,  317,  318,  175,  157,  158,  159,  160,
- /*   740 */   161,  162,  163,  164,  165,  166,  167,  168,  169,  170,
- /*   750 */   171,  246,  155,  156,  157,  158,  159,  160,  161,  162,
- /*   760 */   163,  164,  165,  166,  167,  168,  169,  170,  171,  187,
- /*   770 */    37,  178,  175,  155,  156,  157,  158,  159,  160,  161,
- /*   780 */   162,  163,  164,  165,  166,  167,  168,  169,  170,  171,
- /*   790 */    37,  127,  128,  175,   61,   62,   63,  187,   65,   66,
- /*   800 */    67,   68,   69,   70,   93,  225,   93,  299,  116,  117,
- /*   810 */   218,  219,  220,  187,   61,   62,   63,  252,   65,   66,
- /*   820 */    67,   68,   69,   70,  187,   88,  261,  262,   37,  201,
- /*   830 */   119,  261,  262,  194,  195,  253,  254,  272,  101,  274,
- /*   840 */   187,  104,  272,  133,  274,  135,  136,  114,  137,  138,
- /*   850 */   137,  138,   61,   62,   63,  273,   65,   66,   67,   68,
- /*   860 */    69,   70,  252,  253,  254,  173,  174,  114,  240,  177,
- /*   870 */   189,  261,  262,  134,  116,  117,  116,  117,  139,  253,
- /*   880 */   254,  187,  272,  273,  274,  269,  153,  271,  155,  156,
- /*   890 */   157,  158,  159,  160,  161,  162,  163,  164,  165,  166,
- /*   900 */   167,  168,  169,  170,  171,  114,  167,   42,  155,  156,
- /*   910 */   157,  158,  159,  160,  161,  162,  163,  164,  165,  166,
- /*   920 */   167,  168,  169,  170,  171,  167,  116,  117,  175,  187,
- /*   930 */    21,  173,  187,  173,  174,  177,  283,  177,  196,   37,
- /*   940 */   246,  187,  194,  195,  153,   43,  155,  156,  157,  158,
- /*   950 */   159,  160,  161,  162,  163,  164,  165,  166,  167,  168,
- /*   960 */   169,  170,  171,   61,   62,   63,   37,   65,   66,   67,
- /*   970 */    68,   69,   70,  218,  219,  220,  295,  112,  116,  117,
- /*   980 */   299,  116,  287,  173,  174,  120,  187,  177,  187,   31,
- /*   990 */    61,   62,   63,   88,   65,   66,   67,   68,   69,   70,
- /*  1000 */    37,  115,  260,  141,   99,  134,  101,  253,  254,  104,
- /*  1010 */   139,  257,  317,  318,  165,  166,  114,  117,  126,  127,
- /*  1020 */   128,  116,  117,  174,   61,   62,   63,  225,   65,   66,
- /*  1030 */    67,   68,   69,   70,  148,  173,  127,  128,  173,  177,
- /*  1040 */   225,  141,  177,  114,  179,  180,  181,   89,  143,   91,
- /*  1050 */   187,  309,  253,  254,  253,  254,  257,  155,  156,  157,
- /*  1060 */   158,  159,  160,  161,  162,  163,  164,  165,  166,  167,
- /*  1070 */   168,  169,  170,  171,  273,  175,  176,  114,  173,  278,
- /*  1080 */   187,   37,  177,  187,  155,  156,  157,  158,  159,  160,
- /*  1090 */   161,  162,  163,  164,  165,  166,  167,  168,  169,  170,
- /*  1100 */   171,  187,  116,  117,   37,  187,   62,   63,  287,   65,
- /*  1110 */    66,   67,   68,   69,   70,   37,  253,  254,  155,  156,
- /*  1120 */   157,  158,  159,  160,  161,  162,  163,  164,  165,  166,
- /*  1130 */   167,  168,  169,  170,  171,    1,  273,  187,  317,  318,
- /*  1140 */   264,   63,  187,   65,   66,   67,   68,   69,   70,  253,
- /*  1150 */   254,  275,  259,  187,   43,  187,  187,  187,  114,  173,
- /*  1160 */   174,  116,  117,  177,  196,  187,  211,  253,  254,  273,
- /*  1170 */   187,  257,  173,  174,  278,   41,  177,   88,  187,   37,
- /*  1180 */   187,   39,  187,  116,   42,  187,  141,  187,  233,  234,
- /*  1190 */   101,  143,  114,  104,  187,  242,   54,  279,  187,  155,
- /*  1200 */   156,  157,  158,  159,  160,  161,  162,  163,  164,  165,
- /*  1210 */   166,  167,  168,  169,  170,  171,  187,  187,  173,  253,
- /*  1220 */   254,  242,  177,  257,  176,   83,   92,  258,  260,  279,
- /*  1230 */   242,  253,  254,  155,  156,  157,  158,  159,  160,  161,
- /*  1240 */   162,  163,  164,  165,  166,  167,  168,  169,  170,  171,
- /*  1250 */    37,  273,   39,  283,  112,   42,  122,  259,  116,  117,
- /*  1260 */   253,  254,  120,  280,  257,  176,  313,   54,   65,   37,
- /*  1270 */   187,   78,  187,  280,   37,  280,   39,  309,  187,   42,
- /*  1280 */   280,  117,  253,  254,  173,  174,  187,    1,  177,  259,
- /*  1290 */    97,   54,  313,  151,  187,  196,   83,   65,  202,  106,
- /*  1300 */   242,  313,  273,  120,   67,  141,   93,  165,  166,  167,
- /*  1310 */   216,  217,  187,  130,  172,  173,  174,   31,  115,  177,
- /*  1320 */    83,  179,  180,  181,  182,  112,  126,  127,  128,  116,
- /*  1330 */   117,  304,  305,  120,   97,  241,  211,  144,  187,  102,
- /*  1340 */   176,  247,  248,  249,  253,  254,  252,  115,   29,  112,
- /*  1350 */   137,  138,   37,  116,  117,  261,  262,  120,   43,  260,
- /*  1360 */   253,  254,  130,  280,  151,  187,  272,   37,  274,   39,
- /*  1370 */   264,  313,   42,   53,  187,   89,  251,   91,  165,  166,
- /*  1380 */   273,  275,  175,  176,   54,  172,  173,  174,  151,   43,
- /*  1390 */   177,   72,  179,  180,  181,  182,  187,  303,   78,  187,
- /*  1400 */    73,  187,  165,  166,  253,  254,   86,  187,  309,  172,
- /*  1410 */   173,  174,  140,   83,  177,  321,  179,  180,  181,  182,
- /*  1420 */   187,   23,  107,  187,  273,  187,  152,   97,  154,  114,
- /*  1430 */   187,  187,  102,  118,  119,  120,  121,  122,  123,  124,
- /*  1440 */   253,  254,  112,   45,  264,  130,  116,  117,  176,  129,
- /*  1450 */   120,  276,  277,   49,   37,  275,   39,  187,   60,   42,
- /*  1460 */   187,   57,  253,  254,  187,  253,  254,  253,  254,  264,
- /*  1470 */   187,   54,  187,   75,  187,  187,  187,  140,  187,  115,
- /*  1480 */   275,  151,  187,   13,  187,   15,  253,  254,  264,  253,
- /*  1490 */   254,  253,  254,  128,  187,  165,  166,  253,  254,  275,
- /*  1500 */    83,  174,  172,  173,  174,  187,  142,  177,  187,  179,
- /*  1510 */   180,  181,  182,  176,   97,  150,  147,  148,  156,  102,
- /*  1520 */   174,  216,  217,  253,  254,  175,  176,  147,  173,  112,
- /*  1530 */   253,  254,  177,  116,  117,  187,  174,  120,  253,  254,
- /*  1540 */   253,  254,  253,  254,  253,  254,  241,  187,  253,  254,
- /*  1550 */   253,  254,  247,  248,  249,  187,  176,  252,  175,  176,
- /*  1560 */   253,  254,  187,  175,  176,  187,  261,  262,  151,  119,
- /*  1570 */   120,  253,  254,  187,  253,  254,  187,  272,  187,  274,
- /*  1580 */   187,  174,  165,  166,    0,  178,    2,    3,  128,  172,
- /*  1590 */   173,  174,  187,    9,  177,  111,  179,  180,  181,  182,
- /*  1600 */   187,  253,  254,   19,   37,   21,  187,   23,  303,   25,
- /*  1610 */   150,   27,  187,  253,  254,  187,  132,   33,  179,  187,
- /*  1620 */   181,  253,  254,  187,  319,  320,  321,  173,  253,  254,
- /*  1630 */   187,  177,   48,  187,   50,   37,  187,   39,  187,  143,
- /*  1640 */    42,  179,   58,  181,  253,  254,  253,  254,  175,  176,
- /*  1650 */   175,  176,   54,  187,  187,   37,  187,   39,  253,  254,
- /*  1660 */    42,  187,  175,  176,  175,  176,   82,  175,  176,  175,
- /*  1670 */   176,  175,   54,  187,   90,  187,  109,   93,  253,  254,
- /*  1680 */   187,   83,  175,  176,  187,  253,  254,  187,  187,  253,
- /*  1690 */   254,  175,  176,  187,  110,  187,  253,  254,  187,  253,
- /*  1700 */   254,   83,  175,  176,  253,  254,   95,   96,  175,  176,
- /*  1710 */   112,  175,  176,  173,  116,  117,  132,  177,  120,  253,
- /*  1720 */   254,  137,  138,  175,  176,  200,  187,  253,  254,  187,
- /*  1730 */   112,  187,  222,  188,  116,  117,  199,  139,  120,  244,
- /*  1740 */   187,  253,  254,  187,  187,  187,  253,  254,  187,  151,
- /*  1750 */   253,  254,  187,  187,  253,  254,   37,  139,   39,  253,
- /*  1760 */   254,   42,  187,  165,  166,  187,  187,  183,  238,  151,
- /*  1770 */   172,  173,  174,   54,  187,  177,  296,  179,  180,  181,
- /*  1780 */   182,  187,  192,  165,  166,  188,    2,    3,  245,  187,
- /*  1790 */   172,  173,  174,    9,  188,  177,  187,  179,  180,  181,
- /*  1800 */   182,  187,   83,   19,  188,   21,  207,   23,  188,   25,
- /*  1810 */   263,   27,  187,  236,  253,  254,  187,   33,  250,  224,
- /*  1820 */   187,  300,  210,  187,  255,  265,  285,  265,  253,  254,
- /*  1830 */   266,  112,   48,  282,   50,  116,  117,  282,  300,  120,
- /*  1840 */   253,  254,   58,  255,  285,  240,  266,  253,  254,  263,
- /*  1850 */   240,  255,  269,  240,  269,  253,  254,  285,  285,  240,
- /*  1860 */   187,  174,  253,  254,  256,  265,   82,  253,  254,  115,
- /*  1870 */   151,  237,  237,  292,   90,  237,  176,   93,  253,  254,
- /*  1880 */   235,  174,  253,  254,  165,  166,  253,  254,    2,  253,
- /*  1890 */   254,  172,  173,  174,  110,    9,  177,  239,  179,  180,
- /*  1900 */   181,  182,  239,  237,   76,   19,  227,   21,  256,   23,
- /*  1910 */   125,   25,  237,   27,  222,  237,  132,  227,  237,   33,
- /*  1920 */    72,  137,  138,  210,  210,  178,  253,  254,  191,  191,
- /*  1930 */    56,  215,  215,  191,   48,  149,   50,  293,  148,  286,
- /*  1940 */   174,  284,   61,  203,   58,   35,  191,  206,   35,  206,
- /*  1950 */   206,  206,  147,  286,  266,  286,  284,  266,  212,  203,
- /*  1960 */   266,  203,  266,  191,  212,  152,  298,  183,   82,   74,
- /*  1970 */   191,  297,  212,   43,  197,  114,   90,  256,  198,   93,
- /*  1980 */   198,  146,  191,  143,   94,  270,  103,  269,    8,  281,
- /*  1990 */   281,  243,  243,  174,  318,  289,  110,  191,  152,  270,
- /*  2000 */   145,  291,  268,  144,  212,  191,  267,  256,  191,  212,
- /*  2010 */    25,  209,  209,   11,  238,  208,  266,  208,  132,  208,
- /*  2020 */   232,  232,  223,  137,  138,  238,  232,  223,  308,  305,
- /*  2030 */   308,  189,  189,  189,  189,  130,  189,  174,  124,   79,
- /*  2040 */   174,  174,   79,  175,  174,  176,  175,  183,  183,  174,
- /*  2050 */   173,   43,  108,   46,  174,   79,   55,    4,   29,   31,
- /*  2060 */   175,  138,  175,  129,  149,  176,   43,  140,  142,   39,
- /*  2070 */    31,  183,  140,   73,  129,  129,   55,  149,  156,  129,
- /*  2080 */   156,  156,  116,   52,  178,  156,  183,    9,  115,    1,
- /*  2090 */   174,   80,   80,  176,   59,  175,   87,  178,  115,  109,
- /*  2100 */   116,   52,  141,   52,   43,  174,   52,   52,   52,  147,
- /*  2110 */   175,  178,  175,  174,  176,  175,  174,  176,  175,   52,
- /*  2120 */   100,   87,  174,  176,  175,   98,  175,   62,   87,  105,
- /*  2130 */   176,   52,   52,  140,  140,  176,   21,  134,   43,  175,
- /*  2140 */   175,   39,  175,  175,  175,  174,  174,   37,  178,  174,
- /*  2150 */   176,   29,  175,  175,    7,  174,  174,  178,    5,  322,
- /*  2160 */   322,  322,  176,  174,  322,  178,  322,  322,  322,  322,
- /*  2170 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2180 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2190 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2200 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2210 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2220 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2230 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2240 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2250 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2260 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2270 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2280 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2290 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2300 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2310 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2320 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
+ /*     0 */   252,  216,  217,  201,  218,  219,  220,  205,  252,  261,
+ /*    10 */   262,  189,  190,    1,  253,  193,  187,  261,  262,  187,
+ /*    20 */   272,  253,  274,  187,  276,  277,  241,  187,  272,  187,
+ /*    30 */   274,  252,  247,  248,  249,  253,  187,  252,   38,  187,
+ /*    40 */   261,  262,  306,  307,   32,  252,  261,  262,  219,  220,
+ /*    50 */   221,  272,  201,  274,  261,  262,   56,  272,  187,  274,
+ /*    60 */   211,  219,  220,  221,   64,  272,  230,  274,   68,   69,
+ /*    70 */    70,  233,   72,   73,   74,   75,   76,   77,   78,   79,
+ /*    80 */    80,   81,   82,   83,  187,  253,  254,  252,  303,  257,
+ /*    90 */   226,  240,  252,  253,  254,  231,  261,  262,  246,   44,
+ /*   100 */   251,  261,  262,   48,  319,  320,  321,  272,  211,  274,
+ /*   110 */   288,   38,  272,  273,  274,  103,  187,  105,  278,   80,
+ /*   120 */    81,   82,   83,   84,  253,  254,   30,  187,  128,  129,
+ /*   130 */   130,  131,  132,  133,  134,  135,  136,  137,  138,  139,
+ /*   140 */    85,   68,   69,   70,  273,   72,   73,   74,   75,   76,
+ /*   150 */    77,   78,   79,   80,   81,   82,   83,  134,  135,  136,
+ /*   160 */   137,  138,  139,  213,  214,  187,  187,  128,  129,  130,
+ /*   170 */   131,  132,  133,  134,  135,  136,  137,  138,  139,   51,
+ /*   180 */    99,   99,   86,  202,   38,  112,  145,  114,  107,  148,
+ /*   190 */   149,  150,  190,  253,  254,  193,   50,  187,  143,  158,
+ /*   200 */   187,  128,  129,  130,  131,  132,  133,  134,  135,  136,
+ /*   210 */   137,  138,  139,   85,   68,   69,   70,  139,   72,   73,
+ /*   220 */    74,   75,   76,   77,   78,   79,   80,   81,   82,   83,
+ /*   230 */   252,  253,  254,  252,  153,  153,  154,  155,  252,  261,
+ /*   240 */   262,   95,  261,  262,  294,  164,  165,  261,  262,  187,
+ /*   250 */   272,  273,  274,  272,  314,  274,  316,   38,  272,  246,
+ /*   260 */   274,  187,  283,  253,  254,   80,   81,   82,   83,   22,
+ /*   270 */   142,  143,  144,  187,  128,  129,  130,  131,  132,  133,
+ /*   280 */   134,  135,  136,  137,  138,  139,  107,   68,   69,   70,
+ /*   290 */   288,   72,   73,   74,   75,   76,   77,   78,   79,   80,
+ /*   300 */    81,   82,   83,  132,  133,  134,  135,  136,  137,  138,
+ /*   310 */   139,  187,   93,  128,  129,  130,  131,  132,  133,  134,
+ /*   320 */   135,  136,  137,  138,  139,  315,  316,  253,  254,   46,
+ /*   330 */    38,  257,   43,   50,    9,   24,   11,  187,   46,   72,
+ /*   340 */    73,   74,   75,  164,  165,  283,  187,  128,  129,  130,
+ /*   350 */   131,  132,  133,  134,  135,  136,  137,  138,  139,  187,
+ /*   360 */    68,   69,   70,   52,   72,   73,   74,   75,   76,   77,
+ /*   370 */    78,   79,   80,   81,   82,   83,  190,   38,   67,  193,
+ /*   380 */   218,  219,  220,  211,  187,  125,  128,  129,  130,  131,
+ /*   390 */   132,  133,  134,  135,  136,  137,  138,  139,   85,  187,
+ /*   400 */    89,  154,  155,   38,  187,  233,  234,  283,   50,  259,
+ /*   410 */    99,   46,  253,  254,  147,  126,  137,  138,  139,  159,
+ /*   420 */   128,  129,  130,  131,  132,  133,  134,  135,  136,  137,
+ /*   430 */   138,  139,  143,   68,   69,   70,  147,   72,   73,   74,
+ /*   440 */    75,   76,   77,   78,   79,   80,   81,   82,   83,  187,
+ /*   450 */   253,  254,  302,  189,  257,  142,  143,  144,  145,  187,
+ /*   460 */    92,  148,  149,  150,  187,  253,  254,  187,  179,  180,
+ /*   470 */   181,  158,  199,  314,  288,  316,   38,  204,   85,  111,
+ /*   480 */   141,  142,  187,  187,   46,  273,   85,  301,  120,   85,
+ /*   490 */   278,   98,  196,  128,  129,  130,  131,  132,  133,  134,
+ /*   500 */   135,  136,  137,  138,  139,  187,   68,   69,   70,  170,
+ /*   510 */    72,   73,   74,   75,   76,   77,   78,   79,   80,   81,
+ /*   520 */    82,   83,  164,  165,  189,  253,  254,  310,  311,  257,
+ /*   530 */   253,  254,   44,  253,  254,  142,  143,  144,  134,  187,
+ /*   540 */   172,   85,  252,  142,  143,  144,  142,  143,  144,   38,
+ /*   550 */   273,  261,  262,  273,   98,  278,  260,   46,  278,  295,
+ /*   560 */   187,  187,  272,  299,  274,  287,  128,  129,  130,  131,
+ /*   570 */   132,  133,  134,  135,  136,  137,  138,  139,  177,   68,
+ /*   580 */    69,   70,   44,   72,   73,   74,   75,   76,   77,   78,
+ /*   590 */    79,   80,   81,   82,   83,  317,  318,  279,  142,  143,
+ /*   600 */   144,  102,  261,  262,  190,  309,  190,  193,  160,  193,
+ /*   610 */   162,  163,  113,  272,  115,  274,   85,  118,  187,   85,
+ /*   620 */   132,  133,   38,   85,  187,  225,  253,  254,   50,  107,
+ /*   630 */   257,  187,   48,  224,  299,  226,  187,  228,   38,  128,
+ /*   640 */   129,  130,  131,  132,  133,  134,  135,  136,  137,  138,
+ /*   650 */   139,  187,   68,   69,   70,  187,   72,   73,   74,   75,
+ /*   660 */    76,   77,   78,   79,   80,   81,   82,   83,  146,  255,
+ /*   670 */   171,  255,   72,  142,  143,  144,  142,  143,  144,  187,
+ /*   680 */   142,  143,  144,  187,  253,  254,  164,  165,  257,  187,
+ /*   690 */   253,  254,  187,  102,  257,   38,  187,  253,  254,  187,
+ /*   700 */   169,  257,  288,  169,  288,  187,  115,   54,  187,  118,
+ /*   710 */   242,   58,  128,  129,  130,  131,  132,  133,  134,  135,
+ /*   720 */   136,  137,  138,  139,  187,   68,   69,   70,  187,   72,
+ /*   730 */    73,   74,   75,   76,   77,   78,   79,   80,   81,   82,
+ /*   740 */    83,  141,  293,    1,   91,  253,  254,  283,  187,  253,
+ /*   750 */   254,  154,  155,  175,  242,  253,  254,  157,  253,  254,
+ /*   760 */    85,  242,  253,  254,  187,  273,  229,  230,   38,  273,
+ /*   770 */   187,  253,  254,  187,  187,  273,   46,  187,  273,  196,
+ /*   780 */   312,  313,  273,  196,   42,  128,  129,  130,  131,  132,
+ /*   790 */   133,  134,  135,  136,  137,  138,  139,   46,   68,   69,
+ /*   800 */    70,   50,   72,   73,   74,   75,   76,   77,   78,   79,
+ /*   810 */    80,   81,   82,   83,  253,  254,   85,  142,  143,  144,
+ /*   820 */   153,  154,  155,  187,  312,  313,  261,  262,   44,   44,
+ /*   830 */    46,   46,  313,  176,   50,   50,  246,  272,   50,  274,
+ /*   840 */    38,   38,  187,  260,  258,  187,  187,  260,  106,   46,
+ /*   850 */   187,  290,  132,  133,  196,  196,  279,  187,  128,  129,
+ /*   860 */   130,  131,  132,  133,  134,  135,  136,  137,  138,  139,
+ /*   870 */    60,   68,   69,   70,  143,   72,   73,   74,   75,   76,
+ /*   880 */    77,   78,   79,   80,   81,   82,   83,  153,  154,  155,
+ /*   890 */   102,  149,  309,  225,  134,  144,  309,   50,  187,  179,
+ /*   900 */   199,  181,   92,  115,  187,  204,  118,  225,  253,  254,
+ /*   910 */   100,  127,  127,  187,   38,  187,  253,  254,  260,  187,
+ /*   920 */   169,  161,   46,  253,  254,  123,  166,  187,  164,  165,
+ /*   930 */   287,  128,  129,  130,  131,  132,  133,  134,  135,  136,
+ /*   940 */   137,  138,  139,   38,   68,   69,   70,  311,   72,   73,
+ /*   950 */    74,   75,   76,   77,   78,   79,   80,   81,   82,   83,
+ /*   960 */   317,  318,  262,   32,  253,  254,  156,  309,  309,  187,
+ /*   970 */   253,  254,  272,  187,  274,  269,  187,  271,  187,  253,
+ /*   980 */   254,  253,  254,  187,  187,  253,  254,   38,  187,  194,
+ /*   990 */   195,  144,   24,  253,  254,  187,  187,   14,  187,   16,
+ /*  1000 */   187,   18,  187,  187,  128,  129,  130,  131,  132,  133,
+ /*  1010 */   134,  135,  136,  137,  138,  139,  169,   68,   69,   70,
+ /*  1020 */    52,   72,   73,   74,   75,   76,   77,   78,   79,   80,
+ /*  1030 */    81,   82,   83,  201,  103,   67,  105,  205,  187,  253,
+ /*  1040 */   254,  187,  253,  254,  253,  254,  187,  142,  187,  253,
+ /*  1050 */   254,  187,  187,  187,  253,  254,  187,   89,  187,  187,
+ /*  1060 */    38,  253,  254,   44,  253,  254,  253,  254,   46,  253,
+ /*  1070 */   254,  187,  187,  187,  259,    7,  279,  128,  129,  130,
+ /*  1080 */   131,  132,  133,  134,  135,  136,  137,  138,  139,  280,
+ /*  1090 */    68,   69,   70,  187,   72,   73,   74,   75,   76,   77,
+ /*  1100 */    78,   79,   80,   81,   82,   83,   87,  253,  254,   48,
+ /*  1110 */   259,  187,  253,  254,  253,  254,   50,  253,  254,  253,
+ /*  1120 */   254,  187,  253,  254,  253,  254,  187,  187,  187,  187,
+ /*  1130 */   187,  259,  187,   38,  185,  304,  305,  253,  254,  253,
+ /*  1140 */   254,  187,  187,  187,  259,  187,   85,  187,  187,  287,
+ /*  1150 */   128,  129,  130,  131,  132,  133,  134,  135,  136,  137,
+ /*  1160 */   138,  139,   44,   68,   69,   70,   48,   72,   73,   74,
+ /*  1170 */    75,   76,   77,   78,   79,   80,   81,   82,   83,  317,
+ /*  1180 */   318,  194,  195,  259,  187,   72,  187,  253,  254,  276,
+ /*  1190 */   277,  187,  253,  254,  253,  254,  253,  254,  253,  254,
+ /*  1200 */   187,  187,  187,  187,  143,  187,   38,  253,  254,  253,
+ /*  1210 */   254,  253,  254,  253,  254,  187,   48,  187,  152,  187,
+ /*  1220 */   280,  242,  280,  128,  129,  130,  131,  132,  133,  134,
+ /*  1230 */   135,  136,  137,  138,  139,  280,   68,   69,   70,  171,
+ /*  1240 */    72,   73,   74,   75,   76,   77,   78,   79,   80,   81,
+ /*  1250 */    82,   83,  253,  254,  141,  258,   56,  253,  254,  187,
+ /*  1260 */    44,  187,   46,  242,   64,  187,  253,  254,  253,  254,
+ /*  1270 */   187,  253,  254,  187,   44,  187,   46,  242,  187,   38,
+ /*  1280 */   185,  253,  254,  253,  254,  253,  254,  187,  242,  175,
+ /*  1290 */   176,  187,  313,   50,  280,  141,  128,  129,  130,  131,
+ /*  1300 */   132,  133,  134,  135,  136,  137,  138,  139,   38,   68,
+ /*  1310 */    69,   70,   50,   72,   73,   74,   75,   76,   77,   78,
+ /*  1320 */    79,   80,   81,   82,   83,  253,  254,  253,  254,  141,
+ /*  1330 */   176,  253,  254,  187,  313,  264,  253,  254,   50,  253,
+ /*  1340 */   254,  253,  254,  127,  253,  254,  275,   46,  313,  264,
+ /*  1350 */   161,  264,   38,  253,  254,  166,  264,  127,  170,  313,
+ /*  1360 */   275,  184,  275,  186,   46,   48,   85,  275,   50,  128,
+ /*  1370 */   129,  130,  131,  132,  133,  134,  135,  136,  137,  138,
+ /*  1380 */   139,   44,   68,   69,   70,   44,   72,   73,   74,   75,
+ /*  1390 */    76,   77,   78,   79,   80,   81,   82,   83,  264,   46,
+ /*  1400 */    46,  146,  147,   50,   50,   14,  147,   16,  155,  275,
+ /*  1410 */    46,  168,  142,  155,   50,   46,  157,   46,   85,   50,
+ /*  1420 */    79,   50,   85,   38,  143,   46,   46,   44,   46,   50,
+ /*  1430 */    50,  178,   50,  171,   46,   46,  178,   85,   50,   50,
+ /*  1440 */   202,   44,  128,  129,  130,  131,  132,  133,  134,  135,
+ /*  1450 */   136,  137,  138,  139,   69,   70,  168,   72,   73,   74,
+ /*  1460 */    75,   76,   77,   78,   79,   80,   81,   82,   83,  109,
+ /*  1470 */   110,   46,  171,  187,   46,   50,  143,  179,   50,  181,
+ /*  1480 */   143,  179,   85,  181,  167,   46,   46,  187,  244,   50,
+ /*  1490 */    50,  187,  187,   38,  187,  143,   38,  187,  187,  187,
+ /*  1500 */   187,  238,  187,  187,  296,  199,   48,  187,  187,  187,
+ /*  1510 */   187,  187,  187,  128,  129,  130,  131,  132,  133,  134,
+ /*  1520 */   135,  136,  137,  138,  139,   70,  200,   72,   73,   74,
+ /*  1530 */    75,   76,   77,   78,   79,   80,   81,   82,   83,  142,
+ /*  1540 */   143,  144,  187,  187,  187,  263,  188,  207,  187,  187,
+ /*  1550 */   167,  192,   38,  187,   40,  187,  222,   43,   44,  187,
+ /*  1560 */   187,  187,  187,  236,  245,  188,  188,  224,  285,  188,
+ /*  1570 */   285,  282,   44,  210,  188,   61,  282,   44,  250,  121,
+ /*  1580 */   300,   43,  285,  128,  129,  130,  131,  132,  133,  134,
+ /*  1590 */   135,  136,  137,  138,  139,  265,   38,  139,   40,   85,
+ /*  1600 */   255,   43,   44,  145,  146,  147,  148,  149,  150,  151,
+ /*  1610 */   266,   97,  266,   85,  285,  157,  265,  269,   85,   61,
+ /*  1620 */   255,  107,  255,   85,  240,   44,  141,  240,  292,  237,
+ /*  1630 */   240,  300,   74,  240,   50,  237,  237,  235,   44,  269,
+ /*  1640 */   126,  265,  239,   85,  239,  237,  132,  133,   44,   90,
+ /*  1650 */   256,  227,  237,  152,  140,   97,  142,  143,  144,  263,
+ /*  1660 */   256,  147,  227,  222,  126,   86,  237,  237,  191,  111,
+ /*  1670 */   142,  143,  144,  210,  116,  142,  143,  144,  164,  165,
+ /*  1680 */   142,  143,  210,  167,  126,  147,  191,   63,  215,   85,
+ /*  1690 */   132,  133,   85,  179,  180,  181,  182,  183,  140,  215,
+ /*  1700 */   142,  143,  144,  191,  177,  147,  293,  176,   38,  102,
+ /*  1710 */    40,   44,  286,   43,   44,  284,   68,  179,  180,  181,
+ /*  1720 */   113,  203,  115,   36,   36,  118,   85,  206,  206,  206,
+ /*  1730 */   206,   61,  191,  266,  286,  175,  286,  179,  180,  181,
+ /*  1740 */   182,  183,  212,  284,  266,  203,  142,  143,  144,  142,
+ /*  1750 */   143,  144,   38,  266,   40,   85,  203,   43,   44,  266,
+ /*  1760 */   191,  212,  184,  298,   88,  297,  191,   97,  212,   48,
+ /*  1770 */   197,  139,  198,  132,  133,   61,  256,  191,  171,  174,
+ /*  1780 */   198,  111,  141,  142,  143,  144,  116,  146,  171,  270,
+ /*  1790 */   117,  243,  108,  243,  269,  154,  126,    9,  281,   85,
+ /*  1800 */   318,   44,  132,  133,  289,  191,  184,  281,  173,  270,
+ /*  1810 */   140,   97,  142,  143,  144,  268,  172,  147,  267,  256,
+ /*  1820 */   179,  266,  181,  291,  191,  111,   26,  212,  191,  209,
+ /*  1830 */   116,  212,  209,   12,  208,  208,  208,  308,  232,  223,
+ /*  1840 */   126,  232,  308,  232,  223,  305,  132,  133,  238,  179,
+ /*  1850 */   180,  181,  182,  183,  140,  189,  142,  143,  144,  157,
+ /*  1860 */   189,  147,  151,  238,  189,   93,  189,  189,   44,   44,
+ /*  1870 */    44,   93,   44,   46,    2,    2,   46,   44,   85,   50,
+ /*  1880 */    48,  122,   44,   93,   53,   62,   38,    5,   40,   30,
+ /*  1890 */    32,   43,   44,  179,  180,  181,  182,  183,    0,   46,
+ /*  1900 */     2,    3,    4,   46,  165,  177,  156,   40,   10,   61,
+ /*  1910 */    50,  216,  217,   48,  168,  170,   32,    2,   20,  168,
+ /*  1920 */    22,  156,   24,  156,   26,   62,   28,   87,   79,  177,
+ /*  1930 */    79,   79,   34,   85,   79,  156,  241,  142,   59,    2,
+ /*  1940 */   167,   10,  247,  248,  249,   97,   44,  252,  141,    1,
+ /*  1950 */    94,   50,   66,   55,  167,   57,  261,  262,   94,  141,
+ /*  1960 */    46,   44,  101,   65,  123,  167,   46,  272,   46,  274,
+ /*  1970 */    59,   44,   59,  169,  126,   50,  142,   44,   46,   50,
+ /*  1980 */   132,  133,  134,   48,   46,   46,   50,   59,  140,  175,
+ /*  1990 */   142,  143,  144,   44,   96,  147,   46,  114,  303,   59,
+ /*  2000 */    59,   59,  104,  112,  101,  107,  101,  119,   50,   46,
+ /*  2010 */    59,   59,   69,   38,  168,   40,  321,   46,   43,   44,
+ /*  2020 */   217,   22,  124,   46,   46,   46,   50,  179,  180,  181,
+ /*  2030 */   182,  183,   44,   38,  168,   40,   61,   44,   43,   44,
+ /*  2040 */    50,   44,   46,  167,  241,   44,   46,   44,   50,   44,
+ /*  2050 */   247,  248,  249,   38,  167,  252,   61,  159,  161,  167,
+ /*  2060 */    85,   48,  164,  165,  261,  262,   40,   30,    8,    6,
+ /*  2070 */   322,  322,   97,  322,  322,  272,  322,  274,  322,  322,
+ /*  2080 */    85,  322,  322,  322,  322,  322,  322,  322,  322,  322,
+ /*  2090 */   322,  322,   97,  322,  322,  322,  322,  322,  322,  322,
+ /*  2100 */   322,  126,  322,  322,  322,  322,  303,  132,  133,  322,
+ /*  2110 */   322,  322,  322,  322,  322,  140,  322,  142,  143,  144,
+ /*  2120 */   322,  126,  147,  322,  322,  322,  322,  132,  133,  322,
+ /*  2130 */   322,  322,  322,  322,  322,  140,  322,  142,  143,  144,
+ /*  2140 */   322,  166,  147,  322,  322,  322,   38,  322,   40,  322,
+ /*  2150 */   322,   43,   44,  322,  179,  180,  181,  182,  183,  322,
+ /*  2160 */   322,  166,  322,  322,    2,    3,    4,  322,  322,   61,
+ /*  2170 */   322,  322,   10,  322,  179,  180,  181,  182,  183,  322,
+ /*  2180 */   322,  322,   20,  322,   22,  322,   24,  322,   26,  322,
+ /*  2190 */    28,  322,  322,   85,  322,  322,   34,  322,  322,  322,
+ /*  2200 */   322,  322,  322,  322,  322,   97,  322,  322,  322,  322,
+ /*  2210 */   322,  322,  322,  322,  322,  322,  322,   55,  322,   57,
+ /*  2220 */   322,  322,  322,  322,  322,  322,  322,   65,  322,  322,
+ /*  2230 */   322,  322,  322,  322,  126,  322,  322,  322,  322,  322,
+ /*  2240 */   132,  133,  322,  322,  322,  322,  322,  322,  140,  322,
+ /*  2250 */   142,  143,  144,  322,    3,  147,  322,  322,   96,  322,
+ /*  2260 */   322,   10,  322,  322,  322,  322,  104,  322,  322,  107,
+ /*  2270 */   322,   20,  322,   22,  322,   24,  322,   26,  322,   28,
+ /*  2280 */   322,  322,  322,  322,  322,   34,  124,  179,  180,  181,
+ /*  2290 */   182,  183,  322,  322,  322,  322,  322,  322,  322,  322,
+ /*  2300 */   322,  322,  322,  322,  322,  322,   55,  322,   57,  322,
+ /*  2310 */   322,  322,  322,  322,  322,  322,   65,  322,  322,  322,
+ /*  2320 */   322,  159,  322,  322,  322,  322,  164,  165,  322,  322,
  /*  2330 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2340 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
- /*  2350 */   322,  322,  322,
+ /*  2340 */   322,  322,  322,  322,  322,  322,  322,   96,  322,  322,
+ /*  2350 */   322,  322,  322,  322,  322,  104,  322,  322,  107,  322,
+ /*  2360 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
+ /*  2370 */   322,  322,  322,  322,  322,  124,  322,  322,  322,  322,
+ /*  2380 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
+ /*  2390 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
+ /*  2400 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
+ /*  2410 */   159,  322,  322,  322,  322,  164,  165,  322,  322,  322,
+ /*  2420 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
+ /*  2430 */   322,  322,  322,  322,  322,  322,  322,  322,  322,  322,
+ /*  2440 */   322,  322,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2450 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2460 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2470 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2480 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2490 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2500 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2510 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2520 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2530 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2540 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2550 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2560 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2570 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2580 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2590 */   187,  187,  187,  187,  187,  187,  187,  187,  187,  187,
+ /*  2600 */   187,  187,  187,  187,
 };
 #define YY_SHIFT_COUNT    (582)
 #define YY_SHIFT_MIN      (0)
-#define YY_SHIFT_MAX      (2153)
+#define YY_SHIFT_MAX      (2251)
 static const unsigned short int yy_shift_ofst[] = {
- /*     0 */  1784, 1584, 1886, 1213, 1213,  713,    3, 1237, 1330, 1417,
- /*    10 */  1719, 1719, 1719,  711,  713,  713,  713,  713,  713,    0,
- /*    20 */     0,  194,  929, 1719, 1719, 1719, 1719, 1719, 1719, 1719,
- /*    30 */  1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719,  472,  472,
- /*    40 */   525,  905,  905,  213,  409,  154,  154,  494,  494,  494,
- /*    50 */   494,   38,   58,  214,  252,  274,  389,  410,  448,  560,
- /*    60 */   597,  618,  733,  753,  791,  902,  929,  929,  929,  929,
- /*    70 */   929,  929,  929,  929,  929,  929,  929,  929,  929,  929,
- /*    80 */   929,  929,  929,  963,  929,  929, 1044, 1078, 1078, 1142,
- /*    90 */  1598, 1618, 1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719,
- /*   100 */  1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719,
- /*   110 */  1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719,
- /*   120 */  1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719,
- /*   130 */  1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719, 1719,
- /*   140 */  1719, 1719,  579,  370,  370,  370,  370,  370,  370,  370,
- /*   150 */    76,  232,   98,  289, 1232,  154,  154,  154,  154,  144,
- /*   160 */   144, 1134,   40,  664,    5,    5,    5,  287,   36,   36,
- /*   170 */  2166, 2166, 1315, 1315, 1315,  289,  423,  484,   59,   59,
- /*   180 */    59,   59,  423,  202,  154,  117,  219,  154,  154,  154,
- /*   190 */   154,  154,  154,  154,  154,  154,  154,  154,  154,  154,
- /*   200 */   154,  154,  154,  154,  154,  354,  154, 1089, 1089,  909,
- /*   210 */   737,  737,   77,  524,  524,   77,  131, 2166, 2166, 2166,
- /*   220 */  2166, 2166, 2166, 2166,  865,  284,  284,  573,  692,  758,
- /*   230 */   760,  862, 1045,  810,  986,  154,  154,  154, 1320, 1320,
- /*   240 */  1320,  154,  154,  154,  154,  154,  154,  154,  154,  154,
- /*   250 */   154,  154,  154,  154,  550,  154,  154,  154,  154,  154,
- /*   260 */   154,  154,  154,  154,  900,  154,  154,  154, 1111, 1193,
- /*   270 */  1398,  154,  154,  154,  154,  154,  154,  154,  154,  154,
- /*   280 */   849,  892,  543,  710,  324,  324,  324,  324, 1164,  739,
- /*   290 */   710,  710,  658, 1207,  387, 1346, 1203, 1404, 1319,  886,
- /*   300 */  1369, 1272, 1369, 1067, 1380,  886,  886, 1380,  886, 1272,
- /*   310 */  1067, 1404, 1404, 1364, 1364, 1364, 1364, 1048, 1048, 1274,
- /*   320 */  1337,  871, 1687, 1754, 1754, 1754, 1700, 1707, 1707, 1754,
- /*   330 */  1828, 1687, 1754, 1785, 1754, 1828, 1754, 1848, 1848, 1747,
- /*   340 */  1747, 1874, 1874, 1747, 1786, 1790, 1766, 1881, 1910, 1910,
- /*   350 */  1910, 1910, 1747, 1913, 1805, 1790, 1790, 1805, 1766, 1881,
- /*   360 */  1805, 1881, 1805, 1747, 1913, 1813, 1895, 1747, 1913, 1930,
- /*   370 */  1861, 1861, 1687, 1747, 1835, 1840, 1883, 1883, 1890, 1890,
- /*   380 */  1980, 1819, 1747, 1846, 1835, 1855, 1859, 1805, 1687, 1747,
- /*   390 */  1913, 1747, 1913, 1985, 1985, 2002, 2002, 2002, 2166, 2166,
- /*   400 */  2166, 2166, 2166, 2166, 2166, 2166, 2166, 2166, 2166, 2166,
- /*   410 */  2166, 2166, 2166,  422, 1286,  173,  539, 1200,  999,  958,
- /*   420 */  1350, 1383, 1388, 1355, 1450, 1470, 1183, 1484, 1362,  593,
- /*   430 */  1365, 1460, 1473, 1327, 1475, 1487, 1489, 1492, 1567, 1454,
- /*   440 */  1494, 1507, 1516, 1611, 1496, 1527, 1439, 1462, 1533, 1536,
- /*   450 */  1407, 1548, 1540, 1905, 1914, 1863, 1960, 1866, 1867, 1868,
- /*   460 */  1870, 1963, 1869, 1871, 1864, 1865, 1875, 1877, 2008, 1944,
- /*   470 */  2007, 1880, 1976, 2001, 2053, 2029, 2028, 1885, 1887, 1923,
- /*   480 */  1915, 1934, 1889, 1889, 2023, 1927, 2030, 1926, 2039, 1888,
- /*   490 */  1932, 1945, 1889, 1946, 2000, 2021, 1889, 1928, 1922, 1924,
- /*   500 */  1925, 1929, 1950, 1966, 2031, 1906, 1903, 2078, 1916, 1973,
- /*   510 */  2088, 2011, 1917, 2012, 2009, 2035, 1919, 1983, 1920, 1931,
- /*   520 */  1990, 1933, 1935, 1937, 1984, 2049, 1939, 1961, 1938, 2051,
- /*   530 */  1940, 1942, 2061, 1941, 1943, 1947, 1949, 2054, 1962, 1948,
- /*   540 */  1951, 2055, 2056, 2067, 2020, 2034, 2027, 2065, 2041, 2024,
- /*   550 */  1954, 2079, 2080, 1993, 1994, 1964, 1938, 1965, 1967, 1968,
- /*   560 */  1959, 1969, 1971, 2115, 1972, 1974, 1975, 1977, 1978, 1981,
- /*   570 */  1982, 1986, 1970, 1979, 1987, 1989, 2003, 2095, 2102, 2110,
- /*   580 */  2122, 2147, 2153,
+ /*     0 */  2162, 1898, 2251, 1514, 1514,  179,   81, 1558, 1670, 1714,
+ /*    10 */  2108, 2108, 2108,  522,  179,  179,  179,  179,  179,    0,
+ /*    20 */     0,  219, 1241, 2108, 2108, 2108, 2108, 2108, 2108, 2108,
+ /*    30 */  2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 1641, 1641,
+ /*    40 */   313, 1607, 1607,  393,  456,  675,  675,  358,  358,  358,
+ /*    50 */   358,   73,  146,  292,  365,  438,  511,  584,  657,  730,
+ /*    60 */   803,  876,  949, 1022, 1095, 1168, 1241, 1241, 1241, 1241,
+ /*    70 */  1241, 1241, 1241, 1241, 1241, 1241, 1241, 1241, 1241, 1241,
+ /*    80 */  1241, 1241, 1241, 1314, 1241, 1241, 1385, 1455, 1455, 1848,
+ /*    90 */  1975, 1995, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108,
+ /*   100 */  2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108,
+ /*   110 */  2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108,
+ /*   120 */  2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108,
+ /*   130 */  2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108, 2108,
+ /*   140 */  2108, 2108,   39,  185,  185,  185,  185,  185,  185,  185,
+ /*   150 */   258,  171,   23,  128,  600,  675,  675,  675,  675,  720,
+ /*   160 */   720,  742,  279,  597,  325,  325,  325,  764,   78,   78,
+ /*   170 */  2417, 2417, 1458, 1458, 1458,  128,  311,  401,  538,  538,
+ /*   180 */   538,  538,  311,  499,  675,  784,  785,  675,  675,  675,
+ /*   190 */   675,  675,  675,  675,  675,  675,  675,  675,  675,  675,
+ /*   200 */   675,  675,  675,  675,  675,  339,  675,  788,  788,  247,
+ /*   210 */   591,  591,  731,  905,  905,  731, 1068, 2417, 2417, 2417,
+ /*   220 */  2417, 2417, 2417, 2417, 1538,  289,  289,   41, 1397,  404,
+ /*   230 */  1528,  531,  534, 1533, 1604,  675,  675,  675,  810,  810,
+ /*   240 */   810,  675,  675,  675,  675,  675,  675,  675,  675,  675,
+ /*   250 */   675,  675,  675,  675,   82,  675,  675,  675,  675,  675,
+ /*   260 */   675,  675,  675,  675,  751,  675,  675,  675,   55,  368,
+ /*   270 */   968,  675,  675,  675,  675,  675,  675,  675,  675,  675,
+ /*   280 */   488,  667,  653,  448, 1061, 1061, 1061, 1061,  847,  760,
+ /*   290 */   448,  448,  983,  283, 1066, 1118, 1113, 1200,   96, 1154,
+ /*   300 */  1114, 1243, 1114, 1270,  578, 1154, 1154,  578, 1154, 1243,
+ /*   310 */  1270, 1200, 1200, 1188, 1188, 1188, 1188, 1262, 1262, 1177,
+ /*   320 */  1288, 1189, 1581, 1485, 1485, 1485, 1584, 1594, 1594, 1485,
+ /*   330 */  1559, 1581, 1485, 1501, 1485, 1559, 1485, 1579, 1579, 1516,
+ /*   340 */  1516, 1624, 1624, 1516, 1527, 1531, 1667, 1648, 1687, 1687,
+ /*   350 */  1687, 1687, 1516, 1688, 1560, 1531, 1531, 1560, 1667, 1648,
+ /*   360 */  1560, 1648, 1560, 1516, 1688, 1578, 1676, 1516, 1688, 1721,
+ /*   370 */  1632, 1632, 1581, 1516, 1605, 1617, 1673, 1673, 1684, 1684,
+ /*   380 */  1788, 1757, 1516, 1622, 1605, 1635, 1644, 1560, 1581, 1516,
+ /*   390 */  1688, 1516, 1688, 1800, 1800, 1821, 1821, 1821, 2417, 2417,
+ /*   400 */  2417, 2417, 2417, 2417, 2417, 2417, 2417, 2417, 2417, 2417,
+ /*   410 */  2417, 2417, 2417,  267,   12, 1216, 1230,  734, 1337,  931,
+ /*   420 */  1318, 1353, 1354, 1281, 1255, 1391, 1259,  260, 1341, 1317,
+ /*   430 */  1253, 1258, 1364, 1019, 1369, 1371, 1379, 1380,  802, 1333,
+ /*   440 */  1382, 1388, 1389, 1360, 1301, 1425, 1298, 1302, 1439, 1440,
+ /*   450 */  1383, 1428, 1352, 1702, 1711, 1824, 1772, 1825, 1826, 1827,
+ /*   460 */  1828, 1778, 1829, 1830, 1872, 1873, 1833, 1793, 1832, 1759,
+ /*   470 */  1831, 1838, 1790, 1823, 1882, 1859, 1858, 1853, 1857, 1739,
+ /*   480 */  1728, 1750, 1860, 1860, 1865, 1746, 1867, 1745, 1884, 1915,
+ /*   490 */  1751, 1765, 1860, 1767, 1840, 1863, 1860, 1752, 1849, 1851,
+ /*   500 */  1852, 1855, 1779, 1795, 1879, 1773, 1937, 1931, 1902, 1807,
+ /*   510 */  1948, 1856, 1901, 1864, 1861, 1886, 1787, 1818, 1914, 1917,
+ /*   520 */  1841, 1798, 1920, 1922, 1834, 1911, 1927, 1804, 1925, 1913,
+ /*   530 */  1932, 1933, 1935, 1929, 1938, 1936, 1939, 1928, 1814, 1949,
+ /*   540 */  1950, 1940, 1941, 1942, 1883, 1903, 1891, 1943, 1905, 1888,
+ /*   550 */  1958, 1951, 1952, 1846, 1866, 1963, 1925, 1971, 1977, 1978,
+ /*   560 */  1976, 1979, 1988, 1999, 1993, 1990, 1997, 1996, 2000, 2001,
+ /*   570 */  2003, 1998, 1876, 1887, 1892, 2005, 1897, 2013, 2026, 2015,
+ /*   580 */  2037, 2060, 2063,
 };
 #define YY_REDUCE_COUNT (412)
-#define YY_REDUCE_MIN   (-298)
-#define YY_REDUCE_MAX   (1847)
+#define YY_REDUCE_MIN   (-264)
+#define YY_REDUCE_MAX   (1803)
 static const short yy_reduce_ofst[] = {
- /*     0 */  1305, 1094, -216, -181,  610, -250,   33, -171, -169, -137,
- /*    10 */  -143,  801,  896, -233, -130,   26,  230,  438,  565, -176,
- /*    20 */  -104, -186, -155,   -5,  415,  452,  754,  582,  799,  914,
- /*    30 */   966,  863, 1007,  978, -177, 1029, 1107, 1151, -167,  -34,
- /*    40 */   955, -164,  280,   -7,  742,  968, 1099,  233,  570,  233,
- /*    50 */   570, -190, -190, -190, -190, -190, -190, -190, -190, -190,
- /*    60 */  -190, -190, -190, -190, -190, -190, -190, -190, -190, -190,
- /*    70 */  -190, -190, -190, -190, -190, -190, -190, -190, -190, -190,
- /*    80 */  -190, -190, -190, -190, -190, -190, -190, -190, -190,  626,
- /*    90 */  1091, 1187, 1209, 1212, 1214, 1233, 1236, 1238, 1244, 1270,
- /*   100 */  1277, 1285, 1287, 1289, 1291, 1295, 1297, 1307, 1318, 1321,
- /*   110 */  1348, 1360, 1368, 1375, 1391, 1393, 1405, 1425, 1432, 1436,
- /*   120 */  1443, 1446, 1451, 1466, 1474, 1488, 1493, 1497, 1501, 1506,
- /*   130 */  1561, 1575, 1587, 1594, 1602, 1609, 1614, 1625, 1629, 1633,
- /*   140 */  1636, 1673, -190, -190, -190, -190, -190, -190, -190, -190,
- /*   150 */  -190, -190, -190, -182,  295, 1125,  241, -136,  397,  592,
- /*   160 */   755,  -22, -190,  681,  416,  695,  821, -232, -190, -190,
- /*   170 */  -190, -190,  -48,  -48,  -48, -166,  100,  181,  109,  312,
- /*   180 */   653,  970,  282,   74,  396, -298, -298,  -93,  319,  918,
- /*   190 */   950,  -78,  261,  893,  998,  398,  983,  505,  993,  995,
- /*   200 */   694, 1000, 1030,  969, 1083,  628,  -53,  953,  979,  508,
- /*   210 */   988, 1058,  639, -146,  133,  748,  616, 1027,  876, 1106,
- /*   220 */  1180, 1205, 1175, 1224, -210, -179, -163,  -59,    1,  125,
- /*   230 */   137,  273,  437,  495,  502,  514,  637,  745,  580,  802,
- /*   240 */   815,  991, 1011, 1085, 1178, 1220, 1243, 1273, 1283, 1288,
- /*   250 */  1378, 1386, 1389, 1413, 1096, 1419, 1428, 1449, 1467, 1469,
- /*   260 */  1486, 1500, 1508, 1511, 1525, 1539, 1542, 1544, 1545, 1495,
- /*   270 */  1537, 1553,  125, 1556, 1557, 1558, 1565, 1566, 1578, 1579,
- /*   280 */  1530, 1480, 1543, 1590, 1597, 1606, 1616, 1620, 1525, 1547,
- /*   290 */  1590, 1590, 1599, 1577, 1510, 1568, 1595, 1569, 1612, 1541,
- /*   300 */  1551, 1560, 1555, 1521, 1564, 1559, 1572, 1580, 1573, 1562,
- /*   310 */  1538, 1588, 1596, 1605, 1610, 1613, 1619, 1583, 1585, 1581,
- /*   320 */  1600, 1586, 1608, 1634, 1635, 1638, 1645, 1658, 1663, 1666,
- /*   330 */  1679, 1652, 1675, 1692, 1678, 1690, 1681, 1713, 1714, 1737,
- /*   340 */  1738, 1716, 1717, 1742, 1644, 1653, 1657, 1740, 1741, 1743,
- /*   350 */  1744, 1745, 1755, 1746, 1688, 1667, 1669, 1691, 1672, 1756,
- /*   360 */  1694, 1758, 1696, 1772, 1752, 1668, 1674, 1779, 1760, 1777,
- /*   370 */  1780, 1782, 1721, 1791, 1715, 1718, 1748, 1749, 1708, 1709,
- /*   380 */  1676, 1706, 1806, 1710, 1729, 1734, 1739, 1750, 1751, 1814,
- /*   390 */  1792, 1817, 1797, 1802, 1803, 1807, 1809, 1811, 1788, 1789,
- /*   400 */  1799, 1720, 1722, 1724, 1804, 1776, 1787, 1794, 1842, 1843,
- /*   410 */  1844, 1845, 1847,
+ /*     0 */  -215, 1695, 1803, -160,  -22, -252,  -19,  -60,   10,  159,
+ /*    10 */   212,  277,  280, -244, -221, -207, -165,  -14,  290,  414,
+ /*    20 */   416,  186, -178, -168,   74,  197,  272, -129,  373,  431,
+ /*    30 */   437,  492,  444,  496,  561,  502,  505,  509, -171, -158,
+ /*    40 */   172,  468,  512,  296,  583,  587,  658,  341,  565,  341,
+ /*    50 */   565,    2,    2,    2,    2,    2,    2,    2,    2,    2,
+ /*    60 */     2,    2,    2,    2,    2,    2,    2,    2,    2,    2,
+ /*    70 */     2,    2,    2,    2,    2,    2,    2,    2,    2,    2,
+ /*    80 */     2,    2,    2,    2,    2,    2,    2,    2,    2,  518,
+ /*    90 */   655,  663,  670,  711,  717,  726,  728,  732,  740,  786,
+ /*   100 */   789,  791,  796,  801,  808,  811,  813,  816,  854,  859,
+ /*   110 */   861,  864,  866,  869,  871,  884,  886,  934,  939,  941,
+ /*   120 */   943,  945,  954,  956,  958,  960,  999, 1004, 1013, 1015,
+ /*   130 */  1018, 1028, 1030, 1032, 1072, 1074, 1078, 1083, 1086, 1088,
+ /*   140 */  1091, 1100,    2,    2,    2,    2,    2,    2,    2,    2,
+ /*   150 */     2,    2,    2,  537,  409, -151,  150,  659,  217, -214,
+ /*   160 */   162,  -50,    2,  264,  278,  643,  862,  700,    2,    2,
+ /*   170 */     2,    2, -136, -136, -136, -164,  273,  449,  -21,   62,
+ /*   180 */   124,  464,  701,  519,  586, -264, -264, -103,  318,  577,
+ /*   190 */   797,  815,  851,  872,  885, -148,  809,   13,  940,  942,
+ /*   200 */   590,  955,  924,  997, 1014, -149,  636,  979, 1021,  335,
+ /*   210 */  1035, 1046,  795, -198,  832,  987,  706,  831, 1071, 1085,
+ /*   220 */  1087, 1092,  913, 1134, -239, -232, -218, -162,  -71,   86,
+ /*   230 */   262,  295,  352,  374,  521,  541,  782,  865,  400,  668,
+ /*   240 */   682,  906,  961, 1016, 1104, 1146, 1286, 1300, 1304, 1305,
+ /*   250 */  1307, 1310, 1311, 1312, 1238, 1313, 1315, 1316, 1320, 1321,
+ /*   260 */  1322, 1323, 1324, 1325, 1326, 1355, 1356, 1357, 1358, 1244,
+ /*   270 */  1306, 1361,   86, 1362, 1366, 1368, 1372, 1373, 1374, 1375,
+ /*   280 */  1263, 1208, 1319, 1359, 1377, 1378, 1381, 1386, 1326, 1282,
+ /*   290 */  1359, 1359, 1340, 1327, 1334, 1328, 1343, 1345, 1363, 1283,
+ /*   300 */  1289, 1330, 1294, 1280, 1344, 1285, 1297, 1346, 1329, 1351,
+ /*   310 */  1331, 1365, 1367, 1384, 1387, 1390, 1393, 1348, 1370, 1336,
+ /*   320 */  1376, 1396, 1394, 1392, 1398, 1399, 1402, 1403, 1405, 1408,
+ /*   330 */  1424, 1404, 1415, 1441, 1429, 1435, 1430, 1463, 1472, 1477,
+ /*   340 */  1495, 1473, 1484, 1512, 1413, 1426, 1431, 1518, 1521, 1522,
+ /*   350 */  1523, 1524, 1541, 1530, 1467, 1448, 1450, 1478, 1459, 1542,
+ /*   360 */  1487, 1553, 1493, 1569, 1549, 1465, 1468, 1575, 1556, 1573,
+ /*   370 */  1574, 1582, 1520, 1586, 1519, 1525, 1548, 1550, 1517, 1526,
+ /*   380 */  1482, 1515, 1614, 1532, 1539, 1547, 1551, 1555, 1563, 1633,
+ /*   390 */  1615, 1637, 1619, 1620, 1623, 1626, 1627, 1628, 1606, 1609,
+ /*   400 */  1616, 1529, 1534, 1540, 1621, 1610, 1625, 1611, 1666, 1671,
+ /*   410 */  1675, 1677, 1678,
 };
 static const YYACTIONTYPE yy_default[] = {
  /*     0 */  1663, 1663, 1663, 1491, 1254, 1367, 1254, 1254, 1254, 1254,
@@ -1091,32 +1141,33 @@ static const YYACTIONTYPE yy_default[] = {
 static const YYCODETYPE yyFallback[] = {
     0,  /*          $ => nothing */
     0,  /*      INDEX => nothing */
+    0,  /*       SEMI => nothing */
     0,  /*      ALTER => nothing */
-  173,  /*    EXPLAIN => ID */
+   85,  /*    EXPLAIN => ID */
     0,  /*        ADD => nothing */
-  173,  /*      QUERY => ID */
+   85,  /*      QUERY => ID */
     0,  /*     WINDOW => nothing */
-  173,  /*       PLAN => ID */
+   85,  /*       PLAN => ID */
     0,  /*       OVER => nothing */
-  173,  /*      BEGIN => ID */
+   85,  /*      BEGIN => ID */
     0,  /*     FILTER => nothing */
     0,  /* TRANSACTION => nothing */
     0,  /*     COLUMN => nothing */
-  173,  /*   DEFERRED => ID */
+   85,  /*   DEFERRED => ID */
     0,  /* AGG_FUNCTION => nothing */
-  173,  /*  IMMEDIATE => ID */
+   85,  /*  IMMEDIATE => ID */
     0,  /* AGG_COLUMN => nothing */
-  173,  /*  EXCLUSIVE => ID */
+   85,  /*  EXCLUSIVE => ID */
     0,  /*  TRUEFALSE => nothing */
     0,  /*     COMMIT => nothing */
     0,  /*   FUNCTION => nothing */
-  173,  /*        END => ID */
+   85,  /*        END => ID */
     0,  /*      UPLUS => nothing */
-  173,  /*   ROLLBACK => ID */
+   85,  /*   ROLLBACK => ID */
     0,  /*     UMINUS => nothing */
-  173,  /*  SAVEPOINT => ID */
+   85,  /*  SAVEPOINT => ID */
     0,  /*      TRUTH => nothing */
-  173,  /*    RELEASE => ID */
+   85,  /*    RELEASE => ID */
     0,  /*   REGISTER => nothing */
     0,  /*         TO => nothing */
     0,  /*     VECTOR => nothing */
@@ -1124,88 +1175,114 @@ static const YYCODETYPE yyFallback[] = {
     0,  /* SELECT_COLUMN => nothing */
     0,  /*     CREATE => nothing */
     0,  /* IF_NULL_ROW => nothing */
-  173,  /*         IF => ID */
+   85,  /*         IF => ID */
     0,  /*   ASTERISK => nothing */
     0,  /*        NOT => nothing */
     0,  /*       SPAN => nothing */
     0,  /*     EXISTS => nothing */
     0,  /*      ERROR => nothing */
-  173,  /*       TEMP => ID */
+   85,  /*       TEMP => ID */
     0,  /*    QNUMBER => nothing */
+    0,  /*         LP => nothing */
+    0,  /*      SPACE => nothing */
+    0,  /*         RP => nothing */
+    0,  /*    COMMENT => nothing */
     0,  /*         AS => nothing */
-  173,  /*    WITHOUT => ID */
-  173,  /*      ABORT => ID */
-  173,  /*     ACTION => ID */
-  173,  /*      AFTER => ID */
-  173,  /*    ANALYZE => ID */
-  173,  /*        ASC => ID */
-  173,  /*     ATTACH => ID */
-  173,  /*     BEFORE => ID */
-  173,  /*         BY => ID */
-  173,  /*    CASCADE => ID */
-  173,  /*       CAST => ID */
-  173,  /*   CONFLICT => ID */
-  173,  /*   DATABASE => ID */
-  173,  /*       DESC => ID */
-  173,  /*     DETACH => ID */
-  173,  /*       EACH => ID */
-  173,  /*       FAIL => ID */
+    0,  /*    ILLEGAL => nothing */
+    0,  /*      COMMA => nothing */
+   85,  /*    WITHOUT => ID */
+   85,  /*      ABORT => ID */
+   85,  /*     ACTION => ID */
+   85,  /*      AFTER => ID */
+   85,  /*    ANALYZE => ID */
+   85,  /*        ASC => ID */
+   85,  /*     ATTACH => ID */
+   85,  /*     BEFORE => ID */
+   85,  /*         BY => ID */
+   85,  /*    CASCADE => ID */
+   85,  /*       CAST => ID */
+   85,  /*   CONFLICT => ID */
+   85,  /*   DATABASE => ID */
+   85,  /*       DESC => ID */
+   85,  /*     DETACH => ID */
+   85,  /*       EACH => ID */
+   85,  /*       FAIL => ID */
     0,  /*         OR => nothing */
     0,  /*        AND => nothing */
     0,  /*         IS => nothing */
     0,  /*      ISNOT => nothing */
-  173,  /*      MATCH => ID */
-  173,  /*    LIKE_KW => ID */
+   85,  /*      MATCH => ID */
+   85,  /*    LIKE_KW => ID */
     0,  /*    BETWEEN => nothing */
     0,  /*         IN => nothing */
     0,  /*     ISNULL => nothing */
     0,  /*    NOTNULL => nothing */
+    0,  /*         NE => nothing */
+    0,  /*         EQ => nothing */
+    0,  /*         GT => nothing */
+    0,  /*         LE => nothing */
+    0,  /*         LT => nothing */
+    0,  /*         GE => nothing */
     0,  /*     ESCAPE => nothing */
-  173,  /*   COLUMNKW => ID */
-  173,  /*         DO => ID */
-  173,  /*        FOR => ID */
-  173,  /*     IGNORE => ID */
-  173,  /*  INITIALLY => ID */
-  173,  /*    INSTEAD => ID */
-  173,  /*         NO => ID */
-  173,  /*        KEY => ID */
-  173,  /*         OF => ID */
-  173,  /*     OFFSET => ID */
-  173,  /*     PRAGMA => ID */
-  173,  /*      RAISE => ID */
-  173,  /*  RECURSIVE => ID */
-  173,  /*    REPLACE => ID */
-  173,  /*   RESTRICT => ID */
-  173,  /*        ROW => ID */
-  173,  /*       ROWS => ID */
-  173,  /*    TRIGGER => ID */
-  173,  /*     VACUUM => ID */
-  173,  /*       VIEW => ID */
-  173,  /*    VIRTUAL => ID */
-  173,  /*       WITH => ID */
-  173,  /*      NULLS => ID */
-  173,  /*      FIRST => ID */
-  173,  /*       LAST => ID */
-  173,  /*    CURRENT => ID */
-  173,  /*  FOLLOWING => ID */
-  173,  /*  PARTITION => ID */
-  173,  /*  PRECEDING => ID */
-  173,  /*      RANGE => ID */
-  173,  /*  UNBOUNDED => ID */
-  173,  /*    EXCLUDE => ID */
-  173,  /*     GROUPS => ID */
-  173,  /*     OTHERS => ID */
-  173,  /*       TIES => ID */
-  173,  /*  GENERATED => ID */
-  173,  /*     ALWAYS => ID */
+    0,  /*         ID => nothing */
+   85,  /*   COLUMNKW => ID */
+   85,  /*         DO => ID */
+   85,  /*        FOR => ID */
+   85,  /*     IGNORE => ID */
+   85,  /*  INITIALLY => ID */
+   85,  /*    INSTEAD => ID */
+   85,  /*         NO => ID */
+   85,  /*        KEY => ID */
+   85,  /*         OF => ID */
+   85,  /*     OFFSET => ID */
+   85,  /*     PRAGMA => ID */
+   85,  /*      RAISE => ID */
+   85,  /*  RECURSIVE => ID */
+   85,  /*    REPLACE => ID */
+   85,  /*   RESTRICT => ID */
+   85,  /*        ROW => ID */
+   85,  /*       ROWS => ID */
+   85,  /*    TRIGGER => ID */
+   85,  /*     VACUUM => ID */
+   85,  /*       VIEW => ID */
+   85,  /*    VIRTUAL => ID */
+   85,  /*       WITH => ID */
+   85,  /*      NULLS => ID */
+   85,  /*      FIRST => ID */
+   85,  /*       LAST => ID */
+   85,  /*    CURRENT => ID */
+   85,  /*  FOLLOWING => ID */
+   85,  /*  PARTITION => ID */
+   85,  /*  PRECEDING => ID */
+   85,  /*      RANGE => ID */
+   85,  /*  UNBOUNDED => ID */
+   85,  /*    EXCLUDE => ID */
+   85,  /*     GROUPS => ID */
+   85,  /*     OTHERS => ID */
+   85,  /*       TIES => ID */
+   85,  /*  GENERATED => ID */
+   85,  /*     ALWAYS => ID */
     0,  /* MATERIALIZED => nothing */
-  173,  /*    REINDEX => ID */
-  173,  /*     RENAME => ID */
-  173,  /*   CTIME_KW => ID */
+   85,  /*    REINDEX => ID */
+   85,  /*     RENAME => ID */
+   85,  /*   CTIME_KW => ID */
     0,  /*        ANY => nothing */
+    0,  /*     BITAND => nothing */
+    0,  /*      BITOR => nothing */
+    0,  /*     LSHIFT => nothing */
+    0,  /*     RSHIFT => nothing */
+    0,  /*       PLUS => nothing */
+    0,  /*      MINUS => nothing */
+    0,  /*       STAR => nothing */
+    0,  /*      SLASH => nothing */
+    0,  /*        REM => nothing */
+    0,  /*     CONCAT => nothing */
+    0,  /*        PTR => nothing */
     0,  /*    COLLATE => nothing */
+    0,  /*     BITNOT => nothing */
     0,  /*         ON => nothing */
     0,  /*    INDEXED => nothing */
+    0,  /*     STRING => nothing */
     0,  /*    JOIN_KW => nothing */
     0,  /* CONSTRAINT => nothing */
     0,  /*    DEFAULT => nothing */
@@ -1229,6 +1306,7 @@ static const YYCODETYPE yyFallback[] = {
     0,  /*     SELECT => nothing */
     0,  /*     VALUES => nothing */
     0,  /*   DISTINCT => nothing */
+    0,  /*        DOT => nothing */
     0,  /*       FROM => nothing */
     0,  /*       JOIN => nothing */
     0,  /*      USING => nothing */
@@ -1240,42 +1318,14 @@ static const YYCODETYPE yyFallback[] = {
     0,  /*  RETURNING => nothing */
     0,  /*       INTO => nothing */
     0,  /*    NOTHING => nothing */
-    0,  /*       CASE => nothing */
-    0,  /*       WHEN => nothing */
-    0,  /*       THEN => nothing */
-    0,  /*       ELSE => nothing */
-    0,  /*         NE => nothing */
-    0,  /*         EQ => nothing */
-    0,  /*         GT => nothing */
-    0,  /*         LE => nothing */
-    0,  /*         LT => nothing */
-    0,  /*         GE => nothing */
-    0,  /*     BITAND => nothing */
-    0,  /*      BITOR => nothing */
-    0,  /*     LSHIFT => nothing */
-    0,  /*     RSHIFT => nothing */
-    0,  /*       PLUS => nothing */
-    0,  /*      MINUS => nothing */
-    0,  /*       STAR => nothing */
-    0,  /*      SLASH => nothing */
-    0,  /*        REM => nothing */
-    0,  /*     CONCAT => nothing */
-    0,  /*        PTR => nothing */
-    0,  /*     BITNOT => nothing */
-    0,  /*         ID => nothing */
-    0,  /*         LP => nothing */
-    0,  /*         RP => nothing */
-    0,  /*      COMMA => nothing */
-    0,  /*     STRING => nothing */
-    0,  /*        DOT => nothing */
     0,  /*      FLOAT => nothing */
     0,  /*       BLOB => nothing */
     0,  /*    INTEGER => nothing */
     0,  /*   VARIABLE => nothing */
-    0,  /*       SEMI => nothing */
-    0,  /*      SPACE => nothing */
-    0,  /*    COMMENT => nothing */
-    0,  /*    ILLEGAL => nothing */
+    0,  /*       CASE => nothing */
+    0,  /*       WHEN => nothing */
+    0,  /*       THEN => nothing */
+    0,  /*       ELSE => nothing */
 };
 #endif /* !_SYNQ_EXTERNAL_PARSER */
 #endif /* YYFALLBACK */
@@ -1363,191 +1413,191 @@ void synq_sqlite3ParserTrace(FILE *TraceFILE, char *zTracePrompt){
 static const char *const yyTokenName[] = { 
   /*    0 */ "$",
   /*    1 */ "INDEX",
-  /*    2 */ "ALTER",
-  /*    3 */ "EXPLAIN",
-  /*    4 */ "ADD",
-  /*    5 */ "QUERY",
-  /*    6 */ "WINDOW",
-  /*    7 */ "PLAN",
-  /*    8 */ "OVER",
-  /*    9 */ "BEGIN",
-  /*   10 */ "FILTER",
-  /*   11 */ "TRANSACTION",
-  /*   12 */ "COLUMN",
-  /*   13 */ "DEFERRED",
-  /*   14 */ "AGG_FUNCTION",
-  /*   15 */ "IMMEDIATE",
-  /*   16 */ "AGG_COLUMN",
-  /*   17 */ "EXCLUSIVE",
-  /*   18 */ "TRUEFALSE",
-  /*   19 */ "COMMIT",
-  /*   20 */ "FUNCTION",
-  /*   21 */ "END",
-  /*   22 */ "UPLUS",
-  /*   23 */ "ROLLBACK",
-  /*   24 */ "UMINUS",
-  /*   25 */ "SAVEPOINT",
-  /*   26 */ "TRUTH",
-  /*   27 */ "RELEASE",
-  /*   28 */ "REGISTER",
-  /*   29 */ "TO",
-  /*   30 */ "VECTOR",
-  /*   31 */ "TABLE",
-  /*   32 */ "SELECT_COLUMN",
-  /*   33 */ "CREATE",
-  /*   34 */ "IF_NULL_ROW",
-  /*   35 */ "IF",
-  /*   36 */ "ASTERISK",
-  /*   37 */ "NOT",
-  /*   38 */ "SPAN",
-  /*   39 */ "EXISTS",
-  /*   40 */ "ERROR",
-  /*   41 */ "TEMP",
-  /*   42 */ "QNUMBER",
-  /*   43 */ "AS",
-  /*   44 */ "WITHOUT",
-  /*   45 */ "ABORT",
-  /*   46 */ "ACTION",
-  /*   47 */ "AFTER",
-  /*   48 */ "ANALYZE",
-  /*   49 */ "ASC",
-  /*   50 */ "ATTACH",
-  /*   51 */ "BEFORE",
-  /*   52 */ "BY",
-  /*   53 */ "CASCADE",
-  /*   54 */ "CAST",
-  /*   55 */ "CONFLICT",
-  /*   56 */ "DATABASE",
-  /*   57 */ "DESC",
-  /*   58 */ "DETACH",
-  /*   59 */ "EACH",
-  /*   60 */ "FAIL",
-  /*   61 */ "OR",
-  /*   62 */ "AND",
-  /*   63 */ "IS",
-  /*   64 */ "ISNOT",
-  /*   65 */ "MATCH",
-  /*   66 */ "LIKE_KW",
-  /*   67 */ "BETWEEN",
-  /*   68 */ "IN",
-  /*   69 */ "ISNULL",
-  /*   70 */ "NOTNULL",
-  /*   71 */ "ESCAPE",
-  /*   72 */ "COLUMNKW",
-  /*   73 */ "DO",
-  /*   74 */ "FOR",
-  /*   75 */ "IGNORE",
-  /*   76 */ "INITIALLY",
-  /*   77 */ "INSTEAD",
-  /*   78 */ "NO",
-  /*   79 */ "KEY",
-  /*   80 */ "OF",
-  /*   81 */ "OFFSET",
-  /*   82 */ "PRAGMA",
-  /*   83 */ "RAISE",
-  /*   84 */ "RECURSIVE",
-  /*   85 */ "REPLACE",
-  /*   86 */ "RESTRICT",
-  /*   87 */ "ROW",
-  /*   88 */ "ROWS",
-  /*   89 */ "TRIGGER",
-  /*   90 */ "VACUUM",
-  /*   91 */ "VIEW",
-  /*   92 */ "VIRTUAL",
-  /*   93 */ "WITH",
-  /*   94 */ "NULLS",
-  /*   95 */ "FIRST",
-  /*   96 */ "LAST",
-  /*   97 */ "CURRENT",
-  /*   98 */ "FOLLOWING",
-  /*   99 */ "PARTITION",
-  /*  100 */ "PRECEDING",
-  /*  101 */ "RANGE",
-  /*  102 */ "UNBOUNDED",
-  /*  103 */ "EXCLUDE",
-  /*  104 */ "GROUPS",
-  /*  105 */ "OTHERS",
-  /*  106 */ "TIES",
-  /*  107 */ "GENERATED",
-  /*  108 */ "ALWAYS",
-  /*  109 */ "MATERIALIZED",
-  /*  110 */ "REINDEX",
-  /*  111 */ "RENAME",
-  /*  112 */ "CTIME_KW",
-  /*  113 */ "ANY",
-  /*  114 */ "COLLATE",
-  /*  115 */ "ON",
-  /*  116 */ "INDEXED",
-  /*  117 */ "JOIN_KW",
-  /*  118 */ "CONSTRAINT",
-  /*  119 */ "DEFAULT",
-  /*  120 */ "NULL",
-  /*  121 */ "PRIMARY",
-  /*  122 */ "UNIQUE",
-  /*  123 */ "CHECK",
-  /*  124 */ "REFERENCES",
-  /*  125 */ "AUTOINCR",
-  /*  126 */ "INSERT",
-  /*  127 */ "DELETE",
-  /*  128 */ "UPDATE",
-  /*  129 */ "SET",
-  /*  130 */ "DEFERRABLE",
-  /*  131 */ "FOREIGN",
-  /*  132 */ "DROP",
-  /*  133 */ "UNION",
-  /*  134 */ "ALL",
-  /*  135 */ "EXCEPT",
-  /*  136 */ "INTERSECT",
-  /*  137 */ "SELECT",
-  /*  138 */ "VALUES",
-  /*  139 */ "DISTINCT",
-  /*  140 */ "FROM",
-  /*  141 */ "JOIN",
-  /*  142 */ "USING",
-  /*  143 */ "ORDER",
-  /*  144 */ "GROUP",
-  /*  145 */ "HAVING",
-  /*  146 */ "LIMIT",
-  /*  147 */ "WHERE",
-  /*  148 */ "RETURNING",
-  /*  149 */ "INTO",
-  /*  150 */ "NOTHING",
-  /*  151 */ "CASE",
-  /*  152 */ "WHEN",
-  /*  153 */ "THEN",
-  /*  154 */ "ELSE",
-  /*  155 */ "NE",
-  /*  156 */ "EQ",
-  /*  157 */ "GT",
-  /*  158 */ "LE",
-  /*  159 */ "LT",
-  /*  160 */ "GE",
-  /*  161 */ "BITAND",
-  /*  162 */ "BITOR",
-  /*  163 */ "LSHIFT",
-  /*  164 */ "RSHIFT",
-  /*  165 */ "PLUS",
-  /*  166 */ "MINUS",
-  /*  167 */ "STAR",
-  /*  168 */ "SLASH",
-  /*  169 */ "REM",
-  /*  170 */ "CONCAT",
-  /*  171 */ "PTR",
-  /*  172 */ "BITNOT",
-  /*  173 */ "ID",
-  /*  174 */ "LP",
-  /*  175 */ "RP",
-  /*  176 */ "COMMA",
-  /*  177 */ "STRING",
-  /*  178 */ "DOT",
+  /*    2 */ "SEMI",
+  /*    3 */ "ALTER",
+  /*    4 */ "EXPLAIN",
+  /*    5 */ "ADD",
+  /*    6 */ "QUERY",
+  /*    7 */ "WINDOW",
+  /*    8 */ "PLAN",
+  /*    9 */ "OVER",
+  /*   10 */ "BEGIN",
+  /*   11 */ "FILTER",
+  /*   12 */ "TRANSACTION",
+  /*   13 */ "COLUMN",
+  /*   14 */ "DEFERRED",
+  /*   15 */ "AGG_FUNCTION",
+  /*   16 */ "IMMEDIATE",
+  /*   17 */ "AGG_COLUMN",
+  /*   18 */ "EXCLUSIVE",
+  /*   19 */ "TRUEFALSE",
+  /*   20 */ "COMMIT",
+  /*   21 */ "FUNCTION",
+  /*   22 */ "END",
+  /*   23 */ "UPLUS",
+  /*   24 */ "ROLLBACK",
+  /*   25 */ "UMINUS",
+  /*   26 */ "SAVEPOINT",
+  /*   27 */ "TRUTH",
+  /*   28 */ "RELEASE",
+  /*   29 */ "REGISTER",
+  /*   30 */ "TO",
+  /*   31 */ "VECTOR",
+  /*   32 */ "TABLE",
+  /*   33 */ "SELECT_COLUMN",
+  /*   34 */ "CREATE",
+  /*   35 */ "IF_NULL_ROW",
+  /*   36 */ "IF",
+  /*   37 */ "ASTERISK",
+  /*   38 */ "NOT",
+  /*   39 */ "SPAN",
+  /*   40 */ "EXISTS",
+  /*   41 */ "ERROR",
+  /*   42 */ "TEMP",
+  /*   43 */ "QNUMBER",
+  /*   44 */ "LP",
+  /*   45 */ "SPACE",
+  /*   46 */ "RP",
+  /*   47 */ "COMMENT",
+  /*   48 */ "AS",
+  /*   49 */ "ILLEGAL",
+  /*   50 */ "COMMA",
+  /*   51 */ "WITHOUT",
+  /*   52 */ "ABORT",
+  /*   53 */ "ACTION",
+  /*   54 */ "AFTER",
+  /*   55 */ "ANALYZE",
+  /*   56 */ "ASC",
+  /*   57 */ "ATTACH",
+  /*   58 */ "BEFORE",
+  /*   59 */ "BY",
+  /*   60 */ "CASCADE",
+  /*   61 */ "CAST",
+  /*   62 */ "CONFLICT",
+  /*   63 */ "DATABASE",
+  /*   64 */ "DESC",
+  /*   65 */ "DETACH",
+  /*   66 */ "EACH",
+  /*   67 */ "FAIL",
+  /*   68 */ "OR",
+  /*   69 */ "AND",
+  /*   70 */ "IS",
+  /*   71 */ "ISNOT",
+  /*   72 */ "MATCH",
+  /*   73 */ "LIKE_KW",
+  /*   74 */ "BETWEEN",
+  /*   75 */ "IN",
+  /*   76 */ "ISNULL",
+  /*   77 */ "NOTNULL",
+  /*   78 */ "NE",
+  /*   79 */ "EQ",
+  /*   80 */ "GT",
+  /*   81 */ "LE",
+  /*   82 */ "LT",
+  /*   83 */ "GE",
+  /*   84 */ "ESCAPE",
+  /*   85 */ "ID",
+  /*   86 */ "COLUMNKW",
+  /*   87 */ "DO",
+  /*   88 */ "FOR",
+  /*   89 */ "IGNORE",
+  /*   90 */ "INITIALLY",
+  /*   91 */ "INSTEAD",
+  /*   92 */ "NO",
+  /*   93 */ "KEY",
+  /*   94 */ "OF",
+  /*   95 */ "OFFSET",
+  /*   96 */ "PRAGMA",
+  /*   97 */ "RAISE",
+  /*   98 */ "RECURSIVE",
+  /*   99 */ "REPLACE",
+  /*  100 */ "RESTRICT",
+  /*  101 */ "ROW",
+  /*  102 */ "ROWS",
+  /*  103 */ "TRIGGER",
+  /*  104 */ "VACUUM",
+  /*  105 */ "VIEW",
+  /*  106 */ "VIRTUAL",
+  /*  107 */ "WITH",
+  /*  108 */ "NULLS",
+  /*  109 */ "FIRST",
+  /*  110 */ "LAST",
+  /*  111 */ "CURRENT",
+  /*  112 */ "FOLLOWING",
+  /*  113 */ "PARTITION",
+  /*  114 */ "PRECEDING",
+  /*  115 */ "RANGE",
+  /*  116 */ "UNBOUNDED",
+  /*  117 */ "EXCLUDE",
+  /*  118 */ "GROUPS",
+  /*  119 */ "OTHERS",
+  /*  120 */ "TIES",
+  /*  121 */ "GENERATED",
+  /*  122 */ "ALWAYS",
+  /*  123 */ "MATERIALIZED",
+  /*  124 */ "REINDEX",
+  /*  125 */ "RENAME",
+  /*  126 */ "CTIME_KW",
+  /*  127 */ "ANY",
+  /*  128 */ "BITAND",
+  /*  129 */ "BITOR",
+  /*  130 */ "LSHIFT",
+  /*  131 */ "RSHIFT",
+  /*  132 */ "PLUS",
+  /*  133 */ "MINUS",
+  /*  134 */ "STAR",
+  /*  135 */ "SLASH",
+  /*  136 */ "REM",
+  /*  137 */ "CONCAT",
+  /*  138 */ "PTR",
+  /*  139 */ "COLLATE",
+  /*  140 */ "BITNOT",
+  /*  141 */ "ON",
+  /*  142 */ "INDEXED",
+  /*  143 */ "STRING",
+  /*  144 */ "JOIN_KW",
+  /*  145 */ "CONSTRAINT",
+  /*  146 */ "DEFAULT",
+  /*  147 */ "NULL",
+  /*  148 */ "PRIMARY",
+  /*  149 */ "UNIQUE",
+  /*  150 */ "CHECK",
+  /*  151 */ "REFERENCES",
+  /*  152 */ "AUTOINCR",
+  /*  153 */ "INSERT",
+  /*  154 */ "DELETE",
+  /*  155 */ "UPDATE",
+  /*  156 */ "SET",
+  /*  157 */ "DEFERRABLE",
+  /*  158 */ "FOREIGN",
+  /*  159 */ "DROP",
+  /*  160 */ "UNION",
+  /*  161 */ "ALL",
+  /*  162 */ "EXCEPT",
+  /*  163 */ "INTERSECT",
+  /*  164 */ "SELECT",
+  /*  165 */ "VALUES",
+  /*  166 */ "DISTINCT",
+  /*  167 */ "DOT",
+  /*  168 */ "FROM",
+  /*  169 */ "JOIN",
+  /*  170 */ "USING",
+  /*  171 */ "ORDER",
+  /*  172 */ "GROUP",
+  /*  173 */ "HAVING",
+  /*  174 */ "LIMIT",
+  /*  175 */ "WHERE",
+  /*  176 */ "RETURNING",
+  /*  177 */ "INTO",
+  /*  178 */ "NOTHING",
   /*  179 */ "FLOAT",
   /*  180 */ "BLOB",
   /*  181 */ "INTEGER",
   /*  182 */ "VARIABLE",
-  /*  183 */ "SEMI",
-  /*  184 */ "SPACE",
-  /*  185 */ "COMMENT",
-  /*  186 */ "ILLEGAL",
+  /*  183 */ "CASE",
+  /*  184 */ "WHEN",
+  /*  185 */ "THEN",
+  /*  186 */ "ELSE",
   /*  187 */ "nm",
   /*  188 */ "as",
   /*  189 */ "scanpt",

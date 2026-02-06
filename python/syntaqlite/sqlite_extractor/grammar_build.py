@@ -549,13 +549,11 @@ def _generate_grammar_file(
 """)
 
     # Token declarations - group into lines
-    # Filter out special tokens that shouldn't be declared
-    skip_tokens = {"SEMI", "LP", "RP", "COMMA", "DOT", "EQ", "NE", "GT", "LT", "GE", "LE",
-                   "PLUS", "MINUS", "STAR", "SLASH", "REM", "BITAND", "BITOR", "BITNOT",
-                   "LSHIFT", "RSHIFT", "CONCAT", "PTR", "STRING", "INTEGER", "FLOAT",
-                   "VARIABLE", "BLOB", "ID", "ILLEGAL", "SPACE", "COMMENT"}
-
-    declarable_tokens = [t for t in terminals if t not in skip_tokens]
+    # All base terminals are declared here to lock their IDs and prevent
+    # extension tokens from shifting them. SPACE/COMMENT/ILLEGAL are also
+    # re-declared at the end (harmless duplicate that lemon ignores) to
+    # maintain compatibility with the original grammar structure.
+    declarable_tokens = list(terminals)
 
     if declarable_tokens:
         parts.append("// Base token declarations\n")
@@ -563,16 +561,6 @@ def _generate_grammar_file(
             chunk = declarable_tokens[i:i + 10]
             parts.append(f"%token {' '.join(chunk)}.\n")
         parts.append("\n")
-
-    # Extension token declarations (always after base tokens for stable numbering)
-    if extension_terminals:
-        ext_declarable = [t for t in extension_terminals if t not in skip_tokens]
-        if ext_declarable:
-            parts.append("// Extension token declarations\n")
-            for i in range(0, len(ext_declarable), 10):
-                chunk = ext_declarable[i:i + 10]
-                parts.append(f"%token {' '.join(chunk)}.\n")
-            parts.append("\n")
 
     # Precedence rules (before fallback, per Perfetto's example)
     if precedence_rules:
@@ -605,8 +593,19 @@ def _generate_grammar_file(
         else:
             parts.append(rule + "\n")
 
-    # Tokenizer-only tokens that must be declared but aren't used in rules
-    # These must be at the end per SQLite's requirements
+    # Extension token declarations (after all base tokens for stable numbering)
+    if extension_terminals:
+        parts.append("\n// Extension token declarations\n")
+        for i in range(0, len(extension_terminals), 10):
+            chunk = extension_terminals[i:i + 10]
+            parts.append(f"%token {' '.join(chunk)}.\n")
+
+    # Tokenizer-only tokens re-declared at the end for clarity.
+    # These are already declared in the base token block above (lemon ignores
+    # duplicates), but we keep this for documentation purposes.
+    # NOTE: Unlike upstream SQLite, we do NOT use the >=TK_SPACE range check
+    # optimization, so these tokens do not need to have the highest IDs.
+    # See parser.c for the explicit equality checks we use instead.
     parts.append("\n// Tokenizer-only tokens (not used in grammar rules)\n")
     parts.append("%token SPACE COMMENT ILLEGAL.\n")
 

@@ -122,7 +122,12 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
                                    (uint16_t)tokenLen, (uint16_t)tokenType);
         }
 
-        // Skip whitespace and comments for parser
+        // Skip whitespace and comments for parser.
+        // NOTE: Upstream SQLite uses `tokenType >= TK_SPACE` as a range check
+        // optimization, which requires SPACE/COMMENT/ILLEGAL to have the highest
+        // token IDs. We intentionally use explicit equality checks instead, so
+        // that token ID ordering is not a correctness constraint. This allows
+        // dialect extensions to add tokens without worrying about ID ranges.
         if (tokenType == SYNTAQLITE_TOKEN_SPACE || tokenType == SYNTAQLITE_TOKEN_COMMENT) {
             p->pos += (uint32_t)tokenLen;
             continue;
