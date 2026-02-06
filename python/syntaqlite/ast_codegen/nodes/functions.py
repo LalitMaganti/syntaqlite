@@ -3,15 +3,18 @@
 
 """Function call AST node definitions."""
 
-from ..defs import Node, List, inline, index
+from ..defs import Node, List, Flags, inline, index
 
 ENUMS = []
+
+FLAGS = [
+    Flags("FunctionCall", DISTINCT=0x01, STAR=0x02),
+]
 
 NODES = [
     # Function call: name(args)
     # name is stored as a source span (the function identifier)
     # args is an ExprList (or SYNTAQLITE_NULL_NODE for no args)
-    # flags: bit 0 = DISTINCT, bit 1 = star (COUNT(*))
     Node("FunctionCall",
         func_name=inline("SyntaqliteSourceSpan"),
         flags=inline("u8"),

@@ -415,6 +415,7 @@ def _generate_grammar_file(
     parts.append(f"""%include {{
 #include "src/syntaqlite_sqlite_defs.h"
 #include "src/sqlite_tokens.h"
+#include "src/ast/ast_base.h"
 #include "src/ast/ast_builder.h"
 
 #define YYNOERRORRECOVERY 1
@@ -458,7 +459,7 @@ def _generate_grammar_file(
 %type trans_opt {{int}}
 %type savepoint_opt {{int}}
 %type kwcolumn_opt {{int}}
-%type columnname {{SyntaqliteToken}}
+%type columnname {{SyntaqliteColumnNameValue}}
 
 // Utility/Create support
 %type ifnotexists {{int}}
@@ -482,10 +483,15 @@ def _generate_grammar_file(
 %type defer_subclause_opt {{int}}
 %type table_option_set {{int}}
 %type table_option {{int}}
-%type conslist_opt {{SyntaqliteToken}}
+%type ccons {{SyntaqliteConstraintValue}}
+%type carglist {{SyntaqliteConstraintListValue}}
+%type tcons {{SyntaqliteConstraintValue}}
+%type conslist {{SyntaqliteConstraintListValue}}
+%type conslist_opt {{u32}}
+%type tconscomma {{int}}
 %type onconf {{int}}
 %type scantok {{SyntaqliteToken}}
-%type generated {{u32}}
+%type generated {{SyntaqliteConstraintValue}}
 
 // Window function support
 %type range_or_rows {{int}}

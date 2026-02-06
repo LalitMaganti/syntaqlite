@@ -18,7 +18,7 @@
 expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E) RP. {
     A = ast_aggregate_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, B),
-        (uint8_t)C,
+        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)C},
         D,
         E,
         SYNTAQLITE_NULL_NODE,
@@ -31,7 +31,7 @@ expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E
         (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[F]);
     A = ast_aggregate_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, B),
-        (uint8_t)C,
+        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)C},
         D,
         E,
         fo->filter_expr,

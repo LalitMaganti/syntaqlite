@@ -905,7 +905,9 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth + 1);
       fprintf(out, "if_not_exists: %u\n", node->create_virtual_table_stmt.if_not_exists);
       ast_print_indent(out, depth + 1);
-      fprintf(out, "has_args: %u\n", node->create_virtual_table_stmt.has_args);
+      fprintf(out, "module_args: ");
+      ast_print_source_span(out, source, node->create_virtual_table_stmt.module_args);
+      fprintf(out, "\n");
       break;
     }
 

@@ -57,6 +57,6 @@ NODES = [
         schema=inline("SyntaqliteSourceSpan"),
         module_name=inline("SyntaqliteSourceSpan"),
         if_not_exists=inline("u8"),
-        has_args=inline("u8"),
+        module_args=inline("SyntaqliteSourceSpan"),
     ),
 ]

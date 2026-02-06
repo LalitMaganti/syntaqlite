@@ -20,10 +20,15 @@ cmd(A) ::= create_vtab(X). {
 }
 
 // With arguments in parentheses
-cmd(A) ::= create_vtab(X) LP vtabarglist RP. {
-    // Mark that arguments are present
+cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
+    // Capture module arguments span (content between parens)
     SyntaqliteNode *vtab = AST_NODE(pCtx->astCtx->ast, X);
-    vtab->create_virtual_table_stmt.has_args = 1;
+    const char *args_start = L.z + L.n;
+    const char *args_end = R.z;
+    vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
+        (uint32_t)(args_start - pCtx->zSql),
+        (uint16_t)(args_end - args_start)
+    };
     A = X;
 }
 
@@ -36,7 +41,7 @@ create_vtab(A) ::= createkw VIRTUAL TABLE ifnotexists(E) nm(X) dbnm(Y) USING nm(
         tbl_schema,
         syntaqlite_span(pCtx, Z),
         (uint8_t)E,
-        0);  // has_args = 0 by default
+        SYNTAQLITE_NO_SPAN);  // module_args = none by default
 }
 
 // ============ vtab argument list (grammar-level only, no AST values) ============

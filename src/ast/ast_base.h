@@ -40,6 +40,24 @@ typedef struct SyntaqliteAst {
     uint32_t node_capacity;
 } SyntaqliteAst;
 
+// Grammar stack value: column name + type token (threaded through columnname rule)
+typedef struct SyntaqliteColumnNameValue {
+    SyntaqliteSourceSpan name;
+    SyntaqliteSourceSpan typetoken;
+} SyntaqliteColumnNameValue;
+
+// Grammar stack value: constraint node + optional pending CONSTRAINT name
+typedef struct SyntaqliteConstraintValue {
+    uint32_t node;
+    SyntaqliteSourceSpan pending_name;
+} SyntaqliteConstraintValue;
+
+// Grammar stack value: constraint list + pending CONSTRAINT name
+typedef struct SyntaqliteConstraintListValue {
+    uint32_t list;
+    SyntaqliteSourceSpan pending_name;
+} SyntaqliteConstraintListValue;
+
 // Build context passed through parser
 typedef struct SyntaqliteAstContext {
     SyntaqliteAst *ast;
@@ -47,11 +65,6 @@ typedef struct SyntaqliteAstContext {
     uint32_t source_length;
     int error_code;
     const char *error_msg;
-    // CREATE TABLE parser state
-    SyntaqliteSourceSpan typetoken_span;        // current column type token
-    SyntaqliteSourceSpan constraint_name;       // current column CONSTRAINT name
-    SyntaqliteSourceSpan tcons_constraint_name; // current table CONSTRAINT name
-    uint32_t tcons_list;                        // accumulated table constraint list
 } SyntaqliteAstContext;
 
 // Arena management

@@ -81,7 +81,7 @@ cmd(A) ::= ALTER TABLE add_column_fullname ADD kwcolumn_opt columnname(Y) cargli
     A = ast_alter_table_stmt(pCtx->astCtx,
         SYNTAQLITE_ALTER_OP_ADD_COLUMN, SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NO_SPAN,
-        syntaqlite_span(pCtx, Y));
+        Y.name);
 }
 
 // ============ ALTER TABLE support rules ============
@@ -99,10 +99,9 @@ kwcolumn_opt(A) ::= COLUMNKW. {
     A = 1;
 }
 
-columnname(A) ::= nm(A) typetoken(Y). {
-    // Token passthrough - nm already produces SyntaqliteToken
-    // Also save typetoken for CREATE TABLE column definitions
-    pCtx->astCtx->typetoken_span = Y.z ? syntaqlite_span(pCtx, Y) : SYNTAQLITE_NO_SPAN;
+columnname(A) ::= nm(X) typetoken(Y). {
+    A.name = syntaqlite_span(pCtx, X);
+    A.typetoken = Y.z ? syntaqlite_span(pCtx, Y) : SYNTAQLITE_NO_SPAN;
 }
 
 // ============ Transaction control ============

@@ -3,14 +3,17 @@
 
 """Aggregate function call with ORDER BY AST node definition."""
 
-from ..defs import Node, inline, index
+from ..defs import Node, Flags, inline, index
 
 ENUMS = []
+
+FLAGS = [
+    Flags("AggregateFunctionCall", DISTINCT=0x01),
+]
 
 NODES = [
     # Aggregate function call with ORDER BY: func(args ORDER BY sortlist)
     # Separate from FunctionCall to preserve ABI compatibility.
-    # flags: bit 0 = DISTINCT
     Node("AggregateFunctionCall",
         func_name=inline("SyntaqliteSourceSpan"),
         flags=inline("u8"),

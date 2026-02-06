@@ -3,7 +3,7 @@
 
 """SELECT statement AST node definitions."""
 
-from ..defs import Node, List, Enum, inline, index
+from ..defs import Node, List, Enum, Flags, inline, index
 
 ENUMS = [
     Enum("SortOrder",
@@ -18,10 +18,15 @@ ENUMS = [
     ),
 ]
 
+FLAGS = [
+    Flags("ResultColumn", STAR=0x01),
+    Flags("SelectStmt", DISTINCT=0x01),
+]
+
 NODES = [
     # Result column: expr [AS alias] or *
     Node("ResultColumn",
-        flags=inline("u8"),                # Is star, has alias, etc.
+        flags=inline("u8"),
         alias=inline("SyntaqliteSourceSpan"),  # Alias (empty if none)
         expr=index("Expr"),                # Expression (nullable for table.*)
     ),

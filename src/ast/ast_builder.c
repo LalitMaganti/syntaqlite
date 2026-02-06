@@ -1728,7 +1728,7 @@ uint32_t ast_create_virtual_table_stmt(
     SyntaqliteSourceSpan schema,
     SyntaqliteSourceSpan module_name,
     uint8_t if_not_exists,
-    uint8_t has_args
+    SyntaqliteSourceSpan module_args
 ) {
     uint32_t id = ast_alloc(ctx, SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT, sizeof(SyntaqliteCreateVirtualTableStmt));
     if (id == SYNTAQLITE_NULL_NODE) return id;
@@ -1739,7 +1739,7 @@ uint32_t ast_create_virtual_table_stmt(
     node->schema = schema;
     node->module_name = module_name;
     node->if_not_exists = if_not_exists;
-    node->has_args = has_args;
+    node->module_args = module_args;
     return id;
 }
 

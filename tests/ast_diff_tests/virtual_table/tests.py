@@ -18,7 +18,7 @@ CreateVirtualTableStmt
   schema: null
   module_name: "fts5"
   if_not_exists: 0
-  has_args: 1
+  module_args: "content"
 """,
         )
 
@@ -31,7 +31,7 @@ CreateVirtualTableStmt
   schema: null
   module_name: "mod"
   if_not_exists: 0
-  has_args: 0
+  module_args: null
 """,
         )
 
@@ -44,7 +44,7 @@ CreateVirtualTableStmt
   schema: null
   module_name: "fts5"
   if_not_exists: 1
-  has_args: 1
+  module_args: "content"
 """,
         )
 
@@ -57,7 +57,7 @@ CreateVirtualTableStmt
   schema: "main"
   module_name: "fts5"
   if_not_exists: 0
-  has_args: 0
+  module_args: null
 """,
         )
 
@@ -70,7 +70,7 @@ CreateVirtualTableStmt
   schema: null
   module_name: "fts5"
   if_not_exists: 0
-  has_args: 1
+  module_args: "content, detail=column"
 """,
         )
 
@@ -83,6 +83,6 @@ CreateVirtualTableStmt
   schema: "main"
   module_name: "fts5"
   if_not_exists: 1
-  has_args: 1
+  module_args: "content"
 """,
         )

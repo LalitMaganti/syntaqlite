@@ -67,6 +67,17 @@ class EnumDef:
     values: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class FlagsDef:
+    """Bitflag constants for a node's flags field.
+
+    Generates #define constants like SYNTAQLITE_FUNCTION_CALL_DISTINCT 0x01.
+    """
+
+    node_name: str
+    flags: dict[str, int]
+
+
 # Factory functions for a cleaner declarative API in nodes.py.
 # inline/index convey storage semantics; Node/List/Enum handle
 # **kwargs → dict and *args → tuple conversions.
@@ -95,6 +106,11 @@ def List(name: str, child_type: str) -> ListDef:
 def Enum(name: str, *values: str) -> EnumDef:
     """Define an enum type for AST fields."""
     return EnumDef(name=name, values=values)
+
+
+def Flags(node_name: str, **flags: int) -> FlagsDef:
+    """Define bitflag constants for a node's flags field."""
+    return FlagsDef(node_name=node_name, flags=flags)
 
 
 AnyNodeDef = NodeDef | ListDef

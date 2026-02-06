@@ -485,7 +485,7 @@ uint32_t ast_create_virtual_table_stmt(
     SyntaqliteSourceSpan schema,
     SyntaqliteSourceSpan module_name,
     uint8_t if_not_exists,
-    uint8_t has_args
+    SyntaqliteSourceSpan module_args
 );
 
 #ifdef __cplusplus
