@@ -85,6 +85,25 @@ class _Compiler:
         """Get C accessor for a field."""
         return f"node->{field}"
 
+    def _compile_to_buffer(self, doc: FmtDoc, indent: str) -> tuple[_Result, list[str]]:
+        """Compile doc into a temporary line buffer, returning (result, lines)."""
+        saved = self.lines
+        self.lines = []
+        result = self.compile(doc, indent)
+        buf = self.lines
+        self.lines = saved
+        return result, buf
+
+    def _extract_single_expr(self, result: _Result, lines: list[str]) -> str | None:
+        """If lines is a single 'uint32_t var = expr;', return the expr string."""
+        if len(lines) != 1:
+            return None
+        stripped = lines[0].lstrip()
+        prefix = f"uint32_t {result.var} = "
+        if stripped.startswith(prefix) and stripped.endswith(";"):
+            return stripped[len(prefix):-1]
+        return None
+
     def compile(self, doc: FmtDoc, indent: str = "    ") -> _Result:
         """Compile a FmtDoc and return a _Result with C variable name and nullability."""
         ind = indent
@@ -150,35 +169,17 @@ class _Compiler:
                 doc.then, doc.else_)
 
         if isinstance(doc, FmtIfFlag):
-            # Optimization: if_flag(field, kw(A), kw(B)) → ternary
-            opt = self._try_optimize_ternary(ind,
-                f"{self._accessor(doc.field)}",
-                doc.then, doc.else_)
-            if opt is not None:
-                return opt
             return self._compile_if(ind,
                 f"{self._accessor(doc.field)}",
                 doc.then, doc.else_)
 
         if isinstance(doc, FmtIfEnum):
             enum_value = self._resolve_enum_value(doc.field, doc.value)
-            # Optimization: if_enum(field, val, kw(A), kw(B)) → ternary
-            opt = self._try_optimize_ternary(ind,
-                f"{self._accessor(doc.field)} == {enum_value}",
-                doc.then, doc.else_)
-            if opt is not None:
-                return opt
             return self._compile_if(ind,
                 f"{self._accessor(doc.field)} == {enum_value}",
                 doc.then, doc.else_)
 
         if isinstance(doc, FmtIfSpan):
-            # Optimization: if_span(field, kw(A), kw(B)) → ternary
-            opt = self._try_optimize_ternary(ind,
-                f"{self._accessor(doc.field)}.length > 0",
-                doc.then, doc.else_)
-            if opt is not None:
-                return opt
             return self._compile_if(ind,
                 f"{self._accessor(doc.field)}.length > 0",
                 doc.then, doc.else_)
@@ -250,35 +251,53 @@ class _Compiler:
 
         return None
 
-    def _try_optimize_ternary(self, ind: str, condition: str,
-                               then_doc: FmtDoc,
-                               else_doc: FmtDoc | None) -> _Result | None:
-        """Try to optimize if/else with two FmtKw leaves into a ternary."""
-        if else_doc is None:
-            return None
-        if not isinstance(then_doc, FmtKw) or not isinstance(else_doc, FmtKw):
-            return None
-        v = self._var("kw")
-        self.lines.append(
-            f"{ind}uint32_t {v} = {condition}"
-            f" ? kw(ctx, {_c_str(then_doc.text)})"
-            f" : kw(ctx, {_c_str(else_doc.text)});")
-        return _Result(v, False)
-
     def _compile_if(self, ind: str, condition: str,
                     then_doc: FmtDoc, else_doc: FmtDoc | None) -> _Result:
         inner_ind = ind + "    "
         v = self._var("cond")
+
+        # Compile branches into temporary buffers for inspection.
+        then_result, then_lines = self._compile_to_buffer(then_doc, inner_ind)
+        then_expr = self._extract_single_expr(then_result, then_lines)
+
+        if else_doc:
+            else_result, else_lines = self._compile_to_buffer(else_doc, inner_ind)
+            else_expr = self._extract_single_expr(else_result, else_lines)
+        else:
+            else_result = None
+            else_lines = []
+            else_expr = None
+
+        # Both branches are single expressions → ternary.
+        if then_expr is not None and else_expr is not None:
+            nullable = then_result.nullable or else_result.nullable
+            self.lines.append(
+                f"{ind}uint32_t {v} = {condition}"
+                f" ? {then_expr} : {else_expr};")
+            return _Result(v, nullable)
+
+        # Single-expression then, no else → one-line if.
+        if then_expr is not None and else_doc is None:
+            self.lines.append(f"{ind}uint32_t {v} = SYNTAQLITE_NULL_DOC;")
+            self.lines.append(f"{ind}if ({condition}) {v} = {then_expr};")
+            return _Result(v, True)
+
+        # General case: emit block structure.
         self.lines.append(f"{ind}uint32_t {v} = SYNTAQLITE_NULL_DOC;")
         self.lines.append(f"{ind}if ({condition}) {{")
-        then_result = self.compile(then_doc, inner_ind)
-        self.lines.append(f"{inner_ind}{v} = {then_result.var};")
+        if then_expr is not None:
+            self.lines.append(f"{inner_ind}{v} = {then_expr};")
+        else:
+            self.lines.extend(then_lines)
+            self.lines.append(f"{inner_ind}{v} = {then_result.var};")
         nullable = True
         if else_doc:
             self.lines.append(f"{ind}}} else {{")
-            else_result = self.compile(else_doc, inner_ind)
-            self.lines.append(f"{inner_ind}{v} = {else_result.var};")
-            # If both branches are non-nullable, the result is non-nullable
+            if else_expr is not None:
+                self.lines.append(f"{inner_ind}{v} = {else_expr};")
+            else:
+                self.lines.extend(else_lines)
+                self.lines.append(f"{inner_ind}{v} = {else_result.var};")
             nullable = then_result.nullable or else_result.nullable
         self.lines.append(f"{ind}}}")
         return _Result(v, nullable)
@@ -306,17 +325,32 @@ class _Compiler:
         self.lines.append(f"{ind}switch ({self._accessor(doc.field)}) {{")
         for case_val, case_doc in doc.cases.items():
             c_enum = self._resolve_enum_value(doc.field, case_val)
-            self.lines.append(f"{case_ind}case {c_enum}: {{")
-            body_result = self.compile(case_doc, body_ind)
-            self.lines.append(f"{body_ind}{v} = {body_result.var};")
-            self.lines.append(f"{body_ind}break;")
-            self.lines.append(f"{case_ind}}}")
+            body_result, body_lines = self._compile_to_buffer(case_doc, body_ind)
+            body_expr = self._extract_single_expr(body_result, body_lines)
+            if body_expr is not None:
+                # Flat case: single expression.
+                self.lines.append(
+                    f"{case_ind}case {c_enum}:"
+                    f" {v} = {body_expr}; break;")
+            else:
+                self.lines.append(f"{case_ind}case {c_enum}: {{")
+                self.lines.extend(body_lines)
+                self.lines.append(f"{body_ind}{v} = {body_result.var};")
+                self.lines.append(f"{body_ind}break;")
+                self.lines.append(f"{case_ind}}}")
         if doc.default:
-            self.lines.append(f"{case_ind}default: {{")
-            def_result = self.compile(doc.default, body_ind)
-            self.lines.append(f"{body_ind}{v} = {def_result.var};")
-            self.lines.append(f"{body_ind}break;")
-            self.lines.append(f"{case_ind}}}")
+            def_result, def_lines = self._compile_to_buffer(doc.default, body_ind)
+            def_expr = self._extract_single_expr(def_result, def_lines)
+            if def_expr is not None:
+                self.lines.append(
+                    f"{case_ind}default:"
+                    f" {v} = {def_expr}; break;")
+            else:
+                self.lines.append(f"{case_ind}default: {{")
+                self.lines.extend(def_lines)
+                self.lines.append(f"{body_ind}{v} = {def_result.var};")
+                self.lines.append(f"{body_ind}break;")
+                self.lines.append(f"{case_ind}}}")
         else:
             self.lines.append(f"{case_ind}default: break;")
         self.lines.append(f"{ind}}}")

@@ -170,13 +170,11 @@ static uint32_t format_result_column(FmtCtx *ctx, SyntaqliteResultColumn *node) 
             uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
             cond_2 = cat_5;
         } else {
-            uint32_t kw_6 = kw(ctx, "*");
-            cond_2 = kw_6;
+            cond_2 = kw(ctx, "*");
         }
         cond_1 = cond_2;
     } else {
-        uint32_t ch_7 = format_node(ctx, node->expr);
-        cond_1 = ch_7;
+        cond_1 = format_node(ctx, node->expr);
     }
     uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
     if (node->alias.length > 0) {
@@ -191,46 +189,37 @@ static uint32_t format_result_column(FmtCtx *ctx, SyntaqliteResultColumn *node) 
 }
 
 static uint32_t format_select_stmt(FmtCtx *ctx, SyntaqliteSelectStmt *node) {
-    uint32_t kw_1 = node->flags.distinct ? kw(ctx, "SELECT DISTINCT") : kw(ctx, "SELECT");
-    uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
+    uint32_t cond_1 = node->flags.distinct ? kw(ctx, "SELECT DISTINCT") : kw(ctx, "SELECT");
+    uint32_t cond_4 = SYNTAQLITE_NULL_DOC;
     if (node->columns != SYNTAQLITE_NULL_NODE) {
-        uint32_t ln_3 = doc_line(&ctx->docs);
-        uint32_t ch_4 = format_node(ctx, node->columns);
-        uint32_t cat_5_items[] = { ln_3, ch_4 };
-        uint32_t cat_5 = doc_concat_nullable(&ctx->docs, cat_5_items, 2);
-        uint32_t nst_6 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_5);
-        uint32_t grp_7 = doc_group(&ctx->docs, nst_6);
-        cond_2 = grp_7;
+        uint32_t ln_5 = doc_line(&ctx->docs);
+        uint32_t ch_6 = format_node(ctx, node->columns);
+        uint32_t cat_7_items[] = { ln_5, ch_6 };
+        uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 2);
+        uint32_t nst_8 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_7);
+        uint32_t grp_9 = doc_group(&ctx->docs, nst_8);
+        cond_4 = grp_9;
     }
-    uint32_t cl_8 = format_clause(ctx, "FROM", format_node(ctx, node->from_clause));
-    uint32_t cl_9 = format_clause(ctx, "WHERE", format_node(ctx, node->where));
-    uint32_t cl_10 = format_clause(ctx, "GROUP BY", format_node(ctx, node->groupby));
-    uint32_t cl_11 = format_clause(ctx, "HAVING", format_node(ctx, node->having));
-    uint32_t cl_12 = format_clause(ctx, "ORDER BY", format_node(ctx, node->orderby));
-    uint32_t cl_13 = format_clause(ctx, "LIMIT", format_node(ctx, node->limit_clause));
-    uint32_t cl_14 = format_clause(ctx, "WINDOW", format_node(ctx, node->window_clause));
-    uint32_t cat_15_items[] = { kw_1, cond_2, cl_8, cl_9, cl_10, cl_11, cl_12, cl_13, cl_14 };
-    uint32_t cat_15 = doc_concat_nullable(&ctx->docs, cat_15_items, 9);
-    return doc_group(&ctx->docs, cat_15);
+    uint32_t cl_10 = format_clause(ctx, "FROM", format_node(ctx, node->from_clause));
+    uint32_t cl_11 = format_clause(ctx, "WHERE", format_node(ctx, node->where));
+    uint32_t cl_12 = format_clause(ctx, "GROUP BY", format_node(ctx, node->groupby));
+    uint32_t cl_13 = format_clause(ctx, "HAVING", format_node(ctx, node->having));
+    uint32_t cl_14 = format_clause(ctx, "ORDER BY", format_node(ctx, node->orderby));
+    uint32_t cl_15 = format_clause(ctx, "LIMIT", format_node(ctx, node->limit_clause));
+    uint32_t cl_16 = format_clause(ctx, "WINDOW", format_node(ctx, node->window_clause));
+    uint32_t cat_17_items[] = { cond_1, cond_4, cl_10, cl_11, cl_12, cl_13, cl_14, cl_15, cl_16 };
+    uint32_t cat_17 = doc_concat_nullable(&ctx->docs, cat_17_items, 9);
+    return doc_group(&ctx->docs, cat_17);
 }
 
 static uint32_t format_ordering_term(FmtCtx *ctx, SyntaqliteOrderingTerm *node) {
     uint32_t ch_1 = format_node(ctx, node->expr);
     uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
-    if (node->sort_order == SYNTAQLITE_SORT_ORDER_DESC) {
-        uint32_t kw_3 = kw(ctx, " DESC");
-        cond_2 = kw_3;
-    }
+    if (node->sort_order == SYNTAQLITE_SORT_ORDER_DESC) cond_2 = kw(ctx, " DESC");
     uint32_t cond_4 = SYNTAQLITE_NULL_DOC;
-    if (node->nulls_order == SYNTAQLITE_NULLS_ORDER_FIRST) {
-        uint32_t kw_5 = kw(ctx, " NULLS FIRST");
-        cond_4 = kw_5;
-    }
+    if (node->nulls_order == SYNTAQLITE_NULLS_ORDER_FIRST) cond_4 = kw(ctx, " NULLS FIRST");
     uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
-    if (node->nulls_order == SYNTAQLITE_NULLS_ORDER_LAST) {
-        uint32_t kw_7 = kw(ctx, " NULLS LAST");
-        cond_6 = kw_7;
-    }
+    if (node->nulls_order == SYNTAQLITE_NULLS_ORDER_LAST) cond_6 = kw(ctx, " NULLS LAST");
     uint32_t cat_8_items[] = { ch_1, cond_2, cond_4, cond_6 };
     return doc_concat_nullable(&ctx->docs, cat_8_items, 4);
 }
@@ -275,14 +264,10 @@ static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) 
     uint32_t sp_1 = span_text(ctx, node->func_name);
     uint32_t kw_2 = kw(ctx, "(");
     uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
-    if (node->flags.distinct) {
-        uint32_t kw_4 = kw(ctx, "DISTINCT ");
-        cond_3 = kw_4;
-    }
+    if (node->flags.distinct) cond_3 = kw(ctx, "DISTINCT ");
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
     if (node->flags.star) {
-        uint32_t kw_6 = kw(ctx, "*");
-        cond_5 = kw_6;
+        cond_5 = kw(ctx, "*");
     } else {
         uint32_t cond_7 = SYNTAQLITE_NULL_DOC;
         if (node->args != SYNTAQLITE_NULL_NODE) {
@@ -382,28 +367,28 @@ static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
 
 static uint32_t format_between_expr(FmtCtx *ctx, SyntaqliteBetweenExpr *node) {
     uint32_t ch_1 = format_node(ctx, node->operand);
-    uint32_t kw_2 = node->negated ? kw(ctx, " NOT BETWEEN ") : kw(ctx, " BETWEEN ");
-    uint32_t ch_3 = format_node(ctx, node->low);
-    uint32_t kw_4 = kw(ctx, " AND ");
-    uint32_t ch_5 = format_node(ctx, node->high);
-    uint32_t cat_6_items[] = { ch_1, kw_2, ch_3, kw_4, ch_5 };
-    return doc_concat_nullable(&ctx->docs, cat_6_items, 5);
+    uint32_t cond_2 = node->negated ? kw(ctx, " NOT BETWEEN ") : kw(ctx, " BETWEEN ");
+    uint32_t ch_5 = format_node(ctx, node->low);
+    uint32_t kw_6 = kw(ctx, " AND ");
+    uint32_t ch_7 = format_node(ctx, node->high);
+    uint32_t cat_8_items[] = { ch_1, cond_2, ch_5, kw_6, ch_7 };
+    return doc_concat_nullable(&ctx->docs, cat_8_items, 5);
 }
 
 static uint32_t format_like_expr(FmtCtx *ctx, SyntaqliteLikeExpr *node) {
     uint32_t ch_1 = format_node(ctx, node->operand);
-    uint32_t kw_2 = node->negated ? kw(ctx, " NOT LIKE ") : kw(ctx, " LIKE ");
-    uint32_t ch_3 = format_node(ctx, node->pattern);
-    uint32_t cond_4 = SYNTAQLITE_NULL_DOC;
+    uint32_t cond_2 = node->negated ? kw(ctx, " NOT LIKE ") : kw(ctx, " LIKE ");
+    uint32_t ch_5 = format_node(ctx, node->pattern);
+    uint32_t cond_6 = SYNTAQLITE_NULL_DOC;
     if (node->escape != SYNTAQLITE_NULL_NODE) {
-        uint32_t kw_5 = kw(ctx, " ESCAPE ");
-        uint32_t ch_6 = format_node(ctx, node->escape);
-        uint32_t cat_7_items[] = { kw_5, ch_6 };
-        uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 2);
-        cond_4 = cat_7;
+        uint32_t kw_7 = kw(ctx, " ESCAPE ");
+        uint32_t ch_8 = format_node(ctx, node->escape);
+        uint32_t cat_9_items[] = { kw_7, ch_8 };
+        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 2);
+        cond_6 = cat_9;
     }
-    uint32_t cat_8_items[] = { ch_1, kw_2, ch_3, cond_4 };
-    return doc_concat_nullable(&ctx->docs, cat_8_items, 4);
+    uint32_t cat_10_items[] = { ch_1, cond_2, ch_5, cond_6 };
+    return doc_concat_nullable(&ctx->docs, cat_10_items, 4);
 }
 
 static uint32_t format_case_expr(FmtCtx *ctx, SyntaqliteCaseExpr *node) {
@@ -485,12 +470,12 @@ static uint32_t format_exists_expr(FmtCtx *ctx, SyntaqliteExistsExpr *node) {
 
 static uint32_t format_in_expr(FmtCtx *ctx, SyntaqliteInExpr *node) {
     uint32_t ch_1 = format_node(ctx, node->operand);
-    uint32_t kw_2 = node->negated ? kw(ctx, " NOT IN ") : kw(ctx, " IN ");
-    uint32_t kw_3 = kw(ctx, "(");
-    uint32_t ch_4 = format_node(ctx, node->source);
-    uint32_t kw_5 = kw(ctx, ")");
-    uint32_t cat_6_items[] = { ch_1, kw_2, kw_3, ch_4, kw_5 };
-    return doc_concat_nullable(&ctx->docs, cat_6_items, 5);
+    uint32_t cond_2 = node->negated ? kw(ctx, " NOT IN ") : kw(ctx, " IN ");
+    uint32_t kw_5 = kw(ctx, "(");
+    uint32_t ch_6 = format_node(ctx, node->source);
+    uint32_t kw_7 = kw(ctx, ")");
+    uint32_t cat_8_items[] = { ch_1, cond_2, kw_5, ch_6, kw_7 };
+    return doc_concat_nullable(&ctx->docs, cat_8_items, 5);
 }
 
 static uint32_t format_variable(FmtCtx *ctx, SyntaqliteVariable *node) {
@@ -561,15 +546,9 @@ static uint32_t format_cte_definition(FmtCtx *ctx, SyntaqliteCteDefinition *node
     }
     uint32_t kw_7 = kw(ctx, " AS ");
     uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
-    if (node->materialized == SYNTAQLITE_MATERIALIZED_MATERIALIZED) {
-        uint32_t kw_9 = kw(ctx, "MATERIALIZED ");
-        cond_8 = kw_9;
-    }
+    if (node->materialized == SYNTAQLITE_MATERIALIZED_MATERIALIZED) cond_8 = kw(ctx, "MATERIALIZED ");
     uint32_t cond_10 = SYNTAQLITE_NULL_DOC;
-    if (node->materialized == SYNTAQLITE_MATERIALIZED_NOT_MATERIALIZED) {
-        uint32_t kw_11 = kw(ctx, "NOT MATERIALIZED ");
-        cond_10 = kw_11;
-    }
+    if (node->materialized == SYNTAQLITE_MATERIALIZED_NOT_MATERIALIZED) cond_10 = kw(ctx, "NOT MATERIALIZED ");
     uint32_t kw_12 = kw(ctx, "(");
     uint32_t ch_13 = format_node(ctx, node->select);
     uint32_t kw_14 = kw(ctx, ")");
@@ -578,22 +557,19 @@ static uint32_t format_cte_definition(FmtCtx *ctx, SyntaqliteCteDefinition *node
 }
 
 static uint32_t format_with_clause(FmtCtx *ctx, SyntaqliteWithClause *node) {
-    uint32_t kw_1 = node->recursive ? kw(ctx, "WITH RECURSIVE ") : kw(ctx, "WITH ");
-    uint32_t ch_2 = format_node(ctx, node->ctes);
-    uint32_t hl_3 = doc_hardline(&ctx->docs);
-    uint32_t ch_4 = format_node(ctx, node->select);
-    uint32_t cat_5_items[] = { kw_1, ch_2, hl_3, ch_4 };
-    return doc_concat_nullable(&ctx->docs, cat_5_items, 4);
+    uint32_t cond_1 = node->recursive ? kw(ctx, "WITH RECURSIVE ") : kw(ctx, "WITH ");
+    uint32_t ch_4 = format_node(ctx, node->ctes);
+    uint32_t hl_5 = doc_hardline(&ctx->docs);
+    uint32_t ch_6 = format_node(ctx, node->select);
+    uint32_t cat_7_items[] = { cond_1, ch_4, hl_5, ch_6 };
+    return doc_concat_nullable(&ctx->docs, cat_7_items, 4);
 }
 
 static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateFunctionCall *node) {
     uint32_t sp_1 = span_text(ctx, node->func_name);
     uint32_t kw_2 = kw(ctx, "(");
     uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
-    if (node->flags.distinct) {
-        uint32_t kw_4 = kw(ctx, "DISTINCT ");
-        cond_3 = kw_4;
-    }
+    if (node->flags.distinct) cond_3 = kw(ctx, "DISTINCT ");
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
     if (node->args != SYNTAQLITE_NULL_NODE) {
         uint32_t sl_6 = doc_softline(&ctx->docs);
@@ -640,26 +616,10 @@ static uint32_t format_raise_expr(FmtCtx *ctx, SyntaqliteRaiseExpr *node) {
     uint32_t kw_1 = kw(ctx, "RAISE(");
     uint32_t sw_2 = SYNTAQLITE_NULL_DOC;
     switch (node->raise_type) {
-        case SYNTAQLITE_RAISE_TYPE_IGNORE: {
-            uint32_t kw_3 = kw(ctx, "IGNORE");
-            sw_2 = kw_3;
-            break;
-        }
-        case SYNTAQLITE_RAISE_TYPE_ROLLBACK: {
-            uint32_t kw_4 = kw(ctx, "ROLLBACK");
-            sw_2 = kw_4;
-            break;
-        }
-        case SYNTAQLITE_RAISE_TYPE_ABORT: {
-            uint32_t kw_5 = kw(ctx, "ABORT");
-            sw_2 = kw_5;
-            break;
-        }
-        case SYNTAQLITE_RAISE_TYPE_FAIL: {
-            uint32_t kw_6 = kw(ctx, "FAIL");
-            sw_2 = kw_6;
-            break;
-        }
+        case SYNTAQLITE_RAISE_TYPE_IGNORE: sw_2 = kw(ctx, "IGNORE"); break;
+        case SYNTAQLITE_RAISE_TYPE_ROLLBACK: sw_2 = kw(ctx, "ROLLBACK"); break;
+        case SYNTAQLITE_RAISE_TYPE_ABORT: sw_2 = kw(ctx, "ABORT"); break;
+        case SYNTAQLITE_RAISE_TYPE_FAIL: sw_2 = kw(ctx, "FAIL"); break;
         default: break;
     }
     uint32_t cond_7 = SYNTAQLITE_NULL_DOC;
@@ -805,8 +765,7 @@ static uint32_t format_delete_stmt(FmtCtx *ctx, SyntaqliteDeleteStmt *node) {
 static uint32_t format_set_clause(FmtCtx *ctx, SyntaqliteSetClause *node) {
     uint32_t cond_1 = SYNTAQLITE_NULL_DOC;
     if (node->column.length > 0) {
-        uint32_t sp_2 = span_text(ctx, node->column);
-        cond_1 = sp_2;
+        cond_1 = span_text(ctx, node->column);
     } else {
         uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
         if (node->columns != SYNTAQLITE_NULL_NODE) {
@@ -829,31 +788,11 @@ static uint32_t format_update_stmt(FmtCtx *ctx, SyntaqliteUpdateStmt *node) {
     uint32_t kw_1 = kw(ctx, "UPDATE");
     uint32_t sw_2 = SYNTAQLITE_NULL_DOC;
     switch (node->conflict_action) {
-        case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: {
-            uint32_t kw_3 = kw(ctx, " OR ROLLBACK");
-            sw_2 = kw_3;
-            break;
-        }
-        case SYNTAQLITE_CONFLICT_ACTION_ABORT: {
-            uint32_t kw_4 = kw(ctx, " OR ABORT");
-            sw_2 = kw_4;
-            break;
-        }
-        case SYNTAQLITE_CONFLICT_ACTION_FAIL: {
-            uint32_t kw_5 = kw(ctx, " OR FAIL");
-            sw_2 = kw_5;
-            break;
-        }
-        case SYNTAQLITE_CONFLICT_ACTION_IGNORE: {
-            uint32_t kw_6 = kw(ctx, " OR IGNORE");
-            sw_2 = kw_6;
-            break;
-        }
-        case SYNTAQLITE_CONFLICT_ACTION_REPLACE: {
-            uint32_t kw_7 = kw(ctx, " OR REPLACE");
-            sw_2 = kw_7;
-            break;
-        }
+        case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: sw_2 = kw(ctx, " OR ROLLBACK"); break;
+        case SYNTAQLITE_CONFLICT_ACTION_ABORT: sw_2 = kw(ctx, " OR ABORT"); break;
+        case SYNTAQLITE_CONFLICT_ACTION_FAIL: sw_2 = kw(ctx, " OR FAIL"); break;
+        case SYNTAQLITE_CONFLICT_ACTION_IGNORE: sw_2 = kw(ctx, " OR IGNORE"); break;
+        case SYNTAQLITE_CONFLICT_ACTION_REPLACE: sw_2 = kw(ctx, " OR REPLACE"); break;
         default: break;
     }
     uint32_t kw_8 = kw(ctx, " ");
@@ -869,32 +808,15 @@ static uint32_t format_update_stmt(FmtCtx *ctx, SyntaqliteUpdateStmt *node) {
 static uint32_t format_insert_stmt(FmtCtx *ctx, SyntaqliteInsertStmt *node) {
     uint32_t cond_1 = SYNTAQLITE_NULL_DOC;
     if (node->conflict_action == SYNTAQLITE_CONFLICT_ACTION_REPLACE) {
-        uint32_t kw_2 = kw(ctx, "REPLACE");
-        cond_1 = kw_2;
+        cond_1 = kw(ctx, "REPLACE");
     } else {
         uint32_t kw_3 = kw(ctx, "INSERT");
         uint32_t sw_4 = SYNTAQLITE_NULL_DOC;
         switch (node->conflict_action) {
-            case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: {
-                uint32_t kw_5 = kw(ctx, " OR ROLLBACK");
-                sw_4 = kw_5;
-                break;
-            }
-            case SYNTAQLITE_CONFLICT_ACTION_ABORT: {
-                uint32_t kw_6 = kw(ctx, " OR ABORT");
-                sw_4 = kw_6;
-                break;
-            }
-            case SYNTAQLITE_CONFLICT_ACTION_FAIL: {
-                uint32_t kw_7 = kw(ctx, " OR FAIL");
-                sw_4 = kw_7;
-                break;
-            }
-            case SYNTAQLITE_CONFLICT_ACTION_IGNORE: {
-                uint32_t kw_8 = kw(ctx, " OR IGNORE");
-                sw_4 = kw_8;
-                break;
-            }
+            case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: sw_4 = kw(ctx, " OR ROLLBACK"); break;
+            case SYNTAQLITE_CONFLICT_ACTION_ABORT: sw_4 = kw(ctx, " OR ABORT"); break;
+            case SYNTAQLITE_CONFLICT_ACTION_FAIL: sw_4 = kw(ctx, " OR FAIL"); break;
+            case SYNTAQLITE_CONFLICT_ACTION_IGNORE: sw_4 = kw(ctx, " OR IGNORE"); break;
             default: break;
         }
         uint32_t cat_9_items[] = { kw_3, sw_4 };
@@ -949,10 +871,7 @@ static uint32_t format_drop_stmt(FmtCtx *ctx, SyntaqliteDropStmt *node) {
         default: break;
     }
     uint32_t cond_3 = SYNTAQLITE_NULL_DOC;
-    if (node->if_exists) {
-        uint32_t kw_4 = kw(ctx, " IF EXISTS");
-        cond_3 = kw_4;
-    }
+    if (node->if_exists) cond_3 = kw(ctx, " IF EXISTS");
     uint32_t kw_5 = kw(ctx, " ");
     uint32_t ch_6 = format_node(ctx, node->target);
     uint32_t cat_7_items[] = { kw_1, ed_2, cond_3, kw_5, ch_6 };
@@ -1027,16 +946,8 @@ static uint32_t format_transaction_stmt(FmtCtx *ctx, SyntaqliteTransactionStmt *
             sw_1 = cat_4;
             break;
         }
-        case SYNTAQLITE_TRANSACTION_OP_COMMIT: {
-            uint32_t kw_5 = kw(ctx, "COMMIT");
-            sw_1 = kw_5;
-            break;
-        }
-        case SYNTAQLITE_TRANSACTION_OP_ROLLBACK: {
-            uint32_t kw_6 = kw(ctx, "ROLLBACK");
-            sw_1 = kw_6;
-            break;
-        }
+        case SYNTAQLITE_TRANSACTION_OP_COMMIT: sw_1 = kw(ctx, "COMMIT"); break;
+        case SYNTAQLITE_TRANSACTION_OP_ROLLBACK: sw_1 = kw(ctx, "ROLLBACK"); break;
         default: break;
     }
     return sw_1;
@@ -1111,29 +1022,29 @@ static uint32_t format_pragma_stmt(FmtCtx *ctx, SyntaqlitePragmaStmt *node) {
 }
 
 static uint32_t format_analyze_stmt(FmtCtx *ctx, SyntaqliteAnalyzeStmt *node) {
-    uint32_t kw_1 = node->kind == SYNTAQLITE_ANALYZE_KIND_REINDEX ? kw(ctx, "REINDEX") : kw(ctx, "ANALYZE");
-    uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
+    uint32_t cond_1 = node->kind == SYNTAQLITE_ANALYZE_KIND_REINDEX ? kw(ctx, "REINDEX") : kw(ctx, "ANALYZE");
+    uint32_t cond_4 = SYNTAQLITE_NULL_DOC;
     if (node->schema.length > 0) {
-        uint32_t kw_3 = kw(ctx, " ");
-        uint32_t sp_4 = span_text(ctx, node->schema);
-        uint32_t kw_5 = kw(ctx, ".");
-        uint32_t sp_6 = span_text(ctx, node->target_name);
-        uint32_t cat_7_items[] = { kw_3, sp_4, kw_5, sp_6 };
-        uint32_t cat_7 = doc_concat_nullable(&ctx->docs, cat_7_items, 4);
-        cond_2 = cat_7;
+        uint32_t kw_5 = kw(ctx, " ");
+        uint32_t sp_6 = span_text(ctx, node->schema);
+        uint32_t kw_7 = kw(ctx, ".");
+        uint32_t sp_8 = span_text(ctx, node->target_name);
+        uint32_t cat_9_items[] = { kw_5, sp_6, kw_7, sp_8 };
+        uint32_t cat_9 = doc_concat_nullable(&ctx->docs, cat_9_items, 4);
+        cond_4 = cat_9;
     } else {
-        uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
+        uint32_t cond_10 = SYNTAQLITE_NULL_DOC;
         if (node->target_name.length > 0) {
-            uint32_t kw_9 = kw(ctx, " ");
-            uint32_t sp_10 = span_text(ctx, node->target_name);
-            uint32_t cat_11_items[] = { kw_9, sp_10 };
-            uint32_t cat_11 = doc_concat_nullable(&ctx->docs, cat_11_items, 2);
-            cond_8 = cat_11;
+            uint32_t kw_11 = kw(ctx, " ");
+            uint32_t sp_12 = span_text(ctx, node->target_name);
+            uint32_t cat_13_items[] = { kw_11, sp_12 };
+            uint32_t cat_13 = doc_concat_nullable(&ctx->docs, cat_13_items, 2);
+            cond_10 = cat_13;
         }
-        cond_2 = cond_8;
+        cond_4 = cond_10;
     }
-    uint32_t cat_12_items[] = { kw_1, cond_2 };
-    return doc_concat_nullable(&ctx->docs, cat_12_items, 2);
+    uint32_t cat_14_items[] = { cond_1, cond_4 };
+    return doc_concat_nullable(&ctx->docs, cat_14_items, 2);
 }
 
 static uint32_t format_attach_stmt(FmtCtx *ctx, SyntaqliteAttachStmt *node) {
@@ -1183,26 +1094,20 @@ static uint32_t format_vacuum_stmt(FmtCtx *ctx, SyntaqliteVacuumStmt *node) {
 }
 
 static uint32_t format_explain_stmt(FmtCtx *ctx, SyntaqliteExplainStmt *node) {
-    uint32_t kw_1 = node->explain_mode == SYNTAQLITE_EXPLAIN_MODE_QUERY_PLAN ? kw(ctx, "EXPLAIN QUERY PLAN") : kw(ctx, "EXPLAIN");
-    uint32_t hl_2 = doc_hardline(&ctx->docs);
-    uint32_t ch_3 = format_node(ctx, node->stmt);
-    uint32_t cat_4_items[] = { kw_1, hl_2, ch_3 };
-    return doc_concat_nullable(&ctx->docs, cat_4_items, 3);
+    uint32_t cond_1 = node->explain_mode == SYNTAQLITE_EXPLAIN_MODE_QUERY_PLAN ? kw(ctx, "EXPLAIN QUERY PLAN") : kw(ctx, "EXPLAIN");
+    uint32_t hl_4 = doc_hardline(&ctx->docs);
+    uint32_t ch_5 = format_node(ctx, node->stmt);
+    uint32_t cat_6_items[] = { cond_1, hl_4, ch_5 };
+    return doc_concat_nullable(&ctx->docs, cat_6_items, 3);
 }
 
 static uint32_t format_create_index_stmt(FmtCtx *ctx, SyntaqliteCreateIndexStmt *node) {
     uint32_t kw_1 = kw(ctx, "CREATE");
     uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
-    if (node->is_unique) {
-        uint32_t kw_3 = kw(ctx, " UNIQUE");
-        cond_2 = kw_3;
-    }
+    if (node->is_unique) cond_2 = kw(ctx, " UNIQUE");
     uint32_t kw_4 = kw(ctx, " INDEX");
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
-    if (node->if_not_exists) {
-        uint32_t kw_6 = kw(ctx, " IF NOT EXISTS");
-        cond_5 = kw_6;
-    }
+    if (node->if_not_exists) cond_5 = kw(ctx, " IF NOT EXISTS");
     uint32_t kw_7 = kw(ctx, " ");
     uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
     if (node->schema.length > 0) {
@@ -1227,16 +1132,10 @@ static uint32_t format_create_index_stmt(FmtCtx *ctx, SyntaqliteCreateIndexStmt 
 static uint32_t format_create_view_stmt(FmtCtx *ctx, SyntaqliteCreateViewStmt *node) {
     uint32_t kw_1 = kw(ctx, "CREATE");
     uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
-    if (node->is_temp) {
-        uint32_t kw_3 = kw(ctx, " TEMP");
-        cond_2 = kw_3;
-    }
+    if (node->is_temp) cond_2 = kw(ctx, " TEMP");
     uint32_t kw_4 = kw(ctx, " VIEW");
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
-    if (node->if_not_exists) {
-        uint32_t kw_6 = kw(ctx, " IF NOT EXISTS");
-        cond_5 = kw_6;
-    }
+    if (node->if_not_exists) cond_5 = kw(ctx, " IF NOT EXISTS");
     uint32_t kw_7 = kw(ctx, " ");
     uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
     if (node->schema.length > 0) {
@@ -1284,57 +1183,22 @@ static uint32_t format_foreign_key_clause(FmtCtx *ctx, SyntaqliteForeignKeyClaus
     }
     uint32_t sw_10 = SYNTAQLITE_NULL_DOC;
     switch (node->on_delete) {
-        case SYNTAQLITE_FOREIGN_KEY_ACTION_SET_NULL: {
-            uint32_t kw_11 = kw(ctx, " ON DELETE SET NULL");
-            sw_10 = kw_11;
-            break;
-        }
-        case SYNTAQLITE_FOREIGN_KEY_ACTION_SET_DEFAULT: {
-            uint32_t kw_12 = kw(ctx, " ON DELETE SET DEFAULT");
-            sw_10 = kw_12;
-            break;
-        }
-        case SYNTAQLITE_FOREIGN_KEY_ACTION_CASCADE: {
-            uint32_t kw_13 = kw(ctx, " ON DELETE CASCADE");
-            sw_10 = kw_13;
-            break;
-        }
-        case SYNTAQLITE_FOREIGN_KEY_ACTION_RESTRICT: {
-            uint32_t kw_14 = kw(ctx, " ON DELETE RESTRICT");
-            sw_10 = kw_14;
-            break;
-        }
+        case SYNTAQLITE_FOREIGN_KEY_ACTION_SET_NULL: sw_10 = kw(ctx, " ON DELETE SET NULL"); break;
+        case SYNTAQLITE_FOREIGN_KEY_ACTION_SET_DEFAULT: sw_10 = kw(ctx, " ON DELETE SET DEFAULT"); break;
+        case SYNTAQLITE_FOREIGN_KEY_ACTION_CASCADE: sw_10 = kw(ctx, " ON DELETE CASCADE"); break;
+        case SYNTAQLITE_FOREIGN_KEY_ACTION_RESTRICT: sw_10 = kw(ctx, " ON DELETE RESTRICT"); break;
         default: break;
     }
     uint32_t sw_15 = SYNTAQLITE_NULL_DOC;
     switch (node->on_update) {
-        case SYNTAQLITE_FOREIGN_KEY_ACTION_SET_NULL: {
-            uint32_t kw_16 = kw(ctx, " ON UPDATE SET NULL");
-            sw_15 = kw_16;
-            break;
-        }
-        case SYNTAQLITE_FOREIGN_KEY_ACTION_SET_DEFAULT: {
-            uint32_t kw_17 = kw(ctx, " ON UPDATE SET DEFAULT");
-            sw_15 = kw_17;
-            break;
-        }
-        case SYNTAQLITE_FOREIGN_KEY_ACTION_CASCADE: {
-            uint32_t kw_18 = kw(ctx, " ON UPDATE CASCADE");
-            sw_15 = kw_18;
-            break;
-        }
-        case SYNTAQLITE_FOREIGN_KEY_ACTION_RESTRICT: {
-            uint32_t kw_19 = kw(ctx, " ON UPDATE RESTRICT");
-            sw_15 = kw_19;
-            break;
-        }
+        case SYNTAQLITE_FOREIGN_KEY_ACTION_SET_NULL: sw_15 = kw(ctx, " ON UPDATE SET NULL"); break;
+        case SYNTAQLITE_FOREIGN_KEY_ACTION_SET_DEFAULT: sw_15 = kw(ctx, " ON UPDATE SET DEFAULT"); break;
+        case SYNTAQLITE_FOREIGN_KEY_ACTION_CASCADE: sw_15 = kw(ctx, " ON UPDATE CASCADE"); break;
+        case SYNTAQLITE_FOREIGN_KEY_ACTION_RESTRICT: sw_15 = kw(ctx, " ON UPDATE RESTRICT"); break;
         default: break;
     }
     uint32_t cond_20 = SYNTAQLITE_NULL_DOC;
-    if (node->is_deferred) {
-        uint32_t kw_21 = kw(ctx, "DEFERRABLE INITIALLY DEFERRED");
-        cond_20 = kw_21;
-    }
+    if (node->is_deferred) cond_20 = kw(ctx, "DEFERRABLE INITIALLY DEFERRED");
     uint32_t cat_22_items[] = { cond_1, cond_5, sw_10, sw_15, cond_20 };
     return doc_concat_nullable(&ctx->docs, cat_22_items, 5);
 }
@@ -1354,42 +1218,16 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
         case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_PRIMARY_KEY: {
             uint32_t kw_7 = kw(ctx, "PRIMARY KEY");
             uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
-            if (node->sort_order == SYNTAQLITE_SORT_ORDER_DESC) {
-                uint32_t kw_9 = kw(ctx, " DESC");
-                cond_8 = kw_9;
-            }
+            if (node->sort_order == SYNTAQLITE_SORT_ORDER_DESC) cond_8 = kw(ctx, " DESC");
             uint32_t cond_10 = SYNTAQLITE_NULL_DOC;
-            if (node->is_autoincrement) {
-                uint32_t kw_11 = kw(ctx, " AUTOINCREMENT");
-                cond_10 = kw_11;
-            }
+            if (node->is_autoincrement) cond_10 = kw(ctx, " AUTOINCREMENT");
             uint32_t sw_12 = SYNTAQLITE_NULL_DOC;
             switch (node->onconf) {
-                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: {
-                    uint32_t kw_13 = kw(ctx, " ON CONFLICT ROLLBACK");
-                    sw_12 = kw_13;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_ABORT: {
-                    uint32_t kw_14 = kw(ctx, " ON CONFLICT ABORT");
-                    sw_12 = kw_14;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_FAIL: {
-                    uint32_t kw_15 = kw(ctx, " ON CONFLICT FAIL");
-                    sw_12 = kw_15;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: {
-                    uint32_t kw_16 = kw(ctx, " ON CONFLICT IGNORE");
-                    sw_12 = kw_16;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: {
-                    uint32_t kw_17 = kw(ctx, " ON CONFLICT REPLACE");
-                    sw_12 = kw_17;
-                    break;
-                }
+                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: sw_12 = kw(ctx, " ON CONFLICT ROLLBACK"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_ABORT: sw_12 = kw(ctx, " ON CONFLICT ABORT"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_FAIL: sw_12 = kw(ctx, " ON CONFLICT FAIL"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: sw_12 = kw(ctx, " ON CONFLICT IGNORE"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: sw_12 = kw(ctx, " ON CONFLICT REPLACE"); break;
                 default: break;
             }
             uint32_t cat_18_items[] = { kw_7, cond_8, cond_10, sw_12 };
@@ -1401,31 +1239,11 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
             uint32_t kw_19 = kw(ctx, "NOT NULL");
             uint32_t sw_20 = SYNTAQLITE_NULL_DOC;
             switch (node->onconf) {
-                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: {
-                    uint32_t kw_21 = kw(ctx, " ON CONFLICT ROLLBACK");
-                    sw_20 = kw_21;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_ABORT: {
-                    uint32_t kw_22 = kw(ctx, " ON CONFLICT ABORT");
-                    sw_20 = kw_22;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_FAIL: {
-                    uint32_t kw_23 = kw(ctx, " ON CONFLICT FAIL");
-                    sw_20 = kw_23;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: {
-                    uint32_t kw_24 = kw(ctx, " ON CONFLICT IGNORE");
-                    sw_20 = kw_24;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: {
-                    uint32_t kw_25 = kw(ctx, " ON CONFLICT REPLACE");
-                    sw_20 = kw_25;
-                    break;
-                }
+                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: sw_20 = kw(ctx, " ON CONFLICT ROLLBACK"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_ABORT: sw_20 = kw(ctx, " ON CONFLICT ABORT"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_FAIL: sw_20 = kw(ctx, " ON CONFLICT FAIL"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: sw_20 = kw(ctx, " ON CONFLICT IGNORE"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: sw_20 = kw(ctx, " ON CONFLICT REPLACE"); break;
                 default: break;
             }
             uint32_t cat_26_items[] = { kw_19, sw_20 };
@@ -1437,31 +1255,11 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
             uint32_t kw_27 = kw(ctx, "UNIQUE");
             uint32_t sw_28 = SYNTAQLITE_NULL_DOC;
             switch (node->onconf) {
-                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: {
-                    uint32_t kw_29 = kw(ctx, " ON CONFLICT ROLLBACK");
-                    sw_28 = kw_29;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_ABORT: {
-                    uint32_t kw_30 = kw(ctx, " ON CONFLICT ABORT");
-                    sw_28 = kw_30;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_FAIL: {
-                    uint32_t kw_31 = kw(ctx, " ON CONFLICT FAIL");
-                    sw_28 = kw_31;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: {
-                    uint32_t kw_32 = kw(ctx, " ON CONFLICT IGNORE");
-                    sw_28 = kw_32;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: {
-                    uint32_t kw_33 = kw(ctx, " ON CONFLICT REPLACE");
-                    sw_28 = kw_33;
-                    break;
-                }
+                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: sw_28 = kw(ctx, " ON CONFLICT ROLLBACK"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_ABORT: sw_28 = kw(ctx, " ON CONFLICT ABORT"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_FAIL: sw_28 = kw(ctx, " ON CONFLICT FAIL"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: sw_28 = kw(ctx, " ON CONFLICT IGNORE"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: sw_28 = kw(ctx, " ON CONFLICT REPLACE"); break;
                 default: break;
             }
             uint32_t cat_34_items[] = { kw_27, sw_28 };
@@ -1494,30 +1292,19 @@ static uint32_t format_column_constraint(FmtCtx *ctx, SyntaqliteColumnConstraint
             sw_6 = cat_44;
             break;
         }
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_REFERENCES: {
-            uint32_t ch_45 = format_node(ctx, node->fk_clause);
-            sw_6 = ch_45;
-            break;
-        }
+        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_REFERENCES: sw_6 = format_node(ctx, node->fk_clause); break;
         case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_GENERATED: {
             uint32_t kw_46 = kw(ctx, "AS (");
             uint32_t ch_47 = format_node(ctx, node->generated_expr);
             uint32_t kw_48 = kw(ctx, ")");
             uint32_t cond_49 = SYNTAQLITE_NULL_DOC;
-            if (node->generated_storage == SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED) {
-                uint32_t kw_50 = kw(ctx, " STORED");
-                cond_49 = kw_50;
-            }
+            if (node->generated_storage == SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED) cond_49 = kw(ctx, " STORED");
             uint32_t cat_51_items[] = { kw_46, ch_47, kw_48, cond_49 };
             uint32_t cat_51 = doc_concat_nullable(&ctx->docs, cat_51_items, 4);
             sw_6 = cat_51;
             break;
         }
-        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_NULL: {
-            uint32_t kw_52 = kw(ctx, "NULL");
-            sw_6 = kw_52;
-            break;
-        }
+        case SYNTAQLITE_COLUMN_CONSTRAINT_KIND_NULL: sw_6 = kw(ctx, "NULL"); break;
         default: break;
     }
     uint32_t cat_53_items[] = { cond_1, sw_6 };
@@ -1597,31 +1384,11 @@ static uint32_t format_table_constraint(FmtCtx *ctx, SyntaqliteTableConstraint *
             uint32_t kw_9 = kw(ctx, ")");
             uint32_t sw_10 = SYNTAQLITE_NULL_DOC;
             switch (node->onconf) {
-                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: {
-                    uint32_t kw_11 = kw(ctx, " ON CONFLICT ROLLBACK");
-                    sw_10 = kw_11;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_ABORT: {
-                    uint32_t kw_12 = kw(ctx, " ON CONFLICT ABORT");
-                    sw_10 = kw_12;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_FAIL: {
-                    uint32_t kw_13 = kw(ctx, " ON CONFLICT FAIL");
-                    sw_10 = kw_13;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: {
-                    uint32_t kw_14 = kw(ctx, " ON CONFLICT IGNORE");
-                    sw_10 = kw_14;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: {
-                    uint32_t kw_15 = kw(ctx, " ON CONFLICT REPLACE");
-                    sw_10 = kw_15;
-                    break;
-                }
+                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: sw_10 = kw(ctx, " ON CONFLICT ROLLBACK"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_ABORT: sw_10 = kw(ctx, " ON CONFLICT ABORT"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_FAIL: sw_10 = kw(ctx, " ON CONFLICT FAIL"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: sw_10 = kw(ctx, " ON CONFLICT IGNORE"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: sw_10 = kw(ctx, " ON CONFLICT REPLACE"); break;
                 default: break;
             }
             uint32_t cat_16_items[] = { kw_7, ch_8, kw_9, sw_10 };
@@ -1635,31 +1402,11 @@ static uint32_t format_table_constraint(FmtCtx *ctx, SyntaqliteTableConstraint *
             uint32_t kw_19 = kw(ctx, ")");
             uint32_t sw_20 = SYNTAQLITE_NULL_DOC;
             switch (node->onconf) {
-                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: {
-                    uint32_t kw_21 = kw(ctx, " ON CONFLICT ROLLBACK");
-                    sw_20 = kw_21;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_ABORT: {
-                    uint32_t kw_22 = kw(ctx, " ON CONFLICT ABORT");
-                    sw_20 = kw_22;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_FAIL: {
-                    uint32_t kw_23 = kw(ctx, " ON CONFLICT FAIL");
-                    sw_20 = kw_23;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: {
-                    uint32_t kw_24 = kw(ctx, " ON CONFLICT IGNORE");
-                    sw_20 = kw_24;
-                    break;
-                }
-                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: {
-                    uint32_t kw_25 = kw(ctx, " ON CONFLICT REPLACE");
-                    sw_20 = kw_25;
-                    break;
-                }
+                case SYNTAQLITE_CONFLICT_ACTION_ROLLBACK: sw_20 = kw(ctx, " ON CONFLICT ROLLBACK"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_ABORT: sw_20 = kw(ctx, " ON CONFLICT ABORT"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_FAIL: sw_20 = kw(ctx, " ON CONFLICT FAIL"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_IGNORE: sw_20 = kw(ctx, " ON CONFLICT IGNORE"); break;
+                case SYNTAQLITE_CONFLICT_ACTION_REPLACE: sw_20 = kw(ctx, " ON CONFLICT REPLACE"); break;
                 default: break;
             }
             uint32_t cat_26_items[] = { kw_17, ch_18, kw_19, sw_20 };
@@ -1713,16 +1460,10 @@ static uint32_t format_table_constraint_list(FmtCtx *ctx, SyntaqliteTableConstra
 static uint32_t format_create_table_stmt(FmtCtx *ctx, SyntaqliteCreateTableStmt *node) {
     uint32_t kw_1 = kw(ctx, "CREATE");
     uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
-    if (node->is_temp) {
-        uint32_t kw_3 = kw(ctx, " TEMP");
-        cond_2 = kw_3;
-    }
+    if (node->is_temp) cond_2 = kw(ctx, " TEMP");
     uint32_t kw_4 = kw(ctx, " TABLE");
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
-    if (node->if_not_exists) {
-        uint32_t kw_6 = kw(ctx, " IF NOT EXISTS");
-        cond_5 = kw_6;
-    }
+    if (node->if_not_exists) cond_5 = kw(ctx, " IF NOT EXISTS");
     uint32_t kw_7 = kw(ctx, " ");
     uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
     if (node->schema.length > 0) {
@@ -1767,15 +1508,9 @@ static uint32_t format_create_table_stmt(FmtCtx *ctx, SyntaqliteCreateTableStmt 
         cond_28 = cat_32;
     }
     uint32_t cond_33 = SYNTAQLITE_NULL_DOC;
-    if (node->flags.without_rowid) {
-        uint32_t kw_34 = kw(ctx, " WITHOUT ROWID");
-        cond_33 = kw_34;
-    }
+    if (node->flags.without_rowid) cond_33 = kw(ctx, " WITHOUT ROWID");
     uint32_t cond_35 = SYNTAQLITE_NULL_DOC;
-    if (node->flags.strict) {
-        uint32_t kw_36 = kw(ctx, " STRICT");
-        cond_35 = kw_36;
-    }
+    if (node->flags.strict) cond_35 = kw(ctx, " STRICT");
     uint32_t cat_37_items[] = { kw_1, cond_2, kw_4, cond_5, kw_7, cond_8, sp_12, cond_13, cond_28, cond_33, cond_35 };
     uint32_t cat_37 = doc_concat_nullable(&ctx->docs, cat_37_items, 11);
     return doc_group(&ctx->docs, cat_37);
@@ -1784,11 +1519,7 @@ static uint32_t format_create_table_stmt(FmtCtx *ctx, SyntaqliteCreateTableStmt 
 static uint32_t format_frame_bound(FmtCtx *ctx, SyntaqliteFrameBound *node) {
     uint32_t sw_1 = SYNTAQLITE_NULL_DOC;
     switch (node->bound_type) {
-        case SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_PRECEDING: {
-            uint32_t kw_2 = kw(ctx, "UNBOUNDED PRECEDING");
-            sw_1 = kw_2;
-            break;
-        }
+        case SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_PRECEDING: sw_1 = kw(ctx, "UNBOUNDED PRECEDING"); break;
         case SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_PRECEDING: {
             uint32_t ch_3 = format_node(ctx, node->expr);
             uint32_t kw_4 = kw(ctx, " PRECEDING");
@@ -1797,11 +1528,7 @@ static uint32_t format_frame_bound(FmtCtx *ctx, SyntaqliteFrameBound *node) {
             sw_1 = cat_5;
             break;
         }
-        case SYNTAQLITE_FRAME_BOUND_TYPE_CURRENT_ROW: {
-            uint32_t kw_6 = kw(ctx, "CURRENT ROW");
-            sw_1 = kw_6;
-            break;
-        }
+        case SYNTAQLITE_FRAME_BOUND_TYPE_CURRENT_ROW: sw_1 = kw(ctx, "CURRENT ROW"); break;
         case SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_FOLLOWING: {
             uint32_t ch_7 = format_node(ctx, node->expr);
             uint32_t kw_8 = kw(ctx, " FOLLOWING");
@@ -1810,11 +1537,7 @@ static uint32_t format_frame_bound(FmtCtx *ctx, SyntaqliteFrameBound *node) {
             sw_1 = cat_9;
             break;
         }
-        case SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_FOLLOWING: {
-            uint32_t kw_10 = kw(ctx, "UNBOUNDED FOLLOWING");
-            sw_1 = kw_10;
-            break;
-        }
+        case SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_FOLLOWING: sw_1 = kw(ctx, "UNBOUNDED FOLLOWING"); break;
         default: break;
     }
     return sw_1;
@@ -1823,21 +1546,9 @@ static uint32_t format_frame_bound(FmtCtx *ctx, SyntaqliteFrameBound *node) {
 static uint32_t format_frame_spec(FmtCtx *ctx, SyntaqliteFrameSpec *node) {
     uint32_t sw_1 = SYNTAQLITE_NULL_DOC;
     switch (node->frame_type) {
-        case SYNTAQLITE_FRAME_TYPE_RANGE: {
-            uint32_t kw_2 = kw(ctx, "RANGE");
-            sw_1 = kw_2;
-            break;
-        }
-        case SYNTAQLITE_FRAME_TYPE_ROWS: {
-            uint32_t kw_3 = kw(ctx, "ROWS");
-            sw_1 = kw_3;
-            break;
-        }
-        case SYNTAQLITE_FRAME_TYPE_GROUPS: {
-            uint32_t kw_4 = kw(ctx, "GROUPS");
-            sw_1 = kw_4;
-            break;
-        }
+        case SYNTAQLITE_FRAME_TYPE_RANGE: sw_1 = kw(ctx, "RANGE"); break;
+        case SYNTAQLITE_FRAME_TYPE_ROWS: sw_1 = kw(ctx, "ROWS"); break;
+        case SYNTAQLITE_FRAME_TYPE_GROUPS: sw_1 = kw(ctx, "GROUPS"); break;
         default: break;
     }
     uint32_t kw_5 = kw(ctx, " BETWEEN ");
@@ -1846,26 +1557,10 @@ static uint32_t format_frame_spec(FmtCtx *ctx, SyntaqliteFrameSpec *node) {
     uint32_t ch_8 = format_node(ctx, node->end_bound);
     uint32_t sw_9 = SYNTAQLITE_NULL_DOC;
     switch (node->exclude) {
-        case SYNTAQLITE_FRAME_EXCLUDE_NO_OTHERS: {
-            uint32_t kw_10 = kw(ctx, " EXCLUDE NO OTHERS");
-            sw_9 = kw_10;
-            break;
-        }
-        case SYNTAQLITE_FRAME_EXCLUDE_CURRENT_ROW: {
-            uint32_t kw_11 = kw(ctx, " EXCLUDE CURRENT ROW");
-            sw_9 = kw_11;
-            break;
-        }
-        case SYNTAQLITE_FRAME_EXCLUDE_GROUP: {
-            uint32_t kw_12 = kw(ctx, " EXCLUDE GROUP");
-            sw_9 = kw_12;
-            break;
-        }
-        case SYNTAQLITE_FRAME_EXCLUDE_TIES: {
-            uint32_t kw_13 = kw(ctx, " EXCLUDE TIES");
-            sw_9 = kw_13;
-            break;
-        }
+        case SYNTAQLITE_FRAME_EXCLUDE_NO_OTHERS: sw_9 = kw(ctx, " EXCLUDE NO OTHERS"); break;
+        case SYNTAQLITE_FRAME_EXCLUDE_CURRENT_ROW: sw_9 = kw(ctx, " EXCLUDE CURRENT ROW"); break;
+        case SYNTAQLITE_FRAME_EXCLUDE_GROUP: sw_9 = kw(ctx, " EXCLUDE GROUP"); break;
+        case SYNTAQLITE_FRAME_EXCLUDE_TIES: sw_9 = kw(ctx, " EXCLUDE TIES"); break;
         default: break;
     }
     uint32_t cat_14_items[] = { sw_1, kw_5, ch_6, kw_7, ch_8, sw_9 };
@@ -1875,8 +1570,7 @@ static uint32_t format_frame_spec(FmtCtx *ctx, SyntaqliteFrameSpec *node) {
 static uint32_t format_window_def(FmtCtx *ctx, SyntaqliteWindowDef *node) {
     uint32_t cond_1 = SYNTAQLITE_NULL_DOC;
     if (node->base_window_name.length > 0) {
-        uint32_t sp_2 = span_text(ctx, node->base_window_name);
-        cond_1 = sp_2;
+        cond_1 = span_text(ctx, node->base_window_name);
     } else {
         uint32_t kw_3 = kw(ctx, "(");
         uint32_t cond_4 = SYNTAQLITE_NULL_DOC;
@@ -1890,10 +1584,7 @@ static uint32_t format_window_def(FmtCtx *ctx, SyntaqliteWindowDef *node) {
         uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
         if (node->orderby != SYNTAQLITE_NULL_NODE) {
             uint32_t cond_9 = SYNTAQLITE_NULL_DOC;
-            if (node->partition_by != SYNTAQLITE_NULL_NODE) {
-                uint32_t kw_10 = kw(ctx, " ");
-                cond_9 = kw_10;
-            }
+            if (node->partition_by != SYNTAQLITE_NULL_NODE) cond_9 = kw(ctx, " ");
             uint32_t kw_11 = kw(ctx, "ORDER BY ");
             uint32_t ch_12 = format_node(ctx, node->orderby);
             uint32_t cat_13_items[] = { cond_9, kw_11, ch_12 };
@@ -1904,14 +1595,10 @@ static uint32_t format_window_def(FmtCtx *ctx, SyntaqliteWindowDef *node) {
         if (node->frame != SYNTAQLITE_NULL_NODE) {
             uint32_t cond_15 = SYNTAQLITE_NULL_DOC;
             if (node->partition_by != SYNTAQLITE_NULL_NODE) {
-                uint32_t kw_16 = kw(ctx, " ");
-                cond_15 = kw_16;
+                cond_15 = kw(ctx, " ");
             } else {
                 uint32_t cond_17 = SYNTAQLITE_NULL_DOC;
-                if (node->orderby != SYNTAQLITE_NULL_NODE) {
-                    uint32_t kw_18 = kw(ctx, " ");
-                    cond_17 = kw_18;
-                }
+                if (node->orderby != SYNTAQLITE_NULL_NODE) cond_17 = kw(ctx, " ");
                 cond_15 = cond_17;
             }
             uint32_t ch_19 = format_node(ctx, node->frame);
@@ -1968,16 +1655,8 @@ static uint32_t format_filter_over(FmtCtx *ctx, SyntaqliteFilterOver *node) {
 static uint32_t format_trigger_event(FmtCtx *ctx, SyntaqliteTriggerEvent *node) {
     uint32_t sw_1 = SYNTAQLITE_NULL_DOC;
     switch (node->event_type) {
-        case SYNTAQLITE_TRIGGER_EVENT_TYPE_DELETE: {
-            uint32_t kw_2 = kw(ctx, "DELETE");
-            sw_1 = kw_2;
-            break;
-        }
-        case SYNTAQLITE_TRIGGER_EVENT_TYPE_INSERT: {
-            uint32_t kw_3 = kw(ctx, "INSERT");
-            sw_1 = kw_3;
-            break;
-        }
+        case SYNTAQLITE_TRIGGER_EVENT_TYPE_DELETE: sw_1 = kw(ctx, "DELETE"); break;
+        case SYNTAQLITE_TRIGGER_EVENT_TYPE_INSERT: sw_1 = kw(ctx, "INSERT"); break;
         case SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE: {
             uint32_t kw_4 = kw(ctx, "UPDATE");
             uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
@@ -2019,16 +1698,10 @@ static uint32_t format_trigger_cmd_list(FmtCtx *ctx, SyntaqliteTriggerCmdList *n
 static uint32_t format_create_trigger_stmt(FmtCtx *ctx, SyntaqliteCreateTriggerStmt *node) {
     uint32_t kw_1 = kw(ctx, "CREATE");
     uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
-    if (node->is_temp) {
-        uint32_t kw_3 = kw(ctx, " TEMP");
-        cond_2 = kw_3;
-    }
+    if (node->is_temp) cond_2 = kw(ctx, " TEMP");
     uint32_t kw_4 = kw(ctx, " TRIGGER");
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
-    if (node->if_not_exists) {
-        uint32_t kw_6 = kw(ctx, " IF NOT EXISTS");
-        cond_5 = kw_6;
-    }
+    if (node->if_not_exists) cond_5 = kw(ctx, " IF NOT EXISTS");
     uint32_t kw_7 = kw(ctx, " ");
     uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
     if (node->schema.length > 0) {
@@ -2042,21 +1715,9 @@ static uint32_t format_create_trigger_stmt(FmtCtx *ctx, SyntaqliteCreateTriggerS
     uint32_t kw_13 = kw(ctx, " ");
     uint32_t sw_14 = SYNTAQLITE_NULL_DOC;
     switch (node->timing) {
-        case SYNTAQLITE_TRIGGER_TIMING_BEFORE: {
-            uint32_t kw_15 = kw(ctx, "BEFORE");
-            sw_14 = kw_15;
-            break;
-        }
-        case SYNTAQLITE_TRIGGER_TIMING_AFTER: {
-            uint32_t kw_16 = kw(ctx, "AFTER");
-            sw_14 = kw_16;
-            break;
-        }
-        case SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF: {
-            uint32_t kw_17 = kw(ctx, "INSTEAD OF");
-            sw_14 = kw_17;
-            break;
-        }
+        case SYNTAQLITE_TRIGGER_TIMING_BEFORE: sw_14 = kw(ctx, "BEFORE"); break;
+        case SYNTAQLITE_TRIGGER_TIMING_AFTER: sw_14 = kw(ctx, "AFTER"); break;
+        case SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF: sw_14 = kw(ctx, "INSTEAD OF"); break;
         default: break;
     }
     uint32_t kw_18 = kw(ctx, " ");
@@ -2092,10 +1753,7 @@ static uint32_t format_create_trigger_stmt(FmtCtx *ctx, SyntaqliteCreateTriggerS
 static uint32_t format_create_virtual_table_stmt(FmtCtx *ctx, SyntaqliteCreateVirtualTableStmt *node) {
     uint32_t kw_1 = kw(ctx, "CREATE VIRTUAL TABLE");
     uint32_t cond_2 = SYNTAQLITE_NULL_DOC;
-    if (node->if_not_exists) {
-        uint32_t kw_3 = kw(ctx, " IF NOT EXISTS");
-        cond_2 = kw_3;
-    }
+    if (node->if_not_exists) cond_2 = kw(ctx, " IF NOT EXISTS");
     uint32_t kw_4 = kw(ctx, " ");
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
     if (node->schema.length > 0) {
