@@ -49,7 +49,7 @@ static uint32_t format_comma_list(FmtCtx *ctx, uint32_t *children, uint32_t coun
         }
         buf[n++] = format_node(ctx, children[i]);
     }
-    return doc_concat(&ctx->docs, buf, n);
+    return doc_group(&ctx->docs, doc_concat(&ctx->docs, buf, n));
 }
 
 // ============ Clause Helper ============
@@ -61,7 +61,7 @@ static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_do
     uint32_t items[] = {
         doc_line(&ctx->docs),
         kw(ctx, keyword),
-        doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner),
+        doc_group(&ctx->docs, doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner)),
     };
     return doc_concat(&ctx->docs, items, 3);
 }
@@ -69,43 +69,80 @@ static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_do
 // ============ Node Formatters ============
 
 static uint32_t format_binary_expr(FmtCtx *ctx, SyntaqliteBinaryExpr *node) {
-    uint32_t ch_1 = format_node(ctx, node->left);
-    uint32_t kw_2 = kw(ctx, " ");
-    uint32_t ed_3 = SYNTAQLITE_NULL_DOC;
+    uint32_t sw_1 = SYNTAQLITE_NULL_DOC;
     switch (node->op) {
-        case SYNTAQLITE_BINARY_OP_PLUS: ed_3 = kw(ctx, "+"); break;
-        case SYNTAQLITE_BINARY_OP_MINUS: ed_3 = kw(ctx, "-"); break;
-        case SYNTAQLITE_BINARY_OP_STAR: ed_3 = kw(ctx, "*"); break;
-        case SYNTAQLITE_BINARY_OP_SLASH: ed_3 = kw(ctx, "/"); break;
-        case SYNTAQLITE_BINARY_OP_REM: ed_3 = kw(ctx, "%"); break;
-        case SYNTAQLITE_BINARY_OP_LT: ed_3 = kw(ctx, "<"); break;
-        case SYNTAQLITE_BINARY_OP_GT: ed_3 = kw(ctx, ">"); break;
-        case SYNTAQLITE_BINARY_OP_LE: ed_3 = kw(ctx, "<="); break;
-        case SYNTAQLITE_BINARY_OP_GE: ed_3 = kw(ctx, ">="); break;
-        case SYNTAQLITE_BINARY_OP_EQ: ed_3 = kw(ctx, "="); break;
-        case SYNTAQLITE_BINARY_OP_NE: ed_3 = kw(ctx, "!="); break;
-        case SYNTAQLITE_BINARY_OP_AND: ed_3 = kw(ctx, "AND"); break;
-        case SYNTAQLITE_BINARY_OP_OR: ed_3 = kw(ctx, "OR"); break;
-        case SYNTAQLITE_BINARY_OP_BITAND: ed_3 = kw(ctx, "&"); break;
-        case SYNTAQLITE_BINARY_OP_BITOR: ed_3 = kw(ctx, "|"); break;
-        case SYNTAQLITE_BINARY_OP_LSHIFT: ed_3 = kw(ctx, "<<"); break;
-        case SYNTAQLITE_BINARY_OP_RSHIFT: ed_3 = kw(ctx, ">>"); break;
-        case SYNTAQLITE_BINARY_OP_CONCAT: ed_3 = kw(ctx, "||"); break;
-        case SYNTAQLITE_BINARY_OP_PTR: ed_3 = kw(ctx, "->"); break;
-        default: break;
+        case SYNTAQLITE_BINARY_OP_AND: {
+            uint32_t ch_2 = format_node(ctx, node->left);
+            uint32_t ln_3 = doc_line(&ctx->docs);
+            uint32_t kw_4 = kw(ctx, "AND ");
+            uint32_t ch_5 = format_node(ctx, node->right);
+            uint32_t _buf_6[4];
+            uint32_t _n_7 = 0;
+            if (ch_2 != SYNTAQLITE_NULL_DOC) _buf_6[_n_7++] = ch_2;
+            if (ln_3 != SYNTAQLITE_NULL_DOC) _buf_6[_n_7++] = ln_3;
+            if (kw_4 != SYNTAQLITE_NULL_DOC) _buf_6[_n_7++] = kw_4;
+            if (ch_5 != SYNTAQLITE_NULL_DOC) _buf_6[_n_7++] = ch_5;
+            uint32_t cat_8 = doc_concat(&ctx->docs, _buf_6, _n_7);
+            sw_1 = cat_8;
+            break;
+        }
+        case SYNTAQLITE_BINARY_OP_OR: {
+            uint32_t ch_9 = format_node(ctx, node->left);
+            uint32_t ln_10 = doc_line(&ctx->docs);
+            uint32_t kw_11 = kw(ctx, "OR ");
+            uint32_t ch_12 = format_node(ctx, node->right);
+            uint32_t _buf_13[4];
+            uint32_t _n_14 = 0;
+            if (ch_9 != SYNTAQLITE_NULL_DOC) _buf_13[_n_14++] = ch_9;
+            if (ln_10 != SYNTAQLITE_NULL_DOC) _buf_13[_n_14++] = ln_10;
+            if (kw_11 != SYNTAQLITE_NULL_DOC) _buf_13[_n_14++] = kw_11;
+            if (ch_12 != SYNTAQLITE_NULL_DOC) _buf_13[_n_14++] = ch_12;
+            uint32_t cat_15 = doc_concat(&ctx->docs, _buf_13, _n_14);
+            sw_1 = cat_15;
+            break;
+        }
+        default: {
+            uint32_t ch_16 = format_node(ctx, node->left);
+            uint32_t ln_17 = doc_line(&ctx->docs);
+            uint32_t ed_18 = SYNTAQLITE_NULL_DOC;
+            switch (node->op) {
+                case SYNTAQLITE_BINARY_OP_PLUS: ed_18 = kw(ctx, "+"); break;
+                case SYNTAQLITE_BINARY_OP_MINUS: ed_18 = kw(ctx, "-"); break;
+                case SYNTAQLITE_BINARY_OP_STAR: ed_18 = kw(ctx, "*"); break;
+                case SYNTAQLITE_BINARY_OP_SLASH: ed_18 = kw(ctx, "/"); break;
+                case SYNTAQLITE_BINARY_OP_REM: ed_18 = kw(ctx, "%"); break;
+                case SYNTAQLITE_BINARY_OP_LT: ed_18 = kw(ctx, "<"); break;
+                case SYNTAQLITE_BINARY_OP_GT: ed_18 = kw(ctx, ">"); break;
+                case SYNTAQLITE_BINARY_OP_LE: ed_18 = kw(ctx, "<="); break;
+                case SYNTAQLITE_BINARY_OP_GE: ed_18 = kw(ctx, ">="); break;
+                case SYNTAQLITE_BINARY_OP_EQ: ed_18 = kw(ctx, "="); break;
+                case SYNTAQLITE_BINARY_OP_NE: ed_18 = kw(ctx, "!="); break;
+                case SYNTAQLITE_BINARY_OP_AND: ed_18 = kw(ctx, "AND"); break;
+                case SYNTAQLITE_BINARY_OP_OR: ed_18 = kw(ctx, "OR"); break;
+                case SYNTAQLITE_BINARY_OP_BITAND: ed_18 = kw(ctx, "&"); break;
+                case SYNTAQLITE_BINARY_OP_BITOR: ed_18 = kw(ctx, "|"); break;
+                case SYNTAQLITE_BINARY_OP_LSHIFT: ed_18 = kw(ctx, "<<"); break;
+                case SYNTAQLITE_BINARY_OP_RSHIFT: ed_18 = kw(ctx, ">>"); break;
+                case SYNTAQLITE_BINARY_OP_CONCAT: ed_18 = kw(ctx, "||"); break;
+                case SYNTAQLITE_BINARY_OP_PTR: ed_18 = kw(ctx, "->"); break;
+                default: break;
+            }
+            uint32_t kw_19 = kw(ctx, " ");
+            uint32_t ch_20 = format_node(ctx, node->right);
+            uint32_t _buf_21[5];
+            uint32_t _n_22 = 0;
+            if (ch_16 != SYNTAQLITE_NULL_DOC) _buf_21[_n_22++] = ch_16;
+            if (ln_17 != SYNTAQLITE_NULL_DOC) _buf_21[_n_22++] = ln_17;
+            if (ed_18 != SYNTAQLITE_NULL_DOC) _buf_21[_n_22++] = ed_18;
+            if (kw_19 != SYNTAQLITE_NULL_DOC) _buf_21[_n_22++] = kw_19;
+            if (ch_20 != SYNTAQLITE_NULL_DOC) _buf_21[_n_22++] = ch_20;
+            uint32_t cat_23 = doc_concat(&ctx->docs, _buf_21, _n_22);
+            uint32_t grp_24 = doc_group(&ctx->docs, cat_23);
+            sw_1 = grp_24;
+            break;
+        }
     }
-    uint32_t ln_4 = doc_line(&ctx->docs);
-    uint32_t ch_5 = format_node(ctx, node->right);
-    uint32_t _buf_6[5];
-    uint32_t _n_7 = 0;
-    if (ch_1 != SYNTAQLITE_NULL_DOC) _buf_6[_n_7++] = ch_1;
-    if (kw_2 != SYNTAQLITE_NULL_DOC) _buf_6[_n_7++] = kw_2;
-    if (ed_3 != SYNTAQLITE_NULL_DOC) _buf_6[_n_7++] = ed_3;
-    if (ln_4 != SYNTAQLITE_NULL_DOC) _buf_6[_n_7++] = ln_4;
-    if (ch_5 != SYNTAQLITE_NULL_DOC) _buf_6[_n_7++] = ch_5;
-    uint32_t cat_8 = doc_concat(&ctx->docs, _buf_6, _n_7);
-    uint32_t grp_9 = doc_group(&ctx->docs, cat_8);
-    return grp_9;
+    return sw_1;
 }
 
 static uint32_t format_unary_expr(FmtCtx *ctx, SyntaqliteUnaryExpr *node) {
@@ -356,18 +393,21 @@ static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) 
             if (ch_9 != SYNTAQLITE_NULL_DOC) _buf_10[_n_11++] = ch_9;
             uint32_t cat_12 = doc_concat(&ctx->docs, _buf_10, _n_11);
             uint32_t nst_13 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_12);
-            uint32_t grp_14 = doc_group(&ctx->docs, nst_13);
-            uint32_t sl_15 = doc_softline(&ctx->docs);
-            uint32_t _buf_16[2];
-            uint32_t _n_17 = 0;
-            if (grp_14 != SYNTAQLITE_NULL_DOC) _buf_16[_n_17++] = grp_14;
-            if (sl_15 != SYNTAQLITE_NULL_DOC) _buf_16[_n_17++] = sl_15;
-            uint32_t cat_18 = doc_concat(&ctx->docs, _buf_16, _n_17);
-            cond_7 = cat_18;
+            cond_7 = nst_13;
         }
         cond_5 = cond_7;
     }
-    uint32_t kw_19 = kw(ctx, ")");
+    uint32_t sl_14 = doc_softline(&ctx->docs);
+    uint32_t kw_15 = kw(ctx, ")");
+    uint32_t _buf_16[5];
+    uint32_t _n_17 = 0;
+    if (kw_2 != SYNTAQLITE_NULL_DOC) _buf_16[_n_17++] = kw_2;
+    if (cond_3 != SYNTAQLITE_NULL_DOC) _buf_16[_n_17++] = cond_3;
+    if (cond_5 != SYNTAQLITE_NULL_DOC) _buf_16[_n_17++] = cond_5;
+    if (sl_14 != SYNTAQLITE_NULL_DOC) _buf_16[_n_17++] = sl_14;
+    if (kw_15 != SYNTAQLITE_NULL_DOC) _buf_16[_n_17++] = kw_15;
+    uint32_t cat_18 = doc_concat(&ctx->docs, _buf_16, _n_17);
+    uint32_t grp_19 = doc_group(&ctx->docs, cat_18);
     uint32_t cond_20 = SYNTAQLITE_NULL_DOC;
     if (node->filter_clause != SYNTAQLITE_NULL_NODE) {
         uint32_t kw_21 = kw(ctx, " ");
@@ -390,13 +430,10 @@ static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) 
         uint32_t cat_31 = doc_concat(&ctx->docs, _buf_29, _n_30);
         cond_26 = cat_31;
     }
-    uint32_t _buf_32[7];
+    uint32_t _buf_32[4];
     uint32_t _n_33 = 0;
     if (sp_1 != SYNTAQLITE_NULL_DOC) _buf_32[_n_33++] = sp_1;
-    if (kw_2 != SYNTAQLITE_NULL_DOC) _buf_32[_n_33++] = kw_2;
-    if (cond_3 != SYNTAQLITE_NULL_DOC) _buf_32[_n_33++] = cond_3;
-    if (cond_5 != SYNTAQLITE_NULL_DOC) _buf_32[_n_33++] = cond_5;
-    if (kw_19 != SYNTAQLITE_NULL_DOC) _buf_32[_n_33++] = kw_19;
+    if (grp_19 != SYNTAQLITE_NULL_DOC) _buf_32[_n_33++] = grp_19;
     if (cond_20 != SYNTAQLITE_NULL_DOC) _buf_32[_n_33++] = cond_20;
     if (cond_26 != SYNTAQLITE_NULL_DOC) _buf_32[_n_33++] = cond_26;
     uint32_t cat_34 = doc_concat(&ctx->docs, _buf_32, _n_33);
@@ -749,14 +786,21 @@ static uint32_t format_values_row_list(FmtCtx *ctx, SyntaqliteValuesRowList *nod
 }
 
 static uint32_t format_values_clause(FmtCtx *ctx, SyntaqliteValuesClause *node) {
-    uint32_t kw_1 = kw(ctx, "VALUES ");
-    uint32_t ch_2 = format_node(ctx, node->rows);
-    uint32_t _buf_3[2];
-    uint32_t _n_4 = 0;
-    if (kw_1 != SYNTAQLITE_NULL_DOC) _buf_3[_n_4++] = kw_1;
-    if (ch_2 != SYNTAQLITE_NULL_DOC) _buf_3[_n_4++] = ch_2;
-    uint32_t cat_5 = doc_concat(&ctx->docs, _buf_3, _n_4);
-    return cat_5;
+    uint32_t kw_1 = kw(ctx, "VALUES");
+    uint32_t hl_2 = doc_hardline(&ctx->docs);
+    uint32_t ch_3 = format_node(ctx, node->rows);
+    uint32_t _buf_4[2];
+    uint32_t _n_5 = 0;
+    if (hl_2 != SYNTAQLITE_NULL_DOC) _buf_4[_n_5++] = hl_2;
+    if (ch_3 != SYNTAQLITE_NULL_DOC) _buf_4[_n_5++] = ch_3;
+    uint32_t cat_6 = doc_concat(&ctx->docs, _buf_4, _n_5);
+    uint32_t nst_7 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_6);
+    uint32_t _buf_8[2];
+    uint32_t _n_9 = 0;
+    if (kw_1 != SYNTAQLITE_NULL_DOC) _buf_8[_n_9++] = kw_1;
+    if (nst_7 != SYNTAQLITE_NULL_DOC) _buf_8[_n_9++] = nst_7;
+    uint32_t cat_10 = doc_concat(&ctx->docs, _buf_8, _n_9);
+    return cat_10;
 }
 
 static uint32_t format_cte_definition(FmtCtx *ctx, SyntaqliteCteDefinition *node) {
@@ -838,56 +882,69 @@ static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateF
     }
     uint32_t cond_5 = SYNTAQLITE_NULL_DOC;
     if (node->args != SYNTAQLITE_NULL_NODE) {
-        uint32_t ch_6 = format_node(ctx, node->args);
-        uint32_t grp_7 = doc_group(&ctx->docs, ch_6);
-        cond_5 = grp_7;
+        uint32_t sl_6 = doc_softline(&ctx->docs);
+        uint32_t ch_7 = format_node(ctx, node->args);
+        uint32_t _buf_8[2];
+        uint32_t _n_9 = 0;
+        if (sl_6 != SYNTAQLITE_NULL_DOC) _buf_8[_n_9++] = sl_6;
+        if (ch_7 != SYNTAQLITE_NULL_DOC) _buf_8[_n_9++] = ch_7;
+        uint32_t cat_10 = doc_concat(&ctx->docs, _buf_8, _n_9);
+        uint32_t nst_11 = doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, cat_10);
+        cond_5 = nst_11;
     }
-    uint32_t cond_8 = SYNTAQLITE_NULL_DOC;
+    uint32_t cond_12 = SYNTAQLITE_NULL_DOC;
     if (node->orderby != SYNTAQLITE_NULL_NODE) {
-        uint32_t kw_9 = kw(ctx, " ORDER BY ");
-        uint32_t ch_10 = format_node(ctx, node->orderby);
-        uint32_t _buf_11[2];
-        uint32_t _n_12 = 0;
-        if (kw_9 != SYNTAQLITE_NULL_DOC) _buf_11[_n_12++] = kw_9;
-        if (ch_10 != SYNTAQLITE_NULL_DOC) _buf_11[_n_12++] = ch_10;
-        uint32_t cat_13 = doc_concat(&ctx->docs, _buf_11, _n_12);
-        cond_8 = cat_13;
+        uint32_t kw_13 = kw(ctx, " ORDER BY ");
+        uint32_t ch_14 = format_node(ctx, node->orderby);
+        uint32_t _buf_15[2];
+        uint32_t _n_16 = 0;
+        if (kw_13 != SYNTAQLITE_NULL_DOC) _buf_15[_n_16++] = kw_13;
+        if (ch_14 != SYNTAQLITE_NULL_DOC) _buf_15[_n_16++] = ch_14;
+        uint32_t cat_17 = doc_concat(&ctx->docs, _buf_15, _n_16);
+        cond_12 = cat_17;
     }
-    uint32_t kw_14 = kw(ctx, ")");
-    uint32_t cond_15 = SYNTAQLITE_NULL_DOC;
+    uint32_t sl_18 = doc_softline(&ctx->docs);
+    uint32_t kw_19 = kw(ctx, ")");
+    uint32_t _buf_20[6];
+    uint32_t _n_21 = 0;
+    if (kw_2 != SYNTAQLITE_NULL_DOC) _buf_20[_n_21++] = kw_2;
+    if (cond_3 != SYNTAQLITE_NULL_DOC) _buf_20[_n_21++] = cond_3;
+    if (cond_5 != SYNTAQLITE_NULL_DOC) _buf_20[_n_21++] = cond_5;
+    if (cond_12 != SYNTAQLITE_NULL_DOC) _buf_20[_n_21++] = cond_12;
+    if (sl_18 != SYNTAQLITE_NULL_DOC) _buf_20[_n_21++] = sl_18;
+    if (kw_19 != SYNTAQLITE_NULL_DOC) _buf_20[_n_21++] = kw_19;
+    uint32_t cat_22 = doc_concat(&ctx->docs, _buf_20, _n_21);
+    uint32_t grp_23 = doc_group(&ctx->docs, cat_22);
+    uint32_t cond_24 = SYNTAQLITE_NULL_DOC;
     if (node->filter_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t kw_16 = kw(ctx, " ");
-        uint32_t ch_17 = format_node(ctx, node->filter_clause);
-        uint32_t _buf_18[2];
-        uint32_t _n_19 = 0;
-        if (kw_16 != SYNTAQLITE_NULL_DOC) _buf_18[_n_19++] = kw_16;
-        if (ch_17 != SYNTAQLITE_NULL_DOC) _buf_18[_n_19++] = ch_17;
-        uint32_t cat_20 = doc_concat(&ctx->docs, _buf_18, _n_19);
-        cond_15 = cat_20;
+        uint32_t kw_25 = kw(ctx, " ");
+        uint32_t ch_26 = format_node(ctx, node->filter_clause);
+        uint32_t _buf_27[2];
+        uint32_t _n_28 = 0;
+        if (kw_25 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = kw_25;
+        if (ch_26 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = ch_26;
+        uint32_t cat_29 = doc_concat(&ctx->docs, _buf_27, _n_28);
+        cond_24 = cat_29;
     }
-    uint32_t cond_21 = SYNTAQLITE_NULL_DOC;
+    uint32_t cond_30 = SYNTAQLITE_NULL_DOC;
     if (node->over_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t kw_22 = kw(ctx, " OVER ");
-        uint32_t ch_23 = format_node(ctx, node->over_clause);
-        uint32_t _buf_24[2];
-        uint32_t _n_25 = 0;
-        if (kw_22 != SYNTAQLITE_NULL_DOC) _buf_24[_n_25++] = kw_22;
-        if (ch_23 != SYNTAQLITE_NULL_DOC) _buf_24[_n_25++] = ch_23;
-        uint32_t cat_26 = doc_concat(&ctx->docs, _buf_24, _n_25);
-        cond_21 = cat_26;
+        uint32_t kw_31 = kw(ctx, " OVER ");
+        uint32_t ch_32 = format_node(ctx, node->over_clause);
+        uint32_t _buf_33[2];
+        uint32_t _n_34 = 0;
+        if (kw_31 != SYNTAQLITE_NULL_DOC) _buf_33[_n_34++] = kw_31;
+        if (ch_32 != SYNTAQLITE_NULL_DOC) _buf_33[_n_34++] = ch_32;
+        uint32_t cat_35 = doc_concat(&ctx->docs, _buf_33, _n_34);
+        cond_30 = cat_35;
     }
-    uint32_t _buf_27[8];
-    uint32_t _n_28 = 0;
-    if (sp_1 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = sp_1;
-    if (kw_2 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = kw_2;
-    if (cond_3 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = cond_3;
-    if (cond_5 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = cond_5;
-    if (cond_8 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = cond_8;
-    if (kw_14 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = kw_14;
-    if (cond_15 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = cond_15;
-    if (cond_21 != SYNTAQLITE_NULL_DOC) _buf_27[_n_28++] = cond_21;
-    uint32_t cat_29 = doc_concat(&ctx->docs, _buf_27, _n_28);
-    return cat_29;
+    uint32_t _buf_36[4];
+    uint32_t _n_37 = 0;
+    if (sp_1 != SYNTAQLITE_NULL_DOC) _buf_36[_n_37++] = sp_1;
+    if (grp_23 != SYNTAQLITE_NULL_DOC) _buf_36[_n_37++] = grp_23;
+    if (cond_24 != SYNTAQLITE_NULL_DOC) _buf_36[_n_37++] = cond_24;
+    if (cond_30 != SYNTAQLITE_NULL_DOC) _buf_36[_n_37++] = cond_30;
+    uint32_t cat_38 = doc_concat(&ctx->docs, _buf_36, _n_37);
+    return cat_38;
 }
 
 static uint32_t format_raise_expr(FmtCtx *ctx, SyntaqliteRaiseExpr *node) {
@@ -1127,7 +1184,8 @@ static uint32_t format_delete_stmt(FmtCtx *ctx, SyntaqliteDeleteStmt *node) {
     if (cond_2 != SYNTAQLITE_NULL_DOC) _buf_8[_n_9++] = cond_2;
     if (cond_5 != SYNTAQLITE_NULL_DOC) _buf_8[_n_9++] = cond_5;
     uint32_t cat_10 = doc_concat(&ctx->docs, _buf_8, _n_9);
-    return cat_10;
+    uint32_t grp_11 = doc_group(&ctx->docs, cat_10);
+    return grp_11;
 }
 
 static uint32_t format_set_clause(FmtCtx *ctx, SyntaqliteSetClause *node) {
@@ -1223,7 +1281,8 @@ static uint32_t format_update_stmt(FmtCtx *ctx, SyntaqliteUpdateStmt *node) {
     if (cond_13 != SYNTAQLITE_NULL_DOC) _buf_19[_n_20++] = cond_13;
     if (cond_16 != SYNTAQLITE_NULL_DOC) _buf_19[_n_20++] = cond_16;
     uint32_t cat_21 = doc_concat(&ctx->docs, _buf_19, _n_20);
-    return cat_21;
+    uint32_t grp_22 = doc_group(&ctx->docs, cat_21);
+    return grp_22;
 }
 
 static uint32_t format_insert_stmt(FmtCtx *ctx, SyntaqliteInsertStmt *node) {

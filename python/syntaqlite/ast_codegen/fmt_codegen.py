@@ -347,7 +347,7 @@ def generate_fmt_c(
     lines.append("        }")
     lines.append("        buf[n++] = format_node(ctx, children[i]);")
     lines.append("    }")
-    lines.append("    return doc_concat(&ctx->docs, buf, n);")
+    lines.append("    return doc_group(&ctx->docs, doc_concat(&ctx->docs, buf, n));")
     lines.append("}")
     lines.append("")
 
@@ -361,7 +361,7 @@ def generate_fmt_c(
     lines.append("    uint32_t items[] = {")
     lines.append("        doc_line(&ctx->docs),")
     lines.append("        kw(ctx, keyword),")
-    lines.append("        doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner),")
+    lines.append("        doc_group(&ctx->docs, doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner)),")
     lines.append("    };")
     lines.append("    return doc_concat(&ctx->docs, items, 3);")
     lines.append("}")

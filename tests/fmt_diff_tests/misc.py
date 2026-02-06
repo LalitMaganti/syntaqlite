@@ -40,9 +40,8 @@ class ValuesFormat(TestSuite):
         return AstTestBlueprint(
             sql="values (1, 2, 3)",
             out="""\
-                VALUES (1,
-                2,
-                3)
+                VALUES
+                  (1, 2, 3)
             """,
         )
 
@@ -50,10 +49,9 @@ class ValuesFormat(TestSuite):
         return AstTestBlueprint(
             sql="values (1, 2), (3, 4)",
             out="""\
-                VALUES (1,
-                2),
-                (3,
-                4)
+                VALUES
+                  (1, 2),
+                  (3, 4)
             """,
         )
 
@@ -81,8 +79,7 @@ class CteFormat(TestSuite):
         return AstTestBlueprint(
             sql="with cte(a, b) as (select 1, 2) select * from cte",
             out="""\
-                WITH cte(a,
-                b) AS (SELECT 1, 2)
+                WITH cte(a, b) AS (SELECT 1, 2)
                 SELECT * FROM cte
             """,
         )
@@ -271,8 +268,7 @@ class TriggerFormat(TestSuite):
         return AstTestBlueprint(
             sql="create trigger tr before update of col1, col2 on t begin select 1; end",
             out="""\
-                CREATE TRIGGER tr BEFORE UPDATE OF col1,
-                col2 ON t
+                CREATE TRIGGER tr BEFORE UPDATE OF col1, col2 ON t
                 BEGIN
                   SELECT 1;
                 END
@@ -309,9 +305,7 @@ class TriggerFormat(TestSuite):
             out="""\
                 CREATE TRIGGER tr BEFORE INSERT ON t
                 BEGIN
-                  UPDATE t2
-                  SET
-                    a = 1;
+                  UPDATE t2 SET a = 1;
                 END
             """,
         )

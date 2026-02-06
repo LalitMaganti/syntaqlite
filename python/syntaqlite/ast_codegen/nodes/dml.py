@@ -5,7 +5,7 @@
 
 from ..defs import Node, List, Enum, inline, index
 from ..fmt_dsl import (
-    seq, kw, span, child, hardline,
+    seq, kw, span, child, hardline, group, nest, line,
     if_set, if_span, if_enum, clause, switch,
 )
 
@@ -25,11 +25,11 @@ NODES = [
     Node("DeleteStmt",
         table=index("Expr"),
         where=index("Expr"),
-        fmt=seq(
+        fmt=group(seq(
             kw("DELETE"),
             if_set("table", clause("FROM", child("table"))),
             if_set("where", clause("WHERE", child("where"))),
-        ),
+        )),
     ),
 
     # SET clause assignment: column = expr (or (col1, col2) = expr)
@@ -56,7 +56,7 @@ NODES = [
         setlist=index("SetClauseList"),
         from_clause=index("Expr"),
         where=index("Expr"),
-        fmt=seq(
+        fmt=group(seq(
             kw("UPDATE"),
             switch("conflict_action", {
                 "ROLLBACK": kw(" OR ROLLBACK"),
@@ -69,7 +69,7 @@ NODES = [
             if_set("setlist", clause("SET", child("setlist"))),
             if_set("from_clause", clause("FROM", child("from_clause"))),
             if_set("where", clause("WHERE", child("where"))),
-        ),
+        )),
     ),
 
     # INSERT [OR conflict] INTO [schema.]table [(columns)] source

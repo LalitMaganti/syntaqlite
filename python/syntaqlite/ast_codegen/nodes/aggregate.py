@@ -4,7 +4,7 @@
 """Aggregate function call with ORDER BY AST node definition."""
 
 from ..defs import Node, Flags, inline, index
-from ..fmt_dsl import seq, kw, span, child, group, if_set, if_flag
+from ..fmt_dsl import seq, kw, span, child, group, nest, softline, if_set, if_flag
 
 ENUMS = []
 
@@ -22,11 +22,15 @@ NODES = [
         filter_clause=index("Expr"),
         over_clause=index("WindowDef"),
         fmt=seq(
-            span("func_name"), kw("("),
-            if_flag("flags.distinct", kw("DISTINCT ")),
-            if_set("args", group(child("args"))),
-            if_set("orderby", seq(kw(" ORDER BY "), child("orderby"))),
-            kw(")"),
+            span("func_name"),
+            group(seq(
+                kw("("),
+                if_flag("flags.distinct", kw("DISTINCT ")),
+                if_set("args",
+                    nest(seq(softline(), child("args")))),
+                if_set("orderby", seq(kw(" ORDER BY "), child("orderby"))),
+                softline(),
+                kw(")"))),
             if_set("filter_clause", seq(kw(" "), child("filter_clause"))),
             if_set("over_clause", seq(kw(" OVER "), child("over_clause"))),
         ),

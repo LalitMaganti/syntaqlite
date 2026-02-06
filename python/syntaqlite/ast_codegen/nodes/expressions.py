@@ -4,7 +4,7 @@
 """Expression AST node definitions: binary, unary, and literal."""
 
 from ..defs import Node, List, inline, index
-from ..fmt_dsl import seq, kw, span, child, line, group, enum_display
+from ..fmt_dsl import seq, kw, span, child, line, group, enum_display, switch
 
 ENUMS = []
 
@@ -14,9 +14,14 @@ NODES = [
         op=inline("BinaryOp"),
         left=index("Expr"),
         right=index("Expr"),
-        fmt=group(seq(
+        fmt=switch("op", {
+            # AND/OR: no group — breaks propagate from parent (WHERE clause body)
+            "AND": seq(child("left"), line(), kw("AND "), child("right")),
+            "OR": seq(child("left"), line(), kw("OR "), child("right")),
+        }, default=group(seq(
+            # All other ops: own group — stays flat independently
             child("left"),
-            kw(" "),
+            line(),
             enum_display("op", {
                 "PLUS": "+", "MINUS": "-", "STAR": "*", "SLASH": "/",
                 "REM": "%", "LT": "<", "GT": ">", "LE": "<=", "GE": ">=",
@@ -24,9 +29,9 @@ NODES = [
                 "BITAND": "&", "BITOR": "|", "LSHIFT": "<<", "RSHIFT": ">>",
                 "CONCAT": "||", "PTR": "->",
             }),
-            line(),
+            kw(" "),
             child("right"),
-        )),
+        ))),
     ),
 
     # Unary expression: OP operand

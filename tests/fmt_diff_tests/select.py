@@ -71,10 +71,28 @@ class SelectFormat(TestSuite):
             sql="select a, b, c, d, e, f, g, h, i, j from very_long_table_name where a = 1 and b = 2 and c = 3",
             out="""\
                 SELECT a, b, c, d, e, f, g, h, i, j
-                FROM
-                  very_long_table_name
+                FROM very_long_table_name
+                WHERE a = 1 AND b = 2 AND c = 3
+            """,
+        )
+
+    def test_long_where_clause(self):
+        return AstTestBlueprint(
+            sql="select a from t where x = 1 and y = 2 and z = 3 and w = 4 and v = 5 and u = 6 and q = 7 and r = 8 and s = 9 and p = 10",
+            out="""\
+                SELECT a
+                FROM t
                 WHERE
-                  a = 1 AND b = 2 AND c = 3
+                  x = 1
+                  AND y = 2
+                  AND z = 3
+                  AND w = 4
+                  AND v = 5
+                  AND u = 6
+                  AND q = 7
+                  AND r = 8
+                  AND s = 9
+                  AND p = 10
             """,
         )
 
