@@ -16,5 +16,7 @@ NODES = [
         flags=inline("u8"),
         args=index("ExprList"),
         orderby=index("OrderByList"),
+        filter_clause=index("Expr"),        # FILTER (WHERE expr), or null
+        over_clause=index("WindowDef"),     # OVER (...) or OVER name, or null
     ),
 ]

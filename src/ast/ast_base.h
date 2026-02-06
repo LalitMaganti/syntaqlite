@@ -47,6 +47,11 @@ typedef struct SyntaqliteAstContext {
     uint32_t source_length;
     int error_code;
     const char *error_msg;
+    // CREATE TABLE parser state
+    SyntaqliteSourceSpan typetoken_span;        // current column type token
+    SyntaqliteSourceSpan constraint_name;       // current column CONSTRAINT name
+    SyntaqliteSourceSpan tcons_constraint_name; // current table CONSTRAINT name
+    uint32_t tcons_list;                        // accumulated table constraint list
 } SyntaqliteAstContext;
 
 // Arena management

@@ -19,7 +19,9 @@ expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) RP. {
     A = ast_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, B),
         (uint8_t)C,
-        D);
+        D,
+        SYNTAQLITE_NULL_NODE,
+        SYNTAQLITE_NULL_NODE);
 }
 
 // Function call with star: COUNT(*)
@@ -27,5 +29,31 @@ expr(A) ::= ID|INDEXED|JOIN_KW(B) LP STAR RP. {
     A = ast_function_call(pCtx->astCtx,
         syntaqlite_span(pCtx, B),
         2,
+        SYNTAQLITE_NULL_NODE,
+        SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE);
+}
+
+// Function call with arguments and filter/over: func(args) FILTER/OVER
+expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) RP filter_over(E). {
+    SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
+        (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[E]);
+    A = ast_function_call(pCtx->astCtx,
+        syntaqlite_span(pCtx, B),
+        (uint8_t)C,
+        D,
+        fo->filter_expr,
+        fo->over_def);
+}
+
+// Function call with star and filter/over: COUNT(*) FILTER/OVER
+expr(A) ::= ID|INDEXED|JOIN_KW(B) LP STAR RP filter_over(C). {
+    SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)
+        (pCtx->astCtx->ast->arena + pCtx->astCtx->ast->offsets[C]);
+    A = ast_function_call(pCtx->astCtx,
+        syntaqlite_span(pCtx, B),
+        2,
+        SYNTAQLITE_NULL_NODE,
+        fo->filter_expr,
+        fo->over_def);
 }

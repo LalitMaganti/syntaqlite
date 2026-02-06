@@ -59,7 +59,8 @@ uint32_t ast_select_stmt(
     uint32_t groupby,
     uint32_t having,
     uint32_t orderby,
-    uint32_t limit_clause
+    uint32_t limit_clause,
+    uint32_t window_clause
 );
 
 uint32_t ast_ordering_term(
@@ -91,7 +92,9 @@ uint32_t ast_function_call(
     SyntaqliteAstContext *ctx,
     SyntaqliteSourceSpan func_name,
     uint8_t flags,
-    uint32_t args
+    uint32_t args,
+    uint32_t filter_clause,
+    uint32_t over_clause
 );
 
 uint32_t ast_is_expr(SyntaqliteAstContext *ctx, SyntaqliteIsOp op, uint32_t left, uint32_t right);
@@ -179,7 +182,9 @@ uint32_t ast_aggregate_function_call(
     SyntaqliteSourceSpan func_name,
     uint8_t flags,
     uint32_t args,
-    uint32_t orderby
+    uint32_t orderby,
+    uint32_t filter_clause,
+    uint32_t over_clause
 );
 
 uint32_t ast_raise_expr(
@@ -318,6 +323,169 @@ uint32_t ast_create_view_stmt(
     uint8_t if_not_exists,
     uint32_t column_names,
     uint32_t select
+);
+
+uint32_t ast_foreign_key_clause(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan ref_table,
+    uint32_t ref_columns,
+    SyntaqliteForeignKeyAction on_delete,
+    SyntaqliteForeignKeyAction on_update,
+    uint8_t is_deferred
+);
+
+uint32_t ast_column_constraint(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteColumnConstraintKind kind,
+    SyntaqliteSourceSpan constraint_name,
+    uint8_t onconf,
+    uint8_t sort_order,
+    uint8_t is_autoincrement,
+    SyntaqliteSourceSpan collation_name,
+    SyntaqliteGeneratedColumnStorage generated_storage,
+    uint32_t default_expr,
+    uint32_t check_expr,
+    uint32_t generated_expr,
+    uint32_t fk_clause
+);
+
+// Create empty ColumnConstraintList
+uint32_t ast_column_constraint_list_empty(SyntaqliteAstContext *ctx);
+
+// Create ColumnConstraintList with single child
+uint32_t ast_column_constraint_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to ColumnConstraintList (may reallocate, returns new list ID)
+uint32_t ast_column_constraint_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_column_def(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan column_name,
+    SyntaqliteSourceSpan type_name,
+    uint32_t constraints
+);
+
+// Create empty ColumnDefList
+uint32_t ast_column_def_list_empty(SyntaqliteAstContext *ctx);
+
+// Create ColumnDefList with single child
+uint32_t ast_column_def_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to ColumnDefList (may reallocate, returns new list ID)
+uint32_t ast_column_def_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_table_constraint(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteTableConstraintKind kind,
+    SyntaqliteSourceSpan constraint_name,
+    uint8_t onconf,
+    uint8_t is_autoincrement,
+    uint32_t columns,
+    uint32_t check_expr,
+    uint32_t fk_clause
+);
+
+// Create empty TableConstraintList
+uint32_t ast_table_constraint_list_empty(SyntaqliteAstContext *ctx);
+
+// Create TableConstraintList with single child
+uint32_t ast_table_constraint_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to TableConstraintList (may reallocate, returns new list ID)
+uint32_t ast_table_constraint_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_create_table_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan table_name,
+    SyntaqliteSourceSpan schema,
+    uint8_t is_temp,
+    uint8_t if_not_exists,
+    uint8_t table_options,
+    uint32_t columns,
+    uint32_t table_constraints,
+    uint32_t as_select
+);
+
+uint32_t ast_frame_bound(SyntaqliteAstContext *ctx, SyntaqliteFrameBoundType bound_type, uint32_t expr);
+
+uint32_t ast_frame_spec(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteFrameType frame_type,
+    SyntaqliteFrameExclude exclude,
+    uint32_t start_bound,
+    uint32_t end_bound
+);
+
+uint32_t ast_window_def(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan base_window_name,
+    uint32_t partition_by,
+    uint32_t orderby,
+    uint32_t frame
+);
+
+// Create empty WindowDefList
+uint32_t ast_window_def_list_empty(SyntaqliteAstContext *ctx);
+
+// Create WindowDefList with single child
+uint32_t ast_window_def_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to WindowDefList (may reallocate, returns new list ID)
+uint32_t ast_window_def_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_named_window_def(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan window_name, uint32_t window_def);
+
+// Create empty NamedWindowDefList
+uint32_t ast_named_window_def_list_empty(SyntaqliteAstContext *ctx);
+
+// Create NamedWindowDefList with single child
+uint32_t ast_named_window_def_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to NamedWindowDefList (may reallocate, returns new list ID)
+uint32_t ast_named_window_def_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_filter_over(
+    SyntaqliteAstContext *ctx,
+    uint32_t filter_expr,
+    uint32_t over_def,
+    SyntaqliteSourceSpan over_name
+);
+
+uint32_t ast_trigger_event(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteTriggerEventType event_type,
+    uint32_t columns
+);
+
+// Create empty TriggerCmdList
+uint32_t ast_trigger_cmd_list_empty(SyntaqliteAstContext *ctx);
+
+// Create TriggerCmdList with single child
+uint32_t ast_trigger_cmd_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to TriggerCmdList (may reallocate, returns new list ID)
+uint32_t ast_trigger_cmd_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_create_trigger_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan trigger_name,
+    SyntaqliteSourceSpan schema,
+    uint8_t is_temp,
+    uint8_t if_not_exists,
+    SyntaqliteTriggerTiming timing,
+    uint32_t event,
+    uint32_t table,
+    uint32_t when_expr,
+    uint32_t body
+);
+
+uint32_t ast_create_virtual_table_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan table_name,
+    SyntaqliteSourceSpan schema,
+    SyntaqliteSourceSpan module_name,
+    uint8_t if_not_exists,
+    uint8_t has_args
 );
 
 #ifdef __cplusplus

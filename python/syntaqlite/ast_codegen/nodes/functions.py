@@ -16,5 +16,7 @@ NODES = [
         func_name=inline("SyntaqliteSourceSpan"),
         flags=inline("u8"),
         args=index("ExprList"),
+        filter_clause=index("Expr"),        # FILTER (WHERE expr), or null
+        over_clause=index("WindowDef"),     # OVER (...) or OVER name, or null
     ),
 ]

@@ -99,8 +99,10 @@ kwcolumn_opt(A) ::= COLUMNKW. {
     A = 1;
 }
 
-columnname(A) ::= nm(A) typetoken. {
+columnname(A) ::= nm(A) typetoken(Y). {
     // Token passthrough - nm already produces SyntaqliteToken
+    // Also save typetoken for CREATE TABLE column definitions
+    pCtx->astCtx->typetoken_span = Y.z ? syntaqlite_span(pCtx, Y) : SYNTAQLITE_NO_SPAN;
 }
 
 // ============ Transaction control ============

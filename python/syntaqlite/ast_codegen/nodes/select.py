@@ -39,6 +39,7 @@ NODES = [
         having=index("Expr"),                  # HAVING clause expression
         orderby=index("OrderByList"),          # ORDER BY clause
         limit_clause=index("LimitClause"),     # LIMIT/OFFSET clause
+        window_clause=index("NamedWindowDefList"),  # WINDOW clause (nullable)
     ),
 
     # Ordering term: expr [ASC|DESC] [NULLS FIRST|LAST]

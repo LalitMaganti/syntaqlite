@@ -148,6 +148,73 @@ typedef enum {
     SYNTAQLITE_EXPLAIN_MODE_QUERY_PLAN = 1,
 } SyntaqliteExplainMode;
 
+typedef enum {
+    SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION = 0,
+    SYNTAQLITE_FOREIGN_KEY_ACTION_SET_NULL = 1,
+    SYNTAQLITE_FOREIGN_KEY_ACTION_SET_DEFAULT = 2,
+    SYNTAQLITE_FOREIGN_KEY_ACTION_CASCADE = 3,
+    SYNTAQLITE_FOREIGN_KEY_ACTION_RESTRICT = 4,
+} SyntaqliteForeignKeyAction;
+
+typedef enum {
+    SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL = 0,
+    SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED = 1,
+} SyntaqliteGeneratedColumnStorage;
+
+typedef enum {
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_DEFAULT = 0,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_NOT_NULL = 1,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_PRIMARY_KEY = 2,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_UNIQUE = 3,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_CHECK = 4,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_REFERENCES = 5,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_COLLATE = 6,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_GENERATED = 7,
+    SYNTAQLITE_COLUMN_CONSTRAINT_KIND_NULL = 8,
+} SyntaqliteColumnConstraintKind;
+
+typedef enum {
+    SYNTAQLITE_TABLE_CONSTRAINT_KIND_PRIMARY_KEY = 0,
+    SYNTAQLITE_TABLE_CONSTRAINT_KIND_UNIQUE = 1,
+    SYNTAQLITE_TABLE_CONSTRAINT_KIND_CHECK = 2,
+    SYNTAQLITE_TABLE_CONSTRAINT_KIND_FOREIGN_KEY = 3,
+} SyntaqliteTableConstraintKind;
+
+typedef enum {
+    SYNTAQLITE_FRAME_TYPE_NONE = 0,
+    SYNTAQLITE_FRAME_TYPE_RANGE = 1,
+    SYNTAQLITE_FRAME_TYPE_ROWS = 2,
+    SYNTAQLITE_FRAME_TYPE_GROUPS = 3,
+} SyntaqliteFrameType;
+
+typedef enum {
+    SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_PRECEDING = 0,
+    SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_PRECEDING = 1,
+    SYNTAQLITE_FRAME_BOUND_TYPE_CURRENT_ROW = 2,
+    SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_FOLLOWING = 3,
+    SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_FOLLOWING = 4,
+} SyntaqliteFrameBoundType;
+
+typedef enum {
+    SYNTAQLITE_FRAME_EXCLUDE_NONE = 0,
+    SYNTAQLITE_FRAME_EXCLUDE_NO_OTHERS = 1,
+    SYNTAQLITE_FRAME_EXCLUDE_CURRENT_ROW = 2,
+    SYNTAQLITE_FRAME_EXCLUDE_GROUP = 3,
+    SYNTAQLITE_FRAME_EXCLUDE_TIES = 4,
+} SyntaqliteFrameExclude;
+
+typedef enum {
+    SYNTAQLITE_TRIGGER_TIMING_BEFORE = 0,
+    SYNTAQLITE_TRIGGER_TIMING_AFTER = 1,
+    SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF = 2,
+} SyntaqliteTriggerTiming;
+
+typedef enum {
+    SYNTAQLITE_TRIGGER_EVENT_TYPE_DELETE = 0,
+    SYNTAQLITE_TRIGGER_EVENT_TYPE_INSERT = 1,
+    SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE = 2,
+} SyntaqliteTriggerEventType;
+
 static const char* const syntaqlite_literal_type_names[] = {
     "INTEGER",
     "FLOAT",
@@ -280,6 +347,73 @@ static const char* const syntaqlite_explain_mode_names[] = {
     "QUERY_PLAN",
 };
 
+static const char* const syntaqlite_foreign_key_action_names[] = {
+    "NO_ACTION",
+    "SET_NULL",
+    "SET_DEFAULT",
+    "CASCADE",
+    "RESTRICT",
+};
+
+static const char* const syntaqlite_generated_column_storage_names[] = {
+    "VIRTUAL",
+    "STORED",
+};
+
+static const char* const syntaqlite_column_constraint_kind_names[] = {
+    "DEFAULT",
+    "NOT_NULL",
+    "PRIMARY_KEY",
+    "UNIQUE",
+    "CHECK",
+    "REFERENCES",
+    "COLLATE",
+    "GENERATED",
+    "NULL",
+};
+
+static const char* const syntaqlite_table_constraint_kind_names[] = {
+    "PRIMARY_KEY",
+    "UNIQUE",
+    "CHECK",
+    "FOREIGN_KEY",
+};
+
+static const char* const syntaqlite_frame_type_names[] = {
+    "NONE",
+    "RANGE",
+    "ROWS",
+    "GROUPS",
+};
+
+static const char* const syntaqlite_frame_bound_type_names[] = {
+    "UNBOUNDED_PRECEDING",
+    "EXPR_PRECEDING",
+    "CURRENT_ROW",
+    "EXPR_FOLLOWING",
+    "UNBOUNDED_FOLLOWING",
+};
+
+static const char* const syntaqlite_frame_exclude_names[] = {
+    "NONE",
+    "NO_OTHERS",
+    "CURRENT_ROW",
+    "GROUP",
+    "TIES",
+};
+
+static const char* const syntaqlite_trigger_timing_names[] = {
+    "BEFORE",
+    "AFTER",
+    "INSTEAD_OF",
+};
+
+static const char* const syntaqlite_trigger_event_type_names[] = {
+    "DELETE",
+    "INSERT",
+    "UPDATE",
+};
+
 // ============ Node Tags ============
 
 typedef enum {
@@ -338,6 +472,25 @@ typedef enum {
     SYNTAQLITE_NODE_EXPLAIN_STMT,
     SYNTAQLITE_NODE_CREATE_INDEX_STMT,
     SYNTAQLITE_NODE_CREATE_VIEW_STMT,
+    SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE,
+    SYNTAQLITE_NODE_COLUMN_CONSTRAINT,
+    SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST,
+    SYNTAQLITE_NODE_COLUMN_DEF,
+    SYNTAQLITE_NODE_COLUMN_DEF_LIST,
+    SYNTAQLITE_NODE_TABLE_CONSTRAINT,
+    SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST,
+    SYNTAQLITE_NODE_CREATE_TABLE_STMT,
+    SYNTAQLITE_NODE_FRAME_BOUND,
+    SYNTAQLITE_NODE_FRAME_SPEC,
+    SYNTAQLITE_NODE_WINDOW_DEF,
+    SYNTAQLITE_NODE_WINDOW_DEF_LIST,
+    SYNTAQLITE_NODE_NAMED_WINDOW_DEF,
+    SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST,
+    SYNTAQLITE_NODE_FILTER_OVER,
+    SYNTAQLITE_NODE_TRIGGER_EVENT,
+    SYNTAQLITE_NODE_TRIGGER_CMD_LIST,
+    SYNTAQLITE_NODE_CREATE_TRIGGER_STMT,
+    SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT,
     SYNTAQLITE_NODE_COUNT
 } SyntaqliteNodeTag;
 
@@ -395,6 +548,7 @@ typedef struct SyntaqliteSelectStmt {
     uint32_t having;
     uint32_t orderby;
     uint32_t limit_clause;
+    uint32_t window_clause;
 } SyntaqliteSelectStmt;
 
 typedef struct SyntaqliteOrderingTerm {
@@ -430,6 +584,8 @@ typedef struct SyntaqliteFunctionCall {
     SyntaqliteSourceSpan func_name;
     uint8_t flags;
     uint32_t args;
+    uint32_t filter_clause;
+    uint32_t over_clause;
 } SyntaqliteFunctionCall;
 
 typedef struct SyntaqliteIsExpr {
@@ -559,6 +715,8 @@ typedef struct SyntaqliteAggregateFunctionCall {
     uint8_t flags;
     uint32_t args;
     uint32_t orderby;
+    uint32_t filter_clause;
+    uint32_t over_clause;
 } SyntaqliteAggregateFunctionCall;
 
 typedef struct SyntaqliteRaiseExpr {
@@ -726,6 +884,171 @@ typedef struct SyntaqliteCreateViewStmt {
     uint32_t select;
 } SyntaqliteCreateViewStmt;
 
+typedef struct SyntaqliteForeignKeyClause {
+    uint8_t tag;
+    SyntaqliteSourceSpan ref_table;
+    uint32_t ref_columns;
+    SyntaqliteForeignKeyAction on_delete;
+    SyntaqliteForeignKeyAction on_update;
+    uint8_t is_deferred;
+} SyntaqliteForeignKeyClause;
+
+typedef struct SyntaqliteColumnConstraint {
+    uint8_t tag;
+    SyntaqliteColumnConstraintKind kind;
+    SyntaqliteSourceSpan constraint_name;
+    uint8_t onconf;
+    uint8_t sort_order;
+    uint8_t is_autoincrement;
+    SyntaqliteSourceSpan collation_name;
+    SyntaqliteGeneratedColumnStorage generated_storage;
+    uint32_t default_expr;
+    uint32_t check_expr;
+    uint32_t generated_expr;
+    uint32_t fk_clause;
+} SyntaqliteColumnConstraint;
+
+// List of ColumnConstraint
+typedef struct SyntaqliteColumnConstraintList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteColumnConstraintList;
+
+typedef struct SyntaqliteColumnDef {
+    uint8_t tag;
+    SyntaqliteSourceSpan column_name;
+    SyntaqliteSourceSpan type_name;
+    uint32_t constraints;
+} SyntaqliteColumnDef;
+
+// List of ColumnDef
+typedef struct SyntaqliteColumnDefList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteColumnDefList;
+
+typedef struct SyntaqliteTableConstraint {
+    uint8_t tag;
+    SyntaqliteTableConstraintKind kind;
+    SyntaqliteSourceSpan constraint_name;
+    uint8_t onconf;
+    uint8_t is_autoincrement;
+    uint32_t columns;
+    uint32_t check_expr;
+    uint32_t fk_clause;
+} SyntaqliteTableConstraint;
+
+// List of TableConstraint
+typedef struct SyntaqliteTableConstraintList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteTableConstraintList;
+
+typedef struct SyntaqliteCreateTableStmt {
+    uint8_t tag;
+    SyntaqliteSourceSpan table_name;
+    SyntaqliteSourceSpan schema;
+    uint8_t is_temp;
+    uint8_t if_not_exists;
+    uint8_t table_options;
+    uint32_t columns;
+    uint32_t table_constraints;
+    uint32_t as_select;
+} SyntaqliteCreateTableStmt;
+
+typedef struct SyntaqliteFrameBound {
+    uint8_t tag;
+    SyntaqliteFrameBoundType bound_type;
+    uint32_t expr;
+} SyntaqliteFrameBound;
+
+typedef struct SyntaqliteFrameSpec {
+    uint8_t tag;
+    SyntaqliteFrameType frame_type;
+    SyntaqliteFrameExclude exclude;
+    uint32_t start_bound;
+    uint32_t end_bound;
+} SyntaqliteFrameSpec;
+
+typedef struct SyntaqliteWindowDef {
+    uint8_t tag;
+    SyntaqliteSourceSpan base_window_name;
+    uint32_t partition_by;
+    uint32_t orderby;
+    uint32_t frame;
+} SyntaqliteWindowDef;
+
+// List of WindowDef
+typedef struct SyntaqliteWindowDefList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteWindowDefList;
+
+typedef struct SyntaqliteNamedWindowDef {
+    uint8_t tag;
+    SyntaqliteSourceSpan window_name;
+    uint32_t window_def;
+} SyntaqliteNamedWindowDef;
+
+// List of NamedWindowDef
+typedef struct SyntaqliteNamedWindowDefList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteNamedWindowDefList;
+
+typedef struct SyntaqliteFilterOver {
+    uint8_t tag;
+    uint32_t filter_expr;
+    uint32_t over_def;
+    SyntaqliteSourceSpan over_name;
+} SyntaqliteFilterOver;
+
+typedef struct SyntaqliteTriggerEvent {
+    uint8_t tag;
+    SyntaqliteTriggerEventType event_type;
+    uint32_t columns;
+} SyntaqliteTriggerEvent;
+
+// List of Stmt
+typedef struct SyntaqliteTriggerCmdList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteTriggerCmdList;
+
+typedef struct SyntaqliteCreateTriggerStmt {
+    uint8_t tag;
+    SyntaqliteSourceSpan trigger_name;
+    SyntaqliteSourceSpan schema;
+    uint8_t is_temp;
+    uint8_t if_not_exists;
+    SyntaqliteTriggerTiming timing;
+    uint32_t event;
+    uint32_t table;
+    uint32_t when_expr;
+    uint32_t body;
+} SyntaqliteCreateTriggerStmt;
+
+typedef struct SyntaqliteCreateVirtualTableStmt {
+    uint8_t tag;
+    SyntaqliteSourceSpan table_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteSourceSpan module_name;
+    uint8_t if_not_exists;
+    uint8_t has_args;
+} SyntaqliteCreateVirtualTableStmt;
+
 // ============ Node Union ============
 
 typedef union SyntaqliteNode {
@@ -784,6 +1107,25 @@ typedef union SyntaqliteNode {
     SyntaqliteExplainStmt explain_stmt;
     SyntaqliteCreateIndexStmt create_index_stmt;
     SyntaqliteCreateViewStmt create_view_stmt;
+    SyntaqliteForeignKeyClause foreign_key_clause;
+    SyntaqliteColumnConstraint column_constraint;
+    SyntaqliteColumnConstraintList column_constraint_list;
+    SyntaqliteColumnDef column_def;
+    SyntaqliteColumnDefList column_def_list;
+    SyntaqliteTableConstraint table_constraint;
+    SyntaqliteTableConstraintList table_constraint_list;
+    SyntaqliteCreateTableStmt create_table_stmt;
+    SyntaqliteFrameBound frame_bound;
+    SyntaqliteFrameSpec frame_spec;
+    SyntaqliteWindowDef window_def;
+    SyntaqliteWindowDefList window_def_list;
+    SyntaqliteNamedWindowDef named_window_def;
+    SyntaqliteNamedWindowDefList named_window_def_list;
+    SyntaqliteFilterOver filter_over;
+    SyntaqliteTriggerEvent trigger_event;
+    SyntaqliteTriggerCmdList trigger_cmd_list;
+    SyntaqliteCreateTriggerStmt create_trigger_stmt;
+    SyntaqliteCreateVirtualTableStmt create_virtual_table_stmt;
 } SyntaqliteNode;
 
 // Access node by ID

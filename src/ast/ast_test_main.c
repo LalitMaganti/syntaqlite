@@ -123,6 +123,10 @@ int main(int argc, char **argv) {
   astCtx.source_length = (uint32_t)len;
   astCtx.error_code = 0;
   astCtx.error_msg = NULL;
+  astCtx.typetoken_span = SYNTAQLITE_NO_SPAN;
+  astCtx.constraint_name = SYNTAQLITE_NO_SPAN;
+  astCtx.tcons_constraint_name = SYNTAQLITE_NO_SPAN;
+  astCtx.tcons_list = SYNTAQLITE_NULL_NODE;
 
   // Initialize parse context
   SyntaqliteParseContext parseCtx;

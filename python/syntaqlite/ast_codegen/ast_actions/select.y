@@ -27,7 +27,11 @@ selectnowith(A) ::= oneselect(B). {
 }
 
 oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_opt(F) having_opt(G) orderby_opt(H) limit_opt(I). {
-    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C, D, E, F, G, H, I);
+    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C, D, E, F, G, H, I, SYNTAQLITE_NULL_NODE);
+}
+
+oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_opt(F) having_opt(G) window_clause(R) orderby_opt(H) limit_opt(I). {
+    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C, D, E, F, G, H, I, R);
 }
 
 // ============ Result columns ============

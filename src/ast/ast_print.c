@@ -96,6 +96,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       print_node(out, ast, node->select_stmt.having, source, depth + 1);
       print_node(out, ast, node->select_stmt.orderby, source, depth + 1);
       print_node(out, ast, node->select_stmt.limit_clause, source, depth + 1);
+      print_node(out, ast, node->select_stmt.window_clause, source, depth + 1);
       break;
     }
 
@@ -155,6 +156,8 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth + 1);
       fprintf(out, "flags: %u\n", node->function_call.flags);
       print_node(out, ast, node->function_call.args, source, depth + 1);
+      print_node(out, ast, node->function_call.filter_clause, source, depth + 1);
+      print_node(out, ast, node->function_call.over_clause, source, depth + 1);
       break;
     }
 
@@ -342,6 +345,8 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "flags: %u\n", node->aggregate_function_call.flags);
       print_node(out, ast, node->aggregate_function_call.args, source, depth + 1);
       print_node(out, ast, node->aggregate_function_call.orderby, source, depth + 1);
+      print_node(out, ast, node->aggregate_function_call.filter_clause, source, depth + 1);
+      print_node(out, ast, node->aggregate_function_call.over_clause, source, depth + 1);
       break;
     }
 
@@ -633,6 +638,274 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "if_not_exists: %u\n", node->create_view_stmt.if_not_exists);
       print_node(out, ast, node->create_view_stmt.column_names, source, depth + 1);
       print_node(out, ast, node->create_view_stmt.select, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ForeignKeyClause\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "ref_table: ");
+      ast_print_source_span(out, source, node->foreign_key_clause.ref_table);
+      fprintf(out, "\n");
+      print_node(out, ast, node->foreign_key_clause.ref_columns, source, depth + 1);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "on_delete: %s\n", syntaqlite_foreign_key_action_names[node->foreign_key_clause.on_delete]);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "on_update: %s\n", syntaqlite_foreign_key_action_names[node->foreign_key_clause.on_update]);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "is_deferred: %u\n", node->foreign_key_clause.is_deferred);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_COLUMN_CONSTRAINT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ColumnConstraint\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "kind: %s\n", syntaqlite_column_constraint_kind_names[node->column_constraint.kind]);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "constraint_name: ");
+      ast_print_source_span(out, source, node->column_constraint.constraint_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "onconf: %u\n", node->column_constraint.onconf);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "sort_order: %u\n", node->column_constraint.sort_order);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "is_autoincrement: %u\n", node->column_constraint.is_autoincrement);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "collation_name: ");
+      ast_print_source_span(out, source, node->column_constraint.collation_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "generated_storage: %s\n", syntaqlite_generated_column_storage_names[node->column_constraint.generated_storage]);
+      print_node(out, ast, node->column_constraint.default_expr, source, depth + 1);
+      print_node(out, ast, node->column_constraint.check_expr, source, depth + 1);
+      print_node(out, ast, node->column_constraint.generated_expr, source, depth + 1);
+      print_node(out, ast, node->column_constraint.fk_clause, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ColumnConstraintList[%u]\n", node->column_constraint_list.count);
+      for (uint32_t i = 0; i < node->column_constraint_list.count; i++) {
+        print_node(out, ast, node->column_constraint_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_COLUMN_DEF: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ColumnDef\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "column_name: ");
+      ast_print_source_span(out, source, node->column_def.column_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "type_name: ");
+      ast_print_source_span(out, source, node->column_def.type_name);
+      fprintf(out, "\n");
+      print_node(out, ast, node->column_def.constraints, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_COLUMN_DEF_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ColumnDefList[%u]\n", node->column_def_list.count);
+      for (uint32_t i = 0; i < node->column_def_list.count; i++) {
+        print_node(out, ast, node->column_def_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_TABLE_CONSTRAINT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "TableConstraint\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "kind: %s\n", syntaqlite_table_constraint_kind_names[node->table_constraint.kind]);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "constraint_name: ");
+      ast_print_source_span(out, source, node->table_constraint.constraint_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "onconf: %u\n", node->table_constraint.onconf);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "is_autoincrement: %u\n", node->table_constraint.is_autoincrement);
+      print_node(out, ast, node->table_constraint.columns, source, depth + 1);
+      print_node(out, ast, node->table_constraint.check_expr, source, depth + 1);
+      print_node(out, ast, node->table_constraint.fk_clause, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "TableConstraintList[%u]\n", node->table_constraint_list.count);
+      for (uint32_t i = 0; i < node->table_constraint_list.count; i++) {
+        print_node(out, ast, node->table_constraint_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CREATE_TABLE_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CreateTableStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "table_name: ");
+      ast_print_source_span(out, source, node->create_table_stmt.table_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->create_table_stmt.schema);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "is_temp: %u\n", node->create_table_stmt.is_temp);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %u\n", node->create_table_stmt.if_not_exists);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "table_options: %u\n", node->create_table_stmt.table_options);
+      print_node(out, ast, node->create_table_stmt.columns, source, depth + 1);
+      print_node(out, ast, node->create_table_stmt.table_constraints, source, depth + 1);
+      print_node(out, ast, node->create_table_stmt.as_select, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_FRAME_BOUND: {
+      ast_print_indent(out, depth);
+      fprintf(out, "FrameBound\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "bound_type: %s\n", syntaqlite_frame_bound_type_names[node->frame_bound.bound_type]);
+      print_node(out, ast, node->frame_bound.expr, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_FRAME_SPEC: {
+      ast_print_indent(out, depth);
+      fprintf(out, "FrameSpec\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "frame_type: %s\n", syntaqlite_frame_type_names[node->frame_spec.frame_type]);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "exclude: %s\n", syntaqlite_frame_exclude_names[node->frame_spec.exclude]);
+      print_node(out, ast, node->frame_spec.start_bound, source, depth + 1);
+      print_node(out, ast, node->frame_spec.end_bound, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_WINDOW_DEF: {
+      ast_print_indent(out, depth);
+      fprintf(out, "WindowDef\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "base_window_name: ");
+      ast_print_source_span(out, source, node->window_def.base_window_name);
+      fprintf(out, "\n");
+      print_node(out, ast, node->window_def.partition_by, source, depth + 1);
+      print_node(out, ast, node->window_def.orderby, source, depth + 1);
+      print_node(out, ast, node->window_def.frame, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_WINDOW_DEF_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "WindowDefList[%u]\n", node->window_def_list.count);
+      for (uint32_t i = 0; i < node->window_def_list.count; i++) {
+        print_node(out, ast, node->window_def_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_NAMED_WINDOW_DEF: {
+      ast_print_indent(out, depth);
+      fprintf(out, "NamedWindowDef\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "window_name: ");
+      ast_print_source_span(out, source, node->named_window_def.window_name);
+      fprintf(out, "\n");
+      print_node(out, ast, node->named_window_def.window_def, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "NamedWindowDefList[%u]\n", node->named_window_def_list.count);
+      for (uint32_t i = 0; i < node->named_window_def_list.count; i++) {
+        print_node(out, ast, node->named_window_def_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_FILTER_OVER: {
+      ast_print_indent(out, depth);
+      fprintf(out, "FilterOver\n");
+      print_node(out, ast, node->filter_over.filter_expr, source, depth + 1);
+      print_node(out, ast, node->filter_over.over_def, source, depth + 1);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "over_name: ");
+      ast_print_source_span(out, source, node->filter_over.over_name);
+      fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_TRIGGER_EVENT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "TriggerEvent\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "event_type: %s\n", syntaqlite_trigger_event_type_names[node->trigger_event.event_type]);
+      print_node(out, ast, node->trigger_event.columns, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_TRIGGER_CMD_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "TriggerCmdList[%u]\n", node->trigger_cmd_list.count);
+      for (uint32_t i = 0; i < node->trigger_cmd_list.count; i++) {
+        print_node(out, ast, node->trigger_cmd_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CREATE_TRIGGER_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CreateTriggerStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "trigger_name: ");
+      ast_print_source_span(out, source, node->create_trigger_stmt.trigger_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->create_trigger_stmt.schema);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "is_temp: %u\n", node->create_trigger_stmt.is_temp);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %u\n", node->create_trigger_stmt.if_not_exists);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "timing: %s\n", syntaqlite_trigger_timing_names[node->create_trigger_stmt.timing]);
+      print_node(out, ast, node->create_trigger_stmt.event, source, depth + 1);
+      print_node(out, ast, node->create_trigger_stmt.table, source, depth + 1);
+      print_node(out, ast, node->create_trigger_stmt.when_expr, source, depth + 1);
+      print_node(out, ast, node->create_trigger_stmt.body, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CreateVirtualTableStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "table_name: ");
+      ast_print_source_span(out, source, node->create_virtual_table_stmt.table_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->create_virtual_table_stmt.schema);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "module_name: ");
+      ast_print_source_span(out, source, node->create_virtual_table_stmt.module_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %u\n", node->create_virtual_table_stmt.if_not_exists);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "has_args: %u\n", node->create_virtual_table_stmt.has_args);
       break;
     }
 

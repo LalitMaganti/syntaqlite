@@ -472,6 +472,30 @@ def _generate_grammar_file(
 %type minus_num {{SyntaqliteToken}}
 %type nmnum {{SyntaqliteToken}}
 
+// CREATE TABLE support
+%type autoinc {{int}}
+%type refargs {{int}}
+%type refarg {{int}}
+%type refact {{int}}
+%type defer_subclause {{int}}
+%type init_deferred_pred_opt {{int}}
+%type defer_subclause_opt {{int}}
+%type table_option_set {{int}}
+%type table_option {{int}}
+%type conslist_opt {{SyntaqliteToken}}
+%type onconf {{int}}
+%type scantok {{SyntaqliteToken}}
+%type generated {{u32}}
+
+// Window function support
+%type range_or_rows {{int}}
+%type frame_exclude_opt {{int}}
+%type frame_exclude {{int}}
+
+// Trigger support
+%type trigger_time {{int}}
+%type trnm {{SyntaqliteToken}}
+
 %syntax_error {{
   (void)yymajor;
   (void)TOKEN;
