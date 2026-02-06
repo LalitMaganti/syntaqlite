@@ -116,14 +116,17 @@ class _Compiler:
             return v
 
         if isinstance(doc, FmtSeq):
-            # Use doc_concat_empty + doc_concat_append to safely skip NULL_DOC
-            # items (e.g., from conditionals without else branches).
+            # Compile children, collect non-NULL into stack array, single alloc.
+            n = len(doc.items)
+            item_vars = [self.compile(item, ind) for item in doc.items]
+            buf = self._var("_buf")
+            cnt = self._var("_n")
             v = self._var("cat")
-            self.lines.append(f"{ind}uint32_t {v} = doc_concat_empty(&ctx->docs);")
-            for item in doc.items:
-                item_var = self.compile(item, ind)
-                self.lines.append(f"{ind}if ({item_var} != SYNTAQLITE_NULL_DOC)")
-                self.lines.append(f"{ind}    {v} = doc_concat_append(&ctx->docs, {v}, {item_var});")
+            self.lines.append(f"{ind}uint32_t {buf}[{n}];")
+            self.lines.append(f"{ind}uint32_t {cnt} = 0;")
+            for item_var in item_vars:
+                self.lines.append(f"{ind}if ({item_var} != SYNTAQLITE_NULL_DOC) {buf}[{cnt}++] = {item_var};")
+            self.lines.append(f"{ind}uint32_t {v} = doc_concat(&ctx->docs, {buf}, {cnt});")
             return v
 
         if isinstance(doc, FmtGroup):
@@ -237,8 +240,13 @@ class _Compiler:
     def _compile_for_each_child(self, doc: FmtForEachChild, ind: str) -> str:
         """Iterate list children with per-item formatting."""
         loop_ind = ind + "    "
+        max_per = 2 if doc.separator else 1
+        buf = self._var("_buf")
+        cnt = self._var("_n")
         v = self._var("lst")
-        self.lines.append(f"{ind}uint32_t {v} = doc_concat_empty(&ctx->docs);")
+        cap_expr = f"node->count * {max_per}" if max_per > 1 else "node->count"
+        self.lines.append(f"{ind}uint32_t {buf}[{cap_expr} > 0 ? {cap_expr} : 1];")
+        self.lines.append(f"{ind}uint32_t {cnt} = 0;")
         self.lines.append(
             f"{ind}for (uint32_t _i = 0; _i < node->count; _i++) {{")
         self.lines.append(f"{loop_ind}uint32_t _child_id = node->children[_i];")
@@ -246,13 +254,12 @@ class _Compiler:
             sep_ind = loop_ind + "    "
             self.lines.append(f"{loop_ind}if (_i > 0) {{")
             sep_var = self.compile(doc.separator, sep_ind)
-            self.lines.append(
-                f"{sep_ind}{v} = doc_concat_append(&ctx->docs, {v}, {sep_var});")
+            self.lines.append(f"{sep_ind}{buf}[{cnt}++] = {sep_var};")
             self.lines.append(f"{loop_ind}}}")
         template_var = self.compile(doc.template, loop_ind)
-        self.lines.append(
-            f"{loop_ind}{v} = doc_concat_append(&ctx->docs, {v}, {template_var});")
+        self.lines.append(f"{loop_ind}{buf}[{cnt}++] = {template_var};")
         self.lines.append(f"{ind}}}")
+        self.lines.append(f"{ind}uint32_t {v} = doc_concat(&ctx->docs, {buf}, {cnt});")
         return v
 
     def _resolve_enum_value(self, field_name: str, value: str) -> str:
@@ -331,16 +338,16 @@ def generate_fmt_c(
     lines.append("")
     lines.append("static uint32_t format_comma_list(FmtCtx *ctx, uint32_t *children, uint32_t count) {")
     lines.append('    if (count == 0) return kw(ctx, "");')
-    lines.append("    uint32_t cat = doc_concat_empty(&ctx->docs);")
+    lines.append("    uint32_t buf[count * 3];")
+    lines.append("    uint32_t n = 0;")
     lines.append("    for (uint32_t i = 0; i < count; i++) {")
-    lines.append("        uint32_t child_doc = format_node(ctx, children[i]);")
     lines.append("        if (i > 0) {")
-    lines.append('            cat = doc_concat_append(&ctx->docs, cat, kw(ctx, ","));')
-    lines.append("            cat = doc_concat_append(&ctx->docs, cat, doc_line(&ctx->docs));")
+    lines.append('            buf[n++] = kw(ctx, ",");')
+    lines.append("            buf[n++] = doc_line(&ctx->docs);")
     lines.append("        }")
-    lines.append("        cat = doc_concat_append(&ctx->docs, cat, child_doc);")
+    lines.append("        buf[n++] = format_node(ctx, children[i]);")
     lines.append("    }")
-    lines.append("    return cat;")
+    lines.append("    return doc_concat(&ctx->docs, buf, n);")
     lines.append("}")
     lines.append("")
 
@@ -349,15 +356,14 @@ def generate_fmt_c(
     lines.append("")
     lines.append("static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_doc) {")
     lines.append("    if (body_doc == SYNTAQLITE_NULL_DOC) return SYNTAQLITE_NULL_DOC;")
-    lines.append("    uint32_t inner = doc_concat_empty(&ctx->docs);")
-    lines.append("    inner = doc_concat_append(&ctx->docs, inner, doc_line(&ctx->docs));")
-    lines.append("    inner = doc_concat_append(&ctx->docs, inner, body_doc);")
-    lines.append("    uint32_t result = doc_concat_empty(&ctx->docs);")
-    lines.append("    result = doc_concat_append(&ctx->docs, result, doc_line(&ctx->docs));")
-    lines.append("    result = doc_concat_append(&ctx->docs, result, kw(ctx, keyword));")
-    lines.append("    result = doc_concat_append(&ctx->docs, result,")
-    lines.append("        doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner));")
-    lines.append("    return result;")
+    lines.append("    uint32_t inner_items[] = { doc_line(&ctx->docs), body_doc };")
+    lines.append("    uint32_t inner = doc_concat(&ctx->docs, inner_items, 2);")
+    lines.append("    uint32_t items[] = {")
+    lines.append("        doc_line(&ctx->docs),")
+    lines.append("        kw(ctx, keyword),")
+    lines.append("        doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner),")
+    lines.append("    };")
+    lines.append("    return doc_concat(&ctx->docs, items, 3);")
     lines.append("}")
     lines.append("")
 

@@ -97,9 +97,8 @@ uint32_t doc_hardline(SyntaqliteDocContext *ctx);
 uint32_t doc_nest(SyntaqliteDocContext *ctx, int32_t indent, uint32_t child);
 uint32_t doc_group(SyntaqliteDocContext *ctx, uint32_t child);
 
-// Concat: create empty, then append children one at a time
-uint32_t doc_concat_empty(SyntaqliteDocContext *ctx);
-uint32_t doc_concat_append(SyntaqliteDocContext *ctx, uint32_t concat_id, uint32_t child);
+// Concat: create from array of child IDs
+uint32_t doc_concat(SyntaqliteDocContext *ctx, uint32_t *children, uint32_t count);
 
 #ifdef __cplusplus
 }
