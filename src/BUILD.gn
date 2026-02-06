@@ -7,3 +7,19 @@ config("lemon_generated") {
     "-Wno-unused-variable",
   ]
 }
+
+# Combined CLI tool: synq <ast|fmt|doc> [options] < input.sql
+executable("synq") {
+  testonly = true
+  sources = [ "synq_main.c" ]
+  deps = [
+    "base:getopt",
+    "../include/syntaqlite:headers",
+    "parser:parser_api",
+    "formatter:formatter_api",
+  ]
+  if (is_asan) {
+    deps += [ "//gn/standalone:asan_defaults" ]
+  }
+  configs += [ ":lemon_generated" ]
+}

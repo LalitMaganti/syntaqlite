@@ -3,16 +3,73 @@
 
 #include "syntaqlite/formatter.h"
 
-#include "src/fmt/fmt_helpers.h"
+#include "src/formatter/fmt_helpers.h"
 
 #include <stdlib.h>
+#include <string.h>
 
 // Internal parser accessors (defined in parser_api.c).
 SynqAstContext *syntaqlite_parser_ast_context(SyntaqliteParser *p);
 struct SynqTokenList *syntaqlite_parser_token_list(SyntaqliteParser *p);
 
-char *syntaqlite_format(SyntaqliteParser *parser, uint32_t root_id,
+// ============ High-level API ============
+
+char *syntaqlite_format(const char *sql, uint32_t len,
                         const SyntaqliteFormatOptions *options) {
+    SyntaqliteParserConfig config = {.collect_tokens = 1};
+    SyntaqliteParser *parser = syntaqlite_parser_create(&config);
+    if (!parser) return NULL;
+    syntaqlite_parser_reset(parser, sql, len);
+
+    // Accumulate formatted output from all statements.
+    char *out = NULL;
+    size_t out_len = 0;
+
+    SyntaqliteParseResult result;
+    while ((result = syntaqlite_parser_next(parser)).root != SYNQ_NULL_NODE) {
+        if (result.error) {
+            free(out);
+            syntaqlite_parser_destroy(parser);
+            return NULL;
+        }
+
+        char *stmt = syntaqlite_format_stmt(parser, result.root, options);
+        if (!stmt) continue;
+
+        size_t stmt_len = strlen(stmt);
+        char *new_out = (char *)realloc(out, out_len + stmt_len + 1);
+        if (!new_out) {
+            free(stmt);
+            free(out);
+            syntaqlite_parser_destroy(parser);
+            return NULL;
+        }
+        out = new_out;
+        memcpy(out + out_len, stmt, stmt_len);
+        out_len += stmt_len;
+        out[out_len] = '\0';
+        free(stmt);
+    }
+
+    if (result.error) {
+        free(out);
+        syntaqlite_parser_destroy(parser);
+        return NULL;
+    }
+
+    syntaqlite_parser_destroy(parser);
+
+    if (!out) {
+        out = (char *)malloc(1);
+        if (out) out[0] = '\0';
+    }
+    return out;
+}
+
+// ============ Low-level API ============
+
+char *syntaqlite_format_stmt(SyntaqliteParser *parser, uint32_t root_id,
+                             const SyntaqliteFormatOptions *options) {
     SynqFmtOptions opts = SYNQ_FMT_OPTIONS_DEFAULT;
     if (options) {
         opts.target_width = options->target_width;
@@ -47,8 +104,8 @@ char *syntaqlite_format(SyntaqliteParser *parser, uint32_t root_id,
     return result;
 }
 
-char *syntaqlite_format_debug_ir(SyntaqliteParser *parser, uint32_t root_id,
-                                 const SyntaqliteFormatOptions *options) {
+char *syntaqlite_format_stmt_debug_ir(SyntaqliteParser *parser, uint32_t root_id,
+                                      const SyntaqliteFormatOptions *options) {
     SynqFmtOptions opts = SYNQ_FMT_OPTIONS_DEFAULT;
     if (options) {
         opts.target_width = options->target_width;

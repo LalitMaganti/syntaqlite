@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-#include "src/fmt/fmt_helpers.h"
+#include "src/formatter/fmt_helpers.h"
 #include "src/ast/ast_builder_gen.h"
 }
 

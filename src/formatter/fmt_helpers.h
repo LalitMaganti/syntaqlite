@@ -3,20 +3,20 @@
 
 // Formatter context, comment attachment, and helper functions.
 
-#ifndef SYNQ_SRC_FMT_FMT_HELPERS_H
-#define SYNQ_SRC_FMT_FMT_HELPERS_H
+#ifndef SYNQ_SRC_FORMATTER_FMT_HELPERS_H
+#define SYNQ_SRC_FORMATTER_FMT_HELPERS_H
 
 #include "src/ast/ast_base.h"
-#include "src/fmt/doc.h"
-#include "src/fmt/fmt_ops.h"
-#include "src/fmt/fmt_options.h"
-#include "src/fmt/token_list.h"
+#include "src/formatter/doc.h"
+#include "src/formatter/fmt_ops.h"
+#include "src/formatter/fmt_options.h"
+#include "src/parser/token_list.h"
 
 #include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  // SYNQ_SRC_FORMATTER_FMT_HELPERS_H
 
 // ============ Comment Attachment ============
 
@@ -76,6 +76,6 @@ uint32_t synq_format_clause(SynqFmtCtx *ctx, const char *keyword, uint32_t body_
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // SYNQ_SRC_FORMATTER_FMT_HELPERS_H
 
-#endif  // SYNQ_SRC_FMT_FMT_HELPERS_H
+#endif  // SYNQ_SRC_FORMATTER_FMT_HELPERS_H

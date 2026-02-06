@@ -10,12 +10,15 @@ sys.path.insert(0, ROOT_DIR)
 
 if __name__ == '__main__':
     from python.syntaqlite.diff_tests.runner import main
-    # Default to fmt_test binary and fmt_diff_tests directory
+    # Default to synq binary with fmt subcommand
     argv = sys.argv[1:]
     has_binary = any(a.startswith('--binary') for a in argv)
+    has_subcommand = any(a.startswith('--subcommand') for a in argv)
     has_test_dir = any(a.startswith('--test-dir') for a in argv)
     if not has_binary:
-        argv = ['--binary', 'out/mac_debug/fmt_test'] + argv
+        argv = ['--binary', 'out/mac_debug/synq'] + argv
+    if not has_subcommand:
+        argv = ['--subcommand', 'fmt'] + argv
     if not has_test_dir:
         argv = ['--test-dir', 'tests/fmt_diff_tests'] + argv
     sys.exit(main(argv))

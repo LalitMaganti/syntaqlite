@@ -4,7 +4,7 @@
 // Generated from ast_codegen node definitions - DO NOT EDIT
 // Regenerate with: python3 python/tools/extract_sqlite.py
 
-#include "src/fmt/fmt_ops.h"
+#include "src/formatter/fmt_ops.h"
 
 #include "src/ast/ast_nodes_gen.h"
 

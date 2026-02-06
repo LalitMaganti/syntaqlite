@@ -1,9 +1,22 @@
 # SQLite parser (generated from parse.y via Lemon).
 # Regenerate with: python3 python/tools/extract_sqlite.py
 
+# Raw token list (populated by parser, consumed by formatter).
+source_set("token_list") {
+  sources = [
+    "token_list.c",
+    "token_list.h",
+  ]
+  deps = [
+    "../base:vec",
+    "../../include/syntaqlite:headers",
+  ]
+}
+
 source_set("parser") {
   sources = [
     "sqlite_parse_gen.c",
+    "sqlite_parse_gen.h",
   ]
   deps = [
     "../common",
@@ -21,7 +34,7 @@ source_set("parser_api") {
     "../common",
     "../../include/syntaqlite:headers",
     "../ast",
-    "../fmt:token_list",
+    ":token_list",
     ":parser",
     "../tokenizer:tokenizer_api",
   ]

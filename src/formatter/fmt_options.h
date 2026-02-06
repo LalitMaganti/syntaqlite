@@ -3,14 +3,14 @@
 
 // Formatting options for the SQL pretty printer.
 
-#ifndef SYNQ_SRC_FMT_FMT_OPTIONS_H
-#define SYNQ_SRC_FMT_FMT_OPTIONS_H
+#ifndef SYNQ_SRC_FORMATTER_FMT_OPTIONS_H
+#define SYNQ_SRC_FORMATTER_FMT_OPTIONS_H
 
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  // SYNQ_SRC_FORMATTER_FMT_OPTIONS_H
 
 typedef struct SynqFmtOptions {
     uint32_t target_width;   // default 80
@@ -21,6 +21,6 @@ typedef struct SynqFmtOptions {
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // SYNQ_SRC_FORMATTER_FMT_OPTIONS_H
 
-#endif  // SYNQ_SRC_FMT_FMT_OPTIONS_H
+#endif  // SYNQ_SRC_FORMATTER_FMT_OPTIONS_H

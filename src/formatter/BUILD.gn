@@ -1,15 +1,3 @@
-# Raw token list (shared between parser API and formatter).
-source_set("token_list") {
-  sources = [
-    "token_list.c",
-    "token_list.h",
-  ]
-  deps = [
-    "../base:vec",
-    "../../include/syntaqlite:headers",
-  ]
-}
-
 # Document model, layout engine, and formatter.
 source_set("fmt") {
   sources = [
@@ -26,14 +14,14 @@ source_set("fmt") {
     "../base:vec",
     "../common",
     "../ast",
-    ":token_list",
+    "../parser:token_list",
     "../tokenizer",
   ]
 }
 
 # Public formatter API bridging parser and formatter internals.
 source_set("formatter_api") {
-  sources = [ "formatter_api.c" ]
+  sources = [ "formatter.c" ]
   deps = [
     "../../include/syntaqlite:headers",
     "../parser:parser_api",
@@ -54,22 +42,4 @@ executable("fmt_interpret_test") {
     "../ast",
     ":fmt",
   ]
-}
-
-# Test binary for formatter diff tests
-executable("fmt_test") {
-  testonly = true
-  sources = [
-    "fmt_test_main.c",
-  ]
-  deps = [
-    "../base:getopt",
-    "../../include/syntaqlite:headers",
-    ":formatter_api",
-    "../parser:parser_api",
-  ]
-  if (is_asan) {
-    deps += [ "//gn/standalone:asan_defaults" ]
-  }
-  configs += [ "..:lemon_generated" ]
 }

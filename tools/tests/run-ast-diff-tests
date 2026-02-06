@@ -10,4 +10,12 @@ sys.path.insert(0, ROOT_DIR)
 
 if __name__ == '__main__':
     from python.syntaqlite.diff_tests.runner import main
-    sys.exit(main())
+    # Default to synq binary with ast subcommand
+    argv = sys.argv[1:]
+    has_binary = any(a.startswith('--binary') for a in argv)
+    has_subcommand = any(a.startswith('--subcommand') for a in argv)
+    if not has_binary:
+        argv = ['--binary', 'out/mac_debug/synq'] + argv
+    if not has_subcommand:
+        argv = ['--subcommand', 'ast'] + argv
+    sys.exit(main(argv))

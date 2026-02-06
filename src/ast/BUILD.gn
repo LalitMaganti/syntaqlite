@@ -20,20 +20,3 @@ source_set("ast") {
     "../common",
   ]
 }
-
-# Test binary for AST diff tests
-executable("ast_test") {
-  testonly = true
-  sources = [
-    "ast_test_main.c",
-  ]
-  deps = [
-    "../base:getopt",
-    "../../include/syntaqlite:headers",
-    "../parser:parser_api",
-  ]
-  if (is_asan) {
-    deps += [ "//gn/standalone:asan_defaults" ]
-  }
-  configs += [ "..:lemon_generated" ]
-}

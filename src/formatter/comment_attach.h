@@ -4,18 +4,18 @@
 // Comment attachment: pre-classifies comment tokens (LEADING vs TRAILING)
 // and maps each to its owning AST node based on source ranges.
 
-#ifndef SYNQ_SRC_FMT_COMMENT_ATTACH_H
-#define SYNQ_SRC_FMT_COMMENT_ATTACH_H
+#ifndef SYNQ_SRC_FORMATTER_COMMENT_ATTACH_H
+#define SYNQ_SRC_FORMATTER_COMMENT_ATTACH_H
 
 #include "src/ast/ast_base.h"
 #include "src/ast/ast_nodes_gen.h"
-#include "src/fmt/token_list.h"
+#include "src/parser/token_list.h"
 
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  // SYNQ_SRC_FORMATTER_COMMENT_ATTACH_H
 
 // Comment placement relative to adjacent real tokens.
 typedef enum {
@@ -40,6 +40,6 @@ void synq_comment_attachment_free(SynqCommentAttachment *att);
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // SYNQ_SRC_FORMATTER_COMMENT_ATTACH_H
 
-#endif  // SYNQ_SRC_FMT_COMMENT_ATTACH_H
+#endif  // SYNQ_SRC_FORMATTER_COMMENT_ATTACH_H

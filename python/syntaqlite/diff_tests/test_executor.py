@@ -38,26 +38,31 @@ def execute_test(
     binary: Path,
     name: str,
     blueprint: AstTestBlueprint,
-    timeout: Optional[float] = 30.0
+    timeout: Optional[float] = 30.0,
+    subcommand: Optional[str] = None
 ) -> TestResult:
     """Execute a single test.
 
-    Runs the ast_test binary with the SQL input and compares
-    the output to the expected AST.
+    Runs the binary with the SQL input and compares
+    the output to the expected result.
 
     Args:
-        binary: Path to the ast_test executable.
+        binary: Path to the executable.
         name: Test name for reporting.
         blueprint: The test definition.
         timeout: Maximum execution time in seconds.
+        subcommand: Optional subcommand to pass (e.g., 'ast', 'fmt').
 
     Returns:
         TestResult with pass/fail status and details.
     """
+    cmd = [str(binary)]
+    if subcommand:
+        cmd.append(subcommand)
     t0 = time.monotonic()
     try:
         proc = subprocess.run(
-            [str(binary)],
+            cmd,
             input=blueprint.sql,
             capture_output=True,
             text=True,

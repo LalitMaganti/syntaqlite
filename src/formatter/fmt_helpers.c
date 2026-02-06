@@ -4,7 +4,7 @@
 // Formatter internals: comment attachment, comment emission, clause formatting,
 // and synq_format_node dispatcher.
 
-#include "src/fmt/fmt_helpers.h"
+#include "src/formatter/fmt_helpers.h"
 
 #include "syntaqlite/sqlite_tokens_gen.h"
 

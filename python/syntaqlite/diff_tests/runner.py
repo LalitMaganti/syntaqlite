@@ -18,8 +18,8 @@ from python.syntaqlite.diff_tests.utils import Colors, colorize, format_diff
 
 def _run_single_test(args: tuple) -> TestResult:
     """Worker function for parallel test execution."""
-    binary, name, blueprint = args
-    return execute_test(Path(binary), name, blueprint)
+    binary, subcommand, name, blueprint = args
+    return execute_test(Path(binary), name, blueprint, subcommand=subcommand)
 
 
 def print_run(name: str) -> None:
@@ -60,8 +60,10 @@ def print_failure_details(result: TestResult, rebaseline: bool = False) -> None:
 def main(argv: Optional[List[str]] = None) -> int:
     """Main entry point for the test runner."""
     parser = argparse.ArgumentParser(description='Run AST diff tests')
-    parser.add_argument('--binary', default='out/debug/ast_test',
-                        help='Path to ast_test binary')
+    parser.add_argument('--binary', default='out/mac_debug/synq',
+                        help='Path to synq binary')
+    parser.add_argument('--subcommand', default=None,
+                        help='Subcommand to pass to binary (e.g., ast, fmt)')
     parser.add_argument('--filter', help='Run only tests matching pattern')
     parser.add_argument('--jobs', '-j', type=int, default=None,
                         help='Number of parallel jobs')
@@ -114,7 +116,8 @@ def main(argv: Optional[List[str]] = None) -> int:
     results: List[TestResult] = []
     failed_tests: List[str] = []
 
-    test_args = [(str(binary), name, blueprint) for name, blueprint in tests]
+    subcommand = args.subcommand
+    test_args = [(str(binary), subcommand, name, blueprint) for name, blueprint in tests]
 
     # Submit all tests to the pool for parallel execution, then iterate
     # futures in submission order so output is serialized per-test.

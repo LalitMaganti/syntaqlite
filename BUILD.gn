@@ -1,8 +1,7 @@
 # Default target
 group("default") {
   deps = [
-    "src/ast:ast_test",
-    "src/fmt:fmt_test",
+    "src:synq",
     "third_party:lemon",
   ]
   testonly = true

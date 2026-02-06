@@ -4,7 +4,7 @@
 // Format recipe interpreter: walks a prefix-encoded SynqFmtOp array
 // and builds Wadler-Lindig documents.
 
-#include "src/fmt/fmt_helpers.h"
+#include "src/formatter/fmt_helpers.h"
 
 #include "src/ast/ast_nodes_gen.h"
 

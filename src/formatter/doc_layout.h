@@ -3,16 +3,16 @@
 
 // Wadler-Lindig layout engine: renders a doc tree to a formatted string.
 
-#ifndef SYNQ_SRC_FMT_DOC_LAYOUT_H
-#define SYNQ_SRC_FMT_DOC_LAYOUT_H
+#ifndef SYNQ_SRC_FORMATTER_DOC_LAYOUT_H
+#define SYNQ_SRC_FORMATTER_DOC_LAYOUT_H
 
-#include "src/fmt/doc.h"
+#include "src/formatter/doc.h"
 
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  // SYNQ_SRC_FORMATTER_DOC_LAYOUT_H
 
 // Render a document tree to a formatted string.
 // Returns malloc'd string (caller frees), or NULL on error.
@@ -20,6 +20,6 @@ char *synq_doc_layout(SynqDocContext *ctx, uint32_t root_id, uint32_t target_wid
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // SYNQ_SRC_FORMATTER_DOC_LAYOUT_H
 
-#endif  // SYNQ_SRC_FMT_DOC_LAYOUT_H
+#endif  // SYNQ_SRC_FORMATTER_DOC_LAYOUT_H

@@ -1,16 +1,19 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// SQL formatter: pretty-prints parsed SQL statements.
+// SQL formatter: pretty-prints SQL statements.
 //
-// Usage:
+// High-level (string in, string out):
+//   char *formatted = syntaqlite_format(sql, strlen(sql), NULL);
+//   // use formatted...
+//   free(formatted);
+//
+// Low-level (already-parsed statement):
 //   SyntaqliteParserConfig config = {.collect_tokens = 1};
 //   SyntaqliteParser *p = syntaqlite_parser_create(&config);
 //   syntaqlite_parser_reset(p, sql, len);
 //   SyntaqliteParseResult result = syntaqlite_parser_next(p);
-//   SyntaqliteFormatOptions opts = SYNTAQLITE_FORMAT_OPTIONS_DEFAULT;
-//   char *formatted = syntaqlite_format(p, result.root, &opts);
-//   // use formatted...
+//   char *formatted = syntaqlite_format_stmt(p, result.root, NULL);
 //   free(formatted);
 
 #ifndef SYNTAQLITE_FORMATTER_H
@@ -31,16 +34,22 @@ typedef struct SyntaqliteFormatOptions {
 
 #define SYNTAQLITE_FORMAT_OPTIONS_DEFAULT {80, 2}
 
-// Format a parsed statement to pretty-printed SQL.
+// Format a SQL string. Parses and formats all statements.
+// Returns malloc'd string (caller frees), or NULL on error.
+// options may be NULL for defaults.
+char *syntaqlite_format(const char *sql, uint32_t len,
+                        const SyntaqliteFormatOptions *options);
+
+// Format a single already-parsed statement.
 // Parser must have been created with collect_tokens=1 for comment preservation.
 // Returns malloc'd string (caller frees), or NULL on error.
-char *syntaqlite_format(SyntaqliteParser *parser, uint32_t root_id,
-                        const SyntaqliteFormatOptions *options);
+char *syntaqlite_format_stmt(SyntaqliteParser *parser, uint32_t root_id,
+                             const SyntaqliteFormatOptions *options);
 
 // Debug: print document IR tree instead of formatted output.
 // Returns malloc'd string (caller frees), or NULL on error.
-char *syntaqlite_format_debug_ir(SyntaqliteParser *parser, uint32_t root_id,
-                                 const SyntaqliteFormatOptions *options);
+char *syntaqlite_format_stmt_debug_ir(SyntaqliteParser *parser, uint32_t root_id,
+                                      const SyntaqliteFormatOptions *options);
 
 #ifdef __cplusplus
 }

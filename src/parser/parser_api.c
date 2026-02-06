@@ -6,18 +6,12 @@
 #include "src/ast/ast_nodes_gen.h"
 #include "src/ast/ast_print.h"
 #include "src/common/synq_sqlite_defs.h"
+#include "src/parser/sqlite_parse_gen.h"
 #include "syntaqlite/sqlite_tokens_gen.h"
-#include "src/fmt/token_list.h"
+#include "src/parser/token_list.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-// External parser functions (defined in sqlite_parse_gen.c)
-void *synq_sqlite3ParserAlloc(void *(*mallocProc)(size_t),
-                              SynqParseContext *pCtx);
-void synq_sqlite3Parser(void *parser, int tokenType, SynqToken token,
-                        SynqParseContext *pCtx);
-void synq_sqlite3ParserFree(void *parser, void (*freeProc)(void *));
 
 // External tokenizer function (defined in sqlite_tokenize_gen.c)
 i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType);
@@ -58,10 +52,6 @@ static void on_stack_overflow(SynqParseContext *ctx) {
     snprintf(p->error_msg, sizeof(p->error_msg), "Parser stack overflow");
 }
 
-// External Lemon parser functions for reset support.
-void synq_sqlite3ParserFinalize(void *p);
-void synq_sqlite3ParserInit(void *yypRawParser, SynqParseContext *pCtx);
-
 SyntaqliteParser *syntaqlite_parser_create(const SyntaqliteParserConfig *config) {
     SyntaqliteParser *p = (SyntaqliteParser *)calloc(1, sizeof(SyntaqliteParser));
     if (!p) return NULL;
@@ -91,6 +81,13 @@ SyntaqliteParser *syntaqlite_parser_create(const SyntaqliteParserConfig *config)
         free(p);
         return NULL;
     }
+
+    // Parser tracing (debug builds only)
+#ifndef NDEBUG
+    if (config && config->trace) {
+        synq_sqlite3ParserTrace(stderr, "PARSER: ");
+    }
+#endif
 
     return p;
 }
@@ -165,7 +162,7 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
         token.n = (int)tokenLen;
         token.type = tokenType;
 
-        synq_sqlite3Parser(p->lemon, tokenType, token, &p->parseCtx);
+        synq_sqlite3Parser(p->lemon, tokenType, token);
         p->last_token_type = tokenType;
         p->pos += (uint32_t)tokenLen;
 
@@ -196,7 +193,7 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
     // Reached end of input. Synthesize SEMI if last token wasn't one.
     if (p->last_token_type != 0 && p->last_token_type != TK_SEMI) {
         SynqToken semiToken = {NULL, 0, TK_SEMI};
-        synq_sqlite3Parser(p->lemon, TK_SEMI, semiToken, &p->parseCtx);
+        synq_sqlite3Parser(p->lemon, TK_SEMI, semiToken);
 
         if (p->had_error) {
             if (p->error_msg[0] == '\0') {
@@ -217,7 +214,7 @@ SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p) {
 
     // Send end-of-input to finalize parser
     SynqToken endToken = {NULL, 0, 0};
-    synq_sqlite3Parser(p->lemon, 0, endToken, &p->parseCtx);
+    synq_sqlite3Parser(p->lemon, 0, endToken);
     p->finished = 1;
 
     if (p->had_error) {

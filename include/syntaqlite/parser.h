@@ -33,6 +33,8 @@ typedef struct SyntaqliteParser SyntaqliteParser;
 // Parser configuration.
 typedef struct SyntaqliteParserConfig {
     int collect_tokens;  // If nonzero, collect all tokens for formatter use.
+    int trace;           // If nonzero, enable Lemon parser tracing on stderr
+                         // (debug builds only; ignored in release).
 } SyntaqliteParserConfig;
 
 // Result from syntaqlite_parser_next().
@@ -56,7 +58,7 @@ void syntaqlite_parser_reset(SyntaqliteParser *p, const char *source,
 // Bare semicolons are skipped automatically.
 SyntaqliteParseResult syntaqlite_parser_next(SyntaqliteParser *p);
 
-// Access a node by ID (valid for lifetime of parser).
+// Access a node by ID (valid until the next syntaqlite_parser_reset call).
 const SynqNode *syntaqlite_parser_node(SyntaqliteParser *p, uint32_t node_id);
 
 // Access the source text that was passed to syntaqlite_parser_reset().

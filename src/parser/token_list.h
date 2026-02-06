@@ -3,8 +3,8 @@
 
 // Token list for collecting raw tokens during parsing.
 
-#ifndef SYNQ_SRC_FMT_TOKEN_LIST_H
-#define SYNQ_SRC_FMT_TOKEN_LIST_H
+#ifndef SYNQ_SRC_PARSER_TOKEN_LIST_H
+#define SYNQ_SRC_PARSER_TOKEN_LIST_H
 
 #include "src/base/vec.h"
 
@@ -12,7 +12,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  // SYNQ_SRC_PARSER_TOKEN_LIST_H
 
 // Compact token for internal storage: 8 bytes, offset-based.
 typedef struct SynqRawToken {
@@ -33,6 +33,6 @@ void synq_token_list_append(SynqTokenList *list, uint32_t offset,
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // SYNQ_SRC_PARSER_TOKEN_LIST_H
 
-#endif  // SYNQ_SRC_FMT_TOKEN_LIST_H
+#endif  // SYNQ_SRC_PARSER_TOKEN_LIST_H

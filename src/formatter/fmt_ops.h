@@ -14,15 +14,15 @@
 //           FOP_CHILD(MyNode, columns),
 //   };
 
-#ifndef SYNQ_SRC_FMT_FMT_OPS_H
-#define SYNQ_SRC_FMT_FMT_OPS_H
+#ifndef SYNQ_SRC_FORMATTER_FMT_OPS_H
+#define SYNQ_SRC_FORMATTER_FMT_OPS_H
 
 #include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  // SYNQ_SRC_FORMATTER_FMT_OPS_H
 
 // ============ Op Kinds ============
 
@@ -239,6 +239,6 @@ extern const SynqFmtOp *synq_fmt_recipes[];
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // SYNQ_SRC_FORMATTER_FMT_OPS_H
 
-#endif  // SYNQ_SRC_FMT_FMT_OPS_H
+#endif  // SYNQ_SRC_FORMATTER_FMT_OPS_H

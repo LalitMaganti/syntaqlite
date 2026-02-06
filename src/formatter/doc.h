@@ -3,8 +3,8 @@
 
 // Document model for Wadler-Lindig pretty printer.
 
-#ifndef SYNQ_SRC_FMT_DOC_H
-#define SYNQ_SRC_FMT_DOC_H
+#ifndef SYNQ_SRC_FORMATTER_DOC_H
+#define SYNQ_SRC_FORMATTER_DOC_H
 
 #include "src/base/arena.h"
 
@@ -14,7 +14,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif  // SYNQ_SRC_FORMATTER_DOC_H
 
 // Null document ID (used for nullable fields)
 #define SYNQ_NULL_DOC 0xFFFFFFFFu
@@ -128,6 +128,6 @@ char *synq_doc_layout(SynqDocContext *ctx, uint32_t root_id, uint32_t target_wid
 
 #ifdef __cplusplus
 }
-#endif
+#endif  // SYNQ_SRC_FORMATTER_DOC_H
 
-#endif  // SYNQ_SRC_FMT_DOC_H
+#endif  // SYNQ_SRC_FORMATTER_DOC_H

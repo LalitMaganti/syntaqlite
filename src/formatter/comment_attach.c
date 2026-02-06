@@ -14,7 +14,7 @@
 //      If nothing precedes the comment, it's before the statement
 //      and attaches to the root instead.
 
-#include "src/fmt/comment_attach.h"
+#include "src/formatter/comment_attach.h"
 
 #include "syntaqlite/sqlite_tokens_gen.h"
 
