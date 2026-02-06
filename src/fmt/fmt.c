@@ -199,8 +199,9 @@ static uint32_t format_comma_list(FmtCtx *ctx, uint32_t *children, uint32_t coun
 
 // ============ Clause Helper ============
 
-// Emit: hardline + keyword + nest(indent, line + body)
+// Emit: line + keyword + nest(indent, line + body)
 // Used for FROM, WHERE, GROUP BY, etc.
+// Uses doc_line so the whole SELECT can collapse to one line when it fits.
 static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_doc) {
     if (body_doc == SYNTAQLITE_NULL_DOC) return SYNTAQLITE_NULL_DOC;
     uint32_t inner = concat_docs(ctx,
@@ -208,7 +209,7 @@ static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_do
         body_doc,
         SYNTAQLITE_NULL_DOC);
     return concat_docs(ctx,
-        doc_hardline(&ctx->docs),
+        doc_line(&ctx->docs),
         kw(ctx, keyword),
         doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner),
         SYNTAQLITE_NULL_DOC);
@@ -300,7 +301,7 @@ static uint32_t format_select(FmtCtx *ctx, SyntaqliteSelectStmt *sel) {
             format_clause(ctx, "WINDOW", window_body));
     }
 
-    return result;
+    return doc_group(&ctx->docs, result);
 }
 
 static uint32_t format_binary_expr(FmtCtx *ctx, SyntaqliteBinaryExpr *expr) {
