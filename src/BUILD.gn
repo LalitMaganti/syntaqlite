@@ -19,7 +19,7 @@ executable("syntaqlite") {
     "formatter:formatter_api",
   ]
   if (is_asan) {
-    deps += [ "//gn/standalone:asan_defaults" ]
+    deps += [ "../gn/standalone:asan_defaults" ]
   }
   configs += [ ":lemon_generated" ]
 }
@@ -35,7 +35,7 @@ executable("synqfmt") {
     "formatter:formatter_api",
   ]
   if (is_asan) {
-    deps += [ "//gn/standalone:asan_defaults" ]
+    deps += [ "../gn/standalone:asan_defaults" ]
   }
   configs += [ ":lemon_generated" ]
 }

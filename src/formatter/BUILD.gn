@@ -1,15 +1,23 @@
 # Document model, layout engine, and formatter.
+
+import("../../gn/sqlite_gen.gni")
+
+# Generated formatter dispatch.
+sqlite_gen("formatter_gen") {
+  sources = [ "fmt_gen.c" ]
+}
+
 source_set("fmt") {
   sources = [
     "doc.c",
     "doc.h",
-    "fmt_gen.c",
     "fmt_helpers.c",
     "fmt_helpers.h",
     "fmt_interpret.c",
     "fmt_ops.h",
   ]
   deps = [
+    ":formatter_gen",
     "../base:arena",
     "../base:vec",
     "../common",

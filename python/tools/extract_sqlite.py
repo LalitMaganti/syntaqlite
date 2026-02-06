@@ -489,9 +489,18 @@ def main():
     parser = argparse.ArgumentParser(description="Extract SQLite tokenizer and parser for syntaqlite")
     parser.add_argument("--prefix", default=DEFAULT_PREFIX, help=f"Symbol prefix (default: {DEFAULT_PREFIX})")
     parser.add_argument("--output", type=Path, default=OUTPUT_DIR, help="Output directory")
+    parser.add_argument("--lemon-bin", type=Path, help="Path to pre-built lemon binary")
+    parser.add_argument("--mkkeywordhash-bin", type=Path, help="Path to pre-built mkkeywordhash binary")
     args = parser.parse_args()
 
     runner = ToolRunner(root_dir=ROOT_DIR)
+
+    # Inject pre-built tool paths if provided (skips GN/ninja build step).
+    # Resolve relative to CWD since GN passes build-dir-relative paths.
+    if args.lemon_bin:
+        runner._tool_paths["lemon"] = args.lemon_bin.resolve()
+    if args.mkkeywordhash_bin:
+        runner._tool_paths["mkkeywordhash"] = args.mkkeywordhash_bin.resolve()
 
     if not runner.sqlite_src.exists():
         print(f"SQLite not found at {runner.sqlite_src}. Run tools/dev/install-build-deps first", file=sys.stderr)

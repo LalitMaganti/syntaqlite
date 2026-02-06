@@ -8,3 +8,7 @@
 
 # Build lock file used by tools/dev/build-lock
 out/.build.lock
+
+# Generated files (produced by python/tools/extract_sqlite.py)
+*_gen.c
+*_gen.h

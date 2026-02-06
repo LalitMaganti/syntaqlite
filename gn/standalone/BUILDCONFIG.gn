@@ -1,6 +1,45 @@
 # Build configuration for syntaqlite
+#
+# Two build modes are supported:
+#
+# 1. Standalone builds (default)
+#    syntaqlite_build_standalone = true
+#    syntaqlite_build_with_embedder = false
+#    syntaqlite_root_path = "//"
+#
+# 2. Embedder builds
+#    is_syntaqlite_embedder = true                     (set via gn args or embedder's .gn/.gni)
+#    syntaqlite_build_standalone = false
+#    syntaqlite_build_with_embedder = true
+#    syntaqlite_root_path = "//third_party/syntaqlite/" (or embedder overrides)
 
-# Declare build arguments
+declare_args() {
+  # Embedders set this to true in their .gn(i) files or via `gn args`.
+  # Separate from syntaqlite_build_with_embedder so it can be set via gn args.
+  is_syntaqlite_embedder = false
+}
+
+# Can be overridden by embedders directly in their .gn(i) files.
+# Must be a separate variable from is_syntaqlite_embedder because of how
+# GN scoping works.
+if (!defined(syntaqlite_build_with_embedder)) {
+  syntaqlite_build_with_embedder = is_syntaqlite_embedder
+}
+
+syntaqlite_build_standalone = !syntaqlite_build_with_embedder
+
+# Root path for syntaqlite sources. "//" for standalone builds.
+# Embedders override this to point at their vendored copy.
+if (syntaqlite_build_standalone) {
+  syntaqlite_root_path = "//"
+} else if (!defined(syntaqlite_root_path)) {
+  syntaqlite_root_path = "//third_party/syntaqlite/"
+}
+
+# +----------------------------------------------------------------------------+
+# | Toolchain configuration (standalone builds only)                           |
+# +----------------------------------------------------------------------------+
+
 declare_args() {
   is_debug = true
   is_asan = false

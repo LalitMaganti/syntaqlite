@@ -1,12 +1,21 @@
 # Public API headers for syntaqlite.
 
+import("../../gn/sqlite_gen.gni")
+
+# Generated public headers.
+sqlite_gen("headers_gen") {
+  sources = [
+    "ast_nodes_gen.h",
+    "sqlite_tokens_gen.h",
+  ]
+}
+
 source_set("headers") {
   sources = [
     "ast_defs.h",
-    "ast_nodes_gen.h",
     "formatter.h",
-    "sqlite_tokens_gen.h",
     "tokenizer.h",
     "parser.h",
   ]
+  deps = [ ":headers_gen" ]
 }

@@ -1,0 +1,150 @@
+# Code generation action: runs extract_sqlite.py to produce all *_gen* files.
+#
+# Consumers should NOT depend on this target directly. Instead, use the
+# sqlite_gen() template (from //gn/sqlite_gen.gni) which copies the relevant
+# outputs into the consumer's own gen dir.
+
+action("extract_sqlite") {
+  script = "tools/extract_sqlite.py"
+
+  # Pre-built tool binaries (built by GN as deps below).
+  _lemon = "$root_out_dir/lemon"
+  _mkkeywordhash = "$root_out_dir/mkkeywordhash"
+
+  # Output under our own gen dir; sqlite_gen() targets copy files out.
+  _output_dir = "$target_gen_dir/src"
+
+  args = [
+    "--output",
+    rebase_path(_output_dir, root_build_dir),
+    "--lemon-bin",
+    rebase_path(_lemon, root_build_dir),
+    "--mkkeywordhash-bin",
+    rebase_path(_mkkeywordhash, root_build_dir),
+  ]
+
+  deps = [
+    "../third_party:lemon",
+    "../third_party:mkkeywordhash",
+  ]
+
+  # --- Inputs ---
+
+  # The script itself.
+  inputs = [ "tools/extract_sqlite.py" ]
+
+  # SQLite sources consumed by the extractor.
+  inputs += [
+    "../third_party/src/sqlite/src/parse.y",
+    "../third_party/src/sqlite/src/tokenize.c",
+    "../third_party/src/sqlite/src/global.c",
+    "../third_party/src/sqlite/src/sqliteInt.h",
+    "../third_party/src/sqlite/tool/lempar.c",
+    "../third_party/src/sqlite/tool/mkkeywordhash.c",
+  ]
+
+  # Grammar action files (src/parser/actions/*.y).
+  inputs += [
+    "../src/parser/actions/_common.y",
+    "../src/parser/actions/aggregate.y",
+    "../src/parser/actions/cast.y",
+    "../src/parser/actions/column_ref_select.y",
+    "../src/parser/actions/column_refs.y",
+    "../src/parser/actions/compound.y",
+    "../src/parser/actions/conditionals.y",
+    "../src/parser/actions/create_table.y",
+    "../src/parser/actions/cte.y",
+    "../src/parser/actions/dml.y",
+    "../src/parser/actions/expressions.y",
+    "../src/parser/actions/exprlists.y",
+    "../src/parser/actions/functions.y",
+    "../src/parser/actions/identifiers.y",
+    "../src/parser/actions/literals.y",
+    "../src/parser/actions/misc_expr.y",
+    "../src/parser/actions/orderby.y",
+    "../src/parser/actions/raise_expr.y",
+    "../src/parser/actions/schema_ops.y",
+    "../src/parser/actions/select.y",
+    "../src/parser/actions/table_source.y",
+    "../src/parser/actions/trigger.y",
+    "../src/parser/actions/utility_stmts.y",
+    "../src/parser/actions/values.y",
+    "../src/parser/actions/virtual_table.y",
+    "../src/parser/actions/window.y",
+  ]
+
+  # Node definition files (src/parser/nodes/*.py).
+  inputs += [
+    "../src/parser/nodes/__init__.py",
+    "../src/parser/nodes/_common.py",
+    "../src/parser/nodes/aggregate.py",
+    "../src/parser/nodes/cast.py",
+    "../src/parser/nodes/column_ref.py",
+    "../src/parser/nodes/compound.py",
+    "../src/parser/nodes/conditionals.py",
+    "../src/parser/nodes/create_table.py",
+    "../src/parser/nodes/cte.py",
+    "../src/parser/nodes/dml.py",
+    "../src/parser/nodes/expressions.py",
+    "../src/parser/nodes/functions.py",
+    "../src/parser/nodes/misc_expr.py",
+    "../src/parser/nodes/raise_expr.py",
+    "../src/parser/nodes/schema_ops.py",
+    "../src/parser/nodes/select.py",
+    "../src/parser/nodes/table_source.py",
+    "../src/parser/nodes/trigger.py",
+    "../src/parser/nodes/utility_stmts.py",
+    "../src/parser/nodes/values.py",
+    "../src/parser/nodes/window.py",
+  ]
+
+  # AST codegen infrastructure (python/syntaqlite/ast_codegen/).
+  inputs += [
+    "syntaqlite/ast_codegen/__init__.py",
+    "syntaqlite/ast_codegen/codegen.py",
+    "syntaqlite/ast_codegen/defs.py",
+    "syntaqlite/ast_codegen/fmt_codegen.py",
+    "syntaqlite/ast_codegen/fmt_dsl.py",
+    "syntaqlite/ast_codegen/validator.py",
+  ]
+
+  # SQLite extractor infrastructure (python/syntaqlite/sqlite_extractor/).
+  inputs += [
+    "syntaqlite/__init__.py",
+    "syntaqlite/sqlite_extractor/__init__.py",
+    "syntaqlite/sqlite_extractor/c_tokenizer.py",
+    "syntaqlite/sqlite_extractor/generators.py",
+    "syntaqlite/sqlite_extractor/grammar_build.py",
+    "syntaqlite/sqlite_extractor/lempar_transform.py",
+    "syntaqlite/sqlite_extractor/parser_extract.py",
+    "syntaqlite/sqlite_extractor/tools.py",
+    "syntaqlite/sqlite_extractor/transforms.py",
+  ]
+
+  # --- Outputs ---
+  # All under $target_gen_dir (= $root_gen_dir/python).
+
+  # Parser generated files.
+  outputs = [
+    "$target_gen_dir/src/parser/sqlite_parse_gen.c",
+    "$target_gen_dir/src/parser/ast_nodes_gen.h",
+    "$target_gen_dir/src/parser/ast_builder_gen.h",
+    "$target_gen_dir/src/parser/ast_builder_gen.c",
+    "$target_gen_dir/src/parser/ast_print_gen.c",
+  ]
+
+  # Tokenizer generated files.
+  outputs += [
+    "$target_gen_dir/src/tokenizer/sqlite_charmap_gen.h",
+    "$target_gen_dir/src/tokenizer/sqlite_tokenize_gen.c",
+  ]
+
+  # Formatter generated file.
+  outputs += [ "$target_gen_dir/src/formatter/fmt_gen.c" ]
+
+  # Public headers.
+  outputs += [
+    "$target_gen_dir/include/syntaqlite/ast_nodes_gen.h",
+    "$target_gen_dir/include/syntaqlite/sqlite_tokens_gen.h",
+  ]
+}

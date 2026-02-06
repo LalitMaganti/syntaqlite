@@ -45,6 +45,8 @@ config("default") {
   include_dirs = [
     "../../include",
     "../../",
+    "$root_gen_dir/include",
+    "$root_gen_dir",
   ]
 }
 

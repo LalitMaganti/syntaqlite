@@ -1,3 +1,4 @@
 # Root GN configuration for syntaqlite
 
 buildconfig = "//gn/standalone/BUILDCONFIG.gn"
+script_executable = "python3"

@@ -1,21 +1,32 @@
 # SQLite parser and AST.
 # Regenerate with: python3 python/tools/extract_sqlite.py
 
-# AST node types, builder functions, and printer.
-source_set("ast") {
-  sources = [
-    # Base types (manually maintained)
-    "ast_base.c",
-    "ast_base.h",
+import("../../gn/sqlite_gen.gni")
 
-    # Generated files
+# Generated AST files (builder, nodes header, printer).
+sqlite_gen("ast_gen") {
+  sources = [
     "ast_builder_gen.c",
     "ast_builder_gen.h",
     "ast_nodes_gen.h",
     "ast_print_gen.c",
+  ]
+}
+
+# Generated Lemon parser.
+sqlite_gen("parser_gen") {
+  sources = [ "sqlite_parse_gen.c" ]
+}
+
+# AST node types, builder functions, and printer.
+source_set("ast") {
+  sources = [
+    "ast_base.c",
+    "ast_base.h",
     "ast_print.h",
   ]
   deps = [
+    ":ast_gen",
     "../base:arena",
     "../base:vec",
     "../common",
@@ -37,10 +48,10 @@ source_set("token_list") {
 # Lemon-generated parser.
 source_set("parser") {
   sources = [
-    "sqlite_parse_gen.c",
     "sqlite_parse_gen.h",
   ]
   deps = [
+    ":parser_gen",
     "../common",
     "../tokenizer",
   ]

@@ -11,6 +11,7 @@ config("mkkeywordhash_config") {
   cflags = [
     "-Wno-missing-field-initializers",
     "-Wno-unused-parameter",
+    "-Wno-sign-compare",
   ]
 }
 

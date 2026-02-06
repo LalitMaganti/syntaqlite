@@ -71,6 +71,9 @@ Only three forms allowed (enforced by `python/tools/check_includes.py`):
 Format: `SYNTAQLITE_<PATH>_H` (e.g., `SYNTAQLITE_SRC_LEXER_H`)
 Fix with: `python/tools/fix_include_guards.py`
 
+### GN Paths
+Always use relative paths in BUILD.gn files — never `//`-prefixed absolute paths. Use `../` to reach parent directories. Exceptions: `.gni` template files (labels must resolve from any importing BUILD.gn) and `configs -=` (labels must match the exact form used by BUILDCONFIG.gn).
+
 ### Compiler Flags
 Strict: `-Wall -Wextra -Werror`, no exceptions, no RTTI by default.
 
