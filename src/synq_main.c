@@ -2,12 +2,14 @@
 // Licensed under the Apache License, Version 2.0.
 
 // Combined syntaqlite CLI tool.
-// Usage: synq <command> [options] < input.sql
+// Usage: syntaqlite <command> [options] < input.sql
 //
 // Commands:
 //   ast   Parse SQL and print AST tree
 //   fmt   Parse SQL and print formatted output
 //   doc   Parse SQL and print document IR tree (debug)
+//
+// Also built as `synqfmt` which defaults to fmt mode (no subcommand needed).
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,10 +18,6 @@
 #include "src/base/synq_getopt.h"
 #include "syntaqlite/formatter.h"
 #include "syntaqlite/parser.h"
-
-#ifndef NDEBUG
-void synq_sqlite3ParserTrace(FILE *TraceFILE, char *zTracePrompt);
-#endif
 
 enum synq_mode {
   SYNQ_MODE_AST,
@@ -51,55 +49,87 @@ static char *read_stdin(size_t *out_len) {
   return buf;
 }
 
-static void print_usage(const char *prog) {
-  fprintf(stdout,
-          "Usage: %s <command> [options] < input.sql\n"
-          "\n"
-          "Reads SQL from stdin and processes it.\n"
-          "\n"
-          "Commands:\n"
-          "  ast       Parse SQL and print AST tree\n"
-          "  fmt       Parse SQL and print formatted output\n"
-          "  doc       Parse SQL and print document IR tree (debug)\n"
-          "\n"
-          "Options:\n"
-          "  --trace      Enable Lemon parser trace on stderr (debug builds only)\n"
-          "  --width=N    Target line width (default: 80, applies to fmt/doc)\n"
-          "  --help       Show this help message and exit\n",
-          prog);
+static void print_usage(const char *prog, int is_synqfmt) {
+  if (is_synqfmt) {
+    fprintf(stdout,
+            "Usage: %s [options] < input.sql\n"
+            "\n"
+            "Reads SQL from stdin and prints formatted output.\n"
+            "\n"
+            "Options:\n"
+            "  --trace      Enable Lemon parser trace on stderr (debug builds "
+            "only)\n"
+            "  --width=N    Target line width (default: 80)\n"
+            "  --help       Show this help message and exit\n",
+            prog);
+  } else {
+    fprintf(stdout,
+            "Usage: %s <command> [options] < input.sql\n"
+            "\n"
+            "Reads SQL from stdin and processes it.\n"
+            "\n"
+            "Commands:\n"
+            "  ast       Parse SQL and print AST tree\n"
+            "  fmt       Parse SQL and print formatted output\n"
+            "  doc       Parse SQL and print document IR tree (debug)\n"
+            "\n"
+            "Options:\n"
+            "  --trace      Enable Lemon parser trace on stderr (debug builds "
+            "only)\n"
+            "  --width=N    Target line width (default: 80, applies to "
+            "fmt/doc)\n"
+            "  --help       Show this help message and exit\n",
+            prog);
+  }
 }
 
 int main(int argc, char **argv) {
   const char *prog = argv[0];
 
-  if (argc < 2) {
-    print_usage(prog);
-    return 1;
-  }
+  // Detect basename to check if invoked as synqfmt
+  const char *basename = prog;
+  const char *slash = strrchr(prog, '/');
+  if (slash) basename = slash + 1;
+#ifdef _WIN32
+  const char *bslash = strrchr(basename, '\\');
+  if (bslash) basename = bslash + 1;
+#endif
+  int is_synqfmt = strcmp(basename, "synqfmt") == 0;
 
-  // Handle --help before subcommand
-  if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
-    print_usage(prog);
-    return 0;
-  }
-
-  // Parse subcommand
   enum synq_mode mode;
-  if (strcmp(argv[1], "ast") == 0) {
-    mode = SYNQ_MODE_AST;
-  } else if (strcmp(argv[1], "fmt") == 0) {
-    mode = SYNQ_MODE_FMT;
-  } else if (strcmp(argv[1], "doc") == 0) {
-    mode = SYNQ_MODE_DOC;
-  } else {
-    fprintf(stderr, "Unknown command: %s\n", argv[1]);
-    fprintf(stderr, "Try '%s --help' for usage information.\n", prog);
-    return 1;
-  }
 
-  // Shift argv past subcommand for option parsing
-  argc--;
-  argv++;
+  if (is_synqfmt) {
+    // synqfmt defaults to fmt mode, no subcommand needed
+    mode = SYNQ_MODE_FMT;
+  } else {
+    if (argc < 2) {
+      print_usage(prog, 0);
+      return 1;
+    }
+
+    // Handle --help before subcommand
+    if (strcmp(argv[1], "--help") == 0 || strcmp(argv[1], "-h") == 0) {
+      print_usage(prog, 0);
+      return 0;
+    }
+
+    // Parse subcommand
+    if (strcmp(argv[1], "ast") == 0) {
+      mode = SYNQ_MODE_AST;
+    } else if (strcmp(argv[1], "fmt") == 0) {
+      mode = SYNQ_MODE_FMT;
+    } else if (strcmp(argv[1], "doc") == 0) {
+      mode = SYNQ_MODE_DOC;
+    } else {
+      fprintf(stderr, "Unknown command: %s\n", argv[1]);
+      fprintf(stderr, "Try '%s --help' for usage information.\n", prog);
+      return 1;
+    }
+
+    // Shift argv past subcommand for option parsing
+    argc--;
+    argv++;
+  }
 
   int trace = 0;
   uint32_t width = 80;
@@ -123,7 +153,7 @@ int main(int argc, char **argv) {
         width = (uint32_t)atoi(opt.arg);
         break;
       case 'h':
-        print_usage(prog);
+        print_usage(prog, is_synqfmt);
         return 0;
       default:
         fprintf(stderr, "Try '%s --help' for usage information.\n", prog);
@@ -144,18 +174,13 @@ int main(int argc, char **argv) {
     return 0;
   }
 
-#ifndef NDEBUG
-  if (trace) {
-    synq_sqlite3ParserTrace(stderr, "PARSER: ");
-  }
-#else
-  (void)trace;
-#endif
-
   // Create parser (enable token collection for fmt/doc)
   SyntaqliteParserConfig *config_ptr = NULL;
-  SyntaqliteParserConfig config = {.collect_tokens = 1};
+  SyntaqliteParserConfig config = {.collect_tokens = 1, .trace = trace};
   if (mode == SYNQ_MODE_FMT || mode == SYNQ_MODE_DOC) {
+    config_ptr = &config;
+  } else if (trace) {
+    config.collect_tokens = 0;
     config_ptr = &config;
   }
   SyntaqliteParser *parser = syntaqlite_parser_create(config_ptr);

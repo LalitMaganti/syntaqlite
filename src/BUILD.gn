@@ -8,8 +8,24 @@ config("lemon_generated") {
   ]
 }
 
-# Combined CLI tool: synq <ast|fmt|doc> [options] < input.sql
-executable("synq") {
+# Combined CLI tool: syntaqlite <ast|fmt|doc> [options] < input.sql
+executable("syntaqlite") {
+  testonly = true
+  sources = [ "synq_main.c" ]
+  deps = [
+    "base:getopt",
+    "../include/syntaqlite:headers",
+    "parser:parser_api",
+    "formatter:formatter_api",
+  ]
+  if (is_asan) {
+    deps += [ "//gn/standalone:asan_defaults" ]
+  }
+  configs += [ ":lemon_generated" ]
+}
+
+# Shortcut: synqfmt [options] < input.sql (defaults to fmt mode)
+executable("synqfmt") {
   testonly = true
   sources = [ "synq_main.c" ]
   deps = [

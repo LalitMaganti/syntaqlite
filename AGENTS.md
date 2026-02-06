@@ -42,7 +42,7 @@ tools/dev/gn gen out/mac_asan --args="is_debug=true is_asan=true"
 
 ### AST Diff Tests (Python)
 ```bash
-tools/tests/run-ast-diff-tests --binary out/mac_debug/ast_test
+tools/tests/run-ast-diff-tests --binary out/mac_debug/syntaqlite
 tools/tests/run-ast-diff-tests --filter select --jobs 4   # Filter + parallel
 tools/tests/run-ast-diff-tests --rebaseline               # Print expected outputs
 ```

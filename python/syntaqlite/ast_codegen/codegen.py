@@ -40,7 +40,7 @@ TYPE_MAP = {
 
 def _flags_type_name(flags_name: str) -> str:
     """Generate C union type name from flags name."""
-    return f"Synq{flags_name}"
+    return f"Syntaqlite{flags_name}"
 
 
 def _field_c_type(field_type, enum_names: set[str], flags_names: set[str] | None = None) -> str:
@@ -51,7 +51,7 @@ def _field_c_type(field_type, enum_names: set[str], flags_names: set[str] | None
     if type_name in TYPE_MAP:
         return TYPE_MAP[type_name]
     if type_name in enum_names:
-        return f"Synq{type_name}"
+        return f"Syntaqlite{type_name}"
     if flags_names and type_name in flags_names:
         return _flags_type_name(type_name)
     return type_name
@@ -59,12 +59,12 @@ def _field_c_type(field_type, enum_names: set[str], flags_names: set[str] | None
 
 def _struct_name(node_name: str) -> str:
     """Generate C struct name from node name."""
-    return f"Synq{node_name}"
+    return f"Syntaqlite{node_name}"
 
 
 def _tag_name(node_name: str) -> str:
     """Generate enum tag name from node name."""
-    return f"SYNQ_NODE_{pascal_to_snake(node_name).upper()}"
+    return f"SYNTAQLITE_NODE_{pascal_to_snake(node_name).upper()}"
 
 
 def _builder_name(node_name: str) -> str:
@@ -74,7 +74,7 @@ def _builder_name(node_name: str) -> str:
 
 def _enum_prefix(enum_name: str) -> str:
     """Generate enum value prefix from enum name."""
-    return f"SYNQ_{pascal_to_snake(enum_name).upper()}"
+    return f"SYNTAQLITE_{pascal_to_snake(enum_name).upper()}"
 
 
 def _build_node_params(node: NodeDef, enum_names: set[str], flags_names: set[str] | None = None) -> list[str]:
@@ -110,7 +110,7 @@ def _emit_enums(lines: list[str], enum_defs: list[EnumDef]) -> None:
         lines.append(f"typedef enum {{")
         for i, value in enumerate(enum.values):
             lines.append(f"    {prefix}_{value} = {i},")
-        lines.append(f"}} Synq{enum.name};")
+        lines.append(f"}} Syntaqlite{enum.name};")
         lines.append("")
 
 
@@ -157,11 +157,11 @@ def _emit_node_tags(lines: list[str], node_defs: list[AnyNodeDef]) -> None:
     lines.append("// ============ Node Tags ============")
     lines.append("")
     lines.append("typedef enum {")
-    lines.append("    SYNQ_NODE_NULL = 0,")
+    lines.append("    SYNTAQLITE_NODE_NULL = 0,")
     for node in node_defs:
         lines.append(f"    {_tag_name(node.name)},")
-    lines.append("    SYNQ_NODE_COUNT")
-    lines.append("} SynqNodeTag;")
+    lines.append("    SYNTAQLITE_NODE_COUNT")
+    lines.append("} SyntaqliteNodeTag;")
     lines.append("")
 
 
@@ -196,13 +196,13 @@ def _emit_node_union(lines: list[str], node_defs: list[AnyNodeDef]) -> None:
     """Emit the SynqNode union."""
     lines.append("// ============ Node Union ============")
     lines.append("")
-    lines.append("typedef union SynqNode {")
+    lines.append("typedef union SyntaqliteNode {")
     lines.append("    uint8_t tag;")
     for node in node_defs:
         struct_name = _struct_name(node.name)
         field_name = pascal_to_snake(node.name)
         lines.append(f"    {struct_name} {field_name};")
-    lines.append("} SynqNode;")
+    lines.append("} SyntaqliteNode;")
     lines.append("")
 
 
@@ -239,17 +239,17 @@ def generate_public_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[Enu
     lines.append("#endif")
     lines.append("")
 
-    # SYNQ_NULL_NODE
+    # SYNTAQLITE_NULL_NODE
     lines.append("// Null node ID (used for nullable fields)")
-    lines.append("#define SYNQ_NULL_NODE 0xFFFFFFFFu")
+    lines.append("#define SYNTAQLITE_NULL_NODE 0xFFFFFFFFu")
     lines.append("")
 
-    # SynqSourceSpan
+    # SyntaqliteSourceSpan
     lines.append("// Source location span (offset + length into source text)")
-    lines.append("typedef struct SynqSourceSpan {")
+    lines.append("typedef struct SyntaqliteSourceSpan {")
     lines.append("    uint32_t offset;")
     lines.append("    uint16_t length;")
-    lines.append("} SynqSourceSpan;")
+    lines.append("} SyntaqliteSourceSpan;")
     lines.append("")
 
     _emit_enums(lines, enum_defs)
@@ -306,9 +306,9 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
 
     # Node access (needs SynqArena from ast_base.h)
     lines.append("// Access node by ID")
-    lines.append("inline SynqNode* synq_ast_node(SynqArena *ast, uint32_t id) {")
-    lines.append("    if (id == SYNQ_NULL_NODE) return NULL;")
-    lines.append("    return (SynqNode*)(ast->data + ast->offsets[id]);")
+    lines.append("inline SyntaqliteNode* synq_ast_node(SynqArena *ast, uint32_t id) {")
+    lines.append("    if (id == SYNTAQLITE_NULL_NODE) return NULL;")
+    lines.append("    return (SyntaqliteNode*)(ast->data + ast->offsets[id]);")
     lines.append("}")
     lines.append("")
     lines.append("#define AST_NODE(ast, id) synq_ast_node(ast, id)")
@@ -406,14 +406,14 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines.append("#include <string.h>")
     lines.append("")
     lines.append("// External definition for inline function (C99/C11).")
-    lines.append("extern inline SynqNode* synq_ast_node(SynqArena *ast, uint32_t id);")
+    lines.append("extern inline SyntaqliteNode* synq_ast_node(SynqArena *ast, uint32_t id);")
     lines.append("")
 
     # Node size table - collect fixed-size nodes
     lines.append("// ============ Node Size Table ============")
     lines.append("")
     lines.append("static const size_t node_base_sizes[] = {")
-    lines.append("    [SYNQ_NODE_NULL] = 0,")
+    lines.append("    [SYNTAQLITE_NODE_NULL] = 0,")
     for node in node_defs:
         tag = _tag_name(node.name)
         struct_name = _struct_name(node.name)
@@ -422,7 +422,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines.append("")
 
     lines.append("size_t synq_node_base_size(uint8_t tag) {")
-    lines.append("    if (tag >= SYNQ_NODE_COUNT) return 0;")
+    lines.append("    if (tag >= SYNTAQLITE_NODE_COUNT) return 0;")
     lines.append("    return node_base_sizes[tag];")
     lines.append("}")
     lines.append("")
@@ -458,7 +458,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             ]
             span_fields = [
                 (fn, ft) for fn, ft in node.fields.items()
-                if isinstance(ft, InlineField) and ft.type_name == "SynqSourceSpan"
+                if isinstance(ft, InlineField) and ft.type_name == "SyntaqliteSourceSpan"
             ]
             if index_fields or span_fields:
                 lines.append("")
@@ -499,7 +499,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
 
             # Append function (via accumulator)
             lines.append(f"uint32_t {func_name}_append(SynqAstContext *ctx, uint32_t list_id, uint32_t child) {{")
-            lines.append("    if (list_id == SYNQ_NULL_NODE) {")
+            lines.append("    if (list_id == SYNTAQLITE_NULL_NODE) {")
             lines.append(f"        return {func_name}(ctx, child);")
             lines.append("    }")
             lines.append(f"    return synq_ast_list_append(ctx, list_id, child, {tag});")
@@ -538,7 +538,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,")
     lines.append("                       const char *source, int depth,")
     lines.append("                       const char *field_name) {")
-    lines.append("  if (node_id == SYNQ_NULL_NODE) {")
+    lines.append("  if (node_id == SYNTAQLITE_NULL_NODE) {")
     lines.append("    if (field_name) {")
     lines.append("      synq_ast_print_indent(out, depth);")
     lines.append('      fprintf(out, "%s: null\\n", field_name);')
@@ -546,7 +546,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("    return;")
     lines.append("  }")
     lines.append("")
-    lines.append("  SynqNode *node = AST_NODE(ast, node_id);")
+    lines.append("  SyntaqliteNode *node = AST_NODE(ast, node_id);")
     lines.append("  if (!node) {")
     lines.append("    return;")
     lines.append("  }")

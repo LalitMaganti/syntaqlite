@@ -1,7 +1,8 @@
 # Default target
 group("default") {
   deps = [
-    "src:synq",
+    "src:syntaqlite",
+    "src:synqfmt",
     "third_party:lemon",
   ]
   testonly = true

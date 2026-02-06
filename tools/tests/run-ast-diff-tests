@@ -15,7 +15,7 @@ if __name__ == '__main__':
     has_binary = any(a.startswith('--binary') for a in argv)
     has_subcommand = any(a.startswith('--subcommand') for a in argv)
     if not has_binary:
-        argv = ['--binary', 'out/mac_debug/synq'] + argv
+        argv = ['--binary', 'out/mac_debug/syntaqlite'] + argv
     if not has_subcommand:
         argv = ['--subcommand', 'ast'] + argv
     sys.exit(main(argv))

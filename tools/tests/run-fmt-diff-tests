@@ -16,7 +16,7 @@ if __name__ == '__main__':
     has_subcommand = any(a.startswith('--subcommand') for a in argv)
     has_test_dir = any(a.startswith('--test-dir') for a in argv)
     if not has_binary:
-        argv = ['--binary', 'out/mac_debug/synq'] + argv
+        argv = ['--binary', 'out/mac_debug/syntaqlite'] + argv
     if not has_subcommand:
         argv = ['--subcommand', 'fmt'] + argv
     if not has_test_dir:
