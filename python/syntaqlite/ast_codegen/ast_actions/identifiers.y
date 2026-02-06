@@ -21,11 +21,3 @@ nm(A) ::= ID|INDEXED|JOIN_KW(B). {
 nm(A) ::= STRING(B). {
     A = B;
 }
-
-ids(A) ::= ID(B). {
-    A = B;
-}
-
-ids(A) ::= STRING(B). {
-    A = B;
-}

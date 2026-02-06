@@ -26,8 +26,8 @@ selectnowith(A) ::= oneselect(B). {
     A = B;
 }
 
-oneselect(A) ::= SELECT distinct(B) selcollist(C) from where_opt(E) groupby_opt(F) having_opt(G) orderby_opt(H) limit_opt(I). {
-    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C, E, F, G, H, I);
+oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_opt(F) having_opt(G) orderby_opt(H) limit_opt(I). {
+    A = ast_select_stmt(pCtx->astCtx, (uint8_t)B, C, D, E, F, G, H, I);
 }
 
 // ============ Result columns ============
@@ -60,7 +60,7 @@ as(A) ::= AS nm(B). {
     A = B;
 }
 
-as(A) ::= ids(B). {
+as(A) ::= ID|STRING(B). {
     A = B;
 }
 

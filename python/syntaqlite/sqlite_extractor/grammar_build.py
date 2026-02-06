@@ -92,7 +92,8 @@ def _parse_actions_file(actions_path: Path) -> dict[str, str]:
         # Build full rule text with type annotations and action code
         full_rule = f"{lhs} ::= {rhs_text}.{prec_marker} {action_code}"
 
-        # Build signature without type annotations for matching
+        # Build signature without type annotations for matching, but keeping
+        # the trailing dot and precedence marker to match lemon -g output.
         # "lhs(A)" -> "lhs", "rhs1(B) rhs2(C)" -> "rhs1 rhs2"
         def strip_annotations(s):
             return re.sub(r'\([A-Z]+\)', '', s).strip()
@@ -100,9 +101,9 @@ def _parse_actions_file(actions_path: Path) -> dict[str, str]:
         lhs_clean = strip_annotations(lhs)
         rhs_clean = ' '.join(strip_annotations(tok) for tok in rhs_text.split())
 
-        signature = f"{lhs_clean} ::= {rhs_clean}".strip()
-        if signature.endswith(' ::='):
-            signature = signature[:-4] + ' ::='  # Handle empty RHS
+        signature = f"{lhs_clean} ::= {rhs_clean}.{prec_marker}"
+        if not rhs_clean:
+            signature = f"{lhs_clean} ::=.{prec_marker}"
 
         rules[signature] = full_rule
 
@@ -430,13 +431,46 @@ def _generate_grammar_file(
 
 // Non-terminals that pass through token info (not node IDs)
 %type nm {{SyntaqliteToken}}
-%type ids {{SyntaqliteToken}}
 %type as {{SyntaqliteToken}}
 %type scanpt {{SyntaqliteToken}}
 %type likeop {{SyntaqliteToken}}
 %type dbnm {{SyntaqliteToken}}
 %type multiselect_op {{int}}
 %type in_op {{int}}
+%type typetoken {{SyntaqliteToken}}
+%type typename {{SyntaqliteToken}}
+%type withnm {{SyntaqliteToken}}
+%type wqas {{int}}
+%type collate {{int}}
+%type raisetype {{int}}
+%type joinop {{int}}
+%type indexed_by {{SyntaqliteToken}}
+
+// DML support
+%type insert_cmd {{int}}
+%type orconf {{int}}
+%type resolvetype {{int}}
+%type indexed_opt {{SyntaqliteToken}}
+
+// Schema/Transaction support
+%type ifexists {{int}}
+%type transtype {{int}}
+%type trans_opt {{int}}
+%type savepoint_opt {{int}}
+%type kwcolumn_opt {{int}}
+%type columnname {{SyntaqliteToken}}
+
+// Utility/Create support
+%type ifnotexists {{int}}
+%type temp {{int}}
+%type uniqueflag {{int}}
+%type database_kw_opt {{int}}
+%type explain {{int}}
+%type createkw {{SyntaqliteToken}}
+%type signed {{SyntaqliteToken}}
+%type plus_num {{SyntaqliteToken}}
+%type minus_num {{SyntaqliteToken}}
+%type nmnum {{SyntaqliteToken}}
 
 %syntax_error {{
   (void)yymajor;
@@ -496,18 +530,8 @@ def _generate_grammar_file(
     # Grammar rules - use action version if available, otherwise bare rule
     parts.append("// Grammar rules\n")
     for rule in rules:
-        # Extract signature from the bare rule:
-        # - Remove trailing . (if present)
-        # - Remove precedence markers like [BITNOT]
-        # Example: "expr ::= PLUS|MINUS expr. [BITNOT]" -> "expr ::= PLUS|MINUS expr"
-        bare_sig = rule
-        # Remove precedence marker if present
-        if ' [' in bare_sig:
-            bare_sig = bare_sig[:bare_sig.rfind(' [')]
-        # Remove trailing dot
-        bare_sig = bare_sig.rstrip('. ')
-        if bare_sig in action_rules:
-            parts.append(action_rules[bare_sig] + "\n")
+        if rule in action_rules:
+            parts.append(action_rules[rule] + "\n")
         else:
             parts.append(rule + "\n")
 

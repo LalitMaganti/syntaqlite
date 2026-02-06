@@ -23,6 +23,7 @@ typedef enum {
     SYNTAQLITE_LITERAL_TYPE_BLOB = 3,
     SYNTAQLITE_LITERAL_TYPE_NULL = 4,
     SYNTAQLITE_LITERAL_TYPE_CURRENT = 5,
+    SYNTAQLITE_LITERAL_TYPE_QNUMBER = 6,
 } SyntaqliteLiteralType;
 
 typedef enum {
@@ -44,6 +45,7 @@ typedef enum {
     SYNTAQLITE_BINARY_OP_LSHIFT = 15,
     SYNTAQLITE_BINARY_OP_RSHIFT = 16,
     SYNTAQLITE_BINARY_OP_CONCAT = 17,
+    SYNTAQLITE_BINARY_OP_PTR = 18,
 } SyntaqliteBinaryOp;
 
 typedef enum {
@@ -80,6 +82,72 @@ typedef enum {
     SYNTAQLITE_COMPOUND_OP_EXCEPT = 3,
 } SyntaqliteCompoundOp;
 
+typedef enum {
+    SYNTAQLITE_RAISE_TYPE_IGNORE = 0,
+    SYNTAQLITE_RAISE_TYPE_ROLLBACK = 1,
+    SYNTAQLITE_RAISE_TYPE_ABORT = 2,
+    SYNTAQLITE_RAISE_TYPE_FAIL = 3,
+} SyntaqliteRaiseType;
+
+typedef enum {
+    SYNTAQLITE_JOIN_TYPE_COMMA = 0,
+    SYNTAQLITE_JOIN_TYPE_INNER = 1,
+    SYNTAQLITE_JOIN_TYPE_LEFT = 2,
+    SYNTAQLITE_JOIN_TYPE_RIGHT = 3,
+    SYNTAQLITE_JOIN_TYPE_FULL = 4,
+    SYNTAQLITE_JOIN_TYPE_CROSS = 5,
+    SYNTAQLITE_JOIN_TYPE_NATURAL_INNER = 6,
+    SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT = 7,
+    SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT = 8,
+    SYNTAQLITE_JOIN_TYPE_NATURAL_FULL = 9,
+} SyntaqliteJoinType;
+
+typedef enum {
+    SYNTAQLITE_CONFLICT_ACTION_DEFAULT = 0,
+    SYNTAQLITE_CONFLICT_ACTION_ROLLBACK = 1,
+    SYNTAQLITE_CONFLICT_ACTION_ABORT = 2,
+    SYNTAQLITE_CONFLICT_ACTION_FAIL = 3,
+    SYNTAQLITE_CONFLICT_ACTION_IGNORE = 4,
+    SYNTAQLITE_CONFLICT_ACTION_REPLACE = 5,
+} SyntaqliteConflictAction;
+
+typedef enum {
+    SYNTAQLITE_DROP_OBJECT_TYPE_TABLE = 0,
+    SYNTAQLITE_DROP_OBJECT_TYPE_INDEX = 1,
+    SYNTAQLITE_DROP_OBJECT_TYPE_VIEW = 2,
+    SYNTAQLITE_DROP_OBJECT_TYPE_TRIGGER = 3,
+} SyntaqliteDropObjectType;
+
+typedef enum {
+    SYNTAQLITE_ALTER_OP_RENAME_TABLE = 0,
+    SYNTAQLITE_ALTER_OP_RENAME_COLUMN = 1,
+    SYNTAQLITE_ALTER_OP_DROP_COLUMN = 2,
+    SYNTAQLITE_ALTER_OP_ADD_COLUMN = 3,
+} SyntaqliteAlterOp;
+
+typedef enum {
+    SYNTAQLITE_TRANSACTION_TYPE_DEFERRED = 0,
+    SYNTAQLITE_TRANSACTION_TYPE_IMMEDIATE = 1,
+    SYNTAQLITE_TRANSACTION_TYPE_EXCLUSIVE = 2,
+} SyntaqliteTransactionType;
+
+typedef enum {
+    SYNTAQLITE_TRANSACTION_OP_BEGIN = 0,
+    SYNTAQLITE_TRANSACTION_OP_COMMIT = 1,
+    SYNTAQLITE_TRANSACTION_OP_ROLLBACK = 2,
+} SyntaqliteTransactionOp;
+
+typedef enum {
+    SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT = 0,
+    SYNTAQLITE_SAVEPOINT_OP_RELEASE = 1,
+    SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO = 2,
+} SyntaqliteSavepointOp;
+
+typedef enum {
+    SYNTAQLITE_EXPLAIN_MODE_EXPLAIN = 0,
+    SYNTAQLITE_EXPLAIN_MODE_QUERY_PLAN = 1,
+} SyntaqliteExplainMode;
+
 static const char* const syntaqlite_literal_type_names[] = {
     "INTEGER",
     "FLOAT",
@@ -87,6 +155,7 @@ static const char* const syntaqlite_literal_type_names[] = {
     "BLOB",
     "NULL",
     "CURRENT",
+    "QNUMBER",
 };
 
 static const char* const syntaqlite_binary_op_names[] = {
@@ -108,6 +177,7 @@ static const char* const syntaqlite_binary_op_names[] = {
     "LSHIFT",
     "RSHIFT",
     "CONCAT",
+    "PTR",
 };
 
 static const char* const syntaqlite_unary_op_names[] = {
@@ -144,6 +214,72 @@ static const char* const syntaqlite_compound_op_names[] = {
     "EXCEPT",
 };
 
+static const char* const syntaqlite_raise_type_names[] = {
+    "IGNORE",
+    "ROLLBACK",
+    "ABORT",
+    "FAIL",
+};
+
+static const char* const syntaqlite_join_type_names[] = {
+    "COMMA",
+    "INNER",
+    "LEFT",
+    "RIGHT",
+    "FULL",
+    "CROSS",
+    "NATURAL_INNER",
+    "NATURAL_LEFT",
+    "NATURAL_RIGHT",
+    "NATURAL_FULL",
+};
+
+static const char* const syntaqlite_conflict_action_names[] = {
+    "DEFAULT",
+    "ROLLBACK",
+    "ABORT",
+    "FAIL",
+    "IGNORE",
+    "REPLACE",
+};
+
+static const char* const syntaqlite_drop_object_type_names[] = {
+    "TABLE",
+    "INDEX",
+    "VIEW",
+    "TRIGGER",
+};
+
+static const char* const syntaqlite_alter_op_names[] = {
+    "RENAME_TABLE",
+    "RENAME_COLUMN",
+    "DROP_COLUMN",
+    "ADD_COLUMN",
+};
+
+static const char* const syntaqlite_transaction_type_names[] = {
+    "DEFERRED",
+    "IMMEDIATE",
+    "EXCLUSIVE",
+};
+
+static const char* const syntaqlite_transaction_op_names[] = {
+    "BEGIN",
+    "COMMIT",
+    "ROLLBACK",
+};
+
+static const char* const syntaqlite_savepoint_op_names[] = {
+    "SAVEPOINT",
+    "RELEASE",
+    "ROLLBACK_TO",
+};
+
+static const char* const syntaqlite_explain_mode_names[] = {
+    "EXPLAIN",
+    "QUERY_PLAN",
+};
+
 // ============ Node Tags ============
 
 typedef enum {
@@ -172,6 +308,36 @@ typedef enum {
     SYNTAQLITE_NODE_IN_EXPR,
     SYNTAQLITE_NODE_VARIABLE,
     SYNTAQLITE_NODE_COLLATE_EXPR,
+    SYNTAQLITE_NODE_CAST_EXPR,
+    SYNTAQLITE_NODE_VALUES_ROW_LIST,
+    SYNTAQLITE_NODE_VALUES_CLAUSE,
+    SYNTAQLITE_NODE_CTE_DEFINITION,
+    SYNTAQLITE_NODE_CTE_LIST,
+    SYNTAQLITE_NODE_WITH_CLAUSE,
+    SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL,
+    SYNTAQLITE_NODE_RAISE_EXPR,
+    SYNTAQLITE_NODE_TABLE_REF,
+    SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE,
+    SYNTAQLITE_NODE_JOIN_CLAUSE,
+    SYNTAQLITE_NODE_JOIN_PREFIX,
+    SYNTAQLITE_NODE_DELETE_STMT,
+    SYNTAQLITE_NODE_SET_CLAUSE,
+    SYNTAQLITE_NODE_SET_CLAUSE_LIST,
+    SYNTAQLITE_NODE_UPDATE_STMT,
+    SYNTAQLITE_NODE_INSERT_STMT,
+    SYNTAQLITE_NODE_QUALIFIED_NAME,
+    SYNTAQLITE_NODE_DROP_STMT,
+    SYNTAQLITE_NODE_ALTER_TABLE_STMT,
+    SYNTAQLITE_NODE_TRANSACTION_STMT,
+    SYNTAQLITE_NODE_SAVEPOINT_STMT,
+    SYNTAQLITE_NODE_PRAGMA_STMT,
+    SYNTAQLITE_NODE_ANALYZE_STMT,
+    SYNTAQLITE_NODE_ATTACH_STMT,
+    SYNTAQLITE_NODE_DETACH_STMT,
+    SYNTAQLITE_NODE_VACUUM_STMT,
+    SYNTAQLITE_NODE_EXPLAIN_STMT,
+    SYNTAQLITE_NODE_CREATE_INDEX_STMT,
+    SYNTAQLITE_NODE_CREATE_VIEW_STMT,
     SYNTAQLITE_NODE_COUNT
 } SyntaqliteNodeTag;
 
@@ -223,6 +389,7 @@ typedef struct SyntaqliteSelectStmt {
     uint8_t tag;
     uint8_t flags;
     uint32_t columns;
+    uint32_t from_clause;
     uint32_t where;
     uint32_t groupby;
     uint32_t having;
@@ -344,6 +511,221 @@ typedef struct SyntaqliteCollateExpr {
     SyntaqliteSourceSpan collation;
 } SyntaqliteCollateExpr;
 
+typedef struct SyntaqliteCastExpr {
+    uint8_t tag;
+    uint32_t expr;
+    SyntaqliteSourceSpan type_name;
+} SyntaqliteCastExpr;
+
+// List of ExprList
+typedef struct SyntaqliteValuesRowList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteValuesRowList;
+
+typedef struct SyntaqliteValuesClause {
+    uint8_t tag;
+    uint32_t rows;
+} SyntaqliteValuesClause;
+
+typedef struct SyntaqliteCteDefinition {
+    uint8_t tag;
+    SyntaqliteSourceSpan cte_name;
+    uint8_t materialized;
+    uint32_t columns;
+    uint32_t select;
+} SyntaqliteCteDefinition;
+
+// List of CteDefinition
+typedef struct SyntaqliteCteList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteCteList;
+
+typedef struct SyntaqliteWithClause {
+    uint8_t tag;
+    uint8_t recursive;
+    uint32_t ctes;
+    uint32_t select;
+} SyntaqliteWithClause;
+
+typedef struct SyntaqliteAggregateFunctionCall {
+    uint8_t tag;
+    SyntaqliteSourceSpan func_name;
+    uint8_t flags;
+    uint32_t args;
+    uint32_t orderby;
+} SyntaqliteAggregateFunctionCall;
+
+typedef struct SyntaqliteRaiseExpr {
+    uint8_t tag;
+    SyntaqliteRaiseType raise_type;
+    uint32_t error_message;
+} SyntaqliteRaiseExpr;
+
+typedef struct SyntaqliteTableRef {
+    uint8_t tag;
+    SyntaqliteSourceSpan table_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteSourceSpan alias;
+} SyntaqliteTableRef;
+
+typedef struct SyntaqliteSubqueryTableSource {
+    uint8_t tag;
+    uint32_t select;
+    SyntaqliteSourceSpan alias;
+} SyntaqliteSubqueryTableSource;
+
+typedef struct SyntaqliteJoinClause {
+    uint8_t tag;
+    SyntaqliteJoinType join_type;
+    uint32_t left;
+    uint32_t right;
+    uint32_t on_expr;
+    uint32_t using_columns;
+} SyntaqliteJoinClause;
+
+typedef struct SyntaqliteJoinPrefix {
+    uint8_t tag;
+    uint32_t source;
+    SyntaqliteJoinType join_type;
+} SyntaqliteJoinPrefix;
+
+typedef struct SyntaqliteDeleteStmt {
+    uint8_t tag;
+    uint32_t table;
+    uint32_t where;
+} SyntaqliteDeleteStmt;
+
+typedef struct SyntaqliteSetClause {
+    uint8_t tag;
+    SyntaqliteSourceSpan column;
+    uint32_t columns;
+    uint32_t value;
+} SyntaqliteSetClause;
+
+// List of SetClause
+typedef struct SyntaqliteSetClauseList {
+    uint8_t tag;
+    uint8_t _pad[3];
+    uint32_t count;
+    uint32_t children[];  // flexible array of indices
+} SyntaqliteSetClauseList;
+
+typedef struct SyntaqliteUpdateStmt {
+    uint8_t tag;
+    SyntaqliteConflictAction conflict_action;
+    uint32_t table;
+    uint32_t setlist;
+    uint32_t from_clause;
+    uint32_t where;
+} SyntaqliteUpdateStmt;
+
+typedef struct SyntaqliteInsertStmt {
+    uint8_t tag;
+    SyntaqliteConflictAction conflict_action;
+    uint32_t table;
+    uint32_t columns;
+    uint32_t source;
+} SyntaqliteInsertStmt;
+
+typedef struct SyntaqliteQualifiedName {
+    uint8_t tag;
+    SyntaqliteSourceSpan object_name;
+    SyntaqliteSourceSpan schema;
+} SyntaqliteQualifiedName;
+
+typedef struct SyntaqliteDropStmt {
+    uint8_t tag;
+    SyntaqliteDropObjectType object_type;
+    uint8_t if_exists;
+    uint32_t target;
+} SyntaqliteDropStmt;
+
+typedef struct SyntaqliteAlterTableStmt {
+    uint8_t tag;
+    SyntaqliteAlterOp op;
+    uint32_t target;
+    SyntaqliteSourceSpan new_name;
+    SyntaqliteSourceSpan old_name;
+} SyntaqliteAlterTableStmt;
+
+typedef struct SyntaqliteTransactionStmt {
+    uint8_t tag;
+    SyntaqliteTransactionOp op;
+    SyntaqliteTransactionType trans_type;
+} SyntaqliteTransactionStmt;
+
+typedef struct SyntaqliteSavepointStmt {
+    uint8_t tag;
+    SyntaqliteSavepointOp op;
+    SyntaqliteSourceSpan savepoint_name;
+} SyntaqliteSavepointStmt;
+
+typedef struct SyntaqlitePragmaStmt {
+    uint8_t tag;
+    SyntaqliteSourceSpan pragma_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteSourceSpan value;
+    uint8_t pragma_form;
+} SyntaqlitePragmaStmt;
+
+typedef struct SyntaqliteAnalyzeStmt {
+    uint8_t tag;
+    SyntaqliteSourceSpan target_name;
+    SyntaqliteSourceSpan schema;
+    uint8_t is_reindex;
+} SyntaqliteAnalyzeStmt;
+
+typedef struct SyntaqliteAttachStmt {
+    uint8_t tag;
+    uint32_t filename;
+    uint32_t db_name;
+    uint32_t key;
+} SyntaqliteAttachStmt;
+
+typedef struct SyntaqliteDetachStmt {
+    uint8_t tag;
+    uint32_t db_name;
+} SyntaqliteDetachStmt;
+
+typedef struct SyntaqliteVacuumStmt {
+    uint8_t tag;
+    SyntaqliteSourceSpan schema;
+    uint32_t into_expr;
+} SyntaqliteVacuumStmt;
+
+typedef struct SyntaqliteExplainStmt {
+    uint8_t tag;
+    SyntaqliteExplainMode explain_mode;
+    uint32_t stmt;
+} SyntaqliteExplainStmt;
+
+typedef struct SyntaqliteCreateIndexStmt {
+    uint8_t tag;
+    SyntaqliteSourceSpan index_name;
+    SyntaqliteSourceSpan schema;
+    SyntaqliteSourceSpan table_name;
+    uint8_t is_unique;
+    uint8_t if_not_exists;
+    uint32_t columns;
+    uint32_t where;
+} SyntaqliteCreateIndexStmt;
+
+typedef struct SyntaqliteCreateViewStmt {
+    uint8_t tag;
+    SyntaqliteSourceSpan view_name;
+    SyntaqliteSourceSpan schema;
+    uint8_t is_temp;
+    uint8_t if_not_exists;
+    uint32_t column_names;
+    uint32_t select;
+} SyntaqliteCreateViewStmt;
+
 // ============ Node Union ============
 
 typedef union SyntaqliteNode {
@@ -372,6 +754,36 @@ typedef union SyntaqliteNode {
     SyntaqliteInExpr in_expr;
     SyntaqliteVariable variable;
     SyntaqliteCollateExpr collate_expr;
+    SyntaqliteCastExpr cast_expr;
+    SyntaqliteValuesRowList values_row_list;
+    SyntaqliteValuesClause values_clause;
+    SyntaqliteCteDefinition cte_definition;
+    SyntaqliteCteList cte_list;
+    SyntaqliteWithClause with_clause;
+    SyntaqliteAggregateFunctionCall aggregate_function_call;
+    SyntaqliteRaiseExpr raise_expr;
+    SyntaqliteTableRef table_ref;
+    SyntaqliteSubqueryTableSource subquery_table_source;
+    SyntaqliteJoinClause join_clause;
+    SyntaqliteJoinPrefix join_prefix;
+    SyntaqliteDeleteStmt delete_stmt;
+    SyntaqliteSetClause set_clause;
+    SyntaqliteSetClauseList set_clause_list;
+    SyntaqliteUpdateStmt update_stmt;
+    SyntaqliteInsertStmt insert_stmt;
+    SyntaqliteQualifiedName qualified_name;
+    SyntaqliteDropStmt drop_stmt;
+    SyntaqliteAlterTableStmt alter_table_stmt;
+    SyntaqliteTransactionStmt transaction_stmt;
+    SyntaqliteSavepointStmt savepoint_stmt;
+    SyntaqlitePragmaStmt pragma_stmt;
+    SyntaqliteAnalyzeStmt analyze_stmt;
+    SyntaqliteAttachStmt attach_stmt;
+    SyntaqliteDetachStmt detach_stmt;
+    SyntaqliteVacuumStmt vacuum_stmt;
+    SyntaqliteExplainStmt explain_stmt;
+    SyntaqliteCreateIndexStmt create_index_stmt;
+    SyntaqliteCreateViewStmt create_view_stmt;
 } SyntaqliteNode;
 
 // Access node by ID

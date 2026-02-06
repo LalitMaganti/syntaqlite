@@ -12,27 +12,13 @@
 // - Terminals are SyntaqliteToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
-// ============ Expression Lists ============
+// ============ Aggregate Function with ORDER BY ============
 
-exprlist(A) ::= nexprlist(B). {
-    A = B;
-}
-
-exprlist(A) ::= . {
-    A = SYNTAQLITE_NULL_NODE;
-}
-
-nexprlist(A) ::= nexprlist(B) COMMA expr(C). {
-    A = ast_expr_list_append(pCtx->astCtx, B, C);
-}
-
-nexprlist(A) ::= expr(B). {
-    A = ast_expr_list(pCtx->astCtx, B);
-}
-
-// ============ Row Value Tuple ============
-// (1, 2, 3) => ExprList with 3 elements
-
-expr(A) ::= LP nexprlist(X) COMMA expr(Y) RP. {
-    A = ast_expr_list_append(pCtx->astCtx, X, Y);
+// Aggregate function call: func(args ORDER BY sortlist) or func(DISTINCT args ORDER BY sortlist)
+expr(A) ::= ID|INDEXED|JOIN_KW(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E) RP. {
+    A = ast_aggregate_function_call(pCtx->astCtx,
+        syntaqlite_span(pCtx, B),
+        (uint8_t)C,
+        D,
+        E);
 }

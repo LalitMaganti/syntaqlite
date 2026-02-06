@@ -54,6 +54,7 @@ uint32_t ast_select_stmt(
     SyntaqliteAstContext *ctx,
     uint8_t flags,
     uint32_t columns,
+    uint32_t from_clause,
     uint32_t where,
     uint32_t groupby,
     uint32_t having,
@@ -140,6 +141,184 @@ uint32_t ast_in_expr(SyntaqliteAstContext *ctx, uint8_t negated, uint32_t operan
 uint32_t ast_variable(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan source);
 
 uint32_t ast_collate_expr(SyntaqliteAstContext *ctx, uint32_t expr, SyntaqliteSourceSpan collation);
+
+uint32_t ast_cast_expr(SyntaqliteAstContext *ctx, uint32_t expr, SyntaqliteSourceSpan type_name);
+
+// Create empty ValuesRowList
+uint32_t ast_values_row_list_empty(SyntaqliteAstContext *ctx);
+
+// Create ValuesRowList with single child
+uint32_t ast_values_row_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to ValuesRowList (may reallocate, returns new list ID)
+uint32_t ast_values_row_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_values_clause(SyntaqliteAstContext *ctx, uint32_t rows);
+
+uint32_t ast_cte_definition(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan cte_name,
+    uint8_t materialized,
+    uint32_t columns,
+    uint32_t select
+);
+
+// Create empty CteList
+uint32_t ast_cte_list_empty(SyntaqliteAstContext *ctx);
+
+// Create CteList with single child
+uint32_t ast_cte_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to CteList (may reallocate, returns new list ID)
+uint32_t ast_cte_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_with_clause(SyntaqliteAstContext *ctx, uint8_t recursive, uint32_t ctes, uint32_t select);
+
+uint32_t ast_aggregate_function_call(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan func_name,
+    uint8_t flags,
+    uint32_t args,
+    uint32_t orderby
+);
+
+uint32_t ast_raise_expr(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteRaiseType raise_type,
+    uint32_t error_message
+);
+
+uint32_t ast_table_ref(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan table_name,
+    SyntaqliteSourceSpan schema,
+    SyntaqliteSourceSpan alias
+);
+
+uint32_t ast_subquery_table_source(SyntaqliteAstContext *ctx, uint32_t select, SyntaqliteSourceSpan alias);
+
+uint32_t ast_join_clause(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteJoinType join_type,
+    uint32_t left,
+    uint32_t right,
+    uint32_t on_expr,
+    uint32_t using_columns
+);
+
+uint32_t ast_join_prefix(SyntaqliteAstContext *ctx, uint32_t source, SyntaqliteJoinType join_type);
+
+uint32_t ast_delete_stmt(SyntaqliteAstContext *ctx, uint32_t table, uint32_t where);
+
+uint32_t ast_set_clause(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan column,
+    uint32_t columns,
+    uint32_t value
+);
+
+// Create empty SetClauseList
+uint32_t ast_set_clause_list_empty(SyntaqliteAstContext *ctx);
+
+// Create SetClauseList with single child
+uint32_t ast_set_clause_list(SyntaqliteAstContext *ctx, uint32_t first_child);
+
+// Append child to SetClauseList (may reallocate, returns new list ID)
+uint32_t ast_set_clause_list_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);
+
+uint32_t ast_update_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteConflictAction conflict_action,
+    uint32_t table,
+    uint32_t setlist,
+    uint32_t from_clause,
+    uint32_t where
+);
+
+uint32_t ast_insert_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteConflictAction conflict_action,
+    uint32_t table,
+    uint32_t columns,
+    uint32_t source
+);
+
+uint32_t ast_qualified_name(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan object_name,
+    SyntaqliteSourceSpan schema
+);
+
+uint32_t ast_drop_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteDropObjectType object_type,
+    uint8_t if_exists,
+    uint32_t target
+);
+
+uint32_t ast_alter_table_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteAlterOp op,
+    uint32_t target,
+    SyntaqliteSourceSpan new_name,
+    SyntaqliteSourceSpan old_name
+);
+
+uint32_t ast_transaction_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteTransactionOp op,
+    SyntaqliteTransactionType trans_type
+);
+
+uint32_t ast_savepoint_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSavepointOp op,
+    SyntaqliteSourceSpan savepoint_name
+);
+
+uint32_t ast_pragma_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan pragma_name,
+    SyntaqliteSourceSpan schema,
+    SyntaqliteSourceSpan value,
+    uint8_t pragma_form
+);
+
+uint32_t ast_analyze_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan target_name,
+    SyntaqliteSourceSpan schema,
+    uint8_t is_reindex
+);
+
+uint32_t ast_attach_stmt(SyntaqliteAstContext *ctx, uint32_t filename, uint32_t db_name, uint32_t key);
+
+uint32_t ast_detach_stmt(SyntaqliteAstContext *ctx, uint32_t db_name);
+
+uint32_t ast_vacuum_stmt(SyntaqliteAstContext *ctx, SyntaqliteSourceSpan schema, uint32_t into_expr);
+
+uint32_t ast_explain_stmt(SyntaqliteAstContext *ctx, SyntaqliteExplainMode explain_mode, uint32_t stmt);
+
+uint32_t ast_create_index_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan index_name,
+    SyntaqliteSourceSpan schema,
+    SyntaqliteSourceSpan table_name,
+    uint8_t is_unique,
+    uint8_t if_not_exists,
+    uint32_t columns,
+    uint32_t where
+);
+
+uint32_t ast_create_view_stmt(
+    SyntaqliteAstContext *ctx,
+    SyntaqliteSourceSpan view_name,
+    SyntaqliteSourceSpan schema,
+    uint8_t is_temp,
+    uint8_t if_not_exists,
+    uint32_t column_names,
+    uint32_t select
+);
 
 #ifdef __cplusplus
 }

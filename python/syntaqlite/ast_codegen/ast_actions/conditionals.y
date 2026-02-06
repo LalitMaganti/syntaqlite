@@ -49,7 +49,7 @@ between_op(A) ::= NOT BETWEEN. {
     A = 1;
 }
 
-expr(A) ::= expr(B) between_op(C) expr(D) AND expr(E). {
+expr(A) ::= expr(B) between_op(C) expr(D) AND expr(E). [BETWEEN] {
     A = ast_between_expr(pCtx->astCtx, (uint8_t)C, B, D, E);
 }
 
@@ -64,12 +64,12 @@ likeop(A) ::= NOT LIKE_KW|MATCH(B). {
     A.n |= 0x80000000;
 }
 
-expr(A) ::= expr(B) likeop(C) expr(D). {
+expr(A) ::= expr(B) likeop(C) expr(D). [LIKE_KW] {
     uint8_t negated = (C.n & 0x80000000) ? 1 : 0;
     A = ast_like_expr(pCtx->astCtx, negated, B, D, SYNTAQLITE_NULL_NODE);
 }
 
-expr(A) ::= expr(B) likeop(C) expr(D) ESCAPE expr(E). {
+expr(A) ::= expr(B) likeop(C) expr(D) ESCAPE expr(E). [LIKE_KW] {
     uint8_t negated = (C.n & 0x80000000) ? 1 : 0;
     A = ast_like_expr(pCtx->astCtx, negated, B, D, E);
 }

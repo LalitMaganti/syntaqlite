@@ -90,6 +90,7 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       ast_print_indent(out, depth + 1);
       fprintf(out, "flags: %u\n", node->select_stmt.flags);
       print_node(out, ast, node->select_stmt.columns, source, depth + 1);
+      print_node(out, ast, node->select_stmt.from_clause, source, depth + 1);
       print_node(out, ast, node->select_stmt.where, source, depth + 1);
       print_node(out, ast, node->select_stmt.groupby, source, depth + 1);
       print_node(out, ast, node->select_stmt.having, source, depth + 1);
@@ -267,6 +268,371 @@ static void print_node(FILE *out, SyntaqliteAst *ast, uint32_t node_id,
       fprintf(out, "collation: ");
       ast_print_source_span(out, source, node->collate_expr.collation);
       fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CAST_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CastExpr\n");
+      print_node(out, ast, node->cast_expr.expr, source, depth + 1);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "type_name: ");
+      ast_print_source_span(out, source, node->cast_expr.type_name);
+      fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_VALUES_ROW_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ValuesRowList[%u]\n", node->values_row_list.count);
+      for (uint32_t i = 0; i < node->values_row_list.count; i++) {
+        print_node(out, ast, node->values_row_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_VALUES_CLAUSE: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ValuesClause\n");
+      print_node(out, ast, node->values_clause.rows, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CTE_DEFINITION: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CteDefinition\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "cte_name: ");
+      ast_print_source_span(out, source, node->cte_definition.cte_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "materialized: %u\n", node->cte_definition.materialized);
+      print_node(out, ast, node->cte_definition.columns, source, depth + 1);
+      print_node(out, ast, node->cte_definition.select, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CTE_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CteList[%u]\n", node->cte_list.count);
+      for (uint32_t i = 0; i < node->cte_list.count; i++) {
+        print_node(out, ast, node->cte_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_WITH_CLAUSE: {
+      ast_print_indent(out, depth);
+      fprintf(out, "WithClause\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "recursive: %u\n", node->with_clause.recursive);
+      print_node(out, ast, node->with_clause.ctes, source, depth + 1);
+      print_node(out, ast, node->with_clause.select, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL: {
+      ast_print_indent(out, depth);
+      fprintf(out, "AggregateFunctionCall\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "func_name: ");
+      ast_print_source_span(out, source, node->aggregate_function_call.func_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "flags: %u\n", node->aggregate_function_call.flags);
+      print_node(out, ast, node->aggregate_function_call.args, source, depth + 1);
+      print_node(out, ast, node->aggregate_function_call.orderby, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_RAISE_EXPR: {
+      ast_print_indent(out, depth);
+      fprintf(out, "RaiseExpr\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "raise_type: %s\n", syntaqlite_raise_type_names[node->raise_expr.raise_type]);
+      print_node(out, ast, node->raise_expr.error_message, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_TABLE_REF: {
+      ast_print_indent(out, depth);
+      fprintf(out, "TableRef\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "table_name: ");
+      ast_print_source_span(out, source, node->table_ref.table_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->table_ref.schema);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "alias: ");
+      ast_print_source_span(out, source, node->table_ref.alias);
+      fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE: {
+      ast_print_indent(out, depth);
+      fprintf(out, "SubqueryTableSource\n");
+      print_node(out, ast, node->subquery_table_source.select, source, depth + 1);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "alias: ");
+      ast_print_source_span(out, source, node->subquery_table_source.alias);
+      fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_JOIN_CLAUSE: {
+      ast_print_indent(out, depth);
+      fprintf(out, "JoinClause\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "join_type: %s\n", syntaqlite_join_type_names[node->join_clause.join_type]);
+      print_node(out, ast, node->join_clause.left, source, depth + 1);
+      print_node(out, ast, node->join_clause.right, source, depth + 1);
+      print_node(out, ast, node->join_clause.on_expr, source, depth + 1);
+      print_node(out, ast, node->join_clause.using_columns, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_JOIN_PREFIX: {
+      ast_print_indent(out, depth);
+      fprintf(out, "JoinPrefix\n");
+      print_node(out, ast, node->join_prefix.source, source, depth + 1);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "join_type: %s\n", syntaqlite_join_type_names[node->join_prefix.join_type]);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_DELETE_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "DeleteStmt\n");
+      print_node(out, ast, node->delete_stmt.table, source, depth + 1);
+      print_node(out, ast, node->delete_stmt.where, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_SET_CLAUSE: {
+      ast_print_indent(out, depth);
+      fprintf(out, "SetClause\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "column: ");
+      ast_print_source_span(out, source, node->set_clause.column);
+      fprintf(out, "\n");
+      print_node(out, ast, node->set_clause.columns, source, depth + 1);
+      print_node(out, ast, node->set_clause.value, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_SET_CLAUSE_LIST: {
+      ast_print_indent(out, depth);
+      fprintf(out, "SetClauseList[%u]\n", node->set_clause_list.count);
+      for (uint32_t i = 0; i < node->set_clause_list.count; i++) {
+        print_node(out, ast, node->set_clause_list.children[i], source, depth + 1);
+      }
+      break;
+    }
+
+    case SYNTAQLITE_NODE_UPDATE_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "UpdateStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "conflict_action: %s\n", syntaqlite_conflict_action_names[node->update_stmt.conflict_action]);
+      print_node(out, ast, node->update_stmt.table, source, depth + 1);
+      print_node(out, ast, node->update_stmt.setlist, source, depth + 1);
+      print_node(out, ast, node->update_stmt.from_clause, source, depth + 1);
+      print_node(out, ast, node->update_stmt.where, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_INSERT_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "InsertStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "conflict_action: %s\n", syntaqlite_conflict_action_names[node->insert_stmt.conflict_action]);
+      print_node(out, ast, node->insert_stmt.table, source, depth + 1);
+      print_node(out, ast, node->insert_stmt.columns, source, depth + 1);
+      print_node(out, ast, node->insert_stmt.source, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_QUALIFIED_NAME: {
+      ast_print_indent(out, depth);
+      fprintf(out, "QualifiedName\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "object_name: ");
+      ast_print_source_span(out, source, node->qualified_name.object_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->qualified_name.schema);
+      fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_DROP_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "DropStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "object_type: %s\n", syntaqlite_drop_object_type_names[node->drop_stmt.object_type]);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "if_exists: %u\n", node->drop_stmt.if_exists);
+      print_node(out, ast, node->drop_stmt.target, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_ALTER_TABLE_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "AlterTableStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", syntaqlite_alter_op_names[node->alter_table_stmt.op]);
+      print_node(out, ast, node->alter_table_stmt.target, source, depth + 1);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "new_name: ");
+      ast_print_source_span(out, source, node->alter_table_stmt.new_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "old_name: ");
+      ast_print_source_span(out, source, node->alter_table_stmt.old_name);
+      fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_TRANSACTION_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "TransactionStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", syntaqlite_transaction_op_names[node->transaction_stmt.op]);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "trans_type: %s\n", syntaqlite_transaction_type_names[node->transaction_stmt.trans_type]);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_SAVEPOINT_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "SavepointStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", syntaqlite_savepoint_op_names[node->savepoint_stmt.op]);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "savepoint_name: ");
+      ast_print_source_span(out, source, node->savepoint_stmt.savepoint_name);
+      fprintf(out, "\n");
+      break;
+    }
+
+    case SYNTAQLITE_NODE_PRAGMA_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "PragmaStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "pragma_name: ");
+      ast_print_source_span(out, source, node->pragma_stmt.pragma_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->pragma_stmt.schema);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "value: ");
+      ast_print_source_span(out, source, node->pragma_stmt.value);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "pragma_form: %u\n", node->pragma_stmt.pragma_form);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_ANALYZE_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "AnalyzeStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "target_name: ");
+      ast_print_source_span(out, source, node->analyze_stmt.target_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->analyze_stmt.schema);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "is_reindex: %u\n", node->analyze_stmt.is_reindex);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_ATTACH_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "AttachStmt\n");
+      print_node(out, ast, node->attach_stmt.filename, source, depth + 1);
+      print_node(out, ast, node->attach_stmt.db_name, source, depth + 1);
+      print_node(out, ast, node->attach_stmt.key, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_DETACH_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "DetachStmt\n");
+      print_node(out, ast, node->detach_stmt.db_name, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_VACUUM_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "VacuumStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->vacuum_stmt.schema);
+      fprintf(out, "\n");
+      print_node(out, ast, node->vacuum_stmt.into_expr, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_EXPLAIN_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "ExplainStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "explain_mode: %s\n", syntaqlite_explain_mode_names[node->explain_stmt.explain_mode]);
+      print_node(out, ast, node->explain_stmt.stmt, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CREATE_INDEX_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CreateIndexStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "index_name: ");
+      ast_print_source_span(out, source, node->create_index_stmt.index_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->create_index_stmt.schema);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "table_name: ");
+      ast_print_source_span(out, source, node->create_index_stmt.table_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "is_unique: %u\n", node->create_index_stmt.is_unique);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %u\n", node->create_index_stmt.if_not_exists);
+      print_node(out, ast, node->create_index_stmt.columns, source, depth + 1);
+      print_node(out, ast, node->create_index_stmt.where, source, depth + 1);
+      break;
+    }
+
+    case SYNTAQLITE_NODE_CREATE_VIEW_STMT: {
+      ast_print_indent(out, depth);
+      fprintf(out, "CreateViewStmt\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "view_name: ");
+      ast_print_source_span(out, source, node->create_view_stmt.view_name);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "schema: ");
+      ast_print_source_span(out, source, node->create_view_stmt.schema);
+      fprintf(out, "\n");
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "is_temp: %u\n", node->create_view_stmt.is_temp);
+      ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %u\n", node->create_view_stmt.if_not_exists);
+      print_node(out, ast, node->create_view_stmt.column_names, source, depth + 1);
+      print_node(out, ast, node->create_view_stmt.select, source, depth + 1);
       break;
     }
 

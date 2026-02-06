@@ -14,6 +14,7 @@ ENUMS = [
         "BLOB",      # 3
         "NULL",      # 4
         "CURRENT",   # 5 - CURRENT_TIME, CURRENT_DATE, CURRENT_TIMESTAMP
+        "QNUMBER",   # 6 - Quoted number literal
     ),
 
     # Binary operators
@@ -36,6 +37,7 @@ ENUMS = [
         "LSHIFT",    # 15
         "RSHIFT",    # 16
         "CONCAT",    # 17
+        "PTR",       # 18 - JSON pointer operator (->)
     ),
 
     # Unary operators

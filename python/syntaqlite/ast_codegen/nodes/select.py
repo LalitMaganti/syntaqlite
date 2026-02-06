@@ -33,6 +33,7 @@ NODES = [
     Node("SelectStmt",
         flags=inline("u8"),                    # DISTINCT, ALL
         columns=index("ResultColumnList"),     # Result columns
+        from_clause=index("Expr"),             # FROM clause (TableRef, JoinClause, etc.)
         where=index("Expr"),                   # WHERE clause expression
         groupby=index("ExprList"),             # GROUP BY expressions
         having=index("Expr"),                  # HAVING clause expression

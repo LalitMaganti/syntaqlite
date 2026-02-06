@@ -33,6 +33,10 @@ term(A) ::= NULL|FLOAT|BLOB(B). {
     A = ast_literal(pCtx->astCtx, lit_type, syntaqlite_span(pCtx, B));
 }
 
+term(A) ::= QNUMBER(B). {
+    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_QNUMBER, syntaqlite_span(pCtx, B));
+}
+
 // ============ Date/Time Keywords ============
 
 term(A) ::= CTIME_KW(B). {

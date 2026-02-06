@@ -76,9 +76,13 @@ expr(A) ::= expr(L) CONCAT expr(R). {
     A = ast_binary_expr(pCtx->astCtx, SYNTAQLITE_BINARY_OP_CONCAT, L, R);
 }
 
+expr(A) ::= expr(L) PTR expr(R). {
+    A = ast_binary_expr(pCtx->astCtx, SYNTAQLITE_BINARY_OP_PTR, L, R);
+}
+
 // ============ Unary Expressions ============
 
-expr(A) ::= PLUS|MINUS(OP) expr(B). {
+expr(A) ::= PLUS|MINUS(OP) expr(B). [BITNOT] {
     SyntaqliteUnaryOp op = (OP.type == TK_MINUS) ? SYNTAQLITE_UNARY_OP_MINUS : SYNTAQLITE_UNARY_OP_PLUS;
     A = ast_unary_expr(pCtx->astCtx, op, B);
 }
