@@ -5,7 +5,7 @@
 
 Usage:
     from python.syntaqlite.ast_codegen import codegen, validator
-    from python.syntaqlite.ast_codegen.nodes import NODES, ENUMS
+    from src.parser.nodes import NODES, ENUMS
 
     errors = validator.validate_node_references(NODES)
     codegen.generate_all(NODES, ENUMS, output_dir)

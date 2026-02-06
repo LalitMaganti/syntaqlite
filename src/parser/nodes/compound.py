@@ -3,8 +3,8 @@
 
 """Compound SELECT and subquery AST node definitions."""
 
-from ..defs import Node, Enum, inline, index
-from ..fmt_dsl import seq, kw, child, hardline, if_flag, if_set, enum_display
+from python.syntaqlite.ast_codegen.defs import Node, Enum, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import seq, kw, child, hardline, if_flag, enum_display
 
 ENUMS = [
     Enum("CompoundOp",

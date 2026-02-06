@@ -3,10 +3,10 @@
 
 """FROM clause table source AST node definitions: table refs, joins, subqueries."""
 
-from ..defs import Node, Enum, inline, index
-from ..fmt_dsl import (
+from python.syntaqlite.ast_codegen.defs import Node, Enum, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import (
     seq, kw, span, child, hardline,
-    if_set, if_span, if_enum, switch, enum_display,
+    if_set, if_span, switch, enum_display,
 )
 
 ENUMS = [

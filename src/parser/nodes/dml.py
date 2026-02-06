@@ -3,10 +3,9 @@
 
 """DML (INSERT/UPDATE/DELETE) AST node definitions."""
 
-from ..defs import Node, List, Enum, inline, index
-from ..fmt_dsl import (
-    seq, kw, span, child, hardline, group, nest, line,
-    if_set, if_span, if_enum, clause, switch,
+from python.syntaqlite.ast_codegen.defs import Node, List, Enum, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import (
+    seq, kw, span, child, hardline, group, if_set, if_span, if_enum, clause, switch,
 )
 
 ENUMS = [

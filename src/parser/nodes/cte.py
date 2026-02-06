@@ -3,8 +3,8 @@
 
 """Common Table Expression (CTE / WITH clause) AST node definitions."""
 
-from ..defs import Node, List, Enum, inline, index
-from ..fmt_dsl import seq, kw, span, child, hardline, if_set, if_flag, if_enum
+from python.syntaqlite.ast_codegen.defs import Node, List, Enum, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import seq, kw, span, child, hardline, if_set, if_flag, if_enum
 
 ENUMS = [
     Enum("Materialized",

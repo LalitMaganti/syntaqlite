@@ -3,8 +3,8 @@
 
 """Expression AST node definitions: binary, unary, and literal."""
 
-from ..defs import Node, List, inline, index
-from ..fmt_dsl import seq, kw, span, child, line, group, enum_display, switch
+from python.syntaqlite.ast_codegen.defs import Node, List, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import seq, kw, span, child, line, group, enum_display, switch
 
 ENUMS = []
 

@@ -5,7 +5,7 @@ description: Verify that syntaqlite's hand-written AST action rules are in sync 
 
 # Diff Upstream Grammar
 
-Check whether the hand-written AST action rules in `python/syntaqlite/ast_codegen/ast_actions/*.y` are still compatible with the SQLite grammar in `third_party/src/sqlite/src/parse.y`.
+Check whether the hand-written AST action rules in `src/parser/actions/*.y` are still compatible with the SQLite grammar in `third_party/src/sqlite/src/parse.y`.
 
 Action file rule signatures **must match upstream parse.y exactly**. When SQLite updates its grammar, some signatures may change and the action files need updating.
 
@@ -32,7 +32,7 @@ The warning output names the nonterminals. Find the corresponding action files:
 | `identifiers.y` | nm, ids, identifier rules |
 | `literals.y` | Literal value rules |
 
-All files are in `python/syntaqlite/ast_codegen/ast_actions/`.
+All files are in `src/parser/actions/`.
 
 Update the rule signatures in the action files to match the new grammar exactly, preserving the C action code.
 
@@ -53,5 +53,5 @@ tools/tests/run-ast-diff-tests --binary out/mac_debug/ast_test
 | `tools/dev/diff-upstream-grammar` | CLI entry point |
 | `python/tools/diff_upstream_grammar.py` | Implementation |
 | `third_party/src/sqlite/src/parse.y` | Repo's current SQLite grammar |
-| `python/syntaqlite/ast_codegen/ast_actions/*.y` | Hand-written AST action rules |
+| `src/parser/actions/*.y` | Hand-written AST action rules |
 | `python/tools/extract_sqlite.py` | Full code regeneration |

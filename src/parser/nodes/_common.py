@@ -3,7 +3,7 @@
 
 """Common enum definitions shared across AST node submodules."""
 
-from ..defs import Enum
+from python.syntaqlite.ast_codegen.defs import Enum
 
 ENUMS = [
     # Boolean (for fields that are 0/1)

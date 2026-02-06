@@ -3,8 +3,8 @@
 
 """Schema operations (DROP/ALTER) and transaction control AST node definitions."""
 
-from ..defs import Node, List, Enum, inline, index
-from ..fmt_dsl import (
+from python.syntaqlite.ast_codegen.defs import Node, Enum, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import (
     seq, kw, span, child,
     if_set, if_flag, if_span, switch, enum_display,
 )

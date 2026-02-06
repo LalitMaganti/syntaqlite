@@ -3,8 +3,8 @@
 
 """Column reference AST node definitions."""
 
-from ..defs import Node, inline, index
-from ..fmt_dsl import seq, kw, span, if_span
+from python.syntaqlite.ast_codegen.defs import Node, inline
+from python.syntaqlite.ast_codegen.fmt_dsl import seq, kw, span, if_span
 
 ENUMS = []
 

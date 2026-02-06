@@ -8,10 +8,10 @@ FILTER clause, frame specifications (ROWS/RANGE/GROUPS),
 frame bounds, frame exclusion.
 """
 
-from ..defs import Node, List, Enum, inline, index
-from ..fmt_dsl import (
+from python.syntaqlite.ast_codegen.defs import Node, List, Enum, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import (
     seq, kw, span, child,
-    if_set, if_span, if_enum, switch,
+    if_set, if_span, switch,
 )
 
 ENUMS = [

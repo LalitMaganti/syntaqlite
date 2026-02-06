@@ -7,8 +7,8 @@ Covers: CREATE TABLE, column definitions, column constraints,
 table constraints, foreign keys, generated columns, table options.
 """
 
-from ..defs import Node, List, Enum, Flags, inline, index
-from ..fmt_dsl import (
+from python.syntaqlite.ast_codegen.defs import Node, List, Enum, Flags, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import (
     seq, kw, span, child, hardline, group, nest, line, softline,
     if_set, if_flag, if_enum, if_span, switch, for_each_child,
 )

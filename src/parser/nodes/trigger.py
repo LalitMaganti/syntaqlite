@@ -7,8 +7,8 @@ Covers: CREATE TRIGGER with trigger body commands (UPDATE/INSERT/DELETE/SELECT),
 trigger timing, trigger events, CREATE VIRTUAL TABLE with module arguments.
 """
 
-from ..defs import Node, List, Enum, inline, index
-from ..fmt_dsl import (
+from python.syntaqlite.ast_codegen.defs import Node, List, Enum, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import (
     seq, kw, span, child, hardline, nest,
     if_set, if_flag, if_span, switch, for_each_child,
 )

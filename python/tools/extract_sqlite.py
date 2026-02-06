@@ -63,7 +63,7 @@ from python.syntaqlite.sqlite_extractor.lempar_transform import (
 from python.syntaqlite.ast_codegen import codegen as ast_codegen
 from python.syntaqlite.ast_codegen import fmt_codegen as ast_fmt_codegen
 from python.syntaqlite.ast_codegen import validator as ast_validator
-from python.syntaqlite.ast_codegen.nodes import NODES as AST_NODES, ENUMS as AST_ENUMS, FLAGS as AST_FLAGS
+from src.parser.nodes import NODES as AST_NODES, ENUMS as AST_ENUMS, FLAGS as AST_FLAGS
 
 SQLITE_SRC = ROOT_DIR / "third_party" / "src" / "sqlite" / "src"
 OUTPUT_DIR = ROOT_DIR / "src"

@@ -1,24 +1,26 @@
 # Copyright 2025 The syntaqlite Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0.
 
-"""Aggregate function call with ORDER BY AST node definition."""
+"""Function call AST node definitions."""
 
-from ..defs import Node, Flags, inline, index
-from ..fmt_dsl import seq, kw, span, child, group, nest, softline, if_set, if_flag
+from python.syntaqlite.ast_codegen.defs import Node, Flags, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import (
+    seq, kw, span, child, softline, group, nest,
+    if_set, if_flag,
+)
 
 ENUMS = []
 
 FLAGS = [
-    Flags("AggregateFunctionCallFlags", DISTINCT=0x01),
+    Flags("FunctionCallFlags", DISTINCT=0x01, STAR=0x02),
 ]
 
 NODES = [
-    # Aggregate function call with ORDER BY: func(args ORDER BY sortlist)
-    Node("AggregateFunctionCall",
+    # Function call: name(args)
+    Node("FunctionCall",
         func_name=inline("SyntaqliteSourceSpan"),
-        flags=inline("AggregateFunctionCallFlags"),
+        flags=inline("FunctionCallFlags"),
         args=index("ExprList"),
-        orderby=index("OrderByList"),
         filter_clause=index("Expr"),
         over_clause=index("WindowDef"),
         fmt=seq(
@@ -26,9 +28,10 @@ NODES = [
             group(seq(
                 kw("("),
                 if_flag("flags.distinct", kw("DISTINCT ")),
-                if_set("args",
-                    nest(seq(softline(), child("args")))),
-                if_set("orderby", seq(kw(" ORDER BY "), child("orderby"))),
+                if_flag("flags.star",
+                    kw("*"),
+                    if_set("args",
+                        nest(seq(softline(), child("args"))))),
                 softline(),
                 kw(")"))),
             if_set("filter_clause", seq(kw(" FILTER (WHERE "), child("filter_clause"), kw(")"))),

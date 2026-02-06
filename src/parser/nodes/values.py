@@ -3,8 +3,8 @@
 
 """VALUES clause AST node definitions."""
 
-from ..defs import Node, List, inline, index
-from ..fmt_dsl import seq, kw, child, line, hardline, nest, for_each_child
+from python.syntaqlite.ast_codegen.defs import Node, List, index
+from python.syntaqlite.ast_codegen.fmt_dsl import seq, kw, child, line, hardline, nest, for_each_child
 
 ENUMS = []
 

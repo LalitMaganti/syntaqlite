@@ -3,8 +3,8 @@
 
 """SELECT statement AST node definitions."""
 
-from ..defs import Node, List, Enum, Flags, inline, index
-from ..fmt_dsl import (
+from python.syntaqlite.ast_codegen.defs import Node, List, Enum, Flags, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import (
     seq, kw, span, child, line, group, nest, clause,
     if_set, if_flag, if_enum, if_span,
 )

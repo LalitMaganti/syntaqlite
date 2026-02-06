@@ -3,8 +3,8 @@
 
 """Conditional expression AST node definitions: IS, BETWEEN, LIKE, CASE."""
 
-from ..defs import Node, List, Enum, inline, index
-from ..fmt_dsl import (
+from python.syntaqlite.ast_codegen.defs import Node, List, Enum, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import (
     seq, kw, child, if_set, if_flag, switch, for_each_child,
 )
 

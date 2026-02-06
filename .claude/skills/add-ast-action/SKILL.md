@@ -29,10 +29,10 @@ grep -n 'your_nonterminal' third_party/src/sqlite/src/parse.y
 
 ### 2. Define AST nodes
 
-Create or edit a Python node definition file in `python/syntaqlite/ast_codegen/nodes/`.
+Create or edit a Python node definition file in `src/parser/nodes/`.
 
 ```python
-# python/syntaqlite/ast_codegen/nodes/your_module.py
+# src/parser/nodes/your_module.py
 from ..defs import Node, List, Enum, Flags, inline, index
 
 ENUMS = [
@@ -64,7 +64,7 @@ NODES = [
 
 **Do not use `inline("u8")`** — all integer-like fields should be typed enums, flags, or Bool.
 
-Register the module in `python/syntaqlite/ast_codegen/nodes/__init__.py`:
+Register the module in `src/parser/nodes/__init__.py`:
 ```python
 from .your_module import ENUMS as _YOUR_ENUMS, NODES as _YOUR_NODES, FLAGS as _YOUR_FLAGS
 # Append to ENUMS, NODES, and FLAGS lists
@@ -72,7 +72,7 @@ from .your_module import ENUMS as _YOUR_ENUMS, NODES as _YOUR_NODES, FLAGS as _Y
 
 **Abstract types** (for index fields): `Expr`, `Stmt`, `TableSource`, `InsertSource`
 
-Register the module in `python/syntaqlite/ast_codegen/nodes/__init__.py`:
+Register the module in `src/parser/nodes/__init__.py`:
 ```python
 from .your_module import ENUMS as _YOUR_ENUMS, NODES as _YOUR_NODES
 # Append to ENUMS and NODES lists
@@ -82,10 +82,10 @@ from .your_module import ENUMS as _YOUR_ENUMS, NODES as _YOUR_NODES
 
 ### 3. Write grammar action rules
 
-Create a `.y` file in `python/syntaqlite/ast_codegen/ast_actions/`:
+Create a `.y` file in `src/parser/actions/`:
 
 ```c
-// python/syntaqlite/ast_codegen/ast_actions/your_actions.y
+// src/parser/actions/your_actions.y
 
 // Conventions:
 // - pCtx: SyntaqliteParseContext*
@@ -230,12 +230,12 @@ Watch for:
 
 | File | Purpose |
 |------|---------|
-| `python/syntaqlite/ast_codegen/nodes/*.py` | AST node definitions (Python DSL) |
-| `python/syntaqlite/ast_codegen/ast_actions/*.y` | Grammar action rules |
+| `src/parser/nodes/*.py` | AST node definitions (Python DSL) |
+| `src/parser/actions/*.y` | Grammar action rules |
 | `python/syntaqlite/ast_codegen/defs.py` | Node/List/Enum/inline/index DSL |
 | `python/syntaqlite/ast_codegen/codegen.py` | C code generator |
 | `python/syntaqlite/ast_codegen/validator.py` | Validates index field references |
-| `python/syntaqlite/ast_codegen/nodes/__init__.py` | Module registry (import order = tag order) |
+| `src/parser/nodes/__init__.py` | Module registry (import order = tag order) |
 | `python/syntaqlite/sqlite_extractor/grammar_build.py` | Grammar merging + %type declarations |
 | `third_party/src/sqlite/src/parse.y` | Upstream SQLite grammar (ground truth) |
 | `src/ast/ast_test_main.c` | Test binary entry point (add tracing here) |

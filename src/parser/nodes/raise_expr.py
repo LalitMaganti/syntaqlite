@@ -3,8 +3,8 @@
 
 """RAISE expression AST node definition (used in triggers)."""
 
-from ..defs import Node, Enum, inline, index
-from ..fmt_dsl import seq, kw, child, if_set, switch
+from python.syntaqlite.ast_codegen.defs import Node, Enum, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import seq, kw, child, if_set, switch
 
 ENUMS = [
     Enum("RaiseType",

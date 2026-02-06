@@ -113,7 +113,7 @@ def _parse_actions_file(actions_path: Path) -> dict[str, str]:
 
 
 # Directory containing action rule files
-_ACTIONS_DIR = Path(__file__).parent.parent / "ast_codegen" / "ast_actions"
+_ACTIONS_DIR = Path(__file__).parent.parent.parent.parent / "src" / "parser" / "actions"
 
 
 def _load_all_actions(actions_dir: Path) -> dict[str, str]:

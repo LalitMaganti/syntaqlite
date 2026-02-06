@@ -114,7 +114,7 @@ _INLINE_NODES = {
 
 def collect_all_nodes():
     """Import and return all node definitions."""
-    from python.syntaqlite.ast_codegen.nodes import NODES
+    from src.parser.nodes import NODES
     return NODES
 
 

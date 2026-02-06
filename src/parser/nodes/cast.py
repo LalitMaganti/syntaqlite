@@ -3,8 +3,8 @@
 
 """CAST expression AST node definition."""
 
-from ..defs import Node, inline, index
-from ..fmt_dsl import seq, kw, span, child
+from python.syntaqlite.ast_codegen.defs import Node, inline, index
+from python.syntaqlite.ast_codegen.fmt_dsl import seq, kw, span, child
 
 ENUMS = []
 
