@@ -25,12 +25,12 @@
 // ---------------------------------------------------------------------------
 
 typedef struct {
-    uint8_t *kinds;   // SyntaqliteCommentKind per token position
+    uint8_t *kinds;   // SynqCommentKind per token position
     uint32_t count;
 } CommentMap;
 
 static CommentMap *comment_map_build(
-    const char *source, SyntaqliteTokenList *token_list) {
+    const char *source, SynqTokenList *token_list) {
     if (!token_list || token_list->count == 0) return NULL;
 
     int has_comments = 0;
@@ -56,16 +56,16 @@ static CommentMap *comment_map_build(
     int seen_real = 0;
 
     for (uint32_t i = 0; i < token_list->count; i++) {
-        SyntaqliteRawToken *tok = &token_list->data[i];
+        SynqRawToken *tok = &token_list->data[i];
 
         if (tok->type == TK_COMMENT) {
-            uint8_t kind = SYNTAQLITE_COMMENT_LEADING;
+            uint8_t kind = SYNQ_COMMENT_LEADING;
             if (seen_real) {
                 int has_newline = 0;
                 for (uint32_t j = prev_real_end; j < tok->offset; j++) {
                     if (source[j] == '\n') { has_newline = 1; break; }
                 }
-                if (!has_newline) kind = SYNTAQLITE_COMMENT_TRAILING;
+                if (!has_newline) kind = SYNQ_COMMENT_TRAILING;
             }
             map->kinds[i] = kind;
         } else if (tok->type != TK_SPACE) {
@@ -89,16 +89,16 @@ static void comment_map_free(CommentMap *map) {
 
 // Find the node ending closest to (but <=) `offset`.
 // Prefers innermost (smallest) when tied on end position.
-static uint32_t find_preceding_node(SyntaqliteAstContext *astCtx,
+static uint32_t find_preceding_node(SynqAstContext *astCtx,
                                      uint32_t offset) {
-    uint32_t best = SYNTAQLITE_NULL_NODE;
+    uint32_t best = SYNQ_NULL_NODE;
     uint32_t best_end = 0;
     for (uint32_t n = 0; n < astCtx->ranges.count; n++) {
-        SyntaqliteSourceRange r = astCtx->ranges.data[n];
+        SynqSourceRange r = astCtx->ranges.data[n];
         if (r.first == 0 && r.last == 0) continue;
         if (r.last <= offset && r.last >= best_end) {
             if (r.last > best_end ||
-                (best != SYNTAQLITE_NULL_NODE &&
+                (best != SYNQ_NULL_NODE &&
                  (r.last - r.first) < (astCtx->ranges.data[best].last -
                                         astCtx->ranges.data[best].first))) {
                 best_end = r.last;
@@ -111,16 +111,16 @@ static uint32_t find_preceding_node(SyntaqliteAstContext *astCtx,
 
 // Find the node starting closest to (but >= comment_end).
 // Prefers innermost (smallest) when tied on start position.
-static uint32_t find_following_node(SyntaqliteAstContext *astCtx,
+static uint32_t find_following_node(SynqAstContext *astCtx,
                                      uint32_t comment_end) {
-    uint32_t best = SYNTAQLITE_NULL_NODE;
+    uint32_t best = SYNQ_NULL_NODE;
     uint32_t best_start = UINT32_MAX;
     for (uint32_t n = 0; n < astCtx->ranges.count; n++) {
-        SyntaqliteSourceRange r = astCtx->ranges.data[n];
+        SynqSourceRange r = astCtx->ranges.data[n];
         if (r.first == 0 && r.last == 0) continue;
         if (r.first >= comment_end && r.first <= best_start) {
             if (r.first < best_start ||
-                (best != SYNTAQLITE_NULL_NODE &&
+                (best != SYNQ_NULL_NODE &&
                  (r.last - r.first) < (astCtx->ranges.data[best].last -
                                         astCtx->ranges.data[best].first))) {
                 best_start = r.first;
@@ -131,9 +131,9 @@ static uint32_t find_following_node(SyntaqliteAstContext *astCtx,
     return best;
 }
 
-SyntaqliteCommentAttachment *syntaqlite_comment_attach(
-    SyntaqliteAstContext *astCtx, uint32_t root_id,
-    const char *source, SyntaqliteTokenList *token_list) {
+SynqCommentAttachment *synq_comment_attach(
+    SynqAstContext *astCtx, uint32_t root_id,
+    const char *source, SynqTokenList *token_list) {
 
     if (!token_list || token_list->count == 0) return NULL;
 
@@ -149,50 +149,50 @@ SyntaqliteCommentAttachment *syntaqlite_comment_attach(
 
     CommentMap *map = comment_map_build(source, token_list);
 
-    SyntaqliteCommentAttachment *att = malloc(sizeof(SyntaqliteCommentAttachment));
+    SynqCommentAttachment *att = malloc(sizeof(SynqCommentAttachment));
     att->count = token_list->count;
     att->owner_node = calloc(token_list->count, sizeof(uint32_t));
     att->position = calloc(token_list->count, sizeof(uint8_t));
 
     for (uint32_t i = 0; i < att->count; i++)
-        att->owner_node[i] = SYNTAQLITE_NULL_NODE;
+        att->owner_node[i] = SYNQ_NULL_NODE;
 
     for (uint32_t i = 0; i < token_list->count; i++) {
         if (token_list->data[i].type != TK_COMMENT) continue;
 
         uint32_t c_offset = token_list->data[i].offset;
         uint32_t c_end = c_offset + token_list->data[i].length;
-        uint8_t kind = map ? map->kinds[i] : SYNTAQLITE_COMMENT_LEADING;
+        uint8_t kind = map ? map->kinds[i] : SYNQ_COMMENT_LEADING;
         att->position[i] = kind;
 
         uint32_t owner;
 
-        if (kind == SYNTAQLITE_COMMENT_TRAILING) {
+        if (kind == SYNQ_COMMENT_TRAILING) {
             owner = find_preceding_node(astCtx, c_offset);
             // End-of-statement: nothing follows → attach to root
-            if (owner != SYNTAQLITE_NULL_NODE) {
+            if (owner != SYNQ_NULL_NODE) {
                 uint32_t following = find_following_node(astCtx, c_end);
-                if (following == SYNTAQLITE_NULL_NODE)
+                if (following == SYNQ_NULL_NODE)
                     owner = root_id;
             }
         } else {
             owner = find_following_node(astCtx, c_end);
             // Start-of-statement: nothing precedes → attach to root
-            if (owner != SYNTAQLITE_NULL_NODE) {
+            if (owner != SYNQ_NULL_NODE) {
                 uint32_t preceding = find_preceding_node(astCtx, c_offset);
-                if (preceding == SYNTAQLITE_NULL_NODE)
+                if (preceding == SYNQ_NULL_NODE)
                     owner = root_id;
             }
         }
 
-        att->owner_node[i] = (owner != SYNTAQLITE_NULL_NODE) ? owner : root_id;
+        att->owner_node[i] = (owner != SYNQ_NULL_NODE) ? owner : root_id;
     }
 
     comment_map_free(map);
     return att;
 }
 
-void syntaqlite_comment_attachment_free(SyntaqliteCommentAttachment *att) {
+void synq_comment_attachment_free(SynqCommentAttachment *att) {
     if (!att) return;
     free(att->owner_node);
     free(att->position);

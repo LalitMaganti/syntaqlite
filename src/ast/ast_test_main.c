@@ -14,21 +14,25 @@
 #include "src/sq_getopt.h"
 #include "src/ast/ast_base.h"
 #include "src/ast/ast_print.h"
-#include "src/syntaqlite_sqlite_defs.h"
+#include "src/synq_sqlite_defs.h"
 #include "src/sqlite_tokens.h"
 
+
+// External definitions for inline functions (C99/C11).
+extern inline int synq_getopt_long(struct synq_getopt_state *st, int argc, char *const *argv, const char *shortopts, const struct synq_option *longopts, int *longindex);
+
 // External parser functions (defined in sqlite_parse.c)
-void *syntaqlite_sqlite3ParserAlloc(void *(*mallocProc)(size_t),
-                                     SyntaqliteParseContext *pCtx);
-void syntaqlite_sqlite3Parser(void *parser, int tokenType, SyntaqliteToken token,
-                               SyntaqliteParseContext *pCtx);
-void syntaqlite_sqlite3ParserFree(void *parser, void (*freeProc)(void *));
+void *synq_sqlite3ParserAlloc(void *(*mallocProc)(size_t),
+                                     SynqParseContext *pCtx);
+void synq_sqlite3Parser(void *parser, int tokenType, SynqToken token,
+                               SynqParseContext *pCtx);
+void synq_sqlite3ParserFree(void *parser, void (*freeProc)(void *));
 #ifndef NDEBUG
-void syntaqlite_sqlite3ParserTrace(FILE *TraceFILE, char *zTracePrompt);
+void synq_sqlite3ParserTrace(FILE *TraceFILE, char *zTracePrompt);
 #endif
 
 // External tokenizer function (defined in sqlite_tokenize.c)
-i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType);
+i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType);
 
 // Read entire stdin into a buffer
 static char *read_stdin(size_t *out_len) {
@@ -57,12 +61,12 @@ static char *read_stdin(size_t *out_len) {
 
 // Error handlers
 static int g_syntax_error = 0;
-static void on_syntax_error(SyntaqliteParseContext *ctx) {
+static void on_syntax_error(SynqParseContext *ctx) {
   (void)ctx;
   g_syntax_error = 1;
 }
 
-static void on_stack_overflow(SyntaqliteParseContext *ctx) {
+static void on_stack_overflow(SynqParseContext *ctx) {
   (void)ctx;
   fprintf(stderr, "Error: Parser stack overflow\n");
 }
@@ -70,15 +74,15 @@ static void on_stack_overflow(SyntaqliteParseContext *ctx) {
 int main(int argc, char **argv) {
   int trace = 0;
 
-  static const struct sq_option long_options[] = {
-      {"trace", SQ_NO_ARGUMENT, NULL, 'T'},
-      {"help", SQ_NO_ARGUMENT, NULL, 'h'},
+  static const struct synq_option long_options[] = {
+      {"trace", SYNQ_NO_ARGUMENT, NULL, 'T'},
+      {"help", SYNQ_NO_ARGUMENT, NULL, 'h'},
       {NULL, 0, NULL, 0},
   };
 
-  struct sq_getopt_state opt = SQ_GETOPT_INIT;
+  struct synq_getopt_state opt = SYNQ_GETOPT_INIT;
   int c;
-  while ((c = sq_getopt_long(&opt, argc, argv, "h", long_options, NULL)) !=
+  while ((c = synq_getopt_long(&opt, argc, argv, "h", long_options, NULL)) !=
          -1) {
     switch (c) {
       case 'T':
@@ -115,24 +119,24 @@ int main(int argc, char **argv) {
   }
 
   // Initialize AST context
-  SyntaqliteAstContext astCtx;
-  syntaqlite_ast_context_init(&astCtx, sql, (uint32_t)len);
+  SynqAstContext astCtx;
+  synq_ast_context_init(&astCtx, sql, (uint32_t)len);
 
   // Initialize parse context
-  SyntaqliteParseContext parseCtx;
+  SynqParseContext parseCtx;
   parseCtx.userData = NULL;
   parseCtx.onSyntaxError = on_syntax_error;
   parseCtx.onStackOverflow = on_stack_overflow;
   parseCtx.astCtx = &astCtx;
   parseCtx.zSql = sql;
-  parseCtx.root = SYNTAQLITE_NULL_NODE;
+  parseCtx.root = SYNQ_NULL_NODE;
   parseCtx.token_list = NULL;
 
   // Create parser
-  void *parser = syntaqlite_sqlite3ParserAlloc(malloc, &parseCtx);
+  void *parser = synq_sqlite3ParserAlloc(malloc, &parseCtx);
   if (!parser) {
     fprintf(stderr, "Error: Failed to allocate parser\n");
-    syntaqlite_ast_context_cleanup(&astCtx);
+    synq_ast_context_cleanup(&astCtx);
 
     free(sql);
     return 1;
@@ -140,7 +144,7 @@ int main(int argc, char **argv) {
 
 #ifndef NDEBUG
   if (trace) {
-    syntaqlite_sqlite3ParserTrace(stderr, "PARSER: ");
+    synq_sqlite3ParserTrace(stderr, "PARSER: ");
   }
 #else
   (void)trace;
@@ -153,7 +157,7 @@ int main(int argc, char **argv) {
   int lastTokenType = 0;
 
   while (*z) {
-    i64 tokenLen = syntaqlite_sqlite3GetToken(z, &tokenType);
+    i64 tokenLen = synq_sqlite3GetToken(z, &tokenType);
     if (tokenLen <= 0) break;
 
     // Skip whitespace and comments
@@ -163,18 +167,18 @@ int main(int argc, char **argv) {
     }
 
     // Feed token to parser
-    SyntaqliteToken token;
+    SynqToken token;
     token.z = (const char *)z;
     token.n = (int)tokenLen;
     token.type = tokenType;
 
-    syntaqlite_sqlite3Parser(parser, tokenType, token, &parseCtx);
+    synq_sqlite3Parser(parser, tokenType, token, &parseCtx);
     lastTokenType = tokenType;
 
     if (g_syntax_error) {
       fprintf(stderr, "Error: Syntax error near '%.*s'\n", (int)tokenLen, z);
-      syntaqlite_sqlite3ParserFree(parser, free);
-      syntaqlite_ast_context_cleanup(&astCtx);
+      synq_sqlite3ParserFree(parser, free);
+      synq_ast_context_cleanup(&astCtx);
   
       free(sql);
       return 1;
@@ -185,22 +189,22 @@ int main(int argc, char **argv) {
 
   // If the statement didn't end with SEMI, synthesize one (like Perfetto does)
   if (lastTokenType != TK_SEMI) {
-    SyntaqliteToken semiToken = {NULL, 0, TK_SEMI};
-    syntaqlite_sqlite3Parser(parser, TK_SEMI, semiToken, &parseCtx);
+    SynqToken semiToken = {NULL, 0, TK_SEMI};
+    synq_sqlite3Parser(parser, TK_SEMI, semiToken, &parseCtx);
   }
 
   // Send end-of-input (token 0)
-  SyntaqliteToken endToken = {NULL, 0, 0};
-  syntaqlite_sqlite3Parser(parser, 0, endToken, &parseCtx);
+  SynqToken endToken = {NULL, 0, 0};
+  synq_sqlite3Parser(parser, 0, endToken, &parseCtx);
 
   // Flush any pending list accumulator before reading the AST
-  ast_list_flush(&astCtx);
+  synq_ast_list_flush(&astCtx);
 
   // Check for syntax error
   if (g_syntax_error) {
     fprintf(stderr, "Error: Incomplete statement\n");
-    syntaqlite_sqlite3ParserFree(parser, free);
-    syntaqlite_ast_context_cleanup(&astCtx);
+    synq_sqlite3ParserFree(parser, free);
+    synq_ast_context_cleanup(&astCtx);
 
     free(sql);
     return 1;
@@ -209,21 +213,21 @@ int main(int argc, char **argv) {
   // Get root from parse context
   uint32_t root_id = parseCtx.root;
 
-  if (root_id == SYNTAQLITE_NULL_NODE) {
+  if (root_id == SYNQ_NULL_NODE) {
     // No AST produced (empty input or semicolon only)
-    syntaqlite_sqlite3ParserFree(parser, free);
-    syntaqlite_ast_context_cleanup(&astCtx);
+    synq_sqlite3ParserFree(parser, free);
+    synq_ast_context_cleanup(&astCtx);
 
     free(sql);
     return 0;
   }
 
   // Print AST
-  syntaqlite_ast_print(stdout, &astCtx.ast, root_id, sql);
+  synq_ast_print(stdout, &astCtx.ast, root_id, sql);
 
   // Cleanup
-  syntaqlite_sqlite3ParserFree(parser, free);
-  syntaqlite_ast_context_cleanup(&astCtx);
+  synq_sqlite3ParserFree(parser, free);
+  synq_ast_context_cleanup(&astCtx);
   free(sql);
 
   return 0;

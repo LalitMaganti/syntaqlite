@@ -33,7 +33,7 @@ source_set("tokenizer") {
     "sqlite_charmap.h",
     "sqlite_tokenize.c",
     "sqlite_tokens.h",
-    "syntaqlite_sqlite_defs.h",
+    "synq_sqlite_defs.h",
   ]
   configs += [ ":lemon_generated" ]
 }
@@ -92,6 +92,8 @@ source_set("fmt") {
     "fmt/doc_layout.h",
     "fmt/fmt.c",
     "fmt/fmt.h",
+    "fmt/fmt_helpers.c",
+    "fmt/fmt_helpers.h",
     "fmt/fmt_options.h",
   ]
   deps = [

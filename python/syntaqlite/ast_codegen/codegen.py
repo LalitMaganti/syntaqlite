@@ -40,7 +40,7 @@ TYPE_MAP = {
 
 def _flags_type_name(flags_name: str) -> str:
     """Generate C union type name from flags name."""
-    return f"Syntaqlite{flags_name}"
+    return f"Synq{flags_name}"
 
 
 def _field_c_type(field_type, enum_names: set[str], flags_names: set[str] | None = None) -> str:
@@ -51,7 +51,7 @@ def _field_c_type(field_type, enum_names: set[str], flags_names: set[str] | None
     if type_name in TYPE_MAP:
         return TYPE_MAP[type_name]
     if type_name in enum_names:
-        return f"Syntaqlite{type_name}"
+        return f"Synq{type_name}"
     if flags_names and type_name in flags_names:
         return _flags_type_name(type_name)
     return type_name
@@ -59,27 +59,27 @@ def _field_c_type(field_type, enum_names: set[str], flags_names: set[str] | None
 
 def _struct_name(node_name: str) -> str:
     """Generate C struct name from node name."""
-    return f"Syntaqlite{node_name}"
+    return f"Synq{node_name}"
 
 
 def _tag_name(node_name: str) -> str:
     """Generate enum tag name from node name."""
-    return f"SYNTAQLITE_NODE_{pascal_to_snake(node_name).upper()}"
+    return f"SYNQ_NODE_{pascal_to_snake(node_name).upper()}"
 
 
 def _builder_name(node_name: str) -> str:
     """Generate builder function name from node name."""
-    return f"ast_{pascal_to_snake(node_name)}"
+    return f"synq_ast_{pascal_to_snake(node_name)}"
 
 
 def _enum_prefix(enum_name: str) -> str:
     """Generate enum value prefix from enum name."""
-    return f"SYNTAQLITE_{pascal_to_snake(enum_name).upper()}"
+    return f"SYNQ_{pascal_to_snake(enum_name).upper()}"
 
 
 def _build_node_params(node: NodeDef, enum_names: set[str], flags_names: set[str] | None = None) -> list[str]:
     """Build C parameter list for a node builder function."""
-    params = ["SyntaqliteAstContext *ctx"]
+    params = ["SynqAstContext *ctx"]
     for field_name, field_type in node.fields.items():
         c_type = _field_c_type(field_type, enum_names, flags_names)
         params.append(f"{c_type} {field_name}")
@@ -112,10 +112,10 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
     lines.append("")
-    lines.append("#ifndef SYNTAQLITE_AST_NODES_H")
-    lines.append("#define SYNTAQLITE_AST_NODES_H")
+    lines.append("#ifndef SYNQ_AST_NODES_H")
+    lines.append("#define SYNQ_AST_NODES_H")
     lines.append("")
-    lines.append("// Base types (SyntaqliteSourceSpan, SyntaqliteArena, etc.)")
+    lines.append("// Base types (SynqSourceSpan, SynqArena, etc.)")
     lines.append('#include "src/ast/ast_base.h"')
     lines.append("")
     lines.append("#ifdef __cplusplus")
@@ -132,12 +132,12 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
             lines.append(f"typedef enum {{")
             for i, value in enumerate(enum.values):
                 lines.append(f"    {prefix}_{value} = {i},")
-            lines.append(f"}} Syntaqlite{enum.name};")
+            lines.append(f"}} Synq{enum.name};")
             lines.append("")
 
         # Enum name string arrays
         for enum in enum_defs:
-            var_name = f"syntaqlite_{pascal_to_snake(enum.name)}_names"
+            var_name = f"synq_{pascal_to_snake(enum.name)}_names"
             lines.append(f"static const char* const {var_name}[] = {{")
             for value in enum.values:
                 lines.append(f'    "{value}",')
@@ -171,11 +171,11 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("// ============ Node Tags ============")
     lines.append("")
     lines.append("typedef enum {")
-    lines.append("    SYNTAQLITE_NODE_NULL = 0,")
+    lines.append("    SYNQ_NODE_NULL = 0,")
     for node in node_defs:
         lines.append(f"    {_tag_name(node.name)},")
-    lines.append("    SYNTAQLITE_NODE_COUNT")
-    lines.append("} SyntaqliteNodeTag;")
+    lines.append("    SYNQ_NODE_COUNT")
+    lines.append("} SynqNodeTag;")
     lines.append("")
 
     # Build name sets for type lookups
@@ -213,37 +213,37 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     # Union for ergonomic access
     lines.append("// ============ Node Union ============")
     lines.append("")
-    lines.append("typedef union SyntaqliteNode {")
+    lines.append("typedef union SynqNode {")
     lines.append("    uint8_t tag;")
     for node in node_defs:
         struct_name = _struct_name(node.name)
         field_name = pascal_to_snake(node.name)
         lines.append(f"    {struct_name} {field_name};")
-    lines.append("} SyntaqliteNode;")
+    lines.append("} SynqNode;")
     lines.append("")
 
     # Node access
     lines.append("// Access node by ID")
-    lines.append("static inline SyntaqliteNode* syntaqlite_ast_node(SyntaqliteArena *ast, uint32_t id) {")
-    lines.append("    if (id == SYNTAQLITE_NULL_NODE) return NULL;")
-    lines.append("    return (SyntaqliteNode*)(ast->data + ast->offsets[id]);")
+    lines.append("inline SynqNode* synq_ast_node(SynqArena *ast, uint32_t id) {")
+    lines.append("    if (id == SYNQ_NULL_NODE) return NULL;")
+    lines.append("    return (SynqNode*)(ast->data + ast->offsets[id]);")
     lines.append("}")
     lines.append("")
-    lines.append("#define AST_NODE(ast, id) syntaqlite_ast_node(ast, id)")
+    lines.append("#define AST_NODE(ast, id) synq_ast_node(ast, id)")
     lines.append("")
 
     # Node size table declaration
     lines.append("// ============ Node Size Table ============")
     lines.append("")
     lines.append("// Returns the fixed size of a node type (0 for variable-size nodes like lists)")
-    lines.append("size_t syntaqlite_node_base_size(uint8_t tag);")
+    lines.append("size_t synq_node_base_size(uint8_t tag);")
     lines.append("")
 
     lines.append("#ifdef __cplusplus")
     lines.append("}")
     lines.append("#endif")
     lines.append("")
-    lines.append("#endif  // SYNTAQLITE_AST_NODES_H")
+    lines.append("#endif  // SYNQ_AST_NODES_H")
 
     output.write_text("\n".join(lines) + "\n")
 
@@ -262,8 +262,8 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
     lines.append("")
-    lines.append("#ifndef SYNTAQLITE_AST_BUILDER_H")
-    lines.append("#define SYNTAQLITE_AST_BUILDER_H")
+    lines.append("#ifndef SYNQ_AST_BUILDER_H")
+    lines.append("#define SYNQ_AST_BUILDER_H")
     lines.append("")
     lines.append('#include "src/ast/ast_nodes.h"')
     lines.append("")
@@ -286,20 +286,20 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
         elif isinstance(node, ListDef):
             func_name = _builder_name(node.name)
             lines.append(f"// Create empty {node.name}")
-            lines.append(f"uint32_t {func_name}_empty(SyntaqliteAstContext *ctx);")
+            lines.append(f"uint32_t {func_name}_empty(SynqAstContext *ctx);")
             lines.append("")
             lines.append(f"// Create {node.name} with single child")
-            lines.append(f"uint32_t {func_name}(SyntaqliteAstContext *ctx, uint32_t first_child);")
+            lines.append(f"uint32_t {func_name}(SynqAstContext *ctx, uint32_t first_child);")
             lines.append("")
             lines.append(f"// Append child to {node.name} (may reallocate, returns new list ID)")
-            lines.append(f"uint32_t {func_name}_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child);")
+            lines.append(f"uint32_t {func_name}_append(SynqAstContext *ctx, uint32_t list_id, uint32_t child);")
             lines.append("")
 
     lines.append("#ifdef __cplusplus")
     lines.append("}")
     lines.append("#endif")
     lines.append("")
-    lines.append("#endif  // SYNTAQLITE_AST_BUILDER_H")
+    lines.append("#endif  // SYNQ_AST_BUILDER_H")
 
     output.write_text("\n".join(lines) + "\n")
 
@@ -323,12 +323,15 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines.append("#include <stdlib.h>")
     lines.append("#include <string.h>")
     lines.append("")
+    lines.append("// External definition for inline function (C99/C11).")
+    lines.append("extern inline SynqNode* synq_ast_node(SynqArena *ast, uint32_t id);")
+    lines.append("")
 
     # Node size table - collect fixed-size nodes
     lines.append("// ============ Node Size Table ============")
     lines.append("")
     lines.append("static const size_t node_base_sizes[] = {")
-    lines.append("    [SYNTAQLITE_NODE_NULL] = 0,")
+    lines.append("    [SYNQ_NODE_NULL] = 0,")
     for node in node_defs:
         tag = _tag_name(node.name)
         struct_name = _struct_name(node.name)
@@ -336,8 +339,8 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     lines.append("};")
     lines.append("")
 
-    lines.append("size_t syntaqlite_node_base_size(uint8_t tag) {")
-    lines.append("    if (tag >= SYNTAQLITE_NODE_COUNT) return 0;")
+    lines.append("size_t synq_node_base_size(uint8_t tag) {")
+    lines.append("    if (tag >= SYNQ_NODE_COUNT) return 0;")
     lines.append("    return node_base_sizes[tag];")
     lines.append("}")
     lines.append("")
@@ -356,7 +359,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             _emit_func_signature(lines, func_name, params, " {")
 
             # Allocate node
-            lines.append(f"    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, {tag}, sizeof({struct_name}));")
+            lines.append(f"    uint32_t id = synq_arena_alloc(&ctx->ast, {tag}, sizeof({struct_name}));")
             lines.append("")
 
             # Get pointer and set fields
@@ -373,16 +376,16 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             ]
             span_fields = [
                 (fn, ft) for fn, ft in node.fields.items()
-                if isinstance(ft, InlineField) and ft.type_name == "SyntaqliteSourceSpan"
+                if isinstance(ft, InlineField) and ft.type_name == "SynqSourceSpan"
             ]
             if index_fields or span_fields:
                 lines.append("")
-                lines.append("    ast_ranges_sync(ctx);")
-                lines.append("    SyntaqliteSourceRange _r = {UINT32_MAX, 0};")
+                lines.append("    synq_ast_ranges_sync(ctx);")
+                lines.append("    SynqSourceRange _r = {UINT32_MAX, 0};")
                 for fn, _ft in index_fields:
-                    lines.append(f"    ast_range_union(ctx, &_r, {fn});")
+                    lines.append(f"    synq_ast_range_union(ctx, &_r, {fn});")
                 for fn, _ft in span_fields:
-                    lines.append(f"    ast_range_union_span(&_r, {fn});")
+                    lines.append(f"    synq_ast_range_union_span(&_r, {fn});")
                 lines.append("    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;")
 
             lines.append("    return id;")
@@ -395,29 +398,29 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             tag = _tag_name(node.name)
 
             # Empty list creator (direct arena allocation, no accumulator needed)
-            lines.append(f"uint32_t {func_name}_empty(SyntaqliteAstContext *ctx) {{")
-            lines.append(f"    uint32_t id = syntaqlite_arena_alloc(&ctx->ast, {tag}, sizeof({struct_name}));")
+            lines.append(f"uint32_t {func_name}_empty(SynqAstContext *ctx) {{")
+            lines.append(f"    uint32_t id = synq_arena_alloc(&ctx->ast, {tag}, sizeof({struct_name}));")
             lines.append("")
             lines.append(f"    {struct_name} *node = ({struct_name}*)")
             lines.append("        (ctx->ast.data + ctx->ast.offsets[id]);")
             lines.append("    node->count = 0;")
-            lines.append("    ast_ranges_sync(ctx);")
+            lines.append("    synq_ast_ranges_sync(ctx);")
             lines.append("    return id;")
             lines.append("}")
             lines.append("")
 
             # Single-child creator (via accumulator for O(n) amortized appending)
-            lines.append(f"uint32_t {func_name}(SyntaqliteAstContext *ctx, uint32_t first_child) {{")
-            lines.append(f"    return ast_list_start(ctx, {tag}, first_child);")
+            lines.append(f"uint32_t {func_name}(SynqAstContext *ctx, uint32_t first_child) {{")
+            lines.append(f"    return synq_ast_list_start(ctx, {tag}, first_child);")
             lines.append("}")
             lines.append("")
 
             # Append function (via accumulator)
-            lines.append(f"uint32_t {func_name}_append(SyntaqliteAstContext *ctx, uint32_t list_id, uint32_t child) {{")
-            lines.append("    if (list_id == SYNTAQLITE_NULL_NODE) {")
+            lines.append(f"uint32_t {func_name}_append(SynqAstContext *ctx, uint32_t list_id, uint32_t child) {{")
+            lines.append("    if (list_id == SYNQ_NULL_NODE) {")
             lines.append(f"        return {func_name}(ctx, child);")
             lines.append("    }")
-            lines.append(f"    return ast_list_append(ctx, list_id, child, {tag});")
+            lines.append(f"    return synq_ast_list_append(ctx, list_id, child, {tag});")
             lines.append("}")
             lines.append("")
 
@@ -444,24 +447,24 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("")
 
     # Forward declaration
-    lines.append("static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,")
+    lines.append("static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,")
     lines.append("                       const char *source, int depth,")
     lines.append("                       const char *field_name);")
     lines.append("")
 
     # Main print_node function
-    lines.append("static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,")
+    lines.append("static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,")
     lines.append("                       const char *source, int depth,")
     lines.append("                       const char *field_name) {")
-    lines.append("  if (node_id == SYNTAQLITE_NULL_NODE) {")
+    lines.append("  if (node_id == SYNQ_NULL_NODE) {")
     lines.append("    if (field_name) {")
-    lines.append("      ast_print_indent(out, depth);")
+    lines.append("      synq_ast_print_indent(out, depth);")
     lines.append('      fprintf(out, "%s: null\\n", field_name);')
     lines.append("    }")
     lines.append("    return;")
     lines.append("  }")
     lines.append("")
-    lines.append("  SyntaqliteNode *node = AST_NODE(ast, node_id);")
+    lines.append("  SynqNode *node = AST_NODE(ast, node_id);")
     lines.append("  if (!node) {")
     lines.append("    return;")
     lines.append("  }")
@@ -473,7 +476,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
         snake_name = pascal_to_snake(node.name)
 
         lines.append(f"    case {tag}: {{")
-        lines.append("      ast_print_indent(out, depth);")
+        lines.append("      synq_ast_print_indent(out, depth);")
 
         if isinstance(node, NodeDef):
             # Print node name (with field name prefix if provided)
@@ -488,22 +491,22 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
                     # Recursively print child node with field name
                     lines.append(f'      print_node(out, ast, node->{snake_name}.{field_name}, source, depth + 1, "{field_name}");')
                 elif isinstance(field_type, InlineField):
-                    if field_type.type_name == "SyntaqliteSourceSpan":
+                    if field_type.type_name == "SynqSourceSpan":
                         # Source span - print quoted text or "null"
-                        lines.append("      ast_print_indent(out, depth + 1);")
+                        lines.append("      synq_ast_print_indent(out, depth + 1);")
                         lines.append(f'      fprintf(out, "{field_name}: ");')
-                        lines.append(f"      ast_print_source_span(out, source, node->{snake_name}.{field_name});")
+                        lines.append(f"      synq_ast_print_source_span(out, source, node->{snake_name}.{field_name});")
                         lines.append('      fprintf(out, "\\n");')
                     elif field_type.type_name in enum_names:
                         # Enum field - print as string
-                        names_var = f"syntaqlite_{pascal_to_snake(field_type.type_name)}_names"
-                        lines.append("      ast_print_indent(out, depth + 1);")
+                        names_var = f"synq_{pascal_to_snake(field_type.type_name)}_names"
+                        lines.append("      synq_ast_print_indent(out, depth + 1);")
                         lines.append(f'      fprintf(out, "{field_name}: %s\\n", {names_var}[node->{snake_name}.{field_name}]);')
                     elif field_type.type_name in flags_lookup:
                         # Flags union - print individual flag names
                         fdef = flags_lookup[field_type.type_name]
                         accessor = f"node->{snake_name}.{field_name}"
-                        lines.append("      ast_print_indent(out, depth + 1);")
+                        lines.append("      synq_ast_print_indent(out, depth + 1);")
                         lines.append(f'      fprintf(out, "{field_name}:");')
                         for fname in fdef.flags:
                             lines.append(f'      if ({accessor}.{fname.lower()}) fprintf(out, " {fname}");')
@@ -511,7 +514,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
                         lines.append('      fprintf(out, "\\n");')
                     else:
                         # Regular inline field - print name and value
-                        lines.append("      ast_print_indent(out, depth + 1);")
+                        lines.append("      synq_ast_print_indent(out, depth + 1);")
                         lines.append(f'      fprintf(out, "{field_name}: %u\\n", node->{snake_name}.{field_name});')
 
         elif isinstance(node, ListDef):
@@ -529,7 +532,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
         lines.append("")
 
     lines.append("    default:")
-    lines.append("      ast_print_indent(out, depth);")
+    lines.append("      synq_ast_print_indent(out, depth);")
     lines.append('      fprintf(out, "Unknown(tag=%d)\\n", node->tag);')
     lines.append("      break;")
     lines.append("  }")
@@ -537,7 +540,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("")
 
     # Public function
-    lines.append("void syntaqlite_ast_print(FILE *out, SyntaqliteArena *ast, uint32_t node_id,")
+    lines.append("void synq_ast_print(FILE *out, SynqArena *ast, uint32_t node_id,")
     lines.append("                          const char *source) {")
     lines.append("  print_node(out, ast, node_id, source, 0, NULL);")
     lines.append("}")

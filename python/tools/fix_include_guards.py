@@ -1,7 +1,7 @@
 # Copyright 2025 The syntaqlite Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0.
 
-"""Check and fix include guards to use SYNTAQLITE_ prefix."""
+"""Check and fix include guards to use SYNQ_ prefix."""
 
 import argparse
 import re
@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent.parent.parent
-GUARD_PREFIX = "SYNTAQLITE_"
+GUARD_PREFIX = "SYNQ_"
 
 # Pattern to match include guard ifndef/define
 IFNDEF_PATTERN = re.compile(r"^#ifndef\s+(\w+)\s*$")
@@ -20,7 +20,7 @@ ENDIF_PATTERN = re.compile(r"^#endif\s*(?://.*|/\*.*\*/\s*)?$")
 def path_to_guard(path: Path) -> str:
     """Convert a file path to the expected guard name."""
     rel = path.relative_to(ROOT_DIR)
-    # Convert path to guard: src/lexer.h -> SYNTAQLITE_SRC_LEXER_H
+    # Convert path to guard: src/lexer.h -> SYNQ_SRC_LEXER_H
     guard = str(rel).upper().replace("/", "_").replace(".", "_")
     return f"{GUARD_PREFIX}{guard}"
 

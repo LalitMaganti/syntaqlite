@@ -133,7 +133,7 @@ def rename_symbols_safe(
     Args:
         content: The C source code.
         old_prefix: The prefix to search for (e.g., "sqlite3").
-        new_prefix: The replacement prefix (e.g., "syntaqlite_sqlite3").
+        new_prefix: The replacement prefix (e.g., "synq_sqlite3").
         whole_word: Only match at word boundaries (default True).
 
     Returns:

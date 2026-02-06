@@ -11,9 +11,9 @@ ENUMS = []
 NODES = [
     # Column reference: name, optionally qualified with table and/or schema
     Node("ColumnRef",
-        column=inline("SyntaqliteSourceSpan"),
-        table=inline("SyntaqliteSourceSpan"),
-        schema=inline("SyntaqliteSourceSpan"),
+        column=inline("SynqSourceSpan"),
+        table=inline("SynqSourceSpan"),
+        schema=inline("SynqSourceSpan"),
         fmt=seq(
             if_span("schema", seq(span("schema"), kw("."))),
             if_span("table", seq(span("table"), kw("."))),

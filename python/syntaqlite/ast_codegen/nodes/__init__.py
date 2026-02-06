@@ -9,7 +9,7 @@ Design rules:
 - No pointers: Only indices (node IDs) and offsets (into source text)
 - Variable sizes: Each node type uses exactly the space it needs
 
-For nullable index fields, use SYNTAQLITE_NULL_NODE (0xFFFFFFFF).
+For nullable index fields, use SYNQ_NULL_NODE (0xFFFFFFFF).
 """
 
 # Order matters for binary compatibility: enums are assigned IDs sequentially,

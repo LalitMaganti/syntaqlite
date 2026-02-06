@@ -7,24 +7,24 @@
 **    May you find forgiveness for yourself and forgive others.
 **    May you share freely, never taking more than you give.
 **
-** SQLite tokenizer for syntaqlite.
+** SQLite tokenizer for synq.
 ** Extracted from SQLite's tokenize.c with minimal modifications.
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_sqlite.py
 */
 
-#include "src/syntaqlite_sqlite_defs.h"
+#include "src/synq_sqlite_defs.h"
 #include "src/sqlite_charmap.h"
 
 /*
-** Syntaqlite tokenizer injection support.
-** When SYNTAQLITE_KEYWORDHASH_DATA_FILE is defined, external keyword data is used.
+** Synq tokenizer injection support.
+** When SYNQ_KEYWORDHASH_DATA_FILE is defined, external keyword data is used.
 */
-#ifdef SYNTAQLITE_KEYWORDHASH_DATA_FILE
-#include SYNTAQLITE_KEYWORDHASH_DATA_FILE
-#define _SYNTAQLITE_EXTERNAL_KEYWORDHASH 1
+#ifdef SYNQ_KEYWORDHASH_DATA_FILE
+#include SYNQ_KEYWORDHASH_DATA_FILE
+#define _SYNQ_EXTERNAL_KEYWORDHASH 1
 #endif
 
-#ifndef _SYNTAQLITE_EXTERNAL_KEYWORDHASH
+#ifndef _SYNQ_EXTERNAL_KEYWORDHASH
 #include "src/sqlite_tokens.h"
 /* Hash score: 231 */
 /* zKWText[] encodes 1007 bytes of keyword text in 667 bytes */
@@ -40,7 +40,7 @@
 /*   EPLACEFIRSTFOLLOWINGFROMFULLIMITIFORDERESTRICTOTHERSOVER           */
 /*   ETURNINGRIGHTROLLBACKROWSUNBOUNDEDUNIONUSINGVACUUMVIEWINDOWBY      */
 /*   INITIALLYPRIMARY                                                   */
-static const char syntaqlite_zKWText[666] = {
+static const char synq_zKWText[666] = {
   'R','E','I','N','D','E','X','E','D','E','S','C','A','P','E','A','C','H',
   'E','C','K','E','Y','B','E','F','O','R','E','I','G','N','O','R','E','G',
   'E','X','P','L','A','I','N','S','T','E','A','D','D','A','T','A','B','A',
@@ -80,7 +80,7 @@ static const char syntaqlite_zKWText[666] = {
   'B','Y','I','N','I','T','I','A','L','L','Y','P','R','I','M','A','R','Y',
 };
 /* aKWHash[i] is the hash value for the i-th keyword */
-static const unsigned char syntaqlite_aKWHash[127] = {
+static const unsigned char synq_aKWHash[127] = {
     84,  92, 134,  82, 105,  29,   0,   0,  94,   0,  85,  72,   0,
     53,  35,  86,  15,   0,  42,  97,  54,  89, 135,  19,   0,   0,
    140,   0,  40, 129,   0,  22, 107,   0,   9,   0,   0, 123,  80,
@@ -95,7 +95,7 @@ static const unsigned char syntaqlite_aKWHash[127] = {
 /* aKWNext[] forms the hash collision chain.  If aKWHash[i]==0
 ** then the i-th keyword has no more hash collisions.  Otherwise,
 ** the next keyword with the same hash is aKWHash[i]-1. */
-static const unsigned char syntaqlite_aKWNext[148] = {0,
+static const unsigned char synq_aKWNext[148] = {0,
      0,   0,   0,   0,   4,   0,  43,   0,   0, 106, 114,   0,   0,
      0,   2,   0,   0, 143,   0,   0,   0,  13,   0,   0,   0,   0,
    141,   0,   0, 119,  52,   0,   0, 137,  12,   0,   0,  62,   0,
@@ -110,7 +110,7 @@ static const unsigned char syntaqlite_aKWNext[148] = {0,
    102,   0,   0,  87,
 };
 /* aKWLen[i] is the length (in bytes) of the i-th keyword */
-static const unsigned char syntaqlite_aKWLen[148] = {0,
+static const unsigned char synq_aKWLen[148] = {0,
      7,   7,   5,   4,   6,   4,   5,   3,   6,   7,   3,   6,   6,
      7,   7,   3,   8,   2,   6,   5,   4,   4,   3,  10,   4,   7,
      6,   9,   4,   2,   6,   5,   9,   9,   4,   7,   3,   2,   4,
@@ -126,7 +126,7 @@ static const unsigned char syntaqlite_aKWLen[148] = {0,
 };
 /* aKWOffset[i] is the index into zKWText[] of the start of
 ** the text for the i-th keyword. */
-static const unsigned short int syntaqlite_aKWOffset[148] = {0,
+static const unsigned short int synq_aKWOffset[148] = {0,
      0,   2,   2,   8,   9,  14,  16,  20,  23,  25,  25,  29,  33,
     36,  41,  46,  48,  53,  54,  59,  62,  65,  67,  69,  78,  81,
     86,  90,  90,  94,  99, 101, 105, 111, 119, 123, 123, 123, 126,
@@ -141,7 +141,7 @@ static const unsigned short int syntaqlite_aKWOffset[148] = {0,
    648, 650, 655, 659,
 };
 /* aKWCode[i] is the parser symbol code for the i-th keyword */
-static const unsigned char syntaqlite_aKWCode[148] = {0,
+static const unsigned char synq_aKWCode[148] = {0,
   TK_REINDEX,    TK_INDEXED,    TK_INDEX,      TK_DESC,       TK_ESCAPE,     
   TK_EACH,       TK_CHECK,      TK_KEY,        TK_BEFORE,     TK_FOREIGN,    
   TK_FOR,        TK_IGNORE,     TK_LIKE_KW,    TK_EXPLAIN,    TK_INSTEAD,    
@@ -305,26 +305,26 @@ static const unsigned char syntaqlite_aKWCode[148] = {0,
 /* Check to see if z[0..n-1] is a keyword. If it is, write the
 ** parser symbol code for that keyword into *pType.  Always
 ** return the integer n (the length of the token). */
-#endif /* _SYNTAQLITE_EXTERNAL_KEYWORDHASH */
+#endif /* _SYNQ_EXTERNAL_KEYWORDHASH */
 
 /* Stub for parser fallback - not needed for pure tokenization */
-static inline int syntaqlite_sqlite3ParserFallback(int token) {
+static inline int synq_sqlite3ParserFallback(int token) {
   (void)token;
   return 0;
 }
 
 /* Forward declaration */
-i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType);
+i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType);
 
 /* Keyword lookup function */
-int syntaqlite_keywordCode(const char *z, int n, int *pType){
+int synq_keywordCode(const char *z, int n, int *pType){
   int i, j;
   const char *zKW;
   assert( n>=2 );
-  i = ((syntaqlite_sqlite3Tolower(z[0])*4) ^ (syntaqlite_sqlite3Tolower(z[n-1])*3) ^ n*1) % 127;
-  for(i=(int)syntaqlite_aKWHash[i]; i>0; i=syntaqlite_aKWNext[i]){
-    if( syntaqlite_aKWLen[i]!=n ) continue;
-    zKW = &syntaqlite_zKWText[syntaqlite_aKWOffset[i]];
+  i = ((synq_sqlite3Tolower(z[0])*4) ^ (synq_sqlite3Tolower(z[n-1])*3) ^ n*1) % 127;
+  for(i=(int)synq_aKWHash[i]; i>0; i=synq_aKWNext[i]){
+    if( synq_aKWLen[i]!=n ) continue;
+    zKW = &synq_zKWText[synq_aKWOffset[i]];
 #ifdef SQLITE_ASCII
     if( (z[0]&~0x20)!=zKW[0] ) continue;
     if( (z[1]&~0x20)!=zKW[1] ) continue;
@@ -338,7 +338,7 @@ int syntaqlite_keywordCode(const char *z, int n, int *pType){
     while( j<n && toupper(z[j])==zKW[j] ){ j++; }
 #endif
     if( j<n ) continue;
-    *pType = syntaqlite_aKWCode[i];
+    *pType = synq_aKWCode[i];
     break;
   }
   return n;
@@ -489,10 +489,10 @@ const unsigned char ebcdicToAscii[] = {
 ** But the feature is undocumented.
 */
 #ifdef SQLITE_ASCII
-#define IdChar(C)  ((syntaqlite_sqlite3CtypeMap[(unsigned char)C]&0x46)!=0)
+#define IdChar(C)  ((synq_sqlite3CtypeMap[(unsigned char)C]&0x46)!=0)
 #endif
 #ifdef SQLITE_EBCDIC
-const char syntaqlite_sqlite3IsEbcdicIdChar[] = {
+const char synq_sqlite3IsEbcdicIdChar[] = {
 /* x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF */
     0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0,  /* 4x */
     0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0,  /* 5x */
@@ -507,11 +507,11 @@ const char syntaqlite_sqlite3IsEbcdicIdChar[] = {
     0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1,  /* Ex */
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0,  /* Fx */
 };
-#define IdChar(C)  (((c=C)>=0x42 && syntaqlite_sqlite3IsEbcdicIdChar[c-0x40]))
+#define IdChar(C)  (((c=C)>=0x42 && synq_sqlite3IsEbcdicIdChar[c-0x40]))
 #endif
 
 /* Make the IdChar function accessible from ctime.c and alter.c */
-int syntaqlite_sqlite3IsIdChar(u8 c){ return IdChar(c); }
+int synq_sqlite3IsIdChar(u8 c){ return IdChar(c); }
 
 #ifndef SQLITE_OMIT_WINDOWFUNC
 /*
@@ -522,14 +522,14 @@ static int getToken(const unsigned char **pz){
   const unsigned char *z = *pz;
   int t;                          /* Token type to return */
   do {
-    z += syntaqlite_sqlite3GetToken(z, &t);
+    z += synq_sqlite3GetToken(z, &t);
   }while( t==TK_SPACE || t==TK_COMMENT );
   if( t==TK_ID 
    || t==TK_STRING 
    || t==TK_JOIN_KW 
    || t==TK_WINDOW 
    || t==TK_OVER 
-   || syntaqlite_sqlite3ParserFallback(t)==TK_ID 
+   || synq_sqlite3ParserFallback(t)==TK_ID 
   ){
     t = TK_ID;
   }
@@ -567,7 +567,7 @@ static int getToken(const unsigned char **pz){
 **   * the previous token was TK_RP, and
 **   * the next token is TK_LP.
 */
-int syntaqlite_sqlite3AnalyzeWindowKeyword(const unsigned char *z){
+int synq_sqlite3AnalyzeWindowKeyword(const unsigned char *z){
   int t;
   t = getToken(&z);
   if( t!=TK_ID ) return TK_ID;
@@ -575,14 +575,14 @@ int syntaqlite_sqlite3AnalyzeWindowKeyword(const unsigned char *z){
   if( t!=TK_AS ) return TK_ID;
   return TK_WINDOW;
 }
-int syntaqlite_sqlite3AnalyzeOverKeyword(const unsigned char *z, int lastToken){
+int synq_sqlite3AnalyzeOverKeyword(const unsigned char *z, int lastToken){
   if( lastToken==TK_RP ){
     int t = getToken(&z);
     if( t==TK_LP || t==TK_ID ) return TK_OVER;
   }
   return TK_ID;
 }
-int syntaqlite_sqlite3AnalyzeFilterKeyword(const unsigned char *z, int lastToken){
+int synq_sqlite3AnalyzeFilterKeyword(const unsigned char *z, int lastToken){
   if( lastToken==TK_RP && getToken(&z)==TK_LP ){
     return TK_FILTER;
   }
@@ -594,14 +594,14 @@ int syntaqlite_sqlite3AnalyzeFilterKeyword(const unsigned char *z, int lastToken
 ** Return the length (in bytes) of the token that begins at z[0]. 
 ** Store the token type in *tokenType before returning.
 */
-i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
+i64 synq_sqlite3GetToken(const unsigned char *z, int *tokenType){
   i64 i;
   int c;
   switch( aiClass[*z] ){  /* Switch on the character-class of the first byte
                           ** of the token. See the comment on the CC_ defines
                           ** above. */
     case CC_SPACE: {
-      for(i=1; syntaqlite_sqlite3Isspace(z[i]); i++){}
+      for(i=1; synq_sqlite3Isspace(z[i]); i++){}
       *tokenType = TK_SPACE;
       return i;
     }
@@ -736,7 +736,7 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
     }
     case CC_DOT: {
 #ifndef SQLITE_OMIT_FLOATING_POINT
-      if( !syntaqlite_sqlite3Isdigit(z[1]) )
+      if( !synq_sqlite3Isdigit(z[1]) )
 #endif
       {
         *tokenType = TK_DOT;
@@ -749,9 +749,9 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
     case CC_DIGIT: {
       *tokenType = TK_INTEGER;
 #ifndef SQLITE_OMIT_HEX_INTEGER
-      if( z[0]=='0' && (z[1]=='x' || z[1]=='X') && syntaqlite_sqlite3Isxdigit(z[2]) ){
+      if( z[0]=='0' && (z[1]=='x' || z[1]=='X') && synq_sqlite3Isxdigit(z[2]) ){
         for(i=3; 1; i++){
-          if( syntaqlite_sqlite3Isxdigit(z[i])==0 ){
+          if( synq_sqlite3Isxdigit(z[i])==0 ){
             if( z[i]==SQLITE_DIGIT_SEPARATOR ){
               *tokenType = TK_QNUMBER;
             }else{
@@ -763,7 +763,7 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
 #endif
         {
         for(i=0; 1; i++){
-          if( syntaqlite_sqlite3Isdigit(z[i])==0 ){
+          if( synq_sqlite3Isdigit(z[i])==0 ){
             if( z[i]==SQLITE_DIGIT_SEPARATOR ){
               *tokenType = TK_QNUMBER;
             }else{
@@ -775,7 +775,7 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
         if( z[i]=='.' ){
           if( *tokenType==TK_INTEGER ) *tokenType = TK_FLOAT;
           for(i++; 1; i++){
-            if( syntaqlite_sqlite3Isdigit(z[i])==0 ){
+            if( synq_sqlite3Isdigit(z[i])==0 ){
               if( z[i]==SQLITE_DIGIT_SEPARATOR ){
                 *tokenType = TK_QNUMBER;
               }else{
@@ -785,13 +785,13 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
           }
         }
         if( (z[i]=='e' || z[i]=='E') &&
-             ( syntaqlite_sqlite3Isdigit(z[i+1]) 
-              || ((z[i+1]=='+' || z[i+1]=='-') && syntaqlite_sqlite3Isdigit(z[i+2]))
+             ( synq_sqlite3Isdigit(z[i+1]) 
+              || ((z[i+1]=='+' || z[i+1]=='-') && synq_sqlite3Isdigit(z[i+2]))
              )
         ){
           if( *tokenType==TK_INTEGER ) *tokenType = TK_FLOAT;
           for(i+=2; 1; i++){
-            if( syntaqlite_sqlite3Isdigit(z[i])==0 ){
+            if( synq_sqlite3Isdigit(z[i])==0 ){
               if( z[i]==SQLITE_DIGIT_SEPARATOR ){
                 *tokenType = TK_QNUMBER;
               }else{
@@ -815,7 +815,7 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
     }
     case CC_VARNUM: {
       *tokenType = TK_VARIABLE;
-      for(i=1; syntaqlite_sqlite3Isdigit(z[i]); i++){}
+      for(i=1; synq_sqlite3Isdigit(z[i]); i++){}
       return i;
     }
     case CC_DOLLAR:
@@ -829,7 +829,7 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
         }else if( c=='(' && n>0 ){
           do{
             i++;
-          }while( (c=z[i])!=0 && !syntaqlite_sqlite3Isspace(c) && c!=')' );
+          }while( (c=z[i])!=0 && !synq_sqlite3Isspace(c) && c!=')' );
           if( c==')' ){
             i++;
           }else{
@@ -857,13 +857,13 @@ i64 syntaqlite_sqlite3GetToken(const unsigned char *z, int *tokenType){
         break;
       }
       *tokenType = TK_ID;
-      return syntaqlite_keywordCode((char*)z, i, tokenType);
+      return synq_keywordCode((char*)z, i, tokenType);
     }
     case CC_X: {
 #ifndef SQLITE_OMIT_BLOB_LITERAL
       if( z[1]=='\'' ){
         *tokenType = TK_BLOB;
-        for(i=2; syntaqlite_sqlite3Isxdigit(z[i]); i++){}
+        for(i=2; synq_sqlite3Isxdigit(z[i]); i++){}
         if( z[i]!='\'' || i%2 ){
           *tokenType = TK_ILLEGAL;
           while( z[i] && z[i]!='\'' ){ i++; }

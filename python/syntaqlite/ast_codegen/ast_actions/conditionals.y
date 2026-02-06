@@ -5,38 +5,38 @@
 // Python tooling validates coverage and consistency.
 //
 // Conventions:
-// - pCtx: Parse context (SyntaqliteParseContext*)
+// - pCtx: Parse context (SynqParseContext*)
 // - pCtx->astCtx: AST context for builder calls
 // - pCtx->zSql: Original SQL text (for computing offsets)
 // - pCtx->root: Set to root node ID at input rule
-// - Terminals are SyntaqliteToken with .z (pointer) and .n (length)
+// - Terminals are SynqToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
 // ============ IS / ISNULL / NOTNULL ============
 
 expr(A) ::= expr(B) ISNULL|NOTNULL(E). {
-    SyntaqliteIsOp op = (E.type == TK_ISNULL) ? SYNTAQLITE_IS_OP_ISNULL : SYNTAQLITE_IS_OP_NOTNULL;
-    A = ast_is_expr(pCtx->astCtx, op, B, SYNTAQLITE_NULL_NODE);
+    SynqIsOp op = (E.type == TK_ISNULL) ? SYNQ_IS_OP_ISNULL : SYNQ_IS_OP_NOTNULL;
+    A = synq_ast_is_expr(pCtx->astCtx, op, B, SYNQ_NULL_NODE);
 }
 
 expr(A) ::= expr(B) NOT NULL. {
-    A = ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_NOTNULL, B, SYNTAQLITE_NULL_NODE);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_NOTNULL, B, SYNQ_NULL_NODE);
 }
 
 expr(A) ::= expr(B) IS expr(C). {
-    A = ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_IS, B, C);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_IS, B, C);
 }
 
 expr(A) ::= expr(B) IS NOT expr(C). {
-    A = ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_IS_NOT, B, C);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_IS_NOT, B, C);
 }
 
 expr(A) ::= expr(B) IS NOT DISTINCT FROM expr(C). {
-    A = ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_IS_NOT_DISTINCT, B, C);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_IS_NOT_DISTINCT, B, C);
 }
 
 expr(A) ::= expr(B) IS DISTINCT FROM expr(C). {
-    A = ast_is_expr(pCtx->astCtx, SYNTAQLITE_IS_OP_IS_DISTINCT, B, C);
+    A = synq_ast_is_expr(pCtx->astCtx, SYNQ_IS_OP_IS_DISTINCT, B, C);
 }
 
 // ============ BETWEEN ============
@@ -50,7 +50,7 @@ between_op(A) ::= NOT BETWEEN. {
 }
 
 expr(A) ::= expr(B) between_op(C) expr(D) AND expr(E). [BETWEEN] {
-    A = ast_between_expr(pCtx->astCtx, (SyntaqliteBool)C, B, D, E);
+    A = synq_ast_between_expr(pCtx->astCtx, (SynqBool)C, B, D, E);
 }
 
 // ============ LIKE / GLOB / MATCH ============
@@ -65,29 +65,29 @@ likeop(A) ::= NOT LIKE_KW|MATCH(B). {
 }
 
 expr(A) ::= expr(B) likeop(C) expr(D). [LIKE_KW] {
-    SyntaqliteBool negated = (C.n & 0x80000000) ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
-    A = ast_like_expr(pCtx->astCtx, negated, B, D, SYNTAQLITE_NULL_NODE);
+    SynqBool negated = (C.n & 0x80000000) ? SYNQ_BOOL_TRUE : SYNQ_BOOL_FALSE;
+    A = synq_ast_like_expr(pCtx->astCtx, negated, B, D, SYNQ_NULL_NODE);
 }
 
 expr(A) ::= expr(B) likeop(C) expr(D) ESCAPE expr(E). [LIKE_KW] {
-    SyntaqliteBool negated = (C.n & 0x80000000) ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
-    A = ast_like_expr(pCtx->astCtx, negated, B, D, E);
+    SynqBool negated = (C.n & 0x80000000) ? SYNQ_BOOL_TRUE : SYNQ_BOOL_FALSE;
+    A = synq_ast_like_expr(pCtx->astCtx, negated, B, D, E);
 }
 
 // ============ CASE ============
 
 expr(A) ::= CASE case_operand(B) case_exprlist(C) case_else(D) END. {
-    A = ast_case_expr(pCtx->astCtx, B, D, C);
+    A = synq_ast_case_expr(pCtx->astCtx, B, D, C);
 }
 
 case_exprlist(A) ::= case_exprlist(B) WHEN expr(C) THEN expr(D). {
-    uint32_t w = ast_case_when(pCtx->astCtx, C, D);
-    A = ast_case_when_list_append(pCtx->astCtx, B, w);
+    uint32_t w = synq_ast_case_when(pCtx->astCtx, C, D);
+    A = synq_ast_case_when_list_append(pCtx->astCtx, B, w);
 }
 
 case_exprlist(A) ::= WHEN expr(B) THEN expr(C). {
-    uint32_t w = ast_case_when(pCtx->astCtx, B, C);
-    A = ast_case_when_list(pCtx->astCtx, w);
+    uint32_t w = synq_ast_case_when(pCtx->astCtx, B, C);
+    A = synq_ast_case_when_list(pCtx->astCtx, w);
 }
 
 case_else(A) ::= ELSE expr(B). {
@@ -95,7 +95,7 @@ case_else(A) ::= ELSE expr(B). {
 }
 
 case_else(A) ::= . {
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 case_operand(A) ::= expr(B). {
@@ -103,5 +103,5 @@ case_operand(A) ::= expr(B). {
 }
 
 case_operand(A) ::= . {
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }

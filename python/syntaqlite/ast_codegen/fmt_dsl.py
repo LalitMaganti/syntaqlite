@@ -10,7 +10,7 @@ Usage in node definition files:
     from ..fmt_dsl import seq, kw, span, child, line, group, ...
 
     Node("Literal",
-        source=inline("SyntaqliteSourceSpan"),
+        source=inline("SynqSourceSpan"),
         fmt=span("source"),
     )
 """
@@ -43,17 +43,17 @@ class FmtChild:
 
 @dataclass(frozen=True)
 class FmtLine:
-    """doc_line: space when flat, newline+indent when broken."""
+    """synq_doc_line: space when flat, newline+indent when broken."""
     pass
 
 @dataclass(frozen=True)
 class FmtSoftline:
-    """doc_softline: empty when flat, newline+indent when broken."""
+    """synq_doc_softline: empty when flat, newline+indent when broken."""
     pass
 
 @dataclass(frozen=True)
 class FmtHardline:
-    """doc_hardline: always newline+indent."""
+    """synq_doc_hardline: always newline+indent."""
     pass
 
 
@@ -66,12 +66,12 @@ class FmtSeq:
 
 @dataclass(frozen=True)
 class FmtGroup:
-    """doc_group: try flat, break if doesn't fit."""
+    """synq_doc_group: try flat, break if doesn't fit."""
     child: FmtDoc
 
 @dataclass(frozen=True)
 class FmtNest:
-    """doc_nest: increase indent for child by options.indent_width."""
+    """synq_doc_nest: increase indent for child by options.indent_width."""
     child: FmtDoc
 
 
@@ -79,7 +79,7 @@ class FmtNest:
 
 @dataclass(frozen=True)
 class FmtIfSet:
-    """Conditional on an index field being non-null (not SYNTAQLITE_NULL_NODE)."""
+    """Conditional on an index field being non-null (not SYNQ_NULL_NODE)."""
     field: str
     then: FmtDoc
     else_: FmtDoc | None = None

@@ -51,8 +51,8 @@ ENUMS = [
 NODES = [
     # Qualified name: [schema.]name -- used by DROP and ALTER
     Node("QualifiedName",
-        object_name=inline("SyntaqliteSourceSpan"),
-        schema=inline("SyntaqliteSourceSpan"),
+        object_name=inline("SynqSourceSpan"),
+        schema=inline("SynqSourceSpan"),
         fmt=seq(
             if_span("schema", seq(span("schema"), kw("."))),
             span("object_name"),
@@ -82,8 +82,8 @@ NODES = [
     Node("AlterTableStmt",
         op=inline("AlterOp"),
         target=index("Expr"),                     # QualifiedName - the table
-        new_name=inline("SyntaqliteSourceSpan"),  # RENAME TO / RENAME COLUMN new name
-        old_name=inline("SyntaqliteSourceSpan"),  # RENAME COLUMN old name / DROP COLUMN name / ADD COLUMN name
+        new_name=inline("SynqSourceSpan"),  # RENAME TO / RENAME COLUMN new name
+        old_name=inline("SynqSourceSpan"),  # RENAME COLUMN old name / DROP COLUMN name / ADD COLUMN name
         fmt=seq(
             kw("ALTER TABLE "),
             if_set("target", seq(child("target"), kw(" "))),
@@ -118,7 +118,7 @@ NODES = [
     # SAVEPOINT name / RELEASE [SAVEPOINT] name / ROLLBACK TO [SAVEPOINT] name
     Node("SavepointStmt",
         op=inline("SavepointOp"),
-        savepoint_name=inline("SyntaqliteSourceSpan"),
+        savepoint_name=inline("SynqSourceSpan"),
         fmt=switch("op", {
             "SAVEPOINT": seq(kw("SAVEPOINT "), span("savepoint_name")),
             "RELEASE": seq(kw("RELEASE SAVEPOINT "), span("savepoint_name")),

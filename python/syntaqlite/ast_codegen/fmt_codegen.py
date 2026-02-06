@@ -45,15 +45,15 @@ from .fmt_dsl import (
 
 
 def _tag_name(node_name: str) -> str:
-    return f"SYNTAQLITE_NODE_{pascal_to_snake(node_name).upper()}"
+    return f"SYNQ_NODE_{pascal_to_snake(node_name).upper()}"
 
 
 def _struct_name(node_name: str) -> str:
-    return f"Syntaqlite{node_name}"
+    return f"Synq{node_name}"
 
 
 def _enum_prefix(enum_name: str) -> str:
-    return f"SYNTAQLITE_{pascal_to_snake(enum_name).upper()}"
+    return f"SYNQ_{pascal_to_snake(enum_name).upper()}"
 
 
 def _c_str(s: str) -> str:
@@ -109,36 +109,36 @@ class _Compiler:
 
         if isinstance(doc, FmtKw):
             v = self._var("kw")
-            self.lines.append(f"{ind}uint32_t {v} = kw(ctx, {_c_str(doc.text)});")
+            self.lines.append(f"{ind}uint32_t {v} = synq_kw(ctx, {_c_str(doc.text)});")
             return _Result(v, False)
 
         if isinstance(doc, FmtSpan):
             v = self._var("sp")
-            self.lines.append(f"{ind}uint32_t {v} = span_text(ctx, {self._accessor(doc.field)});")
+            self.lines.append(f"{ind}uint32_t {v} = synq_span_text(ctx, {self._accessor(doc.field)});")
             return _Result(v, True)
 
         if isinstance(doc, FmtChild):
             if doc.field == "_item":
                 v = self._var("item")
-                self.lines.append(f"{ind}uint32_t {v} = format_node(ctx, _child_id);")
+                self.lines.append(f"{ind}uint32_t {v} = synq_format_node(ctx, _child_id);")
                 return _Result(v, True)
             v = self._var("ch")
-            self.lines.append(f"{ind}uint32_t {v} = format_node(ctx, {self._accessor(doc.field)});")
+            self.lines.append(f"{ind}uint32_t {v} = synq_format_node(ctx, {self._accessor(doc.field)});")
             return _Result(v, True)
 
         if isinstance(doc, FmtLine):
             v = self._var("ln")
-            self.lines.append(f"{ind}uint32_t {v} = doc_line(&ctx->docs);")
+            self.lines.append(f"{ind}uint32_t {v} = synq_doc_line(&ctx->docs);")
             return _Result(v, False)
 
         if isinstance(doc, FmtSoftline):
             v = self._var("sl")
-            self.lines.append(f"{ind}uint32_t {v} = doc_softline(&ctx->docs);")
+            self.lines.append(f"{ind}uint32_t {v} = synq_doc_softline(&ctx->docs);")
             return _Result(v, False)
 
         if isinstance(doc, FmtHardline):
             v = self._var("hl")
-            self.lines.append(f"{ind}uint32_t {v} = doc_hardline(&ctx->docs);")
+            self.lines.append(f"{ind}uint32_t {v} = synq_doc_hardline(&ctx->docs);")
             return _Result(v, False)
 
         if isinstance(doc, FmtSeq):
@@ -147,14 +147,14 @@ class _Compiler:
         if isinstance(doc, FmtGroup):
             inner = self.compile(doc.child, ind)
             v = self._var("grp")
-            self.lines.append(f"{ind}uint32_t {v} = doc_group(&ctx->docs, {inner.var});")
+            self.lines.append(f"{ind}uint32_t {v} = synq_doc_group(&ctx->docs, {inner.var});")
             return _Result(v, False)
 
         if isinstance(doc, FmtNest):
             inner = self.compile(doc.child, ind)
             v = self._var("nst")
             self.lines.append(
-                f"{ind}uint32_t {v} = doc_nest(&ctx->docs,"
+                f"{ind}uint32_t {v} = synq_doc_nest(&ctx->docs,"
                 f" (int32_t)ctx->options->indent_width, {inner.var});")
             return _Result(v, False)
 
@@ -164,7 +164,7 @@ class _Compiler:
             if opt is not None:
                 return opt
             return self._compile_if(ind,
-                f"{self._accessor(doc.field)} != SYNTAQLITE_NULL_NODE",
+                f"{self._accessor(doc.field)} != SYNQ_NULL_NODE",
                 doc.then, doc.else_)
 
         if isinstance(doc, FmtIfFlag):
@@ -187,14 +187,14 @@ class _Compiler:
             if isinstance(doc.body, FmtChild) and doc.body.field != "_item":
                 v = self._var("cl")
                 self.lines.append(
-                    f"{ind}uint32_t {v} = format_clause(ctx,"
+                    f"{ind}uint32_t {v} = synq_format_clause(ctx,"
                     f" {_c_str(doc.keyword)}, {self._accessor(doc.body.field)});")
                 return _Result(v, True)
             # Fallback: compile body normally (for non-child bodies)
             body = self.compile(doc.body, ind)
             v = self._var("cl")
             self.lines.append(
-                f"{ind}uint32_t {v} = format_clause(ctx,"
+                f"{ind}uint32_t {v} = synq_format_clause(ctx,"
                 f" {_c_str(doc.keyword)}, {body.var});")
             return _Result(v, True)
 
@@ -210,7 +210,7 @@ class _Compiler:
         raise TypeError(f"Unknown FmtDoc type: {type(doc)}")
 
     def _compile_seq(self, doc: FmtSeq, ind: str) -> _Result:
-        """Compile FmtSeq - doc_concat filters NULLs so always use it directly."""
+        """Compile FmtSeq - synq_doc_concat filters NULLs so always use it directly."""
         n = len(doc.items)
         item_results = [self.compile(item, ind) for item in doc.items]
         any_nullable = any(r.nullable for r in item_results)
@@ -218,7 +218,7 @@ class _Compiler:
         v = self._var("cat")
         items_str = ", ".join(r.var for r in item_results)
         self.lines.append(f"{ind}uint32_t {v}_items[] = {{ {items_str} }};")
-        self.lines.append(f"{ind}uint32_t {v} = doc_concat(&ctx->docs, {v}_items, {n});")
+        self.lines.append(f"{ind}uint32_t {v} = synq_doc_concat(&ctx->docs, {v}_items, {n});")
         return _Result(v, any_nullable)
 
     def _try_optimize_if_set(self, doc: FmtIfSet, ind: str) -> _Result | None:
@@ -232,7 +232,7 @@ class _Compiler:
                 and doc.then.body.field == doc.field):
             v = self._var("cl")
             self.lines.append(
-                f"{ind}uint32_t {v} = format_clause(ctx,"
+                f"{ind}uint32_t {v} = synq_format_clause(ctx,"
                 f" {_c_str(doc.then.keyword)},"
                 f" {self._accessor(doc.field)});")
             return _Result(v, True)
@@ -242,7 +242,7 @@ class _Compiler:
                 and doc.then.field == doc.field):
             v = self._var("ch")
             self.lines.append(
-                f"{ind}uint32_t {v} = format_node(ctx, {self._accessor(doc.field)});")
+                f"{ind}uint32_t {v} = synq_format_node(ctx, {self._accessor(doc.field)});")
             return _Result(v, True)
 
         return None
@@ -274,12 +274,12 @@ class _Compiler:
 
         # Single-expression then, no else -> one-line if.
         if then_expr is not None and else_doc is None:
-            self.lines.append(f"{ind}uint32_t {v} = SYNTAQLITE_NULL_DOC;")
+            self.lines.append(f"{ind}uint32_t {v} = SYNQ_NULL_DOC;")
             self.lines.append(f"{ind}if ({condition}) {v} = {then_expr};")
             return _Result(v, True)
 
         # General case: emit block structure.
-        self.lines.append(f"{ind}uint32_t {v} = SYNTAQLITE_NULL_DOC;")
+        self.lines.append(f"{ind}uint32_t {v} = SYNQ_NULL_DOC;")
         self.lines.append(f"{ind}if ({condition}) {{")
         if then_expr is not None:
             self.lines.append(f"{inner_ind}{v} = {then_expr};")
@@ -301,13 +301,13 @@ class _Compiler:
     def _compile_enum_display(self, doc: FmtEnumDisplay, ind: str) -> _Result:
         """Switch mapping enum values to kw() display strings."""
         v = self._var("ed")
-        self.lines.append(f"{ind}uint32_t {v} = SYNTAQLITE_NULL_DOC;")
+        self.lines.append(f"{ind}uint32_t {v} = SYNQ_NULL_DOC;")
         self.lines.append(f"{ind}switch ({self._accessor(doc.field)}) {{")
         for enum_val, display_str in doc.mapping.items():
             c_enum = self._resolve_enum_value(doc.field, enum_val)
             self.lines.append(
                 f"{ind}    case {c_enum}:"
-                f" {v} = kw(ctx, {_c_str(display_str)}); break;")
+                f" {v} = synq_kw(ctx, {_c_str(display_str)}); break;")
         self.lines.append(f"{ind}    default: break;")
         self.lines.append(f"{ind}}}")
         return _Result(v, True)
@@ -317,7 +317,7 @@ class _Compiler:
         case_ind = ind + "    "
         body_ind = ind + "        "
         v = self._var("sw")
-        self.lines.append(f"{ind}uint32_t {v} = SYNTAQLITE_NULL_DOC;")
+        self.lines.append(f"{ind}uint32_t {v} = SYNQ_NULL_DOC;")
         self.lines.append(f"{ind}switch ({self._accessor(doc.field)}) {{")
         for case_val, case_doc in doc.cases.items():
             c_enum = self._resolve_enum_value(doc.field, case_val)
@@ -374,7 +374,7 @@ class _Compiler:
         template_result = self.compile(doc.template, loop_ind)
         self.lines.append(f"{loop_ind}{buf}[{cnt}++] = {template_result.var};")
         self.lines.append(f"{ind}}}")
-        self.lines.append(f"{ind}uint32_t {v} = doc_concat(&ctx->docs, {buf}, {cnt});")
+        self.lines.append(f"{ind}uint32_t {v} = synq_doc_concat(&ctx->docs, {buf}, {cnt});")
         return _Result(v, False)
 
     def _resolve_enum_value(self, field_name: str, value: str) -> str:
@@ -409,132 +409,9 @@ def generate_fmt_c(
     lines.append("// Generated from ast_codegen node definitions - DO NOT EDIT")
     lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
     lines.append("")
-    lines.append('#include "src/fmt/fmt.h"')
+    lines.append('#include "src/fmt/fmt_helpers.h"')
     lines.append("")
-    lines.append('#include "src/ast/ast_base.h"')
     lines.append('#include "src/ast/ast_nodes.h"')
-    lines.append('#include "src/fmt/comment_attach.h"')
-    lines.append('#include "src/fmt/doc.h"')
-    lines.append('#include "src/fmt/doc_layout.h"')
-    lines.append('#include "src/sqlite_tokens.h"')
-    lines.append("")
-    lines.append("#include <stdlib.h>")
-    lines.append("#include <string.h>")
-    lines.append("")
-
-    # FmtCtx struct
-    lines.append("// ============ Formatter Context ============")
-    lines.append("")
-    lines.append("typedef struct {")
-    lines.append("    SyntaqliteDocContext docs;")
-    lines.append("    SyntaqliteArena *ast;")
-    lines.append("    const char *source;")
-    lines.append("    SyntaqliteTokenList *token_list;")
-    lines.append("    SyntaqliteFmtOptions *options;")
-    lines.append("    SyntaqliteCommentAttachment *comment_att;")
-    lines.append("} FmtCtx;")
-    lines.append("")
-
-    # Helper functions
-    lines.append("// ============ Helpers ============")
-    lines.append("")
-    lines.append("static uint32_t kw(FmtCtx *ctx, const char *text) {")
-    lines.append("    return doc_text(&ctx->docs, text, (uint32_t)strlen(text));")
-    lines.append("}")
-    lines.append("")
-    lines.append("static uint32_t span_text(FmtCtx *ctx, SyntaqliteSourceSpan span) {")
-    lines.append("    if (span.length == 0) return SYNTAQLITE_NULL_DOC;")
-    lines.append("    return doc_text(&ctx->docs, ctx->source + span.offset, span.length);")
-    lines.append("}")
-    lines.append("")
-
-    # Comment emission helpers
-    lines.append("// ============ Comment Helpers ============")
-    lines.append("")
-    lines.append("static uint32_t emit_single_comment(FmtCtx *ctx, uint32_t tok_idx) {")
-    lines.append("    SyntaqliteRawToken *tok = &ctx->token_list->data[tok_idx];")
-    lines.append("    return doc_text(&ctx->docs, ctx->source + tok->offset, tok->length);")
-    lines.append("}")
-    lines.append("")
-    lines.append("static uint32_t emit_owned_comments(FmtCtx *ctx, uint32_t node_id, uint8_t kind) {")
-    lines.append("    if (!ctx->comment_att) return SYNTAQLITE_NULL_DOC;")
-    lines.append("    uint32_t parts[64];")
-    lines.append("    uint32_t n = 0;")
-    lines.append("    for (uint32_t i = 0; i < ctx->comment_att->count && n < 62; i++) {")
-    lines.append("        if (ctx->comment_att->owner_node[i] != node_id) continue;")
-    lines.append("        if (ctx->comment_att->position[i] != kind) continue;")
-    lines.append("")
-    lines.append("        int is_line = (ctx->source[ctx->token_list->data[i].offset] == '-');")
-    lines.append("        if (kind == SYNTAQLITE_COMMENT_LEADING) {")
-    lines.append("            parts[n++] = emit_single_comment(ctx, i);")
-    lines.append("            if (n < 62) parts[n++] = is_line ? doc_hardline(&ctx->docs)")
-    lines.append('                : doc_text(&ctx->docs, " ", 1);')
-    lines.append("        } else {")
-    lines.append("            uint32_t sp_parts[2];")
-    lines.append('            sp_parts[0] = doc_text(&ctx->docs, " ", 1);')
-    lines.append("            sp_parts[1] = emit_single_comment(ctx, i);")
-    lines.append("            uint32_t inner = doc_concat(&ctx->docs, sp_parts, 2);")
-    lines.append("            if (is_line) {")
-    lines.append("                // Line comments consume the rest of the line.")
-    lines.append("                parts[n++] = doc_line_suffix(&ctx->docs, inner);")
-    lines.append("                if (n < 62) parts[n++] = doc_break_parent(&ctx->docs);")
-    lines.append("            } else {")
-    lines.append("                // Block comments are inline.")
-    lines.append("                parts[n++] = inner;")
-    lines.append("            }")
-    lines.append("        }")
-    lines.append("    }")
-    lines.append("    if (n == 0) return SYNTAQLITE_NULL_DOC;")
-    lines.append("    return doc_concat(&ctx->docs, parts, n);")
-    lines.append("}")
-    lines.append("")
-
-    # Forward declarations
-    lines.append("static uint32_t format_node(FmtCtx *ctx, uint32_t node_id);")
-    lines.append("static uint32_t dispatch_format(FmtCtx *ctx, uint32_t node_id);")
-    lines.append("")
-
-    # Comma-separated list helper
-    lines.append("// ============ Comma-Separated List ============")
-    lines.append("")
-    lines.append("static uint32_t format_comma_list(FmtCtx *ctx, uint32_t *children, uint32_t count) {")
-    lines.append('    if (count == 0) return kw(ctx, "");')
-    lines.append("    uint32_t buf[count * 3];")
-    lines.append("    uint32_t n = 0;")
-    lines.append("    for (uint32_t i = 0; i < count; i++) {")
-    lines.append("        if (i > 0) {")
-    lines.append('            buf[n++] = kw(ctx, ",");')
-    lines.append("            buf[n++] = doc_line(&ctx->docs);")
-    lines.append("        }")
-    lines.append("        buf[n++] = format_node(ctx, children[i]);")
-    lines.append("    }")
-    lines.append("    return doc_group(&ctx->docs, doc_concat(&ctx->docs, buf, n));")
-    lines.append("}")
-    lines.append("")
-
-    # Clause helper
-    lines.append("// ============ Clause Helper ============")
-    lines.append("")
-    lines.append("static uint32_t format_clause(FmtCtx *ctx, const char *keyword, uint32_t body_id) {")
-    lines.append("    if (body_id == SYNTAQLITE_NULL_NODE) return SYNTAQLITE_NULL_DOC;")
-    lines.append("    // Extract body's leading comments so they appear before the keyword.")
-    lines.append("    uint32_t leading = emit_owned_comments(ctx, body_id, SYNTAQLITE_COMMENT_LEADING);")
-    lines.append("    uint32_t kw_doc = kw(ctx, keyword);")
-    lines.append("    uint32_t body_doc = dispatch_format(ctx, body_id);")
-    lines.append("    uint32_t trailing = emit_owned_comments(ctx, body_id, SYNTAQLITE_COMMENT_TRAILING);")
-    lines.append("    if (body_doc == SYNTAQLITE_NULL_DOC) return SYNTAQLITE_NULL_DOC;")
-    lines.append("    uint32_t body_parts[] = { body_doc, trailing };")
-    lines.append("    uint32_t body_trail = doc_concat(&ctx->docs, body_parts, 2);")
-    lines.append("    uint32_t inner_items[] = { doc_line(&ctx->docs), body_trail };")
-    lines.append("    uint32_t inner = doc_concat(&ctx->docs, inner_items, 2);")
-    lines.append("    uint32_t items[] = {")
-    lines.append("        doc_line(&ctx->docs),")
-    lines.append("        leading,")
-    lines.append("        kw_doc,")
-    lines.append("        doc_group(&ctx->docs, doc_nest(&ctx->docs, (int32_t)ctx->options->indent_width, inner)),")
-    lines.append("    };")
-    lines.append("    return doc_concat(&ctx->docs, items, 4);")
-    lines.append("}")
     lines.append("")
 
     # Compile all node formatters
@@ -568,14 +445,14 @@ def generate_fmt_c(
             if last_line.startswith(prefix) and last_line.endswith(";"):
                 expr = last_line[len(prefix):-1]
                 func_lines = func_lines[:-1]
-                lines.append(f"static uint32_t format_{snake}(FmtCtx *ctx, {struct} *node) {{")
+                lines.append(f"static uint32_t format_{snake}(SynqFmtCtx *ctx, {struct} *node) {{")
                 lines.extend(func_lines)
                 lines.append(f"    return {expr};")
                 lines.append("}")
                 lines.append("")
                 continue
 
-        lines.append(f"static uint32_t format_{snake}(FmtCtx *ctx, {struct} *node) {{")
+        lines.append(f"static uint32_t format_{snake}(SynqFmtCtx *ctx, {struct} *node) {{")
         lines.extend(func_lines)
         lines.append(f"    return {result_var};")
         lines.append("}")
@@ -584,9 +461,9 @@ def generate_fmt_c(
     # Dispatch function (pure switch, no comment handling)
     lines.append("// ============ Dispatch ============")
     lines.append("")
-    lines.append("static uint32_t dispatch_format(FmtCtx *ctx, uint32_t node_id) {")
-    lines.append("    SyntaqliteNode *node = AST_NODE(ctx->ast, node_id);")
-    lines.append("    if (!node) return SYNTAQLITE_NULL_DOC;")
+    lines.append("uint32_t synq_dispatch_format(SynqFmtCtx *ctx, uint32_t node_id) {")
+    lines.append("    SynqNode *node = AST_NODE(ctx->ast, node_id);")
+    lines.append("    if (!node) return SYNQ_NULL_DOC;")
     lines.append("")
     lines.append("    switch (node->tag) {")
 
@@ -601,94 +478,12 @@ def generate_fmt_c(
             # Default list handling: comma-separated
             lines.append(f"        case {tag}:")
             lines.append(
-                f"            return format_comma_list(ctx,"
+                f"            return synq_format_comma_list(ctx,"
                 f" node->{snake}.children, node->{snake}.count);")
 
     lines.append("        default:")
-    lines.append('            return kw(ctx, "/* UNSUPPORTED */");')
+    lines.append('            return synq_kw(ctx, "/* UNSUPPORTED */");')
     lines.append("    }")
-    lines.append("}")
-    lines.append("")
-
-    # format_node wrapper: leading comments + body + trailing comments
-    lines.append("// ============ Main Dispatcher ============")
-    lines.append("")
-    lines.append("static uint32_t format_node(FmtCtx *ctx, uint32_t node_id) {")
-    lines.append("    if (node_id == SYNTAQLITE_NULL_NODE) return SYNTAQLITE_NULL_DOC;")
-    lines.append("")
-    lines.append("    uint32_t leading = emit_owned_comments(ctx, node_id, SYNTAQLITE_COMMENT_LEADING);")
-    lines.append("    uint32_t body = dispatch_format(ctx, node_id);")
-    lines.append("    uint32_t trailing = emit_owned_comments(ctx, node_id, SYNTAQLITE_COMMENT_TRAILING);")
-    lines.append("")
-    lines.append("    uint32_t parts[3] = { leading, body, trailing };")
-    lines.append("    return doc_concat(&ctx->docs, parts, 3);")
-    lines.append("}")
-    lines.append("")
-
-    # Public API
-    lines.append("// ============ Public API ============")
-    lines.append("")
-    lines.append("char *syntaqlite_format(SyntaqliteAstContext *astCtx, uint32_t root_id,")
-    lines.append("                        const char *source, SyntaqliteTokenList *token_list,")
-    lines.append("                        SyntaqliteFmtOptions *options) {")
-    lines.append("    SyntaqliteFmtOptions default_options = SYNTAQLITE_FMT_OPTIONS_DEFAULT;")
-    lines.append("    if (!options) options = &default_options;")
-    lines.append("")
-    lines.append("    FmtCtx ctx;")
-    lines.append("    syntaqlite_doc_context_init(&ctx.docs);")
-    lines.append("    ctx.ast = &astCtx->ast;")
-    lines.append("    ctx.source = source;")
-    lines.append("    ctx.token_list = token_list;")
-    lines.append("    ctx.options = options;")
-    lines.append("    ctx.comment_att = syntaqlite_comment_attach(astCtx, root_id, source, token_list);")
-    lines.append("")
-    lines.append("    uint32_t root_doc = format_node(&ctx, root_id);")
-    lines.append("")
-    lines.append("    syntaqlite_comment_attachment_free(ctx.comment_att);")
-    lines.append("")
-    lines.append("    if (root_doc == SYNTAQLITE_NULL_DOC) {")
-    lines.append("        syntaqlite_doc_context_cleanup(&ctx.docs);")
-    lines.append("        char *empty = (char*)malloc(1);")
-    lines.append("        if (empty) empty[0] = '\\0';")
-    lines.append("        return empty;")
-    lines.append("    }")
-    lines.append("")
-    lines.append("    char *result = syntaqlite_doc_layout(&ctx.docs, root_doc, options->target_width);")
-    lines.append("    syntaqlite_doc_context_cleanup(&ctx.docs);")
-    lines.append("    return result;")
-    lines.append("}")
-    lines.append("")
-
-    # Debug IR function
-    lines.append("char *syntaqlite_format_debug_ir(SyntaqliteAstContext *astCtx, uint32_t root_id,")
-    lines.append("                                  const char *source, SyntaqliteTokenList *token_list,")
-    lines.append("                                  SyntaqliteFmtOptions *options) {")
-    lines.append("    SyntaqliteFmtOptions default_options = SYNTAQLITE_FMT_OPTIONS_DEFAULT;")
-    lines.append("    if (!options) options = &default_options;")
-    lines.append("")
-    lines.append("    FmtCtx ctx;")
-    lines.append("    syntaqlite_doc_context_init(&ctx.docs);")
-    lines.append("    ctx.ast = &astCtx->ast;")
-    lines.append("    ctx.source = source;")
-    lines.append("    ctx.token_list = token_list;")
-    lines.append("    ctx.options = options;")
-    lines.append("    ctx.comment_att = syntaqlite_comment_attach(astCtx, root_id, source, token_list);")
-    lines.append("")
-    lines.append("    uint32_t root_doc = format_node(&ctx, root_id);")
-    lines.append("")
-    lines.append("    syntaqlite_comment_attachment_free(ctx.comment_att);")
-    lines.append("")
-    lines.append("    // Print debug IR to a temporary file and read it back")
-    lines.append("    char *buf = NULL;")
-    lines.append("    size_t buf_size = 0;")
-    lines.append("    FILE *mem = open_memstream(&buf, &buf_size);")
-    lines.append("    if (mem) {")
-    lines.append("        syntaqlite_doc_debug_print(&ctx.docs, root_doc, mem, 0);")
-    lines.append("        fclose(mem);")
-    lines.append("    }")
-    lines.append("")
-    lines.append("    syntaqlite_doc_context_cleanup(&ctx.docs);")
-    lines.append("    return buf;")
     lines.append("}")
     lines.append("")
 

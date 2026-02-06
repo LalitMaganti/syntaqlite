@@ -5,11 +5,11 @@
 // Python tooling validates coverage and consistency.
 //
 // Conventions:
-// - pCtx: Parse context (SyntaqliteParseContext*)
+// - pCtx: Parse context (SynqParseContext*)
 // - pCtx->astCtx: AST context for builder calls
 // - pCtx->zSql: Original SQL text (for computing offsets)
 // - pCtx->root: Set to root node ID at input rule
-// - Terminals are SyntaqliteToken with .z (pointer) and .n (length)
+// - Terminals are SynqToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
 // ============ WITH for DML ============
@@ -17,7 +17,7 @@
 // It coexists with the existing CTE-select rules (parser resolves via lookahead).
 
 with(A) ::= . {
-    A.cte_list = SYNTAQLITE_NULL_NODE;
+    A.cte_list = SYNQ_NULL_NODE;
     A.is_recursive = 0;
 }
 
@@ -35,9 +35,9 @@ with(A) ::= WITH RECURSIVE wqlist(W). {
 
 cmd(A) ::= with(W) DELETE FROM xfullname(X) indexed_opt(I) where_opt_ret(E). {
     (void)I;
-    uint32_t del = ast_delete_stmt(pCtx->astCtx, X, E);
-    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
-        A = ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, del);
+    uint32_t del = synq_ast_delete_stmt(pCtx->astCtx, X, E);
+    if (W.cte_list != SYNQ_NULL_NODE) {
+        A = synq_ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, del);
     } else {
         A = del;
     }
@@ -47,9 +47,9 @@ cmd(A) ::= with(W) DELETE FROM xfullname(X) indexed_opt(I) where_opt_ret(E). {
 
 cmd(A) ::= with(W) UPDATE orconf(R) xfullname(X) indexed_opt(I) SET setlist(Y) from(F) where_opt_ret(E). {
     (void)I;
-    uint32_t upd = ast_update_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, X, Y, F, E);
-    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
-        A = ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, upd);
+    uint32_t upd = synq_ast_update_stmt(pCtx->astCtx, (SynqConflictAction)R, X, Y, F, E);
+    if (W.cte_list != SYNQ_NULL_NODE) {
+        A = synq_ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, upd);
     } else {
         A = upd;
     }
@@ -59,18 +59,18 @@ cmd(A) ::= with(W) UPDATE orconf(R) xfullname(X) indexed_opt(I) SET setlist(Y) f
 
 cmd(A) ::= with(W) insert_cmd(R) INTO xfullname(X) idlist_opt(F) select(S) upsert(U). {
     (void)U;
-    uint32_t ins = ast_insert_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, X, F, S);
-    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
-        A = ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, ins);
+    uint32_t ins = synq_ast_insert_stmt(pCtx->astCtx, (SynqConflictAction)R, X, F, S);
+    if (W.cte_list != SYNQ_NULL_NODE) {
+        A = synq_ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, ins);
     } else {
         A = ins;
     }
 }
 
 cmd(A) ::= with(W) insert_cmd(R) INTO xfullname(X) idlist_opt(F) DEFAULT VALUES returning. {
-    uint32_t ins = ast_insert_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, X, F, SYNTAQLITE_NULL_NODE);
-    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
-        A = ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, ins);
+    uint32_t ins = synq_ast_insert_stmt(pCtx->astCtx, (SynqConflictAction)R, X, F, SYNQ_NULL_NODE);
+    if (W.cte_list != SYNQ_NULL_NODE) {
+        A = synq_ast_with_clause(pCtx->astCtx, W.is_recursive, W.cte_list, ins);
     } else {
         A = ins;
     }
@@ -83,13 +83,13 @@ insert_cmd(A) ::= INSERT orconf(R). {
 }
 
 insert_cmd(A) ::= REPLACE. {
-    A = (int)SYNTAQLITE_CONFLICT_ACTION_REPLACE;
+    A = (int)SYNQ_CONFLICT_ACTION_REPLACE;
 }
 
 // ============ OR conflict resolution ============
 
 orconf(A) ::= . {
-    A = (int)SYNTAQLITE_CONFLICT_ACTION_DEFAULT;
+    A = (int)SYNQ_CONFLICT_ACTION_DEFAULT;
 }
 
 orconf(A) ::= OR resolvetype(X). {
@@ -97,39 +97,39 @@ orconf(A) ::= OR resolvetype(X). {
 }
 
 resolvetype(A) ::= raisetype(X). {
-    // raisetype: ROLLBACK=1, ABORT=2, FAIL=3 (SyntaqliteRaiseType enum values)
+    // raisetype: ROLLBACK=1, ABORT=2, FAIL=3 (SynqRaiseType enum values)
     // ConflictAction: ROLLBACK=1, ABORT=2, FAIL=3 (same values, direct passthrough)
     A = X;
 }
 
 resolvetype(A) ::= IGNORE. {
-    A = (int)SYNTAQLITE_CONFLICT_ACTION_IGNORE;
+    A = (int)SYNQ_CONFLICT_ACTION_IGNORE;
 }
 
 resolvetype(A) ::= REPLACE. {
-    A = (int)SYNTAQLITE_CONFLICT_ACTION_REPLACE;
+    A = (int)SYNQ_CONFLICT_ACTION_REPLACE;
 }
 
 // ============ xfullname (DML table reference) ============
 
 xfullname(A) ::= nm(X). {
-    A = ast_table_ref(pCtx->astCtx,
-        syntaqlite_span(pCtx, X), SYNTAQLITE_NO_SPAN, SYNTAQLITE_NO_SPAN);
+    A = synq_ast_table_ref(pCtx->astCtx,
+        synq_span(pCtx, X), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
 }
 
 xfullname(A) ::= nm(X) DOT nm(Y). {
-    A = ast_table_ref(pCtx->astCtx,
-        syntaqlite_span(pCtx, Y), syntaqlite_span(pCtx, X), SYNTAQLITE_NO_SPAN);
+    A = synq_ast_table_ref(pCtx->astCtx,
+        synq_span(pCtx, Y), synq_span(pCtx, X), SYNQ_NO_SPAN);
 }
 
 xfullname(A) ::= nm(X) DOT nm(Y) AS nm(Z). {
-    A = ast_table_ref(pCtx->astCtx,
-        syntaqlite_span(pCtx, Y), syntaqlite_span(pCtx, X), syntaqlite_span(pCtx, Z));
+    A = synq_ast_table_ref(pCtx->astCtx,
+        synq_span(pCtx, Y), synq_span(pCtx, X), synq_span(pCtx, Z));
 }
 
 xfullname(A) ::= nm(X) AS nm(Z). {
-    A = ast_table_ref(pCtx->astCtx,
-        syntaqlite_span(pCtx, X), SYNTAQLITE_NO_SPAN, syntaqlite_span(pCtx, Z));
+    A = synq_ast_table_ref(pCtx->astCtx,
+        synq_span(pCtx, X), SYNQ_NO_SPAN, synq_span(pCtx, Z));
 }
 
 // ============ indexed_opt (ignore index hints in AST) ============
@@ -145,7 +145,7 @@ indexed_opt(A) ::= indexed_by(A). {
 // ============ where_opt_ret (WHERE with optional RETURNING) ============
 
 where_opt_ret(A) ::= . {
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 where_opt_ret(A) ::= WHERE expr(X). {
@@ -155,7 +155,7 @@ where_opt_ret(A) ::= WHERE expr(X). {
 where_opt_ret(A) ::= RETURNING selcollist(X). {
     // Ignore RETURNING clause for now (just discard the column list)
     (void)X;
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 where_opt_ret(A) ::= WHERE expr(X) RETURNING selcollist(Y). {
@@ -167,33 +167,33 @@ where_opt_ret(A) ::= WHERE expr(X) RETURNING selcollist(Y). {
 // ============ SET list (UPDATE assignments) ============
 
 setlist(A) ::= setlist(L) COMMA nm(X) EQ expr(Y). {
-    uint32_t clause = ast_set_clause(pCtx->astCtx,
-        syntaqlite_span(pCtx, X), SYNTAQLITE_NULL_NODE, Y);
-    A = ast_set_clause_list_append(pCtx->astCtx, L, clause);
+    uint32_t clause = synq_ast_set_clause(pCtx->astCtx,
+        synq_span(pCtx, X), SYNQ_NULL_NODE, Y);
+    A = synq_ast_set_clause_list_append(pCtx->astCtx, L, clause);
 }
 
 setlist(A) ::= setlist(L) COMMA LP idlist(X) RP EQ expr(Y). {
-    uint32_t clause = ast_set_clause(pCtx->astCtx,
-        SYNTAQLITE_NO_SPAN, X, Y);
-    A = ast_set_clause_list_append(pCtx->astCtx, L, clause);
+    uint32_t clause = synq_ast_set_clause(pCtx->astCtx,
+        SYNQ_NO_SPAN, X, Y);
+    A = synq_ast_set_clause_list_append(pCtx->astCtx, L, clause);
 }
 
 setlist(A) ::= nm(X) EQ expr(Y). {
-    uint32_t clause = ast_set_clause(pCtx->astCtx,
-        syntaqlite_span(pCtx, X), SYNTAQLITE_NULL_NODE, Y);
-    A = ast_set_clause_list(pCtx->astCtx, clause);
+    uint32_t clause = synq_ast_set_clause(pCtx->astCtx,
+        synq_span(pCtx, X), SYNQ_NULL_NODE, Y);
+    A = synq_ast_set_clause_list(pCtx->astCtx, clause);
 }
 
 setlist(A) ::= LP idlist(X) RP EQ expr(Y). {
-    uint32_t clause = ast_set_clause(pCtx->astCtx,
-        SYNTAQLITE_NO_SPAN, X, Y);
-    A = ast_set_clause_list(pCtx->astCtx, clause);
+    uint32_t clause = synq_ast_set_clause(pCtx->astCtx,
+        SYNQ_NO_SPAN, X, Y);
+    A = synq_ast_set_clause_list(pCtx->astCtx, clause);
 }
 
 // ============ Column list for INSERT ============
 
 idlist_opt(A) ::= . {
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 idlist_opt(A) ::= LP idlist(X) RP. {
@@ -203,31 +203,31 @@ idlist_opt(A) ::= LP idlist(X) RP. {
 // ============ UPSERT (stub - ignore ON CONFLICT for now) ============
 
 upsert(A) ::= . {
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 upsert(A) ::= RETURNING selcollist(X). {
     (void)X;
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 upsert(A) ::= ON CONFLICT LP sortlist(T) RP where_opt(TW) DO UPDATE SET setlist(Z) where_opt(W) upsert(N). {
     (void)T; (void)TW; (void)Z; (void)W; (void)N;
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 upsert(A) ::= ON CONFLICT LP sortlist(T) RP where_opt(TW) DO NOTHING upsert(N). {
     (void)T; (void)TW; (void)N;
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 upsert(A) ::= ON CONFLICT DO NOTHING returning. {
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 upsert(A) ::= ON CONFLICT DO UPDATE SET setlist(Z) where_opt(W) returning. {
     (void)Z; (void)W;
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 // ============ RETURNING (stub) ============

@@ -8,7 +8,11 @@
 
 #include <stdlib.h>
 
-void syntaqlite_arena_init(SyntaqliteArena *a) {
+
+// External definitions for inline functions (C99/C11).
+extern inline void *synq_xrealloc(void *ptr, size_t size);
+
+void synq_arena_init(SynqArena *a) {
     a->data = NULL;
     a->size = 0;
     a->capacity = 0;
@@ -17,7 +21,7 @@ void syntaqlite_arena_init(SyntaqliteArena *a) {
     a->offset_capacity = 0;
 }
 
-void syntaqlite_arena_free(SyntaqliteArena *a) {
+void synq_arena_free(SynqArena *a) {
     free(a->data);
     free(a->offsets);
     a->data = NULL;
@@ -28,18 +32,18 @@ void syntaqlite_arena_free(SyntaqliteArena *a) {
     a->offset_capacity = 0;
 }
 
-uint32_t syntaqlite_arena_alloc(SyntaqliteArena *a, uint8_t tag, size_t size) {
+uint32_t synq_arena_alloc(SynqArena *a, uint8_t tag, size_t size) {
     // Grow arena if needed
     if (a->size + size > a->capacity) {
         size_t new_capacity = a->capacity * 2 + size + 1024;
-        a->data = (uint8_t *)syntaqlite_xrealloc(a->data, new_capacity);
+        a->data = (uint8_t *)synq_xrealloc(a->data, new_capacity);
         a->capacity = (uint32_t)new_capacity;
     }
 
     // Grow offset table if needed
     if (a->count >= a->offset_capacity) {
         size_t new_capacity = a->offset_capacity * 2 + 64;
-        a->offsets = (uint32_t *)syntaqlite_xrealloc(
+        a->offsets = (uint32_t *)synq_xrealloc(
             a->offsets, new_capacity * sizeof(uint32_t));
         a->offset_capacity = (uint32_t)new_capacity;
     }
@@ -52,18 +56,18 @@ uint32_t syntaqlite_arena_alloc(SyntaqliteArena *a, uint8_t tag, size_t size) {
     return node_id;
 }
 
-void syntaqlite_arena_ensure(SyntaqliteArena *a, size_t additional) {
+void synq_arena_ensure(SynqArena *a, size_t additional) {
     if (a->size + additional > a->capacity) {
         size_t new_capacity = a->capacity * 2 + additional + 1024;
-        a->data = (uint8_t *)syntaqlite_xrealloc(a->data, new_capacity);
+        a->data = (uint8_t *)synq_xrealloc(a->data, new_capacity);
         a->capacity = (uint32_t)new_capacity;
     }
 }
 
-uint32_t syntaqlite_arena_reserve_id(SyntaqliteArena *a) {
+uint32_t synq_arena_reserve_id(SynqArena *a) {
     if (a->count >= a->offset_capacity) {
         size_t new_capacity = a->offset_capacity * 2 + 64;
-        a->offsets = (uint32_t *)syntaqlite_xrealloc(
+        a->offsets = (uint32_t *)synq_xrealloc(
             a->offsets, new_capacity * sizeof(uint32_t));
         a->offset_capacity = (uint32_t)new_capacity;
     }

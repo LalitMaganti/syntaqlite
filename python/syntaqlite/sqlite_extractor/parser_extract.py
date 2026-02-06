@@ -193,10 +193,10 @@ def format_extension_reduce_function(data: ParserData) -> str:
         data: Extracted parser data containing reduce actions.
 
     Returns:
-        The syntaqlite_extension_reduce function definition.
+        The synq_extension_reduce function definition.
     """
     return f'''/* Extension reduce function */
-static void syntaqlite_extension_reduce(
+static void synq_extension_reduce(
   yyParser *yypParser,
   unsigned int yyruleno,
   yyStackEntry *yymsp,

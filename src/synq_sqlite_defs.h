@@ -4,8 +4,8 @@
 // SQLite compatibility definitions for syntaqlite.
 // Provides type aliases, macros, and structures needed by tokenizer and parser.
 
-#ifndef SYNTAQLITE_SRC_SQLITE_DEFS_H
-#define SYNTAQLITE_SRC_SQLITE_DEFS_H
+#ifndef SYNQ_SRC_SQLITE_DEFS_H
+#define SYNQ_SRC_SQLITE_DEFS_H
 
 #include <assert.h>
 #include <stdint.h>
@@ -34,32 +34,32 @@ typedef uint32_t u32;
 ** Token structure representing a single token from the input.
 ** This is the minor type for terminal symbols in the parser.
 */
-typedef struct SyntaqliteToken {
+typedef struct SynqToken {
   const char *z;  /* Text of the token */
   int n;          /* Length of the token */
   int type;       /* Token type (TK_* constant) */
-} SyntaqliteToken;
+} SynqToken;
 
 /*
 ** Forward declarations for AST types.
 */
-struct SyntaqliteArena;
-struct SyntaqliteAstContext;
-struct SyntaqliteTokenList;
+struct SynqArena;
+struct SynqAstContext;
+struct SynqTokenList;
 
 /*
 ** Parse context passed to the parser.
 ** Users can set callbacks for error handling.
 */
-typedef struct SyntaqliteParseContext SyntaqliteParseContext;
-struct SyntaqliteParseContext {
+typedef struct SynqParseContext SynqParseContext;
+struct SynqParseContext {
   void *userData;                                  /* User-defined data */
-  void (*onSyntaxError)(SyntaqliteParseContext *); /* Syntax error callback */
-  void (*onStackOverflow)(SyntaqliteParseContext *); /* Stack overflow callback */
-  struct SyntaqliteAstContext *astCtx;             /* AST building context */
+  void (*onSyntaxError)(SynqParseContext *); /* Syntax error callback */
+  void (*onStackOverflow)(SynqParseContext *); /* Stack overflow callback */
+  struct SynqAstContext *astCtx;             /* AST building context */
   const char *zSql;                                /* Original SQL text */
   u32 root;                                        /* Root AST node ID */
-  struct SyntaqliteTokenList *token_list;           /* Optional token collector */
+  struct SynqTokenList *token_list;           /* Optional token collector */
 };
 
 /*
@@ -74,4 +74,4 @@ struct SyntaqliteParseContext {
 #define UNUSED_PARAMETER(x) (void)(x)
 #endif
 
-#endif /* SYNTAQLITE_SRC_SQLITE_DEFS_H */
+#endif /* SYNQ_SRC_SQLITE_DEFS_H */

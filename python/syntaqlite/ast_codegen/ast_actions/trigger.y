@@ -5,11 +5,11 @@
 // Python tooling validates coverage and consistency.
 //
 // Conventions:
-// - pCtx: Parse context (SyntaqliteParseContext*)
+// - pCtx: Parse context (SynqParseContext*)
 // - pCtx->astCtx: AST context for builder calls
 // - pCtx->zSql: Original SQL text (for computing offsets)
 // - pCtx->root: Set to root node ID at input rule
-// - Terminals are SyntaqliteToken with .z (pointer) and .n (length)
+// - Terminals are SynqToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
 // ============ CREATE TRIGGER ============
@@ -17,7 +17,7 @@
 // The main cmd rule: completes the trigger with its body
 cmd(A) ::= createkw trigger_decl(D) BEGIN trigger_cmd_list(S) END. {
     // D is a partially-built CreateTriggerStmt, fill in the body
-    SyntaqliteNode *trig = AST_NODE(&pCtx->astCtx->ast, D);
+    SynqNode *trig = AST_NODE(&pCtx->astCtx->ast, D);
     trig->create_trigger_stmt.body = S;
     A = D;
 }
@@ -26,52 +26,52 @@ cmd(A) ::= createkw trigger_decl(D) BEGIN trigger_cmd_list(S) END. {
 trigger_decl(A) ::= temp(T) TRIGGER ifnotexists(NOERR) nm(B) dbnm(Z)
                     trigger_time(C) trigger_event(D)
                     ON fullname(E) foreach_clause when_clause(G). {
-    SyntaqliteSourceSpan trig_name = Z.z ? syntaqlite_span(pCtx, Z) : syntaqlite_span(pCtx, B);
-    SyntaqliteSourceSpan trig_schema = Z.z ? syntaqlite_span(pCtx, B) : SYNTAQLITE_NO_SPAN;
-    A = ast_create_trigger_stmt(pCtx->astCtx,
+    SynqSourceSpan trig_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, B);
+    SynqSourceSpan trig_schema = Z.z ? synq_span(pCtx, B) : SYNQ_NO_SPAN;
+    A = synq_ast_create_trigger_stmt(pCtx->astCtx,
         trig_name,
         trig_schema,
-        (SyntaqliteBool)T,
-        (SyntaqliteBool)NOERR,
-        (SyntaqliteTriggerTiming)C,
+        (SynqBool)T,
+        (SynqBool)NOERR,
+        (SynqTriggerTiming)C,
         D,
         E,
         G,
-        SYNTAQLITE_NULL_NODE);  // body filled in by cmd rule
+        SYNQ_NULL_NODE);  // body filled in by cmd rule
 }
 
 // ============ Trigger timing ============
 
 trigger_time(A) ::= BEFORE|AFTER(X). {
-    A = (X.type == TK_BEFORE) ? (int)SYNTAQLITE_TRIGGER_TIMING_BEFORE
-                               : (int)SYNTAQLITE_TRIGGER_TIMING_AFTER;
+    A = (X.type == TK_BEFORE) ? (int)SYNQ_TRIGGER_TIMING_BEFORE
+                               : (int)SYNQ_TRIGGER_TIMING_AFTER;
 }
 
 trigger_time(A) ::= INSTEAD OF. {
-    A = (int)SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF;
+    A = (int)SYNQ_TRIGGER_TIMING_INSTEAD_OF;
 }
 
 trigger_time(A) ::= . {
-    A = (int)SYNTAQLITE_TRIGGER_TIMING_BEFORE;
+    A = (int)SYNQ_TRIGGER_TIMING_BEFORE;
 }
 
 // ============ Trigger event ============
 
 trigger_event(A) ::= DELETE|INSERT(X). {
-    SyntaqliteTriggerEventType evt = (X.type == TK_DELETE)
-        ? SYNTAQLITE_TRIGGER_EVENT_TYPE_DELETE
-        : SYNTAQLITE_TRIGGER_EVENT_TYPE_INSERT;
-    A = ast_trigger_event(pCtx->astCtx, evt, SYNTAQLITE_NULL_NODE);
+    SynqTriggerEventType evt = (X.type == TK_DELETE)
+        ? SYNQ_TRIGGER_EVENT_TYPE_DELETE
+        : SYNQ_TRIGGER_EVENT_TYPE_INSERT;
+    A = synq_ast_trigger_event(pCtx->astCtx, evt, SYNQ_NULL_NODE);
 }
 
 trigger_event(A) ::= UPDATE. {
-    A = ast_trigger_event(pCtx->astCtx,
-        SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE, SYNTAQLITE_NULL_NODE);
+    A = synq_ast_trigger_event(pCtx->astCtx,
+        SYNQ_TRIGGER_EVENT_TYPE_UPDATE, SYNQ_NULL_NODE);
 }
 
 trigger_event(A) ::= UPDATE OF idlist(X). {
-    A = ast_trigger_event(pCtx->astCtx,
-        SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE, X);
+    A = synq_ast_trigger_event(pCtx->astCtx,
+        SYNQ_TRIGGER_EVENT_TYPE_UPDATE, X);
 }
 
 // ============ FOR EACH ROW (consumed, no value) ============
@@ -87,7 +87,7 @@ foreach_clause ::= FOR EACH ROW. {
 // ============ WHEN clause ============
 
 when_clause(A) ::= . {
-    A = SYNTAQLITE_NULL_NODE;
+    A = SYNQ_NULL_NODE;
 }
 
 when_clause(A) ::= WHEN expr(X). {
@@ -97,11 +97,11 @@ when_clause(A) ::= WHEN expr(X). {
 // ============ Trigger command list ============
 
 trigger_cmd_list(A) ::= trigger_cmd_list(L) trigger_cmd(X) SEMI. {
-    A = ast_trigger_cmd_list_append(pCtx->astCtx, L, X);
+    A = synq_ast_trigger_cmd_list_append(pCtx->astCtx, L, X);
 }
 
 trigger_cmd_list(A) ::= trigger_cmd(X) SEMI. {
-    A = ast_trigger_cmd_list(pCtx->astCtx, X);
+    A = synq_ast_trigger_cmd_list(pCtx->astCtx, X);
 }
 
 // ============ trnm (table name in trigger context) ============
@@ -133,23 +133,23 @@ tridxby ::= NOT INDEXED. {
 
 // UPDATE within trigger
 trigger_cmd(A) ::= UPDATE orconf(R) trnm(X) tridxby SET setlist(Y) from(F) where_opt(Z) scanpt. {
-    uint32_t tbl = ast_table_ref(pCtx->astCtx,
-        syntaqlite_span(pCtx, X), SYNTAQLITE_NO_SPAN, SYNTAQLITE_NO_SPAN);
-    A = ast_update_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, tbl, Y, F, Z);
+    uint32_t tbl = synq_ast_table_ref(pCtx->astCtx,
+        synq_span(pCtx, X), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
+    A = synq_ast_update_stmt(pCtx->astCtx, (SynqConflictAction)R, tbl, Y, F, Z);
 }
 
 // INSERT within trigger
 trigger_cmd(A) ::= scanpt insert_cmd(R) INTO trnm(X) idlist_opt(F) select(S) upsert scanpt. {
-    uint32_t tbl = ast_table_ref(pCtx->astCtx,
-        syntaqlite_span(pCtx, X), SYNTAQLITE_NO_SPAN, SYNTAQLITE_NO_SPAN);
-    A = ast_insert_stmt(pCtx->astCtx, (SyntaqliteConflictAction)R, tbl, F, S);
+    uint32_t tbl = synq_ast_table_ref(pCtx->astCtx,
+        synq_span(pCtx, X), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
+    A = synq_ast_insert_stmt(pCtx->astCtx, (SynqConflictAction)R, tbl, F, S);
 }
 
 // DELETE within trigger
 trigger_cmd(A) ::= DELETE FROM trnm(X) tridxby where_opt(Y) scanpt. {
-    uint32_t tbl = ast_table_ref(pCtx->astCtx,
-        syntaqlite_span(pCtx, X), SYNTAQLITE_NO_SPAN, SYNTAQLITE_NO_SPAN);
-    A = ast_delete_stmt(pCtx->astCtx, tbl, Y);
+    uint32_t tbl = synq_ast_table_ref(pCtx->astCtx,
+        synq_span(pCtx, X), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
+    A = synq_ast_delete_stmt(pCtx->astCtx, tbl, Y);
 }
 
 // SELECT within trigger

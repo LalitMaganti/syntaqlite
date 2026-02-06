@@ -78,7 +78,7 @@ NODES = [
 
     # Window definition: base_name PARTITION BY ... ORDER BY ... frame_spec
     Node("WindowDef",
-        base_window_name=inline("SyntaqliteSourceSpan"),  # optional inherited window name
+        base_window_name=inline("SynqSourceSpan"),  # optional inherited window name
         partition_by=index("ExprList"),                    # nullable
         orderby=index("OrderByList"),                      # nullable
         frame=index("FrameSpec"),                          # nullable
@@ -106,7 +106,7 @@ NODES = [
 
     # Named window definition: name AS (window_spec)
     Node("NamedWindowDef",
-        window_name=inline("SyntaqliteSourceSpan"),
+        window_name=inline("SynqSourceSpan"),
         window_def=index("WindowDef"),
         fmt=seq(span("window_name"), kw(" AS "), child("window_def")),
     ),
@@ -119,7 +119,7 @@ NODES = [
     Node("FilterOver",
         filter_expr=index("Expr"),       # FILTER (WHERE expr), nullable
         over_def=index("WindowDef"),     # OVER (...), nullable
-        over_name=inline("SyntaqliteSourceSpan"),  # OVER nm (named window ref)
+        over_name=inline("SynqSourceSpan"),  # OVER nm (named window ref)
         fmt=seq(
             if_set("filter_expr", seq(kw("FILTER (WHERE "), child("filter_expr"), kw(")"))),
             if_set("over_def", seq(kw(" OVER "), child("over_def"))),

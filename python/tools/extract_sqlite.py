@@ -55,7 +55,7 @@ KEYWORDHASH_SCORE_MARKER = "/* Hash score:"
 KEYWORD_CODE_FUNC_MARKER = "static int keywordCode("
 from python.syntaqlite.sqlite_extractor.generators import extract_tk_defines
 from python.syntaqlite.sqlite_extractor.grammar_build import (
-    build_syntaqlite_grammar,
+    build_synq_grammar,
 )
 from python.syntaqlite.sqlite_extractor.lempar_transform import (
     transform_to_base_template,
@@ -69,7 +69,7 @@ SQLITE_SRC = ROOT_DIR / "third_party" / "src" / "sqlite" / "src"
 OUTPUT_DIR = ROOT_DIR / "src"
 
 # Default prefix for renamed sqlite3 symbols to avoid clashes
-DEFAULT_PREFIX = "syntaqlite"
+DEFAULT_PREFIX = "synq"
 
 REGENERATE_CMD = "python3 python/tools/extract_sqlite.py"
 
@@ -170,22 +170,22 @@ def copy_tokenize_c(
     content = (runner.sqlite_src / "tokenize.c").read_text()
 
     # Build the inlined header that replaces sqliteInt.h
-    inlined_header = f'''#include "src/syntaqlite_sqlite_defs.h"
+    inlined_header = f'''#include "src/synq_sqlite_defs.h"
 #include "src/sqlite_charmap.h"
 
 /*
-** Syntaqlite tokenizer injection support.
-** When SYNTAQLITE_KEYWORDHASH_DATA_FILE is defined, external keyword data is used.
+** Synq tokenizer injection support.
+** When SYNQ_KEYWORDHASH_DATA_FILE is defined, external keyword data is used.
 */
-#ifdef SYNTAQLITE_KEYWORDHASH_DATA_FILE
-#include SYNTAQLITE_KEYWORDHASH_DATA_FILE
-#define _SYNTAQLITE_EXTERNAL_KEYWORDHASH 1
+#ifdef SYNQ_KEYWORDHASH_DATA_FILE
+#include SYNQ_KEYWORDHASH_DATA_FILE
+#define _SYNQ_EXTERNAL_KEYWORDHASH 1
 #endif
 
-#ifndef _SYNTAQLITE_EXTERNAL_KEYWORDHASH
+#ifndef _SYNQ_EXTERNAL_KEYWORDHASH
 #include "src/sqlite_tokens.h"
 {keywordhash_data}
-#endif /* _SYNTAQLITE_EXTERNAL_KEYWORDHASH */
+#endif /* _SYNQ_EXTERNAL_KEYWORDHASH */
 
 /* Stub for parser fallback - not needed for pure tokenization */
 static inline int {sqlite3_prefix}ParserFallback(int token) {{
@@ -391,12 +391,12 @@ def generate_parser(
 
         # Step 1: Build the clean grammar
         print("Building clean grammar from SQLite's parse.y...")
-        grammar_content = build_syntaqlite_grammar(runner, prefix)
-        grammar_path = tmpdir_path / "syntaqlite_parse.y"
+        grammar_content = build_synq_grammar(runner, prefix)
+        grammar_path = tmpdir_path / "synq_parse.y"
         grammar_path.write_text(grammar_content)
 
         # Step 2: Generate the modified lempar.c template
-        print("Generating syntaqlite_lempar.c template...")
+        print("Generating synq_lempar.c template...")
         lempar_content = runner.get_lempar_path().read_text()
         modified_lempar = transform_to_base_template(lempar_content)
         lempar_path = tmpdir_path / "lempar.c"

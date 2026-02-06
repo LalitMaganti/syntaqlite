@@ -51,8 +51,8 @@ NODES = [
     # [FOR EACH ROW] [WHEN expr]
     # BEGIN trigger_cmd_list END
     Node("CreateTriggerStmt",
-        trigger_name=inline("SyntaqliteSourceSpan"),
-        schema=inline("SyntaqliteSourceSpan"),
+        trigger_name=inline("SynqSourceSpan"),
+        schema=inline("SynqSourceSpan"),
         is_temp=inline("Bool"),
         if_not_exists=inline("Bool"),
         timing=inline("TriggerTiming"),
@@ -85,11 +85,11 @@ NODES = [
 
     # CREATE VIRTUAL TABLE [IF NOT EXISTS] [schema.]name USING module[(args)]
     Node("CreateVirtualTableStmt",
-        table_name=inline("SyntaqliteSourceSpan"),
-        schema=inline("SyntaqliteSourceSpan"),
-        module_name=inline("SyntaqliteSourceSpan"),
+        table_name=inline("SynqSourceSpan"),
+        schema=inline("SynqSourceSpan"),
+        module_name=inline("SynqSourceSpan"),
         if_not_exists=inline("Bool"),
-        module_args=inline("SyntaqliteSourceSpan"),
+        module_args=inline("SynqSourceSpan"),
         fmt=seq(
             kw("CREATE VIRTUAL TABLE"),
             if_flag("if_not_exists", kw(" IF NOT EXISTS")),

@@ -15,7 +15,7 @@ FLAGS = [
 NODES = [
     # Aggregate function call with ORDER BY: func(args ORDER BY sortlist)
     Node("AggregateFunctionCall",
-        func_name=inline("SyntaqliteSourceSpan"),
+        func_name=inline("SynqSourceSpan"),
         flags=inline("AggregateFunctionCallFlags"),
         args=index("ExprList"),
         orderby=index("OrderByList"),

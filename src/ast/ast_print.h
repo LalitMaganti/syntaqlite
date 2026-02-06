@@ -4,8 +4,8 @@
 // AST print function declarations.
 // Implementations are generated in ast_print.c.
 
-#ifndef SYNTAQLITE_AST_PRINT_H
-#define SYNTAQLITE_AST_PRINT_H
+#ifndef SYNQ_AST_PRINT_H
+#define SYNQ_AST_PRINT_H
 
 #include "src/arena.h"
 
@@ -16,11 +16,11 @@ extern "C" {
 #endif
 
 // Print AST node and its children to a file stream
-void syntaqlite_ast_print(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
+void synq_ast_print(FILE *out, SynqArena *ast, uint32_t node_id,
                           const char *source);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // SYNTAQLITE_AST_PRINT_H
+#endif  // SYNQ_AST_PRINT_H

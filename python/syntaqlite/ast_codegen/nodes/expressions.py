@@ -49,7 +49,7 @@ NODES = [
     # Literal value (integer, float, string, blob, null)
     Node("Literal",
         literal_type=inline("LiteralType"),
-        source=inline("SyntaqliteSourceSpan"),
+        source=inline("SynqSourceSpan"),
         fmt=span("source"),
     ),
 

@@ -78,7 +78,7 @@ class FlagsDef:
     Usage: Flags("MyFlags", FOO=0x01, BAR=0x02)
     Then:  some_field=inline("MyFlags")
 
-    Generates a C union type SyntaqliteMyFlags with bitfield members.
+    Generates a C union type SynqMyFlags with bitfield members.
     """
 
     name: str

@@ -12,7 +12,7 @@ NODES = [
     # CAST expression: CAST(expr AS type_name)
     Node("CastExpr",
         expr=index("Expr"),
-        type_name=inline("SyntaqliteSourceSpan"),
+        type_name=inline("SynqSourceSpan"),
         fmt=seq(kw("CAST("), child("expr"), kw(" AS "), span("type_name"), kw(")")),
     ),
 ]

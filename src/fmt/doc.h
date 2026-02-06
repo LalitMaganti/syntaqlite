@@ -3,8 +3,8 @@
 
 // Document model for Wadler-Lindig pretty printer.
 
-#ifndef SYNTAQLITE_SRC_FMT_DOC_H
-#define SYNTAQLITE_SRC_FMT_DOC_H
+#ifndef SYNQ_SRC_FMT_DOC_H
+#define SYNQ_SRC_FMT_DOC_H
 
 #include "src/arena.h"
 
@@ -17,111 +17,111 @@ extern "C" {
 #endif
 
 // Null document ID (used for nullable fields)
-#define SYNTAQLITE_NULL_DOC 0xFFFFFFFFu
+#define SYNQ_NULL_DOC 0xFFFFFFFFu
 
 // Document node tags
 typedef enum {
-    SYNTAQLITE_DOC_TEXT,
-    SYNTAQLITE_DOC_LINE,       // space when flat, newline+indent when broken
-    SYNTAQLITE_DOC_SOFTLINE,   // empty when flat, newline+indent when broken
-    SYNTAQLITE_DOC_HARDLINE,   // always newline+indent
-    SYNTAQLITE_DOC_NEST,       // increase indent for child
-    SYNTAQLITE_DOC_GROUP,      // try flat, break if doesn't fit
-    SYNTAQLITE_DOC_CONCAT,     // sequence of children
-    SYNTAQLITE_DOC_LINE_SUFFIX,// buffered until next line break (for trailing comments)
-    SYNTAQLITE_DOC_BREAK_PARENT,// forces containing group into break mode
-} SyntaqliteDocTag;
+    SYNQ_DOC_TEXT,
+    SYNQ_DOC_LINE,       // space when flat, newline+indent when broken
+    SYNQ_DOC_SOFTLINE,   // empty when flat, newline+indent when broken
+    SYNQ_DOC_HARDLINE,   // always newline+indent
+    SYNQ_DOC_NEST,       // increase indent for child
+    SYNQ_DOC_GROUP,      // try flat, break if doesn't fit
+    SYNQ_DOC_CONCAT,     // sequence of children
+    SYNQ_DOC_LINE_SUFFIX,// buffered until next line break (for trailing comments)
+    SYNQ_DOC_BREAK_PARENT,// forces containing group into break mode
+} SynqDocTag;
 
 // ============ Node Structs ============
 
-typedef struct SyntaqliteDocText {
+typedef struct SynqDocText {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t length;
     const char *text;  // points into source or static string, not owned
-} SyntaqliteDocText;
+} SynqDocText;
 
-typedef struct SyntaqliteDocLeaf {
+typedef struct SynqDocLeaf {
     uint8_t tag;  // LINE, SOFTLINE, or HARDLINE
-} SyntaqliteDocLeaf;
+} SynqDocLeaf;
 
-typedef struct SyntaqliteDocNest {
+typedef struct SynqDocNest {
     uint8_t tag;
     uint8_t _pad[3];
     int32_t indent;
     uint32_t child;
-} SyntaqliteDocNest;
+} SynqDocNest;
 
-typedef struct SyntaqliteDocGroup {
+typedef struct SynqDocGroup {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t child;
-} SyntaqliteDocGroup;
+} SynqDocGroup;
 
-typedef struct SyntaqliteDocConcat {
+typedef struct SynqDocConcat {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t count;
     uint32_t children[];  // flexible array of doc IDs
-} SyntaqliteDocConcat;
+} SynqDocConcat;
 
-typedef struct SyntaqliteDocLineSuffix {
+typedef struct SynqDocLineSuffix {
     uint8_t tag;
     uint8_t _pad[3];
     uint32_t child;
-} SyntaqliteDocLineSuffix;
+} SynqDocLineSuffix;
 
 // ============ Node Union ============
 
-typedef union SyntaqliteDoc {
+typedef union SynqDoc {
     uint8_t tag;
-    SyntaqliteDocText text;
-    SyntaqliteDocLeaf leaf;
-    SyntaqliteDocNest nest;
-    SyntaqliteDocGroup group;
-    SyntaqliteDocConcat concat;
-    SyntaqliteDocLineSuffix line_suffix;
-} SyntaqliteDoc;
+    SynqDocText text;
+    SynqDocLeaf leaf;
+    SynqDocNest nest;
+    SynqDocGroup group;
+    SynqDocConcat concat;
+    SynqDocLineSuffix line_suffix;
+} SynqDoc;
 
 // ============ Doc Context ============
 
-typedef struct SyntaqliteDocContext {
-    SyntaqliteArena arena;
-} SyntaqliteDocContext;
+typedef struct SynqDocContext {
+    SynqArena arena;
+} SynqDocContext;
 
-void syntaqlite_doc_context_init(SyntaqliteDocContext *ctx);
-void syntaqlite_doc_context_cleanup(SyntaqliteDocContext *ctx);
+void synq_doc_context_init(SynqDocContext *ctx);
+void synq_doc_context_cleanup(SynqDocContext *ctx);
 
 // Access node by ID
-static inline SyntaqliteDoc* syntaqlite_doc_node(SyntaqliteDocContext *ctx, uint32_t id) {
-    if (id == SYNTAQLITE_NULL_DOC) return NULL;
-    return (SyntaqliteDoc*)(ctx->arena.data + ctx->arena.offsets[id]);
+inline SynqDoc* synq_doc_node(SynqDocContext *ctx, uint32_t id) {
+    if (id == SYNQ_NULL_DOC) return NULL;
+    return (SynqDoc*)(ctx->arena.data + ctx->arena.offsets[id]);
 }
-#define DOC_NODE(ctx, id) syntaqlite_doc_node(ctx, id)
+#define DOC_NODE(ctx, id) synq_doc_node(ctx, id)
 
 // Builder functions - return doc ID
-uint32_t doc_text(SyntaqliteDocContext *ctx, const char *text, uint32_t length);
-uint32_t doc_line(SyntaqliteDocContext *ctx);
-uint32_t doc_softline(SyntaqliteDocContext *ctx);
-uint32_t doc_hardline(SyntaqliteDocContext *ctx);
-uint32_t doc_nest(SyntaqliteDocContext *ctx, int32_t indent, uint32_t child);
-uint32_t doc_group(SyntaqliteDocContext *ctx, uint32_t child);
+uint32_t synq_doc_text(SynqDocContext *ctx, const char *text, uint32_t length);
+uint32_t synq_doc_line(SynqDocContext *ctx);
+uint32_t synq_doc_softline(SynqDocContext *ctx);
+uint32_t synq_doc_hardline(SynqDocContext *ctx);
+uint32_t synq_doc_nest(SynqDocContext *ctx, int32_t indent, uint32_t child);
+uint32_t synq_doc_group(SynqDocContext *ctx, uint32_t child);
 
 // Concat: create from array of child IDs
-uint32_t doc_concat(SyntaqliteDocContext *ctx, uint32_t *children, uint32_t count);
+uint32_t synq_doc_concat(SynqDocContext *ctx, uint32_t *children, uint32_t count);
 
 // Line suffix: content buffered until the next line break (for trailing comments)
-uint32_t doc_line_suffix(SyntaqliteDocContext *ctx, uint32_t child);
+uint32_t synq_doc_line_suffix(SynqDocContext *ctx, uint32_t child);
 
 // Break parent: forces the containing group into break mode (no visible output)
-uint32_t doc_break_parent(SyntaqliteDocContext *ctx);
+uint32_t synq_doc_break_parent(SynqDocContext *ctx);
 
 // Debug: print doc tree in a human-readable format
-void syntaqlite_doc_debug_print(SyntaqliteDocContext *ctx, uint32_t doc_id,
+void synq_doc_debug_print(SynqDocContext *ctx, uint32_t doc_id,
                                  FILE *out, int depth);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // SYNTAQLITE_SRC_FMT_DOC_H
+#endif  // SYNQ_SRC_FMT_DOC_H

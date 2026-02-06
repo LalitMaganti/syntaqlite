@@ -4,8 +4,8 @@
 """Transform lempar.c into syntaqlite templates.
 
 This module transforms Lemon's lempar.c template into two variants:
-1. syntaqlite_lempar.c - Base parser template with #ifdef guards for injection
-2. syntaqlite_extension_lempar.c - Extension template that outputs data as header
+1. synq_lempar.c - Base parser template with #ifdef guards for injection
+2. synq_extension_lempar.c - Extension template that outputs data as header
 
 The templates allow grammar data to be injected at compile time, enabling
 dialect extensibility without recompiling the parser logic.
@@ -33,8 +33,8 @@ RULE_INFO_LHS_ARRAY_DECL = "static const YYCODETYPE yyRuleInfoLhs[] = {"
 RULE_INFO_NRHS_ARRAY_DECL = "static const signed char yyRuleInfoNRhs[] = {"
 
 # Preprocessor guards and macros
-EXTERNAL_PARSER_GUARD = "_SYNTAQLITE_EXTERNAL_PARSER"
-PARSER_DATA_FILE_MACRO = "SYNTAQLITE_PARSER_DATA_FILE"
+EXTERNAL_PARSER_GUARD = "_SYNQ_EXTERNAL_PARSER"
+PARSER_DATA_FILE_MACRO = "SYNQ_PARSER_DATA_FILE"
 
 # Conditional compilation markers
 YYFALLBACK_IFDEF = "#ifdef YYFALLBACK"
@@ -45,10 +45,10 @@ NDEBUG_IFNDEF = "#ifndef NDEBUG"
 def transform_to_base_template(lempar_content: str) -> str:
     """Transform lempar.c into base parser template with injection points.
 
-    This creates syntaqlite_lempar.c which:
-    1. Has #ifdef SYNTAQLITE_PARSER_DATA_FILE at the top to include external data
-    2. Wraps data sections with #ifndef _SYNTAQLITE_EXTERNAL_PARSER
-    3. Adds default fallthrough in reduce switch to call syntaqlite_extension_reduce()
+    This creates synq_lempar.c which:
+    1. Has #ifdef SYNQ_PARSER_DATA_FILE at the top to include external data
+    2. Wraps data sections with #ifndef _SYNQ_EXTERNAL_PARSER
+    3. Adds default fallthrough in reduce switch to call synq_extension_reduce()
 
     Args:
         lempar_content: Content of original lempar.c.
@@ -61,7 +61,7 @@ def transform_to_base_template(lempar_content: str) -> str:
     # Add injection point include at the very top (after initial comment block)
     injection_header = f'''
 /*
-** Syntaqlite parser injection support.
+** Synq parser injection support.
 ** When {PARSER_DATA_FILE_MACRO} is defined, external grammar data is used.
 */
 #ifdef {PARSER_DATA_FILE_MACRO}
@@ -80,7 +80,7 @@ def transform_to_base_template(lempar_content: str) -> str:
             insert_pos += 1
         content = content[:insert_pos] + injection_header + content[insert_pos:]
 
-    # Wrap data sections with #ifndef _SYNTAQLITE_EXTERNAL_PARSER
+    # Wrap data sections with #ifndef _SYNQ_EXTERNAL_PARSER
     content = _wrap_data_sections(content)
 
     # Transform reduce switch to add extension fallthrough
@@ -130,7 +130,7 @@ def _wrap_section(
     end_marker: str,
     after_marker: str | None = None,
 ) -> str:
-    """Wrap a section with #ifndef _SYNTAQLITE_EXTERNAL_PARSER guards.
+    """Wrap a section with #ifndef _SYNQ_EXTERNAL_PARSER guards.
 
     Args:
         content: The content to modify.
@@ -184,7 +184,7 @@ def _transform_reduce_switch(content: str) -> str:
     """Transform the reduce switch to add extension fallthrough.
 
     Wraps the reduce actions section with preprocessor guards and adds
-    a default case that calls syntaqlite_extension_reduce() when using
+    a default case that calls synq_extension_reduce() when using
     external parser data.
     """
     begin_pos = content.find(REDUCE_ACTIONS_START)
@@ -219,7 +219,7 @@ def _transform_reduce_switch(content: str) -> str:
         f"{reduce_section}"
         f"#else\n"
         f"  default:\n"
-        f"    syntaqlite_extension_reduce(yypParser, yyruleno, yymsp, yyLookahead,\n"
+        f"    synq_extension_reduce(yypParser, yyruleno, yymsp, yyLookahead,\n"
         f"                                yyLookaheadToken ParseCTX_PARAM);\n"
         f"    break;\n"
         f"#endif /* {EXTERNAL_PARSER_GUARD} */\n"

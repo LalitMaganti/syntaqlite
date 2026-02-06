@@ -27,9 +27,9 @@ ENUMS = [
 NODES = [
     # Simple table reference: [schema.]table [AS alias]
     Node("TableRef",
-        table_name=inline("SyntaqliteSourceSpan"),
-        schema=inline("SyntaqliteSourceSpan"),
-        alias=inline("SyntaqliteSourceSpan"),
+        table_name=inline("SynqSourceSpan"),
+        schema=inline("SynqSourceSpan"),
+        alias=inline("SynqSourceSpan"),
         fmt=seq(
             if_span("schema", seq(span("schema"), kw("."))),
             span("table_name"),
@@ -40,7 +40,7 @@ NODES = [
     # Subquery as table source: (SELECT ...) [AS alias]
     Node("SubqueryTableSource",
         select=index("Stmt"),
-        alias=inline("SyntaqliteSourceSpan"),
+        alias=inline("SynqSourceSpan"),
         fmt=seq(
             kw("("), child("select"), kw(")"),
             if_span("alias", seq(kw(" AS "), span("alias"))),

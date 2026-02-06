@@ -3,8 +3,8 @@
 
 // SQL formatter: converts AST to formatted SQL string.
 
-#ifndef SYNTAQLITE_SRC_FMT_FMT_H
-#define SYNTAQLITE_SRC_FMT_FMT_H
+#ifndef SYNQ_SRC_FMT_FMT_H
+#define SYNQ_SRC_FMT_FMT_H
 
 #include "src/ast/ast_base.h"
 #include "src/fmt/fmt_options.h"
@@ -19,18 +19,18 @@ extern "C" {
 // Format an AST node to a SQL string.
 // Returns malloc'd string (caller frees), or NULL on error.
 // token_list may be NULL (comments will be omitted).
-char *syntaqlite_format(SyntaqliteAstContext *astCtx, uint32_t root_id,
-                        const char *source, SyntaqliteTokenList *token_list,
-                        SyntaqliteFmtOptions *options);
+char *synq_format(SynqAstContext *astCtx, uint32_t root_id,
+                        const char *source, SynqTokenList *token_list,
+                        SynqFmtOptions *options);
 
 // Build the doc IR and print it in debug format instead of laying it out.
 // Returns malloc'd string (caller frees), or NULL on error.
-char *syntaqlite_format_debug_ir(SyntaqliteAstContext *astCtx, uint32_t root_id,
-                                  const char *source, SyntaqliteTokenList *token_list,
-                                  SyntaqliteFmtOptions *options);
+char *synq_format_debug_ir(SynqAstContext *astCtx, uint32_t root_id,
+                                  const char *source, SynqTokenList *token_list,
+                                  SynqFmtOptions *options);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // SYNTAQLITE_SRC_FMT_FMT_H
+#endif // SYNQ_SRC_FMT_FMT_H

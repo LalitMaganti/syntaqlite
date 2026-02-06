@@ -33,9 +33,9 @@ ENUMS = [
 NODES = [
     # PRAGMA statement: PRAGMA [schema.]name [= value | (value)]
     Node("PragmaStmt",
-        pragma_name=inline("SyntaqliteSourceSpan"),
-        schema=inline("SyntaqliteSourceSpan"),
-        value=inline("SyntaqliteSourceSpan"),
+        pragma_name=inline("SynqSourceSpan"),
+        schema=inline("SynqSourceSpan"),
+        value=inline("SynqSourceSpan"),
         pragma_form=inline("PragmaForm"),
         fmt=seq(
             kw("PRAGMA "),
@@ -50,8 +50,8 @@ NODES = [
 
     # ANALYZE / REINDEX statement
     Node("AnalyzeStmt",
-        target_name=inline("SyntaqliteSourceSpan"),
-        schema=inline("SyntaqliteSourceSpan"),
+        target_name=inline("SynqSourceSpan"),
+        schema=inline("SynqSourceSpan"),
         kind=inline("AnalyzeKind"),
         fmt=seq(
             if_enum("kind", "REINDEX", kw("REINDEX"), kw("ANALYZE")),
@@ -82,7 +82,7 @@ NODES = [
 
     # VACUUM statement: VACUUM [schema] [INTO expr]
     Node("VacuumStmt",
-        schema=inline("SyntaqliteSourceSpan"),
+        schema=inline("SynqSourceSpan"),
         into_expr=index("Expr"),
         fmt=seq(
             kw("VACUUM"),
@@ -107,9 +107,9 @@ NODES = [
     # CREATE INDEX statement
     # CREATE [UNIQUE] INDEX [IF NOT EXISTS] [schema.]name ON table (columns) [WHERE expr]
     Node("CreateIndexStmt",
-        index_name=inline("SyntaqliteSourceSpan"),
-        schema=inline("SyntaqliteSourceSpan"),
-        table_name=inline("SyntaqliteSourceSpan"),
+        index_name=inline("SynqSourceSpan"),
+        schema=inline("SynqSourceSpan"),
+        table_name=inline("SynqSourceSpan"),
         is_unique=inline("Bool"),
         if_not_exists=inline("Bool"),
         columns=index("OrderByList"),
@@ -134,8 +134,8 @@ NODES = [
     # CREATE VIEW statement
     # CREATE [TEMP] VIEW [IF NOT EXISTS] [schema.]name [(columns)] AS select
     Node("CreateViewStmt",
-        view_name=inline("SyntaqliteSourceSpan"),
-        schema=inline("SyntaqliteSourceSpan"),
+        view_name=inline("SynqSourceSpan"),
+        schema=inline("SynqSourceSpan"),
         is_temp=inline("Bool"),
         if_not_exists=inline("Bool"),
         column_names=index("ExprList"),

@@ -5,9 +5,9 @@
 
 #include "src/token_list.h"
 
-void syntaqlite_token_list_append(SyntaqliteTokenList *list, uint32_t offset,
+void synq_token_list_append(SynqTokenList *list, uint32_t offset,
                                   uint16_t length, uint16_t type) {
-    syntaqlite_vec_ensure(list, list->count + 1);
+    synq_vec_ensure(list, list->count + 1);
     list->data[list->count].offset = offset;
     list->data[list->count].length = length;
     list->data[list->count].type = type;

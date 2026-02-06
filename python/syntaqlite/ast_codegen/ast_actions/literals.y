@@ -5,40 +5,40 @@
 // Python tooling validates coverage and consistency.
 //
 // Conventions:
-// - pCtx: Parse context (SyntaqliteParseContext*)
+// - pCtx: Parse context (SynqParseContext*)
 // - pCtx->astCtx: AST context for builder calls
 // - pCtx->zSql: Original SQL text (for computing offsets)
 // - pCtx->root: Set to root node ID at input rule
-// - Terminals are SyntaqliteToken with .z (pointer) and .n (length)
+// - Terminals are SynqToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
 // ============ Literals ============
 
 term(A) ::= INTEGER(B). {
-    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_INTEGER, syntaqlite_span(pCtx, B));
+    A = synq_ast_literal(pCtx->astCtx, SYNQ_LITERAL_TYPE_INTEGER, synq_span(pCtx, B));
 }
 
 term(A) ::= STRING(B). {
-    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_STRING, syntaqlite_span(pCtx, B));
+    A = synq_ast_literal(pCtx->astCtx, SYNQ_LITERAL_TYPE_STRING, synq_span(pCtx, B));
 }
 
 term(A) ::= NULL|FLOAT|BLOB(B). {
-    SyntaqliteLiteralType lit_type;
+    SynqLiteralType lit_type;
     switch (B.type) {
-        case TK_NULL:  lit_type = SYNTAQLITE_LITERAL_TYPE_NULL; break;
-        case TK_FLOAT: lit_type = SYNTAQLITE_LITERAL_TYPE_FLOAT; break;
-        case TK_BLOB:  lit_type = SYNTAQLITE_LITERAL_TYPE_BLOB; break;
-        default:       lit_type = SYNTAQLITE_LITERAL_TYPE_NULL; break;
+        case TK_NULL:  lit_type = SYNQ_LITERAL_TYPE_NULL; break;
+        case TK_FLOAT: lit_type = SYNQ_LITERAL_TYPE_FLOAT; break;
+        case TK_BLOB:  lit_type = SYNQ_LITERAL_TYPE_BLOB; break;
+        default:       lit_type = SYNQ_LITERAL_TYPE_NULL; break;
     }
-    A = ast_literal(pCtx->astCtx, lit_type, syntaqlite_span(pCtx, B));
+    A = synq_ast_literal(pCtx->astCtx, lit_type, synq_span(pCtx, B));
 }
 
 term(A) ::= QNUMBER(B). {
-    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_QNUMBER, syntaqlite_span(pCtx, B));
+    A = synq_ast_literal(pCtx->astCtx, SYNQ_LITERAL_TYPE_QNUMBER, synq_span(pCtx, B));
 }
 
 // ============ Date/Time Keywords ============
 
 term(A) ::= CTIME_KW(B). {
-    A = ast_literal(pCtx->astCtx, SYNTAQLITE_LITERAL_TYPE_CURRENT, syntaqlite_span(pCtx, B));
+    A = synq_ast_literal(pCtx->astCtx, SYNQ_LITERAL_TYPE_CURRENT, synq_span(pCtx, B));
 }

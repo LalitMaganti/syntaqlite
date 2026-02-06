@@ -18,7 +18,7 @@ FLAGS = [
 NODES = [
     # Function call: name(args)
     Node("FunctionCall",
-        func_name=inline("SyntaqliteSourceSpan"),
+        func_name=inline("SynqSourceSpan"),
         flags=inline("FunctionCallFlags"),
         args=index("ExprList"),
         filter_clause=index("Expr"),

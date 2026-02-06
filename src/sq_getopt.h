@@ -2,40 +2,40 @@
 // Licensed under the Apache License, Version 2.0.
 
 // Minimal, portable getopt_long implementation.
-// No global state — all state is in sq_getopt_state.
+// No global state — all state is in synq_getopt_state.
 // Supports short options, long options, required/optional/no argument.
 // API mirrors POSIX getopt_long but is self-contained and reentrant.
 
-#ifndef SYNTAQLITE_SRC_SQ_GETOPT_H
-#define SYNTAQLITE_SRC_SQ_GETOPT_H
+#ifndef SYNQ_SRC_SQ_GETOPT_H
+#define SYNQ_SRC_SQ_GETOPT_H
 
 #include <string.h>
 
 enum {
-  SQ_NO_ARGUMENT = 0,
-  SQ_REQUIRED_ARGUMENT = 1,
-  SQ_OPTIONAL_ARGUMENT = 2,
+  SYNQ_NO_ARGUMENT = 0,
+  SYNQ_REQUIRED_ARGUMENT = 1,
+  SYNQ_OPTIONAL_ARGUMENT = 2,
 };
 
-struct sq_option {
+struct synq_option {
   const char *name;  // Long option name (without --)
-  int has_arg;       // SQ_NO_ARGUMENT, SQ_REQUIRED_ARGUMENT, SQ_OPTIONAL_ARGUMENT
+  int has_arg;       // SYNQ_NO_ARGUMENT, SYNQ_REQUIRED_ARGUMENT, SYNQ_OPTIONAL_ARGUMENT
   int *flag;         // If non-NULL, set *flag = val and return 0
   int val;           // Value to return (or store in *flag)
 };
 
-struct sq_getopt_state {
+struct synq_getopt_state {
   int optind;       // Index of next argv element to process
   const char *arg;  // Argument value for current option (like optarg)
   int pos;          // Position within current short-option cluster
 };
 
-#define SQ_GETOPT_INIT {1, NULL, 0}
+#define SYNQ_GETOPT_INIT {1, NULL, 0}
 
 // Returns option val on match, '?' on error, -1 when done.
-static inline int sq_getopt_long(struct sq_getopt_state *st, int argc,
+inline int synq_getopt_long(struct synq_getopt_state *st, int argc,
                                  char *const *argv, const char *shortopts,
-                                 const struct sq_option *longopts,
+                                 const struct synq_option *longopts,
                                  int *longindex) {
   st->arg = NULL;
 
@@ -71,10 +71,10 @@ static inline int sq_getopt_long(struct sq_getopt_state *st, int argc,
         *longindex = i;
       st->optind++;
 
-      if (longopts[i].has_arg == SQ_NO_ARGUMENT) {
+      if (longopts[i].has_arg == SYNQ_NO_ARGUMENT) {
         if (eq)
           return '?';  // Unexpected argument.
-      } else if (longopts[i].has_arg == SQ_REQUIRED_ARGUMENT) {
+      } else if (longopts[i].has_arg == SYNQ_REQUIRED_ARGUMENT) {
         if (eq) {
           st->arg = eq + 1;
         } else if (st->optind < argc) {
@@ -82,7 +82,7 @@ static inline int sq_getopt_long(struct sq_getopt_state *st, int argc,
         } else {
           return '?';  // Missing argument.
         }
-      } else {  // SQ_OPTIONAL_ARGUMENT
+      } else {  // SYNQ_OPTIONAL_ARGUMENT
         if (eq)
           st->arg = eq + 1;
       }
@@ -146,4 +146,4 @@ static inline int sq_getopt_long(struct sq_getopt_state *st, int argc,
   return (unsigned char)c;
 }
 
-#endif  // SYNTAQLITE_SRC_SQ_GETOPT_H
+#endif  // SYNQ_SRC_SQ_GETOPT_H

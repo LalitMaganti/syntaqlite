@@ -5,11 +5,11 @@
 // Python tooling validates coverage and consistency.
 //
 // Conventions:
-// - pCtx: Parse context (SyntaqliteParseContext*)
+// - pCtx: Parse context (SynqParseContext*)
 // - pCtx->astCtx: AST context for builder calls
 // - pCtx->zSql: Original SQL text (for computing offsets)
 // - pCtx->root: Set to root node ID at input rule
-// - Terminals are SyntaqliteToken with .z (pointer) and .n (length)
+// - Terminals are SynqToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
 // ============ CREATE VIRTUAL TABLE ============
@@ -22,10 +22,10 @@ cmd(A) ::= create_vtab(X). {
 // With arguments in parentheses
 cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
     // Capture module arguments span (content between parens)
-    SyntaqliteNode *vtab = AST_NODE(&pCtx->astCtx->ast, X);
+    SynqNode *vtab = AST_NODE(&pCtx->astCtx->ast, X);
     const char *args_start = L.z + L.n;
     const char *args_end = R.z;
-    vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
+    vtab->create_virtual_table_stmt.module_args = (SynqSourceSpan){
         (uint32_t)(args_start - pCtx->zSql),
         (uint16_t)(args_end - args_start)
     };
@@ -34,14 +34,14 @@ cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
 
 // create_vtab builds the node with table name, schema, module name
 create_vtab(A) ::= createkw VIRTUAL TABLE ifnotexists(E) nm(X) dbnm(Y) USING nm(Z). {
-    SyntaqliteSourceSpan tbl_name = Y.z ? syntaqlite_span(pCtx, Y) : syntaqlite_span(pCtx, X);
-    SyntaqliteSourceSpan tbl_schema = Y.z ? syntaqlite_span(pCtx, X) : SYNTAQLITE_NO_SPAN;
-    A = ast_create_virtual_table_stmt(pCtx->astCtx,
+    SynqSourceSpan tbl_name = Y.z ? synq_span(pCtx, Y) : synq_span(pCtx, X);
+    SynqSourceSpan tbl_schema = Y.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    A = synq_ast_create_virtual_table_stmt(pCtx->astCtx,
         tbl_name,
         tbl_schema,
-        syntaqlite_span(pCtx, Z),
-        (SyntaqliteBool)E,
-        SYNTAQLITE_NO_SPAN);  // module_args = none by default
+        synq_span(pCtx, Z),
+        (SynqBool)E,
+        SYNQ_NO_SPAN);  // module_args = none by default
 }
 
 // ============ vtab argument list (grammar-level only, no AST values) ============

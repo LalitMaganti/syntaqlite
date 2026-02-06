@@ -41,7 +41,7 @@ from .tools import (
     create_keywordhash_rename_pipeline,
 )
 from .grammar_build import (
-    build_syntaqlite_grammar,
+    build_synq_grammar,
     split_extension_grammar,
 )
 from .lempar_transform import (
@@ -73,7 +73,7 @@ __all__ = [
     "create_parser_symbol_rename_pipeline",
     "create_keywordhash_rename_pipeline",
     # grammar_build.py
-    "build_syntaqlite_grammar",
+    "build_synq_grammar",
     "split_extension_grammar",
     # lempar_transform.py
     "transform_to_base_template",

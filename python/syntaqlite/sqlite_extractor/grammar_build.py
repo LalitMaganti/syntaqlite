@@ -305,9 +305,9 @@ def extract_wildcard_from_grammar(grammar_content: str) -> str | None:
     return None
 
 
-def build_syntaqlite_grammar(
+def build_synq_grammar(
     runner: ToolRunner,
-    prefix: str = "syntaqlite",
+    prefix: str = "synq",
     extension_grammar: str | None = None,
 ) -> str:
     """Build a syntaqlite grammar from SQLite's parse.y using lemon -g.
@@ -319,7 +319,7 @@ def build_syntaqlite_grammar(
 
     Args:
         runner: ToolRunner instance for running tools.
-        prefix: Symbol prefix (default: "syntaqlite").
+        prefix: Symbol prefix (default: "synq").
         extension_grammar: Optional extension grammar content to merge.
 
     Returns:
@@ -413,7 +413,7 @@ def _generate_grammar_file(
 
     # Include section with our defs and critical defines
     parts.append(f"""%include {{
-#include "src/syntaqlite_sqlite_defs.h"
+#include "src/synq_sqlite_defs.h"
 #include "src/sqlite_tokens.h"
 #include "src/ast/ast_base.h"
 #include "src/ast/ast_builder.h"
@@ -425,33 +425,33 @@ def _generate_grammar_file(
 """)
 
     # Token type and extra context
-    # Terminals are SyntaqliteToken, non-terminals default to u32 (node IDs)
-    parts.append(f"""%token_type {{SyntaqliteToken}}
+    # Terminals are SynqToken, non-terminals default to u32 (node IDs)
+    parts.append(f"""%token_type {{SynqToken}}
 %default_type {{u32}}
 %extra_context {{{prefix.capitalize()}ParseContext *pCtx}}
 
 // Non-terminals that pass through token info (not node IDs)
-%type nm {{SyntaqliteToken}}
-%type as {{SyntaqliteToken}}
-%type scanpt {{SyntaqliteToken}}
-%type likeop {{SyntaqliteToken}}
-%type dbnm {{SyntaqliteToken}}
+%type nm {{SynqToken}}
+%type as {{SynqToken}}
+%type scanpt {{SynqToken}}
+%type likeop {{SynqToken}}
+%type dbnm {{SynqToken}}
 %type multiselect_op {{int}}
 %type in_op {{int}}
-%type typetoken {{SyntaqliteToken}}
-%type typename {{SyntaqliteToken}}
-%type withnm {{SyntaqliteToken}}
+%type typetoken {{SynqToken}}
+%type typename {{SynqToken}}
+%type withnm {{SynqToken}}
 %type wqas {{int}}
 %type collate {{int}}
 %type raisetype {{int}}
 %type joinop {{int}}
-%type indexed_by {{SyntaqliteToken}}
+%type indexed_by {{SynqToken}}
 
 // DML support
 %type insert_cmd {{int}}
 %type orconf {{int}}
 %type resolvetype {{int}}
-%type indexed_opt {{SyntaqliteToken}}
+%type indexed_opt {{SynqToken}}
 
 // Schema/Transaction support
 %type ifexists {{int}}
@@ -459,7 +459,7 @@ def _generate_grammar_file(
 %type trans_opt {{int}}
 %type savepoint_opt {{int}}
 %type kwcolumn_opt {{int}}
-%type columnname {{SyntaqliteColumnNameValue}}
+%type columnname {{SynqColumnNameValue}}
 
 // Utility/Create support
 %type ifnotexists {{int}}
@@ -467,11 +467,11 @@ def _generate_grammar_file(
 %type uniqueflag {{int}}
 %type database_kw_opt {{int}}
 %type explain {{int}}
-%type createkw {{SyntaqliteToken}}
-%type signed {{SyntaqliteToken}}
-%type plus_num {{SyntaqliteToken}}
-%type minus_num {{SyntaqliteToken}}
-%type nmnum {{SyntaqliteToken}}
+%type createkw {{SynqToken}}
+%type signed {{SynqToken}}
+%type plus_num {{SynqToken}}
+%type minus_num {{SynqToken}}
+%type nmnum {{SynqToken}}
 
 // CREATE TABLE support
 %type autoinc {{int}}
@@ -483,21 +483,21 @@ def _generate_grammar_file(
 %type defer_subclause_opt {{int}}
 %type table_option_set {{int}}
 %type table_option {{int}}
-%type ccons {{SyntaqliteConstraintValue}}
-%type carglist {{SyntaqliteConstraintListValue}}
-%type tcons {{SyntaqliteConstraintValue}}
-%type conslist {{SyntaqliteConstraintListValue}}
+%type ccons {{SynqConstraintValue}}
+%type carglist {{SynqConstraintListValue}}
+%type tcons {{SynqConstraintValue}}
+%type conslist {{SynqConstraintListValue}}
 %type conslist_opt {{u32}}
 %type tconscomma {{int}}
 %type onconf {{int}}
-%type scantok {{SyntaqliteToken}}
-%type generated {{SyntaqliteConstraintValue}}
+%type scantok {{SynqToken}}
+%type generated {{SynqConstraintValue}}
 
 // JOIN ON/USING discriminator
-%type on_using {{SyntaqliteOnUsingValue}}
+%type on_using {{SynqOnUsingValue}}
 
 // WITH clause (recursive flag + cte list)
-%type with {{SyntaqliteWithValue}}
+%type with {{SynqWithValue}}
 
 // Window function support
 %type range_or_rows {{int}}
@@ -506,7 +506,7 @@ def _generate_grammar_file(
 
 // Trigger support
 %type trigger_time {{int}}
-%type trnm {{SyntaqliteToken}}
+%type trnm {{SynqToken}}
 
 %syntax_error {{
   (void)yymajor;

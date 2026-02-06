@@ -10,14 +10,14 @@
 ** Character tables extracted from SQLite's global.c
 ** DO NOT EDIT - regenerate with: python3 python/tools/extract_sqlite.py
 */
-#ifndef SYNTAQLITE_SRC_SQLITE_CHARMAP_H
-#define SYNTAQLITE_SRC_SQLITE_CHARMAP_H
+#ifndef SYNQ_SRC_SQLITE_CHARMAP_H
+#define SYNQ_SRC_SQLITE_CHARMAP_H
 
 /*
 ** Upper-to-lower case conversion table.
 ** SQLite only considers US-ASCII characters.
 */
-static const unsigned char syntaqlite_sqlite3UpperToLower[] = {
+static const unsigned char synq_sqlite3UpperToLower[] = {
 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17,
      18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35,
      36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53,
@@ -63,7 +63,7 @@ static const unsigned char syntaqlite_sqlite3UpperToLower[] = {
 ** non-ASCII UTF character. Hence the test for whether or not a character is
 ** part of an identifier is 0x46.
 */
-static const unsigned char syntaqlite_sqlite3CtypeMap[256] = {
+static const unsigned char synq_sqlite3CtypeMap[256] = {
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  /* 00..07    ........ */
   0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00,  /* 08..0f    ........ */
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  /* 10..17    ........ */
@@ -106,15 +106,15 @@ static const unsigned char syntaqlite_sqlite3CtypeMap[256] = {
 ** isspace(), isalnum(), isdigit() and isxdigit(), respectively. The
 ** sqlite versions only work for ASCII characters, regardless of locale.
 */
-# define syntaqlite_sqlite3Toupper(x)  ((x)&~(syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x20))
-# define syntaqlite_sqlite3Isspace(x)   (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x01)
-# define syntaqlite_sqlite3Isalnum(x)   (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x06)
-# define syntaqlite_sqlite3Isalpha(x)   (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x02)
-# define syntaqlite_sqlite3Isdigit(x)   (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x04)
-# define syntaqlite_sqlite3Isxdigit(x)  (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x08)
-# define syntaqlite_sqlite3Tolower(x)   (syntaqlite_sqlite3UpperToLower[(unsigned char)(x)])
-# define syntaqlite_sqlite3Isquote(x)   (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x80)
-# define syntaqlite_sqlite3JsonId1(x)   (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x42)
-# define syntaqlite_sqlite3JsonId2(x)   (syntaqlite_sqlite3CtypeMap[(unsigned char)(x)]&0x46)
+# define synq_sqlite3Toupper(x)  ((x)&~(synq_sqlite3CtypeMap[(unsigned char)(x)]&0x20))
+# define synq_sqlite3Isspace(x)   (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x01)
+# define synq_sqlite3Isalnum(x)   (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x06)
+# define synq_sqlite3Isalpha(x)   (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x02)
+# define synq_sqlite3Isdigit(x)   (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x04)
+# define synq_sqlite3Isxdigit(x)  (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x08)
+# define synq_sqlite3Tolower(x)   (synq_sqlite3UpperToLower[(unsigned char)(x)])
+# define synq_sqlite3Isquote(x)   (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x80)
+# define synq_sqlite3JsonId1(x)   (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x42)
+# define synq_sqlite3JsonId2(x)   (synq_sqlite3CtypeMap[(unsigned char)(x)]&0x46)
 
-#endif /* SYNTAQLITE_SRC_SQLITE_CHARMAP_H */
+#endif /* SYNQ_SRC_SQLITE_CHARMAP_H */

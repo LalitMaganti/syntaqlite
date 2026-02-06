@@ -4,43 +4,51 @@
 // Base AST infrastructure implementations.
 
 #include "src/ast/ast_base.h"
-#include "src/syntaqlite_sqlite_defs.h"
+#include "src/synq_sqlite_defs.h"
 
 #include <string.h>
 
+
+// External definitions for inline functions (C99/C11).
+extern inline void synq_ast_ranges_sync(SynqAstContext *ctx);
+extern inline void synq_ast_set_range(SynqAstContext *ctx, uint32_t node_id, uint32_t first, uint32_t last);
+extern inline SynqSourceRange synq_ast_get_range(SynqAstContext *ctx, uint32_t node_id);
+extern inline void synq_ast_range_union(SynqAstContext *ctx, SynqSourceRange *acc, uint32_t child_id);
+extern inline void synq_ast_range_union_span(SynqSourceRange *acc, SynqSourceSpan span);
+
 // ============ AST Context Lifecycle ============
 
-void syntaqlite_ast_context_init(SyntaqliteAstContext *ctx,
+void synq_ast_context_init(SynqAstContext *ctx,
                                   const char *source, uint32_t source_length) {
-    syntaqlite_arena_init(&ctx->ast);
+    synq_arena_init(&ctx->ast);
     ctx->source = source;
     ctx->source_length = source_length;
     ctx->error_code = 0;
     ctx->error_msg = NULL;
-    syntaqlite_vec_init(&ctx->list_acc);
-    ctx->list_acc_node_id = SYNTAQLITE_NULL_NODE;
+    synq_vec_init(&ctx->list_acc);
+    ctx->list_acc_node_id = SYNQ_NULL_NODE;
     ctx->list_acc_tag = 0;
-    syntaqlite_vec_init(&ctx->ranges);
+    synq_vec_init(&ctx->ranges);
 }
 
-void syntaqlite_ast_context_cleanup(SyntaqliteAstContext *ctx) {
-    ast_list_flush(ctx);
-    syntaqlite_vec_free(&ctx->list_acc);
-    syntaqlite_vec_free(&ctx->ranges);
-    syntaqlite_arena_free(&ctx->ast);
+void synq_ast_context_cleanup(SynqAstContext *ctx) {
+    synq_ast_list_flush(ctx);
+    synq_vec_free(&ctx->list_acc);
+    synq_vec_free(&ctx->ranges);
+    synq_arena_free(&ctx->ast);
 }
 
 // ============ List Accumulator ============
 
-void ast_list_flush(SyntaqliteAstContext *ctx) {
-    if (ctx->list_acc_node_id == SYNTAQLITE_NULL_NODE) return;
+void synq_ast_list_flush(SynqAstContext *ctx) {
+    if (ctx->list_acc_node_id == SYNQ_NULL_NODE) return;
 
-    SyntaqliteArena *ast = &ctx->ast;
+    SynqArena *ast = &ctx->ast;
     uint32_t count = ctx->list_acc.count;
     // All list structs: tag(1) + pad(3) + count(4) + children(4*N) = 8 + 4*N
     size_t size = 8 + count * sizeof(uint32_t);
 
-    syntaqlite_arena_ensure(ast, size);
+    synq_arena_ensure(ast, size);
 
     uint32_t offset = ast->size;
     ast->offsets[ctx->list_acc_node_id] = offset;
@@ -58,28 +66,28 @@ void ast_list_flush(SyntaqliteAstContext *ctx) {
     ast->size += (uint32_t)size;
 
     // Compute source range as union of all children's ranges
-    ast_ranges_sync(ctx);
-    SyntaqliteSourceRange list_range = {UINT32_MAX, 0};
+    synq_ast_ranges_sync(ctx);
+    SynqSourceRange list_range = {UINT32_MAX, 0};
     for (uint32_t i = 0; i < count; i++) {
-        ast_range_union(ctx, &list_range, ctx->list_acc.data[i]);
+        synq_ast_range_union(ctx, &list_range, ctx->list_acc.data[i]);
     }
     if (list_range.first != UINT32_MAX) {
         ctx->ranges.data[ctx->list_acc_node_id] = list_range;
     }
 
-    ctx->list_acc_node_id = SYNTAQLITE_NULL_NODE;
+    ctx->list_acc_node_id = SYNQ_NULL_NODE;
     ctx->list_acc.count = 0;
 }
 
-uint32_t ast_list_start(SyntaqliteAstContext *ctx, uint8_t tag,
+uint32_t synq_ast_list_start(SynqAstContext *ctx, uint8_t tag,
                          uint32_t first_child) {
     // Flush any in-progress list
-    ast_list_flush(ctx);
+    synq_ast_list_flush(ctx);
 
-    uint32_t node_id = syntaqlite_arena_reserve_id(&ctx->ast);
-    ast_ranges_sync(ctx);
+    uint32_t node_id = synq_arena_reserve_id(&ctx->ast);
+    synq_ast_ranges_sync(ctx);
 
-    syntaqlite_vec_ensure(&ctx->list_acc, 1);
+    synq_vec_ensure(&ctx->list_acc, 1);
     ctx->list_acc.data[0] = first_child;
     ctx->list_acc.count = 1;
     ctx->list_acc_node_id = node_id;
@@ -88,24 +96,24 @@ uint32_t ast_list_start(SyntaqliteAstContext *ctx, uint8_t tag,
     return node_id;
 }
 
-uint32_t ast_list_append(SyntaqliteAstContext *ctx, uint32_t list_id,
+uint32_t synq_ast_list_append(SynqAstContext *ctx, uint32_t list_id,
                           uint32_t child, uint8_t tag) {
     // Fast path: appending to the list currently in the accumulator
     if (list_id == ctx->list_acc_node_id) {
-        syntaqlite_vec_push(&ctx->list_acc, child);
+        synq_vec_push(&ctx->list_acc, child);
         return list_id;
     }
 
     // Slow path: switching to a different list.
     // Flush the current accumulator, then reload this list from the arena.
-    ast_list_flush(ctx);
+    synq_ast_list_flush(ctx);
 
     uint8_t *data = ctx->ast.data + ctx->ast.offsets[list_id];
     uint32_t old_count;
     memcpy(&old_count, data + 4, sizeof(uint32_t));
 
     uint32_t needed = old_count + 1;
-    syntaqlite_vec_ensure(&ctx->list_acc, needed);
+    synq_vec_ensure(&ctx->list_acc, needed);
 
     // Re-fetch after potential realloc in ensure
     data = ctx->ast.data + ctx->ast.offsets[list_id];
@@ -120,13 +128,13 @@ uint32_t ast_list_append(SyntaqliteAstContext *ctx, uint32_t list_id,
     return list_id;
 }
 
-void ast_print_indent(FILE *out, int depth) {
+void synq_ast_print_indent(FILE *out, int depth) {
     for (int i = 0; i < depth; i++) {
         fprintf(out, "  ");
     }
 }
 
-void ast_print_source_span(FILE *out, const char *source, SyntaqliteSourceSpan span) {
+void synq_ast_print_source_span(FILE *out, const char *source, SynqSourceSpan span) {
     if (source && span.length > 0) {
         fprintf(out, "\"");
         for (uint16_t i = 0; i < span.length; i++) {
@@ -147,8 +155,8 @@ void ast_print_source_span(FILE *out, const char *source, SyntaqliteSourceSpan s
     }
 }
 
-SyntaqliteSourceSpan syntaqlite_span(SyntaqliteParseContext *ctx, SyntaqliteToken tok) {
-    return (SyntaqliteSourceSpan){
+SynqSourceSpan synq_span(SynqParseContext *ctx, SynqToken tok) {
+    return (SynqSourceSpan){
         (uint32_t)(tok.z - ctx->zSql),
         (uint16_t)tok.n
     };

@@ -11,14 +11,14 @@ ENUMS = []
 NODES = [
     # Bind parameter: ?, ?1, :name, @name, $name
     Node("Variable",
-        source=inline("SyntaqliteSourceSpan"),
+        source=inline("SynqSourceSpan"),
         fmt=span("source"),
     ),
 
     # COLLATE expression: expr COLLATE collation_name
     Node("CollateExpr",
         expr=index("Expr"),
-        collation=inline("SyntaqliteSourceSpan"),
+        collation=inline("SynqSourceSpan"),
         fmt=seq(child("expr"), kw(" COLLATE "), span("collation")),
     ),
 ]

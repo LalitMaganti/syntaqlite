@@ -7,69 +7,69 @@
 #include "src/ast/ast_nodes.h"
 #include "src/ast/ast_print.h"
 
-static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
+static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
                        const char *source, int depth,
                        const char *field_name);
 
-static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
+static void print_node(FILE *out, SynqArena *ast, uint32_t node_id,
                        const char *source, int depth,
                        const char *field_name) {
-  if (node_id == SYNTAQLITE_NULL_NODE) {
+  if (node_id == SYNQ_NULL_NODE) {
     if (field_name) {
-      ast_print_indent(out, depth);
+      synq_ast_print_indent(out, depth);
       fprintf(out, "%s: null\n", field_name);
     }
     return;
   }
 
-  SyntaqliteNode *node = AST_NODE(ast, node_id);
+  SynqNode *node = AST_NODE(ast, node_id);
   if (!node) {
     return;
   }
 
   switch (node->tag) {
-    case SYNTAQLITE_NODE_BINARY_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_BINARY_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: BinaryExpr\n", field_name);
       else
         fprintf(out, "BinaryExpr\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "op: %s\n", syntaqlite_binary_op_names[node->binary_expr.op]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", synq_binary_op_names[node->binary_expr.op]);
       print_node(out, ast, node->binary_expr.left, source, depth + 1, "left");
       print_node(out, ast, node->binary_expr.right, source, depth + 1, "right");
       break;
     }
 
-    case SYNTAQLITE_NODE_UNARY_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_UNARY_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: UnaryExpr\n", field_name);
       else
         fprintf(out, "UnaryExpr\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "op: %s\n", syntaqlite_unary_op_names[node->unary_expr.op]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", synq_unary_op_names[node->unary_expr.op]);
       print_node(out, ast, node->unary_expr.operand, source, depth + 1, "operand");
       break;
     }
 
-    case SYNTAQLITE_NODE_LITERAL: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_LITERAL: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: Literal\n", field_name);
       else
         fprintf(out, "Literal\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "literal_type: %s\n", syntaqlite_literal_type_names[node->literal.literal_type]);
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "literal_type: %s\n", synq_literal_type_names[node->literal.literal_type]);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "source: ");
-      ast_print_source_span(out, source, node->literal.source);
+      synq_ast_print_source_span(out, source, node->literal.source);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_EXPR_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_EXPR_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ExprList[%u]\n", field_name, node->expr_list.count);
       else
@@ -80,27 +80,27 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_RESULT_COLUMN: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_RESULT_COLUMN: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ResultColumn\n", field_name);
       else
         fprintf(out, "ResultColumn\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "flags:");
       if (node->result_column.flags.star) fprintf(out, " STAR");
       if (!node->result_column.flags.raw) fprintf(out, " (none)");
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "alias: ");
-      ast_print_source_span(out, source, node->result_column.alias);
+      synq_ast_print_source_span(out, source, node->result_column.alias);
       fprintf(out, "\n");
       print_node(out, ast, node->result_column.expr, source, depth + 1, "expr");
       break;
     }
 
-    case SYNTAQLITE_NODE_RESULT_COLUMN_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_RESULT_COLUMN_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ResultColumnList[%u]\n", field_name, node->result_column_list.count);
       else
@@ -111,13 +111,13 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_SELECT_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_SELECT_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SelectStmt\n", field_name);
       else
         fprintf(out, "SelectStmt\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "flags:");
       if (node->select_stmt.flags.distinct) fprintf(out, " DISTINCT");
       if (!node->select_stmt.flags.raw) fprintf(out, " (none)");
@@ -133,22 +133,22 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_ORDERING_TERM: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_ORDERING_TERM: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: OrderingTerm\n", field_name);
       else
         fprintf(out, "OrderingTerm\n");
       print_node(out, ast, node->ordering_term.expr, source, depth + 1, "expr");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "sort_order: %s\n", syntaqlite_sort_order_names[node->ordering_term.sort_order]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "nulls_order: %s\n", syntaqlite_nulls_order_names[node->ordering_term.nulls_order]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "sort_order: %s\n", synq_sort_order_names[node->ordering_term.sort_order]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "nulls_order: %s\n", synq_nulls_order_names[node->ordering_term.nulls_order]);
       break;
     }
 
-    case SYNTAQLITE_NODE_ORDER_BY_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_ORDER_BY_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: OrderByList[%u]\n", field_name, node->order_by_list.count);
       else
@@ -159,8 +159,8 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_LIMIT_CLAUSE: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_LIMIT_CLAUSE: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: LimitClause\n", field_name);
       else
@@ -170,38 +170,38 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_COLUMN_REF: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_COLUMN_REF: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnRef\n", field_name);
       else
         fprintf(out, "ColumnRef\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "column: ");
-      ast_print_source_span(out, source, node->column_ref.column);
+      synq_ast_print_source_span(out, source, node->column_ref.column);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "table: ");
-      ast_print_source_span(out, source, node->column_ref.table);
+      synq_ast_print_source_span(out, source, node->column_ref.table);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->column_ref.schema);
+      synq_ast_print_source_span(out, source, node->column_ref.schema);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_FUNCTION_CALL: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_FUNCTION_CALL: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: FunctionCall\n", field_name);
       else
         fprintf(out, "FunctionCall\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "func_name: ");
-      ast_print_source_span(out, source, node->function_call.func_name);
+      synq_ast_print_source_span(out, source, node->function_call.func_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "flags:");
       if (node->function_call.flags.distinct) fprintf(out, " DISTINCT");
       if (node->function_call.flags.star) fprintf(out, " STAR");
@@ -213,49 +213,49 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_IS_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_IS_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: IsExpr\n", field_name);
       else
         fprintf(out, "IsExpr\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "op: %s\n", syntaqlite_is_op_names[node->is_expr.op]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", synq_is_op_names[node->is_expr.op]);
       print_node(out, ast, node->is_expr.left, source, depth + 1, "left");
       print_node(out, ast, node->is_expr.right, source, depth + 1, "right");
       break;
     }
 
-    case SYNTAQLITE_NODE_BETWEEN_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_BETWEEN_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: BetweenExpr\n", field_name);
       else
         fprintf(out, "BetweenExpr\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "negated: %s\n", syntaqlite_bool_names[node->between_expr.negated]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "negated: %s\n", synq_bool_names[node->between_expr.negated]);
       print_node(out, ast, node->between_expr.operand, source, depth + 1, "operand");
       print_node(out, ast, node->between_expr.low, source, depth + 1, "low");
       print_node(out, ast, node->between_expr.high, source, depth + 1, "high");
       break;
     }
 
-    case SYNTAQLITE_NODE_LIKE_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_LIKE_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: LikeExpr\n", field_name);
       else
         fprintf(out, "LikeExpr\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "negated: %s\n", syntaqlite_bool_names[node->like_expr.negated]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "negated: %s\n", synq_bool_names[node->like_expr.negated]);
       print_node(out, ast, node->like_expr.operand, source, depth + 1, "operand");
       print_node(out, ast, node->like_expr.pattern, source, depth + 1, "pattern");
       print_node(out, ast, node->like_expr.escape, source, depth + 1, "escape");
       break;
     }
 
-    case SYNTAQLITE_NODE_CASE_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CASE_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CaseExpr\n", field_name);
       else
@@ -266,8 +266,8 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_CASE_WHEN: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CASE_WHEN: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CaseWhen\n", field_name);
       else
@@ -277,8 +277,8 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_CASE_WHEN_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CASE_WHEN_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CaseWhenList[%u]\n", field_name, node->case_when_list.count);
       else
@@ -289,21 +289,21 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_COMPOUND_SELECT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_COMPOUND_SELECT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CompoundSelect\n", field_name);
       else
         fprintf(out, "CompoundSelect\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "op: %s\n", syntaqlite_compound_op_names[node->compound_select.op]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", synq_compound_op_names[node->compound_select.op]);
       print_node(out, ast, node->compound_select.left, source, depth + 1, "left");
       print_node(out, ast, node->compound_select.right, source, depth + 1, "right");
       break;
     }
 
-    case SYNTAQLITE_NODE_SUBQUERY_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_SUBQUERY_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SubqueryExpr\n", field_name);
       else
@@ -312,8 +312,8 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_EXISTS_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_EXISTS_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ExistsExpr\n", field_name);
       else
@@ -322,62 +322,62 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_IN_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_IN_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: InExpr\n", field_name);
       else
         fprintf(out, "InExpr\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "negated: %s\n", syntaqlite_bool_names[node->in_expr.negated]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "negated: %s\n", synq_bool_names[node->in_expr.negated]);
       print_node(out, ast, node->in_expr.operand, source, depth + 1, "operand");
       print_node(out, ast, node->in_expr.source, source, depth + 1, "source");
       break;
     }
 
-    case SYNTAQLITE_NODE_VARIABLE: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_VARIABLE: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: Variable\n", field_name);
       else
         fprintf(out, "Variable\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "source: ");
-      ast_print_source_span(out, source, node->variable.source);
+      synq_ast_print_source_span(out, source, node->variable.source);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_COLLATE_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_COLLATE_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CollateExpr\n", field_name);
       else
         fprintf(out, "CollateExpr\n");
       print_node(out, ast, node->collate_expr.expr, source, depth + 1, "expr");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "collation: ");
-      ast_print_source_span(out, source, node->collate_expr.collation);
+      synq_ast_print_source_span(out, source, node->collate_expr.collation);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_CAST_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CAST_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CastExpr\n", field_name);
       else
         fprintf(out, "CastExpr\n");
       print_node(out, ast, node->cast_expr.expr, source, depth + 1, "expr");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "type_name: ");
-      ast_print_source_span(out, source, node->cast_expr.type_name);
+      synq_ast_print_source_span(out, source, node->cast_expr.type_name);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_VALUES_ROW_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_VALUES_ROW_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ValuesRowList[%u]\n", field_name, node->values_row_list.count);
       else
@@ -388,8 +388,8 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_VALUES_CLAUSE: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_VALUES_CLAUSE: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ValuesClause\n", field_name);
       else
@@ -398,25 +398,25 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_CTE_DEFINITION: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CTE_DEFINITION: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CteDefinition\n", field_name);
       else
         fprintf(out, "CteDefinition\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "cte_name: ");
-      ast_print_source_span(out, source, node->cte_definition.cte_name);
+      synq_ast_print_source_span(out, source, node->cte_definition.cte_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "materialized: %s\n", syntaqlite_materialized_names[node->cte_definition.materialized]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "materialized: %s\n", synq_materialized_names[node->cte_definition.materialized]);
       print_node(out, ast, node->cte_definition.columns, source, depth + 1, "columns");
       print_node(out, ast, node->cte_definition.select, source, depth + 1, "select");
       break;
     }
 
-    case SYNTAQLITE_NODE_CTE_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CTE_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CteList[%u]\n", field_name, node->cte_list.count);
       else
@@ -427,30 +427,30 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_WITH_CLAUSE: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_WITH_CLAUSE: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: WithClause\n", field_name);
       else
         fprintf(out, "WithClause\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "recursive: %s\n", syntaqlite_bool_names[node->with_clause.recursive]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "recursive: %s\n", synq_bool_names[node->with_clause.recursive]);
       print_node(out, ast, node->with_clause.ctes, source, depth + 1, "ctes");
       print_node(out, ast, node->with_clause.select, source, depth + 1, "select");
       break;
     }
 
-    case SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_AGGREGATE_FUNCTION_CALL: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: AggregateFunctionCall\n", field_name);
       else
         fprintf(out, "AggregateFunctionCall\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "func_name: ");
-      ast_print_source_span(out, source, node->aggregate_function_call.func_name);
+      synq_ast_print_source_span(out, source, node->aggregate_function_call.func_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "flags:");
       if (node->aggregate_function_call.flags.distinct) fprintf(out, " DISTINCT");
       if (!node->aggregate_function_call.flags.raw) fprintf(out, " (none)");
@@ -462,61 +462,61 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_RAISE_EXPR: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_RAISE_EXPR: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: RaiseExpr\n", field_name);
       else
         fprintf(out, "RaiseExpr\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "raise_type: %s\n", syntaqlite_raise_type_names[node->raise_expr.raise_type]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "raise_type: %s\n", synq_raise_type_names[node->raise_expr.raise_type]);
       print_node(out, ast, node->raise_expr.error_message, source, depth + 1, "error_message");
       break;
     }
 
-    case SYNTAQLITE_NODE_TABLE_REF: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_TABLE_REF: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TableRef\n", field_name);
       else
         fprintf(out, "TableRef\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "table_name: ");
-      ast_print_source_span(out, source, node->table_ref.table_name);
+      synq_ast_print_source_span(out, source, node->table_ref.table_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->table_ref.schema);
+      synq_ast_print_source_span(out, source, node->table_ref.schema);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "alias: ");
-      ast_print_source_span(out, source, node->table_ref.alias);
+      synq_ast_print_source_span(out, source, node->table_ref.alias);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_SUBQUERY_TABLE_SOURCE: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SubqueryTableSource\n", field_name);
       else
         fprintf(out, "SubqueryTableSource\n");
       print_node(out, ast, node->subquery_table_source.select, source, depth + 1, "select");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "alias: ");
-      ast_print_source_span(out, source, node->subquery_table_source.alias);
+      synq_ast_print_source_span(out, source, node->subquery_table_source.alias);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_JOIN_CLAUSE: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_JOIN_CLAUSE: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: JoinClause\n", field_name);
       else
         fprintf(out, "JoinClause\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "join_type: %s\n", syntaqlite_join_type_names[node->join_clause.join_type]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "join_type: %s\n", synq_join_type_names[node->join_clause.join_type]);
       print_node(out, ast, node->join_clause.left, source, depth + 1, "left");
       print_node(out, ast, node->join_clause.right, source, depth + 1, "right");
       print_node(out, ast, node->join_clause.on_expr, source, depth + 1, "on_expr");
@@ -524,20 +524,20 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_JOIN_PREFIX: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_JOIN_PREFIX: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: JoinPrefix\n", field_name);
       else
         fprintf(out, "JoinPrefix\n");
       print_node(out, ast, node->join_prefix.source, source, depth + 1, "source");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "join_type: %s\n", syntaqlite_join_type_names[node->join_prefix.join_type]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "join_type: %s\n", synq_join_type_names[node->join_prefix.join_type]);
       break;
     }
 
-    case SYNTAQLITE_NODE_DELETE_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_DELETE_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: DeleteStmt\n", field_name);
       else
@@ -547,23 +547,23 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_SET_CLAUSE: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_SET_CLAUSE: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SetClause\n", field_name);
       else
         fprintf(out, "SetClause\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "column: ");
-      ast_print_source_span(out, source, node->set_clause.column);
+      synq_ast_print_source_span(out, source, node->set_clause.column);
       fprintf(out, "\n");
       print_node(out, ast, node->set_clause.columns, source, depth + 1, "columns");
       print_node(out, ast, node->set_clause.value, source, depth + 1, "value");
       break;
     }
 
-    case SYNTAQLITE_NODE_SET_CLAUSE_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_SET_CLAUSE_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SetClauseList[%u]\n", field_name, node->set_clause_list.count);
       else
@@ -574,14 +574,14 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_UPDATE_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_UPDATE_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: UpdateStmt\n", field_name);
       else
         fprintf(out, "UpdateStmt\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "conflict_action: %s\n", syntaqlite_conflict_action_names[node->update_stmt.conflict_action]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "conflict_action: %s\n", synq_conflict_action_names[node->update_stmt.conflict_action]);
       print_node(out, ast, node->update_stmt.table, source, depth + 1, "table");
       print_node(out, ast, node->update_stmt.setlist, source, depth + 1, "setlist");
       print_node(out, ast, node->update_stmt.from_clause, source, depth + 1, "from_clause");
@@ -589,143 +589,143 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_INSERT_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_INSERT_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: InsertStmt\n", field_name);
       else
         fprintf(out, "InsertStmt\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "conflict_action: %s\n", syntaqlite_conflict_action_names[node->insert_stmt.conflict_action]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "conflict_action: %s\n", synq_conflict_action_names[node->insert_stmt.conflict_action]);
       print_node(out, ast, node->insert_stmt.table, source, depth + 1, "table");
       print_node(out, ast, node->insert_stmt.columns, source, depth + 1, "columns");
       print_node(out, ast, node->insert_stmt.source, source, depth + 1, "source");
       break;
     }
 
-    case SYNTAQLITE_NODE_QUALIFIED_NAME: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_QUALIFIED_NAME: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: QualifiedName\n", field_name);
       else
         fprintf(out, "QualifiedName\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "object_name: ");
-      ast_print_source_span(out, source, node->qualified_name.object_name);
+      synq_ast_print_source_span(out, source, node->qualified_name.object_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->qualified_name.schema);
+      synq_ast_print_source_span(out, source, node->qualified_name.schema);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_DROP_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_DROP_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: DropStmt\n", field_name);
       else
         fprintf(out, "DropStmt\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "object_type: %s\n", syntaqlite_drop_object_type_names[node->drop_stmt.object_type]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "if_exists: %s\n", syntaqlite_bool_names[node->drop_stmt.if_exists]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "object_type: %s\n", synq_drop_object_type_names[node->drop_stmt.object_type]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "if_exists: %s\n", synq_bool_names[node->drop_stmt.if_exists]);
       print_node(out, ast, node->drop_stmt.target, source, depth + 1, "target");
       break;
     }
 
-    case SYNTAQLITE_NODE_ALTER_TABLE_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_ALTER_TABLE_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: AlterTableStmt\n", field_name);
       else
         fprintf(out, "AlterTableStmt\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "op: %s\n", syntaqlite_alter_op_names[node->alter_table_stmt.op]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", synq_alter_op_names[node->alter_table_stmt.op]);
       print_node(out, ast, node->alter_table_stmt.target, source, depth + 1, "target");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "new_name: ");
-      ast_print_source_span(out, source, node->alter_table_stmt.new_name);
+      synq_ast_print_source_span(out, source, node->alter_table_stmt.new_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "old_name: ");
-      ast_print_source_span(out, source, node->alter_table_stmt.old_name);
+      synq_ast_print_source_span(out, source, node->alter_table_stmt.old_name);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_TRANSACTION_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_TRANSACTION_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TransactionStmt\n", field_name);
       else
         fprintf(out, "TransactionStmt\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "op: %s\n", syntaqlite_transaction_op_names[node->transaction_stmt.op]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "trans_type: %s\n", syntaqlite_transaction_type_names[node->transaction_stmt.trans_type]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", synq_transaction_op_names[node->transaction_stmt.op]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "trans_type: %s\n", synq_transaction_type_names[node->transaction_stmt.trans_type]);
       break;
     }
 
-    case SYNTAQLITE_NODE_SAVEPOINT_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_SAVEPOINT_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: SavepointStmt\n", field_name);
       else
         fprintf(out, "SavepointStmt\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "op: %s\n", syntaqlite_savepoint_op_names[node->savepoint_stmt.op]);
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "op: %s\n", synq_savepoint_op_names[node->savepoint_stmt.op]);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "savepoint_name: ");
-      ast_print_source_span(out, source, node->savepoint_stmt.savepoint_name);
+      synq_ast_print_source_span(out, source, node->savepoint_stmt.savepoint_name);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_PRAGMA_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_PRAGMA_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: PragmaStmt\n", field_name);
       else
         fprintf(out, "PragmaStmt\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "pragma_name: ");
-      ast_print_source_span(out, source, node->pragma_stmt.pragma_name);
+      synq_ast_print_source_span(out, source, node->pragma_stmt.pragma_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->pragma_stmt.schema);
+      synq_ast_print_source_span(out, source, node->pragma_stmt.schema);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "value: ");
-      ast_print_source_span(out, source, node->pragma_stmt.value);
+      synq_ast_print_source_span(out, source, node->pragma_stmt.value);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "pragma_form: %s\n", syntaqlite_pragma_form_names[node->pragma_stmt.pragma_form]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "pragma_form: %s\n", synq_pragma_form_names[node->pragma_stmt.pragma_form]);
       break;
     }
 
-    case SYNTAQLITE_NODE_ANALYZE_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_ANALYZE_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: AnalyzeStmt\n", field_name);
       else
         fprintf(out, "AnalyzeStmt\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "target_name: ");
-      ast_print_source_span(out, source, node->analyze_stmt.target_name);
+      synq_ast_print_source_span(out, source, node->analyze_stmt.target_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->analyze_stmt.schema);
+      synq_ast_print_source_span(out, source, node->analyze_stmt.schema);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "kind: %s\n", syntaqlite_analyze_kind_names[node->analyze_stmt.kind]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "kind: %s\n", synq_analyze_kind_names[node->analyze_stmt.kind]);
       break;
     }
 
-    case SYNTAQLITE_NODE_ATTACH_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_ATTACH_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: AttachStmt\n", field_name);
       else
@@ -736,8 +736,8 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_DETACH_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_DETACH_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: DetachStmt\n", field_name);
       else
@@ -746,126 +746,126 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_VACUUM_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_VACUUM_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: VacuumStmt\n", field_name);
       else
         fprintf(out, "VacuumStmt\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->vacuum_stmt.schema);
+      synq_ast_print_source_span(out, source, node->vacuum_stmt.schema);
       fprintf(out, "\n");
       print_node(out, ast, node->vacuum_stmt.into_expr, source, depth + 1, "into_expr");
       break;
     }
 
-    case SYNTAQLITE_NODE_EXPLAIN_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_EXPLAIN_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ExplainStmt\n", field_name);
       else
         fprintf(out, "ExplainStmt\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "explain_mode: %s\n", syntaqlite_explain_mode_names[node->explain_stmt.explain_mode]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "explain_mode: %s\n", synq_explain_mode_names[node->explain_stmt.explain_mode]);
       print_node(out, ast, node->explain_stmt.stmt, source, depth + 1, "stmt");
       break;
     }
 
-    case SYNTAQLITE_NODE_CREATE_INDEX_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CREATE_INDEX_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateIndexStmt\n", field_name);
       else
         fprintf(out, "CreateIndexStmt\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "index_name: ");
-      ast_print_source_span(out, source, node->create_index_stmt.index_name);
+      synq_ast_print_source_span(out, source, node->create_index_stmt.index_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->create_index_stmt.schema);
+      synq_ast_print_source_span(out, source, node->create_index_stmt.schema);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "table_name: ");
-      ast_print_source_span(out, source, node->create_index_stmt.table_name);
+      synq_ast_print_source_span(out, source, node->create_index_stmt.table_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "is_unique: %s\n", syntaqlite_bool_names[node->create_index_stmt.is_unique]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_index_stmt.if_not_exists]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "is_unique: %s\n", synq_bool_names[node->create_index_stmt.is_unique]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %s\n", synq_bool_names[node->create_index_stmt.if_not_exists]);
       print_node(out, ast, node->create_index_stmt.columns, source, depth + 1, "columns");
       print_node(out, ast, node->create_index_stmt.where, source, depth + 1, "where");
       break;
     }
 
-    case SYNTAQLITE_NODE_CREATE_VIEW_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CREATE_VIEW_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateViewStmt\n", field_name);
       else
         fprintf(out, "CreateViewStmt\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "view_name: ");
-      ast_print_source_span(out, source, node->create_view_stmt.view_name);
+      synq_ast_print_source_span(out, source, node->create_view_stmt.view_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->create_view_stmt.schema);
+      synq_ast_print_source_span(out, source, node->create_view_stmt.schema);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "is_temp: %s\n", syntaqlite_bool_names[node->create_view_stmt.is_temp]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_view_stmt.if_not_exists]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "is_temp: %s\n", synq_bool_names[node->create_view_stmt.is_temp]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %s\n", synq_bool_names[node->create_view_stmt.if_not_exists]);
       print_node(out, ast, node->create_view_stmt.column_names, source, depth + 1, "column_names");
       print_node(out, ast, node->create_view_stmt.select, source, depth + 1, "select");
       break;
     }
 
-    case SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_FOREIGN_KEY_CLAUSE: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ForeignKeyClause\n", field_name);
       else
         fprintf(out, "ForeignKeyClause\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "ref_table: ");
-      ast_print_source_span(out, source, node->foreign_key_clause.ref_table);
+      synq_ast_print_source_span(out, source, node->foreign_key_clause.ref_table);
       fprintf(out, "\n");
       print_node(out, ast, node->foreign_key_clause.ref_columns, source, depth + 1, "ref_columns");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "on_delete: %s\n", syntaqlite_foreign_key_action_names[node->foreign_key_clause.on_delete]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "on_update: %s\n", syntaqlite_foreign_key_action_names[node->foreign_key_clause.on_update]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "is_deferred: %s\n", syntaqlite_bool_names[node->foreign_key_clause.is_deferred]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "on_delete: %s\n", synq_foreign_key_action_names[node->foreign_key_clause.on_delete]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "on_update: %s\n", synq_foreign_key_action_names[node->foreign_key_clause.on_update]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "is_deferred: %s\n", synq_bool_names[node->foreign_key_clause.is_deferred]);
       break;
     }
 
-    case SYNTAQLITE_NODE_COLUMN_CONSTRAINT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_COLUMN_CONSTRAINT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnConstraint\n", field_name);
       else
         fprintf(out, "ColumnConstraint\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "kind: %s\n", syntaqlite_column_constraint_kind_names[node->column_constraint.kind]);
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "kind: %s\n", synq_column_constraint_kind_names[node->column_constraint.kind]);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "constraint_name: ");
-      ast_print_source_span(out, source, node->column_constraint.constraint_name);
+      synq_ast_print_source_span(out, source, node->column_constraint.constraint_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "onconf: %s\n", syntaqlite_conflict_action_names[node->column_constraint.onconf]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "sort_order: %s\n", syntaqlite_sort_order_names[node->column_constraint.sort_order]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "is_autoincrement: %s\n", syntaqlite_bool_names[node->column_constraint.is_autoincrement]);
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "onconf: %s\n", synq_conflict_action_names[node->column_constraint.onconf]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "sort_order: %s\n", synq_sort_order_names[node->column_constraint.sort_order]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "is_autoincrement: %s\n", synq_bool_names[node->column_constraint.is_autoincrement]);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "collation_name: ");
-      ast_print_source_span(out, source, node->column_constraint.collation_name);
+      synq_ast_print_source_span(out, source, node->column_constraint.collation_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "generated_storage: %s\n", syntaqlite_generated_column_storage_names[node->column_constraint.generated_storage]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "generated_storage: %s\n", synq_generated_column_storage_names[node->column_constraint.generated_storage]);
       print_node(out, ast, node->column_constraint.default_expr, source, depth + 1, "default_expr");
       print_node(out, ast, node->column_constraint.check_expr, source, depth + 1, "check_expr");
       print_node(out, ast, node->column_constraint.generated_expr, source, depth + 1, "generated_expr");
@@ -873,8 +873,8 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_COLUMN_CONSTRAINT_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnConstraintList[%u]\n", field_name, node->column_constraint_list.count);
       else
@@ -885,26 +885,26 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_COLUMN_DEF: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_COLUMN_DEF: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnDef\n", field_name);
       else
         fprintf(out, "ColumnDef\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "column_name: ");
-      ast_print_source_span(out, source, node->column_def.column_name);
+      synq_ast_print_source_span(out, source, node->column_def.column_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "type_name: ");
-      ast_print_source_span(out, source, node->column_def.type_name);
+      synq_ast_print_source_span(out, source, node->column_def.type_name);
       fprintf(out, "\n");
       print_node(out, ast, node->column_def.constraints, source, depth + 1, "constraints");
       break;
     }
 
-    case SYNTAQLITE_NODE_COLUMN_DEF_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_COLUMN_DEF_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: ColumnDefList[%u]\n", field_name, node->column_def_list.count);
       else
@@ -915,30 +915,30 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_TABLE_CONSTRAINT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_TABLE_CONSTRAINT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TableConstraint\n", field_name);
       else
         fprintf(out, "TableConstraint\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "kind: %s\n", syntaqlite_table_constraint_kind_names[node->table_constraint.kind]);
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "kind: %s\n", synq_table_constraint_kind_names[node->table_constraint.kind]);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "constraint_name: ");
-      ast_print_source_span(out, source, node->table_constraint.constraint_name);
+      synq_ast_print_source_span(out, source, node->table_constraint.constraint_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "onconf: %s\n", syntaqlite_conflict_action_names[node->table_constraint.onconf]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "is_autoincrement: %s\n", syntaqlite_bool_names[node->table_constraint.is_autoincrement]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "onconf: %s\n", synq_conflict_action_names[node->table_constraint.onconf]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "is_autoincrement: %s\n", synq_bool_names[node->table_constraint.is_autoincrement]);
       print_node(out, ast, node->table_constraint.columns, source, depth + 1, "columns");
       print_node(out, ast, node->table_constraint.check_expr, source, depth + 1, "check_expr");
       print_node(out, ast, node->table_constraint.fk_clause, source, depth + 1, "fk_clause");
       break;
     }
 
-    case SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_TABLE_CONSTRAINT_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TableConstraintList[%u]\n", field_name, node->table_constraint_list.count);
       else
@@ -949,25 +949,25 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_CREATE_TABLE_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CREATE_TABLE_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateTableStmt\n", field_name);
       else
         fprintf(out, "CreateTableStmt\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "table_name: ");
-      ast_print_source_span(out, source, node->create_table_stmt.table_name);
+      synq_ast_print_source_span(out, source, node->create_table_stmt.table_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->create_table_stmt.schema);
+      synq_ast_print_source_span(out, source, node->create_table_stmt.schema);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "is_temp: %s\n", syntaqlite_bool_names[node->create_table_stmt.is_temp]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_table_stmt.if_not_exists]);
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "is_temp: %s\n", synq_bool_names[node->create_table_stmt.is_temp]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %s\n", synq_bool_names[node->create_table_stmt.if_not_exists]);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "flags:");
       if (node->create_table_stmt.flags.without_rowid) fprintf(out, " WITHOUT_ROWID");
       if (node->create_table_stmt.flags.strict) fprintf(out, " STRICT");
@@ -979,42 +979,42 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_FRAME_BOUND: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_FRAME_BOUND: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: FrameBound\n", field_name);
       else
         fprintf(out, "FrameBound\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "bound_type: %s\n", syntaqlite_frame_bound_type_names[node->frame_bound.bound_type]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "bound_type: %s\n", synq_frame_bound_type_names[node->frame_bound.bound_type]);
       print_node(out, ast, node->frame_bound.expr, source, depth + 1, "expr");
       break;
     }
 
-    case SYNTAQLITE_NODE_FRAME_SPEC: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_FRAME_SPEC: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: FrameSpec\n", field_name);
       else
         fprintf(out, "FrameSpec\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "frame_type: %s\n", syntaqlite_frame_type_names[node->frame_spec.frame_type]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "exclude: %s\n", syntaqlite_frame_exclude_names[node->frame_spec.exclude]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "frame_type: %s\n", synq_frame_type_names[node->frame_spec.frame_type]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "exclude: %s\n", synq_frame_exclude_names[node->frame_spec.exclude]);
       print_node(out, ast, node->frame_spec.start_bound, source, depth + 1, "start_bound");
       print_node(out, ast, node->frame_spec.end_bound, source, depth + 1, "end_bound");
       break;
     }
 
-    case SYNTAQLITE_NODE_WINDOW_DEF: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_WINDOW_DEF: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: WindowDef\n", field_name);
       else
         fprintf(out, "WindowDef\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "base_window_name: ");
-      ast_print_source_span(out, source, node->window_def.base_window_name);
+      synq_ast_print_source_span(out, source, node->window_def.base_window_name);
       fprintf(out, "\n");
       print_node(out, ast, node->window_def.partition_by, source, depth + 1, "partition_by");
       print_node(out, ast, node->window_def.orderby, source, depth + 1, "orderby");
@@ -1022,8 +1022,8 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_WINDOW_DEF_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_WINDOW_DEF_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: WindowDefList[%u]\n", field_name, node->window_def_list.count);
       else
@@ -1034,22 +1034,22 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_NAMED_WINDOW_DEF: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_NAMED_WINDOW_DEF: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: NamedWindowDef\n", field_name);
       else
         fprintf(out, "NamedWindowDef\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "window_name: ");
-      ast_print_source_span(out, source, node->named_window_def.window_name);
+      synq_ast_print_source_span(out, source, node->named_window_def.window_name);
       fprintf(out, "\n");
       print_node(out, ast, node->named_window_def.window_def, source, depth + 1, "window_def");
       break;
     }
 
-    case SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_NAMED_WINDOW_DEF_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: NamedWindowDefList[%u]\n", field_name, node->named_window_def_list.count);
       else
@@ -1060,35 +1060,35 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_FILTER_OVER: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_FILTER_OVER: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: FilterOver\n", field_name);
       else
         fprintf(out, "FilterOver\n");
       print_node(out, ast, node->filter_over.filter_expr, source, depth + 1, "filter_expr");
       print_node(out, ast, node->filter_over.over_def, source, depth + 1, "over_def");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "over_name: ");
-      ast_print_source_span(out, source, node->filter_over.over_name);
+      synq_ast_print_source_span(out, source, node->filter_over.over_name);
       fprintf(out, "\n");
       break;
     }
 
-    case SYNTAQLITE_NODE_TRIGGER_EVENT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_TRIGGER_EVENT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TriggerEvent\n", field_name);
       else
         fprintf(out, "TriggerEvent\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "event_type: %s\n", syntaqlite_trigger_event_type_names[node->trigger_event.event_type]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "event_type: %s\n", synq_trigger_event_type_names[node->trigger_event.event_type]);
       print_node(out, ast, node->trigger_event.columns, source, depth + 1, "columns");
       break;
     }
 
-    case SYNTAQLITE_NODE_TRIGGER_CMD_LIST: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_TRIGGER_CMD_LIST: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: TriggerCmdList[%u]\n", field_name, node->trigger_cmd_list.count);
       else
@@ -1099,26 +1099,26 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_CREATE_TRIGGER_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CREATE_TRIGGER_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateTriggerStmt\n", field_name);
       else
         fprintf(out, "CreateTriggerStmt\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "trigger_name: ");
-      ast_print_source_span(out, source, node->create_trigger_stmt.trigger_name);
+      synq_ast_print_source_span(out, source, node->create_trigger_stmt.trigger_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->create_trigger_stmt.schema);
+      synq_ast_print_source_span(out, source, node->create_trigger_stmt.schema);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "is_temp: %s\n", syntaqlite_bool_names[node->create_trigger_stmt.is_temp]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_trigger_stmt.if_not_exists]);
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "timing: %s\n", syntaqlite_trigger_timing_names[node->create_trigger_stmt.timing]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "is_temp: %s\n", synq_bool_names[node->create_trigger_stmt.is_temp]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %s\n", synq_bool_names[node->create_trigger_stmt.if_not_exists]);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "timing: %s\n", synq_trigger_timing_names[node->create_trigger_stmt.timing]);
       print_node(out, ast, node->create_trigger_stmt.event, source, depth + 1, "event");
       print_node(out, ast, node->create_trigger_stmt.table, source, depth + 1, "table");
       print_node(out, ast, node->create_trigger_stmt.when_expr, source, depth + 1, "when_expr");
@@ -1126,41 +1126,41 @@ static void print_node(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
       break;
     }
 
-    case SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT: {
-      ast_print_indent(out, depth);
+    case SYNQ_NODE_CREATE_VIRTUAL_TABLE_STMT: {
+      synq_ast_print_indent(out, depth);
       if (field_name)
         fprintf(out, "%s: CreateVirtualTableStmt\n", field_name);
       else
         fprintf(out, "CreateVirtualTableStmt\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "table_name: ");
-      ast_print_source_span(out, source, node->create_virtual_table_stmt.table_name);
+      synq_ast_print_source_span(out, source, node->create_virtual_table_stmt.table_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "schema: ");
-      ast_print_source_span(out, source, node->create_virtual_table_stmt.schema);
+      synq_ast_print_source_span(out, source, node->create_virtual_table_stmt.schema);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "module_name: ");
-      ast_print_source_span(out, source, node->create_virtual_table_stmt.module_name);
+      synq_ast_print_source_span(out, source, node->create_virtual_table_stmt.module_name);
       fprintf(out, "\n");
-      ast_print_indent(out, depth + 1);
-      fprintf(out, "if_not_exists: %s\n", syntaqlite_bool_names[node->create_virtual_table_stmt.if_not_exists]);
-      ast_print_indent(out, depth + 1);
+      synq_ast_print_indent(out, depth + 1);
+      fprintf(out, "if_not_exists: %s\n", synq_bool_names[node->create_virtual_table_stmt.if_not_exists]);
+      synq_ast_print_indent(out, depth + 1);
       fprintf(out, "module_args: ");
-      ast_print_source_span(out, source, node->create_virtual_table_stmt.module_args);
+      synq_ast_print_source_span(out, source, node->create_virtual_table_stmt.module_args);
       fprintf(out, "\n");
       break;
     }
 
     default:
-      ast_print_indent(out, depth);
+      synq_ast_print_indent(out, depth);
       fprintf(out, "Unknown(tag=%d)\n", node->tag);
       break;
   }
 }
 
-void syntaqlite_ast_print(FILE *out, SyntaqliteArena *ast, uint32_t node_id,
+void synq_ast_print(FILE *out, SynqArena *ast, uint32_t node_id,
                           const char *source) {
   print_node(out, ast, node_id, source, 0, NULL);
 }
