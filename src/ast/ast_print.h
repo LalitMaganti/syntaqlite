@@ -7,7 +7,7 @@
 #ifndef SYNQ_AST_PRINT_H
 #define SYNQ_AST_PRINT_H
 
-#include "src/arena.h"
+#include "src/base/arena.h"
 
 #include <stdio.h>
 

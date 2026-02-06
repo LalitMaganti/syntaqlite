@@ -6,8 +6,8 @@
 #ifndef SYNQ_AST_BASE_H
 #define SYNQ_AST_BASE_H
 
-#include "src/arena.h"
-#include "src/vec.h"
+#include "src/base/arena.h"
+#include "src/base/vec.h"
 
 #include <stddef.h>
 #include <stdint.h>

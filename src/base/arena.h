@@ -3,8 +3,8 @@
 
 // Arena allocator with offset table for node-based data structures.
 
-#ifndef SYNQ_SRC_ARENA_H
-#define SYNQ_SRC_ARENA_H
+#ifndef SYNQ_SRC_BASE_ARENA_H
+#define SYNQ_SRC_BASE_ARENA_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -40,4 +40,4 @@ uint32_t synq_arena_reserve_id(SynqArena *a);
 }
 #endif
 
-#endif  // SYNQ_SRC_ARENA_H
+#endif  // SYNQ_SRC_BASE_ARENA_H

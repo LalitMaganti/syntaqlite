@@ -4,8 +4,8 @@
 // Header-only type-generic dynamic array.
 // Works on any struct with {T *data; uint32_t count; uint32_t capacity;}.
 
-#ifndef SYNQ_SRC_VEC_H
-#define SYNQ_SRC_VEC_H
+#ifndef SYNQ_SRC_BASE_VEC_H
+#define SYNQ_SRC_BASE_VEC_H
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -72,4 +72,4 @@ inline void *synq_xrealloc(void *ptr, size_t size) {
 }
 #endif
 
-#endif  // SYNQ_SRC_VEC_H
+#endif  // SYNQ_SRC_BASE_VEC_H

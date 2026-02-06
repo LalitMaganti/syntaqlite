@@ -1,0 +1,27 @@
+# Foundational utility libraries for syntaqlite.
+
+# Header-only generic dynamic array.
+source_set("vec") {
+  sources = [
+    "vec.h",
+  ]
+}
+
+# Minimal, portable getopt_long.
+source_set("getopt") {
+  sources = [
+    "synq_getopt.c",
+    "synq_getopt.h",
+  ]
+}
+
+# Shared arena allocator with offset table.
+source_set("arena") {
+  sources = [
+    "arena.c",
+    "arena.h",
+  ]
+  deps = [
+    ":vec",
+  ]
+}

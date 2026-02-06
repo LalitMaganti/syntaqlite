@@ -6,7 +6,7 @@
 #ifndef SYNQ_SRC_TOKEN_LIST_H
 #define SYNQ_SRC_TOKEN_LIST_H
 
-#include "src/vec.h"
+#include "src/base/vec.h"
 
 #include <stdint.h>
 

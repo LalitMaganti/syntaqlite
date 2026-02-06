@@ -12,13 +12,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/sq_getopt.h"
+#include "src/base/synq_getopt.h"
 #include "src/synq_sqlite_defs.h"
-
-// External definition for inline function (C99/C11).
-extern inline int synq_getopt_long(struct synq_getopt_state *st, int argc,
-    char *const *argv, const char *shortopts,
-    const struct synq_option *longopts, int *longindex);
 #include "src/sqlite_tokens.h"
 #include "src/token_list.h"
 #include "src/ast/ast_base.h"

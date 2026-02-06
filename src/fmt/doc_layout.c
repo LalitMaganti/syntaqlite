@@ -4,7 +4,7 @@
 // Wadler-Lindig layout engine implementation.
 
 #include "src/fmt/doc_layout.h"
-#include "src/vec.h"
+#include "src/base/vec.h"
 
 #include <stdlib.h>
 #include <string.h>

@@ -6,7 +6,7 @@
 #ifndef SYNQ_SRC_FMT_DOC_H
 #define SYNQ_SRC_FMT_DOC_H
 
-#include "src/arena.h"
+#include "src/base/arena.h"
 
 #include <stddef.h>
 #include <stdint.h>

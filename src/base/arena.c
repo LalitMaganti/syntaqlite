@@ -3,8 +3,8 @@
 
 // Shared arena allocator with offset table.
 
-#include "src/arena.h"
-#include "src/vec.h"
+#include "src/base/arena.h"
+#include "src/base/vec.h"
 
 #include <stdlib.h>
 

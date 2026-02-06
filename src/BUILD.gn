@@ -9,24 +9,6 @@ config("lemon_generated") {
   ]
 }
 
-# Header-only generic dynamic array.
-source_set("vec") {
-  sources = [
-    "vec.h",
-  ]
-}
-
-# Shared arena allocator with offset table.
-source_set("arena") {
-  sources = [
-    "arena.c",
-    "arena.h",
-  ]
-  deps = [
-    ":vec",
-  ]
-}
-
 # SQLite tokenizer (extracted so :fmt can use it for comment injection).
 source_set("tokenizer") {
   sources = [
@@ -56,7 +38,7 @@ source_set("token_list") {
     "token_list.h",
   ]
   deps = [
-    ":vec",
+    "base:vec",
   ]
 }
 
@@ -76,8 +58,8 @@ source_set("ast") {
     "ast/ast_print.h",
   ]
   deps = [
-    ":arena",
-    ":vec",
+    "base:arena",
+    "base:vec",
   ]
 }
 
@@ -97,11 +79,11 @@ source_set("fmt") {
     "fmt/fmt_options.h",
   ]
   deps = [
-    ":arena",
+    "base:arena",
+    "base:vec",
     ":ast",
     ":token_list",
     ":tokenizer",
-    ":vec",
   ]
 }
 
@@ -112,6 +94,7 @@ executable("ast_test") {
     "ast/ast_test_main.c",
   ]
   deps = [
+    "base:getopt",
     ":ast",
     ":sqlite",
   ]
@@ -128,6 +111,7 @@ executable("fmt_test") {
     "fmt/fmt_test_main.c",
   ]
   deps = [
+    "base:getopt",
     ":ast",
     ":fmt",
     ":sqlite",

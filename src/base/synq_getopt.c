@@ -2,41 +2,15 @@
 // Licensed under the Apache License, Version 2.0.
 
 // Minimal, portable getopt_long implementation.
-// No global state — all state is in synq_getopt_state.
-// Supports short options, long options, required/optional/no argument.
-// API mirrors POSIX getopt_long but is self-contained and reentrant.
 
-#ifndef SYNQ_SRC_SQ_GETOPT_H
-#define SYNQ_SRC_SQ_GETOPT_H
+#include "src/base/synq_getopt.h"
 
 #include <string.h>
 
-enum {
-  SYNQ_NO_ARGUMENT = 0,
-  SYNQ_REQUIRED_ARGUMENT = 1,
-  SYNQ_OPTIONAL_ARGUMENT = 2,
-};
-
-struct synq_option {
-  const char *name;  // Long option name (without --)
-  int has_arg;       // SYNQ_NO_ARGUMENT, SYNQ_REQUIRED_ARGUMENT, SYNQ_OPTIONAL_ARGUMENT
-  int *flag;         // If non-NULL, set *flag = val and return 0
-  int val;           // Value to return (or store in *flag)
-};
-
-struct synq_getopt_state {
-  int optind;       // Index of next argv element to process
-  const char *arg;  // Argument value for current option (like optarg)
-  int pos;          // Position within current short-option cluster
-};
-
-#define SYNQ_GETOPT_INIT {1, NULL, 0}
-
-// Returns option val on match, '?' on error, -1 when done.
-inline int synq_getopt_long(struct synq_getopt_state *st, int argc,
-                                 char *const *argv, const char *shortopts,
-                                 const struct synq_option *longopts,
-                                 int *longindex) {
+int synq_getopt_long(struct synq_getopt_state *st, int argc,
+                     char *const *argv, const char *shortopts,
+                     const struct synq_option *longopts,
+                     int *longindex) {
   st->arg = NULL;
 
   if (st->optind >= argc)
@@ -145,5 +119,3 @@ inline int synq_getopt_long(struct synq_getopt_state *st, int argc,
 
   return (unsigned char)c;
 }
-
-#endif  // SYNQ_SRC_SQ_GETOPT_H

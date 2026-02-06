@@ -11,15 +11,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/sq_getopt.h"
+#include "src/base/synq_getopt.h"
 #include "src/ast/ast_base.h"
 #include "src/ast/ast_print.h"
 #include "src/synq_sqlite_defs.h"
 #include "src/sqlite_tokens.h"
 
-
-// External definitions for inline functions (C99/C11).
-extern inline int synq_getopt_long(struct synq_getopt_state *st, int argc, char *const *argv, const char *shortopts, const struct synq_option *longopts, int *longindex);
 
 // External parser functions (defined in sqlite_parse.c)
 void *synq_sqlite3ParserAlloc(void *(*mallocProc)(size_t),
