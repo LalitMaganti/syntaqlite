@@ -37,6 +37,26 @@ class WindowFunctionFormat(TestSuite):
         )
 
 
+class FilterOverFormat(TestSuite):
+    def test_filter_only(self):
+        return AstTestBlueprint(
+            sql="select count(*) filter (where x > 0) from t",
+            out="SELECT count(*) FILTER (WHERE x > 0) FROM t",
+        )
+
+    def test_filter_with_over(self):
+        return AstTestBlueprint(
+            sql="select sum(x) filter (where x > 0) over (order by y) from t",
+            out="SELECT sum(x) FILTER (WHERE x > 0) OVER (ORDER BY y) FROM t",
+        )
+
+    def test_filter_with_named_window(self):
+        return AstTestBlueprint(
+            sql="select sum(x) filter (where x > 0) over w from t window w as (order by y)",
+            out="SELECT sum(x) FILTER (WHERE x > 0) OVER w FROM t WINDOW w AS (ORDER BY y)",
+        )
+
+
 class FrameSpecFormat(TestSuite):
     def test_rows_between(self):
         return AstTestBlueprint(

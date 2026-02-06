@@ -287,22 +287,23 @@ static uint32_t format_function_call(FmtCtx *ctx, SyntaqliteFunctionCall *node) 
     uint32_t grp_15 = doc_group(&ctx->docs, cat_14);
     uint32_t cond_16 = SYNTAQLITE_NULL_DOC;
     if (node->filter_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t kw_17 = kw(ctx, " ");
+        uint32_t kw_17 = kw(ctx, " FILTER (WHERE ");
         uint32_t ch_18 = format_node(ctx, node->filter_clause);
-        uint32_t cat_19_items[] = { kw_17, ch_18 };
-        uint32_t cat_19 = doc_concat_nullable(&ctx->docs, cat_19_items, 2);
-        cond_16 = cat_19;
+        uint32_t kw_19 = kw(ctx, ")");
+        uint32_t cat_20_items[] = { kw_17, ch_18, kw_19 };
+        uint32_t cat_20 = doc_concat_nullable(&ctx->docs, cat_20_items, 3);
+        cond_16 = cat_20;
     }
-    uint32_t cond_20 = SYNTAQLITE_NULL_DOC;
+    uint32_t cond_21 = SYNTAQLITE_NULL_DOC;
     if (node->over_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t kw_21 = kw(ctx, " OVER ");
-        uint32_t ch_22 = format_node(ctx, node->over_clause);
-        uint32_t cat_23_items[] = { kw_21, ch_22 };
-        uint32_t cat_23 = doc_concat_nullable(&ctx->docs, cat_23_items, 2);
-        cond_20 = cat_23;
+        uint32_t kw_22 = kw(ctx, " OVER ");
+        uint32_t ch_23 = format_node(ctx, node->over_clause);
+        uint32_t cat_24_items[] = { kw_22, ch_23 };
+        uint32_t cat_24 = doc_concat_nullable(&ctx->docs, cat_24_items, 2);
+        cond_21 = cat_24;
     }
-    uint32_t cat_24_items[] = { sp_1, grp_15, cond_16, cond_20 };
-    return doc_concat_nullable(&ctx->docs, cat_24_items, 4);
+    uint32_t cat_25_items[] = { sp_1, grp_15, cond_16, cond_21 };
+    return doc_concat_nullable(&ctx->docs, cat_25_items, 4);
 }
 
 static uint32_t format_is_expr(FmtCtx *ctx, SyntaqliteIsExpr *node) {
@@ -594,22 +595,23 @@ static uint32_t format_aggregate_function_call(FmtCtx *ctx, SyntaqliteAggregateF
     uint32_t grp_17 = doc_group(&ctx->docs, cat_16);
     uint32_t cond_18 = SYNTAQLITE_NULL_DOC;
     if (node->filter_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t kw_19 = kw(ctx, " ");
+        uint32_t kw_19 = kw(ctx, " FILTER (WHERE ");
         uint32_t ch_20 = format_node(ctx, node->filter_clause);
-        uint32_t cat_21_items[] = { kw_19, ch_20 };
-        uint32_t cat_21 = doc_concat_nullable(&ctx->docs, cat_21_items, 2);
-        cond_18 = cat_21;
+        uint32_t kw_21 = kw(ctx, ")");
+        uint32_t cat_22_items[] = { kw_19, ch_20, kw_21 };
+        uint32_t cat_22 = doc_concat_nullable(&ctx->docs, cat_22_items, 3);
+        cond_18 = cat_22;
     }
-    uint32_t cond_22 = SYNTAQLITE_NULL_DOC;
+    uint32_t cond_23 = SYNTAQLITE_NULL_DOC;
     if (node->over_clause != SYNTAQLITE_NULL_NODE) {
-        uint32_t kw_23 = kw(ctx, " OVER ");
-        uint32_t ch_24 = format_node(ctx, node->over_clause);
-        uint32_t cat_25_items[] = { kw_23, ch_24 };
-        uint32_t cat_25 = doc_concat_nullable(&ctx->docs, cat_25_items, 2);
-        cond_22 = cat_25;
+        uint32_t kw_24 = kw(ctx, " OVER ");
+        uint32_t ch_25 = format_node(ctx, node->over_clause);
+        uint32_t cat_26_items[] = { kw_24, ch_25 };
+        uint32_t cat_26 = doc_concat_nullable(&ctx->docs, cat_26_items, 2);
+        cond_23 = cat_26;
     }
-    uint32_t cat_26_items[] = { sp_1, grp_17, cond_18, cond_22 };
-    return doc_concat_nullable(&ctx->docs, cat_26_items, 4);
+    uint32_t cat_27_items[] = { sp_1, grp_17, cond_18, cond_23 };
+    return doc_concat_nullable(&ctx->docs, cat_27_items, 4);
 }
 
 static uint32_t format_raise_expr(FmtCtx *ctx, SyntaqliteRaiseExpr *node) {

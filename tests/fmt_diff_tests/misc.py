@@ -183,6 +183,32 @@ class SubqueryFormat(TestSuite):
         )
 
 
+class RaiseFormat(TestSuite):
+    def test_raise_ignore(self):
+        return AstTestBlueprint(
+            sql="SELECT RAISE(IGNORE)",
+            out="SELECT RAISE(IGNORE)",
+        )
+
+    def test_raise_rollback(self):
+        return AstTestBlueprint(
+            sql="SELECT RAISE(ROLLBACK, 'error message')",
+            out="SELECT RAISE(ROLLBACK, 'error message')",
+        )
+
+    def test_raise_abort(self):
+        return AstTestBlueprint(
+            sql="SELECT RAISE(ABORT, 'constraint failed')",
+            out="SELECT RAISE(ABORT, 'constraint failed')",
+        )
+
+    def test_raise_fail(self):
+        return AstTestBlueprint(
+            sql="SELECT RAISE(FAIL, 'error')",
+            out="SELECT RAISE(FAIL, 'error')",
+        )
+
+
 class AggregateFunctionFormat(TestSuite):
     def test_count_star(self):
         return AstTestBlueprint(

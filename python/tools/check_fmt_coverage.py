@@ -187,9 +187,9 @@ def main():
         fmt_str = "  ✓  " if has_fmt else " —  " if is_inline else "     "
         test_str = "  ✓  " if has_test else " —  " if is_inline else "     "
 
-        if has_fmt:
+        if not is_inline and has_fmt:
             n_fmt += 1
-        if has_test:
+        if not is_inline and has_test:
             n_test += 1
         if not is_inline and not has_fmt:
             n_need_fmt += 1
