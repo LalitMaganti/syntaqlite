@@ -15,6 +15,7 @@
 #include "src/syntaqlite_sqlite_defs.h"
 #include "src/sqlite_tokens.h"
 #include "src/token_list.h"
+#include "src/ast/ast_base.h"
 #include "src/fmt/fmt.h"
 #include "src/fmt/fmt_options.h"
 
