@@ -21,6 +21,7 @@ from .defs import (
     pascal_to_snake,
     tag_name as _tag_name,
     enum_prefix as _enum_prefix,
+    emit_file_header,
 )
 
 from .fmt_dsl import (
@@ -348,13 +349,7 @@ def generate_fmt_c(
     flags_lookup = {f.name: f for f in flags_defs}
     lines: list[str] = []
 
-    # Header
-    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
-    lines.append("// Licensed under the Apache License, Version 2.0.")
-    lines.append("")
-    lines.append("// Generated from ast_codegen node definitions - DO NOT EDIT")
-    lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
-    lines.append("")
+    emit_file_header(lines, "ast_codegen node definitions", "python3 python/tools/extract_sqlite.py")
     lines.append('#include "src/formatter/fmt_ops.h"')
     lines.append("")
     lines.append('#include "src/parser/ast_nodes_gen.h"')

@@ -654,3 +654,19 @@ def _generate_grammar_file(
     return "".join(parts)
 
 
+def parse_extension_keywords(grammar_content: str) -> list[str]:
+    """Parse %token declarations from extension grammar content.
+
+    Args:
+        grammar_content: Extension grammar text.
+
+    Returns:
+        Deduplicated list of keyword names preserving order.
+    """
+    keywords = []
+    for match in re.finditer(r'%token\s+([^%{]+?)(?=\n(?:%|\s*$)|$)', grammar_content, re.DOTALL):
+        keywords.extend(re.findall(r'\b([A-Z][A-Z0-9_]*)\b', match.group(1)))
+    # Dedupe preserving order
+    return list(dict.fromkeys(keywords))
+
+

@@ -24,6 +24,8 @@ from .defs import (
     pascal_to_snake,
     tag_name as _tag_name,
     enum_prefix as _enum_prefix,
+    emit_file_header,
+    emit_extern_c,
 )
 
 
@@ -256,12 +258,7 @@ def generate_public_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[Enu
     flags_names = set(flags_lookup.keys())
     lines = []
 
-    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
-    lines.append("// Licensed under the Apache License, Version 2.0.")
-    lines.append("")
-    lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
-    lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
-    lines.append("")
+    emit_file_header(lines, "data/ast_nodes.py", "python3 python/tools/extract_sqlite.py")
     lines.append("#ifndef SYNTAQLITE_AST_NODES_GEN_H")
     lines.append("#define SYNTAQLITE_AST_NODES_GEN_H")
     lines.append("")
@@ -274,10 +271,7 @@ def generate_public_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[Enu
     lines.append("")
     lines.append('#include "syntaqlite/ast.h"')
     lines.append("")
-    lines.append("#ifdef __cplusplus")
-    lines.append('extern "C" {')
-    lines.append("#endif")
-    lines.append("")
+    emit_extern_c(lines)
 
     _emit_enums(lines, enum_defs)
     _emit_flags(lines, flags_defs)
@@ -285,10 +279,7 @@ def generate_public_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[Enu
     _emit_node_structs(lines, node_defs, enum_names, flags_names)
     _emit_node_union(lines, node_defs)
 
-    lines.append("#ifdef __cplusplus")
-    lines.append("}")
-    lines.append("#endif")
-    lines.append("")
+    emit_extern_c(lines, end=True)
     lines.append("#endif /* SYNTAQLITE_CUSTOM_NODES */")
     lines.append("")
     lines.append("#endif  // SYNTAQLITE_AST_NODES_GEN_H")
@@ -308,12 +299,7 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     """
     lines = []
 
-    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
-    lines.append("// Licensed under the Apache License, Version 2.0.")
-    lines.append("")
-    lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
-    lines.append("// Regenerate with: python3 python/tools/extract_sqlite.py")
-    lines.append("")
+    emit_file_header(lines, "data/ast_nodes.py", "python3 python/tools/extract_sqlite.py")
     lines.append("#ifndef SYNQ_SRC_AST_AST_NODES_GEN_H")
     lines.append("#define SYNQ_SRC_AST_AST_NODES_GEN_H")
     lines.append("")
@@ -323,10 +309,7 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("// Internal dependencies (SynqArena, etc.)")
     lines.append('#include "src/parser/ast_base.h"')
     lines.append("")
-    lines.append("#ifdef __cplusplus")
-    lines.append('extern "C" {')
-    lines.append("#endif")
-    lines.append("")
+    emit_extern_c(lines)
 
     # Enum name string arrays (internal only - causes static duplication in public header)
     _emit_enum_name_arrays(lines, enum_defs)
@@ -348,10 +331,7 @@ def generate_ast_nodes_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
     lines.append("size_t synq_node_base_size(uint8_t tag);")
     lines.append("")
 
-    lines.append("#ifdef __cplusplus")
-    lines.append("}")
-    lines.append("#endif")
-    lines.append("")
+    emit_extern_c(lines, end=True)
     lines.append("#endif  // SYNQ_SRC_AST_AST_NODES_GEN_H")
 
     output.write_text("\n".join(lines) + "\n")
@@ -364,22 +344,13 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     flags_names = {f.name for f in flags_defs}
     lines = []
 
-    # Header
-    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
-    lines.append("// Licensed under the Apache License, Version 2.0.")
-    lines.append("")
-    lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
-    lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
-    lines.append("")
+    emit_file_header(lines, "data/ast_nodes.py", "python3 python/tools/generate_ast.py")
     lines.append("#ifndef SYNQ_SRC_AST_AST_BUILDER_GEN_H")
     lines.append("#define SYNQ_SRC_AST_AST_BUILDER_GEN_H")
     lines.append("")
     lines.append('#include "src/parser/ast_nodes_gen.h"')
     lines.append("")
-    lines.append("#ifdef __cplusplus")
-    lines.append('extern "C" {')
-    lines.append("#endif")
-    lines.append("")
+    emit_extern_c(lines)
 
     # Builder function declarations
     lines.append("// ============ Builder Functions ============")
@@ -404,10 +375,7 @@ def generate_ast_builder_h(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
             lines.append(f"uint32_t {func_name}_append(SynqAstContext *ctx, uint32_t list_id, uint32_t child);")
             lines.append("")
 
-    lines.append("#ifdef __cplusplus")
-    lines.append("}")
-    lines.append("#endif")
-    lines.append("")
+    emit_extern_c(lines, end=True)
     lines.append("#endif  // SYNQ_SRC_AST_AST_BUILDER_GEN_H")
 
     output.write_text("\n".join(lines) + "\n")
@@ -420,13 +388,7 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     flags_names = {f.name for f in flags_defs}
     lines = []
 
-    # Header
-    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
-    lines.append("// Licensed under the Apache License, Version 2.0.")
-    lines.append("")
-    lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
-    lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
-    lines.append("")
+    emit_file_header(lines, "data/ast_nodes.py", "python3 python/tools/generate_ast.py")
     lines.append('#include "src/parser/ast_builder_gen.h"')
     lines.append("")
     lines.append("#include <stdlib.h>")
@@ -509,12 +471,7 @@ def generate_ast_print_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef],
 
     lines = []
 
-    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
-    lines.append("// Licensed under the Apache License, Version 2.0.")
-    lines.append("")
-    lines.append("// Generated from data/ast_nodes.py - DO NOT EDIT")
-    lines.append("// Regenerate with: python3 python/tools/generate_ast.py")
-    lines.append("")
+    emit_file_header(lines, "data/ast_nodes.py", "python3 python/tools/generate_ast.py")
     lines.append('#include "src/parser/ast_nodes_gen.h"')
     lines.append('#include "src/parser/ast_print.h"')
     lines.append("")

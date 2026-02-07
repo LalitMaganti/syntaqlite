@@ -51,6 +51,7 @@ from .grammar_build import (
     build_synq_grammar,
     split_extension_grammar,
     parse_actions_content,
+    parse_extension_keywords,
 )
 from .parser_split import (
     split_parser_output,
@@ -93,6 +94,7 @@ __all__ = [
     "build_synq_grammar",
     "split_extension_grammar",
     "parse_actions_content",
+    "parse_extension_keywords",
     # parser_split.py
     "split_parser_output",
     # parser_extract.py

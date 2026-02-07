@@ -26,7 +26,6 @@ Usage:
         -I/path/to/syntaqlite
 """
 import argparse
-import re
 import sys
 import tempfile
 from pathlib import Path
@@ -46,20 +45,11 @@ from python.syntaqlite.sqlite_extractor import (
     format_extension_reduce_function,
     process_keywordhash,
     run_lemon_pipeline,
+    parse_extension_keywords,
 )
 from python.syntaqlite.sqlite_extractor.generators import extract_token_defines
 from python.syntaqlite.ast_codegen.codegen import generate_extension_nodes_c
 from python.syntaqlite.ast_codegen.fmt_codegen import generate_extension_fmt_c
-
-
-def parse_extension_keywords(grammar_path: Path) -> list[str]:
-    """Parse %token declarations from an extension grammar file."""
-    content = grammar_path.read_text()
-    keywords = []
-    for match in re.finditer(r'%token\s+([^%{]+?)(?=\n(?:%|\s*$)|$)', content, re.DOTALL):
-        keywords.extend(re.findall(r'\b([A-Z][A-Z0-9_]*)\b', match.group(1)))
-    # Dedupe preserving order
-    return list(dict.fromkeys(keywords))
 
 
 def generate_token_defines(runner: ToolRunner, extension_grammar: Path) -> str:
@@ -250,7 +240,7 @@ Then compile with:
         return 1
 
     # Parse %token declarations from extension grammar
-    extra_keywords = parse_extension_keywords(args.grammar)
+    extra_keywords = parse_extension_keywords(args.grammar.read_text())
 
     if not extra_keywords:
         print(f"Warning: No %token declarations found in {args.grammar}", file=sys.stderr)

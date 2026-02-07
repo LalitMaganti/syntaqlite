@@ -123,6 +123,29 @@ def Flags(name: str, **flags: int) -> FlagsDef:
 AnyNodeDef = NodeDef | ListDef
 
 
+def emit_file_header(lines: list[str], source: str, regen_cmd: str) -> None:
+    """Emit copyright + generation notice."""
+    lines.append("// Copyright 2025 The syntaqlite Authors. All rights reserved.")
+    lines.append("// Licensed under the Apache License, Version 2.0.")
+    lines.append("")
+    lines.append(f"// Generated from {source} - DO NOT EDIT")
+    lines.append(f"// Regenerate with: {regen_cmd}")
+    lines.append("")
+
+
+def emit_extern_c(lines: list[str], *, end: bool = False) -> None:
+    """Emit #ifdef __cplusplus / extern "C" block."""
+    if end:
+        lines.append("#ifdef __cplusplus")
+        lines.append("}")
+        lines.append("#endif")
+    else:
+        lines.append("#ifdef __cplusplus")
+        lines.append('extern "C" {')
+        lines.append("#endif")
+    lines.append("")
+
+
 def tag_name(node_name: str) -> str:
     """Generate enum tag name from node name (e.g. 'Select' → 'SYNTAQLITE_NODE_SELECT')."""
     return f"SYNTAQLITE_NODE_{pascal_to_snake(node_name).upper()}"
