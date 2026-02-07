@@ -49,6 +49,8 @@ declare_args() {
   cc_wrapper = ""
   cc = "clang"
   cxx = "clang++"
+  extra_cflags = ""
+  extra_cxxflags = ""
 }
 
 is_linux = current_os == "linux"

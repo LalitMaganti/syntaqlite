@@ -22,7 +22,7 @@ Usage:
 
     # To use the generated file, compile with:
     clang -c sqlite_tokenize.c sqlite_parse.c \
-        -DSYNQ_EXTENSION_GRAMMAR=\"my_dialect.h\" \
+        -DSYNTAQLITE_EXTENSION_GRAMMAR=\"my_dialect.h\" \
         -I/path/to/syntaqlite
 """
 import argparse
@@ -38,9 +38,9 @@ if str(ROOT_DIR) not in sys.path:
 from python.syntaqlite.sqlite_extractor import (
     ToolRunner,
     HeaderGenerator,
+    SymbolRename,
     build_synq_grammar,
     split_extension_grammar,
-    transform_to_base_template,
     extract_parser_data,
     format_parser_data_header,
     format_extension_reduce_function,
@@ -73,8 +73,8 @@ def generate_token_defines(runner: ToolRunner, extension_grammar: Path) -> str:
         tmpdir = Path(tmpdir)
 
         # Split extension grammar: directives go first, rules go last
-        # This ensures extension tokens get low numbers while rules can
-        # reference base grammar nonterminals
+        # This ensures extension tokens get IDs after base tokens while
+        # rules can reference base grammar nonterminals
         base_grammar = runner.get_base_grammar()
         ext_grammar = extension_grammar.read_text()
         ext_directives, ext_rules = split_extension_grammar(ext_grammar)
@@ -83,13 +83,16 @@ def generate_token_defines(runner: ToolRunner, extension_grammar: Path) -> str:
         if ext_rules:
             combined += "\n" + ext_rules
 
+        # Replace TK_ prefix with SYNTAQLITE_TOKEN_ to match our convention
+        combined = combined.replace("%token_prefix TK_",
+                                    "%token_prefix SYNTAQLITE_TOKEN_")
+
         (tmpdir / "parse.y").write_text(combined)
 
-        # Run lemon
+        # Run lemon once to get parse.h
         parse_h = runner.run_lemon(tmpdir / "parse.y")
         parse_h_content = parse_h.read_text()
 
-        # Extract SYNTAQLITE_TOKEN_* defines
         defines = extract_token_defines(parse_h_content)
         return "\n".join(defines)
 
@@ -129,6 +132,9 @@ def generate_keywordhash_data(runner: ToolRunner, extra_keywords: list[str]) -> 
         else:
             data_section = generated[:keyword_code_start]
 
+    # Rename TK_ token prefix to SYNTAQLITE_TOKEN_
+    data_section = SymbolRename("TK_", "SYNTAQLITE_TOKEN_").apply(data_section)
+
     # Rename keywordhash arrays to have synq_ prefix
     data_section = create_keywordhash_rename_pipeline("synq").apply(data_section)
 
@@ -167,11 +173,9 @@ def generate_parser_data(
         grammar_path = tmpdir_path / "synq_parse.y"
         grammar_path.write_text(grammar_content)
 
-        # Generate modified lempar.c template
-        lempar_content = runner.get_lempar_path().read_text()
-        modified_lempar = transform_to_base_template(lempar_content)
+        # Copy stock lempar.c template
         lempar_path = tmpdir_path / "lempar.c"
-        lempar_path.write_text(modified_lempar)
+        lempar_path.write_text(runner.get_lempar_path().read_text())
 
         # Run Lemon
         print("Running Lemon on merged grammar...")
@@ -189,7 +193,7 @@ def generate_parser_data(
 
         # Format as header content
         data_header = format_parser_data_header(parser_data)
-        reduce_func = format_extension_reduce_function(parser_data)
+        reduce_func = format_extension_reduce_function(parser_data, prefix)
 
         return data_header + "\n" + reduce_func
 
@@ -204,7 +208,7 @@ Example:
 
 Then compile with:
     clang -c sqlite_tokenize.c sqlite_parse.c \\
-        -DSYNQ_EXTENSION_GRAMMAR=\\"my_dialect.h\\" \\
+        -DSYNTAQLITE_EXTENSION_GRAMMAR=\\"my_dialect.h\\" \\
         -I/path/to/syntaqlite
 """
     )
@@ -296,7 +300,7 @@ Then compile with:
     gen.write(args.output, content)
 
     print(f"\nTo use with syntaqlite, compile with:")
-    print(f'  -DSYNQ_EXTENSION_GRAMMAR=\\"{args.output}\\"')
+    print(f'  -DSYNTAQLITE_EXTENSION_GRAMMAR=\\"{args.output}\\"')
     return 0
 
 

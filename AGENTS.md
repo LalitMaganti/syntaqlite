@@ -99,6 +99,7 @@ Strict: `-Wall -Wextra -Werror`, no exceptions, no RTTI by default.
 | `python/tools/fix_include_guards.py` | Fix include guard format |
 | `python/tools/update_gn_version.py` | Update GN binary |
 | `tools/dev/build-lock` | Ninja wrapper with file lock for concurrent agents |
+| `tools/build-extension-grammar` | Build amalgamated dialect extension header (see `.claude/skills/dialect-extension/`) |
 
 ## Public API Boundary
 

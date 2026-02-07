@@ -15,7 +15,11 @@ sqlite_gen("ast_gen") {
 
 # Generated Lemon parser.
 sqlite_gen("parser_gen") {
-  sources = [ "sqlite_parse_gen.c" ]
+  sources = [
+    "sqlite_parse_defs.h",
+    "sqlite_parse_tables.h",
+    "sqlite_parse_gen.c",
+  ]
 }
 
 # AST node types, builder functions, and printer.

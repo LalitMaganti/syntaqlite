@@ -71,6 +71,12 @@ class FileGenerator:
         path.write_text(self.generate(content))
         print(f"  Written: {path}")
 
+    def write_raw(self, path: Path, content: str) -> None:
+        """Write content to a file without wrapping (guards already present)."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content)
+        print(f"  Written: {path}")
+
 
 def HeaderGenerator(
     guard: str,

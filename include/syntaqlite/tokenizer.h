@@ -24,7 +24,7 @@
 #include <stdint.h>
 
 // Token type constants (SYNTAQLITE_TOKEN_SELECT, SYNTAQLITE_TOKEN_SEMI, etc.)
-// When SYNTAQLITE_CUSTOM_TOKENS is defined, the generated header
+// When SYNTAQLITE_EXTENSION_GRAMMAR is defined, the generated header
 // automatically includes the dialect-specific tokens instead.
 #include "syntaqlite/sqlite_tokens_gen.h"  // IWYU pragma: export
 

@@ -14,8 +14,8 @@ Following Perfetto's approach:
 
 For the parser:
 1. Extract clean grammar rules using lemon -g
-2. Transform lempar.c to add injection points
-3. Generate parser with dialect extensibility support
+2. Run Lemon with stock lempar.c template
+3. Split output into defs.h, tables.h, and engine.c for extensibility
 
 Usage:
     python3 python/tools/extract_sqlite.py
@@ -57,8 +57,8 @@ from python.syntaqlite.sqlite_extractor.generators import extract_token_defines
 from python.syntaqlite.sqlite_extractor.grammar_build import (
     build_synq_grammar,
 )
-from python.syntaqlite.sqlite_extractor.lempar_transform import (
-    transform_to_base_template,
+from python.syntaqlite.sqlite_extractor.parser_split import (
+    split_parser_output,
 )
 from python.syntaqlite.ast_codegen import codegen as ast_codegen
 from python.syntaqlite.ast_codegen import fmt_codegen as ast_fmt_codegen
@@ -178,10 +178,10 @@ def copy_tokenize_c(
 
 /*
 ** Synq tokenizer injection support.
-** When SYNQ_KEYWORDHASH_DATA_FILE is defined, external keyword data is used.
+** When SYNTAQLITE_EXTENSION_GRAMMAR is defined, external keyword data is used.
 */
-#ifdef SYNQ_KEYWORDHASH_DATA_FILE
-#include SYNQ_KEYWORDHASH_DATA_FILE
+#ifdef SYNTAQLITE_EXTENSION_GRAMMAR
+#include SYNTAQLITE_EXTENSION_GRAMMAR
 #define _SYNQ_EXTERNAL_KEYWORDHASH 1
 #endif
 
@@ -285,16 +285,16 @@ def generate_token_defs(
     # Extract SYNTAQLITE_TOKEN_* defines
     defines = extract_token_defines(parse_h_content)
 
-    # Wrap in SYNTAQLITE_CUSTOM_TOKENS ifdef so dialects can substitute
+    # Wrap in SYNTAQLITE_EXTENSION_GRAMMAR ifdef so dialects can substitute
     # their own token definitions and the wrong set can never leak.
     body_lines = [
-        "#ifdef SYNTAQLITE_CUSTOM_TOKENS",
-        "#include SYNTAQLITE_CUSTOM_TOKENS",
+        "#ifdef SYNTAQLITE_EXTENSION_GRAMMAR",
+        "#include SYNTAQLITE_EXTENSION_GRAMMAR",
         "#else",
         "",
     ] + defines + [
         "",
-        "#endif /* SYNTAQLITE_CUSTOM_TOKENS */",
+        "#endif /* SYNTAQLITE_EXTENSION_GRAMMAR */",
     ]
 
     # Generate header
@@ -384,13 +384,13 @@ def generate_parser(
     output_dir: Path,
     prefix: str,
 ) -> str:
-    """Generate the SQLite parser with injection points.
+    """Generate the SQLite parser split into three files.
 
     This function:
     1. Builds a clean grammar from SQLite's parse.y
-    2. Generates a modified lempar.c template with injection points
-    3. Runs Lemon with the custom template
-    4. Applies symbol renaming
+    2. Runs Lemon with the stock lempar.c template
+    3. Applies symbol renaming
+    4. Splits into defs.h, tables.h, and engine.c
 
     Args:
         runner: ToolRunner instance for running tools.
@@ -413,14 +413,12 @@ def generate_parser(
         grammar_path = tmpdir_path / "synq_parse.y"
         grammar_path.write_text(grammar_content)
 
-        # Step 2: Generate the modified lempar.c template
-        print("Generating synq_lempar.c template...")
-        lempar_content = runner.get_lempar_path().read_text()
-        modified_lempar = transform_to_base_template(lempar_content)
+        # Step 2: Copy stock lempar.c template
+        print("Copying stock lempar.c template...")
         lempar_path = tmpdir_path / "lempar.c"
-        lempar_path.write_text(modified_lempar)
+        lempar_path.write_text(runner.get_lempar_path().read_text())
 
-        # Step 3: Run Lemon with the custom template
+        # Step 3: Run Lemon with the stock template
         print("Running Lemon to generate parser...")
         parse_c_path, parse_h_path = runner.run_lemon_with_template(
             grammar_path, lempar_path, tmpdir_path
@@ -442,15 +440,27 @@ def generate_parser(
             parse_c_content
         )
 
-        # Step 6: Write output files
-        output_dir.mkdir(parents=True, exist_ok=True)
+        # Step 6: Split into three files using extract + pipeline
+        print("Splitting parser into defs.h, tables.h, and engine.c...")
+        defs_h, tables_h, engine_c = split_parser_output(parse_c_content, prefix)
 
-        # Write the parser source
-        gen = SourceFileGenerator(
-            description=f"SQLite parser for {prefix}.\n** Generated from SQLite's parse.y via Lemon with injection points.",
+        # Step 7: Write output files
+        output_dir.mkdir(parents=True, exist_ok=True)
+        parser_dir = output_dir / "parser"
+
+        source_gen = SourceFileGenerator(
+            description=f"SQLite parser for {prefix}.\n** Generated from SQLite's parse.y via Lemon.",
             regenerate_cmd=REGENERATE_CMD,
         )
-        gen.write(output_dir / "parser" / "sqlite_parse_gen.c", parse_c_content)
+        header_gen = HeaderGenerator(
+            guard="",  # guards are already in the content
+            description="",
+            regenerate_cmd=REGENERATE_CMD,
+        )
+
+        source_gen.write(parser_dir / "sqlite_parse_gen.c", engine_c)
+        header_gen.write_raw(parser_dir / "sqlite_parse_defs.h", defs_h)
+        header_gen.write_raw(parser_dir / "sqlite_parse_tables.h", tables_h)
 
         return parse_h_content
 

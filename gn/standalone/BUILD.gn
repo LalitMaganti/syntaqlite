@@ -42,6 +42,13 @@ config("default") {
     ldflags = [ "-fsanitize=memory" ]
   }
 
+  if (extra_cflags != "") {
+    cflags += [ extra_cflags ]
+  }
+  if (extra_cxxflags != "") {
+    cflags_cc += [ extra_cxxflags ]
+  }
+
   include_dirs = [
     "../../include",
     "../../",

@@ -91,6 +91,18 @@ class RemoveRegex(Transform):
 
 
 @dataclass
+class ReplaceRegex(Transform):
+    """Replace text matching a regex pattern with a replacement string."""
+
+    pattern: str
+    replacement: str
+    flags: int = 0
+
+    def apply(self, content: str) -> str:
+        return re.sub(self.pattern, self.replacement, content, flags=self.flags)
+
+
+@dataclass
 class SymbolRename(Transform):
     """Safe symbol renaming using C tokenizer.
 
@@ -130,6 +142,38 @@ class RemoveFunctionCalls(Transform):
 
     def apply(self, content: str) -> str:
         return remove_function_calls(content, self.function_name)
+
+
+@dataclass
+class RemoveSection(Transform):
+    """Remove everything between start_marker and end_marker (inclusive, line-aligned).
+
+    Finds the line containing start_marker and the line containing end_marker,
+    then removes that entire range of lines.
+    """
+
+    start_marker: str
+    end_marker: str
+
+    def apply(self, content: str) -> str:
+        start_pos = content.find(self.start_marker)
+        if start_pos == -1:
+            return content
+        end_pos = content.find(self.end_marker, start_pos)
+        if end_pos == -1:
+            return content
+
+        # Expand to line boundaries
+        line_start = content.rfind("\n", 0, start_pos)
+        line_start = 0 if line_start == -1 else line_start + 1
+
+        line_end = content.find("\n", end_pos + len(self.end_marker))
+        if line_end == -1:
+            line_end = len(content)
+        else:
+            line_end += 1  # include the trailing newline
+
+        return content[:line_start] + content[line_end:]
 
 
 @dataclass

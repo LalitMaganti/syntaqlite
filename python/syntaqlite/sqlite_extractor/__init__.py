@@ -25,6 +25,8 @@ from .transforms import (
     ReplaceText,
     TruncateAt,
     RemoveRegex,
+    ReplaceRegex,
+    RemoveSection,
     SymbolRename,
     SymbolRenameExact,
     RemoveFunctionCalls,
@@ -44,8 +46,8 @@ from .grammar_build import (
     build_synq_grammar,
     split_extension_grammar,
 )
-from .lempar_transform import (
-    transform_to_base_template,
+from .parser_split import (
+    split_parser_output,
 )
 from .parser_extract import (
     extract_parser_data,
@@ -60,6 +62,8 @@ __all__ = [
     "ReplaceText",
     "TruncateAt",
     "RemoveRegex",
+    "ReplaceRegex",
+    "RemoveSection",
     "SymbolRename",
     "SymbolRenameExact",
     "RemoveFunctionCalls",
@@ -75,8 +79,8 @@ __all__ = [
     # grammar_build.py
     "build_synq_grammar",
     "split_extension_grammar",
-    # lempar_transform.py
-    "transform_to_base_template",
+    # parser_split.py
+    "split_parser_output",
     # parser_extract.py
     "extract_parser_data",
     "format_parser_data_header",

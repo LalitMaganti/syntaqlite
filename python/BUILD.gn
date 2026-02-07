@@ -117,6 +117,7 @@ action("extract_sqlite") {
     "syntaqlite/sqlite_extractor/grammar_build.py",
     "syntaqlite/sqlite_extractor/lempar_transform.py",
     "syntaqlite/sqlite_extractor/parser_extract.py",
+    "syntaqlite/sqlite_extractor/parser_split.py",
     "syntaqlite/sqlite_extractor/tools.py",
     "syntaqlite/sqlite_extractor/transforms.py",
   ]
@@ -126,6 +127,8 @@ action("extract_sqlite") {
 
   # Parser generated files.
   outputs = [
+    "$target_gen_dir/src/parser/sqlite_parse_defs.h",
+    "$target_gen_dir/src/parser/sqlite_parse_tables.h",
     "$target_gen_dir/src/parser/sqlite_parse_gen.c",
     "$target_gen_dir/src/parser/ast_nodes_gen.h",
     "$target_gen_dir/src/parser/ast_builder_gen.h",
