@@ -63,7 +63,6 @@ from python.syntaqlite.ast_codegen import validator as ast_validator
 from src.parser.nodes import NODES as AST_NODES, ENUMS as AST_ENUMS, FLAGS as AST_FLAGS
 
 SQLITE_SRC = ROOT_DIR / "third_party" / "src" / "sqlite" / "src"
-OUTPUT_DIR = ROOT_DIR / "src"
 
 # Default prefix for renamed sqlite3 symbols to avoid clashes
 DEFAULT_PREFIX = "synq"
@@ -409,7 +408,7 @@ def generate_ast(output_dir: Path) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Extract SQLite tokenizer and parser for syntaqlite")
     parser.add_argument("--prefix", default=DEFAULT_PREFIX, help=f"Symbol prefix (default: {DEFAULT_PREFIX})")
-    parser.add_argument("--output", type=Path, default=OUTPUT_DIR, help="Output directory")
+    parser.add_argument("--output", type=Path, default=None, help="Output directory (default: temp dir)")
     parser.add_argument("--lemon-bin", type=Path, help="Path to pre-built lemon binary")
     parser.add_argument("--mkkeywordhash-bin", type=Path, help="Path to pre-built mkkeywordhash binary")
     parser.add_argument("-v", "--verbose", action="store_true", help="Print progress messages")
@@ -432,9 +431,20 @@ def main():
         return 1
 
     prefix = args.prefix
-    output_dir = args.output
-    output_dir.mkdir(parents=True, exist_ok=True)
 
+    if args.output is not None:
+        output_dir = args.output
+        output_dir.mkdir(parents=True, exist_ok=True)
+        return _run(runner, output_dir, prefix)
+
+    # No --output: use a temp dir so manual runs don't pollute the source tree.
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_dir = Path(tmpdir) / "src"
+        output_dir.mkdir()
+        return _run(runner, output_dir, prefix)
+
+
+def _run(runner: ToolRunner, output_dir: Path, prefix: str) -> int:
     log(f"Using prefix: {prefix}")
     log(f"Output directory: {output_dir}")
 
