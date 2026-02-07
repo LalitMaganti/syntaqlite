@@ -60,6 +60,9 @@ from .parser_extract import (
     format_parser_data_header,
     format_extension_reduce_function,
 )
+from .lemon_pipeline import (
+    run_lemon_pipeline,
+)
 
 __all__ = [
     # transforms.py
@@ -96,4 +99,6 @@ __all__ = [
     "extract_parser_data",
     "format_parser_data_header",
     "format_extension_reduce_function",
+    # lemon_pipeline.py
+    "run_lemon_pipeline",
 ]

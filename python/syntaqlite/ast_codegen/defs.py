@@ -121,3 +121,13 @@ def Flags(name: str, **flags: int) -> FlagsDef:
 
 
 AnyNodeDef = NodeDef | ListDef
+
+
+def tag_name(node_name: str) -> str:
+    """Generate enum tag name from node name (e.g. 'Select' → 'SYNTAQLITE_NODE_SELECT')."""
+    return f"SYNTAQLITE_NODE_{pascal_to_snake(node_name).upper()}"
+
+
+def enum_prefix(enum_name: str) -> str:
+    """Generate enum value prefix from enum name (e.g. 'SortOrder' → 'SYNTAQLITE_SORT_ORDER')."""
+    return f"SYNTAQLITE_{pascal_to_snake(enum_name).upper()}"

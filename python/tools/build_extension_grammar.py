@@ -44,8 +44,8 @@ from python.syntaqlite.sqlite_extractor import (
     extract_parser_data,
     format_parser_data_header,
     format_extension_reduce_function,
-    create_parser_symbol_rename_pipeline,
     process_keywordhash,
+    run_lemon_pipeline,
 )
 from python.syntaqlite.sqlite_extractor.generators import extract_token_defines
 from python.syntaqlite.ast_codegen.codegen import generate_extension_nodes_c
@@ -130,52 +130,37 @@ def generate_parser_data(
         token_defines: Token #define lines from the SAME Lemon run (for
             consistency with the parser tables' numeric token IDs).
     """
-    with tempfile.TemporaryDirectory() as tmpdir:
-        tmpdir_path = Path(tmpdir)
+    # Read extension grammar
+    ext_grammar_content = extension_grammar.read_text()
 
-        # Read extension grammar
-        ext_grammar_content = extension_grammar.read_text()
+    # Build clean grammar with extension merged
+    if verbose:
+        print("Building merged grammar...")
+    grammar_content = build_synq_grammar(
+        runner, prefix, extension_grammar=ext_grammar_content
+    )
 
-        # Build clean grammar with extension merged
-        if verbose:
-            print("Building merged grammar...")
-        grammar_content = build_synq_grammar(
-            runner, prefix, extension_grammar=ext_grammar_content
-        )
-        grammar_path = tmpdir_path / "synq_parse.y"
-        grammar_path.write_text(grammar_content)
+    # Run Lemon pipeline (shared: tmpdir, template, lemon, rename)
+    if verbose:
+        print("Running Lemon on merged grammar...")
+    parse_c_content, parse_h_content = run_lemon_pipeline(
+        runner, grammar_content, prefix
+    )
 
-        # Copy stock lempar.c template
-        lempar_path = tmpdir_path / "lempar.c"
-        lempar_path.write_text(runner.get_lempar_path().read_text())
+    # Extract parser data
+    parser_data = extract_parser_data(parse_c_content)
 
-        # Run Lemon
-        if verbose:
-            print("Running Lemon on merged grammar...")
-        parse_c_path, parse_h_path = runner.run_lemon_with_template(
-            grammar_path, lempar_path, tmpdir_path
-        )
-        parse_c_content = parse_c_path.read_text()
-        parse_h_content = parse_h_path.read_text()
+    # Format as header content
+    data_header = format_parser_data_header(parser_data)
+    reduce_func = format_extension_reduce_function(parser_data, prefix)
 
-        # Apply symbol renaming
-        rename_pipeline = create_parser_symbol_rename_pipeline(prefix)
-        parse_c_content = rename_pipeline.apply(parse_c_content)
+    # Derive token defines from this same Lemon run's parse.h.
+    # Lemon uses TK_ prefix; rename to SYNTAQLITE_TOKEN_ to match.
+    parse_h_content = SymbolRename("TK_", "SYNTAQLITE_TOKEN_").apply(parse_h_content)
+    defines = extract_token_defines(parse_h_content)
+    token_defines = "\n".join(defines)
 
-        # Extract parser data
-        parser_data = extract_parser_data(parse_c_content)
-
-        # Format as header content
-        data_header = format_parser_data_header(parser_data)
-        reduce_func = format_extension_reduce_function(parser_data, prefix)
-
-        # Derive token defines from this same Lemon run's parse.h.
-        # Lemon uses TK_ prefix; rename to SYNTAQLITE_TOKEN_ to match.
-        parse_h_content = SymbolRename("TK_", "SYNTAQLITE_TOKEN_").apply(parse_h_content)
-        defines = extract_token_defines(parse_h_content)
-        token_defines = "\n".join(defines)
-
-        return data_header + "\n" + reduce_func, token_defines
+    return data_header + "\n" + reduce_func, token_defines
 
 
 def generate_extension_nodes(nodes_path: Path) -> str:

@@ -22,6 +22,8 @@ from .defs import (
     InlineField,
     IndexField,
     pascal_to_snake,
+    tag_name as _tag_name,
+    enum_prefix as _enum_prefix,
 )
 
 
@@ -62,19 +64,9 @@ def _struct_name(node_name: str) -> str:
     return f"Syntaqlite{node_name}"
 
 
-def _tag_name(node_name: str) -> str:
-    """Generate enum tag name from node name."""
-    return f"SYNTAQLITE_NODE_{pascal_to_snake(node_name).upper()}"
-
-
 def _builder_name(node_name: str) -> str:
     """Generate builder function name from node name."""
     return f"synq_ast_{pascal_to_snake(node_name)}"
-
-
-def _enum_prefix(enum_name: str) -> str:
-    """Generate enum value prefix from enum name."""
-    return f"SYNTAQLITE_{pascal_to_snake(enum_name).upper()}"
 
 
 def _build_node_params(node: NodeDef, enum_names: set[str], flags_names: set[str] | None = None) -> list[str]:

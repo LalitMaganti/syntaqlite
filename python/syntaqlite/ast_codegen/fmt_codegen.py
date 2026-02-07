@@ -19,6 +19,8 @@ from .defs import (
     FlagsDef,
     InlineField,
     pascal_to_snake,
+    tag_name as _tag_name,
+    enum_prefix as _enum_prefix,
 )
 
 from .fmt_dsl import (
@@ -41,14 +43,6 @@ from .fmt_dsl import (
     FmtSwitch,
     FmtForEachChild,
 )
-
-
-def _tag_name(node_name: str) -> str:
-    return f"SYNTAQLITE_NODE_{pascal_to_snake(node_name).upper()}"
-
-
-def _enum_prefix(enum_name: str) -> str:
-    return f"SYNTAQLITE_{pascal_to_snake(enum_name).upper()}"
 
 
 def _c_str(s: str) -> str:
