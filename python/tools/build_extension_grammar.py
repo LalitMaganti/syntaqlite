@@ -38,19 +38,14 @@ if str(ROOT_DIR) not in sys.path:
 from python.syntaqlite.sqlite_extractor import (
     ToolRunner,
     HeaderGenerator,
-    SymbolRename,
     build_synq_grammar,
     split_extension_grammar,
     extract_parser_data,
     format_parser_data_header,
     format_extension_reduce_function,
     create_parser_symbol_rename_pipeline,
-    create_keywordhash_rename_pipeline,
+    process_keywordhash,
 )
-
-# Keywordhash processing markers
-KEYWORDHASH_SCORE_MARKER = "/* Hash score:"
-KEYWORD_CODE_FUNC_MARKER = "static int keywordCode("
 from python.syntaqlite.sqlite_extractor.generators import extract_token_defines
 
 
@@ -100,51 +95,20 @@ def generate_token_defines(runner: ToolRunner, extension_grammar: Path) -> str:
 def generate_keywordhash_data(runner: ToolRunner, extra_keywords: list[str]) -> str:
     """Generate keyword hash data with extra keywords.
 
-    Returns the data arrays as a string.
+    Returns the data arrays + hash parameter #defines as a string.
+    The keywordCode function is generic (parameterized via SYNQ_KW_HASH_*
+    defines) and lives in the base tokenizer — extensions only swap data.
     """
-    # Run mkkeywordhash with extra keywords
     output = runner.run_mkkeywordhash(extra_keywords=extra_keywords)
-
-    # Find start of actual generated content (skip the SQLite header comment)
-    start = output.find(KEYWORDHASH_SCORE_MARKER)
-    if start == -1:
-        start = 0
-
-    generated = output[start:]
-
-    # Find end of data section (before keywordCode function)
-    keyword_code_start = generated.find(KEYWORD_CODE_FUNC_MARKER)
-    if keyword_code_start == -1:
-        print("Error: Could not find keywordCode function", file=sys.stderr)
-        sys.exit(1)
-
-    # Find the "Hash table decoded" comment that ends the data section
-    hash_table_decoded = generated.rfind("/* Hash table decoded:", 0, keyword_code_start)
-    if hash_table_decoded != -1:
-        comment_end = generated.find("*/", hash_table_decoded) + 2
-        data_section = generated[:comment_end]
-    else:
-        # Fallback: find SQLITE_N_KEYWORD define
-        n_keyword = generated.find("#define SQLITE_N_KEYWORD")
-        if n_keyword != -1:
-            line_end = generated.find("\n", n_keyword) + 1
-            data_section = generated[:line_end]
-        else:
-            data_section = generated[:keyword_code_start]
-
-    # Rename TK_ token prefix to SYNTAQLITE_TOKEN_
-    data_section = SymbolRename("TK_", "SYNTAQLITE_TOKEN_").apply(data_section)
-
-    # Rename keywordhash arrays to have synq_ prefix
-    data_section = create_keywordhash_rename_pipeline("synq").apply(data_section)
-
-    return data_section.strip()
+    result = process_keywordhash(output, "synq")
+    return result.data_section
 
 
 def generate_parser_data(
     runner: ToolRunner,
     extension_grammar: Path,
     prefix: str = "synq",
+    verbose: bool = False,
 ) -> str:
     """Generate parser data from merged extension + SQLite grammar.
 
@@ -155,6 +119,7 @@ def generate_parser_data(
         runner: ToolRunner instance.
         extension_grammar: Path to extension grammar file.
         prefix: Symbol prefix.
+        verbose: Print progress messages.
 
     Returns:
         Parser data as a string for inclusion in the amalgamated header.
@@ -166,7 +131,8 @@ def generate_parser_data(
         ext_grammar_content = extension_grammar.read_text()
 
         # Build clean grammar with extension merged
-        print("Building merged grammar...")
+        if verbose:
+            print("Building merged grammar...")
         grammar_content = build_synq_grammar(
             runner, prefix, extension_grammar=ext_grammar_content
         )
@@ -178,7 +144,8 @@ def generate_parser_data(
         lempar_path.write_text(runner.get_lempar_path().read_text())
 
         # Run Lemon
-        print("Running Lemon on merged grammar...")
+        if verbose:
+            print("Running Lemon on merged grammar...")
         parse_c_path, _ = runner.run_lemon_with_template(
             grammar_path, lempar_path, tmpdir_path
         )
@@ -228,9 +195,14 @@ Then compile with:
         "--prefix", default="synq",
         help="Symbol prefix (default: syntaqlite)"
     )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="Print progress messages"
+    )
     args = parser.parse_args()
 
-    runner = ToolRunner(root_dir=ROOT_DIR)
+    verbose = args.verbose
+    runner = ToolRunner(root_dir=ROOT_DIR, verbose=verbose)
 
     if not runner.sqlite_src.exists():
         print(f"SQLite not found at {runner.sqlite_src}.", file=sys.stderr)
@@ -249,15 +221,18 @@ Then compile with:
         print("Expected format: %token KEYWORD1 KEYWORD2.", file=sys.stderr)
         return 1
 
-    print(f"Grammar: {args.grammar}")
-    print(f"  Extra keywords: {extra_keywords}")
+    if verbose:
+        print(f"Grammar: {args.grammar}")
+        print(f"  Extra keywords: {extra_keywords}")
 
     # Generate token definitions
-    print("\nGenerating token definitions...")
+    if verbose:
+        print("\nGenerating token definitions...")
     token_defines = generate_token_defines(runner, args.grammar)
 
-    # Generate keywordhash data
-    print("Generating keyword hash data...")
+    # Generate keywordhash data (tables + hash param defines)
+    if verbose:
+        print("Generating keyword hash data...")
     keywordhash_data = generate_keywordhash_data(runner, extra_keywords)
 
     # Combine into single amalgamated file
@@ -277,8 +252,9 @@ Then compile with:
 
     # Optionally generate parser data
     if not args.tokenizer_only:
-        print("Generating parser data...")
-        parser_data = generate_parser_data(runner, args.grammar, args.prefix)
+        if verbose:
+            print("Generating parser data...")
+        parser_data = generate_parser_data(runner, args.grammar, args.prefix, verbose=verbose)
         content_parts.extend([
             "",
             "/*",
@@ -296,11 +272,13 @@ Then compile with:
         guard=guard,
         description=f"Amalgamated extension grammar for syntaqlite.\n** Generated by: tools/build-extension-grammar --grammar {args.grammar.name}",
         regenerate_cmd="",
+        verbose=verbose,
     )
     gen.write(args.output, content)
 
-    print(f"\nTo use with syntaqlite, compile with:")
-    print(f'  -DSYNTAQLITE_EXTENSION_GRAMMAR=\\"{args.output}\\"')
+    if verbose:
+        print(f"\nTo use with syntaqlite, compile with:")
+        print(f'  -DSYNTAQLITE_EXTENSION_GRAMMAR=\\"{args.output}\\"')
     return 0
 
 

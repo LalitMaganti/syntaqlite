@@ -39,8 +39,13 @@ from .generators import (
 )
 from .tools import (
     ToolRunner,
+    create_symbol_rename_pipeline,
     create_parser_symbol_rename_pipeline,
     create_keywordhash_rename_pipeline,
+)
+from .keywordhash import (
+    process_keywordhash,
+    KeywordhashResult,
 )
 from .grammar_build import (
     build_synq_grammar,
@@ -74,8 +79,12 @@ __all__ = [
     "SQLITE_BLESSING",
     # tools.py
     "ToolRunner",
+    "create_symbol_rename_pipeline",
     "create_parser_symbol_rename_pipeline",
     "create_keywordhash_rename_pipeline",
+    # keywordhash.py
+    "process_keywordhash",
+    "KeywordhashResult",
     # grammar_build.py
     "build_synq_grammar",
     "split_extension_grammar",

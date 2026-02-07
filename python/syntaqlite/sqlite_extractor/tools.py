@@ -12,7 +12,7 @@ import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .transforms import Pipeline, SymbolRenameExact
+from .transforms import Pipeline, SymbolRename, SymbolRenameExact, RemoveRegex
 
 # Keywordhash array symbols that need renaming
 KEYWORDHASH_ARRAY_SYMBOLS = [
@@ -23,6 +23,25 @@ KEYWORDHASH_ARRAY_SYMBOLS = [
     "aKWOffset",
     "aKWCode",
 ]
+
+
+def create_symbol_rename_pipeline(prefix: str) -> Pipeline:
+    """Create a pipeline for renaming sqlite3 symbols.
+
+    This uses the C tokenizer for safe renaming that preserves comments/strings.
+    """
+    sqlite3_prefix = f"{prefix}_sqlite3"
+
+    return Pipeline([
+        # Rename sqlite3XxxYyy -> {prefix}_sqlite3XxxYyy
+        SymbolRename("sqlite3", sqlite3_prefix),
+        # Rename testcase() which doesn't have sqlite3 prefix
+        SymbolRenameExact("testcase", f"{sqlite3_prefix}Testcase"),
+        # Remove the charMap macro - we'll use Tolower from sqlite_tables.h
+        RemoveRegex(r'#\s*define\s+charMap\(X\)[^\n]*\n'),
+        # Rename charMap -> Tolower
+        SymbolRenameExact("charMap", f"{sqlite3_prefix}Tolower"),
+    ])
 
 
 def create_parser_symbol_rename_pipeline(prefix: str) -> Pipeline:
@@ -103,13 +122,15 @@ class ToolRunner:
         # Configure if needed
         build_ninja = self.build_dir / "build.ninja"
         if not build_ninja.exists():
-            print(f"Configuring build in {self.build_dir}...")
+            if self.verbose:
+                print(f"Configuring build in {self.build_dir}...")
             self.build_dir.mkdir(parents=True, exist_ok=True)
             gn = self.root_dir / "tools" / "dev" / "gn"
             self._run([str(gn), "gen", str(self.build_dir), "--args=is_debug=false"], "GN configure")
 
         # Build
-        print(f"Building {target}...")
+        if self.verbose:
+            print(f"Building {target}...")
         ninja = self.root_dir / "tools" / "dev" / "ninja"
         self._run([str(ninja), "-C", str(self.build_dir), target], f"Build {target}")
 
@@ -143,7 +164,8 @@ class ToolRunner:
     def run_lemon(self, grammar_path: Path, output_dir: Path | None = None) -> Path:
         """Run lemon and return path to generated .h file."""
         output_dir = output_dir or grammar_path.parent
-        print("Running lemon to generate parse.h...")
+        if self.verbose:
+            print("Running lemon to generate parse.h...")
 
         result = self._run_lemon(grammar_path, output_dir, flags=["-l"])
         if result.returncode != 0:
@@ -167,7 +189,8 @@ class ToolRunner:
     ) -> tuple[Path, Path]:
         """Run lemon with a custom template, returning (parse.c, parse.h)."""
         output_dir = output_dir or grammar_path.parent
-        print("Running lemon with custom template...")
+        if self.verbose:
+            print("Running lemon with custom template...")
 
         result = self._run_lemon(grammar_path, output_dir, template_path, flags=["-l"])
 
@@ -180,14 +203,15 @@ class ToolRunner:
             print(f"Lemon failed: {result.stderr}", file=sys.stderr)
             raise RuntimeError("Lemon parser generator failed")
 
-        if result.stderr:
+        if result.stderr and self.verbose:
             print(f"Lemon warnings: {result.stderr}")
         return parse_c, parse_h
 
     def run_lemon_grammar_only(self, grammar_path: Path) -> str:
         """Run lemon -g to get clean grammar rules."""
         lemon_exe = self.build("lemon")
-        print("Running lemon -g to extract clean grammar rules...")
+        if self.verbose:
+            print("Running lemon -g to extract clean grammar rules...")
         result = self._run([str(lemon_exe), "-g", str(grammar_path)], "Lemon -g")
         return result.stdout
 
@@ -199,7 +223,8 @@ class ToolRunner:
         """Run mkkeywordhash to generate keyword hash data."""
         if not extra_keywords and not custom_source:
             exe = self.build("mkkeywordhash")
-            print("Running mkkeywordhash...")
+            if self.verbose:
+                print("Running mkkeywordhash...")
             return self._run([str(exe)], "mkkeywordhash").stdout
 
         # Custom version needed
@@ -216,10 +241,12 @@ class ToolRunner:
             exe_path = tmpdir / ("mkkeywordhash.exe" if os.name == "nt" else "mkkeywordhash")
             cc = os.environ.get("CC", "clang")
 
-            print("Compiling custom mkkeywordhash...")
+            if self.verbose:
+                print("Compiling custom mkkeywordhash...")
             self._run([cc, "-o", str(exe_path), str(src_path)], "Compile mkkeywordhash")
 
-            print("Running mkkeywordhash...")
+            if self.verbose:
+                print("Running mkkeywordhash...")
             return self._run([str(exe_path)], "mkkeywordhash").stdout
 
     def _add_keywords_to_source(self, source: str, extra_keywords: list[str]) -> str:

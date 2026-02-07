@@ -33,6 +33,7 @@ class FileGenerator:
     regenerate_cmd: str = ""
     includes: list[str] = field(default_factory=list)
     use_blessing: bool = True
+    verbose: bool = False
 
     def generate(self, content: str) -> str:
         """Generate a complete file with optional guards."""
@@ -69,13 +70,15 @@ class FileGenerator:
         """Generate and write to a file."""
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.generate(content))
-        print(f"  Written: {path}")
+        if self.verbose:
+            print(f"  Written: {path}")
 
     def write_raw(self, path: Path, content: str) -> None:
         """Write content to a file without wrapping (guards already present)."""
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content)
-        print(f"  Written: {path}")
+        if self.verbose:
+            print(f"  Written: {path}")
 
 
 def HeaderGenerator(
@@ -84,6 +87,7 @@ def HeaderGenerator(
     regenerate_cmd: str = "",
     includes: list[str] | None = None,
     use_blessing: bool = True,
+    verbose: bool = False,
 ) -> FileGenerator:
     """Create a FileGenerator configured for header files."""
     return FileGenerator(
@@ -92,6 +96,7 @@ def HeaderGenerator(
         regenerate_cmd=regenerate_cmd,
         includes=includes or [],
         use_blessing=use_blessing,
+        verbose=verbose,
     )
 
 
@@ -99,6 +104,7 @@ def SourceFileGenerator(
     description: str = "",
     regenerate_cmd: str = "",
     use_blessing: bool = True,
+    verbose: bool = False,
 ) -> FileGenerator:
     """Create a FileGenerator configured for source files."""
     return FileGenerator(
@@ -106,6 +112,7 @@ def SourceFileGenerator(
         description=description,
         regenerate_cmd=regenerate_cmd,
         use_blessing=use_blessing,
+        verbose=verbose,
     )
 
 

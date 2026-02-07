@@ -244,7 +244,7 @@ def format_extension_reduce_function(data: ParserData, prefix: str = "synq") -> 
 #endif
 
 /* Reduce function */
-static void {prefix}_parser_reduce(
+static inline void {prefix}_parser_reduce(
   {prefix}_yyParser *yypParser,
   unsigned int yyruleno,
   {prefix}_yyStackEntry *yymsp,
@@ -253,6 +253,7 @@ static void {prefix}_parser_reduce(
   {sqlite3_prefix}ParserCTX_PDECL
 ) {{
   {sqlite3_prefix}ParserARG_FETCH
+  (void)yypParser;
   (void)yyLookahead;
   (void)yyLookaheadToken;
   (void)yymsp;
