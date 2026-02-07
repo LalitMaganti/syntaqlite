@@ -49,6 +49,7 @@ from python.syntaqlite.sqlite_extractor import (
 )
 from python.syntaqlite.sqlite_extractor.generators import extract_token_defines
 from python.syntaqlite.ast_codegen.codegen import generate_extension_nodes_c
+from python.syntaqlite.ast_codegen.fmt_codegen import generate_extension_fmt_c
 
 
 def parse_extension_keywords(grammar_path: Path) -> list[str]:
@@ -199,7 +200,16 @@ def generate_extension_nodes(nodes_path: Path) -> str:
     enum_defs = getattr(mod, "ENUMS", [])
     flags_defs = getattr(mod, "FLAGS", [])
 
-    return generate_extension_nodes_c(node_defs, enum_defs, flags_defs)
+    code = generate_extension_nodes_c(node_defs, enum_defs, flags_defs)
+
+    # Generate format recipes if any nodes have fmt annotations.
+    has_fmt = any(getattr(n, 'fmt', None) is not None for n in node_defs)
+    if has_fmt:
+        fmt_code = generate_extension_fmt_c(node_defs, flags_defs)
+        if fmt_code:
+            code += "\n" + fmt_code
+
+    return code
 
 
 def main():

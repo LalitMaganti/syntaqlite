@@ -309,6 +309,42 @@ class _OpCompiler:
             f"{self.node_name}.{field_base}.{bit_name}")
 
 
+def _compile_recipes(
+    node_defs: list[AnyNodeDef],
+    flags_lookup: dict[str, FlagsDef],
+) -> tuple[list[tuple[str, _OpCompiler]], set[str]]:
+    """Compile FmtDoc annotations into op arrays.
+
+    Returns (compiled_nodes, fmt_names) where compiled_nodes is a list of
+    (snake_name, compiler) pairs and fmt_names is the set of snake names
+    that have fmt annotations.
+    """
+    compiled: list[tuple[str, _OpCompiler]] = []
+    for node in node_defs:
+        if node.fmt is None:
+            continue
+        snake = pascal_to_snake(node.name)
+        compiler = _OpCompiler(node, flags_lookup)
+        compiler.compile(node.fmt)
+        compiled.append((snake, compiler))
+    fmt_names = {s for s, _ in compiled}
+    return compiled, fmt_names
+
+
+def _emit_recipe_arrays(
+    lines: list[str],
+    compiled_nodes: list[tuple[str, _OpCompiler]],
+) -> None:
+    """Emit static const SynqFmtOp arrays for each compiled node."""
+    for snake, compiler in compiled_nodes:
+        lines.extend(compiler.aux_lines)
+        lines.append(f"static const SynqFmtOp fmt_{snake}[] = {{")
+        for op in compiler.ops:
+            lines.append(f"    {op},")
+        lines.append("};")
+        lines.append("")
+
+
 def generate_fmt_c(
     node_defs: list[AnyNodeDef],
     flags_defs: list[FlagsDef],
@@ -330,33 +366,11 @@ def generate_fmt_c(
     lines.append('#include "src/parser/ast_nodes_gen.h"')
     lines.append("")
 
-    # Compile all node formatters.
-    compiled_nodes: list[tuple[str, _OpCompiler]] = []
+    compiled_nodes, fmt_names = _compile_recipes(node_defs, flags_lookup)
 
-    for node in node_defs:
-        if node.fmt is None:
-            continue
-
-        snake = pascal_to_snake(node.name)
-
-        compiler = _OpCompiler(node, flags_lookup)
-        compiler.compile(node.fmt)
-        compiled_nodes.append((snake, compiler))
-
-    # Format recipes.
     lines.append("// ============ Format Recipes ============")
     lines.append("")
-
-    for snake, compiler in compiled_nodes:
-        # Supporting data (enum entry arrays) first.
-        lines.extend(compiler.aux_lines)
-
-        # Op array.
-        lines.append(f"static const SynqFmtOp fmt_{snake}[] = {{")
-        for op in compiler.ops:
-            lines.append(f"    {op},")
-        lines.append("};")
-        lines.append("")
+    _emit_recipe_arrays(lines, compiled_nodes)
 
     # Recipe lookup table (indexed by SynqNodeTag).
     lines.append("// ============ Recipe Table ============")
@@ -377,3 +391,50 @@ def generate_fmt_c(
 
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text("\n".join(lines))
+
+
+def generate_extension_fmt_c(
+    node_defs: list[AnyNodeDef],
+    flags_defs: list[FlagsDef] | None = None,
+) -> str:
+    """Generate format recipes for extension nodes (header-safe).
+
+    Returns a C code string with:
+    - Static const recipe arrays per annotated node
+    - A lookup table synq_fmt_extension_recipes[] indexed by (tag - SYNTAQLITE_NODE_COUNT)
+    - A #define SYNTAQLITE_EXTENSION_NODE_COUNT for bounds checking
+    """
+    if flags_defs is None:
+        flags_defs = []
+    flags_lookup = {f.name: f for f in flags_defs}
+    lines: list[str] = []
+
+    lines.append('#include "src/formatter/fmt_ops.h"')
+    lines.append("")
+
+    compiled_nodes, fmt_names = _compile_recipes(node_defs, flags_lookup)
+
+    if not compiled_nodes:
+        return ""
+
+    _emit_recipe_arrays(lines, compiled_nodes)
+
+    # Lookup table indexed by (tag - SYNTAQLITE_NODE_COUNT).
+    # Extension tags are contiguous #defines starting at SYNTAQLITE_NODE_COUNT+0.
+    # We need entries for ALL extension nodes (not just fmt-annotated ones),
+    # so unannotated slots get NULL.
+    lines.append(f"#define SYNTAQLITE_EXTENSION_NODE_COUNT {len(node_defs)}")
+    lines.append("")
+    lines.append(
+        "static const SynqFmtOp* synq_fmt_extension_recipes"
+        "[SYNTAQLITE_EXTENSION_NODE_COUNT] = {")
+    for node in node_defs:
+        snake = pascal_to_snake(node.name)
+        if snake in fmt_names:
+            lines.append(f"    fmt_{snake},")
+        else:
+            lines.append("    NULL,")
+    lines.append("};")
+    lines.append("")
+
+    return "\n".join(lines)

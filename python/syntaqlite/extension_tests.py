@@ -386,6 +386,25 @@ def _run_parse_check(binary: Path, sql: str, label: str) -> tuple[bool, str]:
     return True, ""
 
 
+def _run_fmt_check(binary: Path, sql: str, label: str) -> tuple[bool, str]:
+    """Run the binary with `fmt` subcommand and check for format errors."""
+    r = subprocess.run(
+        [str(binary), "fmt"],
+        input=sql,
+        capture_output=True,
+        text=True,
+    )
+    if r.returncode != 0:
+        msg = f"[{label} fmt]: exit={r.returncode}"
+        if r.stderr:
+            msg += f"\n    stderr: {r.stderr.strip()}"
+        return False, msg
+    if "UNSUPPORTED" in r.stdout:
+        msg = f"[{label} fmt]: output contains UNSUPPORTED:\n    {r.stdout.strip()}"
+        return False, msg
+    return True, ""
+
+
 def test_perfetto_compile_and_parse(runner: ToolRunner) -> tuple[bool, str]:
     """Compile an extension-enabled binary and parse PerfettoSQL statements."""
     log("Generating amalgamated extension header...")
@@ -414,6 +433,20 @@ def test_perfetto_compile_and_parse(runner: ToolRunner) -> tuple[bool, str]:
     failures = []
     for sql, label in checks:
         ok, err = _run_parse_check(binary, sql, label)
+        if not ok:
+            failures.append(err)
+
+    log("Testing formatter acceptance...")
+
+    fmt_checks = [
+        ("CREATE PERFETTO FUNCTION foo(a INT) RETURNS INT AS SELECT 1;", "CREATE PERFETTO FUNCTION"),
+        ("INCLUDE PERFETTO MODULE my_module;", "INCLUDE PERFETTO MODULE"),
+        ("CREATE PERFETTO TABLE my_table AS SELECT 1;", "CREATE PERFETTO TABLE"),
+        ("SELECT 1;", "standard SELECT"),
+    ]
+
+    for sql, label in fmt_checks:
+        ok, err = _run_fmt_check(binary, sql, label)
         if not ok:
             failures.append(err)
 

@@ -7,6 +7,7 @@
 #include "src/formatter/fmt_helpers.h"
 
 #include "src/parser/ast_nodes_gen.h"
+#include "syntaqlite/sqlite_tokens_gen.h"
 
 #include <stdbool.h>
 #include <string.h>
@@ -314,6 +315,13 @@ uint32_t synq_fmt_interpret(SynqFmtCtx* ctx, uint32_t node_id) {
 
   const SynqFmtOp* ops =
       node->tag < SYNTAQLITE_NODE_COUNT ? synq_fmt_recipes[node->tag] : NULL;
+#ifdef SYNTAQLITE_EXTENSION_GRAMMAR
+  if (!ops) {
+    uint8_t ext = node->tag - SYNTAQLITE_NODE_COUNT;
+    if (ext < SYNTAQLITE_EXTENSION_NODE_COUNT)
+      ops = synq_fmt_extension_recipes[ext];
+  }
+#endif
   if (!ops)
     return synq_kw(ctx, "/* UNSUPPORTED */");
 
