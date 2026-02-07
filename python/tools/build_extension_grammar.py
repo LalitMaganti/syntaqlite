@@ -38,6 +38,7 @@ if str(ROOT_DIR) not in sys.path:
 from python.syntaqlite.sqlite_extractor import (
     ToolRunner,
     HeaderGenerator,
+    SymbolRename,
     build_synq_grammar,
     split_extension_grammar,
     extract_parser_data,
@@ -109,7 +110,7 @@ def generate_parser_data(
     extension_grammar: Path,
     prefix: str = "synq",
     verbose: bool = False,
-) -> str:
+) -> tuple[str, str]:
     """Generate parser data from merged extension + SQLite grammar.
 
     This generates the parser tables and extension reduce function
@@ -122,7 +123,10 @@ def generate_parser_data(
         verbose: Print progress messages.
 
     Returns:
-        Parser data as a string for inclusion in the amalgamated header.
+        Tuple of (parser_data, token_defines).
+        parser_data: Parser tables + reduce function for the amalgamated header.
+        token_defines: Token #define lines from the SAME Lemon run (for
+            consistency with the parser tables' numeric token IDs).
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)
@@ -146,10 +150,11 @@ def generate_parser_data(
         # Run Lemon
         if verbose:
             print("Running Lemon on merged grammar...")
-        parse_c_path, _ = runner.run_lemon_with_template(
+        parse_c_path, parse_h_path = runner.run_lemon_with_template(
             grammar_path, lempar_path, tmpdir_path
         )
         parse_c_content = parse_c_path.read_text()
+        parse_h_content = parse_h_path.read_text()
 
         # Apply symbol renaming
         rename_pipeline = create_parser_symbol_rename_pipeline(prefix)
@@ -162,7 +167,13 @@ def generate_parser_data(
         data_header = format_parser_data_header(parser_data)
         reduce_func = format_extension_reduce_function(parser_data, prefix)
 
-        return data_header + "\n" + reduce_func
+        # Derive token defines from this same Lemon run's parse.h.
+        # Lemon uses TK_ prefix; rename to SYNTAQLITE_TOKEN_ to match.
+        parse_h_content = SymbolRename("TK_", "SYNTAQLITE_TOKEN_").apply(parse_h_content)
+        defines = extract_token_defines(parse_h_content)
+        token_defines = "\n".join(defines)
+
+        return data_header + "\n" + reduce_func, token_defines
 
 
 def main():
@@ -225,10 +236,20 @@ Then compile with:
         print(f"Grammar: {args.grammar}")
         print(f"  Extra keywords: {extra_keywords}")
 
-    # Generate token definitions
-    if verbose:
-        print("\nGenerating token definitions...")
-    token_defines = generate_token_defines(runner, args.grammar)
+    # When generating parser data, derive token defines from the same Lemon
+    # run to ensure consistent token IDs between tokenizer and parser.
+    if not args.tokenizer_only:
+        if verbose:
+            print("\nGenerating parser data...")
+        parser_data, token_defines = generate_parser_data(
+            runner, args.grammar, args.prefix, verbose=verbose
+        )
+    else:
+        # Tokenizer-only: generate token defines from a standalone Lemon run
+        if verbose:
+            print("\nGenerating token definitions...")
+        token_defines = generate_token_defines(runner, args.grammar)
+        parser_data = None
 
     # Generate keywordhash data (tables + hash param defines)
     if verbose:
@@ -250,11 +271,7 @@ Then compile with:
         keywordhash_data,
     ]
 
-    # Optionally generate parser data
-    if not args.tokenizer_only:
-        if verbose:
-            print("Generating parser data...")
-        parser_data = generate_parser_data(runner, args.grammar, args.prefix, verbose=verbose)
+    if parser_data is not None:
         content_parts.extend([
             "",
             "/*",

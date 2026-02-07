@@ -254,18 +254,20 @@ def test_perfetto_parser_generation(runner: ToolRunner) -> tuple[bool, str]:
     from python.tools.build_extension_grammar import generate_parser_data
 
     log("Generating parser data from Perfetto grammar...")
-    parser_data = generate_parser_data(runner, PERFETTO_GRAMMAR, prefix="synq", verbose=_verbosity >= 2)
+    parser_data, token_defines = generate_parser_data(runner, PERFETTO_GRAMMAR, prefix="synq", verbose=_verbosity >= 2)
 
     if not parser_data:
         return False, "generate_parser_data returned empty"
 
     # Check for expected sections in the output
     expected = [
-        "SYNTAQLITE_TOKEN_",         # Token defines
         "Parsing tables",            # Parser tables section
         "synq_parser_reduce",        # Reduce function
     ]
     missing = [e for e in expected if e not in parser_data]
+
+    if "SYNTAQLITE_TOKEN_" not in token_defines:
+        missing.append("SYNTAQLITE_TOKEN_ in token_defines")
     if missing:
         return False, f"Missing expected sections: {missing}"
 
@@ -285,7 +287,6 @@ def _generate_extension_header(
 ) -> tuple[bool, str]:
     """Generate the amalgamated extension header for Perfetto."""
     from python.tools.build_extension_grammar import (
-        generate_token_defines,
         generate_keywordhash_data,
         generate_parser_data,
         parse_extension_keywords,
@@ -296,9 +297,12 @@ def _generate_extension_header(
     if not extra_keywords:
         return False, "No keywords in Perfetto grammar"
 
-    token_defines = generate_token_defines(runner, PERFETTO_GRAMMAR)
+    # Token defines come from generate_parser_data's Lemon run to ensure
+    # consistent token IDs between tokenizer and parser tables.
+    parser_data, token_defines = generate_parser_data(
+        runner, PERFETTO_GRAMMAR, prefix="synq", verbose=_verbosity >= 2
+    )
     keywordhash_data = generate_keywordhash_data(runner, extra_keywords)
-    parser_data = generate_parser_data(runner, PERFETTO_GRAMMAR, prefix="synq", verbose=_verbosity >= 2)
 
     content = "\n".join([
         "/* Token definitions */", "",
