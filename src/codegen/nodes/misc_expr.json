@@ -1,0 +1,28 @@
+{
+  "definitions": [
+    {
+      "kind": "node",
+      "name": "Variable",
+      "fields": {
+        "source": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": { "type": "span", "field": "source" }
+    },
+    {
+      "kind": "node",
+      "name": "CollateExpr",
+      "fields": {
+        "expr": { "storage": "index", "type": "Expr" },
+        "collation": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "child", "field": "expr" },
+          { "type": "kw", "text": " COLLATE " },
+          { "type": "span", "field": "collation" }
+        ]
+      }
+    }
+  ]
+}

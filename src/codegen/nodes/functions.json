@@ -1,0 +1,84 @@
+{
+  "definitions": [
+    {
+      "kind": "flags",
+      "name": "FunctionCallFlags",
+      "flags": { "DISTINCT": 1, "STAR": 2 }
+    },
+    {
+      "kind": "node",
+      "name": "FunctionCall",
+      "fields": {
+        "func_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "flags": { "storage": "inline", "type": "FunctionCallFlags" },
+        "args": { "storage": "index", "type": "ExprList" },
+        "filter_clause": { "storage": "index", "type": "Expr" },
+        "over_clause": { "storage": "index", "type": "WindowDef" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "span", "field": "func_name" },
+          {
+            "type": "group",
+            "child": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": "(" },
+                {
+                  "type": "if_flag",
+                  "field": "flags.distinct",
+                  "then": { "type": "kw", "text": "DISTINCT " }
+                },
+                {
+                  "type": "if_flag",
+                  "field": "flags.star",
+                  "then": { "type": "kw", "text": "*" },
+                  "else": {
+                    "type": "if_set",
+                    "field": "args",
+                    "then": {
+                      "type": "nest",
+                      "child": {
+                        "type": "seq",
+                        "items": [
+                          { "type": "softline" },
+                          { "type": "child", "field": "args" }
+                        ]
+                      }
+                    }
+                  }
+                },
+                { "type": "softline" },
+                { "type": "kw", "text": ")" }
+              ]
+            }
+          },
+          {
+            "type": "if_set",
+            "field": "filter_clause",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " FILTER (WHERE " },
+                { "type": "child", "field": "filter_clause" },
+                { "type": "kw", "text": ")" }
+              ]
+            }
+          },
+          {
+            "type": "if_set",
+            "field": "over_clause",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " OVER " },
+                { "type": "child", "field": "over_clause" }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

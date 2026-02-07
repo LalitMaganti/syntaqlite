@@ -1,0 +1,198 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "IsOp",
+      "values": ["IS", "IS_NOT", "ISNULL", "NOTNULL", "IS_NOT_DISTINCT", "IS_DISTINCT"]
+    },
+    {
+      "kind": "node",
+      "name": "IsExpr",
+      "fields": {
+        "op": { "storage": "inline", "type": "IsOp" },
+        "left": { "storage": "index", "type": "Expr" },
+        "right": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "switch",
+        "field": "op",
+        "cases": {
+          "ISNULL": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "kw", "text": " ISNULL" }
+            ]
+          },
+          "NOTNULL": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "kw", "text": " NOTNULL" }
+            ]
+          },
+          "IS": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "kw", "text": " IS " },
+              { "type": "child", "field": "right" }
+            ]
+          },
+          "IS_NOT": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "kw", "text": " IS NOT " },
+              { "type": "child", "field": "right" }
+            ]
+          },
+          "IS_NOT_DISTINCT": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "kw", "text": " IS NOT DISTINCT FROM " },
+              { "type": "child", "field": "right" }
+            ]
+          },
+          "IS_DISTINCT": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "kw", "text": " IS DISTINCT FROM " },
+              { "type": "child", "field": "right" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "BetweenExpr",
+      "fields": {
+        "negated": { "storage": "inline", "type": "Bool" },
+        "operand": { "storage": "index", "type": "Expr" },
+        "low": { "storage": "index", "type": "Expr" },
+        "high": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "child", "field": "operand" },
+          {
+            "type": "if_flag",
+            "field": "negated",
+            "then": { "type": "kw", "text": " NOT BETWEEN " },
+            "else": { "type": "kw", "text": " BETWEEN " }
+          },
+          { "type": "child", "field": "low" },
+          { "type": "kw", "text": " AND " },
+          { "type": "child", "field": "high" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "LikeExpr",
+      "fields": {
+        "negated": { "storage": "inline", "type": "Bool" },
+        "operand": { "storage": "index", "type": "Expr" },
+        "pattern": { "storage": "index", "type": "Expr" },
+        "escape": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "child", "field": "operand" },
+          {
+            "type": "if_flag",
+            "field": "negated",
+            "then": { "type": "kw", "text": " NOT LIKE " },
+            "else": { "type": "kw", "text": " LIKE " }
+          },
+          { "type": "child", "field": "pattern" },
+          {
+            "type": "if_set",
+            "field": "escape",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " ESCAPE " },
+                { "type": "child", "field": "escape" }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "CaseExpr",
+      "fields": {
+        "operand": { "storage": "index", "type": "Expr" },
+        "else_expr": { "storage": "index", "type": "Expr" },
+        "whens": { "storage": "index", "type": "CaseWhenList" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "CASE" },
+          {
+            "type": "if_set",
+            "field": "operand",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " " },
+                { "type": "child", "field": "operand" }
+              ]
+            }
+          },
+          {
+            "type": "if_set",
+            "field": "whens",
+            "then": { "type": "child", "field": "whens" }
+          },
+          {
+            "type": "if_set",
+            "field": "else_expr",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " ELSE " },
+                { "type": "child", "field": "else_expr" }
+              ]
+            }
+          },
+          { "type": "kw", "text": " END" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "CaseWhen",
+      "fields": {
+        "when_expr": { "storage": "index", "type": "Expr" },
+        "then_expr": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": " WHEN " },
+          { "type": "child", "field": "when_expr" },
+          { "type": "kw", "text": " THEN " },
+          { "type": "child", "field": "then_expr" }
+        ]
+      }
+    },
+    {
+      "kind": "list",
+      "name": "CaseWhenList",
+      "child_type": "CaseWhen",
+      "fmt": {
+        "type": "for_each_child",
+        "template": { "type": "child", "field": "_item" }
+      }
+    }
+  ]
+}

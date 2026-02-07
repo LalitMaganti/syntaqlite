@@ -1,0 +1,29 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "Bool",
+      "values": ["FALSE", "TRUE"]
+    },
+    {
+      "kind": "enum",
+      "name": "LiteralType",
+      "values": ["INTEGER", "FLOAT", "STRING", "BLOB", "NULL", "CURRENT", "QNUMBER"]
+    },
+    {
+      "kind": "enum",
+      "name": "BinaryOp",
+      "values": [
+        "PLUS", "MINUS", "STAR", "SLASH", "REM",
+        "LT", "GT", "LE", "GE", "EQ", "NE",
+        "AND", "OR", "BITAND", "BITOR", "LSHIFT", "RSHIFT",
+        "CONCAT", "PTR"
+      ]
+    },
+    {
+      "kind": "enum",
+      "name": "UnaryOp",
+      "values": ["MINUS", "PLUS", "BITNOT", "NOT"]
+    }
+  ]
+}

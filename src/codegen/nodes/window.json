@@ -1,0 +1,231 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "FrameType",
+      "values": ["NONE", "RANGE", "ROWS", "GROUPS"]
+    },
+    {
+      "kind": "enum",
+      "name": "FrameBoundType",
+      "values": ["UNBOUNDED_PRECEDING", "EXPR_PRECEDING", "CURRENT_ROW", "EXPR_FOLLOWING", "UNBOUNDED_FOLLOWING"]
+    },
+    {
+      "kind": "enum",
+      "name": "FrameExclude",
+      "values": ["NONE", "NO_OTHERS", "CURRENT_ROW", "GROUP", "TIES"]
+    },
+    {
+      "kind": "node",
+      "name": "FrameBound",
+      "fields": {
+        "bound_type": { "storage": "inline", "type": "FrameBoundType" },
+        "expr": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "switch",
+        "field": "bound_type",
+        "cases": {
+          "UNBOUNDED_PRECEDING": { "type": "kw", "text": "UNBOUNDED PRECEDING" },
+          "EXPR_PRECEDING": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "expr" },
+              { "type": "kw", "text": " PRECEDING" }
+            ]
+          },
+          "CURRENT_ROW": { "type": "kw", "text": "CURRENT ROW" },
+          "EXPR_FOLLOWING": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "expr" },
+              { "type": "kw", "text": " FOLLOWING" }
+            ]
+          },
+          "UNBOUNDED_FOLLOWING": { "type": "kw", "text": "UNBOUNDED FOLLOWING" }
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "FrameSpec",
+      "fields": {
+        "frame_type": { "storage": "inline", "type": "FrameType" },
+        "exclude": { "storage": "inline", "type": "FrameExclude" },
+        "start_bound": { "storage": "index", "type": "FrameBound" },
+        "end_bound": { "storage": "index", "type": "FrameBound" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "switch",
+            "field": "frame_type",
+            "cases": {
+              "RANGE": { "type": "kw", "text": "RANGE" },
+              "ROWS": { "type": "kw", "text": "ROWS" },
+              "GROUPS": { "type": "kw", "text": "GROUPS" }
+            }
+          },
+          { "type": "kw", "text": " BETWEEN " },
+          { "type": "child", "field": "start_bound" },
+          { "type": "kw", "text": " AND " },
+          { "type": "child", "field": "end_bound" },
+          {
+            "type": "switch",
+            "field": "exclude",
+            "cases": {
+              "NO_OTHERS": { "type": "kw", "text": " EXCLUDE NO OTHERS" },
+              "CURRENT_ROW": { "type": "kw", "text": " EXCLUDE CURRENT ROW" },
+              "GROUP": { "type": "kw", "text": " EXCLUDE GROUP" },
+              "TIES": { "type": "kw", "text": " EXCLUDE TIES" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "WindowDef",
+      "fields": {
+        "base_window_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "partition_by": { "storage": "index", "type": "ExprList" },
+        "orderby": { "storage": "index", "type": "OrderByList" },
+        "frame": { "storage": "index", "type": "FrameSpec" }
+      },
+      "fmt": {
+        "type": "if_span",
+        "field": "base_window_name",
+        "then": { "type": "span", "field": "base_window_name" },
+        "else": {
+          "type": "seq",
+          "items": [
+            { "type": "kw", "text": "(" },
+            {
+              "type": "if_set",
+              "field": "partition_by",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "PARTITION BY " },
+                  { "type": "child", "field": "partition_by" }
+                ]
+              }
+            },
+            {
+              "type": "if_set",
+              "field": "orderby",
+              "then": {
+                "type": "seq",
+                "items": [
+                  {
+                    "type": "if_set",
+                    "field": "partition_by",
+                    "then": { "type": "kw", "text": " " }
+                  },
+                  { "type": "kw", "text": "ORDER BY " },
+                  { "type": "child", "field": "orderby" }
+                ]
+              }
+            },
+            {
+              "type": "if_set",
+              "field": "frame",
+              "then": {
+                "type": "seq",
+                "items": [
+                  {
+                    "type": "if_set",
+                    "field": "partition_by",
+                    "then": { "type": "kw", "text": " " },
+                    "else": {
+                      "type": "if_set",
+                      "field": "orderby",
+                      "then": { "type": "kw", "text": " " }
+                    }
+                  },
+                  { "type": "child", "field": "frame" }
+                ]
+              }
+            },
+            { "type": "kw", "text": ")" }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "list",
+      "name": "WindowDefList",
+      "child_type": "WindowDef"
+    },
+    {
+      "kind": "node",
+      "name": "NamedWindowDef",
+      "fields": {
+        "window_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "window_def": { "storage": "index", "type": "WindowDef" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "span", "field": "window_name" },
+          { "type": "kw", "text": " AS " },
+          { "type": "child", "field": "window_def" }
+        ]
+      }
+    },
+    {
+      "kind": "list",
+      "name": "NamedWindowDefList",
+      "child_type": "NamedWindowDef"
+    },
+    {
+      "kind": "node",
+      "name": "FilterOver",
+      "fields": {
+        "filter_expr": { "storage": "index", "type": "Expr" },
+        "over_def": { "storage": "index", "type": "WindowDef" },
+        "over_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_set",
+            "field": "filter_expr",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": "FILTER (WHERE " },
+                { "type": "child", "field": "filter_expr" },
+                { "type": "kw", "text": ")" }
+              ]
+            }
+          },
+          {
+            "type": "if_set",
+            "field": "over_def",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " OVER " },
+                { "type": "child", "field": "over_def" }
+              ]
+            }
+          },
+          {
+            "type": "if_span",
+            "field": "over_name",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " OVER " },
+                { "type": "span", "field": "over_name" }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

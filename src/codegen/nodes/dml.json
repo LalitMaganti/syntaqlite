@@ -1,0 +1,184 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "ConflictAction",
+      "values": ["DEFAULT", "ROLLBACK", "ABORT", "FAIL", "IGNORE", "REPLACE"]
+    },
+    {
+      "kind": "node",
+      "name": "DeleteStmt",
+      "fields": {
+        "table": { "storage": "index", "type": "Expr" },
+        "where": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "group",
+        "child": {
+          "type": "seq",
+          "items": [
+            { "type": "kw", "text": "DELETE" },
+            {
+              "type": "if_set",
+              "field": "table",
+              "then": { "type": "clause", "keyword": "FROM", "body": { "type": "child", "field": "table" } }
+            },
+            {
+              "type": "if_set",
+              "field": "where",
+              "then": { "type": "clause", "keyword": "WHERE", "body": { "type": "child", "field": "where" } }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "SetClause",
+      "fields": {
+        "column": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "columns": { "storage": "index", "type": "ExprList" },
+        "value": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_span",
+            "field": "column",
+            "then": { "type": "span", "field": "column" },
+            "else": {
+              "type": "if_set",
+              "field": "columns",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "(" },
+                  { "type": "child", "field": "columns" },
+                  { "type": "kw", "text": ")" }
+                ]
+              }
+            }
+          },
+          { "type": "kw", "text": " = " },
+          { "type": "child", "field": "value" }
+        ]
+      }
+    },
+    {
+      "kind": "list",
+      "name": "SetClauseList",
+      "child_type": "SetClause"
+    },
+    {
+      "kind": "node",
+      "name": "UpdateStmt",
+      "fields": {
+        "conflict_action": { "storage": "inline", "type": "ConflictAction" },
+        "table": { "storage": "index", "type": "Expr" },
+        "setlist": { "storage": "index", "type": "SetClauseList" },
+        "from_clause": { "storage": "index", "type": "Expr" },
+        "where": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "group",
+        "child": {
+          "type": "seq",
+          "items": [
+            { "type": "kw", "text": "UPDATE" },
+            {
+              "type": "switch",
+              "field": "conflict_action",
+              "cases": {
+                "ROLLBACK": { "type": "kw", "text": " OR ROLLBACK" },
+                "ABORT": { "type": "kw", "text": " OR ABORT" },
+                "FAIL": { "type": "kw", "text": " OR FAIL" },
+                "IGNORE": { "type": "kw", "text": " OR IGNORE" },
+                "REPLACE": { "type": "kw", "text": " OR REPLACE" }
+              }
+            },
+            { "type": "kw", "text": " " },
+            { "type": "child", "field": "table" },
+            {
+              "type": "if_set",
+              "field": "setlist",
+              "then": { "type": "clause", "keyword": "SET", "body": { "type": "child", "field": "setlist" } }
+            },
+            {
+              "type": "if_set",
+              "field": "from_clause",
+              "then": { "type": "clause", "keyword": "FROM", "body": { "type": "child", "field": "from_clause" } }
+            },
+            {
+              "type": "if_set",
+              "field": "where",
+              "then": { "type": "clause", "keyword": "WHERE", "body": { "type": "child", "field": "where" } }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "InsertStmt",
+      "fields": {
+        "conflict_action": { "storage": "inline", "type": "ConflictAction" },
+        "table": { "storage": "index", "type": "Expr" },
+        "columns": { "storage": "index", "type": "ExprList" },
+        "source": { "storage": "index", "type": "Stmt" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_enum",
+            "field": "conflict_action",
+            "value": "REPLACE",
+            "then": { "type": "kw", "text": "REPLACE" },
+            "else": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": "INSERT" },
+                {
+                  "type": "switch",
+                  "field": "conflict_action",
+                  "cases": {
+                    "ROLLBACK": { "type": "kw", "text": " OR ROLLBACK" },
+                    "ABORT": { "type": "kw", "text": " OR ABORT" },
+                    "FAIL": { "type": "kw", "text": " OR FAIL" },
+                    "IGNORE": { "type": "kw", "text": " OR IGNORE" }
+                  }
+                }
+              ]
+            }
+          },
+          { "type": "kw", "text": " INTO " },
+          { "type": "child", "field": "table" },
+          {
+            "type": "if_set",
+            "field": "columns",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " (" },
+                { "type": "child", "field": "columns" },
+                { "type": "kw", "text": ")" }
+              ]
+            }
+          },
+          {
+            "type": "if_set",
+            "field": "source",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "hardline" },
+                { "type": "child", "field": "source" }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

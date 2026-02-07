@@ -1,0 +1,214 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "DropObjectType",
+      "values": ["TABLE", "INDEX", "VIEW", "TRIGGER"]
+    },
+    {
+      "kind": "enum",
+      "name": "AlterOp",
+      "values": ["RENAME_TABLE", "RENAME_COLUMN", "DROP_COLUMN", "ADD_COLUMN"]
+    },
+    {
+      "kind": "enum",
+      "name": "TransactionType",
+      "values": ["DEFERRED", "IMMEDIATE", "EXCLUSIVE"]
+    },
+    {
+      "kind": "enum",
+      "name": "TransactionOp",
+      "values": ["BEGIN", "COMMIT", "ROLLBACK"]
+    },
+    {
+      "kind": "enum",
+      "name": "SavepointOp",
+      "values": ["SAVEPOINT", "RELEASE", "ROLLBACK_TO"]
+    },
+    {
+      "kind": "node",
+      "name": "QualifiedName",
+      "fields": {
+        "object_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_span",
+            "field": "schema",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "span", "field": "schema" },
+                { "type": "kw", "text": "." }
+              ]
+            }
+          },
+          { "type": "span", "field": "object_name" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "DropStmt",
+      "fields": {
+        "object_type": { "storage": "inline", "type": "DropObjectType" },
+        "if_exists": { "storage": "inline", "type": "Bool" },
+        "target": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "DROP " },
+          {
+            "type": "enum_display",
+            "field": "object_type",
+            "mapping": {
+              "TABLE": "TABLE",
+              "INDEX": "INDEX",
+              "VIEW": "VIEW",
+              "TRIGGER": "TRIGGER"
+            }
+          },
+          {
+            "type": "if_flag",
+            "field": "if_exists",
+            "then": { "type": "kw", "text": " IF EXISTS" }
+          },
+          { "type": "kw", "text": " " },
+          { "type": "child", "field": "target" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "AlterTableStmt",
+      "fields": {
+        "op": { "storage": "inline", "type": "AlterOp" },
+        "target": { "storage": "index", "type": "Expr" },
+        "new_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "old_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "ALTER TABLE " },
+          {
+            "type": "if_set",
+            "field": "target",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "child", "field": "target" },
+                { "type": "kw", "text": " " }
+              ]
+            }
+          },
+          {
+            "type": "switch",
+            "field": "op",
+            "cases": {
+              "RENAME_TABLE": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "RENAME TO " },
+                  { "type": "span", "field": "new_name" }
+                ]
+              },
+              "RENAME_COLUMN": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "RENAME COLUMN " },
+                  { "type": "span", "field": "old_name" },
+                  { "type": "kw", "text": " TO " },
+                  { "type": "span", "field": "new_name" }
+                ]
+              },
+              "DROP_COLUMN": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "DROP COLUMN " },
+                  { "type": "span", "field": "old_name" }
+                ]
+              },
+              "ADD_COLUMN": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "ADD COLUMN " },
+                  { "type": "span", "field": "old_name" }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "TransactionStmt",
+      "fields": {
+        "op": { "storage": "inline", "type": "TransactionOp" },
+        "trans_type": { "storage": "inline", "type": "TransactionType" }
+      },
+      "fmt": {
+        "type": "switch",
+        "field": "op",
+        "cases": {
+          "BEGIN": {
+            "type": "seq",
+            "items": [
+              { "type": "kw", "text": "BEGIN" },
+              {
+                "type": "enum_display",
+                "field": "trans_type",
+                "mapping": {
+                  "IMMEDIATE": " IMMEDIATE",
+                  "EXCLUSIVE": " EXCLUSIVE"
+                }
+              }
+            ]
+          },
+          "COMMIT": { "type": "kw", "text": "COMMIT" },
+          "ROLLBACK": { "type": "kw", "text": "ROLLBACK" }
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "SavepointStmt",
+      "fields": {
+        "op": { "storage": "inline", "type": "SavepointOp" },
+        "savepoint_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "switch",
+        "field": "op",
+        "cases": {
+          "SAVEPOINT": {
+            "type": "seq",
+            "items": [
+              { "type": "kw", "text": "SAVEPOINT " },
+              { "type": "span", "field": "savepoint_name" }
+            ]
+          },
+          "RELEASE": {
+            "type": "seq",
+            "items": [
+              { "type": "kw", "text": "RELEASE SAVEPOINT " },
+              { "type": "span", "field": "savepoint_name" }
+            ]
+          },
+          "ROLLBACK_TO": {
+            "type": "seq",
+            "items": [
+              { "type": "kw", "text": "ROLLBACK TO SAVEPOINT " },
+              { "type": "span", "field": "savepoint_name" }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

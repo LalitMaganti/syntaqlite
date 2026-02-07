@@ -1,0 +1,50 @@
+{
+  "definitions": [
+    {
+      "kind": "list",
+      "name": "ValuesRowList",
+      "child_type": "ExprList",
+      "fmt": {
+        "type": "for_each_child",
+        "template": {
+          "type": "seq",
+          "items": [
+            { "type": "kw", "text": "(" },
+            { "type": "child", "field": "_item" },
+            { "type": "kw", "text": ")" }
+          ]
+        },
+        "separator": {
+          "type": "seq",
+          "items": [
+            { "type": "kw", "text": "," },
+            { "type": "line" }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "ValuesClause",
+      "fields": {
+        "rows": { "storage": "index", "type": "ValuesRowList" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "VALUES" },
+          {
+            "type": "nest",
+            "child": {
+              "type": "seq",
+              "items": [
+                { "type": "hardline" },
+                { "type": "child", "field": "rows" }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

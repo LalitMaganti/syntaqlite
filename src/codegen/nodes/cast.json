@@ -1,0 +1,22 @@
+{
+  "definitions": [
+    {
+      "kind": "node",
+      "name": "CastExpr",
+      "fields": {
+        "expr": { "storage": "index", "type": "Expr" },
+        "type_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "CAST(" },
+          { "type": "child", "field": "expr" },
+          { "type": "kw", "text": " AS " },
+          { "type": "span", "field": "type_name" },
+          { "type": "kw", "text": ")" }
+        ]
+      }
+    }
+  ]
+}

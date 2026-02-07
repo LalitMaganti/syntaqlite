@@ -1,0 +1,201 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "TriggerTiming",
+      "values": ["BEFORE", "AFTER", "INSTEAD_OF"]
+    },
+    {
+      "kind": "enum",
+      "name": "TriggerEventType",
+      "values": ["DELETE", "INSERT", "UPDATE"]
+    },
+    {
+      "kind": "node",
+      "name": "TriggerEvent",
+      "fields": {
+        "event_type": { "storage": "inline", "type": "TriggerEventType" },
+        "columns": { "storage": "index", "type": "ExprList" }
+      },
+      "fmt": {
+        "type": "switch",
+        "field": "event_type",
+        "cases": {
+          "DELETE": { "type": "kw", "text": "DELETE" },
+          "INSERT": { "type": "kw", "text": "INSERT" },
+          "UPDATE": {
+            "type": "seq",
+            "items": [
+              { "type": "kw", "text": "UPDATE" },
+              {
+                "type": "if_set",
+                "field": "columns",
+                "then": {
+                  "type": "seq",
+                  "items": [
+                    { "type": "kw", "text": " OF " },
+                    { "type": "child", "field": "columns" }
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "list",
+      "name": "TriggerCmdList",
+      "child_type": "Stmt",
+      "fmt": {
+        "type": "for_each_child",
+        "template": {
+          "type": "seq",
+          "items": [
+            { "type": "child", "field": "_item" },
+            { "type": "kw", "text": ";" }
+          ]
+        },
+        "separator": { "type": "hardline" }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "CreateTriggerStmt",
+      "fields": {
+        "trigger_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "is_temp": { "storage": "inline", "type": "Bool" },
+        "if_not_exists": { "storage": "inline", "type": "Bool" },
+        "timing": { "storage": "inline", "type": "TriggerTiming" },
+        "event": { "storage": "index", "type": "TriggerEvent" },
+        "table": { "storage": "index", "type": "Expr" },
+        "when_expr": { "storage": "index", "type": "Expr" },
+        "body": { "storage": "index", "type": "TriggerCmdList" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "CREATE" },
+          {
+            "type": "if_flag",
+            "field": "is_temp",
+            "then": { "type": "kw", "text": " TEMP" }
+          },
+          { "type": "kw", "text": " TRIGGER" },
+          {
+            "type": "if_flag",
+            "field": "if_not_exists",
+            "then": { "type": "kw", "text": " IF NOT EXISTS" }
+          },
+          { "type": "kw", "text": " " },
+          {
+            "type": "if_span",
+            "field": "schema",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "span", "field": "schema" },
+                { "type": "kw", "text": "." }
+              ]
+            }
+          },
+          { "type": "span", "field": "trigger_name" },
+          { "type": "kw", "text": " " },
+          {
+            "type": "switch",
+            "field": "timing",
+            "cases": {
+              "BEFORE": { "type": "kw", "text": "BEFORE" },
+              "AFTER": { "type": "kw", "text": "AFTER" },
+              "INSTEAD_OF": { "type": "kw", "text": "INSTEAD OF" }
+            }
+          },
+          { "type": "kw", "text": " " },
+          { "type": "child", "field": "event" },
+          { "type": "kw", "text": " ON " },
+          { "type": "child", "field": "table" },
+          {
+            "type": "if_set",
+            "field": "when_expr",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "hardline" },
+                { "type": "kw", "text": "WHEN " },
+                { "type": "child", "field": "when_expr" }
+              ]
+            }
+          },
+          { "type": "hardline" },
+          { "type": "kw", "text": "BEGIN" },
+          {
+            "type": "if_set",
+            "field": "body",
+            "then": {
+              "type": "nest",
+              "child": {
+                "type": "seq",
+                "items": [
+                  { "type": "hardline" },
+                  { "type": "child", "field": "body" }
+                ]
+              }
+            }
+          },
+          { "type": "hardline" },
+          { "type": "kw", "text": "END" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "CreateVirtualTableStmt",
+      "fields": {
+        "table_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "module_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "if_not_exists": { "storage": "inline", "type": "Bool" },
+        "module_args": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "CREATE VIRTUAL TABLE" },
+          {
+            "type": "if_flag",
+            "field": "if_not_exists",
+            "then": { "type": "kw", "text": " IF NOT EXISTS" }
+          },
+          { "type": "kw", "text": " " },
+          {
+            "type": "if_span",
+            "field": "schema",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "span", "field": "schema" },
+                { "type": "kw", "text": "." }
+              ]
+            }
+          },
+          { "type": "span", "field": "table_name" },
+          { "type": "kw", "text": " USING " },
+          { "type": "span", "field": "module_name" },
+          {
+            "type": "if_span",
+            "field": "module_args",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": "(" },
+                { "type": "span", "field": "module_args" },
+                { "type": "kw", "text": ")" }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

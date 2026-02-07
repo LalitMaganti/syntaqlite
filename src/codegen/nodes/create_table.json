@@ -1,0 +1,509 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "ForeignKeyAction",
+      "values": ["NO_ACTION", "SET_NULL", "SET_DEFAULT", "CASCADE", "RESTRICT"]
+    },
+    {
+      "kind": "enum",
+      "name": "GeneratedColumnStorage",
+      "values": ["VIRTUAL", "STORED"]
+    },
+    {
+      "kind": "enum",
+      "name": "ColumnConstraintKind",
+      "values": ["DEFAULT", "NOT_NULL", "PRIMARY_KEY", "UNIQUE", "CHECK", "REFERENCES", "COLLATE", "GENERATED", "NULL"]
+    },
+    {
+      "kind": "enum",
+      "name": "TableConstraintKind",
+      "values": ["PRIMARY_KEY", "UNIQUE", "CHECK", "FOREIGN_KEY"]
+    },
+    {
+      "kind": "flags",
+      "name": "CreateTableStmtFlags",
+      "flags": { "WITHOUT_ROWID": 1, "STRICT": 2 }
+    },
+    {
+      "kind": "node",
+      "name": "ForeignKeyClause",
+      "fields": {
+        "ref_table": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "ref_columns": { "storage": "index", "type": "ExprList" },
+        "on_delete": { "storage": "inline", "type": "ForeignKeyAction" },
+        "on_update": { "storage": "inline", "type": "ForeignKeyAction" },
+        "is_deferred": { "storage": "inline", "type": "Bool" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_span",
+            "field": "ref_table",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": "REFERENCES " },
+                { "type": "span", "field": "ref_table" }
+              ]
+            }
+          },
+          {
+            "type": "if_set",
+            "field": "ref_columns",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": "(" },
+                { "type": "child", "field": "ref_columns" },
+                { "type": "kw", "text": ")" }
+              ]
+            }
+          },
+          {
+            "type": "switch",
+            "field": "on_delete",
+            "cases": {
+              "SET_NULL": { "type": "kw", "text": " ON DELETE SET NULL" },
+              "SET_DEFAULT": { "type": "kw", "text": " ON DELETE SET DEFAULT" },
+              "CASCADE": { "type": "kw", "text": " ON DELETE CASCADE" },
+              "RESTRICT": { "type": "kw", "text": " ON DELETE RESTRICT" }
+            }
+          },
+          {
+            "type": "switch",
+            "field": "on_update",
+            "cases": {
+              "SET_NULL": { "type": "kw", "text": " ON UPDATE SET NULL" },
+              "SET_DEFAULT": { "type": "kw", "text": " ON UPDATE SET DEFAULT" },
+              "CASCADE": { "type": "kw", "text": " ON UPDATE CASCADE" },
+              "RESTRICT": { "type": "kw", "text": " ON UPDATE RESTRICT" }
+            }
+          },
+          {
+            "type": "if_flag",
+            "field": "is_deferred",
+            "then": { "type": "kw", "text": "DEFERRABLE INITIALLY DEFERRED" }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "ColumnConstraint",
+      "fields": {
+        "kind": { "storage": "inline", "type": "ColumnConstraintKind" },
+        "constraint_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "onconf": { "storage": "inline", "type": "ConflictAction" },
+        "sort_order": { "storage": "inline", "type": "SortOrder" },
+        "is_autoincrement": { "storage": "inline", "type": "Bool" },
+        "collation_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "generated_storage": { "storage": "inline", "type": "GeneratedColumnStorage" },
+        "default_expr": { "storage": "index", "type": "Expr" },
+        "check_expr": { "storage": "index", "type": "Expr" },
+        "generated_expr": { "storage": "index", "type": "Expr" },
+        "fk_clause": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_span",
+            "field": "constraint_name",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": "CONSTRAINT " },
+                { "type": "span", "field": "constraint_name" },
+                { "type": "kw", "text": " " }
+              ]
+            }
+          },
+          {
+            "type": "switch",
+            "field": "kind",
+            "cases": {
+              "PRIMARY_KEY": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "PRIMARY KEY" },
+                  {
+                    "type": "if_enum",
+                    "field": "sort_order",
+                    "value": "DESC",
+                    "then": { "type": "kw", "text": " DESC" }
+                  },
+                  {
+                    "type": "if_flag",
+                    "field": "is_autoincrement",
+                    "then": { "type": "kw", "text": " AUTOINCREMENT" }
+                  },
+                  {
+                    "type": "switch",
+                    "field": "onconf",
+                    "cases": {
+                      "ROLLBACK": { "type": "kw", "text": " ON CONFLICT ROLLBACK" },
+                      "ABORT": { "type": "kw", "text": " ON CONFLICT ABORT" },
+                      "FAIL": { "type": "kw", "text": " ON CONFLICT FAIL" },
+                      "IGNORE": { "type": "kw", "text": " ON CONFLICT IGNORE" },
+                      "REPLACE": { "type": "kw", "text": " ON CONFLICT REPLACE" }
+                    }
+                  }
+                ]
+              },
+              "NOT_NULL": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "NOT NULL" },
+                  {
+                    "type": "switch",
+                    "field": "onconf",
+                    "cases": {
+                      "ROLLBACK": { "type": "kw", "text": " ON CONFLICT ROLLBACK" },
+                      "ABORT": { "type": "kw", "text": " ON CONFLICT ABORT" },
+                      "FAIL": { "type": "kw", "text": " ON CONFLICT FAIL" },
+                      "IGNORE": { "type": "kw", "text": " ON CONFLICT IGNORE" },
+                      "REPLACE": { "type": "kw", "text": " ON CONFLICT REPLACE" }
+                    }
+                  }
+                ]
+              },
+              "UNIQUE": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "UNIQUE" },
+                  {
+                    "type": "switch",
+                    "field": "onconf",
+                    "cases": {
+                      "ROLLBACK": { "type": "kw", "text": " ON CONFLICT ROLLBACK" },
+                      "ABORT": { "type": "kw", "text": " ON CONFLICT ABORT" },
+                      "FAIL": { "type": "kw", "text": " ON CONFLICT FAIL" },
+                      "IGNORE": { "type": "kw", "text": " ON CONFLICT IGNORE" },
+                      "REPLACE": { "type": "kw", "text": " ON CONFLICT REPLACE" }
+                    }
+                  }
+                ]
+              },
+              "CHECK": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "CHECK(" },
+                  { "type": "child", "field": "check_expr" },
+                  { "type": "kw", "text": ")" }
+                ]
+              },
+              "DEFAULT": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "DEFAULT " },
+                  { "type": "child", "field": "default_expr" }
+                ]
+              },
+              "COLLATE": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "COLLATE " },
+                  { "type": "span", "field": "collation_name" }
+                ]
+              },
+              "REFERENCES": { "type": "child", "field": "fk_clause" },
+              "GENERATED": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "AS (" },
+                  { "type": "child", "field": "generated_expr" },
+                  { "type": "kw", "text": ")" },
+                  {
+                    "type": "if_enum",
+                    "field": "generated_storage",
+                    "value": "STORED",
+                    "then": { "type": "kw", "text": " STORED" }
+                  }
+                ]
+              },
+              "NULL": { "type": "kw", "text": "NULL" }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "list",
+      "name": "ColumnConstraintList",
+      "child_type": "ColumnConstraint",
+      "fmt": {
+        "type": "for_each_child",
+        "template": { "type": "child", "field": "_item" },
+        "separator": { "type": "kw", "text": " " }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "ColumnDef",
+      "fields": {
+        "column_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "type_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "constraints": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "span", "field": "column_name" },
+          {
+            "type": "if_span",
+            "field": "type_name",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " " },
+                { "type": "span", "field": "type_name" }
+              ]
+            }
+          },
+          {
+            "type": "if_set",
+            "field": "constraints",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " " },
+                { "type": "child", "field": "constraints" }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "list",
+      "name": "ColumnDefList",
+      "child_type": "ColumnDef",
+      "fmt": {
+        "type": "for_each_child",
+        "template": { "type": "child", "field": "_item" },
+        "separator": {
+          "type": "seq",
+          "items": [
+            { "type": "kw", "text": "," },
+            { "type": "line" }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "TableConstraint",
+      "fields": {
+        "kind": { "storage": "inline", "type": "TableConstraintKind" },
+        "constraint_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "onconf": { "storage": "inline", "type": "ConflictAction" },
+        "is_autoincrement": { "storage": "inline", "type": "Bool" },
+        "columns": { "storage": "index", "type": "Expr" },
+        "check_expr": { "storage": "index", "type": "Expr" },
+        "fk_clause": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_span",
+            "field": "constraint_name",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": "CONSTRAINT " },
+                { "type": "span", "field": "constraint_name" },
+                { "type": "kw", "text": " " }
+              ]
+            }
+          },
+          {
+            "type": "switch",
+            "field": "kind",
+            "cases": {
+              "PRIMARY_KEY": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "PRIMARY KEY(" },
+                  { "type": "child", "field": "columns" },
+                  { "type": "kw", "text": ")" },
+                  {
+                    "type": "switch",
+                    "field": "onconf",
+                    "cases": {
+                      "ROLLBACK": { "type": "kw", "text": " ON CONFLICT ROLLBACK" },
+                      "ABORT": { "type": "kw", "text": " ON CONFLICT ABORT" },
+                      "FAIL": { "type": "kw", "text": " ON CONFLICT FAIL" },
+                      "IGNORE": { "type": "kw", "text": " ON CONFLICT IGNORE" },
+                      "REPLACE": { "type": "kw", "text": " ON CONFLICT REPLACE" }
+                    }
+                  }
+                ]
+              },
+              "UNIQUE": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "UNIQUE(" },
+                  { "type": "child", "field": "columns" },
+                  { "type": "kw", "text": ")" },
+                  {
+                    "type": "switch",
+                    "field": "onconf",
+                    "cases": {
+                      "ROLLBACK": { "type": "kw", "text": " ON CONFLICT ROLLBACK" },
+                      "ABORT": { "type": "kw", "text": " ON CONFLICT ABORT" },
+                      "FAIL": { "type": "kw", "text": " ON CONFLICT FAIL" },
+                      "IGNORE": { "type": "kw", "text": " ON CONFLICT IGNORE" },
+                      "REPLACE": { "type": "kw", "text": " ON CONFLICT REPLACE" }
+                    }
+                  }
+                ]
+              },
+              "CHECK": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "CHECK(" },
+                  { "type": "child", "field": "check_expr" },
+                  { "type": "kw", "text": ")" }
+                ]
+              },
+              "FOREIGN_KEY": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "FOREIGN KEY(" },
+                  { "type": "child", "field": "columns" },
+                  { "type": "kw", "text": ") " },
+                  { "type": "child", "field": "fk_clause" }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "list",
+      "name": "TableConstraintList",
+      "child_type": "TableConstraint",
+      "fmt": {
+        "type": "for_each_child",
+        "template": { "type": "child", "field": "_item" },
+        "separator": {
+          "type": "seq",
+          "items": [
+            { "type": "kw", "text": "," },
+            { "type": "line" }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "CreateTableStmt",
+      "fields": {
+        "table_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "is_temp": { "storage": "inline", "type": "Bool" },
+        "if_not_exists": { "storage": "inline", "type": "Bool" },
+        "flags": { "storage": "inline", "type": "CreateTableStmtFlags" },
+        "columns": { "storage": "index", "type": "Expr" },
+        "table_constraints": { "storage": "index", "type": "Expr" },
+        "as_select": { "storage": "index", "type": "Stmt" }
+      },
+      "fmt": {
+        "type": "group",
+        "child": {
+          "type": "seq",
+          "items": [
+            { "type": "kw", "text": "CREATE" },
+            {
+              "type": "if_flag",
+              "field": "is_temp",
+              "then": { "type": "kw", "text": " TEMP" }
+            },
+            { "type": "kw", "text": " TABLE" },
+            {
+              "type": "if_flag",
+              "field": "if_not_exists",
+              "then": { "type": "kw", "text": " IF NOT EXISTS" }
+            },
+            { "type": "kw", "text": " " },
+            {
+              "type": "if_span",
+              "field": "schema",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "span", "field": "schema" },
+                  { "type": "kw", "text": "." }
+                ]
+              }
+            },
+            { "type": "span", "field": "table_name" },
+            {
+              "type": "if_set",
+              "field": "columns",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "(" },
+                  {
+                    "type": "group",
+                    "child": {
+                      "type": "nest",
+                      "child": {
+                        "type": "seq",
+                        "items": [
+                          { "type": "softline" },
+                          { "type": "child", "field": "columns" },
+                          {
+                            "type": "if_set",
+                            "field": "table_constraints",
+                            "then": {
+                              "type": "seq",
+                              "items": [
+                                { "type": "kw", "text": "," },
+                                { "type": "line" },
+                                { "type": "child", "field": "table_constraints" }
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  { "type": "softline" },
+                  { "type": "kw", "text": ")" }
+                ]
+              }
+            },
+            {
+              "type": "if_set",
+              "field": "as_select",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": " AS" },
+                  { "type": "hardline" },
+                  { "type": "child", "field": "as_select" }
+                ]
+              }
+            },
+            {
+              "type": "if_flag",
+              "field": "flags.without_rowid",
+              "then": { "type": "kw", "text": " WITHOUT ROWID" }
+            },
+            {
+              "type": "if_flag",
+              "field": "flags.strict",
+              "then": { "type": "kw", "text": " STRICT" }
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

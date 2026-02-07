@@ -1,0 +1,215 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "SortOrder",
+      "values": ["ASC", "DESC"]
+    },
+    {
+      "kind": "enum",
+      "name": "NullsOrder",
+      "values": ["NONE", "FIRST", "LAST"]
+    },
+    {
+      "kind": "flags",
+      "name": "ResultColumnFlags",
+      "flags": { "STAR": 1 }
+    },
+    {
+      "kind": "flags",
+      "name": "SelectStmtFlags",
+      "flags": { "DISTINCT": 1 }
+    },
+    {
+      "kind": "node",
+      "name": "ResultColumn",
+      "fields": {
+        "flags": { "storage": "inline", "type": "ResultColumnFlags" },
+        "alias": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "expr": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_flag",
+            "field": "flags.star",
+            "then": {
+              "type": "if_set",
+              "field": "expr",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "child", "field": "expr" },
+                  { "type": "kw", "text": ".*" }
+                ]
+              },
+              "else": { "type": "kw", "text": "*" }
+            },
+            "else": { "type": "child", "field": "expr" }
+          },
+          {
+            "type": "if_span",
+            "field": "alias",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " AS " },
+                { "type": "span", "field": "alias" }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "list",
+      "name": "ResultColumnList",
+      "child_type": "ResultColumn"
+    },
+    {
+      "kind": "node",
+      "name": "SelectStmt",
+      "fields": {
+        "flags": { "storage": "inline", "type": "SelectStmtFlags" },
+        "columns": { "storage": "index", "type": "ResultColumnList" },
+        "from_clause": { "storage": "index", "type": "Expr" },
+        "where": { "storage": "index", "type": "Expr" },
+        "groupby": { "storage": "index", "type": "ExprList" },
+        "having": { "storage": "index", "type": "Expr" },
+        "orderby": { "storage": "index", "type": "OrderByList" },
+        "limit_clause": { "storage": "index", "type": "LimitClause" },
+        "window_clause": { "storage": "index", "type": "NamedWindowDefList" }
+      },
+      "fmt": {
+        "type": "group",
+        "child": {
+          "type": "seq",
+          "items": [
+            {
+              "type": "if_flag",
+              "field": "flags.distinct",
+              "then": { "type": "kw", "text": "SELECT DISTINCT" },
+              "else": { "type": "kw", "text": "SELECT" }
+            },
+            {
+              "type": "if_set",
+              "field": "columns",
+              "then": {
+                "type": "group",
+                "child": {
+                  "type": "nest",
+                  "child": {
+                    "type": "seq",
+                    "items": [
+                      { "type": "line" },
+                      { "type": "child", "field": "columns" }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "type": "if_set",
+              "field": "from_clause",
+              "then": { "type": "clause", "keyword": "FROM", "body": { "type": "child", "field": "from_clause" } }
+            },
+            {
+              "type": "if_set",
+              "field": "where",
+              "then": { "type": "clause", "keyword": "WHERE", "body": { "type": "child", "field": "where" } }
+            },
+            {
+              "type": "if_set",
+              "field": "groupby",
+              "then": { "type": "clause", "keyword": "GROUP BY", "body": { "type": "child", "field": "groupby" } }
+            },
+            {
+              "type": "if_set",
+              "field": "having",
+              "then": { "type": "clause", "keyword": "HAVING", "body": { "type": "child", "field": "having" } }
+            },
+            {
+              "type": "if_set",
+              "field": "orderby",
+              "then": { "type": "clause", "keyword": "ORDER BY", "body": { "type": "child", "field": "orderby" } }
+            },
+            {
+              "type": "if_set",
+              "field": "limit_clause",
+              "then": { "type": "clause", "keyword": "LIMIT", "body": { "type": "child", "field": "limit_clause" } }
+            },
+            {
+              "type": "if_set",
+              "field": "window_clause",
+              "then": { "type": "clause", "keyword": "WINDOW", "body": { "type": "child", "field": "window_clause" } }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "OrderingTerm",
+      "fields": {
+        "expr": { "storage": "index", "type": "Expr" },
+        "sort_order": { "storage": "inline", "type": "SortOrder" },
+        "nulls_order": { "storage": "inline", "type": "NullsOrder" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "child", "field": "expr" },
+          {
+            "type": "if_enum",
+            "field": "sort_order",
+            "value": "DESC",
+            "then": { "type": "kw", "text": " DESC" }
+          },
+          {
+            "type": "if_enum",
+            "field": "nulls_order",
+            "value": "FIRST",
+            "then": { "type": "kw", "text": " NULLS FIRST" }
+          },
+          {
+            "type": "if_enum",
+            "field": "nulls_order",
+            "value": "LAST",
+            "then": { "type": "kw", "text": " NULLS LAST" }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "list",
+      "name": "OrderByList",
+      "child_type": "OrderingTerm"
+    },
+    {
+      "kind": "node",
+      "name": "LimitClause",
+      "fields": {
+        "limit": { "storage": "index", "type": "Expr" },
+        "offset": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "child", "field": "limit" },
+          {
+            "type": "if_set",
+            "field": "offset",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " OFFSET " },
+                { "type": "child", "field": "offset" }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

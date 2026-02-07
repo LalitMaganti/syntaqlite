@@ -1,0 +1,91 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "CompoundOp",
+      "values": ["UNION", "UNION_ALL", "INTERSECT", "EXCEPT"]
+    },
+    {
+      "kind": "node",
+      "name": "CompoundSelect",
+      "fields": {
+        "op": { "storage": "inline", "type": "CompoundOp" },
+        "left": { "storage": "index", "type": "Stmt" },
+        "right": { "storage": "index", "type": "Stmt" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "child", "field": "left" },
+          { "type": "hardline" },
+          {
+            "type": "enum_display",
+            "field": "op",
+            "mapping": {
+              "UNION": "UNION",
+              "UNION_ALL": "UNION ALL",
+              "INTERSECT": "INTERSECT",
+              "EXCEPT": "EXCEPT"
+            }
+          },
+          { "type": "hardline" },
+          { "type": "child", "field": "right" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "SubqueryExpr",
+      "fields": {
+        "select": { "storage": "index", "type": "Stmt" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "(" },
+          { "type": "child", "field": "select" },
+          { "type": "kw", "text": ")" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "ExistsExpr",
+      "fields": {
+        "select": { "storage": "index", "type": "Stmt" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "EXISTS (" },
+          { "type": "child", "field": "select" },
+          { "type": "kw", "text": ")" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "InExpr",
+      "fields": {
+        "negated": { "storage": "inline", "type": "Bool" },
+        "operand": { "storage": "index", "type": "Expr" },
+        "source": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "child", "field": "operand" },
+          {
+            "type": "if_flag",
+            "field": "negated",
+            "then": { "type": "kw", "text": " NOT IN " },
+            "else": { "type": "kw", "text": " IN " }
+          },
+          { "type": "kw", "text": "(" },
+          { "type": "child", "field": "source" },
+          { "type": "kw", "text": ")" }
+        ]
+      }
+    }
+  ]
+}

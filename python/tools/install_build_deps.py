@@ -23,6 +23,7 @@ GN_VERSION = "5550ba0f4053c3cbb0bff3d60ded9d867b6fa371"
 NINJA_VERSION = "1.13.2"
 SQLITE_VERSION = "3510200"  # 3.51.2
 SQLITE_YEAR = "2026"
+ZIG_VERSION = "0.14.0"
 
 
 @dataclass
@@ -35,6 +36,7 @@ class BinaryDep:
     target_os: str  # darwin, linux, windows, or all
     target_arch: str  # x64, arm64, or all
     format: str = "zip"
+    strip_prefix: str = ""  # Directory prefix to strip from archive
 
 
 @dataclass
@@ -66,6 +68,12 @@ BINARY_DEPS = [
     BinaryDep("clang-format", "7d46d237", "https://storage.googleapis.com/chromium-clang-format/7d46d237f9664f41ef46b10c1392dcb559250f25", "0c3c13febeb0495ef0086509c24605ecae9e3d968ff9669d12514b8a55c7824e", "darwin", "x64", "raw"),
     BinaryDep("clang-format", "79a7b4e5", "https://storage.googleapis.com/chromium-clang-format/79a7b4e5336339c17b828de10d80611ff0f85961", "889266a51681d55bd4b9e02c9a104fa6ee22ecdfa7e8253532e5ea47e2e4cb4a", "linux", "x64", "raw"),
     BinaryDep("clang-format", "565cab9c", "https://storage.googleapis.com/chromium-clang-format/565cab9c66d61360c27c7d4df5defe1a78ab56d3", "5557943a174e3b67cdc389c10b0ceea2195f318c5c665dd77a427ed01a094557", "windows", "x64", "raw"),
+    # Zig compiler: tar.xz on macOS/Linux, zip on Windows.
+    BinaryDep("zig", ZIG_VERSION, f"https://ziglang.org/download/{ZIG_VERSION}/zig-macos-aarch64-{ZIG_VERSION}.tar.xz", "b71e4b7c4b4be9953657877f7f9e6f7ee89114c716da7c070f4a238220e95d7e", "darwin", "arm64", "tar.xz", f"zig-macos-aarch64-{ZIG_VERSION}"),
+    BinaryDep("zig", ZIG_VERSION, f"https://ziglang.org/download/{ZIG_VERSION}/zig-macos-x86_64-{ZIG_VERSION}.tar.xz", "685816166f21f0b8d6fc7aa6a36e91396dcd82ca6556dfbe3e329deffc01fec3", "darwin", "x64", "tar.xz", f"zig-macos-x86_64-{ZIG_VERSION}"),
+    BinaryDep("zig", ZIG_VERSION, f"https://ziglang.org/download/{ZIG_VERSION}/zig-linux-x86_64-{ZIG_VERSION}.tar.xz", "473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982", "linux", "x64", "tar.xz", f"zig-linux-x86_64-{ZIG_VERSION}"),
+    BinaryDep("zig", ZIG_VERSION, f"https://ziglang.org/download/{ZIG_VERSION}/zig-linux-aarch64-{ZIG_VERSION}.tar.xz", "ab64e3ea277f6fc5f3d723dcd95d9ce1ab282c8ed0f431b4de880d30df891e4f", "linux", "arm64", "tar.xz", f"zig-linux-aarch64-{ZIG_VERSION}"),
+    BinaryDep("zig", ZIG_VERSION, f"https://ziglang.org/download/{ZIG_VERSION}/zig-windows-x86_64-{ZIG_VERSION}.zip", "f53e5f9011ba20bbc3e0e6d0a9441b31eb227a97bac0e7d24172f1b8b27b4371", "windows", "x64", "zip", f"zig-windows-x86_64-{ZIG_VERSION}"),
 ]
 
 GOOGLETEST_VERSION = "1.17.0"
@@ -120,6 +128,9 @@ def extract(archive_path, dest_dir, fmt):
     elif fmt == "tar.gz":
         with tarfile.open(archive_path, "r:gz") as tf:
             tf.extractall(dest_dir)
+    elif fmt == "tar.xz":
+        with tarfile.open(archive_path, "r:xz") as tf:
+            tf.extractall(dest_dir)
     else:
         sys.exit(f"Unsupported format: {fmt}")
 
@@ -155,6 +166,22 @@ def install_binary_dep(dep, target_dir):
             exe_path = os.path.join(target_dir, dep.name)
             shutil.copy2(tmp_path, exe_path)
             os.chmod(exe_path, 0o755)
+        elif dep.strip_prefix:
+            # Directory-structured dep (e.g. Zig): extract, strip prefix, move
+            # contents flat into target_dir.
+            with tempfile.TemporaryDirectory() as extract_dir:
+                extract(tmp_path, extract_dir, dep.format)
+                src_dir = os.path.join(extract_dir, dep.strip_prefix)
+                for item in os.listdir(src_dir):
+                    dest = os.path.join(target_dir, item)
+                    if os.path.isdir(dest):
+                        shutil.rmtree(dest)
+                    elif os.path.exists(dest):
+                        os.unlink(dest)
+                    shutil.move(os.path.join(src_dir, item), dest)
+            exe_path = os.path.join(target_dir, dep.name)
+            if os.path.exists(exe_path):
+                os.chmod(exe_path, 0o755)
         else:
             extract(tmp_path, target_dir, dep.format)
             exe_path = os.path.join(target_dir, dep.name)

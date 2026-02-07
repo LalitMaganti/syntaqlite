@@ -1,0 +1,95 @@
+{
+  "definitions": [
+    {
+      "kind": "node",
+      "name": "BinaryExpr",
+      "fields": {
+        "op": { "storage": "inline", "type": "BinaryOp" },
+        "left": { "storage": "index", "type": "Expr" },
+        "right": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "switch",
+        "field": "op",
+        "cases": {
+          "AND": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "line" },
+              { "type": "kw", "text": "AND " },
+              { "type": "child", "field": "right" }
+            ]
+          },
+          "OR": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "line" },
+              { "type": "kw", "text": "OR " },
+              { "type": "child", "field": "right" }
+            ]
+          }
+        },
+        "default": {
+          "type": "group",
+          "child": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "line" },
+              {
+                "type": "enum_display",
+                "field": "op",
+                "mapping": {
+                  "PLUS": "+", "MINUS": "-", "STAR": "*", "SLASH": "/",
+                  "REM": "%", "LT": "<", "GT": ">", "LE": "<=", "GE": ">=",
+                  "EQ": "=", "NE": "!=", "AND": "AND", "OR": "OR",
+                  "BITAND": "&", "BITOR": "|", "LSHIFT": "<<", "RSHIFT": ">>",
+                  "CONCAT": "||", "PTR": "->"
+                }
+              },
+              { "type": "kw", "text": " " },
+              { "type": "child", "field": "right" }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "UnaryExpr",
+      "fields": {
+        "op": { "storage": "inline", "type": "UnaryOp" },
+        "operand": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "enum_display",
+            "field": "op",
+            "mapping": {
+              "MINUS": "-", "PLUS": "+", "BITNOT": "~", "NOT": "NOT "
+            }
+          },
+          { "type": "child", "field": "operand" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "Literal",
+      "fields": {
+        "literal_type": { "storage": "inline", "type": "LiteralType" },
+        "source": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": { "type": "span", "field": "source" }
+    },
+    {
+      "kind": "list",
+      "name": "ExprList",
+      "child_type": "Expr"
+    }
+  ]
+}

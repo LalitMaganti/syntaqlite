@@ -1,0 +1,330 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "ExplainMode",
+      "values": ["EXPLAIN", "QUERY_PLAN"]
+    },
+    {
+      "kind": "enum",
+      "name": "PragmaForm",
+      "values": ["BARE", "EQ", "CALL"]
+    },
+    {
+      "kind": "enum",
+      "name": "AnalyzeKind",
+      "values": ["ANALYZE", "REINDEX"]
+    },
+    {
+      "kind": "node",
+      "name": "PragmaStmt",
+      "fields": {
+        "pragma_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "value": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "pragma_form": { "storage": "inline", "type": "PragmaForm" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "PRAGMA " },
+          {
+            "type": "if_span",
+            "field": "schema",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "span", "field": "schema" },
+                { "type": "kw", "text": "." }
+              ]
+            }
+          },
+          { "type": "span", "field": "pragma_name" },
+          {
+            "type": "switch",
+            "field": "pragma_form",
+            "cases": {
+              "EQ": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": " = " },
+                  { "type": "span", "field": "value" }
+                ]
+              },
+              "CALL": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "(" },
+                  { "type": "span", "field": "value" },
+                  { "type": "kw", "text": ")" }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "AnalyzeStmt",
+      "fields": {
+        "target_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "kind": { "storage": "inline", "type": "AnalyzeKind" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_enum",
+            "field": "kind",
+            "value": "REINDEX",
+            "then": { "type": "kw", "text": "REINDEX" },
+            "else": { "type": "kw", "text": "ANALYZE" }
+          },
+          {
+            "type": "if_span",
+            "field": "schema",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " " },
+                { "type": "span", "field": "schema" },
+                { "type": "kw", "text": "." },
+                { "type": "span", "field": "target_name" }
+              ]
+            },
+            "else": {
+              "type": "if_span",
+              "field": "target_name",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": " " },
+                  { "type": "span", "field": "target_name" }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "AttachStmt",
+      "fields": {
+        "filename": { "storage": "index", "type": "Expr" },
+        "db_name": { "storage": "index", "type": "Expr" },
+        "key": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "ATTACH " },
+          { "type": "child", "field": "filename" },
+          { "type": "kw", "text": " AS " },
+          { "type": "child", "field": "db_name" },
+          {
+            "type": "if_set",
+            "field": "key",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " KEY " },
+                { "type": "child", "field": "key" }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "DetachStmt",
+      "fields": {
+        "db_name": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "DETACH " },
+          { "type": "child", "field": "db_name" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "VacuumStmt",
+      "fields": {
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "into_expr": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "VACUUM" },
+          {
+            "type": "if_span",
+            "field": "schema",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " " },
+                { "type": "span", "field": "schema" }
+              ]
+            }
+          },
+          {
+            "type": "if_set",
+            "field": "into_expr",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " INTO " },
+                { "type": "child", "field": "into_expr" }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "ExplainStmt",
+      "fields": {
+        "explain_mode": { "storage": "inline", "type": "ExplainMode" },
+        "stmt": { "storage": "index", "type": "Stmt" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_enum",
+            "field": "explain_mode",
+            "value": "QUERY_PLAN",
+            "then": { "type": "kw", "text": "EXPLAIN QUERY PLAN" },
+            "else": { "type": "kw", "text": "EXPLAIN" }
+          },
+          { "type": "hardline" },
+          { "type": "child", "field": "stmt" }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "CreateIndexStmt",
+      "fields": {
+        "index_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "table_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "is_unique": { "storage": "inline", "type": "Bool" },
+        "if_not_exists": { "storage": "inline", "type": "Bool" },
+        "columns": { "storage": "index", "type": "OrderByList" },
+        "where": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "group",
+        "child": {
+          "type": "seq",
+          "items": [
+            { "type": "kw", "text": "CREATE" },
+            {
+              "type": "if_flag",
+              "field": "is_unique",
+              "then": { "type": "kw", "text": " UNIQUE" }
+            },
+            { "type": "kw", "text": " INDEX" },
+            {
+              "type": "if_flag",
+              "field": "if_not_exists",
+              "then": { "type": "kw", "text": " IF NOT EXISTS" }
+            },
+            { "type": "kw", "text": " " },
+            {
+              "type": "if_span",
+              "field": "schema",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "span", "field": "schema" },
+                  { "type": "kw", "text": "." }
+                ]
+              }
+            },
+            { "type": "span", "field": "index_name" },
+            { "type": "kw", "text": " ON " },
+            { "type": "span", "field": "table_name" },
+            { "type": "kw", "text": " (" },
+            { "type": "child", "field": "columns" },
+            { "type": "kw", "text": ")" },
+            {
+              "type": "if_set",
+              "field": "where",
+              "then": { "type": "clause", "keyword": "WHERE", "body": { "type": "child", "field": "where" } }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "CreateViewStmt",
+      "fields": {
+        "view_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "is_temp": { "storage": "inline", "type": "Bool" },
+        "if_not_exists": { "storage": "inline", "type": "Bool" },
+        "column_names": { "storage": "index", "type": "ExprList" },
+        "select": { "storage": "index", "type": "Stmt" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "CREATE" },
+          {
+            "type": "if_flag",
+            "field": "is_temp",
+            "then": { "type": "kw", "text": " TEMP" }
+          },
+          { "type": "kw", "text": " VIEW" },
+          {
+            "type": "if_flag",
+            "field": "if_not_exists",
+            "then": { "type": "kw", "text": " IF NOT EXISTS" }
+          },
+          { "type": "kw", "text": " " },
+          {
+            "type": "if_span",
+            "field": "schema",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "span", "field": "schema" },
+                { "type": "kw", "text": "." }
+              ]
+            }
+          },
+          { "type": "span", "field": "view_name" },
+          {
+            "type": "if_set",
+            "field": "column_names",
+            "then": {
+              "type": "group",
+              "child": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": "(" },
+                  { "type": "child", "field": "column_names" },
+                  { "type": "kw", "text": ")" }
+                ]
+              }
+            }
+          },
+          { "type": "kw", "text": " AS" },
+          { "type": "hardline" },
+          { "type": "child", "field": "select" }
+        ]
+      }
+    }
+  ]
+}

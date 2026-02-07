@@ -9,6 +9,8 @@
 # Build lock file used by tools/dev/build-lock
 out/.build.lock
 
-# Generated files (produced by python/tools/extract_sqlite.py)
-*_gen.c
-*_gen.h
+.zig-cache
+zig-out
+
+# Generated at build time by build_synq_codegen.py
+src/codegen/src/lempar_data.zig

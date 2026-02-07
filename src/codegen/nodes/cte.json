@@ -1,0 +1,85 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "Materialized",
+      "values": ["DEFAULT", "MATERIALIZED", "NOT_MATERIALIZED"]
+    },
+    {
+      "kind": "node",
+      "name": "CteDefinition",
+      "fields": {
+        "cte_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "materialized": { "storage": "inline", "type": "Materialized" },
+        "columns": { "storage": "index", "type": "ExprList" },
+        "select": { "storage": "index", "type": "Stmt" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "span", "field": "cte_name" },
+          {
+            "type": "if_set",
+            "field": "columns",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": "(" },
+                { "type": "child", "field": "columns" },
+                { "type": "kw", "text": ")" }
+              ]
+            }
+          },
+          { "type": "kw", "text": " AS " },
+          {
+            "type": "if_enum",
+            "field": "materialized",
+            "value": "MATERIALIZED",
+            "then": { "type": "kw", "text": "MATERIALIZED " }
+          },
+          {
+            "type": "if_enum",
+            "field": "materialized",
+            "value": "NOT_MATERIALIZED",
+            "then": { "type": "kw", "text": "NOT MATERIALIZED " }
+          },
+          { "type": "kw", "text": "(" },
+          { "type": "child", "field": "select" },
+          { "type": "kw", "text": ")" }
+        ]
+      }
+    },
+    {
+      "kind": "list",
+      "name": "CteList",
+      "child_type": "CteDefinition"
+    },
+    {
+      "kind": "node",
+      "name": "WithClause",
+      "fields": {
+        "recursive": { "storage": "inline", "type": "Bool" },
+        "ctes": { "storage": "index", "type": "CteList" },
+        "select": { "storage": "index", "type": "Stmt" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_flag",
+            "field": "recursive",
+            "then": { "type": "kw", "text": "WITH RECURSIVE " },
+            "else": { "type": "kw", "text": "WITH " }
+          },
+          {
+            "type": "if_set",
+            "field": "ctes",
+            "then": { "type": "child", "field": "ctes" }
+          },
+          { "type": "hardline" },
+          { "type": "child", "field": "select" }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "RaiseType",
+      "values": ["IGNORE", "ROLLBACK", "ABORT", "FAIL"]
+    },
+    {
+      "kind": "node",
+      "name": "RaiseExpr",
+      "fields": {
+        "raise_type": { "storage": "inline", "type": "RaiseType" },
+        "error_message": { "storage": "index", "type": "Expr" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "RAISE(" },
+          {
+            "type": "switch",
+            "field": "raise_type",
+            "cases": {
+              "IGNORE": { "type": "kw", "text": "IGNORE" },
+              "ROLLBACK": { "type": "kw", "text": "ROLLBACK" },
+              "ABORT": { "type": "kw", "text": "ABORT" },
+              "FAIL": { "type": "kw", "text": "FAIL" }
+            }
+          },
+          {
+            "type": "if_set",
+            "field": "error_message",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": ", " },
+                { "type": "child", "field": "error_message" }
+              ]
+            }
+          },
+          { "type": "kw", "text": ")" }
+        ]
+      }
+    }
+  ]
+}

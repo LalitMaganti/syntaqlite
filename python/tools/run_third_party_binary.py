@@ -27,7 +27,7 @@ def get_platform_dir():
         return None, ""
 
 
-def run_third_party_binary(args):
+def run_third_party_binary(args, cwd=None):
     if len(args) < 1:
         print("Usage: %s command [args]" % sys.argv[0])
         return 1
@@ -47,9 +47,9 @@ def run_third_party_binary(args):
         print("Run tools/dev/install-build-deps to install build dependencies.")
         return 1
 
-    if platform.system().lower() == "windows":
-        # execl() behaves oddly on Windows: the spawned process doesn't seem to
-        # receive CTRL+C. Use subprocess instead.
-        sys.exit(subprocess.call([exe_path] + args))
+    if cwd or platform.system().lower() == "windows":
+        # execl() doesn't support cwd and behaves oddly on Windows: the spawned
+        # process doesn't seem to receive CTRL+C. Use subprocess instead.
+        sys.exit(subprocess.call([exe_path] + args, cwd=cwd))
     else:
         os.execl(exe_path, os.path.basename(exe_path), *args)

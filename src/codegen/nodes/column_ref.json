@@ -1,0 +1,41 @@
+{
+  "definitions": [
+    {
+      "kind": "node",
+      "name": "ColumnRef",
+      "fields": {
+        "column": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "table": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_span",
+            "field": "schema",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "span", "field": "schema" },
+                { "type": "kw", "text": "." }
+              ]
+            }
+          },
+          {
+            "type": "if_span",
+            "field": "table",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "span", "field": "table" },
+                { "type": "kw", "text": "." }
+              ]
+            }
+          },
+          { "type": "span", "field": "column" }
+        ]
+      }
+    }
+  ]
+}

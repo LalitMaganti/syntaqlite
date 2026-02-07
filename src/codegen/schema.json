@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://syntaqlite.dev/codegen/node-defs.schema.json",
+  "title": "Syntaqlite Node Definitions",
+  "description": "Schema for AST node, list, enum, and flags definitions used by the Zig codegen tool.",
+  "type": "object",
+  "required": ["definitions"],
+  "properties": {
+    "definitions": {
+      "type": "array",
+      "description": "Ordered list of definitions. Order determines enum IDs and node tag IDs.",
+      "items": {
+        "$ref": "#/$defs/Definition"
+      }
+    }
+  },
+  "$defs": {
+    "Definition": {
+      "oneOf": [
+        { "$ref": "#/$defs/EnumDef" },
+        { "$ref": "#/$defs/FlagsDef" },
+        { "$ref": "#/$defs/NodeDef" },
+        { "$ref": "#/$defs/ListDef" }
+      ]
+    },
+
+    "EnumDef": {
+      "type": "object",
+      "required": ["kind", "name", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "enum" },
+        "name": { "type": "string", "description": "PascalCase enum name (e.g. 'BinaryOp')." },
+        "values": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Enum variant names in order (e.g. ['PLUS', 'MINUS', ...]). Ordinal is array index."
+        }
+      }
+    },
+
+    "FlagsDef": {
+      "type": "object",
+      "required": ["kind", "name", "flags"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "flags" },
+        "name": { "type": "string", "description": "PascalCase flags type name (e.g. 'SelectStmtFlags')." },
+        "flags": {
+          "type": "object",
+          "description": "Map of flag name to bit value (e.g. {\"DISTINCT\": 1, \"STAR\": 2}).",
+          "additionalProperties": { "type": "integer" }
+        }
+      }
+    },
+
+    "NodeDef": {
+      "type": "object",
+      "required": ["kind", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "node" },
+        "name": { "type": "string", "description": "PascalCase node name (e.g. 'SelectStmt')." },
+        "fields": {
+          "type": "object",
+          "description": "Map of field name to field descriptor. Order is insertion order (JSON object key order).",
+          "additionalProperties": { "$ref": "#/$defs/Field" }
+        },
+        "fmt": {
+          "$ref": "#/$defs/FmtDoc",
+          "description": "Optional formatting annotation."
+        }
+      }
+    },
+
+    "ListDef": {
+      "type": "object",
+      "required": ["kind", "name", "child_type"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "list" },
+        "name": { "type": "string", "description": "PascalCase list name (e.g. 'ExprList')." },
+        "child_type": { "type": "string", "description": "Type name of list children (e.g. 'Expr', 'ResultColumn')." },
+        "fmt": {
+          "$ref": "#/$defs/FmtDoc",
+          "description": "Optional formatting annotation."
+        }
+      }
+    },
+
+    "Field": {
+      "type": "object",
+      "required": ["storage", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "storage": {
+          "type": "string",
+          "enum": ["inline", "index"],
+          "description": "'inline' for scalars/enums/spans stored directly; 'index' for node ID references."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type name (e.g. 'BinaryOp', 'SyntaqliteSourceSpan', 'Expr', 'ExprList')."
+        }
+      }
+    },
+
+    "FmtDoc": {
+      "description": "A formatting document node. Discriminated by the 'type' field.",
+      "oneOf": [
+        { "$ref": "#/$defs/FmtKw" },
+        { "$ref": "#/$defs/FmtSpan" },
+        { "$ref": "#/$defs/FmtChild" },
+        { "$ref": "#/$defs/FmtLine" },
+        { "$ref": "#/$defs/FmtSoftline" },
+        { "$ref": "#/$defs/FmtHardline" },
+        { "$ref": "#/$defs/FmtSeq" },
+        { "$ref": "#/$defs/FmtGroup" },
+        { "$ref": "#/$defs/FmtNest" },
+        { "$ref": "#/$defs/FmtIfSet" },
+        { "$ref": "#/$defs/FmtIfFlag" },
+        { "$ref": "#/$defs/FmtIfEnum" },
+        { "$ref": "#/$defs/FmtIfSpan" },
+        { "$ref": "#/$defs/FmtClause" },
+        { "$ref": "#/$defs/FmtEnumDisplay" },
+        { "$ref": "#/$defs/FmtSwitch" },
+        { "$ref": "#/$defs/FmtForEachChild" }
+      ]
+    },
+
+    "FmtKw": {
+      "type": "object",
+      "required": ["type", "text"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "kw" },
+        "text": { "type": "string", "description": "Static keyword string to emit." }
+      }
+    },
+
+    "FmtSpan": {
+      "type": "object",
+      "required": ["type", "field"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "span" },
+        "field": { "type": "string", "description": "Name of a SyntaqliteSourceSpan field." }
+      }
+    },
+
+    "FmtChild": {
+      "type": "object",
+      "required": ["type", "field"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "child" },
+        "field": { "type": "string", "description": "Name of an index field, or '_item' inside for_each_child." }
+      }
+    },
+
+    "FmtLine": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "line" }
+      }
+    },
+
+    "FmtSoftline": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "softline" }
+      }
+    },
+
+    "FmtHardline": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "hardline" }
+      }
+    },
+
+    "FmtSeq": {
+      "type": "object",
+      "required": ["type", "items"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "seq" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/FmtDoc" },
+          "description": "Ordered list of child docs to concatenate."
+        }
+      }
+    },
+
+    "FmtGroup": {
+      "type": "object",
+      "required": ["type", "child"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "group" },
+        "child": { "$ref": "#/$defs/FmtDoc" }
+      }
+    },
+
+    "FmtNest": {
+      "type": "object",
+      "required": ["type", "child"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "nest" },
+        "child": { "$ref": "#/$defs/FmtDoc" }
+      }
+    },
+
+    "FmtIfSet": {
+      "type": "object",
+      "required": ["type", "field", "then"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "if_set" },
+        "field": { "type": "string", "description": "Name of an index field to check for non-null." },
+        "then": { "$ref": "#/$defs/FmtDoc" },
+        "else": { "$ref": "#/$defs/FmtDoc" }
+      }
+    },
+
+    "FmtIfFlag": {
+      "type": "object",
+      "required": ["type", "field", "then"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "if_flag" },
+        "field": { "type": "string", "description": "Field name (e.g. 'negated', 'flags.distinct')." },
+        "then": { "$ref": "#/$defs/FmtDoc" },
+        "else": { "$ref": "#/$defs/FmtDoc" }
+      }
+    },
+
+    "FmtIfEnum": {
+      "type": "object",
+      "required": ["type", "field", "value", "then"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "if_enum" },
+        "field": { "type": "string", "description": "Name of an enum field." },
+        "value": { "type": "string", "description": "Enum variant to compare against." },
+        "then": { "$ref": "#/$defs/FmtDoc" },
+        "else": { "$ref": "#/$defs/FmtDoc" }
+      }
+    },
+
+    "FmtIfSpan": {
+      "type": "object",
+      "required": ["type", "field", "then"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "if_span" },
+        "field": { "type": "string", "description": "Name of a SyntaqliteSourceSpan field to check for non-zero length." },
+        "then": { "$ref": "#/$defs/FmtDoc" },
+        "else": { "$ref": "#/$defs/FmtDoc" }
+      }
+    },
+
+    "FmtClause": {
+      "type": "object",
+      "required": ["type", "keyword", "body"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "clause" },
+        "keyword": { "type": "string", "description": "SQL clause keyword (e.g. 'FROM', 'WHERE')." },
+        "body": { "$ref": "#/$defs/FmtDoc" }
+      }
+    },
+
+    "FmtEnumDisplay": {
+      "type": "object",
+      "required": ["type", "field", "mapping"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "enum_display" },
+        "field": { "type": "string", "description": "Name of an enum field." },
+        "mapping": {
+          "type": "object",
+          "description": "Map of enum variant name to display string.",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+
+    "FmtSwitch": {
+      "type": "object",
+      "required": ["type", "field", "cases"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "switch" },
+        "field": { "type": "string", "description": "Name of an enum field to switch on." },
+        "cases": {
+          "type": "object",
+          "description": "Map of enum variant name to FmtDoc for that case.",
+          "additionalProperties": { "$ref": "#/$defs/FmtDoc" }
+        },
+        "default": { "$ref": "#/$defs/FmtDoc" }
+      }
+    },
+
+    "FmtForEachChild": {
+      "type": "object",
+      "required": ["type", "template"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "for_each_child" },
+        "template": {
+          "$ref": "#/$defs/FmtDoc",
+          "description": "Per-item template. Use child('_item') for the current iteration child."
+        },
+        "separator": {
+          "$ref": "#/$defs/FmtDoc",
+          "description": "Optional doc emitted between items."
+        }
+      }
+    }
+  }
+}

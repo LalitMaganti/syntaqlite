@@ -1,0 +1,183 @@
+{
+  "definitions": [
+    {
+      "kind": "enum",
+      "name": "JoinType",
+      "values": [
+        "COMMA", "INNER", "LEFT", "RIGHT", "FULL", "CROSS",
+        "NATURAL_INNER", "NATURAL_LEFT", "NATURAL_RIGHT", "NATURAL_FULL"
+      ]
+    },
+    {
+      "kind": "node",
+      "name": "TableRef",
+      "fields": {
+        "table_name": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "schema": { "storage": "inline", "type": "SyntaqliteSourceSpan" },
+        "alias": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          {
+            "type": "if_span",
+            "field": "schema",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "span", "field": "schema" },
+                { "type": "kw", "text": "." }
+              ]
+            }
+          },
+          { "type": "span", "field": "table_name" },
+          {
+            "type": "if_span",
+            "field": "alias",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " AS " },
+                { "type": "span", "field": "alias" }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "SubqueryTableSource",
+      "fields": {
+        "select": { "storage": "index", "type": "Stmt" },
+        "alias": { "storage": "inline", "type": "SyntaqliteSourceSpan" }
+      },
+      "fmt": {
+        "type": "seq",
+        "items": [
+          { "type": "kw", "text": "(" },
+          { "type": "child", "field": "select" },
+          { "type": "kw", "text": ")" },
+          {
+            "type": "if_span",
+            "field": "alias",
+            "then": {
+              "type": "seq",
+              "items": [
+                { "type": "kw", "text": " AS " },
+                { "type": "span", "field": "alias" }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "node",
+      "name": "JoinClause",
+      "fields": {
+        "join_type": { "storage": "inline", "type": "JoinType" },
+        "left": { "storage": "index", "type": "Expr" },
+        "right": { "storage": "index", "type": "Expr" },
+        "on_expr": { "storage": "index", "type": "Expr" },
+        "using_columns": { "storage": "index", "type": "ExprList" }
+      },
+      "fmt": {
+        "type": "switch",
+        "field": "join_type",
+        "cases": {
+          "COMMA": {
+            "type": "seq",
+            "items": [
+              { "type": "child", "field": "left" },
+              { "type": "kw", "text": ", " },
+              { "type": "child", "field": "right" },
+              {
+                "type": "if_set",
+                "field": "on_expr",
+                "then": {
+                  "type": "seq",
+                  "items": [
+                    { "type": "hardline" },
+                    { "type": "kw", "text": "ON " },
+                    { "type": "child", "field": "on_expr" }
+                  ]
+                }
+              },
+              {
+                "type": "if_set",
+                "field": "using_columns",
+                "then": {
+                  "type": "seq",
+                  "items": [
+                    { "type": "kw", "text": " USING (" },
+                    { "type": "child", "field": "using_columns" },
+                    { "type": "kw", "text": ")" }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "default": {
+          "type": "seq",
+          "items": [
+            { "type": "child", "field": "left" },
+            { "type": "hardline" },
+            {
+              "type": "enum_display",
+              "field": "join_type",
+              "mapping": {
+                "INNER": "JOIN",
+                "LEFT": "LEFT JOIN",
+                "RIGHT": "RIGHT JOIN",
+                "FULL": "FULL JOIN",
+                "CROSS": "CROSS JOIN",
+                "NATURAL_INNER": "NATURAL JOIN",
+                "NATURAL_LEFT": "NATURAL LEFT JOIN",
+                "NATURAL_RIGHT": "NATURAL RIGHT JOIN",
+                "NATURAL_FULL": "NATURAL FULL JOIN",
+                "COMMA": ","
+              }
+            },
+            { "type": "kw", "text": " " },
+            { "type": "child", "field": "right" },
+            {
+              "type": "if_set",
+              "field": "on_expr",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "hardline" },
+                  { "type": "kw", "text": "ON " },
+                  { "type": "child", "field": "on_expr" }
+                ]
+              }
+            },
+            {
+              "type": "if_set",
+              "field": "using_columns",
+              "then": {
+                "type": "seq",
+                "items": [
+                  { "type": "kw", "text": " USING (" },
+                  { "type": "child", "field": "using_columns" },
+                  { "type": "kw", "text": ")" }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "kind": "node",
+      "name": "JoinPrefix",
+      "fields": {
+        "source": { "storage": "index", "type": "Expr" },
+        "join_type": { "storage": "inline", "type": "JoinType" }
+      },
+      "fmt": { "type": "child", "field": "source" }
+    }
+  ]
+}

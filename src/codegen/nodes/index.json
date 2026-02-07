@@ -1,0 +1,25 @@
+{
+  "description": "Ordered list of node definition files. Order determines enum IDs and node tag IDs. Matches src/parser/nodes/__init__.py ordering.",
+  "files": [
+    "common.json",
+    "expressions.json",
+    "select.json",
+    "column_ref.json",
+    "functions.json",
+    "conditionals.json",
+    "compound.json",
+    "misc_expr.json",
+    "cast.json",
+    "values.json",
+    "cte.json",
+    "aggregate.json",
+    "raise_expr.json",
+    "table_source.json",
+    "dml.json",
+    "schema_ops.json",
+    "utility_stmts.json",
+    "create_table.json",
+    "window.json",
+    "trigger.json"
+  ]
+}
