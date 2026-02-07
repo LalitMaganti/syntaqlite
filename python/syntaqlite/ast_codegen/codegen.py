@@ -86,17 +86,63 @@ def _build_node_params(node: NodeDef, enum_names: set[str], flags_names: set[str
     return params
 
 
-def _emit_func_signature(lines: list[str], func_name: str, params: list[str], end: str = ";") -> None:
-    """Emit a function signature, wrapping long parameter lists."""
+def _emit_func_signature(lines: list[str], func_name: str, params: list[str],
+                         end: str = ";", prefix: str = "") -> None:
+    """Emit a function signature, wrapping long parameter lists.
+
+    Args:
+        prefix: Optional prefix like "static inline " prepended to the signature.
+    """
     params_str = ", ".join(params)
     if len(params_str) > 80:
-        lines.append(f"uint32_t {func_name}(")
+        lines.append(f"{prefix}uint32_t {func_name}(")
         for i, param in enumerate(params):
             comma = "," if i < len(params) - 1 else ""
             lines.append(f"    {param}{comma}")
         lines.append(f"){end}")
     else:
-        lines.append(f"uint32_t {func_name}({params_str}){end}")
+        lines.append(f"{prefix}uint32_t {func_name}({params_str}){end}")
+
+
+def _emit_node_builder_body(lines: list[str], node: NodeDef,
+                            enum_names: set[str], flags_names: set[str]) -> None:
+    """Emit the body of a NodeDef builder function (alloc, set fields, range, return).
+
+    Shared between generate_ast_builder_c and generate_extension_nodes_c.
+    """
+    struct_name = _struct_name(node.name)
+    tag = _tag_name(node.name)
+
+    lines.append(f"    uint32_t id = synq_arena_alloc(&ctx->ast, {tag}, sizeof({struct_name}));")
+    lines.append("")
+    lines.append(f"    {struct_name} *node = ({struct_name}*)")
+    lines.append("        (ctx->ast.data + ctx->ast.offsets[id]);")
+
+    for field_name in node.fields:
+        lines.append(f"    node->{field_name} = {field_name};")
+
+    # Auto-compute source range from IndexField children and SourceSpan fields
+    index_fields = [
+        (fn, ft) for fn, ft in node.fields.items()
+        if isinstance(ft, IndexField)
+    ]
+    span_fields = [
+        (fn, ft) for fn, ft in node.fields.items()
+        if isinstance(ft, InlineField) and ft.type_name == "SyntaqliteSourceSpan"
+    ]
+    if index_fields or span_fields:
+        lines.append("")
+        lines.append("    synq_ast_ranges_sync(ctx);")
+        lines.append("    SynqSourceRange _r = {UINT32_MAX, 0};")
+        for fn, _ft in index_fields:
+            lines.append(f"    synq_ast_range_union(ctx, &_r, {fn});")
+        for fn, _ft in span_fields:
+            lines.append(f"    synq_ast_range_union_span(&_r, {fn});")
+        lines.append("    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;")
+
+    lines.append("    return id;")
+    lines.append("}")
+    lines.append("")
 
 
 def _emit_enums(lines: list[str], enum_defs: list[EnumDef]) -> None:
@@ -423,45 +469,9 @@ def generate_ast_builder_c(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef]
     for node in node_defs:
         if isinstance(node, NodeDef):
             func_name = _builder_name(node.name)
-            struct_name = _struct_name(node.name)
-            tag = _tag_name(node.name)
-
             params = _build_node_params(node, enum_names, flags_names)
             _emit_func_signature(lines, func_name, params, " {")
-
-            # Allocate node
-            lines.append(f"    uint32_t id = synq_arena_alloc(&ctx->ast, {tag}, sizeof({struct_name}));")
-            lines.append("")
-
-            # Get pointer and set fields
-            lines.append(f"    {struct_name} *node = ({struct_name}*)")
-            lines.append("        (ctx->ast.data + ctx->ast.offsets[id]);")
-
-            for field_name in node.fields:
-                lines.append(f"    node->{field_name} = {field_name};")
-
-            # Auto-compute source range from IndexField children and SourceSpan fields
-            index_fields = [
-                (fn, ft) for fn, ft in node.fields.items()
-                if isinstance(ft, IndexField)
-            ]
-            span_fields = [
-                (fn, ft) for fn, ft in node.fields.items()
-                if isinstance(ft, InlineField) and ft.type_name == "SyntaqliteSourceSpan"
-            ]
-            if index_fields or span_fields:
-                lines.append("")
-                lines.append("    synq_ast_ranges_sync(ctx);")
-                lines.append("    SynqSourceRange _r = {UINT32_MAX, 0};")
-                for fn, _ft in index_fields:
-                    lines.append(f"    synq_ast_range_union(ctx, &_r, {fn});")
-                for fn, _ft in span_fields:
-                    lines.append(f"    synq_ast_range_union_span(&_r, {fn});")
-                lines.append("    if (_r.first != UINT32_MAX) ctx->ranges.data[id] = _r;")
-
-            lines.append("    return id;")
-            lines.append("}")
-            lines.append("")
+            _emit_node_builder_body(lines, node, enum_names, flags_names)
 
         elif isinstance(node, ListDef):
             func_name = _builder_name(node.name)
@@ -647,3 +657,70 @@ def generate_all(node_defs: list[AnyNodeDef], enum_defs: list[EnumDef], output_d
     generate_ast_builder_c(node_defs, enum_defs, flags_defs, output_dir / "ast_builder_gen.c")
     # ast_print.h is manually maintained
     generate_ast_print_c(node_defs, enum_defs, flags_defs, output_dir / "ast_print_gen.c")
+
+
+def generate_extension_nodes_c(
+    node_defs: list[AnyNodeDef],
+    enum_defs: list[EnumDef] | None = None,
+    flags_defs: list[FlagsDef] | None = None,
+) -> str:
+    """Generate C code for extension node types (header-safe, static inline).
+
+    Extension nodes get tag values starting from SYNTAQLITE_NODE_COUNT so they
+    don't conflict with base library tags. Builder functions are emitted as
+    static inline so they can live in the amalgamated extension header.
+
+    Reuses the same struct/builder helpers as the base codegen.
+
+    Args:
+        node_defs: Extension node definitions.
+        enum_defs: Optional extension enum definitions.
+        flags_defs: Optional extension flags definitions.
+
+    Returns:
+        C code string with struct typedefs, tag defines, and static inline builders.
+    """
+    if enum_defs is None:
+        enum_defs = []
+    if flags_defs is None:
+        flags_defs = []
+
+    enum_names = {e.name for e in enum_defs}
+    flags_names = {f.name for f in flags_defs}
+    lines: list[str] = []
+
+    lines.append("/* Extension node definitions */")
+    lines.append("")
+    # Pull in base AST types (SyntaqliteBool, SyntaqliteSourceSpan,
+    # SYNTAQLITE_NODE_COUNT, SynqAstContext, synq_arena_alloc, etc.).
+    # Include guards make this a no-op if already included.
+    lines.append('#include "src/parser/ast_base.h"')
+    lines.append("")
+
+    # Reuse shared enum/flags/struct emitters
+    if enum_defs:
+        _emit_enums(lines, enum_defs)
+    if flags_defs:
+        _emit_flags(lines, flags_defs)
+
+    # Tag defines (starting from SYNTAQLITE_NODE_COUNT, not an enum)
+    lines.append("/* Extension node tags */")
+    for i, node in enumerate(node_defs):
+        lines.append(f"#define {_tag_name(node.name)} (SYNTAQLITE_NODE_COUNT + {i})")
+    lines.append("")
+
+    # Reuse shared struct emitter
+    _emit_node_structs(lines, node_defs, enum_names, flags_names)
+
+    # Static inline builders (same body as base, just with "static inline" prefix)
+    lines.append("/* Extension builder functions */")
+    lines.append("")
+    for node in node_defs:
+        if isinstance(node, NodeDef):
+            func_name = _builder_name(node.name)
+            params = _build_node_params(node, enum_names, flags_names)
+            _emit_func_signature(lines, func_name, params, " {",
+                                 prefix="static inline ")
+            _emit_node_builder_body(lines, node, enum_names, flags_names)
+
+    return "\n".join(lines)

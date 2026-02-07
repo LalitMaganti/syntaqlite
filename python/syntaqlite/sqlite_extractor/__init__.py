@@ -50,6 +50,7 @@ from .keywordhash import (
 from .grammar_build import (
     build_synq_grammar,
     split_extension_grammar,
+    parse_actions_content,
 )
 from .parser_split import (
     split_parser_output,
@@ -88,6 +89,7 @@ __all__ = [
     # grammar_build.py
     "build_synq_grammar",
     "split_extension_grammar",
+    "parse_actions_content",
     # parser_split.py
     "split_parser_output",
     # parser_extract.py

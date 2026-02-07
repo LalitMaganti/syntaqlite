@@ -31,6 +31,7 @@ from .diff_tests.utils import Colors, colorize
 
 ROOT_DIR = Path(__file__).parent.parent.parent
 PERFETTO_GRAMMAR = ROOT_DIR / "tests" / "extensions" / "grammars" / "perfetto.y"
+PERFETTO_NODES = ROOT_DIR / "tests" / "extensions" / "nodes" / "perfetto_nodes.py"
 
 # Module-level verbosity, set by main(). 0=quiet, 1=results, 2=progress.
 _verbosity = 0
@@ -284,11 +285,13 @@ NINJA = ROOT_DIR / "tools" / "dev" / "build-lock"
 def _generate_extension_header(
     runner: ToolRunner,
     output_path: Path,
+    nodes_path: Path | None = None,
 ) -> tuple[bool, str]:
     """Generate the amalgamated extension header for Perfetto."""
     from python.tools.build_extension_grammar import (
         generate_keywordhash_data,
         generate_parser_data,
+        generate_extension_nodes,
         parse_extension_keywords,
     )
     from .sqlite_extractor.generators import HeaderGenerator
@@ -304,14 +307,28 @@ def _generate_extension_header(
     )
     keywordhash_data = generate_keywordhash_data(runner, extra_keywords)
 
-    content = "\n".join([
+    content_parts = [
         "/* Token definitions */", "",
         token_defines, "",
+    ]
+
+    # Extension nodes go after token defines but before parser data,
+    # so builder functions are available in reduce actions.
+    if nodes_path and nodes_path.exists():
+        extension_nodes_code = generate_extension_nodes(nodes_path)
+        content_parts.extend([
+            "/* Extension node definitions */", "",
+            extension_nodes_code, "",
+        ])
+
+    content_parts.extend([
         "/* Keyword hash data */", "",
         keywordhash_data, "",
         "/* Parser data */", "",
         parser_data,
     ])
+
+    content = "\n".join(content_parts)
 
     gen = HeaderGenerator(
         guard="SYNQ_EXTENSION_PERFETTO_H",
@@ -373,7 +390,7 @@ def test_perfetto_compile_and_parse(runner: ToolRunner) -> tuple[bool, str]:
     """Compile an extension-enabled binary and parse PerfettoSQL statements."""
     log("Generating amalgamated extension header...")
     header_path = BUILD_DIR / "gen" / _EXT_HEADER_REL
-    ok, err = _generate_extension_header(runner, header_path)
+    ok, err = _generate_extension_header(runner, header_path, nodes_path=PERFETTO_NODES)
     if not ok:
         return False, err
 

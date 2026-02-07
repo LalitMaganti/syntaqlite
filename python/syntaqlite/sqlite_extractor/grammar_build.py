@@ -18,20 +18,16 @@ if TYPE_CHECKING:
     from .tools import ToolRunner
 
 
-def _parse_actions_file(actions_path: Path) -> dict[str, str]:
-    """Parse a .y file with action code and extract rules with their full text.
+def parse_actions_content(content: str) -> dict[str, str]:
+    """Parse grammar content with action code and extract rules with their full text.
 
     Args:
-        actions_path: Path to .y file with action code.
+        content: Grammar content string with action code blocks.
 
     Returns:
         Dict mapping rule signatures (without type annotations) to full rule text
         (including type annotations and action code).
     """
-    if not actions_path.exists():
-        return {}
-
-    content = actions_path.read_text()
     rules = {}
 
     # Parse rules with action blocks
@@ -110,6 +106,13 @@ def _parse_actions_file(actions_path: Path) -> dict[str, str]:
         i = j
 
     return rules
+
+
+def _parse_actions_file(actions_path: Path) -> dict[str, str]:
+    """Parse a .y file with action code and extract rules with their full text."""
+    if not actions_path.exists():
+        return {}
+    return parse_actions_content(actions_path.read_text())
 
 
 # Directory containing action rule files
@@ -200,20 +203,48 @@ def parse_lemon_g_output(output: str) -> LemonGrammarOutput:
     return result
 
 
+def _strip_action_blocks(content: str) -> str:
+    """Strip { ... } action blocks from grammar content (brace-aware).
+
+    This produces bare rules suitable for lemon -g, which doesn't need
+    action code.
+    """
+    result = []
+    i = 0
+    while i < len(content):
+        if content[i] == '{':
+            # Skip to matching close brace
+            depth = 1
+            i += 1
+            while i < len(content) and depth > 0:
+                if content[i] == '{':
+                    depth += 1
+                elif content[i] == '}':
+                    depth -= 1
+                i += 1
+        else:
+            result.append(content[i])
+            i += 1
+    return ''.join(result)
+
+
 def split_extension_grammar(extension_grammar: str) -> tuple[str, str]:
-    """Split extension grammar into directives and rules.
+    """Split extension grammar into directives and bare rules.
 
     Extension grammars need special handling:
     - %token and other directives go BEFORE base grammar (for token ordering)
     - Rules (containing ::=) go AFTER base grammar (to reference its nonterminals)
 
+    Action blocks { ... } are stripped so lemon -g gets clean bare rules.
+
     Args:
-        extension_grammar: Extension grammar content.
+        extension_grammar: Extension grammar content (may contain action blocks).
 
     Returns:
-        Tuple of (directives, rules).
+        Tuple of (directives, bare_rules).
     """
-    lines = extension_grammar.split('\n')
+    stripped = _strip_action_blocks(extension_grammar)
+    lines = stripped.split('\n')
     # Filter out empty lines and comments
     meaningful = [ln for ln in lines if ln.strip() and not ln.strip().startswith('//')]
     directives = [ln for ln in meaningful if ln.strip().startswith('%') and '::=' not in ln]
@@ -379,6 +410,9 @@ def build_synq_grammar(
     precedence_rules = extract_precedence_from_grammar(combined_grammar)
     wildcard = extract_wildcard_from_grammar(combined_grammar)
 
+    # Parse action rules from extension grammar (if it contains action blocks)
+    extension_action_rules = parse_actions_content(extension_grammar) if extension_grammar else {}
+
     # Generate the grammar file
     return _generate_grammar_file(
         prefix=prefix,
@@ -389,6 +423,7 @@ def build_synq_grammar(
         precedence_rules=precedence_rules,
         wildcard=wildcard,
         extension_terminals=extension_terminals,
+        extension_action_rules=extension_action_rules,
     )
 
 
@@ -401,6 +436,7 @@ def _generate_grammar_file(
     precedence_rules: list[str],
     wildcard: str | None = None,
     extension_terminals: list[str] | None = None,
+    extension_action_rules: dict[str, str] | None = None,
 ) -> str:
     """Generate the grammar file content.
 
@@ -414,6 +450,8 @@ def _generate_grammar_file(
         wildcard: Optional wildcard token name.
         extension_terminals: Optional list of extension terminal names.
             These are emitted after base terminals to ensure stable numbering.
+        extension_action_rules: Optional dict of extension action rules
+            (signature -> full rule text) parsed from extension grammar.
 
     Returns:
         Generated grammar file content.
@@ -584,6 +622,10 @@ def _generate_grammar_file(
 
     # Load rules with action code from ast_actions/ directory
     action_rules = _load_all_actions(_ACTIONS_DIR)
+
+    # Merge extension action rules (extension rules override in case of conflict)
+    if extension_action_rules:
+        action_rules.update(extension_action_rules)
 
     # Grammar rules - use action version if available, otherwise bare rule
     parts.append("// Grammar rules\n")

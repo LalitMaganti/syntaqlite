@@ -48,6 +48,7 @@ from python.syntaqlite.sqlite_extractor import (
     process_keywordhash,
 )
 from python.syntaqlite.sqlite_extractor.generators import extract_token_defines
+from python.syntaqlite.ast_codegen.codegen import generate_extension_nodes_c
 
 
 def parse_extension_keywords(grammar_path: Path) -> list[str]:
@@ -176,6 +177,31 @@ def generate_parser_data(
         return data_header + "\n" + reduce_func, token_defines
 
 
+def generate_extension_nodes(nodes_path: Path) -> str:
+    """Generate C code for extension AST nodes from a Python definition file.
+
+    Dynamically imports the given module and calls generate_extension_nodes_c()
+    with the NODES (and optional ENUMS, FLAGS) lists defined there.
+
+    Args:
+        nodes_path: Path to a Python file defining NODES, and optionally ENUMS/FLAGS.
+
+    Returns:
+        C code string with struct typedefs, tag defines, and static inline builders.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("ext_nodes", nodes_path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    node_defs = getattr(mod, "NODES", [])
+    enum_defs = getattr(mod, "ENUMS", [])
+    flags_defs = getattr(mod, "FLAGS", [])
+
+    return generate_extension_nodes_c(node_defs, enum_defs, flags_defs)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Build amalgamated extension grammar file for SQLite dialects",
@@ -197,6 +223,10 @@ Then compile with:
     parser.add_argument(
         "--output", "-o", type=Path, required=True,
         help="Output file path for amalgamated header"
+    )
+    parser.add_argument(
+        "--nodes", type=Path, default=None,
+        help="Python file with extension AST node definitions (NODES list)"
     )
     parser.add_argument(
         "--tokenizer-only", action="store_true",
@@ -256,6 +286,16 @@ Then compile with:
         print("Generating keyword hash data...")
     keywordhash_data = generate_keywordhash_data(runner, extra_keywords)
 
+    # Generate extension node code if node definitions provided
+    extension_nodes_code = None
+    if args.nodes:
+        if not args.nodes.exists():
+            print(f"Node definitions not found: {args.nodes}", file=sys.stderr)
+            return 1
+        if verbose:
+            print("Generating extension node definitions...")
+        extension_nodes_code = generate_extension_nodes(args.nodes)
+
     # Combine into single amalgamated file
     content_parts = [
         "/*",
@@ -264,12 +304,27 @@ Then compile with:
         "",
         token_defines,
         "",
+    ]
+
+    # Extension nodes go after token defines but before parser data,
+    # so builder functions are available in reduce actions.
+    if extension_nodes_code is not None:
+        content_parts.extend([
+            "/*",
+            " * Extension node definitions",
+            " */",
+            "",
+            extension_nodes_code,
+            "",
+        ])
+
+    content_parts.extend([
         "/*",
         " * Keyword hash data",
         " */",
         "",
         keywordhash_data,
-    ]
+    ])
 
     if parser_data is not None:
         content_parts.extend([
