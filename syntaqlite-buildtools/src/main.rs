@@ -55,6 +55,10 @@ enum Command {
     #[command(name = "analyze-versions")]
     AnalyzeVersions(AnalyzeVersionsArgs),
 
+    /// Run upstream `SQLite` tests against syntaqlite parser and validator.
+    #[command(name = "run-upstream-tests")]
+    RunUpstreamTests(RunUpstreamTestsArgs),
+
     /// Hidden subprocess entry point for the Lemon parser generator.
     #[command(hide = true)]
     Lemon {
@@ -130,6 +134,36 @@ struct UpdateDataArgs {
     functions_output: String,
 }
 
+// ── run-upstream-tests ────────────────────────────────────────────────────────
+
+#[derive(clap::Args)]
+struct RunUpstreamTestsArgs {
+    /// Path to `SQLite` source tree `test/` directory.
+    #[arg(long, required = true)]
+    test_dir: String,
+    /// Path to compiled `tclsyntaqlite` shared library.
+    #[arg(long, required = true)]
+    extension_lib: String,
+    /// Path to `tester_shim.tcl`.
+    #[arg(long, required = true)]
+    tester_shim: String,
+    /// Path to baseline file (created on first run).
+    #[arg(long)]
+    baseline: Option<String>,
+    /// Update baseline with current results.
+    #[arg(long)]
+    rebaseline: bool,
+    /// Filter test files by pattern.
+    #[arg(long)]
+    filter: Option<String>,
+    /// Number of parallel test jobs.
+    #[arg(long, short, default_value = "1")]
+    jobs: usize,
+    /// Enable validation (not just parsing).
+    #[arg(long)]
+    validate: bool,
+}
+
 // ── analyze-versions ──────────────────────────────────────────────────────────
 
 #[derive(clap::Args)]
@@ -177,6 +211,20 @@ fn main() {
             output_dir: args.output_dir.clone(),
         }
         .run(),
+        Command::RunUpstreamTests(args) => {
+            use syntaqlite_buildtools::upstream_tests;
+            let config = upstream_tests::RunConfig {
+                test_dir: args.test_dir.clone().into(),
+                extension_lib: args.extension_lib.clone().into(),
+                tester_shim: args.tester_shim.clone().into(),
+                baseline: args.baseline.clone().map(Into::into),
+                rebaseline: args.rebaseline,
+                filter: args.filter.clone(),
+                jobs: args.jobs,
+                validate: args.validate,
+            };
+            upstream_tests::run(&config).map(|_| ())
+        }
         Command::Lemon { args } => syntaqlite_buildtools::run_lemon(args),
         Command::Mkkeyword { args } => syntaqlite_buildtools::run_mkkeyword(args),
     };

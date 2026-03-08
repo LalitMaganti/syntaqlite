@@ -1,0 +1,97 @@
+#!/bin/bash
+# Copyright 2025 The syntaqlite Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# Build and run upstream SQLite tests against syntaqlite parser/validator.
+#
+# Prerequisites:
+#   - tclsh and tcl-dev installed (e.g., apt install tcl-dev)
+#   - SQLite sources present (run tools/install-build-deps first)
+#
+# Usage:
+#   tools/run-upstream-tests [--filter PATTERN] [--validate] [--rebaseline] [-j N]
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
+SQLITE_TEST_DIR="$ROOT_DIR/third_party/src/sqlite/test"
+UPSTREAM_DIR="$ROOT_DIR/upstream-tests"
+TESTER_SHIM="$UPSTREAM_DIR/tcl/tester_shim.tcl"
+BASELINE="$ROOT_DIR/tests/upstream_baselines/parse_acceptance.json"
+
+# --- Check prerequisites ---
+
+if ! command -v tclsh &>/dev/null; then
+  echo "error: tclsh not found. Install tcl (e.g., apt install tcl)." >&2
+  exit 1
+fi
+
+if [ ! -d "$SQLITE_TEST_DIR" ]; then
+  echo "error: SQLite test directory not found at $SQLITE_TEST_DIR" >&2
+  echo "Run tools/install-build-deps first." >&2
+  exit 1
+fi
+
+# --- Build the TCL extension ---
+
+EXTENSION_LIB="$ROOT_DIR/target/tclsyntaqlite.so"
+CSRC_DIR="$UPSTREAM_DIR/csrc"
+
+echo "Building tclsyntaqlite extension..."
+
+# Find tcl.h include path.
+TCL_INCLUDE=""
+for dir in /usr/include/tcl8.6 /usr/include/tcl /usr/include; do
+  if [ -f "$dir/tcl.h" ]; then
+    TCL_INCLUDE="$dir"
+    break
+  fi
+done
+if [ -z "$TCL_INCLUDE" ]; then
+  echo "error: tcl.h not found. Install tcl-dev (e.g., apt install tcl-dev)." >&2
+  exit 1
+fi
+
+# Build syntaqlite as a static library first (we need the C API).
+cargo build -p syntaqlite --release 2>&1
+
+# Find the syntaqlite static lib.
+SYNTAQLITE_LIB="$ROOT_DIR/target/release/libsyntaqlite.a"
+if [ ! -f "$SYNTAQLITE_LIB" ]; then
+  echo "error: libsyntaqlite.a not found at $SYNTAQLITE_LIB" >&2
+  exit 1
+fi
+
+# Compile the extension.
+SYNTAX_INCLUDE="$ROOT_DIR/syntaqlite-syntax/include"
+SQLITE_AMALG="$ROOT_DIR/syntaqlite-buildtools/sqlite-vendored/sources"
+
+cc -shared -fPIC -o "$EXTENSION_LIB" \
+  "$CSRC_DIR/tclsyntaqlite.c" \
+  "$SQLITE_AMALG/sqlite3.c" \
+  -I"$TCL_INCLUDE" \
+  -I"$SYNTAX_INCLUDE" \
+  -I"$SQLITE_AMALG" \
+  -L"$(dirname "$SYNTAQLITE_LIB")" \
+  -lsyntaqlite \
+  -ltcl8.6 \
+  -lpthread -ldl -lm \
+  -O2
+
+echo "Extension built: $EXTENSION_LIB"
+
+# --- Build and run the test runner ---
+
+echo "Building syntaqlite-buildtools..."
+cargo build --release -p syntaqlite-buildtools 2>&1
+
+BUILDTOOLS="$ROOT_DIR/target/release/syntaqlite-buildtools"
+
+exec "$BUILDTOOLS" run-upstream-tests \
+  --test-dir "$SQLITE_TEST_DIR" \
+  --extension-lib "$EXTENSION_LIB" \
+  --tester-shim "$TESTER_SHIM" \
+  --baseline "$BASELINE" \
+  "$@"
