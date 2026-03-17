@@ -1,6 +1,6 @@
 [package]
 name = "syntaqlite-syntax"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 links = "syntaqlite_syntax"
 description = "Internal parser and tokenizer for syntaqlite — not intended for direct use"

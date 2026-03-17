@@ -90,7 +90,7 @@ checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
 name = "benches"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "criterion",
  "syntaqlite",
@@ -1027,7 +1027,7 @@ dependencies = [
 
 [[package]]
 name = "syntaqlite"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "glob",
  "libloading",
@@ -1041,7 +1041,7 @@ dependencies = [
 
 [[package]]
 name = "syntaqlite-buildtools"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "cc",
  "clap",
@@ -1055,7 +1055,7 @@ dependencies = [
 
 [[package]]
 name = "syntaqlite-cli"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "clap",
  "glob",
@@ -1074,11 +1074,11 @@ dependencies = [
 
 [[package]]
 name = "syntaqlite-common"
-version = "0.2.2"
+version = "0.2.3"
 
 [[package]]
 name = "syntaqlite-syntax"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "cc",
  "libloading",
@@ -1088,7 +1088,7 @@ dependencies = [
 
 [[package]]
 name = "syntaqlite-wasm"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "serde",
  "serde_json",

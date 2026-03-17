@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+
+- Fixed Windows Python extension build using the correct static library name for MSVC.
+
 ## 0.2.2
 
 - Fixed Python extension build failing on Windows due to MSVC not supporting `_Static_assert` in C mode.

@@ -1,6 +1,6 @@
 [package]
 name = "syntaqlite-buildtools"
-version = "0.2.2"
+version = "0.2.3"
 edition = "2024"
 description = "Internal codegen and build tools for syntaqlite — not intended for direct use"
 license = "Apache-2.0"
@@ -20,7 +20,7 @@ dist = false
 doc = false
 
 [dependencies]
-syntaqlite-common = { version = "0.2.2", path = "../syntaqlite-common" }
+syntaqlite-common = { version = "0.2.3", path = "../syntaqlite-common" }
 clap = { version = "4.5", features = ["derive"] }
 tempfile = "3.8"
 serde = { version = "1", features = ["derive"] }

@@ -5,7 +5,7 @@ import stat
 import subprocess
 import sys
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 
 # Library API (requires _syntaqlite C extension).
 try:
