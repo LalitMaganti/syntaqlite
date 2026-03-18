@@ -129,6 +129,18 @@ jobs:
       - name: Run upstream SQLite validation tests
         run: tools/run-integration-tests --suite upstream-sqlite --validate
 
+  zed-extension:
+    name: Zed extension build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Add wasm32-unknown-unknown target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Build Zed extension
+        run: cargo build --target wasm32-unknown-unknown --manifest-path integrations/zed/Cargo.toml
+
   amalgamation:
     name: Amalgamation build
     runs-on: ubuntu-latest
