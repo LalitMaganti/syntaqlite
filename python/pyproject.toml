@@ -1,7 +1,7 @@
 [project]
 name = "syntaqlite"
 version = "0.2.11"
-description = "SQLite SQL tools — parser, formatter, validator, and MCP server"
+description = "SQLite SQL tools — parser, formatter, validator, language server, and MCP server"
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
 readme = "README.md"
