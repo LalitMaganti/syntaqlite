@@ -1,6 +1,6 @@
 [package]
 name = "syntaqlite-cli"
-version = "0.2.14"
+version = "0.2.15"
 edition = "2024"
 repository.workspace = true
 description = "Fast, accurate SQLite SQL formatter, validator, and language server — built on SQLite's own grammar"
@@ -30,8 +30,8 @@ rmcp = { version = "0.1", features = ["server", "transport-io"], optional = true
 schemars = { version = "0.8", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-syntaqlite = { version = "0.2.14", path = "../syntaqlite", optional = true, features = ["fmt", "lsp", "validation", "experimental-embedded", "serde-json"] }
-syntaqlite-syntax = { version = "0.2.14", path = "../syntaqlite-syntax" }
-syntaqlite-buildtools = { version = "0.2.14", path = "../syntaqlite-buildtools", optional = true }
+syntaqlite = { version = "0.2.15", path = "../syntaqlite", optional = true, features = ["fmt", "lsp", "validation", "experimental-embedded", "serde-json"] }
+syntaqlite-syntax = { version = "0.2.15", path = "../syntaqlite-syntax" }
+syntaqlite-buildtools = { version = "0.2.15", path = "../syntaqlite-buildtools", optional = true }
 tempfile = "3.8"
 tokio = { version = "1", features = ["rt", "macros", "io-std"], optional = true }
