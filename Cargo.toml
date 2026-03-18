@@ -10,7 +10,7 @@ members = [
     "syntaqlite-cli",
     "tests/benches",
 ]
-exclude = ["tests/comparison/parser", "comparison/parser", "comparison/sqlparser-bench"]
+exclude = ["tests/comparison/parser", "comparison/parser", "comparison/sqlparser-bench", "integrations/zed"]
 resolver = "3"
 
 [workspace.package]

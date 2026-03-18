@@ -1,0 +1,11 @@
+id = "syntaqlite"
+name = "Syntaqlite"
+version = "0.0.1"
+schema_version = 1
+authors = ["Lalit Maganti <lalit@syntaqlite.dev>"]
+description = "SQL language support powered by syntaqlite — tokenizer, parser, formatter and validator built on SQLite's own grammar."
+repository = "https://github.com/LalitMaganti/syntaqlite"
+
+[language_servers.syntaqlite]
+name = "Syntaqlite"
+languages = ["SQL"]
