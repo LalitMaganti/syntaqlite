@@ -49,6 +49,18 @@ This allows projects like libSQL, rqlite, or custom embedded databases to use sy
 - Unsafe minimized: `DialectEnv` safe accessors wrap all raw pointer access; `Interpreter` has zero unsafe
 - AST dump is in C (`syntaqlite_dump_node`), not Rust — single source of truth for metadata
 
+## Git Workflow
+
+All changes go through pull requests — never push directly to `main`.
+
+1. **Branch**: Create a feature branch from `main` with a descriptive kebab-case name (e.g., `add-cte-column-validation`, `fix-fmt-trailing-comma`)
+2. **Commit**: Use the `synq: ` prefix (lowercase). Describe the "why", not the "what"
+3. **Push & PR**: Push the branch and open a PR via `gh pr create`. CI runs automatically on all PRs
+4. **Merge**: PRs merge to `main` after CI passes
+
+Use `/cp` to commit, run pre-push checks, push, and create a PR in one step.
+Use `/cpfast` for the same without pre-push checks (CI will catch issues).
+
 ## Key Directories
 
 - `syntaqlite-common/` - Shared primitives with no generated-file dependencies (e.g. fmt bytecode types). Safe for the bootstrap tool to depend on.
