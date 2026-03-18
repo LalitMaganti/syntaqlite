@@ -22,40 +22,6 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build-cli:
-    name: Build CLI
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: recursive
-
-      - name: Cache third_party
-        uses: actions/cache@v5
-        with:
-          path: third_party
-          key: third-party-${{ runner.os }}-${{ hashFiles('python/tools/install_build_deps.py') }}
-
-      - name: Install build dependencies
-        run: python3 tools/install-build-deps
-
-      - name: Cache Rust build artifacts
-        uses: actions/cache@v5
-        with:
-          path: target
-          key: cargo-cli-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: cargo-cli-${{ runner.os }}-
-
-      - name: Build CLI
-        run: tools/cargo build -p syntaqlite-cli
-
-      - name: Upload CLI binary
-        uses: actions/upload-artifact@v6
-        with:
-          name: syntaqlite-cli
-          path: target/debug/syntaqlite
-          retention-days: 1
-
   unit-tests:
     name: Unit tests
     runs-on: ubuntu-latest
@@ -77,15 +43,25 @@ jobs:
         uses: actions/cache@v5
         with:
           path: target
-          key: cargo-unit-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: cargo-unit-${{ runner.os }}-
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
 
       - name: Run unit tests
         run: tools/run-unit-tests
 
+      - name: Build CLI
+        run: tools/cargo build -p syntaqlite-cli
+
+      - name: Upload CLI binary
+        uses: actions/upload-artifact@v6
+        with:
+          name: syntaqlite-cli
+          path: target/debug/syntaqlite
+          retention-days: 1
+
   integration-tests:
     name: Integration tests
-    needs: [build-cli]
+    needs: [unit-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -106,7 +82,7 @@ jobs:
 
   upstream-sqlite-validation:
     name: Upstream SQLite validation
-    needs: [build-cli]
+    needs: [unit-tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

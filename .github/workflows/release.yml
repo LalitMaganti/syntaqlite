@@ -2,7 +2,7 @@
 #
 # On version tag push: builds CLI binaries, Python wheels, C libraries,
 # amalgamation archives, and publishes to PyPI and GitHub Releases.
-# On pull_request: builds CLI binaries only (smoke test).
+# On pull_request: builds Python wheels only (smoke test).
 name: Release
 
 permissions:
@@ -29,6 +29,7 @@ jobs:
   #   - buildtools binary (for amalgamation, linux-x64 only)
   build:
     name: build (${{ matrix.name }})
+    if: ${{ !github.event.pull_request }}
     strategy:
       fail-fast: false
       matrix:
