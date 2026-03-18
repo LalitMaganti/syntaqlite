@@ -135,6 +135,8 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
+      - uses: actions/checkout@v6
+
       - name: Download all CLI archives
         uses: actions/download-artifact@v7
         with:
