@@ -1,12 +1,10 @@
 # Test published package install methods (pip, Homebrew, download script).
-# Runs after the Release workflow completes and packages are published.
-# Can also be triggered manually.
+# Runs after a GitHub Release is published. Can also be triggered manually.
 name: Test Install
 
 on:
-  workflow_run:
-    workflows: ["Release"]
-    types: [completed]
+  release:
+    types: [published]
   workflow_dispatch:
 
 env:
@@ -15,7 +13,6 @@ env:
 jobs:
   test-pip:
     name: pip (${{ matrix.os }})
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     strategy:
       fail-fast: false
       matrix:
@@ -47,7 +44,6 @@ jobs:
 
   test-brew:
     name: Homebrew
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: macos-latest
     steps:
       - name: Install via Homebrew
@@ -61,8 +57,6 @@ jobs:
 
   test-download-script:
     name: Download script (${{ matrix.os }})
-    needs: test-brew
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     strategy:
       fail-fast: false
       matrix:
@@ -73,7 +67,6 @@ jobs:
         if: runner.os != 'Windows'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SYNTAQLITE_INCLUDE_DRAFTS: "1"
         run: |
           curl -sSf https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/tools/syntaqlite | python3 - install "$HOME/.local/bin"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
@@ -83,7 +76,6 @@ jobs:
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SYNTAQLITE_INCLUDE_DRAFTS: "1"
         run: |
           curl -sSf https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/tools/syntaqlite | python3 - install "$USERPROFILE/.local/bin"
           echo "$USERPROFILE/.local/bin" >> "$GITHUB_PATH"
