@@ -72,21 +72,52 @@ def _github_headers() -> dict:
     return headers
 
 
+def _find_release() -> dict:
+    """Find the latest release. Includes drafts when SYNTAQLITE_INCLUDE_DRAFTS=1."""
+    include_drafts = os.environ.get("SYNTAQLITE_INCLUDE_DRAFTS") == "1"
+    if include_drafts:
+        # List all releases (includes drafts) and pick the first one
+        url = f"https://api.github.com/repos/{REPO}/releases?per_page=5"
+        req = urllib.request.Request(url, headers=_github_headers())
+        releases = json.loads(urllib.request.urlopen(req).read())
+        if not releases:
+            sys.exit("No releases found")
+        return releases[0]
+    else:
+        url = f"https://api.github.com/repos/{REPO}/releases/latest"
+        req = urllib.request.Request(url, headers=_github_headers())
+        return json.loads(urllib.request.urlopen(req).read())
+
+
 def _latest_version() -> str:
-    url = f"https://api.github.com/repos/{REPO}/releases/latest"
-    req = urllib.request.Request(url, headers=_github_headers())
-    data = json.loads(urllib.request.urlopen(req).read())
-    return data["tag_name"]
+    return _find_release()["tag_name"]
 
 
-def _download(target: str, dest: Path) -> None:
+def _download_asset(release: dict, asset_name: str) -> bytes:
+    """Download a release asset by name, using the API for auth (works for drafts)."""
+    for asset in release.get("assets", []):
+        if asset["name"] == asset_name:
+            headers = _github_headers()
+            headers["Accept"] = "application/octet-stream"
+            req = urllib.request.Request(asset["url"], headers=headers)
+            return urllib.request.urlopen(req).read()
+    # Fallback: try the direct download URL (works for published releases)
+    tag = release["tag_name"]
+    url = f"https://github.com/{REPO}/releases/download/{tag}/{asset_name}"
+    return urllib.request.urlopen(url).read()
+
+
+def _download(target: str, dest: Path, release: dict | None = None) -> None:
     is_windows = "windows" in target
     binary_name = _binary_name()
     archive = f"syntaqlite-{target}.{'zip' if is_windows else 'tar.gz'}"
-    url = f"https://github.com/{REPO}/releases/latest/download/{archive}"
 
     print(f"Downloading syntaqlite ({target})...", file=sys.stderr)
-    data = urllib.request.urlopen(url).read()
+    if release:
+        data = _download_asset(release, archive)
+    else:
+        url = f"https://github.com/{REPO}/releases/latest/download/{archive}"
+        data = urllib.request.urlopen(url).read()
 
     if is_windows:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
@@ -137,8 +168,9 @@ def _ensure_binary() -> Path:
 
     if not binary.exists():
         # First download.
-        version = _latest_version()
-        _download(_detect_target(), binary)
+        release = _find_release()
+        version = release["tag_name"]
+        _download(_detect_target(), binary, release)
         _write_version(cache, version)
         _touch_stamp(cache)
         print(f"syntaqlite {version} cached at {binary}", file=sys.stderr)
@@ -147,11 +179,12 @@ def _ensure_binary() -> Path:
     # Binary exists — check for updates if stamp is stale.
     if _needs_update_check(cache):
         try:
-            latest = _latest_version()
+            release = _find_release()
+            latest = release["tag_name"]
             cached = _read_version(cache)
             if cached != latest:
                 print(f"Updating syntaqlite {cached} → {latest}...", file=sys.stderr)
-                _download(_detect_target(), binary)
+                _download(_detect_target(), binary, release)
                 _write_version(cache, latest)
             _touch_stamp(cache)
         except Exception:
@@ -175,7 +208,8 @@ def _is_on_path(directory: Path) -> bool:
 
 def _install_command(custom_dir: str | None) -> None:
     target = _detect_target()
-    version = _latest_version()
+    release = _find_release()
+    version = release["tag_name"]
     dest_dir = Path(custom_dir) if custom_dir else _install_dir()
     dest = dest_dir / _binary_name()
 
@@ -184,7 +218,7 @@ def _install_command(custom_dir: str | None) -> None:
     else:
         print(f"Installing syntaqlite to {dest}...", file=sys.stderr)
 
-    _download(target, dest)
+    _download(target, dest, release)
 
     print(f"syntaqlite {version} installed to {dest}", file=sys.stderr)
 
