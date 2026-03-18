@@ -107,15 +107,7 @@ if not _cli_only:
     )
 
     # Platform-specific link flags.
-    _is_emscripten = (
-        os.environ.get("_PYTHON_HOST_PLATFORM", "").startswith("emscripten")
-        or "emscripten" in os.environ.get("CC", "")
-    )
-    if _is_emscripten:
-        # Link at -O0 to skip wasm-opt (only runs at -O2+).
-        # emsdk's wasm-opt doesn't support flags from newer Rust LLVM.
-        ext.extra_link_args = ["-O0"]
-    elif sys.platform == "darwin":
+    if sys.platform == "darwin":
         ext.extra_link_args = ["-framework", "Security", "-framework", "SystemConfiguration"]
     elif sys.platform == "win32":
         ext.libraries = ["ws2_32", "userenv", "advapi32", "bcrypt", "ntdll"]
