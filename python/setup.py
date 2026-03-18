@@ -62,6 +62,11 @@ if sys.platform == "darwin":
 elif sys.platform == "win32":
     ext.libraries = ["ws2_32", "userenv", "advapi32", "bcrypt", "ntdll"]
 
+# Emscripten/Pyodide cross-build: disable wasm-opt post-processing to avoid
+# version mismatches between emsdk's wasm-opt and Rust's LLVM output.
+if _lib_override and "wasm32" in str(STATIC_LIB):
+    ext.extra_link_args = ["-sWASM_OPT=0"]
+
 setup(
     name="syntaqlite",
     ext_modules=[ext],
