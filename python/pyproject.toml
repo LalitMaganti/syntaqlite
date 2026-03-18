@@ -40,7 +40,6 @@ archs = ["AMD64", "ARM64"]
 
 [[tool.cibuildwheel.overrides]]
 select = "*-win_arm64"
-environment = { SYNTAQLITE_STATIC_LIB = "{project}/../target/aarch64-pc-windows-msvc/release/syntaqlite.lib" }
 test-skip = "*"
 
 [tool.cibuildwheel.pyodide]

@@ -40,19 +40,40 @@ if not _no_cli:
 # Static library for C extension
 # ---------------------------------------------------------------------------
 
-_lib_override = os.environ.get("SYNTAQLITE_STATIC_LIB")
-if _lib_override:
-    STATIC_LIB = Path(_lib_override)
-elif sys.platform == "win32":
-    STATIC_LIB = ROOT / "target" / "release" / "syntaqlite.lib"
-else:
-    STATIC_LIB = ROOT / "target" / "release" / "libsyntaqlite.a"
+def _find_static_lib() -> Path:
+    """Find the Rust static library, checking cross-compiled target dirs."""
+    override = os.environ.get("SYNTAQLITE_STATIC_LIB")
+    if override:
+        return Path(override)
+
+    if sys.platform == "win32":
+        lib_name = "syntaqlite.lib"
+    else:
+        lib_name = "libsyntaqlite.a"
+
+    # Check default location first.
+    default = ROOT / "target" / "release" / lib_name
+    if default.exists():
+        return default
+
+    # Check cross-compiled target directories (e.g. aarch64-pc-windows-msvc).
+    target_dir = ROOT / "target"
+    if target_dir.exists():
+        for candidate in sorted(target_dir.iterdir()):
+            lib = candidate / "release" / lib_name
+            if lib.exists():
+                return lib
+
+    return default  # Fall back to default (will trigger build or error).
+
+
+STATIC_LIB = _find_static_lib()
 
 
 def _ensure_static_lib():
     if STATIC_LIB.exists():
         return
-    if _lib_override:
+    if os.environ.get("SYNTAQLITE_STATIC_LIB"):
         sys.exit(f"SYNTAQLITE_STATIC_LIB set but not found: {STATIC_LIB}")
     print(f"Building {STATIC_LIB.name} ...")
     subprocess.check_call(
