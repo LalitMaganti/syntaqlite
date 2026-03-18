@@ -19,7 +19,7 @@ env:
 jobs:
   build-vsix:
     name: Package ${{ matrix.vscode-target }}
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push') }}
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
