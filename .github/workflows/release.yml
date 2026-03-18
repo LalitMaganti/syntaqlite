@@ -269,6 +269,7 @@ jobs:
           output-dir: wheelhouse/
         env:
           CIBW_PLATFORM: pyodide
+          CIBW_PYODIDE_VERSION: "0.25.0"
           CIBW_BEFORE_BUILD: >-
             rustup target add wasm32-unknown-emscripten &&
             cargo build -p syntaqlite --release --target wasm32-unknown-emscripten

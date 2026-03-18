@@ -44,6 +44,4 @@ select = "*-win_arm64"
 test-skip = "*"
 
 [tool.cibuildwheel.pyodide]
-# Pyodide 0.25.0 uses emsdk 3.1.46, which is compatible with Rust's wasm-opt.
-pyodide-version = "0.25.0"
 test-skip = "*"
