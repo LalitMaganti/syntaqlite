@@ -353,9 +353,9 @@ header nav ul a:hover { color: var(--c-fg); }
   user-select: none;
   border-top: 1px solid var(--c-border);
   margin-top: var(--sp-xs);
+  text-decoration: none;
 }
 
-.version-switcher__group-label:first-child { border-top: none; margin-top: 0; }
 .version-switcher__group-label:hover { color: var(--c-fg); background: var(--c-bg); }
 
 .version-switcher__group-label svg {

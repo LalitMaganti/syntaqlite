@@ -141,21 +141,16 @@
           groupOrder.forEach(function(key) {
             var items = groups[key];
             var hasActive = items.some(function(v) { return v.version === current; });
-            // Group label navigates to the latest (first) in the group
-            var lbl = document.createElement('a');
-            lbl.href = '/' + items[0].version + pagePath;
+            var lbl = document.createElement('div');
             lbl.className = 'version-switcher__group-label' + (hasActive ? ' expanded' : '');
             lbl.innerHTML = key + '.x ' + chevron;
-            // Chevron toggles expansion without navigating
-            var toggle = lbl.querySelector('svg');
-            toggle.addEventListener('click', function(e) {
-              e.preventDefault();
+            var grp = document.createElement('div');
+            grp.className = 'version-switcher__group' + (hasActive ? ' expanded' : '');
+            lbl.addEventListener('click', function(e) {
               e.stopPropagation();
               lbl.classList.toggle('expanded');
               grp.classList.toggle('expanded');
             });
-            var grp = document.createElement('div');
-            grp.className = 'version-switcher__group' + (hasActive ? ' expanded' : '');
             items.forEach(function(v) {
               var a = document.createElement('a');
               a.href = '/' + v.version + pagePath;
