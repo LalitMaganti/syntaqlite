@@ -243,7 +243,9 @@ jobs:
           name: wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
           path: wheelhouse/*.whl
 
-  # Pyodide (WASM) wheel — separate job with different Rust cross-compilation.
+  # Pyodide (WASM) wheel — uses cibuildwheel's Pyodide platform support.
+  # Rust cross-compilation happens in CIBW_BEFORE_BUILD so emcc from
+  # cibuildwheel's own emsdk is available (avoids version mismatches).
   build-python-wheel-pyodide:
     name: python-wheels (pyodide)
     runs-on: ubuntu-latest
@@ -256,16 +258,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Emscripten SDK
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: "3.1.58"
-
-      - name: Cross-compile Rust static lib for WASM
-        run: |
-          rustup target add wasm32-unknown-emscripten
-          cargo build -p syntaqlite --release --target wasm32-unknown-emscripten
-
       - name: Build Pyodide wheel
         uses: pypa/cibuildwheel@v2.23
         with:
@@ -273,6 +265,9 @@ jobs:
           output-dir: wheelhouse/
         env:
           CIBW_PLATFORM: pyodide
+          CIBW_BEFORE_BUILD: >-
+            rustup target add wasm32-unknown-emscripten &&
+            cargo build -p syntaqlite --release --target wasm32-unknown-emscripten
           CIBW_ENVIRONMENT: >-
             SYNTAQLITE_STATIC_LIB="${{ github.workspace }}/target/wasm32-unknown-emscripten/release/libsyntaqlite.a"
             SYNTAQLITE_NO_CLI_BINARY=1
