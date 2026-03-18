@@ -205,7 +205,6 @@ jobs:
 
   # Build Python wheels using cibuildwheel. Builds Rust from source inside
   # each platform's environment, then compiles the C extension per Python version.
-  # Includes native platforms + Pyodide (WASM).
   build-python-wheels:
     name: python-wheels (${{ matrix.os }}, ${{ matrix.cibw_archs }})
     strategy:
@@ -217,7 +216,6 @@ jobs:
           - {os: macos-latest, cibw_archs: "arm64"}
           - {os: macos-26-intel, cibw_archs: "x86_64"}
           - {os: windows-latest, cibw_archs: "AMD64 ARM64"}
-          - {os: ubuntu-latest, cibw_archs: "pyodide", cibw_platform: "pyodide"}
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v6
@@ -235,7 +233,9 @@ jobs:
           output-dir: wheelhouse/
         env:
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
-          CIBW_PLATFORM: ${{ matrix.cibw_platform || '' }}
+          CIBW_BEFORE_ALL_LINUX: bash ${{ github.workspace }}/python/dev/cibw_before_all.sh
+          CIBW_BEFORE_ALL_MACOS: bash ${{ github.workspace }}/python/dev/cibw_before_all.sh
+          CIBW_BEFORE_ALL_WINDOWS: powershell -File ${{ github.workspace }}/python/dev/cibw_before_all_windows.ps1
 
       - name: Upload wheels
         uses: actions/upload-artifact@v6
@@ -243,10 +243,41 @@ jobs:
           name: wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
           path: wheelhouse/*.whl
 
+  # Pyodide (WASM) wheel — separate job with different Rust cross-compilation.
+  build-python-wheel-pyodide:
+    name: python-wheels (pyodide)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build Pyodide wheel
+        uses: pypa/cibuildwheel@v2.23
+        with:
+          package-dir: python/
+          output-dir: wheelhouse/
+        env:
+          CIBW_PLATFORM: pyodide
+          CIBW_BEFORE_ALL: bash ${{ github.workspace }}/python/dev/cibw_before_all_pyodide.sh
+          CIBW_ENVIRONMENT: >-
+            SYNTAQLITE_STATIC_LIB="${{ github.workspace }}/target/wasm32-unknown-emscripten/release/libsyntaqlite.a"
+            SYNTAQLITE_NO_CLI_BINARY=1
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v6
+        with:
+          name: wheels-pyodide
+          path: wheelhouse/*.whl
+
   # Publish all wheels to PyPI in a single job.
   publish-pypi:
     name: Publish to PyPI
-    needs: [build-python-wheels]
+    needs: [build-python-wheels, build-python-wheel-pyodide]
     if: ${{ !github.event.pull_request }}
     runs-on: ubuntu-latest
     environment: pypi

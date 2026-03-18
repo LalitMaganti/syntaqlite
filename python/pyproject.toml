@@ -31,15 +31,12 @@ test-command = """python -c "from syntaqlite import format_sql; assert 'SELECT' 
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64", "aarch64"]
-before-all = "bash {project}/dev/cibw_before_all.sh"
 
 [tool.cibuildwheel.macos]
 archs = ["arm64", "x86_64"]
-before-all = "bash {project}/dev/cibw_before_all.sh"
 
 [tool.cibuildwheel.windows]
 archs = ["AMD64", "ARM64"]
-before-all = "powershell -File {project}/dev/cibw_before_all_windows.ps1"
 
 [[tool.cibuildwheel.overrides]]
 select = "*-win_arm64"
@@ -47,6 +44,4 @@ environment = { SYNTAQLITE_STATIC_LIB = "{project}/../target/aarch64-pc-windows-
 test-skip = "*"
 
 [tool.cibuildwheel.pyodide]
-before-all = "bash {project}/dev/cibw_before_all_pyodide.sh"
-environment = { SYNTAQLITE_STATIC_LIB = "{project}/../target/wasm32-unknown-emscripten/release/libsyntaqlite.a", SYNTAQLITE_NO_CLI_BINARY = "1" }
 test-skip = "*"
