@@ -3,6 +3,14 @@ name: CI
 
 on:
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "web/docs/**"
+      - "*.md"
+      - "LICENSE"
+      - ".github/workflows/**"
+      - "!.github/workflows/ci.yml"
+      - "integrations/claude-code/**"
   push:
     branches: [main]
 
