@@ -1,11 +1,16 @@
 # Changelog
 
-## 0.2.13
+## 0.2.14
 
 - Added Zed editor extension for syntax highlighting and diagnostics.
 - Added Zed getting-started documentation.
 - Fixed Windows ARM64 Python wheel cross-compilation.
 - Fixed amalgamation missing `tokens.h` after embedded-sources refactor.
+- Fixed release workflow failing to upload artifacts to GitHub Release.
+
+## 0.2.13
+
+- Skipped (broken release pipeline).
 
 ## 0.2.12
 

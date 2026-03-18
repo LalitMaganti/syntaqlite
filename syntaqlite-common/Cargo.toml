@@ -1,6 +1,6 @@
 [package]
 name = "syntaqlite-common"
-version = "0.2.13"
+version = "0.2.14"
 edition = "2024"
 description = "Internal shared primitives for syntaqlite — not intended for direct use"
 license = "Apache-2.0"

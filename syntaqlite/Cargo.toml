@@ -2,7 +2,7 @@
 
 [package]
 name = "syntaqlite"
-version = "0.2.13"
+version = "0.2.14"
 edition = "2024"
 description = "Parser, formatter, validator, and language server for SQLite SQL — built on SQLite's own grammar"
 license = "Apache-2.0"
@@ -40,8 +40,8 @@ pin-cflags = ["sqlite", "syntaqlite-syntax/pin-cflags"]    # Pin compile-time fl
 workspace = true
 
 [dependencies]
-syntaqlite-common = { version = "0.2.13", path = "../syntaqlite-common" }
-syntaqlite-syntax = { version = "0.2.13", path = "../syntaqlite-syntax", default-features = false }
+syntaqlite-common = { version = "0.2.14", path = "../syntaqlite-common" }
+syntaqlite-syntax = { version = "0.2.14", path = "../syntaqlite-syntax", default-features = false }
 serde = { version = "1", features = ["derive"], optional = true }
 serde_json = { version = "1", optional = true }
 libloading = { version = "0.8", optional = true }

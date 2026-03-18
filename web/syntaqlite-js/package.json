@@ -1,6 +1,6 @@
 {
   "name": "syntaqlite",
-  "version": "0.2.13",
+  "version": "0.2.14",
   "description": "SQLite SQL parser, formatter, and validator for the browser — powered by WebAssembly",
   "license": "Apache-2.0",
   "repository": {
