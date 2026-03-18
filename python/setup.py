@@ -28,7 +28,13 @@ PKG_DIR = Path(__file__).resolve().parent / "syntaqlite"
 # `pip install -e .` without building the CLI).
 
 _binary_name = "syntaqlite.exe" if sys.platform == "win32" else "syntaqlite"
-_binary_src = ROOT / "target" / "release" / _binary_name
+# When cross-compiling (e.g. ARM64 on AMD64 Windows), the binary lives under
+# target/<triple>/release/ instead of target/release/.
+_cargo_target = os.environ.get("CARGO_BUILD_TARGET")
+if _cargo_target:
+    _binary_src = ROOT / "target" / _cargo_target / "release" / _binary_name
+else:
+    _binary_src = ROOT / "target" / "release" / _binary_name
 if _binary_src.exists():
     _bin_dest = PKG_DIR / "bin"
     _bin_dest.mkdir(exist_ok=True)
@@ -40,9 +46,16 @@ if _binary_src.exists():
 
 def _rust_target_triple() -> str | None:
     """Return the Rust target triple matching the current Python platform, or None for native."""
+    # cibuildwheel sets CARGO_BUILD_TARGET when cross-compiling (e.g. ARM64 on
+    # an AMD64 host).  This is the most reliable signal because
+    # sysconfig.get_platform() still reports the *host* platform inside
+    # cibuildwheel's build environment.
+    env_target = os.environ.get("CARGO_BUILD_TARGET")
+    if env_target:
+        return env_target
+
     import sysconfig
     plat = sysconfig.get_platform()  # e.g. 'win-arm64', 'win-amd64'
-    # Only needed for Windows cross-compilation (AMD64 + ARM64 in one job).
     if plat == "win-arm64":
         return "aarch64-pc-windows-msvc"
     return None
