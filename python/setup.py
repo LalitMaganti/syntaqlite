@@ -112,8 +112,9 @@ if not _cli_only:
         or "emscripten" in os.environ.get("CC", "")
     )
     if _is_emscripten:
-        # Skip wasm-opt: emsdk's version doesn't support flags from newer Rust LLVM.
-        ext.extra_link_args = ["-sWASM_OPT=0"]
+        # Link at -O0 to skip wasm-opt (only runs at -O2+).
+        # emsdk's wasm-opt doesn't support flags from newer Rust LLVM.
+        ext.extra_link_args = ["-O0"]
     elif sys.platform == "darwin":
         ext.extra_link_args = ["-framework", "Security", "-framework", "SystemConfiguration"]
     elif sys.platform == "win32":
