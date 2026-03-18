@@ -270,9 +270,9 @@ jobs:
         env:
           CIBW_PLATFORM: pyodide
           CIBW_BEFORE_BUILD: >-
-            rustup toolchain install 1.85.0 &&
-            rustup target add wasm32-unknown-emscripten --toolchain 1.85.0 &&
-            cargo +1.85.0 build -p syntaqlite --release --target wasm32-unknown-emscripten
+            rustup toolchain install 1.87.0 &&
+            rustup target add wasm32-unknown-emscripten --toolchain 1.87.0 &&
+            cargo +1.87.0 build -p syntaqlite --release --target wasm32-unknown-emscripten
           CIBW_ENVIRONMENT: >-
             SYNTAQLITE_STATIC_LIB="${{ github.workspace }}/target/wasm32-unknown-emscripten/release/libsyntaqlite.a"
             SYNTAQLITE_NO_CLI_BINARY=1
