@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.13
+
+- Added Zed editor extension for syntax highlighting and diagnostics.
+- Added Zed getting-started documentation.
+- Fixed Windows ARM64 Python wheel cross-compilation.
+- Fixed amalgamation missing `tokens.h` after embedded-sources refactor.
+
 ## 0.2.12
 
 - Fixed `cargo install syntaqlite-cli` failing due to `syntaqlite-buildtools` referencing files outside its crate directory ([#29](https://github.com/LalitMaganti/syntaqlite/issues/29))
