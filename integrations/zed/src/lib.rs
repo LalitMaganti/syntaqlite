@@ -1,3 +1,6 @@
+// Copyright 2025 The syntaqlite Authors. All rights reserved.
+// Licensed under the Apache License, Version 2.0.
+
 use std::fs;
 
 use zed_extension_api::{self as zed, settings::LspSettings, LanguageServerId, Result};
