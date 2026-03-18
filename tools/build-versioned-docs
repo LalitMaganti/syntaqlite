@@ -18,7 +18,7 @@ echo "==> Building main docs"
 (cd "$DOCS_DIR" && "$ZOLA" build --base-url "/main/" --output-dir "$OUT_DIR/main")
 
 # --- Discover release tags (semver-like) ---
-TAGS=$(git -C "$REPO_ROOT" tag --list | grep -E '^[0-9]+\.[0-9]+\.[0-9]+' | sort -V || true)
+TAGS=$(git -C "$REPO_ROOT" tag --list | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' | sort -V || true)
 
 # --- Build docs for each release tag ---
 for tag in $TAGS; do
@@ -30,17 +30,19 @@ for tag in $TAGS; do
     continue
   fi
 
-  version_dir="$OUT_DIR/v$tag"
+  # Normalize: strip leading v if present, then always use v-prefix
+  ver="${tag#v}"
+  version_dir="$OUT_DIR/v$ver"
   worktree_dir="$REPO_ROOT/.worktree-docs-$tag"
 
-  echo "    Building v$tag"
+  echo "    Building v$ver"
   git -C "$REPO_ROOT" worktree add --detach "$worktree_dir" "$tag" 2>/dev/null || {
     echo "    SKIP: could not create worktree for $tag"
     continue
   }
 
-  if (cd "$worktree_dir/web/docs" && "$ZOLA" build --base-url "/v$tag/" --output-dir "$version_dir") 2>&1; then
-    echo "    OK: v$tag"
+  if (cd "$worktree_dir/web/docs" && "$ZOLA" build --base-url "/v$ver/" --output-dir "$version_dir") 2>&1; then
+    echo "    OK: v$ver"
   else
     echo "    WARN: zola build failed for tag $tag, skipping"
     rm -rf "$version_dir"
@@ -49,11 +51,12 @@ for tag in $TAGS; do
   git -C "$REPO_ROOT" worktree remove --force "$worktree_dir" 2>/dev/null || true
 done
 
-# --- Find latest release tag (last in sort -V order) that was actually built ---
+# --- Find latest release version (last in sort -V order) that was actually built ---
 LATEST=""
 for tag in $TAGS; do
-  if [ -d "$OUT_DIR/v$tag" ]; then
-    LATEST="$tag"
+  ver="${tag#v}"
+  if [ -d "$OUT_DIR/v$ver" ]; then
+    LATEST="$ver"
   fi
 done
 
@@ -66,11 +69,12 @@ versions+='{"version":"main","path":"/main/","label":"main"}'
 
 # Add tags in reverse order (newest first), mark latest
 for tag in $(echo "$TAGS" | tail -r 2>/dev/null || echo "$TAGS" | tac 2>/dev/null || true); do
-  if [ -d "$OUT_DIR/v$tag" ]; then
-    if [ "$tag" = "$LATEST" ]; then
-      versions+=",{\"version\":\"v$tag\",\"path\":\"/v$tag/\",\"label\":\"v$tag (latest)\"}"
+  ver="${tag#v}"
+  if [ -d "$OUT_DIR/v$ver" ]; then
+    if [ "$ver" = "$LATEST" ]; then
+      versions+=",{\"version\":\"v$ver\",\"path\":\"/v$ver/\",\"label\":\"v$ver (latest)\"}"
     else
-      versions+=",{\"version\":\"v$tag\",\"path\":\"/v$tag/\",\"label\":\"v$tag\"}"
+      versions+=",{\"version\":\"v$ver\",\"path\":\"/v$ver/\",\"label\":\"v$ver\"}"
     fi
   fi
 done
