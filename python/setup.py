@@ -106,10 +106,16 @@ if not _cli_only:
         language="c",
     )
 
-    # On macOS, link system frameworks needed by Rust stdlib.
-    if sys.platform == "darwin":
+    # Platform-specific link flags.
+    _is_emscripten = (
+        os.environ.get("_PYTHON_HOST_PLATFORM", "").startswith("emscripten")
+        or "emscripten" in os.environ.get("CC", "")
+    )
+    if _is_emscripten:
+        # Skip wasm-opt: emsdk's version doesn't support flags from newer Rust LLVM.
+        ext.extra_link_args = ["-sWASM_OPT=0"]
+    elif sys.platform == "darwin":
         ext.extra_link_args = ["-framework", "Security", "-framework", "SystemConfiguration"]
-    # On Windows, link system libraries needed by Rust stdlib.
     elif sys.platform == "win32":
         ext.libraries = ["ws2_32", "userenv", "advapi32", "bcrypt", "ntdll"]
 
