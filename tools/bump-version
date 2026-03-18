@@ -22,11 +22,13 @@ CARGO_TOMLS = [
     "syntaqlite-buildtools/Cargo.toml",
     "tests/benches/Cargo.toml",
     "tests/comparison/parser/Cargo.toml",
+    "integrations/zed/Cargo.toml",
 ]
 
 # Files with `version = "X.Y.Z"` (pyproject.toml style).
 OTHER_MANIFESTS = [
     "python/pyproject.toml",
+    "integrations/zed/extension.toml",
 ]
 
 # Files with `"version": "X.Y.Z"` (package.json style).

@@ -3,9 +3,9 @@
 
 id = "syntaqlite"
 name = "Syntaqlite"
-version = "0.0.1"
+version = "0.2.12"
 schema_version = 1
-authors = ["Lalit Maganti <lalit@syntaqlite.dev>"]
+authors = ["Lalit Maganti <lalitmaganti@gmail.com>"]
 description = "SQL language support powered by syntaqlite — tokenizer, parser, formatter and validator built on SQLite's own grammar."
 repository = "https://github.com/LalitMaganti/syntaqlite"
 
