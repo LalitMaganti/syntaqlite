@@ -157,6 +157,8 @@ jobs:
           fi
 
       - name: Update Homebrew tap
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           TAG="${{ github.ref_name }}"
           VERSION="${TAG#v}"
