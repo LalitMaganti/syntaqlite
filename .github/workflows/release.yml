@@ -233,9 +233,9 @@ jobs:
           output-dir: wheelhouse/
         env:
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
-          CIBW_BEFORE_ALL_LINUX: bash {project}/dev/cibw_before_all.sh
-          CIBW_BEFORE_ALL_MACOS: bash {project}/dev/cibw_before_all.sh
-          CIBW_BEFORE_ALL_WINDOWS: powershell -File {project}/dev/cibw_before_all_windows.ps1
+          CIBW_BEFORE_ALL_LINUX: bash /project/dev/cibw_before_all.sh
+          CIBW_BEFORE_ALL_MACOS: bash ${{ github.workspace }}/python/dev/cibw_before_all.sh
+          CIBW_BEFORE_ALL_WINDOWS: powershell -File ${{ github.workspace }}\python\dev\cibw_before_all_windows.ps1
 
       - name: Upload wheels
         uses: actions/upload-artifact@v6
