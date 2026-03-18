@@ -317,7 +317,9 @@ header nav ul a:hover { color: var(--c-fg); }
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  min-width: 120px;
+  min-width: 140px;
+  max-height: 70vh;
+  overflow-y: auto;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--radius);
@@ -339,6 +341,34 @@ header nav ul a:hover { color: var(--c-fg); }
 
 .version-switcher__menu a:hover { color: var(--c-fg); background: var(--c-bg); }
 .version-switcher__menu a.active { color: var(--c-accent); font-weight: 500; }
+
+.version-switcher__group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem var(--sp-md);
+  font-size: var(--text-sm);
+  color: var(--c-muted);
+  cursor: pointer;
+  user-select: none;
+  border-top: 1px solid var(--c-border);
+  margin-top: var(--sp-xs);
+}
+
+.version-switcher__group-label:first-child { border-top: none; margin-top: 0; }
+.version-switcher__group-label:hover { color: var(--c-fg); background: var(--c-bg); }
+
+.version-switcher__group-label svg {
+  transition: transform 0.15s;
+}
+
+.version-switcher__group-label.expanded svg {
+  transform: rotate(180deg);
+}
+
+.version-switcher__group { display: none; }
+.version-switcher__group.expanded { display: block; }
+.version-switcher__group a { padding-left: calc(var(--sp-md) + 0.5rem); }
 
 /* Theme toggle */
 [data-theme="dark"]  .icon-sun  { display: block; }
