@@ -35,10 +35,10 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
     SyntaqliteSourceSpan table_name;
     SyntaqliteSourceSpan schema;
     if (D.z != NULL) {
-        table_name = synq_span(pCtx, D);
-        schema = synq_span(pCtx, Y);
+        table_name = synq_span_dequote(pCtx, D);
+        schema = synq_span_dequote(pCtx, Y);
     } else {
-        table_name = synq_span(pCtx, Y);
+        table_name = synq_span_dequote(pCtx, Y);
         schema = SYNQ_NO_SPAN;
     }
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema, alias, SYNTAQLITE_NULL_NODE);
@@ -60,10 +60,10 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
     SyntaqliteSourceSpan table_name;
     SyntaqliteSourceSpan schema;
     if (D.z != NULL) {
-        table_name = synq_span(pCtx, D);
-        schema = synq_span(pCtx, Y);
+        table_name = synq_span_dequote(pCtx, D);
+        schema = synq_span_dequote(pCtx, Y);
     } else {
-        table_name = synq_span(pCtx, Y);
+        table_name = synq_span_dequote(pCtx, Y);
         schema = SYNQ_NO_SPAN;
     }
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema, alias, SYNTAQLITE_NULL_NODE);
@@ -84,10 +84,10 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N
     SyntaqliteSourceSpan table_name;
     SyntaqliteSourceSpan schema;
     if (D.z != NULL) {
-        table_name = synq_span(pCtx, D);
-        schema = synq_span(pCtx, Y);
+        table_name = synq_span_dequote(pCtx, D);
+        schema = synq_span_dequote(pCtx, Y);
     } else {
-        table_name = synq_span(pCtx, Y);
+        table_name = synq_span_dequote(pCtx, Y);
         schema = SYNQ_NO_SPAN;
     }
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema, alias, E);
@@ -245,12 +245,12 @@ indexed_by(A) ::= NOT INDEXED. {
 
 idlist(A) ::= idlist(A) COMMA nm(Y). {
     uint32_t col = synq_parse_column_ref(pCtx,
-        synq_span(pCtx, Y), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
+        synq_span_dequote(pCtx, Y), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
     A = synq_parse_expr_list(pCtx, A, col);
 }
 
 idlist(A) ::= nm(Y). {
     uint32_t col = synq_parse_column_ref(pCtx,
-        synq_span(pCtx, Y), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
+        synq_span_dequote(pCtx, Y), SYNQ_NO_SPAN, SYNQ_NO_SPAN);
     A = synq_parse_expr_list(pCtx, SYNTAQLITE_NULL_NODE, col);
 }

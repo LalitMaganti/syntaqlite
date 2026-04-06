@@ -30,7 +30,7 @@ nm(A) ::= STRING(B). {
 
 // Localized name recovery wrapper used at selected grammar sites.
 nmorerr(A) ::= nm(B). {
-    A = synq_parse_ident_name(pCtx, synq_span(pCtx, B));
+    A = synq_parse_ident_name(pCtx, synq_span_dequote(pCtx, B));
 }
 
 nmorerr(A) ::= error. {

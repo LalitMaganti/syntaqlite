@@ -50,8 +50,8 @@ cmd(A) ::= create_table(CT) create_table_args(ARGS). {
 }
 
 create_table(A) ::= createkw temp(T) TABLE ifnotexists(E) nm(Y) dbnm(Z). {
-    SyntaqliteSourceSpan tbl_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, Y);
-    SyntaqliteSourceSpan tbl_schema = Z.z ? synq_span(pCtx, Y) : SYNQ_NO_SPAN;
+    SyntaqliteSourceSpan tbl_name = Z.z ? synq_span_dequote(pCtx, Z) : synq_span_dequote(pCtx, Y);
+    SyntaqliteSourceSpan tbl_schema = Z.z ? synq_span_dequote(pCtx, Y) : SYNQ_NO_SPAN;
     A = synq_parse_create_table_stmt(pCtx,
         tbl_name, tbl_schema, (SyntaqliteBool)T, (SyntaqliteBool)E,
         (SyntaqliteCreateTableStmtFlags){.raw = 0}, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);

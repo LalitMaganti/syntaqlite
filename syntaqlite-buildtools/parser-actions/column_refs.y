@@ -20,7 +20,7 @@
 expr(A) ::= idj(B). {
     synq_mark_as_id(pCtx, B);
     A = synq_parse_column_ref(pCtx,
-        synq_span(pCtx, B),
+        synq_span_dequote(pCtx, B),
         SYNQ_NO_SPAN,
         SYNQ_NO_SPAN);
 }

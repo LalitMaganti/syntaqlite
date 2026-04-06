@@ -205,37 +205,40 @@ static inline void synq_parse_list_flush(SynqParseCtx* ctx) {
 static inline SyntaqliteSourceSpan synq_span(SynqParseCtx* ctx,
                                              SynqParseToken tok) {
   if (tok.z == NULL)
-    return (SyntaqliteSourceSpan){0, 0};
+    return (SyntaqliteSourceSpan){0, 0, 0};
   uint32_t offset = (uint32_t)(tok.z - ctx->source);
   return (SyntaqliteSourceSpan){
       .offset = offset,
       .length = (uint16_t)tok.n,
+      .flags = 0,
   };
 }
 
 // Like synq_span() but strips surrounding quote characters from quoted
 // identifiers, matching SQLite's tokenExpr() dequoting behavior.
 // Handles "...", `...`, and [...] forms.  For unquoted tokens, equivalent
-// to synq_span().
+// to synq_span().  Sets SYNTAQLITE_SPAN_FLAG_QUOTED when quotes are stripped
+// so the formatter can re-wrap in standard double quotes.
 static inline SyntaqliteSourceSpan synq_span_dequote(SynqParseCtx* ctx,
                                                      SynqParseToken tok) {
   if (tok.z == NULL)
-    return (SyntaqliteSourceSpan){0, 0};
+    return (SyntaqliteSourceSpan){0, 0, 0};
   if (tok.n >= 2) {
     char open = tok.z[0];
     char close = tok.z[tok.n - 1];
     if ((open == '"' && close == '"') || (open == '`' && close == '`') ||
         (open == '[' && close == ']')) {
       uint32_t offset = (uint32_t)(tok.z + 1 - ctx->source);
-      return (SyntaqliteSourceSpan){.offset = offset,
-                                    .length = (uint16_t)(tok.n - 2)};
+      uint16_t inner_len = (uint16_t)(tok.n - 2);
+      SyntaqliteSourceSpan sp = {offset, inner_len, 0};
+      return synq_span_set_quoted(sp);
     }
   }
   uint32_t offset = (uint32_t)(tok.z - ctx->source);
-  return (SyntaqliteSourceSpan){.offset = offset, .length = (uint16_t)tok.n};
+  return (SyntaqliteSourceSpan){offset, (uint16_t)tok.n, 0};
 }
 
-#define SYNQ_NO_SPAN ((SyntaqliteSourceSpan){0, 0})
+#define SYNQ_NO_SPAN ((SyntaqliteSourceSpan){0, 0, 0})
 
 // Mark a token as "used as identifier" (fallback from keyword).
 // O(1) — uses the token_idx stored in SynqParseToken at collection time.

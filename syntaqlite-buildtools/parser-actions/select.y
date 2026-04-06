@@ -70,7 +70,7 @@ as(A) ::= AS nmorerr(B). {
 }
 
 as(A) ::= ids(B). {
-    A = synq_parse_ident_name(pCtx, synq_span(pCtx, B));
+    A = synq_parse_ident_name(pCtx, synq_span_dequote(pCtx, B));
 }
 
 as(A) ::= . {

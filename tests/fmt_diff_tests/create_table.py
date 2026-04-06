@@ -283,3 +283,41 @@ class TableConstraintFormat(TestSuite):
                 );
             """,
         )
+
+    # ── Quoted identifiers ────────────────────────────────────────────
+
+    def test_quoted_table_name(self):
+        return DiffTestBlueprint(
+            sql='create table "my table" (a int)',
+            out='CREATE TABLE "my table"(a int);',
+        )
+
+    def test_quoted_column_name(self):
+        return DiffTestBlueprint(
+            sql='create table t (id integer, "set" text)',
+            out='CREATE TABLE t(id integer, "set" text);',
+        )
+
+    def test_backtick_table_normalizes(self):
+        return DiffTestBlueprint(
+            sql="create table `my table` (a int)",
+            out='CREATE TABLE "my table"(a int);',
+        )
+
+    def test_bracket_table_normalizes(self):
+        return DiffTestBlueprint(
+            sql="create table [my table] (a int)",
+            out='CREATE TABLE "my table"(a int);',
+        )
+
+    def test_backtick_column_normalizes(self):
+        return DiffTestBlueprint(
+            sql="create table t (id integer, `set` text)",
+            out='CREATE TABLE t(id integer, "set" text);',
+        )
+
+    def test_bracket_column_normalizes(self):
+        return DiffTestBlueprint(
+            sql="create table t (id integer, [set] text)",
+            out='CREATE TABLE t(id integer, "set" text);',
+        )

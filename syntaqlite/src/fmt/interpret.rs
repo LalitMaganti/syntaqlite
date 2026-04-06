@@ -212,19 +212,32 @@ impl Formatter {
                 }
                 FmtOp::Span(idx) => {
                     // INVARIANT: Span ops only target Span fields.
-                    let FieldValue::Span(s) = fields[idx as usize] else {
+                    let FieldValue::Span { text: s, quoted } = fields[idx as usize] else {
                         panic!("Span: field {idx} is not a Span");
                     };
 
                     if !s.is_empty() {
                         let offset = byte_offset_in(source, s.as_ptr());
                         if let Some(ref cctx) = ctx.comment_ctx {
-                            let drain = cctx.drain_before(offset, source, arena);
+                            // For quoted spans, the original token in source
+                            // starts one byte earlier (the opening quote) and
+                            // extends one byte past (the closing quote).
+                            let drain_offset = if quoted { offset - 1 } else { offset };
+                            let token_len = usize_to_u32(s.len()) + if quoted { 2 } else { 0 };
+                            let drain = cctx.drain_before(drain_offset, source, arena);
                             flush_drain(&drain, &mut pending, &mut running, arena);
-                            cctx.advance_past(offset + usize_to_u32(s.len()));
+                            cctx.advance_past(drain_offset + token_len);
                         }
-                        let txt = arena.text(s);
-                        running = arena.cat(running, txt);
+                        if quoted {
+                            let q = arena.text("\"");
+                            let txt = arena.text(s);
+                            running = arena.cat(running, q);
+                            running = arena.cat(running, txt);
+                            running = arena.cat(running, q);
+                        } else {
+                            let txt = arena.text(s);
+                            running = arena.cat(running, txt);
+                        }
                     }
                 }
                 FmtOp::Child(idx) => {
@@ -481,7 +494,7 @@ impl Formatter {
                 }
                 FmtOp::IfSpan(idx, skip) => {
                     // INVARIANT: IfSpan ops only target Span fields.
-                    let FieldValue::Span(s) = fields[idx as usize] else {
+                    let FieldValue::Span { text: s, .. } = fields[idx as usize] else {
                         panic!("IfSpan: field {idx} is not a Span");
                     };
                     if s.is_empty() {

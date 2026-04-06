@@ -200,7 +200,14 @@ pub enum FieldValue<'a> {
     /// A child node reference.
     NodeId(AnyNodeId),
     /// A source text span — a subslice of the original source string.
-    Span(&'a str),
+    Span {
+        /// The span text.  When `quoted` is true this is the bare identifier
+        /// with surrounding quotes stripped.
+        text: &'a str,
+        /// Whether the identifier was quoted in source.  The formatter
+        /// re-wraps quoted spans in standard double quotes (`"..."`).
+        quoted: bool,
+    },
     /// A boolean flag.
     Bool(bool),
     /// A compact bitfield of flags.
@@ -378,7 +385,7 @@ mod serde_impl {
                     }
                 }
                 // Span: text string, or null for an absent/empty span.
-                (FieldKind::Span, FieldValue::Span(text)) => {
+                (FieldKind::Span, FieldValue::Span { text, .. }) => {
                     if text.is_empty() {
                         serializer.serialize_none()
                     } else {
@@ -424,20 +431,29 @@ mod ffi {
 
     /// A source byte range within the parser's source buffer.
     ///
-    /// Mirrors the C `SyntaqliteSpan` layout: `offset` and `length` in bytes.
+    /// Mirrors the C `SyntaqliteSourceSpan` layout.
     /// Used in generated node structs for token-valued fields (identifiers, literals).
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     #[repr(C)]
     pub(crate) struct CSourceSpan {
         pub(crate) offset: u32,
         pub(crate) length: u16,
+        pub(crate) flags: u16,
     }
 
-    #[expect(dead_code)]
+    /// Span flag: identifier was quoted in source; span points to the
+    /// dequoted inner text.  The formatter re-wraps in `"..."`.
+    const SPAN_FLAG_QUOTED: u16 = 1;
+
     impl CSourceSpan {
         /// Returns `true` if the span covers zero bytes.
         pub(crate) fn is_empty(self) -> bool {
             self.length == 0
+        }
+
+        /// Whether this span was dequoted from a quoted identifier.
+        pub(crate) fn is_quoted(self) -> bool {
+            self.flags & SPAN_FLAG_QUOTED != 0
         }
 
         /// Slice the span out of the given source string.

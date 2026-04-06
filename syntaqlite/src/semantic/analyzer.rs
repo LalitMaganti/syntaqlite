@@ -719,7 +719,7 @@ fn ddl_name_offset(
         SemanticRole::DefineTable { name, .. } | SemanticRole::DefineView { name, .. } => *name,
         _ => return None,
     };
-    let FieldValue::Span(s) = fields[name_idx as usize] else {
+    let FieldValue::Span { text: s, .. } = fields[name_idx as usize] else {
         return None;
     };
     if s.is_empty() {
@@ -957,7 +957,7 @@ impl<'a> ValidationPass<'a> {
             return "";
         }
         match fields[0] {
-            FieldValue::Span(s) => s,
+            FieldValue::Span { text: s, .. } => s,
             _ => "",
         }
     }
@@ -971,7 +971,8 @@ impl<'a> ValidationPass<'a> {
         name_idx: u8,
         alias_idx: u8,
     ) {
-        let FieldValue::Span(name) = fields[name_idx as usize] else {
+        let FieldValue::Span { text: name, .. } = fields[name_idx as usize]
+        else {
             return;
         };
         if name.is_empty() {
@@ -1040,7 +1041,7 @@ impl<'a> ValidationPass<'a> {
         name_idx: u8,
         args_idx: u8,
     ) {
-        if let FieldValue::Span(name) = fields[name_idx as usize]
+        if let FieldValue::Span { text: name, .. } = fields[name_idx as usize]
             && !name.is_empty()
         {
             let offset = self.span_offset(name);
@@ -1104,14 +1105,16 @@ impl<'a> ValidationPass<'a> {
         if !self.scope.has_frames() {
             return;
         }
-        let FieldValue::Span(column) = fields[column_idx as usize] else {
+        let FieldValue::Span { text: column, .. } =
+            fields[column_idx as usize]
+        else {
             return;
         };
         if column.is_empty() {
             return;
         }
         let table = match fields[table_idx as usize] {
-            FieldValue::Span(s) if !s.is_empty() => Some(s),
+            FieldValue::Span { text: s, .. } if !s.is_empty() => Some(s),
             _ => None,
         };
         let offset = self.span_offset(column);
@@ -1448,7 +1451,7 @@ impl<'a> ValidationPass<'a> {
         };
 
         let name = match fields[name_idx as usize] {
-            FieldValue::Span(s) => s,
+            FieldValue::Span { text: s, .. } => s,
             _ => "",
         };
         let body_id = Self::field_node_id(&fields, body_idx);
@@ -3406,33 +3409,75 @@ mod tests {
         );
     }
 
-    // ── Cycle 2: quoted identifier dequoting ──────────────────────────────────
+    // ── Quoted identifier dequoting ─────────────────────────────────────────
+    //
+    // End-to-end table/column dequoting is covered by the `validate`
+    // integration suite.  These unit tests cover cases that the CLI tests
+    // don't reach: column-level quoting variants and expression-span
+    // column names from `CREATE TABLE AS SELECT`.
 
-    /// `CREATE TABLE t AS SELECT 1` gives column named `1` (raw source text).
-    /// Querying `SELECT t."1" FROM t` uses a double-quoted identifier `"1"` which
-    /// `SQLite` treats as a column reference to `1`.  The AST stores the span with
-    /// quotes included, so without grammar-level dequoting this produces a
-    /// spurious `UnknownColumn` error.  This test is RED until Cycle 2 fix.
+    fn assert_no_unknown_col_with_ddl(ddl: &str, query: &str) {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(dialect, &[(ddl, None)]).0;
+        let mut az = sqlite_analyzer();
+        let model = az.analyze(query, &cat, &strict());
+        let errs: Vec<_> = model
+            .diagnostics()
+            .iter()
+            .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
+            .collect();
+        assert!(errs.is_empty(), "unexpected UnknownColumn: {errs:#?}");
+    }
+
     #[test]
-    fn quoted_col_ref_resolves_against_expression_span_name() {
+    fn dequote_col_backtick_ddl_unquoted_query() {
+        assert_no_unknown_col_with_ddl(
+            "CREATE TABLE t (`col` INTEGER);",
+            "SELECT col FROM t",
+        );
+    }
+
+    #[test]
+    fn dequote_col_bracket_ddl_unquoted_query() {
+        assert_no_unknown_col_with_ddl(
+            "CREATE TABLE t ([col] INTEGER);",
+            "SELECT col FROM t",
+        );
+    }
+
+    #[test]
+    fn dequote_col_unquoted_ddl_double_quoted_query() {
+        assert_no_unknown_col_with_ddl(
+            "CREATE TABLE t (col INTEGER);",
+            r#"SELECT "col" FROM t"#,
+        );
+    }
+
+    #[test]
+    fn dequote_reserved_word_column_qualified_ref() {
+        assert_no_unknown_col_with_ddl(
+            r#"CREATE TABLE t (id INTEGER, "set" TEXT);"#,
+            r#"SELECT t."set" FROM t"#,
+        );
+    }
+
+    #[test]
+    fn dequote_expr_span_col_double_quoted() {
         assert_no_unknown_col(r#"CREATE TABLE t AS SELECT 1; SELECT t."1" FROM t;"#);
     }
 
-    /// Same as above but with backtick quoting (MySQL-compat dialect).
     #[test]
-    fn backtick_col_ref_resolves_against_expression_span_name() {
+    fn dequote_expr_span_col_backtick() {
         assert_no_unknown_col("CREATE TABLE t AS SELECT 1; SELECT t.`1` FROM t;");
     }
 
-    /// Same as above but with bracket quoting (SQL Server-compat dialect).
     #[test]
-    fn bracket_col_ref_resolves_against_expression_span_name() {
+    fn dequote_expr_span_col_bracket() {
         assert_no_unknown_col("CREATE TABLE t AS SELECT 1; SELECT t.[1] FROM t;");
     }
 
-    /// Alias path must still work — `"x"` should resolve as `x`.
     #[test]
-    fn quoted_col_ref_resolves_aliased_column() {
+    fn dequote_aliased_col_double_quoted() {
         assert_no_unknown_col(r#"CREATE TABLE t AS SELECT 1 AS x; SELECT t."x" FROM t;"#);
     }
 

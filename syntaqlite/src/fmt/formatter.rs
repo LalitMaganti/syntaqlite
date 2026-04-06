@@ -860,4 +860,5 @@ mod tests {
         drain_gap_comments(&ctx, 9, source, &mut arena, &mut parts);
         assert_eq!(render_parts(&mut arena, &parts), "--a\n/*b*/\n");
     }
+
 }

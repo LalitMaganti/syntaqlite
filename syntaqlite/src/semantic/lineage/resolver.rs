@@ -126,7 +126,9 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
 
         if let SemanticRole::CteBinding { name, body, .. } = role {
             let cte_name = match fields[name as usize] {
-                FieldValue::Span(s) if !s.is_empty() => Some(s.to_ascii_lowercase()),
+                FieldValue::Span { text: s, .. } if !s.is_empty() => {
+                    Some(s.to_ascii_lowercase())
+                }
                 FieldValue::NodeId(id) if !id.is_null() => {
                     self.span_text(id).map(|s| s.to_ascii_lowercase())
                 }
@@ -525,11 +527,14 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         };
 
         let col_name = match expr_fields[col_idx as usize] {
-            FieldValue::Span(s) if !s.is_empty() => s.to_ascii_lowercase(),
+            FieldValue::Span { text: s, .. } if !s.is_empty() => {
+                s.to_ascii_lowercase()
+            }
             _ => return None,
         };
 
-        let source_name = if let FieldValue::Span(s) = expr_fields[tbl_idx as usize]
+        let source_name = if let FieldValue::Span { text: s, .. } =
+            expr_fields[tbl_idx as usize]
             && !s.is_empty()
         {
             s.to_ascii_lowercase()
@@ -580,7 +585,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
             && let Some((_, alias_fields)) = self.stmt.extract_fields(alias_id)
         {
             for j in 0..alias_fields.len() {
-                if let FieldValue::Span(s) = alias_fields[j]
+                if let FieldValue::Span { text: s, .. } = alias_fields[j]
                     && !s.is_empty()
                 {
                     return Some(s.to_ascii_lowercase());
@@ -595,7 +600,8 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
             && let SemanticRole::ColumnRef {
                 column: col_idx, ..
             } = self.role_for(expr_tag)
-            && let FieldValue::Span(col_span) = expr_fields[col_idx as usize]
+            && let FieldValue::Span { text: col_span, .. } =
+                expr_fields[col_idx as usize]
             && !col_span.is_empty()
         {
             return Some(col_span.to_ascii_lowercase());
@@ -625,7 +631,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         }
         let (_, fields) = self.stmt.extract_fields(node_id)?;
         for i in 0..fields.len() {
-            if let FieldValue::Span(s) = fields[i]
+            if let FieldValue::Span { text: s, .. } = fields[i]
                 && !s.is_empty()
             {
                 return Some(s.to_owned());
@@ -643,7 +649,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
             return None;
         }
         match fields[field_idx as usize] {
-            FieldValue::Span(s) if !s.is_empty() => Some(s.to_owned()),
+            FieldValue::Span { text: s, .. } if !s.is_empty() => Some(s.to_owned()),
             FieldValue::NodeId(id) if !id.is_null() => self.span_text(id),
             _ => None,
         }

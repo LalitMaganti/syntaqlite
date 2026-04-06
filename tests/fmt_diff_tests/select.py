@@ -221,3 +221,53 @@ class TableValuedFunctionFormat(TestSuite):
             sql="select * from t join json_each(t.col) as j on 1",
             out="SELECT *\nFROM t\nJOIN json_each(t.col) AS j ON 1;",
         )
+
+    # ── Quoted identifiers ────────────────────────────────────────────
+
+    def test_double_quoted_table(self):
+        return DiffTestBlueprint(
+            sql='SELECT * FROM "my table"',
+            out='SELECT * FROM "my table";',
+        )
+
+    def test_double_quoted_column(self):
+        return DiffTestBlueprint(
+            sql='SELECT "set" FROM t',
+            out='SELECT "set" FROM t;',
+        )
+
+    def test_backtick_table_normalizes_to_double_quote(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM `set`",
+            out='SELECT * FROM "set";',
+        )
+
+    def test_bracket_table_normalizes_to_double_quote(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM [set]",
+            out='SELECT * FROM "set";',
+        )
+
+    def test_backtick_column_normalizes_to_double_quote(self):
+        return DiffTestBlueprint(
+            sql="SELECT `set` FROM t",
+            out='SELECT "set" FROM t;',
+        )
+
+    def test_bracket_column_normalizes_to_double_quote(self):
+        return DiffTestBlueprint(
+            sql="SELECT [set] FROM t",
+            out='SELECT "set" FROM t;',
+        )
+
+    def test_qualified_quoted_column(self):
+        return DiffTestBlueprint(
+            sql='SELECT t."set" FROM t',
+            out='SELECT t."set" FROM t;',
+        )
+
+    def test_unquoted_identifier_stays_unquoted(self):
+        return DiffTestBlueprint(
+            sql="SELECT name FROM users",
+            out="SELECT name FROM users;",
+        )

@@ -142,24 +142,24 @@ resolvetype(A) ::= REPLACE. {
 
 xfullname(A) ::= nm(X). {
     A = synq_parse_table_ref(pCtx,
-        synq_span(pCtx, X), SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+        synq_span_dequote(pCtx, X), SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
 }
 
 xfullname(A) ::= nm(X) DOT nm(Y). {
     A = synq_parse_table_ref(pCtx,
-        synq_span(pCtx, Y), synq_span(pCtx, X), SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+        synq_span_dequote(pCtx, Y), synq_span_dequote(pCtx, X), SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
 }
 
 xfullname(A) ::= nm(X) DOT nm(Y) AS nm(Z). {
-    uint32_t alias = synq_parse_ident_name(pCtx, synq_span(pCtx, Z));
+    uint32_t alias = synq_parse_ident_name(pCtx, synq_span_dequote(pCtx, Z));
     A = synq_parse_table_ref(pCtx,
-        synq_span(pCtx, Y), synq_span(pCtx, X), alias, SYNTAQLITE_NULL_NODE);
+        synq_span_dequote(pCtx, Y), synq_span_dequote(pCtx, X), alias, SYNTAQLITE_NULL_NODE);
 }
 
 xfullname(A) ::= nm(X) AS nm(Z). {
-    uint32_t alias = synq_parse_ident_name(pCtx, synq_span(pCtx, Z));
+    uint32_t alias = synq_parse_ident_name(pCtx, synq_span_dequote(pCtx, Z));
     A = synq_parse_table_ref(pCtx,
-        synq_span(pCtx, X), SYNQ_NO_SPAN, alias, SYNTAQLITE_NULL_NODE);
+        synq_span_dequote(pCtx, X), SYNQ_NO_SPAN, alias, SYNTAQLITE_NULL_NODE);
 }
 
 // ============ indexed_opt (ignore index hints in AST) ============

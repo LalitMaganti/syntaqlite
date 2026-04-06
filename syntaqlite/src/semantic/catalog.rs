@@ -636,7 +636,9 @@ impl Catalog {
                 without_rowid,
             } => {
                 let name_val = match fields[name as usize] {
-                    FieldValue::Span(s) if !s.is_empty() => s.to_string(),
+                    FieldValue::Span { text: s, .. } if !s.is_empty() => {
+                        s.to_string()
+                    }
                     _ => return,
                 };
                 let cols = extract_columns(
@@ -659,7 +661,9 @@ impl Catalog {
                 select,
             } => {
                 let name_val = match fields[name as usize] {
-                    FieldValue::Span(s) if !s.is_empty() => s.to_string(),
+                    FieldValue::Span { text: s, .. } if !s.is_empty() => {
+                        s.to_string()
+                    }
                     _ => return,
                 };
                 let cols = extract_columns(
@@ -678,7 +682,9 @@ impl Catalog {
                 ..
             } => {
                 let name_val = match fields[name as usize] {
-                    FieldValue::Span(s) if !s.is_empty() => s.to_string(),
+                    FieldValue::Span { text: s, .. } if !s.is_empty() => {
+                        s.to_string()
+                    }
                     _ => return,
                 };
                 let arity = extract_function_arity(stmt, &fields, opt_field(args));
@@ -968,7 +974,7 @@ fn ddl_name_span(
         SemanticRole::DefineTable { name, .. } | SemanticRole::DefineView { name, .. } => *name,
         _ => return None,
     };
-    let FieldValue::Span(s) = fields[name_idx as usize] else {
+    let FieldValue::Span { text: s, .. } = fields[name_idx as usize] else {
         return None;
     };
     if s.is_empty() {
@@ -1039,7 +1045,7 @@ fn column_def_name_span<'a>(
     }
     let (_, name_fields) = stmt.extract_fields(name_id)?;
     for j in 0..name_fields.len() {
-        if let FieldValue::Span(s) = name_fields[j]
+        if let FieldValue::Span { text: s, .. } = name_fields[j]
             && !s.is_empty()
         {
             let off = s.as_ptr() as usize - source_start;
@@ -1170,7 +1176,7 @@ fn columns_from_column_list(
         };
         // The first non-empty Span inside the name node is the identifier text.
         for j in 0..name_fields.len() {
-            if let FieldValue::Span(s) = name_fields[j]
+            if let FieldValue::Span { text: s, .. } = name_fields[j]
                 && !s.is_empty()
             {
                 out.push(s.to_ascii_lowercase());
@@ -1272,7 +1278,7 @@ fn infer_result_col_name<'a>(
         && let Some((_, alias_fields)) = stmt.extract_fields(alias_id)
     {
         for j in 0..alias_fields.len() {
-            if let FieldValue::Span(s) = alias_fields[j]
+            if let FieldValue::Span { text: s, .. } = alias_fields[j]
                 && !s.is_empty()
             {
                 return Some(s.to_ascii_lowercase());
@@ -1296,7 +1302,8 @@ fn infer_result_col_name<'a>(
     if let SemanticRole::ColumnRef {
         column: col_idx, ..
     } = expr_role
-        && let FieldValue::Span(col_span) = expr_fields[col_idx as usize]
+        && let FieldValue::Span { text: col_span, .. } =
+            expr_fields[col_idx as usize]
         && !col_span.is_empty()
     {
         return Some(col_span.to_ascii_lowercase());
@@ -1342,7 +1349,7 @@ fn collect_spans(
     if let Some((_, fields)) = stmt.extract_fields(id) {
         for i in 0..fields.len() {
             match fields[i] {
-                FieldValue::Span(s) if !s.is_empty() => {
+                FieldValue::Span { text: s, .. } if !s.is_empty() => {
                     let start = s.as_ptr() as usize - base;
                     let end = start + s.len();
                     if start < *min {

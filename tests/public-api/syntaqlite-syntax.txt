@@ -2043,7 +2043,8 @@ pub syntaqlite_syntax::any::FieldValue::Bool(bool)
 pub syntaqlite_syntax::any::FieldValue::Enum(u32)
 pub syntaqlite_syntax::any::FieldValue::Flags(u8)
 pub syntaqlite_syntax::any::FieldValue::NodeId(syntaqlite_syntax::any::AnyNodeId)
-pub syntaqlite_syntax::any::FieldValue::Span(&'a str)
+pub syntaqlite_syntax::any::FieldValue::Span::quoted: bool
+pub syntaqlite_syntax::any::FieldValue::Span::text: &'a str
 pub syntaqlite_syntax::any::ParseOutcome::Done
 pub syntaqlite_syntax::any::ParseOutcome::Err(E)
 pub syntaqlite_syntax::any::ParseOutcome::Ok(T)

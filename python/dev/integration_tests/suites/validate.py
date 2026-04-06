@@ -603,6 +603,74 @@ def _test_cli_overrides_config_file_level(ctx: SuiteContext) -> bool:
     return True
 
 
+# ── Quoted identifier dequoting ──────────────────────────────────────────
+
+
+def _test_quoted_table_in_ddl_unquoted_query(ctx: SuiteContext) -> bool:
+    """Double-quoted table name in schema should resolve unquoted in query."""
+    ddl = 'CREATE TABLE "users" (id INTEGER, name TEXT);\n'
+    with _Project(ddl=ddl, query="SELECT name FROM users;\n") as p:
+        result = p.run_with_flag(ctx.binary)
+        if result.returncode != 0:
+            _fail("quoted_table_in_ddl_unquoted_query",
+                  f"exit {result.returncode}: {result.stderr}")
+            return False
+    _pass("quoted_table_in_ddl_unquoted_query")
+    return True
+
+
+def _test_unquoted_table_in_ddl_quoted_query(ctx: SuiteContext) -> bool:
+    """Unquoted table in schema should resolve when queried with quotes."""
+    with _Project(ddl=_USERS_DDL, query='SELECT name FROM "users";\n') as p:
+        result = p.run_with_flag(ctx.binary)
+        if result.returncode != 0:
+            _fail("unquoted_table_in_ddl_quoted_query",
+                  f"exit {result.returncode}: {result.stderr}")
+            return False
+    _pass("unquoted_table_in_ddl_quoted_query")
+    return True
+
+
+def _test_reserved_word_column(ctx: SuiteContext) -> bool:
+    """Quoted reserved-word column ("set") should parse and resolve."""
+    ddl = 'CREATE TABLE tracks (id INTEGER, "set" TEXT);\n'
+    query = 'SELECT id, "set" FROM tracks;\n'
+    with _Project(ddl=ddl, query=query) as p:
+        result = p.run_with_flag(ctx.binary)
+        if result.returncode != 0:
+            _fail("reserved_word_column",
+                  f"exit {result.returncode}: {result.stderr}")
+            return False
+    _pass("reserved_word_column")
+    return True
+
+
+def _test_backtick_table_in_ddl(ctx: SuiteContext) -> bool:
+    """Backtick-quoted table in schema should resolve unquoted in query."""
+    ddl = "CREATE TABLE `users` (id INTEGER, name TEXT);\n"
+    with _Project(ddl=ddl, query="SELECT name FROM users;\n") as p:
+        result = p.run_with_flag(ctx.binary)
+        if result.returncode != 0:
+            _fail("backtick_table_in_ddl",
+                  f"exit {result.returncode}: {result.stderr}")
+            return False
+    _pass("backtick_table_in_ddl")
+    return True
+
+
+def _test_bracket_table_in_ddl(ctx: SuiteContext) -> bool:
+    """Bracket-quoted table in schema should resolve unquoted in query."""
+    ddl = "CREATE TABLE [users] (id INTEGER, name TEXT);\n"
+    with _Project(ddl=ddl, query="SELECT name FROM users;\n") as p:
+        result = p.run_with_flag(ctx.binary)
+        if result.returncode != 0:
+            _fail("bracket_table_in_ddl",
+                  f"exit {result.returncode}: {result.stderr}")
+            return False
+    _pass("bracket_table_in_ddl")
+    return True
+
+
 # ── Suite entry point ─────────────────────────────────────────────────────
 
 def run(ctx: SuiteContext) -> int:
@@ -638,6 +706,12 @@ def run(ctx: SuiteContext) -> int:
         _test_deny_overrides_default_warn,
         _test_config_file_check_levels,
         _test_cli_overrides_config_file_level,
+        # Quoted identifiers
+        _test_quoted_table_in_ddl_unquoted_query,
+        _test_unquoted_table_in_ddl_quoted_query,
+        _test_reserved_word_column,
+        _test_backtick_table_in_ddl,
+        _test_bracket_table_in_ddl,
     ]
     results = [t(ctx) for t in tests]
     passed = sum(results)

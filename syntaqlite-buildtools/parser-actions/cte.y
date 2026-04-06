@@ -31,7 +31,7 @@ select(A) ::= WITH RECURSIVE wqlist(W) selectnowith(X). {
 // ============ CTE item ============
 
 wqitem(A) ::= withnm(X) eidlist_opt(Y) wqas(M) LP select(Z) RP. {
-    A = synq_parse_cte_definition(pCtx, synq_span(pCtx, X), (SyntaqliteMaterialized)M, Y, Z);
+    A = synq_parse_cte_definition(pCtx, synq_span_dequote(pCtx, X), (SyntaqliteMaterialized)M, Y, Z);
 }
 
 // ============ CTE list ============
@@ -77,7 +77,7 @@ eidlist_opt(A) ::= LP eidlist(X) RP. {
 eidlist(A) ::= nm(Y) collate(C) sortorder(Z). {
     (void)C; (void)Z;
     uint32_t col = synq_parse_column_ref(pCtx,
-        synq_span(pCtx, Y),
+        synq_span_dequote(pCtx, Y),
         SYNQ_NO_SPAN,
         SYNQ_NO_SPAN);
     A = synq_parse_expr_list(pCtx, SYNTAQLITE_NULL_NODE, col);
@@ -86,7 +86,7 @@ eidlist(A) ::= nm(Y) collate(C) sortorder(Z). {
 eidlist(A) ::= eidlist(A) COMMA nm(Y) collate(C) sortorder(Z). {
     (void)C; (void)Z;
     uint32_t col = synq_parse_column_ref(pCtx,
-        synq_span(pCtx, Y),
+        synq_span_dequote(pCtx, Y),
         SYNQ_NO_SPAN,
         SYNQ_NO_SPAN);
     A = synq_parse_expr_list(pCtx, A, col);

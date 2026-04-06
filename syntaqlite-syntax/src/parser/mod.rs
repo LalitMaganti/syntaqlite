@@ -786,10 +786,13 @@ unsafe fn extract_field_value<'a>(
             FieldKind::NodeId => FieldValue::NodeId(AnyNodeId(*(field_ptr.cast::<u32>()))),
             FieldKind::Span => {
                 let span = &*(field_ptr.cast::<SourceSpan>());
-                if span.length == 0 {
-                    FieldValue::Span("")
+                if span.is_empty() {
+                    FieldValue::Span { text: "", quoted: false }
                 } else {
-                    FieldValue::Span(span.as_str(source))
+                    FieldValue::Span {
+                        text: span.as_str(source),
+                        quoted: span.is_quoted(),
+                    }
                 }
             }
             FieldKind::Bool => FieldValue::Bool(*(field_ptr.cast::<u32>()) != 0),
