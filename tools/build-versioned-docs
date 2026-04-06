@@ -98,11 +98,7 @@ fi
 for tag in $(echo "$TAGS" | tail -r 2>/dev/null || echo "$TAGS" | tac 2>/dev/null || true); do
   ver="${tag#v}"
   if [ -d "$OUT_DIR/v$ver" ]; then
-    if [ "$ver" = "$LATEST" ]; then
-      versions+=",{\"version\":\"v$ver\",\"path\":\"/v$ver/\",\"label\":\"v$ver (latest)\"}"
-    else
-      versions+=",{\"version\":\"v$ver\",\"path\":\"/v$ver/\",\"label\":\"v$ver\"}"
-    fi
+    versions+=",{\"version\":\"v$ver\",\"path\":\"/v$ver/\",\"label\":\"v$ver\"}"
   fi
 done
 versions+=']'
