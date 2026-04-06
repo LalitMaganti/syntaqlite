@@ -118,7 +118,7 @@
           var groups = {};
           var groupOrder = [];
           versions.forEach(function(v) {
-            if (v.version === 'main' || v.version === 'latest' || v.label.indexOf('(latest)') !== -1) {
+            if (v.version === 'main' || v.version === 'latest') {
               topLevel.push(v);
               return;
             }
