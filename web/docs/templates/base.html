@@ -100,7 +100,7 @@
       var menu = document.getElementById('version-menu');
       var label = document.getElementById('version-label');
       if (!btn || !menu || !label) return;
-      var match = window.location.pathname.match(/^\/(main|v[^/]+)(\/.*)?$/);
+      var match = window.location.pathname.match(/^\/(main|latest|v[^/]+)(\/.*)?$/);
       var current = match ? match[1] : 'main';
       var pagePath = match && match[2] ? match[2] : '/';
       label.textContent = current;
@@ -118,7 +118,7 @@
           var groups = {};
           var groupOrder = [];
           versions.forEach(function(v) {
-            if (v.version === 'main' || v.label.indexOf('(latest)') !== -1) {
+            if (v.version === 'main' || v.version === 'latest' || v.label.indexOf('(latest)') !== -1) {
               topLevel.push(v);
               return;
             }

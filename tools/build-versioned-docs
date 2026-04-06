@@ -60,12 +60,39 @@ for tag in $TAGS; do
   fi
 done
 
+# --- Build /latest/ as a copy of the latest release ---
+if [ -n "$LATEST" ]; then
+  LATEST_TAG="v$LATEST"
+  worktree_dir="$REPO_ROOT/.worktree-docs-latest"
+
+  echo "==> Building /latest/ (v$LATEST)"
+  git -C "$REPO_ROOT" worktree add --detach "$worktree_dir" "$LATEST_TAG" 2>/dev/null || {
+    echo "    WARN: could not create worktree for latest, copying v$LATEST instead"
+    cp -r "$OUT_DIR/v$LATEST" "$OUT_DIR/latest"
+    worktree_dir=""
+  }
+
+  if [ -n "$worktree_dir" ]; then
+    if (cd "$worktree_dir/web/docs" && "$ZOLA" build --base-url "/latest/" --output-dir "$OUT_DIR/latest") 2>&1; then
+      echo "    OK: /latest/"
+    else
+      echo "    WARN: zola build failed for /latest/, copying v$LATEST instead"
+      cp -r "$OUT_DIR/v$LATEST" "$OUT_DIR/latest"
+    fi
+    git -C "$REPO_ROOT" worktree remove --force "$worktree_dir" 2>/dev/null || true
+  fi
+fi
+
 # --- Generate versions.json ---
 echo "==> Generating versions.json"
 
-# main always first
+# main and latest always shown at top level
 versions='['
 versions+='{"version":"main","path":"/main/","label":"main"}'
+
+if [ -n "$LATEST" ]; then
+  versions+=",{\"version\":\"latest\",\"path\":\"/latest/\",\"label\":\"latest (v$LATEST)\"}"
+fi
 
 # Add tags in reverse order (newest first), mark latest
 for tag in $(echo "$TAGS" | tail -r 2>/dev/null || echo "$TAGS" | tac 2>/dev/null || true); do
@@ -87,9 +114,9 @@ for dir in "$OUT_DIR"/*/; do
   cp "$OUT_DIR/versions.json" "$dir"
 done
 
-# --- Root redirect: latest release if available, otherwise main ---
+# --- Root redirect: /latest/ if available, otherwise /main/ ---
 if [ -n "$LATEST" ]; then
-  REDIRECT_TARGET="/v$LATEST/"
+  REDIRECT_TARGET="/latest/"
 else
   REDIRECT_TARGET="/main/"
 fi

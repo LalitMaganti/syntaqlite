@@ -28,11 +28,11 @@ error: syntax error near 'RETURNING'
 
 `RETURNING` was added in SQLite 3.35.0; Android 13 still ships SQLite 3.32.2.
 
-We've tested against ~396K statements from [SQLite's upstream test suite](https://sqlite.org/testing.html) with ~99.7% agreement on parse acceptance. See the [detailed comparison](https://docs.syntaqlite.com/main/reference/comparison/) for how syntaqlite stacks up against other tools.
+We've tested against ~396K statements from [SQLite's upstream test suite](https://sqlite.org/testing.html) with ~99.7% agreement on parse acceptance. See the [detailed comparison](https://docs.syntaqlite.com/latest/reference/comparison/) for how syntaqlite stacks up against other tools.
 
 ## What it does
 
-### Validate ([docs](https://docs.syntaqlite.com/main/concepts/validation/))
+### Validate ([docs](https://docs.syntaqlite.com/latest/concepts/validation/))
 
 Finds unknown tables, columns, and functions against your schema, the same errors `sqlite3_prepare` would catch but without needing a database. Unlike `sqlite3`, syntaqlite finds **all** errors in one pass:
 
@@ -69,7 +69,7 @@ warning: unknown function 'ROUDN'
    = help: did you mean 'round'?
 ```
 
-### Format ([docs](https://docs.syntaqlite.com/main/reference/cli/#fmt))
+### Format ([docs](https://docs.syntaqlite.com/latest/reference/cli/#fmt))
 
 Deterministic formatting with configurable line width, keyword casing, and indentation:
 
@@ -88,7 +88,7 @@ ORDER BY p.created_at DESC
 LIMIT 10;
 ```
 
-### Version and compile-flag aware ([docs](https://docs.syntaqlite.com/main/guides/version-pinning/))
+### Version and compile-flag aware ([docs](https://docs.syntaqlite.com/latest/guides/version-pinning/))
 
 Pin the parser to a specific SQLite version or enable [compile-time flags](https://www.sqlite.org/compile.html) to match your exact build:
 
@@ -147,21 +147,21 @@ semicolons = true
 
 The config file is discovered by walking up from the file being processed, same as `rustfmt.toml` or `ruff.toml`. CLI flags override config file values.
 
-### Editor integration ([docs](https://docs.syntaqlite.com/main/getting-started/vscode/))
+### Editor integration ([docs](https://docs.syntaqlite.com/latest/getting-started/vscode/))
 
 Full language server with no database connection required. Diagnostics, format on save, completions, and semantic highlighting.
 
 **VS Code** — install the [syntaqlite extension](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite) from the marketplace.
 
-**[Other editors](https://docs.syntaqlite.com/main/getting-started/other-editors/)** — point your LSP client at:
+**[Other editors](https://docs.syntaqlite.com/latest/getting-started/other-editors/)** — point your LSP client at:
 
 ```bash
 syntaqlite lsp
 ```
 
-**Claude Code** — `claude plugin install syntaqlite@lalitmaganti-plugins` ([docs](https://docs.syntaqlite.com/main/getting-started/claude-code/))
+**Claude Code** — `claude plugin install syntaqlite@lalitmaganti-plugins` ([docs](https://docs.syntaqlite.com/latest/getting-started/claude-code/))
 
-### Parse ([docs](https://docs.syntaqlite.com/main/guides/parsing/))
+### Parse ([docs](https://docs.syntaqlite.com/latest/guides/parsing/))
 
 Full abstract syntax tree with side tables for tokens, comments, and whitespace, for code generation, migration tooling, or static analysis.
 
@@ -173,7 +173,7 @@ syntaqlite parse -e "SELECT 1 + 2"
 
 Want to try syntaqlite without installing anything? The **[web playground](https://playground.syntaqlite.com)** runs entirely in your browser via WASM. Parse, format, and validate SQL instantly.
 
-## Install ([all methods](https://docs.syntaqlite.com/main/getting-started/cli/))
+## Install ([all methods](https://docs.syntaqlite.com/latest/getting-started/cli/))
 
 **Download and run (all platforms, no install)**
 
@@ -207,30 +207,30 @@ brew install LalitMaganti/tap/syntaqlite
 cargo install syntaqlite-cli
 ```
 
-## Use as a library ([docs](https://docs.syntaqlite.com/main/integrating/))
+## Use as a library ([docs](https://docs.syntaqlite.com/latest/integrating/))
 
-**Rust** ([API docs](https://docs.syntaqlite.com/main/integrating/rust-api/))
+**Rust** ([API docs](https://docs.syntaqlite.com/latest/integrating/rust-api/))
 
 ```toml
 [dependencies]
 syntaqlite = { version = "0.2.16", features = ["fmt"] }
 ```
 
-**Python** ([API docs](https://docs.syntaqlite.com/main/reference/python-api/))
+**Python** ([API docs](https://docs.syntaqlite.com/latest/reference/python-api/))
 
 ```bash
 pip install syntaqlite
 ```
 
-**JavaScript / WASM** ([API docs](https://docs.syntaqlite.com/main/reference/js-api/))
+**JavaScript / WASM** ([API docs](https://docs.syntaqlite.com/latest/reference/js-api/))
 
 ```bash
 npm install syntaqlite
 ```
 
-**C** — the parser, tokenizer, formatter, and validator all have C APIs. See the [C API docs](https://docs.syntaqlite.com/main/reference/c-api/).
+**C** — the parser, tokenizer, formatter, and validator all have C APIs. See the [C API docs](https://docs.syntaqlite.com/latest/reference/c-api/).
 
-## Architecture ([docs](https://docs.syntaqlite.com/main/contributing/architecture/))
+## Architecture ([docs](https://docs.syntaqlite.com/latest/contributing/architecture/))
 
 The parser and tokenizer are written in C, directly wrapping SQLite's own grammar. Everything else (formatter, validator, LSP) is written in Rust with C bindings available.
 
@@ -245,7 +245,7 @@ tools/cargo build
 
 ## Contributing
 
-See the [contributing guide](https://docs.syntaqlite.com/contributing/) for architecture overview and testing instructions.
+See the [contributing guide](https://docs.syntaqlite.com/latest/contributing/) for architecture overview and testing instructions.
 
 ## License
 
