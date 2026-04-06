@@ -231,7 +231,7 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -244,6 +244,7 @@ jobs:
           CIBW_ARCHS: ${{ matrix.cibw_archs }}
           CIBW_BEFORE_ALL_LINUX: bash {package}/dev/cibw_before_all.sh
           CIBW_BEFORE_ALL_MACOS: bash {package}/dev/cibw_before_all.sh
+          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0
           CIBW_BEFORE_ALL_WINDOWS: powershell -File {package}/dev/cibw_before_all_windows.ps1
 
       - name: Upload wheels
