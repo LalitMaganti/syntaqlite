@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.16
+
+- Fixed quoted identifiers (`"set"`, `` `set` ``, `[set]`) producing false-positive `unknown-table` and `unknown-column` diagnostics when DDL and query used different quoting styles ([#50](https://github.com/LalitMaganti/syntaqlite/issues/50)).
+- Formatter now normalizes backtick and bracket quoting to standard double quotes.
+
 ## 0.2.15
 
 - Added Zed editor extension for syntax highlighting and diagnostics.

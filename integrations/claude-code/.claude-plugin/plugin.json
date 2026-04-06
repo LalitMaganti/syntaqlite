@@ -1,6 +1,6 @@
 {
   "name": "syntaqlite",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "description": "SQLite SQL language server — diagnostics, formatting, completions, and semantic tokens",
   "author": {
     "name": "Lalit Maganti"
