@@ -169,6 +169,10 @@ Full abstract syntax tree with side tables for tokens, comments, and whitespace,
 syntaqlite parse -e "SELECT 1 + 2"
 ```
 
+## Web Playground
+
+Want to try syntaqlite without installing anything? The **[web playground](https://playground.syntaqlite.com)** runs entirely in your browser via WASM. Parse, format, and validate SQL instantly.
+
 ## Install ([all methods](https://docs.syntaqlite.com/main/getting-started/cli/))
 
 **Download and run (all platforms, no install)**
