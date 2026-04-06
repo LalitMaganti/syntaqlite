@@ -224,7 +224,7 @@ pip install syntaqlite
 npm install syntaqlite
 ```
 
-**C** — the parser, tokenizer, formatter, and validator all have C APIs. See the [C API docs](https://docs.syntaqlite.com/reference/c-api/).
+**C** — the parser, tokenizer, formatter, and validator all have C APIs. See the [C API docs](https://docs.syntaqlite.com/main/reference/c-api/).
 
 ## Architecture ([docs](https://docs.syntaqlite.com/main/contributing/architecture/))
 
