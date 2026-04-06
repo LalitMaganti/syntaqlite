@@ -100,6 +100,7 @@ static inline SyntaqliteSourceSpan synq_error_span(SynqParseCtx* pCtx) {
   return (SyntaqliteSourceSpan){
       .offset = pCtx->error_offset,
       .length = (uint16_t)len,
+      .flags = 0,
   };
 }
 }

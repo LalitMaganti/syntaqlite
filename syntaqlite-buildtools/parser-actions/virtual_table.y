@@ -29,7 +29,8 @@ cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
     const char *args_end = R.z;
     vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
         (uint32_t)(args_start - pCtx->source),
-        (uint16_t)(args_end - args_start)
+        (uint16_t)(args_end - args_start),
+        0
     };
     A = X;
 }

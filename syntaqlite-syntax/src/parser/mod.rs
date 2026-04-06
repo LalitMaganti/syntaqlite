@@ -787,7 +787,10 @@ unsafe fn extract_field_value<'a>(
             FieldKind::Span => {
                 let span = &*(field_ptr.cast::<SourceSpan>());
                 if span.is_empty() {
-                    FieldValue::Span { text: "", quoted: false }
+                    FieldValue::Span {
+                        text: "",
+                        quoted: false,
+                    }
                 } else {
                     FieldValue::Span {
                         text: span.as_str(source),

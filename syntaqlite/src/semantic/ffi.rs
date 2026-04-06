@@ -607,7 +607,7 @@ pub unsafe extern "C" fn syntaqlite_validator_lineage_complete(
 ) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
     let v = unsafe { &*v };
-    v.state().lineage_complete as u32
+    u32::from(v.state().lineage_complete)
 }
 
 /// Number of result columns with lineage information.

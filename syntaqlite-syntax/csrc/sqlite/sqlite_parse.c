@@ -101,6 +101,7 @@ static inline SyntaqliteSourceSpan synq_error_span(SynqParseCtx* pCtx) {
   return (SyntaqliteSourceSpan){
       .offset = pCtx->error_offset,
       .length = (uint16_t)len,
+      .flags = 0,
   };
 }
 /**************** End of %include directives **********************************/
@@ -9553,9 +9554,9 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-8].minor.yy141 = synq_parse_update_stmt(
           pCtx, (SyntaqliteConflictAction)yymsp[-7].minor.yy592, tbl,
-          SYNTAQLITE_INDEX_HINT_DEFAULT, (SyntaqliteSourceSpan){0, 0},
-          yymsp[-3].minor.yy141, yymsp[-2].minor.yy141, yymsp[-1].minor.yy141,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN, yymsp[-3].minor.yy141,
+          yymsp[-2].minor.yy141, yymsp[-1].minor.yy141, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
     } break;
     case 322: /* trigger_cmd ::= scanpt insert_cmd INTO trnm idlist_opt select
                  upsert scanpt */
@@ -9574,9 +9575,9 @@ static YYACTIONTYPE yy_reduce(
           pCtx, synq_span(pCtx, yymsp[-3].minor.yy0), SYNQ_NO_SPAN,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-5].minor.yy141 = synq_parse_delete_stmt(
-          pCtx, tbl, SYNTAQLITE_INDEX_HINT_DEFAULT,
-          (SyntaqliteSourceSpan){0, 0}, yymsp[-1].minor.yy141,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          pCtx, tbl, SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN,
+          yymsp[-1].minor.yy141, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE);
     } break;
     case 325: /* cmd ::= PRAGMA nm dbnm */
     {
@@ -9776,7 +9777,7 @@ static YYACTIONTYPE yy_reduce(
       const char* args_end = yymsp[0].minor.yy0.z;
       vtab->create_virtual_table_stmt.module_args =
           (SyntaqliteSourceSpan){(uint32_t)(args_start - pCtx->source),
-                                 (uint16_t)(args_end - args_start)};
+                                 (uint16_t)(args_end - args_start), 0};
       yylhsminor.yy141 = yymsp[-3].minor.yy141;
     }
       yymsp[-3].minor.yy141 = yylhsminor.yy141;

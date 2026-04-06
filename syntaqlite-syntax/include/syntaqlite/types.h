@@ -29,7 +29,8 @@ typedef struct SyntaqliteSourceSpan {
 // ── Span flags ───────────────────────────────────────────────────────────────
 
 // Identifier was quoted in source (`"..."`, `` `...` ``, or `[...]`).
-// The span points to the dequoted inner text; the formatter re-wraps in `"..."`.
+// The span points to the dequoted inner text; the formatter re-wraps in
+// `"..."`.
 #define SYNTAQLITE_SPAN_FLAG_QUOTED ((uint16_t)1u)
 
 static inline int synq_span_is_quoted(SyntaqliteSourceSpan sp) {

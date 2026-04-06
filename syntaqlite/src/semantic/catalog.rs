@@ -636,9 +636,7 @@ impl Catalog {
                 without_rowid,
             } => {
                 let name_val = match fields[name as usize] {
-                    FieldValue::Span { text: s, .. } if !s.is_empty() => {
-                        s.to_string()
-                    }
+                    FieldValue::Span { text: s, .. } if !s.is_empty() => s.to_string(),
                     _ => return,
                 };
                 let cols = extract_columns(
@@ -661,9 +659,7 @@ impl Catalog {
                 select,
             } => {
                 let name_val = match fields[name as usize] {
-                    FieldValue::Span { text: s, .. } if !s.is_empty() => {
-                        s.to_string()
-                    }
+                    FieldValue::Span { text: s, .. } if !s.is_empty() => s.to_string(),
                     _ => return,
                 };
                 let cols = extract_columns(
@@ -682,9 +678,7 @@ impl Catalog {
                 ..
             } => {
                 let name_val = match fields[name as usize] {
-                    FieldValue::Span { text: s, .. } if !s.is_empty() => {
-                        s.to_string()
-                    }
+                    FieldValue::Span { text: s, .. } if !s.is_empty() => s.to_string(),
                     _ => return,
                 };
                 let arity = extract_function_arity(stmt, &fields, opt_field(args));
@@ -1302,8 +1296,7 @@ fn infer_result_col_name<'a>(
     if let SemanticRole::ColumnRef {
         column: col_idx, ..
     } = expr_role
-        && let FieldValue::Span { text: col_span, .. } =
-            expr_fields[col_idx as usize]
+        && let FieldValue::Span { text: col_span, .. } = expr_fields[col_idx as usize]
         && !col_span.is_empty()
     {
         return Some(col_span.to_ascii_lowercase());

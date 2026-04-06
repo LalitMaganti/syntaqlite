@@ -141,7 +141,7 @@ trigger_cmd(A) ::= UPDATE orconf(R) trnm(X) tridxby SET setlist(Y) from(F) where
     uint32_t tbl = synq_parse_table_ref(pCtx,
         synq_span(pCtx, X), SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
     A = synq_parse_update_stmt(pCtx, (SyntaqliteConflictAction)R, tbl,
-        SYNTAQLITE_INDEX_HINT_DEFAULT, (SyntaqliteSourceSpan){0, 0},
+        SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN,
         Y, F, Z, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
 }
 
@@ -157,7 +157,7 @@ trigger_cmd(A) ::= DELETE FROM trnm(X) tridxby where_opt(Y) scanpt. {
     uint32_t tbl = synq_parse_table_ref(pCtx,
         synq_span(pCtx, X), SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
     A = synq_parse_delete_stmt(pCtx, tbl,
-        SYNTAQLITE_INDEX_HINT_DEFAULT, (SyntaqliteSourceSpan){0, 0},
+        SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN,
         Y, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
 }
 

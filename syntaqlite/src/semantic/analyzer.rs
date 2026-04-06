@@ -971,8 +971,7 @@ impl<'a> ValidationPass<'a> {
         name_idx: u8,
         alias_idx: u8,
     ) {
-        let FieldValue::Span { text: name, .. } = fields[name_idx as usize]
-        else {
+        let FieldValue::Span { text: name, .. } = fields[name_idx as usize] else {
             return;
         };
         if name.is_empty() {
@@ -1105,9 +1104,7 @@ impl<'a> ValidationPass<'a> {
         if !self.scope.has_frames() {
             return;
         }
-        let FieldValue::Span { text: column, .. } =
-            fields[column_idx as usize]
-        else {
+        let FieldValue::Span { text: column, .. } = fields[column_idx as usize] else {
             return;
         };
         if column.is_empty() {
@@ -3431,26 +3428,17 @@ mod tests {
 
     #[test]
     fn dequote_col_backtick_ddl_unquoted_query() {
-        assert_no_unknown_col_with_ddl(
-            "CREATE TABLE t (`col` INTEGER);",
-            "SELECT col FROM t",
-        );
+        assert_no_unknown_col_with_ddl("CREATE TABLE t (`col` INTEGER);", "SELECT col FROM t");
     }
 
     #[test]
     fn dequote_col_bracket_ddl_unquoted_query() {
-        assert_no_unknown_col_with_ddl(
-            "CREATE TABLE t ([col] INTEGER);",
-            "SELECT col FROM t",
-        );
+        assert_no_unknown_col_with_ddl("CREATE TABLE t ([col] INTEGER);", "SELECT col FROM t");
     }
 
     #[test]
     fn dequote_col_unquoted_ddl_double_quoted_query() {
-        assert_no_unknown_col_with_ddl(
-            "CREATE TABLE t (col INTEGER);",
-            r#"SELECT "col" FROM t"#,
-        );
+        assert_no_unknown_col_with_ddl("CREATE TABLE t (col INTEGER);", r#"SELECT "col" FROM t"#);
     }
 
     #[test]
