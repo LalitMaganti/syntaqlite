@@ -479,7 +479,7 @@ impl LspServer {
         match host.format(uri, &config) {
             Ok(formatted) => {
                 let edit = TextEdit {
-                    range: Range::new(Position::new(0, 0), Position::new(u32::MAX, 0)),
+                    range: Range::new(Position::new(0, 0), Position::new(i32::MAX as u32, 0)),
                     new_text: formatted,
                 };
                 Response::new_ok(req.id, Some(vec![edit]))
