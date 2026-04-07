@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.17
+
+- Fixed LSP position encoding to use UTF-16 code units instead of byte offsets, fixing misplaced diagnostics, hovers, and semantic tokens on lines with non-ASCII characters.
+- Fixed LSP formatting response using `u32::MAX` for the TextEdit range end, exceeding the spec's `uinteger` upper bound of 2^31-1 ([#66](https://github.com/LalitMaganti/syntaqlite/issues/66)).
+- Formatter now indents parenthesized content and subquery table sources when they break across lines.
+- Made `indent_width` configurable at render time.
+
 ## 0.2.16
 
 - Fixed quoted identifiers (`"set"`, `` `set` ``, `[set]`) producing false-positive `unknown-table` and `unknown-column` diagnostics when DDL and query used different quoting styles ([#50](https://github.com/LalitMaganti/syntaqlite/issues/50)).
