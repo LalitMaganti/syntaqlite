@@ -924,7 +924,8 @@ impl<'a> SourcePositionMap<'a> {
     /// Convert multiple byte offsets to LSP `Position`s in one O(n) pass.
     ///
     /// Internally sorts the offsets, walks the source once, then returns
-    /// results in the original order.
+    /// results in the original order. Character offsets are UTF-16 code
+    /// units per the LSP specification.
     pub(crate) fn offsets_to_positions(&self, offsets: &[usize]) -> Vec<Position> {
         if offsets.is_empty() {
             return Vec::new();
@@ -941,7 +942,7 @@ impl<'a> SourcePositionMap<'a> {
         let mut result = vec![Position::new(0, 0); offsets.len()];
         let len = self.src.len();
         let mut line = 0u32;
-        let mut col = 0u32;
+        let mut col_utf16 = 0u32;
         let mut pos = 0usize;
 
         for (offset, orig_idx) in indexed {
@@ -949,19 +950,24 @@ impl<'a> SourcePositionMap<'a> {
             while pos < offset {
                 if self.src[pos] == b'\n' {
                     line += 1;
-                    col = 0;
+                    col_utf16 = 0;
+                    pos += 1;
                 } else {
-                    col += 1;
+                    let byte = self.src[pos];
+                    let char_len = utf8_char_len(byte);
+                    // Supplementary characters (4-byte UTF-8) need 2 UTF-16 code units;
+                    // all others need 1.
+                    col_utf16 += if char_len == 4 { 2 } else { 1 };
+                    pos += char_len;
                 }
-                pos += 1;
             }
-            result[orig_idx] = Position::new(line, col);
+            result[orig_idx] = Position::new(line, col_utf16);
         }
 
         result
     }
 
-    /// Convert an LSP `Position` to a byte offset.
+    /// Convert an LSP `Position` (with UTF-16 character offset) to a byte offset.
     pub(crate) fn position_to_offset(&self, pos: Position) -> usize {
         let len = self.src.len();
         let mut line = 0usize;
@@ -982,6 +988,118 @@ impl<'a> SourcePositionMap<'a> {
             .position(|&b| b == b'\n')
             .map_or(len, |rel| line_start + rel);
 
-        line_start + (pos.character as usize).min(line_end - line_start)
+        // Walk UTF-8 characters, counting UTF-16 code units, until we reach
+        // the requested character offset or end of line.
+        let mut byte_pos = line_start;
+        let mut utf16_col = 0u32;
+        while byte_pos < line_end && utf16_col < pos.character {
+            let char_len = utf8_char_len(self.src[byte_pos]);
+            utf16_col += if char_len == 4 { 2 } else { 1 };
+            byte_pos += char_len;
+        }
+        byte_pos
+    }
+}
+
+use super::utf8_char_len;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── offsets_to_positions ──────────────────────────────────────────
+
+    #[test]
+    fn ascii_positions() {
+        let map = SourcePositionMap::new("ab\ncd");
+        let positions = map.offsets_to_positions(&[0, 1, 2, 3, 4]);
+        assert_eq!(positions[0], Position::new(0, 0)); // 'a'
+        assert_eq!(positions[1], Position::new(0, 1)); // 'b'
+        assert_eq!(positions[2], Position::new(0, 2)); // '\n'
+        assert_eq!(positions[3], Position::new(1, 0)); // 'c'
+        assert_eq!(positions[4], Position::new(1, 1)); // 'd'
+    }
+
+    #[test]
+    fn two_byte_utf8_char_is_one_utf16_unit() {
+        // 'é' (U+00E9) = 2 UTF-8 bytes, 1 UTF-16 code unit
+        let src = "aé b";
+        let map = SourcePositionMap::new(src);
+        // byte offsets: a=0, é=1..3, ' '=3, 'b'=4
+        let positions = map.offsets_to_positions(&[0, 3, 4]);
+        assert_eq!(positions[0], Position::new(0, 0)); // 'a'
+        assert_eq!(positions[1], Position::new(0, 2)); // ' ' — after 'a' (1) + 'é' (1)
+        assert_eq!(positions[2], Position::new(0, 3)); // 'b'
+    }
+
+    #[test]
+    fn three_byte_utf8_char_is_one_utf16_unit() {
+        // '中' (U+4E2D) = 3 UTF-8 bytes, 1 UTF-16 code unit
+        let src = "a中b";
+        let map = SourcePositionMap::new(src);
+        // byte offsets: a=0, 中=1..4, b=4
+        let positions = map.offsets_to_positions(&[0, 4]);
+        assert_eq!(positions[0], Position::new(0, 0)); // 'a'
+        assert_eq!(positions[1], Position::new(0, 2)); // 'b' — after 'a' (1) + '中' (1)
+    }
+
+    #[test]
+    fn four_byte_utf8_char_is_two_utf16_units() {
+        // '😀' (U+1F600) = 4 UTF-8 bytes, 2 UTF-16 code units (surrogate pair)
+        let src = "a😀b";
+        let map = SourcePositionMap::new(src);
+        // byte offsets: a=0, 😀=1..5, b=5
+        let positions = map.offsets_to_positions(&[0, 5]);
+        assert_eq!(positions[0], Position::new(0, 0)); // 'a'
+        assert_eq!(positions[1], Position::new(0, 3)); // 'b' — after 'a' (1) + '😀' (2)
+    }
+
+    #[test]
+    fn multibyte_after_newline() {
+        let src = "x\né";
+        let map = SourcePositionMap::new(src);
+        // byte offsets: x=0, \n=1, é=2..4
+        let positions = map.offsets_to_positions(&[2, 4]);
+        assert_eq!(positions[0], Position::new(1, 0)); // start of 'é'
+        assert_eq!(positions[1], Position::new(1, 1)); // after 'é'
+    }
+
+    // ── position_to_offset ───────────────────────────────────────────
+
+    #[test]
+    fn ascii_position_to_offset() {
+        let map = SourcePositionMap::new("ab\ncd");
+        assert_eq!(map.position_to_offset(Position::new(0, 0)), 0);
+        assert_eq!(map.position_to_offset(Position::new(0, 1)), 1);
+        assert_eq!(map.position_to_offset(Position::new(1, 0)), 3);
+        assert_eq!(map.position_to_offset(Position::new(1, 1)), 4);
+    }
+
+    #[test]
+    fn two_byte_char_position_to_offset() {
+        // 'é' (U+00E9) = 2 UTF-8 bytes, 1 UTF-16 code unit
+        let src = "aé b";
+        let map = SourcePositionMap::new(src);
+        // UTF-16 col 0 = byte 0 ('a')
+        // UTF-16 col 1 = byte 1 (start of 'é')
+        // UTF-16 col 2 = byte 3 (' ')
+        // UTF-16 col 3 = byte 4 ('b')
+        assert_eq!(map.position_to_offset(Position::new(0, 0)), 0);
+        assert_eq!(map.position_to_offset(Position::new(0, 1)), 1);
+        assert_eq!(map.position_to_offset(Position::new(0, 2)), 3);
+        assert_eq!(map.position_to_offset(Position::new(0, 3)), 4);
+    }
+
+    #[test]
+    fn four_byte_char_position_to_offset() {
+        // '😀' (U+1F600) = 4 UTF-8 bytes, 2 UTF-16 code units
+        let src = "a😀b";
+        let map = SourcePositionMap::new(src);
+        // UTF-16 col 0 = byte 0 ('a')
+        // UTF-16 col 1 = byte 1 (start of '😀')
+        // UTF-16 col 3 = byte 5 ('b')
+        assert_eq!(map.position_to_offset(Position::new(0, 0)), 0);
+        assert_eq!(map.position_to_offset(Position::new(0, 1)), 1);
+        assert_eq!(map.position_to_offset(Position::new(0, 3)), 5);
     }
 }

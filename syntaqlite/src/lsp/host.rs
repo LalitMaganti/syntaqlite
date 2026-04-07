@@ -840,6 +840,8 @@ impl LspHost {
 
 /// Delta-encode semantic tokens as a flat `u32` array (5 values per token:
 /// `deltaLine`, `deltaStartChar`, `length`, `legendIndex`, `modifiers`).
+///
+/// Character offsets and lengths are in UTF-16 code units per the LSP spec.
 fn encode_semantic_tokens(
     source: &str,
     semantic_tokens: &[SemanticToken],
@@ -860,10 +862,12 @@ fn encode_semantic_tokens(
             if src[src_pos] == b'\n' {
                 cur_line += 1;
                 cur_col = 0;
+                src_pos += 1;
             } else {
-                cur_col += 1;
+                let char_len = utf8_char_len(src[src_pos]);
+                cur_col += if char_len == 4 { 2 } else { 1 };
+                src_pos += char_len;
             }
-            src_pos += 1;
         }
 
         if tok.offset < range_start || tok.offset >= range_end {
@@ -884,9 +888,13 @@ fn encode_semantic_tokens(
             cur_col
         };
 
+        // Compute token length in UTF-16 code units.
+        let tok_end = (tok.offset + tok.length).min(src.len());
+        let length_utf16 = utf16_len(&src[tok.offset..tok_end]);
+
         result.push(delta_line);
         result.push(delta_start);
-        result.push(u32::try_from(tok.length).expect("token length fits u32"));
+        result.push(length_utf16);
         result.push(legend_idx);
         result.push(0);
 
@@ -896,6 +904,20 @@ fn encode_semantic_tokens(
 
     result
 }
+
+/// Count the number of UTF-16 code units in a byte slice of valid UTF-8.
+fn utf16_len(bytes: &[u8]) -> u32 {
+    let mut n = 0u32;
+    let mut i = 0;
+    while i < bytes.len() {
+        let char_len = utf8_char_len(bytes[i]);
+        n += if char_len == 4 { 2 } else { 1 };
+        i += char_len;
+    }
+    n
+}
+
+use super::utf8_char_len;
 
 // ── Hover/signature helpers ────────────────────────────────────────────────────
 
