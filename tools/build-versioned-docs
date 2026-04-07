@@ -73,6 +73,10 @@ if [ -n "$LATEST" ]; then
   }
 
   if [ -n "$worktree_dir" ]; then
+    # Use current templates so the version switcher is up to date
+    rm -rf "$worktree_dir/web/docs/templates"
+    cp -r "$DOCS_DIR/templates" "$worktree_dir/web/docs/templates"
+
     if (cd "$worktree_dir/web/docs" && "$ZOLA" build --base-url "/latest/" --output-dir "$OUT_DIR/latest") 2>&1; then
       echo "    OK: /latest/"
     else
