@@ -405,3 +405,98 @@ class VirtualTableFormat(TestSuite):
             sql="create virtual table main.vt using fts5",
             out="CREATE VIRTUAL TABLE main.vt USING fts5;",
         )
+
+
+class IndentWidthFormat(TestSuite):
+    def test_where_clause_indent_4(self):
+        return DiffTestBlueprint(
+            sql="SELECT a FROM t WHERE x = 1 AND y = 2 AND z = 3",
+            indent_width=4,
+            line_width=30,
+            out="""\
+                SELECT a
+                FROM t
+                WHERE
+                    x = 1
+                    AND y = 2
+                    AND z = 3;
+            """,
+        )
+
+    def test_create_table_indent_4(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a INTEGER NOT NULL, b TEXT, c REAL)",
+            indent_width=4,
+            line_width=30,
+            out="""\
+                CREATE TABLE t(
+                    a INTEGER NOT NULL,
+                    b TEXT,
+                    c REAL
+                );
+            """,
+        )
+
+    def test_trigger_indent_4(self):
+        return DiffTestBlueprint(
+            sql="CREATE TRIGGER tr BEFORE INSERT ON t BEGIN SELECT 1; END",
+            indent_width=4,
+            out="""\
+                CREATE TRIGGER tr BEFORE INSERT ON t
+                BEGIN
+                    SELECT 1;
+                END;
+            """,
+        )
+
+    def test_cte_indent_4(self):
+        return DiffTestBlueprint(
+            sql="""\
+                WITH cte AS (
+                    SELECT a, b, c, d, e, f, g, h, i, j, k
+                    FROM some_table
+                    WHERE some_column = 1 AND another_col = 2
+                )
+                SELECT * FROM cte
+            """,
+            indent_width=4,
+            out="""\
+                WITH
+                    cte AS (
+                        SELECT a, b, c, d, e, f, g, h, i, j, k
+                        FROM some_table
+                        WHERE
+                            some_column = 1
+                            AND another_col = 2
+                    )
+                SELECT * FROM cte;
+            """,
+        )
+
+    def test_indent_width_1(self):
+        return DiffTestBlueprint(
+            sql="SELECT a FROM t WHERE x = 1 AND y = 2 AND z = 3",
+            indent_width=1,
+            line_width=30,
+            out="""\
+                SELECT a
+                FROM t
+                WHERE
+                 x = 1
+                 AND y = 2
+                 AND z = 3;
+            """,
+        )
+
+    def test_indent_width_8(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t (a INTEGER, b TEXT)",
+            indent_width=8,
+            line_width=20,
+            out="""\
+                CREATE TABLE t(
+                        a INTEGER,
+                        b TEXT
+                );
+            """,
+        )

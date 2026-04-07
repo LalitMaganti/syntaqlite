@@ -22,6 +22,8 @@ class DiffTestBlueprint:
     out: str
     cflags: Optional[List[str]] = None
     version: Optional[str] = None
+    line_width: Optional[int] = None
+    indent_width: Optional[int] = None
 
 
 class TestSuite:

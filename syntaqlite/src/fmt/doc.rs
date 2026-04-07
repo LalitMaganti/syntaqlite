@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-use super::KeywordCase;
+use super::{FormatConfig, KeywordCase};
 
 /// A handle into the `DocArena`. `NIL_DOC` represents an empty/absent document.
 pub(super) type DocId = u32;
@@ -153,14 +153,9 @@ impl<'a> DocArena<'a> {
 
     /// Render the document tree rooted at `root` to a string.
     #[cfg(test)]
-    pub(crate) fn render(
-        &self,
-        root: DocId,
-        line_width: usize,
-        keyword_case: KeywordCase,
-    ) -> String {
+    pub(crate) fn render(&self, root: DocId, config: &FormatConfig) -> String {
         let mut bufs = RenderBuffers::new();
-        self.render_into(root, line_width, keyword_case, &mut bufs);
+        self.render_into(root, config, &mut bufs);
         bufs.out
     }
 
@@ -173,13 +168,7 @@ impl<'a> DocArena<'a> {
     ///
     /// This avoids re-allocating the render stack, fits stack, and output
     /// string on every format call.
-    pub(crate) fn render_into(
-        &self,
-        root: DocId,
-        line_width: usize,
-        keyword_case: KeywordCase,
-        bufs: &mut RenderBuffers,
-    ) {
+    pub(crate) fn render_into(&self, root: DocId, config: &FormatConfig, bufs: &mut RenderBuffers) {
         let RenderBuffers {
             out,
             stack,
@@ -190,9 +179,12 @@ impl<'a> DocArena<'a> {
             return;
         }
 
+        let keyword_case = config.keyword_case();
+        let indent_width = usize_to_i32(config.indent_width());
+
         out.reserve(self.docs.len() * 4);
         let mut pos: usize = 0;
-        let line_width_i32 = usize_to_i32(line_width);
+        let line_width_i32 = usize_to_i32(config.line_width());
         stack.push((0, Mode::Break, root));
 
         while let Some((indent, mode, doc_id)) = stack.pop() {
@@ -217,7 +209,7 @@ impl<'a> DocArena<'a> {
                         pos += 1;
                     }
                     Mode::Break => {
-                        flush_line_suffixes(self, line_suffix_buf, keyword_case, out, &mut pos);
+                        flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
                         emit_newline(indent, out, &mut pos);
                     }
                 },
@@ -225,13 +217,13 @@ impl<'a> DocArena<'a> {
                 Doc::SoftLine => match mode {
                     Mode::Flat => {}
                     Mode::Break => {
-                        flush_line_suffixes(self, line_suffix_buf, keyword_case, out, &mut pos);
+                        flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
                         emit_newline(indent, out, &mut pos);
                     }
                 },
 
                 Doc::HardLine => {
-                    flush_line_suffixes(self, line_suffix_buf, keyword_case, out, &mut pos);
+                    flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
                     emit_newline(indent, out, &mut pos);
                 }
 
@@ -241,7 +233,8 @@ impl<'a> DocArena<'a> {
                 }
 
                 Doc::Nest { indent: di, child } => {
-                    stack.push((indent + i32::from(*di), mode, *child));
+                    let spaces = i32::from(*di) * indent_width;
+                    stack.push((indent + spaces, mode, *child));
                 }
 
                 Doc::Group { child } => {
@@ -249,6 +242,7 @@ impl<'a> DocArena<'a> {
                         *child,
                         indent,
                         line_width_i32 - usize_to_i32(pos),
+                        indent_width,
                         fits_stack,
                     ) {
                         stack.push((indent, Mode::Flat, *child));
@@ -265,7 +259,7 @@ impl<'a> DocArena<'a> {
             }
         }
 
-        flush_line_suffixes(self, line_suffix_buf, keyword_case, out, &mut pos);
+        flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
     }
 
     /// Check whether a document fits within `remaining` columns when rendered flat.
@@ -275,6 +269,7 @@ impl<'a> DocArena<'a> {
         doc_id: DocId,
         indent: i32,
         remaining: i32,
+        indent_width: i32,
         scratch: &mut Vec<(i32, DocId)>,
     ) -> bool {
         if remaining < 0 {
@@ -309,7 +304,8 @@ impl<'a> DocArena<'a> {
                     scratch.push((indent, *left));
                 }
                 Doc::Nest { indent: di, child } => {
-                    scratch.push((indent + i32::from(*di), *child));
+                    let spaces = i32::from(*di) * indent_width;
+                    scratch.push((indent + spaces, *child));
                 }
                 Doc::Group { child } => {
                     scratch.push((indent, *child));
@@ -452,7 +448,7 @@ fn push_keyword(s: &str, case: KeywordCase, out: &mut String) {
 fn flush_line_suffixes(
     arena: &DocArena,
     buf: &mut Vec<(i32, Mode, DocId)>,
-    keyword_case: KeywordCase,
+    config: &FormatConfig,
     out: &mut String,
     pos: &mut usize,
 ) {
@@ -460,7 +456,7 @@ fn flush_line_suffixes(
         return;
     }
     for (indent, _mode, doc_id) in buf.drain(..) {
-        render_inline(arena, doc_id, indent, keyword_case, out, pos);
+        render_inline(arena, doc_id, indent, config, out, pos);
     }
 }
 
@@ -469,10 +465,12 @@ fn render_inline(
     arena: &DocArena,
     doc_id: DocId,
     indent: i32,
-    keyword_case: KeywordCase,
+    config: &FormatConfig,
     out: &mut String,
     pos: &mut usize,
 ) {
+    let keyword_case = config.keyword_case();
+    let indent_width = usize_to_i32(config.indent_width());
     if doc_id == NIL_DOC {
         return;
     }
@@ -495,7 +493,8 @@ fn render_inline(
                 stack.push((indent, *left));
             }
             Doc::Nest { indent: di, child } => {
-                stack.push((indent + i32::from(*di), *child));
+                let spaces = i32::from(*di) * indent_width;
+                stack.push((indent + spaces, *child));
             }
             _ => {}
         }
@@ -521,8 +520,13 @@ fn non_negative_i32_to_usize(value: i32) -> usize {
 mod tests {
     use super::*;
 
-    const WIDTH: usize = 80;
-    const CASE: KeywordCase = KeywordCase::Upper;
+    fn cfg() -> FormatConfig {
+        FormatConfig::default()
+    }
+
+    fn cfg_width(line_width: usize) -> FormatConfig {
+        FormatConfig::default().with_line_width(line_width)
+    }
 
     #[test]
     fn arena_alloc_and_get() {
@@ -584,7 +588,7 @@ mod tests {
     fn plain_text() {
         let mut arena = DocArena::new();
         let doc = arena.text("hello world");
-        assert_eq!(arena.render(doc, WIDTH, CASE), "hello world");
+        assert_eq!(arena.render(doc, &cfg()), "hello world");
     }
 
     #[test]
@@ -593,7 +597,7 @@ mod tests {
         let a = arena.text("hello");
         let b = arena.text(" world");
         let doc = arena.cat(a, b);
-        assert_eq!(arena.render(doc, WIDTH, CASE), "hello world");
+        assert_eq!(arena.render(doc, &cfg()), "hello world");
     }
 
     #[test]
@@ -604,7 +608,7 @@ mod tests {
         let b = arena.text("b");
         let inner = arena.cats(&[a, sp, b]);
         let doc = arena.group(inner);
-        assert_eq!(arena.render(doc, WIDTH, CASE), "a b");
+        assert_eq!(arena.render(doc, &cfg()), "a b");
     }
 
     #[test]
@@ -615,7 +619,7 @@ mod tests {
         let b = arena.text("bbbb");
         let inner = arena.cats(&[a, sp, b]);
         let doc = arena.group(inner);
-        assert_eq!(arena.render(doc, 6, CASE), "aaaa\nbbbb");
+        assert_eq!(arena.render(doc, &cfg_width(6)), "aaaa\nbbbb");
     }
 
     #[test]
@@ -625,15 +629,42 @@ mod tests {
         let sp = arena.line();
         let b = arena.text("b");
         let inner = arena.cats(&[a, sp, b]);
-        let nested = arena.nest(4, inner);
+        // nest(1, ..) = 1 indent level; default indent_width=2 → 2 spaces
+        let nested = arena.nest(1, inner);
         let doc = arena.group(nested);
-        assert_eq!(arena.render(doc, 3, CASE), "a b");
-        assert_eq!(arena.render(doc, 2, CASE), "a\n    b");
+        assert_eq!(arena.render(doc, &cfg_width(3)), "a b");
+        assert_eq!(arena.render(doc, &cfg_width(2)), "a\n  b");
     }
 
     #[test]
     fn nil_doc_renders_empty() {
         let arena = DocArena::new();
-        assert_eq!(arena.render(NIL_DOC, WIDTH, CASE), "");
+        assert_eq!(arena.render(NIL_DOC, &cfg()), "");
+    }
+
+    #[test]
+    fn nest_respects_indent_width() {
+        use crate::fmt::FormatConfig;
+
+        let mut arena = DocArena::new();
+        let a = arena.text("a");
+        let sp = arena.line();
+        let b = arena.text("b");
+        let inner = arena.cats(&[a, sp, b]);
+        // nest(1, ..) = 1 indent level
+        let nested = arena.nest(1, inner);
+        let doc = arena.group(nested);
+
+        // With indent_width=4, one level should produce 4 spaces.
+        let config = FormatConfig::default()
+            .with_line_width(2)
+            .with_indent_width(4);
+        assert_eq!(arena.render(doc, &config), "a\n    b");
+
+        // With indent_width=8, one level should produce 8 spaces.
+        let config = FormatConfig::default()
+            .with_line_width(2)
+            .with_indent_width(8);
+        assert_eq!(arena.render(doc, &config), "a\n        b");
     }
 }

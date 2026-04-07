@@ -315,10 +315,8 @@ impl Formatter {
                         GroupNestFrame::Nest(..) => panic!("expected Group frame"),
                     }
                 }
-                FmtOp::NestStart(indent) => {
-                    scratch
-                        .group_nest
-                        .push(GroupNestFrame::Nest(indent, running));
+                FmtOp::NestStart => {
+                    scratch.group_nest.push(GroupNestFrame::Nest(running));
                     running = NIL_DOC;
                 }
                 FmtOp::NestEnd => {
@@ -326,8 +324,8 @@ impl Formatter {
                     pending = NIL_DOC;
                     let inner = running;
                     match scratch.group_nest.pop().expect("unmatched NestEnd") {
-                        GroupNestFrame::Nest(indent, parent) => {
-                            let n = arena.nest(indent, inner);
+                        GroupNestFrame::Nest(parent) => {
+                            let n = arena.nest(1, inner);
                             running = arena.cat(parent, n);
                         }
                         GroupNestFrame::Group(_) => panic!("expected Nest frame"),
@@ -894,7 +892,7 @@ enum FmtOp {
     HardLine,
     GroupStart,
     GroupEnd,
-    NestStart(i16),
+    NestStart,
     NestEnd,
     IfSet(FieldIdx, SkipCount),
     Else(SkipCount),
@@ -929,7 +927,7 @@ impl FmtOp {
             opcodes::HARDLINE => FmtOp::HardLine,
             opcodes::GROUP_START => FmtOp::GroupStart,
             opcodes::GROUP_END => FmtOp::GroupEnd,
-            opcodes::NEST_START => FmtOp::NestStart(i16::from_le_bytes(b.to_le_bytes())),
+            opcodes::NEST_START => FmtOp::NestStart,
             opcodes::NEST_END => FmtOp::NestEnd,
             opcodes::IF_SET => FmtOp::IfSet(a.into(), c),
             opcodes::ELSE_OP => FmtOp::Else(c),
@@ -973,7 +971,7 @@ fn byte_offset_in(source: &str, ptr: *const u8) -> u32 {
 
 enum GroupNestFrame {
     Group(DocId),
-    Nest(i16, DocId),
+    Nest(DocId),
 }
 
 struct ForEachState {

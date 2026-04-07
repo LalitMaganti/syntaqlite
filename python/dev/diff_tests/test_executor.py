@@ -65,6 +65,10 @@ def execute_test(
             cmd.extend(["--sqlite-cflag", flag])
     if subcommand:
         cmd.extend(subcommand.split())
+    if blueprint.line_width is not None:
+        cmd.extend(["--line-width", str(blueprint.line_width)])
+    if blueprint.indent_width is not None:
+        cmd.extend(["--indent-width", str(blueprint.indent_width)])
     t0 = time.monotonic()
     try:
         proc = subprocess.run(

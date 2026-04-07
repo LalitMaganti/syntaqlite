@@ -19,8 +19,6 @@ use std::fmt::{Display, Formatter};
 use super::AstModel;
 use crate::util::synq_parser::{Field, Fmt, Item};
 
-const DEFAULT_NEST_INDENT: u16 = 2;
-
 use syntaqlite_common::fmt::bytecode::RawOp;
 use syntaqlite_common::fmt::bytecode::opcodes;
 
@@ -392,7 +390,7 @@ fn compile_one(
             ops.push(op0(opcodes::GROUP_END));
         }
         Fmt::Nest(body) => {
-            ops.push(opab(opcodes::NEST_START, 0, DEFAULT_NEST_INDENT));
+            ops.push(op0(opcodes::NEST_START));
             compile_seq(body, ctx, ops)?;
             ops.push(op0(opcodes::NEST_END));
         }
@@ -917,10 +915,7 @@ mod tests {
             opcodes::HARDLINE => "FmtOp::HardLine".to_string(),
             opcodes::GROUP_START => "FmtOp::GroupStart".to_string(),
             opcodes::GROUP_END => "FmtOp::GroupEnd".to_string(),
-            opcodes::NEST_START => format!(
-                "FmtOp::NestStart({})",
-                i16::try_from(op.b).expect("nest indent fits i16")
-            ),
+            opcodes::NEST_START => "FmtOp::NestStart".to_string(),
             opcodes::NEST_END => "FmtOp::NestEnd".to_string(),
             opcodes::IF_SET => format!("FmtOp::IfSet({}, {})", op.a, op.c),
             opcodes::ELSE_OP => format!("FmtOp::Else({})", op.c),
@@ -1170,7 +1165,7 @@ mod tests {
 
         let output = generate_rust_fmt_ops(&AstModel::new(&items)).unwrap();
         assert!(output.contains("FmtOp::IfSet(0,"));
-        assert!(output.contains("FmtOp::NestStart(2)"));
+        assert!(output.contains("FmtOp::NestStart"));
         assert!(output.contains("FmtOp::Child(0)"));
         assert!(output.contains("FmtOp::NestEnd"));
     }

@@ -245,12 +245,7 @@ impl Formatter {
             let doc = arena.cats(&self.parts);
             let mut bufs = std::mem::take(&mut self.render_bufs);
             bufs.clear();
-            arena.render_into(
-                doc,
-                self.config.line_width,
-                self.config.keyword_case,
-                &mut bufs,
-            );
+            arena.render_into(doc, &self.config, &mut bufs);
             result.push_str(&bufs.out);
             self.render_bufs = bufs;
 
@@ -356,10 +351,7 @@ impl Formatter {
                     | opcodes::NEST_END
                     | opcodes::END_IF
                     | opcodes::FOR_EACH_END => "}".to_string(),
-                    opcodes::NEST_START => {
-                        let indent = i16::from_le_bytes(b.to_le_bytes());
-                        format!("Nest({indent}) {{")
-                    }
+                    opcodes::NEST_START => "Nest {".to_string(),
                     opcodes::IF_SET => format!("IfSet(field={a}) {{"),
                     opcodes::ELSE_OP => "} Else {".to_string(),
                     opcodes::FOR_EACH_START => format!("ForEach(field={a}) {{"),
@@ -746,7 +738,7 @@ fn reindent_macro<'a>(
         // actual RP token (strings start with `'`, comments with `--`/`/*`).
         let leading_close =
             i32::try_from(trimmed.bytes().take_while(|&b| b == b')').count()).unwrap_or(i32::MAX);
-        let indent = i16::try_from((line_depth - leading_close).max(0) * 2).unwrap_or(i16::MAX);
+        let indent = i16::try_from((line_depth - leading_close).max(0)).unwrap_or(i16::MAX);
 
         if first {
             // Content on same line as "!(" — keep inline.
@@ -773,7 +765,6 @@ fn reindent_macro<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::fmt::KeywordCase;
 
     /// Verify that `Formatter` stores an `AnyParser` derived from the dialect,
     /// not a hardcoded `SQLite` `Parser`.
@@ -793,7 +784,7 @@ mod tests {
 
     fn render_parts(arena: &mut DocArena<'_>, parts: &[DocId]) -> String {
         let root = arena.cats(parts);
-        arena.render(root, 80, KeywordCase::Upper)
+        arena.render(root, &FormatConfig::default())
     }
 
     #[test]
