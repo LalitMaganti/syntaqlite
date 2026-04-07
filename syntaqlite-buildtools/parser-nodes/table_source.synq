@@ -26,7 +26,7 @@ node SubqueryTableSource {
   semantic { scoped_source(body: select, alias: alias) }
 
   fmt {
-    "(" child(select) ")"
+    group { "(" nest { softline child(select) } softline ")" }
     if_set(alias) { " AS " child(alias) }
   }
 }

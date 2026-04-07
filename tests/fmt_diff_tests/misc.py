@@ -226,6 +226,38 @@ class SubqueryFormat(TestSuite):
             out="SELECT a FROM t WHERE x NOT IN (SELECT id FROM t2);",
         )
 
+    def test_subquery_table_source_breaks(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM (SELECT a, b FROM t WHERE x = 1 AND y = 2) AS sub",
+            line_width=30,
+            out="""\
+                SELECT *
+                FROM (
+                  SELECT a, b
+                  FROM t
+                  WHERE
+                    x = 1
+                    AND y = 2
+                ) AS sub;
+            """,
+        )
+
+    def test_subquery_table_source_no_alias_breaks(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM (SELECT a, b FROM t WHERE x = 1 AND y = 2)",
+            line_width=30,
+            out="""\
+                SELECT *
+                FROM (
+                  SELECT a, b
+                  FROM t
+                  WHERE
+                    x = 1
+                    AND y = 2
+                );
+            """,
+        )
+
 
 class RaiseFormat(TestSuite):
     def test_raise_ignore(self):
