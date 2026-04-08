@@ -125,7 +125,7 @@ fn formatter_accepts_sin_regardless_of_math_functions_flag() {
 
 #[test]
 fn typed_parser_accepts_cte_without_cflag() {
-    let parser = syntaqlite::typed::TypedParser::new(syntaqlite::typed::grammar());
+    let parser = syntaqlite::typed::TypedParser::new(syntaqlite::typed::dialect());
     let mut session = parser.parse("WITH t AS (SELECT 1) SELECT * FROM t;");
     assert!(
         matches!(session.next(), ParseOutcome::Ok(_)),
@@ -139,7 +139,7 @@ fn typed_parser_rejects_cte_with_omit_cte_syntax_cflag() {
     // dialect that carries the flag.
     let flags = SqliteFlags::default().with(SqliteFlag::OmitCte);
     let dialect = sqlite_dialect().with_cflags(flags);
-    let grammar = syntaqlite::typed::grammar().with_cflags(dialect.syntax_cflags());
+    let grammar = syntaqlite::typed::dialect().with_cflags(dialect.syntax_cflags());
     let parser = syntaqlite::typed::TypedParser::new(grammar);
     let mut session = parser.parse("WITH t AS (SELECT 1) SELECT * FROM t;");
     assert!(
@@ -152,7 +152,7 @@ fn typed_parser_rejects_cte_with_omit_cte_syntax_cflag() {
 fn typed_parser_rejects_window_function_with_omit_windowfunc_syntax_cflag() {
     let flags = SqliteFlags::default().with(SqliteFlag::OmitWindowfunc);
     let dialect = sqlite_dialect().with_cflags(flags);
-    let grammar = syntaqlite::typed::grammar().with_cflags(dialect.syntax_cflags());
+    let grammar = syntaqlite::typed::dialect().with_cflags(dialect.syntax_cflags());
     let parser = syntaqlite::typed::TypedParser::new(grammar);
     let mut session = parser.parse("SELECT sum(x) OVER () FROM t;");
     assert!(
@@ -165,7 +165,7 @@ fn typed_parser_rejects_window_function_with_omit_windowfunc_syntax_cflag() {
 fn typed_parser_rejects_returning_with_omit_returning_syntax_cflag() {
     let flags = SqliteFlags::default().with(SqliteFlag::OmitReturning);
     let dialect = sqlite_dialect().with_cflags(flags);
-    let grammar = syntaqlite::typed::grammar().with_cflags(dialect.syntax_cflags());
+    let grammar = syntaqlite::typed::dialect().with_cflags(dialect.syntax_cflags());
     let parser = syntaqlite::typed::TypedParser::new(grammar);
     let mut session = parser.parse("INSERT INTO t VALUES(1) RETURNING *;");
     assert!(
@@ -239,7 +239,7 @@ fn lsp_diagnostics_no_parse_error_without_omit_windowfunc() {
 #[test]
 fn typed_tokenizer_cte_parses_ok_without_cflag() {
     use syntaqlite::typed::TypedTokenizer;
-    let tokenizer = TypedTokenizer::new(syntaqlite::typed::grammar());
+    let tokenizer = TypedTokenizer::new(syntaqlite::typed::dialect());
     let tokens: Vec<_> = tokenizer
         .tokenize("WITH t AS (SELECT 1) SELECT * FROM t;")
         .collect();
@@ -259,7 +259,7 @@ fn typed_tokenizer_with_omit_cte_produces_fewer_keyword_tokens() {
     let sql = "WITH t AS (SELECT 1) SELECT * FROM t;";
 
     // Tokenize with default grammar.
-    let default_tokens: Vec<_> = TypedTokenizer::new(syntaqlite::typed::grammar())
+    let default_tokens: Vec<_> = TypedTokenizer::new(syntaqlite::typed::dialect())
         .tokenize(sql)
         .map(|t| AnyTokenType::from(t.token_type()))
         .collect();
@@ -267,7 +267,7 @@ fn typed_tokenizer_with_omit_cte_produces_fewer_keyword_tokens() {
     // Tokenize with OmitCte cflag applied to the grammar.
     let flags = SqliteFlags::default().with(SqliteFlag::OmitCte);
     let dialect = sqlite_dialect().with_cflags(flags);
-    let grammar_with_flag = syntaqlite::typed::grammar().with_cflags(dialect.syntax_cflags());
+    let grammar_with_flag = syntaqlite::typed::dialect().with_cflags(dialect.syntax_cflags());
     let flagged_tokens: Vec<_> = TypedTokenizer::new(grammar_with_flag)
         .tokenize(sql)
         .map(|t| AnyTokenType::from(t.token_type()))

@@ -51,7 +51,7 @@
 #include <stdio.h>
 
 #include "syntaqlite/config.h"
-#include "syntaqlite/grammar.h"
+#include "syntaqlite/dialect.h"
 #include "syntaqlite/types.h"
 
 #ifdef __cplusplus
@@ -116,10 +116,10 @@ typedef struct SyntaqliteMacroRegion {
 // Core API
 // ---------------------------------------------------------------------------
 
-// Allocate a parser bound to a specific grammar environment.
-SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_grammar(
+// Allocate a parser bound to a specific dialect environment.
+SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
     const SyntaqliteMemMethods* mem,
-    SyntaqliteGrammar env);
+    SyntaqliteDialect env);
 
 // Bind a source buffer and reset all internal state. The source must remain
 // valid until the next reset() or destroy(). Can be called again to parse a
@@ -310,12 +310,12 @@ SYNTAQLITE_API char* syntaqlite_dump_node(SyntaqliteParser* p,
 // ============================================================================
 
 #ifndef SYNTAQLITE_OMIT_SQLITE_API
-// Allocate a parser for the built-in SQLite grammar. The parser is inert
+// Allocate a parser for the built-in SQLite dialect. The parser is inert
 // until reset() is called. Pass NULL for mem to use malloc/free.
 SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create(
     const SyntaqliteMemMethods* mem);
 
-SYNTAQLITE_API SyntaqliteGrammar syntaqlite_sqlite_grammar(void);
+SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void);
 #endif
 
 #ifdef __cplusplus

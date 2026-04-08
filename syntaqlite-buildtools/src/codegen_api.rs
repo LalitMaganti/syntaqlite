@@ -25,7 +25,7 @@ use crate::{base_files, dialect_codegen, output_resolver, util};
 
 /// Macro invocation style for the batch parsing loop.
 ///
-/// Mirrors the C enum `SyntaqliteMacroStyle` in `grammar.h`.
+/// Mirrors the C enum `SyntaqliteMacroStyle` in `dialect.h`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum MacroStyle {
     /// No macro detection.
@@ -96,16 +96,16 @@ impl DialectNaming {
         format!("syntaqlite_{}_dialect", self.name)
     }
 
-    /// C symbol name for the grammar function (e.g. `"syntaqlite_sqlite_grammar"`).
+    /// C symbol name for the dialect function (e.g. `"syntaqlite_sqlite_dialect"`).
     #[must_use]
     pub fn grammar_fn_name(&self) -> String {
         format!("syntaqlite_{}_grammar", self.name)
     }
 
-    /// Rust grammar struct type name (`"Grammar"`).
+    /// Rust dialect struct type name (`"Dialect"`).
     #[must_use]
-    pub fn grammar_struct_type(&self) -> String {
-        "Grammar".to_owned()
+    pub fn dialect_struct_type(&self) -> String {
+        "Dialect".to_owned()
     }
 
     /// Rust token enum type name (`"TokenType"`).
@@ -146,7 +146,7 @@ pub(crate) struct RustCodegenArtifacts {
     pub ffi_rs: String,
     /// Rust AST node types (`ast.rs`).
     pub ast_rs: String,
-    /// Grammar module (`grammar.rs`).
+    /// Dialect module (`dialect.rs`).
     pub grammar_rs: Option<String>,
     /// Dialect accessor module (`dialect.rs`).
     pub dialect_rs: Option<String>,
@@ -193,7 +193,7 @@ pub(crate) struct CodegenArtifacts {
     /// Dialect dispatch header (`*_dialect_dispatch.h`).
     pub dialect_dispatch_h: String,
     /// Minimal runtime tokens header containing only the tokens needed by
-    /// `token_wrapped.c` in the grammar-agnostic engine crate.
+    /// `token_wrapped.c` in the dialect-agnostic engine crate.
     pub runtime_tokens_h: String,
     /// `SQLite` cflag index constants header (`cflags.h`).
     pub cflags_h: String,
@@ -209,7 +209,7 @@ pub(crate) struct CodegenArtifacts {
 /// Returns structured `(name, value)` pairs where name is the short name (e.g. "ABORT").
 /// Normalize a raw `SQLite` token name for use as a Rust enum variant.
 ///
-/// `SQLite`'s grammar uses compound token names without underscores (e.g.
+/// `SQLite`'s dialect uses compound token names without underscores (e.g.
 /// `ISNULL`, `NOTNULL`). Inserting underscores here lets `pascal_case`
 /// produce proper `PascalCase` variants (`IsNull`, `NotNull`) downstream.
 fn normalize_token_name(name: &str) -> String {
@@ -239,7 +239,7 @@ pub(crate) fn extract_token_defines(parse_h: &str) -> Vec<(String, u32)> {
     tokens
 }
 
-/// Token names needed by the grammar-agnostic runtime (`token_wrapped.c`).
+/// Token names needed by the dialect-agnostic runtime (`token_wrapped.c`).
 const RUNTIME_TOKEN_NAMES: &[&str] = &[
     "PTR", "MINUS", "QNUMBER", "FLOAT", "INTEGER", "SPACE", "SEMI", "COMMENT", "ID", "ILLEGAL",
     "LP", "RP", "COMMA", "VARIABLE",
@@ -630,13 +630,13 @@ pub(crate) fn generate_codegen_artifacts(
     let rust = if request.include_rust {
         // All generated Rust files import from `crate` directly (they live
         // inside syntaqlite-syntax/src/sqlite/).
-        let grammar_type = format!("super::grammar::{}", request.dialect.grammar_struct_type());
+        let dialect_type = format!("super::dialect::{}", request.dialect.dialect_struct_type());
         let rust_paths = RustAstPaths {
             crate_prefix: "crate",
             // ffi_path: dialect-specific FFI structs live in the sibling ffi module.
             ffi_path: "super::ffi",
             nodes_path: "crate::ast",
-            grammar_type: &grammar_type,
+            dialect_type: &dialect_type,
         };
         Some(RustCodegenArtifacts {
             tokens_rs: generate_rust_tokens(&token_defines[..], &request.dialect.token_type_name()),
@@ -644,19 +644,19 @@ pub(crate) fn generate_codegen_artifacts(
             ast_rs: ast_model.generate_rust_ast(&rust_paths, request.open_for_extension),
             grammar_rs: Some(generate_grammar_module(
                 &request.dialect.grammar_fn_name(),
-                &request.dialect.grammar_struct_type(),
+                &request.dialect.dialect_struct_type(),
                 ast_model.root_node_name(),
                 &request.dialect.token_type_name(),
                 "crate",
             )),
             dialect_rs: Some(generate_dialect_module(
                 &request.dialect.dialect_symbol_fn_name(),
-                &request.dialect.grammar_struct_type(),
+                &request.dialect.dialect_struct_type(),
                 "crate",
             )),
             lib_rs: generate_rust_lib(
                 &request.dialect.dialect_symbol_fn_name(),
-                &request.dialect.grammar_struct_type(),
+                &request.dialect.dialect_struct_type(),
                 ast_model.root_node_name(),
                 &request.dialect.token_type_name(),
             ),

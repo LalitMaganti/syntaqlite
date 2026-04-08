@@ -7,11 +7,11 @@
 #[doc(inline)]
 pub use crate::sqlite::cflags::SqliteSyntaxFlag;
 
-/// Snapshot of C-parser compatibility flags for the `SQLite` grammar.
+/// Snapshot of C-parser compatibility flags for the `SQLite` dialect.
 ///
 /// This type mirrors the `SyntaqliteCflags` C struct (3 bytes, 22 meaningful
 /// bits, compact indices 0–21) and is used to configure the C parser at
-/// runtime. It covers only the grammar-level parser flags defined in
+/// runtime. It covers only the dialect-level parser flags defined in
 /// `include/syntaqlite/cflags.h`.
 ///
 /// For the full set of `SQLite` compile-time flags — including non-parser flags
@@ -20,6 +20,14 @@ pub use crate::sqlite::cflags::SqliteSyntaxFlag;
 pub struct SqliteSyntaxFlags(pub(crate) ffi::CCflags);
 
 impl SqliteSyntaxFlags {
+    /// Construct from a raw [`ffi::CCflags`] value.
+    ///
+    /// This is intended for FFI code that reads cflags from a C struct.
+    #[doc(hidden)]
+    pub fn from_raw(raw: ffi::CCflags) -> Self {
+        Self(raw)
+    }
+
     /// Returns `true` if parser flag `flag` is enabled.
     #[inline]
     pub fn has(&self, flag: SqliteSyntaxFlag) -> bool {
@@ -34,7 +42,7 @@ impl SqliteSyntaxFlags {
     }
 }
 
-/// `SQLite` compatibility target used to select grammar behavior.
+/// `SQLite` compatibility target used to select dialect behavior.
 ///
 /// Pin this when your application needs to parse according to a specific
 /// `SQLite` release. Patch versions are intentionally ignored.
@@ -82,7 +90,7 @@ pub enum SqliteVersion {
     V3_49,
     V3_50,
     V3_51,
-    /// No version constraint — use the latest grammar rules.
+    /// No version constraint — use the latest dialect rules.
     Latest,
 }
 
@@ -266,7 +274,9 @@ impl SqliteVersion {
 
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
-pub(crate) mod ffi {
+/// C-ABI types for compile-time flag representation.
+#[doc(hidden)]
+pub mod ffi {
     /// Mirrors C `SyntaqliteCflags` from `include/syntaqlite/cflags.h`.
     ///
     /// A packed bitfield over the parser-group compile-time flags (22 flags,
@@ -274,7 +284,7 @@ pub(crate) mod ffi {
     /// and the generated [`crate::sqlite::cflags::SqliteSyntaxFlag`] Rust enum.
     #[repr(C)]
     #[derive(Clone, Copy, Default)]
-    pub(crate) struct CCflags {
+    pub struct CCflags {
         pub(super) bytes: [u8; 3],
     }
 
@@ -328,7 +338,7 @@ pub(crate) mod ffi {
 ///
 /// Keyword symbols use all-uppercase names with digits and underscores
 /// (e.g. `SELECT`, `LEFT_JOIN`). This is a pure naming-convention predicate
-/// and does not depend on grammar version or flags.
+/// and does not depend on dialect version or flags.
 pub fn is_suggestable_keyword(name: &str) -> bool {
     !name.is_empty()
         && name

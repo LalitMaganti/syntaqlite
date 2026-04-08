@@ -7,13 +7,13 @@
 //! Fast, accurate SQL tooling for `SQLite` and its dialects.
 //!
 //! This crate provides parsing, formatting, and semantic validation for SQL,
-//! built on `SQLite`'s own tokenizer and grammar rules. Four design principles
+//! built on `SQLite`'s own tokenizer and parser rules. Four design principles
 //! guide the library:
 //!
-//! - **Reliability** — uses `SQLite`'s own grammar rules; formatting is round-trip safe and validation mirrors real engine behaviour.
+//! - **Reliability** — uses `SQLite`'s own parser rules; formatting is round-trip safe and validation mirrors real engine behaviour.
 //! - **Speed** — all core types ([`Formatter`], [`SemanticAnalyzer`], [`Catalog`]) are designed for reuse across many inputs without re-allocation.
 //! - **Portability** — the core formatting and validation engine has no runtime dependencies beyond the standard library; optional features (`lsp`, `serde`) pull in additional crates.
-//! - **Flexibility** — supports multiple database dialects that extend `SQLite`'s grammar with their own tokens and rules.
+//! - **Flexibility** — supports multiple database dialects that extend `SQLite`'s syntax with their own tokens and rules.
 //!
 //! # Parsing
 //!
@@ -96,7 +96,7 @@
 //!
 //! # Features
 //!
-//! - `sqlite` *(default)*: enables the built-in `SQLite` grammar, [`Dialect`],
+//! - `sqlite` *(default)*: enables the built-in `SQLite` dialect, [`Dialect`],
 //!   and re-exports [`Parser`](crate::Parser), [`Tokenizer`](parse::Tokenizer), and typed AST [`nodes`].
 //! - `fmt` *(default)*: enables [`Formatter`], [`FormatConfig`], and
 //!   [`KeywordCase`](fmt::KeywordCase).
@@ -117,8 +117,8 @@
 //! - Use [`Formatter`] when you need to pretty-print or normalize SQL text.
 //! - Use [`LspServer`](lsp::LspServer) (requires the `lsp` feature) to embed a full
 //!   Language Server Protocol implementation in an editor or tool.
-//! - Use [`typed`] when building reusable code over known generated grammars.
-//! - Use [`any`] when grammar choice happens at runtime or crosses
+//! - Use [`typed`] when building reusable code over known generated dialects.
+//! - Use [`any`] when dialect choice happens at runtime or crosses
 //!   FFI/plugin boundaries.
 
 // ── Modules ─────────────────────────────────────────────────────────────────
@@ -244,7 +244,7 @@ pub mod parse {
     };
 }
 
-/// Type-erased (grammar-agnostic) parser and tokenizer types.
+/// Type-erased (dialect-agnostic) parser and tokenizer types.
 pub mod any {
     #[doc(inline)]
     pub use syntaqlite_syntax::any::*;
@@ -261,7 +261,7 @@ pub mod any {
     }
 }
 
-/// Typed (grammar-parameterized) parser and tokenizer infrastructure.
+/// Typed (dialect-parameterized) parser and tokenizer infrastructure.
 pub mod typed {
     #[doc(inline)]
     pub use syntaqlite_syntax::typed::*;
@@ -271,7 +271,7 @@ pub mod typed {
     pub use crate::dialect::TypedDialect;
 }
 
-/// Generated typed AST nodes for the built-in `SQLite` grammar.
+/// Generated typed AST nodes for the built-in `SQLite` dialect.
 #[cfg(feature = "sqlite")]
 pub mod nodes {
     #[doc(inline)]

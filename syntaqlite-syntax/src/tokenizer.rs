@@ -9,10 +9,10 @@ use std::rc::Rc;
 
 use crate::any::AnyTokenType;
 use crate::ast::GrammarTokenType;
-use crate::grammar::{AnyGrammar, TypedGrammar};
+use crate::dialect::{AnyDialect, TypedDialect};
 
 #[cfg(feature = "sqlite")]
-use crate::sqlite::grammar::Grammar;
+use crate::sqlite::dialect::Dialect;
 #[cfg(feature = "sqlite")]
 use crate::sqlite::tokens::TokenType;
 
@@ -29,13 +29,13 @@ use crate::sqlite::tokens::TokenType;
 /// Advanced generic tokenizer APIs exist in [`crate::typed`] and [`crate::any`].
 #[cfg(feature = "sqlite")]
 #[doc(hidden)]
-pub struct Tokenizer(TypedTokenizer<Grammar>);
+pub struct Tokenizer(TypedTokenizer<Dialect>);
 
 #[cfg(feature = "sqlite")]
 impl Tokenizer {
     /// Create a tokenizer for `SQLite` SQL.
     pub fn new() -> Self {
-        Tokenizer(TypedTokenizer::new(crate::sqlite::grammar::grammar()))
+        Tokenizer(TypedTokenizer::new(crate::sqlite::dialect::dialect()))
     }
 
     /// Tokenize one SQL source string and iterate `SQLite` tokens.
@@ -105,7 +105,7 @@ impl Default for Tokenizer {
 /// - Read exact source text via [`text`](Self::text).
 #[cfg(feature = "sqlite")]
 #[doc(hidden)]
-pub struct Token<'a>(TypedToken<'a, Grammar>);
+pub struct Token<'a>(TypedToken<'a, Dialect>);
 
 #[cfg(feature = "sqlite")]
 impl<'a> Token<'a> {
@@ -120,37 +120,37 @@ impl<'a> Token<'a> {
     }
 }
 
-/// Tokenizer parameterized by grammar type `G`.
+/// Tokenizer parameterized by dialect type `G`.
 ///
-/// Useful for reusable tooling built against generated grammars.
+/// Useful for reusable tooling built against generated dialects.
 ///
-/// - Use this when grammar type is known at compile time.
+/// - Use this when dialect type is known at compile time.
 /// - Use [`Tokenizer`] for typical `SQLite` SQL app code.
 ///
-pub struct TypedTokenizer<G: TypedGrammar> {
+pub struct TypedTokenizer<G: TypedDialect> {
     inner: Rc<RefCell<Option<TokenizerInner>>>,
     _marker: PhantomData<G>,
 }
 
-impl<G: TypedGrammar> TypedTokenizer<G> {
-    /// Create a tokenizer for grammar `G`.
+impl<G: TypedDialect> TypedTokenizer<G> {
+    /// Create a tokenizer for dialect `G`.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use syntaqlite_syntax::typed::{grammar, TypedTokenizer};
+    /// use syntaqlite_syntax::typed::{dialect, TypedTokenizer};
     ///
-    /// let _tokenizer = TypedTokenizer::new(grammar());
+    /// let _tokenizer = TypedTokenizer::new(dialect());
     /// ```
     ///
     /// # Panics
     ///
     /// Panics if tokenizer allocation fails (out of memory).
-    pub fn new(grammar: G) -> Self {
-        // SAFETY: create(NULL, grammar.inner) allocates a new tokenizer with
-        // default malloc/free. The C side copies the grammar.
+    pub fn new(dialect: G) -> Self {
+        // SAFETY: create(NULL, dialect.inner) allocates a new tokenizer with
+        // default malloc/free. The C side copies the dialect handle.
         let raw = NonNull::new(unsafe {
-            ffi::CTokenizer::create(std::ptr::null(), Into::<AnyGrammar>::into(grammar).inner)
+            ffi::CTokenizer::create(std::ptr::null(), Into::<AnyDialect>::into(dialect).inner)
         })
         .expect("tokenizer allocation failed");
 
@@ -172,9 +172,9 @@ impl<G: TypedGrammar> TypedTokenizer<G> {
     ///
     /// ```rust
     /// use syntaqlite_syntax::TokenType;
-    /// use syntaqlite_syntax::typed::{grammar, TypedTokenizer};
+    /// use syntaqlite_syntax::typed::{dialect, TypedTokenizer};
     ///
-    /// let tokenizer = TypedTokenizer::new(grammar());
+    /// let tokenizer = TypedTokenizer::new(dialect());
     /// let tokens: Vec<_> = tokenizer.tokenize("SELECT 1").collect();
     ///
     /// assert_eq!(tokens[0].token_type(), TokenType::Select);
@@ -234,9 +234,9 @@ impl<G: TypedGrammar> TypedTokenizer<G> {
     /// ```rust
     /// use std::ffi::CString;
     /// use syntaqlite_syntax::TokenType;
-    /// use syntaqlite_syntax::typed::{grammar, TypedTokenizer};
+    /// use syntaqlite_syntax::typed::{dialect, TypedTokenizer};
     ///
-    /// let tokenizer = TypedTokenizer::new(grammar());
+    /// let tokenizer = TypedTokenizer::new(dialect());
     /// let sql = CString::new("SELECT 1").unwrap();
     /// let types: Vec<_> = tokenizer.tokenize_cstr(&sql).map(|t| t.token_type()).collect();
     ///
@@ -285,16 +285,16 @@ impl<G: TypedGrammar> TypedTokenizer<G> {
 ///
 /// Provides:
 ///
-/// - Grammar-typed token kind.
+/// - Dialect-typed token kind.
 /// - Exact source text slice.
 #[derive(Debug, Clone, Copy)]
-pub struct TypedToken<'a, G: TypedGrammar> {
+pub struct TypedToken<'a, G: TypedDialect> {
     token_type: G::Token,
     text: &'a str,
 }
 
-impl<'a, G: TypedGrammar> TypedToken<'a, G> {
-    /// The grammar-typed token variant.
+impl<'a, G: TypedDialect> TypedToken<'a, G> {
+    /// The dialect-typed token variant.
     pub fn token_type(&self) -> G::Token {
         self.token_type
     }
@@ -305,13 +305,13 @@ impl<'a, G: TypedGrammar> TypedToken<'a, G> {
     }
 }
 
-/// Tokenizer alias for grammar-independent code that picks grammar at runtime.
+/// Tokenizer alias for dialect-independent code that picks dialect at runtime.
 ///
-/// This is a type alias for [`TypedTokenizer<AnyGrammar>`].
-pub type AnyTokenizer = TypedTokenizer<AnyGrammar>;
+/// This is a type alias for [`TypedTokenizer<AnyDialect>`].
+pub type AnyTokenizer = TypedTokenizer<AnyDialect>;
 
-/// Token alias for grammar-independent tokenization pipelines.
-pub type AnyToken<'a> = TypedToken<'a, AnyGrammar>;
+/// Token alias for dialect-independent tokenization pipelines.
+pub type AnyToken<'a> = TypedToken<'a, AnyDialect>;
 
 // ── Crate-internal ───────────────────────────────────────────────────────────
 
@@ -319,7 +319,7 @@ pub type AnyToken<'a> = TypedToken<'a, AnyGrammar>;
 ///
 /// Returned by the `tokenize` family of methods on [`TypedTokenizer`] and [`AnyTokenizer`].
 /// Implements [`Iterator`]`<Item = `[`TypedToken`]`<'a, G>>`.
-struct TypedTokenCursor<'a, G: TypedGrammar> {
+struct TypedTokenCursor<'a, G: TypedDialect> {
     raw: NonNull<ffi::CTokenizer>,
     source: &'a str,
     /// Base pointer of the C source buffer. Used to compute byte offsets back
@@ -330,7 +330,7 @@ struct TypedTokenCursor<'a, G: TypedGrammar> {
     _marker: PhantomData<G>,
 }
 
-impl<G: TypedGrammar> Drop for TypedTokenCursor<'_, G> {
+impl<G: TypedDialect> Drop for TypedTokenCursor<'_, G> {
     fn drop(&mut self) {
         if let Some(inner) = self.inner.take() {
             *self.slot.borrow_mut() = Some(inner);
@@ -338,7 +338,7 @@ impl<G: TypedGrammar> Drop for TypedTokenCursor<'_, G> {
     }
 }
 
-impl<'a, G: TypedGrammar> Iterator for TypedTokenCursor<'a, G> {
+impl<'a, G: TypedDialect> Iterator for TypedTokenCursor<'a, G> {
     type Item = TypedToken<'a, G>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -389,11 +389,11 @@ mod ffi {
     impl CTokenizer {
         pub(crate) unsafe fn create(
             mem: *const std::ffi::c_void,
-            grammar: crate::grammar::ffi::CGrammar,
+            dialect: crate::dialect::ffi::CDialect,
         ) -> *mut Self {
             // SAFETY: caller guarantees `mem` is null or a valid mem-methods
-            // pointer; `grammar` is a valid grammar descriptor.
-            unsafe { syntaqlite_tokenizer_create_with_grammar(mem, grammar) }
+            // pointer; `dialect` is a valid dialect descriptor.
+            unsafe { syntaqlite_tokenizer_create_with_dialect(mem, dialect) }
         }
 
         pub(crate) unsafe fn reset(&mut self, source: *const c_char, len: u32) {
@@ -426,9 +426,9 @@ mod ffi {
     }
 
     unsafe extern "C" {
-        fn syntaqlite_tokenizer_create_with_grammar(
+        fn syntaqlite_tokenizer_create_with_dialect(
             mem: *const std::ffi::c_void,
-            grammar: crate::grammar::ffi::CGrammar,
+            dialect: crate::dialect::ffi::CDialect,
         ) -> *mut CTokenizer;
         fn syntaqlite_tokenizer_reset(tok: *mut CTokenizer, source: *const c_char, len: u32);
         fn syntaqlite_tokenizer_next(tok: *mut CTokenizer, out: *mut CToken) -> u32;

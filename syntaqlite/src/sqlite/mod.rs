@@ -4,7 +4,7 @@
 //! `SQLite` dialect — semantic handle, function catalog, and formatter statics.
 
 // `cflags` is always available — `SqliteFlag` ordinals are stable and
-// grammar-agnostic; callers use them without the full sqlite feature.
+// dialect-agnostic; callers use them without the full sqlite feature.
 pub(crate) mod cflags;
 
 #[cfg(feature = "sqlite")]

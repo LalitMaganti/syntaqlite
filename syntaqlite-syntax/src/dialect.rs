@@ -8,7 +8,7 @@ use crate::util::{SqliteSyntaxFlags, SqliteVersion};
 
 /// Runtime field-value shape used when reflecting over AST nodes.
 ///
-/// This powers grammar-agnostic tooling that inspects nodes without generated
+/// This powers dialect-agnostic tooling that inspects nodes without generated
 /// Rust types.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -88,7 +88,7 @@ impl From<ffi::CTokenCategory> for TokenCategory {
 /// Metadata for one AST field of one node type.
 ///
 /// Use this to build generic inspectors, serializers, or debug UIs that can
-/// walk arbitrary grammars.
+/// walk arbitrary dialects.
 pub struct FieldMeta<'a>(pub(crate) &'a ffi::CFieldMeta);
 
 impl FieldMeta<'_> {
@@ -105,10 +105,10 @@ impl FieldMeta<'_> {
     /// The field name as a `&str`.
     ///
     /// # Panics
-    /// Panics if the grammar table contains invalid UTF-8 in the field name
+    /// Panics if the dialect table contains invalid UTF-8 in the field name
     /// (which would indicate a codegen bug).
     pub fn name(&self) -> &'static str {
-        // SAFETY: `FieldMeta` is only constructed from static grammar tables
+        // SAFETY: `FieldMeta` is only constructed from static dialect tables
         // where `name` is always a valid, NUL-terminated UTF-8 C string.
         unsafe {
             let cstr = std::ffi::CStr::from_ptr(self.0.name);
@@ -119,13 +119,13 @@ impl FieldMeta<'_> {
     /// The `idx`-th display name for enum variants, if present.
     ///
     /// # Panics
-    /// Panics if the grammar table contains invalid UTF-8 in a display name
+    /// Panics if the dialect table contains invalid UTF-8 in a display name
     /// (which would indicate a codegen bug).
     pub fn display_name(&self, idx: usize) -> Option<&'static str> {
         if self.0.display.is_null() || idx >= self.0.display_count as usize {
             return None;
         }
-        // SAFETY: `FieldMeta` is only constructed from static grammar tables;
+        // SAFETY: `FieldMeta` is only constructed from static dialect tables;
         // `display` and its entries are valid static C strings.
         unsafe {
             let ptr = *self.0.display.add(idx);
@@ -183,89 +183,107 @@ impl ParserTokenFlags {
     }
 }
 
-/// Trait implemented by generated grammar handles.
+/// Trait implemented by generated dialect handles.
 ///
 /// End users typically consume implementations rather than writing them.
-/// The trait links a grammar to its typed node and token enums.
-pub trait TypedGrammar: Clone + Into<AnyGrammar> {
-    /// The top-level typed AST node enum for this grammar.
+/// The trait links a dialect to its typed node and token enums.
+pub trait TypedDialect: Clone + Into<AnyDialect> {
+    /// The top-level typed AST node enum for this dialect.
     type Node<'a>: crate::ast::GrammarNodeType<'a>;
-    /// The grammar's typed node ID, wrapping an [`crate::ast::AnyNodeId`].
+    /// The dialect's typed node ID, wrapping an [`crate::ast::AnyNodeId`].
     ///
     /// Used as the return type of [`TypedNodeList::node_id`](crate::ast::TypedNodeList::node_id)
-    /// so callers get a grammar-typed handle rather than a raw [`crate::ast::AnyNodeId`].
+    /// so callers get a dialect-typed handle rather than a raw [`crate::ast::AnyNodeId`].
     type NodeId: Copy + From<crate::ast::AnyNodeId> + Into<crate::ast::AnyNodeId>;
-    /// The typed token enum for this grammar.
+    /// The typed token enum for this dialect.
     type Token: crate::ast::GrammarTokenType;
 }
 
-/// Grammar handle for runtime-configurable, grammar-agnostic workflows.
+/// Dialect handle for runtime-configurable, dialect-agnostic workflows.
 ///
-/// Use `AnyGrammar` when grammar selection/configuration is dynamic (plugins,
-/// LSP hosts, multi-grammar test harnesses). It carries version/cflag knobs
+/// Use `AnyDialect` when dialect selection/configuration is dynamic (plugins,
+/// LSP hosts, multi-dialect test harnesses). It carries version/cflag knobs
 /// and introspection metadata, while remaining cheap to clone.
 ///
-/// Built-in grammars hold `&'static` C data directly. Dynamically loaded
-/// grammars transmute library-memory pointers to `&'static` and keep the
-/// library alive via an [`Arc`](std::sync::Arc). Use `AnyGrammar::load` to create one.
+/// Built-in dialects hold `&'static` C data directly. Dynamically loaded
+/// dialects transmute library-memory pointers to `&'static` and keep the
+/// library alive via an [`Arc`](std::sync::Arc). Use `AnyDialect::load` to create one.
 #[derive(Clone)]
-pub struct AnyGrammar {
-    pub(crate) inner: ffi::CGrammar,
-    /// Keeps the shared library alive for dynamically-loaded grammars.
-    /// `None` for built-in (static) grammars.
+pub struct AnyDialect {
+    pub(crate) inner: ffi::CDialect,
+    /// Keeps the shared library alive for dynamically-loaded dialects.
+    /// `None` for built-in (static) dialects.
     _keep_alive: Option<std::sync::Arc<dyn Send + Sync>>,
 }
 
-// SAFETY: The grammar wraps an immutable reference to static C data.
-unsafe impl Send for AnyGrammar {}
-// SAFETY: AnyGrammar wraps a *const CGrammar to a static C grammar object; it is safe to share across threads.
-unsafe impl Sync for AnyGrammar {}
+// SAFETY: The dialect wraps an immutable reference to static C data.
+unsafe impl Send for AnyDialect {}
+// SAFETY: AnyDialect wraps a *const CDialect to a static C dialect object; it is safe to share across threads.
+unsafe impl Sync for AnyDialect {}
 
-impl AnyGrammar {
-    /// Construct a `AnyGrammar` from a raw C grammar value.\
+impl AnyDialect {
+    /// Construct an `AnyDialect` from a raw C dialect value.
     ///
-    /// This unsafe method exists only for use by grammar implementations which are code generated.
+    /// This unsafe method exists only for use by dialect implementations which are code generated.
     /// End users should never need to call this directly.
     ///
     /// # Safety
     /// The `template` pointer inside `inner` must point to valid, `'static`
-    /// C grammar tables (e.g. returned by a grammar's `extern "C"` grammar
-    /// accessor such as `syntaqlite_sqlite_grammar()`).
-    pub unsafe fn new(inner: ffi::CGrammar) -> Self {
-        AnyGrammar {
+    /// C dialect tables (e.g. returned by a dialect's `extern "C"` accessor
+    /// such as `syntaqlite_sqlite_dialect()`).
+    pub unsafe fn new(inner: ffi::CDialect) -> Self {
+        AnyDialect {
             inner,
             _keep_alive: None,
         }
     }
 
-    /// Load a grammar from a shared library (`.so` / `.dylib` / `.dll`).
+    /// Construct an `AnyDialect` from a dialect template pointer.
     ///
-    /// Resolves `syntaqlite_<name>_grammar` (or `syntaqlite_grammar` when `name`
-    /// is `None`) and calls it to obtain the grammar handle.
+    /// Uses `INT32_MAX` as the version (latest) and empty cflags.
+    ///
+    /// # Safety
+    /// `template` must point to a valid, `'static` `SyntaqliteDialectTemplate`.
+    pub unsafe fn from_dialect_template(template: *const ffi::CDialectTemplate) -> Self {
+        let inner = ffi::CDialect {
+            template,
+            sqlite_version: i32::MAX,
+            cflags: crate::util::ffi::CCflags::default(),
+        };
+        AnyDialect {
+            inner,
+            _keep_alive: None,
+        }
+    }
+
+    /// Load a dialect from a shared library (`.so` / `.dylib` / `.dll`).
+    ///
+    /// Resolves `syntaqlite_<name>_dialect` (or `syntaqlite_dialect` when `name`
+    /// is `None`) and calls it to obtain the dialect handle.
     ///
     /// # Errors
-    /// Returns `Err` if the library cannot be opened or the grammar symbol is absent.
+    /// Returns `Err` if the library cannot be opened or the dialect symbol is absent.
     ///
     /// # Library lifetime
     /// The loaded library is kept alive via an [`Arc`] stored inside the
-    /// returned `AnyGrammar`. Dropping the last clone of the grammar unloads
+    /// returned `AnyDialect`. Dropping the last clone of the dialect unloads
     /// the library. Use [`syntaqlite::Dialect::load`] for dialect-level loading.
     #[cfg(feature = "dynload")]
     pub fn load(path: &str, name: Option<&str>) -> Result<Self, String> {
-        // SAFETY: We keep `lib` alive in an `Arc` below so the grammar pointer
-        // lives as long as any clone of the returned AnyGrammar.
+        // SAFETY: We keep `lib` alive in an `Arc` below so the dialect pointer
+        // lives as long as any clone of the returned AnyDialect.
         let lib = unsafe {
             libloading::Library::new(path).map_err(|e| format!("failed to load {path:?}: {e}"))?
         };
 
         let symbol = match name {
-            Some(n) => format!("syntaqlite_{n}_grammar"),
-            None => "syntaqlite_grammar".to_string(),
+            Some(n) => format!("syntaqlite_{n}_dialect"),
+            None => "syntaqlite_dialect".to_string(),
         };
         // SAFETY: We call the function immediately and drop `func` before `lib`
         // is moved into the Arc, so there is no lifetime overlap issue.
-        let raw: ffi::CGrammar = unsafe {
-            let func: libloading::Symbol<'_, unsafe extern "C" fn() -> ffi::CGrammar> = lib
+        let raw: ffi::CDialect = unsafe {
+            let func: libloading::Symbol<'_, unsafe extern "C" fn() -> ffi::CDialect> = lib
                 .get(symbol.as_bytes())
                 .map_err(|e| format!("symbol {symbol:?} not found in {path:?}: {e}"))?;
             func()
@@ -274,14 +292,14 @@ impl AnyGrammar {
         let keep_alive: std::sync::Arc<dyn Send + Sync> = std::sync::Arc::new(lib);
 
         // SAFETY: `raw.template` points into the shared library kept alive by
-        // `keep_alive`. Dropping the last AnyGrammar clone unloads the library.
-        Ok(AnyGrammar {
+        // `keep_alive`. Dropping the last AnyDialect clone unloads the library.
+        Ok(AnyDialect {
             inner: raw,
             _keep_alive: Some(keep_alive),
         })
     }
 
-    /// Pin this grammar handle to a target `SQLite` version.
+    /// Pin this dialect handle to a target `SQLite` version.
     ///
     /// Useful when your product must emulate a specific engine release.
     #[must_use]
@@ -307,22 +325,26 @@ impl AnyGrammar {
         SqliteSyntaxFlags(self.inner.cflags)
     }
 
-    /// Whether this grammar supports Rust-style macro invocations (`name!(args)`).
+    /// Whether this dialect supports Rust-style macro invocations (`name!(args)`).
     pub fn has_macro_style(&self) -> bool {
         self.template().macro_style != 0
     }
 
-    /// Return a reference to the abstract grammar template.
+    /// Return a reference to the underlying C dialect template.
+    ///
+    /// Reads the `grammar` field from the `SyntaqliteDialectTemplate` pointed
+    /// to by `inner.template`.
     #[inline]
     fn template(&self) -> &'static ffi::CGrammarTemplate {
-        // SAFETY: `inner.template` points to static C data (generated grammar tables).
-        unsafe { &*self.inner.template }
+        // SAFETY: `inner.template` points to a valid `SyntaqliteDialectTemplate`
+        // whose `grammar` field is a valid `*const CGrammarTemplate`.
+        unsafe { &*(*self.inner.template).grammar }
     }
 
     /// Return the human-readable node name for `tag`.
     ///
     /// # Panics
-    /// Panics if `tag` is out of bounds for this grammar.
+    /// Panics if `tag` is out of bounds for this dialect.
     pub fn node_name(&self, tag: AnyNodeTag) -> &'static str {
         let raw = self.template();
         let idx = tag.0 as usize;
@@ -404,7 +426,7 @@ impl AnyGrammar {
         TokenCategory::from(ffi::CTokenCategory::from_u8(byte))
     }
 
-    /// Iterate all keywords known to this grammar.
+    /// Iterate all keywords known to this dialect.
     ///
     /// Yields a [`KeywordEntry`] for each keyword, containing the token type
     /// ordinal and the keyword lexeme (e.g. `SELECT`, `WHERE`).
@@ -425,22 +447,22 @@ impl AnyGrammar {
             unsafe { *raw.keyword_count as usize }
         };
         KeywordIter {
-            grammar: self,
+            dialect: self,
             idx: 0,
             count,
         }
     }
 }
 
-impl TypedGrammar for AnyGrammar {
+impl TypedDialect for AnyDialect {
     type Node<'a> = crate::ast::AnyNode<'a>;
     type NodeId = crate::ast::AnyNodeId;
     type Token = AnyTokenType;
 }
 
-/// One grammar keyword entry.
+/// One dialect keyword entry.
 ///
-/// Yielded by [`AnyGrammar::keywords`] for completions, lexers, and tooling.
+/// Yielded by [`AnyDialect::keywords`] for completions, lexers, and tooling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct KeywordEntry {
     /// The token type for this keyword.
@@ -461,7 +483,7 @@ impl KeywordEntry {
 }
 
 struct KeywordIter<'a> {
-    grammar: &'a AnyGrammar,
+    dialect: &'a AnyDialect,
     idx: usize,
     count: usize,
 }
@@ -473,7 +495,7 @@ impl Iterator for KeywordIter<'_> {
         if self.idx >= self.count {
             return None;
         }
-        let raw = self.grammar.template();
+        let raw = self.dialect.template();
         // SAFETY: all keyword pointers were null-checked in `keywords()`; arrays
         // are static, length = self.count, and self.idx < self.count.
         let entry = unsafe {
@@ -504,7 +526,7 @@ pub(crate) mod ffi {
     use crate::util::ffi::CCflags;
 
     /// Mirrors C `SynqTokenCategory` enum defined in
-    /// `include/syntaqlite/grammar.h`.
+    /// `include/syntaqlite/dialect.h`.
     #[repr(u8)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub(crate) enum CTokenCategory {
@@ -522,7 +544,7 @@ pub(crate) mod ffi {
     }
 
     impl CTokenCategory {
-        /// Convert a raw byte from the grammar table to a `CTokenCategory`.
+        /// Convert a raw byte from the dialect table to a `CTokenCategory`.
         /// Unknown values map to `Other`.
         pub(crate) fn from_u8(v: u8) -> Self {
             match v {
@@ -542,9 +564,9 @@ pub(crate) mod ffi {
     }
 
     /// Mirrors C `SyntaqliteGrammarTemplate` struct defined in
-    /// `include/syntaqlite/grammar.h`.
+    /// `include/syntaqlite/dialect.h`.
     #[repr(C)]
-    pub(crate) struct CGrammarTemplate {
+    pub struct CGrammarTemplate {
         pub(crate) name: *const std::ffi::c_char,
 
         // Range metadata
@@ -557,7 +579,7 @@ pub(crate) mod ffi {
         pub(crate) field_meta_counts: *const u8,
         pub(crate) list_tags: *const u8,
 
-        // Parser lifecycle (function pointers provided by grammar)
+        // Parser lifecycle (function pointers provided by the dialect's parser)
         pub(crate) parser_alloc: *const std::ffi::c_void,
         pub(crate) parser_init: *const std::ffi::c_void,
         pub(crate) parser_finalize: *const std::ffi::c_void,
@@ -567,7 +589,7 @@ pub(crate) mod ffi {
         pub(crate) parser_expected_tokens: *const std::ffi::c_void,
         pub(crate) parser_completion_context: *const std::ffi::c_void,
 
-        // Tokenizer (function pointer provided by grammar)
+        // Tokenizer (function pointer provided by the dialect's parser)
         pub(crate) get_token: *const std::ffi::c_void,
 
         // Keyword table metadata
@@ -585,11 +607,29 @@ pub(crate) mod ffi {
         pub(crate) macro_style: u32,
     }
 
-    /// Mirrors C `SyntaqliteGrammar` from `include/syntaqlite/grammar.h`.
+    /// Mirrors the `SyntaqliteDialectTemplate` C struct as seen by
+    /// `syntaqlite-syntax` (compiled WITHOUT `SYNTAQLITE_FMT` /
+    /// `SYNTAQLITE_VALIDATION`). Only the first field — a pointer to the
+    /// dialect template — is visible at this level.
+    ///
+    /// The `syntaqlite` crate defines its own, wider version of this struct
+    /// with additional fields for fmt/validation data. Both are `#[repr(C)]`
+    /// and share the same first field, so a pointer cast between them is safe.
+    #[repr(C)]
+    pub struct CDialectTemplate {
+        pub(crate) grammar: *const CGrammarTemplate,
+    }
+
+    // SAFETY: CDialectTemplate contains only a pointer to immutable static C data.
+    unsafe impl Send for CDialectTemplate {}
+    // SAFETY: CDialectTemplate contains only a pointer to immutable static C data.
+    unsafe impl Sync for CDialectTemplate {}
+
+    /// Mirrors C `SyntaqliteDialect` from `include/syntaqlite/dialect.h`.
     #[repr(C)]
     #[derive(Debug, Clone, Copy)]
-    pub struct CGrammar {
-        pub(crate) template: *const CGrammarTemplate,
+    pub struct CDialect {
+        pub(crate) template: *const CDialectTemplate,
         pub(crate) sqlite_version: i32,
         pub(crate) cflags: CCflags,
     }

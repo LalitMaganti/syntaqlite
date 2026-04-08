@@ -15,8 +15,8 @@ use super::lineage::{ColumnLineage, LineageResult, QueryLineage, RelationAccess,
 
 /// A token position recorded during parsing.
 ///
-/// `token_type` is grammar-agnostic (`AnyTokenType`) so that the semantic
-/// analyzer works with any dialect, not just the built-in `SQLite` grammar.
+/// `token_type` is dialect-agnostic (`AnyTokenType`) so that the semantic
+/// analyzer works with any dialect, not just the built-in `SQLite` dialect.
 #[derive(Debug, Clone)]
 pub(crate) struct StoredToken {
     pub(crate) offset: usize,
@@ -70,7 +70,7 @@ impl CompletionContext {
 /// Expected tokens and semantic context at a cursor position.
 #[derive(Debug)]
 pub(crate) struct CompletionInfo {
-    /// Terminal token types valid at the cursor (grammar-agnostic).
+    /// Terminal token types valid at the cursor (dialect-agnostic).
     pub tokens: Vec<AnyTokenType>,
     /// Semantic context (expression vs table-ref).
     pub context: CompletionContext,

@@ -214,8 +214,8 @@ impl SemanticAnalyzer {
         let start = statement_token_start(tokens, boundary);
         let stmt_tokens = &tokens[start..boundary];
 
-        let grammar = (*self.dialect).clone();
-        let parser = AnyParser::with_config(grammar, &ParserConfig::default());
+        let syntax = (*self.dialect).clone();
+        let parser = AnyParser::with_config(syntax, &ParserConfig::default());
         let mut cursor_p = parser.incremental_parse(source);
         // Do not call expected_tokens() before feeding any tokens: the C parser
         // returns a garbage `total` count when no tokens have been fed yet,
@@ -260,9 +260,9 @@ impl SemanticAnalyzer {
     // ── Private ───────────────────────────────────────────────────────────────
 
     fn analyze_inner(&mut self, source: &str, config: &ValidationConfig) -> SemanticModel {
-        let grammar = (*self.dialect).clone();
+        let syntax = (*self.dialect).clone();
         let parser = AnyParser::with_config(
-            grammar,
+            syntax,
             &ParserConfig::default()
                 .with_collect_tokens(true)
                 .with_macro_fallback(self.macro_fallback),

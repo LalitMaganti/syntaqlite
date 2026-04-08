@@ -357,10 +357,10 @@ pub(crate) struct RustAstPaths<'a> {
     pub ffi_path: &'a str,
     /// Path to `NodeId`/`SourceSpan`/`NodeList`, e.g. `"syntaqlite_parser::nodes"`.
     pub nodes_path: &'a str,
-    /// Fully-qualified path to the dialect grammar struct, e.g.
-    /// `"super::grammar::SqliteGrammar"`. Used as the `G` parameter in
+    /// Fully-qualified path to the dialect struct, e.g.
+    /// `"super::dialect::Dialect"`. Used as the `G` parameter in
     /// `TypedNodeList<'a, G, T>` type aliases emitted into `ast.rs`.
-    pub grammar_type: &'a str,
+    pub dialect_type: &'a str,
 }
 
 /// Generate Rust source for the FFI layer (`ffi.rs`).
@@ -439,7 +439,7 @@ impl AstModel<'_> {
     ) -> String {
         let crate_prefix = paths.crate_prefix;
         let ffi_path = paths.ffi_path;
-        let grammar_type = paths.grammar_type;
+        let dialect_type = paths.dialect_type;
         let enum_names = self.enum_names();
         let flags_names = self.flags_names();
         let node_names = self.node_names();
@@ -674,7 +674,7 @@ impl AstModel<'_> {
             let _ = writeln!(w, "/// Typed list of `{child_type}`.");
             let _ = writeln!(
                 w,
-                "pub type {name}<'a> = TypedNodeList<'a, {grammar_type}, {element_type}>;"
+                "pub type {name}<'a> = TypedNodeList<'a, {dialect_type}, {element_type}>;"
             );
             w.newline();
 

@@ -1,12 +1,14 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// Grammar descriptor: parser vtable + AST metadata. A concrete grammar
-// (e.g. SQLite) fills one static instance and exposes it via an entry-point
-// function.
+// Dialect and grammar descriptors.
 //
-// Entry-point convention:
-//   const SyntaqliteGrammarTemplate* syntaqlite_<name>_grammar(void);
+// A dialect bundles a grammar (parser vtable + AST metadata) with optional
+// formatter bytecode and semantic-role tables.  A concrete dialect (e.g.
+// SQLite, Perfetto) fills one static SyntaqliteDialectTemplate and exposes
+// it via a SyntaqliteDialect accessor function:
+//
+//   SyntaqliteDialect syntaqlite_<name>_dialect(void);
 //
 // ── Custom include ──────────────────────────────────────────────────────
 //
@@ -18,8 +20,8 @@
 // The config file can set SYNTAQLITE_SQLITE_VERSION, SYNTAQLITE_SQLITE_CFLAGS,
 // and individual SYNTAQLITE_CFLAG_* defines.
 
-#ifndef SYNTAQLITE_GRAMMAR_H
-#define SYNTAQLITE_GRAMMAR_H
+#ifndef SYNTAQLITE_DIALECT_H
+#define SYNTAQLITE_DIALECT_H
 
 #ifdef SYNTAQLITE_CUSTOM_INCLUDE
 #define SYNQ_STRINGIFY_(x) #x
@@ -82,7 +84,11 @@ typedef struct SynqParseToken {
 typedef struct SyntaqliteFieldRangeMeta SyntaqliteFieldRangeMeta;
 typedef struct SyntaqliteRangeMetaEntry SyntaqliteRangeMetaEntry;
 typedef struct SyntaqliteFieldMeta SyntaqliteFieldMeta;
-typedef struct SyntaqliteGrammar SyntaqliteGrammar;
+
+// Forward declaration for use in function pointers below.
+typedef struct SyntaqliteDialect SyntaqliteDialect;
+
+// ── Grammar template (parser vtable) ──────────────────────────────────────
 
 typedef struct SyntaqliteGrammarTemplate {
   const char* name;
@@ -110,7 +116,7 @@ typedef struct SyntaqliteGrammarTemplate {
   uint32_t (*parser_completion_context)(void* parser);
 
   // Tokenizer (provided by grammar)
-  int64_t (*get_token)(const SyntaqliteGrammar* env,
+  int64_t (*get_token)(const SyntaqliteDialect* env,
                        const unsigned char* z,
                        int* tokenType);
 
@@ -134,20 +140,52 @@ typedef struct SyntaqliteGrammarTemplate {
   SyntaqliteMacroStyle macro_style;
 } SyntaqliteGrammarTemplate;
 
-// ── Configured grammar handle ─────────────────────────────────────────────
+// ── Dialect template (static dialect data) ────────────────────────────────
 
-typedef struct SyntaqliteGrammar {
-  const SyntaqliteGrammarTemplate* tmpl;
+// Bundles a grammar template with optional formatter bytecode and semantic
+// role tables.  The fmt/validation fields are compiled out when the
+// corresponding features are not enabled.
+typedef struct SyntaqliteDialectTemplate {
+  const SyntaqliteGrammarTemplate* grammar;
+
+#ifdef SYNTAQLITE_FMT
+  const uint8_t* fmt_str_data;
+  const uint32_t* fmt_str_offsets;
+  uint32_t fmt_str_count;
+  const uint16_t* fmt_enum_display;
+  uint32_t fmt_enum_display_count;
+  const uint8_t* fmt_ops;
+  uint32_t fmt_ops_count;
+  const uint32_t* fmt_dispatch;
+  uint32_t fmt_dispatch_count;
+  const uint8_t* fmt_prec_table;
+  uint32_t fmt_prec_table_count;
+  const uint32_t* fmt_expr_meta;
+  uint32_t fmt_expr_meta_count;
+#endif
+
+#ifdef SYNTAQLITE_VALIDATION
+  const uint8_t* roles_data;
+  uint32_t roles_count;
+  const uint8_t* macro_defs_data;
+  uint32_t macro_defs_count;
+#endif
+} SyntaqliteDialectTemplate;
+
+// ── Configured dialect handle ─────────────────────────────────────────────
+
+typedef struct SyntaqliteDialect {
+  const SyntaqliteDialectTemplate* tmpl;
   int32_t sqlite_version;   // Target version (e.g., 3035000). INT32_MAX =
                             // latest.
   SyntaqliteCflags cflags;  // Active compile-time flags.
-} SyntaqliteGrammar;
+} SyntaqliteDialect;
 
-// Default env: latest version, no cflags.
-#define SYNQ_GRAMMAR_DEFAULT(g) {(g), INT32_MAX, SYNQ_CFLAGS_DEFAULT}
+// Default dialect: latest version, no cflags.
+#define SYNQ_DIALECT_DEFAULT(d) {(d), INT32_MAX, SYNQ_CFLAGS_DEFAULT}
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  // SYNTAQLITE_GRAMMAR_H
+#endif  // SYNTAQLITE_DIALECT_H

@@ -25,7 +25,7 @@
     if ((g)->parser_trace)         \
       (g)->parser_trace(f, s);     \
   } while (0)
-#define SYNQ_GET_TOKEN(g, z, t) (g)->tmpl->get_token(g, z, t)
+#define SYNQ_GET_TOKEN(g, z, t) (g)->tmpl->grammar->get_token(g, z, t)
 #endif
 
 #endif  // SYNTAQLITE_INTERNAL_DIALECT_DISPATCH_H

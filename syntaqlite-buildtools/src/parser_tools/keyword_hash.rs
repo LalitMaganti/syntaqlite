@@ -214,7 +214,7 @@ pub(crate) fn generate(
         .replace_in_function(
             "synq_sqlite3_keywordCode",
             "synq_sqlite3_keywordCode(const char *z",
-            "synq_sqlite3_keywordCode(const SyntaqliteGrammar *env, const char *z",
+            "synq_sqlite3_keywordCode(const SyntaqliteDialect *env, const char *z",
         )
         // Replace the simple assignment with version/cflag checks.
         .replace_in_function(
@@ -253,7 +253,7 @@ pub(crate) fn generate(
     w.sqlite_file_header();
     w.include_local("syntaqlite_dialect/sqlite_compat.h");
     w.include_local(includes.tokens_header);
-    w.include_local("syntaqlite/grammar.h");
+    w.include_local("syntaqlite/dialect.h");
     w.include_local("syntaqlite_dialect/dialect_macros.h");
     w.newline();
 
@@ -278,9 +278,9 @@ pub(crate) fn generate_keyword_h() -> String {
     w.sqlite_file_header();
     w.header_guard_start("SYNTAQLITE_SQLITE_KEYWORD_H");
     w.newline();
-    w.line("#include \"syntaqlite/grammar.h\"");
+    w.line("#include \"syntaqlite/dialect.h\"");
     w.newline();
-    w.line("int synq_sqlite3_keywordCode(const SyntaqliteGrammar *env, const char* z, int n, int* pType);");
+    w.line("int synq_sqlite3_keywordCode(const SyntaqliteDialect *env, const char* z, int n, int* pType);");
     w.newline();
     w.header_guard_end("SYNTAQLITE_SQLITE_KEYWORD_H");
     w.finish()
