@@ -45,7 +45,7 @@ pub(crate) fn assemble(
     let get_token_name = format!("Synq{}GetToken", pascal_case(dialect));
     let output = CTransformer::new(&combined)
         .add_array_static("sqlite3CtypeMap")
-        .insert_after_includes("#include \"syntaqlite/grammar.h\"")
+        .insert_after_includes("#include \"syntaqlite/dialect.h\"")
         .replace_in_function(
             "sqlite3GetToken",
             "keywordCode((char*)",
@@ -54,7 +54,7 @@ pub(crate) fn assemble(
         .replace_in_function(
             "sqlite3GetToken",
             "sqlite3GetToken(const unsigned char *z",
-            "sqlite3GetToken(const SyntaqliteGrammar* env, const unsigned char *z",
+            "sqlite3GetToken(const SyntaqliteDialect* env, const unsigned char *z",
         )
         .rename_function("sqlite3GetToken", &get_token_name)
         .replace_all("TK_", "SYNTAQLITE_TK_")

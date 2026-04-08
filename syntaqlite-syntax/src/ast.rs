@@ -18,16 +18,16 @@ pub trait GrammarNodeType<'a>: Sized {
 
 /// Trait for token enums that support typed <-> raw conversion.
 ///
-/// Enables tokenizer/parser code that is generic over a grammar's token type.
+/// Enables tokenizer/parser code that is generic over a dialect's token type.
 pub trait GrammarTokenType: Sized + Clone + Copy + std::fmt::Debug + Into<u32> {
-    /// Convert a type-erased [`AnyTokenType`] into this grammar's typed token
+    /// Convert a type-erased [`AnyTokenType`] into this dialect's typed token
     /// variant, or `None` if the ordinal is out of range.
     fn from_token_type(raw: AnyTokenType) -> Option<Self>;
 }
 
 /// Type-erased token kind represented as a raw ordinal.
 ///
-/// Use this in grammar-agnostic paths where concrete token enums are unknown.
+/// Use this in dialect-agnostic paths where concrete token enums are unknown.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct AnyTokenType(pub(crate) u32);
@@ -36,7 +36,7 @@ impl AnyTokenType {
     /// Construct from a raw token-type ordinal.
     ///
     /// This does not validate that `v` is a known token for any particular
-    /// grammar. Prefer typed token enums when available.
+    /// dialect. Prefer typed token enums when available.
     pub fn from_raw(v: u32) -> Self {
         AnyTokenType(v)
     }
@@ -56,7 +56,7 @@ impl GrammarTokenType for AnyTokenType {
 
 /// Type-erased AST node tag represented as a raw ordinal.
 ///
-/// Use this for grammar-agnostic AST introspection.
+/// Use this for dialect-agnostic AST introspection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct AnyNodeTag(pub(crate) u32);
@@ -71,7 +71,7 @@ impl AnyNodeTag {
     /// Construct from a raw node tag ordinal.
     ///
     /// This does not validate that `v` is a known tag for any particular
-    /// grammar. Prefer typed tags when available.
+    /// dialect. Prefer typed tags when available.
     pub fn from_raw(v: u32) -> Self {
         AnyNodeTag(v)
     }
@@ -94,7 +94,7 @@ impl AnyNodeId {
     }
 }
 
-/// Grammar-agnostic node view.
+/// Dialect-agnostic node view.
 ///
 /// Useful for tooling that traverses trees without generated node enums.
 #[derive(Clone, Copy)]
@@ -128,7 +128,7 @@ impl std::fmt::Display for AnyNode<'_> {
 ///
 /// Used throughout generated AST APIs for child collections.
 #[derive(Clone)]
-pub struct TypedNodeList<'a, G: crate::grammar::TypedGrammar, T> {
+pub struct TypedNodeList<'a, G: crate::dialect::TypedDialect, T> {
     raw: &'a RawNodeList,
     stmt_result: &'a AnyParsedStatement<'a>,
     id: AnyNodeId,
@@ -138,9 +138,9 @@ pub struct TypedNodeList<'a, G: crate::grammar::TypedGrammar, T> {
 // Manual Copy impl: all fields are Copy regardless of G or T.
 // `derive(Copy)` would add a spurious `G: Copy` bound via PhantomData,
 // which would propagate to every generated list alias.
-impl<G: crate::grammar::TypedGrammar, T: Clone> Copy for TypedNodeList<'_, G, T> {}
+impl<G: crate::dialect::TypedDialect, T: Clone> Copy for TypedNodeList<'_, G, T> {}
 
-impl<G: crate::grammar::TypedGrammar, T> std::fmt::Debug for TypedNodeList<'_, G, T> {
+impl<G: crate::dialect::TypedDialect, T> std::fmt::Debug for TypedNodeList<'_, G, T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TypedNodeList")
             .field("len", &self.raw.children().len())
@@ -148,8 +148,8 @@ impl<G: crate::grammar::TypedGrammar, T> std::fmt::Debug for TypedNodeList<'_, G
     }
 }
 
-impl<G: crate::grammar::TypedGrammar, T> TypedNodeList<'_, G, T> {
-    /// The arena node ID of this list, as the grammar's typed node ID.
+impl<G: crate::dialect::TypedDialect, T> TypedNodeList<'_, G, T> {
+    /// The arena node ID of this list, as the dialect's typed node ID.
     pub fn node_id(&self) -> G::NodeId {
         G::NodeId::from(self.id)
     }
@@ -165,7 +165,7 @@ impl<G: crate::grammar::TypedGrammar, T> TypedNodeList<'_, G, T> {
     }
 }
 
-impl<'a, G: crate::grammar::TypedGrammar, T: GrammarNodeType<'a>> TypedNodeList<'a, G, T> {
+impl<'a, G: crate::dialect::TypedDialect, T: GrammarNodeType<'a>> TypedNodeList<'a, G, T> {
     /// Get a child by index, or `None` if out of bounds or unresolvable.
     pub fn get(&self, index: usize) -> Option<T> {
         let id = *self.raw.children().get(index)?;
@@ -193,7 +193,7 @@ pub trait TypedNodeId: Copy + Into<AnyNodeId> {
 
 /// Reflected field value extracted from a node.
 ///
-/// Used by grammar-agnostic AST tooling built on
+/// Used by dialect-agnostic AST tooling built on
 /// [`AnyParsedStatement::extract_fields`](crate::parser::AnyParsedStatement::extract_fields).
 #[derive(Clone, Copy, Debug)]
 pub enum FieldValue<'a> {
@@ -283,7 +283,7 @@ impl std::fmt::Debug for NodeFields<'_> {
 // ── Crate-internal ───────────────────────────────────────────────────────────
 
 /// Blanket [`GrammarNodeType`] impl for [`TypedNodeList`] — resolves the ID as a list node.
-impl<'a, G: crate::grammar::TypedGrammar, T> GrammarNodeType<'a> for TypedNodeList<'a, G, T> {
+impl<'a, G: crate::dialect::TypedDialect, T> GrammarNodeType<'a> for TypedNodeList<'a, G, T> {
     fn from_result(stmt_result: &'a AnyParsedStatement<'a>, id: AnyNodeId) -> Option<Self> {
         let raw = stmt_result.resolve_list(id)?;
         Some(TypedNodeList {
@@ -309,7 +309,7 @@ pub(crate) unsafe trait ArenaNode {
 #[cfg(feature = "serde")]
 mod serde_impl {
     use super::{AnyNode, FieldValue, GrammarNodeType};
-    use crate::grammar::{FieldKind, FieldMeta};
+    use crate::dialect::{FieldKind, FieldMeta};
     use crate::parser::AnyParsedStatement;
 
     /// Serializes an AST node to the JSON equivalent of the text dump format.
@@ -324,16 +324,16 @@ mod serde_impl {
             use serde::ser::SerializeMap;
 
             let stmt = self.stmt_result;
-            let grammar = &stmt.grammar;
+            let dialect = &stmt.dialect;
             let id = self.id;
 
             let Some((tag, fields)) = stmt.extract_fields(id) else {
                 return serializer.serialize_none();
             };
 
-            let name = grammar.node_name(tag);
+            let name = dialect.node_name(tag);
 
-            if grammar.is_list(tag) {
+            if dialect.is_list(tag) {
                 // { "type": "ListName", "count": N, "children": [...] }
                 let raw_children = stmt.list_children(id).unwrap_or(&[]);
                 let children: Vec<AnyNode<'_>> = raw_children
@@ -348,7 +348,7 @@ mod serde_impl {
                 map.end()
             } else {
                 // { "type": "NodeName", "field1": value1, ... }
-                let metas: Vec<FieldMeta<'static>> = grammar.field_meta(tag).collect();
+                let metas: Vec<FieldMeta<'static>> = dialect.field_meta(tag).collect();
                 let field_count = metas.len().min(fields.len());
                 let mut map = serializer.serialize_map(Some(1 + field_count))?;
                 map.serialize_entry("type", name)?;

@@ -23,7 +23,7 @@ all: select_columns select_columns_c
 
 # Generate amalgamation files from buildtools.
 syntaqlite_sqlite.h syntaqlite_sqlite.c: $(BUILDTOOLS)
-	$(BUILDTOOLS) amalgamate \
+	$(BUILDTOOLS) amalgamate-syntax \
 		--dialect sqlite \
 		--runtime-dir $(RUNTIME) \
 		--dialect-dir $(DIALECT) \

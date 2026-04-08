@@ -7,7 +7,7 @@
 
 use std::sync::LazyLock;
 
-use syntaqlite_syntax::typed::Grammar;
+use syntaqlite_syntax::typed::Dialect as SyntaxDialect;
 use syntaqlite_syntax::util::SqliteVersion;
 
 use crate::dialect::{AnyDialect, TypedDialect};
@@ -50,9 +50,9 @@ impl Dialect {
         self.raw
     }
 
-    /// Return the typed grammar handle for this dialect.
-    pub fn grammar(&self) -> Grammar {
-        Grammar::from_raw(self.raw.grammar().clone())
+    /// Return the syntax dialect handle for this dialect.
+    pub fn syntax_dialect(&self) -> SyntaxDialect {
+        SyntaxDialect::from_raw(self.raw.syntax_dialect().clone())
     }
 
     /// Return a copy targeting a specific `SQLite` version.
@@ -100,10 +100,10 @@ impl std::ops::DerefMut for Dialect {
 }
 
 static DIALECT: LazyLock<AnyDialect> = LazyLock::new(|| {
-    // SAFETY: syntaqlite_sqlite_dialect() returns a pointer to a valid static
-    // SyntaqliteDialect struct compiled into the binary. The data lives for
-    // the entire program lifetime — effectively 'static.
-    unsafe { AnyDialect::from_data(ffi::syntaqlite_sqlite_dialect()) }
+    // SAFETY: `syntaqlite_sqlite_dialect()` returns a `SyntaqliteDialect` value
+    // whose `tmpl` field points to a valid static `SyntaqliteDialectTemplate`.
+    // The data lives for the entire program lifetime — effectively `'static`.
+    unsafe { AnyDialect::from_c_dialect(ffi::syntaqlite_sqlite_dialect()) }
 });
 
 /// Returns the type-erased `SQLite` dialect handle (cached).
@@ -119,9 +119,9 @@ pub(crate) fn dialect() -> Dialect {
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
 mod ffi {
-    use crate::dialect::ffi::CDialectTemplate;
+    use crate::dialect::ffi::CDialect;
 
     unsafe extern "C" {
-        pub(super) fn syntaqlite_sqlite_dialect() -> *const CDialectTemplate;
+        pub(super) fn syntaqlite_sqlite_dialect() -> CDialect;
     }
 }

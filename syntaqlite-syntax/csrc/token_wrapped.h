@@ -12,9 +12,9 @@
 
 #include <stdint.h>
 
-#include "syntaqlite/grammar.h"
+#include "syntaqlite/dialect.h"
 
-int64_t SynqSqliteGetTokenVersionWrapped(const SyntaqliteGrammar* env,
+int64_t SynqSqliteGetTokenVersionWrapped(const SyntaqliteDialect* env,
                                          const unsigned char* z,
                                          uint32_t* tokenType);
 

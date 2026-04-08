@@ -12,7 +12,7 @@ use super::{
 ///
 /// Use this in most applications.
 ///
-/// - Hides grammar setup and returns SQLite SQL-native result types.
+/// - Hides dialect setup and returns SQLite SQL-native result types.
 /// - Reusable across many SQL inputs.
 /// - Supports batch/script parsing via [`parse`](Self::parse).
 /// - Supports editor-style token feeds via [`incremental_parse`](Self::incremental_parse).
@@ -20,19 +20,19 @@ use super::{
 /// Advanced generic APIs exist in [`crate::typed`] and [`crate::any`].
 #[cfg(feature = "sqlite")]
 #[doc(hidden)]
-pub struct Parser(pub(super) TypedParser<crate::sqlite::grammar::Grammar>);
+pub struct Parser(pub(super) TypedParser<crate::sqlite::dialect::Dialect>);
 
 #[cfg(feature = "sqlite")]
 impl Parser {
-    /// Create a parser for the `SQLite` grammar with default configuration.
+    /// Create a parser for the `SQLite` dialect with default configuration.
     pub fn new() -> Self {
-        Parser(TypedParser::new(crate::sqlite::grammar::grammar()))
+        Parser(TypedParser::new(crate::sqlite::dialect::dialect()))
     }
 
-    /// Create a parser for the `SQLite` grammar with custom configuration.
+    /// Create a parser for the `SQLite` dialect with custom configuration.
     pub fn with_config(config: &ParserConfig) -> Self {
         Parser(TypedParser::with_config(
-            crate::sqlite::grammar::grammar(),
+            crate::sqlite::dialect::dialect(),
             config,
         ))
     }
@@ -133,7 +133,7 @@ impl Default for Parser {
 /// - Can continue after recoverable errors.
 #[cfg(feature = "sqlite")]
 #[doc(hidden)]
-pub struct ParseSession(pub(super) TypedParseSession<crate::sqlite::grammar::Grammar>);
+pub struct ParseSession(pub(super) TypedParseSession<crate::sqlite::dialect::Dialect>);
 
 #[cfg(feature = "sqlite")]
 impl ParseSession {
@@ -153,7 +153,7 @@ impl ParseSession {
         self.0.source()
     }
 
-    /// Return a grammar-agnostic view over the current parse arena state.
+    /// Return a dialect-agnostic view over the current parse arena state.
     ///
     /// Useful for generic introspection after consuming the session.
     ///
@@ -208,7 +208,7 @@ impl ParseSession {
 /// });
 /// ```
 #[cfg(feature = "sqlite")]
-pub struct ParserToken<'a>(pub(super) TypedParserToken<'a, crate::sqlite::grammar::Grammar>);
+pub struct ParserToken<'a>(pub(super) TypedParserToken<'a, crate::sqlite::dialect::Dialect>);
 
 #[cfg(feature = "sqlite")]
 impl<'a> ParserToken<'a> {
@@ -219,7 +219,7 @@ impl<'a> ParserToken<'a> {
         self.0.text()
     }
 
-    /// Token kind from the `SQLite` SQL grammar.
+    /// Token kind from the `SQLite` SQL dialect.
     ///
     /// This is the lexical class (keyword, identifier, operator, etc.).
     pub fn token_type(&self) -> crate::sqlite::tokens::TokenType {
@@ -270,7 +270,7 @@ impl std::fmt::Debug for ParserToken<'_> {
 #[cfg(feature = "sqlite")]
 #[doc(hidden)]
 pub struct ParsedStatement<'a>(
-    pub(super) TypedParsedStatement<'a, crate::sqlite::grammar::Grammar>,
+    pub(super) TypedParsedStatement<'a, crate::sqlite::dialect::Dialect>,
 );
 
 #[cfg(feature = "sqlite")]
@@ -304,9 +304,9 @@ impl<'a> ParsedStatement<'a> {
         self.0.comments()
     }
 
-    /// Convert this result into the grammar-agnostic [`AnyParsedStatement`].
+    /// Convert this result into the dialect-agnostic [`AnyParsedStatement`].
     ///
-    /// Use this when handing statement data to grammar-independent tooling.
+    /// Use this when handing statement data to dialect-independent tooling.
     pub fn erase(&self) -> AnyParsedStatement<'a> {
         self.0.clone().erase()
     }
@@ -332,7 +332,7 @@ impl<'a> ParsedStatement<'a> {
 /// - Optional partial recovery tree (`recovery_root()`).
 #[cfg(feature = "sqlite")]
 #[doc(hidden)]
-pub struct ParseError<'a>(pub(super) TypedParseError<'a, crate::sqlite::grammar::Grammar>);
+pub struct ParseError<'a>(pub(super) TypedParseError<'a, crate::sqlite::dialect::Dialect>);
 
 #[cfg(feature = "sqlite")]
 impl<'a> ParseError<'a> {

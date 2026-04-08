@@ -26,7 +26,7 @@
 #include <stdint.h>
 
 #include "syntaqlite/config.h"
-#include "syntaqlite/grammar.h"
+#include "syntaqlite/dialect.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,9 +56,9 @@ typedef struct SyntaqliteToken {
 // the caller's struct does not need to outlive the tokenizer, but the dialect
 // pointer inside must remain valid for the tokenizer's lifetime.
 // The mem methods are copied — pass NULL for all defaults (malloc/free).
-SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_with_grammar(
+SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_with_dialect(
     const SyntaqliteMemMethods* mem,
-    SyntaqliteGrammar env);
+    SyntaqliteDialect env);
 
 // Bind a source buffer and start tokenizing from the beginning. The source
 // must remain valid until the next reset() or destroy(). Can be called
@@ -81,12 +81,12 @@ SYNTAQLITE_API void syntaqlite_tokenizer_destroy(SyntaqliteTokenizer* tok);
 // ---------------------------------------------------------------------------
 
 #ifndef SYNTAQLITE_OMIT_SQLITE_API
-// Allocate a tokenizer for the built-in SQLite grammar.
+// Allocate a tokenizer for the built-in SQLite dialect.
 // The mem methods are copied — pass NULL for all defaults (malloc/free).
 SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create(
     const SyntaqliteMemMethods* mem);
 
-SYNTAQLITE_API SyntaqliteGrammar syntaqlite_sqlite_grammar(void);
+SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void);
 #endif
 
 #ifdef __cplusplus

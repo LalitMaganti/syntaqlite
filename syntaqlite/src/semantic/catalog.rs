@@ -1253,7 +1253,7 @@ pub(super) fn columns_from_select(
 /// Infer the output column name for a single result column node.
 ///
 /// Mirrors `SQLite`'s `sqlite3ExprListSetName` / `sqlite3ExprListSetSpan` logic:
-/// 1. Explicit alias → use alias text (already stripped of quotes by the grammar).
+/// 1. Explicit alias → use alias text (already stripped of quotes by the parser).
 /// 2. Bare `ColumnRef` with no alias → use the column-name span.
 /// 3. Any other expression with no alias → use the raw source text of the
 ///    expression node (`SQLite` calls this `ENAME_SPAN`, stored by

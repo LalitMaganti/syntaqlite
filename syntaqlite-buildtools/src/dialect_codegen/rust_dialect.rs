@@ -21,20 +21,20 @@ fn emit_section(w: &mut RustWriter, section: &str) {
     w.newline();
 }
 
-/// Generate a self-contained grammar accessor module.
+/// Generate a self-contained dialect accessor module.
 ///
 /// Used both for external dialect crates (as part of `lib.rs`) and for the
-/// internal `SQLite` dialect (as `sqlite/grammar.rs`).
+/// internal `SQLite` dialect (as `sqlite/dialect.rs`).
 ///
-/// - `dialect_fn`: the `extern "C"` symbol name, e.g. `syntaqlite_sqlite_grammar`
-/// - `grammar_struct`: the generated grammar struct name, e.g. `Grammar`
+/// - `dialect_fn`: the `extern "C"` symbol name, e.g. `syntaqlite_sqlite_dialect`
+/// - `dialect_struct`: the generated dialect struct name, e.g. `Dialect`
 /// - `root_node`: the root AST node type name, e.g. `Stmt`
 /// - `token_type`: the token enum type name, e.g. `TokenType`
-/// - `syntax_crate`: crate providing `AnyGrammar` and `TypedGrammar`,
+/// - `syntax_crate`: crate providing `AnyDialect` and `TypedDialect`,
 ///   e.g. `crate` (internal) or `syntaqlite_syntax` (external)
 pub(crate) fn generate_grammar_module(
     dialect_fn: &str,
-    grammar_struct: &str,
+    dialect_struct: &str,
     root_node: &str,
     token_type: &str,
     syntax_crate: &str,
@@ -44,7 +44,7 @@ pub(crate) fn generate_grammar_module(
     emit_grammar_module(
         &mut w,
         dialect_fn,
-        grammar_struct,
+        dialect_struct,
         root_node,
         token_type,
         syntax_crate,
@@ -55,37 +55,37 @@ pub(crate) fn generate_grammar_module(
 fn emit_grammar_module(
     w: &mut RustWriter,
     dialect_fn: &str,
-    grammar_struct: &str,
+    dialect_struct: &str,
     root_node: &str,
     token_type: &str,
     syntax_crate: &str,
 ) {
     w.lines(&format!(
         r#"
-use {syntax_crate}::any::AnyGrammar;
-use {syntax_crate}::typed::TypedGrammar;
+use {syntax_crate}::any::AnyDialect;
+use {syntax_crate}::typed::TypedDialect;
 use {syntax_crate}::util::{{SqliteSyntaxFlags, SqliteVersion}};
 
-/// The dialect grammar handle.
+/// The dialect handle.
 ///
-/// Wraps a [`AnyGrammar`] and implements [`TypedGrammar`]. Obtain via [`grammar()`];
+/// Wraps an [`AnyDialect`] and implements [`TypedDialect`]. Obtain via [`dialect()`];
 /// configure with [`with_version`](Self::with_version) and [`with_cflags`](Self::with_cflags).
 #[derive(Clone)]
-pub struct {grammar_struct} {{
-    raw: AnyGrammar,
+pub struct {dialect_struct} {{
+    raw: AnyDialect,
 }}
 
-impl {grammar_struct} {{
-    /// Return the underlying [`AnyGrammar`] by value.
-    pub fn into_raw(self) -> AnyGrammar {{
+impl {dialect_struct} {{
+    /// Return the underlying [`AnyDialect`] by value.
+    pub fn into_raw(self) -> AnyDialect {{
         self.raw
     }}
 
-    /// Construct from a raw [`AnyGrammar`].
+    /// Construct from a raw [`AnyDialect`].
     ///
-    /// Used by dialect loading infrastructure to build a typed grammar handle
-    /// from the grammar embedded in a `CDialectTemplate`.
-    pub fn from_raw(raw: AnyGrammar) -> Self {{
+    /// Used by dialect loading infrastructure to build a typed dialect handle
+    /// from the dialect embedded in a `CDialectTemplate`.
+    pub fn from_raw(raw: AnyDialect) -> Self {{
         Self {{ raw }}
     }}
 
@@ -104,30 +104,30 @@ impl {grammar_struct} {{
     }}
 }}
 
-impl From<{grammar_struct}> for AnyGrammar {{
-    fn from(g: {grammar_struct}) -> AnyGrammar {{
+impl From<{dialect_struct}> for AnyDialect {{
+    fn from(g: {dialect_struct}) -> AnyDialect {{
         g.raw
     }}
 }}
 
-impl TypedGrammar for {grammar_struct} {{
+impl TypedDialect for {dialect_struct} {{
     type Node<'a> = super::ast::{root_node}<'a>;
     type NodeId = super::ast::NodeId;
     type Token = super::tokens::{token_type};
 }}
 
-/// Returns the dialect grammar handle.
-pub fn grammar() -> {grammar_struct} {{
-    // SAFETY: {dialect_fn}() returns a valid static C grammar.
-    let raw = unsafe {{ AnyGrammar::new(ffi::{dialect_fn}()) }};
-    {grammar_struct} {{ raw }}
+/// Returns the dialect handle.
+pub fn dialect() -> {dialect_struct} {{
+    // SAFETY: {dialect_fn}() returns a valid static C dialect descriptor.
+    let raw = unsafe {{ AnyDialect::new(ffi::{dialect_fn}()) }};
+    {dialect_struct} {{ raw }}
 }}
 
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
 mod ffi {{
     unsafe extern "C" {{
-        pub(super) fn {dialect_fn}() -> {syntax_crate}::typed::CGrammar;
+        pub(super) fn {dialect_fn}() -> {syntax_crate}::typed::CDialect;
     }}
 }}
 "#
@@ -140,31 +140,31 @@ mod ffi {{
 /// internal `SQLite` dialect (as `sqlite/dialect.rs`).
 ///
 /// - `dialect_fn`: the `extern "C"` symbol name, e.g. `syntaqlite_sqlite_dialect`
-/// - `grammar_struct`: the typed grammar struct name, e.g. `Grammar`
+/// - `dialect_struct`: the typed dialect struct name, e.g. `Dialect`
 /// - `dialect_crate`: crate providing `AnyDialect`, `TypedDialect`, `CDialectTemplate`,
 ///   e.g. `crate` (internal) or `syntaqlite` (external)
 pub(crate) fn generate_dialect_module(
     dialect_fn: &str,
-    grammar_struct: &str,
+    dialect_struct: &str,
     dialect_crate: &str,
 ) -> String {
     let mut w = RustWriter::new();
     w.file_header();
-    emit_dialect_module(&mut w, dialect_fn, grammar_struct, dialect_crate);
+    emit_dialect_module(&mut w, dialect_fn, dialect_struct, dialect_crate);
     w.finish()
 }
 
 fn emit_dialect_module(
     w: &mut RustWriter,
     dialect_fn: &str,
-    grammar_struct: &str,
+    dialect_struct: &str,
     dialect_crate: &str,
 ) {
     w.lines(&format!(
         r#"
 use std::sync::LazyLock;
 
-use syntaqlite_syntax::typed::{grammar_struct};
+use syntaqlite_syntax::typed::{dialect_struct} as SyntaxDialect;
 use syntaqlite_syntax::util::SqliteVersion;
 
 use {dialect_crate}::dialect::{{AnyDialect, TypedDialect}};
@@ -190,9 +190,9 @@ impl Dialect {{
         self.raw
     }}
 
-    /// Return the typed grammar handle for this dialect.
-    pub fn grammar(&self) -> {grammar_struct} {{
-        {grammar_struct}::from_raw(self.raw.grammar().clone())
+    /// Return the syntax dialect handle for this dialect.
+    pub fn syntax_dialect(&self) -> SyntaxDialect {{
+        SyntaxDialect::from_raw(self.raw.syntax_dialect().clone())
     }}
 
     /// Return a copy targeting a specific `SQLite` version.
@@ -266,7 +266,7 @@ mod ffi {{
 
 pub(crate) fn generate_rust_lib(
     dialect_fn: &str,
-    grammar_struct: &str,
+    dialect_struct: &str,
     root_node: &str,
     token_type: &str,
 ) -> String {
@@ -276,7 +276,7 @@ pub(crate) fn generate_rust_lib(
     emit_grammar_module(
         &mut w,
         dialect_fn,
-        grammar_struct,
+        dialect_struct,
         root_node,
         token_type,
         "syntaqlite_syntax",
@@ -304,7 +304,7 @@ fn main() {{
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_default();
 
     // TypedDialectEnv sources — Lemon parser, tokenizer, keyword lookup, and dialect glue.
-    // Grammar-agnostic engine C is built by the syntaqlite crate.
+    // Dialect-agnostic engine C is built by the syntaqlite crate.
     let mut build = cc::Build::new();
     build
         .file(csrc.join("dialect.c"))
