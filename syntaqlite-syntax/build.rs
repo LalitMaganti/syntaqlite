@@ -8,7 +8,6 @@
 use std::env;
 use std::path::PathBuf;
 
-#[expect(clippy::too_many_lines)]
 fn main() {
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR"));
     let csrc = manifest_dir.join("csrc");
@@ -51,12 +50,6 @@ fn main() {
     if !sqlite_enabled {
         engine_build.define("SYNTAQLITE_OMIT_SQLITE_API", None);
     }
-    if env::var("CARGO_FEATURE_FMT").is_ok() {
-        engine_build.define("SYNTAQLITE_FMT", None);
-    }
-    if env::var("CARGO_FEATURE_VALIDATION").is_ok() {
-        engine_build.define("SYNTAQLITE_VALIDATION", None);
-    }
     if target_os == "emscripten" {
         engine_build.flag("-fPIC");
     }
@@ -82,12 +75,6 @@ fn main() {
             .flag_if_supported("-Wno-type-limits")
             .flag_if_supported("-Wno-old-style-declaration")
             .flag_if_supported("-Wno-implicit-fallthrough");
-        if env::var("CARGO_FEATURE_FMT").is_ok() {
-            build.define("SYNTAQLITE_FMT", None);
-        }
-        if env::var("CARGO_FEATURE_VALIDATION").is_ok() {
-            build.define("SYNTAQLITE_VALIDATION", None);
-        }
         if target_os == "emscripten" {
             build.flag("-fPIC");
         }

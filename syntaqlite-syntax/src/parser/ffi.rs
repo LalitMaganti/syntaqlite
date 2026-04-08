@@ -80,11 +80,11 @@ impl CParser {
     // Lifecycle
     pub(crate) unsafe fn create(
         mem: *const CMemMethods,
-        dialect: crate::dialect::ffi::CDialect,
+        grammar: crate::grammar::ffi::CGrammar,
     ) -> *mut Self {
-        // SAFETY: mem may be null (use default allocator); dialect is a
-        // valid dialect handle passed by the caller.
-        unsafe { syntaqlite_parser_create_with_dialect(mem, dialect) }
+        // SAFETY: mem may be null (use default allocator); grammar is a
+        // valid grammar handle passed by the caller.
+        unsafe { syntaqlite_parser_create_with_grammar(mem, grammar) }
     }
 
     pub(crate) unsafe fn set_trace(&mut self, enable: u32) -> i32 {
@@ -115,7 +115,7 @@ impl CParser {
 
     pub(crate) unsafe fn destroy(this: *mut Self) {
         // SAFETY: this is a valid CParser pointer previously created by
-        // `syntaqlite_parser_create_with_dialect` and not yet destroyed.
+        // `syntaqlite_parser_create_with_grammar` and not yet destroyed.
         unsafe { syntaqlite_parser_destroy(this) }
     }
 
@@ -296,9 +296,9 @@ impl CParser {
 
 unsafe extern "C" {
     // Parser lifecycle
-    fn syntaqlite_parser_create_with_dialect(
+    fn syntaqlite_parser_create_with_grammar(
         mem: *const CMemMethods,
-        dialect: crate::dialect::ffi::CDialect,
+        grammar: crate::grammar::ffi::CGrammar,
     ) -> *mut CParser;
     fn syntaqlite_parser_reset(p: *mut CParser, source: *const c_char, len: u32);
     fn syntaqlite_parser_next(p: *mut CParser) -> i32;
@@ -366,7 +366,7 @@ mod tests {
     use std::ptr::NonNull;
 
     use super::{CParser, PARSE_DONE, PARSE_ERROR, PARSE_OK};
-    use crate::any::AnyDialect;
+    use crate::any::AnyGrammar;
     use crate::ast::{AnyNodeId, GrammarNodeType};
     use crate::sqlite::ast::{Expr, Name, Stmt};
 
@@ -378,9 +378,9 @@ mod tests {
 
     impl ParserHandle {
         fn new() -> Self {
-            let dialect: AnyDialect = crate::sqlite::dialect::dialect().into();
-            // SAFETY: SQLite dialect handle is valid static dialect metadata.
-            let raw = unsafe { CParser::create(std::ptr::null(), dialect.inner) };
+            let grammar: AnyGrammar = crate::sqlite::grammar::grammar().into();
+            // SAFETY: SQLite grammar handle is valid static grammar metadata.
+            let raw = unsafe { CParser::create(std::ptr::null(), grammar.inner) };
             let raw = NonNull::new(raw).expect("parser allocation failed");
             Self { raw }
         }
@@ -414,9 +414,9 @@ mod tests {
     where
         F: FnOnce(Stmt<'_>) -> R,
     {
-        let dialect: AnyDialect = crate::sqlite::dialect::dialect().into();
+        let grammar: AnyGrammar = crate::sqlite::grammar::grammar().into();
         // SAFETY: parser pointer is valid for test scope; source is valid UTF-8.
-        let result = unsafe { crate::parser::AnyParsedStatement::new(parser, source, dialect) };
+        let result = unsafe { crate::parser::AnyParsedStatement::new(parser, source, grammar) };
         let stmt = Stmt::from_result(&result, AnyNodeId(recovery_root))
             .expect("recovery root should resolve to typed Stmt");
         f(stmt)
@@ -546,7 +546,7 @@ mod tests {
     // ── Macro registry / hashmap tests ──────────────────────────────────
 
     /// Helper: create a parser with `macro_fallback` enabled (needed for macro
-    /// registration tests since `SQLite`'s dialect has `macro_style` = NONE).
+    /// registration tests since `SQLite`'s grammar has `macro_style` = NONE).
     fn new_macro_parser() -> ParserHandle {
         let mut handle = ParserHandle::new();
         // SAFETY: CParser wraps a valid C parser handle.

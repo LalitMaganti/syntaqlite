@@ -93,12 +93,12 @@ impl Formatter {
             dialect.has_fmt_data(),
             "dialect has no formatter bytecode — ensure .synq definitions include fmt blocks",
         );
-        // Use the dialect handle embedded in the dialect — do NOT hardcode the
-        // SQLite dialect here, as this method is called with external dialects too.
-        let syntax = (*dialect).clone();
-        let has_macros = syntax.has_macro_style();
+        // Use the grammar embedded in the dialect — do NOT hardcode the SQLite
+        // grammar here, as this method is called with external dialects too.
+        let grammar = (*dialect).clone();
+        let has_macros = grammar.has_macro_style();
         let parser = AnyParser::with_config(
-            syntax,
+            grammar,
             &ParserConfig::default()
                 .with_collect_tokens(true)
                 .with_macro_fallback(has_macros),
@@ -307,7 +307,7 @@ impl Formatter {
                 continue;
             };
 
-            let node_name = self.dialect.syntax_dialect().node_name(tag);
+            let node_name = self.dialect.grammar().node_name(tag);
             let _ = writeln!(result, "=== {node_name} (tag={}) ===", u32::from(tag));
 
             let Some((ops_bytes, ops_len)) = self.dialect.fmt_dispatch(tag) else {
@@ -427,7 +427,7 @@ impl Formatter {
             let root_id = erased.root_id();
 
             if let Some((tag, _)) = erased.extract_fields(root_id) {
-                let node_name = self.dialect.syntax_dialect().node_name(tag);
+                let node_name = self.dialect.grammar().node_name(tag);
                 let _ = writeln!(result, "=== {node_name} ===");
             }
 
@@ -652,7 +652,7 @@ pub(crate) fn try_macro_verbatim<'a>(
 }
 
 /// Raw LP/RP token type values from the `SQLite` tokenizer. These are stable
-/// across all dialects built on the `SQLite` dialect.
+/// across all dialects built on the `SQLite` grammar.
 const TK_LP: u32 = 113;
 const TK_RP: u32 = 115;
 
@@ -774,7 +774,7 @@ mod tests {
     /// After the fix, the field type changes to `AnyParser`.
     #[test]
     #[cfg(feature = "sqlite")]
-    fn formatter_parser_is_any_dialect_based() {
+    fn formatter_parser_is_any_grammar_based() {
         use syntaqlite_syntax::any::AnyParser;
         let dialect = crate::sqlite::dialect::dialect();
         let fmt = Formatter::with_dialect_config(dialect, &FormatConfig::default());

@@ -15,8 +15,8 @@ crate-type = ["rlib", "staticlib"]
 
 [features]
 default = ["sqlite", "fmt", "validation"]
-fmt = ["syntaqlite-syntax/fmt"]                     # formatter (bytecode interpreter)
-validation = ["syntaqlite-syntax/validation"]       # semantic validation (schema checks, fuzzy suggestions)
+fmt = []                     # formatter (bytecode interpreter)
+validation = []              # semantic validation (schema checks, fuzzy suggestions)
 experimental-embedded = ["validation"]    # [experimental] embedded SQL extraction from host languages (Python f-strings, etc.)
 dynload = ["dep:libloading"]             # dynamic dialect loading from .so/.dylib/.dll
 lsp = ["fmt", "validation", "sqlite", "dep:glob", "dep:lsp-server", "dep:lsp-types", "dep:serde_json"]  # LSP analysis host + protocol server

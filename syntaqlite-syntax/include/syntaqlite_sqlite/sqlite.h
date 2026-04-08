@@ -6,13 +6,18 @@
 #ifndef SYNTAQLITE_SQLITE_GRAMMAR_H
 #define SYNTAQLITE_SQLITE_GRAMMAR_H
 
-#include "syntaqlite/dialect.h"
+#include "syntaqlite/grammar.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void);
+typedef struct SyntaqliteDialectTemplate SyntaqliteDialectTemplate;
+
+SYNTAQLITE_API SyntaqliteGrammar syntaqlite_sqlite_grammar(void);
+SYNTAQLITE_API SyntaqliteGrammar
+syntaqlite_sqlite_grammar_with(int32_t sqlite_version, SyntaqliteCflags cflags);
+SYNTAQLITE_API const SyntaqliteDialectTemplate* syntaqlite_sqlite_dialect(void);
 
 #ifdef __cplusplus
 }

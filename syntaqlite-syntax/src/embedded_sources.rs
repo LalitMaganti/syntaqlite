@@ -15,7 +15,7 @@
 ///
 /// Keyed by filename (e.g. `"types.h"`).
 pub const RUNTIME_HEADERS: &[(&str, &str)] = &[
-    ("dialect.h", include_str!("../include/syntaqlite/dialect.h")),
+    ("grammar.h", include_str!("../include/syntaqlite/grammar.h")),
     ("cflags.h", include_str!("../include/syntaqlite/cflags.h")),
     ("config.h", include_str!("../include/syntaqlite/config.h")),
     ("parser.h", include_str!("../include/syntaqlite/parser.h")),

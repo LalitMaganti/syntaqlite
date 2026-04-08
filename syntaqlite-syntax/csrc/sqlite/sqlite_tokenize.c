@@ -13,7 +13,7 @@
 #include "syntaqlite_dialect/sqlite_compat.h"
 #include "syntaqlite_sqlite/sqlite_tokens.h"
 
-#include "syntaqlite/dialect.h"
+#include "syntaqlite/grammar.h"
 
 /*
 ** The author disclaims copyright to this source code.  In place of
@@ -680,7 +680,7 @@ static const unsigned char aiClass[] = {
 **    May you find forgiveness for yourself and forgive others.
 **    May you share freely, never taking more than you give.
 */
-i64 SynqSqliteGetToken(const SyntaqliteDialect* env,
+i64 SynqSqliteGetToken(const SyntaqliteGrammar* env,
                        const unsigned char* z,
                        int* tokenType) {
   i64 i;

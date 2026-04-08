@@ -210,7 +210,7 @@ impl AstModel<'_> {
         w.file_header();
         w.header_guard_start("SYNTAQLITE_DIALECT_META_H");
         w.include_system("stddef.h");
-        w.include_local("syntaqlite/dialect.h");
+        w.include_local("syntaqlite/grammar.h");
         w.include_local("syntaqlite_dialect/dialect_types.h");
         w.include_local(&format!("syntaqlite_{dialect}/{dialect}_node.h"));
         w.newline();

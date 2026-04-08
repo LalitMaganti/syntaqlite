@@ -185,7 +185,7 @@ pub(crate) fn generate_cflags_h(group: &str) -> String {
         "// SQLite compile-time flag constants for the \"{group}\" group."
     )
     .expect("write to String");
-    out.push_str("// For use with SyntaqliteDialect.cflags.\n");
+    out.push_str("// For use with SyntaqliteGrammar.cflags.\n");
     out.push_str("//\n");
     out.push_str("// Indices are group-local (0-based within this group).\n");
     out.push('\n');

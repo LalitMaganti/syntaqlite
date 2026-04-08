@@ -6,19 +6,19 @@
 #include <string.h>
 
 #include "csrc/token_wrapped.h"
-#include "syntaqlite/dialect.h"
+#include "syntaqlite/grammar.h"
 
 struct SyntaqliteTokenizer {
   SyntaqliteMemMethods mem;
-  SyntaqliteDialect env;
+  SyntaqliteGrammar env;
   const char* source;
   uint32_t len;
   uint32_t offset;
 };
 
-SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_with_dialect(
+SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_with_grammar(
     const SyntaqliteMemMethods* mem,
-    const SyntaqliteDialect env) {
+    const SyntaqliteGrammar env) {
   SyntaqliteMemMethods m = mem ? *mem : SYNTAQLITE_MEM_METHODS_DEFAULT;
   SyntaqliteTokenizer* tok = m.xMalloc(sizeof(SyntaqliteTokenizer));
   memset(tok, 0, sizeof(*tok));
@@ -30,8 +30,8 @@ SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_with_dialect(
 #ifndef SYNTAQLITE_OMIT_SQLITE_API
 SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create(
     const SyntaqliteMemMethods* mem) {
-  SyntaqliteDialect env = syntaqlite_sqlite_dialect();
-  return syntaqlite_tokenizer_create_with_dialect(mem, env);
+  SyntaqliteGrammar env = syntaqlite_sqlite_grammar();
+  return syntaqlite_tokenizer_create_with_grammar(mem, env);
 }
 #endif
 
