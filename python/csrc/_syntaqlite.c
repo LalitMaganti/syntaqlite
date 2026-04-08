@@ -558,6 +558,169 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
         Py_DECREF(Py_None);
     }
 
+    /* Per-statement data */
+    {
+        uint32_t stmt_count = syntaqlite_validator_statement_count(v);
+        PyObject *stmt_list = PyList_New(0);
+        if (!stmt_list) {
+            Py_DECREF(result);
+            syntaqlite_validator_destroy(v);
+            return NULL;
+        }
+        for (uint32_t si = 0; si < stmt_count; si++) {
+            PyObject *stmt_dict = PyDict_New();
+            if (!stmt_dict) {
+                Py_DECREF(stmt_list);
+                Py_DECREF(result);
+                syntaqlite_validator_destroy(v);
+                return NULL;
+            }
+
+            /* Per-statement diagnostics */
+            uint32_t sd_count = syntaqlite_validator_statement_diagnostic_count(v, si);
+            PyObject *sd_list = PyList_New(0);
+            if (sd_list) {
+                const SyntaqliteDiagnostic *sd = syntaqlite_validator_statement_diagnostics(v, si);
+                for (uint32_t i = 0; i < sd_count; i++) {
+                    PyObject *d = PyDict_New();
+                    if (!d) break;
+                    const char *sev_str;
+                    switch (sd[i].severity) {
+                        case SYNTAQLITE_SEVERITY_ERROR:   sev_str = "error"; break;
+                        case SYNTAQLITE_SEVERITY_WARNING: sev_str = "warning"; break;
+                        case SYNTAQLITE_SEVERITY_INFO:    sev_str = "info"; break;
+                        case SYNTAQLITE_SEVERITY_HINT:    sev_str = "hint"; break;
+                        default:                          sev_str = "unknown"; break;
+                    }
+                    PyObject *sev = PyUnicode_FromString(sev_str);
+                    PyObject *msg = PyUnicode_FromString(sd[i].message ? sd[i].message : "");
+                    PyObject *start = PyLong_FromUnsignedLong(sd[i].start_offset);
+                    PyObject *end = PyLong_FromUnsignedLong(sd[i].end_offset);
+                    if (sev) { PyDict_SetItemString(d, "severity", sev); Py_DECREF(sev); }
+                    if (msg) { PyDict_SetItemString(d, "message", msg); Py_DECREF(msg); }
+                    if (start) { PyDict_SetItemString(d, "start_offset", start); Py_DECREF(start); }
+                    if (end) { PyDict_SetItemString(d, "end_offset", end); Py_DECREF(end); }
+                    PyList_Append(sd_list, d);
+                    Py_DECREF(d);
+                }
+                PyDict_SetItemString(stmt_dict, "diagnostics", sd_list);
+                Py_DECREF(sd_list);
+            }
+
+            /* Per-statement lineage */
+            uint32_t sc_count = syntaqlite_validator_statement_column_lineage_count(v, si);
+            if (sc_count > 0) {
+                const SyntaqliteColumnLineage *sc = syntaqlite_validator_statement_column_lineage(v, si);
+                PyObject *lin = PyDict_New();
+                if (lin) {
+                    PyObject *col_list = PyList_New(0);
+                    if (col_list) {
+                        for (uint32_t i = 0; i < sc_count; i++) {
+                            PyObject *c = PyDict_New();
+                            if (!c) break;
+                            PyObject *name = PyUnicode_FromString(sc[i].name ? sc[i].name : "");
+                            PyObject *idx = PyLong_FromUnsignedLong(sc[i].index);
+                            if (name) { PyDict_SetItemString(c, "name", name); Py_DECREF(name); }
+                            if (idx) { PyDict_SetItemString(c, "index", idx); Py_DECREF(idx); }
+                            if (sc[i].origin.table) {
+                                PyObject *origin = PyDict_New();
+                                if (origin) {
+                                    PyObject *tbl = PyUnicode_FromString(sc[i].origin.table);
+                                    PyObject *col_name = PyUnicode_FromString(sc[i].origin.column);
+                                    if (tbl) { PyDict_SetItemString(origin, "table", tbl); Py_DECREF(tbl); }
+                                    if (col_name) { PyDict_SetItemString(origin, "column", col_name); Py_DECREF(col_name); }
+                                    PyDict_SetItemString(c, "origin", origin);
+                                    Py_DECREF(origin);
+                                }
+                            } else {
+                                Py_INCREF(Py_None);
+                                PyDict_SetItemString(c, "origin", Py_None);
+                                Py_DECREF(Py_None);
+                            }
+                            PyList_Append(col_list, c);
+                            Py_DECREF(c);
+                        }
+                        PyDict_SetItemString(lin, "columns", col_list);
+                        Py_DECREF(col_list);
+                    }
+
+                    /* Per-statement relations */
+                    uint32_t sr_count = syntaqlite_validator_statement_relation_count(v, si);
+                    PyObject *rel_list = PyList_New(0);
+                    if (rel_list) {
+                        const SyntaqliteRelationAccess *sr = syntaqlite_validator_statement_relations(v, si);
+                        for (uint32_t i = 0; i < sr_count; i++) {
+                            PyObject *r = PyDict_New();
+                            if (r) {
+                                PyObject *rname = PyUnicode_FromString(sr[i].name ? sr[i].name : "");
+                                PyObject *rkind = PyUnicode_FromString(
+                                    sr[i].kind == SYNTAQLITE_RELATION_VIEW ? "view" : "table");
+                                if (rname) { PyDict_SetItemString(r, "name", rname); Py_DECREF(rname); }
+                                if (rkind) { PyDict_SetItemString(r, "kind", rkind); Py_DECREF(rkind); }
+                                PyList_Append(rel_list, r);
+                                Py_DECREF(r);
+                            }
+                        }
+                        PyDict_SetItemString(lin, "relations", rel_list);
+                        Py_DECREF(rel_list);
+                    }
+
+                    /* Per-statement tables */
+                    uint32_t st_count = syntaqlite_validator_statement_table_count(v, si);
+                    PyObject *tbl_list = PyList_New(0);
+                    if (tbl_list) {
+                        const SyntaqliteTableAccess *st = syntaqlite_validator_statement_tables(v, si);
+                        for (uint32_t i = 0; i < st_count; i++) {
+                            PyObject *tname = PyUnicode_FromString(st[i].name ? st[i].name : "");
+                            if (tname) { PyList_Append(tbl_list, tname); Py_DECREF(tname); }
+                        }
+                        PyDict_SetItemString(lin, "tables", tbl_list);
+                        Py_DECREF(tbl_list);
+                    }
+
+                    PyObject *complete = Py_True;  /* per-stmt lineage always present if we got here */
+                    Py_INCREF(complete);
+                    PyDict_SetItemString(lin, "complete", complete);
+                    Py_DECREF(complete);
+
+                    PyDict_SetItemString(stmt_dict, "lineage", lin);
+                    Py_DECREF(lin);
+                }
+            } else {
+                Py_INCREF(Py_None);
+                PyDict_SetItemString(stmt_dict, "lineage", Py_None);
+                Py_DECREF(Py_None);
+            }
+
+            /* Per-statement defined relations */
+            uint32_t dr_count = syntaqlite_validator_statement_defined_relation_count(v, si);
+            PyObject *dr_list = PyList_New(0);
+            if (dr_list) {
+                const SyntaqliteDefinedRelation *drs = syntaqlite_validator_statement_defined_relations(v, si);
+                for (uint32_t i = 0; i < dr_count; i++) {
+                    PyObject *dr = PyDict_New();
+                    if (dr) {
+                        PyObject *drname = PyUnicode_FromString(drs[i].name ? drs[i].name : "");
+                        PyObject *is_view = drs[i].is_view ? Py_True : Py_False;
+                        Py_INCREF(is_view);
+                        if (drname) { PyDict_SetItemString(dr, "name", drname); Py_DECREF(drname); }
+                        PyDict_SetItemString(dr, "is_view", is_view);
+                        Py_DECREF(is_view);
+                        PyList_Append(dr_list, dr);
+                        Py_DECREF(dr);
+                    }
+                }
+                PyDict_SetItemString(stmt_dict, "defined_relations", dr_list);
+                Py_DECREF(dr_list);
+            }
+
+            PyList_Append(stmt_list, stmt_dict);
+            Py_DECREF(stmt_dict);
+        }
+        PyDict_SetItemString(result, "statements", stmt_list);
+        Py_DECREF(stmt_list);
+    }
+
     syntaqlite_validator_destroy(v);
     return result;
 }

@@ -240,54 +240,54 @@ SYNTAQLITE_API const SyntaqliteTableAccess* syntaqlite_validator_tables(
 
 // Number of statements produced by the last analyze() call.
 SYNTAQLITE_API uint32_t syntaqlite_validator_statement_count(
-    const SyntaqliteValidator* v);
+    SyntaqliteValidator* v);
 
 // Number of diagnostics for statement at index `idx`.
 // Returns 0 if idx is out of bounds.
 SYNTAQLITE_API uint32_t syntaqlite_validator_statement_diagnostic_count(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Pointer to diagnostics for statement `idx`. NULL when count is 0 or
 // idx is out of bounds.
 SYNTAQLITE_API const SyntaqliteDiagnostic*
 syntaqlite_validator_statement_diagnostics(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Number of result columns with lineage for statement `idx`.
 SYNTAQLITE_API uint32_t syntaqlite_validator_statement_column_lineage_count(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Column lineage array for statement `idx`. NULL when count is 0.
 SYNTAQLITE_API const SyntaqliteColumnLineage*
 syntaqlite_validator_statement_column_lineage(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Number of relations referenced in FROM for statement `idx`.
 SYNTAQLITE_API uint32_t syntaqlite_validator_statement_relation_count(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Relation access array for statement `idx`. NULL when count is 0.
 SYNTAQLITE_API const SyntaqliteRelationAccess*
 syntaqlite_validator_statement_relations(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Number of physical tables accessed for statement `idx`.
 SYNTAQLITE_API uint32_t syntaqlite_validator_statement_table_count(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Physical table access array for statement `idx`. NULL when count is 0.
 SYNTAQLITE_API const SyntaqliteTableAccess*
 syntaqlite_validator_statement_tables(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Number of relations defined by DDL in statement `idx`.
 SYNTAQLITE_API uint32_t syntaqlite_validator_statement_defined_relation_count(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Defined relations for statement `idx`. NULL when count is 0.
 SYNTAQLITE_API const SyntaqliteDefinedRelation*
 syntaqlite_validator_statement_defined_relations(
-    const SyntaqliteValidator* v, uint32_t idx);
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Free a string returned by a syntaqlite_* function that documents
 // ownership transfer. No-op if s is NULL.

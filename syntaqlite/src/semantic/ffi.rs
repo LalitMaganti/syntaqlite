@@ -72,16 +72,16 @@ pub struct SyntaqliteDefinedRelation {
     pub is_view: u32,
 }
 
-/// Per-statement C-compatible data, populated after each `analyze()` call.
-struct PerStatementC {
-    diagnostics: Vec<SyntaqliteDiagnostic>,
-    messages: Vec<CString>,
-    column_lineage: Vec<SyntaqliteColumnLineage>,
-    relations: Vec<SyntaqliteRelationAccess>,
-    tables: Vec<SyntaqliteTableAccess>,
-    defined_relations: Vec<SyntaqliteDefinedRelation>,
-    /// All CStrings for lineage/relation/defined_relation names.
-    strings: Vec<CString>,
+/// Lazily-cached C-compatible data for a single statement.
+/// Each field is populated on first access by the corresponding accessor
+/// function and remains valid until the next `analyze()` call.
+#[derive(Default)]
+struct PerStatementCache {
+    diagnostics: Option<(Vec<SyntaqliteDiagnostic>, Vec<CString>)>,
+    column_lineage: Option<(Vec<SyntaqliteColumnLineage>, Vec<CString>)>,
+    relations: Option<(Vec<SyntaqliteRelationAccess>, Vec<CString>)>,
+    tables: Option<(Vec<SyntaqliteTableAccess>, Vec<CString>)>,
+    defined_relations: Option<(Vec<SyntaqliteDefinedRelation>, Vec<CString>)>,
 }
 
 /// Opaque validator handle exposed to C.
@@ -114,8 +114,10 @@ struct ValidatorState {
     c_tables: Vec<SyntaqliteTableAccess>,
     /// Rendered lineage strings, kept alive for the C pointers.
     lineage_strings: Vec<CString>,
-    /// Per-statement C data from the most recent `analyze()` call.
-    per_statement: Vec<PerStatementC>,
+    /// The model from the most recent `analyze()` call.
+    last_model: Option<SemanticModel>,
+    /// Lazily-cached per-statement C data.
+    per_statement_cache: Vec<PerStatementCache>,
 }
 
 /// Opaque C handle — the pointer target of `SyntaqliteValidator*`.
@@ -292,7 +294,8 @@ fn create_validator(dialect: AnyDialect) -> *mut SyntaqliteValidator {
         c_relations: Vec::new(),
         c_tables: Vec::new(),
         lineage_strings: Vec::new(),
-        per_statement: Vec::new(),
+        last_model: None,
+        per_statement_cache: Vec::new(),
     });
     Box::into_raw(state).cast::<SyntaqliteValidator>()
 }
@@ -413,7 +416,12 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
     }
 
     populate_lineage(state, &model);
-    populate_per_statement(state, &model);
+
+    // Store model and reset per-statement cache for lazy access.
+    let stmt_count = model.statements().len();
+    state.per_statement_cache.clear();
+    state.per_statement_cache.resize_with(stmt_count, PerStatementCache::default);
+    state.last_model = Some(model);
 
     state.c_diagnostics.len() as u32
 }
@@ -777,275 +785,256 @@ pub unsafe extern "C" fn syntaqlite_validator_tables(
     }
 }
 
-// ── Per-statement data population ─────────────────────────────────────────
+// ── Per-statement lazy accessors ──────────────────────────────────────────
+//
+// Each accessor lazily populates its cache in PerStatementCache on first
+// call, reading from last_model.statements()[idx]. The cache (and model)
+// are cleared on the next analyze() call.
 
-fn populate_per_statement(state: &mut ValidatorState, model: &SemanticModel) {
-    state.per_statement.clear();
+use super::model::StatementModel;
 
-    for stmt in model.statements() {
-        let mut ps = PerStatementC {
-            diagnostics: Vec::new(),
-            messages: Vec::new(),
-            column_lineage: Vec::new(),
-            relations: Vec::new(),
-            tables: Vec::new(),
-            defined_relations: Vec::new(),
-            strings: Vec::new(),
-        };
-
-        // Diagnostics: two-pass (strings first, then C structs).
+/// Build C diagnostics from a `StatementModel`, caching into the slot.
+fn ensure_diagnostics<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
+    -> &'a (Vec<SyntaqliteDiagnostic>, Vec<CString>)
+{
+    cache.diagnostics.get_or_insert_with(|| {
+        let mut msgs = Vec::new();
+        let mut diags = Vec::new();
         for d in stmt.diagnostics() {
-            ps.messages
-                .push(CString::new(d.message().to_string()).unwrap_or_default());
+            msgs.push(CString::new(d.message().to_string()).unwrap_or_default());
         }
-        for (d, msg) in stmt.diagnostics().iter().zip(ps.messages.iter()) {
-            ps.diagnostics.push(SyntaqliteDiagnostic {
+        for (d, msg) in stmt.diagnostics().iter().zip(msgs.iter()) {
+            diags.push(SyntaqliteDiagnostic {
                 severity: severity_to_c(d.severity()),
                 message: msg.as_ptr(),
                 start_offset: d.start_offset() as u32,
                 end_offset: d.end_offset() as u32,
             });
         }
+        (diags, msgs)
+    })
+}
 
-        // Lineage: column lineage, relations, tables.
+/// Build C column lineage from a `StatementModel`.
+fn ensure_column_lineage<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
+    -> &'a (Vec<SyntaqliteColumnLineage>, Vec<CString>)
+{
+    cache.column_lineage.get_or_insert_with(|| {
+        let mut strings = Vec::new();
+        let mut cols = Vec::new();
         if let Some(lineage) = stmt.lineage() {
-            let cols = lineage.into_inner();
-            // First pass: push all strings.
-            for col in cols {
-                ps.strings
-                    .push(CString::new(col.name.as_str()).unwrap_or_default());
+            // First pass: all strings.
+            for col in lineage.into_inner() {
+                strings.push(CString::new(col.name.as_str()).unwrap_or_default());
                 if let Some(ref origin) = col.origin {
-                    ps.strings
-                        .push(CString::new(origin.table.as_str()).unwrap_or_default());
-                    ps.strings
-                        .push(CString::new(origin.column.as_str()).unwrap_or_default());
+                    strings.push(CString::new(origin.table.as_str()).unwrap_or_default());
+                    strings.push(CString::new(origin.column.as_str()).unwrap_or_default());
                 }
             }
             // Second pass: build C structs.
-            let mut str_idx = 0;
+            let mut si = 0;
             for col in stmt.lineage().unwrap().into_inner() {
-                let name_ptr = ps.strings[str_idx].as_ptr();
-                str_idx += 1;
+                let name_ptr = strings[si].as_ptr();
+                si += 1;
                 let origin = if col.origin.is_some() {
-                    let table_ptr = ps.strings[str_idx].as_ptr();
-                    str_idx += 1;
-                    let column_ptr = ps.strings[str_idx].as_ptr();
-                    str_idx += 1;
-                    SyntaqliteColumnOrigin {
-                        table: table_ptr,
-                        column: column_ptr,
-                    }
+                    let tp = strings[si].as_ptr(); si += 1;
+                    let cp = strings[si].as_ptr(); si += 1;
+                    SyntaqliteColumnOrigin { table: tp, column: cp }
                 } else {
-                    SyntaqliteColumnOrigin {
-                        table: std::ptr::null(),
-                        column: std::ptr::null(),
-                    }
+                    SyntaqliteColumnOrigin { table: std::ptr::null(), column: std::ptr::null() }
                 };
-                ps.column_lineage.push(SyntaqliteColumnLineage {
-                    name: name_ptr,
-                    index: col.index,
-                    origin,
-                });
+                cols.push(SyntaqliteColumnLineage { name: name_ptr, index: col.index, origin });
             }
         }
-
-        // Relations accessed.
-        if let Some(rels) = stmt.relations_accessed() {
-            let base = ps.strings.len();
-            for r in rels.into_inner() {
-                ps.strings
-                    .push(CString::new(r.name.as_str()).unwrap_or_default());
-            }
-            for (i, r) in stmt
-                .relations_accessed()
-                .unwrap()
-                .into_inner()
-                .iter()
-                .enumerate()
-            {
-                ps.relations.push(SyntaqliteRelationAccess {
-                    name: ps.strings[base + i].as_ptr(),
-                    kind: match r.kind {
-                        RelationKind::Table => 0,
-                        RelationKind::View => 1,
-                    },
-                });
-            }
-        }
-
-        // Tables accessed.
-        if let Some(tbls) = stmt.tables_accessed() {
-            let base = ps.strings.len();
-            for t in tbls.into_inner() {
-                ps.strings
-                    .push(CString::new(t.name.as_str()).unwrap_or_default());
-            }
-            let count = stmt.tables_accessed().unwrap().into_inner().len();
-            for i in 0..count {
-                ps.tables.push(SyntaqliteTableAccess {
-                    name: ps.strings[base + i].as_ptr(),
-                });
-            }
-        }
-
-        // Defined relations.
-        {
-            let base = ps.strings.len();
-            for dr in stmt.defined_relations() {
-                ps.strings
-                    .push(CString::new(dr.name.as_str()).unwrap_or_default());
-            }
-            for (i, dr) in stmt.defined_relations().iter().enumerate() {
-                ps.defined_relations.push(SyntaqliteDefinedRelation {
-                    name: ps.strings[base + i].as_ptr(),
-                    is_view: u32::from(dr.is_view),
-                });
-            }
-        }
-
-        state.per_statement.push(ps);
-    }
+        (cols, strings)
+    })
 }
 
-// ── Per-statement accessors ───────────────────────────────────────────────
+/// Build C relation access from a `StatementModel`.
+fn ensure_relations<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
+    -> &'a (Vec<SyntaqliteRelationAccess>, Vec<CString>)
+{
+    cache.relations.get_or_insert_with(|| {
+        let mut strings = Vec::new();
+        let mut rels = Vec::new();
+        if let Some(result) = stmt.relations_accessed() {
+            for r in result.into_inner() {
+                strings.push(CString::new(r.name.as_str()).unwrap_or_default());
+            }
+            for (i, r) in stmt.relations_accessed().unwrap().into_inner().iter().enumerate() {
+                rels.push(SyntaqliteRelationAccess {
+                    name: strings[i].as_ptr(),
+                    kind: match r.kind { RelationKind::Table => 0, RelationKind::View => 1 },
+                });
+            }
+        }
+        (rels, strings)
+    })
+}
+
+/// Build C table access from a `StatementModel`.
+fn ensure_tables<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
+    -> &'a (Vec<SyntaqliteTableAccess>, Vec<CString>)
+{
+    cache.tables.get_or_insert_with(|| {
+        let mut strings = Vec::new();
+        let mut tbls = Vec::new();
+        if let Some(result) = stmt.tables_accessed() {
+            for t in result.into_inner() {
+                strings.push(CString::new(t.name.as_str()).unwrap_or_default());
+            }
+            for i in 0..strings.len() {
+                tbls.push(SyntaqliteTableAccess { name: strings[i].as_ptr() });
+            }
+        }
+        (tbls, strings)
+    })
+}
+
+/// Build C defined relations from a `StatementModel`.
+fn ensure_defined_relations<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
+    -> &'a (Vec<SyntaqliteDefinedRelation>, Vec<CString>)
+{
+    cache.defined_relations.get_or_insert_with(|| {
+        let mut strings = Vec::new();
+        let mut defs = Vec::new();
+        for dr in stmt.defined_relations() {
+            strings.push(CString::new(dr.name.as_str()).unwrap_or_default());
+        }
+        for (i, dr) in stmt.defined_relations().iter().enumerate() {
+            defs.push(SyntaqliteDefinedRelation {
+                name: strings[i].as_ptr(),
+                is_view: u32::from(dr.is_view),
+            });
+        }
+        (defs, strings)
+    })
+}
+
+/// Look up the statement + cache for a given index, or return `None` if
+/// out of bounds or no model is available.
+///
+/// # Safety
+/// `v` must be a valid pointer from `syntaqlite_validator_create_*`.
+unsafe fn stmt_cache<'a>(
+    v: *mut SyntaqliteValidator,
+    idx: u32,
+) -> Option<(&'a StatementModel, &'a mut PerStatementCache)> {
+    let state = unsafe { &mut *v }.state_mut();
+    let i = idx as usize;
+    let model = state.last_model.as_ref()?;
+    let stmt = model.statements().get(i)?;
+    let cache = &mut state.per_statement_cache[i];
+    // Reborrow stmt with a longer lifetime — model lives in state and won't
+    // move while we hold &mut state.
+    let stmt: &StatementModel = unsafe { &*(stmt as *const StatementModel) };
+    Some((stmt, cache))
+}
+
+/// Return (ptr, count) for a lazily-cached vec, or (null, 0) on miss.
+fn cached_slice<T>(v: &[T]) -> (*const T, u32) {
+    if v.is_empty() {
+        (std::ptr::null(), 0)
+    } else {
+        (v.as_ptr(), v.len() as u32)
+    }
+}
 
 #[unsafe(no_mangle)]
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_count(
-    v: *const SyntaqliteValidator,
+    v: *mut SyntaqliteValidator,
 ) -> u32 {
-    let v = unsafe { &*v };
-    v.state().per_statement.len() as u32
+    let state = unsafe { &mut *v }.state_mut();
+    state
+        .last_model
+        .as_ref()
+        .map_or(0, |m| m.statements().len() as u32)
 }
 
 #[unsafe(no_mangle)]
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_diagnostic_count(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> u32 {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .map_or(0, |ps| ps.diagnostics.len() as u32)
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    cached_slice(&ensure_diagnostics(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_diagnostics(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> *const SyntaqliteDiagnostic {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .filter(|ps| !ps.diagnostics.is_empty())
-        .map_or(std::ptr::null(), |ps| ps.diagnostics.as_ptr())
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    cached_slice(&ensure_diagnostics(c, s).0).0
 }
 
 #[unsafe(no_mangle)]
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_column_lineage_count(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> u32 {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .map_or(0, |ps| ps.column_lineage.len() as u32)
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    cached_slice(&ensure_column_lineage(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_column_lineage(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> *const SyntaqliteColumnLineage {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .filter(|ps| !ps.column_lineage.is_empty())
-        .map_or(std::ptr::null(), |ps| ps.column_lineage.as_ptr())
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    cached_slice(&ensure_column_lineage(c, s).0).0
 }
 
 #[unsafe(no_mangle)]
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_relation_count(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> u32 {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .map_or(0, |ps| ps.relations.len() as u32)
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    cached_slice(&ensure_relations(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_relations(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> *const SyntaqliteRelationAccess {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .filter(|ps| !ps.relations.is_empty())
-        .map_or(std::ptr::null(), |ps| ps.relations.as_ptr())
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    cached_slice(&ensure_relations(c, s).0).0
 }
 
 #[unsafe(no_mangle)]
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_table_count(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> u32 {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .map_or(0, |ps| ps.tables.len() as u32)
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    cached_slice(&ensure_tables(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_tables(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> *const SyntaqliteTableAccess {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .filter(|ps| !ps.tables.is_empty())
-        .map_or(std::ptr::null(), |ps| ps.tables.as_ptr())
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    cached_slice(&ensure_tables(c, s).0).0
 }
 
 #[unsafe(no_mangle)]
 #[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_defined_relation_count(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> u32 {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .map_or(0, |ps| ps.defined_relations.len() as u32)
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    cached_slice(&ensure_defined_relations(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_defined_relations(
-    v: *const SyntaqliteValidator,
-    idx: u32,
+    v: *mut SyntaqliteValidator, idx: u32,
 ) -> *const SyntaqliteDefinedRelation {
-    let v = unsafe { &*v };
-    v.state()
-        .per_statement
-        .get(idx as usize)
-        .filter(|ps| !ps.defined_relations.is_empty())
-        .map_or(std::ptr::null(), |ps| ps.defined_relations.as_ptr())
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    cached_slice(&ensure_defined_relations(c, s).0).0
 }
 
 /// Free a string returned by `syntaqlite_string_*` functions.
