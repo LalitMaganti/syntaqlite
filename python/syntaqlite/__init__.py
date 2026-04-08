@@ -212,20 +212,60 @@ class View:
         return f"View({self.name!r})"
 
 
-class ValidationResult:
-    """Result of validate() — diagnostics and optional lineage."""
+class DefinedRelation:
+    """A relation defined by a DDL statement (CREATE TABLE / CREATE VIEW)."""
 
-    __slots__ = ("diagnostics", "lineage")
+    __slots__ = ("name", "is_view")
+
+    def __init__(self, d: dict):
+        self.name: str = d["name"]
+        self.is_view: bool = d["is_view"]
+
+    def __repr__(self):
+        kind = "view" if self.is_view else "table"
+        return f"DefinedRelation({self.name!r}, {kind})"
+
+
+class Statement:
+    """Per-statement analysis result."""
+
+    __slots__ = ("diagnostics", "lineage", "defined_relations")
 
     def __init__(self, d: dict):
         self.diagnostics: list[Diagnostic] = [Diagnostic(x) for x in d["diagnostics"]]
         lin = d["lineage"]
         self.lineage: Lineage | None = Lineage(lin) if lin else None
+        self.defined_relations: list[DefinedRelation] = [
+            DefinedRelation(x) for x in d.get("defined_relations", [])
+        ]
 
     def __repr__(self):
         parts = [f"{len(self.diagnostics)} diagnostics"]
         if self.lineage:
             parts.append(str(self.lineage))
+        if self.defined_relations:
+            parts.append(f"{len(self.defined_relations)} defined relations")
+        return f"Statement({', '.join(parts)})"
+
+
+class ValidationResult:
+    """Result of validate() — diagnostics, optional lineage, and per-statement data."""
+
+    __slots__ = ("diagnostics", "lineage", "statements")
+
+    def __init__(self, d: dict):
+        self.diagnostics: list[Diagnostic] = [Diagnostic(x) for x in d["diagnostics"]]
+        lin = d["lineage"]
+        self.lineage: Lineage | None = Lineage(lin) if lin else None
+        self.statements: list[Statement] = [
+            Statement(s) for s in d.get("statements", [])
+        ]
+
+    def __repr__(self):
+        parts = [f"{len(self.diagnostics)} diagnostics"]
+        if self.lineage:
+            parts.append(str(self.lineage))
+        parts.append(f"{len(self.statements)} statements")
         return f"ValidationResult({', '.join(parts)})"
 
 
