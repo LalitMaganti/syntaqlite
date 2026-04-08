@@ -73,9 +73,9 @@ pub struct OutputLayout {
     pub ffi_rs: Option<String>,
     /// Rust AST node types (`ast.rs`).
     pub ast_rs: Option<String>,
-    /// Syntax-crate dialect module (`syntaqlite-syntax/.../dialect.rs`).
-    pub syntax_dialect_rs: Option<String>,
-    /// Library-crate dialect module (`syntaqlite/.../dialect.rs`).
+    /// Grammar module (`grammar.rs`).
+    pub grammar_rs: Option<String>,
+    /// Dialect accessor module (`dialect.rs`).
     pub dialect_rs: Option<String>,
     /// Crate root module (`lib.rs`).
     pub lib_rs: Option<String>,
@@ -206,9 +206,9 @@ impl OutputLayout {
             tokens_rs: Some(format!("{dc}/src/sqlite/tokens.rs")),
             ffi_rs: Some(format!("{dc}/src/sqlite/ffi.rs")),
             ast_rs: Some(format!("{dc}/src/sqlite/ast.rs")),
-            syntax_dialect_rs: Some(format!("{dc}/src/sqlite/dialect.rs")),
-            dialect_rs: None, // hand-maintained; codegen template targets syntaqlite crate, not syntaqlite-syntax
-            lib_rs: None,     // hand-maintained
+            grammar_rs: Some(format!("{dc}/src/sqlite/grammar.rs")),
+            dialect_rs: Some(format!("{dc}/src/sqlite/dialect.rs")),
+            lib_rs: None, // hand-maintained
             functions_catalog_rs: None,
             // Crate root: hand-maintained for the internal crate
             build_rs: None,
@@ -296,7 +296,7 @@ impl OutputLayout {
             tokens_rs: Some("src/tokens.rs".to_string()),
             ffi_rs: Some("src/ffi.rs".to_string()),
             ast_rs: Some("src/ast.rs".to_string()),
-            syntax_dialect_rs: None, // dialect accessor lives in lib.rs for external dialects
+            grammar_rs: None, // grammar accessor lives in lib.rs for external dialects
             dialect_rs: None, // TODO: generate dialect.rs for external crates (needs "syntaqlite" crate path)
             lib_rs: Some("src/lib.rs".to_string()),
             functions_catalog_rs: None,
@@ -386,7 +386,7 @@ impl OutputLayout {
             tokens_rs: None,
             ffi_rs: None,
             ast_rs: None,
-            syntax_dialect_rs: None,
+            grammar_rs: None,
             dialect_rs: None,
             lib_rs: None,
             functions_catalog_rs: None,
@@ -460,8 +460,8 @@ impl OutputLayout {
             write(&self.tokens_rs, &rust.tokens_rs)?;
             write(&self.ffi_rs, &rust.ffi_rs)?;
             write(&self.ast_rs, &rust.ast_rs)?;
-            if let Some(ref content) = rust.syntax_dialect_rs {
-                write(&self.syntax_dialect_rs, content)?;
+            if let Some(ref content) = rust.grammar_rs {
+                write(&self.grammar_rs, content)?;
             }
             if let Some(ref content) = rust.dialect_rs {
                 write(&self.dialect_rs, content)?;

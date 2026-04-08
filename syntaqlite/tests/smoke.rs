@@ -5,7 +5,7 @@
 
 use syntaqlite::any::AnyNodeTag;
 use syntaqlite::nodes::{NodeTag, Stmt};
-use syntaqlite::typed::{TypedParser, dialect};
+use syntaqlite::typed::{TypedParser, grammar};
 use syntaqlite::util::{SqliteSyntaxFlag, SqliteSyntaxFlags};
 use syntaqlite::{ParseOutcome, Parser};
 
@@ -169,7 +169,7 @@ fn parser_reuse() {
 
 #[test]
 fn parse_delete_with_order_by_limit() {
-    let g = dialect()
+    let g = grammar()
         .with_cflags(SqliteSyntaxFlags::default().with(SqliteSyntaxFlag::EnableUpdateDeleteLimit));
     let parser = TypedParser::new(g);
     let mut session = parser.parse("DELETE FROM t ORDER BY id LIMIT 5;");
@@ -187,7 +187,7 @@ fn parse_delete_with_order_by_limit() {
 
 #[test]
 fn parse_update_with_order_by_limit() {
-    let g = dialect()
+    let g = grammar()
         .with_cflags(SqliteSyntaxFlags::default().with(SqliteSyntaxFlag::EnableUpdateDeleteLimit));
     let parser = TypedParser::new(g);
     let mut session = parser.parse("UPDATE t SET a = 1 ORDER BY id LIMIT 3;");

@@ -8,7 +8,7 @@ use std::ptr::NonNull;
 use std::rc::Rc;
 
 use crate::ast::GrammarTokenType;
-use crate::dialect::{AnyDialect, TypedDialect};
+use crate::grammar::{AnyGrammar, TypedGrammar};
 
 use super::{
     AnyParsedStatement, CParser, CompletionContext, ParserInner, TypedParseError,
@@ -17,17 +17,17 @@ use super::{
 #[cfg(feature = "sqlite")]
 use super::{ParseError, ParsedStatement};
 
-/// Incremental parser state machine for dialect `G`.
+/// Incremental parser state machine for grammar `G`.
 ///
 /// Use this for interactive/editor workflows where input arrives token by
 /// token and you need expected-token or completion-context feedback.
 ///
 /// Obtained from [`super::TypedParser::incremental_parse`].
-pub struct TypedIncrementalParseSession<G: TypedDialect> {
+pub struct TypedIncrementalParseSession<G: TypedGrammar> {
     /// Base pointer into the internal source buffer. `feed_token` uses this
     /// to compute the C-side token pointer from byte-offset spans.
     c_source_ptr: NonNull<u8>,
-    dialect: AnyDialect,
+    grammar: AnyGrammar,
     /// Checked-out parser state. Returned to `slot` on drop.
     inner: Option<ParserInner>,
     /// Slot to return `inner` to when this session is dropped.
@@ -36,7 +36,7 @@ pub struct TypedIncrementalParseSession<G: TypedDialect> {
     _marker: PhantomData<G>,
 }
 
-impl<G: TypedDialect> Drop for TypedIncrementalParseSession<G> {
+impl<G: TypedGrammar> Drop for TypedIncrementalParseSession<G> {
     fn drop(&mut self) {
         if let Some(inner) = self.inner.take() {
             *self.slot.borrow_mut() = Some(inner);
@@ -44,16 +44,16 @@ impl<G: TypedDialect> Drop for TypedIncrementalParseSession<G> {
     }
 }
 
-impl<G: TypedDialect> TypedIncrementalParseSession<G> {
+impl<G: TypedGrammar> TypedIncrementalParseSession<G> {
     pub(crate) fn new(
         c_source_ptr: NonNull<u8>,
-        dialect: AnyDialect,
+        grammar: AnyGrammar,
         inner: ParserInner,
         slot: Rc<RefCell<Option<ParserInner>>>,
     ) -> Self {
         TypedIncrementalParseSession {
             c_source_ptr,
-            dialect,
+            grammar,
             inner: Some(inner),
             slot,
             finished: false,
@@ -83,7 +83,7 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
         // reset_parser. The first source_len bytes are the original source.
         let source = unsafe { std::str::from_utf8_unchecked(&inner.source_buf[..source_len]) };
         // SAFETY: inner.raw is valid (owned via ParserInner, not yet destroyed).
-        unsafe { TypedParsedStatement::new(inner.raw.as_ptr(), source, self.dialect.clone()) }
+        unsafe { TypedParsedStatement::new(inner.raw.as_ptr(), source, self.grammar.clone()) }
     }
 
     fn result_from_rc(
@@ -114,15 +114,15 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
     ///   recovery tree.
     ///
     /// `span` is a byte range into the source text bound by this session.
-    /// `token_type` is the dialect's typed token enum.
+    /// `token_type` is the grammar's typed token enum.
     ///
     /// # Examples
     ///
     /// ```rust
-    /// use syntaqlite_syntax::typed::{dialect, TypedParser};
+    /// use syntaqlite_syntax::typed::{grammar, TypedParser};
     /// use syntaqlite_syntax::TokenType;
     ///
-    /// let parser = TypedParser::new(dialect());
+    /// let parser = TypedParser::new(grammar());
     /// let mut session = parser.incremental_parse("SELECT 1");
     ///
     /// assert!(session.feed_token(TokenType::Select, 0..6).is_none());
@@ -171,17 +171,17 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
     /// # Examples
     ///
     /// ```rust
-    /// use syntaqlite_syntax::typed::{dialect, TypedParser};
+    /// use syntaqlite_syntax::typed::{grammar, TypedParser};
     /// use syntaqlite_syntax::TokenType;
     ///
-    /// let parser = TypedParser::new(dialect());
+    /// let parser = TypedParser::new(grammar());
     /// let mut session = parser.incremental_parse("SELECT x FROM t");
     /// let _ = session.feed_token(TokenType::Select, 0..6);
     ///
     /// let expected: Vec<_> = session.expected_tokens().collect();
     /// assert!(!expected.is_empty());
     /// ```
-    pub fn expected_tokens(&self) -> impl Iterator<Item = <G as TypedDialect>::Token> {
+    pub fn expected_tokens(&self) -> impl Iterator<Item = <G as TypedGrammar>::Token> {
         self.assert_not_finished();
         let raw = self.raw_ptr();
         let mut stack_buf = [0u32; 256];
@@ -208,7 +208,7 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
         raw_tokens
             .into_iter()
             .map(crate::any::AnyTokenType)
-            .filter_map(<G as TypedDialect>::Token::from_token_type)
+            .filter_map(<G as TypedGrammar>::Token::from_token_type)
     }
 
     /// Return the semantic completion context for the current parser state.
@@ -267,10 +267,10 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
     }
 }
 
-/// Type-erased incremental parser for runtime-selected dialects.
-pub type AnyIncrementalParseSession = TypedIncrementalParseSession<AnyDialect>;
+/// Type-erased incremental parser for runtime-selected grammars.
+pub type AnyIncrementalParseSession = TypedIncrementalParseSession<AnyGrammar>;
 
-/// Incremental parsing API for the built-in `SQLite` dialect.
+/// Incremental parsing API for the built-in `SQLite` grammar.
 ///
 /// Produced by [`super::Parser::incremental_parse`].
 ///
@@ -279,7 +279,7 @@ pub type AnyIncrementalParseSession = TypedIncrementalParseSession<AnyDialect>;
 ///
 /// Ideal for editor-like flows that parse as the user types.
 #[cfg(feature = "sqlite")]
-pub struct IncrementalParseSession(TypedIncrementalParseSession<crate::sqlite::dialect::Dialect>);
+pub struct IncrementalParseSession(TypedIncrementalParseSession<crate::sqlite::grammar::Grammar>);
 
 #[cfg(feature = "sqlite")]
 impl IncrementalParseSession {
@@ -392,10 +392,10 @@ impl IncrementalParseSession {
 }
 
 #[cfg(feature = "sqlite")]
-impl From<TypedIncrementalParseSession<crate::sqlite::dialect::Dialect>>
+impl From<TypedIncrementalParseSession<crate::sqlite::grammar::Grammar>>
     for IncrementalParseSession
 {
-    fn from(inner: TypedIncrementalParseSession<crate::sqlite::dialect::Dialect>) -> Self {
+    fn from(inner: TypedIncrementalParseSession<crate::sqlite::grammar::Grammar>) -> Self {
         IncrementalParseSession(inner)
     }
 }

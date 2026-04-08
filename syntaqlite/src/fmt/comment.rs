@@ -231,7 +231,7 @@ impl CommentCtx {
     /// (case-insensitive). If the keyword starts at the current cursor
     /// position, returns immediately. Otherwise, scans forward up to
     /// `MAX_SCAN` tokens to handle untracked tokens (e.g. `(` and `)` from
-    /// dialect-level syntax that no fmt opcode covers).
+    /// grammar-level syntax that no fmt opcode covers).
     ///
     /// On match, the token cursor is advanced past any skipped tokens so it
     /// points to the first word of the keyword. Returns `None` if the

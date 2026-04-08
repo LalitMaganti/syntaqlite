@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Cross-cutting utilities for dialect configuration, compatibility, and rendering.
+//! Cross-cutting utilities for grammar configuration, compatibility, and rendering.
 
 use std::io::{self, Write};
 

@@ -7,7 +7,7 @@
 #define SYNTAQLITE_DIALECT_META_H
 
 #include <stddef.h>
-#include "syntaqlite/dialect.h"
+#include "syntaqlite/grammar.h"
 #include "syntaqlite_dialect/dialect_types.h"
 #include "syntaqlite_sqlite/sqlite_node.h"
 

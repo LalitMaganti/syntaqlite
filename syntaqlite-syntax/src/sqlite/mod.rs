@@ -11,6 +11,6 @@ pub(crate) mod tokens;
 #[cfg(feature = "sqlite")]
 pub(crate) mod ast;
 #[cfg(feature = "sqlite")]
-pub(crate) mod dialect;
-#[cfg(feature = "sqlite")]
 pub(crate) mod ffi;
+#[cfg(feature = "sqlite")]
+pub(crate) mod grammar;

@@ -54,11 +54,11 @@ fn multi_stmt_comments_preserved_in_order() {
 fn debug_comment_token_offsets() {
     use syntaqlite::ParseOutcome;
     use syntaqlite::parse::ParserConfig;
-    use syntaqlite::typed::{TypedParser, dialect};
+    use syntaqlite::typed::{TypedParser, grammar};
 
     let input = "SELECT 1;\n\n-- foo\nselect\n-- foo bar\n1\n-- foo\nfrom slice;";
     let config = ParserConfig::default().with_collect_tokens(true);
-    let parser = TypedParser::with_config(dialect(), &config);
+    let parser = TypedParser::with_config(grammar(), &config);
     let mut session = parser.parse(input);
 
     let mut stmt_num = 0;

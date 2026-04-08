@@ -46,7 +46,7 @@ def _write_runtime_shims(csrc_dir: Path) -> None:
 #define SYNTAQLITE_RUNTIME_H
 #include \"syntaqlite/config.h\"
 #include \"syntaqlite/types.h\"
-#include \"syntaqlite/dialect.h\"
+#include \"syntaqlite/grammar.h\"
 #include \"syntaqlite/parser.h\"
 #include \"syntaqlite/tokenizer.h\"
 #endif

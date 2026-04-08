@@ -18,7 +18,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "syntaqlite/dialect.h"
+#include "syntaqlite/grammar.h"
 #include "syntaqlite/parser.h"
 #include "syntaqlite/types.h"
 #include "syntaqlite_dialect/arena.h"
@@ -51,7 +51,7 @@ typedef struct SynqParseCtx {
 
   // Parser state
   const char* source;  // Source text base pointer (for offset computation).
-  const SyntaqliteDialect* env;   // Dialect env (for cflag checks in actions).
+  const SyntaqliteGrammar* env;   // Dialect env (for cflag checks in actions).
   uint32_t root;                  // Root node ID of the current statement.
   uint32_t stmt_completed;        // Set by grammar actions when ecmd reduces.
   uint32_t pending_explain_mode;  // 1=EXPLAIN, 2=EXPLAIN QUERY PLAN (set by
@@ -293,7 +293,7 @@ static inline void synq_mark_as_type(SynqParseCtx* ctx, SynqParseToken tok) {
 }
 
 // Range field metadata types (SyntaqliteFieldRangeMeta,
-// SyntaqliteRangeMetaEntry) are defined in syntaqlite/dialect.h.
+// SyntaqliteRangeMetaEntry) are defined in syntaqlite/grammar.h.
 
 #ifdef __cplusplus
 }

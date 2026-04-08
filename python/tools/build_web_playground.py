@@ -262,7 +262,7 @@ def main() -> int:
     with open(os.path.join(perfetto_csrc_dir, "syntaqlite_runtime.h"), "w", encoding="utf-8") as f:
         f.write("#ifndef SYNTAQLITE_RUNTIME_H\n#define SYNTAQLITE_RUNTIME_H\n"
                 "#include \"syntaqlite/config.h\"\n#include \"syntaqlite/types.h\"\n"
-                "#include \"syntaqlite/dialect.h\"\n#include \"syntaqlite/parser.h\"\n"
+                "#include \"syntaqlite/grammar.h\"\n#include \"syntaqlite/parser.h\"\n"
                 "#include \"syntaqlite/tokenizer.h\"\n#endif\n")
     with open(os.path.join(perfetto_csrc_dir, "syntaqlite_dialect.h"), "w", encoding="utf-8") as f:
         f.write("#ifndef SYNTAQLITE_EXT_H\n#define SYNTAQLITE_EXT_H\n"

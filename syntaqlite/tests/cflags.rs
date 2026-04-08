@@ -25,7 +25,7 @@
 
 use syntaqlite::ParseOutcome;
 use syntaqlite::parse::TokenType;
-use syntaqlite::typed::{TypedParser, TypedTokenizer, dialect};
+use syntaqlite::typed::{TypedParser, TypedTokenizer, grammar};
 use syntaqlite::util::{SqliteSyntaxFlag, SqliteSyntaxFlags, SqliteVersion};
 
 const fn tk(t: TokenType) -> u32 {
@@ -42,7 +42,7 @@ fn tokenize_with_cflags(sql: &str, flags: &[SqliteSyntaxFlag]) -> Vec<(u32, Stri
     for &f in flags {
         syntax_flags = syntax_flags.with(f);
     }
-    let tok = TypedTokenizer::new(dialect().with_cflags(syntax_flags));
+    let tok = TypedTokenizer::new(grammar().with_cflags(syntax_flags));
     tok.tokenize(sql)
         .filter(|t| t.token_type() != TokenType::Space)
         .map(|t| (t.token_type() as u32, t.text().to_string()))
@@ -64,7 +64,7 @@ fn tokenize_at_version_cflags(
     for &f in flags {
         syntax_flags = syntax_flags.with(f);
     }
-    let tok = TypedTokenizer::new(dialect().with_version(version).with_cflags(syntax_flags));
+    let tok = TypedTokenizer::new(grammar().with_version(version).with_cflags(syntax_flags));
     tok.tokenize(sql)
         .filter(|t| t.token_type() != TokenType::Space)
         .map(|t| (t.token_type() as u32, t.text().to_string()))
@@ -77,7 +77,7 @@ fn parses_ok_with_cflags(sql: &str, flags: &[SqliteSyntaxFlag]) -> bool {
     for &f in flags {
         syntax_flags = syntax_flags.with(f);
     }
-    let parser = TypedParser::new(dialect().with_cflags(syntax_flags));
+    let parser = TypedParser::new(grammar().with_cflags(syntax_flags));
     let mut session = parser.parse(sql);
     matches!(session.next(), ParseOutcome::Ok(_))
 }
