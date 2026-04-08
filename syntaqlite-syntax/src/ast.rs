@@ -472,7 +472,7 @@ mod ffi {
         pub(crate) fn as_str(self, source: &str) -> &str {
             let start = self.offset as usize;
             let end = start + self.length as usize;
-            &source[start..end]
+            source.get(start..end).unwrap_or("")
         }
 
         /// Slice the span out of the correct buffer, accounting for macro
@@ -488,12 +488,15 @@ mod ffi {
         ) -> &'a str {
             let start = self.offset as usize;
             let end = start + self.length as usize;
-            if self.buf_idx == 0 {
-                &source[start..end]
+            let buf = if self.buf_idx == 0 {
+                source
             } else {
-                let buf = owned_bufs[(self.buf_idx - 1) as usize];
-                &buf[start..end]
-            }
+                match owned_bufs.get((self.buf_idx - 1) as usize) {
+                    Some(b) => b,
+                    None => return "",
+                }
+            };
+            buf.get(start..end).unwrap_or("")
         }
     }
 

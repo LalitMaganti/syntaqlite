@@ -873,4 +873,54 @@ mod tests {
             "macro region should cover full call, got: '{call_text}'"
         );
     }
+
+    #[test]
+    fn macro_expanded_extract_fields_does_not_panic() {
+        // Regression: synq_span() computes `tok.z - ctx->source` for ALL
+        // tokens, but during macro expansion tok.z points into the expansion
+        // buffer (a different allocation). This makes the offset garbage when
+        // buf_idx == 0 is not corrected. extract_fields then panics with
+        // "byte index N is out of bounds".
+        use crate::ParserConfig;
+        use crate::any::{AnyParser, ParseOutcome};
+
+        let dialect = crate::sqlite::dialect::dialect();
+        let parser = AnyParser::with_config(
+            dialect.into(),
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_macro_fallback(true),
+        );
+        // Register a macro whose body is a valid expression that produces
+        // span fields (identifiers) in the expansion buffer.
+        {
+            let mut setup = parser.parse("SELECT 1;");
+            while let ParseOutcome::Ok(_) = setup.next() {}
+            setup.register_macro("my_expr", &["x"], "$x + 1");
+        }
+
+        // Parse a statement that invokes the macro in expression position.
+        // The macro body "$x + 1" expands with x=42, producing "42 + 1".
+        // The "1" token comes from the expansion buffer — its span offset
+        // must be relative to the expansion buffer, not ctx->source.
+        let mut session2 = parser.parse("SELECT my_expr!(42);");
+        match session2.next() {
+            ParseOutcome::Ok(stmt) => {
+                let erased = stmt.erase();
+                let root = erased.root_id();
+                // This is the call that panics if span offsets are wrong.
+                let result = erased.extract_fields(root);
+                assert!(result.is_some(), "root should have extractable fields");
+                // Also walk all children to exercise all spans.
+                for child in erased.child_node_ids(root) {
+                    let _ = erased.extract_fields(child);
+                }
+            }
+            ParseOutcome::Err(_) => {
+                // Parse error is acceptable — the macro may not produce
+                // valid SQL. But it must not panic.
+            }
+            ParseOutcome::Done => panic!("expected a statement"),
+        }
+    }
 }
