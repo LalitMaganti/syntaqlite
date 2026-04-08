@@ -46,7 +46,9 @@ impl syntaqlite::semantic::CatalogLayerContents
 impl syntaqlite::semantic::CheckConfig
 impl syntaqlite::semantic::CheckLevel
 impl syntaqlite::semantic::DiagnosticMessage
+impl syntaqlite::semantic::DefinedRelation
 impl syntaqlite::semantic::SemanticModel
+impl syntaqlite::semantic::StatementModel
 impl syntaqlite::semantic::ValidationConfig
 impl syntaqlite::typed::TypedDialect for syntaqlite::Dialect
 impl syntaqlite::util::SqliteFlag
@@ -191,11 +193,17 @@ pub fn syntaqlite::semantic::LineageResult<T>::as_ref(&self) -> syntaqlite::sema
 pub fn syntaqlite::semantic::LineageResult<T>::into_inner(self) -> T
 pub fn syntaqlite::semantic::LineageResult<T>::is_complete(&self) -> bool
 pub fn syntaqlite::semantic::LineageResult<T>::map<U, F: core::ops::function::FnOnce(T) -> U>(self, f: F) -> syntaqlite::semantic::LineageResult<U>
-pub fn syntaqlite::semantic::SemanticModel::diagnostics(&self) -> &[syntaqlite::Diagnostic]
+pub fn syntaqlite::semantic::SemanticModel::diagnostic_count(&self) -> usize
+pub fn syntaqlite::semantic::SemanticModel::diagnostics(&self) -> impl core::iter::Iterator<Item = &syntaqlite::Diagnostic>
+pub fn syntaqlite::semantic::SemanticModel::has_diagnostics(&self) -> bool
 pub fn syntaqlite::semantic::SemanticModel::lineage(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::ColumnLineage]>>
-pub fn syntaqlite::semantic::SemanticModel::relations_accessed(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::RelationAccess]>>
 pub fn syntaqlite::semantic::SemanticModel::source(&self) -> &str
-pub fn syntaqlite::semantic::SemanticModel::tables_accessed(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::TableAccess]>>
+pub fn syntaqlite::semantic::SemanticModel::statements(&self) -> &[syntaqlite::semantic::StatementModel]
+pub fn syntaqlite::semantic::StatementModel::defined_relations(&self) -> &[syntaqlite::semantic::DefinedRelation]
+pub fn syntaqlite::semantic::StatementModel::diagnostics(&self) -> &[syntaqlite::Diagnostic]
+pub fn syntaqlite::semantic::StatementModel::lineage(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::ColumnLineage]>>
+pub fn syntaqlite::semantic::StatementModel::relations_accessed(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::RelationAccess]>>
+pub fn syntaqlite::semantic::StatementModel::tables_accessed(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::TableAccess]>>
 pub fn syntaqlite::semantic::Severity::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub fn syntaqlite::semantic::ValidationConfig::checks(&self) -> syntaqlite::semantic::CheckConfig
 pub fn syntaqlite::semantic::ValidationConfig::default() -> Self
@@ -256,7 +264,9 @@ pub struct syntaqlite::semantic::ColumnOrigin
 pub struct syntaqlite::semantic::Diagnostic
 pub struct syntaqlite::semantic::RelationAccess
 pub struct syntaqlite::semantic::SemanticAnalyzer
+pub struct syntaqlite::semantic::DefinedRelation
 pub struct syntaqlite::semantic::SemanticModel
+pub struct syntaqlite::semantic::StatementModel
 pub struct syntaqlite::semantic::TableAccess
 pub struct syntaqlite::semantic::ValidationConfig
 pub struct syntaqlite::util::DiagnosticRenderer<'a>

@@ -133,6 +133,122 @@ fn severity_to_c(s: Severity) -> u32 {
     }
 }
 
+// ── Lineage helper ───────────────────────────────────────────────────────────
+
+use super::model::SemanticModel;
+
+/// Populate lineage C structs from the analysis model.
+fn populate_lineage(state: &mut ValidatorState, model: &SemanticModel) {
+    state.lineage_strings.clear();
+    state.c_column_lineage.clear();
+    state.c_relations.clear();
+    state.c_tables.clear();
+    state.lineage_complete = false;
+
+    if let Some(lineage_result) = model.lineage() {
+        state.lineage_complete = lineage_result.is_complete();
+        let columns = lineage_result.into_inner();
+
+        // First pass: render all strings so CString pointers are stable.
+        for col in columns {
+            state
+                .lineage_strings
+                .push(CString::new(col.name.as_str()).unwrap_or_default());
+            if let Some(ref origin) = col.origin {
+                state
+                    .lineage_strings
+                    .push(CString::new(origin.table.as_str()).unwrap_or_default());
+                state
+                    .lineage_strings
+                    .push(CString::new(origin.column.as_str()).unwrap_or_default());
+            }
+        }
+    }
+
+    // Second pass: build C structs with stable pointers (after all pushes).
+    if let Some(lineage_result) = model.lineage() {
+        let columns = lineage_result.into_inner();
+        let mut str_idx = 0;
+        for col in columns {
+            let name_ptr = state.lineage_strings[str_idx].as_ptr();
+            str_idx += 1;
+            let origin = if col.origin.is_some() {
+                let table_ptr = state.lineage_strings[str_idx].as_ptr();
+                str_idx += 1;
+                let column_ptr = state.lineage_strings[str_idx].as_ptr();
+                str_idx += 1;
+                SyntaqliteColumnOrigin {
+                    table: table_ptr,
+                    column: column_ptr,
+                }
+            } else {
+                SyntaqliteColumnOrigin {
+                    table: std::ptr::null(),
+                    column: std::ptr::null(),
+                }
+            };
+            state.c_column_lineage.push(SyntaqliteColumnLineage {
+                name: name_ptr,
+                index: col.index,
+                origin,
+            });
+        }
+    }
+
+    // Aggregate relations_accessed and tables_accessed across all statements.
+    {
+        let base = state.lineage_strings.len();
+        let mut rel_idx = 0;
+        for stmt in model.statements() {
+            if let Some(rels_result) = stmt.relations_accessed() {
+                for r in rels_result.into_inner() {
+                    state
+                        .lineage_strings
+                        .push(CString::new(r.name.as_str()).unwrap_or_default());
+                    rel_idx += 1;
+                }
+            }
+        }
+        let rel_count = rel_idx;
+        rel_idx = 0;
+        for stmt in model.statements() {
+            if let Some(rels_result) = stmt.relations_accessed() {
+                for r in rels_result.into_inner() {
+                    state.c_relations.push(SyntaqliteRelationAccess {
+                        name: state.lineage_strings[base + rel_idx].as_ptr(),
+                        kind: match r.kind {
+                            RelationKind::Table => 0,
+                            RelationKind::View => 1,
+                        },
+                    });
+                    rel_idx += 1;
+                }
+            }
+        }
+        debug_assert_eq!(rel_idx, rel_count);
+    }
+
+    {
+        let base = state.lineage_strings.len();
+        let mut tbl_count = 0;
+        for stmt in model.statements() {
+            if let Some(tbls_result) = stmt.tables_accessed() {
+                for t in tbls_result.into_inner() {
+                    state
+                        .lineage_strings
+                        .push(CString::new(t.name.as_str()).unwrap_or_default());
+                    tbl_count += 1;
+                }
+            }
+        }
+        for i in 0..tbl_count {
+            state.c_tables.push(SyntaqliteTableAccess {
+                name: state.lineage_strings[base + i].as_ptr(),
+            });
+        }
+    }
+}
+
 // ── Exported C functions ────────────────────────────────────────────────────
 
 /// Create a validator from a dialect handle.
@@ -239,13 +355,14 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
         .analyzer
         .analyze(src, &state.user_catalog, &state.validation_config);
 
+    // Collect diagnostics across all statements.
+    let all_diagnostics: Vec<_> = model.diagnostics().cloned().collect();
+
     // Retain source + diagnostics for diagnostic rendering.
     state.last_source.clear();
     state.last_source.push_str(src);
     state.last_diagnostics.clear();
-    state
-        .last_diagnostics
-        .extend(model.diagnostics().iter().cloned());
+    state.last_diagnostics.extend(all_diagnostics.iter().cloned());
 
     // Reuse existing Vec capacity — clear + push avoids reallocating
     // on steady-state calls.
@@ -254,15 +371,14 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
 
     // First pass: render messages (must be done before building
     // SyntaqliteDiagnostic so the CString pointers are stable).
-    for d in model.diagnostics() {
+    for d in &all_diagnostics {
         state
             .rendered_messages
             .push(CString::new(d.message().to_string()).unwrap_or_default());
     }
 
     // Second pass: build C structs pointing into rendered_messages.
-    for (d, msg) in model
-        .diagnostics()
+    for (d, msg) in all_diagnostics
         .iter()
         .zip(state.rendered_messages.iter())
     {
@@ -274,102 +390,7 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
         });
     }
 
-    // ── Lineage ──────────────────────────────────────────────────────────
-    state.lineage_strings.clear();
-    state.c_column_lineage.clear();
-    state.c_relations.clear();
-    state.c_tables.clear();
-    state.lineage_complete = false;
-
-    if let Some(lineage_result) = model.lineage() {
-        state.lineage_complete = lineage_result.is_complete();
-        let columns = lineage_result.into_inner();
-
-        // First pass: render all strings so CString pointers are stable.
-        for col in columns {
-            state
-                .lineage_strings
-                .push(CString::new(col.name.as_str()).unwrap_or_default());
-            if let Some(ref origin) = col.origin {
-                state
-                    .lineage_strings
-                    .push(CString::new(origin.table.as_str()).unwrap_or_default());
-                state
-                    .lineage_strings
-                    .push(CString::new(origin.column.as_str()).unwrap_or_default());
-            }
-        }
-    }
-
-    // Second pass: build C structs with stable pointers (after all pushes).
-    if let Some(lineage_result) = model.lineage() {
-        let columns = lineage_result.into_inner();
-        let mut str_idx = 0;
-        for col in columns {
-            let name_ptr = state.lineage_strings[str_idx].as_ptr();
-            str_idx += 1;
-            let origin = if col.origin.is_some() {
-                let table_ptr = state.lineage_strings[str_idx].as_ptr();
-                str_idx += 1;
-                let column_ptr = state.lineage_strings[str_idx].as_ptr();
-                str_idx += 1;
-                SyntaqliteColumnOrigin {
-                    table: table_ptr,
-                    column: column_ptr,
-                }
-            } else {
-                SyntaqliteColumnOrigin {
-                    table: std::ptr::null(),
-                    column: std::ptr::null(),
-                }
-            };
-            state.c_column_lineage.push(SyntaqliteColumnLineage {
-                name: name_ptr,
-                index: col.index,
-                origin,
-            });
-        }
-    }
-
-    if let Some(relations_result) = model.relations_accessed() {
-        let relations = relations_result.into_inner();
-        let base = state.lineage_strings.len();
-        for r in relations {
-            state
-                .lineage_strings
-                .push(CString::new(r.name.as_str()).unwrap_or_default());
-        }
-        for (i, r) in model
-            .relations_accessed()
-            .unwrap()
-            .into_inner()
-            .iter()
-            .enumerate()
-        {
-            state.c_relations.push(SyntaqliteRelationAccess {
-                name: state.lineage_strings[base + i].as_ptr(),
-                kind: match r.kind {
-                    RelationKind::Table => 0,
-                    RelationKind::View => 1,
-                },
-            });
-        }
-    }
-
-    if let Some(tables_result) = model.tables_accessed() {
-        let tables = tables_result.into_inner();
-        let base = state.lineage_strings.len();
-        for t in tables {
-            state
-                .lineage_strings
-                .push(CString::new(t.name.as_str()).unwrap_or_default());
-        }
-        for i in 0..model.tables_accessed().unwrap().into_inner().len() {
-            state.c_tables.push(SyntaqliteTableAccess {
-                name: state.lineage_strings[base + i].as_ptr(),
-            });
-        }
-    }
+    populate_lineage(state, &model);
 
     state.c_diagnostics.len() as u32
 }

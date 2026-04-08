@@ -123,10 +123,9 @@ mod server;
 /// Returns 1 for ASCII and for invalid/continuation bytes (defensive).
 fn utf8_char_len(lead: u8) -> usize {
     match lead {
-        0x00..=0x7F => 1,
         0xC0..=0xDF => 2,
         0xE0..=0xEF => 3,
         0xF0..=0xF7 => 4,
-        _ => 1,
+        _ => 1, // ASCII (0x00..=0x7F) and invalid/continuation bytes
     }
 }

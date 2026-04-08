@@ -43,8 +43,9 @@ use crate::util::render_source_error;
 ///
 /// // Render each diagnostic to a String.
 /// let renderer = DiagnosticRenderer::new(model.source(), "query.sql");
+/// let all_diags: Vec<_> = model.diagnostics().cloned().collect();
 /// let mut buf = Vec::new();
-/// renderer.render_diagnostics(model.diagnostics(), &mut buf).unwrap();
+/// renderer.render_diagnostics(&all_diags, &mut buf).unwrap();
 ///
 /// let output = String::from_utf8(buf).unwrap();
 /// assert!(output.contains("usr"));

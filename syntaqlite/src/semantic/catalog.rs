@@ -151,6 +151,11 @@ impl CatalogLayerContents {
         );
     }
 
+    /// Iterate over all relation (table/view) names in this layer.
+    pub fn relation_names(&self) -> impl Iterator<Item = &str> {
+        self.relations.keys().map(String::as_str)
+    }
+
     /// Insert a table into this layer.
     ///
     /// Pass `columns = Some(vec![...])` when the column list is known so the
@@ -253,7 +258,7 @@ impl CatalogLayerContents {
     ///     &catalog,
     ///     &config,
     /// );
-    /// assert!(model.diagnostics().is_empty());
+    /// assert!(!model.has_diagnostics());
     /// ```
     pub fn insert_function_overload(
         &mut self,
@@ -1006,14 +1011,11 @@ pub(crate) fn ddl_column_spans(
     let Some(children) = stmt.list_children(col_list_id) else {
         return out;
     };
-    let source_start = stmt.source().as_ptr() as usize;
-
     for &child_id in children {
         if child_id.is_null() {
             continue;
         }
-        if let Some((name, start, end)) = column_def_name_span(stmt, child_id, roles, source_start)
-        {
+        if let Some((name, start, end)) = column_def_name_span(stmt, child_id, roles) {
             out.push((name.to_ascii_lowercase(), start, end));
         }
     }
@@ -1025,7 +1027,6 @@ fn column_def_name_span<'a>(
     stmt: &AnyParsedStatement<'a>,
     node_id: AnyNodeId,
     roles: &[SemanticRole],
-    source_start: usize,
 ) -> Option<(&'a str, usize, usize)> {
     let (tag, fields) = stmt.extract_fields(node_id)?;
     let SemanticRole::ColumnDef { name: name_idx, .. } = roles.get(u32::from(tag) as usize)? else {
@@ -1039,10 +1040,15 @@ fn column_def_name_span<'a>(
     }
     let (_, name_fields) = stmt.extract_fields(name_id)?;
     for j in 0..name_fields.len() {
-        if let FieldValue::Span { text: s, .. } = name_fields[j]
+        if let FieldValue::Span {
+            text: s,
+            offset,
+            buf_idx,
+            ..
+        } = name_fields[j]
             && !s.is_empty()
         {
-            let off = s.as_ptr() as usize - source_start;
+            let off = if buf_idx == 0 { offset as usize } else { 0 };
             return Some((s, off, off + s.len()));
         }
     }

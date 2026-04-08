@@ -9,7 +9,9 @@ use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
 use std::collections::HashMap;
 
 use super::diagnostics::Diagnostic;
-use super::lineage::{ColumnLineage, LineageResult, QueryLineage, RelationAccess, TableAccess};
+use super::lineage::{
+    ColumnLineage, LineageResult, QueryLineage, RelationAccess, TableAccess,
+};
 
 // ── Stored per-statement positions ───────────────────────────────────────────
 
@@ -134,12 +136,109 @@ pub(crate) struct Resolution {
     pub symbol: ResolvedSymbol,
 }
 
+// ── Per-statement model ──────────────────────────────────────────────────────
+
+/// A relation defined by a DDL statement (e.g. `CREATE TABLE`, `CREATE VIEW`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DefinedRelation {
+    /// The relation name as it appears in the DDL statement.
+    pub name: String,
+    /// Whether this is a view (`true`) or a table (`false`).
+    pub is_view: bool,
+}
+
+/// Per-statement analysis result.
+///
+/// Each statement in the analyzed source produces its own `StatementModel`
+/// containing diagnostics, lineage, and defined relations for that statement.
+/// Access these via [`SemanticModel::statements`].
+pub struct StatementModel {
+    source: String,
+    diagnostics: Vec<Diagnostic>,
+    lineage: Option<QueryLineage>,
+    defined_relations: Vec<DefinedRelation>,
+}
+
+impl StatementModel {
+    /// Create a new per-statement model.
+    pub(crate) fn new(
+        source: String,
+        diagnostics: Vec<Diagnostic>,
+        lineage: Option<QueryLineage>,
+        defined_relations: Vec<DefinedRelation>,
+    ) -> Self {
+        Self {
+            source,
+            diagnostics,
+            lineage,
+            defined_relations,
+        }
+    }
+
+    /// The SQL source text for this statement.
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+
+    /// All diagnostics produced for this statement.
+    pub fn diagnostics(&self) -> &[Diagnostic] {
+        &self.diagnostics
+    }
+
+    /// Per-column lineage for this statement's query body.
+    ///
+    /// Returns `None` if the statement is not a query or DDL-with-SELECT.
+    /// Returns `Some(Complete(...))` when all columns are fully resolved.
+    /// Returns `Some(Partial(...))` when some view bodies are unavailable.
+    pub fn lineage(&self) -> Option<LineageResult<&[ColumnLineage]>> {
+        self.lineage.as_ref().map(|ql| {
+            if ql.complete {
+                LineageResult::Complete(ql.columns.as_slice())
+            } else {
+                LineageResult::Partial(ql.columns.as_slice())
+            }
+        })
+    }
+
+    /// Relations (tables, views) directly referenced in FROM for this statement.
+    ///
+    /// Returns `None` if this statement did not contain a query body.
+    pub fn relations_accessed(&self) -> Option<LineageResult<&[RelationAccess]>> {
+        self.lineage.as_ref().map(|ql| {
+            if ql.complete {
+                LineageResult::Complete(ql.relations.as_slice())
+            } else {
+                LineageResult::Partial(ql.relations.as_slice())
+            }
+        })
+    }
+
+    /// Physical tables accessed by this statement (after resolving CTEs,
+    /// subqueries, views).
+    ///
+    /// Returns `None` if this statement did not contain a query body.
+    pub fn tables_accessed(&self) -> Option<LineageResult<&[TableAccess]>> {
+        self.lineage.as_ref().map(|ql| {
+            if ql.complete {
+                LineageResult::Complete(ql.tables.as_slice())
+            } else {
+                LineageResult::Partial(ql.tables.as_slice())
+            }
+        })
+    }
+
+    /// Relations defined by this DDL statement (e.g. `CREATE TABLE`, `CREATE VIEW`).
+    pub fn defined_relations(&self) -> &[DefinedRelation] {
+        &self.defined_relations
+    }
+}
+
 // ── SemanticModel ─────────────────────────────────────────────────────────────
 
 /// Result of a single analysis pass.
 ///
-/// Owns the source text, stored token/comment positions, and all diagnostics
-/// (both parse errors and semantic issues). Produced by
+/// Owns the source text, stored token/comment positions, and per-statement
+/// analysis results (diagnostics, lineage, defined relations). Produced by
 /// [`SemanticAnalyzer::analyze`](super::analyzer::SemanticAnalyzer::analyze).
 ///
 /// # Example
@@ -172,14 +271,12 @@ pub struct SemanticModel {
     pub(crate) source: String,
     pub(crate) tokens: Vec<StoredToken>,
     pub(crate) comments: Vec<StoredComment>,
-    pub(crate) diagnostics: Vec<Diagnostic>,
+    pub(crate) statements: Vec<StatementModel>,
     pub(crate) resolutions: Vec<Resolution>,
     /// Same-file definition offsets keyed by lowercase name (table) or
     /// `table.column` (column). Used by find-references and rename to
     /// locate definition sites within the document.
     pub(crate) definition_offsets: HashMap<String, (usize, usize)>,
-    /// Column lineage for the last query statement, if any.
-    pub(crate) query_lineage: Option<QueryLineage>,
 }
 
 impl SemanticModel {
@@ -188,50 +285,40 @@ impl SemanticModel {
         &self.source
     }
 
-    /// All diagnostics produced by the analysis pass (parse errors + semantic issues).
-    pub fn diagnostics(&self) -> &[Diagnostic] {
-        &self.diagnostics
+    /// All per-statement analysis results.
+    pub fn statements(&self) -> &[StatementModel] {
+        &self.statements
     }
 
-    /// Per-column lineage: for each result column, which table.column it traces to.
+    /// All diagnostics produced by the analysis pass (parse errors + semantic
+    /// issues), aggregated across all statements.
+    pub fn diagnostics(&self) -> impl Iterator<Item = &Diagnostic> {
+        self.statements.iter().flat_map(|s| s.diagnostics.iter())
+    }
+
+    /// The total number of diagnostics across all statements.
+    pub fn diagnostic_count(&self) -> usize {
+        self.statements.iter().map(|s| s.diagnostics.len()).sum()
+    }
+
+    /// Whether any statement produced diagnostics.
+    pub fn has_diagnostics(&self) -> bool {
+        self.statements.iter().any(|s| !s.diagnostics.is_empty())
+    }
+
+    /// Per-column lineage for the **last** query or DDL-with-SELECT in the
+    /// analyzed source.
     ///
-    /// Returns `None` if the analyzed statement is not a query.
+    /// Works for `SELECT` statements as well as DDL with inner queries
+    /// (`CREATE TABLE/VIEW/FUNCTION ... AS SELECT`).
+    /// Returns `None` if no statement contained a query body.
     /// Returns `Some(Complete(...))` when all columns are fully resolved.
     /// Returns `Some(Partial(...))` when some view bodies are unavailable.
     pub fn lineage(&self) -> Option<LineageResult<&[ColumnLineage]>> {
-        self.query_lineage.as_ref().map(|ql| {
-            if ql.complete {
-                LineageResult::Complete(ql.columns.as_slice())
-            } else {
-                LineageResult::Partial(ql.columns.as_slice())
-            }
-        })
-    }
-
-    /// Relations (tables, views, CTEs, subquery aliases) directly referenced in FROM.
-    ///
-    /// Returns `None` if the analyzed statement is not a query.
-    pub fn relations_accessed(&self) -> Option<LineageResult<&[RelationAccess]>> {
-        self.query_lineage.as_ref().map(|ql| {
-            if ql.complete {
-                LineageResult::Complete(ql.relations.as_slice())
-            } else {
-                LineageResult::Partial(ql.relations.as_slice())
-            }
-        })
-    }
-
-    /// Physical tables accessed (after resolving CTEs, subqueries, views).
-    ///
-    /// Returns `None` if the analyzed statement is not a query.
-    pub fn tables_accessed(&self) -> Option<LineageResult<&[TableAccess]>> {
-        self.query_lineage.as_ref().map(|ql| {
-            if ql.complete {
-                LineageResult::Complete(ql.tables.as_slice())
-            } else {
-                LineageResult::Partial(ql.tables.as_slice())
-            }
-        })
+        self.statements
+            .iter()
+            .rev()
+            .find_map(StatementModel::lineage)
     }
 
     /// Find the resolved symbol at a byte offset, if any.

@@ -23,7 +23,7 @@ fn analyze_with_flags(sql: &str, flags: SqliteFlags) -> Vec<syntaqlite::Diagnost
     let catalog = Catalog::new(dialect);
     let config = ValidationConfig::default();
     let model = analyzer.analyze(sql, &catalog, &config);
-    model.diagnostics().to_vec()
+    model.diagnostics().cloned().collect()
 }
 
 fn analyze_default(sql: &str) -> Vec<syntaqlite::Diagnostic> {
