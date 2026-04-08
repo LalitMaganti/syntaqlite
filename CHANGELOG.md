@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- **Breaking:** Renamed `Grammar` to `Dialect` across C and Rust APIs (`SyntaqliteGrammar` → `SyntaqliteDialect`, `Grammar` → `Dialect`).
+- Added dialect support to the Python API: `syntaqlite.Dialect` and `syntaqlite.load_dialect()` allow parsing and formatting with custom dialects.
+
 ## 0.2.17
 
 - Fixed LSP position encoding to use UTF-16 code units instead of byte offsets, fixing misplaced diagnostics, hovers, and semantic tokens on lines with non-ASCII characters.

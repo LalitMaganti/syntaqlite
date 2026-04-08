@@ -1,6 +1,6 @@
 [package]
 name = "syntaqlite-wasm"
-version = "0.2.17"
+version = "0.3.0"
 edition = "2024"
 repository.workspace = true
 
