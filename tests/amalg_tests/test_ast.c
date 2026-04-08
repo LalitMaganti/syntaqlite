@@ -6,7 +6,7 @@
 // Compiled against a generated syntaqlite_<dialect>.{h,c} amalgamation.
 // Reads SQL from stdin, parses each statement, and dumps the AST.
 // The GRAMMAR_HEADER and GRAMMAR_FN macros are set at compile time to
-// select the grammar header and grammar accessor function.
+// select the dialect header and dialect accessor function.
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,8 +19,8 @@ int main(void) {
   size_t n = fread(buf, 1, sizeof(buf) - 1, stdin);
   buf[n] = '\0';
 
-  SyntaqliteGrammar env = GRAMMAR_FN();
-  SyntaqliteParser* p = syntaqlite_parser_create_with_grammar(NULL, env);
+  SyntaqliteDialect env = GRAMMAR_FN();
+  SyntaqliteParser* p = syntaqlite_parser_create_with_dialect(NULL, env);
   syntaqlite_parser_reset(p, buf, (uint32_t)n);
 
   int32_t rc;

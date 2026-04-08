@@ -96,7 +96,7 @@ def _compile_full_binary(
 ) -> None:
     """Compile test_ast.c against a self-contained full amalgamation."""
     grammar_header = f'"syntaqlite_{dialect_name}.h"'
-    grammar_fn = f"syntaqlite_{dialect_name}_grammar"
+    grammar_fn = f"syntaqlite_{dialect_name}_dialect"
     source = amalg_dir / f"syntaqlite_{dialect_name}.c"
     cmd = [
         "cc", "-o", str(output_binary),
@@ -122,7 +122,7 @@ def _compile_dialect_only_binary(
 ) -> None:
     """Compile test_ast.c against dialect-only + separate runtime."""
     grammar_header = f'"syntaqlite_{dialect_name}.h"'
-    grammar_fn = f"syntaqlite_{dialect_name}_grammar"
+    grammar_fn = f"syntaqlite_{dialect_name}_dialect"
     dialect_src = amalg_dir / f"syntaqlite_{dialect_name}.c"
     runtime_src = runtime_dir / "syntaqlite_runtime.c"
     cmd = [
