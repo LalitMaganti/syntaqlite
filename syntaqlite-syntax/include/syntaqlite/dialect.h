@@ -143,12 +143,12 @@ typedef struct SyntaqliteGrammarTemplate {
 // ── Dialect template (static dialect data) ────────────────────────────────
 
 // Bundles a grammar template with optional formatter bytecode and semantic
-// role tables.  The fmt/validation fields are compiled out when the
-// corresponding features are not enabled.
+// role tables.  All fields are always present so that the struct layout is
+// stable across amalgamation builds regardless of feature-flag order.
 typedef struct SyntaqliteDialectTemplate {
   const SyntaqliteGrammarTemplate* grammar;
 
-#ifdef SYNTAQLITE_FMT
+  // Formatter bytecode (zeroed when formatting is not compiled in).
   const uint8_t* fmt_str_data;
   const uint32_t* fmt_str_offsets;
   uint32_t fmt_str_count;
@@ -162,14 +162,12 @@ typedef struct SyntaqliteDialectTemplate {
   uint32_t fmt_prec_table_count;
   const uint32_t* fmt_expr_meta;
   uint32_t fmt_expr_meta_count;
-#endif
 
-#ifdef SYNTAQLITE_VALIDATION
+  // Semantic role tables (zeroed when validation is not compiled in).
   const uint8_t* roles_data;
   uint32_t roles_count;
   const uint8_t* macro_defs_data;
   uint32_t macro_defs_count;
-#endif
 } SyntaqliteDialectTemplate;
 
 // ── Configured dialect handle ─────────────────────────────────────────────

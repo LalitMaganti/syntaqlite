@@ -130,12 +130,6 @@ pub(crate) fn generate_dialect_c(
     }
     w.newline();
 
-    if !includes.dialect_fmt_h.is_empty() {
-        w.line("#define SYNTAQLITE_FMT");
-    }
-    if !includes.dialect_roles_h.is_empty() {
-        w.line("#define SYNTAQLITE_VALIDATION");
-    }
     w.newline();
 
     if tokens.is_some() {
