@@ -108,8 +108,10 @@ typedef struct SyntaqliteParserToken {
 // A recorded macro invocation region.
 // For the input-side begin/end API see incremental.h.
 typedef struct SyntaqliteMacroRegion {
-  uint32_t call_offset;  // Byte offset of macro call in original source.
-  uint32_t call_length;  // Byte length of entire macro call.
+  uint32_t call_offset;       // Byte offset of macro call in original source.
+  uint32_t call_length;       // Byte length of entire macro call.
+  const char* expansion_data; // Expanded text (NULL for unregistered fallback).
+  uint32_t expansion_len;     // Length of expanded text (0 when data is NULL).
 } SyntaqliteMacroRegion;
 
 // ---------------------------------------------------------------------------

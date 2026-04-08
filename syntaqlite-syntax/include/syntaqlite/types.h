@@ -23,7 +23,8 @@ typedef uint32_t SyntaqliteCompletionContext;
 typedef struct SyntaqliteSourceSpan {
   uint32_t offset;
   uint16_t length;
-  uint16_t flags;
+  uint8_t flags;
+  uint8_t buf_idx;  // 0 = original source, 1+ = expansion buffer index
 } SyntaqliteSourceSpan;
 
 // ── Span flags ───────────────────────────────────────────────────────────────
@@ -31,7 +32,7 @@ typedef struct SyntaqliteSourceSpan {
 // Identifier was quoted in source (`"..."`, `` `...` ``, or `[...]`).
 // The span points to the dequoted inner text; the formatter re-wraps in
 // `"..."`.
-#define SYNTAQLITE_SPAN_FLAG_QUOTED ((uint16_t)1u)
+#define SYNTAQLITE_SPAN_FLAG_QUOTED ((uint8_t)1u)
 
 static inline int synq_span_is_quoted(SyntaqliteSourceSpan sp) {
   return (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTED) != 0;

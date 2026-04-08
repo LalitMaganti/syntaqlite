@@ -199,7 +199,7 @@ pub trait TypedNodeId: Copy + Into<AnyNodeId> {
 pub enum FieldValue<'a> {
     /// A child node reference.
     NodeId(AnyNodeId),
-    /// A source text span — a subslice of the original source string.
+    /// A source text span — a subslice of the source (or expansion buffer).
     Span {
         /// The span text.  When `quoted` is true this is the bare identifier
         /// with surrounding quotes stripped.
@@ -207,6 +207,11 @@ pub enum FieldValue<'a> {
         /// Whether the identifier was quoted in source.  The formatter
         /// re-wraps quoted spans in standard double quotes (`"..."`).
         quoted: bool,
+        /// Byte offset of this span within its source buffer.
+        offset: u32,
+        /// Which source buffer this span belongs to.
+        /// 0 = original source, 1+ = macro expansion buffer index.
+        buf_idx: u8,
     },
     /// A boolean flag.
     Bool(bool),
@@ -438,12 +443,14 @@ mod ffi {
     pub(crate) struct CSourceSpan {
         pub(crate) offset: u32,
         pub(crate) length: u16,
-        pub(crate) flags: u16,
+        pub(crate) flags: u8,
+        /// 0 = original source, 1+ = expansion buffer index (1-based).
+        pub(crate) buf_idx: u8,
     }
 
     /// Span flag: identifier was quoted in source; span points to the
     /// dequoted inner text.  The formatter re-wraps in `"..."`.
-    const SPAN_FLAG_QUOTED: u16 = 1;
+    const SPAN_FLAG_QUOTED: u8 = 1;
 
     impl CSourceSpan {
         /// Returns `true` if the span covers zero bytes.
@@ -456,11 +463,37 @@ mod ffi {
             self.flags & SPAN_FLAG_QUOTED != 0
         }
 
-        /// Slice the span out of the given source string.
+        /// Slice the span out of the original source string.
+        ///
+        /// This resolves spans that refer to the original source (`buf_idx == 0`).
+        /// For macro-expanded spans (`buf_idx >= 1`) this will index into
+        /// the wrong buffer — use [`as_str_with_bufs`](Self::as_str_with_bufs)
+        /// when expansion buffers are available.
         pub(crate) fn as_str(self, source: &str) -> &str {
             let start = self.offset as usize;
             let end = start + self.length as usize;
             &source[start..end]
+        }
+
+        /// Slice the span out of the correct buffer, accounting for macro
+        /// expansion.
+        ///
+        /// When `buf_idx` is 0 the span refers to the original `source`.
+        /// For `buf_idx >= 1` the span refers to an expansion buffer at
+        /// `owned_bufs[buf_idx - 1]`.
+        pub(crate) fn as_str_with_bufs<'a>(
+            self,
+            source: &'a str,
+            owned_bufs: &[&'a str],
+        ) -> &'a str {
+            let start = self.offset as usize;
+            let end = start + self.length as usize;
+            if self.buf_idx == 0 {
+                &source[start..end]
+            } else {
+                let buf = owned_bufs[(self.buf_idx - 1) as usize];
+                &buf[start..end]
+            }
         }
     }
 
