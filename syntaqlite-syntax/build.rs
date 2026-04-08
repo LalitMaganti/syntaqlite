@@ -46,6 +46,7 @@ fn main() {
         .file(csrc.join("tokenizer.c"))
         .file(csrc.join("parser.c"))
         .file(csrc.join("token_wrapped.c"))
+        .file(csrc.join("dialect_load.c"))
         .include(&manifest_dir) // for csrc/*.h internal headers
         .include(&include_dir); // for public syntaqlite/*.h headers
     if !sqlite_enabled {

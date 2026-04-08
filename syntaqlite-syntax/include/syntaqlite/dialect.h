@@ -174,6 +174,33 @@ typedef struct SyntaqliteDialect {
 // Default dialect: latest version, no cflags.
 #define SYNQ_DIALECT_DEFAULT(d) {(d), INT32_MAX, SYNQ_CFLAGS_DEFAULT}
 
+// ── Dynamic dialect loading ───────────────────────────────────────────────
+
+// Opaque handle for a dynamically loaded dialect.
+// Owns the library handle; destroy with syntaqlite_loaded_dialect_destroy().
+typedef struct SyntaqliteLoadedDialect SyntaqliteLoadedDialect;
+
+// Load a dialect from a shared library (.so / .dylib / .dll).
+// `name` may be NULL to resolve `syntaqlite_dialect`; otherwise resolves
+// `syntaqlite_{name}_dialect`.
+// Always returns a non-NULL handle. Check syntaqlite_loaded_dialect_error()
+// to detect failures (returns NULL on success, error string on failure).
+SYNTAQLITE_API SyntaqliteLoadedDialect* syntaqlite_dialect_load(
+    const char* path, const char* name);
+
+// Error message from the load attempt, or NULL on success.
+SYNTAQLITE_API const char* syntaqlite_loaded_dialect_error(
+    const SyntaqliteLoadedDialect* ld);
+
+// Get the SyntaqliteDialect value from a successfully loaded dialect.
+// Undefined if syntaqlite_loaded_dialect_error() returned non-NULL.
+SYNTAQLITE_API SyntaqliteDialect syntaqlite_loaded_dialect_get(
+    const SyntaqliteLoadedDialect* ld);
+
+// Free a loaded dialect. Unloads the shared library. No-op if ld is NULL.
+SYNTAQLITE_API void syntaqlite_loaded_dialect_destroy(
+    SyntaqliteLoadedDialect* ld);
+
 #ifdef __cplusplus
 }
 #endif

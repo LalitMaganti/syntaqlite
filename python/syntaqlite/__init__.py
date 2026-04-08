@@ -9,22 +9,94 @@ __version__ = "0.2.17"
 
 # Library API (requires _syntaqlite C extension).
 try:
-    from ._syntaqlite import FormatError, format_sql, tokenize
+    from ._syntaqlite import FormatError
+    from ._syntaqlite import format_sql as _format_sql_raw
+    from ._syntaqlite import load_dialect as _load_dialect
     from ._syntaqlite import parse as _parse_raw_c
+    from ._syntaqlite import tokenize as _tokenize_raw
     from ._syntaqlite import validate as _validate_raw
 
     from .nodes import _wrap
 
-    def parse(sql: str) -> list:
-        """Parse SQL into typed AST nodes."""
-        return [_wrap(d) for d in _parse_raw_c(sql)]
+    _HAS_C_EXT = True
 
-    def parse_raw(sql: str) -> list[dict]:
+    def parse(sql: str, *, dialect: "Dialect | None" = None) -> list:
+        """Parse SQL into typed AST nodes."""
+        capsule = dialect._capsule if dialect else None
+        return [_wrap(d) for d in _parse_raw_c(sql, dialect=capsule)]
+
+    def parse_raw(sql: str, *, dialect: "Dialect | None" = None) -> list[dict]:
         """Parse SQL into plain dicts (no typed wrapping)."""
-        return _parse_raw_c(sql)
+        capsule = dialect._capsule if dialect else None
+        return _parse_raw_c(sql, dialect=capsule)
+
+    def format_sql(
+        sql: str,
+        *,
+        dialect: "Dialect | None" = None,
+        line_width: int = 80,
+        indent_width: int = 2,
+        keyword_case: str = "upper",
+        semicolons: bool = True,
+    ) -> str:
+        """Format SQL with configurable options.
+
+        Args:
+            sql: SQL to format.
+            dialect: Loaded dialect (default: SQLite).
+            line_width: Max line width (default 80).
+            indent_width: Spaces per indent level (default 2).
+            keyword_case: 'upper' or 'lower' (default 'upper').
+            semicolons: Append semicolons (default True).
+
+        Raises:
+            FormatError: On parse error.
+        """
+        capsule = dialect._capsule if dialect else None
+        return _format_sql_raw(
+            sql,
+            line_width=line_width,
+            indent_width=indent_width,
+            keyword_case=keyword_case,
+            semicolons=semicolons,
+            dialect=capsule,
+        )
+
+    def tokenize(sql: str, *, dialect: "Dialect | None" = None) -> list[dict]:
+        """Tokenize SQL into a list of token dicts.
+
+        Each dict has: text (str), offset (int), length (int), type (int).
+
+        Args:
+            sql: SQL to tokenize.
+            dialect: Loaded dialect (default: SQLite).
+        """
+        capsule = dialect._capsule if dialect else None
+        return _tokenize_raw(sql, dialect=capsule)
 
 except ImportError:
+    _HAS_C_EXT = False
     _validate_raw = None
+
+
+# ── Dialect ───────────────────────────────────────────────────────────────────
+
+
+class Dialect:
+    """A loaded dialect extension.
+
+    Args:
+        path: Path to a shared library (.so/.dylib/.dll) containing the dialect.
+        name: Dialect name. Resolves the ``syntaqlite_{name}_dialect`` symbol.
+              If None, resolves ``syntaqlite_dialect``.
+    """
+
+    __slots__ = ("_capsule",)
+
+    def __init__(self, path: str, name: str | None = None):
+        if not _HAS_C_EXT:
+            raise RuntimeError("syntaqlite C extension not available")
+        self._capsule = _load_dialect(path, name)
 
 
 # ── Result types ─────────────────────────────────────────────────────────────
@@ -164,6 +236,7 @@ def validate(
     views: list[View] | None = None,
     schema_ddl: str | None = None,
     render: bool = False,
+    dialect: Dialect | None = None,
 ):
     """Validate SQL against an optional schema.
 
@@ -173,18 +246,21 @@ def validate(
         views: Schema views.
         schema_ddl: DDL to parse as schema (CREATE TABLE/VIEW statements).
         render: If True, return rendered diagnostics string instead.
+        dialect: Loaded dialect (default: SQLite).
 
     Returns:
         ValidationResult (or str when render=True).
     """
     raw_tables = [t._to_dict() for t in tables] if tables else None
     raw_views = [v._to_dict() for v in views] if views else None
+    capsule = dialect._capsule if dialect else None
     raw = _validate_raw(
         sql,
         tables=raw_tables,
         views=raw_views,
         schema_ddl=schema_ddl,
         render=render,
+        dialect=capsule,
     )
     if render:
         return raw

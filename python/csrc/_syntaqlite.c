@@ -11,7 +11,20 @@
 #include "syntaqlite/tokenizer.h"
 #include "syntaqlite/formatter.h"
 #include "syntaqlite/validation.h"
+#include "syntaqlite/dialect.h"
 #include "syntaqlite_sqlite/sqlite_node.h"
+
+/* ─── Dialect capsule ────────────────────────────────────────────────── */
+
+static const char *DIALECT_CAPSULE_NAME = "syntaqlite.dialect";
+
+static void
+dialect_capsule_destructor(PyObject *capsule)
+{
+    SyntaqliteLoadedDialect *ld =
+        (SyntaqliteLoadedDialect *)PyCapsule_GetPointer(capsule, DIALECT_CAPSULE_NAME);
+    syntaqlite_loaded_dialect_destroy(ld);
+}
 
 /* Generated: tag switch that builds Python dicts from C AST nodes. */
 #include "_py_ast_wrap.h"
@@ -19,22 +32,93 @@
 /* Custom exception for format errors */
 static PyObject *FormatError;
 
+/* ─── helpers ───────────────────────────────────────────────────────── */
+
+/*
+ * Extract the SyntaqliteDialect from a PyCapsule, writing it to *out.
+ * Returns 0 if dialect_obj is None (use SQLite default).
+ * Returns 1 if a dialect was extracted into *out.
+ * Returns -1 on error (Python exception set).
+ */
+static int
+extract_dialect(PyObject *dialect_obj, SyntaqliteDialect *out)
+{
+    if (!dialect_obj || dialect_obj == Py_None)
+        return 0;
+
+    if (!PyCapsule_IsValid(dialect_obj, DIALECT_CAPSULE_NAME)) {
+        PyErr_SetString(PyExc_TypeError,
+            "dialect must be a Dialect object");
+        return -1;
+    }
+    SyntaqliteLoadedDialect *ld =
+        (SyntaqliteLoadedDialect *)PyCapsule_GetPointer(dialect_obj, DIALECT_CAPSULE_NAME);
+    *out = syntaqlite_loaded_dialect_get(ld);
+    return 1;
+}
+
+/* ─── load_dialect ──────────────────────────────────────────────────── */
+
+static PyObject *
+syntaqlite_py_load_dialect(PyObject *self, PyObject *args)
+{
+    const char *path;
+    const char *name = NULL;
+
+    if (!PyArg_ParseTuple(args, "s|z", &path, &name))
+        return NULL;
+
+    SyntaqliteLoadedDialect *ld = syntaqlite_dialect_load(path, name);
+    if (!ld)
+        return PyErr_NoMemory();
+
+    const char *err = syntaqlite_loaded_dialect_error(ld);
+    if (err) {
+        PyErr_SetString(PyExc_OSError, err);
+        syntaqlite_loaded_dialect_destroy(ld);
+        return NULL;
+    }
+
+    PyObject *capsule = PyCapsule_New(ld, DIALECT_CAPSULE_NAME,
+                                      dialect_capsule_destructor);
+    if (!capsule) {
+        syntaqlite_loaded_dialect_destroy(ld);
+        return NULL;
+    }
+
+    return capsule;
+}
+
 /* ─── parse ─────────────────────────────────────────────────────────── */
 
 static PyObject *
-syntaqlite_py_parse(PyObject *self, PyObject *args)
+syntaqlite_py_parse(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     const char *sql;
     Py_ssize_t sql_len;
+    PyObject *dialect_obj = NULL;
 
-    if (!PyArg_ParseTuple(args, "s#", &sql, &sql_len))
+    static char *kwlist[] = {"sql", "dialect", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O", kwlist,
+                                     &sql, &sql_len, &dialect_obj))
+        return NULL;
+
+    SyntaqliteDialect dialect;
+    int has_dialect = extract_dialect(dialect_obj, &dialect);
+    if (has_dialect < 0)
         return NULL;
 
     PyObject *result_list = PyList_New(0);
     if (!result_list)
         return NULL;
 
-    SyntaqliteParser *p = syntaqlite_parser_create(NULL);
+    SyntaqliteParser *p;
+    if (has_dialect)
+        p = syntaqlite_parser_create_with_dialect(NULL, dialect);
+    else
+        p = syntaqlite_parser_create(NULL);
+
     if (!p) {
         Py_DECREF(result_list);
         return PyErr_NoMemory();
@@ -109,14 +193,21 @@ syntaqlite_py_format_sql(PyObject *self, PyObject *args, PyObject *kwargs)
     unsigned int indent_width = 2;
     const char *keyword_case_str = "upper";
     int semicolons = 1;
+    PyObject *dialect_obj = NULL;
 
     static char *kwlist[] = {"sql", "line_width", "indent_width",
-                             "keyword_case", "semicolons", NULL};
+                             "keyword_case", "semicolons", "dialect", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|IIsp", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|IIspO", kwlist,
                                      &sql, &sql_len,
                                      &line_width, &indent_width,
-                                     &keyword_case_str, &semicolons))
+                                     &keyword_case_str, &semicolons,
+                                     &dialect_obj))
+        return NULL;
+
+    SyntaqliteDialect dialect;
+    int has_dialect = extract_dialect(dialect_obj, &dialect);
+    if (has_dialect < 0)
         return NULL;
 
     SyntaqliteFormatConfig config;
@@ -129,7 +220,11 @@ syntaqlite_py_format_sql(PyObject *self, PyObject *args, PyObject *kwargs)
     else
         config.keyword_case = SYNTAQLITE_KEYWORD_UPPER;
 
-    SyntaqliteFormatter *f = syntaqlite_formatter_create_sqlite_with_config(&config);
+    SyntaqliteFormatter *f;
+    if (has_dialect)
+        f = syntaqlite_formatter_create_with_dialect(dialect, &config);
+    else
+        f = syntaqlite_formatter_create_sqlite_with_config(&config);
     if (!f)
         return PyErr_NoMemory();
 
@@ -251,18 +346,28 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
     const char *schema_ddl = NULL;
     Py_ssize_t schema_ddl_len = 0;
     int render = 0;
+    PyObject *dialect_obj = NULL;
 
     static char *kwlist[] = {"sql", "tables", "views", "schema_ddl",
-                             "render", NULL};
+                             "render", "dialect", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|OOz#p", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|OOz#pO", kwlist,
                                      &sql, &sql_len,
                                      &tables_list, &views_list,
                                      &schema_ddl, &schema_ddl_len,
-                                     &render))
+                                     &render, &dialect_obj))
         return NULL;
 
-    SyntaqliteValidator *v = syntaqlite_validator_create_sqlite();
+    SyntaqliteDialect dialect;
+    int has_dialect = extract_dialect(dialect_obj, &dialect);
+    if (has_dialect < 0)
+        return NULL;
+
+    SyntaqliteValidator *v;
+    if (has_dialect)
+        v = syntaqlite_validator_create_with_dialect(dialect);
+    else
+        v = syntaqlite_validator_create_sqlite();
     if (!v)
         return PyErr_NoMemory();
 
@@ -460,19 +565,32 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
 /* ─── tokenize ──────────────────────────────────────────────────────── */
 
 static PyObject *
-syntaqlite_py_tokenize(PyObject *self, PyObject *args)
+syntaqlite_py_tokenize(PyObject *self, PyObject *args, PyObject *kwargs)
 {
     const char *sql;
     Py_ssize_t sql_len;
+    PyObject *dialect_obj = NULL;
 
-    if (!PyArg_ParseTuple(args, "s#", &sql, &sql_len))
+    static char *kwlist[] = {"sql", "dialect", NULL};
+
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|O", kwlist,
+                                     &sql, &sql_len, &dialect_obj))
+        return NULL;
+
+    SyntaqliteDialect dialect;
+    int has_dialect = extract_dialect(dialect_obj, &dialect);
+    if (has_dialect < 0)
         return NULL;
 
     PyObject *result_list = PyList_New(0);
     if (!result_list)
         return NULL;
 
-    SyntaqliteTokenizer *tok = syntaqlite_tokenizer_create(NULL);
+    SyntaqliteTokenizer *tok;
+    if (has_dialect)
+        tok = syntaqlite_tokenizer_create_with_dialect(NULL, dialect);
+    else
+        tok = syntaqlite_tokenizer_create(NULL);
     if (!tok) {
         Py_DECREF(result_list);
         return PyErr_NoMemory();
@@ -510,11 +628,22 @@ syntaqlite_py_tokenize(PyObject *self, PyObject *args)
 /* ─── Module definition ─────────────────────────────────────────────── */
 
 static PyMethodDef SyntaqliteMethods[] = {
-    {"parse", syntaqlite_py_parse, METH_VARARGS,
+    {"load_dialect", syntaqlite_py_load_dialect, METH_VARARGS,
+     "Load a dialect from a shared library.\n\n"
+     "Args:\n"
+     "    path (str): Path to shared library (.so/.dylib/.dll)\n"
+     "    name (str, optional): Dialect name (resolves syntaqlite_{name}_dialect symbol)\n\n"
+     "Returns:\n"
+     "    An opaque capsule representing the loaded dialect."},
+
+    {"parse", (PyCFunction)syntaqlite_py_parse, METH_VARARGS | METH_KEYWORDS,
      "Parse SQL into a list of typed AST node dicts.\n\n"
      "Each dict has a 'type' key with the node type name (e.g. 'SelectStmt').\n"
      "Fields are keyed by their snake_case name. Child nodes are nested dicts.\n"
-     "Lists are Python lists. Source spans are strings. Bools are True/False."},
+     "Lists are Python lists. Source spans are strings. Bools are True/False.\n\n"
+     "Args:\n"
+     "    sql (str): SQL to parse\n"
+     "    dialect: Loaded dialect capsule (default: SQLite)"},
 
     {"format_sql", (PyCFunction)syntaqlite_py_format_sql, METH_VARARGS | METH_KEYWORDS,
      "Format SQL with configurable options.\n\n"
@@ -523,7 +652,8 @@ static PyMethodDef SyntaqliteMethods[] = {
      "    line_width (int): Max line width (default 80)\n"
      "    indent_width (int): Spaces per indent (default 2)\n"
      "    keyword_case (str): 'upper' or 'lower' (default 'upper')\n"
-     "    semicolons (bool): Append semicolons (default True)\n\n"
+     "    semicolons (bool): Append semicolons (default True)\n"
+     "    dialect: Loaded dialect capsule (default: SQLite)\n\n"
      "Raises:\n"
      "    syntaqlite.FormatError: On parse error"},
 
@@ -534,13 +664,17 @@ static PyMethodDef SyntaqliteMethods[] = {
      "    tables (list[dict]): Schema tables. Each dict: name (str), columns (list[str])\n"
      "    views (list[dict]): Schema views. Same format as tables\n"
      "    schema_ddl (str): DDL to parse as schema (CREATE TABLE/VIEW statements)\n"
-     "    render (bool): If True, return rendered diagnostics string\n\n"
+     "    render (bool): If True, return rendered diagnostics string\n"
+     "    dialect: Loaded dialect capsule (default: SQLite)\n\n"
      "Returns:\n"
      "    dict with diagnostics and lineage, or str when render=True"},
 
-    {"tokenize", syntaqlite_py_tokenize, METH_VARARGS,
+    {"tokenize", (PyCFunction)syntaqlite_py_tokenize, METH_VARARGS | METH_KEYWORDS,
      "Tokenize SQL into a list of token dicts.\n\n"
-     "Each dict has: text (str), offset (int), length (int), type (int)."},
+     "Each dict has: text (str), offset (int), length (int), type (int).\n\n"
+     "Args:\n"
+     "    sql (str): SQL to tokenize\n"
+     "    dialect: Loaded dialect capsule (default: SQLite)"},
 
     {NULL, NULL, 0, NULL}
 };

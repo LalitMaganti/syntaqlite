@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include "syntaqlite/config.h"
+#include "syntaqlite/dialect.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -87,6 +88,16 @@ SYNTAQLITE_API uint32_t syntaqlite_formatter_output_len(
 // Returns NULL if format() has not been called or succeeded.
 SYNTAQLITE_API const char* syntaqlite_formatter_error_msg(
     const SyntaqliteFormatter* f);
+
+// ---------------------------------------------------------------------------
+// Dialect-generic constructor
+// ---------------------------------------------------------------------------
+
+// Create a formatter for any dialect with optional config.
+// Pass NULL for config to use defaults.
+SYNTAQLITE_API SyntaqliteFormatter* syntaqlite_formatter_create_with_dialect(
+    SyntaqliteDialect dialect,
+    const SyntaqliteFormatConfig* config);
 
 // ---------------------------------------------------------------------------
 // SQLite convenience (opt-out: -DSYNTAQLITE_OMIT_SQLITE_API)
