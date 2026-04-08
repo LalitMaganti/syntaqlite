@@ -65,6 +65,25 @@ pub struct SyntaqliteTableAccess {
     pub name: *const c_char,
 }
 
+/// A relation defined by a DDL statement.
+#[repr(C)]
+pub struct SyntaqliteDefinedRelation {
+    pub name: *const c_char,
+    pub is_view: u32,
+}
+
+/// Per-statement C-compatible data, populated after each `analyze()` call.
+struct PerStatementC {
+    diagnostics: Vec<SyntaqliteDiagnostic>,
+    messages: Vec<CString>,
+    column_lineage: Vec<SyntaqliteColumnLineage>,
+    relations: Vec<SyntaqliteRelationAccess>,
+    tables: Vec<SyntaqliteTableAccess>,
+    defined_relations: Vec<SyntaqliteDefinedRelation>,
+    /// All CStrings for lineage/relation/defined_relation names.
+    strings: Vec<CString>,
+}
+
 /// Opaque validator handle exposed to C.
 ///
 /// Owns a `SemanticAnalyzer`, a user `Catalog` (for persistent schema), and
@@ -95,6 +114,8 @@ struct ValidatorState {
     c_tables: Vec<SyntaqliteTableAccess>,
     /// Rendered lineage strings, kept alive for the C pointers.
     lineage_strings: Vec<CString>,
+    /// Per-statement C data from the most recent `analyze()` call.
+    per_statement: Vec<PerStatementC>,
 }
 
 /// Opaque C handle — the pointer target of `SyntaqliteValidator*`.
@@ -271,6 +292,7 @@ fn create_validator(dialect: AnyDialect) -> *mut SyntaqliteValidator {
         c_relations: Vec::new(),
         c_tables: Vec::new(),
         lineage_strings: Vec::new(),
+        per_statement: Vec::new(),
     });
     Box::into_raw(state).cast::<SyntaqliteValidator>()
 }
@@ -391,6 +413,7 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
     }
 
     populate_lineage(state, &model);
+    populate_per_statement(state, &model);
 
     state.c_diagnostics.len() as u32
 }
@@ -752,6 +775,277 @@ pub unsafe extern "C" fn syntaqlite_validator_tables(
     } else {
         state.c_tables.as_ptr()
     }
+}
+
+// ── Per-statement data population ─────────────────────────────────────────
+
+fn populate_per_statement(state: &mut ValidatorState, model: &SemanticModel) {
+    state.per_statement.clear();
+
+    for stmt in model.statements() {
+        let mut ps = PerStatementC {
+            diagnostics: Vec::new(),
+            messages: Vec::new(),
+            column_lineage: Vec::new(),
+            relations: Vec::new(),
+            tables: Vec::new(),
+            defined_relations: Vec::new(),
+            strings: Vec::new(),
+        };
+
+        // Diagnostics: two-pass (strings first, then C structs).
+        for d in stmt.diagnostics() {
+            ps.messages
+                .push(CString::new(d.message().to_string()).unwrap_or_default());
+        }
+        for (d, msg) in stmt.diagnostics().iter().zip(ps.messages.iter()) {
+            ps.diagnostics.push(SyntaqliteDiagnostic {
+                severity: severity_to_c(d.severity()),
+                message: msg.as_ptr(),
+                start_offset: d.start_offset() as u32,
+                end_offset: d.end_offset() as u32,
+            });
+        }
+
+        // Lineage: column lineage, relations, tables.
+        if let Some(lineage) = stmt.lineage() {
+            let cols = lineage.into_inner();
+            // First pass: push all strings.
+            for col in cols {
+                ps.strings
+                    .push(CString::new(col.name.as_str()).unwrap_or_default());
+                if let Some(ref origin) = col.origin {
+                    ps.strings
+                        .push(CString::new(origin.table.as_str()).unwrap_or_default());
+                    ps.strings
+                        .push(CString::new(origin.column.as_str()).unwrap_or_default());
+                }
+            }
+            // Second pass: build C structs.
+            let mut str_idx = 0;
+            for col in stmt.lineage().unwrap().into_inner() {
+                let name_ptr = ps.strings[str_idx].as_ptr();
+                str_idx += 1;
+                let origin = if col.origin.is_some() {
+                    let table_ptr = ps.strings[str_idx].as_ptr();
+                    str_idx += 1;
+                    let column_ptr = ps.strings[str_idx].as_ptr();
+                    str_idx += 1;
+                    SyntaqliteColumnOrigin {
+                        table: table_ptr,
+                        column: column_ptr,
+                    }
+                } else {
+                    SyntaqliteColumnOrigin {
+                        table: std::ptr::null(),
+                        column: std::ptr::null(),
+                    }
+                };
+                ps.column_lineage.push(SyntaqliteColumnLineage {
+                    name: name_ptr,
+                    index: col.index,
+                    origin,
+                });
+            }
+        }
+
+        // Relations accessed.
+        if let Some(rels) = stmt.relations_accessed() {
+            let base = ps.strings.len();
+            for r in rels.into_inner() {
+                ps.strings
+                    .push(CString::new(r.name.as_str()).unwrap_or_default());
+            }
+            for (i, r) in stmt
+                .relations_accessed()
+                .unwrap()
+                .into_inner()
+                .iter()
+                .enumerate()
+            {
+                ps.relations.push(SyntaqliteRelationAccess {
+                    name: ps.strings[base + i].as_ptr(),
+                    kind: match r.kind {
+                        RelationKind::Table => 0,
+                        RelationKind::View => 1,
+                    },
+                });
+            }
+        }
+
+        // Tables accessed.
+        if let Some(tbls) = stmt.tables_accessed() {
+            let base = ps.strings.len();
+            for t in tbls.into_inner() {
+                ps.strings
+                    .push(CString::new(t.name.as_str()).unwrap_or_default());
+            }
+            let count = stmt.tables_accessed().unwrap().into_inner().len();
+            for i in 0..count {
+                ps.tables.push(SyntaqliteTableAccess {
+                    name: ps.strings[base + i].as_ptr(),
+                });
+            }
+        }
+
+        // Defined relations.
+        {
+            let base = ps.strings.len();
+            for dr in stmt.defined_relations() {
+                ps.strings
+                    .push(CString::new(dr.name.as_str()).unwrap_or_default());
+            }
+            for (i, dr) in stmt.defined_relations().iter().enumerate() {
+                ps.defined_relations.push(SyntaqliteDefinedRelation {
+                    name: ps.strings[base + i].as_ptr(),
+                    is_view: u32::from(dr.is_view),
+                });
+            }
+        }
+
+        state.per_statement.push(ps);
+    }
+}
+
+// ── Per-statement accessors ───────────────────────────────────────────────
+
+#[unsafe(no_mangle)]
+#[expect(clippy::cast_possible_truncation)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_count(
+    v: *const SyntaqliteValidator,
+) -> u32 {
+    let v = unsafe { &*v };
+    v.state().per_statement.len() as u32
+}
+
+#[unsafe(no_mangle)]
+#[expect(clippy::cast_possible_truncation)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_diagnostic_count(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> u32 {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .map_or(0, |ps| ps.diagnostics.len() as u32)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_diagnostics(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> *const SyntaqliteDiagnostic {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .filter(|ps| !ps.diagnostics.is_empty())
+        .map_or(std::ptr::null(), |ps| ps.diagnostics.as_ptr())
+}
+
+#[unsafe(no_mangle)]
+#[expect(clippy::cast_possible_truncation)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_column_lineage_count(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> u32 {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .map_or(0, |ps| ps.column_lineage.len() as u32)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_column_lineage(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> *const SyntaqliteColumnLineage {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .filter(|ps| !ps.column_lineage.is_empty())
+        .map_or(std::ptr::null(), |ps| ps.column_lineage.as_ptr())
+}
+
+#[unsafe(no_mangle)]
+#[expect(clippy::cast_possible_truncation)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_relation_count(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> u32 {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .map_or(0, |ps| ps.relations.len() as u32)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_relations(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> *const SyntaqliteRelationAccess {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .filter(|ps| !ps.relations.is_empty())
+        .map_or(std::ptr::null(), |ps| ps.relations.as_ptr())
+}
+
+#[unsafe(no_mangle)]
+#[expect(clippy::cast_possible_truncation)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_table_count(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> u32 {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .map_or(0, |ps| ps.tables.len() as u32)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_tables(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> *const SyntaqliteTableAccess {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .filter(|ps| !ps.tables.is_empty())
+        .map_or(std::ptr::null(), |ps| ps.tables.as_ptr())
+}
+
+#[unsafe(no_mangle)]
+#[expect(clippy::cast_possible_truncation)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_defined_relation_count(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> u32 {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .map_or(0, |ps| ps.defined_relations.len() as u32)
+}
+
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_defined_relations(
+    v: *const SyntaqliteValidator,
+    idx: u32,
+) -> *const SyntaqliteDefinedRelation {
+    let v = unsafe { &*v };
+    v.state()
+        .per_statement
+        .get(idx as usize)
+        .filter(|ps| !ps.defined_relations.is_empty())
+        .map_or(std::ptr::null(), |ps| ps.defined_relations.as_ptr())
 }
 
 /// Free a string returned by `syntaqlite_string_*` functions.
@@ -1499,6 +1793,195 @@ mod tests {
             let n = analyze(v, "SELECT id FROM users");
             assert_eq!(n, 0, "valid DDL before error should still be registered");
 
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    // ── Per-statement API ────────────────────────────────────────────────
+
+    unsafe fn c_str_val(ptr: *const c_char) -> String {
+        if ptr.is_null() {
+            String::new()
+        } else {
+            unsafe { CStr::from_ptr(ptr) }
+                .to_str()
+                .unwrap_or("")
+                .to_owned()
+        }
+    }
+
+    #[test]
+    fn statement_count_single() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "SELECT 1;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 1);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn statement_count_multiple() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "SELECT 1; SELECT 2; SELECT 3;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 3);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn statement_count_with_ddl() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "CREATE TABLE t (a INT); SELECT a FROM t;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 2);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn per_statement_diagnostics_only_on_bad_statement() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_table(v, "users", &["id", "name"]);
+            analyze(v, "SELECT id FROM users; SELECT bogus FROM users;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 2);
+            assert_eq!(syntaqlite_validator_statement_diagnostic_count(v, 0), 0);
+            assert_eq!(syntaqlite_validator_statement_diagnostic_count(v, 1), 1);
+
+            let diags = syntaqlite_validator_statement_diagnostics(v, 1);
+            assert!(!diags.is_null());
+            let msg = c_str_val((*diags).message);
+            assert!(msg.contains("bogus"), "expected 'bogus' in: {msg}");
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn per_statement_diagnostics_parse_error() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "SELECT FROM; SELECT 1;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 2);
+            assert!(syntaqlite_validator_statement_diagnostic_count(v, 0) > 0);
+            assert_eq!(syntaqlite_validator_statement_diagnostic_count(v, 1), 0);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn per_statement_lineage_select() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_table(v, "t", &["a", "b"]);
+            analyze(v, "SELECT a, b FROM t;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 1);
+            assert_eq!(syntaqlite_validator_statement_column_lineage_count(v, 0), 2);
+
+            let cols = syntaqlite_validator_statement_column_lineage(v, 0);
+            assert!(!cols.is_null());
+            assert_eq!(c_str_val((*cols).name), "a");
+            assert_eq!(c_str_val((*cols.add(1)).name), "b");
+            assert_eq!(c_str_val((*cols).origin.table), "t");
+            assert_eq!(c_str_val((*cols).origin.column), "a");
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn per_statement_lineage_ddl_has_none() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "CREATE TABLE t (a INT); SELECT 1;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 2);
+            assert_eq!(syntaqlite_validator_statement_column_lineage_count(v, 0), 0);
+            assert_eq!(syntaqlite_validator_statement_column_lineage_count(v, 1), 1);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn per_statement_relations_accessed() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_table(v, "users", &["id"]);
+            add_table(v, "orders", &["id"]);
+            analyze(v, "SELECT id FROM users; SELECT id FROM orders;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 2);
+
+            assert_eq!(syntaqlite_validator_statement_relation_count(v, 0), 1);
+            let rels0 = syntaqlite_validator_statement_relations(v, 0);
+            assert_eq!(c_str_val((*rels0).name), "users");
+
+            assert_eq!(syntaqlite_validator_statement_relation_count(v, 1), 1);
+            let rels1 = syntaqlite_validator_statement_relations(v, 1);
+            assert_eq!(c_str_val((*rels1).name), "orders");
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn per_statement_defined_relations_create_table() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "CREATE TABLE foo (a INT); SELECT 1;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 2);
+            assert_eq!(syntaqlite_validator_statement_defined_relation_count(v, 0), 1);
+            let defs = syntaqlite_validator_statement_defined_relations(v, 0);
+            assert!(!defs.is_null());
+            assert_eq!(c_str_val((*defs).name), "foo");
+            assert_eq!((*defs).is_view, 0);
+            assert_eq!(syntaqlite_validator_statement_defined_relation_count(v, 1), 0);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn per_statement_defined_relations_create_view() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "CREATE VIEW v AS SELECT 1; SELECT 1;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 2);
+            assert_eq!(syntaqlite_validator_statement_defined_relation_count(v, 0), 1);
+            let defs = syntaqlite_validator_statement_defined_relations(v, 0);
+            assert_eq!(c_str_val((*defs).name), "v");
+            assert_eq!((*defs).is_view, 1);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn out_of_bounds_returns_zero() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "SELECT 1;");
+            assert_eq!(syntaqlite_validator_statement_diagnostic_count(v, 99), 0);
+            assert!(syntaqlite_validator_statement_diagnostics(v, 99).is_null());
+            assert_eq!(syntaqlite_validator_statement_column_lineage_count(v, 99), 0);
+            assert!(syntaqlite_validator_statement_column_lineage(v, 99).is_null());
+            assert_eq!(syntaqlite_validator_statement_relation_count(v, 99), 0);
+            assert!(syntaqlite_validator_statement_relations(v, 99).is_null());
+            assert_eq!(syntaqlite_validator_statement_table_count(v, 99), 0);
+            assert!(syntaqlite_validator_statement_tables(v, 99).is_null());
+            assert_eq!(syntaqlite_validator_statement_defined_relation_count(v, 99), 0);
+            assert!(syntaqlite_validator_statement_defined_relations(v, 99).is_null());
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn aggregated_diagnostics_matches_per_statement_sum() {
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_table(v, "t", &["a"]);
+            let total = analyze(v, "SELECT bogus FROM t; SELECT also_bad FROM t;");
+            let stmt_count = syntaqlite_validator_statement_count(v);
+            let mut per_stmt_total = 0u32;
+            for i in 0..stmt_count {
+                per_stmt_total += syntaqlite_validator_statement_diagnostic_count(v, i);
+            }
+            assert_eq!(total, per_stmt_total);
             syntaqlite_validator_destroy(v);
         }
     }
