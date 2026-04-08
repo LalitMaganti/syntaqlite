@@ -103,7 +103,6 @@ fn ensure_model(
     let model = analyzer.analyze(&doc.source, user_catalog, validation_config);
     let parse_diags = model
         .diagnostics()
-        .iter()
         .filter(|d| d.message().is_parse_error())
         .cloned()
         .collect();
@@ -496,7 +495,8 @@ impl LspHost {
             .as_ref()
             .expect("ensure_model sets model")
             .diagnostics()
-            .to_vec();
+            .cloned()
+            .collect();
         Some((version, source, diags))
     }
 
@@ -512,7 +512,6 @@ impl LspHost {
         let model = self.analyzer.analyze(source, &self.user_catalog, config);
         model
             .diagnostics()
-            .iter()
             .filter(|d| !d.message.is_parse_error())
             .cloned()
             .collect()

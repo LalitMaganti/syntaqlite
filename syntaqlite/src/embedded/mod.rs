@@ -364,7 +364,7 @@ impl EmbeddedAnalyzer {
     fn validate_fragment(&self, fragment: &EmbeddedFragment) -> Vec<Diagnostic> {
         let mut analyzer = self.make_analyzer();
         let model = analyzer.analyze(fragment.sql_text(), &self.catalog, &self.config);
-        model.diagnostics().to_vec()
+        model.diagnostics().cloned().collect()
     }
 }
 

@@ -742,9 +742,10 @@ fn validate_source(
 ) -> (bool, bool) {
     let mut analyzer = SemanticAnalyzer::with_dialect(dialect.clone());
     let model = analyzer.analyze(source, schema_catalog, config);
-    let any_diags = !model.diagnostics().is_empty();
+    let any_diags = model.has_diagnostics();
+    let all_diags: Vec<_> = model.diagnostics().cloned().collect();
     let has_errors = DiagnosticRenderer::new(source, file)
-        .render_diagnostics(model.diagnostics(), &mut io::stderr())
+        .render_diagnostics(&all_diags, &mut io::stderr())
         .unwrap_or(false);
     (has_errors, any_diags)
 }

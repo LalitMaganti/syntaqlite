@@ -21,8 +21,8 @@ use super::catalog::{
 use super::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use super::fuzzy::best_suggestion;
 use super::model::{
-    CompletionContext, CompletionInfo, DefinitionLocation, Resolution, ResolvedSymbol,
-    SemanticModel, SemanticToken, StoredComment, StoredToken,
+    CompletionContext, CompletionInfo, DefinedRelation, DefinitionLocation, Resolution,
+    ResolvedSymbol, SemanticModel, SemanticToken, StatementModel, StoredComment, StoredToken,
 };
 use super::{AnalysisMode, CheckConfig, CheckLevel, ValidationConfig};
 
@@ -56,7 +56,7 @@ use super::{AnalysisMode, CheckConfig, CheckLevel, ValidationConfig};
 /// let model = analyzer.analyze("SELECT id, name FROM users;", &catalog, &config);
 ///
 /// // 4. No diagnostics — the query is valid against the schema.
-/// assert!(model.diagnostics().is_empty());
+/// assert!(!model.has_diagnostics());
 /// ```
 pub struct SemanticAnalyzer {
     dialect: AnyDialect,
@@ -152,8 +152,8 @@ impl SemanticAnalyzer {
     ///
     /// // Referencing a column that does not exist produces a diagnostic.
     /// let model = analyzer.analyze("SELECT email FROM users;", &catalog, &config);
-    /// assert!(!model.diagnostics().is_empty());
-    /// assert_eq!(model.diagnostics()[0].severity(), Severity::Warning);
+    /// assert!(model.has_diagnostics());
+    /// assert_eq!(model.diagnostics().next().unwrap().severity(), Severity::Warning);
     /// ```
     pub fn analyze(
         &mut self,
@@ -271,10 +271,9 @@ impl SemanticAnalyzer {
 
         let mut tokens: Vec<StoredToken> = Vec::new();
         let mut comments: Vec<StoredComment> = Vec::new();
-        let mut diagnostics: Vec<Diagnostic> = Vec::new();
+        let mut statements: Vec<StatementModel> = Vec::new();
         let mut definition_offsets: HashMap<String, (usize, usize)> = HashMap::new();
         let mut resolutions: Vec<Resolution> = Vec::new();
-        let mut query_lineage: Option<super::lineage::QueryLineage> = None;
 
         loop {
             let stmt = match session.next() {
@@ -284,13 +283,14 @@ impl SemanticAnalyzer {
                     let message = DiagnosticMessage::ParseError(e.message().to_owned());
                     if let Some(severity) = config.checks().level_for(&message).to_severity() {
                         let (start, end) = parse_error_span(&e, source);
-                        diagnostics.push(Diagnostic {
+                        let diag = Diagnostic {
                             start_offset: start,
                             end_offset: end,
                             message,
                             severity,
                             help: None,
-                        });
+                        };
+                        statements.push(StatementModel::new(String::new(), vec![diag], None, Vec::new()));
                     }
                     collect_tokens(e.tokens(), &mut tokens);
                     collect_comments(e.comments(), &mut comments);
@@ -302,24 +302,22 @@ impl SemanticAnalyzer {
             collect_comments(stmt.comments(), &mut comments);
 
             let erased = stmt.erase();
-            self.analyze_statement(
+            let stmt_model = self.analyze_statement(
                 &erased,
                 config,
-                &mut diagnostics,
                 &mut resolutions,
                 &mut definition_offsets,
-                &mut query_lineage,
             );
+            statements.push(stmt_model);
         }
 
         SemanticModel {
             source: source.to_owned(),
             tokens,
             comments,
-            diagnostics,
+            statements,
             resolutions,
             definition_offsets,
-            query_lineage,
         }
     }
 
@@ -327,12 +325,11 @@ impl SemanticAnalyzer {
         &mut self,
         erased: &AnyParsedStatement<'_>,
         config: &ValidationConfig,
-        diagnostics: &mut Vec<Diagnostic>,
         resolutions: &mut Vec<Resolution>,
         definition_offsets: &mut HashMap<String, (usize, usize)>,
-        query_lineage: &mut Option<super::lineage::QueryLineage>,
-    ) {
+    ) -> StatementModel {
         let root_id = erased.root_id();
+        let mut diagnostics: Vec<Diagnostic> = Vec::new();
 
         self.catalog
             .accumulate_ddl(CatalogLayer::Document, erased, root_id, &self.dialect);
@@ -354,15 +351,23 @@ impl SemanticAnalyzer {
             &self.dialect,
             &mut self.catalog,
             config,
-            diagnostics,
+            &mut diagnostics,
             resolutions,
             definition_offsets,
         );
 
-        *query_lineage =
-            super::lineage::compute_lineage(erased, root_id, &self.catalog, self.dialect.roles())
-                .or(query_lineage.take());
+        let lineage =
+            super::lineage::compute_lineage(erased, root_id, &self.catalog, self.dialect.roles());
+
+        let defined_relations =
+            extract_defined_relations(erased, root_id, self.dialect.roles());
+
+        // Extract the statement source text from token spans.
+        let stmt_source = statement_source(erased);
+
+        StatementModel::new(stmt_source, diagnostics, lineage, defined_relations)
     }
+
 }
 
 #[cfg(feature = "sqlite")]
@@ -373,6 +378,58 @@ impl Default for SemanticAnalyzer {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+/// Extract the source text for a single parsed statement from its token spans.
+fn statement_source(stmt: &AnyParsedStatement<'_>) -> String {
+    let source = stmt.source();
+    let mut start = usize::MAX;
+    let mut end = 0usize;
+    for (offset, length) in stmt.token_spans() {
+        let o = offset as usize;
+        let l = length as usize;
+        if o < start {
+            start = o;
+        }
+        if o + l > end {
+            end = o + l;
+        }
+    }
+    if start <= end && end <= source.len() {
+        source[start..end].to_string()
+    } else {
+        String::new()
+    }
+}
+
+/// Extract relations defined by a DDL statement (CREATE TABLE / CREATE VIEW).
+fn extract_defined_relations(
+    stmt: &AnyParsedStatement<'_>,
+    root: AnyNodeId,
+    roles: &[SemanticRole],
+) -> Vec<DefinedRelation> {
+    let Some((tag, fields)) = stmt.extract_fields(root) else {
+        return Vec::new();
+    };
+    let idx = u32::from(tag) as usize;
+    let Some(&role) = roles.get(idx) else {
+        return Vec::new();
+    };
+    let (name_field, is_view) = match role {
+        SemanticRole::DefineTable { name, .. } => (name, false),
+        SemanticRole::DefineView { name, .. } => (name, true),
+        _ => return Vec::new(),
+    };
+    if let FieldValue::Span { text, .. } = fields[name_field as usize]
+        && !text.is_empty()
+    {
+        vec![DefinedRelation {
+            name: text.to_string(),
+            is_view,
+        }]
+    } else {
+        Vec::new()
+    }
+}
 
 /// If the last two tokens in `tokens` are `identifier DOT`, return the
 /// identifier text as the qualifier. This is used to detect `table.` prefixes
@@ -719,16 +776,25 @@ fn ddl_name_offset(
         SemanticRole::DefineTable { name, .. } | SemanticRole::DefineView { name, .. } => *name,
         _ => return None,
     };
-    let FieldValue::Span { text: s, .. } = fields[name_idx as usize] else {
+    let FieldValue::Span {
+        text: s,
+        offset,
+        buf_idx,
+        ..
+    } = fields[name_idx as usize]
+    else {
         return None;
     };
     if s.is_empty() {
         return None;
     }
-    let off = s.as_ptr() as usize - stmt.source().as_ptr() as usize;
+    let off = ValidationPass::span_offset(offset, buf_idx);
     Some((s.to_ascii_lowercase(), (off, off + s.len())))
 }
 
+/// Check if the root node of a statement defines a template macro and, if so,
+/// extract the macro name, parameter names, and body text as owned strings.
+///
 /// `SQLite`'s implicit rowid aliases.
 fn is_rowid_alias(column: &str) -> bool {
     column.eq_ignore_ascii_case("rowid")
@@ -741,13 +807,14 @@ fn is_rowid_alias(column: &str) -> bool {
 /// Extracted info for a single CTE binding.
 struct CteBindingInfo<'a> {
     name: &'a str,
+    name_offset: u32,
+    name_buf_idx: u8,
     body_id: Option<AnyNodeId>,
-    declared_cols: Option<Vec<&'a str>>,
+    declared_cols: Option<Vec<(&'a str, u32, u8)>>,
 }
 
 struct ValidationPass<'a> {
     roles: &'static [SemanticRole],
-    source_start: usize,
     catalog: &'a mut Catalog,
     config: &'a ValidationConfig,
     diagnostics: &'a mut Vec<Diagnostic>,
@@ -762,7 +829,8 @@ impl CheckConfig {
     /// Get the check level for a diagnostic message's category.
     pub(crate) fn level_for(self, message: &DiagnosticMessage) -> CheckLevel {
         match message {
-            DiagnosticMessage::UnknownTable { .. } => self.unknown_table,
+            DiagnosticMessage::UnknownTable { .. }
+            | DiagnosticMessage::UnknownModule { .. } => self.unknown_table,
             DiagnosticMessage::UnknownColumn { .. } => self.unknown_column,
             DiagnosticMessage::UnknownFunction { .. } => self.unknown_function,
             DiagnosticMessage::FunctionArity { .. } => self.function_arity,
@@ -806,10 +874,8 @@ impl<'a> ValidationPass<'a> {
         definition_offsets: &'a mut HashMap<String, (usize, usize)>,
     ) {
         let roles = dialect.roles();
-        let source_start = stmt.source().as_ptr() as usize;
         let mut pass = ValidationPass {
             roles,
-            source_start,
             catalog,
             config,
             diagnostics,
@@ -926,8 +992,8 @@ impl<'a> ValidationPass<'a> {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    fn span_offset(&self, s: &str) -> usize {
-        s.as_ptr() as usize - self.source_start
+    fn span_offset(offset: u32, buf_idx: u8) -> usize {
+        if buf_idx == 0 { offset as usize } else { 0 }
     }
 
     fn field_node_id(fields: &NodeFields<'_>, idx: u8) -> Option<AnyNodeId> {
@@ -946,19 +1012,24 @@ impl<'a> ValidationPass<'a> {
     /// Extract source text from a `Name` node (`IdentName` or `Error`).
     /// Both node kinds store their span at field 0.
     #[expect(clippy::unused_self)]
-    fn name_text(&self, stmt: &AnyParsedStatement<'a>, node_id: Option<AnyNodeId>) -> &'a str {
+    fn name_text(
+        stmt: &AnyParsedStatement<'a>,
+        node_id: Option<AnyNodeId>,
+    ) -> (&'a str, u32, u8) {
         let Some(node_id) = node_id else {
-            return "";
+            return ("", 0, 0);
         };
         let Some((_, fields)) = stmt.extract_fields(node_id) else {
-            return "";
+            return ("", 0, 0);
         };
         if fields.is_empty() {
-            return "";
+            return ("", 0, 0);
         }
         match fields[0] {
-            FieldValue::Span { text: s, .. } => s,
-            _ => "",
+            FieldValue::Span {
+                text, offset, buf_idx, ..
+            } => (text, offset, buf_idx),
+            _ => ("", 0, 0),
         }
     }
 
@@ -971,13 +1042,19 @@ impl<'a> ValidationPass<'a> {
         name_idx: u8,
         alias_idx: u8,
     ) {
-        let FieldValue::Span { text: name, .. } = fields[name_idx as usize] else {
+        let FieldValue::Span {
+            text: name,
+            offset: raw_offset,
+            buf_idx,
+            ..
+        } = fields[name_idx as usize]
+        else {
             return;
         };
         if name.is_empty() {
             return;
         }
-        let offset = self.span_offset(name);
+        let offset = Self::span_offset(raw_offset, buf_idx);
 
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
@@ -995,7 +1072,7 @@ impl<'a> ValidationPass<'a> {
             );
         }
 
-        let alias = self.name_text(stmt, Self::field_node_id(fields, alias_idx));
+        let (alias, _, _) = Self::name_text(stmt, Self::field_node_id(fields, alias_idx));
         let scope_name = if alias.is_empty() { name } else { alias };
         let (columns, without_rowid) = self.catalog.table_source_info(name);
 
@@ -1040,10 +1117,15 @@ impl<'a> ValidationPass<'a> {
         name_idx: u8,
         args_idx: u8,
     ) {
-        if let FieldValue::Span { text: name, .. } = fields[name_idx as usize]
+        if let FieldValue::Span {
+            text: name,
+            offset: raw_offset,
+            buf_idx,
+            ..
+        } = fields[name_idx as usize]
             && !name.is_empty()
         {
-            let offset = self.span_offset(name);
+            let offset = Self::span_offset(raw_offset, buf_idx);
             let args_id = Self::field_node_id(fields, args_idx);
             let arg_count = args_id
                 .and_then(|id| stmt.list_children(id))
@@ -1104,7 +1186,13 @@ impl<'a> ValidationPass<'a> {
         if !self.scope.has_frames() {
             return;
         }
-        let FieldValue::Span { text: column, .. } = fields[column_idx as usize] else {
+        let FieldValue::Span {
+            text: column,
+            offset: raw_offset,
+            buf_idx,
+            ..
+        } = fields[column_idx as usize]
+        else {
             return;
         };
         if column.is_empty() {
@@ -1114,7 +1202,7 @@ impl<'a> ValidationPass<'a> {
             FieldValue::Span { text: s, .. } if !s.is_empty() => Some(s),
             _ => None,
         };
-        let offset = self.span_offset(column);
+        let offset = Self::span_offset(raw_offset, buf_idx);
 
         match self.scope.resolve_column(table, column) {
             ColumnResolution::Found {
@@ -1206,7 +1294,7 @@ impl<'a> ValidationPass<'a> {
         self.visit_opt(stmt, Self::field_node_id(fields, body_idx));
         self.scope.pop();
 
-        let alias = self.name_text(stmt, Self::field_node_id(fields, alias_idx));
+        let (alias, _, _) = Self::name_text(stmt, Self::field_node_id(fields, alias_idx));
         let cols = Self::field_node_id(fields, body_idx)
             .and_then(|id| columns_from_select(stmt, id, self.roles));
         if alias.is_empty() {
@@ -1285,7 +1373,7 @@ impl<'a> ValidationPass<'a> {
                 continue;
             };
             let alias_node = Self::field_node_id(&child_fields, alias_idx);
-            let alias_text = self.name_text(stmt, alias_node);
+            let (alias_text, _, _) = Self::name_text(stmt, alias_node);
             if !alias_text.is_empty() {
                 aliases.push(alias_text.to_string());
             }
@@ -1322,7 +1410,7 @@ impl<'a> ValidationPass<'a> {
                 let cols = binding
                     .declared_cols
                     .as_ref()
-                    .map(|v| v.iter().map(ToString::to_string).collect());
+                    .map(|v| v.iter().map(|(s, _, _)| s.to_string()).collect());
                 self.catalog.add_query_table(binding.name, cols);
             }
 
@@ -1335,7 +1423,7 @@ impl<'a> ValidationPass<'a> {
             }
 
             // Record CTE definition offset for go-to-definition.
-            let name_offset = self.span_offset(binding.name);
+            let name_offset = Self::span_offset(binding.name_offset, binding.name_buf_idx);
             self.definition_offsets.insert(
                 binding.name.to_ascii_lowercase(),
                 (name_offset, name_offset + binding.name.len()),
@@ -1344,15 +1432,23 @@ impl<'a> ValidationPass<'a> {
             // Determine the CTE's column list and register it in the catalog.
             let cte_key = binding.name.to_ascii_lowercase();
             let cols = if let Some(ref declared) = binding.declared_cols {
-                self.check_cte_column_count(stmt, binding.name, declared, binding.body_id);
+                let col_names: Vec<&str> = declared.iter().map(|(s, _, _)| *s).collect();
+                self.check_cte_column_count(
+                    stmt,
+                    binding.name,
+                    binding.name_offset,
+                    binding.name_buf_idx,
+                    &col_names,
+                    binding.body_id,
+                );
                 // Record declared column definition offsets.
-                for col_name in declared {
-                    let col_offset = self.span_offset(col_name);
+                for &(col_name, col_raw_off, col_buf_idx) in declared {
+                    let col_offset = Self::span_offset(col_raw_off, col_buf_idx);
                     let key = format!("{cte_key}.{}", col_name.to_ascii_lowercase());
                     self.definition_offsets
                         .insert(key, (col_offset, col_offset + col_name.len()));
                 }
-                Some(declared.iter().map(ToString::to_string).collect())
+                Some(declared.iter().map(|(s, _, _)| s.to_string()).collect())
             } else {
                 // Record inferred column definition offsets from SELECT aliases.
                 self.record_select_column_offsets(stmt, binding.body_id, &cte_key);
@@ -1413,9 +1509,10 @@ impl<'a> ValidationPass<'a> {
                 continue;
             };
             let alias_node = Self::field_node_id(&child_fields, alias_idx);
-            let alias_text = self.name_text(stmt, alias_node);
+            let (alias_text, alias_raw_off, alias_buf_idx) =
+                Self::name_text(stmt, alias_node);
             if !alias_text.is_empty() {
-                let off = self.span_offset(alias_text);
+                let off = Self::span_offset(alias_raw_off, alias_buf_idx);
                 let key = format!("{table_key}.{}", alias_text.to_ascii_lowercase());
                 self.definition_offsets
                     .insert(key, (off, off + alias_text.len()));
@@ -1447,14 +1544,18 @@ impl<'a> ValidationPass<'a> {
             return None;
         };
 
-        let name = match fields[name_idx as usize] {
-            FieldValue::Span { text: s, .. } => s,
-            _ => "",
+        let (name, name_offset, name_buf_idx) = match fields[name_idx as usize] {
+            FieldValue::Span {
+                text, offset, buf_idx, ..
+            } => (text, offset, buf_idx),
+            _ => ("", 0, 0),
         };
         let body_id = Self::field_node_id(&fields, body_idx);
-        let declared_cols = self.extract_declared_cols(stmt, &fields, cols_idx);
+        let declared_cols = Self::extract_declared_cols(stmt, &fields, cols_idx);
         Some(CteBindingInfo {
             name,
+            name_offset,
+            name_buf_idx,
             body_id,
             declared_cols,
         })
@@ -1462,22 +1563,21 @@ impl<'a> ValidationPass<'a> {
 
     /// Extract declared CTE column names from the column list field.
     fn extract_declared_cols(
-        &self,
         stmt: &AnyParsedStatement<'a>,
         fields: &NodeFields<'a>,
         cols_idx: u8,
-    ) -> Option<Vec<&'a str>> {
+    ) -> Option<Vec<(&'a str, u32, u8)>> {
         if cols_idx == FIELD_ABSENT {
             return None;
         }
         let list_id = Self::field_node_id(fields, cols_idx)?;
         let children = stmt.list_children(list_id)?;
-        let names: Vec<&'a str> = children
+        let names: Vec<(&'a str, u32, u8)> = children
             .iter()
             .copied()
             .filter(|id| !id.is_null())
-            .map(|id| self.name_text(stmt, Some(id)))
-            .filter(|s| !s.is_empty())
+            .map(|id| Self::name_text(stmt, Some(id)))
+            .filter(|(s, _, _)| !s.is_empty())
             .collect();
         if names.is_empty() { None } else { Some(names) }
     }
@@ -1487,13 +1587,15 @@ impl<'a> ValidationPass<'a> {
         &mut self,
         stmt: &AnyParsedStatement<'a>,
         cte_name: &str,
+        cte_name_offset: u32,
+        cte_name_buf_idx: u8,
         declared: &[&str],
         body_id: Option<AnyNodeId>,
     ) {
         if let Some(actual) = self.count_result_columns(stmt, body_id)
             && actual != declared.len()
         {
-            let offset = self.span_offset(cte_name);
+            let offset = Self::span_offset(cte_name_offset, cte_name_buf_idx);
             self.emit(
                 offset,
                 offset + cte_name.len(),
@@ -1707,7 +1809,6 @@ mod tests {
         let model = az.analyze(source, &cat, &strict());
         let unknown_tables: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(d.message, DiagnosticMessage::UnknownTable { .. }))
             .collect();
         assert!(
@@ -1829,7 +1930,6 @@ mod tests {
         let model = az.analyze("SELECT rowid FROM kv", &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -1852,7 +1952,6 @@ mod tests {
         let model = az.analyze("SELECT rowid FROM users", &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -1889,7 +1988,6 @@ mod tests {
         let model = az.analyze("SELECT id FROM users", &cat, &strict());
         let diags: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(d.message, DiagnosticMessage::UnknownTable { .. }))
             .collect();
         assert!(diags.is_empty(), "unexpected table error: {diags:?}");
@@ -1900,7 +1998,7 @@ mod tests {
         let mut az = sqlite_analyzer();
         let cat = sqlite_catalog();
         let model = az.analyze("", &cat, &strict());
-        assert!(model.diagnostics().is_empty());
+        assert!(!model.has_diagnostics());
     }
 
     #[test]
@@ -1910,7 +2008,6 @@ mod tests {
         let model = az.analyze("PRAGMA journal_mode;", &cat, &strict());
         let sem_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| !d.message.is_parse_error())
             .collect();
         assert!(sem_errs.is_empty());
@@ -1923,7 +2020,7 @@ mod tests {
         let mut az = sqlite_analyzer();
         let cat = sqlite_catalog();
         let model = az.analyze("SELECT * FROM missing_table", &cat, &strict());
-        let errs: Vec<_> = model.diagnostics().iter()
+        let errs: Vec<_> = model.diagnostics()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownTable { name } if name == "missing_table"))
             .collect();
         assert_eq!(errs.len(), 1);
@@ -1935,7 +2032,7 @@ mod tests {
         let mut az = sqlite_analyzer();
         let cat = sqlite_catalog();
         let model = az.analyze("SELECT * FROM missing_table", &cat, &lenient());
-        let warns: Vec<_> = model.diagnostics().iter()
+        let warns: Vec<_> = model.diagnostics()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownTable { name } if name == "missing_table"))
             .collect();
         assert_eq!(warns.len(), 1);
@@ -1952,7 +2049,7 @@ mod tests {
             false,
         );
         let model = az.analyze("SELECT * FROM usres", &cat, &strict()); // typo
-        let diag = model.diagnostics().iter().find(
+        let diag = model.diagnostics().find(
             |d| matches!(&d.message, DiagnosticMessage::UnknownTable { name } if name == "usres"),
         );
         assert!(diag.is_some(), "expected unknown-table diagnostic");
@@ -1974,7 +2071,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let unknown: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownTable { .. }))
             .collect();
         assert!(
@@ -1996,7 +2092,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let unknown: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownTable { .. }))
             .collect();
         assert!(unknown.is_empty(), "VIEW not visible: {unknown:?}");
@@ -2013,9 +2108,9 @@ mod tests {
         let src = "CREATE TABLE t (id INTEGER, name TEXT); SELECT id FROM t;";
         let model = az.analyze(src, &cat, &strict());
         assert!(
-            model.diagnostics().is_empty(),
+            !model.has_diagnostics(),
             "id is a known column of t: {:?}",
-            model.diagnostics()
+            model.diagnostics().collect::<Vec<_>>()
         );
     }
 
@@ -2029,14 +2124,13 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert_eq!(
             errs.len(),
             1,
             "unknown column should be flagged: {:?}",
-            model.diagnostics()
+            model.diagnostics().collect::<Vec<_>>()
         );
     }
 
@@ -2057,7 +2151,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2081,7 +2174,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2104,14 +2196,13 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { column, .. } if column == "bogus"))
             .collect();
         assert_eq!(
             col_errs.len(),
             1,
             "column 'bogus' should be flagged as unknown: {:?}",
-            model.diagnostics()
+            model.diagnostics().collect::<Vec<_>>()
         );
     }
 
@@ -2129,7 +2220,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2149,14 +2239,13 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { column, .. } if column == "missing"))
             .collect();
         assert_eq!(
             col_errs.len(),
             1,
             "'missing' should be flagged as unknown: {:?}",
-            model.diagnostics()
+            model.diagnostics().collect::<Vec<_>>()
         );
     }
 
@@ -2172,7 +2261,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2192,7 +2280,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2213,7 +2300,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2452,7 +2538,7 @@ mod tests {
         let mut az = sqlite_analyzer();
         let cat = sqlite_catalog();
         let model = az.analyze("SELECT totally_unknown_fn(1)", &cat, &strict());
-        let errs: Vec<_> = model.diagnostics().iter()
+        let errs: Vec<_> = model.diagnostics()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownFunction { name } if name == "totally_unknown_fn"))
             .collect();
         assert_eq!(errs.len(), 1);
@@ -2465,7 +2551,6 @@ mod tests {
         let model = az.analyze("SELECT abs(-1)", &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownFunction { .. }))
             .collect();
         assert!(errs.is_empty(), "abs() should be a known builtin: {errs:?}");
@@ -2482,7 +2567,6 @@ mod tests {
         let model = az.analyze("SELECT acos(1.0)", &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| {
                 matches!(&d.message, DiagnosticMessage::UnknownFunction { name } if name == "acos")
             })
@@ -2491,7 +2575,7 @@ mod tests {
             errs.len(),
             1,
             "acos() should be unknown without SQLITE_ENABLE_MATH_FUNCTIONS: {:?}",
-            model.diagnostics()
+            model.diagnostics().collect::<Vec<_>>()
         );
     }
 
@@ -2506,7 +2590,6 @@ mod tests {
         let model = az.analyze("SELECT acos(1.0)", &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownFunction { .. }))
             .collect();
         assert!(
@@ -2530,7 +2613,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownTable { .. }))
             .collect();
         assert!(errs.is_empty());
@@ -2552,7 +2634,6 @@ mod tests {
         let model = az.analyze("SELECT id FROM t;", &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(
                 |d| matches!(&d.message, DiagnosticMessage::UnknownTable { name } if name == "t"),
             )
@@ -2577,7 +2658,6 @@ mod tests {
         let model = sqlite_analyzer().analyze("SELECT id FROM conn_tbl", &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownTable { name } if name == "conn_tbl"))
             .collect();
         assert!(
@@ -2601,7 +2681,6 @@ mod tests {
         let model = sqlite_analyzer().analyze("SELECT b FROM t", &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2627,7 +2706,6 @@ mod tests {
         );
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2648,7 +2726,6 @@ mod tests {
         let model = sqlite_analyzer().analyze("SELECT id FROM conn_tbl", &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownTable { name } if name == "conn_tbl"))
             .collect();
         assert_eq!(errs.len(), 1, "connection table should be gone after clear");
@@ -2662,12 +2739,12 @@ mod tests {
         let mut az = sqlite_analyzer();
         let cat = sqlite_catalog();
         let model = az.analyze(source, &cat, &strict());
-        assert!(!model.diagnostics().is_empty());
+        assert!(model.has_diagnostics());
 
         let renderer = DiagnosticRenderer::new(source, "test.sql");
         let mut out = Vec::new();
         let has_errors = renderer
-            .render_diagnostics(model.diagnostics(), &mut out)
+            .render_diagnostics(&model.diagnostics().cloned().collect::<Vec<_>>(), &mut out)
             .unwrap();
         let text = String::from_utf8(out).unwrap();
         assert!(has_errors);
@@ -2696,7 +2773,7 @@ mod tests {
         let renderer = DiagnosticRenderer::new(source, "test.sql");
         let mut out = Vec::new();
         renderer
-            .render_diagnostics(model.diagnostics(), &mut out)
+            .render_diagnostics(&model.diagnostics().cloned().collect::<Vec<_>>(), &mut out)
             .unwrap();
         let text = String::from_utf8(out).unwrap();
         assert!(
@@ -2720,7 +2797,6 @@ mod tests {
         );
         let sem_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| !d.message.is_parse_error())
             .collect();
         assert!(sem_errs.is_empty(), "unexpected diagnostics: {sem_errs:?}");
@@ -2737,7 +2813,6 @@ mod tests {
         );
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::CteColumnCountMismatch { .. }))
             .collect();
         assert!(errs.is_empty(), "unexpected mismatch diagnostic: {errs:?}");
@@ -2755,7 +2830,6 @@ mod tests {
         );
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::CteColumnCountMismatch { .. }))
             .collect();
         assert_eq!(errs.len(), 1, "expected CteColumnCountMismatch: {errs:?}");
@@ -2781,7 +2855,6 @@ mod tests {
         );
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::CteColumnCountMismatch { .. }))
             .collect();
         assert_eq!(errs.len(), 1, "expected CteColumnCountMismatch: {errs:?}");
@@ -2806,7 +2879,6 @@ mod tests {
         );
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { column, .. } if column == "z"))
             .collect();
         assert_eq!(errs.len(), 1, "expected UnknownColumn for 'z': {errs:?}");
@@ -2824,7 +2896,6 @@ mod tests {
         );
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(errs.is_empty(), "unexpected UnknownColumn: {errs:?}");
@@ -2847,7 +2918,6 @@ mod tests {
         );
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::CteColumnCountMismatch { .. }))
             .collect();
         assert!(
@@ -2870,7 +2940,6 @@ mod tests {
         );
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { column, .. } if column == "z"))
             .collect();
         assert_eq!(errs.len(), 1, "expected UnknownColumn for 'z': {errs:?}");
@@ -2888,7 +2957,6 @@ mod tests {
         );
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(errs.is_empty(), "unexpected UnknownColumn: {errs:?}");
@@ -2911,7 +2979,6 @@ mod tests {
         );
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2931,7 +2998,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| {
                 matches!(&d.message, DiagnosticMessage::UnknownColumn { column, .. } if column == col)
             })
@@ -2950,7 +3016,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -2974,7 +3039,6 @@ mod tests {
         let model = az.analyze(src, &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3127,7 +3191,6 @@ mod tests {
         // UnknownTable for "users" is expected and correct.
         let table_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| {
                 matches!(&d.message, DiagnosticMessage::UnknownTable { name } if name == "users")
             })
@@ -3136,13 +3199,12 @@ mod tests {
             table_errs.len(),
             1,
             "expected exactly one UnknownTable for 'users': {:#?}",
-            model.diagnostics()
+            model.diagnostics().collect::<Vec<_>>()
         );
 
         // UnknownColumn must NOT appear — users is unknown so any column is ok.
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3165,19 +3227,17 @@ mod tests {
         // Two UnknownTable errors expected.
         let table_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownTable { .. }))
             .collect();
         assert_eq!(
             table_errs.len(),
             2,
             "expected UnknownTable for both 'users' and 'orders': {:#?}",
-            model.diagnostics()
+            model.diagnostics().collect::<Vec<_>>()
         );
 
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3199,7 +3259,6 @@ mod tests {
 
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3223,7 +3282,6 @@ mod tests {
         );
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3245,7 +3303,6 @@ mod tests {
         );
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3263,7 +3320,6 @@ mod tests {
         let model = az.analyze("DELETE FROM unknown_tbl WHERE idx='t1a'", &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3288,7 +3344,6 @@ mod tests {
         );
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3311,7 +3366,6 @@ mod tests {
         );
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3334,7 +3388,6 @@ mod tests {
         );
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3357,7 +3410,6 @@ mod tests {
         );
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3374,7 +3426,6 @@ mod tests {
         let model = az.analyze("ATTACH ':memory:' AS scratch", &cat, &strict());
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3397,7 +3448,6 @@ mod tests {
         );
         let col_errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(
@@ -3420,7 +3470,6 @@ mod tests {
         let model = az.analyze(query, &cat, &strict());
         let errs: Vec<_> = model
             .diagnostics()
-            .iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownColumn { .. }))
             .collect();
         assert!(errs.is_empty(), "unexpected UnknownColumn: {errs:#?}");
@@ -3517,6 +3566,24 @@ mod tests {
         let s = best_suggestion("xyzzy", &candidates, 2);
         assert!(s.is_none());
     }
+
+    #[test]
+    fn relation_names_enumerates_catalog() {
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t1", Some(vec!["a".into()]), false);
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_view("v1", Some(vec!["b".into()]));
+
+        let names: HashSet<&str> = catalog
+            .layer(CatalogLayer::Database)
+            .relation_names()
+            .collect();
+        assert!(names.contains("t1"));
+        assert!(names.contains("v1"));
+    }
 }
 
 #[cfg(test)]
@@ -3609,13 +3676,13 @@ mod lineage_tests {
         );
 
         // relations_accessed — only catalog relations (not CTEs/subqueries)
-        let rels = model.relations_accessed().unwrap().into_inner();
+        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
         assert_eq!(rels.len(), 1);
         assert_eq!(rels[0].name, "users");
         assert_eq!(rels[0].kind, RelationKind::Table);
 
         // tables_accessed
-        let tbls = model.tables_accessed().unwrap().into_inner();
+        let tbls = model.statements().last().unwrap().tables_accessed().unwrap().into_inner();
         assert_eq!(tbls.len(), 1);
         assert_eq!(tbls[0].name, "users");
     }
@@ -3704,7 +3771,7 @@ mod lineage_tests {
             })
         );
 
-        let tbls = model.tables_accessed().unwrap().into_inner();
+        let tbls = model.statements().last().unwrap().tables_accessed().unwrap().into_inner();
         assert!(tbls.iter().any(|t| t.name == "users"));
         assert!(tbls.iter().any(|t| t.name == "orders"));
     }
@@ -3739,13 +3806,13 @@ mod lineage_tests {
         );
 
         // relations — only catalog relations, CTE excluded
-        let rels = model.relations_accessed().unwrap().into_inner();
+        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
         assert_eq!(rels.len(), 1);
         assert_eq!(rels[0].name, "users");
         assert_eq!(rels[0].kind, RelationKind::Table);
 
         // tables includes users (physical)
-        let tbls = model.tables_accessed().unwrap().into_inner();
+        let tbls = model.statements().last().unwrap().tables_accessed().unwrap().into_inner();
         assert_eq!(tbls.len(), 1);
         assert_eq!(tbls[0].name, "users");
     }
@@ -3777,7 +3844,7 @@ mod lineage_tests {
             })
         );
 
-        let tbls = model.tables_accessed().unwrap().into_inner();
+        let tbls = model.statements().last().unwrap().tables_accessed().unwrap().into_inner();
         assert_eq!(tbls.len(), 1);
         assert_eq!(tbls[0].name, "users");
     }
@@ -3822,7 +3889,7 @@ mod lineage_tests {
             "view with unavailable body should be Partial"
         );
 
-        let rels = model.relations_accessed().unwrap().into_inner();
+        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
         assert_eq!(rels.len(), 1);
         assert_eq!(rels[0].name, "active_users");
         assert_eq!(rels[0].kind, RelationKind::View);
@@ -3837,9 +3904,11 @@ mod lineage_tests {
         let model = analyzer.analyze("CREATE TABLE t(x)", &catalog, &lenient());
 
         assert!(model.lineage().is_none());
-        assert!(model.relations_accessed().is_none());
-        assert!(model.tables_accessed().is_none());
+        assert!(model.statements().last().unwrap().relations_accessed().is_none());
+        assert!(model.statements().last().unwrap().tables_accessed().is_none());
     }
+
+    // ── Test 9b: DDL with inner SELECT computes lineage ─────────────────────
 
     // ── Test 10: CTE with expression — origin None ───────────────────────────
 
@@ -3910,5 +3979,168 @@ mod lineage_tests {
         assert!(!cat.is_view("users"));
         assert!(cat.is_view("active_users"));
         assert!(!cat.is_view("nonexistent"));
+    }
+
+    // ── StatementModel tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn statements_returns_one_per_statement() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze(
+            "SELECT 1; SELECT 2; SELECT 3;",
+            &catalog,
+            &lenient(),
+        );
+        assert_eq!(model.statements().len(), 3);
+    }
+
+    #[test]
+    fn statement_model_diagnostics_isolated() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "users",
+            Some(vec!["id".into()]),
+            false,
+        );
+        // First statement is fine, second references unknown table.
+        let model = analyzer.analyze(
+            "SELECT id FROM users; SELECT * FROM missing;",
+            &catalog,
+            &lenient(),
+        );
+        assert_eq!(model.statements().len(), 2);
+        // First statement should have no diagnostics.
+        assert!(model.statements()[0].diagnostics().is_empty());
+        // Second statement should have a diagnostic for "missing".
+        assert!(!model.statements()[1].diagnostics().is_empty());
+        // Aggregated diagnostics should have exactly one.
+        assert_eq!(model.diagnostic_count(), 1);
+    }
+
+    #[test]
+    fn statement_model_lineage_per_statement() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "a",
+            Some(vec!["x".into()]),
+            false,
+        );
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "b",
+            Some(vec!["y".into()]),
+            false,
+        );
+        let model = analyzer.analyze(
+            "SELECT x FROM a; SELECT y FROM b;",
+            &catalog,
+            &lenient(),
+        );
+        assert_eq!(model.statements().len(), 2);
+
+        // First statement lineage traces to table a.
+        let cols0 = model.statements()[0].lineage().unwrap().into_inner();
+        assert_eq!(cols0.len(), 1);
+        assert_eq!(cols0[0].origin.as_ref().unwrap().table, "a");
+
+        // Second statement lineage traces to table b.
+        let cols1 = model.statements()[1].lineage().unwrap().into_inner();
+        assert_eq!(cols1.len(), 1);
+        assert_eq!(cols1[0].origin.as_ref().unwrap().table, "b");
+
+        // model.lineage() delegates to the last statement.
+        let last_cols = model.lineage().unwrap().into_inner();
+        assert_eq!(last_cols[0].origin.as_ref().unwrap().table, "b");
+    }
+
+    #[test]
+    fn statement_model_relations_per_statement() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "t1",
+            Some(vec!["x".into()]),
+            false,
+        );
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "t2",
+            Some(vec!["y".into()]),
+            false,
+        );
+        let model = analyzer.analyze(
+            "SELECT x FROM t1; SELECT y FROM t2;",
+            &catalog,
+            &lenient(),
+        );
+
+        let rels0 = model.statements()[0].relations_accessed().unwrap().into_inner();
+        assert_eq!(rels0.len(), 1);
+        assert_eq!(rels0[0].name, "t1");
+
+        let rels1 = model.statements()[1].relations_accessed().unwrap().into_inner();
+        assert_eq!(rels1.len(), 1);
+        assert_eq!(rels1[0].name, "t2");
+    }
+
+    #[test]
+    fn defined_relations_for_create_table() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze(
+            "CREATE TABLE users (id INTEGER, name TEXT);",
+            &catalog,
+            &lenient(),
+        );
+        assert_eq!(model.statements().len(), 1);
+        let defs = model.statements()[0].defined_relations();
+        assert_eq!(defs.len(), 1);
+        assert_eq!(defs[0].name, "users");
+        assert!(!defs[0].is_view);
+    }
+
+    #[test]
+    fn defined_relations_for_create_view() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze(
+            "CREATE VIEW v AS SELECT 1;",
+            &catalog,
+            &lenient(),
+        );
+        assert_eq!(model.statements().len(), 1);
+        let defs = model.statements()[0].defined_relations();
+        assert_eq!(defs.len(), 1);
+        assert_eq!(defs[0].name, "v");
+        assert!(defs[0].is_view);
+    }
+
+    #[test]
+    fn defined_relations_for_select_is_empty() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT 1;", &catalog, &lenient());
+        assert_eq!(model.statements().len(), 1);
+        assert!(model.statements()[0].defined_relations().is_empty());
+    }
+
+    #[test]
+    fn parse_error_creates_statement_model() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT;", &catalog, &lenient());
+        // Parse error should produce a statement model with a diagnostic.
+        assert!(model.has_diagnostics());
+        assert!(model.statements().iter().any(|s| !s.diagnostics().is_empty()));
+    }
+
+    #[test]
+    fn has_diagnostics_false_when_clean() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT 1;", &catalog, &lenient());
+        assert!(!model.has_diagnostics());
+        assert_eq!(model.diagnostic_count(), 0);
     }
 }

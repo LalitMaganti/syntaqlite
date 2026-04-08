@@ -161,6 +161,11 @@ pub enum DiagnosticMessage {
         /// Number of result columns in the CTE body.
         actual: usize,
     },
+    /// Module import could not be resolved.
+    UnknownModule {
+        /// The unresolved module path (e.g. `slices.flow`).
+        name: String,
+    },
     /// Parse error from the parser.
     ParseError(String),
 }
@@ -202,6 +207,7 @@ impl std::fmt::Display for DiagnosticMessage {
                 f,
                 "table '{name}' has {actual} values for {declared} columns"
             ),
+            Self::UnknownModule { name } => write!(f, "unknown module '{name}'"),
             Self::ParseError(msg) => f.write_str(msg),
         }
     }
@@ -308,6 +314,12 @@ impl serde::Serialize for DiagnosticMessage {
                 m.serialize_entry("name", name)?;
                 m.serialize_entry("expected", expected)?;
                 m.serialize_entry("got", got)?;
+                m.end()
+            }
+            Self::UnknownModule { name } => {
+                let mut m = serializer.serialize_map(Some(2))?;
+                m.serialize_entry("kind", "unknown_module")?;
+                m.serialize_entry("name", name)?;
                 m.end()
             }
         }

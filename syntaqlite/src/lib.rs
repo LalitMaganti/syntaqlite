@@ -65,7 +65,7 @@
 //! let model = analyzer.analyze("SELECT id, name FROM users", &catalog, &config);
 //!
 //! // All names resolve — no diagnostics.
-//! assert!(model.diagnostics().is_empty());
+//! assert!(!model.has_diagnostics());
 //! ```
 //!
 //! For richer output, use [`DiagnosticRenderer`](util::DiagnosticRenderer) to produce rustc-style

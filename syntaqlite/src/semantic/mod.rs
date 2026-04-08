@@ -39,7 +39,7 @@
 //! );
 //!
 //! // "nme" is close to "name" — expect a diagnostic with a suggestion.
-//! assert!(!model.diagnostics().is_empty());
+//! assert!(model.has_diagnostics());
 //! ```
 
 #[cfg(feature = "validation")]
@@ -76,7 +76,7 @@ pub use lineage::{
 };
 #[doc(inline)]
 #[cfg(feature = "validation")]
-pub use model::SemanticModel;
+pub use model::{DefinedRelation, SemanticModel, StatementModel};
 
 /// Whether statements are being analyzed (editing a file) or executed
 /// (running sequentially in a session).
