@@ -78,6 +78,78 @@ pub use lineage::{
 #[cfg(feature = "validation")]
 pub use model::{DefinedRelation, SemanticModel, StatementModel};
 
+
+// ── Module resolution ────────────────────────────────────────────────────────
+
+/// Callback for resolving `INCLUDE PERFETTO MODULE` (or similar) import
+/// statements during semantic analysis.
+///
+/// Implement this trait to teach the [`SemanticAnalyzer`] how to locate
+/// module source text. The analyzer calls [`resolve`](Self::resolve) when
+/// it encounters an import statement; if the module is found, its DDL is
+/// analyzed and accumulated into the catalog so that subsequent statements
+/// can reference the imported definitions.
+///
+/// # Example
+///
+/// ```
+/// use syntaqlite::semantic::ModuleResolver;
+///
+/// struct InMemoryResolver {
+///     modules: std::collections::HashMap<String, String>,
+/// }
+///
+/// impl ModuleResolver for InMemoryResolver {
+///     fn resolve(&self, module_path: &str) -> Option<String> {
+///         self.modules.get(module_path).cloned()
+///     }
+/// }
+/// ```
+pub trait ModuleResolver {
+    /// Given a dotted module path (e.g. `"slices.flow"`), return the SQL
+    /// source text for that module.
+    ///
+    /// Return `None` if the module cannot be found — the analyzer will emit
+    /// an [`UnknownModule`](DiagnosticMessage::UnknownModule) diagnostic.
+    fn resolve(&self, module_path: &str) -> Option<String>;
+}
+
+/// A [`ModuleResolver`] that maps dotted module paths to files under a
+/// directory root.
+///
+/// The path `slices.flow` is resolved to `<root>/slices/flow.sql`.
+///
+/// # Example
+///
+/// ```no_run
+/// use syntaqlite::semantic::{DirectoryModuleResolver, ModuleResolver};
+/// use std::path::PathBuf;
+///
+/// let resolver = DirectoryModuleResolver::new(PathBuf::from("stdlib/"));
+/// assert_eq!(
+///     resolver.resolve("slices.flow").is_some(),
+///     std::path::Path::new("stdlib/slices/flow.sql").exists(),
+/// );
+/// ```
+pub struct DirectoryModuleResolver {
+    root: std::path::PathBuf,
+}
+
+impl DirectoryModuleResolver {
+    /// Create a resolver rooted at the given directory.
+    pub fn new(root: std::path::PathBuf) -> Self {
+        Self { root }
+    }
+}
+
+impl ModuleResolver for DirectoryModuleResolver {
+    fn resolve(&self, module_path: &str) -> Option<String> {
+        let rel = module_path.replace('.', std::path::MAIN_SEPARATOR_STR);
+        let path = self.root.join(rel).with_extension("sql");
+        std::fs::read_to_string(path).ok()
+    }
+}
+
 /// Whether statements are being analyzed (editing a file) or executed
 /// (running sequentially in a session).
 ///
