@@ -13,6 +13,7 @@ pub const fn syntaqlite_buildtools::base_files::base_synq_files() -> &'static [(
 pub const fn syntaqlite_buildtools::base_files::base_y_files() -> &'static [(&'static str, &'static str)]
 pub const fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_base_synq(self, files: &'a [(&'a str, &'a str)]) -> Self
 pub const fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_macro_style(self, style: syntaqlite_buildtools::codegen_api::MacroStyle) -> Self
+pub const fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_python(self) -> Self
 pub enum syntaqlite_buildtools::codegen_api::MacroStyle
 pub fn alloc::string::String::from(v: syntaqlite_buildtools::version_analysis::SqliteVersion) -> Self
 pub fn syntaqlite_buildtools::amalgamate::amalgamate_dialect(dialect: &str, dialect_dir: &std::path::Path, runtime_header: core::option::Option<&str>, ext_header: core::option::Option<&str>) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
@@ -27,9 +28,9 @@ pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_rust(self
 pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::write_to(&self, layout: &syntaqlite_buildtools::output_resolver::OutputLayout, ensure_dir: &impl core::ops::function::Fn(&std::path::Path) -> core::result::Result<(), alloc::string::String>, write_file: &impl core::ops::function::Fn(&std::path::Path, &str) -> core::result::Result<(), alloc::string::String>) -> core::result::Result<(), alloc::string::String>
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_dispatch_header_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_header_name(&self) -> alloc::string::String
+pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_struct_type(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_symbol_fn_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::grammar_fn_name(&self) -> alloc::string::String
-pub fn syntaqlite_buildtools::codegen_api::DialectNaming::grammar_struct_type(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::guarded_tokens_header(&self, parse_h: &str) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::include_dir_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::name(&self) -> &str
@@ -104,6 +105,7 @@ pub syntaqlite_buildtools::output_resolver::CHeader::write: core::option::Option
 pub syntaqlite_buildtools::output_resolver::OutputLayout::ast_builder_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::ast_nodes_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::ast_rs: core::option::Option<alloc::string::String>
+pub syntaqlite_buildtools::output_resolver::OutputLayout::ast_wrap_h: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::build_rs: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::cargo_toml: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::cflags_h: syntaqlite_buildtools::output_resolver::CHeader
@@ -115,16 +117,18 @@ pub syntaqlite_buildtools::output_resolver::OutputLayout::dialect_meta_h: syntaq
 pub syntaqlite_buildtools::output_resolver::OutputLayout::dialect_roles_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::dialect_rs: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::dialect_tokens_h: syntaqlite_buildtools::output_resolver::CHeader
+pub syntaqlite_buildtools::output_resolver::OutputLayout::enums_py: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::ffi_rs: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::functions_catalog_rs: core::option::Option<alloc::string::String>
-pub syntaqlite_buildtools::output_resolver::OutputLayout::grammar_rs: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::keyword_c: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::keyword_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::lib_rs: core::option::Option<alloc::string::String>
+pub syntaqlite_buildtools::output_resolver::OutputLayout::nodes_py: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::parse_api_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::parse_c: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::root: std::path::PathBuf
 pub syntaqlite_buildtools::output_resolver::OutputLayout::runtime_tokens_h: syntaqlite_buildtools::output_resolver::CHeader
+pub syntaqlite_buildtools::output_resolver::OutputLayout::syntax_dialect_rs: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::tokenize_c: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::tokenize_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::tokens_h: syntaqlite_buildtools::output_resolver::CHeader

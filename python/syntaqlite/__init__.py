@@ -229,7 +229,7 @@ class DefinedRelation:
 class Statement:
     """Per-statement analysis result."""
 
-    __slots__ = ("diagnostics", "lineage", "defined_relations")
+    __slots__ = ("diagnostics", "lineage", "defined_relations", "source", "relations")
 
     def __init__(self, d: dict):
         self.diagnostics: list[Diagnostic] = [Diagnostic(x) for x in d["diagnostics"]]
@@ -237,6 +237,10 @@ class Statement:
         self.lineage: Lineage | None = Lineage(lin) if lin else None
         self.defined_relations: list[DefinedRelation] = [
             DefinedRelation(x) for x in d.get("defined_relations", [])
+        ]
+        self.source: str = d.get("source", "")
+        self.relations: list[RelationAccess] = [
+            RelationAccess(r) for r in d.get("relations", [])
         ]
 
     def __repr__(self):
@@ -275,6 +279,7 @@ def validate(
     tables: list[Table] | None = None,
     views: list[View] | None = None,
     schema_ddl: str | None = None,
+    module_resolver: "Callable[[str], str | None] | None" = None,
     render: bool = False,
     dialect: Dialect | None = None,
 ):
@@ -285,6 +290,9 @@ def validate(
         tables: Schema tables.
         views: Schema views.
         schema_ddl: DDL to parse as schema (CREATE TABLE/VIEW statements).
+        module_resolver: Callable that resolves module imports. Given a dotted
+            module path (e.g. ``"slices.flow"``), return the SQL source text
+            or None if not found.
         render: If True, return rendered diagnostics string instead.
         dialect: Loaded dialect (default: SQLite).
 
@@ -301,6 +309,7 @@ def validate(
         schema_ddl=schema_ddl,
         render=render,
         dialect=capsule,
+        module_resolver=module_resolver,
     )
     if render:
         return raw

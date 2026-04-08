@@ -9,9 +9,7 @@ use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
 use std::collections::HashMap;
 
 use super::diagnostics::Diagnostic;
-use super::lineage::{
-    ColumnLineage, LineageResult, QueryLineage, RelationAccess, TableAccess,
-};
+use super::lineage::{ColumnLineage, LineageResult, QueryLineage, RelationAccess, TableAccess};
 
 // ── Stored per-statement positions ───────────────────────────────────────────
 

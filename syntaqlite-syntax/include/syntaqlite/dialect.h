@@ -186,7 +186,8 @@ typedef struct SyntaqliteLoadedDialect SyntaqliteLoadedDialect;
 // Always returns a non-NULL handle. Check syntaqlite_loaded_dialect_error()
 // to detect failures (returns NULL on success, error string on failure).
 SYNTAQLITE_API SyntaqliteLoadedDialect* syntaqlite_dialect_load(
-    const char* path, const char* name);
+    const char* path,
+    const char* name);
 
 // Error message from the load attempt, or NULL on success.
 SYNTAQLITE_API const char* syntaqlite_loaded_dialect_error(
@@ -194,8 +195,8 @@ SYNTAQLITE_API const char* syntaqlite_loaded_dialect_error(
 
 // Get the SyntaqliteDialect value from a successfully loaded dialect.
 // Undefined if syntaqlite_loaded_dialect_error() returned non-NULL.
-SYNTAQLITE_API SyntaqliteDialect syntaqlite_loaded_dialect_get(
-    const SyntaqliteLoadedDialect* ld);
+SYNTAQLITE_API SyntaqliteDialect
+syntaqlite_loaded_dialect_get(const SyntaqliteLoadedDialect* ld);
 
 // Free a loaded dialect. Unloads the shared library. No-op if ld is NULL.
 SYNTAQLITE_API void syntaqlite_loaded_dialect_destroy(

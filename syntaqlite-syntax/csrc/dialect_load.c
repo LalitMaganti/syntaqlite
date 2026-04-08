@@ -4,8 +4,8 @@
 // Dynamic dialect loading via dlopen (POSIX) or LoadLibrary (Windows).
 //
 // Lifecycle:
-//   SyntaqliteLoadedDialect* ld = syntaqlite_dialect_load("perfetto.so", "perfetto");
-//   SyntaqliteDialect d = syntaqlite_loaded_dialect_get(ld);
+//   SyntaqliteLoadedDialect* ld = syntaqlite_dialect_load("perfetto.so",
+//   "perfetto"); SyntaqliteDialect d = syntaqlite_loaded_dialect_get(ld);
 //   // use d with parser/formatter/validator
 //   syntaqlite_loaded_dialect_destroy(ld);
 
@@ -19,12 +19,12 @@
 #include <windows.h>
 typedef HMODULE synq_lib_handle_t;
 #define SYNQ_DLOPEN(p) LoadLibraryA(p)
-#define SYNQ_DLSYM(l, s) (void *)GetProcAddress(l, s)
+#define SYNQ_DLSYM(l, s) (void*)GetProcAddress(l, s)
 #define SYNQ_DLCLOSE(l) FreeLibrary(l)
 #define SYNQ_DLERROR() "LoadLibrary failed"
 #else
 #include <dlfcn.h>
-typedef void *synq_lib_handle_t;
+typedef void* synq_lib_handle_t;
 #define SYNQ_DLOPEN(p) dlopen(p, RTLD_NOW)
 #define SYNQ_DLSYM(l, s) dlsym(l, s)
 #define SYNQ_DLCLOSE(l) dlclose(l)
@@ -45,10 +45,11 @@ struct SyntaqliteLoadedDialect {
 // Public API
 // ---------------------------------------------------------------------------
 
-SYNTAQLITE_API SyntaqliteLoadedDialect *
-syntaqlite_dialect_load(const char *path, const char *name) {
-  SyntaqliteLoadedDialect *ld =
-      (SyntaqliteLoadedDialect *)calloc(1, sizeof(SyntaqliteLoadedDialect));
+SYNTAQLITE_API SyntaqliteLoadedDialect* syntaqlite_dialect_load(
+    const char* path,
+    const char* name) {
+  SyntaqliteLoadedDialect* ld =
+      (SyntaqliteLoadedDialect*)calloc(1, sizeof(SyntaqliteLoadedDialect));
   if (!ld)
     return NULL;
 
@@ -80,20 +81,20 @@ syntaqlite_dialect_load(const char *path, const char *name) {
   return ld;
 }
 
-SYNTAQLITE_API const char *
-syntaqlite_loaded_dialect_error(const SyntaqliteLoadedDialect *ld) {
+SYNTAQLITE_API const char* syntaqlite_loaded_dialect_error(
+    const SyntaqliteLoadedDialect* ld) {
   if (!ld || ld->error[0] == '\0')
     return NULL;
   return ld->error;
 }
 
 SYNTAQLITE_API SyntaqliteDialect
-syntaqlite_loaded_dialect_get(const SyntaqliteLoadedDialect *ld) {
+syntaqlite_loaded_dialect_get(const SyntaqliteLoadedDialect* ld) {
   return ld->dialect;
 }
 
-SYNTAQLITE_API void
-syntaqlite_loaded_dialect_destroy(SyntaqliteLoadedDialect *ld) {
+SYNTAQLITE_API void syntaqlite_loaded_dialect_destroy(
+    SyntaqliteLoadedDialect* ld) {
   if (!ld)
     return;
   if (ld->lib)
