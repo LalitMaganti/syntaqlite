@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include "syntaqlite/config.h"
+#include "syntaqlite/dialect.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -230,6 +231,15 @@ SYNTAQLITE_API const SyntaqliteTableAccess* syntaqlite_validator_tables(
 // Free a string returned by a syntaqlite_* function that documents
 // ownership transfer. No-op if s is NULL.
 SYNTAQLITE_API void syntaqlite_string_destroy(char* s);
+
+// ---------------------------------------------------------------------------
+// Dialect-generic constructor
+// ---------------------------------------------------------------------------
+
+// Create a validator for any dialect.
+// The default analysis mode is SYNTAQLITE_MODE_DOCUMENT.
+SYNTAQLITE_API SyntaqliteValidator* syntaqlite_validator_create_with_dialect(
+    SyntaqliteDialect dialect);
 
 // ---------------------------------------------------------------------------
 // SQLite convenience (opt-out: -DSYNTAQLITE_OMIT_SQLITE_API)

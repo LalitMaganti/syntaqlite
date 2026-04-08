@@ -135,11 +135,8 @@ fn severity_to_c(s: Severity) -> u32 {
 
 // ── Exported C functions ────────────────────────────────────────────────────
 
-/// Create a validator for the built-in `SQLite` dialect.
-#[cfg(feature = "sqlite")]
-#[unsafe(no_mangle)]
-pub extern "C" fn syntaqlite_validator_create_sqlite() -> *mut SyntaqliteValidator {
-    let dialect: AnyDialect = crate::sqlite_dialect().into();
+/// Create a validator from a dialect handle.
+fn create_validator(dialect: AnyDialect) -> *mut SyntaqliteValidator {
     let analyzer = SemanticAnalyzer::with_dialect(dialect.clone());
     let user_catalog = Catalog::new(dialect.clone());
 
@@ -160,6 +157,28 @@ pub extern "C" fn syntaqlite_validator_create_sqlite() -> *mut SyntaqliteValidat
         lineage_strings: Vec::new(),
     });
     Box::into_raw(state).cast::<SyntaqliteValidator>()
+}
+
+/// Create a validator for any dialect.
+///
+/// # Safety
+///
+/// `dialect.tmpl` must point to a valid `SyntaqliteDialectTemplate`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_create_with_dialect(
+    dialect: crate::dialect::ffi::CDialect,
+) -> *mut SyntaqliteValidator {
+    // SAFETY: caller guarantees `dialect.tmpl` is valid.
+    let any = unsafe { AnyDialect::from_c_dialect(dialect) };
+    create_validator(any)
+}
+
+/// Create a validator for the built-in `SQLite` dialect.
+#[cfg(feature = "sqlite")]
+#[unsafe(no_mangle)]
+pub extern "C" fn syntaqlite_validator_create_sqlite() -> *mut SyntaqliteValidator {
+    let dialect: AnyDialect = crate::sqlite_dialect().into();
+    create_validator(dialect)
 }
 
 /// Free a validator. No-op if `v` is NULL.

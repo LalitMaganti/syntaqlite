@@ -197,6 +197,30 @@ pub unsafe extern "C" fn syntaqlite_formatter_error_msg(
     }
 }
 
+// ── Dialect-generic constructor ────────────────────────────────────────────
+
+/// Create a formatter for any dialect with optional config.
+///
+/// # Safety
+///
+/// - `dialect.tmpl` must point to a valid `SyntaqliteDialectTemplate`.
+/// - `config` must be NULL or a valid pointer to a `SyntaqliteFormatConfig`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_formatter_create_with_dialect(
+    dialect: crate::dialect::ffi::CDialect,
+    config: *const SyntaqliteFormatConfig,
+) -> *mut SyntaqliteFormatter {
+    // SAFETY: caller guarantees `dialect.tmpl` is valid.
+    let any = unsafe { crate::dialect::AnyDialect::from_c_dialect(dialect) };
+    let cfg = if config.is_null() {
+        FormatConfig::default()
+    } else {
+        // SAFETY: caller guarantees `config` is valid.
+        config_from_c(unsafe { &*config })
+    };
+    new_state(Formatter::with_dialect_config(any, &cfg))
+}
+
 // ── SQLite convenience (feature = "sqlite") ───────────────────────────────
 
 /// Create a formatter for the built-in `SQLite` dialect with default config.
