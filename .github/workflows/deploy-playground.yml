@@ -55,4 +55,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy web/playground/dist --project-name=syntaqlite-playground
+          command: pages deploy web/playground/dist --project-name=syntaqlite-playground --branch=main
