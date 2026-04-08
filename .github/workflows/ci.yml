@@ -248,3 +248,67 @@ jobs:
           name: playwright-report
           path: web/playground/playwright-report/
           retention-days: 30
+
+  deploy-playwright-report:
+    name: Deploy Playwright report
+    needs: playwright-tests
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Download Playwright report
+        uses: actions/download-artifact@v6
+        with:
+          name: playwright-report
+          path: playwright-report
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy playwright-report --project-name=syntaqlite-playwright-reports --branch=pr-${{ github.event.number }}
+
+      - name: Comment PR with report URL
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deploy.outputs.deployment-url }}';
+            const sha = '${{ github.event.pull_request.head.sha }}'.slice(0, 7);
+            const status = '${{ needs.playwright-tests.result }}';
+            const icon = status === 'success' ? '✅' : '❌';
+            const now = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+            const entry = `| ${icon} | \`${sha}\` | ${now} | [report](${url}) |`;
+            const header = [
+              '### Playwright Reports',
+              '',
+              '| | commit | time | link |',
+              '|---|--------|------|------|',
+            ].join('\n');
+            const marker = '<!-- playwright-reports -->';
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body.includes(marker));
+            if (existing) {
+              const body = existing.body + '\n' + entry;
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              const body = marker + '\n' + header + '\n' + entry;
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
