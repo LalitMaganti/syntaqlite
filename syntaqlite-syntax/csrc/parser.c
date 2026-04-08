@@ -57,11 +57,10 @@ typedef struct SynqMacroArg {
 // macro_expansions when fed via feed_macro_expansion().
 typedef struct MacroExpansion {
   const SyntaqliteMacroEntry* entry;  // Registry entry (for blue-paint).
-  char* data;                          // Expanded text.
-  uint32_t data_len;                   // Length of expanded text.
-  uint32_t end_offset;                 // Position past ')' in the source buf.
+  char* data;                         // Expanded text.
+  uint32_t data_len;                  // Length of expanded text.
+  uint32_t end_offset;                // Position past ')' in the source buf.
 } MacroExpansion;
-
 
 // ---------------------------------------------------------------------------
 // Parser struct
@@ -115,7 +114,6 @@ static int32_t set_result_status(SyntaqliteParser* p, int32_t rc) {
 
 // Forward declaration — defined after feed_one_token.
 static int check_macro_straddle(SyntaqliteParser* p);
-
 
 // Forward declaration — balanced-paren scanning for macro args (defined later).
 static uint32_t scan_macro_args(SyntaqliteParser* p,
@@ -449,13 +447,20 @@ static void record_comment(SyntaqliteParser* p, uint32_t offset, uint32_t len) {
 }
 
 // Forward declarations for the macro expansion pipeline.
-static int expand_macro(SyntaqliteParser* p, const char* buf, uint32_t buf_len,
-                        uint32_t id_offset, uint32_t id_len,
-                        uint32_t bang_offset, MacroExpansion* out);
-static int feed_macro_expansion(SyntaqliteParser* p, uint32_t call_offset,
-                                uint32_t call_length, MacroExpansion* exp,
+static int expand_macro(SyntaqliteParser* p,
+                        const char* buf,
+                        uint32_t buf_len,
+                        uint32_t id_offset,
+                        uint32_t id_len,
+                        uint32_t bang_offset,
+                        MacroExpansion* out);
+static int feed_macro_expansion(SyntaqliteParser* p,
+                                uint32_t call_offset,
+                                uint32_t call_length,
+                                MacroExpansion* exp,
                                 uint32_t depth);
-static void begin_macro_expansion(SyntaqliteParser* p, uint32_t call_offset,
+static void begin_macro_expansion(SyntaqliteParser* p,
+                                  uint32_t call_offset,
                                   uint32_t call_length,
                                   const char* expansion_data,
                                   uint32_t expansion_len);
@@ -722,8 +727,8 @@ static int expand_and_feed(SyntaqliteParser* p,
     uint32_t next_pos = pos + (uint32_t)tlen;
     if (ttype == SYNTAQLITE_TK_ID && next_pos < buf_len && z[next_pos] == '!') {
       MacroExpansion nested = {0};
-      int erc = expand_macro(p, buf, buf_len, pos, (uint32_t)tlen, next_pos,
-                             &nested);
+      int erc =
+          expand_macro(p, buf, buf_len, pos, (uint32_t)tlen, next_pos, &nested);
       if (erc == 0) {
         // Nested macros have no meaningful source-level call site.
         int frc = feed_macro_expansion(p, 0, 0, &nested, depth + 1);

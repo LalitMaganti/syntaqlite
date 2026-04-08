@@ -77,6 +77,7 @@ pub struct SyntaqliteDefinedRelation {
 /// function and remains valid until the next `analyze()` call.
 #[derive(Default)]
 struct PerStatementCache {
+    source: Option<CString>,
     diagnostics: Option<(Vec<SyntaqliteDiagnostic>, Vec<CString>)>,
     column_lineage: Option<(Vec<SyntaqliteColumnLineage>, Vec<CString>)>,
     relations: Option<(Vec<SyntaqliteRelationAccess>, Vec<CString>)>,
@@ -354,6 +355,89 @@ pub unsafe extern "C" fn syntaqlite_validator_set_mode(v: *mut SyntaqliteValidat
     });
 }
 
+// ── Module resolver callback ────────────────────────────────────────────────
+
+/// C function pointer type for module resolution.
+///
+/// Given a NUL-terminated module path (e.g. `"slices.flow"`), return the SQL
+/// source as a NUL-terminated `malloc`-allocated string, or NULL if the module
+/// is not found. The validator will `free()` the returned string.
+pub type SyntaqliteModuleResolverFn = unsafe extern "C" fn(
+    module_path: *const c_char,
+    user_data: *mut std::ffi::c_void,
+) -> *mut c_char;
+
+/// Wraps a C callback pair into a Rust `ModuleResolver`.
+struct CCallbackResolver {
+    resolve_fn: SyntaqliteModuleResolverFn,
+    user_data: *mut std::ffi::c_void,
+}
+
+// SAFETY: The C caller is responsible for ensuring thread safety of the
+// callback and user_data. The validator is single-threaded by design.
+unsafe impl Send for CCallbackResolver {}
+// SAFETY: Same as above — single-threaded validator, C caller owns thread safety.
+unsafe impl Sync for CCallbackResolver {}
+
+impl super::ModuleResolver for CCallbackResolver {
+    fn resolve(&self, module_path: &str) -> Option<String> {
+        let c_path = CString::new(module_path).ok()?;
+        // SAFETY: `resolve_fn` is a valid C function pointer provided by the caller
+        // of `syntaqlite_validator_set_module_resolver`. `c_path` is a valid
+        // NUL-terminated string and `user_data` is caller-managed.
+        let result = unsafe { (self.resolve_fn)(c_path.as_ptr(), self.user_data) };
+        if result.is_null() {
+            return None;
+        }
+        // SAFETY: the C callback returned a malloc-allocated NUL-terminated string.
+        let s = unsafe { CStr::from_ptr(result) }
+            .to_str()
+            .ok()
+            .map(String::from);
+        // SAFETY: `result` was returned by the C callback as a malloc-allocated
+        // string, so it is safe to pass to `free`.
+        unsafe {
+            unsafe extern "C" {
+                fn free(ptr: *mut std::ffi::c_void);
+            }
+            free(result.cast());
+        }
+        s
+    }
+}
+
+/// Set a module resolver callback on the validator. When the analyzer
+/// encounters an import statement, it calls `resolve_fn` to obtain the
+/// module's SQL source. Pass NULL for `resolve_fn` to clear the resolver.
+///
+/// # Safety
+///
+/// - `v` must be a valid pointer from `syntaqlite_validator_create_*`.
+/// - `resolve_fn` (if non-null) and `user_data` must remain valid for the
+///   lifetime of the validator or until the resolver is replaced/cleared.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_set_module_resolver(
+    v: *mut SyntaqliteValidator,
+    resolve_fn: Option<SyntaqliteModuleResolverFn>,
+    user_data: *mut std::ffi::c_void,
+) {
+    // SAFETY: caller guarantees `v` is a valid pointer from `syntaqlite_validator_create_*`.
+    let v = unsafe { &mut *v };
+    let state = v.state_mut();
+    match resolve_fn {
+        Some(f) => {
+            let resolver = CCallbackResolver {
+                resolve_fn: f,
+                user_data,
+            };
+            state.analyzer.set_module_resolver(Some(Box::new(resolver)));
+        }
+        None => {
+            state.analyzer.set_module_resolver(None);
+        }
+    }
+}
+
 /// Analyze a SQL source string. Returns the number of diagnostics.
 ///
 /// # Safety
@@ -387,7 +471,9 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
     state.last_source.clear();
     state.last_source.push_str(src);
     state.last_diagnostics.clear();
-    state.last_diagnostics.extend(all_diagnostics.iter().cloned());
+    state
+        .last_diagnostics
+        .extend(all_diagnostics.iter().cloned());
 
     // Reuse existing Vec capacity — clear + push avoids reallocating
     // on steady-state calls.
@@ -403,10 +489,7 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
     }
 
     // Second pass: build C structs pointing into rendered_messages.
-    for (d, msg) in all_diagnostics
-        .iter()
-        .zip(state.rendered_messages.iter())
-    {
+    for (d, msg) in all_diagnostics.iter().zip(state.rendered_messages.iter()) {
         state.c_diagnostics.push(SyntaqliteDiagnostic {
             severity: severity_to_c(d.severity()),
             message: msg.as_ptr(),
@@ -420,7 +503,9 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
     // Store model and reset per-statement cache for lazy access.
     let stmt_count = model.statements().len();
     state.per_statement_cache.clear();
-    state.per_statement_cache.resize_with(stmt_count, PerStatementCache::default);
+    state
+        .per_statement_cache
+        .resize_with(stmt_count, PerStatementCache::default);
     state.last_model = Some(model);
 
     state.c_diagnostics.len() as u32
@@ -793,10 +878,19 @@ pub unsafe extern "C" fn syntaqlite_validator_tables(
 
 use super::model::StatementModel;
 
+/// Build C source string from a `StatementModel`, caching into the slot.
+fn ensure_source<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel) -> &'a CString {
+    cache
+        .source
+        .get_or_insert_with(|| CString::new(stmt.source()).unwrap_or_default())
+}
+
 /// Build C diagnostics from a `StatementModel`, caching into the slot.
-fn ensure_diagnostics<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
-    -> &'a (Vec<SyntaqliteDiagnostic>, Vec<CString>)
-{
+#[expect(clippy::cast_possible_truncation)]
+fn ensure_diagnostics<'a>(
+    cache: &'a mut PerStatementCache,
+    stmt: &StatementModel,
+) -> &'a (Vec<SyntaqliteDiagnostic>, Vec<CString>) {
     cache.diagnostics.get_or_insert_with(|| {
         let mut msgs = Vec::new();
         let mut diags = Vec::new();
@@ -816,34 +910,54 @@ fn ensure_diagnostics<'a>(cache: &'a mut PerStatementCache, stmt: &StatementMode
 }
 
 /// Build C column lineage from a `StatementModel`.
-fn ensure_column_lineage<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
-    -> &'a (Vec<SyntaqliteColumnLineage>, Vec<CString>)
-{
+fn ensure_column_lineage<'a>(
+    cache: &'a mut PerStatementCache,
+    stmt: &StatementModel,
+) -> &'a (Vec<SyntaqliteColumnLineage>, Vec<CString>) {
     cache.column_lineage.get_or_insert_with(|| {
         let mut strings = Vec::new();
         let mut cols = Vec::new();
         if let Some(lineage) = stmt.lineage() {
-            // First pass: all strings.
-            for col in lineage.into_inner() {
-                strings.push(CString::new(col.name.as_str()).unwrap_or_default());
-                if let Some(ref origin) = col.origin {
-                    strings.push(CString::new(origin.table.as_str()).unwrap_or_default());
-                    strings.push(CString::new(origin.column.as_str()).unwrap_or_default());
-                }
-            }
-            // Second pass: build C structs.
+            let inner = lineage.into_inner();
+            // First pass: collect all CStrings.
+            let has_origin: Vec<bool> = inner
+                .iter()
+                .map(|col| {
+                    strings.push(CString::new(col.name.as_str()).unwrap_or_default());
+                    if let Some(ref origin) = col.origin {
+                        strings.push(CString::new(origin.table.as_str()).unwrap_or_default());
+                        strings.push(CString::new(origin.column.as_str()).unwrap_or_default());
+                        true
+                    } else {
+                        false
+                    }
+                })
+                .collect();
+            // Second pass: build C structs referencing the collected strings.
             let mut si = 0;
-            for col in stmt.lineage().unwrap().into_inner() {
+            for (col, &has_orig) in inner.iter().zip(has_origin.iter()) {
                 let name_ptr = strings[si].as_ptr();
                 si += 1;
-                let origin = if col.origin.is_some() {
-                    let tp = strings[si].as_ptr(); si += 1;
-                    let cp = strings[si].as_ptr(); si += 1;
-                    SyntaqliteColumnOrigin { table: tp, column: cp }
+                let origin = if has_orig {
+                    let tp = strings[si].as_ptr();
+                    si += 1;
+                    let cp = strings[si].as_ptr();
+                    si += 1;
+                    SyntaqliteColumnOrigin {
+                        table: tp,
+                        column: cp,
+                    }
                 } else {
-                    SyntaqliteColumnOrigin { table: std::ptr::null(), column: std::ptr::null() }
+                    SyntaqliteColumnOrigin {
+                        table: std::ptr::null(),
+                        column: std::ptr::null(),
+                    }
                 };
-                cols.push(SyntaqliteColumnLineage { name: name_ptr, index: col.index, origin });
+                cols.push(SyntaqliteColumnLineage {
+                    name: name_ptr,
+                    index: col.index,
+                    origin,
+                });
             }
         }
         (cols, strings)
@@ -851,20 +965,25 @@ fn ensure_column_lineage<'a>(cache: &'a mut PerStatementCache, stmt: &StatementM
 }
 
 /// Build C relation access from a `StatementModel`.
-fn ensure_relations<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
-    -> &'a (Vec<SyntaqliteRelationAccess>, Vec<CString>)
-{
+fn ensure_relations<'a>(
+    cache: &'a mut PerStatementCache,
+    stmt: &StatementModel,
+) -> &'a (Vec<SyntaqliteRelationAccess>, Vec<CString>) {
     cache.relations.get_or_insert_with(|| {
         let mut strings = Vec::new();
         let mut rels = Vec::new();
         if let Some(result) = stmt.relations_accessed() {
-            for r in result.into_inner() {
+            let inner = result.into_inner();
+            for r in inner {
                 strings.push(CString::new(r.name.as_str()).unwrap_or_default());
             }
-            for (i, r) in stmt.relations_accessed().unwrap().into_inner().iter().enumerate() {
+            for (s, r) in strings.iter().zip(inner.iter()) {
                 rels.push(SyntaqliteRelationAccess {
-                    name: strings[i].as_ptr(),
-                    kind: match r.kind { RelationKind::Table => 0, RelationKind::View => 1 },
+                    name: s.as_ptr(),
+                    kind: match r.kind {
+                        RelationKind::Table => 0,
+                        RelationKind::View => 1,
+                    },
                 });
             }
         }
@@ -873,9 +992,10 @@ fn ensure_relations<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
 }
 
 /// Build C table access from a `StatementModel`.
-fn ensure_tables<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
-    -> &'a (Vec<SyntaqliteTableAccess>, Vec<CString>)
-{
+fn ensure_tables<'a>(
+    cache: &'a mut PerStatementCache,
+    stmt: &StatementModel,
+) -> &'a (Vec<SyntaqliteTableAccess>, Vec<CString>) {
     cache.tables.get_or_insert_with(|| {
         let mut strings = Vec::new();
         let mut tbls = Vec::new();
@@ -883,8 +1003,8 @@ fn ensure_tables<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
             for t in result.into_inner() {
                 strings.push(CString::new(t.name.as_str()).unwrap_or_default());
             }
-            for i in 0..strings.len() {
-                tbls.push(SyntaqliteTableAccess { name: strings[i].as_ptr() });
+            for s in &strings {
+                tbls.push(SyntaqliteTableAccess { name: s.as_ptr() });
             }
         }
         (tbls, strings)
@@ -892,18 +1012,20 @@ fn ensure_tables<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
 }
 
 /// Build C defined relations from a `StatementModel`.
-fn ensure_defined_relations<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel)
-    -> &'a (Vec<SyntaqliteDefinedRelation>, Vec<CString>)
-{
+fn ensure_defined_relations<'a>(
+    cache: &'a mut PerStatementCache,
+    stmt: &StatementModel,
+) -> &'a (Vec<SyntaqliteDefinedRelation>, Vec<CString>) {
     cache.defined_relations.get_or_insert_with(|| {
         let mut strings = Vec::new();
         let mut defs = Vec::new();
-        for dr in stmt.defined_relations() {
+        let defined = stmt.defined_relations();
+        for dr in defined {
             strings.push(CString::new(dr.name.as_str()).unwrap_or_default());
         }
-        for (i, dr) in stmt.defined_relations().iter().enumerate() {
+        for (s, dr) in strings.iter().zip(defined.iter()) {
             defs.push(SyntaqliteDefinedRelation {
-                name: strings[i].as_ptr(),
+                name: s.as_ptr(),
                 is_view: u32::from(dr.is_view),
             });
         }
@@ -920,18 +1042,20 @@ unsafe fn stmt_cache<'a>(
     v: *mut SyntaqliteValidator,
     idx: u32,
 ) -> Option<(&'a StatementModel, &'a mut PerStatementCache)> {
+    // SAFETY: caller guarantees `v` is a valid pointer from `syntaqlite_validator_create_*`.
     let state = unsafe { &mut *v }.state_mut();
     let i = idx as usize;
     let model = state.last_model.as_ref()?;
     let stmt = model.statements().get(i)?;
     let cache = &mut state.per_statement_cache[i];
-    // Reborrow stmt with a longer lifetime — model lives in state and won't
+    // SAFETY: Reborrow stmt with a longer lifetime — model lives in state and won't
     // move while we hold &mut state.
-    let stmt: &StatementModel = unsafe { &*(stmt as *const StatementModel) };
+    let stmt: &StatementModel = unsafe { &*std::ptr::from_ref::<StatementModel>(stmt) };
     Some((stmt, cache))
 }
 
 /// Return (ptr, count) for a lazily-cached vec, or (null, 0) on miss.
+#[expect(clippy::cast_possible_truncation)]
 fn cached_slice<T>(v: &[T]) -> (*const T, u32) {
     if v.is_empty() {
         (std::ptr::null(), 0)
@@ -940,11 +1064,27 @@ fn cached_slice<T>(v: &[T]) -> (*const T, u32) {
     }
 }
 
+/// Source text for statement `idx`. Returns NULL when out of bounds.
+///
+/// # Safety
+///
+/// `v` must be a valid pointer from `syntaqlite_validator_create_*`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_source(
+    v: *mut SyntaqliteValidator,
+    idx: u32,
+) -> *const c_char {
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return std::ptr::null();
+    };
+    ensure_source(c, s).as_ptr()
+}
+
 #[unsafe(no_mangle)]
 #[expect(clippy::cast_possible_truncation)]
-pub unsafe extern "C" fn syntaqlite_validator_statement_count(
-    v: *mut SyntaqliteValidator,
-) -> u32 {
+pub unsafe extern "C" fn syntaqlite_validator_statement_count(v: *mut SyntaqliteValidator) -> u32 {
+    // SAFETY: caller guarantees `v` is a valid pointer from `syntaqlite_validator_create_*`.
     let state = unsafe { &mut *v }.state_mut();
     state
         .last_model
@@ -953,87 +1093,122 @@ pub unsafe extern "C" fn syntaqlite_validator_statement_count(
 }
 
 #[unsafe(no_mangle)]
-#[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_diagnostic_count(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> u32 {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return 0;
+    };
     cached_slice(&ensure_diagnostics(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_diagnostics(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> *const SyntaqliteDiagnostic {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return std::ptr::null();
+    };
     cached_slice(&ensure_diagnostics(c, s).0).0
 }
 
 #[unsafe(no_mangle)]
-#[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_column_lineage_count(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> u32 {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return 0;
+    };
     cached_slice(&ensure_column_lineage(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_column_lineage(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> *const SyntaqliteColumnLineage {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return std::ptr::null();
+    };
     cached_slice(&ensure_column_lineage(c, s).0).0
 }
 
 #[unsafe(no_mangle)]
-#[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_relation_count(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> u32 {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return 0;
+    };
     cached_slice(&ensure_relations(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_relations(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> *const SyntaqliteRelationAccess {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return std::ptr::null();
+    };
     cached_slice(&ensure_relations(c, s).0).0
 }
 
 #[unsafe(no_mangle)]
-#[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_table_count(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> u32 {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return 0;
+    };
     cached_slice(&ensure_tables(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_tables(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> *const SyntaqliteTableAccess {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return std::ptr::null();
+    };
     cached_slice(&ensure_tables(c, s).0).0
 }
 
 #[unsafe(no_mangle)]
-#[expect(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_defined_relation_count(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> u32 {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return 0 };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return 0;
+    };
     cached_slice(&ensure_defined_relations(c, s).0).1
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn syntaqlite_validator_statement_defined_relations(
-    v: *mut SyntaqliteValidator, idx: u32,
+    v: *mut SyntaqliteValidator,
+    idx: u32,
 ) -> *const SyntaqliteDefinedRelation {
-    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else { return std::ptr::null() };
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return std::ptr::null();
+    };
     cached_slice(&ensure_defined_relations(c, s).0).0
 }
 
@@ -1557,6 +1732,7 @@ mod tests {
     // ── Lineage ─────────────────────────────────────────────────────────
 
     /// Helper: register a table with known columns via FFI.
+    #[expect(clippy::cast_possible_truncation)]
     unsafe fn add_table(v: *mut SyntaqliteValidator, name: &str, cols: &[&str]) {
         let c_name = CString::new(name).unwrap();
         let c_cols: Vec<CString> = cols.iter().map(|c| CString::new(*c).unwrap()).collect();
@@ -1747,6 +1923,7 @@ mod tests {
     // ── load_schema_ddl ─────────────────────────────────────────────────
 
     #[test]
+    #[expect(clippy::cast_possible_truncation)]
     fn load_schema_ddl_registers_tables_and_views() {
         let v = syntaqlite_validator_create_sqlite();
         // SAFETY: FFI test.
@@ -1769,6 +1946,7 @@ mod tests {
     }
 
     #[test]
+    #[expect(clippy::cast_possible_truncation)]
     fn load_schema_ddl_reports_parse_errors() {
         let v = syntaqlite_validator_create_sqlite();
         // SAFETY: FFI test.
@@ -1788,10 +1966,12 @@ mod tests {
 
     // ── Per-statement API ────────────────────────────────────────────────
 
+    // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
     unsafe fn c_str_val(ptr: *const c_char) -> String {
         if ptr.is_null() {
             String::new()
         } else {
+            // SAFETY: caller guarantees `ptr` is a valid NUL-terminated C string.
             unsafe { CStr::from_ptr(ptr) }
                 .to_str()
                 .unwrap_or("")
@@ -1801,6 +1981,7 @@ mod tests {
 
     #[test]
     fn statement_count_single() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             analyze(v, "SELECT 1;");
@@ -1811,6 +1992,7 @@ mod tests {
 
     #[test]
     fn statement_count_multiple() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             analyze(v, "SELECT 1; SELECT 2; SELECT 3;");
@@ -1821,6 +2003,7 @@ mod tests {
 
     #[test]
     fn statement_count_with_ddl() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             analyze(v, "CREATE TABLE t (a INT); SELECT a FROM t;");
@@ -1831,6 +2014,7 @@ mod tests {
 
     #[test]
     fn per_statement_diagnostics_only_on_bad_statement() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             add_table(v, "users", &["id", "name"]);
@@ -1849,6 +2033,7 @@ mod tests {
 
     #[test]
     fn per_statement_diagnostics_parse_error() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             analyze(v, "SELECT FROM; SELECT 1;");
@@ -1861,6 +2046,7 @@ mod tests {
 
     #[test]
     fn per_statement_lineage_select() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             add_table(v, "t", &["a", "b"]);
@@ -1880,6 +2066,7 @@ mod tests {
 
     #[test]
     fn per_statement_lineage_ddl_has_none() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             analyze(v, "CREATE TABLE t (a INT); SELECT 1;");
@@ -1892,6 +2079,7 @@ mod tests {
 
     #[test]
     fn per_statement_relations_accessed() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             add_table(v, "users", &["id"]);
@@ -1912,27 +2100,38 @@ mod tests {
 
     #[test]
     fn per_statement_defined_relations_create_table() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             analyze(v, "CREATE TABLE foo (a INT); SELECT 1;");
             assert_eq!(syntaqlite_validator_statement_count(v), 2);
-            assert_eq!(syntaqlite_validator_statement_defined_relation_count(v, 0), 1);
+            assert_eq!(
+                syntaqlite_validator_statement_defined_relation_count(v, 0),
+                1
+            );
             let defs = syntaqlite_validator_statement_defined_relations(v, 0);
             assert!(!defs.is_null());
             assert_eq!(c_str_val((*defs).name), "foo");
             assert_eq!((*defs).is_view, 0);
-            assert_eq!(syntaqlite_validator_statement_defined_relation_count(v, 1), 0);
+            assert_eq!(
+                syntaqlite_validator_statement_defined_relation_count(v, 1),
+                0
+            );
             syntaqlite_validator_destroy(v);
         }
     }
 
     #[test]
     fn per_statement_defined_relations_create_view() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             analyze(v, "CREATE VIEW v AS SELECT 1; SELECT 1;");
             assert_eq!(syntaqlite_validator_statement_count(v), 2);
-            assert_eq!(syntaqlite_validator_statement_defined_relation_count(v, 0), 1);
+            assert_eq!(
+                syntaqlite_validator_statement_defined_relation_count(v, 0),
+                1
+            );
             let defs = syntaqlite_validator_statement_defined_relations(v, 0);
             assert_eq!(c_str_val((*defs).name), "v");
             assert_eq!((*defs).is_view, 1);
@@ -1942,25 +2141,87 @@ mod tests {
 
     #[test]
     fn out_of_bounds_returns_zero() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             analyze(v, "SELECT 1;");
             assert_eq!(syntaqlite_validator_statement_diagnostic_count(v, 99), 0);
             assert!(syntaqlite_validator_statement_diagnostics(v, 99).is_null());
-            assert_eq!(syntaqlite_validator_statement_column_lineage_count(v, 99), 0);
+            assert_eq!(
+                syntaqlite_validator_statement_column_lineage_count(v, 99),
+                0
+            );
             assert!(syntaqlite_validator_statement_column_lineage(v, 99).is_null());
             assert_eq!(syntaqlite_validator_statement_relation_count(v, 99), 0);
             assert!(syntaqlite_validator_statement_relations(v, 99).is_null());
             assert_eq!(syntaqlite_validator_statement_table_count(v, 99), 0);
             assert!(syntaqlite_validator_statement_tables(v, 99).is_null());
-            assert_eq!(syntaqlite_validator_statement_defined_relation_count(v, 99), 0);
+            assert_eq!(
+                syntaqlite_validator_statement_defined_relation_count(v, 99),
+                0
+            );
             assert!(syntaqlite_validator_statement_defined_relations(v, 99).is_null());
+            assert!(syntaqlite_validator_statement_source(v, 99).is_null());
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn per_statement_source_text() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "SELECT 1; SELECT 2;");
+            assert_eq!(syntaqlite_validator_statement_count(v), 2);
+
+            let src0 = syntaqlite_validator_statement_source(v, 0);
+            assert!(!src0.is_null());
+            let s0 = CStr::from_ptr(src0).to_str().unwrap();
+            assert!(s0.contains("SELECT 1"), "expected 'SELECT 1', got: {s0}");
+
+            let src1 = syntaqlite_validator_statement_source(v, 1);
+            assert!(!src1.is_null());
+            let s1 = CStr::from_ptr(src1).to_str().unwrap();
+            assert!(s1.contains("SELECT 2"), "expected 'SELECT 2', got: {s1}");
+
+            // Out of bounds returns null.
+            assert!(syntaqlite_validator_statement_source(v, 99).is_null());
+
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn set_module_resolver_callback_no_crash() {
+        // A resolver that always returns NULL (module not found).
+        unsafe extern "C" fn null_resolver(
+            _module_path: *const c_char,
+            _user_data: *mut std::ffi::c_void,
+        ) -> *mut c_char {
+            std::ptr::null_mut()
+        }
+
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+
+            // Set a resolver callback — should not crash.
+            syntaqlite_validator_set_module_resolver(v, Some(null_resolver), std::ptr::null_mut());
+            analyze(v, "SELECT 1;");
+            assert_eq!(syntaqlite_validator_diagnostic_count(v), 0);
+
+            // Clear the resolver — should not crash.
+            syntaqlite_validator_set_module_resolver(v, None, std::ptr::null_mut());
+            analyze(v, "SELECT 1;");
+            assert_eq!(syntaqlite_validator_diagnostic_count(v), 0);
+
             syntaqlite_validator_destroy(v);
         }
     }
 
     #[test]
     fn aggregated_diagnostics_matches_per_statement_sum() {
+        // SAFETY: FFI test — all pointers are valid and calls follow documented API contracts.
         unsafe {
             let v = syntaqlite_validator_create_sqlite();
             add_table(v, "t", &["a"]);

@@ -136,8 +136,8 @@ impl core::convert::From<syntaqlite_syntax::nodes::VariableId> for syntaqlite_sy
 impl core::convert::From<syntaqlite_syntax::nodes::WindowDefId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::WindowDefListId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::WithClauseId> for syntaqlite_syntax::any::AnyNodeId
-impl core::convert::From<syntaqlite_syntax::typed::Grammar> for syntaqlite_syntax::any::AnyGrammar
-impl core::convert::From<syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::typed::Grammar>> for syntaqlite_syntax::IncrementalParseSession
+impl core::convert::From<syntaqlite_syntax::typed::Dialect> for syntaqlite_syntax::any::AnyDialect
+impl core::convert::From<syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::typed::Dialect>> for syntaqlite_syntax::IncrementalParseSession
 impl core::fmt::Debug for syntaqlite_syntax::ParserToken<'_>
 impl core::fmt::Debug for syntaqlite_syntax::any::AnyNode<'_>
 impl core::fmt::Debug for syntaqlite_syntax::any::NodeFields<'_>
@@ -270,14 +270,14 @@ impl core::fmt::Display for syntaqlite_syntax::nodes::ValuesClause<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::Variable<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::WindowDef<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::WithClause<'_>
-impl core::marker::Send for syntaqlite_syntax::any::AnyGrammar
-impl core::marker::Sync for syntaqlite_syntax::any::AnyGrammar
+impl core::marker::Send for syntaqlite_syntax::any::AnyDialect
+impl core::marker::Sync for syntaqlite_syntax::any::AnyDialect
 impl syntaqlite_syntax::CommentSpan
 impl syntaqlite_syntax::CompletionContext
 impl syntaqlite_syntax::IncrementalParseSession
 impl syntaqlite_syntax::ParserConfig
 impl syntaqlite_syntax::ParserTokenFlags
-impl syntaqlite_syntax::any::AnyGrammar
+impl syntaqlite_syntax::any::AnyDialect
 impl syntaqlite_syntax::any::AnyNodeId
 impl syntaqlite_syntax::any::AnyNodeTag
 impl syntaqlite_syntax::any::AnyTokenType
@@ -405,11 +405,11 @@ impl syntaqlite_syntax::nodes::VariableId
 impl syntaqlite_syntax::nodes::WindowDefId
 impl syntaqlite_syntax::nodes::WindowDefListId
 impl syntaqlite_syntax::nodes::WithClauseId
-impl syntaqlite_syntax::typed::Grammar
+impl syntaqlite_syntax::typed::Dialect
 impl syntaqlite_syntax::typed::GrammarTokenType for syntaqlite_syntax::TokenType
 impl syntaqlite_syntax::typed::GrammarTokenType for syntaqlite_syntax::any::AnyTokenType
-impl syntaqlite_syntax::typed::TypedGrammar for syntaqlite_syntax::any::AnyGrammar
-impl syntaqlite_syntax::typed::TypedGrammar for syntaqlite_syntax::typed::Grammar
+impl syntaqlite_syntax::typed::TypedDialect for syntaqlite_syntax::any::AnyDialect
+impl syntaqlite_syntax::typed::TypedDialect for syntaqlite_syntax::typed::Dialect
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::AggregateFunctionCallId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::AlterTableStmtId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId
@@ -498,12 +498,12 @@ impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::WithCla
 impl syntaqlite_syntax::util::SqliteSyntaxFlag
 impl syntaqlite_syntax::util::SqliteSyntaxFlags
 impl syntaqlite_syntax::util::SqliteVersion
-impl<'a, G: syntaqlite_syntax::typed::TypedGrammar, T: syntaqlite_syntax::typed::GrammarNodeType<'a>> syntaqlite_syntax::typed::TypedNodeList<'a, G, T>
-impl<'a, G: syntaqlite_syntax::typed::TypedGrammar, T> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::typed::TypedNodeList<'a, G, T>
-impl<'a, G: syntaqlite_syntax::typed::TypedGrammar> syntaqlite_syntax::typed::TypedParseError<'a, G>
-impl<'a, G: syntaqlite_syntax::typed::TypedGrammar> syntaqlite_syntax::typed::TypedParsedStatement<'a, G>
-impl<'a, G: syntaqlite_syntax::typed::TypedGrammar> syntaqlite_syntax::typed::TypedParserToken<'a, G>
-impl<'a, G: syntaqlite_syntax::typed::TypedGrammar> syntaqlite_syntax::typed::TypedToken<'a, G>
+impl<'a, G: syntaqlite_syntax::typed::TypedDialect, T: syntaqlite_syntax::typed::GrammarNodeType<'a>> syntaqlite_syntax::typed::TypedNodeList<'a, G, T>
+impl<'a, G: syntaqlite_syntax::typed::TypedDialect, T> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::typed::TypedNodeList<'a, G, T>
+impl<'a, G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedParseError<'a, G>
+impl<'a, G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedParsedStatement<'a, G>
+impl<'a, G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedParserToken<'a, G>
+impl<'a, G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedToken<'a, G>
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::AggregateFunctionCall<'a>> for syntaqlite_syntax::nodes::AggregateFunctionCallId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::AlterTableStmt<'a>> for syntaqlite_syntax::nodes::AlterTableStmtId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>> for syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId
@@ -575,20 +575,20 @@ impl<'a> core::convert::From<syntaqlite_syntax::nodes::ValuesClause<'a>> for syn
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::Variable<'a>> for syntaqlite_syntax::nodes::VariableId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::WindowDef<'a>> for syntaqlite_syntax::nodes::WindowDefId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::WithClause<'a>> for syntaqlite_syntax::nodes::WithClauseId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::CaseWhen<'a>>> for syntaqlite_syntax::nodes::CaseWhenListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ColumnConstraint<'a>>> for syntaqlite_syntax::nodes::ColumnConstraintListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ColumnDef<'a>>> for syntaqlite_syntax::nodes::ColumnDefListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::CteDefinition<'a>>> for syntaqlite_syntax::nodes::CteListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::Expr<'a>>> for syntaqlite_syntax::nodes::ExprListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::NamedWindowDef<'a>>> for syntaqlite_syntax::nodes::NamedWindowDefListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::OrderingTerm<'a>>> for syntaqlite_syntax::nodes::OrderByListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ResultColumn<'a>>> for syntaqlite_syntax::nodes::ResultColumnListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::SetClause<'a>>> for syntaqlite_syntax::nodes::SetClauseListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::Stmt<'a>>> for syntaqlite_syntax::nodes::TriggerCmdListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::TableConstraint<'a>>> for syntaqlite_syntax::nodes::TableConstraintListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::UpsertClause<'a>>> for syntaqlite_syntax::nodes::UpsertClauseListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::WindowDef<'a>>> for syntaqlite_syntax::nodes::WindowDefListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::Expr<'a>>>> for syntaqlite_syntax::nodes::ValuesRowListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::CaseWhen<'a>>> for syntaqlite_syntax::nodes::CaseWhenListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ColumnConstraint<'a>>> for syntaqlite_syntax::nodes::ColumnConstraintListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ColumnDef<'a>>> for syntaqlite_syntax::nodes::ColumnDefListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::CteDefinition<'a>>> for syntaqlite_syntax::nodes::CteListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Expr<'a>>> for syntaqlite_syntax::nodes::ExprListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::NamedWindowDef<'a>>> for syntaqlite_syntax::nodes::NamedWindowDefListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::OrderingTerm<'a>>> for syntaqlite_syntax::nodes::OrderByListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ResultColumn<'a>>> for syntaqlite_syntax::nodes::ResultColumnListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::SetClause<'a>>> for syntaqlite_syntax::nodes::SetClauseListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Stmt<'a>>> for syntaqlite_syntax::nodes::TriggerCmdListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraint<'a>>> for syntaqlite_syntax::nodes::TableConstraintListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::UpsertClause<'a>>> for syntaqlite_syntax::nodes::UpsertClauseListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::WindowDef<'a>>> for syntaqlite_syntax::nodes::WindowDefListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Expr<'a>>>> for syntaqlite_syntax::nodes::ValuesRowListId
 impl<'a> core::ops::index::Index<usize> for syntaqlite_syntax::any::NodeFields<'a>
 impl<'a> syntaqlite_syntax::Comment<'a>
 impl<'a> syntaqlite_syntax::ParserToken<'a>
@@ -737,18 +737,18 @@ impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::no
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::Variable<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::WindowDef<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::WithClause<'a>
-impl<G: syntaqlite_syntax::typed::TypedGrammar, T: core::clone::Clone> core::marker::Copy for syntaqlite_syntax::typed::TypedNodeList<'_, G, T>
-impl<G: syntaqlite_syntax::typed::TypedGrammar, T> core::fmt::Debug for syntaqlite_syntax::typed::TypedNodeList<'_, G, T>
-impl<G: syntaqlite_syntax::typed::TypedGrammar, T> syntaqlite_syntax::typed::TypedNodeList<'_, G, T>
-impl<G: syntaqlite_syntax::typed::TypedGrammar> core::error::Error for syntaqlite_syntax::typed::TypedParseError<'_, G>
-impl<G: syntaqlite_syntax::typed::TypedGrammar> core::fmt::Debug for syntaqlite_syntax::typed::TypedParseError<'_, G>
-impl<G: syntaqlite_syntax::typed::TypedGrammar> core::fmt::Display for syntaqlite_syntax::typed::TypedParseError<'_, G>
-impl<G: syntaqlite_syntax::typed::TypedGrammar> core::ops::drop::Drop for syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
-impl<G: syntaqlite_syntax::typed::TypedGrammar> core::ops::drop::Drop for syntaqlite_syntax::typed::TypedParseSession<G>
-impl<G: syntaqlite_syntax::typed::TypedGrammar> syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
-impl<G: syntaqlite_syntax::typed::TypedGrammar> syntaqlite_syntax::typed::TypedParseSession<G>
-impl<G: syntaqlite_syntax::typed::TypedGrammar> syntaqlite_syntax::typed::TypedParser<G>
-impl<G: syntaqlite_syntax::typed::TypedGrammar> syntaqlite_syntax::typed::TypedTokenizer<G>
+impl<G: syntaqlite_syntax::typed::TypedDialect, T: core::clone::Clone> core::marker::Copy for syntaqlite_syntax::typed::TypedNodeList<'_, G, T>
+impl<G: syntaqlite_syntax::typed::TypedDialect, T> core::fmt::Debug for syntaqlite_syntax::typed::TypedNodeList<'_, G, T>
+impl<G: syntaqlite_syntax::typed::TypedDialect, T> syntaqlite_syntax::typed::TypedNodeList<'_, G, T>
+impl<G: syntaqlite_syntax::typed::TypedDialect> core::error::Error for syntaqlite_syntax::typed::TypedParseError<'_, G>
+impl<G: syntaqlite_syntax::typed::TypedDialect> core::fmt::Debug for syntaqlite_syntax::typed::TypedParseError<'_, G>
+impl<G: syntaqlite_syntax::typed::TypedDialect> core::fmt::Display for syntaqlite_syntax::typed::TypedParseError<'_, G>
+impl<G: syntaqlite_syntax::typed::TypedDialect> core::ops::drop::Drop for syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
+impl<G: syntaqlite_syntax::typed::TypedDialect> core::ops::drop::Drop for syntaqlite_syntax::typed::TypedParseSession<G>
+impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
+impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedParseSession<G>
+impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedParser<G>
+impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedTokenizer<G>
 impl<T, E> syntaqlite_syntax::ParseOutcome<T, E>
 pub enum syntaqlite_syntax::CommentKind
 pub enum syntaqlite_syntax::ParseOutcome<T, E>
@@ -778,7 +778,7 @@ pub fn syntaqlite_syntax::IncrementalParseSession::end_macro(&mut self)
 pub fn syntaqlite_syntax::IncrementalParseSession::expected_tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::TokenType>
 pub fn syntaqlite_syntax::IncrementalParseSession::feed_token(&mut self, token_type: syntaqlite_syntax::TokenType, span: core::ops::range::Range<usize>) -> core::option::Option<core::result::Result<ParsedStatement<'_>, ParseError<'_>>>
 pub fn syntaqlite_syntax::IncrementalParseSession::finish(&mut self) -> core::option::Option<core::result::Result<ParsedStatement<'_>, ParseError<'_>>>
-pub fn syntaqlite_syntax::IncrementalParseSession::from(inner: syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::typed::Grammar>) -> Self
+pub fn syntaqlite_syntax::IncrementalParseSession::from(inner: syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::typed::Dialect>) -> Self
 pub fn syntaqlite_syntax::IncrementalParseSession::node_count(&self) -> u32
 pub fn syntaqlite_syntax::ParseOutcome<T, E>::map<U>(self, f: impl core::ops::function::FnOnce(T) -> U) -> syntaqlite_syntax::ParseOutcome<U, E>
 pub fn syntaqlite_syntax::ParseOutcome<T, E>::map_err<F>(self, f: impl core::ops::function::FnOnce(E) -> F) -> syntaqlite_syntax::ParseOutcome<T, F>
@@ -800,18 +800,18 @@ pub fn syntaqlite_syntax::ParserTokenFlags::used_as_function(self) -> bool
 pub fn syntaqlite_syntax::ParserTokenFlags::used_as_identifier(self) -> bool
 pub fn syntaqlite_syntax::ParserTokenFlags::used_as_type(self) -> bool
 pub fn syntaqlite_syntax::TokenType::from_token_type(raw: syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
-pub fn syntaqlite_syntax::any::AnyGrammar::cflags(&self) -> syntaqlite_syntax::util::SqliteSyntaxFlags
-pub fn syntaqlite_syntax::any::AnyGrammar::classify_token(&self, token_type: syntaqlite_syntax::any::AnyTokenType, flags: syntaqlite_syntax::ParserTokenFlags) -> syntaqlite_syntax::any::TokenCategory
-pub fn syntaqlite_syntax::any::AnyGrammar::field_meta(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::FieldMeta<'static>>
-pub fn syntaqlite_syntax::any::AnyGrammar::from(g: syntaqlite_syntax::typed::Grammar) -> syntaqlite_syntax::any::AnyGrammar
-pub fn syntaqlite_syntax::any::AnyGrammar::has_macro_style(&self) -> bool
-pub fn syntaqlite_syntax::any::AnyGrammar::is_list(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> bool
-pub fn syntaqlite_syntax::any::AnyGrammar::keywords(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::KeywordEntry> + '_
-pub fn syntaqlite_syntax::any::AnyGrammar::node_name(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> &'static str
-pub fn syntaqlite_syntax::any::AnyGrammar::token_category(&self, token_type: syntaqlite_syntax::any::AnyTokenType) -> syntaqlite_syntax::any::TokenCategory
-pub fn syntaqlite_syntax::any::AnyGrammar::version(&self) -> syntaqlite_syntax::util::SqliteVersion
-pub fn syntaqlite_syntax::any::AnyGrammar::with_cflags(self, flags: syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
-pub fn syntaqlite_syntax::any::AnyGrammar::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
+pub fn syntaqlite_syntax::any::AnyDialect::cflags(&self) -> syntaqlite_syntax::util::SqliteSyntaxFlags
+pub fn syntaqlite_syntax::any::AnyDialect::classify_token(&self, token_type: syntaqlite_syntax::any::AnyTokenType, flags: syntaqlite_syntax::ParserTokenFlags) -> syntaqlite_syntax::any::TokenCategory
+pub fn syntaqlite_syntax::any::AnyDialect::field_meta(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::FieldMeta<'static>>
+pub fn syntaqlite_syntax::any::AnyDialect::from(g: syntaqlite_syntax::typed::Dialect) -> syntaqlite_syntax::any::AnyDialect
+pub fn syntaqlite_syntax::any::AnyDialect::has_macro_style(&self) -> bool
+pub fn syntaqlite_syntax::any::AnyDialect::is_list(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> bool
+pub fn syntaqlite_syntax::any::AnyDialect::keywords(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::KeywordEntry> + '_
+pub fn syntaqlite_syntax::any::AnyDialect::node_name(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> &'static str
+pub fn syntaqlite_syntax::any::AnyDialect::token_category(&self, token_type: syntaqlite_syntax::any::AnyTokenType) -> syntaqlite_syntax::any::TokenCategory
+pub fn syntaqlite_syntax::any::AnyDialect::version(&self) -> syntaqlite_syntax::util::SqliteVersion
+pub fn syntaqlite_syntax::any::AnyDialect::with_cflags(self, flags: syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
+pub fn syntaqlite_syntax::any::AnyDialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
 pub fn syntaqlite_syntax::any::AnyNode<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::any::AnyNode<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::AggregateFunctionCallId) -> syntaqlite_syntax::any::AnyNodeId
@@ -1585,24 +1585,24 @@ pub fn syntaqlite_syntax::nodes::WithClause<'a>::recursive(&self) -> bool
 pub fn syntaqlite_syntax::nodes::WithClause<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
 pub fn syntaqlite_syntax::nodes::WithClauseId::from(n: syntaqlite_syntax::nodes::WithClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::WithClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::typed::Grammar::from_raw(raw: syntaqlite_syntax::any::AnyGrammar) -> Self
-pub fn syntaqlite_syntax::typed::Grammar::into_raw(self) -> syntaqlite_syntax::any::AnyGrammar
-pub fn syntaqlite_syntax::typed::Grammar::with_cflags(self, cflags: syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
-pub fn syntaqlite_syntax::typed::Grammar::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
+pub fn syntaqlite_syntax::typed::Dialect::from_raw(raw: syntaqlite_syntax::any::AnyDialect) -> Self
+pub fn syntaqlite_syntax::typed::Dialect::into_raw(self) -> syntaqlite_syntax::any::AnyDialect
+pub fn syntaqlite_syntax::typed::Dialect::with_cflags(self, cflags: syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
+pub fn syntaqlite_syntax::typed::Dialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
 pub fn syntaqlite_syntax::typed::GrammarNodeType::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::typed::GrammarTokenType::from_token_type(raw: syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::begin_macro(&mut self, span: core::ops::range::Range<usize>)
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::completion_context(&self) -> syntaqlite_syntax::CompletionContext
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::drop(&mut self)
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::end_macro(&mut self)
-pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::expected_tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = <G as syntaqlite_syntax::typed::TypedGrammar>::Token>
-pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::feed_token(&mut self, token_type: <G as syntaqlite_syntax::typed::TypedGrammar>::Token, span: core::ops::range::Range<usize>) -> core::option::Option<core::result::Result<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>>
+pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::expected_tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = <G as syntaqlite_syntax::typed::TypedDialect>::Token>
+pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::feed_token(&mut self, token_type: <G as syntaqlite_syntax::typed::TypedDialect>::Token, span: core::ops::range::Range<usize>) -> core::option::Option<core::result::Result<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>>
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::finish(&mut self) -> core::option::Option<core::result::Result<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>>
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::node_count(&self) -> u32
 pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::is_empty(&self) -> bool
 pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::len(&self) -> usize
-pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::node_id(&self) -> <G as syntaqlite_syntax::typed::TypedGrammar>::NodeId
+pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::node_id(&self) -> <G as syntaqlite_syntax::typed::TypedDialect>::NodeId
 pub fn syntaqlite_syntax::typed::TypedNodeList<'a, G, T>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::typed::TypedNodeList<'a, G, T>::get(&self, index: usize) -> core::option::Option<T>
 pub fn syntaqlite_syntax::typed::TypedNodeList<'a, G, T>::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = T> + 'a
@@ -1615,7 +1615,7 @@ pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::length(&self) -> core::
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::message(&self) -> &str
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::offset(&self) -> core::option::Option<usize>
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::parse_source(&self) -> &'a str
-pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::recovery_root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedGrammar>::Node>
+pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::recovery_root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::arena_result(&self) -> syntaqlite_syntax::any::AnyParsedStatement<'_>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::drop(&mut self)
@@ -1626,26 +1626,26 @@ pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::comments(&self) ->
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::dump(&self, out: &mut alloc::string::String, indent: usize)
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::erase(self) -> syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::macro_regions(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRegion> + use<'_, 'a, G>
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedGrammar>::Node>
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::source(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
 pub fn syntaqlite_syntax::typed::TypedParser<G>::deregister_macro(&mut self, name: &str) -> bool
 pub fn syntaqlite_syntax::typed::TypedParser<G>::incremental_parse(&self, source: &str) -> syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
-pub fn syntaqlite_syntax::typed::TypedParser<G>::new(grammar: G) -> Self
+pub fn syntaqlite_syntax::typed::TypedParser<G>::new(dialect: G) -> Self
 pub fn syntaqlite_syntax::typed::TypedParser<G>::parse(&self, source: &str) -> syntaqlite_syntax::typed::TypedParseSession<G>
 pub fn syntaqlite_syntax::typed::TypedParser<G>::register_macro(&mut self, name: &str, params: &[&str], body: &str)
-pub fn syntaqlite_syntax::typed::TypedParser<G>::with_config(grammar: G, config: &syntaqlite_syntax::ParserConfig) -> Self
+pub fn syntaqlite_syntax::typed::TypedParser<G>::with_config(dialect: G, config: &syntaqlite_syntax::ParserConfig) -> Self
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::flags(&self) -> syntaqlite_syntax::ParserTokenFlags
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::length(&self) -> u32
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::offset(&self) -> u32
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::text(&self) -> &'a str
-pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::token_type(&self) -> <G as syntaqlite_syntax::typed::TypedGrammar>::Token
+pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::token_type(&self) -> <G as syntaqlite_syntax::typed::TypedDialect>::Token
 pub fn syntaqlite_syntax::typed::TypedToken<'a, G>::text(&self) -> &'a str
-pub fn syntaqlite_syntax::typed::TypedToken<'a, G>::token_type(&self) -> <G as syntaqlite_syntax::typed::TypedGrammar>::Token
-pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::new(grammar: G) -> Self
+pub fn syntaqlite_syntax::typed::TypedToken<'a, G>::token_type(&self) -> <G as syntaqlite_syntax::typed::TypedDialect>::Token
+pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::new(dialect: G) -> Self
 pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::tokenize<'a>(&self, source: &'a str) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedToken<'a, G>> + use<'a, G>
 pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::tokenize_cstr<'a>(&self, source: &'a core::ffi::c_str::CStr) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedToken<'a, G>> + use<'a, G>
-pub fn syntaqlite_syntax::typed::grammar() -> syntaqlite_syntax::typed::Grammar
+pub fn syntaqlite_syntax::typed::dialect() -> syntaqlite_syntax::typed::Dialect
 pub fn syntaqlite_syntax::util::SqliteSyntaxFlag::from_name(s: &str) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::util::SqliteSyntaxFlag::name(self) -> &'static str
 pub fn syntaqlite_syntax::util::SqliteSyntaxFlags::has(&self, flag: syntaqlite_syntax::util::SqliteSyntaxFlag) -> bool
@@ -1670,7 +1670,7 @@ pub struct syntaqlite_syntax::IncrementalParseSession(_)
 pub struct syntaqlite_syntax::ParserConfig
 pub struct syntaqlite_syntax::ParserToken<'a>(_)
 pub struct syntaqlite_syntax::ParserTokenFlags(_)
-pub struct syntaqlite_syntax::any::AnyGrammar
+pub struct syntaqlite_syntax::any::AnyDialect
 pub struct syntaqlite_syntax::any::AnyNode<'a>
 pub struct syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub struct syntaqlite_syntax::any::FieldMeta<'a>(_)
@@ -1826,16 +1826,16 @@ pub struct syntaqlite_syntax::nodes::WindowDefId(_)
 pub struct syntaqlite_syntax::nodes::WindowDefListId(_)
 pub struct syntaqlite_syntax::nodes::WithClause<'a>
 pub struct syntaqlite_syntax::nodes::WithClauseId(_)
-pub struct syntaqlite_syntax::typed::Grammar
-pub struct syntaqlite_syntax::typed::TypedIncrementalParseSession<G: syntaqlite_syntax::typed::TypedGrammar>
-pub struct syntaqlite_syntax::typed::TypedNodeList<'a, G: syntaqlite_syntax::typed::TypedGrammar, T>
-pub struct syntaqlite_syntax::typed::TypedParseError<'a, G: syntaqlite_syntax::typed::TypedGrammar>(_)
-pub struct syntaqlite_syntax::typed::TypedParseSession<G: syntaqlite_syntax::typed::TypedGrammar>
-pub struct syntaqlite_syntax::typed::TypedParsedStatement<'a, G: syntaqlite_syntax::typed::TypedGrammar>
-pub struct syntaqlite_syntax::typed::TypedParser<G: syntaqlite_syntax::typed::TypedGrammar>
-pub struct syntaqlite_syntax::typed::TypedParserToken<'a, G: syntaqlite_syntax::typed::TypedGrammar>
-pub struct syntaqlite_syntax::typed::TypedToken<'a, G: syntaqlite_syntax::typed::TypedGrammar>
-pub struct syntaqlite_syntax::typed::TypedTokenizer<G: syntaqlite_syntax::typed::TypedGrammar>
+pub struct syntaqlite_syntax::typed::Dialect
+pub struct syntaqlite_syntax::typed::TypedIncrementalParseSession<G: syntaqlite_syntax::typed::TypedDialect>
+pub struct syntaqlite_syntax::typed::TypedNodeList<'a, G: syntaqlite_syntax::typed::TypedDialect, T>
+pub struct syntaqlite_syntax::typed::TypedParseError<'a, G: syntaqlite_syntax::typed::TypedDialect>(_)
+pub struct syntaqlite_syntax::typed::TypedParseSession<G: syntaqlite_syntax::typed::TypedDialect>
+pub struct syntaqlite_syntax::typed::TypedParsedStatement<'a, G: syntaqlite_syntax::typed::TypedDialect>
+pub struct syntaqlite_syntax::typed::TypedParser<G: syntaqlite_syntax::typed::TypedDialect>
+pub struct syntaqlite_syntax::typed::TypedParserToken<'a, G: syntaqlite_syntax::typed::TypedDialect>
+pub struct syntaqlite_syntax::typed::TypedToken<'a, G: syntaqlite_syntax::typed::TypedDialect>
+pub struct syntaqlite_syntax::typed::TypedTokenizer<G: syntaqlite_syntax::typed::TypedDialect>
 pub struct syntaqlite_syntax::util::SqliteSyntaxFlags(_)
 pub syntaqlite_syntax::CommentKind::Block
 pub syntaqlite_syntax::CommentKind::Line
@@ -2043,6 +2043,9 @@ pub syntaqlite_syntax::any::FieldValue::Bool(bool)
 pub syntaqlite_syntax::any::FieldValue::Enum(u32)
 pub syntaqlite_syntax::any::FieldValue::Flags(u8)
 pub syntaqlite_syntax::any::FieldValue::NodeId(syntaqlite_syntax::any::AnyNodeId)
+pub syntaqlite_syntax::any::FieldValue::Span
+pub syntaqlite_syntax::any::FieldValue::Span::buf_idx: u8
+pub syntaqlite_syntax::any::FieldValue::Span::offset: u32
 pub syntaqlite_syntax::any::FieldValue::Span::quoted: bool
 pub syntaqlite_syntax::any::FieldValue::Span::text: &'a str
 pub syntaqlite_syntax::any::ParseOutcome::Done
@@ -2486,18 +2489,18 @@ pub syntaqlite_syntax::util::SqliteVersion::V3_50
 pub syntaqlite_syntax::util::SqliteVersion::V3_51
 pub trait syntaqlite_syntax::typed::GrammarNodeType<'a>: core::marker::Sized
 pub trait syntaqlite_syntax::typed::GrammarTokenType: core::marker::Sized + core::clone::Clone + core::marker::Copy + core::fmt::Debug + core::convert::Into<u32>
-pub trait syntaqlite_syntax::typed::TypedGrammar: core::clone::Clone + core::convert::Into<syntaqlite_syntax::any::AnyGrammar>
+pub trait syntaqlite_syntax::typed::TypedDialect: core::clone::Clone + core::convert::Into<syntaqlite_syntax::any::AnyDialect>
 pub trait syntaqlite_syntax::typed::TypedNodeId: core::marker::Copy + core::convert::Into<syntaqlite_syntax::any::AnyNodeId>
-pub type syntaqlite_syntax::any::AnyGrammar::Node<'a> = syntaqlite_syntax::any::AnyNode<'a>
-pub type syntaqlite_syntax::any::AnyGrammar::NodeId = syntaqlite_syntax::any::AnyNodeId
-pub type syntaqlite_syntax::any::AnyGrammar::Token = syntaqlite_syntax::any::AnyTokenType
-pub type syntaqlite_syntax::any::AnyIncrementalParseSession = syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::any::AnyGrammar>
-pub type syntaqlite_syntax::any::AnyParseError<'a> = syntaqlite_syntax::typed::TypedParseError<'a, syntaqlite_syntax::any::AnyGrammar>
-pub type syntaqlite_syntax::any::AnyParseSession = syntaqlite_syntax::typed::TypedParseSession<syntaqlite_syntax::any::AnyGrammar>
-pub type syntaqlite_syntax::any::AnyParser = syntaqlite_syntax::typed::TypedParser<syntaqlite_syntax::any::AnyGrammar>
-pub type syntaqlite_syntax::any::AnyParserToken<'a> = syntaqlite_syntax::typed::TypedParserToken<'a, syntaqlite_syntax::any::AnyGrammar>
-pub type syntaqlite_syntax::any::AnyToken<'a> = syntaqlite_syntax::typed::TypedToken<'a, syntaqlite_syntax::any::AnyGrammar>
-pub type syntaqlite_syntax::any::AnyTokenizer = syntaqlite_syntax::typed::TypedTokenizer<syntaqlite_syntax::any::AnyGrammar>
+pub type syntaqlite_syntax::any::AnyDialect::Node<'a> = syntaqlite_syntax::any::AnyNode<'a>
+pub type syntaqlite_syntax::any::AnyDialect::NodeId = syntaqlite_syntax::any::AnyNodeId
+pub type syntaqlite_syntax::any::AnyDialect::Token = syntaqlite_syntax::any::AnyTokenType
+pub type syntaqlite_syntax::any::AnyIncrementalParseSession = syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::any::AnyDialect>
+pub type syntaqlite_syntax::any::AnyParseError<'a> = syntaqlite_syntax::typed::TypedParseError<'a, syntaqlite_syntax::any::AnyDialect>
+pub type syntaqlite_syntax::any::AnyParseSession = syntaqlite_syntax::typed::TypedParseSession<syntaqlite_syntax::any::AnyDialect>
+pub type syntaqlite_syntax::any::AnyParser = syntaqlite_syntax::typed::TypedParser<syntaqlite_syntax::any::AnyDialect>
+pub type syntaqlite_syntax::any::AnyParserToken<'a> = syntaqlite_syntax::typed::TypedParserToken<'a, syntaqlite_syntax::any::AnyDialect>
+pub type syntaqlite_syntax::any::AnyToken<'a> = syntaqlite_syntax::typed::TypedToken<'a, syntaqlite_syntax::any::AnyDialect>
+pub type syntaqlite_syntax::any::AnyTokenizer = syntaqlite_syntax::typed::TypedTokenizer<syntaqlite_syntax::any::AnyDialect>
 pub type syntaqlite_syntax::any::NodeFields<'a>::Output = syntaqlite_syntax::any::FieldValue<'a>
 pub type syntaqlite_syntax::nodes::AggregateFunctionCallId::Node<'a> = syntaqlite_syntax::nodes::AggregateFunctionCall<'a>
 pub type syntaqlite_syntax::nodes::AlterTableStmtId::Node<'a> = syntaqlite_syntax::nodes::AlterTableStmt<'a>
@@ -2507,16 +2510,16 @@ pub type syntaqlite_syntax::nodes::BetweenExprId::Node<'a> = syntaqlite_syntax::
 pub type syntaqlite_syntax::nodes::BinaryExprId::Node<'a> = syntaqlite_syntax::nodes::BinaryExpr<'a>
 pub type syntaqlite_syntax::nodes::CaseExprId::Node<'a> = syntaqlite_syntax::nodes::CaseExpr<'a>
 pub type syntaqlite_syntax::nodes::CaseWhenId::Node<'a> = syntaqlite_syntax::nodes::CaseWhen<'a>
-pub type syntaqlite_syntax::nodes::CaseWhenList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::CaseWhen<'a>>
-pub type syntaqlite_syntax::nodes::CaseWhenListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::CaseWhen<'a>>
+pub type syntaqlite_syntax::nodes::CaseWhenList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::CaseWhen<'a>>
+pub type syntaqlite_syntax::nodes::CaseWhenListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::CaseWhen<'a>>
 pub type syntaqlite_syntax::nodes::CastExprId::Node<'a> = syntaqlite_syntax::nodes::CastExpr<'a>
 pub type syntaqlite_syntax::nodes::CollateExprId::Node<'a> = syntaqlite_syntax::nodes::CollateExpr<'a>
 pub type syntaqlite_syntax::nodes::ColumnConstraintId::Node<'a> = syntaqlite_syntax::nodes::ColumnConstraint<'a>
-pub type syntaqlite_syntax::nodes::ColumnConstraintList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ColumnConstraint<'a>>
-pub type syntaqlite_syntax::nodes::ColumnConstraintListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ColumnConstraint<'a>>
+pub type syntaqlite_syntax::nodes::ColumnConstraintList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ColumnConstraint<'a>>
+pub type syntaqlite_syntax::nodes::ColumnConstraintListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ColumnConstraint<'a>>
 pub type syntaqlite_syntax::nodes::ColumnDefId::Node<'a> = syntaqlite_syntax::nodes::ColumnDef<'a>
-pub type syntaqlite_syntax::nodes::ColumnDefList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ColumnDef<'a>>
-pub type syntaqlite_syntax::nodes::ColumnDefListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ColumnDef<'a>>
+pub type syntaqlite_syntax::nodes::ColumnDefList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ColumnDef<'a>>
+pub type syntaqlite_syntax::nodes::ColumnDefListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ColumnDef<'a>>
 pub type syntaqlite_syntax::nodes::ColumnRefId::Node<'a> = syntaqlite_syntax::nodes::ColumnRef<'a>
 pub type syntaqlite_syntax::nodes::CompoundSelectId::Node<'a> = syntaqlite_syntax::nodes::CompoundSelect<'a>
 pub type syntaqlite_syntax::nodes::CreateIndexStmtId::Node<'a> = syntaqlite_syntax::nodes::CreateIndexStmt<'a>
@@ -2525,8 +2528,8 @@ pub type syntaqlite_syntax::nodes::CreateTriggerStmtId::Node<'a> = syntaqlite_sy
 pub type syntaqlite_syntax::nodes::CreateViewStmtId::Node<'a> = syntaqlite_syntax::nodes::CreateViewStmt<'a>
 pub type syntaqlite_syntax::nodes::CreateVirtualTableStmtId::Node<'a> = syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>
 pub type syntaqlite_syntax::nodes::CteDefinitionId::Node<'a> = syntaqlite_syntax::nodes::CteDefinition<'a>
-pub type syntaqlite_syntax::nodes::CteList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::CteDefinition<'a>>
-pub type syntaqlite_syntax::nodes::CteListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::CteDefinition<'a>>
+pub type syntaqlite_syntax::nodes::CteList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::CteDefinition<'a>>
+pub type syntaqlite_syntax::nodes::CteListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::CteDefinition<'a>>
 pub type syntaqlite_syntax::nodes::DeleteStmtId::Node<'a> = syntaqlite_syntax::nodes::DeleteStmt<'a>
 pub type syntaqlite_syntax::nodes::DetachStmtId::Node<'a> = syntaqlite_syntax::nodes::DetachStmt<'a>
 pub type syntaqlite_syntax::nodes::DropStmtId::Node<'a> = syntaqlite_syntax::nodes::DropStmt<'a>
@@ -2534,8 +2537,8 @@ pub type syntaqlite_syntax::nodes::ErrorId::Node<'a> = syntaqlite_syntax::nodes:
 pub type syntaqlite_syntax::nodes::ExistsExprId::Node<'a> = syntaqlite_syntax::nodes::ExistsExpr<'a>
 pub type syntaqlite_syntax::nodes::ExplainStmtId::Node<'a> = syntaqlite_syntax::nodes::ExplainStmt<'a>
 pub type syntaqlite_syntax::nodes::ExprId::Node<'a> = syntaqlite_syntax::nodes::Expr<'a>
-pub type syntaqlite_syntax::nodes::ExprList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::Expr<'a>>
-pub type syntaqlite_syntax::nodes::ExprListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::Expr<'a>>
+pub type syntaqlite_syntax::nodes::ExprList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Expr<'a>>
+pub type syntaqlite_syntax::nodes::ExprListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Expr<'a>>
 pub type syntaqlite_syntax::nodes::FilterOverId::Node<'a> = syntaqlite_syntax::nodes::FilterOver<'a>
 pub type syntaqlite_syntax::nodes::ForeignKeyClauseId::Node<'a> = syntaqlite_syntax::nodes::ForeignKeyClause<'a>
 pub type syntaqlite_syntax::nodes::FrameBoundId::Node<'a> = syntaqlite_syntax::nodes::FrameBound<'a>
@@ -2553,56 +2556,57 @@ pub type syntaqlite_syntax::nodes::LimitClauseId::Node<'a> = syntaqlite_syntax::
 pub type syntaqlite_syntax::nodes::LiteralId::Node<'a> = syntaqlite_syntax::nodes::Literal<'a>
 pub type syntaqlite_syntax::nodes::NameId::Node<'a> = syntaqlite_syntax::nodes::Name<'a>
 pub type syntaqlite_syntax::nodes::NamedWindowDefId::Node<'a> = syntaqlite_syntax::nodes::NamedWindowDef<'a>
-pub type syntaqlite_syntax::nodes::NamedWindowDefList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::NamedWindowDef<'a>>
-pub type syntaqlite_syntax::nodes::NamedWindowDefListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::NamedWindowDef<'a>>
+pub type syntaqlite_syntax::nodes::NamedWindowDefList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::NamedWindowDef<'a>>
+pub type syntaqlite_syntax::nodes::NamedWindowDefListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::NamedWindowDef<'a>>
 pub type syntaqlite_syntax::nodes::NodeId::Node<'a> = syntaqlite_syntax::nodes::Node<'a>
-pub type syntaqlite_syntax::nodes::OrderByList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::OrderingTerm<'a>>
-pub type syntaqlite_syntax::nodes::OrderByListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::OrderingTerm<'a>>
+pub type syntaqlite_syntax::nodes::OrderByList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::OrderingTerm<'a>>
+pub type syntaqlite_syntax::nodes::OrderByListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::OrderingTerm<'a>>
 pub type syntaqlite_syntax::nodes::OrderedSetFunctionCallId::Node<'a> = syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>
 pub type syntaqlite_syntax::nodes::OrderingTermId::Node<'a> = syntaqlite_syntax::nodes::OrderingTerm<'a>
 pub type syntaqlite_syntax::nodes::PragmaStmtId::Node<'a> = syntaqlite_syntax::nodes::PragmaStmt<'a>
 pub type syntaqlite_syntax::nodes::QualifiedNameId::Node<'a> = syntaqlite_syntax::nodes::QualifiedName<'a>
 pub type syntaqlite_syntax::nodes::RaiseExprId::Node<'a> = syntaqlite_syntax::nodes::RaiseExpr<'a>
 pub type syntaqlite_syntax::nodes::ResultColumnId::Node<'a> = syntaqlite_syntax::nodes::ResultColumn<'a>
-pub type syntaqlite_syntax::nodes::ResultColumnList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ResultColumn<'a>>
-pub type syntaqlite_syntax::nodes::ResultColumnListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ResultColumn<'a>>
+pub type syntaqlite_syntax::nodes::ResultColumnList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ResultColumn<'a>>
+pub type syntaqlite_syntax::nodes::ResultColumnListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ResultColumn<'a>>
 pub type syntaqlite_syntax::nodes::SavepointStmtId::Node<'a> = syntaqlite_syntax::nodes::SavepointStmt<'a>
 pub type syntaqlite_syntax::nodes::SelectId::Node<'a> = syntaqlite_syntax::nodes::Select<'a>
 pub type syntaqlite_syntax::nodes::SelectStmtId::Node<'a> = syntaqlite_syntax::nodes::SelectStmt<'a>
 pub type syntaqlite_syntax::nodes::SetClauseId::Node<'a> = syntaqlite_syntax::nodes::SetClause<'a>
-pub type syntaqlite_syntax::nodes::SetClauseList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::SetClause<'a>>
-pub type syntaqlite_syntax::nodes::SetClauseListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::SetClause<'a>>
+pub type syntaqlite_syntax::nodes::SetClauseList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::SetClause<'a>>
+pub type syntaqlite_syntax::nodes::SetClauseListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::SetClause<'a>>
 pub type syntaqlite_syntax::nodes::StmtId::Node<'a> = syntaqlite_syntax::nodes::Stmt<'a>
 pub type syntaqlite_syntax::nodes::SubqueryExprId::Node<'a> = syntaqlite_syntax::nodes::SubqueryExpr<'a>
 pub type syntaqlite_syntax::nodes::SubqueryTableSourceId::Node<'a> = syntaqlite_syntax::nodes::SubqueryTableSource<'a>
 pub type syntaqlite_syntax::nodes::TableConstraintId::Node<'a> = syntaqlite_syntax::nodes::TableConstraint<'a>
-pub type syntaqlite_syntax::nodes::TableConstraintList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::TableConstraint<'a>>
-pub type syntaqlite_syntax::nodes::TableConstraintListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::TableConstraint<'a>>
+pub type syntaqlite_syntax::nodes::TableConstraintList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraint<'a>>
+pub type syntaqlite_syntax::nodes::TableConstraintListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraint<'a>>
 pub type syntaqlite_syntax::nodes::TableRefId::Node<'a> = syntaqlite_syntax::nodes::TableRef<'a>
 pub type syntaqlite_syntax::nodes::TableSourceId::Node<'a> = syntaqlite_syntax::nodes::TableSource<'a>
 pub type syntaqlite_syntax::nodes::TransactionStmtId::Node<'a> = syntaqlite_syntax::nodes::TransactionStmt<'a>
-pub type syntaqlite_syntax::nodes::TriggerCmdList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::Stmt<'a>>
-pub type syntaqlite_syntax::nodes::TriggerCmdListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::Stmt<'a>>
+pub type syntaqlite_syntax::nodes::TriggerCmdList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Stmt<'a>>
+pub type syntaqlite_syntax::nodes::TriggerCmdListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Stmt<'a>>
 pub type syntaqlite_syntax::nodes::TriggerEventId::Node<'a> = syntaqlite_syntax::nodes::TriggerEvent<'a>
 pub type syntaqlite_syntax::nodes::UnaryExprId::Node<'a> = syntaqlite_syntax::nodes::UnaryExpr<'a>
 pub type syntaqlite_syntax::nodes::UpdateStmtId::Node<'a> = syntaqlite_syntax::nodes::UpdateStmt<'a>
 pub type syntaqlite_syntax::nodes::UpsertClauseId::Node<'a> = syntaqlite_syntax::nodes::UpsertClause<'a>
-pub type syntaqlite_syntax::nodes::UpsertClauseList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::UpsertClause<'a>>
-pub type syntaqlite_syntax::nodes::UpsertClauseListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::UpsertClause<'a>>
+pub type syntaqlite_syntax::nodes::UpsertClauseList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::UpsertClause<'a>>
+pub type syntaqlite_syntax::nodes::UpsertClauseListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::UpsertClause<'a>>
 pub type syntaqlite_syntax::nodes::VacuumStmtId::Node<'a> = syntaqlite_syntax::nodes::VacuumStmt<'a>
 pub type syntaqlite_syntax::nodes::ValuesClauseId::Node<'a> = syntaqlite_syntax::nodes::ValuesClause<'a>
-pub type syntaqlite_syntax::nodes::ValuesRowList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::ExprList<'a>>
-pub type syntaqlite_syntax::nodes::ValuesRowListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::Expr<'a>>>
+pub type syntaqlite_syntax::nodes::ValuesRowList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ExprList<'a>>
+pub type syntaqlite_syntax::nodes::ValuesRowListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Expr<'a>>>
 pub type syntaqlite_syntax::nodes::VariableId::Node<'a> = syntaqlite_syntax::nodes::Variable<'a>
 pub type syntaqlite_syntax::nodes::WindowDefId::Node<'a> = syntaqlite_syntax::nodes::WindowDef<'a>
-pub type syntaqlite_syntax::nodes::WindowDefList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::WindowDef<'a>>
-pub type syntaqlite_syntax::nodes::WindowDefListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Grammar, syntaqlite_syntax::nodes::WindowDef<'a>>
+pub type syntaqlite_syntax::nodes::WindowDefList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::WindowDef<'a>>
+pub type syntaqlite_syntax::nodes::WindowDefListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::WindowDef<'a>>
 pub type syntaqlite_syntax::nodes::WithClauseId::Node<'a> = syntaqlite_syntax::nodes::WithClause<'a>
-pub type syntaqlite_syntax::typed::Grammar::Node<'a> = syntaqlite_syntax::nodes::Stmt<'a>
-pub type syntaqlite_syntax::typed::Grammar::NodeId = syntaqlite_syntax::nodes::NodeId
-pub type syntaqlite_syntax::typed::Grammar::Token = syntaqlite_syntax::TokenType
-pub type syntaqlite_syntax::typed::TypedGrammar::Node<'a>: syntaqlite_syntax::typed::GrammarNodeType<'a>
-pub type syntaqlite_syntax::typed::TypedGrammar::NodeId: core::marker::Copy + core::convert::From<syntaqlite_syntax::any::AnyNodeId> + core::convert::Into<syntaqlite_syntax::any::AnyNodeId>
-pub type syntaqlite_syntax::typed::TypedGrammar::Token: syntaqlite_syntax::typed::GrammarTokenType
+pub type syntaqlite_syntax::typed::Dialect::Node<'a> = syntaqlite_syntax::nodes::Stmt<'a>
+pub type syntaqlite_syntax::typed::Dialect::NodeId = syntaqlite_syntax::nodes::NodeId
+pub type syntaqlite_syntax::typed::Dialect::Token = syntaqlite_syntax::TokenType
+pub type syntaqlite_syntax::typed::TypedDialect::Node<'a>: syntaqlite_syntax::typed::GrammarNodeType<'a>
+pub type syntaqlite_syntax::typed::TypedDialect::NodeId: core::marker::Copy + core::convert::From<syntaqlite_syntax::any::AnyNodeId> + core::convert::Into<syntaqlite_syntax::any::AnyNodeId>
+pub type syntaqlite_syntax::typed::TypedDialect::Token: syntaqlite_syntax::typed::GrammarTokenType
 pub type syntaqlite_syntax::typed::TypedNodeId::Node<'a>: syntaqlite_syntax::typed::GrammarNodeType<'a>
-pub unsafe fn syntaqlite_syntax::any::AnyGrammar::new(inner: syntaqlite_syntax::grammar::ffi::CGrammar) -> Self
+pub unsafe fn syntaqlite_syntax::any::AnyDialect::from_dialect_template(template: *const syntaqlite_syntax::dialect::ffi::CDialectTemplate) -> Self
+pub unsafe fn syntaqlite_syntax::any::AnyDialect::new(inner: syntaqlite_syntax::dialect::ffi::CDialect) -> Self

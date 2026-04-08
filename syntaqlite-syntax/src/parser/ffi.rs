@@ -76,7 +76,7 @@ pub(crate) struct CMacroRegion {
     pub(crate) call_length: u32,
     /// Expanded text (null for unregistered/fallback macros).
     pub(crate) expansion_data: *const u8,
-    /// Length of expanded text (0 when expansion_data is null).
+    /// Length of expanded text (0 when `expansion_data` is null).
     pub(crate) expansion_len: u32,
 }
 
@@ -296,7 +296,6 @@ impl CParser {
         // SAFETY: self is a valid, non-null CParser pointer; name is valid.
         unsafe { syntaqlite_parser_deregister_macro(self, name, name_len) }
     }
-
 }
 
 unsafe extern "C" {

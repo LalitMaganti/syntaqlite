@@ -1,4 +1,3 @@
-#[repr(C)] pub struct syntaqlite::any::ffi::CDialectTemplate
 #[repr(u32)] pub enum syntaqlite::util::SqliteFlag
 impl core::convert::From<syntaqlite::Dialect> for syntaqlite::any::AnyDialect
 impl core::convert::From<syntaqlite::util::SqliteFlags> for syntaqlite_syntax::util::SqliteSyntaxFlags
@@ -15,9 +14,7 @@ impl core::fmt::Display for syntaqlite::fmt::FormatError
 impl core::fmt::Display for syntaqlite::semantic::DiagnosticMessage
 impl core::fmt::Display for syntaqlite::semantic::Help
 impl core::marker::Send for syntaqlite::any::AnyDialect
-impl core::marker::Send for syntaqlite::any::ffi::CDialectTemplate
 impl core::marker::Sync for syntaqlite::any::AnyDialect
-impl core::marker::Sync for syntaqlite::any::ffi::CDialectTemplate
 impl core::ops::deref::Deref for syntaqlite::Dialect
 impl core::ops::deref::Deref for syntaqlite::any::AnyDialect
 impl core::ops::deref::DerefMut for syntaqlite::Dialect
@@ -46,7 +43,8 @@ impl syntaqlite::semantic::CatalogLayerContents
 impl syntaqlite::semantic::CheckConfig
 impl syntaqlite::semantic::CheckLevel
 impl syntaqlite::semantic::DiagnosticMessage
-impl syntaqlite::semantic::DefinedRelation
+impl syntaqlite::semantic::DirectoryModuleResolver
+impl syntaqlite::semantic::ModuleResolver for syntaqlite::semantic::DirectoryModuleResolver
 impl syntaqlite::semantic::SemanticModel
 impl syntaqlite::semantic::StatementModel
 impl syntaqlite::semantic::ValidationConfig
@@ -89,8 +87,8 @@ pub fn syntaqlite::Dialect::default() -> Self
 pub fn syntaqlite::Dialect::deref(&self) -> &syntaqlite::any::AnyDialect
 pub fn syntaqlite::Dialect::deref_mut(&mut self) -> &mut syntaqlite::any::AnyDialect
 pub fn syntaqlite::Dialect::erase(self) -> syntaqlite::any::AnyDialect
-pub fn syntaqlite::Dialect::grammar(&self) -> syntaqlite_syntax::sqlite::grammar::Grammar
 pub fn syntaqlite::Dialect::new() -> Self
+pub fn syntaqlite::Dialect::syntax_dialect(&self) -> syntaqlite_syntax::sqlite::dialect::Dialect
 pub fn syntaqlite::Dialect::with_cflags(self, flags: syntaqlite::util::SqliteFlags) -> Self
 pub fn syntaqlite::Dialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
 pub fn syntaqlite::Formatter::default() -> Self
@@ -104,14 +102,16 @@ pub fn syntaqlite::SemanticAnalyzer::analyze(&mut self, source: &str, user_catal
 pub fn syntaqlite::SemanticAnalyzer::default() -> Self
 pub fn syntaqlite::SemanticAnalyzer::new() -> Self
 pub fn syntaqlite::SemanticAnalyzer::set_mode(&mut self, mode: syntaqlite::semantic::AnalysisMode)
+pub fn syntaqlite::SemanticAnalyzer::set_module_resolver(&mut self, resolver: core::option::Option<alloc::boxed::Box<dyn syntaqlite::semantic::ModuleResolver>>)
 pub fn syntaqlite::SemanticAnalyzer::with_dialect(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
 pub fn syntaqlite::SemanticAnalyzer::with_mode(self, mode: syntaqlite::semantic::AnalysisMode) -> Self
+pub fn syntaqlite::SemanticAnalyzer::with_module_resolver(self, resolver: alloc::boxed::Box<dyn syntaqlite::semantic::ModuleResolver>) -> Self
 pub fn syntaqlite::any::AnyDialect::cflags(&self) -> syntaqlite::util::SqliteFlags
-pub fn syntaqlite::any::AnyDialect::deref(&self) -> &syntaqlite_syntax::grammar::AnyGrammar
-pub fn syntaqlite::any::AnyDialect::deref_mut(&mut self) -> &mut syntaqlite_syntax::grammar::AnyGrammar
+pub fn syntaqlite::any::AnyDialect::deref(&self) -> &syntaqlite_syntax::dialect::AnyDialect
+pub fn syntaqlite::any::AnyDialect::deref_mut(&mut self) -> &mut syntaqlite_syntax::dialect::AnyDialect
 pub fn syntaqlite::any::AnyDialect::from(d: syntaqlite::Dialect) -> syntaqlite::any::AnyDialect
-pub fn syntaqlite::any::AnyDialect::grammar(&self) -> &syntaqlite_syntax::grammar::AnyGrammar
 pub fn syntaqlite::any::AnyDialect::syntax_cflags(&self) -> syntaqlite_syntax::util::SqliteSyntaxFlags
+pub fn syntaqlite::any::AnyDialect::syntax_dialect(&self) -> &syntaqlite_syntax::dialect::AnyDialect
 pub fn syntaqlite::any::AnyDialect::version(&self) -> syntaqlite_syntax::util::SqliteVersion
 pub fn syntaqlite::any::AnyDialect::with_cflags(self, flags: syntaqlite::util::SqliteFlags) -> Self
 pub fn syntaqlite::any::AnyDialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
@@ -166,6 +166,7 @@ pub fn syntaqlite::semantic::CatalogLayerContents::insert_function_overload(&mut
 pub fn syntaqlite::semantic::CatalogLayerContents::insert_table(&mut self, name: impl core::convert::Into<alloc::string::String>, columns: core::option::Option<alloc::vec::Vec<alloc::string::String>>, without_rowid: bool)
 pub fn syntaqlite::semantic::CatalogLayerContents::insert_table_function(&mut self, name: impl core::convert::Into<alloc::string::String>, arity: syntaqlite::semantic::AritySpec, output_columns: alloc::vec::Vec<alloc::string::String>)
 pub fn syntaqlite::semantic::CatalogLayerContents::insert_view(&mut self, name: impl core::convert::Into<alloc::string::String>, columns: core::option::Option<alloc::vec::Vec<alloc::string::String>>)
+pub fn syntaqlite::semantic::CatalogLayerContents::relation_names(&self) -> impl core::iter::traits::iterator::Iterator<Item = &str>
 pub fn syntaqlite::semantic::CheckConfig::cte_columns(&self) -> syntaqlite::semantic::CheckLevel
 pub fn syntaqlite::semantic::CheckConfig::default() -> Self
 pub fn syntaqlite::semantic::CheckConfig::function_arity(&self) -> syntaqlite::semantic::CheckLevel
@@ -187,24 +188,28 @@ pub fn syntaqlite::semantic::CheckLevel::to_severity(self) -> core::option::Opti
 pub fn syntaqlite::semantic::DiagnosticMessage::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite::semantic::DiagnosticMessage::is_parse_error(&self) -> bool
 pub fn syntaqlite::semantic::DiagnosticMessage::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+pub fn syntaqlite::semantic::DirectoryModuleResolver::new(root: std::path::PathBuf) -> Self
+pub fn syntaqlite::semantic::DirectoryModuleResolver::resolve(&self, module_path: &str) -> core::option::Option<alloc::string::String>
 pub fn syntaqlite::semantic::Help::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite::semantic::Help::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub fn syntaqlite::semantic::LineageResult<T>::as_ref(&self) -> syntaqlite::semantic::LineageResult<&T>
 pub fn syntaqlite::semantic::LineageResult<T>::into_inner(self) -> T
 pub fn syntaqlite::semantic::LineageResult<T>::is_complete(&self) -> bool
 pub fn syntaqlite::semantic::LineageResult<T>::map<U, F: core::ops::function::FnOnce(T) -> U>(self, f: F) -> syntaqlite::semantic::LineageResult<U>
+pub fn syntaqlite::semantic::ModuleResolver::resolve(&self, module_path: &str) -> core::option::Option<alloc::string::String>
 pub fn syntaqlite::semantic::SemanticModel::diagnostic_count(&self) -> usize
-pub fn syntaqlite::semantic::SemanticModel::diagnostics(&self) -> impl core::iter::Iterator<Item = &syntaqlite::Diagnostic>
+pub fn syntaqlite::semantic::SemanticModel::diagnostics(&self) -> impl core::iter::traits::iterator::Iterator<Item = &syntaqlite::Diagnostic>
 pub fn syntaqlite::semantic::SemanticModel::has_diagnostics(&self) -> bool
 pub fn syntaqlite::semantic::SemanticModel::lineage(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::ColumnLineage]>>
 pub fn syntaqlite::semantic::SemanticModel::source(&self) -> &str
 pub fn syntaqlite::semantic::SemanticModel::statements(&self) -> &[syntaqlite::semantic::StatementModel]
+pub fn syntaqlite::semantic::Severity::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub fn syntaqlite::semantic::StatementModel::defined_relations(&self) -> &[syntaqlite::semantic::DefinedRelation]
 pub fn syntaqlite::semantic::StatementModel::diagnostics(&self) -> &[syntaqlite::Diagnostic]
 pub fn syntaqlite::semantic::StatementModel::lineage(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::ColumnLineage]>>
 pub fn syntaqlite::semantic::StatementModel::relations_accessed(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::RelationAccess]>>
+pub fn syntaqlite::semantic::StatementModel::source(&self) -> &str
 pub fn syntaqlite::semantic::StatementModel::tables_accessed(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::TableAccess]>>
-pub fn syntaqlite::semantic::Severity::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub fn syntaqlite::semantic::ValidationConfig::checks(&self) -> syntaqlite::semantic::CheckConfig
 pub fn syntaqlite::semantic::ValidationConfig::default() -> Self
 pub fn syntaqlite::semantic::ValidationConfig::suggestion_threshold(&self) -> usize
@@ -261,10 +266,11 @@ pub struct syntaqlite::semantic::CatalogLayerContents
 pub struct syntaqlite::semantic::CheckConfig
 pub struct syntaqlite::semantic::ColumnLineage
 pub struct syntaqlite::semantic::ColumnOrigin
+pub struct syntaqlite::semantic::DefinedRelation
 pub struct syntaqlite::semantic::Diagnostic
+pub struct syntaqlite::semantic::DirectoryModuleResolver
 pub struct syntaqlite::semantic::RelationAccess
 pub struct syntaqlite::semantic::SemanticAnalyzer
-pub struct syntaqlite::semantic::DefinedRelation
 pub struct syntaqlite::semantic::SemanticModel
 pub struct syntaqlite::semantic::StatementModel
 pub struct syntaqlite::semantic::TableAccess
@@ -301,6 +307,8 @@ pub syntaqlite::semantic::ColumnLineage::name: alloc::string::String
 pub syntaqlite::semantic::ColumnLineage::origin: core::option::Option<syntaqlite::semantic::ColumnOrigin>
 pub syntaqlite::semantic::ColumnOrigin::column: alloc::string::String
 pub syntaqlite::semantic::ColumnOrigin::table: alloc::string::String
+pub syntaqlite::semantic::DefinedRelation::is_view: bool
+pub syntaqlite::semantic::DefinedRelation::name: alloc::string::String
 pub syntaqlite::semantic::DiagnosticMessage::CteColumnCountMismatch
 pub syntaqlite::semantic::DiagnosticMessage::CteColumnCountMismatch::actual: usize
 pub syntaqlite::semantic::DiagnosticMessage::CteColumnCountMismatch::declared: usize
@@ -315,6 +323,8 @@ pub syntaqlite::semantic::DiagnosticMessage::UnknownColumn::column: alloc::strin
 pub syntaqlite::semantic::DiagnosticMessage::UnknownColumn::table: core::option::Option<alloc::string::String>
 pub syntaqlite::semantic::DiagnosticMessage::UnknownFunction
 pub syntaqlite::semantic::DiagnosticMessage::UnknownFunction::name: alloc::string::String
+pub syntaqlite::semantic::DiagnosticMessage::UnknownModule
+pub syntaqlite::semantic::DiagnosticMessage::UnknownModule::name: alloc::string::String
 pub syntaqlite::semantic::DiagnosticMessage::UnknownTable
 pub syntaqlite::semantic::DiagnosticMessage::UnknownTable::name: alloc::string::String
 pub syntaqlite::semantic::FunctionCategory::Aggregate
@@ -374,13 +384,15 @@ pub syntaqlite::util::SqliteFlag::OmitView = 17
 pub syntaqlite::util::SqliteFlag::OmitVirtualtable = 18
 pub syntaqlite::util::SqliteFlag::OmitWindowfunc = 19
 pub syntaqlite::util::SqliteFlag::Soundex = 41
+pub trait syntaqlite::semantic::ModuleResolver
 pub trait syntaqlite::typed::TypedDialect: core::convert::Into<syntaqlite::any::AnyDialect> + core::clone::Clone + 'static
 pub type syntaqlite::Dialect::Target = syntaqlite::any::AnyDialect
-pub type syntaqlite::any::AnyDialect::Target = syntaqlite_syntax::grammar::AnyGrammar
+pub type syntaqlite::any::AnyDialect::Target = syntaqlite_syntax::dialect::AnyDialect
 pub type syntaqlite::util::SourceContext<'a> = syntaqlite::util::DiagnosticRenderer<'a>
-pub unsafe fn syntaqlite::any::AnyDialect::from_c_dialect_ptr(ptr: *const syntaqlite::any::ffi::CDialectTemplate) -> Self
+pub unsafe fn syntaqlite::any::AnyDialect::from_c_dialect_ptr(ptr: *const syntaqlite_syntax::dialect::ffi::CDialectTemplate) -> Self
 pub use syntaqlite::ParseOutcome
 pub use syntaqlite::any::<<syntaqlite_syntax::any::*>>
+pub use syntaqlite::any::ffi::CDialectTemplate
 pub use syntaqlite::nodes::<<syntaqlite_syntax::nodes::*>>
 pub use syntaqlite::parse::CommentKind
 pub use syntaqlite::parse::IncrementalParseSession

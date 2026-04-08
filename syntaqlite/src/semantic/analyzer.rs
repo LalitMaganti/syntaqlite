@@ -130,6 +130,11 @@ impl SemanticAnalyzer {
         self
     }
 
+    /// Set (or clear) the module resolver on an existing analyzer.
+    pub fn set_module_resolver(&mut self, resolver: Option<Box<dyn super::ModuleResolver>>) {
+        self.resolver = resolver;
+    }
+
     /// Enable macro fallback: unregistered `name!(args)` calls parse as
     /// identifiers and record [`MacroRegion`]s on the resulting model.
     #[must_use]
@@ -308,7 +313,12 @@ impl SemanticAnalyzer {
                             severity,
                             help: None,
                         };
-                        statements.push(StatementModel::new(String::new(), vec![diag], None, Vec::new()));
+                        statements.push(StatementModel::new(
+                            String::new(),
+                            vec![diag],
+                            None,
+                            Vec::new(),
+                        ));
                     }
                     collect_tokens(e.tokens(), &mut tokens);
                     collect_comments(e.comments(), &mut comments);
@@ -398,8 +408,7 @@ impl SemanticAnalyzer {
         let lineage =
             super::lineage::compute_lineage(erased, root_id, &self.catalog, self.dialect.roles());
 
-        let defined_relations =
-            extract_defined_relations(erased, root_id, self.dialect.roles());
+        let defined_relations = extract_defined_relations(erased, root_id, self.dialect.roles());
 
         // Extract the statement source text from token spans.
         let stmt_source = statement_source(erased);
@@ -452,9 +461,7 @@ impl SemanticAnalyzer {
                 }
                 _ => (0, 0),
             };
-            let message = DiagnosticMessage::UnknownModule {
-                name: module_name,
-            };
+            let message = DiagnosticMessage::UnknownModule { name: module_name };
             if let Some(severity) = config.checks().level_for(&message).to_severity() {
                 diagnostics.push(Diagnostic::new(start, end, message, severity, None));
             }
@@ -986,8 +993,9 @@ impl CheckConfig {
     /// Get the check level for a diagnostic message's category.
     pub(crate) fn level_for(self, message: &DiagnosticMessage) -> CheckLevel {
         match message {
-            DiagnosticMessage::UnknownTable { .. }
-            | DiagnosticMessage::UnknownModule { .. } => self.unknown_table,
+            DiagnosticMessage::UnknownTable { .. } | DiagnosticMessage::UnknownModule { .. } => {
+                self.unknown_table
+            }
             DiagnosticMessage::UnknownColumn { .. } => self.unknown_column,
             DiagnosticMessage::UnknownFunction { .. } => self.unknown_function,
             DiagnosticMessage::FunctionArity { .. } => self.function_arity,
@@ -1169,10 +1177,7 @@ impl<'a> ValidationPass<'a> {
     /// Extract source text from a `Name` node (`IdentName` or `Error`).
     /// Both node kinds store their span at field 0.
     #[expect(clippy::unused_self)]
-    fn name_text(
-        stmt: &AnyParsedStatement<'a>,
-        node_id: Option<AnyNodeId>,
-    ) -> (&'a str, u32, u8) {
+    fn name_text(stmt: &AnyParsedStatement<'a>, node_id: Option<AnyNodeId>) -> (&'a str, u32, u8) {
         let Some(node_id) = node_id else {
             return ("", 0, 0);
         };
@@ -1184,7 +1189,10 @@ impl<'a> ValidationPass<'a> {
         }
         match fields[0] {
             FieldValue::Span {
-                text, offset, buf_idx, ..
+                text,
+                offset,
+                buf_idx,
+                ..
             } => (text, offset, buf_idx),
             _ => ("", 0, 0),
         }
@@ -1666,8 +1674,7 @@ impl<'a> ValidationPass<'a> {
                 continue;
             };
             let alias_node = Self::field_node_id(&child_fields, alias_idx);
-            let (alias_text, alias_raw_off, alias_buf_idx) =
-                Self::name_text(stmt, alias_node);
+            let (alias_text, alias_raw_off, alias_buf_idx) = Self::name_text(stmt, alias_node);
             if !alias_text.is_empty() {
                 let off = Self::span_offset(alias_raw_off, alias_buf_idx);
                 let key = format!("{table_key}.{}", alias_text.to_ascii_lowercase());
@@ -1703,7 +1710,10 @@ impl<'a> ValidationPass<'a> {
 
         let (name, name_offset, name_buf_idx) = match fields[name_idx as usize] {
             FieldValue::Span {
-                text, offset, buf_idx, ..
+                text,
+                offset,
+                buf_idx,
+                ..
             } => (text, offset, buf_idx),
             _ => ("", 0, 0),
         };
@@ -3737,8 +3747,7 @@ mod tests {
     #[test]
     fn module_resolver_with_analyzer_does_not_panic() {
         let resolver = MapResolver(HashMap::new());
-        let mut analyzer =
-            sqlite_analyzer().with_module_resolver(Box::new(resolver));
+        let mut analyzer = sqlite_analyzer().with_module_resolver(Box::new(resolver));
         let catalog = sqlite_catalog();
         let model = analyzer.analyze("SELECT 1", &catalog, &lenient());
         assert!(!model.has_diagnostics());
@@ -3747,8 +3756,7 @@ mod tests {
     #[test]
     fn module_import_dedup_tracking() {
         let resolver = MapResolver(HashMap::new());
-        let mut analyzer =
-            sqlite_analyzer().with_module_resolver(Box::new(resolver));
+        let mut analyzer = sqlite_analyzer().with_module_resolver(Box::new(resolver));
         assert!(analyzer.imported.insert("test.module".to_string()));
         assert!(!analyzer.imported.insert("test.module".to_string()));
     }
@@ -3862,13 +3870,25 @@ mod lineage_tests {
         );
 
         // relations_accessed — only catalog relations (not CTEs/subqueries)
-        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
+        let rels = model
+            .statements()
+            .last()
+            .unwrap()
+            .relations_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(rels.len(), 1);
         assert_eq!(rels[0].name, "users");
         assert_eq!(rels[0].kind, RelationKind::Table);
 
         // tables_accessed
-        let tbls = model.statements().last().unwrap().tables_accessed().unwrap().into_inner();
+        let tbls = model
+            .statements()
+            .last()
+            .unwrap()
+            .tables_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(tbls.len(), 1);
         assert_eq!(tbls[0].name, "users");
     }
@@ -3957,7 +3977,13 @@ mod lineage_tests {
             })
         );
 
-        let tbls = model.statements().last().unwrap().tables_accessed().unwrap().into_inner();
+        let tbls = model
+            .statements()
+            .last()
+            .unwrap()
+            .tables_accessed()
+            .unwrap()
+            .into_inner();
         assert!(tbls.iter().any(|t| t.name == "users"));
         assert!(tbls.iter().any(|t| t.name == "orders"));
     }
@@ -3992,13 +4018,25 @@ mod lineage_tests {
         );
 
         // relations — only catalog relations, CTE excluded
-        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
+        let rels = model
+            .statements()
+            .last()
+            .unwrap()
+            .relations_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(rels.len(), 1);
         assert_eq!(rels[0].name, "users");
         assert_eq!(rels[0].kind, RelationKind::Table);
 
         // tables includes users (physical)
-        let tbls = model.statements().last().unwrap().tables_accessed().unwrap().into_inner();
+        let tbls = model
+            .statements()
+            .last()
+            .unwrap()
+            .tables_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(tbls.len(), 1);
         assert_eq!(tbls[0].name, "users");
     }
@@ -4030,7 +4068,13 @@ mod lineage_tests {
             })
         );
 
-        let tbls = model.statements().last().unwrap().tables_accessed().unwrap().into_inner();
+        let tbls = model
+            .statements()
+            .last()
+            .unwrap()
+            .tables_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(tbls.len(), 1);
         assert_eq!(tbls[0].name, "users");
     }
@@ -4075,7 +4119,13 @@ mod lineage_tests {
             "view with unavailable body should be Partial"
         );
 
-        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
+        let rels = model
+            .statements()
+            .last()
+            .unwrap()
+            .relations_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(rels.len(), 1);
         assert_eq!(rels[0].name, "active_users");
         assert_eq!(rels[0].kind, RelationKind::View);
@@ -4090,8 +4140,22 @@ mod lineage_tests {
         let model = analyzer.analyze("CREATE TABLE t(x)", &catalog, &lenient());
 
         assert!(model.lineage().is_none());
-        assert!(model.statements().last().unwrap().relations_accessed().is_none());
-        assert!(model.statements().last().unwrap().tables_accessed().is_none());
+        assert!(
+            model
+                .statements()
+                .last()
+                .unwrap()
+                .relations_accessed()
+                .is_none()
+        );
+        assert!(
+            model
+                .statements()
+                .last()
+                .unwrap()
+                .tables_accessed()
+                .is_none()
+        );
     }
 
     // ── Test 9b: DDL with inner SELECT computes lineage ─────────────────────
@@ -4100,9 +4164,11 @@ mod lineage_tests {
     fn lineage_create_table_as_select() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog
-            .layer_mut(CatalogLayer::Database)
-            .insert_table("src", Some(vec!["a".into(), "b".into()]), false);
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "src",
+            Some(vec!["a".into(), "b".into()]),
+            false,
+        );
 
         let model = analyzer.analyze(
             "CREATE TABLE t AS SELECT a, b FROM src",
@@ -4116,7 +4182,13 @@ mod lineage_tests {
         assert_eq!(lineage[0].origin.as_ref().unwrap().table, "src");
         assert_eq!(lineage[1].name, "b");
 
-        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
+        let rels = model
+            .statements()
+            .last()
+            .unwrap()
+            .relations_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(rels.len(), 1);
         assert_eq!(rels[0].name, "src");
     }
@@ -4125,17 +4197,21 @@ mod lineage_tests {
     fn lineage_create_view_as_select() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog
-            .layer_mut(CatalogLayer::Database)
-            .insert_table("t", Some(vec!["x".into(), "y".into()]), false);
-
-        let model = analyzer.analyze(
-            "CREATE VIEW v AS SELECT x FROM t",
-            &catalog,
-            &lenient(),
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "t",
+            Some(vec!["x".into(), "y".into()]),
+            false,
         );
 
-        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
+        let model = analyzer.analyze("CREATE VIEW v AS SELECT x FROM t", &catalog, &lenient());
+
+        let rels = model
+            .statements()
+            .last()
+            .unwrap()
+            .relations_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(rels.len(), 1);
         assert_eq!(rels[0].name, "t");
     }
@@ -4217,11 +4293,7 @@ mod lineage_tests {
     fn statements_returns_one_per_statement() {
         let mut analyzer = sqlite_analyzer();
         let catalog = sqlite_catalog();
-        let model = analyzer.analyze(
-            "SELECT 1; SELECT 2; SELECT 3;",
-            &catalog,
-            &lenient(),
-        );
+        let model = analyzer.analyze("SELECT 1; SELECT 2; SELECT 3;", &catalog, &lenient());
         assert_eq!(model.statements().len(), 3);
     }
 
@@ -4253,21 +4325,13 @@ mod lineage_tests {
     fn statement_model_lineage_per_statement() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "a",
-            Some(vec!["x".into()]),
-            false,
-        );
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "b",
-            Some(vec!["y".into()]),
-            false,
-        );
-        let model = analyzer.analyze(
-            "SELECT x FROM a; SELECT y FROM b;",
-            &catalog,
-            &lenient(),
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("a", Some(vec!["x".into()]), false);
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("b", Some(vec!["y".into()]), false);
+        let model = analyzer.analyze("SELECT x FROM a; SELECT y FROM b;", &catalog, &lenient());
         assert_eq!(model.statements().len(), 2);
 
         // First statement lineage traces to table a.
@@ -4289,27 +4353,25 @@ mod lineage_tests {
     fn statement_model_relations_per_statement() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "t1",
-            Some(vec!["x".into()]),
-            false,
-        );
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "t2",
-            Some(vec!["y".into()]),
-            false,
-        );
-        let model = analyzer.analyze(
-            "SELECT x FROM t1; SELECT y FROM t2;",
-            &catalog,
-            &lenient(),
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t1", Some(vec!["x".into()]), false);
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t2", Some(vec!["y".into()]), false);
+        let model = analyzer.analyze("SELECT x FROM t1; SELECT y FROM t2;", &catalog, &lenient());
 
-        let rels0 = model.statements()[0].relations_accessed().unwrap().into_inner();
+        let rels0 = model.statements()[0]
+            .relations_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(rels0.len(), 1);
         assert_eq!(rels0[0].name, "t1");
 
-        let rels1 = model.statements()[1].relations_accessed().unwrap().into_inner();
+        let rels1 = model.statements()[1]
+            .relations_accessed()
+            .unwrap()
+            .into_inner();
         assert_eq!(rels1.len(), 1);
         assert_eq!(rels1[0].name, "t2");
     }
@@ -4334,11 +4396,7 @@ mod lineage_tests {
     fn defined_relations_for_create_view() {
         let mut analyzer = sqlite_analyzer();
         let catalog = sqlite_catalog();
-        let model = analyzer.analyze(
-            "CREATE VIEW v AS SELECT 1;",
-            &catalog,
-            &lenient(),
-        );
+        let model = analyzer.analyze("CREATE VIEW v AS SELECT 1;", &catalog, &lenient());
         assert_eq!(model.statements().len(), 1);
         let defs = model.statements()[0].defined_relations();
         assert_eq!(defs.len(), 1);
@@ -4362,7 +4420,12 @@ mod lineage_tests {
         let model = analyzer.analyze("SELECT;", &catalog, &lenient());
         // Parse error should produce a statement model with a diagnostic.
         assert!(model.has_diagnostics());
-        assert!(model.statements().iter().any(|s| !s.diagnostics().is_empty()));
+        assert!(
+            model
+                .statements()
+                .iter()
+                .any(|s| !s.diagnostics().is_empty())
+        );
     }
 
     #[test]

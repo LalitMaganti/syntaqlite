@@ -7,6 +7,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <string.h>
 #include "syntaqlite/parser.h"
 #include "syntaqlite/tokenizer.h"
 #include "syntaqlite/formatter.h"
@@ -334,6 +335,33 @@ register_relations(SyntaqliteValidator *v, PyObject *list, const char *kind,
     return ok ? 0 : -1;
 }
 
+/* ─── module resolver trampoline ─────────────────────────────────────── */
+
+/*
+ * C trampoline that calls a Python callable for module resolution.
+ * user_data is a borrowed PyObject* (the callable).
+ * Returns a malloc-allocated string or NULL.
+ */
+static char *
+py_module_resolver_trampoline(const char *module_path, void *user_data)
+{
+    PyGILState_STATE gstate = PyGILState_Ensure();
+
+    PyObject *callable = (PyObject *)user_data;
+    PyObject *result = PyObject_CallFunction(callable, "s", module_path);
+    char *out = NULL;
+
+    if (result && result != Py_None && PyUnicode_Check(result)) {
+        const char *s = PyUnicode_AsUTF8(result);
+        if (s)
+            out = strdup(s);
+    }
+
+    Py_XDECREF(result);
+    PyGILState_Release(gstate);
+    return out;
+}
+
 /* ─── validate ──────────────────────────────────────────────────────── */
 
 static PyObject *
@@ -347,15 +375,16 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
     Py_ssize_t schema_ddl_len = 0;
     int render = 0;
     PyObject *dialect_obj = NULL;
+    PyObject *resolver_obj = NULL;
 
     static char *kwlist[] = {"sql", "tables", "views", "schema_ddl",
-                             "render", "dialect", NULL};
+                             "render", "dialect", "module_resolver", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|OOz#pO", kwlist,
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "s#|OOz#pOO", kwlist,
                                      &sql, &sql_len,
                                      &tables_list, &views_list,
                                      &schema_ddl, &schema_ddl_len,
-                                     &render, &dialect_obj))
+                                     &render, &dialect_obj, &resolver_obj))
         return NULL;
 
     SyntaqliteDialect dialect;
@@ -388,6 +417,17 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
     /* Load schema from DDL */
     if (schema_ddl) {
         syntaqlite_validator_load_schema_ddl(v, schema_ddl, (uint32_t)schema_ddl_len);
+    }
+
+    /* Set module resolver if provided */
+    if (resolver_obj && resolver_obj != Py_None) {
+        if (!PyCallable_Check(resolver_obj)) {
+            PyErr_SetString(PyExc_TypeError, "module_resolver must be callable");
+            syntaqlite_validator_destroy(v);
+            return NULL;
+        }
+        syntaqlite_validator_set_module_resolver(
+            v, py_module_resolver_trampoline, (void *)resolver_obj);
     }
 
     uint32_t n_diags = syntaqlite_validator_analyze(v, sql, (uint32_t)sql_len);
@@ -607,6 +647,22 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
                 Py_DECREF(sd_list);
             }
 
+            /* Per-statement source text */
+            {
+                const char *src = syntaqlite_validator_statement_source(v, si);
+                if (src) {
+                    PyObject *src_obj = PyUnicode_FromString(src);
+                    if (src_obj) {
+                        PyDict_SetItemString(stmt_dict, "source", src_obj);
+                        Py_DECREF(src_obj);
+                    }
+                } else {
+                    Py_INCREF(Py_None);
+                    PyDict_SetItemString(stmt_dict, "source", Py_None);
+                    Py_DECREF(Py_None);
+                }
+            }
+
             /* Per-statement lineage */
             uint32_t sc_count = syntaqlite_validator_statement_column_lineage_count(v, si);
             if (sc_count > 0) {
@@ -690,6 +746,29 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
                 Py_INCREF(Py_None);
                 PyDict_SetItemString(stmt_dict, "lineage", Py_None);
                 Py_DECREF(Py_None);
+            }
+
+            /* Per-statement relations (top-level, independent of lineage) */
+            {
+                uint32_t sr_count = syntaqlite_validator_statement_relation_count(v, si);
+                PyObject *rel_list = PyList_New(0);
+                if (rel_list) {
+                    const SyntaqliteRelationAccess *sr = syntaqlite_validator_statement_relations(v, si);
+                    for (uint32_t i = 0; i < sr_count; i++) {
+                        PyObject *r = PyDict_New();
+                        if (r) {
+                            PyObject *rname = PyUnicode_FromString(sr[i].name ? sr[i].name : "");
+                            PyObject *rkind = PyUnicode_FromString(
+                                sr[i].kind == SYNTAQLITE_RELATION_VIEW ? "view" : "table");
+                            if (rname) { PyDict_SetItemString(r, "name", rname); Py_DECREF(rname); }
+                            if (rkind) { PyDict_SetItemString(r, "kind", rkind); Py_DECREF(rkind); }
+                            PyList_Append(rel_list, r);
+                            Py_DECREF(r);
+                        }
+                    }
+                    PyDict_SetItemString(stmt_dict, "relations", rel_list);
+                    Py_DECREF(rel_list);
+                }
             }
 
             /* Per-statement defined relations */

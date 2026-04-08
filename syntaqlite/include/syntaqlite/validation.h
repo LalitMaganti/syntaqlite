@@ -119,6 +119,25 @@ SYNTAQLITE_API void syntaqlite_validator_set_mode(SyntaqliteValidator* v,
                                                    SyntaqliteAnalysisMode mode);
 
 // ---------------------------------------------------------------------------
+// Module resolution
+// ---------------------------------------------------------------------------
+
+// Module resolver callback. Given a NUL-terminated dotted module path
+// (e.g. "slices.flow"), return the SQL source text for that module as a
+// NUL-terminated malloc-allocated string, or NULL if the module is not
+// found. The validator frees the returned string.
+typedef char* (*SyntaqliteModuleResolverFn)(const char* module_path,
+                                            void* user_data);
+
+// Set a module resolver callback. When the analyzer encounters an import
+// statement (e.g. INCLUDE PERFETTO MODULE), it calls resolve_fn to obtain
+// the module's SQL source. Pass NULL for resolve_fn to clear the resolver.
+SYNTAQLITE_API void syntaqlite_validator_set_module_resolver(
+    SyntaqliteValidator* v,
+    SyntaqliteModuleResolverFn resolve_fn,
+    void* user_data);
+
+// ---------------------------------------------------------------------------
 // Analysis
 // ---------------------------------------------------------------------------
 
@@ -241,6 +260,11 @@ SYNTAQLITE_API const SyntaqliteTableAccess* syntaqlite_validator_tables(
 // Number of statements produced by the last analyze() call.
 SYNTAQLITE_API uint32_t syntaqlite_validator_statement_count(
     SyntaqliteValidator* v);
+
+// Source text for statement `idx`. NULL when idx is out of bounds.
+// The returned string is valid until the next analyze() or destroy() call.
+SYNTAQLITE_API const char* syntaqlite_validator_statement_source(
+    SyntaqliteValidator* v, uint32_t idx);
 
 // Number of diagnostics for statement at index `idx`.
 // Returns 0 if idx is out of bounds.

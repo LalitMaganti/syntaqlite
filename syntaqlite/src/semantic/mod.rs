@@ -78,7 +78,6 @@ pub use lineage::{
 #[cfg(feature = "validation")]
 pub use model::{DefinedRelation, SemanticModel, StatementModel};
 
-
 // ── Module resolution ────────────────────────────────────────────────────────
 
 /// Callback for resolving `INCLUDE PERFETTO MODULE` (or similar) import
