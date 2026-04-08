@@ -20,7 +20,7 @@ extern const unsigned int synq_sqlite_nKeyword;
 
 // ============ sqlite dialect descriptor ============
 
-static const SyntaqliteGrammarTemplate SQLITE_GRAMMAR = {
+static const SyntaqliteDialectTemplate SQLITE_DIALECT = {
     .name = "sqlite",
 
     // AST metadata
@@ -57,12 +57,7 @@ static const SyntaqliteGrammarTemplate SQLITE_GRAMMAR = {
     .token_categories = token_categories,
     .token_type_count = TOKEN_TYPE_COUNT,
     .macro_style = SYNQ_MACRO_STYLE_NONE,
-};
 
-// ============ Dialect descriptor ============
-
-static const SyntaqliteDialectTemplate SQLITE_DIALECT = {
-    .grammar = &SQLITE_GRAMMAR,
     .fmt_str_data = sqlite_fmt_string_data,
     .fmt_str_offsets = sqlite_fmt_string_offsets,
     .fmt_str_count = sqlite_fmt_string_count,
@@ -72,14 +67,14 @@ static const SyntaqliteDialectTemplate SQLITE_DIALECT = {
     .fmt_ops_count = sqlite_fmt_ops_count,
     .fmt_dispatch = sqlite_fmt_dispatch,
     .fmt_dispatch_count = sqlite_fmt_dispatch_count,
-    .roles_data = sqlite_roles_data,
-    .roles_count = sqlite_roles_count,
-    .macro_defs_data = sqlite_macro_defs_data,
-    .macro_defs_count = sqlite_macro_defs_count,
     .fmt_prec_table = sqlite_fmt_prec_table,
     .fmt_prec_table_count = sqlite_fmt_prec_table_count,
     .fmt_expr_meta = sqlite_fmt_expr_meta,
     .fmt_expr_meta_count = sqlite_fmt_expr_meta_count,
+    .roles_data = sqlite_roles_data,
+    .roles_count = sqlite_roles_count,
+    .macro_defs_data = sqlite_macro_defs_data,
+    .macro_defs_count = sqlite_macro_defs_count,
 };
 
 SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void) {

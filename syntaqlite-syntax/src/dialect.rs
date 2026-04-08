@@ -331,14 +331,10 @@ impl AnyDialect {
     }
 
     /// Return a reference to the underlying C dialect template.
-    ///
-    /// Reads the `grammar` field from the `SyntaqliteDialectTemplate` pointed
-    /// to by `inner.template`.
     #[inline]
-    fn template(&self) -> &'static ffi::CGrammarTemplate {
-        // SAFETY: `inner.template` points to a valid `SyntaqliteDialectTemplate`
-        // whose `grammar` field is a valid `*const CGrammarTemplate`.
-        unsafe { &*(*self.inner.template).grammar }
+    fn template(&self) -> &'static ffi::CDialectTemplate {
+        // SAFETY: `inner.template` points to a valid `SyntaqliteDialectTemplate`.
+        unsafe { &*self.inner.template }
     }
 
     /// Return the human-readable node name for `tag`.
@@ -385,7 +381,7 @@ impl AnyDialect {
                 &[]
             } else {
                 let count = *raw.field_meta_counts.add(idx) as usize;
-                let ptr = *raw.field_meta.add(idx);
+                let ptr = (*raw.field_meta.add(idx)).cast::<ffi::CFieldMeta>();
                 if count == 0 || ptr.is_null() {
                     &[]
                 } else {
@@ -563,75 +559,130 @@ pub(crate) mod ffi {
         }
     }
 
-    /// Mirrors C `SyntaqliteGrammarTemplate` struct defined in
+    /// Mirrors the C `SyntaqliteDialectTemplate` struct defined in
     /// `include/syntaqlite/dialect.h`.
-    #[repr(C)]
-    pub struct CGrammarTemplate {
-        pub(crate) name: *const std::ffi::c_char,
-
-        // Range metadata
-        pub(crate) range_meta: *const std::ffi::c_void,
-
-        // AST metadata
-        pub(crate) node_count: u32,
-        pub(crate) node_names: *const *const std::ffi::c_char,
-        pub(crate) field_meta: *const *const CFieldMeta,
-        pub(crate) field_meta_counts: *const u8,
-        pub(crate) list_tags: *const u8,
-
-        // Parser lifecycle (function pointers provided by the dialect's parser)
-        pub(crate) parser_alloc: *const std::ffi::c_void,
-        pub(crate) parser_init: *const std::ffi::c_void,
-        pub(crate) parser_finalize: *const std::ffi::c_void,
-        pub(crate) parser_free: *const std::ffi::c_void,
-        pub(crate) parser_feed: *const std::ffi::c_void,
-        pub(crate) parser_trace: *const std::ffi::c_void,
-        pub(crate) parser_expected_tokens: *const std::ffi::c_void,
-        pub(crate) parser_completion_context: *const std::ffi::c_void,
-
-        // Tokenizer (function pointer provided by the dialect's parser)
-        pub(crate) get_token: *const std::ffi::c_void,
-
-        // Keyword table metadata
-        pub(crate) keyword_text: *const std::ffi::c_char,
-        pub(crate) keyword_offsets: *const u16,
-        pub(crate) keyword_lens: *const u8,
-        pub(crate) keyword_codes: *const u8,
-        pub(crate) keyword_count: *const u32,
-
-        // Token metadata (indexed by token type ordinal)
-        pub(crate) token_categories: *const u8,
-        pub(crate) token_type_count: u32,
-
-        // Macro invocation style
-        pub(crate) macro_style: u32,
-    }
-
-    /// Mirrors the `SyntaqliteDialectTemplate` C struct as seen by
-    /// `syntaqlite-syntax` (compiled WITHOUT `SYNTAQLITE_FMT` /
-    /// `SYNTAQLITE_VALIDATION`). Only the first field — a pointer to the
-    /// dialect template — is visible at this level.
     ///
-    /// The `syntaqlite` crate defines its own, wider version of this struct
-    /// with additional fields for fmt/validation data. Both are `#[repr(C)]`
-    /// and share the same first field, so a pointer cast between them is safe.
+    /// All fields are always present; optional sections (fmt, validation)
+    /// are zeroed when the feature is not compiled in.
     #[repr(C)]
     pub struct CDialectTemplate {
-        pub(crate) grammar: *const CGrammarTemplate,
+        #[doc(hidden)]
+        pub name: *const std::ffi::c_char,
+
+        // Range metadata
+        #[doc(hidden)]
+        pub range_meta: *const std::ffi::c_void,
+
+        // AST metadata
+        #[doc(hidden)]
+        pub node_count: u32,
+        #[doc(hidden)]
+        pub node_names: *const *const std::ffi::c_char,
+        #[doc(hidden)]
+        pub field_meta: *const *const std::ffi::c_void,
+        #[doc(hidden)]
+        pub field_meta_counts: *const u8,
+        #[doc(hidden)]
+        pub list_tags: *const u8,
+
+        // Parser lifecycle (function pointers provided by the dialect's parser)
+        #[doc(hidden)]
+        pub parser_alloc: *const std::ffi::c_void,
+        #[doc(hidden)]
+        pub parser_init: *const std::ffi::c_void,
+        #[doc(hidden)]
+        pub parser_finalize: *const std::ffi::c_void,
+        #[doc(hidden)]
+        pub parser_free: *const std::ffi::c_void,
+        #[doc(hidden)]
+        pub parser_feed: *const std::ffi::c_void,
+        #[doc(hidden)]
+        pub parser_trace: *const std::ffi::c_void,
+        #[doc(hidden)]
+        pub parser_expected_tokens: *const std::ffi::c_void,
+        #[doc(hidden)]
+        pub parser_completion_context: *const std::ffi::c_void,
+
+        // Tokenizer (function pointer provided by the dialect's parser)
+        #[doc(hidden)]
+        pub get_token: *const std::ffi::c_void,
+
+        // Keyword table metadata
+        #[doc(hidden)]
+        pub keyword_text: *const std::ffi::c_char,
+        #[doc(hidden)]
+        pub keyword_offsets: *const u16,
+        #[doc(hidden)]
+        pub keyword_lens: *const u8,
+        #[doc(hidden)]
+        pub keyword_codes: *const u8,
+        #[doc(hidden)]
+        pub keyword_count: *const u32,
+
+        // Token metadata (indexed by token type ordinal)
+        #[doc(hidden)]
+        pub token_categories: *const u8,
+        #[doc(hidden)]
+        pub token_type_count: u32,
+
+        // Macro invocation style
+        #[doc(hidden)]
+        pub macro_style: u32,
+
+        // ── fmt fields ──
+        #[doc(hidden)]
+        pub fmt_str_data: *const u8,
+        #[doc(hidden)]
+        pub fmt_str_offsets: *const u32,
+        #[doc(hidden)]
+        pub fmt_str_count: u32,
+        #[doc(hidden)]
+        pub fmt_enum_display: *const u16,
+        #[doc(hidden)]
+        pub fmt_enum_display_count: u32,
+        #[doc(hidden)]
+        pub fmt_ops: *const u8,
+        #[doc(hidden)]
+        pub fmt_ops_count: u32,
+        #[doc(hidden)]
+        pub fmt_dispatch: *const u32,
+        #[doc(hidden)]
+        pub fmt_dispatch_count: u32,
+        #[doc(hidden)]
+        pub fmt_prec_table: *const u8,
+        #[doc(hidden)]
+        pub fmt_prec_table_count: u32,
+        #[doc(hidden)]
+        pub fmt_expr_meta: *const u32,
+        #[doc(hidden)]
+        pub fmt_expr_meta_count: u32,
+
+        // ── validation fields ──
+        #[doc(hidden)]
+        pub roles_data: *const u8,
+        #[doc(hidden)]
+        pub roles_count: u32,
+        #[doc(hidden)]
+        pub macro_defs_data: *const u8,
+        #[doc(hidden)]
+        pub macro_defs_count: u32,
     }
 
-    // SAFETY: CDialectTemplate contains only a pointer to immutable static C data.
+    // SAFETY: CDialectTemplate contains only pointers to immutable static C data.
     unsafe impl Send for CDialectTemplate {}
-    // SAFETY: CDialectTemplate contains only a pointer to immutable static C data.
+    // SAFETY: CDialectTemplate contains only pointers to immutable static C data.
     unsafe impl Sync for CDialectTemplate {}
 
     /// Mirrors C `SyntaqliteDialect` from `include/syntaqlite/dialect.h`.
     #[repr(C)]
     #[derive(Debug, Clone, Copy)]
     pub struct CDialect {
-        pub(crate) template: *const CDialectTemplate,
-        pub(crate) sqlite_version: i32,
-        pub(crate) cflags: CCflags,
+        #[doc(hidden)]
+        pub template: *const CDialectTemplate,
+        #[doc(hidden)]
+        pub sqlite_version: i32,
+        #[doc(hidden)]
+        pub cflags: CCflags,
     }
 
     /// Mirrors C `SyntaqliteFieldMeta` from `include/syntaqlite_dialect/dialect_types.h`.

@@ -126,7 +126,7 @@ pub mod typed {
 
     // Only exposed for use in generated code, not public API.
     #[doc(hidden)]
-    pub use crate::dialect::ffi::{CDialect, CDialectTemplate, CGrammarTemplate};
+    pub use crate::dialect::ffi::{CDialect, CDialectTemplate};
 
     /// Top-level typed dialect handle for the `SQLite` dialect.
     ///

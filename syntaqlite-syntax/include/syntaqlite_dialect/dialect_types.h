@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 // Dialect-implementation types: full definitions of structs that appear in
-// SyntaqliteGrammarTemplate by pointer and are only needed when building a
+// SyntaqliteDialectTemplate by pointer and are only needed when building a
 // dialect descriptor. Consumer code (code that merely *uses* a dialect) needs
 // only the forward declarations in syntaqlite/dialect.h.
 

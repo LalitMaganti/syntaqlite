@@ -1,12 +1,10 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// Dialect and grammar descriptors.
+// Dialect descriptor.
 //
-// A dialect bundles a grammar (parser vtable + AST metadata) with optional
-// formatter bytecode and semantic-role tables.  A concrete dialect (e.g.
-// SQLite, Perfetto) fills one static SyntaqliteDialectTemplate and exposes
-// it via a SyntaqliteDialect accessor function:
+// A concrete dialect (e.g. SQLite, Perfetto) fills one static
+// SyntaqliteDialectTemplate and exposes it via a SyntaqliteDialect accessor:
 //
 //   SyntaqliteDialect syntaqlite_<name>_dialect(void);
 //
@@ -43,7 +41,7 @@ extern "C" {
 // ── Token category ────────────────────────────────────────────────────────
 
 // Semantic category of a SQL token, used for syntax highlighting.
-// Stored as uint8_t in SyntaqliteGrammarTemplate::token_categories.
+// Stored as uint8_t in SyntaqliteDialectTemplate::token_categories.
 typedef enum {
   SYNQ_TOKEN_CATEGORY_OTHER = 0,
   SYNQ_TOKEN_CATEGORY_KEYWORD = 1,
@@ -88,9 +86,12 @@ typedef struct SyntaqliteFieldMeta SyntaqliteFieldMeta;
 // Forward declaration for use in function pointers below.
 typedef struct SyntaqliteDialect SyntaqliteDialect;
 
-// ── Grammar template (parser vtable) ──────────────────────────────────────
+// ── Dialect template (static dialect data) ────────────────────────────────
 
-typedef struct SyntaqliteGrammarTemplate {
+// Static dialect descriptor: parser vtable, AST metadata, formatter bytecode,
+// and semantic-role tables.  All fields are always present; optional sections
+// (fmt, validation) are zeroed when the feature is not compiled in.
+typedef struct SyntaqliteDialectTemplate {
   const char* name;
 
   // Range metadata for the macro straddle check.
@@ -138,15 +139,6 @@ typedef struct SyntaqliteGrammarTemplate {
   // begin_macro/end_macro directly — this field is only used by
   // syntaqlite_parser_next().
   SyntaqliteMacroStyle macro_style;
-} SyntaqliteGrammarTemplate;
-
-// ── Dialect template (static dialect data) ────────────────────────────────
-
-// Bundles a grammar template with optional formatter bytecode and semantic
-// role tables.  All fields are always present so that the struct layout is
-// stable across amalgamation builds regardless of feature-flag order.
-typedef struct SyntaqliteDialectTemplate {
-  const SyntaqliteGrammarTemplate* grammar;
 
   // Formatter bytecode (zeroed when formatting is not compiled in).
   const uint8_t* fmt_str_data;

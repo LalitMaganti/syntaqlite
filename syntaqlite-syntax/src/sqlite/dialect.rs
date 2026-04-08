@@ -7,7 +7,7 @@ use crate::any::AnyDialect;
 use crate::typed::TypedDialect;
 use crate::util::{SqliteSyntaxFlags, SqliteVersion};
 
-/// The typed dialect handle for the `SQLite` dialect.
+/// The dialect handle.
 ///
 /// Wraps an [`AnyDialect`] and implements [`TypedDialect`]. Obtain via [`dialect()`];
 /// configure with [`with_version`](Self::with_version) and [`with_cflags`](Self::with_cflags).
@@ -57,17 +57,17 @@ impl TypedDialect for Dialect {
     type Token = super::tokens::TokenType;
 }
 
-/// Returns the typed dialect handle for the `SQLite` dialect.
+/// Returns the dialect handle.
 pub fn dialect() -> Dialect {
-    // SAFETY: `syntaqlite_sqlite_dialect()` returns a valid `SyntaqliteDialect`
-    // whose `tmpl` points to a static `SyntaqliteDialectTemplate`.
-    let raw = unsafe {
-        let d = syntaqlite_sqlite_dialect();
-        AnyDialect::new(d)
-    };
+    // SAFETY: syntaqlite_sqlite_dialect() returns a valid static C dialect descriptor.
+    let raw = unsafe { AnyDialect::new(ffi::syntaqlite_sqlite_dialect()) };
     Dialect { raw }
 }
 
-unsafe extern "C" {
-    fn syntaqlite_sqlite_dialect() -> crate::dialect::ffi::CDialect;
+// ── ffi ───────────────────────────────────────────────────────────────────────
+
+mod ffi {
+    unsafe extern "C" {
+        pub(super) fn syntaqlite_sqlite_dialect() -> crate::typed::CDialect;
+    }
 }

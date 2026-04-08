@@ -144,8 +144,8 @@ static void free_macro_entry(SyntaqliteParser* p, SyntaqliteMacroEntry* e);
 // reduce via ecmd ::= SEMI . or ecmd ::= error SEMI . using the *next*
 // token as the lookahead, so that token is already consumed by Lemon.
 static void lemon_reinit(SyntaqliteParser* p) {
-  SYNQ_PARSER_FINALIZE(p->dialect.tmpl->grammar, p->lemon);
-  SYNQ_PARSER_INIT(p->dialect.tmpl->grammar, p->lemon, &p->ctx);
+  SYNQ_PARSER_FINALIZE(p->dialect.tmpl, p->lemon);
+  SYNQ_PARSER_INIT(p->dialect.tmpl, p->lemon, &p->ctx);
   p->last_token_type = 0;
 }
 
@@ -212,7 +212,7 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   memset(p, 0, sizeof(*p));
   p->mem = m;
   p->dialect = dialect;
-  p->lemon = SYNQ_PARSER_ALLOC(dialect.tmpl->grammar, m.xMalloc, &p->ctx);
+  p->lemon = SYNQ_PARSER_ALLOC(dialect.tmpl, m.xMalloc, &p->ctx);
   synq_parse_ctx_init(&p->ctx, m);
   syntaqlite_vec_init(&p->comments);
   syntaqlite_vec_init(&p->tokens);
@@ -263,7 +263,7 @@ static int feed_one_token(SyntaqliteParser* p,
                           uint32_t token_idx) {
   SynqParseToken minor = {
       .z = text, .n = len, .type = token_type, .token_idx = token_idx};
-  SYNQ_PARSER_FEED(p->dialect.tmpl->grammar, p->lemon, (int)token_type, minor);
+  SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, (int)token_type, minor);
   p->last_token_type = token_type;
 
   if (p->ctx.error) {
@@ -299,7 +299,7 @@ static int check_macro_straddle(SyntaqliteParser* p) {
   uint32_t macro_count = syntaqlite_vec_len(&p->macros);
   if (macro_count == 0)
     return 0;
-  if (!p->dialect.tmpl->grammar->range_meta) {
+  if (!p->dialect.tmpl->range_meta) {
     snprintf(p->error_msg, sizeof(p->error_msg),
              "internal error: grammar has no range_meta but macros were used");
     p->had_error = 1;
@@ -313,11 +313,10 @@ static int check_macro_straddle(SyntaqliteParser* p) {
     const uint8_t* raw = (const uint8_t*)synq_arena_ptr(&p->ctx.ast, nid);
     uint32_t tag;
     memcpy(&tag, raw, sizeof(tag));
-    if (tag == 0 || tag >= p->dialect.tmpl->grammar->node_count)
+    if (tag == 0 || tag >= p->dialect.tmpl->node_count)
       continue;
 
-    const SyntaqliteRangeMetaEntry* entry =
-        &p->dialect.tmpl->grammar->range_meta[tag];
+    const SyntaqliteRangeMetaEntry* entry = &p->dialect.tmpl->range_meta[tag];
     if (entry->fields == NULL || entry->count == 0)
       continue;
 
@@ -390,7 +389,7 @@ static int finish_input(SyntaqliteParser* p) {
 
   // Send end-of-input (EOF) to flush the final reduction.
   SynqParseToken eof = {.z = NULL, .n = 0, .type = 0, .token_idx = 0xFFFFFFFF};
-  SYNQ_PARSER_FEED(p->dialect.tmpl->grammar, p->lemon, 0, eof);
+  SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, 0, eof);
   p->finished = 1;
 
   if (p->ctx.error) {
@@ -464,7 +463,7 @@ static int try_macro_call(SyntaqliteParser* p,
   const unsigned char* z = (const unsigned char*)p->source;
   if (z[bang_offset] != '!')
     return -1;
-  if (p->dialect.tmpl->grammar->macro_style != SYNQ_MACRO_STYLE_RUST &&
+  if (p->dialect.tmpl->macro_style != SYNQ_MACRO_STYLE_RUST &&
       !p->macro_fallback)
     return -1;
 
@@ -491,7 +490,7 @@ static int try_macro_call(SyntaqliteParser* p,
   // Unregistered macro — fallback to TK_ID.  Always allowed when the
   // grammar declares RUST-style macros; otherwise only when macro_fallback
   // is explicitly set (e.g. embedded-SQL hole placeholders).
-  if (p->dialect.tmpl->grammar->macro_style != SYNQ_MACRO_STYLE_RUST &&
+  if (p->dialect.tmpl->macro_style != SYNQ_MACRO_STYLE_RUST &&
       !p->macro_fallback)
     return -1;
 
@@ -732,7 +731,7 @@ static int expand_and_feed(SyntaqliteParser* p,
                             .n = (uint32_t)tlen,
                             .type = ttype,
                             .token_idx = 0xFFFFFFFF};
-    SYNQ_PARSER_FEED(p->dialect.tmpl->grammar, p->lemon, (int)ttype, minor);
+    SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, (int)ttype, minor);
     p->last_token_type = ttype;
 
     if (p->ctx.error) {
@@ -1044,22 +1043,21 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
 SYNTAQLITE_API uint32_t syntaqlite_parser_expected_tokens(SyntaqliteParser* p,
                                                           uint32_t* out_tokens,
                                                           uint32_t out_cap) {
-  if (p == NULL || p->dialect.tmpl->grammar == NULL ||
-      p->dialect.tmpl->grammar->parser_expected_tokens == NULL) {
+  if (p == NULL || p->dialect.tmpl == NULL ||
+      p->dialect.tmpl->parser_expected_tokens == NULL) {
     return 0;
   }
-  return p->dialect.tmpl->grammar->parser_expected_tokens(p->lemon, out_tokens,
-                                                          out_cap);
+  return p->dialect.tmpl->parser_expected_tokens(p->lemon, out_tokens, out_cap);
 }
 
 SYNTAQLITE_API SyntaqliteCompletionContext
 syntaqlite_parser_completion_context(SyntaqliteParser* p) {
-  if (p == NULL || p->dialect.tmpl->grammar == NULL ||
-      p->dialect.tmpl->grammar->parser_completion_context == NULL) {
+  if (p == NULL || p->dialect.tmpl == NULL ||
+      p->dialect.tmpl->parser_completion_context == NULL) {
     return SYNTAQLITE_COMPLETION_CONTEXT_UNKNOWN;
   }
   return (SyntaqliteCompletionContext)
-      p->dialect.tmpl->grammar->parser_completion_context(p->lemon);
+      p->dialect.tmpl->parser_completion_context(p->lemon);
 }
 
 SYNTAQLITE_API int32_t syntaqlite_parser_finish(SyntaqliteParser* p) {
@@ -1138,7 +1136,7 @@ static void dump_node_recursive(DumpBuf* b,
   uint32_t tag;
   memcpy(&tag, raw, sizeof(tag));
 
-  const SyntaqliteGrammarTemplate* g = p->dialect.tmpl->grammar;
+  const SyntaqliteDialectTemplate* g = p->dialect.tmpl;
   if (tag >= g->node_count)
     return;
 
@@ -1276,7 +1274,7 @@ static void free_macro_entry(SyntaqliteParser* p, SyntaqliteMacroEntry* e) {
 
 SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
   if (p) {
-    SYNQ_PARSER_FREE(p->dialect.tmpl->grammar, p->lemon, p->mem.xFree);
+    SYNQ_PARSER_FREE(p->dialect.tmpl, p->lemon, p->mem.xFree);
     synq_parse_ctx_free(&p->ctx);
     syntaqlite_vec_free(&p->comments, p->mem);
     syntaqlite_vec_free(&p->tokens, p->mem);
@@ -1328,9 +1326,9 @@ SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
     return -1;
   p->trace = enable;
   if (enable) {
-    SYNQ_PARSER_TRACE(p->dialect.tmpl->grammar, stderr, "parser> ");
+    SYNQ_PARSER_TRACE(p->dialect.tmpl, stderr, "parser> ");
   } else {
-    SYNQ_PARSER_TRACE(p->dialect.tmpl->grammar, NULL, NULL);
+    SYNQ_PARSER_TRACE(p->dialect.tmpl, NULL, NULL);
   }
   return 0;
 }

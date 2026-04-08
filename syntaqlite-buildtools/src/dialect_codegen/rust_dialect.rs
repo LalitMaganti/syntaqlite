@@ -127,7 +127,7 @@ pub fn dialect() -> {dialect_struct} {{
 
 mod ffi {{
     unsafe extern "C" {{
-        pub(super) fn {dialect_fn}() -> {syntax_crate}::typed::CGrammar;
+        pub(super) fn {dialect_fn}() -> {syntax_crate}::typed::CDialect;
     }}
 }}
 "#

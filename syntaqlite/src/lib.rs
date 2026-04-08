@@ -257,7 +257,7 @@ pub mod any {
     #[cfg(feature = "fmt")]
     pub mod ffi {
         #[doc(inline)]
-        pub use crate::dialect::ffi::CDialectTemplate;
+        pub use syntaqlite_syntax::typed::CDialectTemplate;
     }
 }
 

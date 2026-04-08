@@ -204,11 +204,11 @@ impl AnyDialect {
     ///
     /// # Safety
     ///
-    /// `dialect.tmpl` must point to a valid [`ffi::CDialectTemplate`] that
+    /// `dialect.template` must point to a valid [`ffi::CDialectTemplate`] that
     /// lives at least as long as this `AnyDialect` (and all its clones).
     pub(crate) unsafe fn from_c_dialect(dialect: ffi::CDialect) -> Self {
-        // SAFETY: caller guarantees dialect.tmpl is valid.
-        let mut inner = unsafe { (*dialect.tmpl).syntax_dialect() };
+        // SAFETY: caller guarantees dialect.template is valid.
+        let mut inner = unsafe { (*dialect.template).syntax_dialect() };
         inner = inner
             .with_version(SqliteVersion::from_int(dialect.sqlite_version))
             .with_cflags(syntaqlite_syntax::util::SqliteSyntaxFlags::from_raw(
@@ -216,7 +216,7 @@ impl AnyDialect {
             ));
         AnyDialect {
             inner,
-            data: dialect.tmpl,
+            data: dialect.template,
             ext_cflags: crate::util::SqliteFlags::default(),
             _keep_alive: None,
         }
@@ -464,212 +464,144 @@ mod tests {
 
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
-/// C-ABI types for external dialect implementors.
-///
-/// External dialect crates and WASM side modules use the types here to hand a
-/// dialect template pointer to [`AnyDialect::from_c_dialect_ptr`]. No other
-/// callers should depend on these types.
+/// C-ABI types re-exported from `syntaqlite-syntax`.
 pub(crate) mod ffi {
-    use syntaqlite_syntax::any::AnyDialect as SyntaxDialect;
+    pub(crate) use syntaqlite_syntax::typed::{CDialect, CDialectTemplate};
+}
 
-    use crate::dialect::SemanticRole;
+/// Extension methods on [`ffi::CDialectTemplate`] for fmt/validation access.
+///
+/// These live here (not in `syntaqlite-syntax`) because they depend on types
+/// from `syntaqlite-common` (e.g. [`SemanticRole`]).
+pub(crate) trait CDialectTemplateExt {
+    /// Construct an [`SyntaxDialect`](syntaqlite_syntax::any::AnyDialect) with
+    /// default version and cflags.
+    ///
+    /// # Safety
+    /// `self` must be a valid, fully-initialized `CDialectTemplate`.
+    unsafe fn syntax_dialect(&self) -> SyntaxDialect;
 
-    /// C-ABI mirror of the `SyntaqliteDialectTemplate` struct defined in
-    /// `include/syntaqlite/dialect.h`.
+    /// The semantic role table for this dialect, indexed by node tag.
     ///
-    /// Bundles a pointer to the dialect template with optional formatter
-    /// bytecode and semantic-role tables.  A `syntaqlite_<name>_dialect()`
-    /// extern "C" function returns a `SyntaqliteDialect` whose `tmpl` field
-    /// points to a static instance of this struct.
+    /// # Safety
+    /// `self` must be a valid, fully-initialized `CDialectTemplate`.
+    unsafe fn roles(&self) -> &'static [SemanticRole];
+
+    /// Whether this template has formatter data.
+    fn has_fmt_data(&self) -> bool;
+
+    /// Read the packed `fmt_dispatch` entry for a node-tag index.
     ///
-    /// Field order and types must exactly match the C `SyntaqliteDialectTemplate`
-    /// typedef.  All fields are private; this type is opaque to external
-    /// callers — only pass it by pointer to [`super::AnyDialect::from_c_dialect_ptr`].
-    #[repr(C)]
-    pub struct CDialectTemplate {
-        grammar: *const syntaqlite_syntax::typed::CGrammarTemplate,
-        // ── fmt fields (SYNTAQLITE_FMT) ──
-        fmt_str_data: *const u8,
-        fmt_str_offsets: *const u32,
-        fmt_str_count: u32,
-        fmt_enum_display: *const u16,
-        fmt_enum_display_count: u32,
-        fmt_ops: *const u8,
-        fmt_ops_count: u32,
-        fmt_dispatch: *const u32,
-        fmt_dispatch_count: u32,
-        fmt_prec_table: *const u8,
-        fmt_prec_table_count: u32,
-        fmt_expr_meta: *const u32,
-        fmt_expr_meta_count: u32,
-        // ── validation fields (SYNTAQLITE_VALIDATION) ──
-        roles_data: *const u8,
-        roles_count: u32,
-        macro_defs_data: *const u8,
-        macro_defs_count: u32,
+    /// # Safety
+    /// `self` must be a valid, fully-initialized `CDialectTemplate`.
+    unsafe fn fmt_dispatch(&self, tag_idx: usize) -> Option<(&[u8], usize)>;
+
+    /// Look up a string from the fmt string table by index (CSR encoding).
+    ///
+    /// # Safety
+    /// `self` must be a valid template and `idx` must be in bounds.
+    unsafe fn fmt_string(&self, idx: usize) -> &'static str;
+
+    /// Look up a value in the enum display table.
+    ///
+    /// # Safety
+    /// `self` must be valid and `idx` must be in bounds.
+    unsafe fn fmt_enum_display_val(&self, idx: usize) -> u16;
+
+    /// Look up `(prec, group)` from the precedence table at `base + ordinal`.
+    ///
+    /// # Safety
+    /// `self` must be valid and the index must be in bounds.
+    unsafe fn fmt_prec_lookup(&self, base: u16, ordinal: u32) -> (u8, u8);
+
+    /// Look up the expr-meta for a node tag.
+    ///
+    /// # Safety
+    /// `self` must be valid and `tag_idx` must be in bounds.
+    unsafe fn fmt_expr_meta(&self, tag_idx: usize) -> Option<(u8, u16)>;
+}
+
+impl CDialectTemplateExt for ffi::CDialectTemplate {
+    unsafe fn syntax_dialect(&self) -> SyntaxDialect {
+        // SAFETY: caller guarantees self is valid.
+        unsafe { SyntaxDialect::from_dialect_template(std::ptr::from_ref(self)) }
     }
 
-    // SAFETY: CDialectTemplate contains only pointers to immutable static C data.
-    unsafe impl Send for CDialectTemplate {}
-    // SAFETY: same as Send above.
-    unsafe impl Sync for CDialectTemplate {}
-
-    /// C-ABI mirror of the `SyntaqliteDialect` struct defined in
-    /// `include/syntaqlite/dialect.h`.
-    ///
-    /// This is the configured dialect handle: a pointer to the static dialect
-    /// template plus per-instance version and cflag overrides. The C layout is:
-    ///
-    /// ```c
-    /// typedef struct SyntaqliteDialect {
-    ///     const SyntaqliteDialectTemplate* tmpl;
-    ///     int32_t sqlite_version;
-    ///     SyntaqliteCflags cflags;
-    /// } SyntaqliteDialect;
-    /// ```
-    #[repr(C)]
-    #[derive(Clone, Copy)]
-    pub(crate) struct CDialect {
-        pub(crate) tmpl: *const CDialectTemplate,
-        pub(crate) sqlite_version: i32,
-        pub(crate) cflags: syntaqlite_syntax::util::ffi::CCflags,
+    unsafe fn roles(&self) -> &'static [SemanticRole] {
+        // SAFETY: roles_data points to roles_count valid SemanticRole values in static storage.
+        unsafe {
+            std::slice::from_raw_parts(
+                self.roles_data.cast::<SemanticRole>(),
+                self.roles_count as usize,
+            )
+        }
     }
 
-    // SAFETY: CDialect holds a pointer to immutable static C data.
-    unsafe impl Send for CDialect {}
-    // SAFETY: same as Send above.
-    unsafe impl Sync for CDialect {}
+    fn has_fmt_data(&self) -> bool {
+        self.fmt_str_count > 0
+    }
 
-    impl CDialectTemplate {
-        /// Construct an [`SyntaxDialect`] with default version and cflags from the
-        /// dialect template pointer in this dialect template.
-        ///
-        /// The returned handle uses `INT32_MAX` (latest version) and empty
-        /// cflags. Callers that need a configured version/cflags should apply
-        /// them afterwards via [`SyntaxDialect::with_version`] /
-        /// [`SyntaxDialect::with_cflags`].
-        ///
-        /// # Safety
-        /// `self` must be a valid, fully-initialized `CDialectTemplate` and
-        /// its `grammar` pointer must be valid.
-        pub(crate) unsafe fn syntax_dialect(&self) -> SyntaxDialect {
-            // SAFETY: caller guarantees self is valid. We cast our CDialectTemplate*
-            // to the opaque CDialectTemplate in syntaqlite-syntax (same C struct).
-            let tmpl =
-                std::ptr::from_ref(self).cast::<syntaqlite_syntax::typed::CDialectTemplate>();
-            // SAFETY: tmpl points to the same static data as self, just cast to
-            // the syntaqlite-syntax version of CDialectTemplate (same first field).
-            unsafe { SyntaxDialect::from_dialect_template(tmpl) }
+    unsafe fn fmt_dispatch(&self, tag_idx: usize) -> Option<(&[u8], usize)> {
+        if tag_idx >= self.fmt_dispatch_count as usize {
+            return None;
         }
+        // SAFETY: tag_idx < fmt_dispatch_count; fmt_dispatch is valid for that range.
+        let packed = unsafe { *self.fmt_dispatch.add(tag_idx) };
+        let offset = (packed >> 16) as u16;
+        let length = (packed & 0xFFFF) as u16;
+        if offset == 0xFFFF {
+            return None;
+        }
+        let byte_offset = offset as usize * 6;
+        let byte_len = length as usize * 6;
+        // SAFETY: dispatch entries are bounds-checked at codegen time.
+        let slice = unsafe { std::slice::from_raw_parts(self.fmt_ops.add(byte_offset), byte_len) };
+        Some((slice, length as usize))
+    }
 
-        /// The semantic role table for this dialect, indexed by node tag.
-        ///
-        /// # Safety
-        /// `self` must be a valid, fully-initialized `CDialectTemplate`.
-        pub(crate) unsafe fn roles(&self) -> &'static [SemanticRole] {
-            // SAFETY: roles_data points to roles_count valid SemanticRole values in static storage.
-            unsafe {
-                std::slice::from_raw_parts(
-                    self.roles_data.cast::<SemanticRole>(),
-                    self.roles_count as usize,
-                )
-            }
+    unsafe fn fmt_string(&self, idx: usize) -> &'static str {
+        // SAFETY: offsets has fmt_str_count+1 entries; fmt_str_data covers the range.
+        let (start, end) = unsafe {
+            (
+                *self.fmt_str_offsets.add(idx) as usize,
+                *self.fmt_str_offsets.add(idx + 1) as usize,
+            )
+        };
+        // SAFETY: bytes are valid UTF-8 by codegen construction.
+        unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                self.fmt_str_data.add(start),
+                end - start,
+            ))
         }
+    }
 
-        /// Whether this template has formatter data.
-        pub(crate) fn has_fmt_data(&self) -> bool {
-            self.fmt_str_count > 0
-        }
+    unsafe fn fmt_enum_display_val(&self, idx: usize) -> u16 {
+        // SAFETY: callers pass indices checked at codegen time.
+        unsafe { *self.fmt_enum_display.add(idx) }
+    }
 
-        /// Read the packed `fmt_dispatch` entry for a node-tag index.
-        ///
-        /// Returns `(opcode_slice, op_count)` or `None` if the tag is out of range
-        /// or has no dispatch entry.
-        ///
-        /// # Safety
-        /// `self` must be a valid, fully-initialized `CDialectTemplate`.
-        pub(crate) unsafe fn fmt_dispatch(&self, tag_idx: usize) -> Option<(&[u8], usize)> {
-            if tag_idx >= self.fmt_dispatch_count as usize {
-                return None;
-            }
-            // SAFETY: tag_idx < fmt_dispatch_count; fmt_dispatch is valid for that range.
-            let packed = unsafe { *self.fmt_dispatch.add(tag_idx) };
-            let offset = (packed >> 16) as u16;
-            let length = (packed & 0xFFFF) as u16;
-            if offset == 0xFFFF {
-                return None;
-            }
-            let byte_offset = offset as usize * 6;
-            let byte_len = length as usize * 6;
-            // SAFETY: dispatch entries are bounds-checked at codegen time.
-            let slice =
-                unsafe { std::slice::from_raw_parts(self.fmt_ops.add(byte_offset), byte_len) };
-            Some((slice, length as usize))
-        }
+    unsafe fn fmt_prec_lookup(&self, base: u16, ordinal: u32) -> (u8, u8) {
+        let idx = base as usize + ordinal as usize;
+        let byte_idx = idx * 2;
+        // SAFETY: indices are bounds-checked at codegen time.
+        let prec = unsafe { *self.fmt_prec_table.add(byte_idx) };
+        // SAFETY: byte_idx + 1 is in bounds (prec table has 2 bytes per variant).
+        let group = unsafe { *self.fmt_prec_table.add(byte_idx + 1) };
+        (prec, group)
+    }
 
-        /// Look up a string from the fmt string table by index (CSR encoding).
-        ///
-        /// # Safety
-        /// `self` must be a valid template and `idx` must be in bounds.
-        pub(crate) unsafe fn fmt_string(&self, idx: usize) -> &'static str {
-            // SAFETY: offsets has fmt_str_count+1 entries; fmt_str_data covers the range.
-            let (start, end) = unsafe {
-                (
-                    *self.fmt_str_offsets.add(idx) as usize,
-                    *self.fmt_str_offsets.add(idx + 1) as usize,
-                )
-            };
-            // SAFETY: bytes are valid UTF-8 by codegen construction.
-            unsafe {
-                std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                    self.fmt_str_data.add(start),
-                    end - start,
-                ))
-            }
+    unsafe fn fmt_expr_meta(&self, tag_idx: usize) -> Option<(u8, u16)> {
+        if tag_idx >= self.fmt_expr_meta_count as usize {
+            return None;
         }
-
-        /// Look up a value in the enum display table.
-        ///
-        /// # Safety
-        /// `self` must be valid and `idx` must be in bounds.
-        pub(crate) unsafe fn fmt_enum_display_val(&self, idx: usize) -> u16 {
-            // SAFETY: callers pass indices checked at codegen time.
-            unsafe { *self.fmt_enum_display.add(idx) }
+        // SAFETY: tag_idx < fmt_expr_meta_count.
+        let packed = unsafe { *self.fmt_expr_meta.add(tag_idx) };
+        if packed == 0xFFFF_FFFF {
+            return None;
         }
-
-        /// Look up `(prec, group)` from the precedence table at `base + ordinal`.
-        ///
-        /// # Safety
-        /// `self` must be valid and the index must be in bounds.
-        pub(crate) unsafe fn fmt_prec_lookup(&self, base: u16, ordinal: u32) -> (u8, u8) {
-            let idx = base as usize + ordinal as usize;
-            let byte_idx = idx * 2;
-            // SAFETY: indices are bounds-checked at codegen time.
-            let prec = unsafe { *self.fmt_prec_table.add(byte_idx) };
-            // SAFETY: byte_idx + 1 is in bounds (prec table has 2 bytes per variant).
-            let group = unsafe { *self.fmt_prec_table.add(byte_idx + 1) };
-            (prec, group)
-        }
-
-        /// Look up the expr-meta for a node tag.
-        ///
-        /// Returns `Some((op_field_idx, prec_table_base))` if the node carries
-        /// operator precedence info, or `None` if not.
-        ///
-        /// # Safety
-        /// `self` must be valid and `tag_idx` must be in bounds.
-        pub(crate) unsafe fn fmt_expr_meta(&self, tag_idx: usize) -> Option<(u8, u16)> {
-            if tag_idx >= self.fmt_expr_meta_count as usize {
-                return None;
-            }
-            // SAFETY: tag_idx < fmt_expr_meta_count.
-            let packed = unsafe { *self.fmt_expr_meta.add(tag_idx) };
-            if packed == 0xFFFF_FFFF {
-                return None;
-            }
-            let op_field_idx = (packed & 0xFF) as u8;
-            let prec_table_base = ((packed >> 8) & 0xFFFF) as u16;
-            Some((op_field_idx, prec_table_base))
-        }
+        let op_field_idx = (packed & 0xFF) as u8;
+        let prec_table_base = ((packed >> 8) & 0xFFFF) as u16;
+        Some((op_field_idx, prec_table_base))
     }
 }

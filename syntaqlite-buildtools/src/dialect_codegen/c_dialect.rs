@@ -147,8 +147,14 @@ pub(crate) fn generate_dialect_c(
 
     w.section(&format!("{dialect} dialect descriptor"));
     w.newline();
+
+    let pascal = pascal_case(dialect);
+    let p = format!("{dialect}_fmt");
+    let has_fmt = !includes.dialect_fmt_h.is_empty();
+    let has_roles = !includes.dialect_roles_h.is_empty();
+
     w.line(&format!(
-        "static const SyntaqliteGrammarTemplate {upper}_GRAMMAR = {{"
+        "static const SyntaqliteDialectTemplate {upper}_DIALECT = {{"
     ));
     w.line(&format!("    .name = \"{dialect}\","));
     w.newline();
@@ -160,7 +166,6 @@ pub(crate) fn generate_dialect_c(
     w.line("    .list_tags = ast_meta_list_tags,");
     w.line("    .range_meta = ast_meta_range_meta,");
     w.newline();
-    let pascal = pascal_case(dialect);
     w.line("    // Parser lifecycle");
     w.line(&format!("    .parser_alloc = Synq{pascal}ParseAlloc,"));
     w.line(&format!("    .parser_init = Synq{pascal}ParseInit,"));
@@ -206,87 +211,47 @@ pub(crate) fn generate_dialect_c(
         w.line("    .token_type_count = 0,");
     }
     w.line(&format!("    .macro_style = {},", macro_style.c_name()));
+    w.newline();
+    // Formatter bytecode
+    if has_fmt {
+        w.line(&format!("    .fmt_str_data = {p}_string_data,"));
+        w.line(&format!("    .fmt_str_offsets = {p}_string_offsets,"));
+        w.line(&format!("    .fmt_str_count = {p}_string_count,"));
+        w.line(&format!("    .fmt_enum_display = {p}_enum_display,"));
+        w.line(&format!(
+            "    .fmt_enum_display_count = {p}_enum_display_count,"
+        ));
+        w.line(&format!("    .fmt_ops = {p}_ops,"));
+        w.line(&format!("    .fmt_ops_count = {p}_ops_count,"));
+        w.line(&format!("    .fmt_dispatch = {p}_dispatch,"));
+        w.line(&format!("    .fmt_dispatch_count = {p}_dispatch_count,"));
+        w.line(&format!("    .fmt_prec_table = {p}_prec_table,"));
+        w.line(&format!(
+            "    .fmt_prec_table_count = {p}_prec_table_count,"
+        ));
+        w.line(&format!("    .fmt_expr_meta = {p}_expr_meta,"));
+        w.line(&format!("    .fmt_expr_meta_count = {p}_expr_meta_count,"));
+    }
+    // Semantic roles
+    if has_roles {
+        w.line(&format!("    .roles_data = {dialect}_roles_data,"));
+        w.line(&format!("    .roles_count = {dialect}_roles_count,"));
+        w.line(&format!(
+            "    .macro_defs_data = {dialect}_macro_defs_data,"
+        ));
+        w.line(&format!(
+            "    .macro_defs_count = {dialect}_macro_defs_count,"
+        ));
+    }
     w.line("};");
     w.newline();
-
-    w.section("Dialect descriptor");
-    w.newline();
-
-    // Emit the bundled SyntaqliteDialectTemplate struct + single accessor.
-    {
-        let p = format!("{dialect}_fmt");
-        let has_fmt = !includes.dialect_fmt_h.is_empty();
-        let has_roles = !includes.dialect_roles_h.is_empty();
-
-        w.line(&format!(
-            "static const SyntaqliteDialectTemplate {upper}_DIALECT = {{"
-        ));
-        w.line(&format!("    .grammar = &{upper}_GRAMMAR,"));
-        if has_fmt {
-            w.line(&format!("    .fmt_str_data = {p}_string_data,"));
-            w.line(&format!("    .fmt_str_offsets = {p}_string_offsets,"));
-            w.line(&format!("    .fmt_str_count = {p}_string_count,"));
-            w.line(&format!("    .fmt_enum_display = {p}_enum_display,"));
-            w.line(&format!(
-                "    .fmt_enum_display_count = {p}_enum_display_count,"
-            ));
-            w.line(&format!("    .fmt_ops = {p}_ops,"));
-            w.line(&format!("    .fmt_ops_count = {p}_ops_count,"));
-            w.line(&format!("    .fmt_dispatch = {p}_dispatch,"));
-            w.line(&format!("    .fmt_dispatch_count = {p}_dispatch_count,"));
-        } else {
-            w.line("    .fmt_str_data = 0,");
-            w.line("    .fmt_str_offsets = 0,");
-            w.line("    .fmt_str_count = 0,");
-            w.line("    .fmt_enum_display = 0,");
-            w.line("    .fmt_enum_display_count = 0,");
-            w.line("    .fmt_ops = 0,");
-            w.line("    .fmt_ops_count = 0,");
-            w.line("    .fmt_dispatch = 0,");
-            w.line("    .fmt_dispatch_count = 0,");
-        }
-        if has_roles {
-            w.line(&format!("    .roles_data = {dialect}_roles_data,"));
-            w.line(&format!("    .roles_count = {dialect}_roles_count,"));
-        } else {
-            w.line("    .roles_data = 0,");
-            w.line("    .roles_count = 0,");
-        }
-        // macro_defs are always emitted inside the roles header (count=0 when none).
-        if has_roles {
-            w.line(&format!(
-                "    .macro_defs_data = {dialect}_macro_defs_data,"
-            ));
-            w.line(&format!(
-                "    .macro_defs_count = {dialect}_macro_defs_count,"
-            ));
-        } else {
-            w.line("    .macro_defs_data = 0,");
-            w.line("    .macro_defs_count = 0,");
-        }
-        if has_fmt {
-            w.line(&format!("    .fmt_prec_table = {p}_prec_table,"));
-            w.line(&format!(
-                "    .fmt_prec_table_count = {p}_prec_table_count,"
-            ));
-            w.line(&format!("    .fmt_expr_meta = {p}_expr_meta,"));
-            w.line(&format!("    .fmt_expr_meta_count = {p}_expr_meta_count,"));
-        } else {
-            w.line("    .fmt_prec_table = 0,");
-            w.line("    .fmt_prec_table_count = 0,");
-            w.line("    .fmt_expr_meta = 0,");
-            w.line("    .fmt_expr_meta_count = 0,");
-        }
-        w.line("};");
-        w.newline();
-        w.line(&format!(
-            "SYNTAQLITE_API SyntaqliteDialect syntaqlite_{dialect}_dialect(void) {{"
-        ));
-        w.line(&format!(
-            "    return (SyntaqliteDialect)SYNQ_DIALECT_DEFAULT(&{upper}_DIALECT);"
-        ));
-        w.line("}");
-    }
+    w.line(&format!(
+        "SYNTAQLITE_API SyntaqliteDialect syntaqlite_{dialect}_dialect(void) {{"
+    ));
+    w.line(&format!(
+        "    return (SyntaqliteDialect)SYNQ_DIALECT_DEFAULT(&{upper}_DIALECT);"
+    ));
+    w.line("}");
 
     w.finish()
 }
@@ -466,8 +431,6 @@ mod tests {
             &default_includes(),
             crate::codegen_api::MacroStyle::None,
         );
-        assert!(c.contains("SyntaqliteGrammarTemplate SQLITE_GRAMMAR ="));
-        // Bundled dialect struct and accessor
         assert!(c.contains("SyntaqliteDialectTemplate SQLITE_DIALECT ="));
         assert!(c.contains("SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void)"));
         assert!(c.contains("SYNQ_DIALECT_DEFAULT(&SQLITE_DIALECT)"));

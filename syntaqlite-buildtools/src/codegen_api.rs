@@ -96,10 +96,10 @@ impl DialectNaming {
         format!("syntaqlite_{}_dialect", self.name)
     }
 
-    /// C symbol name for the dialect function (e.g. `"syntaqlite_sqlite_dialect"`).
+    /// C symbol name for the grammar-level dialect function (e.g. `"syntaqlite_sqlite_dialect"`).
     #[must_use]
     pub fn grammar_fn_name(&self) -> String {
-        format!("syntaqlite_{}_grammar", self.name)
+        format!("syntaqlite_{}_dialect", self.name)
     }
 
     /// Rust dialect struct type name (`"Dialect"`).
@@ -146,9 +146,9 @@ pub(crate) struct RustCodegenArtifacts {
     pub ffi_rs: String,
     /// Rust AST node types (`ast.rs`).
     pub ast_rs: String,
-    /// Dialect module (`dialect.rs`).
-    pub grammar_rs: Option<String>,
-    /// Dialect accessor module (`dialect.rs`).
+    /// Syntax-crate dialect module (`syntaqlite-syntax/.../dialect.rs`).
+    pub syntax_dialect_rs: Option<String>,
+    /// Library-crate dialect module (`syntaqlite/.../dialect.rs`).
     pub dialect_rs: Option<String>,
     /// Crate root module (`lib.rs`).
     pub lib_rs: String,
@@ -642,7 +642,7 @@ pub(crate) fn generate_codegen_artifacts(
             tokens_rs: generate_rust_tokens(&token_defines[..], &request.dialect.token_type_name()),
             ffi_rs: ast_model.generate_rust_ffi_nodes(&rust_paths),
             ast_rs: ast_model.generate_rust_ast(&rust_paths, request.open_for_extension),
-            grammar_rs: Some(generate_grammar_module(
+            syntax_dialect_rs: Some(generate_grammar_module(
                 &request.dialect.grammar_fn_name(),
                 &request.dialect.dialect_struct_type(),
                 ast_model.root_node_name(),
