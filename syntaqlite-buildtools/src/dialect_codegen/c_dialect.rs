@@ -252,6 +252,12 @@ pub(crate) fn generate_dialect_c(
         "    return (SyntaqliteDialect)SYNQ_DIALECT_DEFAULT(&{upper}_DIALECT);"
     ));
     w.line("}");
+    w.newline();
+    w.line(&format!(
+        "SYNTAQLITE_API const SyntaqliteDialectTemplate* syntaqlite_{dialect}_dialect_template(void) {{"
+    ));
+    w.line(&format!("    return &{upper}_DIALECT;"));
+    w.line("}");
 
     w.finish()
 }
@@ -279,6 +285,9 @@ pub(crate) fn generate_dialect_h(dialect: &str) -> String {
     w.newline();
     w.line(&format!(
         "SYNTAQLITE_API SyntaqliteDialect syntaqlite_{dialect}_dialect(void);"
+    ));
+    w.line(&format!(
+        "SYNTAQLITE_API const SyntaqliteDialectTemplate* syntaqlite_{dialect}_dialect_template(void);"
     ));
     w.newline();
     w.line("#ifdef __cplusplus");

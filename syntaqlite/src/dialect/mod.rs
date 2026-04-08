@@ -352,8 +352,8 @@ impl AnyDialect {
 
     /// Load a dialect from a shared library (`.so` / `.dylib` / `.dll`).
     ///
-    /// Resolves the single `syntaqlite_<name>_dialect` symbol (or
-    /// `syntaqlite_dialect` when `name` is `None`), which returns a pointer to
+    /// Resolves the `syntaqlite_<name>_dialect_template` symbol (or
+    /// `syntaqlite_dialect_template` when `name` is `None`), which returns a pointer to
     /// a `SyntaqliteDialectTemplate` struct bundling dialect + all data arrays.
     ///
     /// # Errors
@@ -369,8 +369,8 @@ impl AnyDialect {
         };
 
         let sym: String = match name {
-            Some(n) => format!("syntaqlite_{n}_dialect"),
-            None => "syntaqlite_dialect".to_string(),
+            Some(n) => format!("syntaqlite_{n}_dialect_template"),
+            None => "syntaqlite_dialect_template".to_string(),
         };
 
         // Resolve the single dialect symbol and call it to get the data pointer.
