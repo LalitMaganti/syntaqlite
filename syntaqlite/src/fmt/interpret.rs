@@ -212,7 +212,7 @@ impl Formatter {
                 }
                 FmtOp::Span(idx) => {
                     // INVARIANT: Span ops only target Span fields.
-                    let FieldValue::Span { text: s, quoted } = fields[idx as usize] else {
+                    let FieldValue::Span { text: s, quoted, .. } = fields[idx as usize] else {
                         panic!("Span: field {idx} is not a Span");
                     };
 

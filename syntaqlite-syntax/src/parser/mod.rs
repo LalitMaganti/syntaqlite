@@ -483,11 +483,31 @@ impl<'a> AnyParsedStatement<'a> {
         id: AnyNodeId,
     ) -> Option<(AnyNodeTag, crate::ast::NodeFields<'a>)> {
         let (ptr, tag) = self.node_ptr(id)?;
+        // SAFETY: self.raw is a valid parser pointer for 'a; macro regions
+        // contain expansion buffers valid for the same lifetime.
+        let regions = unsafe { self.raw.as_ref().result_macros() };
+        let owned_bufs: Vec<&'a str> = regions
+            .iter()
+            .map(|r| {
+                if r.expansion_data.is_null() || r.expansion_len == 0 {
+                    ""
+                } else {
+                    // SAFETY: expansion_data points to expansion_len bytes of
+                    // SQL text produced by the macro expander (always UTF-8).
+                    unsafe {
+                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                            r.expansion_data,
+                            r.expansion_len as usize,
+                        ))
+                    }
+                }
+            })
+            .collect();
         let mut fields = crate::ast::NodeFields::new();
         for meta in self.dialect.field_meta(tag) {
             // SAFETY: ptr is a valid arena node pointer valid for 'a;
             // meta describes a field within that node's struct layout.
-            let val = unsafe { extract_field_value(ptr, &meta, self.source) };
+            let val = unsafe { extract_field_value(ptr, &meta, self.source, &owned_bufs) };
             fields.push(val);
         }
         Some((tag, fields))
@@ -776,6 +796,7 @@ unsafe fn extract_field_value<'a>(
     ptr: *const u8,
     meta: &crate::dialect::FieldMeta<'_>,
     source: &'a str,
+    owned_bufs: &[&'a str],
 ) -> crate::ast::FieldValue<'a> {
     use crate::ast::{FieldValue, SourceSpan};
     use crate::dialect::FieldKind;
@@ -790,11 +811,15 @@ unsafe fn extract_field_value<'a>(
                     FieldValue::Span {
                         text: "",
                         quoted: false,
+                        offset: 0,
+                        buf_idx: 0,
                     }
                 } else {
                     FieldValue::Span {
-                        text: span.as_str(source),
+                        text: span.as_str_with_bufs(source, owned_bufs),
                         quoted: span.is_quoted(),
+                        offset: span.offset,
+                        buf_idx: span.buf_idx,
                     }
                 }
             }

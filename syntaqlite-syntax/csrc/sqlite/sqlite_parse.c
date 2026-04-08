@@ -102,6 +102,7 @@ static inline SyntaqliteSourceSpan synq_error_span(SynqParseCtx* pCtx) {
       .offset = pCtx->error_offset,
       .length = (uint16_t)len,
       .flags = 0,
+      .buf_idx = 0,
   };
 }
 /**************** End of %include directives **********************************/
@@ -9775,9 +9776,9 @@ static YYACTIONTYPE yy_reduce(
       SyntaqliteNode* vtab = AST_NODE(&pCtx->ast, yymsp[-3].minor.yy141);
       const char* args_start = yymsp[-2].minor.yy0.z + yymsp[-2].minor.yy0.n;
       const char* args_end = yymsp[0].minor.yy0.z;
-      vtab->create_virtual_table_stmt.module_args =
-          (SyntaqliteSourceSpan){(uint32_t)(args_start - pCtx->source),
-                                 (uint16_t)(args_end - args_start), 0};
+      vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
+          (uint32_t)(args_start - pCtx->source),
+          (uint16_t)(args_end - args_start), 0, (uint8_t)pCtx->buf_idx};
       yylhsminor.yy141 = yymsp[-3].minor.yy141;
     }
       yymsp[-3].minor.yy141 = yylhsminor.yy141;
@@ -10049,7 +10050,7 @@ static void yy_syntax_error(
   SynqSqliteParseARG_FETCH SynqSqliteParseCTX_FETCH
 #define TOKEN yyminor
       /************ Begin %syntax_error code
-         ****************************************/
+       ****************************************/
 
       (void) yymajor;
   (void)TOKEN;

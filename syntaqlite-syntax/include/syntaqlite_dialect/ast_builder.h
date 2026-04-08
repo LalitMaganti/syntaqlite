@@ -67,6 +67,10 @@ typedef struct SynqParseCtx {
   // Typed as void* because SYNQ_VEC produces anonymous struct types; the
   // synq_mark_as_id() helper casts it to the right layout.
   void* tokens;
+
+  // Expansion buffer index for span construction.
+  // 0 = original source, 1+ = index into owned_bufs (1-based).
+  uint32_t buf_idx;
 } SynqParseCtx;
 
 // Common header for all list nodes in the arena.
@@ -205,12 +209,13 @@ static inline void synq_parse_list_flush(SynqParseCtx* ctx) {
 static inline SyntaqliteSourceSpan synq_span(SynqParseCtx* ctx,
                                              SynqParseToken tok) {
   if (tok.z == NULL)
-    return (SyntaqliteSourceSpan){0, 0, 0};
+    return (SyntaqliteSourceSpan){0, 0, 0, 0};
   uint32_t offset = (uint32_t)(tok.z - ctx->source);
   return (SyntaqliteSourceSpan){
       .offset = offset,
       .length = (uint16_t)tok.n,
       .flags = 0,
+      .buf_idx = (uint8_t)ctx->buf_idx,
   };
 }
 
@@ -222,7 +227,7 @@ static inline SyntaqliteSourceSpan synq_span(SynqParseCtx* ctx,
 static inline SyntaqliteSourceSpan synq_span_dequote(SynqParseCtx* ctx,
                                                      SynqParseToken tok) {
   if (tok.z == NULL)
-    return (SyntaqliteSourceSpan){0, 0, 0};
+    return (SyntaqliteSourceSpan){0, 0, 0, 0};
   if (tok.n >= 2) {
     char open = tok.z[0];
     char close = tok.z[tok.n - 1];
@@ -230,15 +235,16 @@ static inline SyntaqliteSourceSpan synq_span_dequote(SynqParseCtx* ctx,
         (open == '[' && close == ']')) {
       uint32_t offset = (uint32_t)(tok.z + 1 - ctx->source);
       uint16_t inner_len = (uint16_t)(tok.n - 2);
-      SyntaqliteSourceSpan sp = {offset, inner_len, 0};
+      SyntaqliteSourceSpan sp = {offset, inner_len, 0, (uint8_t)ctx->buf_idx};
       return synq_span_set_quoted(sp);
     }
   }
   uint32_t offset = (uint32_t)(tok.z - ctx->source);
-  return (SyntaqliteSourceSpan){offset, (uint16_t)tok.n, 0};
+  return (SyntaqliteSourceSpan){offset, (uint16_t)tok.n, 0,
+                                (uint8_t)ctx->buf_idx};
 }
 
-#define SYNQ_NO_SPAN ((SyntaqliteSourceSpan){0, 0, 0})
+#define SYNQ_NO_SPAN ((SyntaqliteSourceSpan){0, 0, 0, 0})
 
 // Mark a token as "used as identifier" (fallback from keyword).
 // O(1) — uses the token_idx stored in SynqParseToken at collection time.
