@@ -223,7 +223,7 @@ export class Header implements m.ClassComponent<Attrs> {
                   m("div.sq-dialect-popover__row", [
                     m("span.sq-dialect-popover__label", "Symbol"),
                     m("input.sq-dialect-popover__name[type=text]", {
-                      placeholder: "syntaqlite_xyz_dialect",
+                      placeholder: "syntaqlite_xyz_dialect_template",
                       value: this.customSymbol,
                       oninput: (e: Event) => {
                         this.customSymbol = (e.target as HTMLInputElement).value;

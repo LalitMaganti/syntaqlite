@@ -13,6 +13,8 @@ extern "C" {
 #endif
 
 SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void);
+SYNTAQLITE_API const SyntaqliteDialectTemplate*
+syntaqlite_sqlite_dialect_template(void);
 
 #ifdef __cplusplus
 }

@@ -80,3 +80,8 @@ static const SyntaqliteDialectTemplate SQLITE_DIALECT = {
 SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void) {
   return (SyntaqliteDialect)SYNQ_DIALECT_DEFAULT(&SQLITE_DIALECT);
 }
+
+SYNTAQLITE_API const SyntaqliteDialectTemplate*
+syntaqlite_sqlite_dialect_template(void) {
+  return &SQLITE_DIALECT;
+}
