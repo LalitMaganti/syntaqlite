@@ -90,6 +90,16 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                 None
             }
             SemanticRole::Query { .. } => self.resolve_select(node_id),
+            SemanticRole::DefineTable { select, .. }
+            | SemanticRole::DefineView { select, .. }
+            | SemanticRole::DefineFunction { select, .. } => {
+                if select != crate::dialect::FIELD_ABSENT
+                    && let FieldValue::NodeId(select_id) = fields[select as usize]
+                {
+                    return self.resolve_node(select_id);
+                }
+                None
+            }
             SemanticRole::Transparent | SemanticRole::DmlScope => {
                 for child_id in self.stmt.child_node_ids(node_id) {
                     if let Some(result) = self.resolve_node(child_id) {

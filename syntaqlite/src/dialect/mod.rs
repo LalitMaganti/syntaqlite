@@ -14,7 +14,7 @@ pub(crate) use syntaqlite_syntax::util::SqliteVersion;
 
 // ── Semantic role types (re-exported from syntaqlite-common) ─────────────────
 
-pub(crate) use syntaqlite_common::roles::{FIELD_ABSENT, SemanticRole};
+pub(crate) use syntaqlite_common::roles::{FIELD_ABSENT, MacroDef, SemanticRole};
 #[cfg(test)]
 use syntaqlite_common::roles::{FieldIdx, FlagSpec};
 
@@ -238,6 +238,15 @@ impl AnyDialect {
     pub(crate) fn roles(&self) -> &'static [SemanticRole] {
         // SAFETY: template() is valid for the lifetime of self.
         unsafe { self.template().roles() }
+    }
+
+    /// The macro definition descriptors for this dialect.
+    ///
+    /// Each entry describes an AST node type that defines a template macro
+    /// (e.g. `CREATE PERFETTO MACRO`). Empty for dialects without macros.
+    pub(crate) fn macro_defs(&self) -> &'static [MacroDef] {
+        // SAFETY: template() is valid for the lifetime of self.
+        unsafe { self.template().macro_defs() }
     }
 
     /// Whether this dialect has formatter data.
@@ -487,6 +496,12 @@ pub(crate) trait CDialectTemplateExt {
     /// `self` must be a valid, fully-initialized `CDialectTemplate`.
     unsafe fn roles(&self) -> &'static [SemanticRole];
 
+    /// The macro definition descriptors for this dialect.
+    ///
+    /// # Safety
+    /// `self` must be a valid, fully-initialized `CDialectTemplate`.
+    unsafe fn macro_defs(&self) -> &'static [MacroDef];
+
     /// Whether this template has formatter data.
     fn has_fmt_data(&self) -> bool;
 
@@ -539,6 +554,17 @@ impl CDialectTemplateExt for ffi::CDialectTemplate {
 
     fn has_fmt_data(&self) -> bool {
         self.fmt_str_count > 0
+    }
+
+    unsafe fn macro_defs(&self) -> &'static [MacroDef] {
+        // SAFETY: macro_defs_data points to macro_defs_count valid MacroDef values
+        // in static storage.
+        unsafe {
+            std::slice::from_raw_parts(
+                self.macro_defs_data.cast::<MacroDef>(),
+                self.macro_defs_count as usize,
+            )
+        }
     }
 
     unsafe fn fmt_dispatch(&self, tag_idx: usize) -> Option<(&[u8], usize)> {

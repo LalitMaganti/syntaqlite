@@ -12,7 +12,7 @@ use syntaqlite_syntax::any::{
 };
 
 use crate::dialect::AnyDialect;
-use crate::dialect::{FIELD_ABSENT, SemanticRole};
+use crate::dialect::{FIELD_ABSENT, MacroDef, SemanticRole};
 
 use super::catalog::{
     AritySpec, Catalog, CatalogLayer, ColumnResolution, FunctionCategory, FunctionCheckResult,
@@ -63,6 +63,10 @@ pub struct SemanticAnalyzer {
     catalog: Catalog,
     mode: AnalysisMode,
     macro_fallback: bool,
+    resolver: Option<Box<dyn super::ModuleResolver>>,
+    /// Modules already imported (by dotted path) — prevents cycles and
+    /// duplicate imports.
+    imported: HashSet<String>,
 }
 
 #[expect(dead_code)]
@@ -97,6 +101,8 @@ impl SemanticAnalyzer {
             dialect,
             mode: AnalysisMode::default(),
             macro_fallback: false,
+            resolver: None,
+            imported: HashSet::new(),
         }
     }
 
@@ -110,6 +116,18 @@ impl SemanticAnalyzer {
     /// Set the analysis mode on an existing analyzer.
     pub fn set_mode(&mut self, mode: AnalysisMode) {
         self.mode = mode;
+    }
+
+    /// Attach a module resolver for handling import statements (e.g.
+    /// `INCLUDE PERFETTO MODULE`).
+    ///
+    /// When the analyzer encounters an import, it calls the resolver to
+    /// obtain the module's SQL source, analyzes it recursively, and
+    /// accumulates the resulting DDL into the catalog.
+    #[must_use]
+    pub fn with_module_resolver(mut self, resolver: Box<dyn super::ModuleResolver>) -> Self {
+        self.resolver = Some(resolver);
+        self
     }
 
     /// Enable macro fallback: unregistered `name!(args)` calls parse as
@@ -301,14 +319,32 @@ impl SemanticAnalyzer {
             collect_tokens(stmt.tokens(), &mut tokens);
             collect_comments(stmt.comments(), &mut comments);
 
-            let erased = stmt.erase();
-            let stmt_model = self.analyze_statement(
-                &erased,
-                config,
-                &mut resolutions,
-                &mut definition_offsets,
-            );
+            // Process the statement and extract macro registration info.
+            // The erased statement borrows the session, so we must extract
+            // owned macro data before dropping it and calling register_macro.
+            let (stmt_model, macro_reg) = {
+                let erased = stmt.erase();
+                let model = self.analyze_statement(
+                    &erased,
+                    config,
+                    &mut resolutions,
+                    &mut definition_offsets,
+                );
+                let reg = extract_macro_registration(
+                    &erased,
+                    erased.root_id(),
+                    self.dialect.macro_defs(),
+                );
+                (model, reg)
+            };
             statements.push(stmt_model);
+
+            // Register any macro defined by this statement so subsequent
+            // `name!(args)` invocations are expanded inline by the parser.
+            if let Some((name, params, body)) = macro_reg {
+                let param_refs: Vec<&str> = params.iter().map(String::as_str).collect();
+                session.register_macro(&name, &param_refs, &body);
+            }
         }
 
         SemanticModel {
@@ -333,6 +369,9 @@ impl SemanticAnalyzer {
 
         self.catalog
             .accumulate_ddl(CatalogLayer::Document, erased, root_id, &self.dialect);
+
+        // Handle module imports: resolve and analyze imported source.
+        self.handle_import(erased, root_id, config, &mut diagnostics);
 
         // Record DDL definition offsets for go-to-definition (same-file).
         if let Some((table_name, off)) = ddl_name_offset(erased, root_id, &self.dialect) {
@@ -368,6 +407,65 @@ impl SemanticAnalyzer {
         StatementModel::new(stmt_source, diagnostics, lineage, defined_relations)
     }
 
+    /// If this statement is an import, resolve and analyze the imported module.
+    fn handle_import(
+        &mut self,
+        erased: &AnyParsedStatement<'_>,
+        root_id: AnyNodeId,
+        config: &ValidationConfig,
+        diagnostics: &mut Vec<Diagnostic>,
+    ) {
+        // Check if resolver is available and root is an Import node.
+        if self.resolver.is_none() {
+            return;
+        }
+
+        let Some((tag, fields)) = erased.extract_fields(root_id) else {
+            return;
+        };
+        let idx = u32::from(tag) as usize;
+        let Some(&role) = self.dialect.roles().get(idx) else {
+            return;
+        };
+        let SemanticRole::Import { module } = role else {
+            return;
+        };
+
+        // Extract the module name text.
+        let module_name = match fields[module as usize] {
+            FieldValue::Span { text, .. } if !text.is_empty() => text.to_string(),
+            _ => return,
+        };
+
+        // Dedup / cycle detection.
+        if !self.imported.insert(module_name.clone()) {
+            return;
+        }
+
+        // Resolve the module source.
+        let Some(source) = self.resolver.as_ref().and_then(|r| r.resolve(&module_name)) else {
+            // Emit diagnostic for unresolvable module.
+            let (start, end) = match fields[module as usize] {
+                FieldValue::Span { text, .. } => {
+                    let offset = erased.source().find(text).unwrap_or(0);
+                    (offset, offset + text.len())
+                }
+                _ => (0, 0),
+            };
+            let message = DiagnosticMessage::UnknownModule {
+                name: module_name,
+            };
+            if let Some(severity) = config.checks().level_for(&message).to_severity() {
+                diagnostics.push(Diagnostic::new(start, end, message, severity, None));
+            }
+            return;
+        };
+
+        // Recursively analyze the imported module. DDL accumulates into the
+        // Document layer (visible to subsequent statements in the importing
+        // file).
+        let _ = self.analyze_inner(&source, config);
+    }
 }
 
 #[cfg(feature = "sqlite")]
@@ -796,6 +894,65 @@ fn ddl_name_offset(
 /// extract the macro name, parameter names, and body text as owned strings.
 ///
 /// `SQLite`'s implicit rowid aliases.
+/// Check if the root node of a statement defines a template macro and, if so,
+/// extract the macro name, parameter names, and body text as owned strings.
+///
+/// Returns `None` when the statement is not a macro definition or when any
+/// required field is missing.
+fn extract_macro_registration(
+    stmt: &AnyParsedStatement<'_>,
+    root: AnyNodeId,
+    macro_defs: &[MacroDef],
+) -> Option<(String, Vec<String>, String)> {
+    if macro_defs.is_empty() || root.is_null() {
+        return None;
+    }
+    let (tag, fields) = stmt.extract_fields(root)?;
+    let tag_u32 = u32::from(tag);
+
+    // Find the matching MacroDef entry for this node tag.
+    let def = macro_defs.iter().find(|d| d.node_tag() == tag_u32)?;
+
+    // Extract the macro name.
+    let name = match fields[def.name_field as usize] {
+        FieldValue::Span { text, .. } if !text.is_empty() => text.to_string(),
+        _ => return None,
+    };
+
+    // Extract the macro body.
+    let body = match fields[def.body_field as usize] {
+        FieldValue::Span { text, .. } if !text.is_empty() => text.to_string(),
+        _ => return None,
+    };
+
+    // Extract parameter names from the args list (if present).
+    let params = if def.args_field == FIELD_ABSENT {
+        Vec::new()
+    } else {
+        let args_id = match fields[def.args_field as usize] {
+            FieldValue::NodeId(id) if !id.is_null() => id,
+            _ => return Some((name, Vec::new(), body)),
+        };
+        let children = stmt.list_children(args_id)?;
+        let mut param_names = Vec::with_capacity(children.len());
+        for &child_id in children {
+            if child_id.is_null() {
+                continue;
+            }
+            let (_, child_fields) = stmt.extract_fields(child_id)?;
+            match child_fields[def.arg_name_field as usize] {
+                FieldValue::Span { text, .. } if !text.is_empty() => {
+                    param_names.push(text.to_string());
+                }
+                _ => return None,
+            }
+        }
+        param_names
+    };
+
+    Some((name, params, body))
+}
+
 fn is_rowid_alias(column: &str) -> bool {
     column.eq_ignore_ascii_case("rowid")
         || column.eq_ignore_ascii_case("oid")
@@ -3567,6 +3724,35 @@ mod tests {
         assert!(s.is_none());
     }
 
+    // ── Module import resolution ─────────────────────────────────────────────
+
+    struct MapResolver(HashMap<String, String>);
+
+    impl super::super::ModuleResolver for MapResolver {
+        fn resolve(&self, module_path: &str) -> Option<String> {
+            self.0.get(module_path).cloned()
+        }
+    }
+
+    #[test]
+    fn module_resolver_with_analyzer_does_not_panic() {
+        let resolver = MapResolver(HashMap::new());
+        let mut analyzer =
+            sqlite_analyzer().with_module_resolver(Box::new(resolver));
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT 1", &catalog, &lenient());
+        assert!(!model.has_diagnostics());
+    }
+
+    #[test]
+    fn module_import_dedup_tracking() {
+        let resolver = MapResolver(HashMap::new());
+        let mut analyzer =
+            sqlite_analyzer().with_module_resolver(Box::new(resolver));
+        assert!(analyzer.imported.insert("test.module".to_string()));
+        assert!(!analyzer.imported.insert("test.module".to_string()));
+    }
+
     #[test]
     fn relation_names_enumerates_catalog() {
         let mut catalog = sqlite_catalog();
@@ -3909,6 +4095,50 @@ mod lineage_tests {
     }
 
     // ── Test 9b: DDL with inner SELECT computes lineage ─────────────────────
+
+    #[test]
+    fn lineage_create_table_as_select() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("src", Some(vec!["a".into(), "b".into()]), false);
+
+        let model = analyzer.analyze(
+            "CREATE TABLE t AS SELECT a, b FROM src",
+            &catalog,
+            &lenient(),
+        );
+
+        let lineage = model.lineage().unwrap().into_inner();
+        assert_eq!(lineage.len(), 2);
+        assert_eq!(lineage[0].name, "a");
+        assert_eq!(lineage[0].origin.as_ref().unwrap().table, "src");
+        assert_eq!(lineage[1].name, "b");
+
+        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
+        assert_eq!(rels.len(), 1);
+        assert_eq!(rels[0].name, "src");
+    }
+
+    #[test]
+    fn lineage_create_view_as_select() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t", Some(vec!["x".into(), "y".into()]), false);
+
+        let model = analyzer.analyze(
+            "CREATE VIEW v AS SELECT x FROM t",
+            &catalog,
+            &lenient(),
+        );
+
+        let rels = model.statements().last().unwrap().relations_accessed().unwrap().into_inner();
+        assert_eq!(rels.len(), 1);
+        assert_eq!(rels[0].name, "t");
+    }
 
     // ── Test 10: CTE with expression — origin None ───────────────────────────
 
