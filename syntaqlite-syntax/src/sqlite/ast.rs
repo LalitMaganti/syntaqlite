@@ -6305,7 +6305,7 @@ impl TypedNodeId for FilterOverId {
 }
 
 /// Typed list of `CaseWhen`.
-pub type CaseWhenList<'a> = TypedNodeList<'a, super::grammar::Grammar, CaseWhen<'a>>;
+pub type CaseWhenList<'a> = TypedNodeList<'a, super::dialect::Dialect, CaseWhen<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CaseWhenListId(AnyNodeId);
@@ -6334,7 +6334,7 @@ impl TypedNodeId for CaseWhenListId {
 
 /// Typed list of `ColumnConstraint`.
 pub type ColumnConstraintList<'a> =
-    TypedNodeList<'a, super::grammar::Grammar, ColumnConstraint<'a>>;
+    TypedNodeList<'a, super::dialect::Dialect, ColumnConstraint<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ColumnConstraintListId(AnyNodeId);
@@ -6362,7 +6362,7 @@ impl TypedNodeId for ColumnConstraintListId {
 }
 
 /// Typed list of `ColumnDef`.
-pub type ColumnDefList<'a> = TypedNodeList<'a, super::grammar::Grammar, ColumnDef<'a>>;
+pub type ColumnDefList<'a> = TypedNodeList<'a, super::dialect::Dialect, ColumnDef<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ColumnDefListId(AnyNodeId);
@@ -6390,7 +6390,7 @@ impl TypedNodeId for ColumnDefListId {
 }
 
 /// Typed list of `TableConstraint`.
-pub type TableConstraintList<'a> = TypedNodeList<'a, super::grammar::Grammar, TableConstraint<'a>>;
+pub type TableConstraintList<'a> = TypedNodeList<'a, super::dialect::Dialect, TableConstraint<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TableConstraintListId(AnyNodeId);
@@ -6418,7 +6418,7 @@ impl TypedNodeId for TableConstraintListId {
 }
 
 /// Typed list of `CteDefinition`.
-pub type CteList<'a> = TypedNodeList<'a, super::grammar::Grammar, CteDefinition<'a>>;
+pub type CteList<'a> = TypedNodeList<'a, super::dialect::Dialect, CteDefinition<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct CteListId(AnyNodeId);
@@ -6446,7 +6446,7 @@ impl TypedNodeId for CteListId {
 }
 
 /// Typed list of `UpsertClause`.
-pub type UpsertClauseList<'a> = TypedNodeList<'a, super::grammar::Grammar, UpsertClause<'a>>;
+pub type UpsertClauseList<'a> = TypedNodeList<'a, super::dialect::Dialect, UpsertClause<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct UpsertClauseListId(AnyNodeId);
@@ -6474,7 +6474,7 @@ impl TypedNodeId for UpsertClauseListId {
 }
 
 /// Typed list of `SetClause`.
-pub type SetClauseList<'a> = TypedNodeList<'a, super::grammar::Grammar, SetClause<'a>>;
+pub type SetClauseList<'a> = TypedNodeList<'a, super::dialect::Dialect, SetClause<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct SetClauseListId(AnyNodeId);
@@ -6502,7 +6502,7 @@ impl TypedNodeId for SetClauseListId {
 }
 
 /// Typed list of `Expr`.
-pub type ExprList<'a> = TypedNodeList<'a, super::grammar::Grammar, Expr<'a>>;
+pub type ExprList<'a> = TypedNodeList<'a, super::dialect::Dialect, Expr<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ExprListId(AnyNodeId);
@@ -6530,7 +6530,7 @@ impl TypedNodeId for ExprListId {
 }
 
 /// Typed list of `ResultColumn`.
-pub type ResultColumnList<'a> = TypedNodeList<'a, super::grammar::Grammar, ResultColumn<'a>>;
+pub type ResultColumnList<'a> = TypedNodeList<'a, super::dialect::Dialect, ResultColumn<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ResultColumnListId(AnyNodeId);
@@ -6558,7 +6558,7 @@ impl TypedNodeId for ResultColumnListId {
 }
 
 /// Typed list of `OrderingTerm`.
-pub type OrderByList<'a> = TypedNodeList<'a, super::grammar::Grammar, OrderingTerm<'a>>;
+pub type OrderByList<'a> = TypedNodeList<'a, super::dialect::Dialect, OrderingTerm<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct OrderByListId(AnyNodeId);
@@ -6586,7 +6586,7 @@ impl TypedNodeId for OrderByListId {
 }
 
 /// Typed list of `Stmt`.
-pub type TriggerCmdList<'a> = TypedNodeList<'a, super::grammar::Grammar, Stmt<'a>>;
+pub type TriggerCmdList<'a> = TypedNodeList<'a, super::dialect::Dialect, Stmt<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TriggerCmdListId(AnyNodeId);
@@ -6614,7 +6614,7 @@ impl TypedNodeId for TriggerCmdListId {
 }
 
 /// Typed list of `ExprList`.
-pub type ValuesRowList<'a> = TypedNodeList<'a, super::grammar::Grammar, ExprList<'a>>;
+pub type ValuesRowList<'a> = TypedNodeList<'a, super::dialect::Dialect, ExprList<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct ValuesRowListId(AnyNodeId);
@@ -6642,7 +6642,7 @@ impl TypedNodeId for ValuesRowListId {
 }
 
 /// Typed list of `WindowDef`.
-pub type WindowDefList<'a> = TypedNodeList<'a, super::grammar::Grammar, WindowDef<'a>>;
+pub type WindowDefList<'a> = TypedNodeList<'a, super::dialect::Dialect, WindowDef<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct WindowDefListId(AnyNodeId);
@@ -6670,7 +6670,7 @@ impl TypedNodeId for WindowDefListId {
 }
 
 /// Typed list of `NamedWindowDef`.
-pub type NamedWindowDefList<'a> = TypedNodeList<'a, super::grammar::Grammar, NamedWindowDef<'a>>;
+pub type NamedWindowDefList<'a> = TypedNodeList<'a, super::dialect::Dialect, NamedWindowDef<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct NamedWindowDefListId(AnyNodeId);

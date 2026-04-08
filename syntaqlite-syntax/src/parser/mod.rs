@@ -9,7 +9,7 @@ use std::rc::Rc;
 
 use crate::any::{AnyNodeTag, AnyTokenType};
 use crate::ast::{AnyNodeId, ArenaNode, GrammarNodeType, GrammarTokenType, RawNodeList};
-use crate::grammar::{AnyGrammar, TypedGrammar};
+use crate::dialect::{AnyDialect, TypedDialect};
 
 mod config;
 mod ffi;
@@ -54,33 +54,33 @@ pub enum ParseErrorKind {
     Fatal = 2,
 }
 
-/// Parser API parameterized by grammar type `G`.
+/// Parser API parameterized by dialect type `G`.
 ///
-/// Primarily for library/framework code over generated grammars.
+/// Primarily for library/framework code over generated dialects.
 ///
-/// - Use this when grammar type is known at compile time.
+/// - Use this when dialect type is known at compile time.
 /// - Use top-level [`Parser`] for typical `SQLite` SQL app code.
-pub struct TypedParser<G: TypedGrammar> {
+pub struct TypedParser<G: TypedDialect> {
     inner: Rc<RefCell<Option<ParserInner>>>,
-    grammar: AnyGrammar,
+    dialect: AnyDialect,
     _marker: PhantomData<G>,
 }
 
-impl<G: TypedGrammar> TypedParser<G> {
-    /// Create a parser for grammar `G` with default [`ParserConfig`].
-    pub fn new(grammar: G) -> Self {
-        Self::with_config(grammar, &ParserConfig::default())
+impl<G: TypedDialect> TypedParser<G> {
+    /// Create a parser for dialect `G` with default [`ParserConfig`].
+    pub fn new(dialect: G) -> Self {
+        Self::with_config(dialect, &ParserConfig::default())
     }
 
-    /// Create a parser for grammar `G` with custom [`ParserConfig`].
+    /// Create a parser for dialect `G` with custom [`ParserConfig`].
     ///
     /// # Panics
     /// Panics if parser allocation fails (out of memory).
-    pub fn with_config(grammar: G, config: &ParserConfig) -> Self {
-        let grammar_raw: AnyGrammar = grammar.into();
-        // SAFETY: create(NULL, grammar_raw.inner) allocates a new parser with
-        // default malloc/free. The C side copies the grammar.
-        let mut raw = NonNull::new(unsafe { CParser::create(std::ptr::null(), grammar_raw.inner) })
+    pub fn with_config(dialect: G, config: &ParserConfig) -> Self {
+        let dialect_raw: AnyDialect = dialect.into();
+        // SAFETY: create(NULL, dialect_raw.inner) allocates a new parser with
+        // default malloc/free. The C side copies the dialect handle.
+        let mut raw = NonNull::new(unsafe { CParser::create(std::ptr::null(), dialect_raw.inner) })
             .expect("parser allocation failed");
 
         // SAFETY: raw is freshly created (not sealed), so these calls always return 0.
@@ -97,7 +97,7 @@ impl<G: TypedGrammar> TypedParser<G> {
                 raw,
                 source_buf: Vec::new(),
             }))),
-            grammar: grammar_raw,
+            dialect: dialect_raw,
             _marker: PhantomData,
         }
     }
@@ -107,10 +107,10 @@ impl<G: TypedGrammar> TypedParser<G> {
     /// # Examples
     ///
     /// ```rust
-    /// use syntaqlite_syntax::typed::{grammar, TypedParser};
+    /// use syntaqlite_syntax::typed::{dialect, TypedParser};
     /// use syntaqlite_syntax::ParseOutcome;
     ///
-    /// let parser = TypedParser::new(grammar());
+    /// let parser = TypedParser::new(dialect());
     /// let mut session = parser.parse("SELECT 1;");
     /// let stmt = match session.next() {
     ///     ParseOutcome::Ok(stmt) => stmt,
@@ -134,14 +134,14 @@ impl<G: TypedGrammar> TypedParser<G> {
         // copied into source_buf which will be owned by the session.
         unsafe { reset_parser(inner.raw.as_ptr(), &mut inner.source_buf, source) };
         TypedParseSession {
-            grammar: self.grammar.clone(),
+            dialect: self.dialect.clone(),
             inner: Some(inner),
             slot: Rc::clone(&self.inner),
             _marker: PhantomData,
         }
     }
 
-    /// Start incremental parsing for grammar `G`.
+    /// Start incremental parsing for dialect `G`.
     ///
     /// Use this when tokens arrive over time (editor completion, interactive
     /// parsing, macro-expansion pipelines).
@@ -149,10 +149,10 @@ impl<G: TypedGrammar> TypedParser<G> {
     /// # Examples
     ///
     /// ```rust
-    /// use syntaqlite_syntax::typed::{grammar, TypedParser};
+    /// use syntaqlite_syntax::typed::{dialect, TypedParser};
     /// use syntaqlite_syntax::TokenType;
     ///
-    /// let parser = TypedParser::new(grammar());
+    /// let parser = TypedParser::new(dialect());
     /// let mut session = parser.incremental_parse("SELECT 1");
     ///
     /// let _ = session.feed_token(TokenType::Select, 0..6);
@@ -223,7 +223,7 @@ impl<G: TypedGrammar> TypedParser<G> {
         rc == 0
     }
 
-    /// Start incremental parsing for grammar `G`.
+    /// Start incremental parsing for dialect `G`.
     ///
     /// Use this when tokens arrive over time (editor completion, interactive
     /// parsing, macro-expansion pipelines).
@@ -245,7 +245,7 @@ impl<G: TypedGrammar> TypedParser<G> {
             NonNull::new(inner.source_buf.as_mut_ptr()).expect("source_buf is non-empty");
         TypedIncrementalParseSession::new(
             c_source_ptr,
-            self.grammar.clone(),
+            self.dialect.clone(),
             inner,
             Rc::clone(&self.inner),
         )
@@ -259,8 +259,8 @@ impl<G: TypedGrammar> TypedParser<G> {
 /// - Iterates statement-by-statement.
 /// - Surfaces failures per statement.
 /// - Can continue after recoverable errors.
-pub struct TypedParseSession<G: TypedGrammar> {
-    grammar: AnyGrammar,
+pub struct TypedParseSession<G: TypedDialect> {
+    dialect: AnyDialect,
     /// Checked-out parser state. Returned to `slot` on drop.
     inner: Option<ParserInner>,
     /// Slot to return `inner` to when this session is dropped.
@@ -268,7 +268,7 @@ pub struct TypedParseSession<G: TypedGrammar> {
     _marker: PhantomData<G>,
 }
 
-impl<G: TypedGrammar> Drop for TypedParseSession<G> {
+impl<G: TypedDialect> Drop for TypedParseSession<G> {
     fn drop(&mut self) {
         if let Some(inner) = self.inner.take() {
             *self.slot.borrow_mut() = Some(inner);
@@ -276,7 +276,7 @@ impl<G: TypedGrammar> Drop for TypedParseSession<G> {
     }
 }
 
-impl<G: TypedGrammar> TypedParseSession<G> {
+impl<G: TypedDialect> TypedParseSession<G> {
     /// Register a template macro with the parser during an active session.
     ///
     /// This is used by the formatter to auto-register macros defined by
@@ -351,7 +351,7 @@ impl<G: TypedGrammar> TypedParseSession<G> {
         let source = unsafe { std::str::from_utf8_unchecked(&inner.source_buf[..source_len]) };
         // SAFETY: inner.raw is valid (owned via ParserInner, not yet destroyed).
         let result =
-            unsafe { TypedParsedStatement::new(inner.raw.as_ptr(), source, self.grammar.clone()) };
+            unsafe { TypedParsedStatement::new(inner.raw.as_ptr(), source, self.dialect.clone()) };
         if rc == ffi::PARSE_OK {
             ParseOutcome::Ok(result)
         } else {
@@ -376,7 +376,7 @@ impl<G: TypedGrammar> TypedParseSession<G> {
         unsafe { std::str::from_utf8_unchecked(&inner.source_buf[..source_len]) }
     }
 
-    /// Get a grammar-agnostic view of this session's current arena state.
+    /// Get a dialect-agnostic view of this session's current arena state.
     ///
     /// Allows reading node data and source text after all statements have been
     /// consumed via [`next`](Self::next). The returned
@@ -394,26 +394,26 @@ impl<G: TypedGrammar> TypedParseSession<G> {
         // reset_parser; inner.raw is valid (owned via ParserInner).
         let source = unsafe { std::str::from_utf8_unchecked(&inner.source_buf[..source_len]) };
         // SAFETY: inner.raw is valid for 'self; source is valid UTF-8 for 'self.
-        unsafe { AnyParsedStatement::new(inner.raw.as_ptr(), source, self.grammar.clone()) }
+        unsafe { AnyParsedStatement::new(inner.raw.as_ptr(), source, self.dialect.clone()) }
     }
 }
 
-/// Parser alias for grammar-independent code that picks grammar at runtime.
-pub type AnyParser = TypedParser<AnyGrammar>;
+/// Parser alias for dialect-independent code that picks dialect at runtime.
+pub type AnyParser = TypedParser<AnyDialect>;
 
 /// Session alias paired with [`AnyParser`].
-pub type AnyParseSession = TypedParseSession<AnyGrammar>;
+pub type AnyParseSession = TypedParseSession<AnyDialect>;
 
-/// Grammar-erased view of a parsed statement.
+/// Dialect-erased view of a parsed statement.
 ///
-/// Cheap to borrow — holds a raw parser pointer, source reference, and grammar
+/// Cheap to borrow — holds a raw parser pointer, source reference, and dialect
 /// handle. Nodes and lists store `&'a AnyParsedStatement<'a>` rather than an
-/// owned copy, making them `Copy` and eliminating grammar-handle clones.
+/// owned copy, making them `Copy` and eliminating dialect-handle clones.
 #[derive(Clone)]
 pub struct AnyParsedStatement<'a> {
     pub(crate) raw: NonNull<CParser>,
     pub(crate) source: &'a str,
-    pub(crate) grammar: AnyGrammar,
+    pub(crate) dialect: AnyDialect,
 }
 
 impl<'a> AnyParsedStatement<'a> {
@@ -421,12 +421,12 @@ impl<'a> AnyParsedStatement<'a> {
     ///
     /// # Safety
     /// `raw` must be a valid, non-null parser pointer that remains valid for `'a`.
-    pub(crate) unsafe fn new(raw: *mut CParser, source: &'a str, grammar: AnyGrammar) -> Self {
+    pub(crate) unsafe fn new(raw: *mut CParser, source: &'a str, dialect: AnyDialect) -> Self {
         AnyParsedStatement {
             // SAFETY: caller guarantees raw is non-null.
             raw: unsafe { NonNull::new_unchecked(raw) },
             source,
-            grammar,
+            dialect,
         }
     }
 
@@ -484,7 +484,7 @@ impl<'a> AnyParsedStatement<'a> {
     ) -> Option<(AnyNodeTag, crate::ast::NodeFields<'a>)> {
         let (ptr, tag) = self.node_ptr(id)?;
         let mut fields = crate::ast::NodeFields::new();
-        for meta in self.grammar.field_meta(tag) {
+        for meta in self.dialect.field_meta(tag) {
             // SAFETY: ptr is a valid arena node pointer valid for 'a;
             // meta describes a field within that node's struct layout.
             let val = unsafe { extract_field_value(ptr, &meta, self.source) };
@@ -496,7 +496,7 @@ impl<'a> AnyParsedStatement<'a> {
     /// Return child node IDs if `id` is a list node.
     pub fn list_children(&self, id: AnyNodeId) -> Option<&'a [AnyNodeId]> {
         let (_, tag) = self.node_ptr(id)?;
-        if !self.grammar.is_list(tag) {
+        if !self.dialect.is_list(tag) {
             return None;
         }
         #[expect(clippy::redundant_closure_for_method_calls)]
@@ -600,31 +600,31 @@ impl<'a> AnyParsedStatement<'a> {
 ///
 /// - AST traversal (`root()`).
 /// - Token/comment-aware tooling (`tokens()`, `comments()`).
-/// - Grammar-agnostic pipelines (`erase()`).
+/// - Dialect-agnostic pipelines (`erase()`).
 #[derive(Clone)]
-pub struct TypedParsedStatement<'a, G: TypedGrammar> {
+pub struct TypedParsedStatement<'a, G: TypedDialect> {
     pub(crate) any: AnyParsedStatement<'a>,
     _marker: PhantomData<G>,
 }
 
-impl<'a, G: TypedGrammar> TypedParsedStatement<'a, G> {
+impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     /// Construct from raw parts.
     ///
     /// # Safety
     /// `raw` must be a valid, non-null parser pointer that remains valid for `'a`.
-    pub(crate) unsafe fn new(raw: *mut CParser, source: &'a str, grammar: AnyGrammar) -> Self {
+    pub(crate) unsafe fn new(raw: *mut CParser, source: &'a str, dialect: AnyDialect) -> Self {
         TypedParsedStatement {
             any: AnyParsedStatement {
                 // SAFETY: caller guarantees raw is non-null.
                 raw: unsafe { NonNull::new_unchecked(raw) },
                 source,
-                grammar,
+                dialect,
             },
             _marker: PhantomData,
         }
     }
 
-    /// Convert to the grammar-agnostic [`AnyParsedStatement`] view.
+    /// Convert to the dialect-agnostic [`AnyParsedStatement`] view.
     pub fn erase(self) -> AnyParsedStatement<'a> {
         self.any
     }
@@ -669,7 +669,7 @@ impl<'a, G: TypedGrammar> TypedParsedStatement<'a, G> {
     ///
     /// Each [`MacroRegion`] describes a byte range in the original source
     /// that was identified as a macro invocation (e.g. `name!(args)`).
-    /// Populated automatically when the grammar's `macro_style` is set.
+    /// Populated automatically when the dialect's `macro_style` is set.
     pub fn macro_regions(&self) -> impl Iterator<Item = MacroRegion> + use<'_, 'a, G> {
         self.any.macro_regions()
     }
@@ -774,11 +774,11 @@ impl<'a, G: TypedGrammar> TypedParsedStatement<'a, G> {
 #[expect(clippy::cast_ptr_alignment)]
 unsafe fn extract_field_value<'a>(
     ptr: *const u8,
-    meta: &crate::grammar::FieldMeta<'_>,
+    meta: &crate::dialect::FieldMeta<'_>,
     source: &'a str,
 ) -> crate::ast::FieldValue<'a> {
     use crate::ast::{FieldValue, SourceSpan};
-    use crate::grammar::FieldKind;
+    use crate::dialect::FieldKind;
     // SAFETY: covered by function-level contract; ptr and meta are consistent.
     unsafe {
         let field_ptr = ptr.add(meta.offset() as usize);
@@ -805,7 +805,7 @@ unsafe fn extract_field_value<'a>(
     }
 }
 
-/// Parse failure for a single statement in grammar `G`.
+/// Parse failure for a single statement in dialect `G`.
 ///
 /// Designed for diagnostics:
 ///
@@ -821,9 +821,9 @@ unsafe fn extract_field_value<'a>(
 /// - The returned `recovery_root()` can still be useful for diagnostics, but may
 ///   contain error placeholders where input was skipped.
 /// - `Fatal`: the parser could not find a safe point to continue from.
-pub struct TypedParseError<'a, G: TypedGrammar>(TypedParsedStatement<'a, G>);
+pub struct TypedParseError<'a, G: TypedDialect>(TypedParsedStatement<'a, G>);
 
-impl<'a, G: TypedGrammar> TypedParseError<'a, G> {
+impl<'a, G: TypedDialect> TypedParseError<'a, G> {
     pub(crate) fn new(result: TypedParsedStatement<'a, G>) -> Self {
         TypedParseError(result)
     }
@@ -876,7 +876,7 @@ impl<'a, G: TypedGrammar> TypedParseError<'a, G> {
     }
 }
 
-impl<G: TypedGrammar> std::fmt::Debug for TypedParseError<'_, G> {
+impl<G: TypedDialect> std::fmt::Debug for TypedParseError<'_, G> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TypedParseError")
             .field("kind", &self.kind())
@@ -887,16 +887,16 @@ impl<G: TypedGrammar> std::fmt::Debug for TypedParseError<'_, G> {
     }
 }
 
-impl<G: TypedGrammar> std::fmt::Display for TypedParseError<'_, G> {
+impl<G: TypedDialect> std::fmt::Display for TypedParseError<'_, G> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.message())
     }
 }
 
-impl<G: TypedGrammar> std::error::Error for TypedParseError<'_, G> {}
+impl<G: TypedDialect> std::error::Error for TypedParseError<'_, G> {}
 
-/// Parse-error alias for grammar-independent pipelines.
-pub type AnyParseError<'a> = TypedParseError<'a, AnyGrammar>;
+/// Parse-error alias for dialect-independent pipelines.
+pub type AnyParseError<'a> = TypedParseError<'a, AnyDialect>;
 
 // ── Crate-internal ───────────────────────────────────────────────────────────
 

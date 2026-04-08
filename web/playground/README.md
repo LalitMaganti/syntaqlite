@@ -55,8 +55,8 @@ Default output:
 
 Upload this file in the UI. Dialect symbol resolution can use either:
 
-- `syntaqlite_perfetto_dialect`
-- `syntaqlite_dialect`
+- `syntaqlite_perfetto_dialect_template`
+- `syntaqlite_dialect_template`
 
 ## Runtime ABI (`syntaqlite-wasm`)
 

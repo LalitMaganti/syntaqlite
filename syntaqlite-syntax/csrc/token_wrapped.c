@@ -10,10 +10,10 @@
 #include "csrc/token_wrapped.h"
 #include "csrc/dialect_dispatch.h"
 #include "csrc/tokens.h"
-#include "syntaqlite/grammar.h"
+#include "syntaqlite/dialect.h"
 #include "syntaqlite_dialect/dialect_macros.h"
 
-int64_t SynqSqliteGetTokenVersionWrapped(const SyntaqliteGrammar* g,
+int64_t SynqSqliteGetTokenVersionWrapped(const SyntaqliteDialect* g,
                                          const unsigned char* z,
                                          uint32_t* tokenType) {
   int token_type_int = 0;

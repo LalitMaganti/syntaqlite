@@ -138,7 +138,7 @@ mod tests {
     fn parser_header_uses_new_constructor_names() {
         let h = runtime_header("parser.h");
         assert!(h.contains("syntaqlite_parser_create("));
-        assert!(h.contains("syntaqlite_parser_create_with_grammar("));
+        assert!(h.contains("syntaqlite_parser_create_with_dialect("));
         assert!(h.contains("SyntaqliteParser* p = syntaqlite_parser_create(NULL);"));
         assert!(h.contains("#ifndef SYNTAQLITE_OMIT_SQLITE_API"));
     }
@@ -147,7 +147,7 @@ mod tests {
     fn tokenizer_header_uses_new_constructor_names() {
         let h = runtime_header("tokenizer.h");
         assert!(h.contains("syntaqlite_tokenizer_create("));
-        assert!(h.contains("syntaqlite_tokenizer_create_with_grammar("));
+        assert!(h.contains("syntaqlite_tokenizer_create_with_dialect("));
         assert!(h.contains("SyntaqliteTokenizer* tok = syntaqlite_tokenizer_create(NULL);"));
         assert!(h.contains("#ifndef SYNTAQLITE_OMIT_SQLITE_API"));
         assert!(!h.contains("syntaqlite_create_sqlite_tokenizer("));

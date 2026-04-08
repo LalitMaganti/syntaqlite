@@ -13,7 +13,7 @@ export interface DialectPreset {
 
 export const BUILTIN_PRESETS: DialectPreset[] = [
   // SQLite is a side module; the runtime loads it via loadDynamicLibrary.
-  {id: "sqlite", label: "SQLite", wasmUrl: "syntaqlite-sqlite.wasm", symbol: "syntaqlite_sqlite_dialect"},
+  {id: "sqlite", label: "SQLite", wasmUrl: "syntaqlite-sqlite.wasm", symbol: "syntaqlite_sqlite_dialect_template"},
 ];
 
 export interface DialectManagerConfig {

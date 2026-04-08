@@ -24,7 +24,7 @@
 
 use syntaqlite::ParseOutcome;
 use syntaqlite::parse::TokenType;
-use syntaqlite::typed::{TypedParser, TypedTokenizer, grammar};
+use syntaqlite::typed::{TypedParser, TypedTokenizer, dialect};
 use syntaqlite::util::SqliteVersion;
 
 /// Shorthand: convert a `TokenType` variant to its raw u32 value.
@@ -39,7 +39,7 @@ const fn tk(t: TokenType) -> u32 {
 /// Tokenize SQL with a specific `SQLite` version and return (`token_type`, text) pairs,
 /// filtering out whitespace.
 fn tokenize_at_version(sql: &str, version: SqliteVersion) -> Vec<(u32, String)> {
-    let tok = TypedTokenizer::new(grammar().with_version(version));
+    let tok = TypedTokenizer::new(dialect().with_version(version));
     tok.tokenize(sql)
         .filter(|t| t.token_type() != TokenType::Space)
         .map(|t| (t.token_type() as u32, t.text().to_string()))
@@ -53,7 +53,7 @@ fn tokenize_latest(sql: &str) -> Vec<(u32, String)> {
 
 /// Parse SQL with a specific `SQLite` version and return whether it succeeded.
 fn parses_ok_at_version(sql: &str, version: SqliteVersion) -> bool {
-    let parser = TypedParser::new(grammar().with_version(version));
+    let parser = TypedParser::new(dialect().with_version(version));
     let mut session = parser.parse(sql);
     matches!(session.next(), ParseOutcome::Ok(_))
 }

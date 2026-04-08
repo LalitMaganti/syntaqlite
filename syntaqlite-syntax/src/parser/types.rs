@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-use crate::grammar::TypedGrammar;
+use crate::dialect::TypedDialect;
 
 /// Tri-state parse result for statement-oriented parser APIs.
 ///
@@ -140,14 +140,14 @@ impl CommentSpan {
     }
 }
 
-pub use crate::grammar::ParserTokenFlags;
+pub use crate::dialect::ParserTokenFlags;
 
-/// Token captured from a parsed statement, typed by grammar `G`.
+/// Token captured from a parsed statement, typed by dialect `G`.
 ///
 /// Returned by [`super::TypedParsedStatement::tokens`]. Requires
 /// `collect_tokens: true` in [`super::ParserConfig`].
 #[derive(Debug, Clone, Copy)]
-pub struct TypedParserToken<'a, G: TypedGrammar> {
+pub struct TypedParserToken<'a, G: TypedDialect> {
     text: &'a str,
     token_type: G::Token,
     flags: ParserTokenFlags,
@@ -155,7 +155,7 @@ pub struct TypedParserToken<'a, G: TypedGrammar> {
     length: u32,
 }
 
-impl<'a, G: TypedGrammar> TypedParserToken<'a, G> {
+impl<'a, G: TypedDialect> TypedParserToken<'a, G> {
     pub(super) fn new(
         text: &'a str,
         token_type: G::Token,
@@ -177,7 +177,7 @@ impl<'a, G: TypedGrammar> TypedParserToken<'a, G> {
         self.text
     }
 
-    /// Grammar-typed token variant.
+    /// Dialect-typed token variant.
     pub fn token_type(&self) -> G::Token {
         self.token_type
     }
@@ -198,8 +198,8 @@ impl<'a, G: TypedGrammar> TypedParserToken<'a, G> {
     }
 }
 
-/// Parser-token alias for grammar-independent pipelines.
-pub type AnyParserToken<'a> = TypedParserToken<'a, crate::grammar::AnyGrammar>;
+/// Parser-token alias for dialect-independent pipelines.
+pub type AnyParserToken<'a> = TypedParserToken<'a, crate::dialect::AnyDialect>;
 
 /// Byte range of a macro call that contributed to this parse.
 ///
