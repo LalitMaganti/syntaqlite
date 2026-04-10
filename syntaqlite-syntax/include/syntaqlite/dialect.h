@@ -72,11 +72,17 @@ typedef enum {
 typedef struct SynqParseCtx SynqParseCtx;
 
 typedef struct SynqParseToken {
-  const char* z;       // pointer to start of token in source text
+  const char* z;       // pointer to start of token in its buffer
   uint32_t n;          // byte length of token
   uint32_t type;       // token type ID (SYNTAQLITE_TK_*)
   uint32_t token_idx;  // index into parser's token vec (0xFFFFFFFF if not
                        // collecting)
+  uint32_t offset;     // byte offset within the token's buffer; set at
+                       // shift time so reductions don't depend on
+                       // ctx->source which may have been swapped back
+                       // after a macro expansion
+  uint8_t buf_idx;     // 0 = original source, 1+ = expansion buffer index
+  uint8_t _pad[3];
 } SynqParseToken;
 
 typedef struct SyntaqliteFieldRangeMeta SyntaqliteFieldRangeMeta;

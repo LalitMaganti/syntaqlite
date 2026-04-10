@@ -200,6 +200,11 @@ pub enum FieldValue<'a> {
     /// A child node reference.
     NodeId(AnyNodeId),
     /// A source text span — a subslice of the source (or expansion buffer).
+    ///
+    /// Use
+    /// [`AnyParsedStatement::field_source_range`](crate::parser::AnyParsedStatement::field_source_range)
+    /// to obtain the byte range in the original source (for macro-expanded
+    /// spans this points at the macro call site, not the expansion).
     Span {
         /// The span text.  When `quoted` is true this is the bare identifier
         /// with surrounding quotes stripped.
@@ -207,11 +212,6 @@ pub enum FieldValue<'a> {
         /// Whether the identifier was quoted in source.  The formatter
         /// re-wraps quoted spans in standard double quotes (`"..."`).
         quoted: bool,
-        /// Byte offset of this span within its source buffer.
-        offset: u32,
-        /// Which source buffer this span belongs to.
-        /// 0 = original source, 1+ = macro expansion buffer index.
-        buf_idx: u8,
     },
     /// A boolean flag.
     Bool(bool),
@@ -429,74 +429,38 @@ mod serde_impl {
 
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
-pub(crate) use ffi::{CNodeList as RawNodeList, CSourceSpan as SourceSpan};
+pub(crate) use ffi::CNodeList as RawNodeList;
+pub(crate) use ffi::CSourceSpan as SourceSpan;
 
 mod ffi {
     use crate::ast::AnyNodeId;
 
-    /// A source byte range within the parser's source buffer.
+    /// A source byte range stored in an AST node.
     ///
-    /// Mirrors the C `SyntaqliteSourceSpan` layout.
-    /// Used in generated node structs for token-valued fields (identifiers, literals).
+    /// Mirrors the C `SyntaqliteSourceSpan` layout.  Embedded in generated
+    /// node structs for token-valued fields (identifiers, literals).
+    ///
+    /// **Opaque**: the fields are an implementation detail.  When macros are
+    /// involved, the offset may reference an internal expansion buffer, not
+    /// the original source.  Use
+    /// [`AnyParsedStatement::field_source_range`](crate::parser::AnyParsedStatement::field_source_range)
+    /// or
+    /// [`AnyParsedStatement::span_text`](crate::parser::AnyParsedStatement::span_text)
+    /// to get usable values.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     #[repr(C)]
     pub(crate) struct CSourceSpan {
-        pub(crate) offset: u32,
-        pub(crate) length: u16,
-        pub(crate) flags: u8,
-        /// 0 = original source, 1+ = expansion buffer index (1-based).
-        pub(crate) buf_idx: u8,
+        offset: u32,
+        length: u16,
+        flags: u8,
+        /// Internal: 0 = original source, >0 = macro expansion buffer.
+        _buf_idx: u8,
     }
-
-    /// Span flag: identifier was quoted in source; span points to the
-    /// dequoted inner text.  The formatter re-wraps in `"..."`.
-    const SPAN_FLAG_QUOTED: u8 = 1;
 
     impl CSourceSpan {
         /// Returns `true` if the span covers zero bytes.
         pub(crate) fn is_empty(self) -> bool {
             self.length == 0
-        }
-
-        /// Whether this span was dequoted from a quoted identifier.
-        pub(crate) fn is_quoted(self) -> bool {
-            self.flags & SPAN_FLAG_QUOTED != 0
-        }
-
-        /// Slice the span out of the original source string.
-        ///
-        /// This resolves spans that refer to the original source (`buf_idx == 0`).
-        /// For macro-expanded spans (`buf_idx >= 1`) this will index into
-        /// the wrong buffer — use [`as_str_with_bufs`](Self::as_str_with_bufs)
-        /// when expansion buffers are available.
-        pub(crate) fn as_str(self, source: &str) -> &str {
-            let start = self.offset as usize;
-            let end = start + self.length as usize;
-            source.get(start..end).unwrap_or("")
-        }
-
-        /// Slice the span out of the correct buffer, accounting for macro
-        /// expansion.
-        ///
-        /// When `buf_idx` is 0 the span refers to the original `source`.
-        /// For `buf_idx >= 1` the span refers to an expansion buffer at
-        /// `owned_bufs[buf_idx - 1]`.
-        pub(crate) fn as_str_with_bufs<'a>(
-            self,
-            source: &'a str,
-            owned_bufs: &[&'a str],
-        ) -> &'a str {
-            let start = self.offset as usize;
-            let end = start + self.length as usize;
-            let buf = if self.buf_idx == 0 {
-                source
-            } else {
-                match owned_bufs.get((self.buf_idx - 1) as usize) {
-                    Some(b) => b,
-                    None => return "",
-                }
-            };
-            buf.get(start..end).unwrap_or("")
         }
     }
 

@@ -77,6 +77,7 @@ pub fn syntaqlite::Catalog::new_connection(&mut self)
 pub fn syntaqlite::Catalog::new_database(&mut self)
 pub fn syntaqlite::Catalog::new_document(&mut self)
 pub fn syntaqlite::Diagnostic::end_offset(&self) -> usize
+pub fn syntaqlite::Diagnostic::expansion_frames(&self) -> &[syntaqlite::semantic::diagnostics::DiagnosticFrame]
 pub fn syntaqlite::Diagnostic::help(&self) -> core::option::Option<&syntaqlite::semantic::Help>
 pub fn syntaqlite::Diagnostic::message(&self) -> &syntaqlite::semantic::DiagnosticMessage
 pub fn syntaqlite::Diagnostic::new(start_offset: usize, end_offset: usize, message: syntaqlite::semantic::DiagnosticMessage, severity: syntaqlite::semantic::Severity, help: core::option::Option<syntaqlite::semantic::Help>) -> Self

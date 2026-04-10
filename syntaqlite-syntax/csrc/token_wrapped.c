@@ -14,11 +14,22 @@
 #include "syntaqlite_dialect/dialect_macros.h"
 
 int64_t SynqSqliteGetTokenVersionWrapped(const SyntaqliteDialect* g,
+                                         uint32_t macro_fallback,
                                          const unsigned char* z,
                                          uint32_t* tokenType) {
   int token_type_int = 0;
   int64_t len = SYNQ_GET_TOKEN(g, z, &token_type_int);
   *tokenType = (uint32_t)token_type_int;
+
+  // Reclassify a lone '!' as TK_BANG when the caller can have macro calls.
+  // Check the cheap conditions first (token type / length / character)
+  // before consulting macro_style or macro_fallback — the common case is
+  // that the token isn't '!' at all.
+  if (*tokenType == SYNTAQLITE_TK_ILLEGAL && len == 1 && z[0] == '!' &&
+      (g->tmpl->macro_style == SYNQ_MACRO_STYLE_RUST || macro_fallback)) {
+    *tokenType = SYNTAQLITE_TK_BANG;
+    return 1;
+  }
 
   if (SYNQ_VER_LT(g, 3038000) && *tokenType == SYNTAQLITE_TK_PTR) {
     /* -> and ->> operators added in 3.38.

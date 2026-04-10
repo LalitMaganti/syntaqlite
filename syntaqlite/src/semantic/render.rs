@@ -85,7 +85,27 @@ impl<'a> DiagnosticRenderer<'a> {
                 end_offset: diag.end_offset(),
                 help: help.as_deref(),
             },
-        )
+        )?;
+
+        // Render macro expansion traceback (Perfetto-style).  Frame 0 is
+        // the outermost call site (already shown above), so we render the
+        // inner frames as "in macro expansion" notes.
+        let frames = diag.expansion_frames();
+        for frame in frames.iter().skip(1) {
+            render_source_error(
+                out,
+                &crate::util::SourceError {
+                    source: &frame.buffer,
+                    file: "<macro expansion>",
+                    severity: "note",
+                    message: "in macro expansion",
+                    start_offset: frame.start,
+                    end_offset: frame.end,
+                    help: None,
+                },
+            )?;
+        }
+        Ok(())
     }
 
     /// Render all diagnostics to `out`. Returns `true` if any had `Severity::Error`.

@@ -110,9 +110,6 @@ typedef struct SyntaqliteParserToken {
 typedef struct SyntaqliteMacroRegion {
   uint32_t call_offset;  // Byte offset of macro call in original source.
   uint32_t call_length;  // Byte length of entire macro call.
-  const char*
-      expansion_data;      // Expanded text (NULL for unregistered fallback).
-  uint32_t expansion_len;  // Length of expanded text (0 when data is NULL).
 } SyntaqliteMacroRegion;
 
 // ---------------------------------------------------------------------------
@@ -199,23 +196,60 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_source_length(SyntaqliteParser* p);
 SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
 
 // ---------------------------------------------------------------------------
-// Source span helpers
+// Span resolution
 // ---------------------------------------------------------------------------
 
-static inline const char* syntaqlite_span_text(SyntaqliteParser* p,
-                                               SyntaqliteSourceSpan span,
-                                               uint32_t* out_len) {
-  if (span.length == 0) {
-    *out_len = 0;
-    return NULL;
-  }
-  *out_len = span.length;
-  return syntaqlite_parser_source(p) + span.offset;
-}
+// A fully-resolved span: text pointer, text length, source byte range, and
+// flags.  Returned by syntaqlite_parser_resolve_span_for_node().
+//
+// `text` points into the correct buffer — original source for direct spans,
+// expansion buffer for spans inside macros.  `source_offset`/`source_length`
+// are always in the original source; for spans inside a macro expansion,
+// they point at the entire macro call.
+typedef struct SyntaqliteResolvedSpan {
+  const char* text;
+  uint32_t text_len;
+  uint32_t source_offset;
+  uint32_t source_length;
+  uint8_t flags;
+} SyntaqliteResolvedSpan;
 
-static inline uint32_t syntaqlite_span_is_present(SyntaqliteSourceSpan span) {
-  return span.length != 0;
-}
+// Resolve a source span to its text and source byte range.
+//
+// Walks the macro expansion parent chain for source position, picks the
+// correct buffer for text.  Returns all zeros for a NULL or empty span.
+//
+// This is the only correct way to read a span when macros may be involved:
+// the raw `offset`/`length` fields on `SyntaqliteSourceSpan` may reference
+// an internal expansion buffer.
+SYNTAQLITE_API SyntaqliteResolvedSpan
+syntaqlite_parser_resolve_span(SyntaqliteParser* p,
+                               const SyntaqliteSourceSpan* span);
+
+// One frame in an expansion traceback.  Each frame describes a position
+// inside a particular buffer (the original source or a macro expansion).
+typedef struct SyntaqliteExpansionFrame {
+  const char* buffer;   // Buffer text (source or expansion)
+  uint32_t buffer_len;  // Length of buffer
+  uint32_t offset;      // Byte offset within buffer
+  uint32_t length;      // Byte length within buffer
+} SyntaqliteExpansionFrame;
+
+// Build an expansion traceback for a span.  Frames are written from
+// outermost (call site in original source) to innermost (position inside
+// the deepest expansion buffer).
+//
+// Writes up to `max_frames` frames into `frames[]`.  Returns the total
+// number of frames available (caller can pre-size by calling with
+// `max_frames=0` to get the count, then allocating).
+//
+// For a span not inside any macro expansion, returns 1 frame pointing at
+// the span's position in the original source.
+SYNTAQLITE_API uint32_t
+syntaqlite_parser_expansion_traceback(SyntaqliteParser* p,
+                                      const SyntaqliteSourceSpan* span,
+                                      SyntaqliteExpansionFrame* frames,
+                                      uint32_t max_frames);
 
 // ---------------------------------------------------------------------------
 // Node and list helpers

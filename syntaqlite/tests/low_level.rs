@@ -527,3 +527,110 @@ fn sqlite_type_tokens_are_marked_as_type() {
 
     assert_eq!(marked, vec!["int", "TEXT", "varchar"]);
 }
+
+/// Walk an AST collecting `(field_idx, source_offset, source_length)` for
+/// every span field, recursing through child nodes and list children.
+fn collect_span_ranges(
+    erased: &syntaqlite_syntax::any::AnyParsedStatement<'_>,
+    node_id: syntaqlite_syntax::any::AnyNodeId,
+    spans: &mut Vec<(u8, usize, usize)>,
+) {
+    use syntaqlite_syntax::any::FieldValue;
+    if node_id.is_null() {
+        return;
+    }
+    if let Some((_, fields)) = erased.extract_fields(node_id) {
+        for idx in 0..fields.len() {
+            let field_idx = u8::try_from(idx).expect("field index fits in u8");
+            match fields[idx] {
+                FieldValue::Span { .. } => {
+                    let (off, len) = erased.field_source_range(node_id, field_idx);
+                    spans.push((field_idx, off, len));
+                }
+                FieldValue::NodeId(child) if !child.is_null() => {
+                    collect_span_ranges(erased, child, spans);
+                }
+                _ => {}
+            }
+        }
+    }
+    if let Some(children) = erased.list_children(node_id) {
+        for &child in children {
+            collect_span_ranges(erased, child, spans);
+        }
+    }
+}
+
+/// `field_source_range` returns the direct source position for non-macro spans.
+#[test]
+fn field_source_range_direct_span() {
+    // "SELECT 1"
+    //  0      7
+    let source = "SELECT 1";
+    let parser = Parser::new();
+    let mut session = parser.incremental_parse(source);
+
+    session.feed_token(TokenType::Select, 0..6);
+    session.feed_token(TokenType::Integer, 7..8);
+
+    let stmt = session
+        .finish()
+        .expect("expected Some")
+        .expect("expected a statement");
+    let erased = stmt.erase();
+
+    // Walk the entire AST and collect all span ranges.
+    let mut spans = Vec::new();
+    collect_span_ranges(&erased, erased.root_id(), &mut spans);
+    eprintln!("spans: {spans:?}");
+
+    // The integer "1" should be at offset 7, length 1.
+    assert!(
+        spans.iter().any(|&(_, off, len)| off == 7 && len == 1),
+        "expected to find span at offset 7 length 1, got: {spans:?}"
+    );
+}
+
+/// `field_source_range` on a macro-expanded span returns the macro call site.
+#[test]
+fn field_source_range_macro_expansion() {
+    // "SELECT foo!(1 + 2), 3"
+    //  0      7          18 20
+    // The macro call "foo!(1 + 2)" is at offset 7, length 11.
+    // Tokens inside the expansion get spans relative to the expansion buffer,
+    // but field_source_range should map them back to the call site.
+    let source = "SELECT foo!(1 + 2), 3";
+    let parser = Parser::new();
+    let mut session = parser.incremental_parse(source);
+
+    session.feed_token(TokenType::Select, 0..6);
+
+    // Macro call at 7..18 = "foo!(1 + 2)"
+    session.begin_macro(7..18);
+    session.feed_token(TokenType::Integer, 0..1); // "1" in expansion buffer
+    session.feed_token(TokenType::Plus, 2..3);
+    session.feed_token(TokenType::Integer, 4..5);
+    session.end_macro();
+
+    session.feed_token(TokenType::Comma, 18..19);
+    session.feed_token(TokenType::Integer, 20..21);
+
+    let stmt = session
+        .finish()
+        .expect("expected Some")
+        .expect("expected a statement");
+
+    let erased = stmt.erase();
+
+    // Collect all spans from the AST.
+    let mut spans = Vec::new();
+    collect_span_ranges(&erased, erased.root_id(), &mut spans);
+    eprintln!("macro spans: {spans:?}");
+
+    // Tokens inside the macro expansion should resolve to the call site (7, 11).
+    // The "3" outside should be at (20, 1).
+    assert!(
+        spans.iter().any(|&(_, off, len)| off == 7 && len == 11),
+        "expected to find a span mapped to macro call site (7, 11), got: {spans:?}"
+    );
+}

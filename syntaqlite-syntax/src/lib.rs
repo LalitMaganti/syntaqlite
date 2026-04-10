@@ -84,7 +84,7 @@ pub mod any {
     #[doc(inline)]
     pub use crate::parser::{
         AnyIncrementalParseSession, AnyParseError, AnyParseSession, AnyParsedStatement, AnyParser,
-        AnyParserToken, MacroRegion, ParseOutcome,
+        AnyParserToken, ExpansionFrame, MacroRegion, ParseOutcome,
     };
     #[doc(inline)]
     pub use crate::tokenizer::{AnyToken, AnyTokenizer};

@@ -242,7 +242,7 @@ pub(crate) fn extract_token_defines(parse_h: &str) -> Vec<(String, u32)> {
 /// Token names needed by the dialect-agnostic runtime (`token_wrapped.c`).
 const RUNTIME_TOKEN_NAMES: &[&str] = &[
     "PTR", "MINUS", "QNUMBER", "FLOAT", "INTEGER", "SPACE", "SEMI", "COMMENT", "ID", "ILLEGAL",
-    "LP", "RP", "COMMA", "VARIABLE",
+    "BANG", "LP", "RP", "COMMA", "VARIABLE",
 ];
 
 /// Generate a minimal tokens header containing only the runtime-required tokens.

@@ -25,8 +25,8 @@ pub use incremental::{AnyIncrementalParseSession, TypedIncrementalParseSession};
 #[cfg(feature = "sqlite")]
 pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken};
 pub use types::{
-    AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, MacroRegion,
-    ParseOutcome, ParserTokenFlags, TypedParserToken,
+    AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, ExpansionFrame,
+    MacroRegion, ParseOutcome, ParserTokenFlags, TypedParserToken,
 };
 
 /// Indicates whether parsing can continue after an error.
@@ -446,6 +446,97 @@ impl<'a> AnyParsedStatement<'a> {
         })
     }
 
+    /// Source-level byte range for a span field of a node.
+    ///
+    /// If the field appears directly in the source, returns its exact position.
+    /// If the field is inside a macro expansion, returns the position of the
+    /// entire macro call in the original source.
+    ///
+    /// Returns `(0, 0)` for non-span fields, invalid nodes, or empty spans.
+    pub fn field_source_range(&self, node_id: AnyNodeId, field_idx: u8) -> (usize, usize) {
+        let Some(sp) = self.field_span(node_id, field_idx) else {
+            return (0, 0);
+        };
+        let r = self.resolve_span(sp);
+        (r.source_offset as usize, r.source_length as usize)
+    }
+
+    /// Expansion traceback for a span field.
+    ///
+    /// Returns a list of [`ExpansionFrame`]s from outermost (call site in
+    /// the original source) to innermost (the position inside the deepest
+    /// expansion buffer).  Returns a single frame for non-expansion spans.
+    /// Returns an empty vec for invalid/non-span fields.
+    pub fn field_expansion_traceback(
+        &self,
+        node_id: AnyNodeId,
+        field_idx: u8,
+    ) -> Vec<ExpansionFrame<'a>> {
+        let Some(sp) = self.field_span(node_id, field_idx) else {
+            return Vec::new();
+        };
+        // SAFETY: self.raw is valid for 'a; sp is a copy of an arena value.
+        let raw_frames = unsafe { self.raw.as_ref().expansion_traceback(sp) };
+        raw_frames
+            .into_iter()
+            .map(|f| ExpansionFrame {
+                buffer: if f.buffer.is_null() || f.buffer_len == 0 {
+                    ""
+                } else {
+                    // SAFETY: C guarantees buffer points to buffer_len bytes
+                    // of valid UTF-8 in a parser-owned buffer valid for 'a.
+                    unsafe {
+                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                            f.buffer,
+                            f.buffer_len as usize,
+                        ))
+                    }
+                },
+                offset: f.offset as usize,
+                length: f.length as usize,
+            })
+            .collect()
+    }
+
+    /// Resolved text for an arena span, picking the correct buffer.
+    ///
+    /// For spans inside a macro expansion, returns the text from the
+    /// expansion buffer (e.g. `"a"` for `$name` expanded with arg `a`).
+    /// For direct spans, returns a slice of the original source.
+    pub(crate) fn span_text(&self, span: crate::ast::SourceSpan) -> &'a str {
+        let r = self.resolve_span(span);
+        if r.text.is_null() || r.text_len == 0 {
+            return "";
+        }
+        // SAFETY: C guarantees text points to text_len bytes of valid
+        // UTF-8 in a parser-owned buffer valid for 'a.
+        unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(r.text, r.text_len as usize))
+        }
+    }
+
+    fn resolve_span(&self, span: crate::ast::SourceSpan) -> ffi::CResolvedSpan {
+        // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
+        unsafe { self.raw.as_ref().resolve_span(span) }
+    }
+
+    fn field_span(&self, node_id: AnyNodeId, field_idx: u8) -> Option<crate::ast::SourceSpan> {
+        let (ptr, tag) = self.node_ptr(node_id)?;
+        let meta = self.dialect.field_meta(tag).nth(field_idx as usize)?;
+        if !matches!(meta.kind(), crate::dialect::FieldKind::Span) {
+            return None;
+        }
+        // SAFETY: ptr is a valid arena node pointer for 'a; meta describes
+        // a Span field at the indicated byte offset within the node struct.
+        // SourceSpan is `#[repr(C)]` Copy with 1-byte alignment; we use
+        // read_unaligned to avoid alignment assumptions on the raw pointer.
+        Some(unsafe {
+            ptr.add(meta.offset() as usize)
+                .cast::<crate::ast::SourceSpan>()
+                .read_unaligned()
+        })
+    }
+
     /// The source text bound to this result.
     pub fn source(&self) -> &'a str {
         self.source
@@ -483,31 +574,12 @@ impl<'a> AnyParsedStatement<'a> {
         id: AnyNodeId,
     ) -> Option<(AnyNodeTag, crate::ast::NodeFields<'a>)> {
         let (ptr, tag) = self.node_ptr(id)?;
-        // SAFETY: self.raw is a valid parser pointer for 'a; macro regions
-        // contain expansion buffers valid for the same lifetime.
-        let regions = unsafe { self.raw.as_ref().result_macros() };
-        let owned_bufs: Vec<&'a str> = regions
-            .iter()
-            .map(|r| {
-                if r.expansion_data.is_null() || r.expansion_len == 0 {
-                    ""
-                } else {
-                    // SAFETY: expansion_data points to expansion_len bytes of
-                    // SQL text produced by the macro expander (always UTF-8).
-                    unsafe {
-                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                            r.expansion_data,
-                            r.expansion_len as usize,
-                        ))
-                    }
-                }
-            })
-            .collect();
         let mut fields = crate::ast::NodeFields::new();
         for meta in self.dialect.field_meta(tag) {
             // SAFETY: ptr is a valid arena node pointer valid for 'a;
             // meta describes a field within that node's struct layout.
-            let val = unsafe { extract_field_value(ptr, &meta, self.source, &owned_bufs) };
+            // self.raw is a valid parser pointer for 'a.
+            let val = unsafe { extract_field_value(ptr, &meta, self.raw.as_ref()) };
             fields.push(val);
         }
         Some((tag, fields))
@@ -795,8 +867,7 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
 unsafe fn extract_field_value<'a>(
     ptr: *const u8,
     meta: &crate::dialect::FieldMeta<'_>,
-    source: &'a str,
-    owned_bufs: &[&'a str],
+    parser: &CParser,
 ) -> crate::ast::FieldValue<'a> {
     use crate::ast::{FieldValue, SourceSpan};
     use crate::dialect::FieldKind;
@@ -806,20 +877,32 @@ unsafe fn extract_field_value<'a>(
         match meta.kind() {
             FieldKind::NodeId => FieldValue::NodeId(AnyNodeId(*(field_ptr.cast::<u32>()))),
             FieldKind::Span => {
-                let span = &*(field_ptr.cast::<SourceSpan>());
+                // SourceSpan is `#[repr(C)]` Copy with 1-byte alignment;
+                // use read_unaligned to avoid alignment assumptions.
+                let span = field_ptr.cast::<SourceSpan>().read_unaligned();
                 if span.is_empty() {
                     FieldValue::Span {
                         text: "",
                         quoted: false,
-                        offset: 0,
-                        buf_idx: 0,
                     }
                 } else {
+                    // Delegate to C: resolves text (picks the right buffer)
+                    // and walks parent chain for source position.  Rust
+                    // never inspects buf_idx or expansion buffers directly.
+                    let resolved = parser.resolve_span(span);
+                    let text = if resolved.text.is_null() || resolved.text_len == 0 {
+                        ""
+                    } else {
+                        // SAFETY: C guarantees text points to text_len bytes
+                        // of valid UTF-8 in a parser-owned buffer valid for 'a.
+                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                            resolved.text,
+                            resolved.text_len as usize,
+                        ))
+                    };
                     FieldValue::Span {
-                        text: span.as_str_with_bufs(source, owned_bufs),
-                        quoted: span.is_quoted(),
-                        offset: span.offset,
-                        buf_idx: span.buf_idx,
+                        text,
+                        quoted: (resolved.flags & 1) != 0,
                     }
                 }
             }

@@ -223,6 +223,26 @@ impl MacroRegion {
     }
 }
 
+/// One frame in a macro expansion traceback.
+///
+/// Each frame describes a position inside a particular buffer.  Frame 0
+/// is the outermost (the call site in the original source), and the last
+/// frame is the innermost (the position inside the deepest expansion
+/// buffer).
+///
+/// Returned by
+/// [`super::AnyParsedStatement::field_expansion_traceback`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ExpansionFrame<'a> {
+    /// The buffer text — the original source for the outermost frame, or
+    /// an expansion buffer for inner frames.
+    pub buffer: &'a str,
+    /// Byte offset of this frame's span within `buffer`.
+    pub offset: usize,
+    /// Byte length of this frame's span within `buffer`.
+    pub length: usize,
+}
+
 /// Parser's best guess about what kind of token fits next.
 ///
 /// Returned by incremental parse sessions for completion engines.

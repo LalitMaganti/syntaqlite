@@ -195,6 +195,7 @@ pub enum TokenType {
     Space = 185,
     Comment = 186,
     Illegal = 187,
+    Bang = 188,
 }
 
 impl From<TokenType> for u32 {
@@ -400,6 +401,7 @@ impl crate::ast::GrammarTokenType for TokenType {
             185 => Some(TokenType::Space),
             186 => Some(TokenType::Comment),
             187 => Some(TokenType::Illegal),
+            188 => Some(TokenType::Bang),
             _ => None,
         }
     }

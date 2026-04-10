@@ -905,6 +905,8 @@ pub fn syntaqlite_syntax::any::AnyNodeTag::from_raw(v: u32) -> Self
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyNodeId> + '_
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields<'a>)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::field_expansion_traceback(&self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> alloc::vec::Vec<syntaqlite_syntax::any::ExpansionFrame<'a>>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::field_source_range(&self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> (usize, usize)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_regions(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRegion> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaqlite_syntax::any::AnyNodeId
@@ -1673,6 +1675,7 @@ pub struct syntaqlite_syntax::ParserTokenFlags(_)
 pub struct syntaqlite_syntax::any::AnyDialect
 pub struct syntaqlite_syntax::any::AnyNode<'a>
 pub struct syntaqlite_syntax::any::AnyParsedStatement<'a>
+pub struct syntaqlite_syntax::any::ExpansionFrame<'a>
 pub struct syntaqlite_syntax::any::FieldMeta<'a>(_)
 pub struct syntaqlite_syntax::any::KeywordEntry
 pub struct syntaqlite_syntax::any::MacroRegion
@@ -1864,6 +1867,7 @@ pub syntaqlite_syntax::TokenType::Asc = 5
 pub syntaqlite_syntax::TokenType::Asterisk = 182
 pub syntaqlite_syntax::TokenType::Attach = 6
 pub syntaqlite_syntax::TokenType::Autoincr = 139
+pub syntaqlite_syntax::TokenType::Bang = 188
 pub syntaqlite_syntax::TokenType::Before = 7
 pub syntaqlite_syntax::TokenType::Begin = 8
 pub syntaqlite_syntax::TokenType::Between = 29
@@ -2034,6 +2038,9 @@ pub syntaqlite_syntax::TokenType::Window = 167
 pub syntaqlite_syntax::TokenType::With = 69
 pub syntaqlite_syntax::TokenType::Within = 86
 pub syntaqlite_syntax::TokenType::Without = 70
+pub syntaqlite_syntax::any::ExpansionFrame::buffer: &'a str
+pub syntaqlite_syntax::any::ExpansionFrame::length: usize
+pub syntaqlite_syntax::any::ExpansionFrame::offset: usize
 pub syntaqlite_syntax::any::FieldKind::Bool = 2
 pub syntaqlite_syntax::any::FieldKind::Enum = 4
 pub syntaqlite_syntax::any::FieldKind::Flags = 3
@@ -2044,8 +2051,6 @@ pub syntaqlite_syntax::any::FieldValue::Enum(u32)
 pub syntaqlite_syntax::any::FieldValue::Flags(u8)
 pub syntaqlite_syntax::any::FieldValue::NodeId(syntaqlite_syntax::any::AnyNodeId)
 pub syntaqlite_syntax::any::FieldValue::Span
-pub syntaqlite_syntax::any::FieldValue::Span::buf_idx: u8
-pub syntaqlite_syntax::any::FieldValue::Span::offset: u32
 pub syntaqlite_syntax::any::FieldValue::Span::quoted: bool
 pub syntaqlite_syntax::any::FieldValue::Span::text: &'a str
 pub syntaqlite_syntax::any::ParseOutcome::Done
