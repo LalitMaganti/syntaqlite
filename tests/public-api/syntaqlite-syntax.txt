@@ -50,6 +50,7 @@ impl core::convert::From<syntaqlite_syntax::TokenType> for u32
 impl core::convert::From<syntaqlite_syntax::any::AnyNodeId> for syntaqlite_syntax::nodes::NodeId
 impl core::convert::From<syntaqlite_syntax::any::AnyNodeTag> for u32
 impl core::convert::From<syntaqlite_syntax::any::AnyTokenType> for u32
+impl core::convert::From<syntaqlite_syntax::any::SourceRange> for core::ops::range::Range<usize>
 impl core::convert::From<syntaqlite_syntax::nodes::AggregateFunctionCallId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::AlterTableStmtId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId> for syntaqlite_syntax::any::AnyNodeId
@@ -284,6 +285,7 @@ impl syntaqlite_syntax::any::AnyTokenType
 impl syntaqlite_syntax::any::FieldMeta<'_>
 impl syntaqlite_syntax::any::KeywordEntry
 impl syntaqlite_syntax::any::MacroRegion
+impl syntaqlite_syntax::any::SourceRange
 impl syntaqlite_syntax::nodes::AggregateFunctionCallFlags
 impl syntaqlite_syntax::nodes::AggregateFunctionCallId
 impl syntaqlite_syntax::nodes::AlterOp
@@ -763,6 +765,7 @@ pub enum syntaqlite_syntax::nodes::Select<'a>
 pub enum syntaqlite_syntax::nodes::Stmt<'a>
 pub enum syntaqlite_syntax::nodes::TableSource<'a>
 pub enum syntaqlite_syntax::typed::ParseOutcome<T, E>
+pub fn core::ops::range::Range<usize>::from(r: syntaqlite_syntax::any::SourceRange) -> core::ops::range::Range<usize>
 pub fn syntaqlite_syntax::Comment<'a>::kind(&self) -> syntaqlite_syntax::CommentKind
 pub fn syntaqlite_syntax::Comment<'a>::length(&self) -> u32
 pub fn syntaqlite_syntax::Comment<'a>::offset(&self) -> u32
@@ -906,7 +909,6 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id:
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields<'a>)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::field_expansion_traceback(&self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> alloc::vec::Vec<syntaqlite_syntax::any::ExpansionFrame<'a>>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::field_source_range(&self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> (usize, usize)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_regions(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRegion> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaqlite_syntax::any::AnyNodeId
@@ -929,6 +931,8 @@ pub fn syntaqlite_syntax::any::NodeFields<'_>::fmt(&self, f: &mut core::fmt::For
 pub fn syntaqlite_syntax::any::NodeFields<'a>::index(&self, idx: usize) -> &syntaqlite_syntax::any::FieldValue<'a>
 pub fn syntaqlite_syntax::any::NodeFields<'a>::is_empty(&self) -> bool
 pub fn syntaqlite_syntax::any::NodeFields<'a>::len(&self) -> usize
+pub fn syntaqlite_syntax::any::SourceRange::is_empty(self) -> bool
+pub fn syntaqlite_syntax::any::SourceRange::len(self) -> u32
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::filter_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
@@ -1680,6 +1684,7 @@ pub struct syntaqlite_syntax::any::FieldMeta<'a>(_)
 pub struct syntaqlite_syntax::any::KeywordEntry
 pub struct syntaqlite_syntax::any::MacroRegion
 pub struct syntaqlite_syntax::any::NodeFields<'a>
+pub struct syntaqlite_syntax::any::SourceRange
 pub struct syntaqlite_syntax::nodes::AggregateFunctionCall<'a>
 pub struct syntaqlite_syntax::nodes::AggregateFunctionCallId(_)
 pub struct syntaqlite_syntax::nodes::AlterTableStmt<'a>
@@ -2052,10 +2057,13 @@ pub syntaqlite_syntax::any::FieldValue::Flags(u8)
 pub syntaqlite_syntax::any::FieldValue::NodeId(syntaqlite_syntax::any::AnyNodeId)
 pub syntaqlite_syntax::any::FieldValue::Span
 pub syntaqlite_syntax::any::FieldValue::Span::quoted: bool
+pub syntaqlite_syntax::any::FieldValue::Span::source: syntaqlite_syntax::any::SourceRange
 pub syntaqlite_syntax::any::FieldValue::Span::text: &'a str
 pub syntaqlite_syntax::any::ParseOutcome::Done
 pub syntaqlite_syntax::any::ParseOutcome::Err(E)
 pub syntaqlite_syntax::any::ParseOutcome::Ok(T)
+pub syntaqlite_syntax::any::SourceRange::end: u32
+pub syntaqlite_syntax::any::SourceRange::start: u32
 pub syntaqlite_syntax::any::TokenCategory::Comment
 pub syntaqlite_syntax::any::TokenCategory::Function
 pub syntaqlite_syntax::any::TokenCategory::Identifier

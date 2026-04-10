@@ -1040,14 +1040,12 @@ fn column_def_name_span<'a>(
     }
     let (_, name_fields) = stmt.extract_fields(name_id)?;
     for j in 0..name_fields.len() {
-        if let FieldValue::Span { text: s, .. } = name_fields[j]
+        if let FieldValue::Span {
+            text: s, source, ..
+        } = name_fields[j]
             && !s.is_empty()
         {
-            // Field index fits in u8 — node fields are bounded by the
-            // grammar (well below 256).
-            let field_idx = u8::try_from(j).expect("field index fits in u8");
-            let (off, len) = stmt.field_source_range(name_id, field_idx);
-            return Some((s, off, off + len));
+            return Some((s, source.start as usize, source.end as usize));
         }
     }
     None

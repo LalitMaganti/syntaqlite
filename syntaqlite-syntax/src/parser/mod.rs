@@ -446,21 +446,6 @@ impl<'a> AnyParsedStatement<'a> {
         })
     }
 
-    /// Source-level byte range for a span field of a node.
-    ///
-    /// If the field appears directly in the source, returns its exact position.
-    /// If the field is inside a macro expansion, returns the position of the
-    /// entire macro call in the original source.
-    ///
-    /// Returns `(0, 0)` for non-span fields, invalid nodes, or empty spans.
-    pub fn field_source_range(&self, node_id: AnyNodeId, field_idx: u8) -> (usize, usize) {
-        let Some(sp) = self.field_span(node_id, field_idx) else {
-            return (0, 0);
-        };
-        let r = self.resolve_span(sp);
-        (r.source_offset as usize, r.source_length as usize)
-    }
-
     /// Expansion traceback for a span field.
     ///
     /// Returns a list of [`ExpansionFrame`]s from outermost (call site in
@@ -504,7 +489,8 @@ impl<'a> AnyParsedStatement<'a> {
     /// expansion buffer (e.g. `"a"` for `$name` expanded with arg `a`).
     /// For direct spans, returns a slice of the original source.
     pub(crate) fn span_text(&self, span: crate::ast::SourceSpan) -> &'a str {
-        let r = self.resolve_span(span);
+        // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
+        let r = unsafe { self.raw.as_ref().resolve_span(span) };
         if r.text.is_null() || r.text_len == 0 {
             return "";
         }
@@ -513,11 +499,6 @@ impl<'a> AnyParsedStatement<'a> {
         unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(r.text, r.text_len as usize))
         }
-    }
-
-    fn resolve_span(&self, span: crate::ast::SourceSpan) -> ffi::CResolvedSpan {
-        // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
-        unsafe { self.raw.as_ref().resolve_span(span) }
     }
 
     fn field_span(&self, node_id: AnyNodeId, field_idx: u8) -> Option<crate::ast::SourceSpan> {
@@ -869,7 +850,7 @@ unsafe fn extract_field_value<'a>(
     meta: &crate::dialect::FieldMeta<'_>,
     parser: &CParser,
 ) -> crate::ast::FieldValue<'a> {
-    use crate::ast::{FieldValue, SourceSpan};
+    use crate::ast::{FieldValue, SourceRange, SourceSpan};
     use crate::dialect::FieldKind;
     // SAFETY: covered by function-level contract; ptr and meta are consistent.
     unsafe {
@@ -884,6 +865,7 @@ unsafe fn extract_field_value<'a>(
                     FieldValue::Span {
                         text: "",
                         quoted: false,
+                        source: SourceRange::default(),
                     }
                 } else {
                     // Delegate to C: resolves text (picks the right buffer)
@@ -903,6 +885,10 @@ unsafe fn extract_field_value<'a>(
                     FieldValue::Span {
                         text,
                         quoted: (resolved.flags & 1) != 0,
+                        source: SourceRange {
+                            start: resolved.source_offset,
+                            end: resolved.source_offset + resolved.source_length,
+                        },
                     }
                 }
             }

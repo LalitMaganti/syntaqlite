@@ -200,7 +200,7 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
 // ---------------------------------------------------------------------------
 
 // A fully-resolved span: text pointer, text length, source byte range, and
-// flags.  Returned by syntaqlite_parser_resolve_span_for_node().
+// flags.  Returned by syntaqlite_parser_resolve_span().
 //
 // `text` points into the correct buffer — original source for direct spans,
 // expansion buffer for spans inside macros.  `source_offset`/`source_length`

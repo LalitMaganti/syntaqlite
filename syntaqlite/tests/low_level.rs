@@ -528,8 +528,8 @@ fn sqlite_type_tokens_are_marked_as_type() {
     assert_eq!(marked, vec!["int", "TEXT", "varchar"]);
 }
 
-/// Walk an AST collecting `(field_idx, source_offset, source_length)` for
-/// every span field, recursing through child nodes and list children.
+/// Walk an AST collecting `(field_idx, source_start, source_end)` for every
+/// span field, recursing through child nodes and list children.
 fn collect_span_ranges(
     erased: &syntaqlite_syntax::any::AnyParsedStatement<'_>,
     node_id: syntaqlite_syntax::any::AnyNodeId,
@@ -543,9 +543,8 @@ fn collect_span_ranges(
         for idx in 0..fields.len() {
             let field_idx = u8::try_from(idx).expect("field index fits in u8");
             match fields[idx] {
-                FieldValue::Span { .. } => {
-                    let (off, len) = erased.field_source_range(node_id, field_idx);
-                    spans.push((field_idx, off, len));
+                FieldValue::Span { source, .. } => {
+                    spans.push((field_idx, source.start as usize, source.end as usize));
                 }
                 FieldValue::NodeId(child) if !child.is_null() => {
                     collect_span_ranges(erased, child, spans);
@@ -561,7 +560,7 @@ fn collect_span_ranges(
     }
 }
 
-/// `field_source_range` returns the direct source position for non-macro spans.
+/// `FieldValue::Span.source` carries the direct source position for non-macro spans.
 #[test]
 fn field_source_range_direct_span() {
     // "SELECT 1"
@@ -584,14 +583,14 @@ fn field_source_range_direct_span() {
     collect_span_ranges(&erased, erased.root_id(), &mut spans);
     eprintln!("spans: {spans:?}");
 
-    // The integer "1" should be at offset 7, length 1.
+    // The integer "1" should be at offset 7..8.
     assert!(
-        spans.iter().any(|&(_, off, len)| off == 7 && len == 1),
-        "expected to find span at offset 7 length 1, got: {spans:?}"
+        spans.iter().any(|&(_, start, end)| start == 7 && end == 8),
+        "expected to find span at range 7..8, got: {spans:?}"
     );
 }
 
-/// `field_source_range` on a macro-expanded span returns the macro call site.
+/// `FieldValue::Span.source` on a macro-expanded span returns the macro call site.
 #[test]
 fn field_source_range_macro_expansion() {
     // "SELECT foo!(1 + 2), 3"
@@ -627,10 +626,10 @@ fn field_source_range_macro_expansion() {
     collect_span_ranges(&erased, erased.root_id(), &mut spans);
     eprintln!("macro spans: {spans:?}");
 
-    // Tokens inside the macro expansion should resolve to the call site (7, 11).
-    // The "3" outside should be at (20, 1).
+    // Tokens inside the macro expansion should resolve to the call site 7..18.
+    // The "3" outside should be at 20..21.
     assert!(
-        spans.iter().any(|&(_, off, len)| off == 7 && len == 11),
-        "expected to find a span mapped to macro call site (7, 11), got: {spans:?}"
+        spans.iter().any(|&(_, start, end)| start == 7 && end == 18),
+        "expected to find a span mapped to macro call site 7..18, got: {spans:?}"
     );
 }
