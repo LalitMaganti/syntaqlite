@@ -71,6 +71,12 @@ typedef struct SynqParseCtx {
   // Expansion buffer index for span construction.
   // 0 = original source, 1+ = index into owned_bufs (1-based).
   uint32_t buf_idx;
+
+  // Counter for "currently parsing inside a macro definition body".
+  // While > 0, the tokenizer skips macro expansion so the body is captured
+  // verbatim instead of being recursively expanded.  Set/cleared by
+  // grammar actions on entering/leaving the body production.
+  uint32_t in_macro_def_body;
 } SynqParseCtx;
 
 // Common header for all list nodes in the arena.
@@ -208,14 +214,14 @@ static inline void synq_parse_list_flush(SynqParseCtx* ctx) {
 
 static inline SyntaqliteSourceSpan synq_span(SynqParseCtx* ctx,
                                              SynqParseToken tok) {
+  (void)ctx;
   if (tok.z == NULL)
     return (SyntaqliteSourceSpan){0, 0, 0, 0};
-  uint32_t offset = (uint32_t)(tok.z - ctx->source);
   return (SyntaqliteSourceSpan){
-      .offset = offset,
+      .offset = tok.offset,
       .length = (uint16_t)tok.n,
       .flags = 0,
-      .buf_idx = (uint8_t)ctx->buf_idx,
+      ._buf_idx = tok.buf_idx,
   };
 }
 
@@ -226,6 +232,7 @@ static inline SyntaqliteSourceSpan synq_span(SynqParseCtx* ctx,
 // so the formatter can re-wrap in standard double quotes.
 static inline SyntaqliteSourceSpan synq_span_dequote(SynqParseCtx* ctx,
                                                      SynqParseToken tok) {
+  (void)ctx;
   if (tok.z == NULL)
     return (SyntaqliteSourceSpan){0, 0, 0, 0};
   if (tok.n >= 2) {
@@ -233,15 +240,12 @@ static inline SyntaqliteSourceSpan synq_span_dequote(SynqParseCtx* ctx,
     char close = tok.z[tok.n - 1];
     if ((open == '"' && close == '"') || (open == '`' && close == '`') ||
         (open == '[' && close == ']')) {
-      uint32_t offset = (uint32_t)(tok.z + 1 - ctx->source);
-      uint16_t inner_len = (uint16_t)(tok.n - 2);
-      SyntaqliteSourceSpan sp = {offset, inner_len, 0, (uint8_t)ctx->buf_idx};
+      SyntaqliteSourceSpan sp = {tok.offset + 1, (uint16_t)(tok.n - 2), 0,
+                                 tok.buf_idx};
       return synq_span_set_quoted(sp);
     }
   }
-  uint32_t offset = (uint32_t)(tok.z - ctx->source);
-  return (SyntaqliteSourceSpan){offset, (uint16_t)tok.n, 0,
-                                (uint8_t)ctx->buf_idx};
+  return (SyntaqliteSourceSpan){tok.offset, (uint16_t)tok.n, 0, tok.buf_idx};
 }
 
 #define SYNQ_NO_SPAN ((SyntaqliteSourceSpan){0, 0, 0, 0})

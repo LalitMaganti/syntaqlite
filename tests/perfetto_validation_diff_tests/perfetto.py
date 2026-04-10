@@ -58,18 +58,24 @@ class PerfettoFunctionValidation(TestSuite):
 
 
 class MacroExpansionSpanRegression(TestSuite):
-    def test_macro_expansion_does_not_crash(self):
-        """Regression: macro expansion produced spans with out-of-bounds
-        offsets that panicked in as_str / as_str_with_bufs.
-
-        TODO(#84): The macro invocation _d!(a) should produce a diagnostic
-        like "unknown column 'a'" pointing at the call site. Currently the
-        expanded span resolves to empty text so no diagnostic is emitted.
-        Fixing this requires rewriting the macro expansion span tracking.
+    def test_macro_expansion_unknown_column(self):
+        """Macro expansion (#84): a column reference produced inside a macro
+        expansion should report "unknown column 'a'" pointing at the entire
+        macro call site `_d!(a)` in the original source, plus a traceback
+        showing the position inside the expansion buffer.
         """
         return DiffTestBlueprint(
             sql="CREATE PERFETTO MACRO _d(name ColumnName) RETURNS Expr AS $name;\nSELECT _d!(a);",
-            out="",
+            out="""warning: unknown column 'a'
+ --> <stdin>:2:8
+  |
+2 | SELECT _d!(a);
+  |        ^~~~~~
+note: in macro expansion
+ --> <macro expansion>:1:1
+  |
+1 | a
+  | ^""",
         )
 
 

@@ -21,7 +21,14 @@ perfetto_arg_type(A) ::= ID(B). {
 }
 perfetto_arg_type(A) ::= ID(B) LP ID DOT ID RP(E). {
     synq_mark_as_type(pCtx, B);
-    A = (SynqParseToken){B.z, (uint32_t)(E.z + E.n - B.z), B.type};
+    A = (SynqParseToken){
+        .z = B.z,
+        .n = (uint32_t)(E.z + E.n - B.z),
+        .type = B.type,
+        .token_idx = B.token_idx,
+        .offset = B.offset,
+        .buf_idx = B.buf_idx,
+    };
 }
 
 // Argument definition list for functions and table schemas.
@@ -111,7 +118,14 @@ perfetto_macro_arg_list_ne(A) ::= perfetto_macro_arg_list_ne(L) COMMA ID(N) ID(T
 %type perfetto_module_name {SynqParseToken}
 perfetto_module_name(A) ::= ID|STAR|INTERSECT(B). { A = B; }
 perfetto_module_name(A) ::= perfetto_module_name(B) DOT ID|STAR|INTERSECT(C). {
-    A = (SynqParseToken){B.z, (uint32_t)(C.z + C.n - B.z), B.type};
+    A = (SynqParseToken){
+        .z = B.z,
+        .n = (uint32_t)(C.z + C.n - B.z),
+        .type = B.type,
+        .token_idx = B.token_idx,
+        .offset = B.offset,
+        .buf_idx = B.buf_idx,
+    };
 }
 
 // ---------- CREATE PERFETTO TABLE ----------
@@ -160,17 +174,38 @@ cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO INDEX nm(N) ON nm(T) LP perfet
         L);
 }
 
+// Empty marker rule that fires as a default reduction right after the
+// parser shifts the return-type ID and BEFORE it shifts AS.  Lemon will
+// reduce the empty rule eagerly to satisfy the LALR table, which sets
+// the "in macro definition body" flag in the parser context.  The
+// tokenizer then skips nested macro expansion while reading the body
+// so the body is captured verbatim.  The flag is cleared in the main
+// `cmd` action when the CREATE PERFETTO MACRO production reduces.
+%type before_macro_body {int}
+before_macro_body(A) ::= . {
+    pCtx->in_macro_def_body++;
+    A = 0;
+}
+
 // Macro body: consumes arbitrary tokens via the %wildcard ANY mechanism.
 %type perfetto_macro_body {SynqParseToken}
 perfetto_macro_body(A) ::= ANY(B). { A = B; }
 perfetto_macro_body(A) ::= perfetto_macro_body(B) ANY(C). {
-    A = (SynqParseToken){B.z, (uint32_t)(C.z + C.n - B.z), B.type};
+    A = (SynqParseToken){
+        .z = B.z,
+        .n = (uint32_t)(C.z + C.n - B.z),
+        .type = B.type,
+        .token_idx = B.token_idx,
+        .offset = B.offset,
+        .buf_idx = B.buf_idx,
+    };
 }
 
 // ---------- CREATE PERFETTO MACRO ----------
 
-cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO MACRO nm(N) LP perfetto_macro_arg_list(ARGS) RP RETURNS ID(T) AS perfetto_macro_body(BODY). {
+cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO MACRO nm(N) LP perfetto_macro_arg_list(ARGS) RP RETURNS ID(T) before_macro_body AS perfetto_macro_body(BODY). {
     synq_mark_as_type(pCtx, T);
+    if (pCtx->in_macro_def_body > 0) pCtx->in_macro_def_body--;
     A = synq_parse_create_perfetto_macro_stmt(pCtx,
         synq_span(pCtx, N),
         R ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,

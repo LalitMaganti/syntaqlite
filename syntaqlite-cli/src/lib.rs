@@ -65,25 +65,25 @@ pub(crate) struct Cli {
 
     /// Path to a shared library (.so/.dylib/.dll) providing a dialect.
     #[cfg(feature = "builtin-sqlite")]
-    #[arg(long = "dialect")]
+    #[arg(long = "dialect", global = true)]
     pub(crate) dialect_path: Option<String>,
 
     /// Dialect name for symbol lookup.
     /// When omitted, the loader resolves `syntaqlite_grammar`.
     /// With a name, it resolves `syntaqlite_<name>_grammar`.
     #[cfg(feature = "builtin-sqlite")]
-    #[arg(long, requires = "dialect_path")]
+    #[arg(long, requires = "dialect_path", global = true)]
     pub(crate) dialect_name: Option<String>,
 
     /// `SQLite` version to emulate (e.g. "3.47.0", "latest").
     #[cfg(feature = "builtin-sqlite")]
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub(crate) sqlite_version: Option<String>,
 
     /// Enable a `SQLite` compile-time flag (e.g. `SQLITE_ENABLE_ORDERED_SET_AGGREGATES`).
     /// Can be specified multiple times.
     #[cfg(feature = "builtin-sqlite")]
-    #[arg(long)]
+    #[arg(long, global = true)]
     pub(crate) sqlite_cflag: Vec<String>,
 
     #[command(subcommand)]

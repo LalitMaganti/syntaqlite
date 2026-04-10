@@ -52,9 +52,19 @@ typedef struct SynqMacroArg {
   uint32_t length;  // Byte length of the argument text.
 } SynqMacroArg;
 
+// Internal macro expansion record, parallel to the public SyntaqliteMacroRegion
+// (which stores call_offset/call_length).  Entry 0 is a sentinel for the
+// original source; actual expansions start at index 1.  `buf_idx` on AST
+// spans indexes directly into the parser's macro_regions vector.
+typedef struct SynqMacroRegion {
+  const char* expansion_data;  // Expanded text (NULL for sentinel/fallback).
+  uint32_t expansion_len;      // Length of expanded text.
+  uint8_t parent_buf_idx;      // Buffer containing the call (0 = source).
+} SynqMacroRegion;
+
 // Result of a successful macro expansion (pure template substitution).
 // `data` is caller-owned (allocated via p->mem); ownership transfers to
-// macro_expansions when fed via feed_macro_expansion().
+// macro_regions when fed via feed_macro_expansion().
 typedef struct MacroExpansion {
   const SyntaqliteMacroEntry* entry;  // Registry entry (for blue-paint).
   char* data;                         // Expanded text.
@@ -90,10 +100,14 @@ struct SyntaqliteParser {
   SYNQ_VEC(SyntaqliteParserToken) tokens;
   uint32_t macro_depth;  // Nesting depth (0 = not in macro).
 
-  // Unified macro expansion records.  Each entry carries the call-site
-  // location in the original source AND (optionally) the owned expansion
-  // buffer.  `buf_idx` on AST spans is a 1-based index into this vector.
+  // Public macro regions (call site ranges only), returned by
+  // syntaqlite_result_macros().
   SYNQ_VEC(SyntaqliteMacroRegion) macro_expansions;
+  // Internal macro expansion records.  `buf_idx` on AST spans indexes
+  // directly into this vector.  Entry 0 is a sentinel representing the
+  // original source (parent_buf_idx=0, expansion_data=source pointer).
+  // Actual expansions start at index 1.
+  SYNQ_VEC(SynqMacroRegion) macro_regions;
 
   // ── Macro registry (open-addressing hashmap) ──────────────────────────
   SyntaqliteMacroEntry* macro_table;
@@ -153,11 +167,23 @@ static void reset_stmt(SyntaqliteParser* p) {
   syntaqlite_vec_clear(&p->comments);
   syntaqlite_vec_clear(&p->tokens);
   // Free owned expansion buffers from previous statement.
-  for (uint32_t i = 0; i < syntaqlite_vec_len(&p->macro_expansions); i++) {
-    if (p->macro_expansions.data[i].expansion_data)
-      p->mem.xFree((void*)p->macro_expansions.data[i].expansion_data);
+  // Skip index 0 (sentinel) — its expansion_data points to source, not
+  // malloc'd.
+  for (uint32_t i = 1; i < syntaqlite_vec_len(&p->macro_regions); i++) {
+    if (p->macro_regions.data[i].expansion_data)
+      p->mem.xFree((void*)p->macro_regions.data[i].expansion_data);
   }
   syntaqlite_vec_clear(&p->macro_expansions);
+  syntaqlite_vec_clear(&p->macro_regions);
+  // Push sentinel at index 0 (source buffer).  p->source may be NULL on
+  // the very first reset_stmt call (before syntaqlite_parser_reset sets it),
+  // which is fine — syntaqlite_parser_reset re-clears and re-pushes.
+  if (p->source) {
+    SyntaqliteMacroRegion pub_sentinel = {0, 0};
+    syntaqlite_vec_push(&p->macro_expansions, pub_sentinel, p->mem);
+    SynqMacroRegion sentinel = {p->source, p->source_len, 0};
+    syntaqlite_vec_push(&p->macro_regions, sentinel, p->mem);
+  }
   p->expansion_depth = 0;
   p->ctx.buf_idx = 0;
   p->ctx.root = SYNTAQLITE_NULL_NODE;
@@ -213,6 +239,7 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   syntaqlite_vec_init(&p->comments);
   syntaqlite_vec_init(&p->tokens);
   syntaqlite_vec_init(&p->macro_expansions);
+  syntaqlite_vec_init(&p->macro_regions);
   // macro_table, expansion state already zeroed by memset
   return p;
 }
@@ -242,6 +269,17 @@ SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
   p->last_status = SYNTAQLITE_PARSE_DONE;
   p->macro_depth = 0;
 
+  // Re-push sentinels with the correct source pointer (reset_stmt may have
+  // pushed ones with the old source, or none if source was NULL).
+  syntaqlite_vec_clear(&p->macro_expansions);
+  syntaqlite_vec_clear(&p->macro_regions);
+  {
+    SyntaqliteMacroRegion pub_sentinel = {0, 0};
+    syntaqlite_vec_push(&p->macro_expansions, pub_sentinel, p->mem);
+    SynqMacroRegion sentinel = {source, len, 0};
+    syntaqlite_vec_push(&p->macro_regions, sentinel, p->mem);
+  }
+
   p->ctx.source = source;
   p->ctx.env = &p->dialect;
 }
@@ -256,8 +294,21 @@ static int feed_one_token(SyntaqliteParser* p,
                           const char* text,
                           uint32_t len,
                           uint32_t token_idx) {
+  uint32_t tok_offset = 0;
+  if (text != NULL) {
+    // Compute offset relative to the current buffer (which may be the
+    // original source or a macro expansion buffer during expand_and_feed).
+    tok_offset = (uint32_t)(text - p->ctx.source);
+  }
   SynqParseToken minor = {
-      .z = text, .n = len, .type = token_type, .token_idx = token_idx};
+      .z = text,
+      .n = len,
+      .type = token_type,
+      .token_idx = token_idx,
+      .offset = tok_offset,
+      .buf_idx = (uint8_t)p->ctx.buf_idx,
+      ._pad = {0, 0, 0},
+  };
   SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, (int)token_type, minor);
   p->last_token_type = token_type;
 
@@ -383,7 +434,13 @@ static int finish_input(SyntaqliteParser* p) {
   }
 
   // Send end-of-input (EOF) to flush the final reduction.
-  SynqParseToken eof = {.z = NULL, .n = 0, .type = 0, .token_idx = 0xFFFFFFFF};
+  SynqParseToken eof = {.z = NULL,
+                        .n = 0,
+                        .type = 0,
+                        .token_idx = 0xFFFFFFFF,
+                        .offset = 0,
+                        .buf_idx = 0,
+                        ._pad = {0, 0, 0}};
   SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, 0, eof);
   p->finished = 1;
 
@@ -480,6 +537,10 @@ static int try_macro_call(SyntaqliteParser* p,
   if (p->dialect.tmpl->macro_style != SYNQ_MACRO_STYLE_RUST &&
       !p->macro_fallback)
     return -1;
+  // Don't expand macros while parsing a macro definition body — the body
+  // should be captured verbatim, with nested macro calls preserved as text.
+  if (p->ctx.in_macro_def_body > 0)
+    return -1;
 
   // Look up macro in registry.
   SyntaqliteMacroEntry* entry = NULL;
@@ -547,14 +608,16 @@ static uint32_t scan_macro_args(SyntaqliteParser* p,
 
   // Expect LP.
   uint32_t ttype = 0;
-  int64_t tlen = SynqSqliteGetTokenVersionWrapped(&p->dialect, z + pos, &ttype);
+  int64_t tlen = SynqSqliteGetTokenVersionWrapped(
+      &p->dialect, p->macro_fallback, z + pos, &ttype);
   if (tlen <= 0 || ttype != SYNTAQLITE_TK_LP)
     return 0;
   pos += (uint32_t)tlen;
 
   // Check for empty args: macro!()
   ttype = 0;
-  tlen = SynqSqliteGetTokenVersionWrapped(&p->dialect, z + pos, &ttype);
+  tlen = SynqSqliteGetTokenVersionWrapped(&p->dialect, p->macro_fallback,
+                                          z + pos, &ttype);
   if (tlen > 0 && ttype == SYNTAQLITE_TK_RP) {
     *out_end_offset = pos + (uint32_t)tlen;
     return 0;
@@ -566,7 +629,8 @@ static uint32_t scan_macro_args(SyntaqliteParser* p,
 
   while (pos < source_len && depth > 0) {
     ttype = 0;
-    tlen = SynqSqliteGetTokenVersionWrapped(&p->dialect, z + pos, &ttype);
+    tlen = SynqSqliteGetTokenVersionWrapped(&p->dialect, p->macro_fallback,
+                                            z + pos, &ttype);
     if (tlen <= 0)
       return 0;
 
@@ -627,8 +691,8 @@ static int expand_template(SyntaqliteParser* p,
   uint32_t pos = 0;
   while (pos < blen) {
     uint32_t ttype = 0;
-    int64_t tlen =
-        SynqSqliteGetTokenVersionWrapped(&p->dialect, z + pos, &ttype);
+    int64_t tlen = SynqSqliteGetTokenVersionWrapped(
+        &p->dialect, p->macro_fallback, z + pos, &ttype);
     if (tlen <= 0)
       break;
 
@@ -713,8 +777,8 @@ static int expand_and_feed(SyntaqliteParser* p,
 
   while (pos < buf_len) {
     uint32_t ttype = 0;
-    int64_t tlen =
-        SynqSqliteGetTokenVersionWrapped(&p->dialect, z + pos, &ttype);
+    int64_t tlen = SynqSqliteGetTokenVersionWrapped(
+        &p->dialect, p->macro_fallback, z + pos, &ttype);
     if (tlen <= 0)
       break;
 
@@ -724,14 +788,20 @@ static int expand_and_feed(SyntaqliteParser* p,
     }
 
     // Check for nested macro call: ID followed by '!'.
+    // Skip when inside a macro definition body — body should be verbatim.
     uint32_t next_pos = pos + (uint32_t)tlen;
-    if (ttype == SYNTAQLITE_TK_ID && next_pos < buf_len && z[next_pos] == '!') {
+    if (ttype == SYNTAQLITE_TK_ID && next_pos < buf_len && z[next_pos] == '!' &&
+        p->ctx.in_macro_def_body == 0) {
       MacroExpansion nested = {0};
       int erc =
           expand_macro(p, buf, buf_len, pos, (uint32_t)tlen, next_pos, &nested);
       if (erc == 0) {
-        // Nested macros have no meaningful source-level call site.
-        int frc = feed_macro_expansion(p, 0, 0, &nested, depth + 1);
+        // The nested call site is `name!(args)` within the parent buffer.
+        // call_offset is `pos` (position of the name token), call_length is
+        // the entire `name!(args)` span.
+        uint32_t nested_call_length = nested.end_offset - pos;
+        int frc = feed_macro_expansion(p, pos, nested_call_length, &nested,
+                                       depth + 1);
         if (frc < 0) {
           p->ctx.source = saved_source;
           return -1;
@@ -746,11 +816,16 @@ static int expand_and_feed(SyntaqliteParser* p,
       }
     }
 
-    // Feed token to Lemon.
+    // Feed token to Lemon.  `pos` is the offset within the expansion
+    // buffer; `p->ctx.buf_idx` was set to the current expansion's index
+    // before expand_and_feed was called.
     SynqParseToken minor = {.z = buf + pos,
                             .n = (uint32_t)tlen,
                             .type = ttype,
-                            .token_idx = 0xFFFFFFFF};
+                            .token_idx = 0xFFFFFFFF,
+                            .offset = pos,
+                            .buf_idx = (uint8_t)p->ctx.buf_idx,
+                            ._pad = {0, 0, 0}};
     SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, (int)ttype, minor);
     p->last_token_type = ttype;
 
@@ -855,7 +930,7 @@ static int feed_macro_expansion(SyntaqliteParser* p,
 
   // Set buf_idx so spans created during expansion reference this entry.
   uint32_t saved_buf_idx = p->ctx.buf_idx;
-  p->ctx.buf_idx = syntaqlite_vec_len(&p->macro_expansions);  // 1-based
+  p->ctx.buf_idx = syntaqlite_vec_len(&p->macro_regions) - 1;
 
   // Push blue-paint for recursion detection.
   p->expansion_names[p->expansion_depth] = exp->entry->name;
@@ -890,7 +965,8 @@ static int64_t next_token(SyntaqliteParser* p,
                           uint32_t* out_type) {
   while (pos < p->source_len && z[pos] != '\0') {
     uint32_t type = 0;
-    int64_t len = SynqSqliteGetTokenVersionWrapped(&p->dialect, z + pos, &type);
+    int64_t len = SynqSqliteGetTokenVersionWrapped(
+        &p->dialect, p->macro_fallback, z + pos, &type);
     if (len <= 0)
       return 0;
     if (type == SYNTAQLITE_TK_SPACE) {
@@ -939,8 +1015,10 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     uint32_t la_type = 0;
     int64_t la_len = next_token(p, z, p->offset, &la_offset, &la_type);
 
-    // Macro detection: ID followed by TK_ILLEGAL ('!').
-    if (cur_type == SYNTAQLITE_TK_ID && la_type == SYNTAQLITE_TK_ILLEGAL) {
+    // Macro detection: ID followed by TK_BANG ('!').  The token wrapper
+    // produces TK_BANG for any dialect that may have macro calls (Rust-style
+    // dialects or any dialect with macro_fallback enabled).
+    if (cur_type == SYNTAQLITE_TK_ID && la_type == SYNTAQLITE_TK_BANG) {
       int mrc = try_macro_call(p, cur_offset, (uint32_t)cur_len, la_offset);
       if (mrc == 1)
         return set_result_status(p, stmt_boundary(p));
@@ -1012,8 +1090,14 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
 SYNTAQLITE_API const SyntaqliteMacroRegion* syntaqlite_result_macros(
     SyntaqliteParser* p,
     uint32_t* count) {
-  *count = syntaqlite_vec_len(&p->macro_expansions);
-  return p->macro_expansions.data;
+  uint32_t total = syntaqlite_vec_len(&p->macro_expansions);
+  // Skip sentinel at index 0.
+  if (total <= 1) {
+    *count = 0;
+    return NULL;
+  }
+  *count = total - 1;
+  return p->macro_expansions.data + 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -1125,9 +1209,11 @@ static void begin_macro_expansion(SyntaqliteParser* p,
                                   uint32_t call_length,
                                   const char* expansion_data,
                                   uint32_t expansion_len) {
-  SyntaqliteMacroRegion region = {call_offset, call_length, expansion_data,
-                                  expansion_len};
-  syntaqlite_vec_push(&p->macro_expansions, region, p->mem);
+  SyntaqliteMacroRegion pub_region = {call_offset, call_length};
+  syntaqlite_vec_push(&p->macro_expansions, pub_region, p->mem);
+  SynqMacroRegion internal = {expansion_data, expansion_len,
+                              (uint8_t)p->ctx.buf_idx};
+  syntaqlite_vec_push(&p->macro_regions, internal, p->mem);
   p->macro_depth++;
 }
 
@@ -1135,11 +1221,24 @@ SYNTAQLITE_API void syntaqlite_parser_begin_macro(SyntaqliteParser* p,
                                                   uint32_t call_offset,
                                                   uint32_t call_length) {
   begin_macro_expansion(p, call_offset, call_length, NULL, 0);
+  // Set buf_idx so spans created while this macro is active reference it.
+  p->ctx.buf_idx = syntaqlite_vec_len(&p->macro_regions) - 1;
 }
 
 SYNTAQLITE_API void syntaqlite_parser_end_macro(SyntaqliteParser* p) {
   if (p->macro_depth > 0) {
     p->macro_depth--;
+    // Restore buf_idx to parent. If we're back to depth 0, that's buf_idx 0
+    // (source). Otherwise, find the parent from the current region.
+    if (p->macro_depth == 0) {
+      p->ctx.buf_idx = 0;
+    } else {
+      // Walk back to find the still-active parent region.
+      uint32_t cur = p->ctx.buf_idx;
+      if (cur > 0 && cur < syntaqlite_vec_len(&p->macro_regions)) {
+        p->ctx.buf_idx = p->macro_regions.data[cur].parent_buf_idx;
+      }
+    }
   }
 }
 
@@ -1334,12 +1433,15 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
     synq_parse_ctx_free(&p->ctx);
     syntaqlite_vec_free(&p->comments, p->mem);
     syntaqlite_vec_free(&p->tokens, p->mem);
-    // Free owned expansion buffers and the macro_expansions vector.
-    for (uint32_t i = 0; i < syntaqlite_vec_len(&p->macro_expansions); i++) {
-      if (p->macro_expansions.data[i].expansion_data)
-        p->mem.xFree((void*)p->macro_expansions.data[i].expansion_data);
+    // Free owned expansion buffers and macro vectors.
+    // Skip index 0 (sentinel) — its expansion_data points to source, not
+    // malloc'd.
+    for (uint32_t i = 1; i < syntaqlite_vec_len(&p->macro_regions); i++) {
+      if (p->macro_regions.data[i].expansion_data)
+        p->mem.xFree((void*)p->macro_regions.data[i].expansion_data);
     }
     syntaqlite_vec_free(&p->macro_expansions, p->mem);
+    syntaqlite_vec_free(&p->macro_regions, p->mem);
     // Free macro registry.
     if (p->macro_table) {
       for (uint32_t i = 0; i < p->macro_table_size; i++) {
@@ -1371,6 +1473,103 @@ SYNTAQLITE_API const char* syntaqlite_parser_source(SyntaqliteParser* p) {
 
 SYNTAQLITE_API uint32_t syntaqlite_parser_source_length(SyntaqliteParser* p) {
   return p->source_len;
+}
+
+// ---------------------------------------------------------------------------
+// Span resolution
+// ---------------------------------------------------------------------------
+
+// Walk the parent chain to resolve a (buf_idx, offset, length) to the
+// outermost source-level call site.
+static void resolve_to_source(SyntaqliteParser* p,
+                              uint8_t buf_idx,
+                              uint32_t offset,
+                              uint16_t length,
+                              uint32_t* out_offset,
+                              uint32_t* out_length) {
+  uint32_t off = offset;
+  uint32_t len = length;
+  uint8_t buf = buf_idx;
+  while (buf > 0 && buf < syntaqlite_vec_len(&p->macro_regions)) {
+    const SyntaqliteMacroRegion* pub_r = &p->macro_expansions.data[buf];
+    off = pub_r->call_offset;
+    len = pub_r->call_length;
+    buf = p->macro_regions.data[buf].parent_buf_idx;
+  }
+  *out_offset = off;
+  *out_length = len;
+}
+
+SYNTAQLITE_API SyntaqliteResolvedSpan
+syntaqlite_parser_resolve_span(SyntaqliteParser* p,
+                               const SyntaqliteSourceSpan* sp) {
+  SyntaqliteResolvedSpan result = {NULL, 0, 0, 0, 0};
+
+  if (!sp || sp->length == 0)
+    return result;
+
+  // Pick the correct buffer for text based on internal buf_idx.
+  uint8_t buf = sp->_buf_idx;
+  if (buf < syntaqlite_vec_len(&p->macro_regions)) {
+    const SynqMacroRegion* r = &p->macro_regions.data[buf];
+    if (r->expansion_data && sp->offset + sp->length <= r->expansion_len) {
+      result.text = r->expansion_data + sp->offset;
+      result.text_len = sp->length;
+    }
+  }
+
+  result.flags = sp->flags;
+
+  // Resolve source offset: walk parent chain to outermost call site.
+  resolve_to_source(p, sp->_buf_idx, sp->offset, sp->length,
+                    &result.source_offset, &result.source_length);
+
+  return result;
+}
+
+SYNTAQLITE_API uint32_t
+syntaqlite_parser_expansion_traceback(SyntaqliteParser* p,
+                                      const SyntaqliteSourceSpan* sp,
+                                      SyntaqliteExpansionFrame* frames,
+                                      uint32_t max_frames) {
+  if (!sp || sp->length == 0)
+    return 0;
+
+  // Walk the parent chain from innermost to outermost, collecting frames
+  // in a temporary buffer.  Then reverse them so frame 0 is outermost.
+  SyntaqliteExpansionFrame tmp[SYNQ_MAX_MACRO_DEPTH + 1];
+  uint32_t count = 0;
+  uint32_t cur_off = sp->offset;
+  uint32_t cur_len = sp->length;
+  uint8_t cur_buf = sp->_buf_idx;
+
+  while (count < SYNQ_MAX_MACRO_DEPTH + 1) {
+    if (cur_buf >= syntaqlite_vec_len(&p->macro_regions))
+      break;
+    const SynqMacroRegion* r = &p->macro_regions.data[cur_buf];
+    tmp[count].buffer = r->expansion_data;
+    tmp[count].buffer_len = r->expansion_len;
+    tmp[count].offset = cur_off;
+    tmp[count].length = cur_len;
+    count++;
+    if (cur_buf == 0)
+      break;
+    // Move to parent: the call site of this expansion in the parent buffer.
+    if (cur_buf < syntaqlite_vec_len(&p->macro_expansions)) {
+      const SyntaqliteMacroRegion* pub_r = &p->macro_expansions.data[cur_buf];
+      cur_off = pub_r->call_offset;
+      cur_len = pub_r->call_length;
+    }
+    cur_buf = r->parent_buf_idx;
+  }
+
+  // Reverse so frames[0] is outermost (source) and frames[count-1] is
+  // innermost (deepest expansion).
+  uint32_t to_write = count < max_frames ? count : max_frames;
+  for (uint32_t i = 0; i < to_write; i++) {
+    frames[i] = tmp[count - 1 - i];
+  }
+  return count;
 }
 
 // ---------------------------------------------------------------------------

@@ -20,11 +20,23 @@ typedef uint32_t SyntaqliteCompletionContext;
   ((SyntaqliteCompletionContext)1)
 #define SYNTAQLITE_COMPLETION_CONTEXT_TABLE_REF ((SyntaqliteCompletionContext)2)
 
+// A span field embedded in an AST node.
+//
+// `offset` and `length` are directly usable as byte positions in the source
+// string you passed to `syntaqlite_parser_reset` — BUT ONLY if your input
+// contains no macro expansions.  If you use macros, `offset`/`length` may
+// reference an internal expansion buffer (not your source) and will produce
+// garbage if used directly.  In that case you must call
+// `syntaqlite_parser_resolve_span_for_node` to get the real source position
+// (which points at the entire macro call site for expanded spans).
+//
+// `_buf_idx` is an internal implementation detail and should not be read by
+// consumers.  Treat it as opaque padding.
 typedef struct SyntaqliteSourceSpan {
   uint32_t offset;
   uint16_t length;
   uint8_t flags;
-  uint8_t buf_idx;  // 0 = original source, 1+ = expansion buffer index
+  uint8_t _buf_idx;  // Internal: 0 = source, >0 = macro expansion buffer.
 } SyntaqliteSourceSpan;
 
 // ── Span flags ───────────────────────────────────────────────────────────────

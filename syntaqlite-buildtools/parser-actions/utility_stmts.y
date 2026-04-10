@@ -94,6 +94,8 @@ minus_num(A) ::= MINUS(M) number(X). {
     // Build a token that spans from the MINUS sign through the number
     A.z = M.z;
     A.n = (int)(X.z - M.z) + X.n;
+    A.offset = M.offset;
+    A.buf_idx = M.buf_idx;
 }
 
 signed(A) ::= plus_num(A). {

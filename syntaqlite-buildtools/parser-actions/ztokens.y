@@ -23,4 +23,4 @@
   ERROR           /* An expression containing an error */
 .
 
-%token SPACE COMMENT ILLEGAL.
+%token SPACE COMMENT ILLEGAL BANG.

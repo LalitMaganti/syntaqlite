@@ -50,8 +50,10 @@ SYNTAQLITE_API uint32_t syntaqlite_tokenizer_next(SyntaqliteTokenizer* tok,
   }
 
   uint32_t token_type = 0;
+  // Standalone tokenizer has no parser context, so macro_fallback is 0.
   int64_t token_len = SynqSqliteGetTokenVersionWrapped(
-      &tok->env, (const unsigned char*)tok->source + tok->offset, &token_type);
+      &tok->env, 0, (const unsigned char*)tok->source + tok->offset,
+      &token_type);
 
   out->text = tok->source + tok->offset;
   out->length = (uint32_t)token_len;

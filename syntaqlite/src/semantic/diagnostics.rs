@@ -42,6 +42,24 @@
 ///     }
 /// }
 /// ```
+/// One frame in a macro expansion traceback attached to a [`Diagnostic`].
+///
+/// Frame 0 is the outermost (the call site in the original source); the
+/// last frame is the innermost (the position inside the deepest expansion
+/// buffer).
+#[derive(Debug, Clone)]
+pub struct DiagnosticFrame {
+    /// Buffer text — the original source for the outermost frame, or an
+    /// expansion buffer for inner frames.
+    pub buffer: String,
+    /// Byte offset of this frame's span within `buffer`.
+    pub start: usize,
+    /// Byte offset of the end of this frame's span within `buffer`.
+    pub end: usize,
+}
+
+/// A semantic diagnostic produced by validation, with location, message,
+/// severity, optional help, and an optional macro expansion traceback.
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
     pub(crate) start_offset: usize,
@@ -49,6 +67,10 @@ pub struct Diagnostic {
     pub(crate) message: DiagnosticMessage,
     pub(crate) severity: Severity,
     pub(crate) help: Option<Help>,
+    /// Macro expansion traceback.  Empty for direct (non-expansion) spans.
+    /// Frame 0 is the outermost call site (in the original source).  The
+    /// last frame is the innermost position inside the deepest expansion.
+    pub(crate) expansion_frames: Vec<DiagnosticFrame>,
 }
 
 impl Diagnostic {
@@ -66,6 +88,7 @@ impl Diagnostic {
             message,
             severity,
             help,
+            expansion_frames: Vec::new(),
         }
     }
 
@@ -88,6 +111,12 @@ impl Diagnostic {
     /// Optional structured help attached to the diagnostic.
     pub fn help(&self) -> Option<&Help> {
         self.help.as_ref()
+    }
+
+    /// Macro expansion traceback frames.  Empty if the diagnostic is not
+    /// inside a macro expansion.
+    pub fn expansion_frames(&self) -> &[DiagnosticFrame] {
+        &self.expansion_frames
     }
 }
 

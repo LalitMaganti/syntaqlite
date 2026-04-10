@@ -312,6 +312,7 @@ impl SemanticAnalyzer {
                             message,
                             severity,
                             help: None,
+                            expansion_frames: Vec::new(),
                         };
                         statements.push(StatementModel::new(
                             String::new(),
@@ -881,20 +882,14 @@ fn ddl_name_offset(
         SemanticRole::DefineTable { name, .. } | SemanticRole::DefineView { name, .. } => *name,
         _ => return None,
     };
-    let FieldValue::Span {
-        text: s,
-        offset,
-        buf_idx,
-        ..
-    } = fields[name_idx as usize]
-    else {
+    let FieldValue::Span { text: s, .. } = fields[name_idx as usize] else {
         return None;
     };
     if s.is_empty() {
         return None;
     }
-    let off = ValidationPass::span_offset(offset, buf_idx);
-    Some((s.to_ascii_lowercase(), (off, off + s.len())))
+    let (start, length) = stmt.field_source_range(root, name_idx);
+    Some((s.to_ascii_lowercase(), (start, start + length)))
 }
 
 /// Check if the root node of a statement defines a template macro and, if so,
@@ -971,10 +966,12 @@ fn is_rowid_alias(column: &str) -> bool {
 /// Extracted info for a single CTE binding.
 struct CteBindingInfo<'a> {
     name: &'a str,
-    name_offset: u32,
-    name_buf_idx: u8,
+    /// Source-level byte range of the CTE name (start, end).  For CTEs
+    /// inside a macro expansion, points at the macro call site.
+    name_range: (usize, usize),
     body_id: Option<AnyNodeId>,
-    declared_cols: Option<Vec<(&'a str, u32, u8)>>,
+    /// Each declared column: text and source-level byte range.
+    declared_cols: Option<Vec<(&'a str, usize, usize)>>,
 }
 
 struct ValidationPass<'a> {
@@ -1006,10 +1003,46 @@ impl CheckConfig {
 }
 
 impl<'a> ValidationPass<'a> {
-    /// Push a diagnostic if its check category is not `allow`.
-    /// Severity is determined entirely by the check level — callers do not
-    /// specify it.
+    /// Push a diagnostic spanning a span field of a node.  Computes the
+    /// source range and expansion traceback from the field.  Severity is
+    /// determined entirely by the check level — callers do not specify it.
     fn emit(
+        &mut self,
+        stmt: &AnyParsedStatement<'a>,
+        node_id: AnyNodeId,
+        field_idx: u8,
+        message: DiagnosticMessage,
+        help: Option<Help>,
+    ) {
+        let Some(severity) = self.config.checks().level_for(&message).to_severity() else {
+            return;
+        };
+        let (start, length) = stmt.field_source_range(node_id, field_idx);
+        let frames = stmt
+            .field_expansion_traceback(node_id, field_idx)
+            .into_iter()
+            .map(|f| crate::semantic::diagnostics::DiagnosticFrame {
+                buffer: f.buffer.to_string(),
+                start: f.offset,
+                end: f.offset + f.length,
+            })
+            .collect::<Vec<_>>();
+        // Only attach if there's actual expansion (more than 1 frame).
+        let expansion_frames = if frames.len() > 1 { frames } else { Vec::new() };
+        self.diagnostics.push(Diagnostic {
+            start_offset: start,
+            end_offset: start + length,
+            message,
+            severity,
+            help,
+            expansion_frames,
+        });
+    }
+
+    /// Push a diagnostic with explicit source offsets and no expansion
+    /// traceback.  Use only when there is no associated span field
+    /// (e.g. computed-from-tokens locations).
+    fn emit_at(
         &mut self,
         start_offset: usize,
         end_offset: usize,
@@ -1023,6 +1056,7 @@ impl<'a> ValidationPass<'a> {
                 message,
                 severity,
                 help,
+                expansion_frames: Vec::new(),
             });
         }
     }
@@ -1100,10 +1134,10 @@ impl<'a> ValidationPass<'a> {
                 self.visit_call(stmt, node_id, &fields, name, args);
             }
             SemanticRole::ColumnRef { column, table } => {
-                self.visit_column_ref(&fields, column, table);
+                self.visit_column_ref(stmt, node_id, &fields, column, table);
             }
             SemanticRole::SourceRef { name, alias, .. } => {
-                self.visit_source_ref(stmt, &fields, name, alias);
+                self.visit_source_ref(stmt, node_id, &fields, name, alias);
             }
             SemanticRole::ScopedSource { body, alias } => {
                 self.visit_scoped_source(stmt, &fields, body, alias);
@@ -1157,10 +1191,6 @@ impl<'a> ValidationPass<'a> {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    fn span_offset(offset: u32, buf_idx: u8) -> usize {
-        if buf_idx == 0 { offset as usize } else { 0 }
-    }
-
     fn field_node_id(fields: &NodeFields<'_>, idx: u8) -> Option<AnyNodeId> {
         match fields[idx as usize] {
             FieldValue::NodeId(id) if !id.is_null() => Some(id),
@@ -1174,10 +1204,14 @@ impl<'a> ValidationPass<'a> {
         }
     }
 
-    /// Extract source text from a `Name` node (`IdentName` or `Error`).
-    /// Both node kinds store their span at field 0.
-    #[expect(clippy::unused_self)]
-    fn name_text(stmt: &AnyParsedStatement<'a>, node_id: Option<AnyNodeId>) -> (&'a str, u32, u8) {
+    /// Extract source text and source-level byte range from a `Name` node
+    /// (`IdentName` or `Error`).  Both node kinds store their span at field 0.
+    /// Returns `(text, source_start, source_end)`.  For spans inside a macro
+    /// expansion, the source range points at the macro call site.
+    fn name_text(
+        stmt: &AnyParsedStatement<'a>,
+        node_id: Option<AnyNodeId>,
+    ) -> (&'a str, usize, usize) {
         let Some(node_id) = node_id else {
             return ("", 0, 0);
         };
@@ -1188,12 +1222,10 @@ impl<'a> ValidationPass<'a> {
             return ("", 0, 0);
         }
         match fields[0] {
-            FieldValue::Span {
-                text,
-                offset,
-                buf_idx,
-                ..
-            } => (text, offset, buf_idx),
+            FieldValue::Span { text, .. } => {
+                let (start, length) = stmt.field_source_range(node_id, 0);
+                (text, start, start + length)
+            }
             _ => ("", 0, 0),
         }
     }
@@ -1203,23 +1235,19 @@ impl<'a> ValidationPass<'a> {
     fn visit_source_ref(
         &mut self,
         stmt: &AnyParsedStatement<'a>,
+        node_id: AnyNodeId,
         fields: &NodeFields<'a>,
         name_idx: u8,
         alias_idx: u8,
     ) {
-        let FieldValue::Span {
-            text: name,
-            offset: raw_offset,
-            buf_idx,
-            ..
-        } = fields[name_idx as usize]
-        else {
+        let FieldValue::Span { text: name, .. } = fields[name_idx as usize] else {
             return;
         };
         if name.is_empty() {
             return;
         }
-        let offset = Self::span_offset(raw_offset, buf_idx);
+        let (start, length) = stmt.field_source_range(node_id, name_idx);
+        let end = start + length;
 
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
@@ -1228,8 +1256,9 @@ impl<'a> ValidationPass<'a> {
             candidates.extend(self.catalog.all_table_function_names());
             let suggestion = best_suggestion(name, &candidates, self.config.suggestion_threshold());
             self.emit(
-                offset,
-                offset + name.len(),
+                stmt,
+                node_id,
+                name_idx,
                 DiagnosticMessage::UnknownTable {
                     name: name.to_string(),
                 },
@@ -1260,8 +1289,8 @@ impl<'a> ValidationPass<'a> {
                         })
                 });
             self.resolutions.push(Resolution {
-                start: offset,
-                end: offset + name.len(),
+                start,
+                end,
                 symbol: ResolvedSymbol::Table {
                     name: name.to_string(),
                     columns: columns.clone(),
@@ -1282,15 +1311,11 @@ impl<'a> ValidationPass<'a> {
         name_idx: u8,
         args_idx: u8,
     ) {
-        if let FieldValue::Span {
-            text: name,
-            offset: raw_offset,
-            buf_idx,
-            ..
-        } = fields[name_idx as usize]
+        if let FieldValue::Span { text: name, .. } = fields[name_idx as usize]
             && !name.is_empty()
         {
-            let offset = Self::span_offset(raw_offset, buf_idx);
+            let (start, length) = stmt.field_source_range(node_id, name_idx);
+            let end = start + length;
             let args_id = Self::field_node_id(fields, args_idx);
             let arg_count = args_id
                 .and_then(|id| stmt.list_children(id))
@@ -1306,8 +1331,8 @@ impl<'a> ValidationPass<'a> {
                         let arity_strs: Vec<String> =
                             arities.iter().map(|a| format_arity(name, *a)).collect();
                         self.resolutions.push(Resolution {
-                            start: offset,
-                            end: offset + name.len(),
+                            start,
+                            end,
                             symbol: ResolvedSymbol::Function {
                                 category: cat_str.to_string(),
                                 arities: arity_strs,
@@ -1320,8 +1345,9 @@ impl<'a> ValidationPass<'a> {
                     let suggestion =
                         best_suggestion(name, &candidates, self.config.suggestion_threshold());
                     self.emit(
-                        offset,
-                        offset + name.len(),
+                        stmt,
+                        node_id,
+                        name_idx,
                         DiagnosticMessage::UnknownFunction {
                             name: name.to_string(),
                         },
@@ -1330,8 +1356,9 @@ impl<'a> ValidationPass<'a> {
                 }
                 FunctionCheckResult::WrongArity { expected } => {
                     self.emit(
-                        offset,
-                        offset + name.len(),
+                        stmt,
+                        node_id,
+                        name_idx,
                         DiagnosticMessage::FunctionArity {
                             name: name.to_string(),
                             expected,
@@ -1345,19 +1372,20 @@ impl<'a> ValidationPass<'a> {
         self.visit_children(stmt, node_id);
     }
 
-    fn visit_column_ref(&mut self, fields: &NodeFields<'a>, column_idx: u8, table_idx: u8) {
+    fn visit_column_ref(
+        &mut self,
+        stmt: &AnyParsedStatement<'a>,
+        node_id: AnyNodeId,
+        fields: &NodeFields<'a>,
+        column_idx: u8,
+        table_idx: u8,
+    ) {
         // ColumnRef outside any query scope (e.g. ATTACH ... AS scratch)
         // is just a bare identifier — skip validation.
         if !self.scope.has_frames() {
             return;
         }
-        let FieldValue::Span {
-            text: column,
-            offset: raw_offset,
-            buf_idx,
-            ..
-        } = fields[column_idx as usize]
-        else {
+        let FieldValue::Span { text: column, .. } = fields[column_idx as usize] else {
             return;
         };
         if column.is_empty() {
@@ -1367,7 +1395,8 @@ impl<'a> ValidationPass<'a> {
             FieldValue::Span { text: s, .. } if !s.is_empty() => Some(s),
             _ => None,
         };
-        let offset = Self::span_offset(raw_offset, buf_idx);
+        let (start, length) = stmt.field_source_range(node_id, column_idx);
+        let end = start + length;
 
         match self.scope.resolve_column(table, column) {
             ColumnResolution::Found {
@@ -1398,8 +1427,8 @@ impl<'a> ValidationPass<'a> {
                                 })
                         });
                     self.resolutions.push(Resolution {
-                        start: offset,
-                        end: offset + column.len(),
+                        start,
+                        end,
                         symbol: ResolvedSymbol::Column {
                             column: column.to_string(),
                             table: resolved_table,
@@ -1416,8 +1445,9 @@ impl<'a> ValidationPass<'a> {
                 let suggestion =
                     best_suggestion(column, &candidates, self.config.suggestion_threshold());
                 self.emit(
-                    offset,
-                    offset + column.len(),
+                    stmt,
+                    node_id,
+                    column_idx,
                     DiagnosticMessage::UnknownColumn {
                         column: column.to_string(),
                         table: Some(tbl.to_string()),
@@ -1436,8 +1466,9 @@ impl<'a> ValidationPass<'a> {
                 let suggestion =
                     best_suggestion(column, &candidates, self.config.suggestion_threshold());
                 self.emit(
-                    offset,
-                    offset + column.len(),
+                    stmt,
+                    node_id,
+                    column_idx,
                     DiagnosticMessage::UnknownColumn {
                         column: column.to_string(),
                         table: None,
@@ -1588,11 +1619,8 @@ impl<'a> ValidationPass<'a> {
             }
 
             // Record CTE definition offset for go-to-definition.
-            let name_offset = Self::span_offset(binding.name_offset, binding.name_buf_idx);
-            self.definition_offsets.insert(
-                binding.name.to_ascii_lowercase(),
-                (name_offset, name_offset + binding.name.len()),
-            );
+            self.definition_offsets
+                .insert(binding.name.to_ascii_lowercase(), binding.name_range);
 
             // Determine the CTE's column list and register it in the catalog.
             let cte_key = binding.name.to_ascii_lowercase();
@@ -1601,17 +1629,14 @@ impl<'a> ValidationPass<'a> {
                 self.check_cte_column_count(
                     stmt,
                     binding.name,
-                    binding.name_offset,
-                    binding.name_buf_idx,
+                    binding.name_range,
                     &col_names,
                     binding.body_id,
                 );
                 // Record declared column definition offsets.
-                for &(col_name, col_raw_off, col_buf_idx) in declared {
-                    let col_offset = Self::span_offset(col_raw_off, col_buf_idx);
+                for &(col_name, col_start, col_end) in declared {
                     let key = format!("{cte_key}.{}", col_name.to_ascii_lowercase());
-                    self.definition_offsets
-                        .insert(key, (col_offset, col_offset + col_name.len()));
+                    self.definition_offsets.insert(key, (col_start, col_end));
                 }
                 Some(declared.iter().map(|(s, _, _)| s.to_string()).collect())
             } else {
@@ -1674,12 +1699,11 @@ impl<'a> ValidationPass<'a> {
                 continue;
             };
             let alias_node = Self::field_node_id(&child_fields, alias_idx);
-            let (alias_text, alias_raw_off, alias_buf_idx) = Self::name_text(stmt, alias_node);
+            let (alias_text, alias_start, alias_end) = Self::name_text(stmt, alias_node);
             if !alias_text.is_empty() {
-                let off = Self::span_offset(alias_raw_off, alias_buf_idx);
                 let key = format!("{table_key}.{}", alias_text.to_ascii_lowercase());
                 self.definition_offsets
-                    .insert(key, (off, off + alias_text.len()));
+                    .insert(key, (alias_start, alias_end));
             }
         }
     }
@@ -1708,21 +1732,17 @@ impl<'a> ValidationPass<'a> {
             return None;
         };
 
-        let (name, name_offset, name_buf_idx) = match fields[name_idx as usize] {
-            FieldValue::Span {
-                text,
-                offset,
-                buf_idx,
-                ..
-            } => (text, offset, buf_idx),
-            _ => ("", 0, 0),
+        let name = match fields[name_idx as usize] {
+            FieldValue::Span { text, .. } => text,
+            _ => "",
         };
+        let (name_start, name_length) = stmt.field_source_range(cte_id, name_idx);
+        let name_range = (name_start, name_start + name_length);
         let body_id = Self::field_node_id(&fields, body_idx);
         let declared_cols = Self::extract_declared_cols(stmt, &fields, cols_idx);
         Some(CteBindingInfo {
             name,
-            name_offset,
-            name_buf_idx,
+            name_range,
             body_id,
             declared_cols,
         })
@@ -1733,13 +1753,13 @@ impl<'a> ValidationPass<'a> {
         stmt: &AnyParsedStatement<'a>,
         fields: &NodeFields<'a>,
         cols_idx: u8,
-    ) -> Option<Vec<(&'a str, u32, u8)>> {
+    ) -> Option<Vec<(&'a str, usize, usize)>> {
         if cols_idx == FIELD_ABSENT {
             return None;
         }
         let list_id = Self::field_node_id(fields, cols_idx)?;
         let children = stmt.list_children(list_id)?;
-        let names: Vec<(&'a str, u32, u8)> = children
+        let names: Vec<(&'a str, usize, usize)> = children
             .iter()
             .copied()
             .filter(|id| !id.is_null())
@@ -1754,18 +1774,18 @@ impl<'a> ValidationPass<'a> {
         &mut self,
         stmt: &AnyParsedStatement<'a>,
         cte_name: &str,
-        cte_name_offset: u32,
-        cte_name_buf_idx: u8,
+        cte_name_range: (usize, usize),
         declared: &[&str],
         body_id: Option<AnyNodeId>,
     ) {
         if let Some(actual) = self.count_result_columns(stmt, body_id)
             && actual != declared.len()
         {
-            let offset = Self::span_offset(cte_name_offset, cte_name_buf_idx);
-            self.emit(
-                offset,
-                offset + cte_name.len(),
+            // The CTE name range is already source-resolved (computed via
+            // field_source_range when building CteBindingInfo).
+            self.emit_at(
+                cte_name_range.0,
+                cte_name_range.1,
                 DiagnosticMessage::CteColumnCountMismatch {
                     name: cte_name.to_string(),
                     declared: declared.len(),

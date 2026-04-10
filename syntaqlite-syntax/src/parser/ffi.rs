@@ -74,10 +74,31 @@ pub(crate) struct CMacroRegion {
     pub(crate) call_offset: u32,
     /// Byte length of the entire macro call.
     pub(crate) call_length: u32,
-    /// Expanded text (null for unregistered/fallback macros).
-    pub(crate) expansion_data: *const u8,
-    /// Length of expanded text (0 when `expansion_data` is null).
-    pub(crate) expansion_len: u32,
+}
+
+/// A fully-resolved span returned by `syntaqlite_parser_resolve_span_for_node`.
+///
+/// Mirrors C `SyntaqliteResolvedSpan` from `include/syntaqlite/parser.h`.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub(crate) struct CResolvedSpan {
+    pub(crate) text: *const u8,
+    pub(crate) text_len: u32,
+    pub(crate) source_offset: u32,
+    pub(crate) source_length: u32,
+    pub(crate) flags: u8,
+}
+
+/// One frame in a macro expansion traceback.
+///
+/// Mirrors C `SyntaqliteExpansionFrame` from `include/syntaqlite/parser.h`.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub(crate) struct CExpansionFrame {
+    pub(crate) buffer: *const u8,
+    pub(crate) buffer_len: u32,
+    pub(crate) offset: u32,
+    pub(crate) length: u32,
 }
 
 impl CParser {
@@ -182,6 +203,51 @@ impl CParser {
         // SAFETY: ptr is a valid pointer to `count` CParserToken values owned
         // by the parser arena; the slice is valid for the parser's lifetime.
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
+    }
+
+    pub(crate) unsafe fn resolve_span(&self, span: crate::ast::SourceSpan) -> CResolvedSpan {
+        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
+        // of an arena value with the SyntaqliteSourceSpan layout; result
+        // accessors are valid after `next()` returns a non-DONE code.
+        unsafe {
+            syntaqlite_parser_resolve_span(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                std::ptr::from_ref(&span).cast(),
+            )
+        }
+    }
+
+    pub(crate) unsafe fn expansion_traceback(
+        &self,
+        span: crate::ast::SourceSpan,
+    ) -> Vec<CExpansionFrame> {
+        // First call with max=0 to get the count.
+        // SAFETY: self is a valid CParser pointer; span is a copy of an
+        // arena value with the SyntaqliteSourceSpan layout.
+        let count = unsafe {
+            syntaqlite_parser_expansion_traceback(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                std::ptr::from_ref(&span).cast(),
+                std::ptr::null_mut(),
+                0,
+            )
+        };
+        if count == 0 {
+            return Vec::new();
+        }
+        let mut frames: Vec<CExpansionFrame> = Vec::with_capacity(count as usize);
+        // SAFETY: capacity is at least `count`; the C function writes
+        // exactly `count` frames into the buffer.
+        unsafe {
+            syntaqlite_parser_expansion_traceback(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                std::ptr::from_ref(&span).cast(),
+                frames.as_mut_ptr(),
+                count,
+            );
+            frames.set_len(count as usize);
+        }
+        frames
     }
 
     pub(crate) unsafe fn result_macros(&self) -> &[CMacroRegion] {
@@ -321,6 +387,15 @@ unsafe extern "C" {
     // Arena accessors
     fn syntaqlite_parser_node(p: *mut CParser, node_id: u32) -> *const u32;
     fn syntaqlite_parser_node_count(p: *mut CParser) -> u32;
+
+    // Span resolution
+    fn syntaqlite_parser_resolve_span(p: *mut CParser, span: *const c_void) -> CResolvedSpan;
+    fn syntaqlite_parser_expansion_traceback(
+        p: *mut CParser,
+        span: *const c_void,
+        frames: *mut CExpansionFrame,
+        max_frames: u32,
+    ) -> u32;
 
     // Configuration
     fn syntaqlite_parser_set_trace(p: *mut CParser, enable: u32) -> i32;
