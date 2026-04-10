@@ -9768,13 +9768,19 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 372: /* cmd ::= create_vtab LP vtabarglist RP */
     {
-      // Capture module arguments span (content between parens)
+      // Capture module arguments span (content between parens).
+      // Use token offsets/buf_idx so this works correctly when the statement
+      // is produced by a macro expansion; LP and RP share a buffer within the
+      // same reduction.
       SyntaqliteNode* vtab = AST_NODE(&pCtx->ast, yymsp[-3].minor.yy277);
-      const char* args_start = yymsp[-2].minor.yy0.z + yymsp[-2].minor.yy0.n;
-      const char* args_end = yymsp[0].minor.yy0.z;
-      vtab->create_virtual_table_stmt.module_args =
-          (SyntaqliteSourceSpan){(uint32_t)(args_start - pCtx->source),
-                                 (uint16_t)(args_end - args_start), 0};
+      uint32_t args_start = yymsp[-2].minor.yy0.offset + yymsp[-2].minor.yy0.n;
+      uint32_t args_end = yymsp[0].minor.yy0.offset;
+      vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
+          .offset = args_start,
+          .length = (uint16_t)(args_end - args_start),
+          .flags = 0,
+          ._buf_idx = yymsp[-2].minor.yy0.buf_idx,
+      };
       yylhsminor.yy277 = yymsp[-3].minor.yy277;
     }
       yymsp[-3].minor.yy277 = yylhsminor.yy277;

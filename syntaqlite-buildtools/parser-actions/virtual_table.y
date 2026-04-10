@@ -23,14 +23,18 @@ cmd(A) ::= create_vtab(X). {
 
 // With arguments in parentheses
 cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
-    // Capture module arguments span (content between parens)
+    // Capture module arguments span (content between parens).
+    // Use token offsets/buf_idx so this works correctly when the statement
+    // is produced by a macro expansion; LP and RP share a buffer within the
+    // same reduction.
     SyntaqliteNode *vtab = AST_NODE(&pCtx->ast, X);
-    const char *args_start = L.z + L.n;
-    const char *args_end = R.z;
+    uint32_t args_start = L.offset + L.n;
+    uint32_t args_end = R.offset;
     vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
-        (uint32_t)(args_start - pCtx->source),
-        (uint16_t)(args_end - args_start),
-        0
+        .offset = args_start,
+        .length = (uint16_t)(args_end - args_start),
+        .flags = 0,
+        ._buf_idx = L.buf_idx,
     };
     A = X;
 }

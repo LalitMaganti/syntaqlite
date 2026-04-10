@@ -19,11 +19,10 @@
 
 // Extract a std::string from a SyntaqliteSourceSpan.
 static std::string SpanText(SyntaqliteParser* p, SyntaqliteSourceSpan span) {
-  uint32_t len;
-  const char* text = syntaqlite_span_text(p, span, &len);
-  if (!text)
+  SyntaqliteResolvedSpan resolved = syntaqlite_parser_resolve_span(p, &span);
+  if (!resolved.text || resolved.text_len == 0)
     return {};
-  return {text, len};
+  return {resolved.text, resolved.text_len};
 }
 
 // Extract a std::string from an IdentName node ID.
@@ -140,7 +139,7 @@ static std::string ExprSource(SyntaqliteParser* p,
 
   if (expr->tag == SYNTAQLITE_NODE_COLUMN_REF) {
     const auto& ref = expr->column_ref;
-    if (syntaqlite_span_is_present(ref.table)) {
+    if (ref.table.length != 0) {
       // Explicit qualifier: SELECT u.name → source is "u"
       return SpanText(p, ref.table);
     }

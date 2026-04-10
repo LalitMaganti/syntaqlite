@@ -63,14 +63,14 @@ static void span_to_str(SyntaqliteParser* p,
                         SyntaqliteSourceSpan span,
                         char* buf,
                         int buf_size) {
-  uint32_t len;
-  const char* text = syntaqlite_span_text(p, span, &len);
-  if (!text) {
+  SyntaqliteResolvedSpan resolved = syntaqlite_parser_resolve_span(p, &span);
+  if (!resolved.text || resolved.text_len == 0) {
     buf[0] = '\0';
     return;
   }
-  int n = (int)len < buf_size - 1 ? (int)len : buf_size - 1;
-  memcpy(buf, text, n);
+  int n = (int)resolved.text_len < buf_size - 1 ? (int)resolved.text_len
+                                                : buf_size - 1;
+  memcpy(buf, resolved.text, n);
   buf[n] = '\0';
 }
 
@@ -225,7 +225,7 @@ static void expr_source(SyntaqliteParser* p,
 
   if (expr->tag == SYNTAQLITE_NODE_COLUMN_REF) {
     const SyntaqliteColumnRef* ref = &expr->column_ref;
-    if (syntaqlite_span_is_present(ref->table)) {
+    if (ref->table.length != 0) {
       // Explicit qualifier: SELECT u.name → source is "u"
       span_to_str(p, ref->table, buf, buf_size);
       return;
