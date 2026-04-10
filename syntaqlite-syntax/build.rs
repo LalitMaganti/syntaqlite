@@ -40,11 +40,14 @@ fn main() {
 
     // ── Grammar-agnostic engine sources ─────────────────────────────────
     //
-    // Always compiled: tokenizer.c, parser.c (the runtime engine).
+    // Always compiled: tokenizer.c and the parser runtime engine
+    // (split across parser.c, parser_macros.c, parser_dump.c).
     let mut engine_build = cc::Build::new();
     engine_build
         .file(csrc.join("tokenizer.c"))
         .file(csrc.join("parser.c"))
+        .file(csrc.join("parser_macros.c"))
+        .file(csrc.join("parser_dump.c"))
         .file(csrc.join("token_wrapped.c"))
         .file(csrc.join("dialect_load.c"))
         .include(&manifest_dir) // for csrc/*.h internal headers

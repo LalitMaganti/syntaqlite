@@ -40,6 +40,12 @@ pub const RUNTIME_CSRC: &[(&str, &str)] = &[
     ),
     ("hashmap.h", include_str!("../csrc/hashmap.h")),
     ("parser.c", include_str!("../csrc/parser.c")),
+    ("parser_macros.c", include_str!("../csrc/parser_macros.c")),
+    ("parser_dump.c", include_str!("../csrc/parser_dump.c")),
+    (
+        "parser_internal.h",
+        include_str!("../csrc/parser_internal.h"),
+    ),
     ("token_wrapped.c", include_str!("../csrc/token_wrapped.c")),
     ("token_wrapped.h", include_str!("../csrc/token_wrapped.h")),
     ("tokenizer.c", include_str!("../csrc/tokenizer.c")),

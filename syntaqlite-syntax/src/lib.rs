@@ -78,7 +78,9 @@ pub mod util;
 #[cfg(feature = "sqlite-minimal")]
 pub mod any {
     #[doc(inline)]
-    pub use crate::ast::{AnyNode, AnyNodeId, AnyNodeTag, AnyTokenType, FieldValue, NodeFields};
+    pub use crate::ast::{
+        AnyNode, AnyNodeId, AnyNodeTag, AnyTokenType, FieldValue, NodeFields, SourceRange,
+    };
     #[doc(inline)]
     pub use crate::dialect::{AnyDialect, FieldKind, FieldMeta, KeywordEntry, TokenCategory};
     #[doc(inline)]

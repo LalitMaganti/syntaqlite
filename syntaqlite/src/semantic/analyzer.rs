@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
     AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, AnyTokenType, FieldValue, NodeFields,
-    ParseOutcome, TokenCategory,
+    ParseOutcome, SourceRange, TokenCategory,
 };
 
 use crate::dialect::AnyDialect;
@@ -882,14 +882,19 @@ fn ddl_name_offset(
         SemanticRole::DefineTable { name, .. } | SemanticRole::DefineView { name, .. } => *name,
         _ => return None,
     };
-    let FieldValue::Span { text: s, .. } = fields[name_idx as usize] else {
+    let FieldValue::Span {
+        text: s, source, ..
+    } = fields[name_idx as usize]
+    else {
         return None;
     };
     if s.is_empty() {
         return None;
     }
-    let (start, length) = stmt.field_source_range(root, name_idx);
-    Some((s.to_ascii_lowercase(), (start, start + length)))
+    Some((
+        s.to_ascii_lowercase(),
+        (source.start as usize, source.end as usize),
+    ))
 }
 
 /// Check if the root node of a statement defines a template macro and, if so,
@@ -1003,21 +1008,22 @@ impl CheckConfig {
 }
 
 impl<'a> ValidationPass<'a> {
-    /// Push a diagnostic spanning a span field of a node.  Computes the
-    /// source range and expansion traceback from the field.  Severity is
+    /// Push a diagnostic anchored to a span field of a node.  `source` is the
+    /// pre-extracted `SourceRange` from the field; `node_id` + `field_idx` are
+    /// used to build the macro expansion traceback (if any).  Severity is
     /// determined entirely by the check level — callers do not specify it.
     fn emit(
         &mut self,
         stmt: &AnyParsedStatement<'a>,
         node_id: AnyNodeId,
         field_idx: u8,
+        source: SourceRange,
         message: DiagnosticMessage,
         help: Option<Help>,
     ) {
         let Some(severity) = self.config.checks().level_for(&message).to_severity() else {
             return;
         };
-        let (start, length) = stmt.field_source_range(node_id, field_idx);
         let frames = stmt
             .field_expansion_traceback(node_id, field_idx)
             .into_iter()
@@ -1030,8 +1036,8 @@ impl<'a> ValidationPass<'a> {
         // Only attach if there's actual expansion (more than 1 frame).
         let expansion_frames = if frames.len() > 1 { frames } else { Vec::new() };
         self.diagnostics.push(Diagnostic {
-            start_offset: start,
-            end_offset: start + length,
+            start_offset: source.start as usize,
+            end_offset: source.end as usize,
             message,
             severity,
             help,
@@ -1222,9 +1228,8 @@ impl<'a> ValidationPass<'a> {
             return ("", 0, 0);
         }
         match fields[0] {
-            FieldValue::Span { text, .. } => {
-                let (start, length) = stmt.field_source_range(node_id, 0);
-                (text, start, start + length)
+            FieldValue::Span { text, source, .. } => {
+                (text, source.start as usize, source.end as usize)
             }
             _ => ("", 0, 0),
         }
@@ -1240,14 +1245,17 @@ impl<'a> ValidationPass<'a> {
         name_idx: u8,
         alias_idx: u8,
     ) {
-        let FieldValue::Span { text: name, .. } = fields[name_idx as usize] else {
+        let FieldValue::Span {
+            text: name, source, ..
+        } = fields[name_idx as usize]
+        else {
             return;
         };
         if name.is_empty() {
             return;
         }
-        let (start, length) = stmt.field_source_range(node_id, name_idx);
-        let end = start + length;
+        let start = source.start as usize;
+        let end = source.end as usize;
 
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
@@ -1259,6 +1267,7 @@ impl<'a> ValidationPass<'a> {
                 stmt,
                 node_id,
                 name_idx,
+                source,
                 DiagnosticMessage::UnknownTable {
                     name: name.to_string(),
                 },
@@ -1311,11 +1320,13 @@ impl<'a> ValidationPass<'a> {
         name_idx: u8,
         args_idx: u8,
     ) {
-        if let FieldValue::Span { text: name, .. } = fields[name_idx as usize]
+        if let FieldValue::Span {
+            text: name, source, ..
+        } = fields[name_idx as usize]
             && !name.is_empty()
         {
-            let (start, length) = stmt.field_source_range(node_id, name_idx);
-            let end = start + length;
+            let start = source.start as usize;
+            let end = source.end as usize;
             let args_id = Self::field_node_id(fields, args_idx);
             let arg_count = args_id
                 .and_then(|id| stmt.list_children(id))
@@ -1348,6 +1359,7 @@ impl<'a> ValidationPass<'a> {
                         stmt,
                         node_id,
                         name_idx,
+                        source,
                         DiagnosticMessage::UnknownFunction {
                             name: name.to_string(),
                         },
@@ -1359,6 +1371,7 @@ impl<'a> ValidationPass<'a> {
                         stmt,
                         node_id,
                         name_idx,
+                        source,
                         DiagnosticMessage::FunctionArity {
                             name: name.to_string(),
                             expected,
@@ -1385,7 +1398,12 @@ impl<'a> ValidationPass<'a> {
         if !self.scope.has_frames() {
             return;
         }
-        let FieldValue::Span { text: column, .. } = fields[column_idx as usize] else {
+        let FieldValue::Span {
+            text: column,
+            source,
+            ..
+        } = fields[column_idx as usize]
+        else {
             return;
         };
         if column.is_empty() {
@@ -1395,8 +1413,8 @@ impl<'a> ValidationPass<'a> {
             FieldValue::Span { text: s, .. } if !s.is_empty() => Some(s),
             _ => None,
         };
-        let (start, length) = stmt.field_source_range(node_id, column_idx);
-        let end = start + length;
+        let start = source.start as usize;
+        let end = source.end as usize;
 
         match self.scope.resolve_column(table, column) {
             ColumnResolution::Found {
@@ -1448,6 +1466,7 @@ impl<'a> ValidationPass<'a> {
                     stmt,
                     node_id,
                     column_idx,
+                    source,
                     DiagnosticMessage::UnknownColumn {
                         column: column.to_string(),
                         table: Some(tbl.to_string()),
@@ -1469,6 +1488,7 @@ impl<'a> ValidationPass<'a> {
                     stmt,
                     node_id,
                     column_idx,
+                    source,
                     DiagnosticMessage::UnknownColumn {
                         column: column.to_string(),
                         table: None,
@@ -1732,12 +1752,12 @@ impl<'a> ValidationPass<'a> {
             return None;
         };
 
-        let name = match fields[name_idx as usize] {
-            FieldValue::Span { text, .. } => text,
-            _ => "",
+        let (name, name_range) = match fields[name_idx as usize] {
+            FieldValue::Span { text, source, .. } => {
+                (text, (source.start as usize, source.end as usize))
+            }
+            _ => ("", (0, 0)),
         };
-        let (name_start, name_length) = stmt.field_source_range(cte_id, name_idx);
-        let name_range = (name_start, name_start + name_length);
         let body_id = Self::field_node_id(&fields, body_idx);
         let declared_cols = Self::extract_declared_cols(stmt, &fields, cols_idx);
         Some(CteBindingInfo {
@@ -1782,7 +1802,7 @@ impl<'a> ValidationPass<'a> {
             && actual != declared.len()
         {
             // The CTE name range is already source-resolved (computed via
-            // field_source_range when building CteBindingInfo).
+            // FieldValue::Span.source when building CteBindingInfo).
             self.emit_at(
                 cte_name_range.0,
                 cte_name_range.1,

@@ -191,6 +191,38 @@ pub trait TypedNodeId: Copy + Into<AnyNodeId> {
     type Node<'a>: GrammarNodeType<'a>;
 }
 
+/// Byte range in the original source text.
+///
+/// For spans inside a macro expansion, points at the macro call site in the
+/// original source (not the expansion buffer).  Use
+/// [`AnyParsedStatement::field_expansion_traceback`](crate::parser::AnyParsedStatement::field_expansion_traceback)
+/// if you need position info inside the expansion.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SourceRange {
+    /// Inclusive start offset, in bytes.
+    pub start: u32,
+    /// Exclusive end offset, in bytes.
+    pub end: u32,
+}
+
+impl SourceRange {
+    /// Returns `true` if this range covers zero bytes.
+    pub fn is_empty(self) -> bool {
+        self.start == self.end
+    }
+
+    /// Byte length of the range.
+    pub fn len(self) -> u32 {
+        self.end - self.start
+    }
+}
+
+impl From<SourceRange> for std::ops::Range<usize> {
+    fn from(r: SourceRange) -> std::ops::Range<usize> {
+        r.start as usize..r.end as usize
+    }
+}
+
 /// Reflected field value extracted from a node.
 ///
 /// Used by dialect-agnostic AST tooling built on
@@ -199,19 +231,18 @@ pub trait TypedNodeId: Copy + Into<AnyNodeId> {
 pub enum FieldValue<'a> {
     /// A child node reference.
     NodeId(AnyNodeId),
-    /// A source text span — a subslice of the source (or expansion buffer).
-    ///
-    /// Use
-    /// [`AnyParsedStatement::field_source_range`](crate::parser::AnyParsedStatement::field_source_range)
-    /// to obtain the byte range in the original source (for macro-expanded
-    /// spans this points at the macro call site, not the expansion).
+    /// A source text span.
     Span {
         /// The span text.  When `quoted` is true this is the bare identifier
-        /// with surrounding quotes stripped.
+        /// with surrounding quotes stripped.  For spans inside a macro
+        /// expansion, this is the resolved text in the expansion buffer.
         text: &'a str,
         /// Whether the identifier was quoted in source.  The formatter
         /// re-wraps quoted spans in standard double quotes (`"..."`).
         quoted: bool,
+        /// Byte range in the original source.  For spans inside a macro
+        /// expansion, points at the entire macro call site.
+        source: SourceRange,
     },
     /// A boolean flag.
     Bool(bool),
@@ -440,13 +471,9 @@ mod ffi {
     /// Mirrors the C `SyntaqliteSourceSpan` layout.  Embedded in generated
     /// node structs for token-valued fields (identifiers, literals).
     ///
-    /// **Opaque**: the fields are an implementation detail.  When macros are
-    /// involved, the offset may reference an internal expansion buffer, not
-    /// the original source.  Use
-    /// [`AnyParsedStatement::field_source_range`](crate::parser::AnyParsedStatement::field_source_range)
-    /// or
-    /// [`AnyParsedStatement::span_text`](crate::parser::AnyParsedStatement::span_text)
-    /// to get usable values.
+    /// Rust callers normally never see a raw `CSourceSpan`: span fields are
+    /// eagerly resolved into [`FieldValue::Span`](super::FieldValue) values
+    /// with text and a [`SourceRange`](super::SourceRange) already populated.
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     #[repr(C)]
     pub(crate) struct CSourceSpan {
@@ -454,6 +481,8 @@ mod ffi {
         length: u16,
         flags: u8,
         /// Internal: 0 = original source, >0 = macro expansion buffer.
+        /// Read by the C-side `syntaqlite_parser_resolve_span` helper; the
+        /// Rust side never inspects it directly.
         _buf_idx: u8,
     }
 

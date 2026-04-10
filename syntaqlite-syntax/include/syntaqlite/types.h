@@ -22,16 +22,14 @@ typedef uint32_t SyntaqliteCompletionContext;
 
 // A span field embedded in an AST node.
 //
-// `offset` and `length` are directly usable as byte positions in the source
-// string you passed to `syntaqlite_parser_reset` — BUT ONLY if your input
-// contains no macro expansions.  If you use macros, `offset`/`length` may
-// reference an internal expansion buffer (not your source) and will produce
-// garbage if used directly.  In that case you must call
-// `syntaqlite_parser_resolve_span_for_node` to get the real source position
-// (which points at the entire macro call site for expanded spans).
-//
-// `_buf_idx` is an internal implementation detail and should not be read by
-// consumers.  Treat it as opaque padding.
+// Fast path: when `synq_span_needs_resolve(sp)` is false, `offset` and
+// `length` are directly usable as byte positions in the source string you
+// passed to `syntaqlite_parser_reset`.  Otherwise the span lives inside a
+// macro expansion buffer and direct access will produce garbage — call
+// `syntaqlite_parser_resolve_span` to get the real source text + byte
+// range (which points at the entire macro call site for expanded spans),
+// or `syntaqlite_parser_expansion_traceback` if you need the full
+// outermost → innermost expansion chain.
 typedef struct SyntaqliteSourceSpan {
   uint32_t offset;
   uint16_t length;
@@ -54,6 +52,13 @@ static inline SyntaqliteSourceSpan synq_span_set_quoted(
     SyntaqliteSourceSpan sp) {
   sp.flags |= SYNTAQLITE_SPAN_FLAG_QUOTED;
   return sp;
+}
+
+// Returns non-zero if this span requires `syntaqlite_parser_resolve_span` to
+// access its text and source position.  When zero, `offset`/`length` are
+// directly usable as byte positions in the parser's input string.
+static inline int synq_span_needs_resolve(SyntaqliteSourceSpan sp) {
+  return sp._buf_idx != 0;
 }
 
 #ifdef __cplusplus

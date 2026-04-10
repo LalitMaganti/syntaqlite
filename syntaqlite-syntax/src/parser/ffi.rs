@@ -76,7 +76,7 @@ pub(crate) struct CMacroRegion {
     pub(crate) call_length: u32,
 }
 
-/// A fully-resolved span returned by `syntaqlite_parser_resolve_span_for_node`.
+/// A fully-resolved span returned by `syntaqlite_parser_resolve_span`.
 ///
 /// Mirrors C `SyntaqliteResolvedSpan` from `include/syntaqlite/parser.h`.
 #[derive(Debug, Clone, Copy)]
