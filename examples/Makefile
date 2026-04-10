@@ -13,6 +13,7 @@ AMALG_CFLAGS := \
 	-Wno-void-pointer-to-int-cast \
 	-Wno-unused-variable \
 	-Wno-unused-parameter \
+	-Wno-unused-function \
 	-Wno-comment
 
 BUILDTOOLS := $(ROOT)/target/release/syntaqlite-buildtools
