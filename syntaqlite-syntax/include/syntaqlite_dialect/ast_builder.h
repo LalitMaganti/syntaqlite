@@ -68,9 +68,9 @@ typedef struct SynqParseCtx {
   // synq_mark_as_id() helper casts it to the right layout.
   void* tokens;
 
-  // Expansion buffer index for span construction.
-  // 0 = original source, 1+ = index into owned_bufs (1-based).
-  uint32_t buf_idx;
+  // Expansion layer index for span construction.
+  // 0 = original source, 1+ = index into the layer tree (1-based).
+  uint32_t layer_id;
 
   // Counter for "currently parsing inside a macro definition body".
   // While > 0, the tokenizer skips macro expansion so the body is captured
@@ -221,7 +221,7 @@ static inline SyntaqliteSourceSpan synq_span(SynqParseCtx* ctx,
       .offset = tok.offset,
       .length = (uint16_t)tok.n,
       .flags = 0,
-      ._buf_idx = tok.buf_idx,
+      ._layer_id = tok.layer_id,
   };
 }
 
@@ -241,11 +241,11 @@ static inline SyntaqliteSourceSpan synq_span_dequote(SynqParseCtx* ctx,
     if ((open == '"' && close == '"') || (open == '`' && close == '`') ||
         (open == '[' && close == ']')) {
       SyntaqliteSourceSpan sp = {tok.offset + 1, (uint16_t)(tok.n - 2), 0,
-                                 tok.buf_idx};
+                                 tok.layer_id};
       return synq_span_set_quoted(sp);
     }
   }
-  return (SyntaqliteSourceSpan){tok.offset, (uint16_t)tok.n, 0, tok.buf_idx};
+  return (SyntaqliteSourceSpan){tok.offset, (uint16_t)tok.n, 0, tok.layer_id};
 }
 
 #define SYNQ_NO_SPAN ((SyntaqliteSourceSpan){0, 0, 0, 0})

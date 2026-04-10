@@ -98,11 +98,19 @@ typedef uint32_t SyntaqliteParserTokenFlags;
   ((SyntaqliteParserTokenFlags)4)  // Consumed as type name.
 
 // A non-whitespace, non-comment token position captured during parsing.
+//
+// For tokens produced by macro expansion, `offset` is a byte position in
+// the expansion layer's internal buffer (identified by `_layer_id`), not a
+// position in the input source.  Consumers that need source-level
+// positions should resolve the token's span via the parser's span
+// accessors rather than using `offset` directly.
 typedef struct SyntaqliteParserToken {
-  uint32_t offset;  // Byte offset in source.
+  uint32_t offset;  // Byte offset in the token's layer buffer.
   uint32_t length;  // Byte length.
   uint32_t type;    // Original token type from tokenizer (pre-fallback).
   SyntaqliteParserTokenFlags flags;  // Bitmask of SYNQ_TOKEN_FLAG_* values.
+  uint8_t _layer_id;  // Internal: 0 = original source, >0 = expansion layer.
+  uint8_t _pad[3];
 } SyntaqliteParserToken;
 
 // A recorded macro invocation region.
@@ -199,6 +207,13 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
 // Span resolution
 // ---------------------------------------------------------------------------
 
+// A byte range `[start, end)` in the user's authored input text.
+// Returned by `syntaqlite_parser_span_text_range`.
+typedef struct SyntaqliteTextRange {
+  uint32_t start;
+  uint32_t end;
+} SyntaqliteTextRange;
+
 // A fully-resolved span: text pointer, text length, source byte range, and
 // flags.  Returned by syntaqlite_parser_resolve_span().
 //
@@ -250,6 +265,43 @@ syntaqlite_parser_expansion_traceback(SyntaqliteParser* p,
                                       const SyntaqliteSourceSpan* span,
                                       SyntaqliteExpansionFrame* frames,
                                       uint32_t max_frames);
+
+// ── New span accessors (plan: text / expanded_text vocabulary) ──────────
+
+// Post-expansion text for `span` — the bytes the tokenizer actually saw.
+// For macro-free spans, a slice of the input source.  For spans inside a
+// macro expansion, a slice of the expansion layer's buffer.  Writes the
+// byte length to `*out_len`.  Always a direct slice — no allocation.
+//
+// Returns NULL (and writes 0 to `*out_len`) for empty or invalid spans.
+SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
+    SyntaqliteParser* p,
+    const SyntaqliteSourceSpan* span,
+    uint32_t* out_len);
+
+// Authored text for `span` — always a slice of the input source.
+//
+// For macro-free spans, identical to `span_expanded_text`.  For spans
+// inside a macro expansion, walks the expansion-layer chain:
+//   - If the span falls inside a substituted `$param` arg segment, drills
+//     to the arg's origin text in the caller's layer (recursively).
+//   - Otherwise, collapses to the outermost `name!(...)` call site.
+//
+// Always a direct slice of the source — no allocation.  Returns NULL
+// (and writes 0 to `*out_len`) for empty or invalid spans.
+SYNTAQLITE_API const char* syntaqlite_parser_span_text(
+    SyntaqliteParser* p,
+    const SyntaqliteSourceSpan* span,
+    uint32_t* out_len);
+
+// Byte range of `syntaqlite_parser_span_text(span)` in the input source.
+// The returned range satisfies:
+//   syntaqlite_parser_span_text(span) ==
+//       source[range.start .. range.end]
+// Returns `{0, 0}` for empty or invalid spans.
+SYNTAQLITE_API SyntaqliteTextRange
+syntaqlite_parser_span_text_range(SyntaqliteParser* p,
+                                  const SyntaqliteSourceSpan* span);
 
 // ---------------------------------------------------------------------------
 // Node and list helpers

@@ -27,7 +27,7 @@ perfetto_arg_type(A) ::= ID(B) LP ID DOT ID RP(E). {
         .type = B.type,
         .token_idx = B.token_idx,
         .offset = B.offset,
-        .buf_idx = B.buf_idx,
+        .layer_id = B.layer_id,
     };
 }
 
@@ -124,7 +124,7 @@ perfetto_module_name(A) ::= perfetto_module_name(B) DOT ID|STAR|INTERSECT(C). {
         .type = B.type,
         .token_idx = B.token_idx,
         .offset = B.offset,
-        .buf_idx = B.buf_idx,
+        .layer_id = B.layer_id,
     };
 }
 
@@ -197,7 +197,7 @@ perfetto_macro_body(A) ::= perfetto_macro_body(B) ANY(C). {
         .type = B.type,
         .token_idx = B.token_idx,
         .offset = B.offset,
-        .buf_idx = B.buf_idx,
+        .layer_id = B.layer_id,
     };
 }
 

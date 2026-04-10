@@ -480,10 +480,10 @@ mod ffi {
         offset: u32,
         length: u16,
         flags: u8,
-        /// Internal: 0 = original source, >0 = macro expansion buffer.
+        /// Internal: 0 = original source, >0 = macro expansion layer id.
         /// Read by the C-side `syntaqlite_parser_resolve_span` helper; the
         /// Rust side never inspects it directly.
-        _buf_idx: u8,
+        _layer_id: u8,
     }
 
     impl CSourceSpan {

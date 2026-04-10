@@ -95,7 +95,7 @@ minus_num(A) ::= MINUS(M) number(X). {
     A.z = M.z;
     A.n = (int)(X.z - M.z) + X.n;
     A.offset = M.offset;
-    A.buf_idx = M.buf_idx;
+    A.layer_id = M.layer_id;
 }
 
 signed(A) ::= plus_num(A). {

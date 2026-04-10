@@ -111,6 +111,12 @@ SYNTAQLITE_API void syntaqlite_parser_end_macro(SyntaqliteParser* p);
 
 // Register a template macro.  Copies all strings.
 // The macro body uses $param placeholders (e.g. "$x + 1").
+//
+// `def_line` / `def_col` are the 1-based line/column of the defining
+// statement (e.g. `CREATE PERFETTO MACRO foo`).  They are stored on the
+// registry entry and surfaced by expansion tracebacks so error frames for
+// macro bodies can reference the authoring position.  Pass 0/0 if unknown.
+//
 // Returns 0 on success.
 SYNTAQLITE_API int syntaqlite_parser_register_macro(
     SyntaqliteParser* p,
@@ -119,7 +125,9 @@ SYNTAQLITE_API int syntaqlite_parser_register_macro(
     const char* const* param_names,
     uint32_t param_count,
     const char* body,
-    uint32_t body_len);
+    uint32_t body_len,
+    uint32_t def_line,
+    uint32_t def_col);
 
 // Deregister a macro by name.  Returns 0 on success, -1 if not found.
 SYNTAQLITE_API int syntaqlite_parser_deregister_macro(SyntaqliteParser* p,

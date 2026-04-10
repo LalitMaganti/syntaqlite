@@ -196,6 +196,8 @@ impl<G: TypedDialect> TypedParser<G> {
                 params.len() as u32,
                 body.as_ptr().cast(),
                 body.len() as u32,
+                0,
+                0,
             );
         }
     }
@@ -308,6 +310,8 @@ impl<G: TypedDialect> TypedParseSession<G> {
                 params.len() as u32,
                 body.as_ptr().cast(),
                 body.len() as u32,
+                0,
+                0,
             );
         }
     }
@@ -483,25 +487,73 @@ impl<'a> AnyParsedStatement<'a> {
             .collect()
     }
 
-    /// Resolved text for an arena span, picking the correct buffer.
+    /// Post-expansion text for an arena span — the bytes the tokenizer
+    /// actually saw.
     ///
-    /// For spans inside a macro expansion, returns the text from the
-    /// expansion buffer (e.g. `"a"` for `$name` expanded with arg `a`).
-    /// For direct spans, returns a slice of the original source.
-    pub(crate) fn span_text(&self, span: crate::ast::SourceSpan) -> &'a str {
+    /// For direct (macro-free) spans, returns a slice of the original
+    /// source.  For spans inside a macro expansion, returns the slice
+    /// from the appropriate expansion layer's buffer (e.g. `"a"` for
+    /// `$name` expanded with arg `a`).  Always a direct slice — no
+    /// allocation.
+    pub(crate) fn span_expanded_text(&self, span: crate::ast::SourceSpan) -> &'a str {
+        let mut out_len: u32 = 0;
         // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
-        let r = unsafe { self.raw.as_ref().resolve_span(span) };
-        if r.text.is_null() || r.text_len == 0 {
+        let ptr = unsafe { self.raw.as_ref().span_expanded_text(span, &raw mut out_len) };
+        if ptr.is_null() || out_len == 0 {
             return "";
         }
-        // SAFETY: C guarantees text points to text_len bytes of valid
-        // UTF-8 in a parser-owned buffer valid for 'a.
-        unsafe {
-            std::str::from_utf8_unchecked(std::slice::from_raw_parts(r.text, r.text_len as usize))
+        // SAFETY: C guarantees ptr points to out_len bytes of valid UTF-8
+        // in a parser-owned buffer valid for 'a.
+        unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
+    }
+
+    /// Authored text for an arena span — always a slice of the user's
+    /// input source (the text passed to `reset`).
+    ///
+    /// For direct (macro-free) spans, this is the same bytes as
+    /// `span_expanded_text`.  For spans inside a macro expansion, this
+    /// walks the expansion layer chain: if the span was tokenized inside
+    /// a substituted argument, it drills back to the arg's origin text in
+    /// the source; otherwise it collapses to the outermost `name!(...)`
+    /// call site in the source.  Always a direct slice — no allocation.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "wired into FieldValue::Span in Step 12")
+    )]
+    pub(crate) fn span_text(&self, span: crate::ast::SourceSpan) -> &'a str {
+        let mut out_len: u32 = 0;
+        // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
+        let ptr = unsafe { self.raw.as_ref().span_text(span, &raw mut out_len) };
+        if ptr.is_null() || out_len == 0 {
+            return "";
+        }
+        // SAFETY: C guarantees ptr points to out_len bytes of valid UTF-8
+        // in a parser-owned buffer valid for 'a.
+        unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
+    }
+
+    /// Byte range of `span_text(span)` in the user's input source.  For
+    /// spans inside a macro expansion, this is the byte range of either
+    /// the outermost call site or the substituted arg's origin text —
+    /// matching the bytes returned by `span_text`.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "wired into FieldValue::Span in Step 12")
+    )]
+    pub(crate) fn span_text_range(&self, span: crate::ast::SourceSpan) -> crate::ast::SourceRange {
+        // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
+        let r = unsafe { self.raw.as_ref().span_text_range(span) };
+        crate::ast::SourceRange {
+            start: r.start,
+            end: r.end,
         }
     }
 
-    fn field_span(&self, node_id: AnyNodeId, field_idx: u8) -> Option<crate::ast::SourceSpan> {
+    pub(crate) fn field_span(
+        &self,
+        node_id: AnyNodeId,
+        field_idx: u8,
+    ) -> Option<crate::ast::SourceSpan> {
         let (ptr, tag) = self.node_ptr(node_id)?;
         let meta = self.dialect.field_meta(tag).nth(field_idx as usize)?;
         if !matches!(meta.kind(), crate::dialect::FieldKind::Span) {
@@ -870,7 +922,7 @@ unsafe fn extract_field_value<'a>(
                 } else {
                     // Delegate to C: resolves text (picks the right buffer)
                     // and walks parent chain for source position.  Rust
-                    // never inspects buf_idx or expansion buffers directly.
+                    // never inspects layer_id or expansion layers directly.
                     let resolved = parser.resolve_span(span);
                     let text = if resolved.text.is_null() || resolved.text_len == 0 {
                         ""

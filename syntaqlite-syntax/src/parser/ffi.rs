@@ -62,6 +62,11 @@ pub(crate) struct CParserToken {
     pub length: u32,
     pub type_: u32,
     pub flags: CParserTokenFlags,
+    /// Internal: 0 = original source, >0 = expansion layer id.
+    /// Read only by C-side span accessors; the Rust side does not
+    /// inspect it directly.
+    pub _layer_id: u8,
+    pub _pad: [u8; 3],
 }
 
 /// A recorded macro invocation region.
@@ -87,6 +92,16 @@ pub(crate) struct CResolvedSpan {
     pub(crate) source_offset: u32,
     pub(crate) source_length: u32,
     pub(crate) flags: u8,
+}
+
+/// A byte range in the user's authored input.
+///
+/// Mirrors C `SyntaqliteTextRange` from `include/syntaqlite/parser.h`.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub(crate) struct CTextRange {
+    pub(crate) start: u32,
+    pub(crate) end: u32,
 }
 
 /// One frame in a macro expansion traceback.
@@ -203,6 +218,51 @@ impl CParser {
         // SAFETY: ptr is a valid pointer to `count` CParserToken values owned
         // by the parser arena; the slice is valid for the parser's lifetime.
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
+    }
+
+    pub(crate) unsafe fn span_expanded_text(
+        &self,
+        span: crate::ast::SourceSpan,
+        out_len: *mut u32,
+    ) -> *const u8 {
+        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
+        // of an arena value with the SyntaqliteSourceSpan layout; out_len is
+        // a valid pointer owned by the caller.
+        unsafe {
+            syntaqlite_parser_span_expanded_text(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                std::ptr::from_ref(&span).cast(),
+                out_len,
+            )
+        }
+    }
+
+    pub(crate) unsafe fn span_text(
+        &self,
+        span: crate::ast::SourceSpan,
+        out_len: *mut u32,
+    ) -> *const u8 {
+        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
+        // of an arena value with the SyntaqliteSourceSpan layout; out_len is
+        // a valid pointer owned by the caller.
+        unsafe {
+            syntaqlite_parser_span_text(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                std::ptr::from_ref(&span).cast(),
+                out_len,
+            )
+        }
+    }
+
+    pub(crate) unsafe fn span_text_range(&self, span: crate::ast::SourceSpan) -> CTextRange {
+        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
+        // of an arena value with the SyntaqliteSourceSpan layout.
+        unsafe {
+            syntaqlite_parser_span_text_range(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                std::ptr::from_ref(&span).cast(),
+            )
+        }
     }
 
     pub(crate) unsafe fn resolve_span(&self, span: crate::ast::SourceSpan) -> CResolvedSpan {
@@ -334,6 +394,7 @@ impl CParser {
         unsafe { syntaqlite_parser_end_macro(self) }
     }
 
+    #[expect(clippy::too_many_arguments, reason = "mirrors the C API surface 1:1")]
     pub(crate) unsafe fn register_macro(
         &mut self,
         name: *const c_char,
@@ -342,6 +403,8 @@ impl CParser {
         param_count: u32,
         body: *const c_char,
         body_len: u32,
+        def_line: u32,
+        def_col: u32,
     ) -> i32 {
         // SAFETY: self is a valid, non-null CParser pointer; name, param_names,
         // and body are valid pointers with the specified lengths.
@@ -354,6 +417,8 @@ impl CParser {
                 param_count,
                 body,
                 body_len,
+                def_line,
+                def_col,
             )
         }
     }
@@ -390,6 +455,17 @@ unsafe extern "C" {
 
     // Span resolution
     fn syntaqlite_parser_resolve_span(p: *mut CParser, span: *const c_void) -> CResolvedSpan;
+    fn syntaqlite_parser_span_expanded_text(
+        p: *mut CParser,
+        span: *const c_void,
+        out_len: *mut u32,
+    ) -> *const u8;
+    fn syntaqlite_parser_span_text(
+        p: *mut CParser,
+        span: *const c_void,
+        out_len: *mut u32,
+    ) -> *const u8;
+    fn syntaqlite_parser_span_text_range(p: *mut CParser, span: *const c_void) -> CTextRange;
     fn syntaqlite_parser_expansion_traceback(
         p: *mut CParser,
         span: *const c_void,
@@ -431,6 +507,8 @@ unsafe extern "C" {
         param_count: u32,
         body: *const c_char,
         body_len: u32,
+        def_line: u32,
+        def_col: u32,
     ) -> i32;
     fn syntaqlite_parser_deregister_macro(
         p: *mut CParser,
@@ -651,6 +729,8 @@ mod tests {
                 params.len() as u32,
                 body.as_ptr().cast(),
                 body.len() as u32,
+                0,
+                0,
             )
         };
         assert_eq!(rc, 0, "register_macro failed for '{name}'");
@@ -954,7 +1034,7 @@ mod tests {
         // Regression: synq_span() computes `tok.z - ctx->source` for ALL
         // tokens, but during macro expansion tok.z points into the expansion
         // buffer (a different allocation). This makes the offset garbage when
-        // buf_idx == 0 is not corrected. extract_fields then panics with
+        // layer_id == 0 is not corrected. extract_fields then panics with
         // "byte index N is out of bounds".
         use crate::ParserConfig;
         use crate::any::{AnyParser, ParseOutcome};

@@ -43,8 +43,31 @@ typedef struct SynqMacroEntry {
   uint32_t* param_name_lens;
   uint32_t param_count;
 
+  // --- Definition provenance ---
+  // Line/column of the `CREATE PERFETTO MACRO` statement that defined this
+  // entry (1-based). Zero means "unknown". Used by traceback rendering to
+  // label macro-body frames with their authoring position. The macro body
+  // text itself is `body` above — traceback frames borrow that pointer.
+  uint32_t def_line;
+  uint32_t def_col;
+
   uint8_t state;  // SYNQ_MAP_EMPTY / LIVE / TOMBSTONE
 } SynqMacroEntry;
+
+// One parameter substitution recorded during macro expansion. Tracks where
+// the copied arg text landed in the child layer's buffer and where it came
+// from in the parent layer's buffer. Populated by expand_template during
+// Step 4; consumed by argument-level traceback (Step 7).
+typedef struct SynqArgSegment {
+  uint32_t sub_offset;       // Where the substituted arg landed in the child
+                             // layer's buffer.
+  uint32_t sub_length;       // Length of the substitution.
+  uint32_t origin_layer_id;  // Layer that owned the arg text.
+  uint32_t origin_offset;    // Where the arg text started in the origin layer.
+  uint32_t origin_length;    // Length of the origin arg text (may differ from
+                             // sub_length if the arg was rewritten — presently
+                             // the two are always equal).
+} SynqArgSegment;
 
 // A comma-separated argument extracted from a macro call site.
 typedef struct SynqMacroArg {
@@ -52,24 +75,62 @@ typedef struct SynqMacroArg {
   uint32_t length;  // Byte length of the argument text.
 } SynqMacroArg;
 
-// Internal macro expansion record, parallel to the public SyntaqliteMacroRegion
-// (which stores call_offset/call_length).  Entry 0 is a sentinel for the
-// original source; actual expansions start at index 1.  `buf_idx` on AST
-// spans indexes directly into the parser's macro_regions vector.
-typedef struct SynqMacroRegion {
+// Unified expansion layer record.  `_layer_id` on AST spans indexes
+// directly into the parser's layers vector.  Entry 0 is a sentinel for the
+// original source (expansion_data = source pointer, parent_layer_id = 0,
+// call_offset/call_length = 0, template_body/name/arg_segments all NULL).
+// Actual expansions start at index 1.
+//
+// Carries the union of what were previously two parallel structs:
+//   - SyntaqliteMacroRegion (public): call_offset, call_length
+//   - SynqMacroRegion (internal): expansion_data, expansion_len,
+//   parent_layer_id
+//
+// syntaqlite_result_macros() builds a view over the call_offset/call_length
+// fields on demand via a lazy cached array in p->public_macros_view.
+//
+// Template/name/def_line/def_col are borrowed pointers into the macro
+// registry entry that was expanded to produce this layer; they outlive the
+// layer because parse state is reset before any registry entries can be
+// freed.  For the sentinel (layer 0) and incremental-API begin_macro (no
+// registry entry), these fields are all NULL/0.
+typedef struct SynqExpansionLayer {
+  uint32_t call_offset;        // Byte offset of macro call in parent layer.
+  uint32_t call_length;        // Byte length of entire macro call.
   const char* expansion_data;  // Expanded text (NULL for sentinel/fallback).
   uint32_t expansion_len;      // Length of expanded text.
-  uint8_t parent_buf_idx;      // Buffer containing the call (0 = source).
-} SynqMacroRegion;
+
+  // Definition provenance (borrowed from macro registry entry).
+  const char* template_body;   // Registry body with $params visible.
+  uint32_t template_body_len;  // Length of template_body, or 0.
+  const char* name;            // Macro name (borrowed), or NULL.
+  uint32_t name_len;           // Length of name.
+  uint32_t def_line;           // Macro definition line (1-based, 0=unknown).
+  uint32_t def_col;            // Macro definition column (1-based, 0=unknown).
+
+  // Parameter substitutions recorded during expand_template (Step 4).
+  // Arg segments live in p->mem; freed in reset_stmt / destroy alongside
+  // expansion_data. Empty for layers without parameter substitution.
+  SynqArgSegment* arg_segments;
+  uint32_t arg_segment_count;
+
+  uint8_t parent_layer_id;  // Layer containing the call (0 = source).
+} SynqExpansionLayer;
 
 // Result of a successful macro expansion (pure template substitution).
-// `data` is caller-owned (allocated via p->mem); ownership transfers to
-// macro_regions when fed via synq_parser_feed_macro_expansion().
+// `data` and `arg_segments` are caller-owned (allocated via p->mem);
+// ownership transfers to the layer record when fed via
+// synq_parser_feed_macro_expansion().
 typedef struct SynqMacroExpansion {
   const SynqMacroEntry* entry;  // Registry entry (for blue-paint).
   char* data;                   // Expanded text.
   uint32_t data_len;            // Length of expanded text.
   uint32_t end_offset;          // Position past ')' in the source buf.
+  // Arg-segment list recorded during template substitution.  Sorted by
+  // sub_offset (ascending), non-overlapping.  NULL when the template has
+  // no $param placeholders.  Allocated via p->mem.
+  SynqArgSegment* arg_segments;
+  uint32_t arg_segment_count;
 } SynqMacroExpansion;
 
 // ── Parser struct ───────────────────────────────────────────────────────────
@@ -98,14 +159,16 @@ struct SyntaqliteParser {
   SYNQ_VEC(SyntaqliteParserToken) tokens;
   uint32_t macro_depth;  // Nesting depth (0 = not in macro).
 
-  // Public macro regions (call site ranges only), returned by
-  // syntaqlite_result_macros().
-  SYNQ_VEC(SyntaqliteMacroRegion) macro_expansions;
-  // Internal macro expansion records.  `buf_idx` on AST spans indexes
-  // directly into this vector.  Entry 0 is a sentinel representing the
-  // original source (parent_buf_idx=0, expansion_data=source pointer).
-  // Actual expansions start at index 1.
-  SYNQ_VEC(SynqMacroRegion) macro_regions;
+  // Unified layer tree.  Entry 0 is a sentinel representing the original
+  // source; actual expansions start at index 1.  `_layer_id` on AST spans
+  // indexes directly into this vector.
+  SYNQ_VEC(SynqExpansionLayer) layers;
+
+  // Lazy view returned by syntaqlite_result_macros().  Allocated on first
+  // call from p->layers[1..], freed and reallocated when layers grows.
+  // Freed on destroy.  Owned by p->mem.
+  SyntaqliteMacroRegion* public_macros_view;
+  uint32_t public_macros_view_cap;
 
   // ── Macro registry (open-addressing hashmap) ──────────────────────────
   SynqMacroEntry* macro_table;
