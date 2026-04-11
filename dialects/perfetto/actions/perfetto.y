@@ -128,31 +128,67 @@ perfetto_module_name(A) ::= perfetto_module_name(B) DOT ID|STAR|INTERSECT(C). {
     };
 }
 
+// Empty marker rules used to bracket a `select` subrule so the parent
+// production can compute an exact source span covering the authored
+// body.  The BEFORE marker reads `cur_shift_start` — the start offset
+// of the token Lemon is currently processing, so leading whitespace
+// between the previous terminal (AS) and the first token of select is
+// excluded.  The AFTER marker reads `last_shifted_end` — the end of
+// the last real terminal of select (set by `record_and_feed` after
+// Lemon finishes processing it).
+%type select_body_start {uint32_t}
+select_body_start(A) ::= . { A = pCtx->cur_shift_start; }
+
+%type select_body_end {uint32_t}
+select_body_end(A) ::= . { A = pCtx->last_shifted_end; }
+
 // ---------- CREATE PERFETTO TABLE ----------
 
-cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO TABLE nm(N) perfetto_table_schema(S) AS select(E). {
+cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO TABLE nm(N)
+           perfetto_table_schema(S) AS select_body_start(BS) select(E) select_body_end(BE). {
+    SyntaqliteSourceSpan select_span = {
+        BS,
+        (uint16_t)(BE - BS),
+        0,
+        /*layer_id=*/0,
+    };
     A = synq_parse_create_perfetto_table_stmt(pCtx,
         synq_span(pCtx, N),
         R ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
-        S, E);
+        S, E, select_span);
 }
 
 // ---------- CREATE PERFETTO VIEW ----------
 
-cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO VIEW nm(N) perfetto_table_schema(S) AS select(E). {
+cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO VIEW nm(N)
+           perfetto_table_schema(S) AS select_body_start(BS) select(E) select_body_end(BE). {
+    SyntaqliteSourceSpan select_span = {
+        BS,
+        (uint16_t)(BE - BS),
+        0,
+        /*layer_id=*/0,
+    };
     A = synq_parse_create_perfetto_view_stmt(pCtx,
         synq_span(pCtx, N),
         R ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
-        S, E);
+        S, E, select_span);
 }
 
 // ---------- CREATE PERFETTO FUNCTION ----------
 
-cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO FUNCTION nm(N) LP perfetto_arg_def_list(ARGS) RP RETURNS perfetto_return_type(RT) AS select(E). {
+cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO FUNCTION nm(N) LP
+           perfetto_arg_def_list(ARGS) RP RETURNS perfetto_return_type(RT)
+           AS select_body_start(BS) select(E) select_body_end(BE). {
+    SyntaqliteSourceSpan select_span = {
+        BS,
+        (uint16_t)(BE - BS),
+        0,
+        /*layer_id=*/0,
+    };
     A = synq_parse_create_perfetto_function_stmt(pCtx,
         synq_span(pCtx, N),
         R ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
-        ARGS, RT, E);
+        ARGS, RT, E, select_span);
 }
 
 // ---------- CREATE PERFETTO FUNCTION (delegating) ----------

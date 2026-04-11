@@ -63,6 +63,7 @@ static void reset_stmt(SyntaqliteParser* p) {
   synq_parse_ctx_clear(&p->ctx);
   syntaqlite_vec_clear(&p->comments);
   syntaqlite_vec_clear(&p->tokens);
+  syntaqlite_vec_clear(&p->traceback_buf);
   // Free owned expansion buffers and arg-segment arrays from previous
   // statement.  Skip index 0 (sentinel) — its expansion_data points to
   // source (not malloc'd) and it has no arg_segments.
@@ -89,6 +90,8 @@ static void reset_stmt(SyntaqliteParser* p) {
   }
   p->expansion_depth = 0;
   p->ctx.layer_id = 0;
+  p->ctx.cur_shift_start = 0;
+  p->ctx.last_shifted_end = 0;
   p->ctx.root = SYNTAQLITE_NULL_NODE;
   p->ctx.stmt_completed = 0;
   p->ctx.pending_explain_mode = 0;
@@ -142,6 +145,7 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   syntaqlite_vec_init(&p->comments);
   syntaqlite_vec_init(&p->tokens);
   syntaqlite_vec_init(&p->layers);
+  syntaqlite_vec_init(&p->traceback_buf);
   // macro_table, expansion state already zeroed by memset
   return p;
 }
@@ -206,6 +210,7 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
         p->mem.xFree(lyr->arg_segments);
     }
     syntaqlite_vec_free(&p->layers, p->mem);
+    syntaqlite_vec_free(&p->traceback_buf, p->mem);
     // Free macro registry.
     if (p->macro_table) {
       for (uint32_t i = 0; i < p->macro_table_size; i++) {
@@ -357,7 +362,20 @@ int synq_parser_record_and_feed(SyntaqliteParser* p,
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
   }
+  // Publish the upcoming token's start *before* Lemon processes it so
+  // that BEFORE-style empty-marker reductions firing inside feed_one_token
+  // see the start of the token about to be shifted (whitespace between
+  // the previous terminal and this one is excluded).  Only track
+  // positions for tokens shifted from the root source layer.
+  if (p->ctx.layer_id == 0)
+    p->ctx.cur_shift_start = cur_offset;
   int rc = feed_one_token(p, cur_type, p->source + cur_offset, cur_len, tidx);
+  // Advance the "last shifted terminal end" cursor *after* Lemon finishes
+  // processing `cur`, so that any empty-rule reductions that fired inside
+  // feed_one_token observed the previous shifted token's end.  AFTER-style
+  // markers use this to capture the end position of a non-terminal.
+  if (p->ctx.layer_id == 0)
+    p->ctx.last_shifted_end = cur_offset + cur_len;
   // After parse_failure, Lemon stops reducing — force a boundary on SEMI
   // so errors don't bleed into subsequent statements.
   if (p->had_error && rc == 0 && cur_type == SYNTAQLITE_TK_SEMI)

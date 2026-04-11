@@ -58,14 +58,16 @@ class PerfettoFunctionValidation(TestSuite):
 
 
 class MacroExpansionSpanRegression(TestSuite):
-    def test_macro_expansion_unknown_column(self):
-        """Macro expansion (#84): a column reference produced inside a macro
-        expansion should report "unknown column 'a'".  The primary span
-        drills through the macro's `$name` arg segment to the user's
-        authored arg text `a` in the original source (argument-level
+    def test_macro_expansion_unknown_column_in_substituted_arg(self):
+        """Macro expansion (#84): a column reference produced from a `$param`
+        substitution should drill through the arg segment back to the
+        user's authored arg text in the original source (argument-level
         fidelity, per the text-expansion-model plan's success criterion
-        #5), and a traceback frame shows the corresponding position
-        inside the expansion buffer.
+        #5).  Because the span lies fully inside a substituted arg, the
+        new `traceback` API collapses the macro frame — the span's
+        provenance at every level in the chain is the arg origin in
+        user source — so the rendered diagnostic shows only the primary
+        span with no "in macro expansion" note.
         """
         return DiffTestBlueprint(
             sql="CREATE PERFETTO MACRO _d(name ColumnName) RETURNS Expr AS $name;\nSELECT _d!(a);",
@@ -73,12 +75,30 @@ class MacroExpansionSpanRegression(TestSuite):
  --> <stdin>:2:12
   |
 2 | SELECT _d!(a);
-  |            ^
+  |            ^""",
+        )
+
+    def test_macro_expansion_unknown_column_in_macro_body(self):
+        """Dual of the arg-substitution case: when the unresolved reference
+        is authored *in the macro body itself* (not in a `$param`
+        substitution), the traceback does not drill — the span's
+        authored provenance collapses to the `m!()` call site in user
+        source, and a "note: in macro expansion" frame shows the
+        position inside the expanded body.  This guards the
+        multi-frame traceback rendering path.
+        """
+        return DiffTestBlueprint(
+            sql="CREATE PERFETTO MACRO m() RETURNS Expr AS unknown_col;\nSELECT m!();",
+            out="""warning: unknown column 'unknown_col'
+ --> <stdin>:2:8
+  |
+2 | SELECT m!();
+  |        ^~~~
 note: in macro expansion
  --> <macro expansion>:1:1
   |
-1 | a
-  | ^""",
+1 | unknown_col
+  | ^~~~~~~~~~~""",
         )
 
 

@@ -91,16 +91,29 @@ pub(crate) struct CTextRange {
     pub(crate) end: u32,
 }
 
-/// One frame in a macro expansion traceback.
+/// One frame in a traceback produced by the span traceback API.
 ///
-/// Mirrors C `SyntaqliteExpansionFrame` from `include/syntaqlite/parser.h`.
+/// Mirrors C `SyntaqliteTracebackFrame` from `include/syntaqlite/parser.h`.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub(crate) struct CExpansionFrame {
-    pub(crate) buffer: *const u8,
-    pub(crate) buffer_len: u32,
-    pub(crate) offset: u32,
-    pub(crate) length: u32,
+pub(crate) struct CTracebackFrame {
+    /// Macro name pointer (borrowed from the macro registry), or null for
+    /// the root source frame.
+    pub(crate) name: *const u8,
+    /// Length of `name`, or 0 for the root frame.
+    pub(crate) name_len: u32,
+    /// 1-based line number of `offset_in_snippet` within `snippet`.
+    pub(crate) line: u32,
+    /// 1-based column number of `offset_in_snippet` within `snippet`.
+    pub(crate) col: u32,
+    /// Buffer to render the frame against — the original source for the
+    /// root frame, or an expansion layer's buffer for macro frames.
+    pub(crate) snippet: *const u8,
+    pub(crate) snippet_len: u32,
+    /// Byte offset of this frame's position within `snippet`.
+    pub(crate) offset_in_snippet: u32,
+    /// Byte length of this frame's position within `snippet`.
+    pub(crate) length_in_snippet: u32,
 }
 
 impl CParser {
@@ -252,37 +265,26 @@ impl CParser {
         }
     }
 
-    pub(crate) unsafe fn expansion_traceback(
-        &self,
-        span: crate::ast::SourceSpan,
-    ) -> Vec<CExpansionFrame> {
-        // First call with max=0 to get the count.
+    pub(crate) unsafe fn traceback(&self, span: crate::ast::SourceSpan) -> &[CTracebackFrame] {
+        let mut count: u32 = 0;
         // SAFETY: self is a valid CParser pointer; span is a copy of an
-        // arena value with the SyntaqliteSourceSpan layout.
-        let count = unsafe {
-            syntaqlite_parser_expansion_traceback(
+        // arena value with the SyntaqliteSourceSpan layout.  The returned
+        // pointer is backed by the parser's owned `traceback_buf` vec and
+        // remains valid until the next call to this function or until the
+        // parser is mutated through another `&mut` method.
+        let ptr = unsafe {
+            syntaqlite_parser_traceback(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
                 std::ptr::from_ref(&span).cast(),
-                std::ptr::null_mut(),
-                0,
+                &raw mut count,
             )
         };
-        if count == 0 {
-            return Vec::new();
+        if ptr.is_null() || count == 0 {
+            return &[];
         }
-        let mut frames: Vec<CExpansionFrame> = Vec::with_capacity(count as usize);
-        // SAFETY: capacity is at least `count`; the C function writes
-        // exactly `count` frames into the buffer.
-        unsafe {
-            syntaqlite_parser_expansion_traceback(
-                std::ptr::from_ref::<Self>(self).cast_mut(),
-                std::ptr::from_ref(&span).cast(),
-                frames.as_mut_ptr(),
-                count,
-            );
-            frames.set_len(count as usize);
-        }
-        frames
+        // SAFETY: ptr + count describe a valid slice of CTracebackFrame
+        // values owned by the parser for the duration of the next call.
+        unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
     pub(crate) unsafe fn result_macro_count(&self) -> u32 {
@@ -439,12 +441,11 @@ unsafe extern "C" {
         out_len: *mut u32,
     ) -> *const u8;
     fn syntaqlite_parser_span_text_range(p: *mut CParser, span: *const c_void) -> CTextRange;
-    fn syntaqlite_parser_expansion_traceback(
+    fn syntaqlite_parser_traceback(
         p: *mut CParser,
         span: *const c_void,
-        frames: *mut CExpansionFrame,
-        max_frames: u32,
-    ) -> u32;
+        out_count: *mut u32,
+    ) -> *const CTracebackFrame;
 
     // Configuration
     fn syntaqlite_parser_set_trace(p: *mut CParser, enable: u32) -> i32;

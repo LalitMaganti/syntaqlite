@@ -44,6 +44,7 @@ class PerfettoExtension(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              select_span: "SELECT 1"
 """,
         )
 
@@ -75,6 +76,7 @@ class PerfettoExtension(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              select_span: "SELECT 1"
 """,
         )
 
@@ -108,6 +110,7 @@ class PerfettoExtension(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              select_span: "SELECT 1"
 """,
         )
 
@@ -153,6 +156,7 @@ class PerfettoExtension(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              select_span: "SELECT 1"
 """,
         )
 
@@ -189,6 +193,43 @@ class PerfettoExtension(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              select_span: "SELECT 42"
+""",
+        )
+
+    def test_create_perfetto_table_select_span_leading_ws(self):
+        """select_span must exclude leading/trailing whitespace around the
+        body, demonstrating that the BEFORE marker captures the start of
+        the first real token (not the end of `AS`) and the AFTER marker
+        captures the end of the last real token (not the start of `;`).
+        """
+        return DiffTestBlueprint(
+            sql="CREATE PERFETTO TABLE foo AS    SELECT 1   ",
+            out="""\
+            CreatePerfettoTableStmt
+              table_name: "foo"
+              or_replace: FALSE
+              schema: (none)
+              select:
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: (none)
+                        alias: (none)
+                        expr:
+                          Literal
+                            literal_type: INTEGER
+                            source: "1"
+                  from_clause: (none)
+                  where_clause: (none)
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause: (none)
+                  window_clause: (none)
+              select_span: "SELECT 1"
 """,
         )
 

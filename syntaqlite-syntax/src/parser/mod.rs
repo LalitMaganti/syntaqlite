@@ -25,8 +25,8 @@ pub use incremental::{AnyIncrementalParseSession, TypedIncrementalParseSession};
 #[cfg(feature = "sqlite")]
 pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken};
 pub use types::{
-    AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, ExpansionFrame,
-    MacroRegion, ParseOutcome, ParserTokenFlags, TypedParserToken,
+    AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, MacroRegion,
+    ParseOutcome, ParserTokenFlags, TracebackFrame, TypedParserToken,
 };
 
 /// Indicates whether parsing can continue after an error.
@@ -455,41 +455,69 @@ impl<'a> AnyParsedStatement<'a> {
         })
     }
 
-    /// Expansion traceback for a span field.
+    /// Build a traceback for a span field.
     ///
-    /// Returns a list of [`ExpansionFrame`]s from outermost (call site in
-    /// the original source) to innermost (the position inside the deepest
-    /// expansion buffer).  Returns a single frame for non-expansion spans.
-    /// Returns an empty vec for invalid/non-span fields.
-    pub fn field_expansion_traceback(
-        &self,
+    /// Yields [`TracebackFrame`]s in outermost-to-innermost order —
+    /// frame 0 is the root source, and the final frame is the position
+    /// inside the deepest macro expansion layer.  For macro-free spans,
+    /// yields exactly one root frame.
+    ///
+    /// When a span was tokenized inside a substituted macro argument,
+    /// the walk drills through the substitution: the innermost frame
+    /// points at the user's authored arg text rather than at the
+    /// `foo!(…)` call site.
+    ///
+    /// Yields no frames for invalid or non-span fields.
+    ///
+    /// Frames live in a parser-owned scratch buffer that is overwritten
+    /// on every call, so this method takes `&mut self`; `.collect()` the
+    /// iterator before calling `traceback` again if you need to retain
+    /// frames across calls.
+    pub fn traceback(
+        &mut self,
         node_id: AnyNodeId,
         field_idx: u8,
-    ) -> Vec<ExpansionFrame<'a>> {
-        let Some(sp) = self.field_span(node_id, field_idx) else {
-            return Vec::new();
+    ) -> impl Iterator<Item = TracebackFrame<'a>> + use<'_, 'a> {
+        let sp = self.field_span(node_id, field_idx);
+        // The returned slice borrows from the parser's internal
+        // `traceback_buf` vec.  The `&mut self` receiver on this method
+        // ensures no other traceback call can overwrite that buffer
+        // while the returned iterator is live.
+        let raw_frames: &[ffi::CTracebackFrame] = match sp {
+            // SAFETY: self.raw is valid for 'a; sp is a copy of an arena value.
+            Some(sp) => unsafe { self.raw.as_ref().traceback(sp) },
+            None => &[],
         };
-        // SAFETY: self.raw is valid for 'a; sp is a copy of an arena value.
-        let raw_frames = unsafe { self.raw.as_ref().expansion_traceback(sp) };
-        raw_frames
-            .into_iter()
-            .map(|f| ExpansionFrame {
-                buffer: if f.buffer.is_null() || f.buffer_len == 0 {
-                    ""
-                } else {
-                    // SAFETY: C guarantees buffer points to buffer_len bytes
-                    // of valid UTF-8 in a parser-owned buffer valid for 'a.
-                    unsafe {
-                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                            f.buffer,
-                            f.buffer_len as usize,
-                        ))
-                    }
-                },
-                offset: f.offset as usize,
-                length: f.length as usize,
-            })
-            .collect()
+        raw_frames.iter().map(|f| TracebackFrame {
+            name: if f.name.is_null() || f.name_len == 0 {
+                None
+            } else {
+                // SAFETY: C guarantees name points to name_len bytes of
+                // valid UTF-8 in a parser-owned buffer valid for 'a.
+                Some(unsafe {
+                    std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                        f.name,
+                        f.name_len as usize,
+                    ))
+                })
+            },
+            line: f.line,
+            col: f.col,
+            snippet: if f.snippet.is_null() || f.snippet_len == 0 {
+                ""
+            } else {
+                // SAFETY: C guarantees snippet points to snippet_len bytes
+                // of valid UTF-8 in a parser-owned buffer valid for 'a.
+                unsafe {
+                    std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                        f.snippet,
+                        f.snippet_len as usize,
+                    ))
+                }
+            },
+            offset_in_snippet: f.offset_in_snippet as usize,
+            length_in_snippet: f.length_in_snippet as usize,
+        })
     }
 
     /// Post-expansion text for an arena span — the bytes the tokenizer
@@ -634,7 +662,12 @@ impl<'a> AnyParsedStatement<'a> {
     }
 
     /// Iterate direct child node IDs for the node at `id`.
-    pub fn child_node_ids(&self, id: AnyNodeId) -> impl Iterator<Item = AnyNodeId> + '_ {
+    ///
+    /// The returned iterator owns its data and does not borrow from
+    /// `self`, so it can be held across `&mut self` method calls on the
+    /// statement (e.g. while recursively invoking a visitor that itself
+    /// takes `&mut AnyParsedStatement`).
+    pub fn child_node_ids(&self, id: AnyNodeId) -> impl Iterator<Item = AnyNodeId> + use<> {
         let mut out = Vec::new();
         if let Some((_, fields)) = self.extract_fields(id) {
             for i in 0..fields.len() {

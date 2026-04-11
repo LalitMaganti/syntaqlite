@@ -35,8 +35,9 @@ typedef uint32_t SyntaqliteCompletionContext;
 //     live in an expansion layer buffer.
 //   - `syntaqlite_parser_span_text_range(p, &span)` — byte range of
 //     `span_text` in the input source.
-//   - `syntaqlite_parser_expansion_traceback(p, &span, ...)` — the full
-//     outermost → innermost expansion chain for diagnostics.
+//   - `syntaqlite_parser_traceback(p, &span, ...)` — the full outermost
+//     → innermost expansion chain for diagnostics, with argument-level
+//     drill-through fidelity for spans inside substituted macro args.
 typedef struct SyntaqliteSourceSpan {
   uint32_t offset;
   uint16_t length;

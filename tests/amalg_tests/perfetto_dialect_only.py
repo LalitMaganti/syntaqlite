@@ -68,5 +68,6 @@ class PerfettoAmalgDialectOnly(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              select_span: "SELECT 1"
 """,
         )

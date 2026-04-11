@@ -777,4 +777,122 @@ mod tests {
         let slice = &source[range.start as usize..range.end as usize];
         assert_eq!(slice, "authored");
     }
+
+    // ── Step 7: traceback with arg-segment drilling ─────────────────────────
+
+    // Walk the tree depth-first looking for the first non-empty Span field;
+    // return (owning node, field index) for use with `traceback`.
+    fn first_span_field<'a>(
+        stmt: &'a AnyParsedStatement<'a>,
+    ) -> Option<(crate::ast::AnyNodeId, u8)> {
+        use crate::ast::FieldValue;
+        fn walk<'a>(
+            stmt: &'a AnyParsedStatement<'a>,
+            id: crate::ast::AnyNodeId,
+        ) -> Option<(crate::ast::AnyNodeId, u8)> {
+            if let Some((_, fields)) = stmt.extract_fields(id) {
+                for i in 0..fields.len() {
+                    if matches!(fields[i], FieldValue::Span { .. })
+                        && let Ok(field_idx) = u8::try_from(i)
+                        && let Some(sp) = stmt.field_span(id, field_idx)
+                        && !sp.is_empty()
+                    {
+                        return Some((id, field_idx));
+                    }
+                }
+            }
+            for child in stmt.child_node_ids(id) {
+                if let Some(found) = walk(stmt, child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+        let root = stmt.root_id();
+        if root.is_null() {
+            return None;
+        }
+        walk(stmt, root)
+    }
+
+    #[test]
+    fn traceback_macro_free_yields_single_root_frame() {
+        let parser = Parser::new();
+        let source = "SELECT foo FROM bar";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let mut erased = stmt.erase();
+        let (nid, fidx) = first_span_field(&erased).expect("span field");
+
+        let frames: Vec<_> = erased.traceback(nid, fidx).collect();
+        assert_eq!(frames.len(), 1, "macro-free span → single root frame");
+        let f = &frames[0];
+        assert_eq!(f.name, None, "root frame has no macro name");
+        assert_eq!(f.snippet, source, "root snippet is the authored source");
+        // Offset points somewhere inside source.
+        assert!(f.offset_in_snippet < source.len());
+    }
+
+    #[test]
+    fn traceback_span_inside_macro_body_yields_two_frames() {
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        // Body has a hardcoded identifier; not an arg substitution.
+        parser.register_macro("idmac", &[], "inner");
+        let source = "SELECT idmac!()";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let mut erased = stmt.erase();
+        let (nid, fidx) = first_span_field(&erased).expect("span field");
+
+        let frames: Vec<_> = erased.traceback(nid, fidx).collect();
+        assert_eq!(
+            frames.len(),
+            2,
+            "span inside macro body → root + macro frames"
+        );
+        // Outermost = root
+        assert_eq!(frames[0].name, None);
+        assert_eq!(frames[0].snippet, source);
+        // Innermost = macro expansion
+        assert_eq!(frames[1].name, Some("idmac"));
+        assert_eq!(frames[1].snippet, "inner");
+        assert_eq!(frames[1].offset_in_snippet, 0);
+    }
+
+    #[test]
+    fn traceback_span_inside_substituted_arg_drills_to_origin() {
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.register_macro("idmac", &["x"], "$x");
+        let source = "SELECT idmac!(authored)";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let mut erased = stmt.erase();
+        let (nid, fidx) = first_span_field(&erased).expect("span field");
+
+        let frames: Vec<_> = erased.traceback(nid, fidx).collect();
+        // Arg-segment drill collapses the macro frame: the innermost frame
+        // is the user's authored arg text in the original source.
+        assert_eq!(
+            frames.len(),
+            1,
+            "span in substituted arg collapses to a single root frame"
+        );
+        assert_eq!(frames[0].name, None, "root frame after drill");
+        assert_eq!(frames[0].snippet, source);
+        let off = frames[0].offset_in_snippet;
+        let end = off + "authored".len();
+        assert_eq!(&source[off..end], "authored");
+    }
 }
