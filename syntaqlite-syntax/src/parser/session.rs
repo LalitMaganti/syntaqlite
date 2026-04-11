@@ -648,4 +648,133 @@ mod tests {
         let mut parser = Parser::new();
         assert!(!parser.deregister_macro("nonexistent"));
     }
+
+    // ── Step 6: span_text / span_expanded_text / span_text_range ────────────
+
+    use super::super::AnyParsedStatement;
+
+    // Walk the tree depth-first looking for a non-empty Span field; return
+    // the raw SourceSpan of the first one found.
+    fn first_span_in_tree<'a>(stmt: &'a AnyParsedStatement<'a>) -> Option<crate::ast::SourceSpan> {
+        use crate::ast::FieldValue;
+        fn walk<'a>(
+            stmt: &'a AnyParsedStatement<'a>,
+            id: crate::ast::AnyNodeId,
+        ) -> Option<crate::ast::SourceSpan> {
+            if let Some((_, fields)) = stmt.extract_fields(id) {
+                for i in 0..fields.len() {
+                    if matches!(fields[i], FieldValue::Span { .. })
+                        && let Ok(field_idx) = u8::try_from(i)
+                        && let Some(sp) = stmt.field_span(id, field_idx)
+                        && !sp.is_empty()
+                    {
+                        return Some(sp);
+                    }
+                }
+            }
+            for child in stmt.child_node_ids(id) {
+                if let Some(found) = walk(stmt, child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+        let root = stmt.root_id();
+        if root.is_null() {
+            return None;
+        }
+        walk(stmt, root)
+    }
+
+    #[test]
+    fn span_text_macro_free_equals_authored_slice() {
+        let parser = Parser::new();
+        let source = "SELECT foo FROM bar";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        let span = first_span_in_tree(&erased).expect("expected a Span field");
+
+        // Macro-free: span_text == span_expanded_text, range indexes into source.
+        let span_text = erased.span_text(span);
+        let span_expanded = erased.span_expanded_text(span);
+        let range = erased.span_text_range(span);
+
+        assert_eq!(span_text, span_expanded);
+        let slice = &source[range.start as usize..range.end as usize];
+        assert_eq!(span_text, slice);
+    }
+
+    #[test]
+    fn span_text_inside_macro_body_collapses_to_call_site() {
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        // Body produces an identifier token ("inner") that lives entirely in
+        // the template — no parameter substitution at the span location.
+        parser.register_macro("idmac", &[], "inner");
+
+        let source = "SELECT idmac!()";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        // The first span in the tree should be "inner" from the expansion.
+        let span = first_span_in_tree(&erased).expect("expected a Span field");
+
+        let span_text = erased.span_text(span);
+        let span_expanded = erased.span_expanded_text(span);
+        let range = erased.span_text_range(span);
+
+        // span_text: authored slice — the whole macro call "idmac!()".
+        assert_eq!(
+            span_text, "idmac!()",
+            "span_text should collapse to the call site"
+        );
+        // span_expanded_text: the literal text the tokenizer saw — "inner".
+        assert_eq!(span_expanded, "inner");
+        // Range points at the call site in source.
+        let slice = &source[range.start as usize..range.end as usize];
+        assert_eq!(slice, "idmac!()");
+    }
+
+    #[test]
+    fn span_text_inside_substituted_arg_drills_to_origin() {
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        // Body is purely a $param substitution. The identifier token in the
+        // expansion is an arg-copy of the caller's text.
+        parser.register_macro("idmac", &["x"], "$x");
+
+        let source = "SELECT idmac!(authored)";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        let span = first_span_in_tree(&erased).expect("expected a Span field");
+
+        let span_text = erased.span_text(span);
+        let span_expanded = erased.span_expanded_text(span);
+        let range = erased.span_text_range(span);
+
+        // Arg-segment drill: span_text points at the user's authored arg
+        // text, not at the whole call site.
+        assert_eq!(
+            span_text, "authored",
+            "span_text should drill through arg segment to origin"
+        );
+        // Expanded text (the token the tokenizer actually saw) is also
+        // "authored" because the arg was copied verbatim.
+        assert_eq!(span_expanded, "authored");
+        // Range points at the authored arg in source.
+        let slice = &source[range.start as usize..range.end as usize];
+        assert_eq!(slice, "authored");
+    }
 }

@@ -24,8 +24,8 @@ cmd(A) ::= create_vtab(X). {
 // With arguments in parentheses
 cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
     // Capture module arguments span (content between parens).
-    // Use token offsets/buf_idx so this works correctly when the statement
-    // is produced by a macro expansion; LP and RP share a buffer within the
+    // Use token offsets/layer_id so this works correctly when the statement
+    // is produced by a macro expansion; LP and RP share a layer within the
     // same reduction.
     SyntaqliteNode *vtab = AST_NODE(&pCtx->ast, X);
     uint32_t args_start = L.offset + L.n;
@@ -34,7 +34,7 @@ cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
         .offset = args_start,
         .length = (uint16_t)(args_end - args_start),
         .flags = 0,
-        ._buf_idx = L.buf_idx,
+        ._layer_id = L.layer_id,
     };
     A = X;
 }

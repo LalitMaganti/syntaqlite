@@ -19,10 +19,11 @@
 
 // Extract a std::string from a SyntaqliteSourceSpan.
 static std::string SpanText(SyntaqliteParser* p, SyntaqliteSourceSpan span) {
-  SyntaqliteResolvedSpan resolved = syntaqlite_parser_resolve_span(p, &span);
-  if (!resolved.text || resolved.text_len == 0)
+  uint32_t len = 0;
+  const char* text = syntaqlite_parser_span_expanded_text(p, &span, &len);
+  if (!text || len == 0)
     return {};
-  return {resolved.text, resolved.text_len};
+  return {text, len};
 }
 
 // Extract a std::string from an IdentName node ID.

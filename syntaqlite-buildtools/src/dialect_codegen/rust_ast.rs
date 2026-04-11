@@ -73,7 +73,7 @@ fn rust_view_accessor_body(field: &Field, ffi_path: &str) -> String {
             if t == "Bool" {
                 format!("self.raw.{fname} == {ffi_path}::Bool::True")
             } else if t == "SyntaqliteSourceSpan" {
-                format!("self.stmt_result.span_text(self.raw.{fname})")
+                format!("self.stmt_result.span_expanded_text(self.raw.{fname})")
             } else {
                 format!("self.raw.{fname}")
             }

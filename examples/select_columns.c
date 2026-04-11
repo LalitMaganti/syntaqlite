@@ -63,14 +63,14 @@ static void span_to_str(SyntaqliteParser* p,
                         SyntaqliteSourceSpan span,
                         char* buf,
                         int buf_size) {
-  SyntaqliteResolvedSpan resolved = syntaqlite_parser_resolve_span(p, &span);
-  if (!resolved.text || resolved.text_len == 0) {
+  uint32_t len = 0;
+  const char* text = syntaqlite_parser_span_expanded_text(p, &span, &len);
+  if (!text || len == 0) {
     buf[0] = '\0';
     return;
   }
-  int n = (int)resolved.text_len < buf_size - 1 ? (int)resolved.text_len
-                                                : buf_size - 1;
-  memcpy(buf, resolved.text, n);
+  int n = (int)len < buf_size - 1 ? (int)len : buf_size - 1;
+  memcpy(buf, text, n);
   buf[n] = '\0';
 }
 
