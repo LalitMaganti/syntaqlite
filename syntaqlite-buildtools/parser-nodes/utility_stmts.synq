@@ -3,9 +3,9 @@ enum PragmaForm { BARE EQ CALL }
 enum AnalyzeOrReindexOp { ANALYZE REINDEX }
 
 node PragmaStmt {
-  pragma_name: inline SyntaqliteSourceSpan
-  schema: inline SyntaqliteSourceSpan
-  value: inline SyntaqliteSourceSpan
+  pragma_name: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
+  value: inline SyntaqliteTextSpan
   pragma_form: inline PragmaForm
 
   fmt {
@@ -20,8 +20,8 @@ node PragmaStmt {
 }
 
 node AnalyzeOrReindexStmt {
-  target_name: inline SyntaqliteSourceSpan
-  schema: inline SyntaqliteSourceSpan
+  target_name: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
   kind: inline AnalyzeOrReindexOp
 
   fmt {
@@ -52,7 +52,7 @@ node DetachStmt {
 }
 
 node VacuumStmt {
-  schema: inline SyntaqliteSourceSpan
+  schema: inline SyntaqliteTextSpan
   filename: index Expr
 
   fmt {
@@ -73,9 +73,9 @@ node ExplainStmt {
 }
 
 node CreateIndexStmt {
-  index_name: inline SyntaqliteSourceSpan
-  schema: inline SyntaqliteSourceSpan
-  table_name: inline SyntaqliteSourceSpan
+  index_name: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
+  table_name: inline SyntaqliteTextSpan
   is_unique: inline Bool
   if_not_exists: inline Bool
   columns: index OrderByList
@@ -98,8 +98,8 @@ node CreateIndexStmt {
 }
 
 node CreateViewStmt {
-  view_name: inline SyntaqliteSourceSpan
-  schema: inline SyntaqliteSourceSpan
+  view_name: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
   is_temp: inline Bool
   if_not_exists: inline Bool
   column_names: index ExprList

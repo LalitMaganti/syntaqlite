@@ -107,7 +107,7 @@ static void dump_node_recursive(DumpBuf* b,
         break;
       }
       case SYNTAQLITE_FIELD_SPAN: {
-        SyntaqliteSourceSpan sp;
+        SyntaqliteTextSpan sp;
         memcpy(&sp, field_ptr, sizeof(sp));
         dump_indent(b, mem, indent + 1);
         if (sp.length == 0) {

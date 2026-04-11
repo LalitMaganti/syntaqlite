@@ -135,7 +135,7 @@ fn emit_node_field_setter(
                 w.line(&format!(
                     "PyDict_SetItemString(d, \"{py_key}\", n->{fname} ? Py_True : Py_False);"
                 ));
-            } else if t == "SyntaqliteSourceSpan" {
+            } else if t == "SyntaqliteTextSpan" {
                 w.line(&format!(
                     "PyObject *val = syntaqlite_py_wrap_span(p, n->{fname});"
                 ));
@@ -187,10 +187,10 @@ fn emit_wrap_list_fn(w: &mut CWriter) {
 /// Emit the helper function that wraps a source span into a Python str.
 fn emit_wrap_span_fn(w: &mut CWriter) {
     w.line("static PyObject *");
-    w.line("syntaqlite_py_wrap_span(SyntaqliteParser *p, SyntaqliteSourceSpan span) {");
+    w.line("syntaqlite_py_wrap_span(SyntaqliteParser *p, SyntaqliteTextSpan span) {");
     w.indent();
     w.line("if (span.length == 0) Py_RETURN_NONE;");
-    w.line("const char *src = syntaqlite_parser_source(p);");
+    w.line("const char *src = syntaqlite_parser_text(p);");
     w.line("return PyUnicode_FromStringAndSize(src + span.offset, span.length);");
     w.dedent();
     w.line("}");
@@ -205,7 +205,7 @@ mod tests {
     fn generates_switch_for_nodes() {
         let items = parse_synq_file(
             r"
-            node Foo { x: inline Bool  y: inline SyntaqliteSourceSpan }
+            node Foo { x: inline Bool  y: inline SyntaqliteTextSpan }
             node Bar { child: index Foo }
             list FooList { Foo }
             ",

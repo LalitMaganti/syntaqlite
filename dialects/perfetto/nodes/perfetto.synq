@@ -1,6 +1,6 @@
 node PerfettoArgDef {
   arg_name: index Name
-  arg_type: inline SyntaqliteSourceSpan
+  arg_type: inline SyntaqliteTextSpan
   is_variadic: inline Bool
 
   semantic { column_def(name: arg_name, type: arg_type) }
@@ -17,8 +17,8 @@ list PerfettoArgDefList {
 }
 
 node PerfettoMacroArg {
-  arg_name: inline SyntaqliteSourceSpan
-  arg_type: inline SyntaqliteSourceSpan
+  arg_name: inline SyntaqliteTextSpan
+  arg_type: inline SyntaqliteTextSpan
 
   fmt {
     span(arg_name) " " span(arg_type)
@@ -31,7 +31,7 @@ list PerfettoMacroArgList {
 }
 
 node PerfettoIndexedColumn {
-  column_name: inline SyntaqliteSourceSpan
+  column_name: inline SyntaqliteTextSpan
 
   fmt { span(column_name) }
 }
@@ -45,7 +45,7 @@ enum PerfettoReturnKind { SCALAR TABLE }
 
 node PerfettoReturnType {
   kind: inline PerfettoReturnKind
-  scalar_type: inline SyntaqliteSourceSpan
+  scalar_type: inline SyntaqliteTextSpan
   table_columns: index PerfettoArgDefList
 
   semantic { return_spec(table_columns: table_columns) }
@@ -68,11 +68,11 @@ node PerfettoReturnType {
 }
 
 node CreatePerfettoTableStmt {
-  table_name: inline SyntaqliteSourceSpan
+  table_name: inline SyntaqliteTextSpan
   or_replace: inline Bool
   schema: index PerfettoArgDefList
   select: index Select
-  select_span: inline SyntaqliteSourceSpan
+  select_span: inline SyntaqliteTextSpan
 
   semantic { define_table(name: table_name, columns: schema, select: select) }
 
@@ -96,11 +96,11 @@ node CreatePerfettoTableStmt {
 }
 
 node CreatePerfettoViewStmt {
-  view_name: inline SyntaqliteSourceSpan
+  view_name: inline SyntaqliteTextSpan
   or_replace: inline Bool
   schema: index PerfettoArgDefList
   select: index Select
-  select_span: inline SyntaqliteSourceSpan
+  select_span: inline SyntaqliteTextSpan
 
   semantic { define_view(name: view_name, columns: schema, select: select) }
 
@@ -124,12 +124,12 @@ node CreatePerfettoViewStmt {
 }
 
 node CreatePerfettoFunctionStmt {
-  function_name: inline SyntaqliteSourceSpan
+  function_name: inline SyntaqliteTextSpan
   or_replace: inline Bool
   args: index PerfettoArgDefList
   return_type: index PerfettoReturnType
   select: index Select
-  select_span: inline SyntaqliteSourceSpan
+  select_span: inline SyntaqliteTextSpan
 
   semantic { define_function(name: function_name, args: args, return_type: return_type, select: select) }
 
@@ -155,11 +155,11 @@ node CreatePerfettoFunctionStmt {
 }
 
 node CreatePerfettoDelegatingFunctionStmt {
-  function_name: inline SyntaqliteSourceSpan
+  function_name: inline SyntaqliteTextSpan
   or_replace: inline Bool
   args: index PerfettoArgDefList
   return_type: index PerfettoReturnType
-  delegate_to: inline SyntaqliteSourceSpan
+  delegate_to: inline SyntaqliteTextSpan
 
   fmt {
     group {
@@ -182,9 +182,9 @@ node CreatePerfettoDelegatingFunctionStmt {
 }
 
 node CreatePerfettoIndexStmt {
-  index_name: inline SyntaqliteSourceSpan
+  index_name: inline SyntaqliteTextSpan
   or_replace: inline Bool
-  table_name: inline SyntaqliteSourceSpan
+  table_name: inline SyntaqliteTextSpan
   columns: index PerfettoIndexedColumnList
 
   fmt {
@@ -204,10 +204,10 @@ node CreatePerfettoIndexStmt {
 }
 
 node CreatePerfettoMacroStmt {
-  macro_name: inline SyntaqliteSourceSpan
+  macro_name: inline SyntaqliteTextSpan
   or_replace: inline Bool
-  return_type: inline SyntaqliteSourceSpan
-  body: inline SyntaqliteSourceSpan
+  return_type: inline SyntaqliteTextSpan
+  body: inline SyntaqliteTextSpan
   args: index PerfettoMacroArgList
 
   macro_def(name: macro_name, body: body, args: args, arg_name: arg_name)
@@ -233,7 +233,7 @@ node CreatePerfettoMacroStmt {
 }
 
 node IncludePerfettoModuleStmt {
-  module_name: inline SyntaqliteSourceSpan
+  module_name: inline SyntaqliteTextSpan
 
   semantic { import(module: module_name) }
 
@@ -243,8 +243,8 @@ node IncludePerfettoModuleStmt {
 }
 
 node DropPerfettoIndexStmt {
-  index_name: inline SyntaqliteSourceSpan
-  table_name: inline SyntaqliteSourceSpan
+  index_name: inline SyntaqliteTextSpan
+  table_name: inline SyntaqliteTextSpan
 
   fmt {
     "DROP PERFETTO INDEX " span(index_name) " ON " span(table_name)

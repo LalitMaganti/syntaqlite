@@ -186,7 +186,7 @@ impl Formatter {
 
             let erased = stmt.erase();
             self.collect_side_channels(&erased);
-            let stmt_source = erased.source();
+            let stmt_source = erased.text();
 
             let root_id = erased.root_id();
             let prev_has_root = last_has_root;
@@ -448,7 +448,7 @@ impl Formatter {
             let mut arena = DocArena::recycle(prev_arena);
             self.parts.clear();
 
-            let stmt_source = erased.source();
+            let stmt_source = erased.text();
             if stmt_num > 0 {
                 emit_stmt_separator(
                     comment_ctx.as_ref(),
@@ -615,7 +615,7 @@ pub(crate) fn try_macro_verbatim<'a>(
 ) -> Option<DocId> {
     let cctx = ctx.comment_ctx.as_ref()?;
     let (tok_offset, _) = cctx.peek_next_token()?;
-    let source = ctx.source();
+    let source = ctx.text();
 
     for (i, r) in regions.iter().enumerate() {
         let r_start = r.call_offset();

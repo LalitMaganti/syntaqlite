@@ -243,10 +243,10 @@ impl<G: TypedDialect> TypedParser<G> {
         // SAFETY: inner.raw is valid (owned via ParserInner); source is
         // copied into source_buf.
         unsafe { reset_parser(inner.raw.as_ptr(), &mut inner.source_buf, source) };
-        let c_source_ptr =
+        let c_text_ptr =
             NonNull::new(inner.source_buf.as_mut_ptr()).expect("source_buf is non-empty");
         TypedIncrementalParseSession::new(
-            c_source_ptr,
+            c_text_ptr,
             self.dialect.clone(),
             inner,
             Rc::clone(&self.inner),
@@ -369,7 +369,7 @@ impl<G: TypedDialect> TypedParseSession<G> {
     /// # Panics
     ///
     /// Panics only if session invariants were violated.
-    pub fn source(&self) -> &str {
+    pub fn text(&self) -> &str {
         let inner = self
             .inner
             .as_ref()
@@ -416,7 +416,7 @@ pub type AnyParseSession = TypedParseSession<AnyDialect>;
 #[derive(Clone)]
 pub struct AnyParsedStatement<'a> {
     pub(crate) raw: NonNull<CParser>,
-    pub(crate) source: &'a str,
+    pub(crate) text: &'a str,
     pub(crate) dialect: AnyDialect,
 }
 
@@ -425,11 +425,11 @@ impl<'a> AnyParsedStatement<'a> {
     ///
     /// # Safety
     /// `raw` must be a valid, non-null parser pointer that remains valid for `'a`.
-    pub(crate) unsafe fn new(raw: *mut CParser, source: &'a str, dialect: AnyDialect) -> Self {
+    pub(crate) unsafe fn new(raw: *mut CParser, text: &'a str, dialect: AnyDialect) -> Self {
         AnyParsedStatement {
             // SAFETY: caller guarantees raw is non-null.
             raw: unsafe { NonNull::new_unchecked(raw) },
-            source,
+            text,
             dialect,
         }
     }
@@ -528,7 +528,7 @@ impl<'a> AnyParsedStatement<'a> {
     /// from the appropriate expansion layer's buffer (e.g. `"a"` for
     /// `$name` expanded with arg `a`).  Always a direct slice — no
     /// allocation.
-    pub(crate) fn span_expanded_text(&self, span: crate::ast::SourceSpan) -> &'a str {
+    pub fn span_expanded_text(&self, span: crate::ast::TextSpan) -> &'a str {
         let mut out_len: u32 = 0;
         // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
         let ptr = unsafe { self.raw.as_ref().span_expanded_text(span, &raw mut out_len) };
@@ -540,53 +540,43 @@ impl<'a> AnyParsedStatement<'a> {
         unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
     }
 
-    /// Authored text for an arena span — always a slice of the user's
-    /// input source (the text passed to `reset`).
+    /// Resolve a [`TextSpan`](crate::ast::TextSpan) to `(authored_text,
+    /// source_offset)` where `authored_text` is a direct slice of the
+    /// user's input source and `source_offset` is its byte offset in
+    /// that source.
     ///
-    /// For direct (macro-free) spans, this is the same bytes as
-    /// `span_expanded_text`.  For spans inside a macro expansion, this
-    /// walks the expansion layer chain: if the span was tokenized inside
-    /// a substituted argument, it drills back to the arg's origin text in
-    /// the source; otherwise it collapses to the outermost `name!(...)`
-    /// call site in the source.  Always a direct slice — no allocation.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "wired into FieldValue::Span in Step 12")
-    )]
-    pub(crate) fn span_text(&self, span: crate::ast::SourceSpan) -> &'a str {
+    /// For direct (macro-free) spans, this is the span's own bytes and
+    /// position.  For spans inside a macro expansion, this walks the
+    /// expansion layer chain: if the span was tokenized inside a
+    /// substituted `$param`, it drills back to the arg's origin text in
+    /// the caller's source; otherwise it collapses to the outermost
+    /// `name!(...)` call site.  Always a direct slice — no allocation.
+    /// Returns `("", 0)` for empty or invalid spans.
+    pub fn span_text(&self, span: crate::ast::TextSpan) -> (&'a str, u32) {
         let mut out_len: u32 = 0;
+        let mut out_offset: u32 = 0;
         // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
-        let ptr = unsafe { self.raw.as_ref().span_text(span, &raw mut out_len) };
+        let ptr = unsafe {
+            self.raw
+                .as_ref()
+                .span_text(span, &raw mut out_len, &raw mut out_offset)
+        };
         if ptr.is_null() || out_len == 0 {
-            return "";
+            return ("", 0);
         }
         // SAFETY: C guarantees ptr points to out_len bytes of valid UTF-8
         // in a parser-owned buffer valid for 'a.
-        unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
-    }
-
-    /// Byte range of `span_text(span)` in the user's input source.  For
-    /// spans inside a macro expansion, this is the byte range of either
-    /// the outermost call site or the substituted arg's origin text —
-    /// matching the bytes returned by `span_text`.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "wired into FieldValue::Span in Step 12")
-    )]
-    pub(crate) fn span_text_range(&self, span: crate::ast::SourceSpan) -> crate::ast::SourceRange {
-        // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
-        let r = unsafe { self.raw.as_ref().span_text_range(span) };
-        crate::ast::SourceRange {
-            start: r.start,
-            end: r.end,
-        }
+        let text = unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
+        };
+        (text, out_offset)
     }
 
     pub(crate) fn field_span(
         &self,
         node_id: AnyNodeId,
         field_idx: u8,
-    ) -> Option<crate::ast::SourceSpan> {
+    ) -> Option<crate::ast::TextSpan> {
         let (ptr, tag) = self.node_ptr(node_id)?;
         let meta = self.dialect.field_meta(tag).nth(field_idx as usize)?;
         if !matches!(meta.kind(), crate::dialect::FieldKind::Span) {
@@ -594,18 +584,18 @@ impl<'a> AnyParsedStatement<'a> {
         }
         // SAFETY: ptr is a valid arena node pointer for 'a; meta describes
         // a Span field at the indicated byte offset within the node struct.
-        // SourceSpan is `#[repr(C)]` Copy with 1-byte alignment; we use
+        // TextSpan is `#[repr(C)]` Copy with 1-byte alignment; we use
         // read_unaligned to avoid alignment assumptions on the raw pointer.
         Some(unsafe {
             ptr.add(meta.offset() as usize)
-                .cast::<crate::ast::SourceSpan>()
+                .cast::<crate::ast::TextSpan>()
                 .read_unaligned()
         })
     }
 
     /// The source text bound to this result.
-    pub fn source(&self) -> &'a str {
-        self.source
+    pub fn text(&self) -> &'a str {
+        self.text
     }
 
     /// Raw token spans `(offset, length)` for all collected tokens.
@@ -635,17 +625,13 @@ impl<'a> AnyParsedStatement<'a> {
     }
 
     /// Extract reflective node data (`tag` + field values) for `id`.
-    pub fn extract_fields(
-        &self,
-        id: AnyNodeId,
-    ) -> Option<(AnyNodeTag, crate::ast::NodeFields<'a>)> {
+    pub fn extract_fields(&self, id: AnyNodeId) -> Option<(AnyNodeTag, crate::ast::NodeFields)> {
         let (ptr, tag) = self.node_ptr(id)?;
         let mut fields = crate::ast::NodeFields::new();
         for meta in self.dialect.field_meta(tag) {
-            // SAFETY: ptr is a valid arena node pointer valid for 'a;
-            // meta describes a field within that node's struct layout.
-            // self.raw is a valid parser pointer for 'a.
-            let val = unsafe { extract_field_value(ptr, &meta, self.raw.as_ref()) };
+            // SAFETY: ptr is a valid arena node pointer; meta describes a
+            // field within that node's struct layout.
+            let val = unsafe { extract_field_value(ptr, &meta) };
             fields.push(val);
         }
         Some((tag, fields))
@@ -775,12 +761,12 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     ///
     /// # Safety
     /// `raw` must be a valid, non-null parser pointer that remains valid for `'a`.
-    pub(crate) unsafe fn new(raw: *mut CParser, source: &'a str, dialect: AnyDialect) -> Self {
+    pub(crate) unsafe fn new(raw: *mut CParser, text: &'a str, dialect: AnyDialect) -> Self {
         TypedParsedStatement {
             any: AnyParsedStatement {
                 // SAFETY: caller guarantees raw is non-null.
                 raw: unsafe { NonNull::new_unchecked(raw) },
-                source,
+                text,
                 dialect,
             },
             _marker: PhantomData,
@@ -824,8 +810,8 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     }
 
     /// The source text bound to this result.
-    pub fn source(&self) -> &'a str {
-        self.any.source
+    pub fn text(&self) -> &'a str {
+        self.any.text
     }
 
     /// Macro expansion call-site spans recorded during parsing.
@@ -841,7 +827,7 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     ///
     /// Requires `collect_tokens: true` and skips unknown token ordinals for `G`.
     pub fn tokens(&self) -> impl Iterator<Item = TypedParserToken<'a, G>> {
-        let source = self.any.source;
+        let source = self.any.text;
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CParserToken] = unsafe { self.any.raw.as_ref().result_tokens() };
         raw.iter().filter_map(move |t| {
@@ -861,7 +847,7 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     ///
     /// Requires `collect_tokens: true` in [`ParserConfig`].
     pub fn comments(&self) -> impl Iterator<Item = Comment<'a>> {
-        let source = self.any.source;
+        let source = self.any.text;
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CComment] = unsafe { self.any.raw.as_ref().result_comments() };
         raw.iter().map(move |c| {
@@ -931,16 +917,19 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
 
 /// Extract a single [`crate::ast::FieldValue`] from a raw arena node pointer.
 ///
+/// Just copies raw bytes into the corresponding variant — callers pull
+/// text / offset / expanded-buffer views out via the accessor methods on
+/// [`AnyParsedStatement`] (e.g. [`span_text`](AnyParsedStatement::span_text)).
+///
 /// # Safety
 /// `ptr` must point to a valid arena node struct whose field at `meta.offset()`
-/// has the type indicated by `meta.kind()`, and must be valid for lifetime `'a`.
+/// has the type indicated by `meta.kind()`.
 #[expect(clippy::cast_ptr_alignment)]
-unsafe fn extract_field_value<'a>(
+unsafe fn extract_field_value(
     ptr: *const u8,
     meta: &crate::dialect::FieldMeta<'_>,
-    parser: &'a CParser,
-) -> crate::ast::FieldValue<'a> {
-    use crate::ast::{FieldValue, SourceRange, SourceSpan};
+) -> crate::ast::FieldValue {
+    use crate::ast::{FieldValue, TextSpan};
     use crate::dialect::FieldKind;
     // SAFETY: covered by function-level contract; ptr and meta are consistent.
     unsafe {
@@ -948,61 +937,16 @@ unsafe fn extract_field_value<'a>(
         match meta.kind() {
             FieldKind::NodeId => FieldValue::NodeId(AnyNodeId(*(field_ptr.cast::<u32>()))),
             FieldKind::Span => {
-                // SourceSpan is `#[repr(C)]` Copy with 1-byte alignment;
+                // TextSpan is `#[repr(C)]` Copy with 1-byte alignment;
                 // use read_unaligned to avoid alignment assumptions.
-                let span = field_ptr.cast::<SourceSpan>().read_unaligned();
-                if span.is_empty() {
-                    return FieldValue::Span {
-                        text: "",
-                        quoted: false,
-                        source: SourceRange::default(),
-                    };
-                }
-                // Populate from the new span accessors.  `text` preserves
-                // the pre-rework semantics (post-expansion bytes — what
-                // the tokenizer saw); `source` is the authored byte range
-                // in the user's input, walking through the layer chain
-                // and arg segments as needed.  Step 12 of the
-                // text-expansion-model plan reshapes this variant into
-                // separate `text` / `expanded_text` / `text_range` fields.
-                let text = span_slice(parser, span, CParser::span_expanded_text);
-                let range = parser.span_text_range(span);
-                FieldValue::Span {
-                    text,
-                    quoted: span.is_quoted(),
-                    source: SourceRange {
-                        start: range.start,
-                        end: range.end,
-                    },
-                }
+                let span = field_ptr.cast::<TextSpan>().read_unaligned();
+                FieldValue::Span(span)
             }
             FieldKind::Bool => FieldValue::Bool(*(field_ptr.cast::<u32>()) != 0),
             FieldKind::Flags => FieldValue::Flags(*field_ptr),
             FieldKind::Enum => FieldValue::Enum(*(field_ptr.cast::<u32>())),
         }
     }
-}
-
-/// Call a span text accessor (`span_text` or `span_expanded_text`) and
-/// materialize the returned pointer/length as a `&'a str`.
-///
-/// # Safety
-/// `parser` must be a valid `CParser` for lifetime `'a`; `span` must be a
-/// copy of an arena value with the `SyntaqliteSourceSpan` layout.
-unsafe fn span_slice(
-    parser: &CParser,
-    span: crate::ast::SourceSpan,
-    accessor: unsafe fn(&CParser, crate::ast::SourceSpan, *mut u32) -> *const u8,
-) -> &str {
-    let mut out_len: u32 = 0;
-    // SAFETY: delegated via function-level contract.
-    let ptr = unsafe { accessor(parser, span, &raw mut out_len) };
-    if ptr.is_null() || out_len == 0 {
-        return "";
-    }
-    // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid UTF-8
-    // in a parser-owned buffer valid for `'a`.
-    unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
 }
 
 /// Parse failure for a single statement in dialect `G`.
@@ -1061,8 +1005,8 @@ impl<'a, G: TypedDialect> TypedParseError<'a, G> {
     }
 
     /// The source text bound to this result.
-    pub fn parse_source(&self) -> &'a str {
-        self.0.source()
+    pub fn text(&self) -> &'a str {
+        self.0.text()
     }
 
     /// Tokens collected during the (partial) parse, if `collect_tokens` was enabled.
@@ -1126,12 +1070,12 @@ pub(crate) unsafe fn reset_parser(raw: *mut CParser, source_buf: &mut Vec<u8>, s
     source_buf.push(0);
 
     // source_buf has at least one byte (the null terminator just pushed).
-    let c_source_ptr = source_buf.as_ptr();
-    // SAFETY: raw is valid (caller owns it); c_source_ptr points to
+    let c_text_ptr = source_buf.as_ptr();
+    // SAFETY: raw is valid (caller owns it); c_text_ptr points to
     // source_buf which is null-terminated.
     #[expect(clippy::cast_possible_truncation)]
     unsafe {
-        (*raw).reset(c_source_ptr.cast(), source.len() as u32);
+        (*raw).reset(c_text_ptr.cast(), source.len() as u32);
     }
 }
 

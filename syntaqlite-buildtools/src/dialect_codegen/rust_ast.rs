@@ -26,8 +26,8 @@ fn rust_ffi_field_type(
                 "Bool".into()
             } else if enum_names.contains(t.as_str()) || flags_names.contains(t.as_str()) {
                 format!("super::ast::{t}")
-            } else if t == "SyntaqliteSourceSpan" {
-                "SourceSpan".into()
+            } else if t == "SyntaqliteTextSpan" {
+                "TextSpan".into()
             } else {
                 t.clone()
             }
@@ -52,7 +52,7 @@ fn rust_view_return_type(
             let t = &field.type_name;
             if t == "Bool" {
                 "bool".into()
-            } else if t == "SyntaqliteSourceSpan" {
+            } else if t == "SyntaqliteTextSpan" {
                 "&'a str".into()
             } else {
                 t.clone()
@@ -72,7 +72,7 @@ fn rust_view_accessor_body(field: &Field, ffi_path: &str) -> String {
             let t = &field.type_name;
             if t == "Bool" {
                 format!("self.raw.{fname} == {ffi_path}::Bool::True")
-            } else if t == "SyntaqliteSourceSpan" {
+            } else if t == "SyntaqliteTextSpan" {
                 format!("self.stmt_result.span_expanded_text(self.raw.{fname})")
             } else {
                 format!("self.raw.{fname}")
@@ -355,7 +355,7 @@ pub(crate) struct RustAstPaths<'a> {
     pub crate_prefix: &'a str,
     /// Path to FFI node structs, e.g. `"crate::ffi"`.
     pub ffi_path: &'a str,
-    /// Path to `NodeId`/`SourceSpan`/`NodeList`, e.g. `"syntaqlite_parser::nodes"`.
+    /// Path to `NodeId`/`TextSpan`/`NodeList`, e.g. `"syntaqlite_parser::nodes"`.
     pub nodes_path: &'a str,
     /// Fully-qualified path to the dialect struct, e.g.
     /// `"super::dialect::Dialect"`. Used as the `G` parameter in
@@ -382,7 +382,7 @@ impl AstModel<'_> {
         w.newline();
         w.lines(&format!(
             "
-        use {nodes_path}::{{ArenaNode, AnyNodeId, SourceSpan}};
+        use {nodes_path}::{{ArenaNode, AnyNodeId, TextSpan}};
     ",
         ));
         w.newline();

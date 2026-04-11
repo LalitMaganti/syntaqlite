@@ -330,7 +330,7 @@ Node definition (`perfetto_stmts.synq`):
 
 ```
 node PerfettoFunctionStmt {
-    func_name: inline SourceSpan
+    func_name: inline TextSpan
     body: index Stmt
     is_replace: inline Bool
     fmt {

@@ -57,8 +57,9 @@ typedef struct SynqMacroEntry {
 
 // One parameter substitution recorded during macro expansion. Tracks where
 // the copied arg text landed in the child layer's buffer and where it came
-// from in the parent layer's buffer. Populated by expand_template during
-// Step 4; consumed by argument-level traceback (Step 7).
+// from in the parent layer's buffer. Populated by expand_template; consumed
+// by argument-level traceback to drill span positions back through `$param`
+// substitutions to the caller's authored arg text.
 typedef struct SynqArgSegment {
   uint32_t sub_offset;       // Where the substituted arg landed in the child
                              // layer's buffer.
@@ -101,7 +102,7 @@ typedef struct SynqExpansionLayer {
   uint32_t def_line;           // Macro definition line (1-based, 0=unknown).
   uint32_t def_col;            // Macro definition column (1-based, 0=unknown).
 
-  // Parameter substitutions recorded during expand_template (Step 4).
+  // Parameter substitutions recorded during expand_template.
   // Arg segments live in p->mem; freed in reset_stmt / destroy alongside
   // expansion_data. Empty for layers without parameter substitution.
   SynqArgSegment* arg_segments;

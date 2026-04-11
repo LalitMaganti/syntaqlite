@@ -30,7 +30,7 @@ cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
     SyntaqliteNode *vtab = AST_NODE(&pCtx->ast, X);
     uint32_t args_start = L.offset + L.n;
     uint32_t args_end = R.offset;
-    vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
+    vtab->create_virtual_table_stmt.module_args = (SyntaqliteTextSpan){
         .offset = args_start,
         .length = (uint16_t)(args_end - args_start),
         .flags = 0,
@@ -41,8 +41,8 @@ cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
 
 // create_vtab builds the node with table name, schema, module name
 create_vtab(A) ::= createkw VIRTUAL TABLE ifnotexists(E) nm(X) dbnm(Y) USING nm(Z). {
-    SyntaqliteSourceSpan tbl_name = Y.z ? synq_span(pCtx, Y) : synq_span(pCtx, X);
-    SyntaqliteSourceSpan tbl_schema = Y.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
+    SyntaqliteTextSpan tbl_name = Y.z ? synq_span(pCtx, Y) : synq_span(pCtx, X);
+    SyntaqliteTextSpan tbl_schema = Y.z ? synq_span(pCtx, X) : SYNQ_NO_SPAN;
     A = synq_parse_create_virtual_table_stmt(pCtx,
         tbl_name,
         tbl_schema,

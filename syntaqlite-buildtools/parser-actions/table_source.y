@@ -32,8 +32,8 @@ stl_prefix(A) ::= . {
 // Simple table reference: FROM t, FROM t AS x, FROM schema.t
 seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
     uint32_t alias = Z;
-    SyntaqliteSourceSpan table_name;
-    SyntaqliteSourceSpan schema;
+    SyntaqliteTextSpan table_name;
+    SyntaqliteTextSpan schema;
     if (D.z != NULL) {
         table_name = synq_span_dequote(pCtx, D);
         schema = synq_span_dequote(pCtx, Y);
@@ -57,8 +57,8 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
 seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
     (void)I;
     uint32_t alias = Z;
-    SyntaqliteSourceSpan table_name;
-    SyntaqliteSourceSpan schema;
+    SyntaqliteTextSpan table_name;
+    SyntaqliteTextSpan schema;
     if (D.z != NULL) {
         table_name = synq_span_dequote(pCtx, D);
         schema = synq_span_dequote(pCtx, Y);
@@ -81,8 +81,8 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
 // Table-valued function: FROM t(args)
 seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N). {
     uint32_t alias = Z;
-    SyntaqliteSourceSpan table_name;
-    SyntaqliteSourceSpan schema;
+    SyntaqliteTextSpan table_name;
+    SyntaqliteTextSpan schema;
     if (D.z != NULL) {
         table_name = synq_span_dequote(pCtx, D);
         schema = synq_span_dequote(pCtx, Y);

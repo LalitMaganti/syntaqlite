@@ -200,10 +200,10 @@ SYNTAQLITE_API const void* syntaqlite_parser_node(SyntaqliteParser* p,
                                                   uint32_t node_id);
 
 // Return a pointer to the source text bound by the last reset() call.
-SYNTAQLITE_API const char* syntaqlite_parser_source(SyntaqliteParser* p);
+SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p);
 
 // Return the byte length of the source text bound by the last reset() call.
-SYNTAQLITE_API uint32_t syntaqlite_parser_source_length(SyntaqliteParser* p);
+SYNTAQLITE_API uint32_t syntaqlite_parser_text_length(SyntaqliteParser* p);
 
 // Return the number of nodes currently in the arena.
 SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
@@ -211,13 +211,6 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
 // ---------------------------------------------------------------------------
 // Span accessors
 // ---------------------------------------------------------------------------
-
-// A byte range `[start, end)` in the user's authored input text.
-// Returned by `syntaqlite_parser_span_text_range`.
-typedef struct SyntaqliteTextRange {
-  uint32_t start;
-  uint32_t end;
-} SyntaqliteTextRange;
 
 // One frame in a span traceback, produced by
 // `syntaqlite_parser_traceback`.  Each frame is self-contained: it
@@ -264,7 +257,7 @@ typedef struct SyntaqliteTracebackFrame {
 // that need to retain frames across such calls must copy them out.
 SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
     SyntaqliteParser* p,
-    const SyntaqliteSourceSpan* span,
+    const SyntaqliteTextSpan* span,
     uint32_t* out_count);
 
 // Post-expansion text for `span` — the bytes the tokenizer actually saw.
@@ -275,7 +268,7 @@ SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
 // Returns NULL (and writes 0 to `*out_len`) for empty or invalid spans.
 SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
     SyntaqliteParser* p,
-    const SyntaqliteSourceSpan* span,
+    const SyntaqliteTextSpan* span,
     uint32_t* out_len);
 
 // Authored text for `span` — always a slice of the input source.
@@ -288,19 +281,16 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
 //
 // Always a direct slice of the source — no allocation.  Returns NULL
 // (and writes 0 to `*out_len`) for empty or invalid spans.
+//
+// `out_offset` is optional; when non-NULL it receives the byte offset
+// in the input source where the returned slice begins (so callers can
+// compute source-relative positions without pointer arithmetic).
+// Written 0 for empty or invalid spans.
 SYNTAQLITE_API const char* syntaqlite_parser_span_text(
     SyntaqliteParser* p,
-    const SyntaqliteSourceSpan* span,
-    uint32_t* out_len);
-
-// Byte range of `syntaqlite_parser_span_text(span)` in the input source.
-// The returned range satisfies:
-//   syntaqlite_parser_span_text(span) ==
-//       source[range.start .. range.end]
-// Returns `{0, 0}` for empty or invalid spans.
-SYNTAQLITE_API SyntaqliteTextRange
-syntaqlite_parser_span_text_range(SyntaqliteParser* p,
-                                  const SyntaqliteSourceSpan* span);
+    const SyntaqliteTextSpan* span,
+    uint32_t* out_len,
+    uint32_t* out_offset);
 
 // ---------------------------------------------------------------------------
 // Node and list helpers

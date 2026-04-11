@@ -18,7 +18,7 @@ Here's everything you need to represent and format `CAST(expr AS type)`:
 ```synq
 node CastExpr {
   expr: index Expr
-  type_name: inline SyntaqliteSourceSpan
+  type_name: inline SyntaqliteTextSpan
 
   fmt { "CAST(" child(expr) " AS " span(type_name) ")" }
 }
@@ -34,7 +34,7 @@ storage class, and a type:
 - `expr: index Expr` — an `index` field is a reference to another
   node in the AST arena. The generated struct stores a node index; the
   builder function takes a node index parameter.
-- `type_name: inline SyntaqliteSourceSpan` — an `inline` field is
+- `type_name: inline SyntaqliteTextSpan` — an `inline` field is
   stored directly in the node struct. Source spans, enums, flags, and
   bools are all inline.
 

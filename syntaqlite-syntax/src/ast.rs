@@ -191,59 +191,24 @@ pub trait TypedNodeId: Copy + Into<AnyNodeId> {
     type Node<'a>: GrammarNodeType<'a>;
 }
 
-/// Byte range in the original source text.
-///
-/// For spans inside a macro expansion, points at the macro call site in the
-/// original source (not the expansion buffer).  Use
-/// [`AnyParsedStatement::traceback`](crate::parser::AnyParsedStatement::traceback)
-/// if you need position info inside the expansion.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct SourceRange {
-    /// Inclusive start offset, in bytes.
-    pub start: u32,
-    /// Exclusive end offset, in bytes.
-    pub end: u32,
-}
-
-impl SourceRange {
-    /// Returns `true` if this range covers zero bytes.
-    pub fn is_empty(self) -> bool {
-        self.start == self.end
-    }
-
-    /// Byte length of the range.
-    pub fn len(self) -> u32 {
-        self.end - self.start
-    }
-}
-
-impl From<SourceRange> for std::ops::Range<usize> {
-    fn from(r: SourceRange) -> std::ops::Range<usize> {
-        r.start as usize..r.end as usize
-    }
-}
-
 /// Reflected field value extracted from a node.
 ///
 /// Used by dialect-agnostic AST tooling built on
 /// [`AnyParsedStatement::extract_fields`](crate::parser::AnyParsedStatement::extract_fields).
+///
+/// Mirrors the C-side 1:1: `Span` wraps the raw `TextSpan` struct and
+/// callers use the accessor methods on
+/// [`AnyParsedStatement`](crate::parser::AnyParsedStatement) (e.g.
+/// [`span_text`](crate::parser::AnyParsedStatement::span_text)) to get
+/// the bytes / authored offset / expansion-layer view.
 #[derive(Clone, Copy, Debug)]
-pub enum FieldValue<'a> {
+pub enum FieldValue {
     /// A child node reference.
     NodeId(AnyNodeId),
-    /// A source text span.
-    Span {
-        /// The span text.  When `quoted` is true this is the bare identifier
-        /// with surrounding quotes stripped.  For spans inside a macro
-        /// expansion, this is the resolved text in the expansion buffer.
-        text: &'a str,
-        /// Whether the identifier was quoted in source.  The formatter
-        /// re-wraps quoted spans in standard double quotes (`"..."`).
-        quoted: bool,
-        /// Byte range in the original source.  For spans inside a macro
-        /// expansion, points at the entire macro call site.
-        source: SourceRange,
-    },
+    /// A source text span.  Use
+    /// [`AnyParsedStatement::span_text`](crate::parser::AnyParsedStatement::span_text)
+    /// to resolve to authored bytes.
+    Span(TextSpan),
     /// A boolean flag.
     Bool(bool),
     /// A compact bitfield of flags.
@@ -256,12 +221,12 @@ pub enum FieldValue<'a> {
 ///
 /// Returned by [`AnyParsedStatement::extract_fields`](crate::parser::AnyParsedStatement::extract_fields)
 /// and indexable via `fields[idx]`.
-pub struct NodeFields<'a> {
-    buf: [std::mem::MaybeUninit<FieldValue<'a>>; 16],
+pub struct NodeFields {
+    buf: [std::mem::MaybeUninit<FieldValue>; 16],
     len: usize,
 }
 
-impl<'a> NodeFields<'a> {
+impl NodeFields {
     /// Create an empty `NodeFields`.
     pub(crate) fn new() -> Self {
         Self {
@@ -274,7 +239,7 @@ impl<'a> NodeFields<'a> {
     ///
     /// # Panics
     /// Panics if more than 16 fields are pushed.
-    pub(crate) fn push(&mut self, val: FieldValue<'a>) {
+    pub(crate) fn push(&mut self, val: FieldValue) {
         assert!(self.len < 16, "NodeFields overflow: more than 16 fields");
         self.buf[self.len] = std::mem::MaybeUninit::new(val);
         self.len += 1;
@@ -291,10 +256,10 @@ impl<'a> NodeFields<'a> {
     }
 }
 
-impl<'a> std::ops::Index<usize> for NodeFields<'a> {
-    type Output = FieldValue<'a>;
+impl std::ops::Index<usize> for NodeFields {
+    type Output = FieldValue;
 
-    fn index(&self, idx: usize) -> &FieldValue<'a> {
+    fn index(&self, idx: usize) -> &FieldValue {
         assert!(
             idx < self.len,
             "field index {} out of bounds (len={})",
@@ -306,7 +271,7 @@ impl<'a> std::ops::Index<usize> for NodeFields<'a> {
     }
 }
 
-impl std::fmt::Debug for NodeFields<'_> {
+impl std::fmt::Debug for NodeFields {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let mut list = f.debug_list();
         for i in 0..self.len {
@@ -402,26 +367,27 @@ mod serde_impl {
     /// `"field_name": <this>`.
     struct FieldValueSerializer<'a, 'b> {
         meta: &'b FieldMeta<'static>,
-        value: &'b FieldValue<'a>,
+        value: &'b FieldValue,
         stmt: &'b AnyParsedStatement<'a>,
     }
 
     impl serde::Serialize for FieldValueSerializer<'_, '_> {
         fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-            match (self.meta.kind(), self.value) {
+            match (self.meta.kind(), *self.value) {
                 // Node field: recurse, or null if absent.
                 (FieldKind::NodeId, FieldValue::NodeId(id)) => {
                     if id.is_null() {
                         serializer.serialize_none()
                     } else {
-                        match AnyNode::from_result(self.stmt, *id) {
+                        match AnyNode::from_result(self.stmt, id) {
                             Some(node) => node.serialize(serializer),
                             None => serializer.serialize_none(),
                         }
                     }
                 }
-                // Span: text string, or null for an absent/empty span.
-                (FieldKind::Span, FieldValue::Span { text, .. }) => {
+                // Span: authored text slice of the source, or null when empty.
+                (FieldKind::Span, FieldValue::Span(span)) => {
+                    let (text, _) = self.stmt.span_text(span);
                     if text.is_empty() {
                         serializer.serialize_none()
                     } else {
@@ -429,10 +395,10 @@ mod serde_impl {
                     }
                 }
                 // Bool: plain boolean.
-                (FieldKind::Bool, FieldValue::Bool(b)) => serializer.serialize_bool(*b),
+                (FieldKind::Bool, FieldValue::Bool(b)) => serializer.serialize_bool(b),
                 // Enum: display-name string, or null if no display name.
                 (FieldKind::Enum, FieldValue::Enum(discriminant)) => {
-                    match self.meta.display_name(*discriminant as usize) {
+                    match self.meta.display_name(discriminant as usize) {
                         Some(s) => serializer.serialize_str(s),
                         None => serializer.serialize_none(),
                     }
@@ -440,7 +406,6 @@ mod serde_impl {
                 // Flags: array of active flag-name strings (empty array when none set).
                 (FieldKind::Flags, FieldValue::Flags(bits)) => {
                     use serde::ser::SerializeSeq;
-                    let bits = *bits;
                     let active: Vec<&'static str> = (0..self.meta.display_count())
                         .filter(|&i| bits & (1u8 << i) != 0)
                         .filter_map(|i| self.meta.display_name(i))
@@ -461,37 +426,39 @@ mod serde_impl {
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
 pub(crate) use ffi::CNodeList as RawNodeList;
-pub(crate) use ffi::CSourceSpan as SourceSpan;
+pub use ffi::CTextSpan as TextSpan;
 
 mod ffi {
     use crate::ast::AnyNodeId;
 
     /// A source byte range stored in an AST node.
     ///
-    /// Mirrors the C `SyntaqliteSourceSpan` layout.  Embedded in generated
-    /// node structs for token-valued fields (identifiers, literals).
-    ///
-    /// Rust callers normally never see a raw `CSourceSpan`: span fields are
-    /// eagerly resolved into [`FieldValue::Span`](super::FieldValue) values
-    /// with text and a [`SourceRange`](super::SourceRange) already populated.
+    /// Mirrors the C `SyntaqliteTextSpan` layout 1:1.  The fields are
+    /// deliberately opaque to Rust callers: the encoded position may
+    /// refer to either the input source or an internal macro expansion
+    /// buffer.  Resolve a `TextSpan` via the accessor methods on
+    /// [`AnyParsedStatement`](crate::parser::AnyParsedStatement):
+    /// [`span_text`](crate::parser::AnyParsedStatement::span_text),
+    /// [`span_expanded_text`](crate::parser::AnyParsedStatement::span_expanded_text),
+    /// [`span_text_offset`](crate::parser::AnyParsedStatement::span_text_offset).
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
     #[repr(C)]
-    pub(crate) struct CSourceSpan {
-        offset: u32,
-        length: u16,
-        flags: u8,
+    pub struct CTextSpan {
+        pub(crate) offset: u32,
+        pub(crate) length: u16,
+        pub(crate) flags: u8,
         /// Internal: 0 = original source, >0 = macro expansion layer id.
         /// Read by the C-side span accessors; the Rust side passes the
         /// whole struct across the FFI boundary without inspecting it.
-        _layer_id: u8,
+        pub(crate) _layer_id: u8,
     }
 
     /// Mirror of C `SYNTAQLITE_SPAN_FLAG_QUOTED` from `types.h`.
     const SPAN_FLAG_QUOTED: u8 = 1;
 
-    impl CSourceSpan {
+    impl CTextSpan {
         /// Returns `true` if the span covers zero bytes.
-        pub(crate) fn is_empty(self) -> bool {
+        pub fn is_empty(self) -> bool {
             self.length == 0
         }
 
@@ -499,7 +466,7 @@ mod ffi {
         /// `` `...` ``, or `[...]`).  The span points at the dequoted inner
         /// text; the formatter re-wraps quoted spans in standard double
         /// quotes.
-        pub(crate) fn is_quoted(self) -> bool {
+        pub fn is_quoted(self) -> bool {
             (self.flags & SPAN_FLAG_QUOTED) != 0
         }
     }

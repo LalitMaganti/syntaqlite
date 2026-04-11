@@ -136,7 +136,9 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
 
         if let SemanticRole::CteBinding { name, body, .. } = role {
             let cte_name = match fields[name as usize] {
-                FieldValue::Span { text: s, .. } if !s.is_empty() => Some(s.to_ascii_lowercase()),
+                FieldValue::Span(sp) if !sp.is_empty() => {
+                    Some(self.stmt.span_expanded_text(sp).to_ascii_lowercase())
+                }
                 FieldValue::NodeId(id) if !id.is_null() => {
                     self.span_text(id).map(|s| s.to_ascii_lowercase())
                 }
@@ -514,7 +516,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
 
     fn trace_expr_origin(
         &mut self,
-        child_fields: &syntaqlite_syntax::any::NodeFields<'_>,
+        child_fields: &syntaqlite_syntax::any::NodeFields,
         expr_idx: u8,
         sources: &HashMap<String, SourceInfo>,
     ) -> Option<ColumnOrigin> {
@@ -535,14 +537,16 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         };
 
         let col_name = match expr_fields[col_idx as usize] {
-            FieldValue::Span { text: s, .. } if !s.is_empty() => s.to_ascii_lowercase(),
+            FieldValue::Span(sp) if !sp.is_empty() => {
+                self.stmt.span_expanded_text(sp).to_ascii_lowercase()
+            }
             _ => return None,
         };
 
-        let source_name = if let FieldValue::Span { text: s, .. } = expr_fields[tbl_idx as usize]
-            && !s.is_empty()
+        let source_name = if let FieldValue::Span(sp) = expr_fields[tbl_idx as usize]
+            && !sp.is_empty()
         {
-            s.to_ascii_lowercase()
+            self.stmt.span_expanded_text(sp).to_ascii_lowercase()
         } else {
             find_source_for_column(sources, &col_name)?
         };
@@ -580,7 +584,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
 
     fn infer_column_name(
         &self,
-        child_fields: &syntaqlite_syntax::any::NodeFields<'_>,
+        child_fields: &syntaqlite_syntax::any::NodeFields,
         alias_idx: u8,
         expr_idx: u8,
     ) -> Option<String> {
@@ -590,10 +594,10 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
             && let Some((_, alias_fields)) = self.stmt.extract_fields(alias_id)
         {
             for j in 0..alias_fields.len() {
-                if let FieldValue::Span { text: s, .. } = alias_fields[j]
-                    && !s.is_empty()
+                if let FieldValue::Span(sp) = alias_fields[j]
+                    && !sp.is_empty()
                 {
-                    return Some(s.to_ascii_lowercase());
+                    return Some(self.stmt.span_expanded_text(sp).to_ascii_lowercase());
                 }
             }
         }
@@ -605,10 +609,10 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
             && let SemanticRole::ColumnRef {
                 column: col_idx, ..
             } = self.role_for(expr_tag)
-            && let FieldValue::Span { text: col_span, .. } = expr_fields[col_idx as usize]
-            && !col_span.is_empty()
+            && let FieldValue::Span(sp) = expr_fields[col_idx as usize]
+            && !sp.is_empty()
         {
-            return Some(col_span.to_ascii_lowercase());
+            return Some(self.stmt.span_expanded_text(sp).to_ascii_lowercase());
         }
 
         // Fallback: use expression source text.
@@ -635,10 +639,10 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         }
         let (_, fields) = self.stmt.extract_fields(node_id)?;
         for i in 0..fields.len() {
-            if let FieldValue::Span { text: s, .. } = fields[i]
-                && !s.is_empty()
+            if let FieldValue::Span(sp) = fields[i]
+                && !sp.is_empty()
             {
-                return Some(s.to_owned());
+                return Some(self.stmt.span_expanded_text(sp).to_owned());
             }
         }
         None
@@ -646,14 +650,16 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
 
     fn span_text_from_field(
         &self,
-        fields: &syntaqlite_syntax::any::NodeFields<'_>,
+        fields: &syntaqlite_syntax::any::NodeFields,
         field_idx: u8,
     ) -> Option<String> {
         if field_idx == crate::dialect::FIELD_ABSENT {
             return None;
         }
         match fields[field_idx as usize] {
-            FieldValue::Span { text: s, .. } if !s.is_empty() => Some(s.to_owned()),
+            FieldValue::Span(sp) if !sp.is_empty() => {
+                Some(self.stmt.span_expanded_text(sp).to_owned())
+            }
             FieldValue::NodeId(id) if !id.is_null() => self.span_text(id),
             _ => None,
         }

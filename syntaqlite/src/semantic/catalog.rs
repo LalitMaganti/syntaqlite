@@ -651,7 +651,9 @@ impl Catalog {
                 without_rowid,
             } => {
                 let name_val = match fields[name as usize] {
-                    FieldValue::Span { text: s, .. } if !s.is_empty() => s.to_string(),
+                    FieldValue::Span(sp) if !sp.is_empty() => {
+                        stmt.span_expanded_text(sp).to_string()
+                    }
                     _ => return,
                 };
                 let cols = extract_columns(
@@ -674,7 +676,9 @@ impl Catalog {
                 select,
             } => {
                 let name_val = match fields[name as usize] {
-                    FieldValue::Span { text: s, .. } if !s.is_empty() => s.to_string(),
+                    FieldValue::Span(sp) if !sp.is_empty() => {
+                        stmt.span_expanded_text(sp).to_string()
+                    }
                     _ => return,
                 };
                 let cols = extract_columns(
@@ -693,7 +697,9 @@ impl Catalog {
                 ..
             } => {
                 let name_val = match fields[name as usize] {
-                    FieldValue::Span { text: s, .. } if !s.is_empty() => s.to_string(),
+                    FieldValue::Span(sp) if !sp.is_empty() => {
+                        stmt.span_expanded_text(sp).to_string()
+                    }
                     _ => return,
                 };
                 let arity = extract_function_arity(stmt, &fields, opt_field(args));
@@ -989,13 +995,14 @@ fn ddl_name_span(
         SemanticRole::DefineTable { name, .. } | SemanticRole::DefineView { name, .. } => *name,
         _ => return None,
     };
-    let FieldValue::Span { text: s, .. } = fields[name_idx as usize] else {
+    let FieldValue::Span(sp) = fields[name_idx as usize] else {
         return None;
     };
-    if s.is_empty() {
+    if sp.is_empty() {
         return None;
     }
-    let off = s.as_ptr() as usize - stmt.source().as_ptr() as usize;
+    let (s, off_u32) = stmt.span_text(sp);
+    let off = off_u32 as usize;
     Some((s.to_ascii_lowercase(), off, off + s.len()))
 }
 
@@ -1058,12 +1065,12 @@ fn column_def_name_span<'a>(
     }
     let (_, name_fields) = stmt.extract_fields(name_id)?;
     for j in 0..name_fields.len() {
-        if let FieldValue::Span {
-            text: s, source, ..
-        } = name_fields[j]
-            && !s.is_empty()
+        if let FieldValue::Span(sp) = name_fields[j]
+            && !sp.is_empty()
         {
-            return Some((s, source.start as usize, source.end as usize));
+            let (s, off) = stmt.span_text(sp);
+            let start = off as usize;
+            return Some((s, start, start + s.len()));
         }
     }
     None
@@ -1075,9 +1082,9 @@ fn column_def_name_span<'a>(
 /// the result columns of the AS-SELECT body. Returns `None` only when
 /// inference is impossible (e.g. `SELECT *`), which tells the catalog to
 /// accept any column reference conservatively.
-fn extract_columns<'a>(
-    stmt: &AnyParsedStatement<'a>,
-    fields: &NodeFields<'a>,
+fn extract_columns(
+    stmt: &AnyParsedStatement<'_>,
+    fields: &NodeFields,
     columns_field: Option<u8>,
     select_field: Option<u8>,
     roles: &'static [SemanticRole],
@@ -1106,9 +1113,9 @@ fn extract_columns<'a>(
 }
 
 /// Check whether a DDL function returns a table.
-fn is_table_returning<'a>(
-    stmt: &AnyParsedStatement<'a>,
-    fields: &NodeFields<'a>,
+fn is_table_returning(
+    stmt: &AnyParsedStatement<'_>,
+    fields: &NodeFields,
     return_type_field: Option<u8>,
     roles: &'static [SemanticRole],
 ) -> bool {
@@ -1135,9 +1142,9 @@ fn is_table_returning<'a>(
 }
 
 /// Extract argument count for a function DDL contribution.
-fn extract_function_arity<'a>(
-    stmt: &AnyParsedStatement<'a>,
-    fields: &NodeFields<'a>,
+fn extract_function_arity(
+    stmt: &AnyParsedStatement<'_>,
+    fields: &NodeFields,
     args_field: Option<u8>,
 ) -> AritySpec {
     let Some(args_idx) = args_field else {
@@ -1190,10 +1197,10 @@ fn columns_from_column_list(
         };
         // The first non-empty Span inside the name node is the identifier text.
         for j in 0..name_fields.len() {
-            if let FieldValue::Span { text: s, .. } = name_fields[j]
-                && !s.is_empty()
+            if let FieldValue::Span(sp) = name_fields[j]
+                && !sp.is_empty()
             {
-                out.push(s.to_ascii_lowercase());
+                out.push(stmt.span_expanded_text(sp).to_ascii_lowercase());
                 break;
             }
         }
@@ -1279,9 +1286,9 @@ pub(super) fn columns_from_select(
 ///    expression node (`SQLite` calls this `ENAME_SPAN`, stored by
 ///    `sqlite3ExprListSetSpan`). For `SELECT 1` this gives `"1"`;
 ///    for `SELECT 1+2` it gives `"1+2"`; etc.
-fn infer_result_col_name<'a>(
-    stmt: &AnyParsedStatement<'a>,
-    child_fields: &NodeFields<'a>,
+fn infer_result_col_name(
+    stmt: &AnyParsedStatement<'_>,
+    child_fields: &NodeFields,
     alias_idx: u8,
     expr_idx: u8,
     roles: &[SemanticRole],
@@ -1292,10 +1299,10 @@ fn infer_result_col_name<'a>(
         && let Some((_, alias_fields)) = stmt.extract_fields(alias_id)
     {
         for j in 0..alias_fields.len() {
-            if let FieldValue::Span { text: s, .. } = alias_fields[j]
-                && !s.is_empty()
+            if let FieldValue::Span(sp) = alias_fields[j]
+                && !sp.is_empty()
             {
-                return Some(s.to_ascii_lowercase());
+                return Some(stmt.span_expanded_text(sp).to_ascii_lowercase());
             }
         }
     }
@@ -1316,10 +1323,10 @@ fn infer_result_col_name<'a>(
     if let SemanticRole::ColumnRef {
         column: col_idx, ..
     } = expr_role
-        && let FieldValue::Span { text: col_span, .. } = expr_fields[col_idx as usize]
-        && !col_span.is_empty()
+        && let FieldValue::Span(sp) = expr_fields[col_idx as usize]
+        && !sp.is_empty()
     {
-        return Some(col_span.to_ascii_lowercase());
+        return Some(stmt.span_expanded_text(sp).to_ascii_lowercase());
     }
 
     // Fallback: use the raw source text spanned by the expression node
@@ -1336,11 +1343,10 @@ pub(super) fn expr_source_text<'a>(
     stmt: &AnyParsedStatement<'a>,
     id: AnyNodeId,
 ) -> Option<&'a str> {
-    let source = stmt.source();
-    let base = source.as_ptr() as usize;
+    let source = stmt.text();
     let mut min = usize::MAX;
     let mut max = 0usize;
-    collect_spans(stmt, id, base, &mut min, &mut max);
+    collect_spans(stmt, id, &mut min, &mut max);
     if min < max {
         Some(&source[min..max])
     } else {
@@ -1349,22 +1355,17 @@ pub(super) fn expr_source_text<'a>(
 }
 
 /// Walk `id` and all its descendants, updating `[min, max)` with every `Span`.
-fn collect_spans(
-    stmt: &AnyParsedStatement<'_>,
-    id: AnyNodeId,
-    base: usize,
-    min: &mut usize,
-    max: &mut usize,
-) {
+fn collect_spans(stmt: &AnyParsedStatement<'_>, id: AnyNodeId, min: &mut usize, max: &mut usize) {
     if id.is_null() {
         return;
     }
     if let Some((_, fields)) = stmt.extract_fields(id) {
         for i in 0..fields.len() {
             match fields[i] {
-                FieldValue::Span { text: s, .. } if !s.is_empty() => {
-                    let start = s.as_ptr() as usize - base;
-                    let end = start + s.len();
+                FieldValue::Span(sp) if !sp.is_empty() => {
+                    let (text, off) = stmt.span_text(sp);
+                    let start = off as usize;
+                    let end = start + text.len();
                     if start < *min {
                         *min = start;
                     }
@@ -1373,7 +1374,7 @@ fn collect_spans(
                     }
                 }
                 FieldValue::NodeId(child) if !child.is_null() => {
-                    collect_spans(stmt, child, base, min, max);
+                    collect_spans(stmt, child, min, max);
                 }
                 _ => {}
             }
@@ -1382,7 +1383,7 @@ fn collect_spans(
     // Also descend into list children (e.g. ExprList inside a FunctionCall).
     if let Some(children) = stmt.list_children(id) {
         for &child in children {
-            collect_spans(stmt, child, base, min, max);
+            collect_spans(stmt, child, min, max);
         }
     }
 }

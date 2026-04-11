@@ -163,7 +163,7 @@ pub trait LanguageExtractor {
     type Fragment;
     fn extract(source: &str) -> Vec<Self::Fragment>;
     fn sql_text<'a>(fragment: &'a Self::Fragment) -> &'a str;
-    fn map_span(fragment: &Self::Fragment, sql_span: SourceSpan) -> SourceSpan;
+    fn map_span(fragment: &Self::Fragment, sql_span: TextSpan) -> TextSpan;
 }
 ```
 

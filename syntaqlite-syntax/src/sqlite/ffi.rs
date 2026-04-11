@@ -5,7 +5,7 @@
 
 #![allow(clippy::struct_field_names)]
 
-use crate::ast::{AnyNodeId, ArenaNode, SourceSpan};
+use crate::ast::{AnyNodeId, ArenaNode, TextSpan};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
@@ -19,7 +19,7 @@ pub(crate) enum Bool {
 #[repr(C)]
 pub(crate) struct AggregateFunctionCall {
     pub(crate) tag: u32,
-    pub(crate) func_name: SourceSpan,
+    pub(crate) func_name: TextSpan,
     pub(crate) flags: super::ast::AggregateFunctionCallFlags,
     pub(crate) args: AnyNodeId,
     pub(crate) orderby: AnyNodeId,
@@ -31,7 +31,7 @@ pub(crate) struct AggregateFunctionCall {
 #[repr(C)]
 pub(crate) struct OrderedSetFunctionCall {
     pub(crate) tag: u32,
-    pub(crate) func_name: SourceSpan,
+    pub(crate) func_name: TextSpan,
     pub(crate) flags: super::ast::AggregateFunctionCallFlags,
     pub(crate) args: AnyNodeId,
     pub(crate) orderby_expr: AnyNodeId,
@@ -44,16 +44,16 @@ pub(crate) struct OrderedSetFunctionCall {
 pub(crate) struct CastExpr {
     pub(crate) tag: u32,
     pub(crate) expr: AnyNodeId,
-    pub(crate) type_name: SourceSpan,
+    pub(crate) type_name: TextSpan,
 }
 
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub(crate) struct ColumnRef {
     pub(crate) tag: u32,
-    pub(crate) column: SourceSpan,
-    pub(crate) table: SourceSpan,
-    pub(crate) schema: SourceSpan,
+    pub(crate) column: TextSpan,
+    pub(crate) table: TextSpan,
+    pub(crate) schema: TextSpan,
 }
 
 #[derive(Debug, Clone)]
@@ -139,7 +139,7 @@ pub(crate) struct CaseWhen {
 #[repr(C)]
 pub(crate) struct ForeignKeyClause {
     pub(crate) tag: u32,
-    pub(crate) ref_table: SourceSpan,
+    pub(crate) ref_table: TextSpan,
     pub(crate) ref_columns: AnyNodeId,
     pub(crate) on_delete: super::ast::ForeignKeyAction,
     pub(crate) on_update: super::ast::ForeignKeyAction,
@@ -151,11 +151,11 @@ pub(crate) struct ForeignKeyClause {
 pub(crate) struct ColumnConstraint {
     pub(crate) tag: u32,
     pub(crate) kind: super::ast::ColumnConstraintType,
-    pub(crate) constraint_name: SourceSpan,
+    pub(crate) constraint_name: TextSpan,
     pub(crate) onconf: super::ast::ConflictAction,
     pub(crate) sort_order: super::ast::SortOrder,
     pub(crate) is_autoincrement: Bool,
-    pub(crate) collation_name: SourceSpan,
+    pub(crate) collation_name: TextSpan,
     pub(crate) generated_storage: super::ast::GeneratedColumnStorage,
     pub(crate) default_expr: AnyNodeId,
     pub(crate) check_expr: AnyNodeId,
@@ -168,7 +168,7 @@ pub(crate) struct ColumnConstraint {
 pub(crate) struct ColumnDef {
     pub(crate) tag: u32,
     pub(crate) column_name: AnyNodeId,
-    pub(crate) type_name: SourceSpan,
+    pub(crate) type_name: TextSpan,
     pub(crate) constraints: AnyNodeId,
 }
 
@@ -177,7 +177,7 @@ pub(crate) struct ColumnDef {
 pub(crate) struct TableConstraint {
     pub(crate) tag: u32,
     pub(crate) kind: super::ast::TableConstraintType,
-    pub(crate) constraint_name: SourceSpan,
+    pub(crate) constraint_name: TextSpan,
     pub(crate) onconf: super::ast::ConflictAction,
     pub(crate) is_autoincrement: Bool,
     pub(crate) pk_columns: AnyNodeId,
@@ -190,8 +190,8 @@ pub(crate) struct TableConstraint {
 #[repr(C)]
 pub(crate) struct CreateTableStmt {
     pub(crate) tag: u32,
-    pub(crate) table_name: SourceSpan,
-    pub(crate) schema: SourceSpan,
+    pub(crate) table_name: TextSpan,
+    pub(crate) schema: TextSpan,
     pub(crate) is_temp: Bool,
     pub(crate) if_not_exists: Bool,
     pub(crate) flags: super::ast::CreateTableStmtFlags,
@@ -204,7 +204,7 @@ pub(crate) struct CreateTableStmt {
 #[repr(C)]
 pub(crate) struct CteDefinition {
     pub(crate) tag: u32,
-    pub(crate) cte_name: SourceSpan,
+    pub(crate) cte_name: TextSpan,
     pub(crate) materialized: super::ast::Materialized,
     pub(crate) columns: AnyNodeId,
     pub(crate) select: AnyNodeId,
@@ -236,7 +236,7 @@ pub(crate) struct DeleteStmt {
     pub(crate) tag: u32,
     pub(crate) table: AnyNodeId,
     pub(crate) index_hint: super::ast::IndexHint,
-    pub(crate) index_name: SourceSpan,
+    pub(crate) index_name: TextSpan,
     pub(crate) where_clause: AnyNodeId,
     pub(crate) orderby: AnyNodeId,
     pub(crate) limit_clause: AnyNodeId,
@@ -247,7 +247,7 @@ pub(crate) struct DeleteStmt {
 #[repr(C)]
 pub(crate) struct SetClause {
     pub(crate) tag: u32,
-    pub(crate) column: SourceSpan,
+    pub(crate) column: TextSpan,
     pub(crate) columns: AnyNodeId,
     pub(crate) value: AnyNodeId,
 }
@@ -259,7 +259,7 @@ pub(crate) struct UpdateStmt {
     pub(crate) conflict_action: super::ast::ConflictAction,
     pub(crate) table: AnyNodeId,
     pub(crate) index_hint: super::ast::IndexHint,
-    pub(crate) index_name: SourceSpan,
+    pub(crate) index_name: TextSpan,
     pub(crate) setlist: AnyNodeId,
     pub(crate) from_clause: AnyNodeId,
     pub(crate) where_clause: AnyNodeId,
@@ -302,28 +302,28 @@ pub(crate) struct UnaryExpr {
 pub(crate) struct Literal {
     pub(crate) tag: u32,
     pub(crate) literal_type: super::ast::LiteralType,
-    pub(crate) source: SourceSpan,
+    pub(crate) source: TextSpan,
 }
 
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub(crate) struct IdentName {
     pub(crate) tag: u32,
-    pub(crate) source: SourceSpan,
+    pub(crate) source: TextSpan,
 }
 
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub(crate) struct Error {
     pub(crate) tag: u32,
-    pub(crate) source: SourceSpan,
+    pub(crate) source: TextSpan,
 }
 
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub(crate) struct FunctionCall {
     pub(crate) tag: u32,
-    pub(crate) func_name: SourceSpan,
+    pub(crate) func_name: TextSpan,
     pub(crate) flags: super::ast::FunctionCallFlags,
     pub(crate) args: AnyNodeId,
     pub(crate) filter_clause: AnyNodeId,
@@ -334,7 +334,7 @@ pub(crate) struct FunctionCall {
 #[repr(C)]
 pub(crate) struct Variable {
     pub(crate) tag: u32,
-    pub(crate) source: SourceSpan,
+    pub(crate) source: TextSpan,
 }
 
 #[derive(Debug, Clone)]
@@ -342,7 +342,7 @@ pub(crate) struct Variable {
 pub(crate) struct CollateExpr {
     pub(crate) tag: u32,
     pub(crate) expr: AnyNodeId,
-    pub(crate) collation: SourceSpan,
+    pub(crate) collation: TextSpan,
 }
 
 #[derive(Debug, Clone)]
@@ -441,8 +441,8 @@ pub(crate) struct LimitClause {
 #[repr(C)]
 pub(crate) struct TableRef {
     pub(crate) tag: u32,
-    pub(crate) table_name: SourceSpan,
-    pub(crate) schema: SourceSpan,
+    pub(crate) table_name: TextSpan,
+    pub(crate) schema: TextSpan,
     pub(crate) alias: AnyNodeId,
     pub(crate) args: AnyNodeId,
 }
@@ -486,8 +486,8 @@ pub(crate) struct TriggerEvent {
 #[repr(C)]
 pub(crate) struct CreateTriggerStmt {
     pub(crate) tag: u32,
-    pub(crate) trigger_name: SourceSpan,
-    pub(crate) schema: SourceSpan,
+    pub(crate) trigger_name: TextSpan,
+    pub(crate) schema: TextSpan,
     pub(crate) is_temp: Bool,
     pub(crate) if_not_exists: Bool,
     pub(crate) timing: super::ast::TriggerTiming,
@@ -501,20 +501,20 @@ pub(crate) struct CreateTriggerStmt {
 #[repr(C)]
 pub(crate) struct CreateVirtualTableStmt {
     pub(crate) tag: u32,
-    pub(crate) table_name: SourceSpan,
-    pub(crate) schema: SourceSpan,
-    pub(crate) module_name: SourceSpan,
+    pub(crate) table_name: TextSpan,
+    pub(crate) schema: TextSpan,
+    pub(crate) module_name: TextSpan,
     pub(crate) if_not_exists: Bool,
-    pub(crate) module_args: SourceSpan,
+    pub(crate) module_args: TextSpan,
 }
 
 #[derive(Debug, Clone)]
 #[repr(C)]
 pub(crate) struct PragmaStmt {
     pub(crate) tag: u32,
-    pub(crate) pragma_name: SourceSpan,
-    pub(crate) schema: SourceSpan,
-    pub(crate) value: SourceSpan,
+    pub(crate) pragma_name: TextSpan,
+    pub(crate) schema: TextSpan,
+    pub(crate) value: TextSpan,
     pub(crate) pragma_form: super::ast::PragmaForm,
 }
 
@@ -522,8 +522,8 @@ pub(crate) struct PragmaStmt {
 #[repr(C)]
 pub(crate) struct AnalyzeOrReindexStmt {
     pub(crate) tag: u32,
-    pub(crate) target_name: SourceSpan,
-    pub(crate) schema: SourceSpan,
+    pub(crate) target_name: TextSpan,
+    pub(crate) schema: TextSpan,
     pub(crate) kind: super::ast::AnalyzeOrReindexOp,
 }
 
@@ -547,7 +547,7 @@ pub(crate) struct DetachStmt {
 #[repr(C)]
 pub(crate) struct VacuumStmt {
     pub(crate) tag: u32,
-    pub(crate) schema: SourceSpan,
+    pub(crate) schema: TextSpan,
     pub(crate) filename: AnyNodeId,
 }
 
@@ -563,9 +563,9 @@ pub(crate) struct ExplainStmt {
 #[repr(C)]
 pub(crate) struct CreateIndexStmt {
     pub(crate) tag: u32,
-    pub(crate) index_name: SourceSpan,
-    pub(crate) schema: SourceSpan,
-    pub(crate) table_name: SourceSpan,
+    pub(crate) index_name: TextSpan,
+    pub(crate) schema: TextSpan,
+    pub(crate) table_name: TextSpan,
     pub(crate) is_unique: Bool,
     pub(crate) if_not_exists: Bool,
     pub(crate) columns: AnyNodeId,
@@ -576,8 +576,8 @@ pub(crate) struct CreateIndexStmt {
 #[repr(C)]
 pub(crate) struct CreateViewStmt {
     pub(crate) tag: u32,
-    pub(crate) view_name: SourceSpan,
-    pub(crate) schema: SourceSpan,
+    pub(crate) view_name: TextSpan,
+    pub(crate) schema: TextSpan,
     pub(crate) is_temp: Bool,
     pub(crate) if_not_exists: Bool,
     pub(crate) column_names: AnyNodeId,
@@ -613,7 +613,7 @@ pub(crate) struct FrameSpec {
 #[repr(C)]
 pub(crate) struct WindowDef {
     pub(crate) tag: u32,
-    pub(crate) base_window_name: SourceSpan,
+    pub(crate) base_window_name: TextSpan,
     pub(crate) partition_by: AnyNodeId,
     pub(crate) orderby: AnyNodeId,
     pub(crate) frame: AnyNodeId,
@@ -623,7 +623,7 @@ pub(crate) struct WindowDef {
 #[repr(C)]
 pub(crate) struct NamedWindowDef {
     pub(crate) tag: u32,
-    pub(crate) window_name: SourceSpan,
+    pub(crate) window_name: TextSpan,
     pub(crate) window_def: AnyNodeId,
 }
 
@@ -633,7 +633,7 @@ pub(crate) struct FilterOver {
     pub(crate) tag: u32,
     pub(crate) filter_expr: AnyNodeId,
     pub(crate) over_def: AnyNodeId,
-    pub(crate) over_name: SourceSpan,
+    pub(crate) over_name: TextSpan,
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.

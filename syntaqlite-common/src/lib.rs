@@ -265,9 +265,9 @@ pub mod roles {
         pub node_tag_lo: u8,
         /// Node tag high byte (little-endian).
         pub node_tag_hi: u8,
-        /// Field index for the macro name (`SyntaqliteSourceSpan`).
+        /// Field index for the macro name (`SyntaqliteTextSpan`).
         pub name_field: FieldIdx,
-        /// Field index for the macro body (`SyntaqliteSourceSpan`).
+        /// Field index for the macro body (`SyntaqliteTextSpan`).
         pub body_field: FieldIdx,
         /// Field index for the args list node (`FIELD_ABSENT` if no params).
         pub args_field: FieldIdx,

@@ -12,7 +12,7 @@
 // - pCtx->root: Set to root node ID at input rule
 // - Terminals are SynqParseToken with .z (pointer), .n (length), .type (token ID)
 // - Non-terminals default to uint32_t (node IDs)
-// - synq_span(pCtx, tok) converts a SynqParseToken into SyntaqliteSourceSpan
+// - synq_span(pCtx, tok) converts a SynqParseToken into SyntaqliteTextSpan
 // - SYNQ_NO_SPAN is the zero sentinel span
 
 %token_prefix SYNTAQLITE_TK_
@@ -46,19 +46,19 @@
 // columnname: passes name span + typetoken span from column definition.
 typedef struct SynqColumnNameValue {
   uint32_t name;
-  SyntaqliteSourceSpan typetoken;
+  SyntaqliteTextSpan typetoken;
 } SynqColumnNameValue;
 
 // ccons / tcons / generated: a constraint node + pending constraint name.
 typedef struct SynqConstraintValue {
   uint32_t node;
-  SyntaqliteSourceSpan pending_name;
+  SyntaqliteTextSpan pending_name;
 } SynqConstraintValue;
 
 // carglist / conslist: accumulated constraint list + pending name for next.
 typedef struct SynqConstraintListValue {
   uint32_t list;
-  SyntaqliteSourceSpan pending_name;
+  SyntaqliteTextSpan pending_name;
 } SynqConstraintListValue;
 
 // on_using: ON expr / USING column-list discriminator.
@@ -89,7 +89,7 @@ typedef struct SynqUpsertValue {
 #define YYPARSEFREENEVERNULL 1
 
 // Map parser error bookkeeping to a best-effort source span.
-static inline SyntaqliteSourceSpan synq_error_span(SynqParseCtx* pCtx) {
+static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
   if (pCtx->error_offset == 0xFFFFFFFF || pCtx->error_length == 0) {
     return SYNQ_NO_SPAN;
   }
@@ -97,7 +97,7 @@ static inline SyntaqliteSourceSpan synq_error_span(SynqParseCtx* pCtx) {
   if (len > UINT16_MAX) {
     len = UINT16_MAX;
   }
-  return (SyntaqliteSourceSpan){
+  return (SyntaqliteTextSpan){
       .offset = pCtx->error_offset,
       .length = (uint16_t)len,
       .flags = 0,

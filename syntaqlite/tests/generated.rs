@@ -187,7 +187,7 @@ fn debug_multi_stmt_comments() {
                 ParseOutcome::Err(e) => panic!("parse error: {e:?}"),
             };
             let comments: Vec<_> = stmt.comments().collect();
-            eprintln!("stmt {stmt_num}: source={:?}", stmt.source());
+            eprintln!("stmt {stmt_num}: source={:?}", stmt.text());
             eprintln!("  {} comment(s):", comments.len());
             for c in &comments {
                 let text = &source[c.offset() as usize..(c.offset() + c.length()) as usize];

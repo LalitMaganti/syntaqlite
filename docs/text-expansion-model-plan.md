@@ -222,12 +222,12 @@ struct SyntaqliteParser {
 
 ```c
 // Public struct; _layer_id is an implementation-detail field.
-typedef struct SyntaqliteSourceSpan {
+typedef struct SyntaqliteTextSpan {
     uint32_t offset;
     uint16_t length;
     uint8_t flags;
     uint8_t _layer_id;   // Internal. Do not access.
-} SyntaqliteSourceSpan;
+} SyntaqliteTextSpan;
 
 // Byte range in text() (the user's authored input).
 typedef struct SyntaqliteTextRange {
@@ -284,7 +284,7 @@ typedef struct SyntaqliteParserToken {
 ```c
 // ── Whole-statement text ─────────────────────────────────────────────────
 
-// The user's authored input. Same as syntaqlite_parser_source() today,
+// The user's authored input. Same as syntaqlite_parser_text() today,
 // renamed for vocabulary consistency. (Deferred — see Step 15.)
 SYNTAQLITE_API const char*
 syntaqlite_parser_text(SyntaqliteParser* p, uint32_t* out_len);
@@ -298,7 +298,7 @@ syntaqlite_parser_text(SyntaqliteParser* p, uint32_t* out_len);
 // no allocation.
 SYNTAQLITE_API const char*
 syntaqlite_parser_span_text(SyntaqliteParser* p,
-                            const SyntaqliteSourceSpan* span,
+                            const SyntaqliteTextSpan* span,
                             uint32_t* out_len);
 
 // What the parser's tokenizer saw for this span. For spans outside a
@@ -306,14 +306,14 @@ syntaqlite_parser_span_text(SyntaqliteParser* p,
 // expansion layer's buffer. Always a direct slice — no allocation.
 SYNTAQLITE_API const char*
 syntaqlite_parser_span_expanded_text(SyntaqliteParser* p,
-                                     const SyntaqliteSourceSpan* span,
+                                     const SyntaqliteTextSpan* span,
                                      uint32_t* out_len);
 
 // Byte range of span_text in text(). Always a valid range in the user's
 // authored input.
 SYNTAQLITE_API SyntaqliteTextRange
 syntaqlite_parser_span_text_range(SyntaqliteParser* p,
-                                  const SyntaqliteSourceSpan* span);
+                                  const SyntaqliteTextSpan* span);
 
 // ── Traceback ────────────────────────────────────────────────────────────
 
@@ -331,7 +331,7 @@ syntaqlite_parser_span_text_range(SyntaqliteParser* p,
 // empty or invalid spans.
 SYNTAQLITE_API const SyntaqliteTracebackFrame*
 syntaqlite_parser_traceback(SyntaqliteParser* p,
-                            const SyntaqliteSourceSpan* span,
+                            const SyntaqliteTextSpan* span,
                             uint32_t* out_count);
 ```
 
@@ -490,7 +490,7 @@ substituted arg" diagnostic land directly on the user's code.
 
 From today's codebase:
 
-- `SyntaqliteSourceSpan._buf_idx` field name (renamed to `_layer_id`).
+- `SyntaqliteTextSpan._buf_idx` field name (renamed to `_layer_id`).
 - `SynqMacroRegion` type (unified into `SynqExpansionLayer`).
 - `macro_regions` and `macro_expansions` parser vectors (unified into
   `layers`).
@@ -532,7 +532,7 @@ additive/rename work lands first, then behavior changes, then deletions.
 | 12. `FieldValue::Span` rename                       | ⏳ partial | `extract_field_value` now populates `FieldValue::Span` from the new trio (Session 1 follow-up, PR #90 review). Full rename of the variant's field names (`source` → `text_range`, adding a second authored-text field) still deferred. |
 | 13. Delete old expansion traceback API              | ✅ done | Removed `syntaqlite_parser_expansion_traceback`, `SyntaqliteExpansionFrame`, `ExpansionFrame`, `field_expansion_traceback`. Validator migrated to `traceback()`. |
 | 14. Delete `resolve_span` and `SyntaqliteResolvedSpan` | ✅ done | Brought forward from Session 1 follow-up (PR #90 review). Zero callers remain. |
-| 15. Rename `syntaqlite_parser_source()` → `syntaqlite_parser_text()` | ⏳ deferred | |
+| 15. Rename `syntaqlite_parser_text()` → `syntaqlite_parser_text()` | ⏳ deferred | |
 
 **Notes on Step 6 (session 1):**
 - The existing Rust `AnyParsedStatement::span_text` method (which returned
@@ -624,7 +624,7 @@ implementation and must fail on the pre-change tree.
 ### Step 1 — Rename `_buf_idx` to `_layer_id`
 
 Pure rename at the field level. Touches:
-- `include/syntaqlite/types.h` — `SyntaqliteSourceSpan._buf_idx` → `_layer_id`
+- `include/syntaqlite/types.h` — `SyntaqliteTextSpan._buf_idx` → `_layer_id`
 - `include/syntaqlite/dialect.h` — `SynqParseToken.buf_idx` → `layer_id`
 - `include/syntaqlite_dialect/ast_builder.h` — `SynqParseCtx.buf_idx` → `layer_id`
 - `csrc/parser*.c` — all references, including `synq_span`, `synq_span_dequote`
@@ -715,7 +715,7 @@ enforced.
 
 **(Reshaped from the originally-planned generalized `subtree_text` API.)**
 
-Scope: add a dedicated `select_span: inline SyntaqliteSourceSpan` field
+Scope: add a dedicated `select_span: inline SyntaqliteTextSpan` field
 on `CreatePerfettoTableStmt`, `CreatePerfettoViewStmt`, and
 `CreatePerfettoFunctionStmt` in `perfetto.synq`, populated explicitly by
 the grammar action with the byte range of the authored `select` body
@@ -745,7 +745,7 @@ Mechanism:
 3. Update the three `cmd` actions to bracket `select(E)`:
    ```
    cmd(A) ::= CREATE … AS select_body_start(BS) select(E) select_body_end(BE). {
-       SyntaqliteSourceSpan select_span = {
+       SyntaqliteTextSpan select_span = {
            BS, (uint16_t)(BE - BS), 0, /*layer_id=*/0,
        };
        A = synq_parse_create_perfetto_table_stmt(pCtx, …, E, select_span);
@@ -810,7 +810,7 @@ removed the last caller of `resolve_span`. The C function and the
 `SyntaqliteResolvedSpan` struct were then deleted (hard removal, no
 shim retained).
 
-### Step 15 — Rename `syntaqlite_parser_source()` → `syntaqlite_parser_text()`
+### Step 15 — Rename `syntaqlite_parser_text()` → `syntaqlite_parser_text()`
 
 Hard rename, no compat alias. Update CLI, WASM playground, Python
 bindings, and any tests referencing the old name. A grep for
@@ -881,7 +881,7 @@ This refactor is done when:
    per the table above. *(Partially done — `parser_source` → `text`
    rename is deferred to Step 15.)*
 2. **`_layer_id` is never referenced by any public API signature.** It
-   exists as an implementation-detail field on `SyntaqliteSourceSpan` and
+   exists as an implementation-detail field on `SyntaqliteTextSpan` and
    `SyntaqliteParserToken` but no public function takes it as a parameter
    or returns it. *(Done.)*
 3. **`statement_source` in `analyzer.rs` is deleted.** Its replacement

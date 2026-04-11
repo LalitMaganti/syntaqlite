@@ -323,7 +323,7 @@ fn field_type_and_expr(
             let t = &field.type_name;
             if t == "Bool" {
                 ("bool".to_string(), format!("d[\"{py_name}\"]"))
-            } else if t == "SyntaqliteSourceSpan" {
+            } else if t == "SyntaqliteTextSpan" {
                 ("str | None".to_string(), format!("d.get(\"{py_name}\")"))
             } else if enum_names.contains(t.as_str()) || flags_names.contains(t.as_str()) {
                 (t.clone(), format!("{t}(d[\"{py_name}\"])"))
@@ -366,7 +366,7 @@ mod tests {
             r"
             enum SortOrder { ASC DESC }
             flags SelectStmtFlags { DISTINCT = 1 }
-            node Foo { x: inline Bool  y: inline SyntaqliteSourceSpan }
+            node Foo { x: inline Bool  y: inline SyntaqliteTextSpan }
             node Bar { child: index Foo  order: inline SortOrder }
             list FooList { Foo }
             node Baz { items: index FooList  flags: inline SelectStmtFlags }

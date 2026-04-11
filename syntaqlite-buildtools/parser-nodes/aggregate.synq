@@ -1,7 +1,7 @@
 flags AggregateFunctionCallFlags { DISTINCT = 1 }
 
 node AggregateFunctionCall {
-  func_name: inline SyntaqliteSourceSpan
+  func_name: inline SyntaqliteTextSpan
   flags: inline AggregateFunctionCallFlags
   args: index ExprList
   orderby: index OrderByList
@@ -25,7 +25,7 @@ node AggregateFunctionCall {
 }
 
 node OrderedSetFunctionCall {
-  func_name: inline SyntaqliteSourceSpan
+  func_name: inline SyntaqliteTextSpan
   flags: inline AggregateFunctionCallFlags
   args: index ExprList
   orderby_expr: index Expr

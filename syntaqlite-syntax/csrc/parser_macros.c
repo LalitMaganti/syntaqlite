@@ -607,9 +607,9 @@ int synq_parser_check_macro_straddle(SyntaqliteParser* p) {
 
       for (uint8_t fi = 0; fi < entry->count; fi++) {
         if (entry->fields[fi].kind != 1)
-          continue;  // Not a SourceSpan.
-        const SyntaqliteSourceSpan* sp =
-            (const SyntaqliteSourceSpan*)(raw + entry->fields[fi].offset);
+          continue;  // Not a TextSpan.
+        const SyntaqliteTextSpan* sp =
+            (const SyntaqliteTextSpan*)(raw + entry->fields[fi].offset);
         if (sp->length == 0)
           continue;
 
@@ -723,7 +723,7 @@ SYNTAQLITE_API int syntaqlite_parser_deregister_macro(SyntaqliteParser* p,
 }
 
 // ---------------------------------------------------------------------------
-// Span accessors: span_text, span_expanded_text, span_text_range
+// Span accessors: span_text, span_expanded_text
 // ---------------------------------------------------------------------------
 
 // Walk the layer chain to resolve (layer, offset, length) to an authored
@@ -783,7 +783,7 @@ static void span_walk_to_source(SyntaqliteParser* p,
 
 SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
     SyntaqliteParser* p,
-    const SyntaqliteSourceSpan* span,
+    const SyntaqliteTextSpan* span,
     uint32_t* out_len) {
   if (!span || span->length == 0) {
     *out_len = 0;
@@ -806,8 +806,11 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
 
 SYNTAQLITE_API const char* syntaqlite_parser_span_text(
     SyntaqliteParser* p,
-    const SyntaqliteSourceSpan* span,
-    uint32_t* out_len) {
+    const SyntaqliteTextSpan* span,
+    uint32_t* out_len,
+    uint32_t* out_offset) {
+  if (out_offset)
+    *out_offset = 0;
   if (!span || span->length == 0) {
     *out_len = 0;
     return NULL;
@@ -819,6 +822,8 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_text(
       return NULL;
     }
     *out_len = span->length;
+    if (out_offset)
+      *out_offset = span->offset;
     return p->source + span->offset;
   }
   // Walk the expansion chain to find the authored bytes.
@@ -831,32 +836,9 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_text(
     return NULL;
   }
   *out_len = len;
+  if (out_offset)
+    *out_offset = off;
   return p->source + off;
-}
-
-SYNTAQLITE_API SyntaqliteTextRange
-syntaqlite_parser_span_text_range(SyntaqliteParser* p,
-                                  const SyntaqliteSourceSpan* span) {
-  SyntaqliteTextRange r = {0, 0};
-  if (!span || span->length == 0) {
-    return r;
-  }
-  if (span->_layer_id == 0) {
-    if (span->offset + span->length > p->source_len)
-      return r;
-    r.start = span->offset;
-    r.end = span->offset + span->length;
-    return r;
-  }
-  uint32_t off = 0;
-  uint32_t len = 0;
-  span_walk_to_source(p, span->_layer_id, span->offset, span->length, &off,
-                      &len);
-  if (off + len > p->source_len)
-    return r;
-  r.start = off;
-  r.end = off + len;
-  return r;
 }
 
 // Compute 1-based (line, col) for `offset` within `buf[..buf_len]`.  The
@@ -888,7 +870,7 @@ static void compute_line_col(const char* buf,
 
 SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
     SyntaqliteParser* p,
-    const SyntaqliteSourceSpan* sp,
+    const SyntaqliteTextSpan* sp,
     uint32_t* out_count) {
   if (out_count)
     *out_count = 0;

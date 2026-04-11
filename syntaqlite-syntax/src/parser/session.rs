@@ -149,8 +149,8 @@ impl ParseSession {
     }
 
     /// Original SQL source bound to this session.
-    pub fn source(&self) -> &str {
-        self.0.source()
+    pub fn text(&self) -> &str {
+        self.0.text()
     }
 
     /// Return a dialect-agnostic view over the current parse arena state.
@@ -286,8 +286,8 @@ impl<'a> ParsedStatement<'a> {
     }
 
     /// The source text bound to this result.
-    pub fn source(&self) -> &'a str {
-        self.0.source()
+    pub fn text(&self) -> &'a str {
+        self.0.text()
     }
 
     /// Statement-local token stream with parser usage flags.
@@ -374,8 +374,8 @@ impl<'a> ParseError<'a> {
     }
 
     /// The source text bound to this result.
-    pub fn parse_source(&self) -> &'a str {
-        self.0.0.source()
+    pub fn text(&self) -> &'a str {
+        self.0.0.text()
     }
 
     /// Tokens collected during the (partial) parse, if `collect_tokens` was enabled.
@@ -649,18 +649,18 @@ mod tests {
         assert!(!parser.deregister_macro("nonexistent"));
     }
 
-    // ── Step 6: span_text / span_expanded_text / span_text_range ────────────
+    // ── span_text / span_expanded_text accessors ────────────────────────────
 
     use super::super::AnyParsedStatement;
 
     // Walk the tree depth-first looking for a non-empty Span field; return
-    // the raw SourceSpan of the first one found.
-    fn first_span_in_tree<'a>(stmt: &'a AnyParsedStatement<'a>) -> Option<crate::ast::SourceSpan> {
+    // the raw TextSpan of the first one found.
+    fn first_span_in_tree<'a>(stmt: &'a AnyParsedStatement<'a>) -> Option<crate::ast::TextSpan> {
         use crate::ast::FieldValue;
         fn walk<'a>(
             stmt: &'a AnyParsedStatement<'a>,
             id: crate::ast::AnyNodeId,
-        ) -> Option<crate::ast::SourceSpan> {
+        ) -> Option<crate::ast::TextSpan> {
             if let Some((_, fields)) = stmt.extract_fields(id) {
                 for i in 0..fields.len() {
                     if matches!(fields[i], FieldValue::Span { .. })
@@ -699,14 +699,12 @@ mod tests {
         let erased = stmt.erase();
         let span = first_span_in_tree(&erased).expect("expected a Span field");
 
-        // Macro-free: span_text == span_expanded_text, range indexes into source.
-        let span_text = erased.span_text(span);
+        // Macro-free: span_text == span_expanded_text, and both are slices of
+        // the original source.
+        let (span_text, _) = erased.span_text(span);
         let span_expanded = erased.span_expanded_text(span);
-        let range = erased.span_text_range(span);
-
         assert_eq!(span_text, span_expanded);
-        let slice = &source[range.start as usize..range.end as usize];
-        assert_eq!(span_text, slice);
+        assert!(source.contains(span_text));
     }
 
     #[test]
@@ -727,20 +725,14 @@ mod tests {
         // The first span in the tree should be "inner" from the expansion.
         let span = first_span_in_tree(&erased).expect("expected a Span field");
 
-        let span_text = erased.span_text(span);
-        let span_expanded = erased.span_expanded_text(span);
-        let range = erased.span_text_range(span);
-
         // span_text: authored slice — the whole macro call "idmac!()".
         assert_eq!(
-            span_text, "idmac!()",
+            erased.span_text(span).0,
+            "idmac!()",
             "span_text should collapse to the call site"
         );
         // span_expanded_text: the literal text the tokenizer saw — "inner".
-        assert_eq!(span_expanded, "inner");
-        // Range points at the call site in source.
-        let slice = &source[range.start as usize..range.end as usize];
-        assert_eq!(slice, "idmac!()");
+        assert_eq!(erased.span_expanded_text(span), "inner");
     }
 
     #[test]
@@ -760,25 +752,19 @@ mod tests {
         let erased = stmt.erase();
         let span = first_span_in_tree(&erased).expect("expected a Span field");
 
-        let span_text = erased.span_text(span);
-        let span_expanded = erased.span_expanded_text(span);
-        let range = erased.span_text_range(span);
-
         // Arg-segment drill: span_text points at the user's authored arg
         // text, not at the whole call site.
         assert_eq!(
-            span_text, "authored",
+            erased.span_text(span).0,
+            "authored",
             "span_text should drill through arg segment to origin"
         );
         // Expanded text (the token the tokenizer actually saw) is also
         // "authored" because the arg was copied verbatim.
-        assert_eq!(span_expanded, "authored");
-        // Range points at the authored arg in source.
-        let slice = &source[range.start as usize..range.end as usize];
-        assert_eq!(slice, "authored");
+        assert_eq!(erased.span_expanded_text(span), "authored");
     }
 
-    // ── Step 7: traceback with arg-segment drilling ─────────────────────────
+    // ── traceback with arg-segment drilling ─────────────────────────────────
 
     // Walk the tree depth-first looking for the first non-empty Span field;
     // return (owning node, field index) for use with `traceback`.

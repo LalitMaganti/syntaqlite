@@ -81,16 +81,6 @@ pub(crate) struct CMacroRegion {
     pub(crate) call_length: u32,
 }
 
-/// A byte range in the user's authored input.
-///
-/// Mirrors C `SyntaqliteTextRange` from `include/syntaqlite/parser.h`.
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub(crate) struct CTextRange {
-    pub(crate) start: u32,
-    pub(crate) end: u32,
-}
-
 /// One frame in a traceback produced by the span traceback API.
 ///
 /// Mirrors C `SyntaqliteTracebackFrame` from `include/syntaqlite/parser.h`.
@@ -222,11 +212,11 @@ impl CParser {
 
     pub(crate) unsafe fn span_expanded_text(
         &self,
-        span: crate::ast::SourceSpan,
+        span: crate::ast::TextSpan,
         out_len: *mut u32,
     ) -> *const u8 {
         // SAFETY: self is a valid, non-null CParser pointer; span is a copy
-        // of an arena value with the SyntaqliteSourceSpan layout; out_len is
+        // of an arena value with the SyntaqliteTextSpan layout; out_len is
         // a valid pointer owned by the caller.
         unsafe {
             syntaqlite_parser_span_expanded_text(
@@ -239,36 +229,27 @@ impl CParser {
 
     pub(crate) unsafe fn span_text(
         &self,
-        span: crate::ast::SourceSpan,
+        span: crate::ast::TextSpan,
         out_len: *mut u32,
+        out_offset: *mut u32,
     ) -> *const u8 {
         // SAFETY: self is a valid, non-null CParser pointer; span is a copy
-        // of an arena value with the SyntaqliteSourceSpan layout; out_len is
-        // a valid pointer owned by the caller.
+        // of an arena value with the SyntaqliteTextSpan layout; out_len and
+        // out_offset are valid pointers (or null).
         unsafe {
             syntaqlite_parser_span_text(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
                 std::ptr::from_ref(&span).cast(),
                 out_len,
+                out_offset,
             )
         }
     }
 
-    pub(crate) unsafe fn span_text_range(&self, span: crate::ast::SourceSpan) -> CTextRange {
-        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
-        // of an arena value with the SyntaqliteSourceSpan layout.
-        unsafe {
-            syntaqlite_parser_span_text_range(
-                std::ptr::from_ref::<Self>(self).cast_mut(),
-                std::ptr::from_ref(&span).cast(),
-            )
-        }
-    }
-
-    pub(crate) unsafe fn traceback(&self, span: crate::ast::SourceSpan) -> &[CTracebackFrame] {
+    pub(crate) unsafe fn traceback(&self, span: crate::ast::TextSpan) -> &[CTracebackFrame] {
         let mut count: u32 = 0;
         // SAFETY: self is a valid CParser pointer; span is a copy of an
-        // arena value with the SyntaqliteSourceSpan layout.  The returned
+        // arena value with the SyntaqliteTextSpan layout.  The returned
         // pointer is backed by the parser's owned `traceback_buf` vec and
         // remains valid until the next call to this function or until the
         // parser is mutated through another `&mut` method.
@@ -428,7 +409,6 @@ unsafe extern "C" {
     // Arena accessors
     fn syntaqlite_parser_node(p: *mut CParser, node_id: u32) -> *const u32;
     fn syntaqlite_parser_node_count(p: *mut CParser) -> u32;
-
     // Span accessors
     fn syntaqlite_parser_span_expanded_text(
         p: *mut CParser,
@@ -439,8 +419,8 @@ unsafe extern "C" {
         p: *mut CParser,
         span: *const c_void,
         out_len: *mut u32,
+        out_offset: *mut u32,
     ) -> *const u8;
-    fn syntaqlite_parser_span_text_range(p: *mut CParser, span: *const c_void) -> CTextRange;
     fn syntaqlite_parser_traceback(
         p: *mut CParser,
         span: *const c_void,

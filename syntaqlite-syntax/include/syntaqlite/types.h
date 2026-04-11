@@ -33,17 +33,15 @@ typedef uint32_t SyntaqliteCompletionContext;
 //   - `syntaqlite_parser_span_expanded_text(p, &span, &len)` — the
 //     bytes the tokenizer actually saw, which for macro-expanded spans
 //     live in an expansion layer buffer.
-//   - `syntaqlite_parser_span_text_range(p, &span)` — byte range of
-//     `span_text` in the input source.
 //   - `syntaqlite_parser_traceback(p, &span, ...)` — the full outermost
 //     → innermost expansion chain for diagnostics, with argument-level
 //     drill-through fidelity for spans inside substituted macro args.
-typedef struct SyntaqliteSourceSpan {
+typedef struct SyntaqliteTextSpan {
   uint32_t offset;
   uint16_t length;
   uint8_t flags;
   uint8_t _layer_id;  // Internal: 0 = source, >0 = macro expansion layer.
-} SyntaqliteSourceSpan;
+} SyntaqliteTextSpan;
 
 // ── Span flags ───────────────────────────────────────────────────────────────
 
@@ -52,12 +50,11 @@ typedef struct SyntaqliteSourceSpan {
 // `"..."`.
 #define SYNTAQLITE_SPAN_FLAG_QUOTED ((uint8_t)1u)
 
-static inline int synq_span_is_quoted(SyntaqliteSourceSpan sp) {
+static inline int synq_span_is_quoted(SyntaqliteTextSpan sp) {
   return (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTED) != 0;
 }
 
-static inline SyntaqliteSourceSpan synq_span_set_quoted(
-    SyntaqliteSourceSpan sp) {
+static inline SyntaqliteTextSpan synq_span_set_quoted(SyntaqliteTextSpan sp) {
   sp.flags |= SYNTAQLITE_SPAN_FLAG_QUOTED;
   return sp;
 }

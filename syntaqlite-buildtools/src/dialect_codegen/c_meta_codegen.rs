@@ -280,7 +280,7 @@ impl AstModel<'_> {
             let span_fields: Vec<_> = node
                 .fields
                 .iter()
-                .filter(|f| f.storage == Storage::Inline && f.type_name == "SyntaqliteSourceSpan")
+                .filter(|f| f.storage == Storage::Inline && f.type_name == "SyntaqliteTextSpan")
                 .collect();
             if span_fields.is_empty() {
                 continue;
@@ -334,7 +334,7 @@ impl AstModel<'_> {
                         .fields
                         .iter()
                         .filter(|f| {
-                            f.storage == Storage::Inline && f.type_name == "SyntaqliteSourceSpan"
+                            f.storage == Storage::Inline && f.type_name == "SyntaqliteTextSpan"
                         })
                         .count();
                     if span_count > 0 {
@@ -410,7 +410,7 @@ fn c_field_kind(
         Storage::Index => Ok("SYNTAQLITE_FIELD_NODE_ID"),
         Storage::Inline => {
             let t = &field.type_name;
-            if t == "SyntaqliteSourceSpan" {
+            if t == "SyntaqliteTextSpan" {
                 Ok("SYNTAQLITE_FIELD_SPAN")
             } else if t == "Bool" {
                 Ok("SYNTAQLITE_FIELD_BOOL")
