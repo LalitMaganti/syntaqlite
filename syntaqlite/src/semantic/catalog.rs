@@ -57,6 +57,7 @@ struct FunctionSet {
 }
 
 /// Where a catalog entry was originally defined (e.g. in an external schema file).
+#[cfg(feature = "lsp")]
 #[derive(Debug, Clone)]
 pub(crate) struct DefinitionSite {
     /// File URI (e.g. `"file:///path/to/schema.sql"`).
@@ -78,8 +79,10 @@ struct RelationEntry {
     /// `true` if this relation is a view (not a physical table).
     is_view: bool,
     /// Where this relation was defined, if known.
+    #[cfg(feature = "lsp")]
     definition_site: Option<DefinitionSite>,
     /// Where each column was defined, keyed by lowercase column name.
+    #[cfg(feature = "lsp")]
     column_definition_sites: HashMap<String, DefinitionSite>,
 }
 
@@ -194,7 +197,9 @@ impl CatalogLayerContents {
                 columns,
                 without_rowid,
                 is_view: false,
+                #[cfg(feature = "lsp")]
                 definition_site: None,
+                #[cfg(feature = "lsp")]
                 column_definition_sites: HashMap::new(),
             },
         );
@@ -225,7 +230,9 @@ impl CatalogLayerContents {
                 columns,
                 without_rowid: true, // views have no rowid
                 is_view: true,
+                #[cfg(feature = "lsp")]
                 definition_site: None,
+                #[cfg(feature = "lsp")]
                 column_definition_sites: HashMap::new(),
             },
         );
@@ -537,7 +544,10 @@ impl Catalog {
                 let root_id: AnyNodeId = root.node_id().into();
                 let erased = stmt.erase();
                 catalog.accumulate_ddl(CatalogLayer::Database, &erased, root_id, &dialect);
+                #[cfg(feature = "lsp")]
                 catalog.record_ddl_definition_site(&erased, root_id, &dialect, file_uri);
+                #[cfg(not(feature = "lsp"))]
+                let _ = file_uri;
             }
         }
         (catalog, errors)
@@ -814,6 +824,7 @@ impl Catalog {
     }
 
     /// Record definition sites for a DDL statement (table + columns), if `file_uri` is provided.
+    #[cfg(feature = "lsp")]
     fn record_ddl_definition_site(
         &mut self,
         stmt: &AnyParsedStatement<'_>,
@@ -853,6 +864,7 @@ impl Catalog {
     }
 
     /// Return the definition site for a column in a relation, if one was recorded.
+    #[cfg(feature = "lsp")]
     pub(crate) fn column_definition_site(
         &self,
         table: &str,
@@ -868,6 +880,7 @@ impl Catalog {
     }
 
     /// Return the definition site for a relation, if one was recorded.
+    #[cfg(feature = "lsp")]
     pub(crate) fn relation_definition_site(&self, name: &str) -> Option<&DefinitionSite> {
         for layer in self.all_layers_ordered() {
             if let Some(rel) = layer.relation(name) {
@@ -891,6 +904,7 @@ impl Catalog {
         out
     }
 
+    #[cfg(feature = "lsp")]
     pub(crate) fn all_column_names(&self, table: Option<&str>) -> Vec<String> {
         let mut names = Vec::new();
         for layer in self.all_layers_ordered() {
@@ -908,6 +922,7 @@ impl Catalog {
     }
 
     /// Look up function metadata by name: returns (category, arities) if found.
+    #[cfg(feature = "lsp")]
     pub(crate) fn function_signature(
         &self,
         name: &str,
@@ -962,6 +977,7 @@ impl Catalog {
 ///
 /// Returns `(lowercase_name, start, end)` for CREATE TABLE / CREATE VIEW,
 /// or `None` for non-DDL statements.
+#[cfg(feature = "lsp")]
 fn ddl_name_span(
     stmt: &AnyParsedStatement<'_>,
     root: AnyNodeId,
@@ -986,6 +1002,7 @@ fn ddl_name_span(
 /// Extract column name spans from a `CREATE TABLE` statement.
 ///
 /// Returns `[(lowercase_name, start, end)]` for each `ColumnDef` child.
+#[cfg(feature = "lsp")]
 pub(crate) fn ddl_column_spans(
     stmt: &AnyParsedStatement<'_>,
     root: AnyNodeId,
@@ -1023,6 +1040,7 @@ pub(crate) fn ddl_column_spans(
 }
 
 /// Extract the name and byte offset of a single `ColumnDef` node.
+#[cfg(feature = "lsp")]
 fn column_def_name_span<'a>(
     stmt: &AnyParsedStatement<'a>,
     node_id: AnyNodeId,
