@@ -20,7 +20,7 @@ pub(crate) fn assemble(
     fragments: &SqliteFragments,
     dialect: &str,
     includes: &DialectCIncludes<'_>,
-) -> (String, TokenizerExtractResult) {
+) -> Result<(String, TokenizerExtractResult), String> {
     let combined = {
         let mut w = CWriter::new();
         w.sqlite_file_header();
@@ -58,13 +58,14 @@ pub(crate) fn assemble(
         )
         .rename_function("sqlite3GetToken", &get_token_name)
         .replace_all("TK_", "SYNTAQLITE_TK_")
-        .finish();
+        .finish()
+        .map_err(|e| format!("Failed to assemble tokenizer for dialect `{dialect}`: {e}"))?;
 
-    (
+    Ok((
         output,
         TokenizerExtractResult {
             char_map: fragments.char_map.to_string(),
             upper_to_lower: fragments.upper_to_lower.to_string(),
         },
-    )
+    ))
 }
