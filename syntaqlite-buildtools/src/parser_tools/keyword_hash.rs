@@ -232,7 +232,8 @@ pub(crate) fn generate(
         .replace_all("aKWCode", &kw_code_sym)
         .replace_all("TK_", "SYNTAQLITE_TK_")
         .replace_all("__SYNQ_DIALECT__", &format!("synq_{dialect}"))
-        .finish();
+        .finish()
+        .map_err(|e| format!("Failed to process keyword hash for dialect `{dialect}`: {e}"))?;
 
     // Insert keyword arrays before the keywordCode function.
     let processed_code = {
