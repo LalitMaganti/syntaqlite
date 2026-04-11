@@ -1,6 +1,6 @@
 node CastExpr {
   expr: index Expr
-  type_name: inline SyntaqliteSourceSpan
+  type_name: inline SyntaqliteTextSpan
 
   fmt { "CAST(" child_paren_list(expr) " AS " span(type_name) ")" }
 }

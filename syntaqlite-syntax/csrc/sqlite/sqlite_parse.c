@@ -47,19 +47,19 @@
 // columnname: passes name span + typetoken span from column definition.
 typedef struct SynqColumnNameValue {
   uint32_t name;
-  SyntaqliteSourceSpan typetoken;
+  SyntaqliteTextSpan typetoken;
 } SynqColumnNameValue;
 
 // ccons / tcons / generated: a constraint node + pending constraint name.
 typedef struct SynqConstraintValue {
   uint32_t node;
-  SyntaqliteSourceSpan pending_name;
+  SyntaqliteTextSpan pending_name;
 } SynqConstraintValue;
 
 // carglist / conslist: accumulated constraint list + pending name for next.
 typedef struct SynqConstraintListValue {
   uint32_t list;
-  SyntaqliteSourceSpan pending_name;
+  SyntaqliteTextSpan pending_name;
 } SynqConstraintListValue;
 
 // on_using: ON expr / USING column-list discriminator.
@@ -90,7 +90,7 @@ typedef struct SynqUpsertValue {
 #define YYPARSEFREENEVERNULL 1
 
 // Map parser error bookkeeping to a best-effort source span.
-static inline SyntaqliteSourceSpan synq_error_span(SynqParseCtx* pCtx) {
+static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
   if (pCtx->error_offset == 0xFFFFFFFF || pCtx->error_length == 0) {
     return SYNQ_NO_SPAN;
   }
@@ -98,7 +98,7 @@ static inline SyntaqliteSourceSpan synq_error_span(SynqParseCtx* pCtx) {
   if (len > UINT16_MAX) {
     len = UINT16_MAX;
   }
-  return (SyntaqliteSourceSpan){
+  return (SyntaqliteTextSpan){
       .offset = pCtx->error_offset,
       .length = (uint16_t)len,
       .flags = 0,
@@ -7676,10 +7676,10 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 58: /* create_table ::= createkw temp TABLE ifnotexists nm dbnm */
     {
-      SyntaqliteSourceSpan tbl_name =
+      SyntaqliteTextSpan tbl_name =
           yymsp[0].minor.yy0.z ? synq_span_dequote(pCtx, yymsp[0].minor.yy0)
                                : synq_span_dequote(pCtx, yymsp[-1].minor.yy0);
-      SyntaqliteSourceSpan tbl_schema =
+      SyntaqliteTextSpan tbl_schema =
           yymsp[0].minor.yy0.z ? synq_span_dequote(pCtx, yymsp[-1].minor.yy0)
                                : SYNQ_NO_SPAN;
       yymsp[-5].minor.yy277 = synq_parse_create_table_stmt(
@@ -8114,9 +8114,9 @@ static YYACTIONTYPE yy_reduce(
     case 108: /* conslist ::= conslist tconscomma tcons */
     {
       // If comma separator was present, clear pending constraint name
-      SyntaqliteSourceSpan pending = yymsp[-1].minor.yy320
-                                         ? SYNQ_NO_SPAN
-                                         : yymsp[-2].minor.yy430.pending_name;
+      SyntaqliteTextSpan pending = yymsp[-1].minor.yy320
+                                       ? SYNQ_NO_SPAN
+                                       : yymsp[-2].minor.yy430.pending_name;
       if (yymsp[0].minor.yy150.node != SYNTAQLITE_NULL_NODE) {
         SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[0].minor.yy150.node);
         node->table_constraint.constraint_name = pending;
@@ -9159,8 +9159,8 @@ static YYACTIONTYPE yy_reduce(
     case 286: /* seltablist ::= stl_prefix nm dbnm as on_using */
     {
       uint32_t alias = yymsp[-1].minor.yy277;
-      SyntaqliteSourceSpan table_name;
-      SyntaqliteSourceSpan schema;
+      SyntaqliteTextSpan table_name;
+      SyntaqliteTextSpan schema;
       if (yymsp[-2].minor.yy0.z != NULL) {
         table_name = synq_span_dequote(pCtx, yymsp[-2].minor.yy0);
         schema = synq_span_dequote(pCtx, yymsp[-3].minor.yy0);
@@ -9183,8 +9183,8 @@ static YYACTIONTYPE yy_reduce(
     {
       (void)yymsp[-1].minor.yy0;
       uint32_t alias = yymsp[-2].minor.yy277;
-      SyntaqliteSourceSpan table_name;
-      SyntaqliteSourceSpan schema;
+      SyntaqliteTextSpan table_name;
+      SyntaqliteTextSpan schema;
       if (yymsp[-3].minor.yy0.z != NULL) {
         table_name = synq_span_dequote(pCtx, yymsp[-3].minor.yy0);
         schema = synq_span_dequote(pCtx, yymsp[-4].minor.yy0);
@@ -9206,8 +9206,8 @@ static YYACTIONTYPE yy_reduce(
     case 288: /* seltablist ::= stl_prefix nm dbnm LP exprlist RP as on_using */
     {
       uint32_t alias = yymsp[-1].minor.yy277;
-      SyntaqliteSourceSpan table_name;
-      SyntaqliteSourceSpan schema;
+      SyntaqliteTextSpan table_name;
+      SyntaqliteTextSpan schema;
       if (yymsp[-5].minor.yy0.z != NULL) {
         table_name = synq_span_dequote(pCtx, yymsp[-5].minor.yy0);
         schema = synq_span_dequote(pCtx, yymsp[-6].minor.yy0);
@@ -9431,10 +9431,10 @@ static YYACTIONTYPE yy_reduce(
     case 303: /* trigger_decl ::= temp TRIGGER ifnotexists nm dbnm trigger_time
                  trigger_event ON fullname foreach_clause when_clause */
     {
-      SyntaqliteSourceSpan trig_name =
-          yymsp[-6].minor.yy0.z ? synq_span(pCtx, yymsp[-6].minor.yy0)
-                                : synq_span(pCtx, yymsp[-7].minor.yy0);
-      SyntaqliteSourceSpan trig_schema =
+      SyntaqliteTextSpan trig_name = yymsp[-6].minor.yy0.z
+                                         ? synq_span(pCtx, yymsp[-6].minor.yy0)
+                                         : synq_span(pCtx, yymsp[-7].minor.yy0);
+      SyntaqliteTextSpan trig_schema =
           yymsp[-6].minor.yy0.z ? synq_span(pCtx, yymsp[-7].minor.yy0)
                                 : SYNQ_NO_SPAN;
       yylhsminor.yy277 = synq_parse_create_trigger_stmt(
@@ -9576,10 +9576,10 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 325: /* cmd ::= PRAGMA nm dbnm */
     {
-      SyntaqliteSourceSpan name_span =
-          yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[0].minor.yy0)
-                               : synq_span(pCtx, yymsp[-1].minor.yy0);
-      SyntaqliteSourceSpan schema_span =
+      SyntaqliteTextSpan name_span = yymsp[0].minor.yy0.z
+                                         ? synq_span(pCtx, yymsp[0].minor.yy0)
+                                         : synq_span(pCtx, yymsp[-1].minor.yy0);
+      SyntaqliteTextSpan schema_span =
           yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[-1].minor.yy0)
                                : SYNQ_NO_SPAN;
       yymsp[-2].minor.yy277 =
@@ -9590,10 +9590,10 @@ static YYACTIONTYPE yy_reduce(
     case 328: /* cmd ::= PRAGMA nm dbnm EQ minus_num */
       yytestcase(yyruleno == 328);
       {
-        SyntaqliteSourceSpan name_span =
+        SyntaqliteTextSpan name_span =
             yymsp[-2].minor.yy0.z ? synq_span(pCtx, yymsp[-2].minor.yy0)
                                   : synq_span(pCtx, yymsp[-3].minor.yy0);
-        SyntaqliteSourceSpan schema_span =
+        SyntaqliteTextSpan schema_span =
             yymsp[-2].minor.yy0.z ? synq_span(pCtx, yymsp[-3].minor.yy0)
                                   : SYNQ_NO_SPAN;
         yymsp[-4].minor.yy277 = synq_parse_pragma_stmt(
@@ -9605,10 +9605,10 @@ static YYACTIONTYPE yy_reduce(
     case 329: /* cmd ::= PRAGMA nm dbnm LP minus_num RP */
       yytestcase(yyruleno == 329);
       {
-        SyntaqliteSourceSpan name_span =
+        SyntaqliteTextSpan name_span =
             yymsp[-3].minor.yy0.z ? synq_span(pCtx, yymsp[-3].minor.yy0)
                                   : synq_span(pCtx, yymsp[-4].minor.yy0);
-        SyntaqliteSourceSpan schema_span =
+        SyntaqliteTextSpan schema_span =
             yymsp[-3].minor.yy0.z ? synq_span(pCtx, yymsp[-4].minor.yy0)
                                   : SYNQ_NO_SPAN;
         yymsp[-5].minor.yy277 = synq_parse_pragma_stmt(
@@ -9639,10 +9639,10 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 341: /* cmd ::= ANALYZE nm dbnm */
     {
-      SyntaqliteSourceSpan name_span =
-          yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[0].minor.yy0)
-                               : synq_span(pCtx, yymsp[-1].minor.yy0);
-      SyntaqliteSourceSpan schema_span =
+      SyntaqliteTextSpan name_span = yymsp[0].minor.yy0.z
+                                         ? synq_span(pCtx, yymsp[0].minor.yy0)
+                                         : synq_span(pCtx, yymsp[-1].minor.yy0);
+      SyntaqliteTextSpan schema_span =
           yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[-1].minor.yy0)
                                : SYNQ_NO_SPAN;
       yymsp[-2].minor.yy277 = synq_parse_analyze_or_reindex_stmt(
@@ -9657,10 +9657,10 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 343: /* cmd ::= REINDEX nm dbnm */
     {
-      SyntaqliteSourceSpan name_span =
-          yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[0].minor.yy0)
-                               : synq_span(pCtx, yymsp[-1].minor.yy0);
-      SyntaqliteSourceSpan schema_span =
+      SyntaqliteTextSpan name_span = yymsp[0].minor.yy0.z
+                                         ? synq_span(pCtx, yymsp[0].minor.yy0)
+                                         : synq_span(pCtx, yymsp[-1].minor.yy0);
+      SyntaqliteTextSpan schema_span =
           yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[-1].minor.yy0)
                                : SYNQ_NO_SPAN;
       yymsp[-2].minor.yy277 =
@@ -9715,12 +9715,12 @@ static YYACTIONTYPE yy_reduce(
     case 357: /* cmd ::= createkw uniqueflag INDEX ifnotexists nm dbnm ON nm LP
                  sortlist RP where_opt */
     {
-      SyntaqliteSourceSpan idx_name =
-          yymsp[-6].minor.yy0.z ? synq_span(pCtx, yymsp[-6].minor.yy0)
-                                : synq_span(pCtx, yymsp[-7].minor.yy0);
-      SyntaqliteSourceSpan idx_schema =
-          yymsp[-6].minor.yy0.z ? synq_span(pCtx, yymsp[-7].minor.yy0)
-                                : SYNQ_NO_SPAN;
+      SyntaqliteTextSpan idx_name = yymsp[-6].minor.yy0.z
+                                        ? synq_span(pCtx, yymsp[-6].minor.yy0)
+                                        : synq_span(pCtx, yymsp[-7].minor.yy0);
+      SyntaqliteTextSpan idx_schema = yymsp[-6].minor.yy0.z
+                                          ? synq_span(pCtx, yymsp[-7].minor.yy0)
+                                          : SYNQ_NO_SPAN;
       yymsp[-11].minor.yy277 = synq_parse_create_index_stmt(
           pCtx, idx_name, idx_schema, synq_span(pCtx, yymsp[-4].minor.yy0),
           (SyntaqliteBool)yymsp[-10].minor.yy320,
@@ -9734,10 +9734,10 @@ static YYACTIONTYPE yy_reduce(
     case 362: /* cmd ::= createkw temp VIEW ifnotexists nm dbnm eidlist_opt AS
                  select */
     {
-      SyntaqliteSourceSpan view_name =
-          yymsp[-3].minor.yy0.z ? synq_span(pCtx, yymsp[-3].minor.yy0)
-                                : synq_span(pCtx, yymsp[-4].minor.yy0);
-      SyntaqliteSourceSpan view_schema =
+      SyntaqliteTextSpan view_name = yymsp[-3].minor.yy0.z
+                                         ? synq_span(pCtx, yymsp[-3].minor.yy0)
+                                         : synq_span(pCtx, yymsp[-4].minor.yy0);
+      SyntaqliteTextSpan view_schema =
           yymsp[-3].minor.yy0.z ? synq_span(pCtx, yymsp[-4].minor.yy0)
                                 : SYNQ_NO_SPAN;
       yymsp[-8].minor.yy277 = synq_parse_create_view_stmt(
@@ -9775,7 +9775,7 @@ static YYACTIONTYPE yy_reduce(
       SyntaqliteNode* vtab = AST_NODE(&pCtx->ast, yymsp[-3].minor.yy277);
       uint32_t args_start = yymsp[-2].minor.yy0.offset + yymsp[-2].minor.yy0.n;
       uint32_t args_end = yymsp[0].minor.yy0.offset;
-      vtab->create_virtual_table_stmt.module_args = (SyntaqliteSourceSpan){
+      vtab->create_virtual_table_stmt.module_args = (SyntaqliteTextSpan){
           .offset = args_start,
           .length = (uint16_t)(args_end - args_start),
           .flags = 0,
@@ -9788,12 +9788,12 @@ static YYACTIONTYPE yy_reduce(
     case 373: /* create_vtab ::= createkw VIRTUAL TABLE ifnotexists nm dbnm
                  USING nm */
     {
-      SyntaqliteSourceSpan tbl_name =
-          yymsp[-2].minor.yy0.z ? synq_span(pCtx, yymsp[-2].minor.yy0)
-                                : synq_span(pCtx, yymsp[-3].minor.yy0);
-      SyntaqliteSourceSpan tbl_schema =
-          yymsp[-2].minor.yy0.z ? synq_span(pCtx, yymsp[-3].minor.yy0)
-                                : SYNQ_NO_SPAN;
+      SyntaqliteTextSpan tbl_name = yymsp[-2].minor.yy0.z
+                                        ? synq_span(pCtx, yymsp[-2].minor.yy0)
+                                        : synq_span(pCtx, yymsp[-3].minor.yy0);
+      SyntaqliteTextSpan tbl_schema = yymsp[-2].minor.yy0.z
+                                          ? synq_span(pCtx, yymsp[-3].minor.yy0)
+                                          : SYNQ_NO_SPAN;
       yymsp[-7].minor.yy277 = synq_parse_create_virtual_table_stmt(
           pCtx, tbl_name, tbl_schema, synq_span(pCtx, yymsp[0].minor.yy0),
           (SyntaqliteBool)yymsp[-4].minor.yy320,

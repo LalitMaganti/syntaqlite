@@ -1,4 +1,5 @@
 #[non_exhaustive] pub enum syntaqlite_syntax::util::SqliteVersion
+#[repr(C)] pub struct syntaqlite_syntax::any::TextSpan
 #[repr(transparent)] pub struct syntaqlite_syntax::any::AnyNodeId(_)
 #[repr(transparent)] pub struct syntaqlite_syntax::any::AnyNodeTag(_)
 #[repr(transparent)] pub struct syntaqlite_syntax::any::AnyTokenType(_)
@@ -50,7 +51,6 @@ impl core::convert::From<syntaqlite_syntax::TokenType> for u32
 impl core::convert::From<syntaqlite_syntax::any::AnyNodeId> for syntaqlite_syntax::nodes::NodeId
 impl core::convert::From<syntaqlite_syntax::any::AnyNodeTag> for u32
 impl core::convert::From<syntaqlite_syntax::any::AnyTokenType> for u32
-impl core::convert::From<syntaqlite_syntax::any::SourceRange> for core::ops::range::Range<usize>
 impl core::convert::From<syntaqlite_syntax::nodes::AggregateFunctionCallId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::AlterTableStmtId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId> for syntaqlite_syntax::any::AnyNodeId
@@ -141,7 +141,7 @@ impl core::convert::From<syntaqlite_syntax::typed::Dialect> for syntaqlite_synta
 impl core::convert::From<syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::typed::Dialect>> for syntaqlite_syntax::IncrementalParseSession
 impl core::fmt::Debug for syntaqlite_syntax::ParserToken<'_>
 impl core::fmt::Debug for syntaqlite_syntax::any::AnyNode<'_>
-impl core::fmt::Debug for syntaqlite_syntax::any::NodeFields<'_>
+impl core::fmt::Debug for syntaqlite_syntax::any::NodeFields
 impl core::fmt::Debug for syntaqlite_syntax::nodes::AggregateFunctionCall<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::AlterTableStmt<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'_>
@@ -273,6 +273,7 @@ impl core::fmt::Display for syntaqlite_syntax::nodes::WindowDef<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::WithClause<'_>
 impl core::marker::Send for syntaqlite_syntax::any::AnyDialect
 impl core::marker::Sync for syntaqlite_syntax::any::AnyDialect
+impl core::ops::index::Index<usize> for syntaqlite_syntax::any::NodeFields
 impl syntaqlite_syntax::CommentSpan
 impl syntaqlite_syntax::CompletionContext
 impl syntaqlite_syntax::IncrementalParseSession
@@ -285,7 +286,8 @@ impl syntaqlite_syntax::any::AnyTokenType
 impl syntaqlite_syntax::any::FieldMeta<'_>
 impl syntaqlite_syntax::any::KeywordEntry
 impl syntaqlite_syntax::any::MacroRegion
-impl syntaqlite_syntax::any::SourceRange
+impl syntaqlite_syntax::any::NodeFields
+impl syntaqlite_syntax::any::TextSpan
 impl syntaqlite_syntax::nodes::AggregateFunctionCallFlags
 impl syntaqlite_syntax::nodes::AggregateFunctionCallId
 impl syntaqlite_syntax::nodes::AlterOp
@@ -591,11 +593,9 @@ impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaql
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::UpsertClause<'a>>> for syntaqlite_syntax::nodes::UpsertClauseListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::WindowDef<'a>>> for syntaqlite_syntax::nodes::WindowDefListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Expr<'a>>>> for syntaqlite_syntax::nodes::ValuesRowListId
-impl<'a> core::ops::index::Index<usize> for syntaqlite_syntax::any::NodeFields<'a>
 impl<'a> syntaqlite_syntax::Comment<'a>
 impl<'a> syntaqlite_syntax::ParserToken<'a>
 impl<'a> syntaqlite_syntax::any::AnyParsedStatement<'a>
-impl<'a> syntaqlite_syntax::any::NodeFields<'a>
 impl<'a> syntaqlite_syntax::nodes::AggregateFunctionCall<'a>
 impl<'a> syntaqlite_syntax::nodes::AlterTableStmt<'a>
 impl<'a> syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>
@@ -754,7 +754,7 @@ impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedT
 impl<T, E> syntaqlite_syntax::ParseOutcome<T, E>
 pub enum syntaqlite_syntax::CommentKind
 pub enum syntaqlite_syntax::ParseOutcome<T, E>
-pub enum syntaqlite_syntax::any::FieldValue<'a>
+pub enum syntaqlite_syntax::any::FieldValue
 pub enum syntaqlite_syntax::any::ParseOutcome<T, E>
 pub enum syntaqlite_syntax::any::TokenCategory
 pub enum syntaqlite_syntax::nodes::Expr<'a>
@@ -765,7 +765,6 @@ pub enum syntaqlite_syntax::nodes::Select<'a>
 pub enum syntaqlite_syntax::nodes::Stmt<'a>
 pub enum syntaqlite_syntax::nodes::TableSource<'a>
 pub enum syntaqlite_syntax::typed::ParseOutcome<T, E>
-pub fn core::ops::range::Range<usize>::from(r: syntaqlite_syntax::any::SourceRange) -> core::ops::range::Range<usize>
 pub fn syntaqlite_syntax::Comment<'a>::kind(&self) -> syntaqlite_syntax::CommentKind
 pub fn syntaqlite_syntax::Comment<'a>::length(&self) -> u32
 pub fn syntaqlite_syntax::Comment<'a>::offset(&self) -> u32
@@ -905,14 +904,16 @@ pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::Wit
 pub fn syntaqlite_syntax::any::AnyNodeId::is_null(&self) -> bool
 pub fn syntaqlite_syntax::any::AnyNodeTag::from(t: syntaqlite_syntax::nodes::NodeTag) -> syntaqlite_syntax::any::AnyNodeTag
 pub fn syntaqlite_syntax::any::AnyNodeTag::from_raw(v: u32) -> Self
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyNodeId> + '_
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyNodeId> + use<>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields<'a>)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_regions(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRegion> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_node(&self) -> core::option::Option<syntaqlite_syntax::any::AnyNode<'_>>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::source(&self) -> &'a str
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_expanded_text(&self, span: syntaqlite_syntax::any::TextSpan) -> &'a str
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, u32)
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::token_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = (u32, u32)> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&mut self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyTokenType::from(t: syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
@@ -927,12 +928,12 @@ pub fn syntaqlite_syntax::any::KeywordEntry::keyword(&self) -> &'static str
 pub fn syntaqlite_syntax::any::KeywordEntry::token_type(&self) -> syntaqlite_syntax::any::AnyTokenType
 pub fn syntaqlite_syntax::any::MacroRegion::call_length(&self) -> u32
 pub fn syntaqlite_syntax::any::MacroRegion::call_offset(&self) -> u32
-pub fn syntaqlite_syntax::any::NodeFields<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::any::NodeFields<'a>::index(&self, idx: usize) -> &syntaqlite_syntax::any::FieldValue<'a>
-pub fn syntaqlite_syntax::any::NodeFields<'a>::is_empty(&self) -> bool
-pub fn syntaqlite_syntax::any::NodeFields<'a>::len(&self) -> usize
-pub fn syntaqlite_syntax::any::SourceRange::is_empty(self) -> bool
-pub fn syntaqlite_syntax::any::SourceRange::len(self) -> u32
+pub fn syntaqlite_syntax::any::NodeFields::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::any::NodeFields::index(&self, idx: usize) -> &syntaqlite_syntax::any::FieldValue
+pub fn syntaqlite_syntax::any::NodeFields::is_empty(&self) -> bool
+pub fn syntaqlite_syntax::any::NodeFields::len(&self) -> usize
+pub fn syntaqlite_syntax::any::TextSpan::is_empty(self) -> bool
+pub fn syntaqlite_syntax::any::TextSpan::is_quoted(self) -> bool
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::filter_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
@@ -1620,20 +1621,20 @@ pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::kind(&self) -> syntaqli
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::length(&self) -> core::option::Option<usize>
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::message(&self) -> &str
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::offset(&self) -> core::option::Option<usize>
-pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::parse_source(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::recovery_root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
+pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::arena_result(&self) -> syntaqlite_syntax::any::AnyParsedStatement<'_>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::drop(&mut self)
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::next(&mut self) -> syntaqlite_syntax::ParseOutcome<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::register_macro(&mut self, name: &str, params: &[&str], body: &str)
-pub fn syntaqlite_syntax::typed::TypedParseSession<G>::source(&self) -> &str
+pub fn syntaqlite_syntax::typed::TypedParseSession<G>::text(&self) -> &str
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::dump(&self, out: &mut alloc::string::String, indent: usize)
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::erase(self) -> syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::macro_regions(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRegion> + use<'_, 'a, G>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::source(&self) -> &'a str
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
 pub fn syntaqlite_syntax::typed::TypedParser<G>::deregister_macro(&mut self, name: &str) -> bool
 pub fn syntaqlite_syntax::typed::TypedParser<G>::incremental_parse(&self, source: &str) -> syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
@@ -1682,8 +1683,7 @@ pub struct syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub struct syntaqlite_syntax::any::FieldMeta<'a>(_)
 pub struct syntaqlite_syntax::any::KeywordEntry
 pub struct syntaqlite_syntax::any::MacroRegion
-pub struct syntaqlite_syntax::any::NodeFields<'a>
-pub struct syntaqlite_syntax::any::SourceRange
+pub struct syntaqlite_syntax::any::NodeFields
 pub struct syntaqlite_syntax::any::TracebackFrame<'a>
 pub struct syntaqlite_syntax::nodes::AggregateFunctionCall<'a>
 pub struct syntaqlite_syntax::nodes::AggregateFunctionCallId(_)
@@ -2052,15 +2052,10 @@ pub syntaqlite_syntax::any::FieldValue::Bool(bool)
 pub syntaqlite_syntax::any::FieldValue::Enum(u32)
 pub syntaqlite_syntax::any::FieldValue::Flags(u8)
 pub syntaqlite_syntax::any::FieldValue::NodeId(syntaqlite_syntax::any::AnyNodeId)
-pub syntaqlite_syntax::any::FieldValue::Span
-pub syntaqlite_syntax::any::FieldValue::Span::quoted: bool
-pub syntaqlite_syntax::any::FieldValue::Span::source: syntaqlite_syntax::any::SourceRange
-pub syntaqlite_syntax::any::FieldValue::Span::text: &'a str
+pub syntaqlite_syntax::any::FieldValue::Span(syntaqlite_syntax::any::TextSpan)
 pub syntaqlite_syntax::any::ParseOutcome::Done
 pub syntaqlite_syntax::any::ParseOutcome::Err(E)
 pub syntaqlite_syntax::any::ParseOutcome::Ok(T)
-pub syntaqlite_syntax::any::SourceRange::end: u32
-pub syntaqlite_syntax::any::SourceRange::start: u32
 pub syntaqlite_syntax::any::TokenCategory::Comment
 pub syntaqlite_syntax::any::TokenCategory::Function
 pub syntaqlite_syntax::any::TokenCategory::Identifier
@@ -2517,7 +2512,7 @@ pub type syntaqlite_syntax::any::AnyParser = syntaqlite_syntax::typed::TypedPars
 pub type syntaqlite_syntax::any::AnyParserToken<'a> = syntaqlite_syntax::typed::TypedParserToken<'a, syntaqlite_syntax::any::AnyDialect>
 pub type syntaqlite_syntax::any::AnyToken<'a> = syntaqlite_syntax::typed::TypedToken<'a, syntaqlite_syntax::any::AnyDialect>
 pub type syntaqlite_syntax::any::AnyTokenizer = syntaqlite_syntax::typed::TypedTokenizer<syntaqlite_syntax::any::AnyDialect>
-pub type syntaqlite_syntax::any::NodeFields<'a>::Output = syntaqlite_syntax::any::FieldValue<'a>
+pub type syntaqlite_syntax::any::NodeFields::Output = syntaqlite_syntax::any::FieldValue
 pub type syntaqlite_syntax::nodes::AggregateFunctionCallId::Node<'a> = syntaqlite_syntax::nodes::AggregateFunctionCall<'a>
 pub type syntaqlite_syntax::nodes::AlterTableStmtId::Node<'a> = syntaqlite_syntax::nodes::AlterTableStmt<'a>
 pub type syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId::Node<'a> = syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>

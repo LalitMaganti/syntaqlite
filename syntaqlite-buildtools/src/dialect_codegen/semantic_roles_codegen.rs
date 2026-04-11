@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn transparent_for_node_without_annotation() {
-        let items = model_from("node Foo { x: inline SyntaqliteSourceSpan }");
+        let items = model_from("node Foo { x: inline SyntaqliteTextSpan }");
         let model = AstModel::new(&items);
         let header = generate_c_roles_h(&model, "test");
         let bytes = extract_bytes_from_header(&header, "test");
@@ -510,8 +510,8 @@ mod tests {
     fn define_table_with_correct_field_indices() {
         let items = model_from(
             r"node CreateTableStmt {
-                table_name: inline SyntaqliteSourceSpan
-                schema: inline SyntaqliteSourceSpan
+                table_name: inline SyntaqliteTextSpan
+                schema: inline SyntaqliteTextSpan
                 columns: index ColumnDefList
                 as_select: index Select
                 semantic { define_table(name: table_name, columns: columns, select: as_select) }
@@ -537,7 +537,7 @@ mod tests {
     fn define_table_optional_fields_absent_when_not_given() {
         let items = model_from(
             r"node CreateTableStmt {
-                table_name: inline SyntaqliteSourceSpan
+                table_name: inline SyntaqliteTextSpan
                 semantic { define_table(name: table_name) }
             }",
         );
@@ -560,8 +560,8 @@ mod tests {
     fn define_view_with_correct_field_indices() {
         let items = model_from(
             r"node CreateViewStmt {
-                view_name: inline SyntaqliteSourceSpan
-                schema: inline SyntaqliteSourceSpan
+                view_name: inline SyntaqliteTextSpan
+                schema: inline SyntaqliteTextSpan
                 select: index Select
                 semantic { define_view(name: view_name, select: select) }
             }",
@@ -584,7 +584,7 @@ mod tests {
     #[test]
     fn list_always_emits_transparent() {
         let items = model_from(
-            r"node Foo { x: inline SyntaqliteSourceSpan }
+            r"node Foo { x: inline SyntaqliteTextSpan }
                list FooList { Foo }",
         );
         let model = AstModel::new(&items);
@@ -600,8 +600,8 @@ mod tests {
     #[test]
     fn count_matches_node_count() {
         let items = model_from(
-            r"node Foo { x: inline SyntaqliteSourceSpan }
-               node Bar { y: inline SyntaqliteSourceSpan }",
+            r"node Foo { x: inline SyntaqliteTextSpan }
+               node Bar { y: inline SyntaqliteTextSpan }",
         );
         let model = AstModel::new(&items);
         let header = generate_c_roles_h(&model, "test");
@@ -616,9 +616,9 @@ mod tests {
     fn source_ref_kind_bytes_correct() {
         let items = model_from(
             r"node TableRef {
-                name: inline SyntaqliteSourceSpan
-                schema: inline SyntaqliteSourceSpan
-                alias: inline SyntaqliteSourceSpan
+                name: inline SyntaqliteTextSpan
+                schema: inline SyntaqliteTextSpan
+                alias: inline SyntaqliteTextSpan
                 semantic { source_ref(kind: table, name: name, alias: alias) }
             }",
         );

@@ -18,7 +18,7 @@ extern "C" {
 
 static inline uint32_t synq_parse_aggregate_function_call(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan func_name,
+    SyntaqliteTextSpan func_name,
     SyntaqliteAggregateFunctionCallFlags flags,
     uint32_t args,
     uint32_t orderby,
@@ -38,7 +38,7 @@ static inline uint32_t synq_parse_aggregate_function_call(
 
 static inline uint32_t synq_parse_ordered_set_function_call(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan func_name,
+    SyntaqliteTextSpan func_name,
     SyntaqliteAggregateFunctionCallFlags flags,
     uint32_t args,
     uint32_t orderby_expr,
@@ -58,7 +58,7 @@ static inline uint32_t synq_parse_ordered_set_function_call(
 
 static inline uint32_t synq_parse_cast_expr(SynqParseCtx* ctx,
                                             uint32_t expr,
-                                            SyntaqliteSourceSpan type_name) {
+                                            SyntaqliteTextSpan type_name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteCastExpr){.tag = SYNTAQLITE_NODE_CAST_EXPR,
@@ -68,9 +68,9 @@ static inline uint32_t synq_parse_cast_expr(SynqParseCtx* ctx,
 }
 
 static inline uint32_t synq_parse_column_ref(SynqParseCtx* ctx,
-                                             SyntaqliteSourceSpan column,
-                                             SyntaqliteSourceSpan table,
-                                             SyntaqliteSourceSpan schema) {
+                                             SyntaqliteTextSpan column,
+                                             SyntaqliteTextSpan table,
+                                             SyntaqliteTextSpan schema) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteColumnRef){.tag = SYNTAQLITE_NODE_COLUMN_REF,
@@ -193,7 +193,7 @@ static inline uint32_t synq_parse_case_when(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_foreign_key_clause(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan ref_table,
+    SyntaqliteTextSpan ref_table,
     uint32_t ref_columns,
     SyntaqliteForeignKeyAction on_delete,
     SyntaqliteForeignKeyAction on_update,
@@ -212,11 +212,11 @@ static inline uint32_t synq_parse_foreign_key_clause(
 static inline uint32_t synq_parse_column_constraint(
     SynqParseCtx* ctx,
     SyntaqliteColumnConstraintType kind,
-    SyntaqliteSourceSpan constraint_name,
+    SyntaqliteTextSpan constraint_name,
     SyntaqliteConflictAction onconf,
     SyntaqliteSortOrder sort_order,
     SyntaqliteBool is_autoincrement,
-    SyntaqliteSourceSpan collation_name,
+    SyntaqliteTextSpan collation_name,
     SyntaqliteGeneratedColumnStorage generated_storage,
     uint32_t default_expr,
     uint32_t check_expr,
@@ -241,7 +241,7 @@ static inline uint32_t synq_parse_column_constraint(
 
 static inline uint32_t synq_parse_column_def(SynqParseCtx* ctx,
                                              uint32_t column_name,
-                                             SyntaqliteSourceSpan type_name,
+                                             SyntaqliteTextSpan type_name,
                                              uint32_t constraints) {
   return synq_parse_build(
       ctx,
@@ -255,7 +255,7 @@ static inline uint32_t synq_parse_column_def(SynqParseCtx* ctx,
 static inline uint32_t synq_parse_table_constraint(
     SynqParseCtx* ctx,
     SyntaqliteTableConstraintType kind,
-    SyntaqliteSourceSpan constraint_name,
+    SyntaqliteTextSpan constraint_name,
     SyntaqliteConflictAction onconf,
     SyntaqliteBool is_autoincrement,
     uint32_t pk_columns,
@@ -278,8 +278,8 @@ static inline uint32_t synq_parse_table_constraint(
 
 static inline uint32_t synq_parse_create_table_stmt(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan table_name,
-    SyntaqliteSourceSpan schema,
+    SyntaqliteTextSpan table_name,
+    SyntaqliteTextSpan schema,
     SyntaqliteBool is_temp,
     SyntaqliteBool if_not_exists,
     SyntaqliteCreateTableStmtFlags flags,
@@ -302,7 +302,7 @@ static inline uint32_t synq_parse_create_table_stmt(
 
 static inline uint32_t synq_parse_cte_definition(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan cte_name,
+    SyntaqliteTextSpan cte_name,
     SyntaqliteMaterialized materialized,
     uint32_t columns,
     uint32_t select) {
@@ -349,7 +349,7 @@ static inline uint32_t synq_parse_upsert_clause(SynqParseCtx* ctx,
 static inline uint32_t synq_parse_delete_stmt(SynqParseCtx* ctx,
                                               uint32_t table,
                                               SyntaqliteIndexHint index_hint,
-                                              SyntaqliteSourceSpan index_name,
+                                              SyntaqliteTextSpan index_name,
                                               uint32_t where_clause,
                                               uint32_t orderby,
                                               uint32_t limit_clause,
@@ -368,7 +368,7 @@ static inline uint32_t synq_parse_delete_stmt(SynqParseCtx* ctx,
 }
 
 static inline uint32_t synq_parse_set_clause(SynqParseCtx* ctx,
-                                             SyntaqliteSourceSpan column,
+                                             SyntaqliteTextSpan column,
                                              uint32_t columns,
                                              uint32_t value) {
   return synq_parse_build(
@@ -385,7 +385,7 @@ static inline uint32_t synq_parse_update_stmt(
     SyntaqliteConflictAction conflict_action,
     uint32_t table,
     SyntaqliteIndexHint index_hint,
-    SyntaqliteSourceSpan index_name,
+    SyntaqliteTextSpan index_name,
     uint32_t setlist,
     uint32_t from_clause,
     uint32_t where_clause,
@@ -453,7 +453,7 @@ static inline uint32_t synq_parse_unary_expr(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_literal(SynqParseCtx* ctx,
                                           SyntaqliteLiteralType literal_type,
-                                          SyntaqliteSourceSpan source) {
+                                          SyntaqliteTextSpan source) {
   return synq_parse_build(ctx,
                           &(SyntaqliteLiteral){.tag = SYNTAQLITE_NODE_LITERAL,
                                                .literal_type = literal_type,
@@ -462,7 +462,7 @@ static inline uint32_t synq_parse_literal(SynqParseCtx* ctx,
 }
 
 static inline uint32_t synq_parse_ident_name(SynqParseCtx* ctx,
-                                             SyntaqliteSourceSpan source) {
+                                             SyntaqliteTextSpan source) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteIdentName){.tag = SYNTAQLITE_NODE_IDENT_NAME,
@@ -471,7 +471,7 @@ static inline uint32_t synq_parse_ident_name(SynqParseCtx* ctx,
 }
 
 static inline uint32_t synq_parse_error(SynqParseCtx* ctx,
-                                        SyntaqliteSourceSpan source) {
+                                        SyntaqliteTextSpan source) {
   return synq_parse_build(
       ctx, &(SyntaqliteError){.tag = SYNTAQLITE_NODE_ERROR, .source = source},
       (uint32_t)sizeof(SyntaqliteError));
@@ -479,7 +479,7 @@ static inline uint32_t synq_parse_error(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_function_call(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan func_name,
+    SyntaqliteTextSpan func_name,
     SyntaqliteFunctionCallFlags flags,
     uint32_t args,
     uint32_t filter_clause,
@@ -496,7 +496,7 @@ static inline uint32_t synq_parse_function_call(
 }
 
 static inline uint32_t synq_parse_variable(SynqParseCtx* ctx,
-                                           SyntaqliteSourceSpan source) {
+                                           SyntaqliteTextSpan source) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteVariable){.tag = SYNTAQLITE_NODE_VARIABLE, .source = source},
@@ -505,7 +505,7 @@ static inline uint32_t synq_parse_variable(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_collate_expr(SynqParseCtx* ctx,
                                                uint32_t expr,
-                                               SyntaqliteSourceSpan collation) {
+                                               SyntaqliteTextSpan collation) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteCollateExpr){.tag = SYNTAQLITE_NODE_COLLATE_EXPR,
@@ -653,8 +653,8 @@ static inline uint32_t synq_parse_limit_clause(SynqParseCtx* ctx,
 }
 
 static inline uint32_t synq_parse_table_ref(SynqParseCtx* ctx,
-                                            SyntaqliteSourceSpan table_name,
-                                            SyntaqliteSourceSpan schema,
+                                            SyntaqliteTextSpan table_name,
+                                            SyntaqliteTextSpan schema,
                                             uint32_t alias,
                                             uint32_t args) {
   return synq_parse_build(
@@ -720,8 +720,8 @@ static inline uint32_t synq_parse_trigger_event(
 
 static inline uint32_t synq_parse_create_trigger_stmt(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan trigger_name,
-    SyntaqliteSourceSpan schema,
+    SyntaqliteTextSpan trigger_name,
+    SyntaqliteTextSpan schema,
     SyntaqliteBool is_temp,
     SyntaqliteBool if_not_exists,
     SyntaqliteTriggerTiming timing,
@@ -746,11 +746,11 @@ static inline uint32_t synq_parse_create_trigger_stmt(
 
 static inline uint32_t synq_parse_create_virtual_table_stmt(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan table_name,
-    SyntaqliteSourceSpan schema,
-    SyntaqliteSourceSpan module_name,
+    SyntaqliteTextSpan table_name,
+    SyntaqliteTextSpan schema,
+    SyntaqliteTextSpan module_name,
     SyntaqliteBool if_not_exists,
-    SyntaqliteSourceSpan module_args) {
+    SyntaqliteTextSpan module_args) {
   return synq_parse_build(ctx,
                           &(SyntaqliteCreateVirtualTableStmt){
                               .tag = SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT,
@@ -764,9 +764,9 @@ static inline uint32_t synq_parse_create_virtual_table_stmt(
 
 static inline uint32_t synq_parse_pragma_stmt(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan pragma_name,
-    SyntaqliteSourceSpan schema,
-    SyntaqliteSourceSpan value,
+    SyntaqliteTextSpan pragma_name,
+    SyntaqliteTextSpan schema,
+    SyntaqliteTextSpan value,
     SyntaqlitePragmaForm pragma_form) {
   return synq_parse_build(
       ctx,
@@ -780,8 +780,8 @@ static inline uint32_t synq_parse_pragma_stmt(
 
 static inline uint32_t synq_parse_analyze_or_reindex_stmt(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan target_name,
-    SyntaqliteSourceSpan schema,
+    SyntaqliteTextSpan target_name,
+    SyntaqliteTextSpan schema,
     SyntaqliteAnalyzeOrReindexOp kind) {
   return synq_parse_build(ctx,
                           &(SyntaqliteAnalyzeOrReindexStmt){
@@ -815,7 +815,7 @@ static inline uint32_t synq_parse_detach_stmt(SynqParseCtx* ctx,
 }
 
 static inline uint32_t synq_parse_vacuum_stmt(SynqParseCtx* ctx,
-                                              SyntaqliteSourceSpan schema,
+                                              SyntaqliteTextSpan schema,
                                               uint32_t filename) {
   return synq_parse_build(
       ctx,
@@ -839,9 +839,9 @@ static inline uint32_t synq_parse_explain_stmt(
 
 static inline uint32_t synq_parse_create_index_stmt(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan index_name,
-    SyntaqliteSourceSpan schema,
-    SyntaqliteSourceSpan table_name,
+    SyntaqliteTextSpan index_name,
+    SyntaqliteTextSpan schema,
+    SyntaqliteTextSpan table_name,
     SyntaqliteBool is_unique,
     SyntaqliteBool if_not_exists,
     uint32_t columns,
@@ -859,14 +859,13 @@ static inline uint32_t synq_parse_create_index_stmt(
       (uint32_t)sizeof(SyntaqliteCreateIndexStmt));
 }
 
-static inline uint32_t synq_parse_create_view_stmt(
-    SynqParseCtx* ctx,
-    SyntaqliteSourceSpan view_name,
-    SyntaqliteSourceSpan schema,
-    SyntaqliteBool is_temp,
-    SyntaqliteBool if_not_exists,
-    uint32_t column_names,
-    uint32_t select) {
+static inline uint32_t synq_parse_create_view_stmt(SynqParseCtx* ctx,
+                                                   SyntaqliteTextSpan view_name,
+                                                   SyntaqliteTextSpan schema,
+                                                   SyntaqliteBool is_temp,
+                                                   SyntaqliteBool if_not_exists,
+                                                   uint32_t column_names,
+                                                   uint32_t select) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteCreateViewStmt){.tag = SYNTAQLITE_NODE_CREATE_VIEW_STMT,
@@ -917,7 +916,7 @@ static inline uint32_t synq_parse_frame_spec(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_window_def(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan base_window_name,
+    SyntaqliteTextSpan base_window_name,
     uint32_t partition_by,
     uint32_t orderby,
     uint32_t frame) {
@@ -933,7 +932,7 @@ static inline uint32_t synq_parse_window_def(
 
 static inline uint32_t synq_parse_named_window_def(
     SynqParseCtx* ctx,
-    SyntaqliteSourceSpan window_name,
+    SyntaqliteTextSpan window_name,
     uint32_t window_def) {
   return synq_parse_build(
       ctx,
@@ -946,7 +945,7 @@ static inline uint32_t synq_parse_named_window_def(
 static inline uint32_t synq_parse_filter_over(SynqParseCtx* ctx,
                                               uint32_t filter_expr,
                                               uint32_t over_def,
-                                              SyntaqliteSourceSpan over_name) {
+                                              SyntaqliteTextSpan over_name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteFilterOver){.tag = SYNTAQLITE_NODE_FILTER_OVER,

@@ -6,32 +6,31 @@
 use std::collections::{HashMap, HashSet};
 
 use syntaqlite_syntax::ParserConfig;
-use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, FieldValue, NodeFields, ParseOutcome,
-    SourceRange,
-};
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-use syntaqlite_syntax::any::TokenCategory;
 #[cfg(feature = "lsp")]
 use syntaqlite_syntax::any::AnyTokenType;
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
+use syntaqlite_syntax::any::TokenCategory;
+use syntaqlite_syntax::any::{
+    AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, FieldValue, NodeFields, ParseOutcome,
+};
 
 use crate::dialect::AnyDialect;
 use crate::dialect::{FIELD_ABSENT, MacroDef, SemanticRole};
 
+#[cfg(feature = "lsp")]
+use super::catalog::{AritySpec, FunctionCategory};
 use super::catalog::{
     Catalog, CatalogLayer, ColumnResolution, FunctionCheckResult, columns_from_select,
 };
-#[cfg(feature = "lsp")]
-use super::catalog::{AritySpec, FunctionCategory};
 use super::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use super::fuzzy::best_suggestion;
-use super::model::{DefinedRelation, SemanticModel, StatementModel};
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-use super::model::{SemanticToken, StoredComment, StoredToken};
 #[cfg(feature = "lsp")]
 use super::model::{
     CompletionContext, CompletionInfo, DefinitionLocation, Resolution, ResolvedSymbol,
 };
+use super::model::{DefinedRelation, SemanticModel, StatementModel};
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
+use super::model::{SemanticToken, StoredComment, StoredToken};
 use super::{AnalysisMode, CheckConfig, CheckLevel, ValidationConfig};
 
 /// Long-lived semantic analysis engine.
@@ -470,7 +469,7 @@ impl SemanticAnalyzer {
 
         // Extract the module name text.
         let module_name = match fields[module as usize] {
-            FieldValue::Span { text, .. } if !text.is_empty() => text.to_string(),
+            FieldValue::Span(sp) if !sp.is_empty() => erased.span_expanded_text(sp).to_string(),
             _ => return,
         };
 
@@ -483,9 +482,9 @@ impl SemanticAnalyzer {
         let Some(source) = self.resolver.as_ref().and_then(|r| r.resolve(&module_name)) else {
             // Emit diagnostic for unresolvable module.
             let (start, end) = match fields[module as usize] {
-                FieldValue::Span { text, .. } => {
-                    let offset = erased.source().find(text).unwrap_or(0);
-                    (offset, offset + text.len())
+                FieldValue::Span(sp) => {
+                    let (authored, off) = erased.span_text(sp);
+                    (off as usize, off as usize + authored.len())
                 }
                 _ => (0, 0),
             };
@@ -514,7 +513,7 @@ impl Default for SemanticAnalyzer {
 
 /// Extract the source text for a single parsed statement from its token spans.
 fn statement_source(stmt: &AnyParsedStatement<'_>) -> String {
-    let source = stmt.source();
+    let source = stmt.text();
     let mut start = usize::MAX;
     let mut end = 0usize;
     for (offset, length) in stmt.token_spans() {
@@ -552,11 +551,11 @@ fn extract_defined_relations(
         SemanticRole::DefineView { name, .. } => (name, true),
         _ => return Vec::new(),
     };
-    if let FieldValue::Span { text, .. } = fields[name_field as usize]
-        && !text.is_empty()
+    if let FieldValue::Span(sp) = fields[name_field as usize]
+        && !sp.is_empty()
     {
         vec![DefinedRelation {
-            name: text.to_string(),
+            name: stmt.span_expanded_text(sp).to_string(),
             is_view,
         }]
     } else {
@@ -917,19 +916,17 @@ fn ddl_name_offset(
         SemanticRole::DefineTable { name, .. } | SemanticRole::DefineView { name, .. } => *name,
         _ => return None,
     };
-    let FieldValue::Span {
-        text: s, source, ..
-    } = fields[name_idx as usize]
-    else {
+    let FieldValue::Span(sp) = fields[name_idx as usize] else {
         return None;
     };
-    if s.is_empty() {
+    if sp.is_empty() {
         return None;
     }
-    Some((
-        s.to_ascii_lowercase(),
-        (source.start as usize, source.end as usize),
-    ))
+    let name = stmt.span_expanded_text(sp);
+    let (authored, off) = stmt.span_text(sp);
+    let start = off as usize;
+    let end = start + authored.len();
+    Some((name.to_ascii_lowercase(), (start, end)))
 }
 
 /// Check if the root node of a statement defines a template macro and, if so,
@@ -957,13 +954,13 @@ fn extract_macro_registration(
 
     // Extract the macro name.
     let name = match fields[def.name_field as usize] {
-        FieldValue::Span { text, .. } if !text.is_empty() => text.to_string(),
+        FieldValue::Span(sp) if !sp.is_empty() => stmt.span_text(sp).0.to_string(),
         _ => return None,
     };
 
     // Extract the macro body.
     let body = match fields[def.body_field as usize] {
-        FieldValue::Span { text, .. } if !text.is_empty() => text.to_string(),
+        FieldValue::Span(sp) if !sp.is_empty() => stmt.span_expanded_text(sp).to_string(),
         _ => return None,
     };
 
@@ -983,8 +980,8 @@ fn extract_macro_registration(
             }
             let (_, child_fields) = stmt.extract_fields(child_id)?;
             match child_fields[def.arg_name_field as usize] {
-                FieldValue::Span { text, .. } if !text.is_empty() => {
-                    param_names.push(text.to_string());
+                FieldValue::Span(sp) if !sp.is_empty() => {
+                    param_names.push(stmt.span_text(sp).0.to_string());
                 }
                 _ => return None,
             }
@@ -1045,16 +1042,17 @@ impl CheckConfig {
 }
 
 impl<'a> ValidationPass<'a> {
-    /// Push a diagnostic anchored to a span field of a node.  `source` is the
-    /// pre-extracted `SourceRange` from the field; `node_id` + `field_idx` are
-    /// used to build the macro expansion traceback (if any).  Severity is
-    /// determined entirely by the check level — callers do not specify it.
+    /// Push a diagnostic anchored to a span field of a node.  `text_range`
+    /// is `(start, end)` authored byte offsets from the field; `node_id` +
+    /// `field_idx` are used to build the macro expansion traceback (if
+    /// any).  Severity is determined entirely by the check level —
+    /// callers do not specify it.
     fn emit(
         &mut self,
         stmt: &mut AnyParsedStatement<'_>,
         node_id: AnyNodeId,
         field_idx: u8,
-        source: SourceRange,
+        text_range: (usize, usize),
         message: DiagnosticMessage,
         help: Option<Help>,
     ) {
@@ -1072,8 +1070,8 @@ impl<'a> ValidationPass<'a> {
         // Only attach if there's actual expansion (more than 1 frame).
         let expansion_frames = if frames.len() > 1 { frames } else { Vec::new() };
         self.diagnostics.push(Diagnostic {
-            start_offset: source.start as usize,
-            end_offset: source.end as usize,
+            start_offset: text_range.0,
+            end_offset: text_range.1,
             message,
             severity,
             help,
@@ -1237,7 +1235,7 @@ impl<'a> ValidationPass<'a> {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    fn field_node_id(fields: &NodeFields<'_>, idx: u8) -> Option<AnyNodeId> {
+    fn field_node_id(fields: &NodeFields, idx: u8) -> Option<AnyNodeId> {
         match fields[idx as usize] {
             FieldValue::NodeId(id) if !id.is_null() => Some(id),
             _ => None,
@@ -1268,8 +1266,13 @@ impl<'a> ValidationPass<'a> {
             return ("", 0, 0);
         }
         match fields[0] {
-            FieldValue::Span { text, source, .. } => {
-                (text, source.start as usize, source.end as usize)
+            FieldValue::Span(sp) => {
+                // Identifier spelling uses the post-expansion bytes;
+                // source position uses the authored byte range.
+                let name = stmt.span_expanded_text(sp);
+                let (authored, off) = stmt.span_text(sp);
+                let start = off as usize;
+                (name, start, start + authored.len())
             }
             _ => ("", 0, 0),
         }
@@ -1277,27 +1280,31 @@ impl<'a> ValidationPass<'a> {
 
     // ── Role handlers ─────────────────────────────────────────────────────────
 
-    fn visit_source_ref<'b>(
+    fn visit_source_ref(
         &mut self,
-        stmt: &mut AnyParsedStatement<'b>,
+        stmt: &mut AnyParsedStatement<'_>,
         node_id: AnyNodeId,
-        fields: &NodeFields<'b>,
+        fields: &NodeFields,
         name_idx: u8,
         alias_idx: u8,
     ) {
-        let FieldValue::Span {
-            text: name, source, ..
-        } = fields[name_idx as usize]
-        else {
+        let FieldValue::Span(sp) = fields[name_idx as usize] else {
             return;
         };
-        if name.is_empty() {
+        if sp.is_empty() {
             return;
         }
-        #[cfg(feature = "lsp")]
-        let start = source.start as usize;
-        #[cfg(feature = "lsp")]
-        let end = source.end as usize;
+        // Identifier spelling comes from the post-expansion bytes (what
+        // the tokenizer saw), so a reference produced from a macro body
+        // resolves against the catalog by its expanded name.  Source
+        // position comes from `span_text`, which walks the expansion
+        // chain back to the authored byte range in the user's input —
+        // so diagnostics anchor at the macro call site when the token
+        // lives inside a macro body.
+        let name = stmt.span_expanded_text(sp);
+        let (authored, off) = stmt.span_text(sp);
+        let start = off as usize;
+        let end = start + authored.len();
 
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
@@ -1309,7 +1316,7 @@ impl<'a> ValidationPass<'a> {
                 stmt,
                 node_id,
                 name_idx,
-                source,
+                (start, end),
                 DiagnosticMessage::UnknownTable {
                     name: name.to_string(),
                 },
@@ -1355,23 +1362,24 @@ impl<'a> ValidationPass<'a> {
             .add_table(scope_name, columns, without_rowid.into());
     }
 
-    fn visit_call<'b>(
+    fn visit_call(
         &mut self,
-        stmt: &mut AnyParsedStatement<'b>,
+        stmt: &mut AnyParsedStatement<'_>,
         node_id: AnyNodeId,
-        fields: &NodeFields<'b>,
+        fields: &NodeFields,
         name_idx: u8,
         args_idx: u8,
     ) {
-        if let FieldValue::Span {
-            text: name, source, ..
-        } = fields[name_idx as usize]
-            && !name.is_empty()
+        if let FieldValue::Span(sp) = fields[name_idx as usize]
+            && !sp.is_empty()
         {
-            #[cfg(feature = "lsp")]
-            let start = source.start as usize;
-            #[cfg(feature = "lsp")]
-            let end = source.end as usize;
+            // Identifier spelling from post-expansion bytes; source
+            // position from `span_text` (walks expansion chain back to
+            // authored byte range).
+            let name = stmt.span_expanded_text(sp);
+            let (authored, off) = stmt.span_text(sp);
+            let start = off as usize;
+            let end = start + authored.len();
             let args_id = Self::field_node_id(fields, args_idx);
             let arg_count = args_id
                 .and_then(|id| stmt.list_children(id))
@@ -1405,7 +1413,7 @@ impl<'a> ValidationPass<'a> {
                         stmt,
                         node_id,
                         name_idx,
-                        source,
+                        (start, end),
                         DiagnosticMessage::UnknownFunction {
                             name: name.to_string(),
                         },
@@ -1417,7 +1425,7 @@ impl<'a> ValidationPass<'a> {
                         stmt,
                         node_id,
                         name_idx,
-                        source,
+                        (start, end),
                         DiagnosticMessage::FunctionArity {
                             name: name.to_string(),
                             expected,
@@ -1431,11 +1439,11 @@ impl<'a> ValidationPass<'a> {
         self.visit_children(stmt, node_id);
     }
 
-    fn visit_column_ref<'b>(
+    fn visit_column_ref(
         &mut self,
-        stmt: &mut AnyParsedStatement<'b>,
+        stmt: &mut AnyParsedStatement<'_>,
         node_id: AnyNodeId,
-        fields: &NodeFields<'b>,
+        fields: &NodeFields,
         column_idx: u8,
         table_idx: u8,
     ) {
@@ -1444,21 +1452,23 @@ impl<'a> ValidationPass<'a> {
         if !self.scope.has_frames() {
             return;
         }
-        let FieldValue::Span {
-            text: column,
-            source,
-            ..
-        } = fields[column_idx as usize]
-        else {
+        let FieldValue::Span(col_sp) = fields[column_idx as usize] else {
             return;
         };
-        if column.is_empty() {
+        if col_sp.is_empty() {
             return;
         }
+        // Identifier spelling comes from post-expansion bytes; source
+        // position from `span_text` (walks expansion chain back to
+        // authored byte range for diagnostic placement).
+        let column = stmt.span_expanded_text(col_sp);
         let table = match fields[table_idx as usize] {
-            FieldValue::Span { text: s, .. } if !s.is_empty() => Some(s),
+            FieldValue::Span(sp) if !sp.is_empty() => Some(stmt.span_expanded_text(sp)),
             _ => None,
         };
+        let (authored, col_off) = stmt.span_text(col_sp);
+        let start = col_off as usize;
+        let end = start + authored.len();
 
         match self.scope.resolve_column(table, column) {
             ColumnResolution::Found {
@@ -1466,7 +1476,7 @@ impl<'a> ValidationPass<'a> {
                 all_columns,
             } => {
                 #[cfg(feature = "lsp")]
-                self.record_column_resolution(source, column, resolved_table, all_columns);
+                self.record_column_resolution(start, end, column, resolved_table, all_columns);
                 #[cfg(not(feature = "lsp"))]
                 let _ = (resolved_table, all_columns);
             }
@@ -1480,7 +1490,7 @@ impl<'a> ValidationPass<'a> {
                     stmt,
                     node_id,
                     column_idx,
-                    source,
+                    (start, end),
                     DiagnosticMessage::UnknownColumn {
                         column: column.to_string(),
                         table: Some(tbl.to_string()),
@@ -1502,7 +1512,7 @@ impl<'a> ValidationPass<'a> {
                     stmt,
                     node_id,
                     column_idx,
-                    source,
+                    (start, end),
                     DiagnosticMessage::UnknownColumn {
                         column: column.to_string(),
                         table: None,
@@ -1518,7 +1528,8 @@ impl<'a> ValidationPass<'a> {
     #[cfg(feature = "lsp")]
     fn record_column_resolution(
         &mut self,
-        source: SourceRange,
+        start: usize,
+        end: usize,
         column: &str,
         resolved_table: String,
         all_columns: Vec<String>,
@@ -1549,8 +1560,8 @@ impl<'a> ValidationPass<'a> {
                     })
             });
         self.resolutions.push(Resolution {
-            start: source.start as usize,
-            end: source.end as usize,
+            start,
+            end,
             symbol: ResolvedSymbol::Column {
                 column: column.to_string(),
                 table: resolved_table,
@@ -1560,10 +1571,10 @@ impl<'a> ValidationPass<'a> {
         });
     }
 
-    fn visit_scoped_source<'b>(
+    fn visit_scoped_source(
         &mut self,
-        stmt: &mut AnyParsedStatement<'b>,
-        fields: &NodeFields<'b>,
+        stmt: &mut AnyParsedStatement<'_>,
+        fields: &NodeFields,
         body_idx: u8,
         alias_idx: u8,
     ) {
@@ -1582,10 +1593,10 @@ impl<'a> ValidationPass<'a> {
     }
 
     #[expect(clippy::too_many_arguments)]
-    fn visit_query<'b>(
+    fn visit_query(
         &mut self,
-        stmt: &mut AnyParsedStatement<'b>,
-        fields: &NodeFields<'b>,
+        stmt: &mut AnyParsedStatement<'_>,
+        fields: &NodeFields,
         from: u8,
         columns: u8,
         where_clause: u8,
@@ -1618,10 +1629,10 @@ impl<'a> ValidationPass<'a> {
     }
 
     /// Extract alias names from the SELECT result column list.
-    fn collect_select_aliases<'b>(
+    fn collect_select_aliases(
         &self,
-        stmt: &mut AnyParsedStatement<'b>,
-        fields: &NodeFields<'b>,
+        stmt: &mut AnyParsedStatement<'_>,
+        fields: &NodeFields,
         columns_idx: u8,
     ) -> Vec<String> {
         let mut aliases = Vec::new();
@@ -1658,10 +1669,10 @@ impl<'a> ValidationPass<'a> {
         aliases
     }
 
-    fn visit_cte_scope<'b>(
+    fn visit_cte_scope(
         &mut self,
-        stmt: &mut AnyParsedStatement<'b>,
-        fields: &NodeFields<'b>,
+        stmt: &mut AnyParsedStatement<'_>,
+        fields: &NodeFields,
         recursive_idx: u8,
         bindings_idx: u8,
         body_idx: u8,
@@ -1819,8 +1830,11 @@ impl<'a> ValidationPass<'a> {
         };
 
         let (name, name_range) = match fields[name_idx as usize] {
-            FieldValue::Span { text, source, .. } => {
-                (text, (source.start as usize, source.end as usize))
+            FieldValue::Span(sp) => {
+                let name = stmt.span_expanded_text(sp);
+                let (authored, off) = stmt.span_text(sp);
+                let start = off as usize;
+                (name, (start, start + authored.len()))
             }
             _ => ("", (0, 0)),
         };
@@ -1837,7 +1851,7 @@ impl<'a> ValidationPass<'a> {
     /// Extract declared CTE column names from the column list field.
     fn extract_declared_cols<'b>(
         stmt: &mut AnyParsedStatement<'b>,
-        fields: &NodeFields<'b>,
+        fields: &NodeFields,
         cols_idx: u8,
     ) -> Option<Vec<(&'b str, usize, usize)>> {
         if cols_idx == FIELD_ABSENT {
@@ -1940,10 +1954,10 @@ impl<'a> ValidationPass<'a> {
         Some(count)
     }
 
-    fn visit_trigger_scope<'b>(
+    fn visit_trigger_scope(
         &mut self,
-        stmt: &mut AnyParsedStatement<'b>,
-        fields: &NodeFields<'b>,
+        stmt: &mut AnyParsedStatement<'_>,
+        fields: &NodeFields,
         when_idx: u8,
         body_idx: u8,
     ) {

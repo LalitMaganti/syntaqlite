@@ -50,8 +50,8 @@ cmd(A) ::= create_table(CT) create_table_args(ARGS). {
 }
 
 create_table(A) ::= createkw temp(T) TABLE ifnotexists(E) nm(Y) dbnm(Z). {
-    SyntaqliteSourceSpan tbl_name = Z.z ? synq_span_dequote(pCtx, Z) : synq_span_dequote(pCtx, Y);
-    SyntaqliteSourceSpan tbl_schema = Z.z ? synq_span_dequote(pCtx, Y) : SYNQ_NO_SPAN;
+    SyntaqliteTextSpan tbl_name = Z.z ? synq_span_dequote(pCtx, Z) : synq_span_dequote(pCtx, Y);
+    SyntaqliteTextSpan tbl_schema = Z.z ? synq_span_dequote(pCtx, Y) : SYNQ_NO_SPAN;
     A = synq_parse_create_table_stmt(pCtx,
         tbl_name, tbl_schema, (SyntaqliteBool)T, (SyntaqliteBool)E,
         (SyntaqliteCreateTableStmtFlags){.raw = 0}, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
@@ -469,7 +469,7 @@ conslist_opt(A) ::= COMMA conslist(L). {
 
 conslist(A) ::= conslist(L) tconscomma(SEP) tcons(TC). {
     // If comma separator was present, clear pending constraint name
-    SyntaqliteSourceSpan pending = SEP ? SYNQ_NO_SPAN : L.pending_name;
+    SyntaqliteTextSpan pending = SEP ? SYNQ_NO_SPAN : L.pending_name;
     if (TC.node != SYNTAQLITE_NULL_NODE) {
         SyntaqliteNode *node = AST_NODE(&pCtx->ast, TC.node);
         node->table_constraint.constraint_name = pending;

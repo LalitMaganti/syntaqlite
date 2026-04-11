@@ -335,7 +335,6 @@ impl SemanticModel {
             .rev()
             .find_map(StatementModel::lineage)
     }
-
 }
 
 #[cfg(feature = "lsp")]

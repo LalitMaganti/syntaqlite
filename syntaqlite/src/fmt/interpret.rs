@@ -19,8 +19,8 @@ pub(crate) struct FmtCtx<'a> {
 }
 
 impl<'a> FmtCtx<'a> {
-    pub(crate) fn source(&self) -> &'a str {
-        self.reader.source()
+    pub(crate) fn text(&self) -> &'a str {
+        self.reader.text()
     }
 }
 
@@ -79,7 +79,7 @@ impl Formatter {
             return NIL_DOC;
         }
 
-        let source = ctx.source();
+        let source = ctx.text();
         let Some((tag, fields)) = ctx.reader.extract_fields(root_id) else {
             return NIL_DOC;
         };
@@ -212,26 +212,20 @@ impl Formatter {
                 }
                 FmtOp::Span(idx) => {
                     // INVARIANT: Span ops only target Span fields.
-                    let FieldValue::Span {
-                        text: s,
-                        quoted,
-                        source: span_src,
-                    } = fields[idx as usize]
-                    else {
+                    let FieldValue::Span(span) = fields[idx as usize] else {
                         panic!("Span: field {idx} is not a Span");
                     };
 
+                    let (s, span_start) = ctx.reader.span_text(span);
                     if !s.is_empty() {
+                        let quoted = span.is_quoted();
                         if let Some(ref cctx) = ctx.comment_ctx {
                             // For quoted spans, the original token in source
                             // starts one byte earlier (the opening quote) and
                             // extends one byte past (the closing quote).
-                            let drain_offset = if quoted {
-                                span_src.start - 1
-                            } else {
-                                span_src.start
-                            };
-                            let token_len = span_src.len() + if quoted { 2 } else { 0 };
+                            let span_len = u32::try_from(s.len()).unwrap_or(u32::MAX);
+                            let drain_offset = if quoted { span_start - 1 } else { span_start };
+                            let token_len = span_len + if quoted { 2 } else { 0 };
                             let drain = cctx.drain_before(drain_offset, source, arena);
                             flush_drain(&drain, &mut pending, &mut running, arena);
                             cctx.advance_past(drain_offset + token_len);
@@ -500,10 +494,10 @@ impl Formatter {
                 }
                 FmtOp::IfSpan(idx, skip) => {
                     // INVARIANT: IfSpan ops only target Span fields.
-                    let FieldValue::Span { text: s, .. } = fields[idx as usize] else {
+                    let FieldValue::Span(span) = fields[idx as usize] else {
                         panic!("IfSpan: field {idx} is not a Span");
                     };
-                    if s.is_empty() {
+                    if span.is_empty() {
                         ip += skip as usize;
                     }
                 }

@@ -543,8 +543,10 @@ fn collect_span_ranges(
         for idx in 0..fields.len() {
             let field_idx = u8::try_from(idx).expect("field index fits in u8");
             match fields[idx] {
-                FieldValue::Span { source, .. } => {
-                    spans.push((field_idx, source.start as usize, source.end as usize));
+                FieldValue::Span(sp) => {
+                    let (text, off) = erased.span_text(sp);
+                    let start = off as usize;
+                    spans.push((field_idx, start, start + text.len()));
                 }
                 FieldValue::NodeId(child) if !child.is_null() => {
                     collect_span_ranges(erased, child, spans);

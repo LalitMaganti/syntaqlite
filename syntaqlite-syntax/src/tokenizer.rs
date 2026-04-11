@@ -201,14 +201,14 @@ impl<G: TypedDialect> TypedTokenizer<G> {
         inner.source_buf.push(0);
 
         // source_buf has at least one byte (the null terminator just pushed).
-        let c_source_ptr =
+        let c_text_ptr =
             NonNull::new(inner.source_buf.as_mut_ptr()).expect("source_buf is non-empty");
-        // SAFETY: inner.raw is valid; c_source_ptr points to source_buf which
+        // SAFETY: inner.raw is valid; c_text_ptr points to source_buf which
         // is null-terminated. source_buf lives inside inner which will be owned
         // by the cursor.
         unsafe {
             inner.raw.as_mut().reset(
-                c_source_ptr.as_ptr() as *const _,
+                c_text_ptr.as_ptr() as *const _,
                 #[expect(clippy::cast_possible_truncation)]
                 {
                     source.len() as u32
@@ -218,7 +218,7 @@ impl<G: TypedDialect> TypedTokenizer<G> {
         TypedTokenCursor {
             raw: inner.raw,
             source,
-            c_source_base: c_source_ptr,
+            c_text_base: c_text_ptr,
             inner: Some(inner),
             slot: Rc::clone(&self.inner),
             _marker: PhantomData,
@@ -273,7 +273,7 @@ impl<G: TypedDialect> TypedTokenizer<G> {
         TypedTokenCursor {
             raw: inner.raw,
             source: source_str,
-            c_source_base: NonNull::new(source.as_ptr() as *mut u8).expect("CStr is non-null"),
+            c_text_base: NonNull::new(source.as_ptr() as *mut u8).expect("CStr is non-null"),
             inner: Some(inner),
             slot: Rc::clone(&self.inner),
             _marker: PhantomData,
@@ -324,7 +324,7 @@ struct TypedTokenCursor<'a, G: TypedDialect> {
     source: &'a str,
     /// Base pointer of the C source buffer. Used to compute byte offsets back
     /// into the Rust `source` slice.
-    c_source_base: NonNull<u8>,
+    c_text_base: NonNull<u8>,
     inner: Option<TokenizerInner>,
     slot: Rc<RefCell<Option<TokenizerInner>>>,
     _marker: PhantomData<G>,
@@ -357,7 +357,7 @@ impl<'a, G: TypedDialect> Iterator for TypedTokenCursor<'a, G> {
 
             if let Some(token_type) = G::Token::from_token_type(AnyTokenType(token.type_)) {
                 // Compute offset into the source string from the C pointer.
-                let offset = token.text as usize - self.c_source_base.as_ptr() as usize;
+                let offset = token.text as usize - self.c_text_base.as_ptr() as usize;
                 let text = &self.source[offset..offset + token.length as usize];
                 return Some(TypedToken { token_type, text });
             }

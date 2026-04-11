@@ -24,9 +24,9 @@ syntaqlite_py_wrap_list(SyntaqliteParser *p, const void *raw) {
 }
 
 static PyObject *
-syntaqlite_py_wrap_span(SyntaqliteParser *p, SyntaqliteSourceSpan span) {
+syntaqlite_py_wrap_span(SyntaqliteParser *p, SyntaqliteTextSpan span) {
     if (span.length == 0) Py_RETURN_NONE;
-    const char *src = syntaqlite_parser_source(p);
+    const char *src = syntaqlite_parser_text(p);
     return PyUnicode_FromStringAndSize(src + span.offset, span.length);
 }
 

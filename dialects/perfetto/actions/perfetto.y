@@ -146,7 +146,7 @@ select_body_end(A) ::= . { A = pCtx->last_shifted_end; }
 
 cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO TABLE nm(N)
            perfetto_table_schema(S) AS select_body_start(BS) select(E) select_body_end(BE). {
-    SyntaqliteSourceSpan select_span = {
+    SyntaqliteTextSpan select_span = {
         BS,
         (uint16_t)(BE - BS),
         0,
@@ -162,7 +162,7 @@ cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO TABLE nm(N)
 
 cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO VIEW nm(N)
            perfetto_table_schema(S) AS select_body_start(BS) select(E) select_body_end(BE). {
-    SyntaqliteSourceSpan select_span = {
+    SyntaqliteTextSpan select_span = {
         BS,
         (uint16_t)(BE - BS),
         0,
@@ -179,7 +179,7 @@ cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO VIEW nm(N)
 cmd(A) ::= CREATE perfetto_or_replace(R) PERFETTO FUNCTION nm(N) LP
            perfetto_arg_def_list(ARGS) RP RETURNS perfetto_return_type(RT)
            AS select_body_start(BS) select(E) select_body_end(BE). {
-    SyntaqliteSourceSpan select_span = {
+    SyntaqliteTextSpan select_span = {
         BS,
         (uint16_t)(BE - BS),
         0,

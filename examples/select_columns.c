@@ -60,7 +60,7 @@ static const TableSchema* schema_get(const Schema* s, const char* name) {
 // ── Helpers ─────────────────────────────────────────────────────────────
 
 static void span_to_str(SyntaqliteParser* p,
-                        SyntaqliteSourceSpan span,
+                        SyntaqliteTextSpan span,
                         char* buf,
                         int buf_size) {
   uint32_t len = 0;

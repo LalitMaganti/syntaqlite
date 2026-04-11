@@ -4,8 +4,8 @@ enum JoinType {
 }
 
 node TableRef {
-  table_name: inline SyntaqliteSourceSpan
-  schema: inline SyntaqliteSourceSpan
+  table_name: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
   alias: index Name
   args: index ExprList
 

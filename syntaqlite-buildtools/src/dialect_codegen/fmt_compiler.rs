@@ -173,7 +173,7 @@ impl EnumDisplayTable {
 struct FieldInfo {
     /// Index into the `FieldVal` array for this node.
     idx: u16,
-    /// The type name (e.g. "`SelectStmtFlags`", "`SortOrder`", "`SyntaqliteSourceSpan`").
+    /// The type name (e.g. "`SelectStmtFlags`", "`SortOrder`", "`SyntaqliteTextSpan`").
     type_name: String,
 }
 
@@ -1014,7 +1014,7 @@ mod tests {
             fields: vec![Field {
                 name: "source".into(),
                 storage: Storage::Inline,
-                type_name: "SyntaqliteSourceSpan".into(),
+                type_name: "SyntaqliteTextSpan".into(),
             }],
             fmt: Some(vec![Fmt::Span("source".into())]),
             semantic: None,

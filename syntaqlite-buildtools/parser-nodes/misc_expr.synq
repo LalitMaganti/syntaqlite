@@ -1,12 +1,12 @@
 node Variable {
-  source: inline SyntaqliteSourceSpan
+  source: inline SyntaqliteTextSpan
 
   fmt { span(source) }
 }
 
 node CollateExpr {
   expr: index Expr
-  collation: inline SyntaqliteSourceSpan
+  collation: inline SyntaqliteTextSpan
 
   fmt_precedence(9)
   fmt_group(0)

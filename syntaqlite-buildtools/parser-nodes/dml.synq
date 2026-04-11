@@ -34,7 +34,7 @@ list UpsertClauseList {
 node DeleteStmt {
   table: index TableRef
   index_hint: inline IndexHint
-  index_name: inline SyntaqliteSourceSpan
+  index_name: inline SyntaqliteTextSpan
   where_clause: index Expr
   orderby: index OrderByList
   limit_clause: index LimitClause
@@ -58,7 +58,7 @@ node DeleteStmt {
 }
 
 node SetClause {
-  column: inline SyntaqliteSourceSpan
+  column: inline SyntaqliteTextSpan
   columns: index ExprList
   value: index Expr
 
@@ -76,7 +76,7 @@ node UpdateStmt {
   conflict_action: inline ConflictAction
   table: index TableRef
   index_hint: inline IndexHint
-  index_name: inline SyntaqliteSourceSpan
+  index_name: inline SyntaqliteTextSpan
   setlist: index SetClauseList
   from_clause: index TableSource
   where_clause: index Expr

@@ -1140,7 +1140,7 @@ mod tests {
     fn semantic_define_table_parses() {
         let item = parse_node(
             r"node CreateTableStmt {
-                table_name: inline SyntaqliteSourceSpan
+                table_name: inline SyntaqliteTextSpan
                 columns: index ColumnDefList
                 as_select: index Select
                 semantic { define_table(name: table_name, columns: columns, select: as_select) }
@@ -1167,7 +1167,7 @@ mod tests {
     fn semantic_import_uses_module_key() {
         let item = parse_node(
             r"node IncludePerfettoModuleStmt {
-                module_name: inline SyntaqliteSourceSpan
+                module_name: inline SyntaqliteTextSpan
                 semantic { import(module: module_name) }
             }",
         );
@@ -1182,7 +1182,7 @@ mod tests {
     fn semantic_unknown_field_is_error() {
         let result = parse_synq_file(
             r"node Foo {
-                bar: inline SyntaqliteSourceSpan
+                bar: inline SyntaqliteTextSpan
                 semantic { define_table(name: nonexistent) }
             }",
         );
@@ -1194,7 +1194,7 @@ mod tests {
     fn semantic_unknown_role_is_error() {
         let result = parse_synq_file(
             r"node Foo {
-                bar: inline SyntaqliteSourceSpan
+                bar: inline SyntaqliteTextSpan
                 semantic { frobnicate(name: bar) }
             }",
         );
@@ -1211,7 +1211,7 @@ mod tests {
     fn node_without_semantic_has_none() {
         let item = parse_node(
             r"node Foo {
-                bar: inline SyntaqliteSourceSpan
+                bar: inline SyntaqliteTextSpan
             }",
         );
         assert!(node_semantic(item).is_none());

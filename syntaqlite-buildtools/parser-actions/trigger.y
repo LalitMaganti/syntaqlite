@@ -31,8 +31,8 @@ cmd(A) ::= createkw trigger_decl(D) BEGIN trigger_cmd_list(S) END. {
 trigger_decl(A) ::= temp(T) TRIGGER ifnotexists(NOERR) nm(B) dbnm(Z)
                     trigger_time(C) trigger_event(D)
                     ON fullname(E) foreach_clause when_clause(G). {
-    SyntaqliteSourceSpan trig_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, B);
-    SyntaqliteSourceSpan trig_schema = Z.z ? synq_span(pCtx, B) : SYNQ_NO_SPAN;
+    SyntaqliteTextSpan trig_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, B);
+    SyntaqliteTextSpan trig_schema = Z.z ? synq_span(pCtx, B) : SYNQ_NO_SPAN;
     A = synq_parse_create_trigger_stmt(pCtx,
         trig_name,
         trig_schema,

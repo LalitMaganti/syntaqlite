@@ -1,7 +1,7 @@
 enum Materialized { DEFAULT MATERIALIZED NOT_MATERIALIZED }
 
 node CteDefinition {
-  cte_name: inline SyntaqliteSourceSpan
+  cte_name: inline SyntaqliteTextSpan
   materialized: inline Materialized
   columns: index ExprList
   select: index Select

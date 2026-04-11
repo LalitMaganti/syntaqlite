@@ -25,8 +25,8 @@ list TriggerCmdList {
 }
 
 node CreateTriggerStmt {
-  trigger_name: inline SyntaqliteSourceSpan
-  schema: inline SyntaqliteSourceSpan
+  trigger_name: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
   is_temp: inline Bool
   if_not_exists: inline Bool
   timing: inline TriggerTiming
@@ -59,11 +59,11 @@ node CreateTriggerStmt {
 }
 
 node CreateVirtualTableStmt {
-  table_name: inline SyntaqliteSourceSpan
-  schema: inline SyntaqliteSourceSpan
-  module_name: inline SyntaqliteSourceSpan
+  table_name: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
+  module_name: inline SyntaqliteTextSpan
   if_not_exists: inline Bool
-  module_args: inline SyntaqliteSourceSpan
+  module_args: inline SyntaqliteTextSpan
 
   fmt {
     "CREATE VIRTUAL TABLE"

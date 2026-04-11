@@ -561,11 +561,11 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p) {
   return syntaqlite_vec_len(&p->ctx.ast.offsets);
 }
 
-SYNTAQLITE_API const char* syntaqlite_parser_source(SyntaqliteParser* p) {
+SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p) {
   return p->source;
 }
 
-SYNTAQLITE_API uint32_t syntaqlite_parser_source_length(SyntaqliteParser* p) {
+SYNTAQLITE_API uint32_t syntaqlite_parser_text_length(SyntaqliteParser* p) {
   return p->source_len;
 }
 

@@ -1,7 +1,7 @@
 flags FunctionCallFlags { DISTINCT = 1 STAR = 2 }
 
 node FunctionCall {
-  func_name: inline SyntaqliteSourceSpan
+  func_name: inline SyntaqliteTextSpan
   flags: inline FunctionCallFlags
   args: index ExprList
   filter_clause: index Expr

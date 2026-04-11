@@ -37,19 +37,19 @@ node UnaryExpr {
 
 node Literal {
   literal_type: inline LiteralType
-  source: inline SyntaqliteSourceSpan
+  source: inline SyntaqliteTextSpan
 
   fmt { span(source) }
 }
 
 node IdentName {
-  source: inline SyntaqliteSourceSpan
+  source: inline SyntaqliteTextSpan
 
   fmt { span(source) }
 }
 
 node Error {
-  source: inline SyntaqliteSourceSpan
+  source: inline SyntaqliteTextSpan
 
   fmt {
     if_span(source) {

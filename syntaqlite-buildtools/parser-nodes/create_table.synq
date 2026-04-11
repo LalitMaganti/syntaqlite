@@ -6,7 +6,7 @@ enum TableConstraintType { PRIMARY_KEY UNIQUE CHECK FOREIGN_KEY }
 flags CreateTableStmtFlags { WITHOUT_ROWID = 1 STRICT = 2 }
 
 node ForeignKeyClause {
-  ref_table: inline SyntaqliteSourceSpan
+  ref_table: inline SyntaqliteTextSpan
   ref_columns: index ExprList
   on_delete: inline ForeignKeyAction
   on_update: inline ForeignKeyAction
@@ -33,11 +33,11 @@ node ForeignKeyClause {
 
 node ColumnConstraint {
   kind: inline ColumnConstraintType
-  constraint_name: inline SyntaqliteSourceSpan
+  constraint_name: inline SyntaqliteTextSpan
   onconf: inline ConflictAction
   sort_order: inline SortOrder
   is_autoincrement: inline Bool
-  collation_name: inline SyntaqliteSourceSpan
+  collation_name: inline SyntaqliteTextSpan
   generated_storage: inline GeneratedColumnStorage
   default_expr: index Expr
   check_expr: index Expr
@@ -99,7 +99,7 @@ list ColumnConstraintList {
 
 node ColumnDef {
   column_name: index Name
-  type_name: inline SyntaqliteSourceSpan
+  type_name: inline SyntaqliteTextSpan
   constraints: index ColumnConstraintList
 
   semantic { column_def(name: column_name, type: type_name, constraints: constraints) }
@@ -120,7 +120,7 @@ list ColumnDefList {
 
 node TableConstraint {
   kind: inline TableConstraintType
-  constraint_name: inline SyntaqliteSourceSpan
+  constraint_name: inline SyntaqliteTextSpan
   onconf: inline ConflictAction
   is_autoincrement: inline Bool
   pk_columns: index OrderByList
@@ -163,8 +163,8 @@ list TableConstraintList {
 }
 
 node CreateTableStmt {
-  table_name: inline SyntaqliteSourceSpan
-  schema: inline SyntaqliteSourceSpan
+  table_name: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
   is_temp: inline Bool
   if_not_exists: inline Bool
   flags: inline CreateTableStmtFlags

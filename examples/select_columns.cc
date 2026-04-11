@@ -17,8 +17,8 @@
 
 // ── Helpers ─────────────────────────────────────────────────────────────
 
-// Extract a std::string from a SyntaqliteSourceSpan.
-static std::string SpanText(SyntaqliteParser* p, SyntaqliteSourceSpan span) {
+// Extract a std::string from a SyntaqliteTextSpan.
+static std::string SpanText(SyntaqliteParser* p, SyntaqliteTextSpan span) {
   uint32_t len = 0;
   const char* text = syntaqlite_parser_span_expanded_text(p, &span, &len);
   if (!text || len == 0)

@@ -26,7 +26,7 @@ use super::{ParseError, ParsedStatement};
 pub struct TypedIncrementalParseSession<G: TypedDialect> {
     /// Base pointer into the internal source buffer. `feed_token` uses this
     /// to compute the C-side token pointer from byte-offset spans.
-    c_source_ptr: NonNull<u8>,
+    c_text_ptr: NonNull<u8>,
     dialect: AnyDialect,
     /// Checked-out parser state. Returned to `slot` on drop.
     inner: Option<ParserInner>,
@@ -46,13 +46,13 @@ impl<G: TypedDialect> Drop for TypedIncrementalParseSession<G> {
 
 impl<G: TypedDialect> TypedIncrementalParseSession<G> {
     pub(crate) fn new(
-        c_source_ptr: NonNull<u8>,
+        c_text_ptr: NonNull<u8>,
         dialect: AnyDialect,
         inner: ParserInner,
         slot: Rc<RefCell<Option<ParserInner>>>,
     ) -> Self {
         TypedIncrementalParseSession {
-            c_source_ptr,
+            c_text_ptr,
             dialect,
             inner: Some(inner),
             slot,
@@ -135,9 +135,9 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
         span: Range<usize>,
     ) -> Option<Result<TypedParsedStatement<'_, G>, TypedParseError<'_, G>>> {
         self.assert_not_finished();
-        // SAFETY: c_source_ptr is valid for the source length; raw is valid.
+        // SAFETY: c_text_ptr is valid for the source length; raw is valid.
         let rc = unsafe {
-            let c_text = self.c_source_ptr.as_ptr().add(span.start);
+            let c_text = self.c_text_ptr.as_ptr().add(span.start);
             let raw_token_type: u32 = token_type.into();
             #[expect(clippy::cast_possible_truncation)]
             (*self.raw_ptr()).feed_token(raw_token_type, c_text as *const _, span.len() as u32)

@@ -1,7 +1,7 @@
 node ColumnRef {
-  column: inline SyntaqliteSourceSpan
-  table: inline SyntaqliteSourceSpan
-  schema: inline SyntaqliteSourceSpan
+  column: inline SyntaqliteTextSpan
+  table: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
 
   semantic { column_ref(column: column, table: table) }
 

@@ -78,8 +78,8 @@ typedef struct {
 | Function | Description |
 |----------|-------------|
 | `syntaqlite_parser_node(p, node_id)` | Pointer to node data in the arena |
-| `syntaqlite_parser_source(p)` | Pointer to the source text |
-| `syntaqlite_parser_source_length(p)` | Length of the source text |
+| `syntaqlite_parser_text(p)` | Pointer to the source text |
+| `syntaqlite_parser_text_length(p)` | Length of the source text |
 | `syntaqlite_parser_node_count(p)` | Number of nodes in the arena |
 | `syntaqlite_dump_node(p, node_id, indent)` | Pretty-print a node subtree. **Caller must `free()` the result** |
 

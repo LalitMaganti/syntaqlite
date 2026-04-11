@@ -40,7 +40,7 @@ node FrameSpec {
 }
 
 node WindowDef {
-  base_window_name: inline SyntaqliteSourceSpan
+  base_window_name: inline SyntaqliteTextSpan
   partition_by: index ExprList
   orderby: index OrderByList
   frame: index FrameSpec
@@ -72,7 +72,7 @@ node WindowDef {
 list WindowDefList { WindowDef }
 
 node NamedWindowDef {
-  window_name: inline SyntaqliteSourceSpan
+  window_name: inline SyntaqliteTextSpan
   window_def: index WindowDef
 
   fmt { span(window_name) " AS " child(window_def) }
@@ -83,7 +83,7 @@ list NamedWindowDefList { NamedWindowDef }
 node FilterOver {
   filter_expr: index Expr
   over_def: index WindowDef
-  over_name: inline SyntaqliteSourceSpan
+  over_name: inline SyntaqliteTextSpan
 
   fmt {
     if_set(filter_expr) { group { "FILTER (" nest { softline "WHERE " child(filter_expr) } softline ")" } }

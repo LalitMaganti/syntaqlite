@@ -111,7 +111,7 @@ The `.synq` grammar files already have semantic annotations for DDL:
 ```synq
 -- syntaqlite-syntax/parser-nodes/create_table.synq
 node CreateTableStmt {
-  table_name: inline SyntaqliteSourceSpan
+  table_name: inline SyntaqliteTextSpan
   columns: index ColumnDefList
   as_select: index Select
   ...
@@ -120,7 +120,7 @@ node CreateTableStmt {
 
 -- syntaqlite-syntax/parser-nodes/utility_stmts.synq
 node CreateViewStmt {
-  view_name: inline SyntaqliteSourceSpan
+  view_name: inline SyntaqliteTextSpan
   select: index Select
   ...
   session_schema { view(name: view_name, as_select: select) }
@@ -128,7 +128,7 @@ node CreateViewStmt {
 
 -- dialects/perfetto/nodes/perfetto.synq
 node CreatePerfettoTableStmt {
-  table_name: inline SyntaqliteSourceSpan
+  table_name: inline SyntaqliteTextSpan
   schema: index PerfettoArgDefList      -- explicit column list
   select: index Select
   ...
@@ -137,14 +137,14 @@ node CreatePerfettoTableStmt {
 }
 
 node CreatePerfettoFunctionStmt {
-  function_name: inline SyntaqliteSourceSpan
+  function_name: inline SyntaqliteTextSpan
   args: index PerfettoArgDefList
   ...
   session_schema { function(name: function_name, args: args) }
 }
 
 node IncludePerfettoModuleStmt {
-  module_name: inline SyntaqliteSourceSpan
+  module_name: inline SyntaqliteTextSpan
   ...
   session_schema { import(name: module_name) }
 }
@@ -216,15 +216,15 @@ annotation:
 ```synq
 node ColumnDef {
   column_name: index Name
-  type_name: inline SyntaqliteSourceSpan
+  type_name: inline SyntaqliteTextSpan
   constraints: index ColumnConstraintList
   ...
   semantic { column_def(name: column_name, type: type_name, constraints: constraints) }
 }
 
 node PerfettoArgDef {
-  arg_name: inline SyntaqliteSourceSpan
-  arg_type: inline SyntaqliteSourceSpan
+  arg_name: inline SyntaqliteTextSpan
+  arg_type: inline SyntaqliteTextSpan
   ...
   semantic { column_def(name: arg_name, type: arg_type) }
 }
@@ -249,7 +249,7 @@ These are the nodes that produce values or reference names. They are the primary
 
 ```synq
 node FunctionCall {
-  func_name: inline SyntaqliteSourceSpan
+  func_name: inline SyntaqliteTextSpan
   args: index ExprList
   filter_clause: index Expr
   over_clause: index WindowDef
@@ -258,8 +258,8 @@ node FunctionCall {
 }
 
 node ColumnRef {
-  column: inline SyntaqliteSourceSpan
-  table: inline SyntaqliteSourceSpan
+  column: inline SyntaqliteTextSpan
+  table: inline SyntaqliteTextSpan
   ...
   semantic { column_ref(column: column, table: table) }
 }
@@ -283,7 +283,7 @@ These are nodes that appear in FROM clauses and introduce names into the current
 
 ```synq
 node TableRef {
-  table_name: inline SyntaqliteSourceSpan
+  table_name: inline SyntaqliteTextSpan
   alias: index Name
   ...
   semantic { source_ref(kind: table, name: table_name, alias: alias) }
@@ -327,7 +327,7 @@ node SelectStmt {
 }
 
 node CteDefinition {
-  cte_name: inline SyntaqliteSourceSpan
+  cte_name: inline SyntaqliteTextSpan
   select: index Select
   ...
   semantic { cte_binding(name: cte_name, body: select) }
@@ -760,7 +760,7 @@ All `.synq` files migrated from `session_schema { ... }` to `semantic { define_*
   `CreatePerfettoTableStmt` bug fixed: `columns: schema` now included so the explicit
   `PerfettoArgDefList` is captured rather than relying solely on AS SELECT inference.
 
-`PerfettoArgDef.arg_name` changed from `inline SyntaqliteSourceSpan` to `index Name` to match
+`PerfettoArgDef.arg_name` changed from `inline SyntaqliteTextSpan` to `index Name` to match
 `ColumnDef.column_name`, giving `columns_from_column_list` a single NodeId-based code path for
 both dialects. The four `perfetto_arg_def_list_ne` parser action rules updated to wrap the name
 token with `synq_parse_ident_name(pCtx, synq_span(pCtx, N))`.
