@@ -43,7 +43,8 @@
 //
 // For macro region tracking, bracket expanded tokens with
 // syntaqlite_parser_begin_macro() / syntaqlite_parser_end_macro(). Read
-// accumulated regions via syntaqlite_result_macros() after parsing.
+// accumulated regions via syntaqlite_result_macro_count() /
+// syntaqlite_result_macro_at() after parsing.
 
 #ifndef SYNTAQLITE_INCREMENTAL_PARSER_H
 #define SYNTAQLITE_INCREMENTAL_PARSER_H

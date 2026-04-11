@@ -170,8 +170,8 @@ SYNTAQLITE_API uint32_t syntaqlite_result_error_offset(SyntaqliteParser* p);
 // Byte length of error token (0 = unknown).
 SYNTAQLITE_API uint32_t syntaqlite_result_error_length(SyntaqliteParser* p);
 
-// Per-statement token/comment/macro arrays.
-// Token/comment arrays are empty unless collect_tokens is enabled via
+// Per-statement token/comment arrays.
+// Empty unless collect_tokens is enabled via
 // syntaqlite_parser_set_collect_tokens(p, 1) before first reset().
 SYNTAQLITE_API const SyntaqliteComment* syntaqlite_result_comments(
     SyntaqliteParser* p,
@@ -179,9 +179,14 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_result_comments(
 SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
     SyntaqliteParser* p,
     uint32_t* count);
-SYNTAQLITE_API const SyntaqliteMacroRegion* syntaqlite_result_macros(
-    SyntaqliteParser* p,
-    uint32_t* count);
+
+// Macro-invocation call sites recorded during parsing.  Accessed via count
+// + indexed getter rather than an array pointer to avoid materializing a
+// separate view — the internal representation carries more data per entry
+// than `SyntaqliteMacroRegion` exposes.
+SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p);
+SYNTAQLITE_API SyntaqliteMacroRegion
+syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx);
 
 // ---------------------------------------------------------------------------
 // Arena accessors
@@ -204,7 +209,7 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_source_length(SyntaqliteParser* p);
 SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
 
 // ---------------------------------------------------------------------------
-// Span resolution
+// Span accessors
 // ---------------------------------------------------------------------------
 
 // A byte range `[start, end)` in the user's authored input text.
@@ -213,33 +218,6 @@ typedef struct SyntaqliteTextRange {
   uint32_t start;
   uint32_t end;
 } SyntaqliteTextRange;
-
-// A fully-resolved span: text pointer, text length, source byte range, and
-// flags.  Returned by syntaqlite_parser_resolve_span().
-//
-// `text` points into the correct buffer — original source for direct spans,
-// expansion buffer for spans inside macros.  `source_offset`/`source_length`
-// are always in the original source; for spans inside a macro expansion,
-// they point at the entire macro call.
-typedef struct SyntaqliteResolvedSpan {
-  const char* text;
-  uint32_t text_len;
-  uint32_t source_offset;
-  uint32_t source_length;
-  uint8_t flags;
-} SyntaqliteResolvedSpan;
-
-// Resolve a source span to its text and source byte range.
-//
-// Walks the macro expansion parent chain for source position, picks the
-// correct buffer for text.  Returns all zeros for a NULL or empty span.
-//
-// This is the only correct way to read a span when macros may be involved:
-// the raw `offset`/`length` fields on `SyntaqliteSourceSpan` may reference
-// an internal expansion buffer.
-SYNTAQLITE_API SyntaqliteResolvedSpan
-syntaqlite_parser_resolve_span(SyntaqliteParser* p,
-                               const SyntaqliteSourceSpan* span);
 
 // One frame in an expansion traceback.  Each frame describes a position
 // inside a particular buffer (the original source or a macro expansion).
@@ -265,8 +243,6 @@ syntaqlite_parser_expansion_traceback(SyntaqliteParser* p,
                                       const SyntaqliteSourceSpan* span,
                                       SyntaqliteExpansionFrame* frames,
                                       uint32_t max_frames);
-
-// ── New span accessors (plan: text / expanded_text vocabulary) ──────────
 
 // Post-expansion text for `span` — the bytes the tokenizer actually saw.
 // For macro-free spans, a slice of the input source.  For spans inside a

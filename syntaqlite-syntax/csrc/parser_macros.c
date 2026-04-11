@@ -723,71 +723,7 @@ SYNTAQLITE_API int syntaqlite_parser_deregister_macro(SyntaqliteParser* p,
 }
 
 // ---------------------------------------------------------------------------
-// Span resolution
-// ---------------------------------------------------------------------------
-
-// Walk the parent chain to resolve a (layer_id, offset, length) to the
-// outermost source-level call site.
-static void resolve_to_source(SyntaqliteParser* p,
-                              uint8_t layer_id,
-                              uint32_t offset,
-                              uint16_t length,
-                              uint32_t* out_offset,
-                              uint32_t* out_length) {
-  uint32_t off = offset;
-  uint32_t len = length;
-  uint8_t layer = layer_id;
-  while (layer > 0 && layer < syntaqlite_vec_len(&p->layers)) {
-    const SynqExpansionLayer* entry = &p->layers.data[layer];
-    off = entry->call_offset;
-    len = entry->call_length;
-    layer = entry->parent_layer_id;
-  }
-  *out_offset = off;
-  *out_length = len;
-}
-
-SYNTAQLITE_API SyntaqliteResolvedSpan
-syntaqlite_parser_resolve_span(SyntaqliteParser* p,
-                               const SyntaqliteSourceSpan* sp) {
-  SyntaqliteResolvedSpan result = {NULL, 0, 0, 0, 0};
-
-  if (!sp || sp->length == 0)
-    return result;
-
-  result.flags = sp->flags;
-
-  // Fast path for direct (non-expansion) spans: offset/length are already
-  // source positions and the text lives in the original source buffer.
-  if (!synq_span_needs_resolve(*sp)) {
-    if (sp->offset + sp->length <= p->source_len) {
-      result.text = p->source + sp->offset;
-      result.text_len = sp->length;
-    }
-    result.source_offset = sp->offset;
-    result.source_length = sp->length;
-    return result;
-  }
-
-  // Expansion span: pick the correct expansion layer for text.
-  uint8_t layer = sp->_layer_id;
-  if (layer < syntaqlite_vec_len(&p->layers)) {
-    const SynqExpansionLayer* r = &p->layers.data[layer];
-    if (r->expansion_data && sp->offset + sp->length <= r->expansion_len) {
-      result.text = r->expansion_data + sp->offset;
-      result.text_len = sp->length;
-    }
-  }
-
-  // Walk the parent chain to find the outermost call site in the source.
-  resolve_to_source(p, sp->_layer_id, sp->offset, sp->length,
-                    &result.source_offset, &result.source_length);
-
-  return result;
-}
-
-// ---------------------------------------------------------------------------
-// New span accessors: span_text, span_expanded_text, span_text_range
+// Span accessors: span_text, span_expanded_text, span_text_range
 // ---------------------------------------------------------------------------
 
 // Walk the layer chain to resolve (layer, offset, length) to an authored

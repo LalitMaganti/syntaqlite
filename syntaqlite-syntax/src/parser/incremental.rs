@@ -260,11 +260,6 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
         // SAFETY: raw is valid (owned via ParserInner, valid for &self).
         unsafe { (*self.raw_ptr()).result_tokens() }
     }
-
-    pub(crate) fn macro_regions(&self) -> &[ffi::CMacroRegion] {
-        // SAFETY: raw is valid (owned via ParserInner, valid for &self).
-        unsafe { (*self.raw_ptr()).result_macros() }
-    }
 }
 
 /// Type-erased incremental parser for runtime-selected dialects.
@@ -383,11 +378,6 @@ impl IncrementalParseSession {
     #[expect(dead_code)]
     pub(crate) fn tokens(&self) -> &[ffi::CParserToken] {
         self.0.tokens()
-    }
-
-    #[expect(dead_code)]
-    pub(crate) fn macro_regions(&self) -> &[ffi::CMacroRegion] {
-        self.0.macro_regions()
     }
 }
 

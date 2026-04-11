@@ -81,19 +81,6 @@ pub(crate) struct CMacroRegion {
     pub(crate) call_length: u32,
 }
 
-/// A fully-resolved span returned by `syntaqlite_parser_resolve_span`.
-///
-/// Mirrors C `SyntaqliteResolvedSpan` from `include/syntaqlite/parser.h`.
-#[derive(Debug, Clone, Copy)]
-#[repr(C)]
-pub(crate) struct CResolvedSpan {
-    pub(crate) text: *const u8,
-    pub(crate) text_len: u32,
-    pub(crate) source_offset: u32,
-    pub(crate) source_length: u32,
-    pub(crate) flags: u8,
-}
-
 /// A byte range in the user's authored input.
 ///
 /// Mirrors C `SyntaqliteTextRange` from `include/syntaqlite/parser.h`.
@@ -265,18 +252,6 @@ impl CParser {
         }
     }
 
-    pub(crate) unsafe fn resolve_span(&self, span: crate::ast::SourceSpan) -> CResolvedSpan {
-        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
-        // of an arena value with the SyntaqliteSourceSpan layout; result
-        // accessors are valid after `next()` returns a non-DONE code.
-        unsafe {
-            syntaqlite_parser_resolve_span(
-                std::ptr::from_ref::<Self>(self).cast_mut(),
-                std::ptr::from_ref(&span).cast(),
-            )
-        }
-    }
-
     pub(crate) unsafe fn expansion_traceback(
         &self,
         span: crate::ast::SourceSpan,
@@ -310,19 +285,17 @@ impl CParser {
         frames
     }
 
-    pub(crate) unsafe fn result_macros(&self) -> &[CMacroRegion] {
-        let mut count: u32 = 0;
+    pub(crate) unsafe fn result_macro_count(&self) -> u32 {
         // SAFETY: self is a valid, non-null CParser pointer; result
         // accessors are valid after `next()` returns a non-DONE code.
-        let ptr = unsafe {
-            syntaqlite_result_macros(std::ptr::from_ref::<Self>(self).cast_mut(), &raw mut count)
-        };
-        if count == 0 || ptr.is_null() {
-            return &[];
-        }
-        // SAFETY: ptr is a valid pointer to `count` CMacroRegion values owned
-        // by the parser arena; the slice is valid for the parser's lifetime.
-        unsafe { std::slice::from_raw_parts(ptr, count as usize) }
+        unsafe { syntaqlite_result_macro_count(std::ptr::from_ref::<Self>(self).cast_mut()) }
+    }
+
+    pub(crate) unsafe fn result_macro_at(&self, idx: u32) -> CMacroRegion {
+        // SAFETY: self is a valid, non-null CParser pointer; result
+        // accessors are valid after `next()` returns a non-DONE code.
+        // The C side clamps out-of-range indices to {0, 0}.
+        unsafe { syntaqlite_result_macro_at(std::ptr::from_ref::<Self>(self).cast_mut(), idx) }
     }
 
     // Arena accessors
@@ -447,14 +420,14 @@ unsafe extern "C" {
     fn syntaqlite_result_error_length(p: *mut CParser) -> u32;
     fn syntaqlite_result_comments(p: *mut CParser, count: *mut u32) -> *const CComment;
     fn syntaqlite_result_tokens(p: *mut CParser, count: *mut u32) -> *const CParserToken;
-    fn syntaqlite_result_macros(p: *mut CParser, count: *mut u32) -> *const CMacroRegion;
+    fn syntaqlite_result_macro_count(p: *mut CParser) -> u32;
+    fn syntaqlite_result_macro_at(p: *mut CParser, idx: u32) -> CMacroRegion;
 
     // Arena accessors
     fn syntaqlite_parser_node(p: *mut CParser, node_id: u32) -> *const u32;
     fn syntaqlite_parser_node_count(p: *mut CParser) -> u32;
 
-    // Span resolution
-    fn syntaqlite_parser_resolve_span(p: *mut CParser, span: *const c_void) -> CResolvedSpan;
+    // Span accessors
     fn syntaqlite_parser_span_expanded_text(
         p: *mut CParser,
         span: *const c_void,
@@ -946,9 +919,10 @@ mod tests {
         assert_eq!(rc, PARSE_OK);
 
         // SAFETY: CParser wraps a valid C parser handle.
-        let regions = unsafe { parser.result_macros() };
-        assert_eq!(regions.len(), 1, "expected one macro region");
-        let r = &regions[0];
+        let count = unsafe { parser.result_macro_count() };
+        assert_eq!(count, 1, "expected one macro region");
+        // SAFETY: idx < count.
+        let r = unsafe { parser.result_macro_at(0) };
         #[expect(clippy::cast_possible_truncation)]
         let call_start = sql.find("foo!").unwrap() as u32;
         assert_eq!(r.call_offset, call_start);
@@ -1019,9 +993,10 @@ mod tests {
         );
 
         // SAFETY: CParser wraps a valid C parser handle.
-        let regions = unsafe { parser.result_macros() };
-        assert_eq!(regions.len(), 1);
-        let r = &regions[0];
+        let count = unsafe { parser.result_macro_count() };
+        assert_eq!(count, 1);
+        // SAFETY: idx < count.
+        let r = unsafe { parser.result_macro_at(0) };
         let call_text = &sql[r.call_offset as usize..(r.call_offset + r.call_length) as usize];
         assert!(
             call_text.starts_with("graph!(") && call_text.ends_with(')'),

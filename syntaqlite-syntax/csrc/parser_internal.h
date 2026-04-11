@@ -75,19 +75,11 @@ typedef struct SynqMacroArg {
   uint32_t length;  // Byte length of the argument text.
 } SynqMacroArg;
 
-// Unified expansion layer record.  `_layer_id` on AST spans indexes
-// directly into the parser's layers vector.  Entry 0 is a sentinel for the
-// original source (expansion_data = source pointer, parent_layer_id = 0,
+// Expansion layer record.  `_layer_id` on AST spans indexes directly into
+// the parser's layers vector.  Entry 0 is a sentinel for the original
+// source (expansion_data = source pointer, parent_layer_id = 0,
 // call_offset/call_length = 0, template_body/name/arg_segments all NULL).
 // Actual expansions start at index 1.
-//
-// Carries the union of what were previously two parallel structs:
-//   - SyntaqliteMacroRegion (public): call_offset, call_length
-//   - SynqMacroRegion (internal): expansion_data, expansion_len,
-//   parent_layer_id
-//
-// syntaqlite_result_macros() builds a view over the call_offset/call_length
-// fields on demand via a lazy cached array in p->public_macros_view.
 //
 // Template/name/def_line/def_col are borrowed pointers into the macro
 // registry entry that was expanded to produce this layer; they outlive the
@@ -163,12 +155,6 @@ struct SyntaqliteParser {
   // source; actual expansions start at index 1.  `_layer_id` on AST spans
   // indexes directly into this vector.
   SYNQ_VEC(SynqExpansionLayer) layers;
-
-  // Lazy view returned by syntaqlite_result_macros().  Allocated on first
-  // call from p->layers[1..], freed and reallocated when layers grows.
-  // Freed on destroy.  Owned by p->mem.
-  SyntaqliteMacroRegion* public_macros_view;
-  uint32_t public_macros_view_cap;
 
   // ── Macro registry (open-addressing hashmap) ──────────────────────────
   SynqMacroEntry* macro_table;

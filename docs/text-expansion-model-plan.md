@@ -546,7 +546,7 @@ additive/rename work lands first, then behavior changes, then deletions.
 | Step | Status | Notes |
 | ---- | ------ | ----- |
 | 1. Rename `_buf_idx` → `_layer_id`                  | ✅ done | |
-| 2. Rename `SynqMacroRegion` → `SynqExpansionLayer`  | ✅ done | Public `syntaqlite_result_macros` preserved via lazy `public_macros_view`. |
+| 2. Rename `SynqMacroRegion` → `SynqExpansionLayer`  | ✅ done | `syntaqlite_result_macros` replaced by count + indexed getter (`_macro_count` / `_macro_at`) so `p->layers` stays the single source of truth (no parallel view). |
 | 3. Add new layer metadata fields                    | ✅ done | `syntaqlite_parser_register_macro` gained `def_line`/`def_col` params; Rust wrappers currently pass `0, 0`. |
 | 4. Record `SynqArgSegment` during param substitution| ✅ done | `SynqMacroExpansion` carries arg segments until transferred onto the layer in `feed_macro_expansion`; `reset_stmt` / `destroy` free both expansion buffers and segment arrays. |
 | 5. Add `_layer_id` to `SyntaqliteParserToken`       | ✅ done | ABI change (16 → 20 bytes). Python bindings unaffected (they don't use the struct); Rust `CParserToken` mirror updated. |
@@ -556,9 +556,9 @@ additive/rename work lands first, then behavior changes, then deletions.
 | 9. Lazy expanded splicer + `subtree_expanded_text` / `expanded_text` | ⏳ deferred | |
 | 10. Migrate formatter's `try_macro_verbatim`        | ⏳ deferred | |
 | 11. Migrate analyzer's `statement_source`           | ⏳ deferred | |
-| 12. `FieldValue::Span` rename                       | ⏳ deferred | Step 6 Rust methods are `pub(crate)` and test-only; Step 12 promotes them and rewrites `extract_field_value`. |
+| 12. `FieldValue::Span` rename                       | ⏳ partial | `extract_field_value` now populates `FieldValue::Span` from the new trio (Session 1 follow-up, PR #90 review). Full rename of the variant's field names (`source` → `text_range`, adding a second authored-text field) still deferred. |
 | 13. Delete old expansion traceback API              | ⏳ deferred | |
-| 14. Delete `resolve_span` and `SyntaqliteResolvedSpan` | ⏳ deferred | Currently still the live path for `FieldValue::Span` population. |
+| 14. Delete `resolve_span` and `SyntaqliteResolvedSpan` | ✅ done | Brought forward from Session 1 follow-up (PR #90 review). Zero callers remain. |
 | 15. Rename `syntaqlite_parser_source()` → `syntaqlite_parser_text()` | ⏳ deferred | |
 
 **Notes on Step 6 (session 1):**
@@ -570,13 +570,11 @@ additive/rename work lands first, then behavior changes, then deletions.
   (`syntaqlite-buildtools/src/dialect_codegen/rust_ast.rs`) was updated to
   emit `span_expanded_text(...)` and generated files were regenerated.
   Generated call sites preserve their original behavior after the rename.
-- All three new Rust methods are `pub(crate)` for now. Test callers live
-  in the same crate (`parser/session.rs` tests), and the eventual
-  Step 12 migration will promote them to `pub` when `FieldValue::Span`
-  consumes them directly.
-- Methods are annotated with `#[cfg_attr(not(test), expect(dead_code,
-  reason = "wired into FieldValue::Span in Step 12"))]` where the only
-  non-test caller is tests; this is removed in Step 12.
+- The three new Rust methods started as `pub(crate)` for Step 6 since the
+  only caller was tests; after the Session 1 follow-up that rewired
+  `extract_field_value` on top of them, they are now genuinely used on
+  every span field extraction. Promoting them to `pub` happens in the
+  full Step 12 rework (still deferred).
 
 **Red-green discipline:** Steps 1–5 are mechanical renames and internal
 plumbing with no user-visible surface, so there is nothing to fail a
@@ -594,6 +592,15 @@ implementation and must fail on the pre-change tree.
   `span_text_inside_substituted_arg_drills_to_origin`. Full workspace
   tests, integration suites (`ast`, `fmt`, `grammar`), and clippy
   `-D warnings` all green at session end.
+- **Session 1 follow-up (PR #90 review)** brought forward the dedupe
+  work: removed `syntaqlite_parser_resolve_span` /
+  `SyntaqliteResolvedSpan` (Step 14) and migrated `extract_field_value`
+  to populate `FieldValue::Span` directly from `span_expanded_text` +
+  `span_text_range` + `sp.is_quoted()` — a partial Step 12 landing.
+  Also replaced `syntaqlite_result_macros` (array-pointer view over
+  `p->layers`) with a count + `_macro_at(idx)` pair so there is no
+  separate "public view" data structure. Updated C examples
+  (`select_columns.c` / `.cc`) accordingly.
 
 ### Step 1 — Rename `_buf_idx` to `_layer_id`
 

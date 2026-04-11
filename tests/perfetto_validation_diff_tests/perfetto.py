@@ -60,17 +60,20 @@ class PerfettoFunctionValidation(TestSuite):
 class MacroExpansionSpanRegression(TestSuite):
     def test_macro_expansion_unknown_column(self):
         """Macro expansion (#84): a column reference produced inside a macro
-        expansion should report "unknown column 'a'" pointing at the entire
-        macro call site `_d!(a)` in the original source, plus a traceback
-        showing the position inside the expansion buffer.
+        expansion should report "unknown column 'a'".  The primary span
+        drills through the macro's `$name` arg segment to the user's
+        authored arg text `a` in the original source (argument-level
+        fidelity, per the text-expansion-model plan's success criterion
+        #5), and a traceback frame shows the corresponding position
+        inside the expansion buffer.
         """
         return DiffTestBlueprint(
             sql="CREATE PERFETTO MACRO _d(name ColumnName) RETURNS Expr AS $name;\nSELECT _d!(a);",
             out="""warning: unknown column 'a'
- --> <stdin>:2:8
+ --> <stdin>:2:12
   |
 2 | SELECT _d!(a);
-  |        ^~~~~~
+  |            ^
 note: in macro expansion
  --> <macro expansion>:1:1
   |

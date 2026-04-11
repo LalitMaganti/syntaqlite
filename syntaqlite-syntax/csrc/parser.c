@@ -206,9 +206,6 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
         p->mem.xFree(lyr->arg_segments);
     }
     syntaqlite_vec_free(&p->layers, p->mem);
-    if (p->public_macros_view) {
-      p->mem.xFree(p->public_macros_view);
-    }
     // Free macro registry.
     if (p->macro_table) {
       for (uint32_t i = 0; i < p->macro_table_size; i++) {
@@ -516,33 +513,21 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
   return p->tokens.data;
 }
 
-SYNTAQLITE_API const SyntaqliteMacroRegion* syntaqlite_result_macros(
-    SyntaqliteParser* p,
-    uint32_t* count) {
+SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
   uint32_t total = syntaqlite_vec_len(&p->layers);
-  // Skip sentinel at index 0.
-  if (total <= 1) {
-    *count = 0;
-    return NULL;
+  // Entry 0 is the source sentinel; real expansion layers start at 1.
+  return total <= 1 ? 0 : total - 1;
+}
+
+SYNTAQLITE_API SyntaqliteMacroRegion
+syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx) {
+  // +1 to skip the source sentinel at index 0.
+  uint32_t layer_idx = idx + 1;
+  if (layer_idx >= syntaqlite_vec_len(&p->layers)) {
+    return (SyntaqliteMacroRegion){0, 0};
   }
-  uint32_t needed = total - 1;
-  // Lazily (re)allocate the public view when the layer vector has grown
-  // past the current capacity.  Valid until the next parser_next / reset /
-  // destroy, matching the documented lifetime of result_*() pointers.
-  if (needed > p->public_macros_view_cap) {
-    p->public_macros_view =
-        p->public_macros_view
-            ? p->mem.xRealloc(p->public_macros_view,
-                              needed * sizeof(SyntaqliteMacroRegion))
-            : p->mem.xMalloc(needed * sizeof(SyntaqliteMacroRegion));
-    p->public_macros_view_cap = needed;
-  }
-  for (uint32_t i = 0; i < needed; i++) {
-    p->public_macros_view[i].call_offset = p->layers.data[i + 1].call_offset;
-    p->public_macros_view[i].call_length = p->layers.data[i + 1].call_length;
-  }
-  *count = needed;
-  return p->public_macros_view;
+  const SynqExpansionLayer* lyr = &p->layers.data[layer_idx];
+  return (SyntaqliteMacroRegion){lyr->call_offset, lyr->call_length};
 }
 
 // ---------------------------------------------------------------------------
