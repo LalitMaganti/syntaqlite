@@ -785,9 +785,11 @@ pub fn syntaqlite_syntax::IncrementalParseSession::node_count(&self) -> u32
 pub fn syntaqlite_syntax::ParseOutcome<T, E>::map<U>(self, f: impl core::ops::function::FnOnce(T) -> U) -> syntaqlite_syntax::ParseOutcome<U, E>
 pub fn syntaqlite_syntax::ParseOutcome<T, E>::map_err<F>(self, f: impl core::ops::function::FnOnce(E) -> F) -> syntaqlite_syntax::ParseOutcome<T, F>
 pub fn syntaqlite_syntax::ParseOutcome<T, E>::transpose(self) -> core::result::Result<core::option::Option<T>, E>
+pub fn syntaqlite_syntax::ParserConfig::collect_node_extents(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::collect_tokens(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::macro_fallback(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::trace(&self) -> bool
+pub fn syntaqlite_syntax::ParserConfig::with_collect_node_extents(self, collect_node_extents: bool) -> Self
 pub fn syntaqlite_syntax::ParserConfig::with_collect_tokens(self, collect_tokens: bool) -> Self
 pub fn syntaqlite_syntax::ParserConfig::with_macro_fallback(self, macro_fallback: bool) -> Self
 pub fn syntaqlite_syntax::ParserConfig::with_trace(self, trace: bool) -> Self
@@ -909,6 +911,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> i
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_regions(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRegion> + use<'_>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_range(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<core::ops::range::Range<u32>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_node(&self) -> core::option::Option<syntaqlite_syntax::any::AnyNode<'_>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_expanded_text(&self, span: syntaqlite_syntax::any::TextSpan) -> &'a str

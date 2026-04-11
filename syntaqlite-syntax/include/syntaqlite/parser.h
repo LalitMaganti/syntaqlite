@@ -372,6 +372,32 @@ SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
 SYNTAQLITE_API int32_t syntaqlite_parser_set_macro_fallback(SyntaqliteParser* p,
                                                             uint32_t enable);
 
+// Enable per-node extent tracking.  When enabled, the parser records
+// the authored-source byte range of every AST node it commits to the
+// arena, so that after a successful parse
+// `syntaqlite_parser_node_range` can return the exact source bytes
+// each node represents.  Default: off (0).  Orthogonal to
+// `collect_tokens` — neither requires the other.
+// Returns 0 on success, -1 if the parser has already been used.
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_collect_node_extents(SyntaqliteParser* p,
+                                           uint32_t enable);
+
+// Return the authored-source byte range for the AST node `node_id`
+// in the current parse result.  `*out_start` and `*out_end` receive
+// a half-open range `[start, end)` such that `source[start..end]` is
+// the text the node covers.
+//
+// Returns 0 on success, -1 if extent tracking is disabled for this
+// parser, the node id is unknown, or no extent was recorded for it
+// (e.g. the node id belongs to a different statement than the one
+// currently in the result, or the grammar action did not route
+// through `synq_parse_build` / the list builders).
+SYNTAQLITE_API int32_t syntaqlite_parser_node_range(SyntaqliteParser* p,
+                                                    uint32_t node_id,
+                                                    uint32_t* out_start,
+                                                    uint32_t* out_end);
+
 // ============================================================================
 // Debugging
 // ============================================================================

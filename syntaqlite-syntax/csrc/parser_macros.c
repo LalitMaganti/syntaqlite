@@ -31,21 +31,94 @@
 // via the macros in `extent_hooks.h`, which the post-lemon patching
 // step injects at the two stable anchor lines.
 //
-// The bodies are intentionally no-ops at this point in the stack —
-// they exist only so the injected calls link.  A follow-up change
-// will add the shadow stack, the `collect_node_extents` flag on
-// `SynqParseCtx`, and the actual extent-recording logic.
+// Both hooks early-exit when `collect_node_extents` is off — the
+// feature is strictly opt-in and must be zero-overhead when disabled.
+//
+// When enabled, the hooks maintain a shadow stack that mirrors Lemon's
+// symbol stack:
+//
+//   - shift: push a `(root_start, root_end)` range for the incoming
+//     terminal.
+//   - reduce: pop `nrhs` entries, merge them via (min start, max end),
+//     push the merged result.  Epsilon reductions (`nrhs == 0`) push
+//     a sentinel empty range that is skipped by future merges.
+//
+// After a clean parse of a single statement the shadow stack has
+// exactly one entry — the start symbol's merged extent covering the
+// full authored source.
+
+// Sentinel pushed by epsilon reductions.  Any non-empty range wins
+// over this in a merge; an all-empty merge propagates as empty.
+#define SYNQ_EXTENT_EMPTY_START UINT32_MAX
+#define SYNQ_EXTENT_EMPTY_END 0u
+
+static inline int synq_extent_is_empty(SynqExtentRange r) {
+  return r.root_start == SYNQ_EXTENT_EMPTY_START &&
+         r.root_end == SYNQ_EXTENT_EMPTY_END;
+}
+
 void synq_extent_on_shift(SynqParseCtx* pCtx,
                           unsigned int major,
                           const SynqParseToken* token) {
-  (void)pCtx;
   (void)major;
-  (void)token;
+  if (!pCtx->collect_node_extents) {
+    return;
+  }
+  // TODO(macro-layers): when `token->layer_id > 0` this is an offset
+  // inside an expansion buffer, not a root offset.  Walk the layer
+  // chain to collapse to the outermost `macro!(...)` call site in
+  // root coordinates.  For now, macro-expanded tokens get an
+  // approximate range — the follow-up PR that wires the full API
+  // surface will fix this.
+  SynqExtentRange r;
+  r.root_start = token->offset;
+  r.root_end = token->offset + token->n;
+  syntaqlite_vec_push(&pCtx->extent_stack, r, pCtx->mem);
 }
 
-void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int ruleno) {
-  (void)pCtx;
-  (void)ruleno;
+void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
+  if (!pCtx->collect_node_extents) {
+    return;
+  }
+  uint32_t len = syntaqlite_vec_len(&pCtx->extent_stack);
+  if (nrhs == 0) {
+    // Epsilon production: push a sentinel empty range.  Future merges
+    // involving this entry will ignore it.
+    SynqExtentRange empty;
+    empty.root_start = SYNQ_EXTENT_EMPTY_START;
+    empty.root_end = SYNQ_EXTENT_EMPTY_END;
+    syntaqlite_vec_push(&pCtx->extent_stack, empty, pCtx->mem);
+    return;
+  }
+  if (nrhs > len) {
+    // Shouldn't happen in a well-formed parse — indicates a desync
+    // between our shadow stack and Lemon's symbol stack.  Recover by
+    // clearing; extents on this parse become unreliable.
+    syntaqlite_vec_truncate(&pCtx->extent_stack, 0);
+    return;
+  }
+  // Merge the top `nrhs` entries into a single range.
+  SynqExtentRange merged;
+  merged.root_start = SYNQ_EXTENT_EMPTY_START;
+  merged.root_end = SYNQ_EXTENT_EMPTY_END;
+  for (uint32_t i = len - nrhs; i < len; i++) {
+    SynqExtentRange e = syntaqlite_vec_at(&pCtx->extent_stack, i);
+    if (synq_extent_is_empty(e)) {
+      continue;
+    }
+    if (synq_extent_is_empty(merged)) {
+      merged = e;
+    } else {
+      if (e.root_start < merged.root_start) {
+        merged.root_start = e.root_start;
+      }
+      if (e.root_end > merged.root_end) {
+        merged.root_end = e.root_end;
+      }
+    }
+  }
+  syntaqlite_vec_truncate(&pCtx->extent_stack, len - nrhs);
+  syntaqlite_vec_push(&pCtx->extent_stack, merged, pCtx->mem);
 }
 
 // ---------------------------------------------------------------------------

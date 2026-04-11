@@ -132,6 +132,31 @@ impl CParser {
         unsafe { syntaqlite_parser_set_macro_fallback(self, enable) }
     }
 
+    pub(crate) unsafe fn set_collect_node_extents(&mut self, enable: u32) -> i32 {
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        unsafe { syntaqlite_parser_set_collect_node_extents(self, enable) }
+    }
+
+    /// Authored-source byte range for the AST node `node_id` in the
+    /// current parse result.  Returns `None` when extent tracking is
+    /// disabled, the node id is unknown, or no extent was recorded
+    /// for this id.
+    pub(crate) unsafe fn node_range(&self, node_id: u32) -> Option<core::ops::Range<u32>> {
+        let mut start: u32 = 0;
+        let mut end: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        // The C function only writes through the out pointers when it returns 0.
+        let rc = unsafe {
+            syntaqlite_parser_node_range(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                node_id,
+                &raw mut start,
+                &raw mut end,
+            )
+        };
+        if rc < 0 { None } else { Some(start..end) }
+    }
+
     pub(crate) unsafe fn reset(&mut self, source: *const c_char, len: u32) {
         // SAFETY: self is a valid, non-null CParser pointer; source is a
         // null-terminated C string of at least `len` bytes.
@@ -431,6 +456,13 @@ unsafe extern "C" {
     fn syntaqlite_parser_set_trace(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_collect_tokens(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_macro_fallback(p: *mut CParser, enable: u32) -> i32;
+    fn syntaqlite_parser_set_collect_node_extents(p: *mut CParser, enable: u32) -> i32;
+    fn syntaqlite_parser_node_range(
+        p: *mut CParser,
+        node_id: u32,
+        out_start: *mut u32,
+        out_end: *mut u32,
+    ) -> i32;
 
     // AST dump
     fn syntaqlite_dump_node(p: *mut CParser, node_id: u32, indent: u32) -> *mut c_char;

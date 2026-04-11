@@ -41,22 +41,27 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
                           const SynqParseToken* token);
 
 // Called from the top of Lemon's `yy_reduce` for every rule reduction,
-// before the user action switch.  Will pop `-yyRuleInfoNRhs[ruleno]`
-// entries from the shadow stack, compute the merged range, and push
-// the result back so the user action can read its own extent;
-// currently a no-op.
-void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int ruleno);
+// before the user action switch.  `nrhs` is the RHS-symbol count for
+// the rule being reduced.  Pops `nrhs` entries from the shadow stack,
+// computes the merged range, and pushes the result back so the user
+// action can read its own extent.  No-op when `collect_node_extents`
+// is disabled.
+void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs);
 
 // Convenience macros invoked from the patched Lemon template.  At the
 // call site `yyParser` is Lemon's generated parser struct, carrying
 // the `%extra_context` field `pCtx` directly (see `_common.y`:
-// `%extra_context {SynqParseCtx* pCtx}`).
+// `%extra_context {SynqParseCtx* pCtx}`).  The reduce macro converts
+// the rule number to an RHS count inline: Lemon stores `yyRuleInfoNRhs`
+// as the *negative* of the actual count (see its declaration in the
+// generated `parse.c`), so we negate and cast to an unsigned count.
 #define synq_on_shift(yypParser, yyMajor, yyMinor_ptr)             \
   synq_extent_on_shift((yypParser)->pCtx, (unsigned int)(yyMajor), \
                        (yyMinor_ptr))
 
 #define synq_on_reduce(yypParser, yyruleno) \
-  synq_extent_on_reduce((yypParser)->pCtx, (yyruleno))
+  synq_extent_on_reduce((yypParser)->pCtx,  \
+                        (unsigned int)(-yyRuleInfoNRhs[yyruleno]))
 
 #ifdef __cplusplus
 }

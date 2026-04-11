@@ -701,3 +701,38 @@ SYNTAQLITE_API int32_t syntaqlite_parser_set_macro_fallback(SyntaqliteParser* p,
   p->macro_fallback = enable;
   return 0;
 }
+
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_collect_node_extents(SyntaqliteParser* p,
+                                           uint32_t enable) {
+  if (p->sealed)
+    return -1;
+  p->ctx.collect_node_extents = enable;
+  return 0;
+}
+
+SYNTAQLITE_API int32_t syntaqlite_parser_node_range(SyntaqliteParser* p,
+                                                    uint32_t node_id,
+                                                    uint32_t* out_start,
+                                                    uint32_t* out_end) {
+  if (!p->ctx.collect_node_extents) {
+    return -1;
+  }
+  if (node_id >= syntaqlite_vec_len(&p->ctx.node_extents)) {
+    return -1;
+  }
+  SynqExtentRange r = syntaqlite_vec_at(&p->ctx.node_extents, node_id);
+  // Entries padded by `synq_extent_record` before a node was ever
+  // recorded carry the sentinel empty range and are not a valid
+  // extent for any real node.
+  if (r.root_start == UINT32_MAX && r.root_end == 0) {
+    return -1;
+  }
+  if (out_start) {
+    *out_start = r.root_start;
+  }
+  if (out_end) {
+    *out_end = r.root_end;
+  }
+  return 0;
+}

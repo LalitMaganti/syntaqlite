@@ -311,6 +311,14 @@ impl<'a> ParsedStatement<'a> {
         self.0.clone().erase()
     }
 
+    /// Authored-source byte range for the AST node `id` in this
+    /// parse result.  See
+    /// [`AnyParsedStatement::node_range`](super::AnyParsedStatement::node_range)
+    /// for the full contract.
+    pub fn node_range(&self, id: super::AnyNodeId) -> Option<core::ops::Range<u32>> {
+        self.0.any.node_range(id)
+    }
+
     /// Macro expansion call-site spans recorded during parsing.
     pub fn macro_regions(&self) -> impl Iterator<Item = super::MacroRegion> + use<'_, 'a> {
         self.0.macro_regions()
@@ -473,6 +481,78 @@ mod tests {
                 .iter()
                 .any(|comment| comment.kind() == CommentKind::Line
                     && comment.text().contains("tail"))
+        );
+    }
+
+    #[test]
+    fn parser_collect_node_extents_records_root_range() {
+        // Per-node extent tracking records the authored-source byte
+        // range of every AST node the parser commits to the arena.
+        // This test pins the end-to-end chain:
+        //
+        //   - `ParserConfig::with_collect_node_extents(true)` flag
+        //   - `syntaqlite_parser_set_collect_node_extents` FFI
+        //   - `synq_extent_on_shift` / `synq_extent_on_reduce` hooks
+        //   - `synq_extent_record` from `synq_parse_build` and the
+        //     list builders
+        //   - `syntaqlite_parser_node_range` public accessor
+        //
+        // For `SELECT 1;` the root statement's extent should cover
+        // the SELECT through the end of the integer literal
+        // (i.e. `0..8`).  The trailing semicolon is a statement
+        // *separator* — it terminates the parse but isn't part of
+        // the SELECT itself, so it does not contribute to the root
+        // node's range.
+        let source = "SELECT 1;";
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
+        let mut session = parser.parse(source);
+
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let erased = statement.erase();
+        let root_id = erased.root_id();
+        let range = statement
+            .node_range(root_id)
+            .expect("root node should have a recorded extent");
+        assert_eq!(
+            range.start, 0,
+            "root extent should start at 0, got {range:?} for source {source:?}"
+        );
+        // "SELECT 1" — everything up to but excluding the trailing semicolon.
+        let expected_end = u32::try_from("SELECT 1".len()).expect("fits in u32");
+        assert_eq!(
+            range.end, expected_end,
+            "root extent should end at byte {expected_end} (end of `SELECT 1`), got {range:?}"
+        );
+
+        // Sanity check: the range slices back to exactly the root text.
+        let slice = &source[range.start as usize..range.end as usize];
+        assert_eq!(slice, "SELECT 1");
+    }
+
+    #[test]
+    fn parser_collect_node_extents_off_returns_none() {
+        // When `collect_node_extents` is disabled (the default),
+        // `node_range` must return None — proving the recording path
+        // is a zero-cost no-op and produces no stored extents.
+        let parser = Parser::with_config(&ParserConfig::default());
+        let mut session = parser.parse("SELECT 1;");
+
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let erased = statement.erase();
+        let root_id = erased.root_id();
+        assert!(
+            statement.node_range(root_id).is_none(),
+            "node_range should be None when collect_node_extents is off"
         );
     }
 

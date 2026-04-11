@@ -90,6 +90,8 @@ impl<G: TypedDialect> TypedParser<G> {
                 .set_collect_tokens(u32::from(config.collect_tokens()));
             raw.as_mut()
                 .set_macro_fallback(u32::from(config.macro_fallback()));
+            raw.as_mut()
+                .set_collect_node_extents(u32::from(config.collect_node_extents()));
         }
 
         TypedParser {
@@ -438,6 +440,28 @@ impl<'a> AnyParsedStatement<'a> {
     pub fn root_id(&self) -> AnyNodeId {
         // SAFETY: self.raw is a valid, non-null parser pointer for lifetime 'a.
         AnyNodeId(unsafe { self.raw.as_ref().result_root() })
+    }
+
+    /// Authored-source byte range for the AST node `id` in this parse
+    /// result.
+    ///
+    /// Returns `None` when any of the following is true:
+    ///
+    /// - the parser was not configured with
+    ///   [`ParserConfig::with_collect_node_extents`],
+    /// - the node id is unknown or belongs to a different statement,
+    /// - no extent was recorded for this id (e.g. the grammar action
+    ///   produced the node via a custom path that doesn't go through
+    ///   `synq_parse_build` or the list builders).
+    ///
+    /// The returned range indexes directly into [`Self::text`], so
+    /// `&stmt.text()[range]` is the exact source the node covers.
+    pub fn node_range(&self, id: AnyNodeId) -> Option<core::ops::Range<u32>> {
+        if id.is_null() {
+            return None;
+        }
+        // SAFETY: self.raw is valid for 'a.
+        unsafe { self.raw.as_ref().node_range(id.0) }
     }
 
     /// Macro expansion call-site spans recorded during parsing.
