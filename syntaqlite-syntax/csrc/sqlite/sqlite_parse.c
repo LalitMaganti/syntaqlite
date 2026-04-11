@@ -4971,6 +4971,8 @@ typedef struct yyParser yyParser;
 #include "syntaqlite_sqlite/sqlite_tokens.h"
 
 #include "syntaqlite_dialect/dialect_macros.h"
+
+#include "syntaqlite_dialect/extent_hooks.h"
 static FILE* yyTraceFILE = 0;
 static char* yyTracePrompt = 0;
 #endif /* NDEBUG */
@@ -6220,7 +6222,7 @@ static void yy_shift(
   yytos->stateno = yyNewState;
   yytos->major = yyMajor;
   yytos->minor.yy0 = yyMinor;
-  /* synq_on_shift hook site */
+  synq_on_shift(yypParser, yyMajor, &yyMinor);
   yyTraceShift(yypParser, yyNewState, "Shift");
 }
 
@@ -7141,7 +7143,7 @@ static YYACTIONTYPE yy_reduce(
   SynqSqliteParseARG_FETCH(void) yyLookahead;
   (void)yyLookaheadToken;
   yymsp = yypParser->yytos;
-  /* synq_on_reduce hook site */
+  synq_on_reduce(yypParser, yyruleno);
 
   switch (yyruleno) {
     /* Beginning here are the reduction cases.  A typical example

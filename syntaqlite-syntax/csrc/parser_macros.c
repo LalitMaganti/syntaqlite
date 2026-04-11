@@ -19,8 +19,34 @@
 #include "syntaqlite/parser.h"
 #include "syntaqlite_dialect/ast_builder.h"
 #include "syntaqlite_dialect/dialect_types.h"
+#include "syntaqlite_dialect/extent_hooks.h"
 
 #include "csrc/parser_internal.h"
+
+// ---------------------------------------------------------------------------
+// Per-node extent tracking hooks
+// ---------------------------------------------------------------------------
+//
+// These are invoked from the Lemon-generated `yy_shift` and `yy_reduce`
+// via the macros in `extent_hooks.h`, which the post-lemon patching
+// step injects at the two stable anchor lines.
+//
+// The bodies are intentionally no-ops at this point in the stack —
+// they exist only so the injected calls link.  A follow-up change
+// will add the shadow stack, the `collect_node_extents` flag on
+// `SynqParseCtx`, and the actual extent-recording logic.
+void synq_extent_on_shift(SynqParseCtx* pCtx,
+                          unsigned int major,
+                          const SynqParseToken* token) {
+  (void)pCtx;
+  (void)major;
+  (void)token;
+}
+
+void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int ruleno) {
+  (void)pCtx;
+  (void)ruleno;
+}
 
 // ---------------------------------------------------------------------------
 // Macro argument scanning
