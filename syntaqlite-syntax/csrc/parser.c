@@ -63,6 +63,7 @@ static void reset_stmt(SyntaqliteParser* p) {
   synq_parse_ctx_clear(&p->ctx);
   syntaqlite_vec_clear(&p->comments);
   syntaqlite_vec_clear(&p->tokens);
+  syntaqlite_vec_clear(&p->traceback_buf);
   // Free owned expansion buffers and arg-segment arrays from previous
   // statement.  Skip index 0 (sentinel) — its expansion_data points to
   // source (not malloc'd) and it has no arg_segments.
@@ -144,6 +145,7 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   syntaqlite_vec_init(&p->comments);
   syntaqlite_vec_init(&p->tokens);
   syntaqlite_vec_init(&p->layers);
+  syntaqlite_vec_init(&p->traceback_buf);
   // macro_table, expansion state already zeroed by memset
   return p;
 }
@@ -208,6 +210,7 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
         p->mem.xFree(lyr->arg_segments);
     }
     syntaqlite_vec_free(&p->layers, p->mem);
+    syntaqlite_vec_free(&p->traceback_buf, p->mem);
     // Free macro registry.
     if (p->macro_table) {
       for (uint32_t i = 0; i < p->macro_table_size; i++) {

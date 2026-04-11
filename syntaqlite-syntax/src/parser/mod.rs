@@ -457,10 +457,10 @@ impl<'a> AnyParsedStatement<'a> {
 
     /// Build a traceback for a span field.
     ///
-    /// Returns a list of [`TracebackFrame`]s from outermost (the root
-    /// source frame) to innermost (the position inside the deepest
-    /// macro expansion layer).  For macro-free spans, returns a single
-    /// root frame.
+    /// Yields [`TracebackFrame`]s in outermost-to-innermost order —
+    /// frame 0 is the root source frame, and the final frame is the
+    /// position inside the deepest macro expansion layer.  For
+    /// macro-free spans, yields exactly one root frame.
     ///
     /// When a span was tokenized inside a substituted macro argument,
     /// the walk drills through the substitution: the innermost frame
@@ -469,46 +469,59 @@ impl<'a> AnyParsedStatement<'a> {
     /// described by the text-expansion-model plan (success criterion
     /// #5).
     ///
-    /// Returns an empty vec for invalid/non-span fields.
-    pub fn traceback(&self, node_id: AnyNodeId, field_idx: u8) -> Vec<TracebackFrame<'a>> {
-        let Some(sp) = self.field_span(node_id, field_idx) else {
-            return Vec::new();
+    /// Yields no frames for invalid or non-span fields.
+    ///
+    /// Takes `&mut self` because the traceback result lives in a
+    /// parser-owned scratch buffer that is overwritten on every call.
+    /// The `&mut` borrow enforces that only one traceback iterator is
+    /// live at a time — callers who need to retain frames across
+    /// another `traceback` call must copy them out (e.g. via
+    /// `.collect::<Vec<_>>()`).
+    pub fn traceback(
+        &mut self,
+        node_id: AnyNodeId,
+        field_idx: u8,
+    ) -> impl Iterator<Item = TracebackFrame<'a>> + use<'_, 'a> {
+        let sp = self.field_span(node_id, field_idx);
+        // The returned slice borrows from the parser's internal
+        // `traceback_buf` vec.  The `&mut self` receiver on this method
+        // ensures no other traceback call can overwrite that buffer
+        // while the returned iterator is live.
+        let raw_frames: &[ffi::CTracebackFrame] = match sp {
+            // SAFETY: self.raw is valid for 'a; sp is a copy of an arena value.
+            Some(sp) => unsafe { self.raw.as_ref().traceback(sp) },
+            None => &[],
         };
-        // SAFETY: self.raw is valid for 'a; sp is a copy of an arena value.
-        let raw_frames = unsafe { self.raw.as_ref().traceback(sp) };
-        raw_frames
-            .into_iter()
-            .map(|f| TracebackFrame {
-                name: if f.name.is_null() || f.name_len == 0 {
-                    None
-                } else {
-                    // SAFETY: C guarantees name points to name_len bytes of
-                    // valid UTF-8 in a parser-owned buffer valid for 'a.
-                    Some(unsafe {
-                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                            f.name,
-                            f.name_len as usize,
-                        ))
-                    })
-                },
-                line: f.line,
-                col: f.col,
-                snippet: if f.snippet.is_null() || f.snippet_len == 0 {
-                    ""
-                } else {
-                    // SAFETY: C guarantees snippet points to snippet_len bytes
-                    // of valid UTF-8 in a parser-owned buffer valid for 'a.
-                    unsafe {
-                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                            f.snippet,
-                            f.snippet_len as usize,
-                        ))
-                    }
-                },
-                offset_in_snippet: f.offset_in_snippet as usize,
-                length_in_snippet: f.length_in_snippet as usize,
-            })
-            .collect()
+        raw_frames.iter().map(|f| TracebackFrame {
+            name: if f.name.is_null() || f.name_len == 0 {
+                None
+            } else {
+                // SAFETY: C guarantees name points to name_len bytes of
+                // valid UTF-8 in a parser-owned buffer valid for 'a.
+                Some(unsafe {
+                    std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                        f.name,
+                        f.name_len as usize,
+                    ))
+                })
+            },
+            line: f.line,
+            col: f.col,
+            snippet: if f.snippet.is_null() || f.snippet_len == 0 {
+                ""
+            } else {
+                // SAFETY: C guarantees snippet points to snippet_len bytes
+                // of valid UTF-8 in a parser-owned buffer valid for 'a.
+                unsafe {
+                    std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                        f.snippet,
+                        f.snippet_len as usize,
+                    ))
+                }
+            },
+            offset_in_snippet: f.offset_in_snippet as usize,
+            length_in_snippet: f.length_in_snippet as usize,
+        })
     }
 
     /// Post-expansion text for an arena span — the bytes the tokenizer

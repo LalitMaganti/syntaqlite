@@ -882,19 +882,25 @@ static void compute_line_col(const char* buf,
   *out_col = col;
 }
 
-SYNTAQLITE_API uint32_t
-syntaqlite_parser_traceback(SyntaqliteParser* p,
-                            const SyntaqliteSourceSpan* sp,
-                            SyntaqliteTracebackFrame* frames,
-                            uint32_t max_frames) {
+SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
+    SyntaqliteParser* p,
+    const SyntaqliteSourceSpan* sp,
+    uint32_t* out_count) {
+  if (out_count)
+    *out_count = 0;
+  // Clear the scratch buffer from any previous call.  Keeps the
+  // allocation so repeat calls reuse the same heap block.
+  syntaqlite_vec_clear(&p->traceback_buf);
   if (!sp || sp->length == 0)
-    return 0;
+    return NULL;
 
-  // Walk the layer chain, emitting one frame per layer.  When the
-  // current position lies inside a substituted arg segment, drill
-  // through to the arg's origin layer and retry — no frame is emitted
-  // for the layer we drilled past, because the span's "real" location
-  // at that level is the arg-origin text, not the substitution site.
+  // Walk the layer chain, emitting one frame per layer into a small
+  // on-stack buffer (innermost first).  When the current position lies
+  // inside a substituted arg segment, drill through to the arg's
+  // origin layer and retry — no frame is emitted for the layer we
+  // drilled past, because the span's "real" location at that level is
+  // the arg-origin text, not the substitution site.  Then reverse
+  // into the parser's owned vec so the caller sees outermost first.
   SyntaqliteTracebackFrame tmp[SYNQ_MAX_MACRO_DEPTH + 2];
   uint32_t count = 0;
   uint32_t off = sp->offset;
@@ -946,10 +952,16 @@ syntaqlite_parser_traceback(SyntaqliteParser* p,
     layer_id = lyr->parent_layer_id;
   }
 
-  // Reverse so frames[0] is outermost and frames[count-1] is innermost.
-  uint32_t to_write = count < max_frames ? count : max_frames;
-  for (uint32_t i = 0; i < to_write; i++) {
-    frames[i] = tmp[count - 1 - i];
+  if (count == 0)
+    return NULL;
+
+  // Reverse into the parser's owned buffer so frame[0] is outermost.
+  syntaqlite_vec_ensure(&p->traceback_buf, count, p->mem);
+  for (uint32_t i = 0; i < count; i++) {
+    p->traceback_buf.data[i] = tmp[count - 1 - i];
   }
-  return count;
+  p->traceback_buf.count = count;
+  if (out_count)
+    *out_count = count;
+  return p->traceback_buf.data;
 }

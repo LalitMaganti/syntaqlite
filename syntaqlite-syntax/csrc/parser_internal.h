@@ -10,6 +10,7 @@
 
 #include "syntaqlite/config.h"
 #include "syntaqlite/dialect.h"
+#include "syntaqlite/parser.h"
 #include "syntaqlite_dialect/ast_builder.h"
 
 #ifdef __cplusplus
@@ -155,6 +156,11 @@ struct SyntaqliteParser {
   // source; actual expansions start at index 1.  `_layer_id` on AST spans
   // indexes directly into this vector.
   SYNQ_VEC(SynqExpansionLayer) layers;
+
+  // Scratch buffer owned by the parser for `syntaqlite_parser_traceback`.
+  // Rewritten on every call; pointers returned from one call are
+  // invalidated by the next (and by `reset_stmt`).
+  SYNQ_VEC(SyntaqliteTracebackFrame) traceback_buf;
 
   // ── Macro registry (open-addressing hashmap) ──────────────────────────
   SynqMacroEntry* macro_table;

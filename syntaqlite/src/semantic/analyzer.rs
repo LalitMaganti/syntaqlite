@@ -334,9 +334,9 @@ impl SemanticAnalyzer {
             // The erased statement borrows the session, so we must extract
             // owned macro data before dropping it and calling register_macro.
             let (stmt_model, macro_reg) = {
-                let erased = stmt.erase();
+                let mut erased = stmt.erase();
                 let model = self.analyze_statement(
-                    &erased,
+                    &mut erased,
                     config,
                     &mut resolutions,
                     &mut definition_offsets,
@@ -370,7 +370,7 @@ impl SemanticAnalyzer {
 
     fn analyze_statement(
         &mut self,
-        erased: &AnyParsedStatement<'_>,
+        erased: &mut AnyParsedStatement<'_>,
         config: &ValidationConfig,
         resolutions: &mut Vec<Resolution>,
         definition_offsets: &mut HashMap<String, (usize, usize)>,
@@ -1014,7 +1014,7 @@ impl<'a> ValidationPass<'a> {
     /// determined entirely by the check level — callers do not specify it.
     fn emit(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
+        stmt: &mut AnyParsedStatement<'_>,
         node_id: AnyNodeId,
         field_idx: u8,
         source: SourceRange,
@@ -1026,7 +1026,6 @@ impl<'a> ValidationPass<'a> {
         };
         let frames = stmt
             .traceback(node_id, field_idx)
-            .into_iter()
             .map(|f| crate::semantic::diagnostics::DiagnosticFrame {
                 buffer: f.snippet.to_string(),
                 start: f.offset_in_snippet,
@@ -1068,8 +1067,8 @@ impl<'a> ValidationPass<'a> {
     }
 
     #[expect(clippy::too_many_arguments)]
-    fn run(
-        stmt: &AnyParsedStatement<'a>,
+    fn run<'b>(
+        stmt: &mut AnyParsedStatement<'b>,
         root: AnyNodeId,
         dialect: &AnyDialect,
         catalog: &'a mut Catalog,
@@ -1093,7 +1092,7 @@ impl<'a> ValidationPass<'a> {
 
     // ── Core visitor ─────────────────────────────────────────────────────────
 
-    fn visit(&mut self, stmt: &AnyParsedStatement<'a>, node_id: AnyNodeId) {
+    fn visit(&mut self, stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
         if node_id.is_null() {
             return;
         }
@@ -1187,8 +1186,11 @@ impl<'a> ValidationPass<'a> {
         }
     }
 
-    fn visit_children(&mut self, stmt: &AnyParsedStatement<'a>, node_id: AnyNodeId) {
-        for child in stmt.child_node_ids(node_id) {
+    fn visit_children(&mut self, stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
+        // Collect child IDs up front so the iterator's borrow on stmt is
+        // dropped before the recursive `&mut` visits.
+        let children: Vec<AnyNodeId> = stmt.child_node_ids(node_id).collect();
+        for child in children {
             if !child.is_null() {
                 self.visit(stmt, child);
             }
@@ -1204,7 +1206,7 @@ impl<'a> ValidationPass<'a> {
         }
     }
 
-    fn visit_opt(&mut self, stmt: &AnyParsedStatement<'a>, id: Option<AnyNodeId>) {
+    fn visit_opt(&mut self, stmt: &mut AnyParsedStatement<'_>, id: Option<AnyNodeId>) {
         if let Some(id) = id {
             self.visit(stmt, id);
         }
@@ -1214,10 +1216,10 @@ impl<'a> ValidationPass<'a> {
     /// (`IdentName` or `Error`).  Both node kinds store their span at field 0.
     /// Returns `(text, source_start, source_end)`.  For spans inside a macro
     /// expansion, the source range points at the macro call site.
-    fn name_text(
-        stmt: &AnyParsedStatement<'a>,
+    fn name_text<'b>(
+        stmt: &AnyParsedStatement<'b>,
         node_id: Option<AnyNodeId>,
-    ) -> (&'a str, usize, usize) {
+    ) -> (&'b str, usize, usize) {
         let Some(node_id) = node_id else {
             return ("", 0, 0);
         };
@@ -1237,11 +1239,11 @@ impl<'a> ValidationPass<'a> {
 
     // ── Role handlers ─────────────────────────────────────────────────────────
 
-    fn visit_source_ref(
+    fn visit_source_ref<'b>(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
+        stmt: &mut AnyParsedStatement<'b>,
         node_id: AnyNodeId,
-        fields: &NodeFields<'a>,
+        fields: &NodeFields<'b>,
         name_idx: u8,
         alias_idx: u8,
     ) {
@@ -1312,11 +1314,11 @@ impl<'a> ValidationPass<'a> {
             .add_table(scope_name, columns, without_rowid.into());
     }
 
-    fn visit_call(
+    fn visit_call<'b>(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
+        stmt: &mut AnyParsedStatement<'b>,
         node_id: AnyNodeId,
-        fields: &NodeFields<'a>,
+        fields: &NodeFields<'b>,
         name_idx: u8,
         args_idx: u8,
     ) {
@@ -1385,11 +1387,11 @@ impl<'a> ValidationPass<'a> {
         self.visit_children(stmt, node_id);
     }
 
-    fn visit_column_ref(
+    fn visit_column_ref<'b>(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
+        stmt: &mut AnyParsedStatement<'b>,
         node_id: AnyNodeId,
-        fields: &NodeFields<'a>,
+        fields: &NodeFields<'b>,
         column_idx: u8,
         table_idx: u8,
     ) {
@@ -1499,10 +1501,10 @@ impl<'a> ValidationPass<'a> {
         }
     }
 
-    fn visit_scoped_source(
+    fn visit_scoped_source<'b>(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
-        fields: &NodeFields<'a>,
+        stmt: &mut AnyParsedStatement<'b>,
+        fields: &NodeFields<'b>,
         body_idx: u8,
         alias_idx: u8,
     ) {
@@ -1521,10 +1523,10 @@ impl<'a> ValidationPass<'a> {
     }
 
     #[expect(clippy::too_many_arguments)]
-    fn visit_query(
+    fn visit_query<'b>(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
-        fields: &NodeFields<'a>,
+        stmt: &mut AnyParsedStatement<'b>,
+        fields: &NodeFields<'b>,
         from: u8,
         columns: u8,
         where_clause: u8,
@@ -1557,10 +1559,10 @@ impl<'a> ValidationPass<'a> {
     }
 
     /// Extract alias names from the SELECT result column list.
-    fn collect_select_aliases(
+    fn collect_select_aliases<'b>(
         &self,
-        stmt: &AnyParsedStatement<'a>,
-        fields: &NodeFields<'a>,
+        stmt: &mut AnyParsedStatement<'b>,
+        fields: &NodeFields<'b>,
         columns_idx: u8,
     ) -> Vec<String> {
         let mut aliases = Vec::new();
@@ -1597,10 +1599,10 @@ impl<'a> ValidationPass<'a> {
         aliases
     }
 
-    fn visit_cte_scope(
+    fn visit_cte_scope<'b>(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
-        fields: &NodeFields<'a>,
+        stmt: &mut AnyParsedStatement<'b>,
+        fields: &NodeFields<'b>,
         recursive_idx: u8,
         bindings_idx: u8,
         body_idx: u8,
@@ -1679,7 +1681,7 @@ impl<'a> ValidationPass<'a> {
     /// alias names `a` and `b` so go-to-definition can jump to them.
     fn record_select_column_offsets(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
+        stmt: &mut AnyParsedStatement<'_>,
         body_id: Option<AnyNodeId>,
         table_key: &str,
     ) {
@@ -1729,11 +1731,11 @@ impl<'a> ValidationPass<'a> {
     }
 
     /// Extract CTE binding info from a node, or `None` if it's not a CTE.
-    fn extract_cte_binding(
+    fn extract_cte_binding<'b>(
         &self,
-        stmt: &AnyParsedStatement<'a>,
+        stmt: &mut AnyParsedStatement<'b>,
         cte_id: AnyNodeId,
-    ) -> Option<CteBindingInfo<'a>> {
+    ) -> Option<CteBindingInfo<'b>> {
         if cte_id.is_null() {
             return None;
         }
@@ -1769,17 +1771,17 @@ impl<'a> ValidationPass<'a> {
     }
 
     /// Extract declared CTE column names from the column list field.
-    fn extract_declared_cols(
-        stmt: &AnyParsedStatement<'a>,
-        fields: &NodeFields<'a>,
+    fn extract_declared_cols<'b>(
+        stmt: &mut AnyParsedStatement<'b>,
+        fields: &NodeFields<'b>,
         cols_idx: u8,
-    ) -> Option<Vec<(&'a str, usize, usize)>> {
+    ) -> Option<Vec<(&'b str, usize, usize)>> {
         if cols_idx == FIELD_ABSENT {
             return None;
         }
         let list_id = Self::field_node_id(fields, cols_idx)?;
         let children = stmt.list_children(list_id)?;
-        let names: Vec<(&'a str, usize, usize)> = children
+        let names: Vec<(&'b str, usize, usize)> = children
             .iter()
             .copied()
             .filter(|id| !id.is_null())
@@ -1792,7 +1794,7 @@ impl<'a> ValidationPass<'a> {
     /// Emit a diagnostic if the CTE body has a different column count than declared.
     fn check_cte_column_count(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
+        stmt: &mut AnyParsedStatement<'_>,
         cte_name: &str,
         cte_name_range: (usize, usize),
         declared: &[&str],
@@ -1822,7 +1824,7 @@ impl<'a> ValidationPass<'a> {
     /// column uses `*` (wildcard), which would require catalog expansion to count.
     fn count_result_columns(
         &self,
-        stmt: &AnyParsedStatement<'a>,
+        stmt: &mut AnyParsedStatement<'_>,
         body_id: Option<AnyNodeId>,
     ) -> Option<usize> {
         let body_id = body_id?;
@@ -1874,10 +1876,10 @@ impl<'a> ValidationPass<'a> {
         Some(count)
     }
 
-    fn visit_trigger_scope(
+    fn visit_trigger_scope<'b>(
         &mut self,
-        stmt: &AnyParsedStatement<'a>,
-        fields: &NodeFields<'a>,
+        stmt: &mut AnyParsedStatement<'b>,
+        fields: &NodeFields<'b>,
         when_idx: u8,
         body_idx: u8,
     ) {

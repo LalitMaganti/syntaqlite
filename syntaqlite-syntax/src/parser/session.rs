@@ -825,10 +825,10 @@ mod tests {
             ParseOutcome::Done => panic!("expected statement"),
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
-        let erased = stmt.erase();
+        let mut erased = stmt.erase();
         let (nid, fidx) = first_span_field(&erased).expect("span field");
 
-        let frames = erased.traceback(nid, fidx);
+        let frames: Vec<_> = erased.traceback(nid, fidx).collect();
         assert_eq!(frames.len(), 1, "macro-free span → single root frame");
         let f = &frames[0];
         assert_eq!(f.name, None, "root frame has no macro name");
@@ -849,10 +849,10 @@ mod tests {
             ParseOutcome::Done => panic!("expected statement"),
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
-        let erased = stmt.erase();
+        let mut erased = stmt.erase();
         let (nid, fidx) = first_span_field(&erased).expect("span field");
 
-        let frames = erased.traceback(nid, fidx);
+        let frames: Vec<_> = erased.traceback(nid, fidx).collect();
         assert_eq!(
             frames.len(),
             2,
@@ -878,10 +878,10 @@ mod tests {
             ParseOutcome::Done => panic!("expected statement"),
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
-        let erased = stmt.erase();
+        let mut erased = stmt.erase();
         let (nid, fidx) = first_span_field(&erased).expect("span field");
 
-        let frames = erased.traceback(nid, fidx);
+        let frames: Vec<_> = erased.traceback(nid, fidx).collect();
         // Arg-segment drill collapses the macro frame: the innermost frame
         // is the user's authored arg text in the original source.
         assert_eq!(

@@ -243,9 +243,10 @@ typedef struct SyntaqliteTracebackFrame {
   uint32_t length_in_snippet;
 } SyntaqliteTracebackFrame;
 
-// Build a traceback for a span.  Frames are written from outermost (the
-// root source frame) to innermost (the position inside the deepest
-// macro expansion layer).
+// Build a traceback for a span and return a pointer to a parser-owned
+// frame array.  Frames are ordered from outermost (the root source
+// frame) to innermost (the position inside the deepest macro
+// expansion layer).
 //
 // When the span was tokenized inside a substituted macro argument, the
 // walk drills through the substitution to the argument's origin layer
@@ -253,17 +254,19 @@ typedef struct SyntaqliteTracebackFrame {
 // than at the macro call site.  This is the argument-level fidelity
 // described in the text-expansion-model plan (success criterion #5).
 //
-// Writes up to `max_frames` frames into `frames[]`.  Returns the total
-// number of frames available (caller can pre-size by calling with
-// `max_frames=0` to get the count, then allocating).
+// Writes the number of frames into `*out_count`.  For a span not
+// inside any macro expansion, returns a single-frame slice with
+// `name == NULL`.  Returns NULL (and writes 0 to `*out_count`) for
+// empty or invalid spans.
 //
-// For a span not inside any macro expansion, returns 1 frame pointing
-// at the span's position in the original source with `name == NULL`.
-SYNTAQLITE_API uint32_t
-syntaqlite_parser_traceback(SyntaqliteParser* p,
-                            const SyntaqliteSourceSpan* span,
-                            SyntaqliteTracebackFrame* frames,
-                            uint32_t max_frames);
+// The returned pointer is valid until the next call to
+// `syntaqlite_parser_traceback` on the same parser or until the next
+// `syntaqlite_parser_next` resets the current statement — callers
+// that need to retain frames across such calls must copy them out.
+SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
+    SyntaqliteParser* p,
+    const SyntaqliteSourceSpan* span,
+    uint32_t* out_count);
 
 // Post-expansion text for `span` — the bytes the tokenizer actually saw.
 // For macro-free spans, a slice of the input source.  For spans inside a

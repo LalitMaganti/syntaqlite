@@ -265,34 +265,26 @@ impl CParser {
         }
     }
 
-    pub(crate) unsafe fn traceback(&self, span: crate::ast::SourceSpan) -> Vec<CTracebackFrame> {
-        // First call with max=0 to get the count.
+    pub(crate) unsafe fn traceback(&self, span: crate::ast::SourceSpan) -> &[CTracebackFrame] {
+        let mut count: u32 = 0;
         // SAFETY: self is a valid CParser pointer; span is a copy of an
-        // arena value with the SyntaqliteSourceSpan layout.
-        let count = unsafe {
+        // arena value with the SyntaqliteSourceSpan layout.  The returned
+        // pointer is backed by the parser's owned `traceback_buf` vec and
+        // remains valid until the next call to this function or until the
+        // parser is mutated through another `&mut` method.
+        let ptr = unsafe {
             syntaqlite_parser_traceback(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
                 std::ptr::from_ref(&span).cast(),
-                std::ptr::null_mut(),
-                0,
+                &raw mut count,
             )
         };
-        if count == 0 {
-            return Vec::new();
+        if ptr.is_null() || count == 0 {
+            return &[];
         }
-        let mut frames: Vec<CTracebackFrame> = Vec::with_capacity(count as usize);
-        // SAFETY: capacity is at least `count`; the C function writes
-        // exactly `count` frames into the buffer.
-        unsafe {
-            syntaqlite_parser_traceback(
-                std::ptr::from_ref::<Self>(self).cast_mut(),
-                std::ptr::from_ref(&span).cast(),
-                frames.as_mut_ptr(),
-                count,
-            );
-            frames.set_len(count as usize);
-        }
-        frames
+        // SAFETY: ptr + count describe a valid slice of CTracebackFrame
+        // values owned by the parser for the duration of the next call.
+        unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
     pub(crate) unsafe fn result_macro_count(&self) -> u32 {
@@ -452,9 +444,8 @@ unsafe extern "C" {
     fn syntaqlite_parser_traceback(
         p: *mut CParser,
         span: *const c_void,
-        frames: *mut CTracebackFrame,
-        max_frames: u32,
-    ) -> u32;
+        out_count: *mut u32,
+    ) -> *const CTracebackFrame;
 
     // Configuration
     fn syntaqlite_parser_set_trace(p: *mut CParser, enable: u32) -> i32;
