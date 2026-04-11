@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1
+
+- Restored Python 3.14 (cp314) wheel publishing, which had been silently dropped since 0.2.13 ([#91](https://github.com/LalitMaganti/syntaqlite/issues/91)).
+- Added macro registration, module resolver, and DDL lineage tracking to the semantic model.
+- Added per-statement C and Python API for diagnostics, lineage, and defined relations.
+- Fixed panic when diagnostics spanned macro expansions ([#84](https://github.com/LalitMaganti/syntaqlite/issues/84)).
+- Improved macro expansion span tracking to report full traceback through nested expansions.
+
 ## 0.3.0
 
 - **Breaking:** Renamed `Grammar` to `Dialect` across C and Rust APIs (`SyntaqliteGrammar` → `SyntaqliteDialect`, `Grammar` → `Dialect`).
