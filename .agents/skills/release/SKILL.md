@@ -37,18 +37,40 @@ asks to "release", "bump version", "tag a release", or "publish".
 
    Keep entries concise — one line per change, no sub-bullets.
 
-4. **Commit and push:**
+4. **Commit on a release branch and open a PR.** `main` is protected and
+   rejects direct pushes — the bump must land via PR.
    ```sh
+   git checkout -b release-<new_version>
    git add -A
    git commit -m "$(cat <<'EOF'
    synq: bump version to <new_version>
    EOF
    )"
-   git push origin HEAD:main
-   ```
+   git push -u origin HEAD
+   gh pr create --title "synq: bump version to <new_version>" --body "$(cat <<'EOF'
+   ## Motivation
 
-5. **Create and push the tag:**
+   Cut the <new_version> release.
+
+   ## Changes
+
+   - Bumps version to <new_version> across all Cargo.toml / pyproject.toml /
+     integration manifests / README / docs.
+   - Adds <new_version> CHANGELOG entry.
+
+   Release notes:
+
+   <paste the CHANGELOG entries for this version here>
+   EOF
+   )"
+   ```
+   **Stop and wait for the user to merge the PR** before continuing. Do not
+   attempt to merge it yourself — the user decides when the release goes out.
+
+5. **After the PR merges**, fast-forward local main and tag the merge commit:
    ```sh
+   git checkout main
+   git pull origin main
    git tag v<new_version>
    git push origin v<new_version>
    ```
