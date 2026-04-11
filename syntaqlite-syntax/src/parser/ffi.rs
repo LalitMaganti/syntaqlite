@@ -137,24 +137,41 @@ impl CParser {
         unsafe { syntaqlite_parser_set_collect_node_extents(self, enable) }
     }
 
-    /// Authored-source byte range for the AST node `node_id` in the
-    /// current parse result.  Returns `None` when extent tracking is
-    /// disabled, the node id is unknown, or no extent was recorded
-    /// for this id.
-    pub(crate) unsafe fn node_range(&self, node_id: u32) -> Option<core::ops::Range<u32>> {
-        let mut start: u32 = 0;
-        let mut end: u32 = 0;
+    /// Authored-source text for the AST node `node_id` in the
+    /// current parse result, returned as `(&str, u32)` where the
+    /// slice is a direct view into the input source and the u32 is
+    /// the slice's byte offset in that source.  Returns `None` when
+    /// extent tracking is disabled, the node id is unknown, no
+    /// extent was recorded for this id, or the recorded extent does
+    /// not lie within the current source buffer.
+    ///
+    /// # Safety
+    /// Caller must ensure the returned slice outlives no longer
+    /// than the borrow underlying `self`.
+    pub(crate) unsafe fn node_text<'a>(&self, node_id: u32) -> Option<(&'a str, u32)> {
+        let mut out_len: u32 = 0;
+        let mut out_offset: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
-        // The C function only writes through the out pointers when it returns 0.
-        let rc = unsafe {
-            syntaqlite_parser_node_range(
+        // The C function only writes through the out pointers and returns a
+        // non-null pointer when there's a recorded extent within the source.
+        let ptr = unsafe {
+            syntaqlite_parser_node_text(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
                 node_id,
-                &raw mut start,
-                &raw mut end,
+                &raw mut out_len,
+                &raw mut out_offset,
             )
         };
-        if rc < 0 { None } else { Some(start..end) }
+        if ptr.is_null() || out_len == 0 {
+            return None;
+        }
+        // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
+        // UTF-8 within the parser's source buffer, which remains valid
+        // for the caller-provided lifetime.
+        let text = unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
+        };
+        Some((text, out_offset))
     }
 
     pub(crate) unsafe fn reset(&mut self, source: *const c_char, len: u32) {
@@ -457,12 +474,12 @@ unsafe extern "C" {
     fn syntaqlite_parser_set_collect_tokens(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_macro_fallback(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_collect_node_extents(p: *mut CParser, enable: u32) -> i32;
-    fn syntaqlite_parser_node_range(
+    fn syntaqlite_parser_node_text(
         p: *mut CParser,
         node_id: u32,
-        out_start: *mut u32,
-        out_end: *mut u32,
-    ) -> i32;
+        out_len: *mut u32,
+        out_offset: *mut u32,
+    ) -> *const u8;
 
     // AST dump
     fn syntaqlite_dump_node(p: *mut CParser, node_id: u32, indent: u32) -> *mut c_char;

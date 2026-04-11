@@ -116,13 +116,24 @@ typedef struct SynqParseCtx {
   // reduction.  After each grammar-action `synq_parse_*` call
   // `synq_extent_record` copies the current top of the shadow stack
   // into `node_extents[node_id]`, which backs the
-  // `syntaqlite_parser_node_range` public accessor.
+  // `syntaqlite_parser_node_text` public accessor.
+  //
+  // `macro_root_start` / `macro_root_end` cache the root-source
+  // byte range of the *outermost* currently-active macro call site,
+  // stashed once when the parser first leaves layer 0 for a macro
+  // expansion and reused by `synq_extent_on_shift` for every token
+  // shifted inside that (or any nested) expansion.  This makes the
+  // hook O(1) per shift — no walking the layer chain at runtime.
+  // Only meaningful when the shifted token's `layer_id > 0`; the
+  // field is stale but unread when back in root.
   //
   // When the flag is off, all of the above are early-exit no-ops
   // and the vecs are never touched.
   SYNQ_VEC(SynqExtentRange) extent_stack;
   SYNQ_VEC(SynqExtentRange) node_extents;
   uint32_t collect_node_extents;
+  uint32_t macro_root_start;
+  uint32_t macro_root_end;
 } SynqParseCtx;
 
 // Common header for all list nodes in the arena.
@@ -170,6 +181,8 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   syntaqlite_vec_init(&ctx->extent_stack);
   syntaqlite_vec_init(&ctx->node_extents);
   ctx->collect_node_extents = 0;
+  ctx->macro_root_start = 0;
+  ctx->macro_root_end = 0;
 }
 
 static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
@@ -187,6 +200,8 @@ static inline void synq_parse_ctx_clear(SynqParseCtx* ctx) {
   syntaqlite_vec_clear(&ctx->extent_stack);
   syntaqlite_vec_clear(&ctx->node_extents);
   synq_arena_clear(&ctx->ast);
+  ctx->macro_root_start = 0;
+  ctx->macro_root_end = 0;
 }
 
 // Record the current top of the extent shadow stack as the extent for

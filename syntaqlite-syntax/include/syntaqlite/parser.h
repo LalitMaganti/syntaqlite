@@ -383,20 +383,30 @@ SYNTAQLITE_API int32_t
 syntaqlite_parser_set_collect_node_extents(SyntaqliteParser* p,
                                            uint32_t enable);
 
-// Return the authored-source byte range for the AST node `node_id`
-// in the current parse result.  `*out_start` and `*out_end` receive
-// a half-open range `[start, end)` such that `source[start..end]` is
-// the text the node covers.
+// Return the authored-source text for the AST node `node_id` in the
+// current parse result.  The returned pointer is a direct slice into
+// the input source — no allocation — of length `*out_len`, and
+// `*out_offset` (optional) receives its byte offset in that source.
 //
-// Returns 0 on success, -1 if extent tracking is disabled for this
-// parser, the node id is unknown, or no extent was recorded for it
-// (e.g. the node id belongs to a different statement than the one
-// currently in the result, or the grammar action did not route
-// through `synq_parse_build` / the list builders).
-SYNTAQLITE_API int32_t syntaqlite_parser_node_range(SyntaqliteParser* p,
-                                                    uint32_t node_id,
-                                                    uint32_t* out_start,
-                                                    uint32_t* out_end);
+// Returns NULL (and writes 0 to `*out_len` / `*out_offset`) when
+// extent tracking is disabled for this parser, the node id is
+// unknown, no extent was recorded for it (e.g. the node id belongs
+// to a different statement than the one currently in the result,
+// or the grammar action did not route through `synq_parse_build` /
+// the list builders), or the recorded extent does not lie within
+// the current source buffer.
+//
+// Mirrors `syntaqlite_parser_span_text` for AST nodes rather than
+// spans, so callers can write:
+//
+//     uint32_t len = 0, off = 0;
+//     const char* text = syntaqlite_parser_node_text(p, id, &len, &off);
+//     if (text) { /* text[0..len], offset = off */ }
+SYNTAQLITE_API const char* syntaqlite_parser_node_text(
+    SyntaqliteParser* p,
+    uint32_t node_id,
+    uint32_t* out_len,
+    uint32_t* out_offset);
 
 // ============================================================================
 // Debugging

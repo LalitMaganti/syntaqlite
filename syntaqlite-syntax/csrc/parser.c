@@ -711,28 +711,42 @@ syntaqlite_parser_set_collect_node_extents(SyntaqliteParser* p,
   return 0;
 }
 
-SYNTAQLITE_API int32_t syntaqlite_parser_node_range(SyntaqliteParser* p,
-                                                    uint32_t node_id,
-                                                    uint32_t* out_start,
-                                                    uint32_t* out_end) {
+SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
+                                                       uint32_t node_id,
+                                                       uint32_t* out_len,
+                                                       uint32_t* out_offset) {
+  if (out_len) {
+    *out_len = 0;
+  }
+  if (out_offset) {
+    *out_offset = 0;
+  }
   if (!p->ctx.collect_node_extents) {
-    return -1;
+    return NULL;
   }
   if (node_id >= syntaqlite_vec_len(&p->ctx.node_extents)) {
-    return -1;
+    return NULL;
   }
   SynqExtentRange r = syntaqlite_vec_at(&p->ctx.node_extents, node_id);
   // Entries padded by `synq_extent_record` before a node was ever
   // recorded carry the sentinel empty range and are not a valid
   // extent for any real node.
   if (r.root_start == UINT32_MAX && r.root_end == 0) {
-    return -1;
+    return NULL;
   }
-  if (out_start) {
-    *out_start = r.root_start;
+  // Defensive: reject ranges that don't lie entirely within the current
+  // source buffer.  Macro-expanded tokens currently push in-layer
+  // offsets (see TODO in parser_macros.c); those can be out of bounds
+  // for the root source, and callers should get NULL rather than a
+  // misleading slice.
+  if (r.root_end < r.root_start || r.root_end > p->source_len) {
+    return NULL;
   }
-  if (out_end) {
-    *out_end = r.root_end;
+  if (out_len) {
+    *out_len = r.root_end - r.root_start;
   }
-  return 0;
+  if (out_offset) {
+    *out_offset = r.root_start;
+  }
+  return p->source + r.root_start;
 }

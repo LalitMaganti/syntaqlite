@@ -442,8 +442,10 @@ impl<'a> AnyParsedStatement<'a> {
         AnyNodeId(unsafe { self.raw.as_ref().result_root() })
     }
 
-    /// Authored-source byte range for the AST node `id` in this parse
-    /// result.
+    /// Authored-source text for the AST node `id` in this parse
+    /// result, returned as `(authored_text, source_offset)` where
+    /// `authored_text` is a direct slice of the user's input source
+    /// and `source_offset` is its byte offset in that source.
     ///
     /// Returns `None` when any of the following is true:
     ///
@@ -452,16 +454,19 @@ impl<'a> AnyParsedStatement<'a> {
     /// - the node id is unknown or belongs to a different statement,
     /// - no extent was recorded for this id (e.g. the grammar action
     ///   produced the node via a custom path that doesn't go through
-    ///   `synq_parse_build` or the list builders).
+    ///   `synq_parse_build` or the list builders),
+    /// - the recorded extent does not lie within the current source
+    ///   buffer.
     ///
-    /// The returned range indexes directly into [`Self::text`], so
-    /// `&stmt.text()[range]` is the exact source the node covers.
-    pub fn node_range(&self, id: AnyNodeId) -> Option<core::ops::Range<u32>> {
+    /// Mirrors [`Self::span_text`] for AST nodes rather than spans —
+    /// no allocation, slice is valid for `'a`.
+    pub fn node_text(&self, id: AnyNodeId) -> Option<(&'a str, u32)> {
         if id.is_null() {
             return None;
         }
-        // SAFETY: self.raw is valid for 'a.
-        unsafe { self.raw.as_ref().node_range(id.0) }
+        // SAFETY: self.raw is valid for 'a; the returned slice borrows
+        // from the parser's source buffer which outlives 'a.
+        unsafe { self.raw.as_ref().node_text(id.0) }
     }
 
     /// Macro expansion call-site spans recorded during parsing.

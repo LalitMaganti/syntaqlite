@@ -64,15 +64,28 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
   if (!pCtx->collect_node_extents) {
     return;
   }
-  // TODO(macro-layers): when `token->layer_id > 0` this is an offset
-  // inside an expansion buffer, not a root offset.  Walk the layer
-  // chain to collapse to the outermost `macro!(...)` call site in
-  // root coordinates.  For now, macro-expanded tokens get an
-  // approximate range — the follow-up PR that wires the full API
-  // surface will fix this.
   SynqExtentRange r;
-  r.root_start = token->offset;
-  r.root_end = token->offset + token->n;
+  if (token->layer_id == 0) {
+    // Root-layer token: offset is in the user's input source, so
+    // use it directly.
+    r.root_start = token->offset;
+    r.root_end = token->offset + token->n;
+  } else {
+    // Token shifted from inside a macro expansion.  Its `offset`
+    // is an in-layer position, not a root offset, so slicing
+    // `source[offset..]` with it would be nonsense.  Instead,
+    // attribute the token to the root-source range of the
+    // outermost enclosing `name!(...)` call site, which
+    // `begin_macro_expansion` stashed onto the ctx when we first
+    // left root layer 0.  Every token from any nested expansion
+    // under that same outermost call site shares the same
+    // extent, which is the right semantics: a user asking for
+    // "where does this node come from in my source" wants the
+    // location they wrote the macro call, not the synthesized
+    // expansion bytes.
+    r.root_start = pCtx->macro_root_start;
+    r.root_end = pCtx->macro_root_end;
+  }
   syntaqlite_vec_push(&pCtx->extent_stack, r, pCtx->mem);
 }
 
@@ -503,6 +516,21 @@ static void begin_macro_expansion(SyntaqliteParser* p,
                                   const char* expansion_data,
                                   uint32_t expansion_len,
                                   const SynqMacroEntry* entry) {
+  // Per-node extent tracking: if this is the outermost non-root
+  // layer we're about to enter (i.e. the current layer is the root
+  // source), `call_offset` / `call_length` are in root-source
+  // coordinates and give us the `name!(...)` call-site range
+  // directly.  Stash it so `synq_extent_on_shift` can attribute
+  // every token shifted inside this (or any nested) expansion to
+  // the same root range without walking the layer chain.  Nested
+  // macros (called from within another expansion) don't update
+  // the stash — the outer macro's range is still the right root
+  // range for all tokens underneath.
+  if (p->ctx.layer_id == 0) {
+    p->ctx.macro_root_start = call_offset;
+    p->ctx.macro_root_end = call_offset + call_length;
+  }
+
   SynqExpansionLayer layer = {
       .call_offset = call_offset,
       .call_length = call_length,
