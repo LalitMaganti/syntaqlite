@@ -1187,10 +1187,9 @@ impl<'a> ValidationPass<'a> {
     }
 
     fn visit_children(&mut self, stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
-        // Collect child IDs up front so the iterator's borrow on stmt is
-        // dropped before the recursive `&mut` visits.
-        let children: Vec<AnyNodeId> = stmt.child_node_ids(node_id).collect();
-        for child in children {
+        // `child_node_ids` owns its data (no borrow on `stmt`), so we
+        // can hold it while recursively `&mut`-borrowing `stmt`.
+        for child in stmt.child_node_ids(node_id) {
             if !child.is_null() {
                 self.visit(stmt, child);
             }

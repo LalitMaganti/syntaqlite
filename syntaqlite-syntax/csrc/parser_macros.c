@@ -868,18 +868,22 @@ static void compute_line_col(const char* buf,
                              uint32_t* out_col) {
   if (offset > buf_len)
     offset = buf_len;
+  // Walk newline-to-newline with memchr instead of char-by-char so
+  // long single-line SQL doesn't become O(offset) per frame.
   uint32_t line = 1;
-  uint32_t col = 1;
-  for (uint32_t i = 0; i < offset; i++) {
-    if (buf[i] == '\n') {
-      line++;
-      col = 1;
-    } else {
-      col++;
-    }
+  uint32_t last_nl_end = 0;  // byte position just past the most recent '\n'
+  uint32_t scanned = 0;
+  while (scanned < offset) {
+    const char* nl =
+        (const char*)memchr(buf + scanned, '\n', (size_t)(offset - scanned));
+    if (!nl)
+      break;
+    line++;
+    last_nl_end = (uint32_t)(nl - buf) + 1;
+    scanned = last_nl_end;
   }
   *out_line = line;
-  *out_col = col;
+  *out_col = offset - last_nl_end + 1;
 }
 
 SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(

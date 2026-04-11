@@ -458,25 +458,21 @@ impl<'a> AnyParsedStatement<'a> {
     /// Build a traceback for a span field.
     ///
     /// Yields [`TracebackFrame`]s in outermost-to-innermost order —
-    /// frame 0 is the root source frame, and the final frame is the
-    /// position inside the deepest macro expansion layer.  For
-    /// macro-free spans, yields exactly one root frame.
+    /// frame 0 is the root source, and the final frame is the position
+    /// inside the deepest macro expansion layer.  For macro-free spans,
+    /// yields exactly one root frame.
     ///
     /// When a span was tokenized inside a substituted macro argument,
     /// the walk drills through the substitution: the innermost frame
     /// points at the user's authored arg text rather than at the
-    /// `foo!(…)` call site.  This is the argument-level fidelity
-    /// described by the text-expansion-model plan (success criterion
-    /// #5).
+    /// `foo!(…)` call site.
     ///
     /// Yields no frames for invalid or non-span fields.
     ///
-    /// Takes `&mut self` because the traceback result lives in a
-    /// parser-owned scratch buffer that is overwritten on every call.
-    /// The `&mut` borrow enforces that only one traceback iterator is
-    /// live at a time — callers who need to retain frames across
-    /// another `traceback` call must copy them out (e.g. via
-    /// `.collect::<Vec<_>>()`).
+    /// Frames live in a parser-owned scratch buffer that is overwritten
+    /// on every call, so this method takes `&mut self`; `.collect()` the
+    /// iterator before calling `traceback` again if you need to retain
+    /// frames across calls.
     pub fn traceback(
         &mut self,
         node_id: AnyNodeId,
@@ -666,7 +662,12 @@ impl<'a> AnyParsedStatement<'a> {
     }
 
     /// Iterate direct child node IDs for the node at `id`.
-    pub fn child_node_ids(&self, id: AnyNodeId) -> impl Iterator<Item = AnyNodeId> + '_ {
+    ///
+    /// The returned iterator owns its data and does not borrow from
+    /// `self`, so it can be held across `&mut self` method calls on the
+    /// statement (e.g. while recursively invoking a visitor that itself
+    /// takes `&mut AnyParsedStatement`).
+    pub fn child_node_ids(&self, id: AnyNodeId) -> impl Iterator<Item = AnyNodeId> + use<> {
         let mut out = Vec::new();
         if let Some((_, fields)) = self.extract_fields(id) {
             for i in 0..fields.len() {

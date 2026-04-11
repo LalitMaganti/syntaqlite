@@ -223,15 +223,14 @@ impl MacroRegion {
     }
 }
 
-/// One frame in a macro expansion traceback.
+/// One frame in a span traceback.
 ///
 /// Each frame describes a position inside either the original authored
 /// source (root frame, `name` is `None`) or a macro expansion layer
 /// (inner frame, `name` carries the macro name).
 ///
-/// Frame 0 is the outermost — the root frame if the span originates in a
-/// macro, or the only frame for a macro-free span. The last frame is the
-/// innermost position along the expansion chain.
+/// Frame 0 is the outermost (root source); the last frame is the
+/// innermost expansion layer.
 ///
 /// `snippet` is the buffer to render the caret against, and
 /// `offset_in_snippet` is the byte offset within that snippet.
@@ -239,8 +238,9 @@ impl MacroRegion {
 /// Returned by [`super::AnyParsedStatement::traceback`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TracebackFrame<'a> {
-    /// Frame name — `None` for the root source frame, `Some("foo")` for a
-    /// macro expansion frame from `CREATE PERFETTO MACRO foo …`.
+    /// Frame name — `None` for the root source frame, or `Some(name)`
+    /// for a macro expansion frame, where `name` is the macro's
+    /// registered name.
     pub name: Option<&'a str>,
     /// 1-based line number of `offset_in_snippet` within `snippet`.
     pub line: u32,

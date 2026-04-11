@@ -251,8 +251,7 @@ typedef struct SyntaqliteTracebackFrame {
 // When the span was tokenized inside a substituted macro argument, the
 // walk drills through the substitution to the argument's origin layer
 // — the innermost frame points at the user's authored arg text rather
-// than at the macro call site.  This is the argument-level fidelity
-// described in the text-expansion-model plan (success criterion #5).
+// than at the macro call site.
 //
 // Writes the number of frames into `*out_count`.  For a span not
 // inside any macro expansion, returns a single-frame slice with
