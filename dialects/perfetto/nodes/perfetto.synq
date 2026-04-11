@@ -72,6 +72,7 @@ node CreatePerfettoTableStmt {
   or_replace: inline Bool
   schema: index PerfettoArgDefList
   select: index Select
+  select_span: inline SyntaqliteSourceSpan
 
   semantic { define_table(name: table_name, columns: schema, select: select) }
 
@@ -99,6 +100,7 @@ node CreatePerfettoViewStmt {
   or_replace: inline Bool
   schema: index PerfettoArgDefList
   select: index Select
+  select_span: inline SyntaqliteSourceSpan
 
   semantic { define_view(name: view_name, columns: schema, select: select) }
 
@@ -127,6 +129,7 @@ node CreatePerfettoFunctionStmt {
   args: index PerfettoArgDefList
   return_type: index PerfettoReturnType
   select: index Select
+  select_span: inline SyntaqliteSourceSpan
 
   semantic { define_function(name: function_name, args: args, return_type: return_type, select: select) }
 

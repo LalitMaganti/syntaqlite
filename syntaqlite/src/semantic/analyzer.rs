@@ -1025,12 +1025,12 @@ impl<'a> ValidationPass<'a> {
             return;
         };
         let frames = stmt
-            .field_expansion_traceback(node_id, field_idx)
+            .traceback(node_id, field_idx)
             .into_iter()
             .map(|f| crate::semantic::diagnostics::DiagnosticFrame {
-                buffer: f.buffer.to_string(),
-                start: f.offset,
-                end: f.offset + f.length,
+                buffer: f.snippet.to_string(),
+                start: f.offset_in_snippet,
+                end: f.offset_in_snippet + f.length_in_snippet,
             })
             .collect::<Vec<_>>();
         // Only attach if there's actual expansion (more than 1 frame).

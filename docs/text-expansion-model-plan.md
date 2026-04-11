@@ -551,13 +551,13 @@ additive/rename work lands first, then behavior changes, then deletions.
 | 4. Record `SynqArgSegment` during param substitution| ✅ done | `SynqMacroExpansion` carries arg segments until transferred onto the layer in `feed_macro_expansion`; `reset_stmt` / `destroy` free both expansion buffers and segment arrays. |
 | 5. Add `_layer_id` to `SyntaqliteParserToken`       | ✅ done | ABI change (16 → 20 bytes). Python bindings unaffected (they don't use the struct); Rust `CParserToken` mirror updated. |
 | 6. Add `span_text` / `span_expanded_text` / `span_text_range` | ✅ done | See "Notes on Step 6" below. |
-| 7. Add `traceback` with arg-segment drilling        | ⏳ deferred | |
-| 8. Lazy subtree extent cache + `subtree_text`       | ⏳ deferred | |
-| 9. Lazy expanded splicer + `subtree_expanded_text` / `expanded_text` | ⏳ deferred | |
-| 10. Migrate formatter's `try_macro_verbatim`        | ⏳ deferred | |
+| 7. Add `traceback` with arg-segment drilling        | ✅ done | New `SyntaqliteTracebackFrame` struct + `syntaqlite_parser_traceback` C API, `TracebackFrame<'a>` + `AnyParsedStatement::traceback` Rust method. Validator migrated off the old API. See session 2 notes. |
+| 8. Targeted `select_span` on Perfetto CREATE stmts (was: subtree extent cache) | ✅ done (reshaped) | **Scope change**: the generalized `subtree_text` API was dropped in favor of a targeted grammar-annotation mechanism. Added `cur_shift_start`/`last_shifted_end` tracking on `SynqParseCtx` (updated in `record_and_feed` before/after `feed_one_token`) plus empty-marker rules `select_body_start` / `select_body_end` in `perfetto.y`. Added `select_span` field to `CreatePerfettoTableStmt` / `CreatePerfettoViewStmt` / `CreatePerfettoFunctionStmt`. Consumers read the field like any other span and call `span_text_range(select_span)` for the authored byte range. Perfetto macro body already lands as a span via existing `synq_span` conversion — no change needed. |
+| 9. Lazy expanded splicer + `subtree_expanded_text` / `expanded_text` | ❌ dropped | Obviated by Step 8's reshape. Macro-containing subtrees don't need a generalized splicer; Perfetto's actual use cases are handled by the `select_span` field (whose authored bytes come from the root layer directly). |
+| 10. Migrate formatter's `try_macro_verbatim`        | ❌ dropped | Obviated by Step 8's reshape. The formatter's existing `MacroRegion` + peek-next-token approach is correct and doesn't benefit from a subtree accessor. |
 | 11. Migrate analyzer's `statement_source`           | ⏳ deferred | |
 | 12. `FieldValue::Span` rename                       | ⏳ partial | `extract_field_value` now populates `FieldValue::Span` from the new trio (Session 1 follow-up, PR #90 review). Full rename of the variant's field names (`source` → `text_range`, adding a second authored-text field) still deferred. |
-| 13. Delete old expansion traceback API              | ⏳ deferred | |
+| 13. Delete old expansion traceback API              | ✅ done | Removed `syntaqlite_parser_expansion_traceback`, `SyntaqliteExpansionFrame`, `ExpansionFrame`, `field_expansion_traceback`. Validator migrated to `traceback()`. |
 | 14. Delete `resolve_span` and `SyntaqliteResolvedSpan` | ✅ done | Brought forward from Session 1 follow-up (PR #90 review). Zero callers remain. |
 | 15. Rename `syntaqlite_parser_source()` → `syntaqlite_parser_text()` | ⏳ deferred | |
 
@@ -601,6 +601,32 @@ implementation and must fail on the pre-change tree.
   `p->layers`) with a count + `_macro_at(idx)` pair so there is no
   separate "public view" data structure. Updated C examples
   (`select_columns.c` / `.cc`) accordingly.
+- **Session 2** landed Steps 7, 8 (reshaped), and 13, plus dropped
+  Steps 9/10 entirely. Step 7 added the new `traceback` API with
+  arg-segment drilling (`SyntaqliteTracebackFrame` C struct, `CTracebackFrame`
+  FFI mirror, `TracebackFrame<'a>` public Rust type, and a
+  `compute_line_col` helper). The validator's `emit()` method now
+  uses `stmt.traceback(node_id, field_idx)`. Step 13 followed
+  immediately: the old `expansion_traceback` / `ExpansionFrame` /
+  `field_expansion_traceback` symbols are gone entirely. The Perfetto
+  `MacroExpansionSpanRegression` diff test split into two cases — one
+  for the arg-drill collapse (`_d!(a)` → single root frame, no "in
+  macro expansion" note) and one for the macro-body case (`m!()`
+  where the body contains a literal unknown ident, yielding two
+  frames and the multi-frame render path). New `traceback_*` tests in
+  `session.rs`. **Step 8 reshape**: during prototyping the plan's
+  generalized `subtree_text` API was discarded because (a) field-span
+  based extent computation misses leading keywords like `SELECT`,
+  (b) Perfetto's actual use case is a *specific* grammar rule, not
+  every node, and (c) the formatter's `try_macro_verbatim` doesn't
+  benefit from a subtree accessor. Replaced with a targeted `select_span`
+  field on `CreatePerfettoTableStmt` / `ViewStmt` / `FunctionStmt`
+  populated via `cur_shift_start` / `last_shifted_end` ctx fields
+  and `select_body_start` / `select_body_end` empty-marker rules.
+  The span excludes leading/trailing whitespace. Macro body was
+  already handled by the existing `body` span — no changes needed.
+  Steps 9/10 are dropped (they only existed to support the
+  generalized subtree abstraction).
 
 ### Step 1 — Rename `_buf_idx` to `_layer_id`
 

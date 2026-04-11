@@ -859,41 +859,94 @@ syntaqlite_parser_span_text_range(SyntaqliteParser* p,
   return r;
 }
 
+// Compute 1-based (line, col) for `offset` within `buf[..buf_len]`.  The
+// offset is clamped to `buf_len`.
+static void compute_line_col(const char* buf,
+                             uint32_t buf_len,
+                             uint32_t offset,
+                             uint32_t* out_line,
+                             uint32_t* out_col) {
+  if (offset > buf_len)
+    offset = buf_len;
+  uint32_t line = 1;
+  uint32_t col = 1;
+  for (uint32_t i = 0; i < offset; i++) {
+    if (buf[i] == '\n') {
+      line++;
+      col = 1;
+    } else {
+      col++;
+    }
+  }
+  *out_line = line;
+  *out_col = col;
+}
+
 SYNTAQLITE_API uint32_t
-syntaqlite_parser_expansion_traceback(SyntaqliteParser* p,
-                                      const SyntaqliteSourceSpan* sp,
-                                      SyntaqliteExpansionFrame* frames,
-                                      uint32_t max_frames) {
+syntaqlite_parser_traceback(SyntaqliteParser* p,
+                            const SyntaqliteSourceSpan* sp,
+                            SyntaqliteTracebackFrame* frames,
+                            uint32_t max_frames) {
   if (!sp || sp->length == 0)
     return 0;
 
-  // Walk the parent chain from innermost to outermost, collecting frames
-  // in a temporary buffer.  Then reverse them so frame 0 is outermost.
-  SyntaqliteExpansionFrame tmp[SYNQ_MAX_MACRO_DEPTH + 1];
+  // Walk the layer chain, emitting one frame per layer.  When the
+  // current position lies inside a substituted arg segment, drill
+  // through to the arg's origin layer and retry — no frame is emitted
+  // for the layer we drilled past, because the span's "real" location
+  // at that level is the arg-origin text, not the substitution site.
+  SyntaqliteTracebackFrame tmp[SYNQ_MAX_MACRO_DEPTH + 2];
   uint32_t count = 0;
-  uint32_t cur_off = sp->offset;
-  uint32_t cur_len = sp->length;
-  uint8_t cur_layer = sp->_layer_id;
+  uint32_t off = sp->offset;
+  uint32_t len = sp->length;
+  uint8_t layer_id = sp->_layer_id;
+  uint32_t layers_count = syntaqlite_vec_len(&p->layers);
 
-  while (count < SYNQ_MAX_MACRO_DEPTH + 1) {
-    if (cur_layer >= syntaqlite_vec_len(&p->layers))
+  // Bound the walk: each iteration either drills or walks up one parent,
+  // so at most 2 * (depth + 1) iterations.
+  for (uint32_t step = 0; step < 2 * (SYNQ_MAX_MACRO_DEPTH + 1) &&
+                          count < SYNQ_MAX_MACRO_DEPTH + 2;
+       step++) {
+    if (layer_id >= layers_count)
       break;
-    const SynqExpansionLayer* r = &p->layers.data[cur_layer];
-    tmp[count].buffer = r->expansion_data;
-    tmp[count].buffer_len = r->expansion_len;
-    tmp[count].offset = cur_off;
-    tmp[count].length = cur_len;
-    count++;
-    if (cur_layer == 0)
+    const SynqExpansionLayer* lyr = &p->layers.data[layer_id];
+
+    // Arg-segment drill: skip emitting a frame for this layer.
+    int drilled = 0;
+    for (uint32_t i = 0; i < lyr->arg_segment_count; i++) {
+      const SynqArgSegment* seg = &lyr->arg_segments[i];
+      if (off >= seg->sub_offset && off < seg->sub_offset + seg->sub_length) {
+        off = seg->origin_offset + (off - seg->sub_offset);
+        layer_id = seg->origin_layer_id;
+        drilled = 1;
+        break;
+      }
+    }
+    if (drilled)
+      continue;
+
+    SyntaqliteTracebackFrame* f = &tmp[count++];
+    f->name = lyr->name;
+    f->name_len = lyr->name_len;
+    f->snippet = lyr->expansion_data;
+    f->snippet_len = lyr->expansion_len;
+    f->offset_in_snippet = off;
+    f->length_in_snippet = len;
+    compute_line_col(lyr->expansion_data, lyr->expansion_len, off, &f->line,
+                     &f->col);
+
+    if (layer_id == 0) {
+      // Root (sentinel) — walk terminates.
       break;
-    // Move to parent: the call site of this expansion in the parent layer.
-    cur_off = r->call_offset;
-    cur_len = r->call_length;
-    cur_layer = r->parent_layer_id;
+    }
+    // Walk up to parent at this layer's call site.  The call site spans
+    // the whole `name!(...)` call.
+    off = lyr->call_offset;
+    len = lyr->call_length;
+    layer_id = lyr->parent_layer_id;
   }
 
-  // Reverse so frames[0] is outermost (source) and frames[count-1] is
-  // innermost (deepest expansion).
+  // Reverse so frames[0] is outermost and frames[count-1] is innermost.
   uint32_t to_write = count < max_frames ? count : max_frames;
   for (uint32_t i = 0; i < to_write; i++) {
     frames[i] = tmp[count - 1 - i];

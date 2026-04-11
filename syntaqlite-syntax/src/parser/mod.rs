@@ -25,8 +25,8 @@ pub use incremental::{AnyIncrementalParseSession, TypedIncrementalParseSession};
 #[cfg(feature = "sqlite")]
 pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken};
 pub use types::{
-    AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, ExpansionFrame,
-    MacroRegion, ParseOutcome, ParserTokenFlags, TypedParserToken,
+    AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, MacroRegion,
+    ParseOutcome, ParserTokenFlags, TracebackFrame, TypedParserToken,
 };
 
 /// Indicates whether parsing can continue after an error.
@@ -455,39 +455,58 @@ impl<'a> AnyParsedStatement<'a> {
         })
     }
 
-    /// Expansion traceback for a span field.
+    /// Build a traceback for a span field.
     ///
-    /// Returns a list of [`ExpansionFrame`]s from outermost (call site in
-    /// the original source) to innermost (the position inside the deepest
-    /// expansion buffer).  Returns a single frame for non-expansion spans.
+    /// Returns a list of [`TracebackFrame`]s from outermost (the root
+    /// source frame) to innermost (the position inside the deepest
+    /// macro expansion layer).  For macro-free spans, returns a single
+    /// root frame.
+    ///
+    /// When a span was tokenized inside a substituted macro argument,
+    /// the walk drills through the substitution: the innermost frame
+    /// points at the user's authored arg text rather than at the
+    /// `foo!(…)` call site.  This is the argument-level fidelity
+    /// described by the text-expansion-model plan (success criterion
+    /// #5).
+    ///
     /// Returns an empty vec for invalid/non-span fields.
-    pub fn field_expansion_traceback(
-        &self,
-        node_id: AnyNodeId,
-        field_idx: u8,
-    ) -> Vec<ExpansionFrame<'a>> {
+    pub fn traceback(&self, node_id: AnyNodeId, field_idx: u8) -> Vec<TracebackFrame<'a>> {
         let Some(sp) = self.field_span(node_id, field_idx) else {
             return Vec::new();
         };
         // SAFETY: self.raw is valid for 'a; sp is a copy of an arena value.
-        let raw_frames = unsafe { self.raw.as_ref().expansion_traceback(sp) };
+        let raw_frames = unsafe { self.raw.as_ref().traceback(sp) };
         raw_frames
             .into_iter()
-            .map(|f| ExpansionFrame {
-                buffer: if f.buffer.is_null() || f.buffer_len == 0 {
+            .map(|f| TracebackFrame {
+                name: if f.name.is_null() || f.name_len == 0 {
+                    None
+                } else {
+                    // SAFETY: C guarantees name points to name_len bytes of
+                    // valid UTF-8 in a parser-owned buffer valid for 'a.
+                    Some(unsafe {
+                        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                            f.name,
+                            f.name_len as usize,
+                        ))
+                    })
+                },
+                line: f.line,
+                col: f.col,
+                snippet: if f.snippet.is_null() || f.snippet_len == 0 {
                     ""
                 } else {
-                    // SAFETY: C guarantees buffer points to buffer_len bytes
+                    // SAFETY: C guarantees snippet points to snippet_len bytes
                     // of valid UTF-8 in a parser-owned buffer valid for 'a.
                     unsafe {
                         std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-                            f.buffer,
-                            f.buffer_len as usize,
+                            f.snippet,
+                            f.snippet_len as usize,
                         ))
                     }
                 },
-                offset: f.offset as usize,
-                length: f.length as usize,
+                offset_in_snippet: f.offset_in_snippet as usize,
+                length_in_snippet: f.length_in_snippet as usize,
             })
             .collect()
     }

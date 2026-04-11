@@ -908,13 +908,13 @@ pub fn syntaqlite_syntax::any::AnyNodeTag::from_raw(v: u32) -> Self
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyNodeId> + '_
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields<'a>)>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::field_expansion_traceback(&self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> alloc::vec::Vec<syntaqlite_syntax::any::ExpansionFrame<'a>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_regions(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRegion> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_node(&self) -> core::option::Option<syntaqlite_syntax::any::AnyNode<'_>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::source(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::token_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = (u32, u32)> + use<'_>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> alloc::vec::Vec<syntaqlite_syntax::any::TracebackFrame<'a>>
 pub fn syntaqlite_syntax::any::AnyTokenType::from(t: syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
 pub fn syntaqlite_syntax::any::AnyTokenType::from_raw(v: u32) -> Self
 pub fn syntaqlite_syntax::any::AnyTokenType::from_token_type(raw: syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
@@ -1679,12 +1679,12 @@ pub struct syntaqlite_syntax::ParserTokenFlags(_)
 pub struct syntaqlite_syntax::any::AnyDialect
 pub struct syntaqlite_syntax::any::AnyNode<'a>
 pub struct syntaqlite_syntax::any::AnyParsedStatement<'a>
-pub struct syntaqlite_syntax::any::ExpansionFrame<'a>
 pub struct syntaqlite_syntax::any::FieldMeta<'a>(_)
 pub struct syntaqlite_syntax::any::KeywordEntry
 pub struct syntaqlite_syntax::any::MacroRegion
 pub struct syntaqlite_syntax::any::NodeFields<'a>
 pub struct syntaqlite_syntax::any::SourceRange
+pub struct syntaqlite_syntax::any::TracebackFrame<'a>
 pub struct syntaqlite_syntax::nodes::AggregateFunctionCall<'a>
 pub struct syntaqlite_syntax::nodes::AggregateFunctionCallId(_)
 pub struct syntaqlite_syntax::nodes::AlterTableStmt<'a>
@@ -2043,9 +2043,6 @@ pub syntaqlite_syntax::TokenType::Window = 167
 pub syntaqlite_syntax::TokenType::With = 69
 pub syntaqlite_syntax::TokenType::Within = 86
 pub syntaqlite_syntax::TokenType::Without = 70
-pub syntaqlite_syntax::any::ExpansionFrame::buffer: &'a str
-pub syntaqlite_syntax::any::ExpansionFrame::length: usize
-pub syntaqlite_syntax::any::ExpansionFrame::offset: usize
 pub syntaqlite_syntax::any::FieldKind::Bool = 2
 pub syntaqlite_syntax::any::FieldKind::Enum = 4
 pub syntaqlite_syntax::any::FieldKind::Flags = 3
@@ -2075,6 +2072,12 @@ pub syntaqlite_syntax::any::TokenCategory::Parameter
 pub syntaqlite_syntax::any::TokenCategory::Punctuation
 pub syntaqlite_syntax::any::TokenCategory::String
 pub syntaqlite_syntax::any::TokenCategory::Type
+pub syntaqlite_syntax::any::TracebackFrame::col: u32
+pub syntaqlite_syntax::any::TracebackFrame::length_in_snippet: usize
+pub syntaqlite_syntax::any::TracebackFrame::line: u32
+pub syntaqlite_syntax::any::TracebackFrame::name: core::option::Option<&'a str>
+pub syntaqlite_syntax::any::TracebackFrame::offset_in_snippet: usize
+pub syntaqlite_syntax::any::TracebackFrame::snippet: &'a str
 pub syntaqlite_syntax::nodes::AlterOp::AddColumn = 3
 pub syntaqlite_syntax::nodes::AlterOp::DropColumn = 2
 pub syntaqlite_syntax::nodes::AlterOp::RenameColumn = 1

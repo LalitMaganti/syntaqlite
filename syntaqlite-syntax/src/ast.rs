@@ -195,7 +195,7 @@ pub trait TypedNodeId: Copy + Into<AnyNodeId> {
 ///
 /// For spans inside a macro expansion, points at the macro call site in the
 /// original source (not the expansion buffer).  Use
-/// [`AnyParsedStatement::field_expansion_traceback`](crate::parser::AnyParsedStatement::field_expansion_traceback)
+/// [`AnyParsedStatement::traceback`](crate::parser::AnyParsedStatement::traceback)
 /// if you need position info inside the expansion.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SourceRange {
