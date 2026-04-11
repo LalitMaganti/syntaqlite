@@ -9627,7 +9627,7 @@ static YYACTIONTYPE yy_reduce(
       yylhsminor.yy0.n = (int)(yymsp[0].minor.yy0.z - yymsp[-1].minor.yy0.z) +
                          yymsp[0].minor.yy0.n;
       yylhsminor.yy0.offset = yymsp[-1].minor.yy0.offset;
-      yylhsminor.yy0.buf_idx = yymsp[-1].minor.yy0.buf_idx;
+      yylhsminor.yy0.layer_id = yymsp[-1].minor.yy0.layer_id;
     }
       yymsp[-1].minor.yy0 = yylhsminor.yy0;
       break;
@@ -9769,8 +9769,8 @@ static YYACTIONTYPE yy_reduce(
     case 372: /* cmd ::= create_vtab LP vtabarglist RP */
     {
       // Capture module arguments span (content between parens).
-      // Use token offsets/buf_idx so this works correctly when the statement
-      // is produced by a macro expansion; LP and RP share a buffer within the
+      // Use token offsets/layer_id so this works correctly when the statement
+      // is produced by a macro expansion; LP and RP share a layer within the
       // same reduction.
       SyntaqliteNode* vtab = AST_NODE(&pCtx->ast, yymsp[-3].minor.yy277);
       uint32_t args_start = yymsp[-2].minor.yy0.offset + yymsp[-2].minor.yy0.n;
@@ -9779,7 +9779,7 @@ static YYACTIONTYPE yy_reduce(
           .offset = args_start,
           .length = (uint16_t)(args_end - args_start),
           .flags = 0,
-          ._buf_idx = yymsp[-2].minor.yy0.buf_idx,
+          ._layer_id = yymsp[-2].minor.yy0.layer_id,
       };
       yylhsminor.yy277 = yymsp[-3].minor.yy277;
     }

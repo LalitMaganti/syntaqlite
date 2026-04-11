@@ -63,26 +63,35 @@ static void reset_stmt(SyntaqliteParser* p) {
   synq_parse_ctx_clear(&p->ctx);
   syntaqlite_vec_clear(&p->comments);
   syntaqlite_vec_clear(&p->tokens);
-  // Free owned expansion buffers from previous statement.
-  // Skip index 0 (sentinel) — its expansion_data points to source, not
-  // malloc'd.
-  for (uint32_t i = 1; i < syntaqlite_vec_len(&p->macro_regions); i++) {
-    if (p->macro_regions.data[i].expansion_data)
-      p->mem.xFree((void*)p->macro_regions.data[i].expansion_data);
+  syntaqlite_vec_clear(&p->traceback_buf);
+  // Free owned expansion buffers and arg-segment arrays from previous
+  // statement.  Skip index 0 (sentinel) — its expansion_data points to
+  // source (not malloc'd) and it has no arg_segments.
+  for (uint32_t i = 1; i < syntaqlite_vec_len(&p->layers); i++) {
+    SynqExpansionLayer* lyr = &p->layers.data[i];
+    if (lyr->expansion_data)
+      p->mem.xFree((void*)lyr->expansion_data);
+    if (lyr->arg_segments)
+      p->mem.xFree(lyr->arg_segments);
   }
-  syntaqlite_vec_clear(&p->macro_expansions);
-  syntaqlite_vec_clear(&p->macro_regions);
-  // Push sentinel at index 0 (source buffer).  p->source may be NULL on
+  syntaqlite_vec_clear(&p->layers);
+  // Push sentinel at index 0 (source layer).  p->source may be NULL on
   // the very first reset_stmt call (before syntaqlite_parser_reset sets it),
   // which is fine — syntaqlite_parser_reset re-clears and re-pushes.
   if (p->source) {
-    SyntaqliteMacroRegion pub_sentinel = {0, 0};
-    syntaqlite_vec_push(&p->macro_expansions, pub_sentinel, p->mem);
-    SynqMacroRegion sentinel = {p->source, p->source_len, 0};
-    syntaqlite_vec_push(&p->macro_regions, sentinel, p->mem);
+    SynqExpansionLayer sentinel = {
+        .call_offset = 0,
+        .call_length = 0,
+        .expansion_data = p->source,
+        .expansion_len = p->source_len,
+        .parent_layer_id = 0,
+    };
+    syntaqlite_vec_push(&p->layers, sentinel, p->mem);
   }
   p->expansion_depth = 0;
-  p->ctx.buf_idx = 0;
+  p->ctx.layer_id = 0;
+  p->ctx.cur_shift_start = 0;
+  p->ctx.last_shifted_end = 0;
   p->ctx.root = SYNTAQLITE_NULL_NODE;
   p->ctx.stmt_completed = 0;
   p->ctx.pending_explain_mode = 0;
@@ -135,8 +144,8 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   synq_parse_ctx_init(&p->ctx, m);
   syntaqlite_vec_init(&p->comments);
   syntaqlite_vec_init(&p->tokens);
-  syntaqlite_vec_init(&p->macro_expansions);
-  syntaqlite_vec_init(&p->macro_regions);
+  syntaqlite_vec_init(&p->layers);
+  syntaqlite_vec_init(&p->traceback_buf);
   // macro_table, expansion state already zeroed by memset
   return p;
 }
@@ -166,15 +175,18 @@ SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
   p->last_status = SYNTAQLITE_PARSE_DONE;
   p->macro_depth = 0;
 
-  // Re-push sentinels with the correct source pointer (reset_stmt may have
-  // pushed ones with the old source, or none if source was NULL).
-  syntaqlite_vec_clear(&p->macro_expansions);
-  syntaqlite_vec_clear(&p->macro_regions);
+  // Re-push the sentinel with the correct source pointer (reset_stmt may
+  // have pushed one with the old source, or none if source was NULL).
+  syntaqlite_vec_clear(&p->layers);
   {
-    SyntaqliteMacroRegion pub_sentinel = {0, 0};
-    syntaqlite_vec_push(&p->macro_expansions, pub_sentinel, p->mem);
-    SynqMacroRegion sentinel = {source, len, 0};
-    syntaqlite_vec_push(&p->macro_regions, sentinel, p->mem);
+    SynqExpansionLayer sentinel = {
+        .call_offset = 0,
+        .call_length = 0,
+        .expansion_data = source,
+        .expansion_len = len,
+        .parent_layer_id = 0,
+    };
+    syntaqlite_vec_push(&p->layers, sentinel, p->mem);
   }
 
   p->ctx.source = source;
@@ -187,15 +199,18 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
     synq_parse_ctx_free(&p->ctx);
     syntaqlite_vec_free(&p->comments, p->mem);
     syntaqlite_vec_free(&p->tokens, p->mem);
-    // Free owned expansion buffers and macro vectors.
-    // Skip index 0 (sentinel) — its expansion_data points to source, not
-    // malloc'd.
-    for (uint32_t i = 1; i < syntaqlite_vec_len(&p->macro_regions); i++) {
-      if (p->macro_regions.data[i].expansion_data)
-        p->mem.xFree((void*)p->macro_regions.data[i].expansion_data);
+    // Free owned expansion buffers, arg-segment arrays, and the layer
+    // vector.  Skip index 0 (sentinel) — its expansion_data points to
+    // source (not malloc'd) and it has no arg_segments.
+    for (uint32_t i = 1; i < syntaqlite_vec_len(&p->layers); i++) {
+      SynqExpansionLayer* lyr = &p->layers.data[i];
+      if (lyr->expansion_data)
+        p->mem.xFree((void*)lyr->expansion_data);
+      if (lyr->arg_segments)
+        p->mem.xFree(lyr->arg_segments);
     }
-    syntaqlite_vec_free(&p->macro_expansions, p->mem);
-    syntaqlite_vec_free(&p->macro_regions, p->mem);
+    syntaqlite_vec_free(&p->layers, p->mem);
+    syntaqlite_vec_free(&p->traceback_buf, p->mem);
     // Free macro registry.
     if (p->macro_table) {
       for (uint32_t i = 0; i < p->macro_table_size; i++) {
@@ -230,7 +245,7 @@ int synq_parser_feed_one_token(SyntaqliteParser* p,
       .type = token_type,
       .token_idx = token_idx,
       .offset = tok_offset,
-      .buf_idx = (uint8_t)p->ctx.buf_idx,
+      .layer_id = (uint8_t)p->ctx.layer_id,
       ._pad = {0, 0, 0},
   };
   SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, (int)token_type, minor);
@@ -301,7 +316,7 @@ static int finish_input(SyntaqliteParser* p) {
                         .type = 0,
                         .token_idx = 0xFFFFFFFF,
                         .offset = 0,
-                        .buf_idx = 0,
+                        .layer_id = 0,
                         ._pad = {0, 0, 0}};
   SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, 0, eof);
   p->finished = 1;
@@ -342,11 +357,25 @@ int synq_parser_record_and_feed(SyntaqliteParser* p,
                                 uint32_t cur_len) {
   uint32_t tidx = 0xFFFFFFFF;
   if (p->collect_tokens) {
-    SyntaqliteParserToken tp = {cur_offset, cur_len, cur_type, 0};
+    SyntaqliteParserToken tp = {
+        cur_offset, cur_len, cur_type, 0, (uint8_t)p->ctx.layer_id, {0, 0, 0}};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
   }
+  // Publish the upcoming token's start *before* Lemon processes it so
+  // that BEFORE-style empty-marker reductions firing inside feed_one_token
+  // see the start of the token about to be shifted (whitespace between
+  // the previous terminal and this one is excluded).  Only track
+  // positions for tokens shifted from the root source layer.
+  if (p->ctx.layer_id == 0)
+    p->ctx.cur_shift_start = cur_offset;
   int rc = feed_one_token(p, cur_type, p->source + cur_offset, cur_len, tidx);
+  // Advance the "last shifted terminal end" cursor *after* Lemon finishes
+  // processing `cur`, so that any empty-rule reductions that fired inside
+  // feed_one_token observed the previous shifted token's end.  AFTER-style
+  // markers use this to capture the end position of a non-terminal.
+  if (p->ctx.layer_id == 0)
+    p->ctx.last_shifted_end = cur_offset + cur_len;
   // After parse_failure, Lemon stops reducing — force a boundary on SEMI
   // so errors don't bleed into subsequent statements.
   if (p->had_error && rc == 0 && cur_type == SYNTAQLITE_TK_SEMI)
@@ -502,17 +531,21 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
   return p->tokens.data;
 }
 
-SYNTAQLITE_API const SyntaqliteMacroRegion* syntaqlite_result_macros(
-    SyntaqliteParser* p,
-    uint32_t* count) {
-  uint32_t total = syntaqlite_vec_len(&p->macro_expansions);
-  // Skip sentinel at index 0.
-  if (total <= 1) {
-    *count = 0;
-    return NULL;
+SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
+  uint32_t total = syntaqlite_vec_len(&p->layers);
+  // Entry 0 is the source sentinel; real expansion layers start at 1.
+  return total <= 1 ? 0 : total - 1;
+}
+
+SYNTAQLITE_API SyntaqliteMacroRegion
+syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx) {
+  // +1 to skip the source sentinel at index 0.
+  uint32_t layer_idx = idx + 1;
+  if (layer_idx >= syntaqlite_vec_len(&p->layers)) {
+    return (SyntaqliteMacroRegion){0, 0};
   }
-  *count = total - 1;
-  return p->macro_expansions.data + 1;
+  const SynqExpansionLayer* lyr = &p->layers.data[layer_idx];
+  return (SyntaqliteMacroRegion){lyr->call_offset, lyr->call_length};
 }
 
 // ---------------------------------------------------------------------------
@@ -572,7 +605,8 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
   uint32_t tidx = 0xFFFFFFFF;
   if (p->collect_tokens && text) {
     uint32_t tok_offset = (uint32_t)(text - p->source);
-    SyntaqliteParserToken tp = {tok_offset, len, token_type, 0};
+    SyntaqliteParserToken tp = {
+        tok_offset, len, token_type, 0, (uint8_t)p->ctx.layer_id, {0, 0, 0}};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
   }

@@ -13,7 +13,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! syntaqlite = { version = "0.3.0", default-features = false, features = ["sqlite"] }
+//! syntaqlite = { version = "0.3.1", default-features = false, features = ["sqlite"] }
 //! ```
 
 // ==== Public API ====
@@ -86,7 +86,7 @@ pub mod any {
     #[doc(inline)]
     pub use crate::parser::{
         AnyIncrementalParseSession, AnyParseError, AnyParseSession, AnyParsedStatement, AnyParser,
-        AnyParserToken, ExpansionFrame, MacroRegion, ParseOutcome,
+        AnyParserToken, MacroRegion, ParseOutcome, TracebackFrame,
     };
     #[doc(inline)]
     pub use crate::tokenizer::{AnyToken, AnyTokenizer};

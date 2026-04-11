@@ -62,6 +62,11 @@ pub(crate) struct CParserToken {
     pub length: u32,
     pub type_: u32,
     pub flags: CParserTokenFlags,
+    /// Internal: 0 = original source, >0 = expansion layer id.
+    /// Read only by C-side span accessors; the Rust side does not
+    /// inspect it directly.
+    pub _layer_id: u8,
+    pub _pad: [u8; 3],
 }
 
 /// A recorded macro invocation region.
@@ -76,29 +81,39 @@ pub(crate) struct CMacroRegion {
     pub(crate) call_length: u32,
 }
 
-/// A fully-resolved span returned by `syntaqlite_parser_resolve_span`.
+/// A byte range in the user's authored input.
 ///
-/// Mirrors C `SyntaqliteResolvedSpan` from `include/syntaqlite/parser.h`.
+/// Mirrors C `SyntaqliteTextRange` from `include/syntaqlite/parser.h`.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub(crate) struct CResolvedSpan {
-    pub(crate) text: *const u8,
-    pub(crate) text_len: u32,
-    pub(crate) source_offset: u32,
-    pub(crate) source_length: u32,
-    pub(crate) flags: u8,
+pub(crate) struct CTextRange {
+    pub(crate) start: u32,
+    pub(crate) end: u32,
 }
 
-/// One frame in a macro expansion traceback.
+/// One frame in a traceback produced by the span traceback API.
 ///
-/// Mirrors C `SyntaqliteExpansionFrame` from `include/syntaqlite/parser.h`.
+/// Mirrors C `SyntaqliteTracebackFrame` from `include/syntaqlite/parser.h`.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub(crate) struct CExpansionFrame {
-    pub(crate) buffer: *const u8,
-    pub(crate) buffer_len: u32,
-    pub(crate) offset: u32,
-    pub(crate) length: u32,
+pub(crate) struct CTracebackFrame {
+    /// Macro name pointer (borrowed from the macro registry), or null for
+    /// the root source frame.
+    pub(crate) name: *const u8,
+    /// Length of `name`, or 0 for the root frame.
+    pub(crate) name_len: u32,
+    /// 1-based line number of `offset_in_snippet` within `snippet`.
+    pub(crate) line: u32,
+    /// 1-based column number of `offset_in_snippet` within `snippet`.
+    pub(crate) col: u32,
+    /// Buffer to render the frame against — the original source for the
+    /// root frame, or an expansion layer's buffer for macro frames.
+    pub(crate) snippet: *const u8,
+    pub(crate) snippet_len: u32,
+    /// Byte offset of this frame's position within `snippet`.
+    pub(crate) offset_in_snippet: u32,
+    /// Byte length of this frame's position within `snippet`.
+    pub(crate) length_in_snippet: u32,
 }
 
 impl CParser {
@@ -205,64 +220,84 @@ impl CParser {
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
-    pub(crate) unsafe fn resolve_span(&self, span: crate::ast::SourceSpan) -> CResolvedSpan {
-        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
-        // of an arena value with the SyntaqliteSourceSpan layout; result
-        // accessors are valid after `next()` returns a non-DONE code.
-        unsafe {
-            syntaqlite_parser_resolve_span(
-                std::ptr::from_ref::<Self>(self).cast_mut(),
-                std::ptr::from_ref(&span).cast(),
-            )
-        }
-    }
-
-    pub(crate) unsafe fn expansion_traceback(
+    pub(crate) unsafe fn span_expanded_text(
         &self,
         span: crate::ast::SourceSpan,
-    ) -> Vec<CExpansionFrame> {
-        // First call with max=0 to get the count.
-        // SAFETY: self is a valid CParser pointer; span is a copy of an
-        // arena value with the SyntaqliteSourceSpan layout.
-        let count = unsafe {
-            syntaqlite_parser_expansion_traceback(
-                std::ptr::from_ref::<Self>(self).cast_mut(),
-                std::ptr::from_ref(&span).cast(),
-                std::ptr::null_mut(),
-                0,
-            )
-        };
-        if count == 0 {
-            return Vec::new();
-        }
-        let mut frames: Vec<CExpansionFrame> = Vec::with_capacity(count as usize);
-        // SAFETY: capacity is at least `count`; the C function writes
-        // exactly `count` frames into the buffer.
+        out_len: *mut u32,
+    ) -> *const u8 {
+        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
+        // of an arena value with the SyntaqliteSourceSpan layout; out_len is
+        // a valid pointer owned by the caller.
         unsafe {
-            syntaqlite_parser_expansion_traceback(
+            syntaqlite_parser_span_expanded_text(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
                 std::ptr::from_ref(&span).cast(),
-                frames.as_mut_ptr(),
-                count,
-            );
-            frames.set_len(count as usize);
+                out_len,
+            )
         }
-        frames
     }
 
-    pub(crate) unsafe fn result_macros(&self) -> &[CMacroRegion] {
+    pub(crate) unsafe fn span_text(
+        &self,
+        span: crate::ast::SourceSpan,
+        out_len: *mut u32,
+    ) -> *const u8 {
+        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
+        // of an arena value with the SyntaqliteSourceSpan layout; out_len is
+        // a valid pointer owned by the caller.
+        unsafe {
+            syntaqlite_parser_span_text(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                std::ptr::from_ref(&span).cast(),
+                out_len,
+            )
+        }
+    }
+
+    pub(crate) unsafe fn span_text_range(&self, span: crate::ast::SourceSpan) -> CTextRange {
+        // SAFETY: self is a valid, non-null CParser pointer; span is a copy
+        // of an arena value with the SyntaqliteSourceSpan layout.
+        unsafe {
+            syntaqlite_parser_span_text_range(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                std::ptr::from_ref(&span).cast(),
+            )
+        }
+    }
+
+    pub(crate) unsafe fn traceback(&self, span: crate::ast::SourceSpan) -> &[CTracebackFrame] {
         let mut count: u32 = 0;
-        // SAFETY: self is a valid, non-null CParser pointer; result
-        // accessors are valid after `next()` returns a non-DONE code.
+        // SAFETY: self is a valid CParser pointer; span is a copy of an
+        // arena value with the SyntaqliteSourceSpan layout.  The returned
+        // pointer is backed by the parser's owned `traceback_buf` vec and
+        // remains valid until the next call to this function or until the
+        // parser is mutated through another `&mut` method.
         let ptr = unsafe {
-            syntaqlite_result_macros(std::ptr::from_ref::<Self>(self).cast_mut(), &raw mut count)
+            syntaqlite_parser_traceback(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                std::ptr::from_ref(&span).cast(),
+                &raw mut count,
+            )
         };
-        if count == 0 || ptr.is_null() {
+        if ptr.is_null() || count == 0 {
             return &[];
         }
-        // SAFETY: ptr is a valid pointer to `count` CMacroRegion values owned
-        // by the parser arena; the slice is valid for the parser's lifetime.
+        // SAFETY: ptr + count describe a valid slice of CTracebackFrame
+        // values owned by the parser for the duration of the next call.
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
+    }
+
+    pub(crate) unsafe fn result_macro_count(&self) -> u32 {
+        // SAFETY: self is a valid, non-null CParser pointer; result
+        // accessors are valid after `next()` returns a non-DONE code.
+        unsafe { syntaqlite_result_macro_count(std::ptr::from_ref::<Self>(self).cast_mut()) }
+    }
+
+    pub(crate) unsafe fn result_macro_at(&self, idx: u32) -> CMacroRegion {
+        // SAFETY: self is a valid, non-null CParser pointer; result
+        // accessors are valid after `next()` returns a non-DONE code.
+        // The C side clamps out-of-range indices to {0, 0}.
+        unsafe { syntaqlite_result_macro_at(std::ptr::from_ref::<Self>(self).cast_mut(), idx) }
     }
 
     // Arena accessors
@@ -334,6 +369,7 @@ impl CParser {
         unsafe { syntaqlite_parser_end_macro(self) }
     }
 
+    #[expect(clippy::too_many_arguments, reason = "mirrors the C API surface 1:1")]
     pub(crate) unsafe fn register_macro(
         &mut self,
         name: *const c_char,
@@ -342,6 +378,8 @@ impl CParser {
         param_count: u32,
         body: *const c_char,
         body_len: u32,
+        def_line: u32,
+        def_col: u32,
     ) -> i32 {
         // SAFETY: self is a valid, non-null CParser pointer; name, param_names,
         // and body are valid pointers with the specified lengths.
@@ -354,6 +392,8 @@ impl CParser {
                 param_count,
                 body,
                 body_len,
+                def_line,
+                def_col,
             )
         }
     }
@@ -382,20 +422,30 @@ unsafe extern "C" {
     fn syntaqlite_result_error_length(p: *mut CParser) -> u32;
     fn syntaqlite_result_comments(p: *mut CParser, count: *mut u32) -> *const CComment;
     fn syntaqlite_result_tokens(p: *mut CParser, count: *mut u32) -> *const CParserToken;
-    fn syntaqlite_result_macros(p: *mut CParser, count: *mut u32) -> *const CMacroRegion;
+    fn syntaqlite_result_macro_count(p: *mut CParser) -> u32;
+    fn syntaqlite_result_macro_at(p: *mut CParser, idx: u32) -> CMacroRegion;
 
     // Arena accessors
     fn syntaqlite_parser_node(p: *mut CParser, node_id: u32) -> *const u32;
     fn syntaqlite_parser_node_count(p: *mut CParser) -> u32;
 
-    // Span resolution
-    fn syntaqlite_parser_resolve_span(p: *mut CParser, span: *const c_void) -> CResolvedSpan;
-    fn syntaqlite_parser_expansion_traceback(
+    // Span accessors
+    fn syntaqlite_parser_span_expanded_text(
         p: *mut CParser,
         span: *const c_void,
-        frames: *mut CExpansionFrame,
-        max_frames: u32,
-    ) -> u32;
+        out_len: *mut u32,
+    ) -> *const u8;
+    fn syntaqlite_parser_span_text(
+        p: *mut CParser,
+        span: *const c_void,
+        out_len: *mut u32,
+    ) -> *const u8;
+    fn syntaqlite_parser_span_text_range(p: *mut CParser, span: *const c_void) -> CTextRange;
+    fn syntaqlite_parser_traceback(
+        p: *mut CParser,
+        span: *const c_void,
+        out_count: *mut u32,
+    ) -> *const CTracebackFrame;
 
     // Configuration
     fn syntaqlite_parser_set_trace(p: *mut CParser, enable: u32) -> i32;
@@ -431,6 +481,8 @@ unsafe extern "C" {
         param_count: u32,
         body: *const c_char,
         body_len: u32,
+        def_line: u32,
+        def_col: u32,
     ) -> i32;
     fn syntaqlite_parser_deregister_macro(
         p: *mut CParser,
@@ -651,6 +703,8 @@ mod tests {
                 params.len() as u32,
                 body.as_ptr().cast(),
                 body.len() as u32,
+                0,
+                0,
             )
         };
         assert_eq!(rc, 0, "register_macro failed for '{name}'");
@@ -866,9 +920,10 @@ mod tests {
         assert_eq!(rc, PARSE_OK);
 
         // SAFETY: CParser wraps a valid C parser handle.
-        let regions = unsafe { parser.result_macros() };
-        assert_eq!(regions.len(), 1, "expected one macro region");
-        let r = &regions[0];
+        let count = unsafe { parser.result_macro_count() };
+        assert_eq!(count, 1, "expected one macro region");
+        // SAFETY: idx < count.
+        let r = unsafe { parser.result_macro_at(0) };
         #[expect(clippy::cast_possible_truncation)]
         let call_start = sql.find("foo!").unwrap() as u32;
         assert_eq!(r.call_offset, call_start);
@@ -939,9 +994,10 @@ mod tests {
         );
 
         // SAFETY: CParser wraps a valid C parser handle.
-        let regions = unsafe { parser.result_macros() };
-        assert_eq!(regions.len(), 1);
-        let r = &regions[0];
+        let count = unsafe { parser.result_macro_count() };
+        assert_eq!(count, 1);
+        // SAFETY: idx < count.
+        let r = unsafe { parser.result_macro_at(0) };
         let call_text = &sql[r.call_offset as usize..(r.call_offset + r.call_length) as usize];
         assert!(
             call_text.starts_with("graph!(") && call_text.ends_with(')'),
@@ -954,7 +1010,7 @@ mod tests {
         // Regression: synq_span() computes `tok.z - ctx->source` for ALL
         // tokens, but during macro expansion tok.z points into the expansion
         // buffer (a different allocation). This makes the offset garbage when
-        // buf_idx == 0 is not corrected. extract_fields then panics with
+        // layer_id == 0 is not corrected. extract_fields then panics with
         // "byte index N is out of bounds".
         use crate::ParserConfig;
         use crate::any::{AnyParser, ParseOutcome};

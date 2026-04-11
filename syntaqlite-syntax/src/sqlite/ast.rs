@@ -1398,7 +1398,7 @@ impl<'a> AggregateFunctionCall<'a> {
         AggregateFunctionCallId(self.id)
     }
     pub fn func_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.func_name)
+        self.stmt_result.span_expanded_text(self.raw.func_name)
     }
     pub fn flags(&self) -> AggregateFunctionCallFlags {
         self.raw.flags
@@ -1482,7 +1482,7 @@ impl<'a> OrderedSetFunctionCall<'a> {
         OrderedSetFunctionCallId(self.id)
     }
     pub fn func_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.func_name)
+        self.stmt_result.span_expanded_text(self.raw.func_name)
     }
     pub fn flags(&self) -> AggregateFunctionCallFlags {
         self.raw.flags
@@ -1569,7 +1569,7 @@ impl<'a> CastExpr<'a> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.expr)
     }
     pub fn type_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.type_name)
+        self.stmt_result.span_expanded_text(self.raw.type_name)
     }
 }
 
@@ -1638,13 +1638,13 @@ impl<'a> ColumnRef<'a> {
         ColumnRefId(self.id)
     }
     pub fn column(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.column)
+        self.stmt_result.span_expanded_text(self.raw.column)
     }
     pub fn table(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.table)
+        self.stmt_result.span_expanded_text(self.raw.table)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
 }
 
@@ -2382,7 +2382,7 @@ impl<'a> ForeignKeyClause<'a> {
         ForeignKeyClauseId(self.id)
     }
     pub fn ref_table(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.ref_table)
+        self.stmt_result.span_expanded_text(self.raw.ref_table)
     }
     pub fn ref_columns(&self) -> Option<ExprList<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.ref_columns)
@@ -2466,7 +2466,8 @@ impl<'a> ColumnConstraint<'a> {
         self.raw.kind
     }
     pub fn constraint_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.constraint_name)
+        self.stmt_result
+            .span_expanded_text(self.raw.constraint_name)
     }
     pub fn onconf(&self) -> ConflictAction {
         self.raw.onconf
@@ -2478,7 +2479,7 @@ impl<'a> ColumnConstraint<'a> {
         self.raw.is_autoincrement == super::ffi::Bool::True
     }
     pub fn collation_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.collation_name)
+        self.stmt_result.span_expanded_text(self.raw.collation_name)
     }
     pub fn generated_storage(&self) -> GeneratedColumnStorage {
         self.raw.generated_storage
@@ -2565,7 +2566,7 @@ impl<'a> ColumnDef<'a> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.column_name)
     }
     pub fn type_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.type_name)
+        self.stmt_result.span_expanded_text(self.raw.type_name)
     }
     pub fn constraints(&self) -> Option<ColumnConstraintList<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.constraints)
@@ -2640,7 +2641,8 @@ impl<'a> TableConstraint<'a> {
         self.raw.kind
     }
     pub fn constraint_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.constraint_name)
+        self.stmt_result
+            .span_expanded_text(self.raw.constraint_name)
     }
     pub fn onconf(&self) -> ConflictAction {
         self.raw.onconf
@@ -2727,10 +2729,10 @@ impl<'a> CreateTableStmt<'a> {
         CreateTableStmtId(self.id)
     }
     pub fn table_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.table_name)
+        self.stmt_result.span_expanded_text(self.raw.table_name)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
     pub fn is_temp(&self) -> bool {
         self.raw.is_temp == super::ffi::Bool::True
@@ -2817,7 +2819,7 @@ impl<'a> CteDefinition<'a> {
         CteDefinitionId(self.id)
     }
     pub fn cte_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.cte_name)
+        self.stmt_result.span_expanded_text(self.raw.cte_name)
     }
     pub fn materialized(&self) -> Materialized {
         self.raw.materialized
@@ -3057,7 +3059,7 @@ impl<'a> DeleteStmt<'a> {
         self.raw.index_hint
     }
     pub fn index_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.index_name)
+        self.stmt_result.span_expanded_text(self.raw.index_name)
     }
     pub fn where_clause(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.where_clause)
@@ -3138,7 +3140,7 @@ impl<'a> SetClause<'a> {
         SetClauseId(self.id)
     }
     pub fn column(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.column)
+        self.stmt_result.span_expanded_text(self.raw.column)
     }
     pub fn columns(&self) -> Option<ExprList<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.columns)
@@ -3222,7 +3224,7 @@ impl<'a> UpdateStmt<'a> {
         self.raw.index_hint
     }
     pub fn index_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.index_name)
+        self.stmt_result.span_expanded_text(self.raw.index_name)
     }
     pub fn setlist(&self) -> Option<SetClauseList<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.setlist)
@@ -3543,7 +3545,7 @@ impl<'a> Literal<'a> {
         self.raw.literal_type
     }
     pub fn source(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.source)
+        self.stmt_result.span_expanded_text(self.raw.source)
     }
 }
 
@@ -3612,7 +3614,7 @@ impl<'a> IdentName<'a> {
         IdentNameId(self.id)
     }
     pub fn source(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.source)
+        self.stmt_result.span_expanded_text(self.raw.source)
     }
 }
 
@@ -3681,7 +3683,7 @@ impl<'a> Error<'a> {
         ErrorId(self.id)
     }
     pub fn source(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.source)
+        self.stmt_result.span_expanded_text(self.raw.source)
     }
 }
 
@@ -3750,7 +3752,7 @@ impl<'a> FunctionCall<'a> {
         FunctionCallId(self.id)
     }
     pub fn func_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.func_name)
+        self.stmt_result.span_expanded_text(self.raw.func_name)
     }
     pub fn flags(&self) -> FunctionCallFlags {
         self.raw.flags
@@ -3831,7 +3833,7 @@ impl<'a> Variable<'a> {
         VariableId(self.id)
     }
     pub fn source(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.source)
+        self.stmt_result.span_expanded_text(self.raw.source)
     }
 }
 
@@ -3903,7 +3905,7 @@ impl<'a> CollateExpr<'a> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.expr)
     }
     pub fn collation(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.collation)
+        self.stmt_result.span_expanded_text(self.raw.collation)
     }
 }
 
@@ -4728,10 +4730,10 @@ impl<'a> TableRef<'a> {
         TableRefId(self.id)
     }
     pub fn table_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.table_name)
+        self.stmt_result.span_expanded_text(self.raw.table_name)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
     pub fn alias(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.alias)
@@ -5103,10 +5105,10 @@ impl<'a> CreateTriggerStmt<'a> {
         CreateTriggerStmtId(self.id)
     }
     pub fn trigger_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.trigger_name)
+        self.stmt_result.span_expanded_text(self.raw.trigger_name)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
     pub fn is_temp(&self) -> bool {
         self.raw.is_temp == super::ffi::Bool::True
@@ -5196,19 +5198,19 @@ impl<'a> CreateVirtualTableStmt<'a> {
         CreateVirtualTableStmtId(self.id)
     }
     pub fn table_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.table_name)
+        self.stmt_result.span_expanded_text(self.raw.table_name)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
     pub fn module_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.module_name)
+        self.stmt_result.span_expanded_text(self.raw.module_name)
     }
     pub fn if_not_exists(&self) -> bool {
         self.raw.if_not_exists == super::ffi::Bool::True
     }
     pub fn module_args(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.module_args)
+        self.stmt_result.span_expanded_text(self.raw.module_args)
     }
 }
 
@@ -5277,13 +5279,13 @@ impl<'a> PragmaStmt<'a> {
         PragmaStmtId(self.id)
     }
     pub fn pragma_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.pragma_name)
+        self.stmt_result.span_expanded_text(self.raw.pragma_name)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
     pub fn value(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.value)
+        self.stmt_result.span_expanded_text(self.raw.value)
     }
     pub fn pragma_form(&self) -> PragmaForm {
         self.raw.pragma_form
@@ -5355,10 +5357,10 @@ impl<'a> AnalyzeOrReindexStmt<'a> {
         AnalyzeOrReindexStmtId(self.id)
     }
     pub fn target_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.target_name)
+        self.stmt_result.span_expanded_text(self.raw.target_name)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
     pub fn kind(&self) -> AnalyzeOrReindexOp {
         self.raw.kind
@@ -5574,7 +5576,7 @@ impl<'a> VacuumStmt<'a> {
         VacuumStmtId(self.id)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
     pub fn filename(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.filename)
@@ -5718,13 +5720,13 @@ impl<'a> CreateIndexStmt<'a> {
         CreateIndexStmtId(self.id)
     }
     pub fn index_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.index_name)
+        self.stmt_result.span_expanded_text(self.raw.index_name)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
     pub fn table_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.table_name)
+        self.stmt_result.span_expanded_text(self.raw.table_name)
     }
     pub fn is_unique(&self) -> bool {
         self.raw.is_unique == super::ffi::Bool::True
@@ -5805,10 +5807,10 @@ impl<'a> CreateViewStmt<'a> {
         CreateViewStmtId(self.id)
     }
     pub fn view_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.view_name)
+        self.stmt_result.span_expanded_text(self.raw.view_name)
     }
     pub fn schema(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.schema)
+        self.stmt_result.span_expanded_text(self.raw.schema)
     }
     pub fn is_temp(&self) -> bool {
         self.raw.is_temp == super::ffi::Bool::True
@@ -6108,7 +6110,8 @@ impl<'a> WindowDef<'a> {
         WindowDefId(self.id)
     }
     pub fn base_window_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.base_window_name)
+        self.stmt_result
+            .span_expanded_text(self.raw.base_window_name)
     }
     pub fn partition_by(&self) -> Option<ExprList<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.partition_by)
@@ -6186,7 +6189,7 @@ impl<'a> NamedWindowDef<'a> {
         NamedWindowDefId(self.id)
     }
     pub fn window_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.window_name)
+        self.stmt_result.span_expanded_text(self.raw.window_name)
     }
     pub fn window_def(&self) -> Option<WindowDef<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.window_def)
@@ -6264,7 +6267,7 @@ impl<'a> FilterOver<'a> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.over_def)
     }
     pub fn over_name(&self) -> &'a str {
-        self.stmt_result.span_text(self.raw.over_name)
+        self.stmt_result.span_expanded_text(self.raw.over_name)
     }
 }
 

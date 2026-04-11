@@ -223,24 +223,35 @@ impl MacroRegion {
     }
 }
 
-/// One frame in a macro expansion traceback.
+/// One frame in a span traceback.
 ///
-/// Each frame describes a position inside a particular buffer.  Frame 0
-/// is the outermost (the call site in the original source), and the last
-/// frame is the innermost (the position inside the deepest expansion
-/// buffer).
+/// Each frame describes a position inside either the original authored
+/// source (root frame, `name` is `None`) or a macro expansion layer
+/// (inner frame, `name` carries the macro name).
 ///
-/// Returned by
-/// [`super::AnyParsedStatement::field_expansion_traceback`].
+/// Frame 0 is the outermost (root source); the last frame is the
+/// innermost expansion layer.
+///
+/// `snippet` is the buffer to render the caret against, and
+/// `offset_in_snippet` is the byte offset within that snippet.
+///
+/// Returned by [`super::AnyParsedStatement::traceback`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ExpansionFrame<'a> {
-    /// The buffer text — the original source for the outermost frame, or
-    /// an expansion buffer for inner frames.
-    pub buffer: &'a str,
-    /// Byte offset of this frame's span within `buffer`.
-    pub offset: usize,
-    /// Byte length of this frame's span within `buffer`.
-    pub length: usize,
+pub struct TracebackFrame<'a> {
+    /// Frame name — `None` for the root source frame, or `Some(name)`
+    /// for a macro expansion frame, where `name` is the macro's
+    /// registered name.
+    pub name: Option<&'a str>,
+    /// 1-based line number of `offset_in_snippet` within `snippet`.
+    pub line: u32,
+    /// 1-based column number of `offset_in_snippet` within `snippet`.
+    pub col: u32,
+    /// Buffer to render the caret against.
+    pub snippet: &'a str,
+    /// Byte offset of the frame's position within `snippet`.
+    pub offset_in_snippet: usize,
+    /// Byte length of the frame's position within `snippet`.
+    pub length_in_snippet: usize,
 }
 
 /// Parser's best guess about what kind of token fits next.

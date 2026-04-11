@@ -195,7 +195,7 @@ pub trait TypedNodeId: Copy + Into<AnyNodeId> {
 ///
 /// For spans inside a macro expansion, points at the macro call site in the
 /// original source (not the expansion buffer).  Use
-/// [`AnyParsedStatement::field_expansion_traceback`](crate::parser::AnyParsedStatement::field_expansion_traceback)
+/// [`AnyParsedStatement::traceback`](crate::parser::AnyParsedStatement::traceback)
 /// if you need position info inside the expansion.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SourceRange {
@@ -480,16 +480,27 @@ mod ffi {
         offset: u32,
         length: u16,
         flags: u8,
-        /// Internal: 0 = original source, >0 = macro expansion buffer.
-        /// Read by the C-side `syntaqlite_parser_resolve_span` helper; the
-        /// Rust side never inspects it directly.
-        _buf_idx: u8,
+        /// Internal: 0 = original source, >0 = macro expansion layer id.
+        /// Read by the C-side span accessors; the Rust side passes the
+        /// whole struct across the FFI boundary without inspecting it.
+        _layer_id: u8,
     }
+
+    /// Mirror of C `SYNTAQLITE_SPAN_FLAG_QUOTED` from `types.h`.
+    const SPAN_FLAG_QUOTED: u8 = 1;
 
     impl CSourceSpan {
         /// Returns `true` if the span covers zero bytes.
         pub(crate) fn is_empty(self) -> bool {
             self.length == 0
+        }
+
+        /// Returns `true` if the span was quoted in source (`"..."`,
+        /// `` `...` ``, or `[...]`).  The span points at the dequoted inner
+        /// text; the formatter re-wraps quoted spans in standard double
+        /// quotes.
+        pub(crate) fn is_quoted(self) -> bool {
+            (self.flags & SPAN_FLAG_QUOTED) != 0
         }
     }
 
