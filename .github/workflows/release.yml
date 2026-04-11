@@ -236,7 +236,7 @@ jobs:
           python-version: "3.12"
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.23
+        uses: pypa/cibuildwheel@v3.4
         with:
           package-dir: python/
           output-dir: wheelhouse/
