@@ -3,9 +3,12 @@
 
 //! Result types for a single semantic analysis pass.
 
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 use syntaqlite_syntax::ParserTokenFlags;
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
 
+#[cfg(feature = "lsp")]
 use std::collections::HashMap;
 
 use super::diagnostics::Diagnostic;
@@ -17,6 +20,7 @@ use super::lineage::{ColumnLineage, LineageResult, QueryLineage, RelationAccess,
 ///
 /// `token_type` is dialect-agnostic (`AnyTokenType`) so that the semantic
 /// analyzer works with any dialect, not just the built-in `SQLite` dialect.
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 #[derive(Debug, Clone)]
 pub(crate) struct StoredToken {
     pub(crate) offset: usize,
@@ -26,6 +30,7 @@ pub(crate) struct StoredToken {
 }
 
 /// A comment position recorded during parsing.
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 #[derive(Debug, Clone)]
 pub(crate) struct StoredComment {
     pub(crate) offset: usize,
@@ -35,6 +40,7 @@ pub(crate) struct StoredComment {
 // ── Output types ──────────────────────────────────────────────────────────────
 
 /// A semantic token for syntax highlighting.
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 #[derive(Debug, Clone)]
 pub(crate) struct SemanticToken {
     /// Byte offset in the source text.
@@ -46,6 +52,7 @@ pub(crate) struct SemanticToken {
 }
 
 /// Semantic completion context derived from parser stack state.
+#[cfg(feature = "lsp")]
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CompletionContext {
@@ -57,6 +64,7 @@ pub(crate) enum CompletionContext {
     TableRef = 2,
 }
 
+#[cfg(feature = "lsp")]
 impl CompletionContext {
     pub(crate) fn from_parser(v: syntaqlite_syntax::CompletionContext) -> Self {
         match v {
@@ -68,6 +76,7 @@ impl CompletionContext {
 }
 
 /// Expected tokens and semantic context at a cursor position.
+#[cfg(feature = "lsp")]
 #[derive(Debug)]
 pub(crate) struct CompletionInfo {
     /// Terminal token types valid at the cursor (dialect-agnostic).
@@ -81,6 +90,7 @@ pub(crate) struct CompletionInfo {
 // ── Resolved symbols ──────────────────────────────────────────────────────────
 
 /// A definition site that a reference points to.
+#[cfg(feature = "lsp")]
 #[derive(Debug, Clone)]
 pub(crate) struct DefinitionLocation {
     pub start: usize,
@@ -91,6 +101,7 @@ pub(crate) struct DefinitionLocation {
 
 /// Result of a go-to-definition lookup: the origin span (reference token the
 /// user clicked on) plus the target definition location.
+#[cfg(feature = "lsp")]
 #[derive(Debug, Clone)]
 pub(crate) struct DefinitionResult {
     /// Byte offset of the start of the reference token.
@@ -102,6 +113,7 @@ pub(crate) struct DefinitionResult {
 }
 
 /// A symbol resolution recorded during the validation pass.
+#[cfg(feature = "lsp")]
 #[derive(Debug, Clone)]
 pub(crate) enum ResolvedSymbol {
     /// A table or view reference that resolved successfully.
@@ -127,6 +139,7 @@ pub(crate) enum ResolvedSymbol {
 }
 
 /// A resolved symbol at a specific source location.
+#[cfg(feature = "lsp")]
 #[derive(Debug, Clone)]
 pub(crate) struct Resolution {
     pub start: usize,
@@ -267,13 +280,17 @@ impl StatementModel {
 /// ```
 pub struct SemanticModel {
     pub(crate) source: String,
+    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
     pub(crate) tokens: Vec<StoredToken>,
+    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
     pub(crate) comments: Vec<StoredComment>,
     pub(crate) statements: Vec<StatementModel>,
+    #[cfg(feature = "lsp")]
     pub(crate) resolutions: Vec<Resolution>,
     /// Same-file definition offsets keyed by lowercase name (table) or
     /// `table.column` (column). Used by find-references and rename to
     /// locate definition sites within the document.
+    #[cfg(feature = "lsp")]
     pub(crate) definition_offsets: HashMap<String, (usize, usize)>,
 }
 
@@ -319,6 +336,10 @@ impl SemanticModel {
             .find_map(StatementModel::lineage)
     }
 
+}
+
+#[cfg(feature = "lsp")]
+impl SemanticModel {
     /// Find the resolved symbol at a byte offset, if any.
     pub(crate) fn resolution_at(&self, offset: usize) -> Option<&ResolvedSymbol> {
         self.resolutions
@@ -356,12 +377,14 @@ impl SemanticModel {
 }
 
 /// Identity of a symbol for matching across resolutions (find-references / rename).
+#[cfg(feature = "lsp")]
 #[derive(Debug)]
 pub(crate) enum SymbolIdentity {
     Table(String),
     Column { table: String, column: String },
 }
 
+#[cfg(feature = "lsp")]
 impl SymbolIdentity {
     /// Derive the identity from a `ResolvedSymbol`.
     pub(crate) fn from_resolved(sym: &ResolvedSymbol) -> Option<Self> {

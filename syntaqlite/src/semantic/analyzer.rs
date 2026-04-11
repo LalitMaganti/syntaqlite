@@ -7,22 +7,30 @@ use std::collections::{HashMap, HashSet};
 
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, AnyTokenType, FieldValue, NodeFields,
-    ParseOutcome, SourceRange, TokenCategory,
+    AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, FieldValue, NodeFields, ParseOutcome,
+    SourceRange,
 };
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
+use syntaqlite_syntax::any::TokenCategory;
+#[cfg(feature = "lsp")]
+use syntaqlite_syntax::any::AnyTokenType;
 
 use crate::dialect::AnyDialect;
 use crate::dialect::{FIELD_ABSENT, MacroDef, SemanticRole};
 
 use super::catalog::{
-    AritySpec, Catalog, CatalogLayer, ColumnResolution, FunctionCategory, FunctionCheckResult,
-    columns_from_select,
+    Catalog, CatalogLayer, ColumnResolution, FunctionCheckResult, columns_from_select,
 };
+#[cfg(feature = "lsp")]
+use super::catalog::{AritySpec, FunctionCategory};
 use super::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use super::fuzzy::best_suggestion;
+use super::model::{DefinedRelation, SemanticModel, StatementModel};
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
+use super::model::{SemanticToken, StoredComment, StoredToken};
+#[cfg(feature = "lsp")]
 use super::model::{
-    CompletionContext, CompletionInfo, DefinedRelation, DefinitionLocation, Resolution,
-    ResolvedSymbol, SemanticModel, SemanticToken, StatementModel, StoredComment, StoredToken,
+    CompletionContext, CompletionInfo, DefinitionLocation, Resolution, ResolvedSymbol,
 };
 use super::{AnalysisMode, CheckConfig, CheckLevel, ValidationConfig};
 
@@ -203,9 +211,8 @@ impl SemanticAnalyzer {
 
     /// Semantic tokens for syntax highlighting, derived from a prior
     /// [`analyze`](Self::analyze) result.
+    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
     pub(crate) fn semantic_tokens(&self, model: &SemanticModel) -> Vec<SemanticToken> {
-        use syntaqlite_syntax::any::TokenCategory;
-
         let mut out = Vec::new();
         for t in &model.tokens {
             let cat = self.dialect.classify_token(t.token_type, t.flags);
@@ -229,6 +236,7 @@ impl SemanticAnalyzer {
     }
 
     /// Expected tokens and semantic context at `offset` (for completion).
+    #[cfg(feature = "lsp")]
     pub(crate) fn completion_info(&self, model: &SemanticModel, offset: usize) -> CompletionInfo {
         let source = model.source();
         let tokens = &model.tokens;
@@ -292,10 +300,14 @@ impl SemanticAnalyzer {
         );
         let mut session = parser.parse(source);
 
+        #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
         let mut tokens: Vec<StoredToken> = Vec::new();
+        #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
         let mut comments: Vec<StoredComment> = Vec::new();
         let mut statements: Vec<StatementModel> = Vec::new();
+        #[cfg(feature = "lsp")]
         let mut definition_offsets: HashMap<String, (usize, usize)> = HashMap::new();
+        #[cfg(feature = "lsp")]
         let mut resolutions: Vec<Resolution> = Vec::new();
 
         loop {
@@ -321,14 +333,20 @@ impl SemanticAnalyzer {
                             Vec::new(),
                         ));
                     }
-                    collect_tokens(e.tokens(), &mut tokens);
-                    collect_comments(e.comments(), &mut comments);
+                    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
+                    {
+                        collect_tokens(e.tokens(), &mut tokens);
+                        collect_comments(e.comments(), &mut comments);
+                    }
                     continue;
                 }
             };
 
-            collect_tokens(stmt.tokens(), &mut tokens);
-            collect_comments(stmt.comments(), &mut comments);
+            #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
+            {
+                collect_tokens(stmt.tokens(), &mut tokens);
+                collect_comments(stmt.comments(), &mut comments);
+            }
 
             // Process the statement and extract macro registration info.
             // The erased statement borrows the session, so we must extract
@@ -338,7 +356,9 @@ impl SemanticAnalyzer {
                 let model = self.analyze_statement(
                     &mut erased,
                     config,
+                    #[cfg(feature = "lsp")]
                     &mut resolutions,
+                    #[cfg(feature = "lsp")]
                     &mut definition_offsets,
                 );
                 let reg = extract_macro_registration(
@@ -360,10 +380,14 @@ impl SemanticAnalyzer {
 
         SemanticModel {
             source: source.to_owned(),
+            #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
             tokens,
+            #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
             comments,
             statements,
+            #[cfg(feature = "lsp")]
             resolutions,
+            #[cfg(feature = "lsp")]
             definition_offsets,
         }
     }
@@ -372,8 +396,8 @@ impl SemanticAnalyzer {
         &mut self,
         erased: &mut AnyParsedStatement<'_>,
         config: &ValidationConfig,
-        resolutions: &mut Vec<Resolution>,
-        definition_offsets: &mut HashMap<String, (usize, usize)>,
+        #[cfg(feature = "lsp")] resolutions: &mut Vec<Resolution>,
+        #[cfg(feature = "lsp")] definition_offsets: &mut HashMap<String, (usize, usize)>,
     ) -> StatementModel {
         let root_id = erased.root_id();
         let mut diagnostics: Vec<Diagnostic> = Vec::new();
@@ -385,6 +409,7 @@ impl SemanticAnalyzer {
         self.handle_import(erased, root_id, config, &mut diagnostics);
 
         // Record DDL definition offsets for go-to-definition (same-file).
+        #[cfg(feature = "lsp")]
         if let Some((table_name, off)) = ddl_name_offset(erased, root_id, &self.dialect) {
             for (col_name, col_start, col_end) in
                 super::catalog::ddl_column_spans(erased, root_id, self.dialect.roles())
@@ -402,7 +427,9 @@ impl SemanticAnalyzer {
             &mut self.catalog,
             config,
             &mut diagnostics,
+            #[cfg(feature = "lsp")]
             resolutions,
+            #[cfg(feature = "lsp")]
             definition_offsets,
         );
 
@@ -540,6 +567,7 @@ fn extract_defined_relations(
 /// If the last two tokens in `tokens` are `identifier DOT`, return the
 /// identifier text as the qualifier. This is used to detect `table.` prefixes
 /// for qualified column completion.
+#[cfg(feature = "lsp")]
 fn detect_qualifier(source: &str, tokens: &[StoredToken], dialect: &AnyDialect) -> Option<String> {
     if tokens.len() < 2 {
         return None;
@@ -563,6 +591,7 @@ fn detect_qualifier(source: &str, tokens: &[StoredToken], dialect: &AnyDialect) 
     Some(name.to_string())
 }
 
+#[cfg(feature = "lsp")]
 fn format_arity(name: &str, arity: AritySpec) -> String {
     match arity {
         AritySpec::Exact(n) => {
@@ -578,6 +607,7 @@ fn format_arity(name: &str, arity: AritySpec) -> String {
     }
 }
 
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 fn collect_tokens<'a>(
     iter: impl Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>>,
     tokens: &mut Vec<StoredToken>,
@@ -592,6 +622,7 @@ fn collect_tokens<'a>(
     }
 }
 
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 fn collect_comments<'a>(
     iter: impl Iterator<Item = syntaqlite_syntax::Comment<'a>>,
     comments: &mut Vec<StoredComment>,
@@ -622,6 +653,7 @@ fn parse_error_span(err: &AnyParseError<'_>, source: &str) -> (usize, usize) {
     }
 }
 
+#[cfg(feature = "lsp")]
 fn completion_boundary(
     source: &str,
     tokens: &[StoredToken],
@@ -656,6 +688,7 @@ fn completion_boundary(
 ///
 /// Uses `TokenType::Semi` — safe across all dialects because `SQLite` token
 /// ordinals are stable and equal to `AnyTokenType` ordinals.
+#[cfg(feature = "lsp")]
 fn statement_token_start(tokens: &[StoredToken], boundary: usize) -> usize {
     let semi = AnyTokenType::from(syntaqlite_syntax::TokenType::Semi);
     tokens[..boundary]
@@ -664,6 +697,7 @@ fn statement_token_start(tokens: &[StoredToken], boundary: usize) -> usize {
         .map_or(0, |idx| idx + 1)
 }
 
+#[cfg(feature = "lsp")]
 fn merge_expected_tokens(into: &mut Vec<AnyTokenType>, extra: Vec<AnyTokenType>) {
     let mut seen: HashSet<AnyTokenType> = into.iter().copied().collect();
     for token in extra {
@@ -871,6 +905,7 @@ impl QueryScope {
 ///
 /// Returns `(lowercase_name, (start, end))` for CREATE TABLE / CREATE VIEW,
 /// or `None` for non-DDL statements.
+#[cfg(feature = "lsp")]
 fn ddl_name_offset(
     stmt: &AnyParsedStatement<'_>,
     root: AnyNodeId,
@@ -984,10 +1019,12 @@ struct ValidationPass<'a> {
     catalog: &'a mut Catalog,
     config: &'a ValidationConfig,
     diagnostics: &'a mut Vec<Diagnostic>,
+    #[cfg(feature = "lsp")]
     resolutions: &'a mut Vec<Resolution>,
     scope: QueryScope,
     /// Maps `lowercase(name)` → `(start_offset, end_offset)` for definition sites.
     /// Populated from DDL (per-document) and CTE bindings (per-WITH scope).
+    #[cfg(feature = "lsp")]
     definition_offsets: &'a mut HashMap<String, (usize, usize)>,
 }
 
@@ -1066,7 +1103,7 @@ impl<'a> ValidationPass<'a> {
         }
     }
 
-    #[expect(clippy::too_many_arguments)]
+    #[cfg_attr(feature = "lsp", expect(clippy::too_many_arguments))]
     fn run<'b>(
         stmt: &mut AnyParsedStatement<'b>,
         root: AnyNodeId,
@@ -1074,8 +1111,8 @@ impl<'a> ValidationPass<'a> {
         catalog: &'a mut Catalog,
         config: &'a ValidationConfig,
         diagnostics: &'a mut Vec<Diagnostic>,
-        resolutions: &'a mut Vec<Resolution>,
-        definition_offsets: &'a mut HashMap<String, (usize, usize)>,
+        #[cfg(feature = "lsp")] resolutions: &'a mut Vec<Resolution>,
+        #[cfg(feature = "lsp")] definition_offsets: &'a mut HashMap<String, (usize, usize)>,
     ) {
         let roles = dialect.roles();
         let mut pass = ValidationPass {
@@ -1083,8 +1120,10 @@ impl<'a> ValidationPass<'a> {
             catalog,
             config,
             diagnostics,
+            #[cfg(feature = "lsp")]
             resolutions,
             scope: QueryScope::default(),
+            #[cfg(feature = "lsp")]
             definition_offsets,
         };
         pass.visit(stmt, root);
@@ -1255,7 +1294,9 @@ impl<'a> ValidationPass<'a> {
         if name.is_empty() {
             return;
         }
+        #[cfg(feature = "lsp")]
         let start = source.start as usize;
+        #[cfg(feature = "lsp")]
         let end = source.end as usize;
 
         let is_known =
@@ -1280,6 +1321,7 @@ impl<'a> ValidationPass<'a> {
         let scope_name = if alias.is_empty() { name } else { alias };
         let (columns, without_rowid) = self.catalog.table_source_info(name);
 
+        #[cfg(feature = "lsp")]
         if is_known {
             let definition = self
                 .definition_offsets
@@ -1326,7 +1368,9 @@ impl<'a> ValidationPass<'a> {
         } = fields[name_idx as usize]
             && !name.is_empty()
         {
+            #[cfg(feature = "lsp")]
             let start = source.start as usize;
+            #[cfg(feature = "lsp")]
             let end = source.end as usize;
             let args_id = Self::field_node_id(fields, args_idx);
             let arg_count = args_id
@@ -1334,6 +1378,7 @@ impl<'a> ValidationPass<'a> {
                 .map_or(0, <[_]>::len);
             match self.catalog.check_function(name, arg_count) {
                 FunctionCheckResult::Ok => {
+                    #[cfg(feature = "lsp")]
                     if let Some((cat, arities)) = self.catalog.function_signature(name) {
                         let cat_str = match cat {
                             FunctionCategory::Scalar => "scalar function",
@@ -1414,48 +1459,16 @@ impl<'a> ValidationPass<'a> {
             FieldValue::Span { text: s, .. } if !s.is_empty() => Some(s),
             _ => None,
         };
-        let start = source.start as usize;
-        let end = source.end as usize;
 
         match self.scope.resolve_column(table, column) {
             ColumnResolution::Found {
                 table: resolved_table,
                 all_columns,
             } => {
-                if !resolved_table.is_empty() {
-                    let def_key = format!(
-                        "{}.{}",
-                        resolved_table.to_ascii_lowercase(),
-                        column.to_ascii_lowercase()
-                    );
-                    let definition = self
-                        .definition_offsets
-                        .get(&def_key)
-                        .map(|&(start, end)| DefinitionLocation {
-                            start,
-                            end,
-                            file_uri: None,
-                        })
-                        .or_else(|| {
-                            self.catalog
-                                .column_definition_site(&resolved_table, column)
-                                .map(|site| DefinitionLocation {
-                                    start: site.start,
-                                    end: site.end,
-                                    file_uri: Some(site.file_uri.clone()),
-                                })
-                        });
-                    self.resolutions.push(Resolution {
-                        start,
-                        end,
-                        symbol: ResolvedSymbol::Column {
-                            column: column.to_string(),
-                            table: resolved_table,
-                            all_columns,
-                            definition,
-                        },
-                    });
-                }
+                #[cfg(feature = "lsp")]
+                self.record_column_resolution(source, column, resolved_table, all_columns);
+                #[cfg(not(feature = "lsp"))]
+                let _ = (resolved_table, all_columns);
             }
             ColumnResolution::TableNotFound => {}
             ColumnResolution::TableFoundColumnMissing => {
@@ -1498,6 +1511,53 @@ impl<'a> ValidationPass<'a> {
                 );
             }
         }
+    }
+
+    /// Record a successful column-reference resolution for LSP features
+    /// (go-to-definition, find-references, hover).
+    #[cfg(feature = "lsp")]
+    fn record_column_resolution(
+        &mut self,
+        source: SourceRange,
+        column: &str,
+        resolved_table: String,
+        all_columns: Vec<String>,
+    ) {
+        if resolved_table.is_empty() {
+            return;
+        }
+        let def_key = format!(
+            "{}.{}",
+            resolved_table.to_ascii_lowercase(),
+            column.to_ascii_lowercase()
+        );
+        let definition = self
+            .definition_offsets
+            .get(&def_key)
+            .map(|&(start, end)| DefinitionLocation {
+                start,
+                end,
+                file_uri: None,
+            })
+            .or_else(|| {
+                self.catalog
+                    .column_definition_site(&resolved_table, column)
+                    .map(|site| DefinitionLocation {
+                        start: site.start,
+                        end: site.end,
+                        file_uri: Some(site.file_uri.clone()),
+                    })
+            });
+        self.resolutions.push(Resolution {
+            start: source.start as usize,
+            end: source.end as usize,
+            symbol: ResolvedSymbol::Column {
+                column: column.to_string(),
+                table: resolved_table,
+                all_columns,
+                definition,
+            },
+        });
     }
 
     fn visit_scoped_source<'b>(
@@ -1640,10 +1700,12 @@ impl<'a> ValidationPass<'a> {
             }
 
             // Record CTE definition offset for go-to-definition.
+            #[cfg(feature = "lsp")]
             self.definition_offsets
                 .insert(binding.name.to_ascii_lowercase(), binding.name_range);
 
             // Determine the CTE's column list and register it in the catalog.
+            #[cfg(feature = "lsp")]
             let cte_key = binding.name.to_ascii_lowercase();
             let cols = if let Some(ref declared) = binding.declared_cols {
                 let col_names: Vec<&str> = declared.iter().map(|(s, _, _)| *s).collect();
@@ -1655,6 +1717,7 @@ impl<'a> ValidationPass<'a> {
                     binding.body_id,
                 );
                 // Record declared column definition offsets.
+                #[cfg(feature = "lsp")]
                 for &(col_name, col_start, col_end) in declared {
                     let key = format!("{cte_key}.{}", col_name.to_ascii_lowercase());
                     self.definition_offsets.insert(key, (col_start, col_end));
@@ -1662,6 +1725,7 @@ impl<'a> ValidationPass<'a> {
                 Some(declared.iter().map(|(s, _, _)| s.to_string()).collect())
             } else {
                 // Record inferred column definition offsets from SELECT aliases.
+                #[cfg(feature = "lsp")]
                 self.record_select_column_offsets(stmt, binding.body_id, &cte_key);
                 binding
                     .body_id
@@ -1678,6 +1742,7 @@ impl<'a> ValidationPass<'a> {
     ///
     /// For `WITH foo AS (SELECT 1 AS a, 2 AS b)`, records offsets for the
     /// alias names `a` and `b` so go-to-definition can jump to them.
+    #[cfg(feature = "lsp")]
     fn record_select_column_offsets(
         &mut self,
         stmt: &mut AnyParsedStatement<'_>,
@@ -2518,6 +2583,7 @@ mod tests {
 
     // ── Analyzer: go-to-definition ──────────────────────────────────────────────
 
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_cte_reference_jumps_to_cte_name() {
         let src = "WITH cte AS (SELECT 1) SELECT * FROM cte";
@@ -2538,6 +2604,7 @@ mod tests {
         assert_eq!(def.target.end, cte_def_offset + "cte".len());
     }
 
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_ddl_table_reference_jumps_to_create() {
         let src = "CREATE TABLE users (id INTEGER); SELECT id FROM users;";
@@ -2562,6 +2629,7 @@ mod tests {
         assert_eq!(def.target.end, ddl_offset + "users".len());
     }
 
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_cte_shadows_ddl() {
         let src = "CREATE TABLE t (id INTEGER); WITH t AS (SELECT 1 AS id) SELECT * FROM t;";
@@ -2586,6 +2654,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_unknown_table_returns_none() {
         let src = "SELECT * FROM nonexistent";
@@ -2601,6 +2670,7 @@ mod tests {
     // ── Go-to-definition: columns ──────────────────────────────────────────────
 
     /// Go-to-definition on a column ref should jump to the column in CREATE TABLE.
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_column_in_ddl_table() {
         let src = "CREATE TABLE users (id INTEGER, name TEXT);\nSELECT name FROM users;";
@@ -2630,6 +2700,7 @@ mod tests {
     }
 
     /// Go-to-definition on a column that doesn't exist should return None.
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_unknown_column_returns_none() {
         let src = "CREATE TABLE t (a INT);\nSELECT b FROM t;";
@@ -2646,6 +2717,7 @@ mod tests {
     // ── Go-to-definition: CTE columns ─────────────────────────────────────────
 
     /// Go-to-definition on a CTE column (inferred from alias) should jump to the alias.
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_cte_column_inferred_from_alias() {
         let src = "WITH foo AS (SELECT 1 AS a)\nSELECT a FROM foo;";
@@ -2670,6 +2742,7 @@ mod tests {
     }
 
     /// Go-to-definition on a CTE column (declared column list).
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_cte_column_from_declared_list() {
         let src = "WITH foo(x) AS (SELECT 1)\nSELECT x FROM foo;";
@@ -2694,6 +2767,7 @@ mod tests {
 
     // ── Go-to-definition: cross-file schema ─────────────────────────────────────
 
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_schema_table_jumps_to_external_file() {
         let schema = "CREATE TABLE users (id INTEGER, name TEXT);";
@@ -2715,6 +2789,7 @@ mod tests {
         assert_eq!(def.target.end, schema_offset + "users".len());
     }
 
+    #[cfg(feature = "lsp")]
     #[test]
     fn definition_same_file_ddl_shadows_schema() {
         // Same-file CREATE TABLE should win over external schema.
@@ -3823,6 +3898,7 @@ mod tests {
 
 #[cfg(test)]
 #[cfg(feature = "sqlite")]
+#[cfg(feature = "lsp")]
 mod detect_qualifier_test {
     use super::*;
     use crate::semantic::model::StoredToken;
