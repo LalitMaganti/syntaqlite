@@ -38,6 +38,24 @@ typedef struct SynqListDesc {
   uint32_t tag;
 } SynqListDesc;
 
+// Half-open byte range in the authored source, used by per-node extent
+// tracking.  Sentinel `(UINT32_MAX, 0)` marks an unrecorded/empty range.
+typedef struct SynqExtentRange {
+  uint32_t root_start;
+  uint32_t root_end;
+} SynqExtentRange;
+
+// Layer-local byte range used by per-node *expanded*-text tracking —
+// the bytes the tokenizer saw for a node, in whichever layer buffer
+// they live.  `length == 0` is the sentinel: either an epsilon
+// reduction (no tokens) or a node whose tokens span multiple layers
+// (no contiguous expansion slice can represent it).
+typedef struct SynqNodeExpandedExtent {
+  uint32_t offset;
+  uint32_t length;
+  uint32_t layer_id;
+} SynqNodeExpandedExtent;
+
 // ---------------------------------------------------------------------------
 // Parse context — threaded through grammar actions via %extra_argument
 // ---------------------------------------------------------------------------
@@ -96,6 +114,25 @@ typedef struct SynqParseCtx {
   // markers use this to capture the end position of a non-terminal.
   // Valid only for tokens shifted from the root source layer.
   uint32_t last_shifted_end;
+
+  // Per-node extent tracking.  Opt-in via `collect_node_extents`.
+  // `extent_stack` / `node_extents` track the merged *authored*
+  // source range (in root coordinates) — used by
+  // `syntaqlite_parser_node_text`.  `expanded_stack` /
+  // `node_expanded_extents` track the merged *expanded* range in the
+  // tokens' own layer — used by
+  // `syntaqlite_parser_node_expanded_text`; mixed-layer merges
+  // collapse to a sentinel.  `macro_root_*` caches the outermost
+  // currently-active macro call site in root coordinates so tokens
+  // shifted inside expansions can be attributed back to the authored
+  // source.
+  SYNQ_VEC(SynqExtentRange) extent_stack;
+  SYNQ_VEC(SynqExtentRange) node_extents;
+  SYNQ_VEC(SynqNodeExpandedExtent) expanded_stack;
+  SYNQ_VEC(SynqNodeExpandedExtent) node_expanded_extents;
+  uint32_t collect_node_extents;
+  uint32_t macro_root_start;
+  uint32_t macro_root_end;
 } SynqParseCtx;
 
 // Common header for all list nodes in the arena.
@@ -140,11 +177,22 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   synq_arena_init(&ctx->ast);
   syntaqlite_vec_init(&ctx->child_buf);
   syntaqlite_vec_init(&ctx->list_stack);
+  syntaqlite_vec_init(&ctx->extent_stack);
+  syntaqlite_vec_init(&ctx->node_extents);
+  syntaqlite_vec_init(&ctx->expanded_stack);
+  syntaqlite_vec_init(&ctx->node_expanded_extents);
+  ctx->collect_node_extents = 0;
+  ctx->macro_root_start = 0;
+  ctx->macro_root_end = 0;
 }
 
 static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
   syntaqlite_vec_free(&ctx->child_buf, ctx->mem);
   syntaqlite_vec_free(&ctx->list_stack, ctx->mem);
+  syntaqlite_vec_free(&ctx->extent_stack, ctx->mem);
+  syntaqlite_vec_free(&ctx->node_extents, ctx->mem);
+  syntaqlite_vec_free(&ctx->expanded_stack, ctx->mem);
+  syntaqlite_vec_free(&ctx->node_expanded_extents, ctx->mem);
   synq_arena_free(&ctx->ast, ctx->mem);
 }
 
@@ -152,14 +200,50 @@ static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
 static inline void synq_parse_ctx_clear(SynqParseCtx* ctx) {
   syntaqlite_vec_clear(&ctx->child_buf);
   syntaqlite_vec_clear(&ctx->list_stack);
+  syntaqlite_vec_clear(&ctx->extent_stack);
+  syntaqlite_vec_clear(&ctx->node_extents);
+  syntaqlite_vec_clear(&ctx->expanded_stack);
+  syntaqlite_vec_clear(&ctx->node_expanded_extents);
   synq_arena_clear(&ctx->ast);
+  ctx->macro_root_start = 0;
+  ctx->macro_root_end = 0;
+}
+
+// Record the current shadow-stack tops (authored + expanded) as the
+// extents for `node_id`.  Called right after a node is allocated, so
+// the tops are the merged ranges for the rule currently being
+// reduced.  List node ids are re-recorded on each append, so the
+// final stored value is the full list's extent.  Node ids are
+// monotonically allocated, so `node_id` is either equal to
+// `node_extents.count` (new) or less (existing).
+static inline void synq_extent_record(SynqParseCtx* ctx, uint32_t node_id) {
+  if (!ctx->collect_node_extents) {
+    return;
+  }
+  uint32_t stack_len = syntaqlite_vec_len(&ctx->extent_stack);
+  if (stack_len == 0) {
+    return;
+  }
+  SynqExtentRange top = syntaqlite_vec_at(&ctx->extent_stack, stack_len - 1);
+  SynqNodeExpandedExtent exp_top =
+      syntaqlite_vec_at(&ctx->expanded_stack, stack_len - 1);
+  if (node_id < ctx->node_extents.count) {
+    syntaqlite_vec_at(&ctx->node_extents, node_id) = top;
+    syntaqlite_vec_at(&ctx->node_expanded_extents, node_id) = exp_top;
+  } else {
+    syntaqlite_vec_push(&ctx->node_extents, top, ctx->mem);
+    syntaqlite_vec_push(&ctx->node_expanded_extents, exp_top, ctx->mem);
+  }
 }
 
 // Generic node builder: copy node data into the arena.
 static inline uint32_t synq_parse_build(SynqParseCtx* ctx,
                                         const void* node_data,
                                         uint32_t node_size) {
-  return synq_arena_alloc(&ctx->ast, node_data, node_size, ctx->mem);
+  uint32_t node_id =
+      synq_arena_alloc(&ctx->ast, node_data, node_size, ctx->mem);
+  synq_extent_record(ctx, node_id);
+  return node_id;
 }
 
 static inline uint32_t synq_parse_list_append(SynqParseCtx* ctx,
@@ -173,6 +257,7 @@ static inline uint32_t synq_parse_list_append(SynqParseCtx* ctx,
     desc.tag = tag;
     syntaqlite_vec_push(&ctx->list_stack, desc, ctx->mem);
     syntaqlite_vec_push(&ctx->child_buf, child, ctx->mem);
+    synq_extent_record(ctx, desc.node_id);
     return desc.node_id;
   }
 
@@ -183,6 +268,7 @@ static inline uint32_t synq_parse_list_append(SynqParseCtx* ctx,
     synq_parse_list_flush_top(ctx);
   }
   syntaqlite_vec_push(&ctx->child_buf, child, ctx->mem);
+  synq_extent_record(ctx, list_id);
   return list_id;
 }
 
@@ -218,6 +304,7 @@ static inline uint32_t synq_parse_list_prepend(SynqParseCtx* ctx,
         syntaqlite_vec_at(&ctx->child_buf, i - 1);
   }
   syntaqlite_vec_at(&ctx->child_buf, insert_at) = child;
+  synq_extent_record(ctx, list_id);
   return list_id;
 }
 

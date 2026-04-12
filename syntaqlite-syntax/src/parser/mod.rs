@@ -90,6 +90,8 @@ impl<G: TypedDialect> TypedParser<G> {
                 .set_collect_tokens(u32::from(config.collect_tokens()));
             raw.as_mut()
                 .set_macro_fallback(u32::from(config.macro_fallback()));
+            raw.as_mut()
+                .set_collect_node_extents(u32::from(config.collect_node_extents()));
         }
 
         TypedParser {
@@ -349,13 +351,10 @@ impl<G: TypedDialect> TypedParseSession<G> {
             .inner
             .as_ref()
             .expect("inner is Some while session is not finished");
-        let source_len = inner.source_buf.len().saturating_sub(1);
-        // SAFETY: source_buf was populated from valid UTF-8 (&str) in
-        // reset_parser. The first source_len bytes are the original source.
-        let source = unsafe { std::str::from_utf8_unchecked(&inner.source_buf[..source_len]) };
-        // SAFETY: inner.raw is valid (owned via ParserInner, not yet destroyed).
-        let result =
-            unsafe { TypedParsedStatement::new(inner.raw.as_ptr(), source, self.dialect.clone()) };
+        // SAFETY: inner.raw is valid (owned via ParserInner, not yet
+        // destroyed); its bound source buffer lives in ParserInner and
+        // outlives `&self`.
+        let result = unsafe { TypedParsedStatement::new(inner.raw.as_ptr(), self.dialect.clone()) };
         if rc == ffi::PARSE_OK {
             ParseOutcome::Ok(result)
         } else {
@@ -374,10 +373,28 @@ impl<G: TypedDialect> TypedParseSession<G> {
             .inner
             .as_ref()
             .expect("inner is Some while session is not finished");
-        let source_len = inner.source_buf.len().saturating_sub(1);
-        // SAFETY: source_buf was populated from valid UTF-8 (&str) in
-        // reset_parser.
-        unsafe { std::str::from_utf8_unchecked(&inner.source_buf[..source_len]) }
+        // SAFETY: inner.raw is valid for `&self`; the returned slice
+        // borrows from the parser's source buffer.
+        unsafe { inner.raw.as_ref().text() }
+    }
+
+    /// Post-expansion source — the bound source with every
+    /// currently-active macro call replaced by its expansion.
+    /// Materialized into a parser-owned scratch buffer; the returned
+    /// slice is invalidated by the next `*_expanded_text` call or
+    /// when the session advances to the next statement.
+    ///
+    /// # Panics
+    ///
+    /// Panics only if session invariants were violated.
+    pub fn expanded_text(&self) -> &str {
+        let inner = self
+            .inner
+            .as_ref()
+            .expect("inner is Some while session is not finished");
+        // SAFETY: inner.raw is valid for `&self`; the returned slice
+        // borrows from the parser's scratch buffer.
+        unsafe { inner.raw.as_ref().expanded_text() }
     }
 
     /// Get a dialect-agnostic view of this session's current arena state.
@@ -393,12 +410,9 @@ impl<G: TypedDialect> TypedParseSession<G> {
             .inner
             .as_ref()
             .expect("inner is Some while session is alive");
-        let source_len = inner.source_buf.len().saturating_sub(1);
-        // SAFETY: source_buf was populated from valid UTF-8 (&str) in
-        // reset_parser; inner.raw is valid (owned via ParserInner).
-        let source = unsafe { std::str::from_utf8_unchecked(&inner.source_buf[..source_len]) };
-        // SAFETY: inner.raw is valid for 'self; source is valid UTF-8 for 'self.
-        unsafe { AnyParsedStatement::new(inner.raw.as_ptr(), source, self.dialect.clone()) }
+        // SAFETY: inner.raw is a valid parser pointer whose source_buf
+        // outlives `&self`.
+        unsafe { AnyParsedStatement::new(inner.raw.as_ptr(), self.dialect.clone()) }
     }
 }
 
@@ -410,27 +424,28 @@ pub type AnyParseSession = TypedParseSession<AnyDialect>;
 
 /// Dialect-erased view of a parsed statement.
 ///
-/// Cheap to borrow — holds a raw parser pointer, source reference, and dialect
-/// handle. Nodes and lists store `&'a AnyParsedStatement<'a>` rather than an
-/// owned copy, making them `Copy` and eliminating dialect-handle clones.
+/// Cheap to borrow — holds a raw parser pointer and dialect handle.  Nodes
+/// and lists store `&'a AnyParsedStatement<'a>` rather than an owned copy,
+/// making them `Copy` and eliminating dialect-handle clones.
 #[derive(Clone)]
 pub struct AnyParsedStatement<'a> {
     pub(crate) raw: NonNull<CParser>,
-    pub(crate) text: &'a str,
     pub(crate) dialect: AnyDialect,
+    _marker: PhantomData<&'a str>,
 }
 
 impl<'a> AnyParsedStatement<'a> {
     /// Construct from raw parts.
     ///
     /// # Safety
-    /// `raw` must be a valid, non-null parser pointer that remains valid for `'a`.
-    pub(crate) unsafe fn new(raw: *mut CParser, text: &'a str, dialect: AnyDialect) -> Self {
+    /// `raw` must be a valid, non-null parser pointer whose bound source
+    /// buffer remains valid for `'a`.
+    pub(crate) unsafe fn new(raw: *mut CParser, dialect: AnyDialect) -> Self {
         AnyParsedStatement {
             // SAFETY: caller guarantees raw is non-null.
             raw: unsafe { NonNull::new_unchecked(raw) },
-            text,
             dialect,
+            _marker: PhantomData,
         }
     }
 
@@ -438,6 +453,50 @@ impl<'a> AnyParsedStatement<'a> {
     pub fn root_id(&self) -> AnyNodeId {
         // SAFETY: self.raw is a valid, non-null parser pointer for lifetime 'a.
         AnyNodeId(unsafe { self.raw.as_ref().result_root() })
+    }
+
+    /// Source text of AST node `id` as `(text, offset)`, or `None` when
+    /// extent tracking is disabled or no extent was recorded for this
+    /// node.  Requires [`ParserConfig::with_collect_node_extents`].
+    pub fn node_text(&self, id: AnyNodeId) -> Option<(&'a str, u32)> {
+        if id.is_null() {
+            return None;
+        }
+        // SAFETY: self.raw is valid for 'a; the returned slice borrows
+        // from the parser's source buffer which outlives 'a.
+        unsafe { self.raw.as_ref().node_text(id.0) }
+    }
+
+    /// Post-expansion text of AST node `id`.
+    ///
+    /// For nodes whose tokens all live in a single layer, returns a
+    /// direct slice of that layer's buffer (input source or macro
+    /// expansion).  For mixed-layer nodes, the text is materialized
+    /// into a parser-owned scratch buffer by inlining each enclosed
+    /// macro call's expansion; the returned slice is valid until the
+    /// next `*_expanded_text` call on the same parser or until the
+    /// parser advances to the next statement.  Requires
+    /// [`ParserConfig::with_collect_node_extents`].
+    pub fn node_expanded_text(&self, id: AnyNodeId) -> Option<&'a str> {
+        if id.is_null() {
+            return None;
+        }
+        // SAFETY: self.raw is valid for 'a; the returned slice borrows
+        // from either a layer buffer or the parser's scratch buffer,
+        // both of which outlive 'a.
+        unsafe { self.raw.as_ref().node_expanded_text(id.0) }
+    }
+
+    /// Post-expansion text for the whole bound source — the
+    /// parser-level analogue of [`Self::node_expanded_text`].
+    /// Materializes the source with every currently-active macro call
+    /// replaced by its expansion into a parser-owned scratch buffer;
+    /// the returned slice is valid until the next `*_expanded_text`
+    /// call on the same parser or until the parser advances.
+    pub fn expanded_text(&self) -> &'a str {
+        // SAFETY: self.raw is valid for 'a; the returned slice borrows
+        // from the parser's scratch buffer which outlives 'a.
+        unsafe { self.raw.as_ref().expanded_text() }
     }
 
     /// Macro expansion call-site spans recorded during parsing.
@@ -595,7 +654,9 @@ impl<'a> AnyParsedStatement<'a> {
 
     /// The source text bound to this result.
     pub fn text(&self) -> &'a str {
-        self.text
+        // SAFETY: self.raw is valid for 'a; the returned slice borrows
+        // from the parser's source buffer which outlives 'a.
+        unsafe { self.raw.as_ref().text() }
     }
 
     /// Raw token spans `(offset, length)` for all collected tokens.
@@ -760,15 +821,13 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     /// Construct from raw parts.
     ///
     /// # Safety
-    /// `raw` must be a valid, non-null parser pointer that remains valid for `'a`.
-    pub(crate) unsafe fn new(raw: *mut CParser, text: &'a str, dialect: AnyDialect) -> Self {
+    /// `raw` must be a valid, non-null parser pointer whose bound source
+    /// buffer remains valid for `'a`.
+    pub(crate) unsafe fn new(raw: *mut CParser, dialect: AnyDialect) -> Self {
         TypedParsedStatement {
-            any: AnyParsedStatement {
-                // SAFETY: caller guarantees raw is non-null.
-                raw: unsafe { NonNull::new_unchecked(raw) },
-                text,
-                dialect,
-            },
+            // SAFETY: caller guarantees raw is non-null and its bound
+            // source buffer outlives 'a.
+            any: unsafe { AnyParsedStatement::new(raw, dialect) },
             _marker: PhantomData,
         }
     }
@@ -811,7 +870,14 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
 
     /// The source text bound to this result.
     pub fn text(&self) -> &'a str {
-        self.any.text
+        self.any.text()
+    }
+
+    /// Post-expansion source — the bound source with every currently-
+    /// active macro call replaced by its expansion.  See
+    /// [`AnyParsedStatement::expanded_text`] for lifetime semantics.
+    pub fn expanded_text(&self) -> &'a str {
+        self.any.expanded_text()
     }
 
     /// Macro expansion call-site spans recorded during parsing.
@@ -827,7 +893,7 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     ///
     /// Requires `collect_tokens: true` and skips unknown token ordinals for `G`.
     pub fn tokens(&self) -> impl Iterator<Item = TypedParserToken<'a, G>> {
-        let source = self.any.text;
+        let source = self.any.text();
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CParserToken] = unsafe { self.any.raw.as_ref().result_tokens() };
         raw.iter().filter_map(move |t| {
@@ -847,7 +913,7 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     ///
     /// Requires `collect_tokens: true` in [`ParserConfig`].
     pub fn comments(&self) -> impl Iterator<Item = Comment<'a>> {
-        let source = self.any.text;
+        let source = self.any.text();
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CComment] = unsafe { self.any.raw.as_ref().result_comments() };
         raw.iter().map(move |c| {

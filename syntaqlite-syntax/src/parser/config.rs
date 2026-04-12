@@ -6,10 +6,15 @@
 /// Keep defaults for pure parsing. Enable extras only when your tool needs
 /// them (for example, token-level highlighting or parser debugging).
 #[derive(Debug, Default, Clone, Copy)]
+#[expect(
+    clippy::struct_excessive_bools,
+    reason = "each flag toggles an independent, orthogonal feature"
+)]
 pub struct ParserConfig {
     trace: bool,
     collect_tokens: bool,
     macro_fallback: bool,
+    collect_node_extents: bool,
 }
 
 impl ParserConfig {
@@ -56,6 +61,22 @@ impl ParserConfig {
     #[must_use]
     pub fn with_macro_fallback(mut self, macro_fallback: bool) -> Self {
         self.macro_fallback = macro_fallback;
+        self
+    }
+
+    /// Whether per-node extent tracking is enabled. Default: `false`.
+    ///
+    /// When enabled, the parser records the source byte range of every
+    /// AST node, accessible via [`AnyParsedStatement::node_text`](
+    /// super::AnyParsedStatement::node_text).
+    pub fn collect_node_extents(&self) -> bool {
+        self.collect_node_extents
+    }
+
+    /// Enable or disable per-node extent tracking.
+    #[must_use]
+    pub fn with_collect_node_extents(mut self, collect_node_extents: bool) -> Self {
+        self.collect_node_extents = collect_node_extents;
         self
     }
 }

@@ -163,6 +163,12 @@ struct SyntaqliteParser {
   // invalidated by the next (and by `reset_stmt`).
   SYNQ_VEC(SyntaqliteTracebackFrame) traceback_buf;
 
+  // Scratch buffer owned by the parser for materializing the expanded
+  // text of mixed-layer nodes in `syntaqlite_parser_node_expanded_text`.
+  // Same lifetime semantics as `traceback_buf` — rewritten on every
+  // call, invalidated by the next call / `reset_stmt`.
+  SYNQ_VEC(uint8_t) node_expanded_buf;
+
   // ── Macro registry (open-addressing hashmap) ──────────────────────────
   SynqMacroEntry* macro_table;
   uint32_t macro_table_size;   // Capacity (power of 2).

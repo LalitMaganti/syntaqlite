@@ -59,7 +59,7 @@ extern "C" {
 #endif
 
 // ---------------------------------------------------------------------------
-// Types
+// Parser handle and return codes
 // ---------------------------------------------------------------------------
 
 // Opaque parser handle (heap-allocated, reusable across inputs).
@@ -78,6 +78,91 @@ typedef struct SyntaqliteParser SyntaqliteParser;
 #define SYNTAQLITE_PARSE_DONE 0
 #define SYNTAQLITE_PARSE_OK 1
 #define SYNTAQLITE_PARSE_ERROR (-1)
+
+// ---------------------------------------------------------------------------
+// Core API — create, reset, parse, destroy
+// ---------------------------------------------------------------------------
+
+#ifndef SYNTAQLITE_OMIT_SQLITE_API
+// Allocate a parser for the built-in SQLite dialect.  The parser is
+// inert until `reset()` binds a source buffer.  Pass NULL for `mem` to
+// use malloc/free.
+SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create(
+    const SyntaqliteMemMethods* mem);
+#endif
+
+// Bind a source buffer and reset all internal state. The source must remain
+// valid until the next reset() or destroy(). Can be called again to parse a
+// new input without reallocating — all previous nodes are invalidated.
+SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
+                                            const char* source,
+                                            uint32_t len);
+
+// Parse the next SQL statement. Call in a loop until SYNTAQLITE_PARSE_DONE.
+// Bare semicolons between statements are skipped automatically.
+// The arena is reset at the start of each call — pointers from the previous
+// call become invalid.
+//
+// Returns one of the SYNTAQLITE_PARSE_* codes.
+SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p);
+
+// Free the parser, its arena, and all its nodes. No-op if p is NULL.
+SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p);
+
+// ---------------------------------------------------------------------------
+// Configuration — call after create(), before the first reset()
+// ---------------------------------------------------------------------------
+
+// Enable token/comment collection for result_tokens/result_comments.
+// Default: off (0), in which case those arrays are empty.
+// Returns 0 on success, -1 if the parser has already been used.
+SYNTAQLITE_API int32_t syntaqlite_parser_set_collect_tokens(SyntaqliteParser* p,
+                                                            uint32_t enable);
+
+// Enable parser trace output (debug builds only). Default: off (0).
+// Returns 0 on success, -1 if the parser has already been used.
+SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
+                                                   uint32_t enable);
+
+// Enable macro fallback: when the dialect uses SYNQ_MACRO_STYLE_RUST and a
+// name!(args) call is encountered but the name is NOT in the macro registry,
+// consume the entire name!(args) as a single TK_ID token instead of raising
+// a parse error. A MacroRegion is recorded so the formatter can emit the
+// call verbatim. Default: off (0).
+// Returns 0 on success, -1 if the parser has already been used.
+SYNTAQLITE_API int32_t syntaqlite_parser_set_macro_fallback(SyntaqliteParser* p,
+                                                            uint32_t enable);
+
+// Enable per-node extent tracking.  When enabled, the parser records
+// the source byte range of every AST node it commits to the arena,
+// accessible via `syntaqlite_parser_node_text`.  Default: off (0).
+// Returns 0 on success, -1 if the parser has already been used.
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_collect_node_extents(SyntaqliteParser* p,
+                                           uint32_t enable);
+
+// ---------------------------------------------------------------------------
+// Result accessors
+// Valid until the next syntaqlite_parser_next(), reset(), or destroy() call.
+// ---------------------------------------------------------------------------
+
+// Statement root node ID for SYNTAQLITE_PARSE_OK results.
+// Returns SYNTAQLITE_NULL_NODE for DONE/ERROR.
+SYNTAQLITE_API uint32_t syntaqlite_result_root(SyntaqliteParser* p);
+
+// Partial recovery root for SYNTAQLITE_PARSE_ERROR results.
+// Returns SYNTAQLITE_NULL_NODE when no recovery tree is available.
+// Recovery trees may include grammar-level error nodes where parsing resumed.
+SYNTAQLITE_API uint32_t syntaqlite_result_recovery_root(SyntaqliteParser* p);
+
+// Human-readable error message, or NULL.
+SYNTAQLITE_API const char* syntaqlite_result_error_msg(SyntaqliteParser* p);
+
+// Byte offset of error token (0xFFFFFFFF = unknown).
+SYNTAQLITE_API uint32_t syntaqlite_result_error_offset(SyntaqliteParser* p);
+
+// Byte length of error token (0 = unknown).
+SYNTAQLITE_API uint32_t syntaqlite_result_error_length(SyntaqliteParser* p);
 
 // A comment captured during parsing.
 typedef struct SyntaqliteComment {
@@ -113,63 +198,6 @@ typedef struct SyntaqliteParserToken {
   uint8_t _pad[3];
 } SyntaqliteParserToken;
 
-// A recorded macro invocation region.
-// For the input-side begin/end API see incremental.h.
-typedef struct SyntaqliteMacroRegion {
-  uint32_t call_offset;  // Byte offset of macro call in original source.
-  uint32_t call_length;  // Byte length of entire macro call.
-} SyntaqliteMacroRegion;
-
-// ---------------------------------------------------------------------------
-// Core API
-// ---------------------------------------------------------------------------
-
-// Allocate a parser bound to a specific dialect environment.
-SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
-    const SyntaqliteMemMethods* mem,
-    SyntaqliteDialect env);
-
-// Bind a source buffer and reset all internal state. The source must remain
-// valid until the next reset() or destroy(). Can be called again to parse a
-// new input without reallocating — all previous nodes are invalidated.
-SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
-                                            const char* source,
-                                            uint32_t len);
-
-// Parse the next SQL statement. Call in a loop until SYNTAQLITE_PARSE_DONE.
-// Bare semicolons between statements are skipped automatically.
-// The arena is reset at the start of each call — pointers from the previous
-// call become invalid.
-//
-// Returns one of the SYNTAQLITE_PARSE_* codes.
-SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p);
-
-// Free the parser, its arena, and all its nodes. No-op if p is NULL.
-SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p);
-
-// ---------------------------------------------------------------------------
-// Result accessors
-// Valid until the next syntaqlite_parser_next(), reset(), or destroy() call.
-// ---------------------------------------------------------------------------
-
-// Statement root node ID for SYNTAQLITE_PARSE_OK results.
-// Returns SYNTAQLITE_NULL_NODE for DONE/ERROR.
-SYNTAQLITE_API uint32_t syntaqlite_result_root(SyntaqliteParser* p);
-
-// Partial recovery root for SYNTAQLITE_PARSE_ERROR results.
-// Returns SYNTAQLITE_NULL_NODE when no recovery tree is available.
-// Recovery trees may include grammar-level error nodes where parsing resumed.
-SYNTAQLITE_API uint32_t syntaqlite_result_recovery_root(SyntaqliteParser* p);
-
-// Human-readable error message, or NULL.
-SYNTAQLITE_API const char* syntaqlite_result_error_msg(SyntaqliteParser* p);
-
-// Byte offset of error token (0xFFFFFFFF = unknown).
-SYNTAQLITE_API uint32_t syntaqlite_result_error_offset(SyntaqliteParser* p);
-
-// Byte length of error token (0 = unknown).
-SYNTAQLITE_API uint32_t syntaqlite_result_error_length(SyntaqliteParser* p);
-
 // Per-statement token/comment arrays.
 // Empty unless collect_tokens is enabled via
 // syntaqlite_parser_set_collect_tokens(p, 1) before first reset().
@@ -179,6 +207,13 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_result_comments(
 SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
     SyntaqliteParser* p,
     uint32_t* count);
+
+// A recorded macro invocation region.
+// For the input-side begin/end API see incremental.h.
+typedef struct SyntaqliteMacroRegion {
+  uint32_t call_offset;  // Byte offset of macro call in original source.
+  uint32_t call_length;  // Byte length of entire macro call.
+} SyntaqliteMacroRegion;
 
 // Macro-invocation call sites recorded during parsing.  Accessed via count
 // + indexed getter rather than an array pointer to avoid materializing a
@@ -199,17 +234,28 @@ syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx);
 SYNTAQLITE_API const void* syntaqlite_parser_node(SyntaqliteParser* p,
                                                   uint32_t node_id);
 
-// Return a pointer to the source text bound by the last reset() call.
-SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p);
+// Source text bound by the last reset() call.  Writes the byte length
+// to `*out_len` (optional) and returns a direct pointer into the
+// parser's source buffer.
+SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
+                                                  uint32_t* out_len);
 
-// Return the byte length of the source text bound by the last reset() call.
-SYNTAQLITE_API uint32_t syntaqlite_parser_text_length(SyntaqliteParser* p);
+// Post-expansion text for the whole input — the parser-level
+// analogue of `syntaqlite_parser_node_expanded_text`.  Materializes
+// the source with every currently-active macro call replaced by its
+// expansion into a parser-owned scratch buffer and returns a pointer
+// valid until the next call to `syntaqlite_parser_expanded_text` /
+// `syntaqlite_parser_node_expanded_text` on the same parser or until
+// the parser advances to the next statement.  Writes the byte length
+// to `*out_len` (optional).
+SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(SyntaqliteParser* p,
+                                                           uint32_t* out_len);
 
 // Return the number of nodes currently in the arena.
 SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
 
 // ---------------------------------------------------------------------------
-// Span accessors
+// Source text accessors — spans, nodes, and tracebacks
 // ---------------------------------------------------------------------------
 
 // One frame in a span traceback, produced by
@@ -292,6 +338,47 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_text(
     uint32_t* out_len,
     uint32_t* out_offset);
 
+// Authored source text for AST node `node_id` — the analogue of
+// `syntaqlite_parser_span_text` for whole nodes rather than spans.
+//
+// Requires per-node extent tracking to be enabled via
+// `syntaqlite_parser_set_collect_node_extents` before the first
+// `reset()`.  On success writes the slice length to `*out_len` and
+// its byte offset in the source to `*out_offset` (both optional) and
+// returns a direct slice of the input source — no allocation.
+//
+// Returns NULL (and writes 0 to `*out_len` / `*out_offset`) when
+// extent tracking is disabled, the node id is unknown, or no extent
+// was recorded for it.
+SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
+                                                       uint32_t node_id,
+                                                       uint32_t* out_len,
+                                                       uint32_t* out_offset);
+
+// Post-expansion text for AST node `node_id` — the analogue of
+// `syntaqlite_parser_span_expanded_text` for whole nodes.
+//
+// For nodes whose tokens all live in a single layer (the common
+// case), the return value is a direct slice of that layer's buffer —
+// the input source for root-layer nodes, or a macro expansion buffer
+// for nodes built entirely from one expansion.
+//
+// For nodes whose tokens cross layers (e.g. `SELECT id!(42)` where
+// `SELECT` lives in the root source and `42` lives in `id`'s
+// expansion), the result is materialized into a parser-owned scratch
+// buffer by walking the node's root range and inlining each enclosed
+// macro call's expansion.  The returned pointer is valid until the
+// next call to `syntaqlite_parser_node_expanded_text` on the same
+// parser or until the parser advances to the next statement — copy
+// the bytes out if you need them to outlive that.
+//
+// Returns NULL (and writes 0 to `*out_len`) when extent tracking is
+// disabled, the node id is unknown, or no extent was recorded for it.
+SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
+    SyntaqliteParser* p,
+    uint32_t node_id,
+    uint32_t* out_len);
+
 // ---------------------------------------------------------------------------
 // Node and list helpers
 // ---------------------------------------------------------------------------
@@ -348,33 +435,9 @@ static inline const void* syntaqlite_list_child(SyntaqliteParser* p,
                SYNTAQLITE_LIST_ITEM(p, Type, _sqlist_##var, _sqi_##var);  \
            var; var = 0)
 
-// ============================================================================
-// Configuration — call after create(), before first reset()
-// ============================================================================
-
-// Enable token/comment collection for result_tokens/result_comments.
-// Default: off (0), in which case those arrays are empty.
-// Returns 0 on success, -1 if the parser has already been used.
-SYNTAQLITE_API int32_t syntaqlite_parser_set_collect_tokens(SyntaqliteParser* p,
-                                                            uint32_t enable);
-
-// Enable parser trace output (debug builds only). Default: off (0).
-// Returns 0 on success, -1 if the parser has already been used.
-SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
-                                                   uint32_t enable);
-
-// Enable macro fallback: when the dialect uses SYNQ_MACRO_STYLE_RUST and a
-// name!(args) call is encountered but the name is NOT in the macro registry,
-// consume the entire name!(args) as a single TK_ID token instead of raising
-// a parse error. A MacroRegion is recorded so the formatter can emit the
-// call verbatim. Default: off (0).
-// Returns 0 on success, -1 if the parser has already been used.
-SYNTAQLITE_API int32_t syntaqlite_parser_set_macro_fallback(SyntaqliteParser* p,
-                                                            uint32_t enable);
-
-// ============================================================================
+// ---------------------------------------------------------------------------
 // Debugging
-// ============================================================================
+// ---------------------------------------------------------------------------
 
 // Dump an AST node tree as indented text. Returns a malloc'd NUL-terminated
 // string. The caller must free() the result. Returns NULL on allocation
@@ -383,16 +446,19 @@ SYNTAQLITE_API char* syntaqlite_dump_node(SyntaqliteParser* p,
                                           uint32_t node_id,
                                           uint32_t indent);
 
-// ============================================================================
+// ---------------------------------------------------------------------------
 // Advanced: custom dialects
-// ============================================================================
+// ---------------------------------------------------------------------------
+
+// Allocate a parser bound to a specific dialect environment.  Use this
+// for custom dialects; for the built-in SQLite dialect prefer
+// `syntaqlite_parser_create`.
+SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
+    const SyntaqliteMemMethods* mem,
+    SyntaqliteDialect env);
 
 #ifndef SYNTAQLITE_OMIT_SQLITE_API
-// Allocate a parser for the built-in SQLite dialect. The parser is inert
-// until reset() is called. Pass NULL for mem to use malloc/free.
-SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create(
-    const SyntaqliteMemMethods* mem);
-
+// Return the built-in SQLite dialect handle.
 SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void);
 #endif
 

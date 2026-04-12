@@ -132,6 +132,117 @@ impl CParser {
         unsafe { syntaqlite_parser_set_macro_fallback(self, enable) }
     }
 
+    pub(crate) unsafe fn set_collect_node_extents(&mut self, enable: u32) -> i32 {
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        unsafe { syntaqlite_parser_set_collect_node_extents(self, enable) }
+    }
+
+    /// Source text bound by the last `reset()` call.
+    ///
+    /// # Safety
+    /// The returned slice must not outlive the borrow underlying `self`.
+    pub(crate) unsafe fn text<'a>(&self) -> &'a str {
+        let mut out_len: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        let ptr = unsafe {
+            syntaqlite_parser_text(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                &raw mut out_len,
+            )
+        };
+        if ptr.is_null() || out_len == 0 {
+            return "";
+        }
+        // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
+        // UTF-8 within the parser's source buffer.
+        unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
+        }
+    }
+
+    /// Post-expansion source text — the bound source with every
+    /// currently-active macro call replaced by its expansion.
+    /// Materialized into the parser's scratch buffer; the returned
+    /// slice is valid until the next call to `expanded_text` /
+    /// `node_expanded_text` or until the parser advances.
+    ///
+    /// # Safety
+    /// The returned slice must not outlive the borrow underlying
+    /// `self` and is invalidated by the next call.
+    pub(crate) unsafe fn expanded_text<'a>(&self) -> &'a str {
+        let mut out_len: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        let ptr = unsafe {
+            syntaqlite_parser_expanded_text(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                &raw mut out_len,
+            )
+        };
+        if ptr.is_null() || out_len == 0 {
+            return "";
+        }
+        // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
+        // UTF-8 within the parser's scratch buffer.
+        unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
+        }
+    }
+
+    /// Source text of AST node `node_id`, returned as `(slice, offset)`
+    /// where `slice` borrows from the parser's source buffer.
+    ///
+    /// # Safety
+    /// The returned slice must not outlive the borrow underlying `self`.
+    pub(crate) unsafe fn node_text<'a>(&self, node_id: u32) -> Option<(&'a str, u32)> {
+        let mut out_len: u32 = 0;
+        let mut out_offset: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        let ptr = unsafe {
+            syntaqlite_parser_node_text(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                node_id,
+                &raw mut out_len,
+                &raw mut out_offset,
+            )
+        };
+        if ptr.is_null() || out_len == 0 {
+            return None;
+        }
+        // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
+        // UTF-8 within the parser's source buffer.
+        let text = unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
+        };
+        Some((text, out_offset))
+    }
+
+    /// Post-expansion text of AST node `node_id` — a slice of whichever
+    /// layer buffer (source or macro expansion) contains the node's
+    /// tokens.  `None` for mixed-layer nodes.
+    ///
+    /// # Safety
+    /// The returned slice must not outlive the borrow underlying `self`.
+    pub(crate) unsafe fn node_expanded_text<'a>(&self, node_id: u32) -> Option<&'a str> {
+        let mut out_len: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        let ptr = unsafe {
+            syntaqlite_parser_node_expanded_text(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                node_id,
+                &raw mut out_len,
+            )
+        };
+        if ptr.is_null() || out_len == 0 {
+            return None;
+        }
+        // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
+        // UTF-8 within the layer buffer it belongs to.
+        let text = unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
+        };
+        Some(text)
+    }
+
     pub(crate) unsafe fn reset(&mut self, source: *const c_char, len: u32) {
         // SAFETY: self is a valid, non-null CParser pointer; source is a
         // null-terminated C string of at least `len` bytes.
@@ -431,6 +542,20 @@ unsafe extern "C" {
     fn syntaqlite_parser_set_trace(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_collect_tokens(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_macro_fallback(p: *mut CParser, enable: u32) -> i32;
+    fn syntaqlite_parser_set_collect_node_extents(p: *mut CParser, enable: u32) -> i32;
+    fn syntaqlite_parser_text(p: *mut CParser, out_len: *mut u32) -> *const u8;
+    fn syntaqlite_parser_expanded_text(p: *mut CParser, out_len: *mut u32) -> *const u8;
+    fn syntaqlite_parser_node_text(
+        p: *mut CParser,
+        node_id: u32,
+        out_len: *mut u32,
+        out_offset: *mut u32,
+    ) -> *const u8;
+    fn syntaqlite_parser_node_expanded_text(
+        p: *mut CParser,
+        node_id: u32,
+        out_len: *mut u32,
+    ) -> *const u8;
 
     // AST dump
     fn syntaqlite_dump_node(p: *mut CParser, node_id: u32, indent: u32) -> *mut c_char;
@@ -521,13 +646,13 @@ mod tests {
         sql_c
     }
 
-    fn with_recovery_stmt<F, R>(parser: *mut CParser, source: &str, recovery_root: u32, f: F) -> R
+    fn with_recovery_stmt<F, R>(parser: *mut CParser, _source: &str, recovery_root: u32, f: F) -> R
     where
         F: FnOnce(Stmt<'_>) -> R,
     {
         let dialect: AnyDialect = crate::sqlite::dialect::dialect().into();
-        // SAFETY: parser pointer is valid for test scope; source is valid UTF-8.
-        let result = unsafe { crate::parser::AnyParsedStatement::new(parser, source, dialect) };
+        // SAFETY: parser pointer is valid for the test scope.
+        let result = unsafe { crate::parser::AnyParsedStatement::new(parser, dialect) };
         let stmt = Stmt::from_result(&result, AnyNodeId(recovery_root))
             .expect("recovery root should resolve to typed Stmt");
         f(stmt)

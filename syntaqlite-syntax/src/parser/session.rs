@@ -153,6 +153,14 @@ impl ParseSession {
         self.0.text()
     }
 
+    /// Post-expansion source — the bound source with every currently-
+    /// active macro call replaced by its expansion.  See
+    /// [`AnyParsedStatement::expanded_text`](super::AnyParsedStatement::expanded_text)
+    /// for lifetime semantics.
+    pub fn expanded_text(&self) -> &str {
+        self.0.expanded_text()
+    }
+
     /// Return a dialect-agnostic view over the current parse arena state.
     ///
     /// Useful for generic introspection after consuming the session.
@@ -290,6 +298,14 @@ impl<'a> ParsedStatement<'a> {
         self.0.text()
     }
 
+    /// Post-expansion source — the bound source with every currently-
+    /// active macro call replaced by its expansion.  See
+    /// [`AnyParsedStatement::expanded_text`](super::AnyParsedStatement::expanded_text)
+    /// for lifetime semantics.
+    pub fn expanded_text(&self) -> &'a str {
+        self.0.expanded_text()
+    }
+
     /// Statement-local token stream with parser usage flags.
     ///
     /// Requires `collect_tokens: true` in [`ParserConfig`].
@@ -309,6 +325,19 @@ impl<'a> ParsedStatement<'a> {
     /// Use this when handing statement data to dialect-independent tooling.
     pub fn erase(&self) -> AnyParsedStatement<'a> {
         self.0.clone().erase()
+    }
+
+    /// Source text of AST node `id` as `(text, offset)`.  See
+    /// [`AnyParsedStatement::node_text`](super::AnyParsedStatement::node_text).
+    pub fn node_text(&self, id: super::AnyNodeId) -> Option<(&'a str, u32)> {
+        self.0.any.node_text(id)
+    }
+
+    /// Post-expansion text of AST node `id`.  See
+    /// [`AnyParsedStatement::node_expanded_text`](
+    /// super::AnyParsedStatement::node_expanded_text).
+    pub fn node_expanded_text(&self, id: super::AnyNodeId) -> Option<&'a str> {
+        self.0.any.node_expanded_text(id)
     }
 
     /// Macro expansion call-site spans recorded during parsing.
@@ -474,6 +503,149 @@ mod tests {
                 .any(|comment| comment.kind() == CommentKind::Line
                     && comment.text().contains("tail"))
         );
+    }
+
+    #[test]
+    fn parser_collect_node_extents_records_root_text() {
+        // The trailing `;` is a statement separator and does not
+        // contribute to the SELECT's recorded range.
+        let source = "SELECT 1;";
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
+        let mut session = parser.parse(source);
+
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let root_id = statement.erase().root_id();
+        let (text, offset) = statement
+            .node_text(root_id)
+            .expect("root node should have recorded text");
+        assert_eq!(text, "SELECT 1");
+        assert_eq!(offset, 0);
+    }
+
+    #[test]
+    fn parser_collect_node_extents_attributes_macro_tokens_to_call_site() {
+        // The SELECT node crosses layers: `SELECT` comes from the root
+        // source, `42` from `id`'s expansion buffer.  `node_text`
+        // returns the authored slice (with the macro call written
+        // verbatim).  `node_expanded_text` materializes the
+        // post-expansion view by inlining the expansion in place of
+        // the call site.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_node_extents(true)
+                .with_macro_fallback(true),
+        );
+        parser.register_macro("id", &["x"], "$x");
+
+        let source = "SELECT id!(42);";
+        let mut session = parser.parse(source);
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let root_id = statement.erase().root_id();
+        let (text, offset) = statement
+            .node_text(root_id)
+            .expect("root node should have recorded text");
+        assert_eq!(text, "SELECT id!(42)");
+        assert_eq!(offset, 0);
+
+        assert_eq!(statement.node_expanded_text(root_id), Some("SELECT 42"));
+    }
+
+    #[test]
+    fn parser_collect_node_extents_expanded_text_is_source_for_root_nodes() {
+        // For nodes built entirely from root-layer tokens,
+        // `node_expanded_text` and `node_text` both return slices of
+        // the input source — `expanded_text` is just the same bytes
+        // without the authored-offset.
+        let source = "SELECT 1;";
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
+        let mut session = parser.parse(source);
+
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let root_id = statement.erase().root_id();
+        assert_eq!(statement.node_expanded_text(root_id), Some("SELECT 1"));
+    }
+
+    #[test]
+    fn parser_collect_node_extents_expanded_text_is_expansion_buffer_for_pure_macro_nodes() {
+        // When a statement is produced entirely by a macro expansion,
+        // the root node's tokens all live in a single expansion
+        // layer.  `node_expanded_text` returns the expansion-buffer
+        // bytes (`SELECT 1`), while `node_text` collapses to the
+        // authored call site (`id!(SELECT 1)`).
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_node_extents(true)
+                .with_macro_fallback(true),
+        );
+        parser.register_macro("id", &["x"], "$x");
+
+        let source = "id!(SELECT 1);";
+        let mut session = parser.parse(source);
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let root_id = statement.erase().root_id();
+        assert_eq!(statement.node_expanded_text(root_id), Some("SELECT 1"));
+        let (authored, _) = statement
+            .node_text(root_id)
+            .expect("root node should have authored text");
+        assert_eq!(authored, "id!(SELECT 1)");
+    }
+
+    #[test]
+    fn parser_expanded_text_materializes_macro_calls() {
+        // `session.expanded_text()` materializes the whole input with
+        // every currently-active macro call replaced by its expansion,
+        // mirroring `syntaqlite_parser_expanded_text` at the C level.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default().with_macro_fallback(true),
+        );
+        parser.register_macro("id", &["x"], "$x");
+
+        let source = "SELECT id!(42);";
+        let mut session = parser.parse(source);
+        // Drive the parser forward so the macro layer exists.
+        match session.next() {
+            ParseOutcome::Ok(_) => {}
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        }
+
+        assert_eq!(session.text(), "SELECT id!(42);");
+        assert_eq!(session.expanded_text(), "SELECT 42;");
+    }
+
+    #[test]
+    fn parser_collect_node_extents_off_returns_none() {
+        let parser = Parser::with_config(&ParserConfig::default());
+        let mut session = parser.parse("SELECT 1;");
+
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let root_id = statement.erase().root_id();
+        assert!(statement.node_text(root_id).is_none());
     }
 
     #[test]
