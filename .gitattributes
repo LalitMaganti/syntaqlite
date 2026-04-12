@@ -9,7 +9,9 @@ syntaqlite-syntax/csrc/sqlite/sqlite_tokenize.c linguist-generated=true
 
 # ── C internal headers (syntaqlite-syntax/csrc/sqlite/) ──────────────────────
 syntaqlite-syntax/csrc/sqlite/dialect_builder.h linguist-generated=true
+syntaqlite-syntax/csrc/sqlite/dialect_fmt.h linguist-generated=true
 syntaqlite-syntax/csrc/sqlite/dialect_meta.h linguist-generated=true
+syntaqlite-syntax/csrc/sqlite/dialect_roles.h linguist-generated=true
 syntaqlite-syntax/csrc/sqlite/dialect_tokens.h linguist-generated=true
 syntaqlite-syntax/csrc/sqlite/sqlite_dialect_dispatch.h linguist-generated=true
 syntaqlite-syntax/csrc/sqlite/sqlite_keyword.h linguist-generated=true
@@ -17,21 +19,26 @@ syntaqlite-syntax/csrc/sqlite/sqlite_parse.h linguist-generated=true
 syntaqlite-syntax/csrc/sqlite/sqlite_tokenize.h linguist-generated=true
 syntaqlite-syntax/csrc/tokens.h linguist-generated=true
 
-# ── C public headers (syntaqlite-syntax/include/syntaqlite_sqlite/) ──────────
+# ── C public headers (syntaqlite-syntax/include/) ────────────────────────────
+syntaqlite-syntax/include/syntaqlite/cflags.h linguist-generated=true
 syntaqlite-syntax/include/syntaqlite_sqlite/sqlite.h linguist-generated=true
 syntaqlite-syntax/include/syntaqlite_sqlite/sqlite_node.h linguist-generated=true
 syntaqlite-syntax/include/syntaqlite_sqlite/sqlite_tokens.h linguist-generated=true
 
 # ── Rust (syntaqlite-syntax/src/sqlite/) ─────────────────────────────────────
 syntaqlite-syntax/src/sqlite/ast.rs linguist-generated=true
-syntaqlite-syntax/src/sqlite/ast_traits.rs linguist-generated=true
+syntaqlite-syntax/src/sqlite/dialect.rs linguist-generated=true
 syntaqlite-syntax/src/sqlite/ffi.rs linguist-generated=true
 syntaqlite-syntax/src/sqlite/tokens.rs linguist-generated=true
 
 # ── Rust (syntaqlite/src/sqlite/) — semantic crate ───────────────────────────
 syntaqlite/src/sqlite/cflags.rs linguist-generated=true
 syntaqlite/src/sqlite/functions_catalog.rs linguist-generated=true
-syntaqlite/src/sqlite/semantic_roles.rs linguist-generated=true
 
 # ── Rust (syntaqlite-syntax/src/sqlite/) — syntax crate ──────────────────────
 syntaqlite-syntax/src/sqlite/cflags.rs linguist-generated=true
+
+# ── Python ────────────────────────────────────────────────────────────────
+python/syntaqlite/enums.py linguist-generated=true
+python/syntaqlite/nodes.py linguist-generated=true
+python/csrc/_py_ast_wrap.h linguist-generated=true
