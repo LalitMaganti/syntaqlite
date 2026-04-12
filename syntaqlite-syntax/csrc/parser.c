@@ -64,6 +64,7 @@ static void reset_stmt(SyntaqliteParser* p) {
   syntaqlite_vec_clear(&p->comments);
   syntaqlite_vec_clear(&p->tokens);
   syntaqlite_vec_clear(&p->traceback_buf);
+  syntaqlite_vec_clear(&p->node_expanded_buf);
   // Free owned expansion buffers and arg-segment arrays from previous
   // statement.  Skip index 0 (sentinel) — its expansion_data points to
   // source (not malloc'd) and it has no arg_segments.
@@ -146,6 +147,7 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   syntaqlite_vec_init(&p->tokens);
   syntaqlite_vec_init(&p->layers);
   syntaqlite_vec_init(&p->traceback_buf);
+  syntaqlite_vec_init(&p->node_expanded_buf);
   // macro_table, expansion state already zeroed by memset
   return p;
 }
@@ -211,6 +213,7 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
     }
     syntaqlite_vec_free(&p->layers, p->mem);
     syntaqlite_vec_free(&p->traceback_buf, p->mem);
+    syntaqlite_vec_free(&p->node_expanded_buf, p->mem);
     // Free macro registry.
     if (p->macro_table) {
       for (uint32_t i = 0; i < p->macro_table_size; i++) {
@@ -561,12 +564,38 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p) {
   return syntaqlite_vec_len(&p->ctx.ast.offsets);
 }
 
-SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p) {
+static void append_expanded_range(SyntaqliteParser* p,
+                                  uint32_t layer_id,
+                                  const char* buf,
+                                  uint32_t buf_len,
+                                  uint32_t start,
+                                  uint32_t end);
+
+SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
+                                                  uint32_t* out_len) {
+  if (out_len) {
+    *out_len = p->source_len;
+  }
   return p->source;
 }
 
-SYNTAQLITE_API uint32_t syntaqlite_parser_text_length(SyntaqliteParser* p) {
-  return p->source_len;
+SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(SyntaqliteParser* p,
+                                                           uint32_t* out_len) {
+  if (out_len) {
+    *out_len = 0;
+  }
+  // Materialize the whole input with every currently-active macro
+  // call replaced by its expansion buffer.  Walks the full source
+  // range `[0, source_len)` using the same recursive inliner as
+  // `syntaqlite_parser_node_expanded_text` and writes the result into
+  // the parser's scratch buffer.  Returned pointer is valid until the
+  // next call or `reset_stmt`.
+  syntaqlite_vec_clear(&p->node_expanded_buf);
+  append_expanded_range(p, 0, p->source, p->source_len, 0, p->source_len);
+  if (out_len) {
+    *out_len = syntaqlite_vec_len(&p->node_expanded_buf);
+  }
+  return (const char*)p->node_expanded_buf.data;
 }
 
 // ---------------------------------------------------------------------------
@@ -728,18 +757,8 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
     return NULL;
   }
   SynqExtentRange r = syntaqlite_vec_at(&p->ctx.node_extents, node_id);
-  // Entries padded by `synq_extent_record` before a node was ever
-  // recorded carry the sentinel empty range and are not a valid
-  // extent for any real node.
-  if (r.root_start == UINT32_MAX && r.root_end == 0) {
-    return NULL;
-  }
-  // Defensive: reject ranges that don't lie entirely within the current
-  // source buffer.  Macro-expanded tokens currently push in-layer
-  // offsets (see TODO in parser_macros.c); those can be out of bounds
-  // for the root source, and callers should get NULL rather than a
-  // misleading slice.
-  if (r.root_end < r.root_start || r.root_end > p->source_len) {
+  // Sentinel `(UINT32_MAX, 0)` or any out-of-source range → not recorded.
+  if (r.root_start > r.root_end || r.root_end > p->source_len) {
     return NULL;
   }
   if (out_len) {
@@ -749,4 +768,117 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
     *out_offset = r.root_start;
   }
   return p->source + r.root_start;
+}
+
+// Recursively append `buf[start..end]` to `out`, inlining any child
+// expansion layers whose parent is `layer_id` and whose call site
+// falls within `[start, end)`.  For each child found, writes the bytes
+// up to its call site, then recurses into the child's expansion data.
+// This materializes the post-expansion view of a byte range.
+static void append_expanded_range(SyntaqliteParser* p,
+                                  uint32_t layer_id,
+                                  const char* buf,
+                                  uint32_t buf_len,
+                                  uint32_t start,
+                                  uint32_t end) {
+  if (start > buf_len)
+    start = buf_len;
+  if (end > buf_len)
+    end = buf_len;
+  uint32_t cursor = start;
+  uint32_t nlayers = syntaqlite_vec_len(&p->layers);
+  for (;;) {
+    // Find the next child layer (parent == layer_id) whose call site
+    // begins at or after `cursor` and lies fully within `[start, end)`.
+    uint32_t best_child = 0;
+    uint32_t best_offset = UINT32_MAX;
+    for (uint32_t i = 1; i < nlayers; i++) {
+      const SynqExpansionLayer* lyr = &p->layers.data[i];
+      if (lyr->parent_layer_id != layer_id)
+        continue;
+      if (lyr->call_offset < cursor)
+        continue;
+      if (lyr->call_offset + lyr->call_length > end)
+        continue;
+      if (lyr->call_offset < best_offset) {
+        best_offset = lyr->call_offset;
+        best_child = i;
+      }
+    }
+    if (best_child == 0)
+      break;
+    const SynqExpansionLayer* child = &p->layers.data[best_child];
+    if (best_offset > cursor) {
+      uint32_t n = best_offset - cursor;
+      syntaqlite_vec_push_n(&p->node_expanded_buf, buf + cursor, n, p->mem);
+    }
+    append_expanded_range(p, best_child, child->expansion_data,
+                          child->expansion_len, 0, child->expansion_len);
+    cursor = best_offset + child->call_length;
+  }
+  if (end > cursor) {
+    uint32_t n = end - cursor;
+    syntaqlite_vec_push_n(&p->node_expanded_buf, buf + cursor, n, p->mem);
+  }
+}
+
+SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
+    SyntaqliteParser* p,
+    uint32_t node_id,
+    uint32_t* out_len) {
+  if (out_len) {
+    *out_len = 0;
+  }
+  if (!p->ctx.collect_node_extents) {
+    return NULL;
+  }
+  if (node_id >= syntaqlite_vec_len(&p->ctx.node_expanded_extents)) {
+    return NULL;
+  }
+
+  // Fast path: node's tokens all live in one layer → return a direct
+  // slice of that layer's buffer, no allocation.
+  SynqNodeExpandedExtent e =
+      syntaqlite_vec_at(&p->ctx.node_expanded_extents, node_id);
+  if (e.length > 0) {
+    if (e.layer_id == 0) {
+      if (e.offset + e.length > p->source_len) {
+        return NULL;
+      }
+      if (out_len) {
+        *out_len = e.length;
+      }
+      return p->source + e.offset;
+    }
+    if (e.layer_id < syntaqlite_vec_len(&p->layers)) {
+      const SynqExpansionLayer* lyr = &p->layers.data[e.layer_id];
+      if (lyr->expansion_data && e.offset + e.length <= lyr->expansion_len) {
+        if (out_len) {
+          *out_len = e.length;
+        }
+        return lyr->expansion_data + e.offset;
+      }
+    }
+    return NULL;
+  }
+
+  // Slow path: the node's tokens cross layers.  Materialize the
+  // post-expansion text by walking the node's root range and inlining
+  // each enclosed macro call's expansion buffer.  The result is
+  // written into the parser's scratch buffer and the returned pointer
+  // is valid until the next call or `reset_stmt`.
+  if (node_id >= syntaqlite_vec_len(&p->ctx.node_extents)) {
+    return NULL;
+  }
+  SynqExtentRange r = syntaqlite_vec_at(&p->ctx.node_extents, node_id);
+  if (r.root_start > r.root_end || r.root_end > p->source_len) {
+    return NULL;
+  }
+  syntaqlite_vec_clear(&p->node_expanded_buf);
+  append_expanded_range(p, 0, p->source, p->source_len, r.root_start,
+                        r.root_end);
+  if (out_len) {
+    *out_len = syntaqlite_vec_len(&p->node_expanded_buf);
+  }
+  return (const char*)p->node_expanded_buf.data;
 }

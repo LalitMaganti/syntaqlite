@@ -153,6 +153,14 @@ impl ParseSession {
         self.0.text()
     }
 
+    /// Post-expansion source — the bound source with every currently-
+    /// active macro call replaced by its expansion.  See
+    /// [`AnyParsedStatement::expanded_text`](super::AnyParsedStatement::expanded_text)
+    /// for lifetime semantics.
+    pub fn expanded_text(&self) -> &str {
+        self.0.expanded_text()
+    }
+
     /// Return a dialect-agnostic view over the current parse arena state.
     ///
     /// Useful for generic introspection after consuming the session.
@@ -290,6 +298,14 @@ impl<'a> ParsedStatement<'a> {
         self.0.text()
     }
 
+    /// Post-expansion source — the bound source with every currently-
+    /// active macro call replaced by its expansion.  See
+    /// [`AnyParsedStatement::expanded_text`](super::AnyParsedStatement::expanded_text)
+    /// for lifetime semantics.
+    pub fn expanded_text(&self) -> &'a str {
+        self.0.expanded_text()
+    }
+
     /// Statement-local token stream with parser usage flags.
     ///
     /// Requires `collect_tokens: true` in [`ParserConfig`].
@@ -311,12 +327,17 @@ impl<'a> ParsedStatement<'a> {
         self.0.clone().erase()
     }
 
-    /// Authored-source text for the AST node `id` in this parse
-    /// result, as `(authored_text, source_offset)`.  See
-    /// [`AnyParsedStatement::node_text`](super::AnyParsedStatement::node_text)
-    /// for the full contract.
+    /// Source text of AST node `id` as `(text, offset)`.  See
+    /// [`AnyParsedStatement::node_text`](super::AnyParsedStatement::node_text).
     pub fn node_text(&self, id: super::AnyNodeId) -> Option<(&'a str, u32)> {
         self.0.any.node_text(id)
+    }
+
+    /// Post-expansion text of AST node `id`.  See
+    /// [`AnyParsedStatement::node_expanded_text`](
+    /// super::AnyParsedStatement::node_expanded_text).
+    pub fn node_expanded_text(&self, id: super::AnyNodeId) -> Option<&'a str> {
+        self.0.any.node_expanded_text(id)
     }
 
     /// Macro expansion call-site spans recorded during parsing.
@@ -486,25 +507,8 @@ mod tests {
 
     #[test]
     fn parser_collect_node_extents_records_root_text() {
-        // Per-node extent tracking records the authored-source byte
-        // range of every AST node the parser commits to the arena,
-        // surfaced via `node_text` which returns a `(&str, offset)`
-        // pair mirroring `span_text`.
-        //
-        // This test pins the end-to-end chain:
-        //
-        //   - `ParserConfig::with_collect_node_extents(true)` flag
-        //   - `syntaqlite_parser_set_collect_node_extents` FFI
-        //   - `synq_extent_on_shift` / `synq_extent_on_reduce` hooks
-        //   - `synq_extent_record` from `synq_parse_build` and the
-        //     list builders
-        //   - `syntaqlite_parser_node_text` public accessor
-        //
-        // For `SELECT 1;` the root statement's recorded text should
-        // be exactly `"SELECT 1"`, with offset 0.  The trailing
-        // semicolon is a statement *separator* — it terminates the
-        // parse but isn't part of the SELECT, so it does not
-        // contribute to the root node's recorded range.
+        // The trailing `;` is a statement separator and does not
+        // contribute to the SELECT's recorded range.
         let source = "SELECT 1;";
         let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
         let mut session = parser.parse(source);
@@ -515,41 +519,22 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         };
 
-        let erased = statement.erase();
-        let root_id = erased.root_id();
+        let root_id = statement.erase().root_id();
         let (text, offset) = statement
             .node_text(root_id)
             .expect("root node should have recorded text");
         assert_eq!(text, "SELECT 1");
         assert_eq!(offset, 0);
-
-        // Sanity check: slicing the source at the returned offset
-        // should reproduce the returned text.
-        assert_eq!(&source[offset as usize..offset as usize + text.len()], text);
     }
 
     #[test]
     fn parser_collect_node_extents_attributes_macro_tokens_to_call_site() {
-        // Tokens shifted from inside a macro expansion must have
-        // their extent attributed to the *outermost* enclosing
-        // `macro!(...)` call site in root-source coordinates, not
-        // the in-layer offset within the expansion buffer.  For
-        // `SELECT id!(42);` the root SelectStmt's recorded text
-        // should be exactly `"SELECT id!(42)"`:
-        //
-        //   - `SELECT` shifts at layer 0 → `(0, 6)`
-        //   - `id!(42)` begins a macro expansion layer, which
-        //     stashes `(7, 14)` on the ctx (the root-source byte
-        //     range of the call site).
-        //   - the `42` integer token shifts at layer 1 → uses the
-        //     stash → `(7, 14)`, NOT `42`'s in-layer offset.
-        //   - reductions up the SELECT merge those two ranges,
-        //     yielding `(0, 14)` on the root node's extent.
-        //
-        // If the stash were broken — e.g. we stored the in-layer
-        // offset — the root's text would either be wrong or
-        // `node_text` would return None because of the bounds
-        // check in `syntaqlite_parser_node_text`.
+        // The SELECT node crosses layers: `SELECT` comes from the root
+        // source, `42` from `id`'s expansion buffer.  `node_text`
+        // returns the authored slice (with the macro call written
+        // verbatim).  `node_expanded_text` materializes the
+        // post-expansion view by inlining the expansion in place of
+        // the call site.
         let mut parser = Parser::with_config(
             &ParserConfig::default()
                 .with_collect_node_extents(true)
@@ -565,23 +550,91 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         };
 
-        let erased = statement.erase();
-        let root_id = erased.root_id();
+        let root_id = statement.erase().root_id();
         let (text, offset) = statement
             .node_text(root_id)
             .expect("root node should have recorded text");
         assert_eq!(text, "SELECT id!(42)");
         assert_eq!(offset, 0);
 
-        // Sanity: slicing source at the reported offset reproduces the text.
-        assert_eq!(&source[offset as usize..offset as usize + text.len()], text);
+        assert_eq!(statement.node_expanded_text(root_id), Some("SELECT 42"));
+    }
+
+    #[test]
+    fn parser_collect_node_extents_expanded_text_is_source_for_root_nodes() {
+        // For nodes built entirely from root-layer tokens,
+        // `node_expanded_text` and `node_text` both return slices of
+        // the input source — `expanded_text` is just the same bytes
+        // without the authored-offset.
+        let source = "SELECT 1;";
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
+        let mut session = parser.parse(source);
+
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let root_id = statement.erase().root_id();
+        assert_eq!(statement.node_expanded_text(root_id), Some("SELECT 1"));
+    }
+
+    #[test]
+    fn parser_collect_node_extents_expanded_text_is_expansion_buffer_for_pure_macro_nodes() {
+        // When a statement is produced entirely by a macro expansion,
+        // the root node's tokens all live in a single expansion
+        // layer.  `node_expanded_text` returns the expansion-buffer
+        // bytes (`SELECT 1`), while `node_text` collapses to the
+        // authored call site (`id!(SELECT 1)`).
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_node_extents(true)
+                .with_macro_fallback(true),
+        );
+        parser.register_macro("id", &["x"], "$x");
+
+        let source = "id!(SELECT 1);";
+        let mut session = parser.parse(source);
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let root_id = statement.erase().root_id();
+        assert_eq!(statement.node_expanded_text(root_id), Some("SELECT 1"));
+        let (authored, _) = statement
+            .node_text(root_id)
+            .expect("root node should have authored text");
+        assert_eq!(authored, "id!(SELECT 1)");
+    }
+
+    #[test]
+    fn parser_expanded_text_materializes_macro_calls() {
+        // `session.expanded_text()` materializes the whole input with
+        // every currently-active macro call replaced by its expansion,
+        // mirroring `syntaqlite_parser_expanded_text` at the C level.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default().with_macro_fallback(true),
+        );
+        parser.register_macro("id", &["x"], "$x");
+
+        let source = "SELECT id!(42);";
+        let mut session = parser.parse(source);
+        // Drive the parser forward so the macro layer exists.
+        match session.next() {
+            ParseOutcome::Ok(_) => {}
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        }
+
+        assert_eq!(session.text(), "SELECT id!(42);");
+        assert_eq!(session.expanded_text(), "SELECT 42;");
     }
 
     #[test]
     fn parser_collect_node_extents_off_returns_none() {
-        // When `collect_node_extents` is disabled (the default),
-        // `node_text` must return None — proving the recording path
-        // is a zero-cost no-op and produces no stored extents.
         let parser = Parser::with_config(&ParserConfig::default());
         let mut session = parser.parse("SELECT 1;");
 
@@ -591,12 +644,8 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         };
 
-        let erased = statement.erase();
-        let root_id = erased.root_id();
-        assert!(
-            statement.node_text(root_id).is_none(),
-            "node_text should be None when collect_node_extents is off"
-        );
+        let root_id = statement.erase().root_id();
+        assert!(statement.node_text(root_id).is_none());
     }
 
     #[test]

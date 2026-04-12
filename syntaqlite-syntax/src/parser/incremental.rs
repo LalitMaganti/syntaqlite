@@ -78,12 +78,9 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
 
     fn typed_stmt_result(&self) -> TypedParsedStatement<'_, G> {
         let inner = self.inner.as_ref().expect("inner taken after finish()");
-        let source_len = inner.source_buf.len().saturating_sub(1);
-        // SAFETY: source_buf was populated from valid UTF-8 (&str) in
-        // reset_parser. The first source_len bytes are the original source.
-        let source = unsafe { std::str::from_utf8_unchecked(&inner.source_buf[..source_len]) };
-        // SAFETY: inner.raw is valid (owned via ParserInner, not yet destroyed).
-        unsafe { TypedParsedStatement::new(inner.raw.as_ptr(), source, self.dialect.clone()) }
+        // SAFETY: inner.raw is valid (owned via ParserInner, not yet
+        // destroyed); its bound source buffer outlives `&self`.
+        unsafe { TypedParsedStatement::new(inner.raw.as_ptr(), self.dialect.clone()) }
     }
 
     fn result_from_rc(

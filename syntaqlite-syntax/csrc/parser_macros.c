@@ -27,35 +27,22 @@
 // Per-node extent tracking hooks
 // ---------------------------------------------------------------------------
 //
-// These are invoked from the Lemon-generated `yy_shift` and `yy_reduce`
-// via the macros in `extent_hooks.h`, which the post-lemon patching
-// step injects at the two stable anchor lines.
+// Invoked from `yy_shift` / `yy_reduce` via the macros in
+// `extent_hooks.h`.  When enabled, two parallel shadow stacks mirror
+// Lemon's symbol stack:
 //
-// Both hooks early-exit when `collect_node_extents` is off — the
-// feature is strictly opt-in and must be zero-overhead when disabled.
+//   * `extent_stack` tracks the merged *authored* range in root-source
+//     coordinates — used by `syntaqlite_parser_node_text`.  Macro
+//     tokens push the outermost call-site range stashed in
+//     `begin_macro_expansion`.  Epsilon pushes the sentinel
+//     `(UINT32_MAX, 0)`, which is neutral under min/max merging.
 //
-// When enabled, the hooks maintain a shadow stack that mirrors Lemon's
-// symbol stack:
-//
-//   - shift: push a `(root_start, root_end)` range for the incoming
-//     terminal.
-//   - reduce: pop `nrhs` entries, merge them via (min start, max end),
-//     push the merged result.  Epsilon reductions (`nrhs == 0`) push
-//     a sentinel empty range that is skipped by future merges.
-//
-// After a clean parse of a single statement the shadow stack has
-// exactly one entry — the start symbol's merged extent covering the
-// full authored source.
-
-// Sentinel pushed by epsilon reductions.  Any non-empty range wins
-// over this in a merge; an all-empty merge propagates as empty.
-#define SYNQ_EXTENT_EMPTY_START UINT32_MAX
-#define SYNQ_EXTENT_EMPTY_END 0u
-
-static inline int synq_extent_is_empty(SynqExtentRange r) {
-  return r.root_start == SYNQ_EXTENT_EMPTY_START &&
-         r.root_end == SYNQ_EXTENT_EMPTY_END;
-}
+//   * `expanded_stack` tracks the merged *expanded* range in the
+//     tokens' own layer — used by
+//     `syntaqlite_parser_node_expanded_text`.  Same-layer merges keep
+//     the layer; mixed-layer merges collapse to the sentinel
+//     `(length=0)`, since no contiguous expansion slice can represent
+//     a node whose tokens cross layers.
 
 void synq_extent_on_shift(SynqParseCtx* pCtx,
                           unsigned int major,
@@ -66,27 +53,22 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
   }
   SynqExtentRange r;
   if (token->layer_id == 0) {
-    // Root-layer token: offset is in the user's input source, so
-    // use it directly.
     r.root_start = token->offset;
     r.root_end = token->offset + token->n;
   } else {
-    // Token shifted from inside a macro expansion.  Its `offset`
-    // is an in-layer position, not a root offset, so slicing
-    // `source[offset..]` with it would be nonsense.  Instead,
-    // attribute the token to the root-source range of the
-    // outermost enclosing `name!(...)` call site, which
-    // `begin_macro_expansion` stashed onto the ctx when we first
-    // left root layer 0.  Every token from any nested expansion
-    // under that same outermost call site shares the same
-    // extent, which is the right semantics: a user asking for
-    // "where does this node come from in my source" wants the
-    // location they wrote the macro call, not the synthesized
-    // expansion bytes.
+    // Attribute tokens from inside a macro expansion to the outermost
+    // call-site range stashed in `begin_macro_expansion`.
     r.root_start = pCtx->macro_root_start;
     r.root_end = pCtx->macro_root_end;
   }
   syntaqlite_vec_push(&pCtx->extent_stack, r, pCtx->mem);
+
+  SynqNodeExpandedExtent e = {
+      .offset = token->offset,
+      .length = token->n,
+      .layer_id = token->layer_id,
+  };
+  syntaqlite_vec_push(&pCtx->expanded_stack, e, pCtx->mem);
 }
 
 void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
@@ -94,44 +76,47 @@ void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
     return;
   }
   uint32_t len = syntaqlite_vec_len(&pCtx->extent_stack);
-  if (nrhs == 0) {
-    // Epsilon production: push a sentinel empty range.  Future merges
-    // involving this entry will ignore it.
-    SynqExtentRange empty;
-    empty.root_start = SYNQ_EXTENT_EMPTY_START;
-    empty.root_end = SYNQ_EXTENT_EMPTY_END;
-    syntaqlite_vec_push(&pCtx->extent_stack, empty, pCtx->mem);
-    return;
-  }
-  if (nrhs > len) {
-    // Shouldn't happen in a well-formed parse — indicates a desync
-    // between our shadow stack and Lemon's symbol stack.  Recover by
-    // clearing; extents on this parse become unreliable.
-    syntaqlite_vec_truncate(&pCtx->extent_stack, 0);
-    return;
-  }
-  // Merge the top `nrhs` entries into a single range.
-  SynqExtentRange merged;
-  merged.root_start = SYNQ_EXTENT_EMPTY_START;
-  merged.root_end = SYNQ_EXTENT_EMPTY_END;
+
+  SynqExtentRange merged = {UINT32_MAX, 0};
   for (uint32_t i = len - nrhs; i < len; i++) {
     SynqExtentRange e = syntaqlite_vec_at(&pCtx->extent_stack, i);
-    if (synq_extent_is_empty(e)) {
-      continue;
+    if (e.root_start < merged.root_start) {
+      merged.root_start = e.root_start;
     }
-    if (synq_extent_is_empty(merged)) {
-      merged = e;
-    } else {
-      if (e.root_start < merged.root_start) {
-        merged.root_start = e.root_start;
-      }
-      if (e.root_end > merged.root_end) {
-        merged.root_end = e.root_end;
-      }
+    if (e.root_end > merged.root_end) {
+      merged.root_end = e.root_end;
     }
   }
   syntaqlite_vec_truncate(&pCtx->extent_stack, len - nrhs);
   syntaqlite_vec_push(&pCtx->extent_stack, merged, pCtx->mem);
+
+  // Merge expanded-layer spans: all same layer → merge in that layer;
+  // empty entries are neutral; any cross-layer or pre-existing sentinel
+  // collapses the result to the sentinel (length = 0).
+  SynqNodeExpandedExtent exp_merged = {0, 0, 0};
+  for (uint32_t i = len - nrhs; i < len; i++) {
+    SynqNodeExpandedExtent e = syntaqlite_vec_at(&pCtx->expanded_stack, i);
+    if (e.length == 0) {
+      continue;
+    }
+    if (exp_merged.length == 0) {
+      exp_merged = e;
+      continue;
+    }
+    if (exp_merged.layer_id != e.layer_id) {
+      exp_merged.length = 0;  // cross-layer → sentinel
+      break;
+    }
+    uint32_t start =
+        exp_merged.offset < e.offset ? exp_merged.offset : e.offset;
+    uint32_t end_a = exp_merged.offset + exp_merged.length;
+    uint32_t end_b = e.offset + e.length;
+    uint32_t end = end_a > end_b ? end_a : end_b;
+    exp_merged.offset = start;
+    exp_merged.length = end - start;
+  }
+  syntaqlite_vec_truncate(&pCtx->expanded_stack, len - nrhs);
+  syntaqlite_vec_push(&pCtx->expanded_stack, exp_merged, pCtx->mem);
 }
 
 // ---------------------------------------------------------------------------
@@ -516,16 +501,9 @@ static void begin_macro_expansion(SyntaqliteParser* p,
                                   const char* expansion_data,
                                   uint32_t expansion_len,
                                   const SynqMacroEntry* entry) {
-  // Per-node extent tracking: if this is the outermost non-root
-  // layer we're about to enter (i.e. the current layer is the root
-  // source), `call_offset` / `call_length` are in root-source
-  // coordinates and give us the `name!(...)` call-site range
-  // directly.  Stash it so `synq_extent_on_shift` can attribute
-  // every token shifted inside this (or any nested) expansion to
-  // the same root range without walking the layer chain.  Nested
-  // macros (called from within another expansion) don't update
-  // the stash — the outer macro's range is still the right root
-  // range for all tokens underneath.
+  // Stash the outermost macro call-site range so per-node extent
+  // tracking can attribute tokens from inside this (or any nested)
+  // expansion back to the authored source.
   if (p->ctx.layer_id == 0) {
     p->ctx.macro_root_start = call_offset;
     p->ctx.macro_root_end = call_offset + call_length;

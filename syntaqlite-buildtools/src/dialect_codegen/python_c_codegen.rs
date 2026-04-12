@@ -190,7 +190,7 @@ fn emit_wrap_span_fn(w: &mut CWriter) {
     w.line("syntaqlite_py_wrap_span(SyntaqliteParser *p, SyntaqliteTextSpan span) {");
     w.indent();
     w.line("if (span.length == 0) Py_RETURN_NONE;");
-    w.line("const char *src = syntaqlite_parser_text(p);");
+    w.line("const char *src = syntaqlite_parser_text(p, NULL);");
     w.line("return PyUnicode_FromStringAndSize(src + span.offset, span.length);");
     w.dedent();
     w.line("}");

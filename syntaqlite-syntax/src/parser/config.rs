@@ -66,10 +66,9 @@ impl ParserConfig {
 
     /// Whether per-node extent tracking is enabled. Default: `false`.
     ///
-    /// When enabled, the parser maintains a shadow stack that records
-    /// the authored-source byte range of every grammar symbol as the
-    /// parse progresses.  Orthogonal to `collect_tokens` — neither
-    /// requires the other.
+    /// When enabled, the parser records the source byte range of every
+    /// AST node, accessible via [`AnyParsedStatement::node_text`](
+    /// super::AnyParsedStatement::node_text).
     pub fn collect_node_extents(&self) -> bool {
         self.collect_node_extents
     }

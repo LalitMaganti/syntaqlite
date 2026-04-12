@@ -38,14 +38,23 @@ typedef struct SynqListDesc {
   uint32_t tag;
 } SynqListDesc;
 
-// Half-open byte range in the authored source text, used by per-node
-// extent tracking.  `root_start == UINT32_MAX` marks an "empty" sentinel
-// pushed by epsilon reductions; these are dropped when merging with
-// non-empty entries.
+// Half-open byte range in the authored source, used by per-node extent
+// tracking.  Sentinel `(UINT32_MAX, 0)` marks an unrecorded/empty range.
 typedef struct SynqExtentRange {
   uint32_t root_start;
   uint32_t root_end;
 } SynqExtentRange;
+
+// Layer-local byte range used by per-node *expanded*-text tracking —
+// the bytes the tokenizer saw for a node, in whichever layer buffer
+// they live.  `length == 0` is the sentinel: either an epsilon
+// reduction (no tokens) or a node whose tokens span multiple layers
+// (no contiguous expansion slice can represent it).
+typedef struct SynqNodeExpandedExtent {
+  uint32_t offset;
+  uint32_t length;
+  uint32_t layer_id;
+} SynqNodeExpandedExtent;
 
 // ---------------------------------------------------------------------------
 // Parse context — threaded through grammar actions via %extra_argument
@@ -106,31 +115,21 @@ typedef struct SynqParseCtx {
   // Valid only for tokens shifted from the root source layer.
   uint32_t last_shifted_end;
 
-  // ── Per-node extent tracking ────────────────────────────────────────
-  // Opt-in via `collect_node_extents` (set through
-  // `syntaqlite_parser_set_collect_node_extents`).  When enabled, the
-  // parser maintains a shadow stack that mirrors Lemon's symbol stack:
-  // `synq_extent_on_shift` pushes a `(root_start, root_end)` range
-  // on every terminal shift, and `synq_extent_on_reduce` pops
-  // `nrhs` entries and pushes the merged range on every rule
-  // reduction.  After each grammar-action `synq_parse_*` call
-  // `synq_extent_record` copies the current top of the shadow stack
-  // into `node_extents[node_id]`, which backs the
-  // `syntaqlite_parser_node_text` public accessor.
-  //
-  // `macro_root_start` / `macro_root_end` cache the root-source
-  // byte range of the *outermost* currently-active macro call site,
-  // stashed once when the parser first leaves layer 0 for a macro
-  // expansion and reused by `synq_extent_on_shift` for every token
-  // shifted inside that (or any nested) expansion.  This makes the
-  // hook O(1) per shift — no walking the layer chain at runtime.
-  // Only meaningful when the shifted token's `layer_id > 0`; the
-  // field is stale but unread when back in root.
-  //
-  // When the flag is off, all of the above are early-exit no-ops
-  // and the vecs are never touched.
+  // Per-node extent tracking.  Opt-in via `collect_node_extents`.
+  // `extent_stack` / `node_extents` track the merged *authored*
+  // source range (in root coordinates) — used by
+  // `syntaqlite_parser_node_text`.  `expanded_stack` /
+  // `node_expanded_extents` track the merged *expanded* range in the
+  // tokens' own layer — used by
+  // `syntaqlite_parser_node_expanded_text`; mixed-layer merges
+  // collapse to a sentinel.  `macro_root_*` caches the outermost
+  // currently-active macro call site in root coordinates so tokens
+  // shifted inside expansions can be attributed back to the authored
+  // source.
   SYNQ_VEC(SynqExtentRange) extent_stack;
   SYNQ_VEC(SynqExtentRange) node_extents;
+  SYNQ_VEC(SynqNodeExpandedExtent) expanded_stack;
+  SYNQ_VEC(SynqNodeExpandedExtent) node_expanded_extents;
   uint32_t collect_node_extents;
   uint32_t macro_root_start;
   uint32_t macro_root_end;
@@ -180,6 +179,8 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   syntaqlite_vec_init(&ctx->list_stack);
   syntaqlite_vec_init(&ctx->extent_stack);
   syntaqlite_vec_init(&ctx->node_extents);
+  syntaqlite_vec_init(&ctx->expanded_stack);
+  syntaqlite_vec_init(&ctx->node_expanded_extents);
   ctx->collect_node_extents = 0;
   ctx->macro_root_start = 0;
   ctx->macro_root_end = 0;
@@ -190,6 +191,8 @@ static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
   syntaqlite_vec_free(&ctx->list_stack, ctx->mem);
   syntaqlite_vec_free(&ctx->extent_stack, ctx->mem);
   syntaqlite_vec_free(&ctx->node_extents, ctx->mem);
+  syntaqlite_vec_free(&ctx->expanded_stack, ctx->mem);
+  syntaqlite_vec_free(&ctx->node_expanded_extents, ctx->mem);
   synq_arena_free(&ctx->ast, ctx->mem);
 }
 
@@ -199,24 +202,20 @@ static inline void synq_parse_ctx_clear(SynqParseCtx* ctx) {
   syntaqlite_vec_clear(&ctx->list_stack);
   syntaqlite_vec_clear(&ctx->extent_stack);
   syntaqlite_vec_clear(&ctx->node_extents);
+  syntaqlite_vec_clear(&ctx->expanded_stack);
+  syntaqlite_vec_clear(&ctx->node_expanded_extents);
   synq_arena_clear(&ctx->ast);
   ctx->macro_root_start = 0;
   ctx->macro_root_end = 0;
 }
 
-// Record the current top of the extent shadow stack as the extent for
-// `node_id`.  Called from `synq_parse_build` and the list builders
-// right after a node is created, so the shadow stack top is the
-// merged range for the rule currently being reduced.
-//
-// Early-exits when `collect_node_extents` is off, so the cost is one
-// load + one branch on the fast path.  When enabled, lazily grows
-// `node_extents` to hold at least `node_id + 1` entries (padding
-// missing slots with a sentinel empty range) and writes the current
-// shadow-stack top into `node_extents[node_id]`.  Lists have their
-// node id reused across multiple appends, so each append overwrites
-// the previous recording with the latest merged range — the final
-// stored value is the full list's extent.
+// Record the current shadow-stack tops (authored + expanded) as the
+// extents for `node_id`.  Called right after a node is allocated, so
+// the tops are the merged ranges for the rule currently being
+// reduced.  List node ids are re-recorded on each append, so the
+// final stored value is the full list's extent.  Node ids are
+// monotonically allocated, so `node_id` is either equal to
+// `node_extents.count` (new) or less (existing).
 static inline void synq_extent_record(SynqParseCtx* ctx, uint32_t node_id) {
   if (!ctx->collect_node_extents) {
     return;
@@ -226,20 +225,18 @@ static inline void synq_extent_record(SynqParseCtx* ctx, uint32_t node_id) {
     return;
   }
   SynqExtentRange top = syntaqlite_vec_at(&ctx->extent_stack, stack_len - 1);
-  uint32_t needed = node_id + 1;
-  syntaqlite_vec_ensure(&ctx->node_extents, needed, ctx->mem);
-  while (ctx->node_extents.count <= node_id) {
-    SynqExtentRange empty;
-    empty.root_start = UINT32_MAX;
-    empty.root_end = 0;
-    ctx->node_extents.data[ctx->node_extents.count++] = empty;
+  SynqNodeExpandedExtent exp_top =
+      syntaqlite_vec_at(&ctx->expanded_stack, stack_len - 1);
+  if (node_id < ctx->node_extents.count) {
+    syntaqlite_vec_at(&ctx->node_extents, node_id) = top;
+    syntaqlite_vec_at(&ctx->node_expanded_extents, node_id) = exp_top;
+  } else {
+    syntaqlite_vec_push(&ctx->node_extents, top, ctx->mem);
+    syntaqlite_vec_push(&ctx->node_expanded_extents, exp_top, ctx->mem);
   }
-  syntaqlite_vec_at(&ctx->node_extents, node_id) = top;
 }
 
-// Generic node builder: copy node data into the arena and record the
-// current extent-shadow-stack top as this node's authored-source
-// range (no-op when `collect_node_extents` is disabled).
+// Generic node builder: copy node data into the arena.
 static inline uint32_t synq_parse_build(SynqParseCtx* ctx,
                                         const void* node_data,
                                         uint32_t node_size) {
