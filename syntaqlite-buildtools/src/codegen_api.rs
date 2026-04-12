@@ -591,7 +591,7 @@ pub(crate) fn generate_codegen_artifacts(
         &fragments,
         request.dialect.name(),
         &request.dialect_c_includes,
-    );
+    )?;
     let keyword_c = keyword_hash::generate(
         &extract_result,
         &fragments,
