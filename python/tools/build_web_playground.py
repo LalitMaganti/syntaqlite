@@ -270,6 +270,7 @@ def main() -> int:
                 "#include \"syntaqlite_dialect/vec.h\"\n#include \"syntaqlite_dialect/dialect_types.h\"\n"
                 "#include \"syntaqlite_dialect/dialect_macros.h\"\n"
                 "#include \"syntaqlite_dialect/ast_builder.h\"\n"
+                "#include \"syntaqlite_dialect/extent_hooks.h\"\n"
                 "#endif\n")
 
     out_perfetto = os.path.join(ROOT_DIR, "web/playground", "public", "syntaqlite-perfetto.wasm")

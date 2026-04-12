@@ -118,11 +118,12 @@ fn patch_generated_parser_files(
     }
     let c_patched = transformer
         .insert_after_includes("#include \"syntaqlite_dialect/dialect_macros.h\"")
-        // Inject per-node extent tracking hook sites into Lemon's
-        // `yy_shift` and `yy_reduce` functions.  These are currently
-        // compile-time no-op C comments; a follow-up change will
-        // replace them with real `synq_on_shift` / `synq_on_reduce`
-        // calls once the runtime helpers land.  The anchor lines
+        .insert_after_includes("#include \"syntaqlite_dialect/extent_hooks.h\"")
+        // Inject per-node extent tracking hook calls into Lemon's
+        // `yy_shift` and `yy_reduce` functions.  The hook macros
+        // (declared in `extent_hooks.h`) bridge `yypParser` — Lemon's
+        // internal parser struct — to the `SynqParseCtx*` the
+        // underlying hook functions expect.  The anchor lines
         // (`yytos->minor.yy0 = yyMinor;` and `yymsp = yypParser->yytos;`)
         // are stable Lemon internals and have been unchanged for
         // years; the hardened `CTransformer` will fail loudly if
@@ -131,12 +132,12 @@ fn patch_generated_parser_files(
         .replace_in_function(
             "yy_shift",
             "yytos->minor.yy0 = yyMinor;",
-            "yytos->minor.yy0 = yyMinor;\n  /* synq_on_shift hook site */",
+            "yytos->minor.yy0 = yyMinor;\n  synq_on_shift(yypParser, yyMajor, &yyMinor);",
         )
         .replace_in_function(
             "yy_reduce",
             "yymsp = yypParser->yytos;",
-            "yymsp = yypParser->yytos;\n  /* synq_on_reduce hook site */",
+            "yymsp = yypParser->yytos;\n  synq_on_reduce(yypParser, yyruleno);",
         )
         .append(&expected_tokens_c_snippet(parser_name))
         .append(&nonterminal_defines_snippet(&nts))
@@ -467,20 +468,26 @@ mod tests {
     }
 
     #[test]
-    fn patch_generated_parser_files_injects_extent_hook_sites() {
-        // The per-node extent tracking work (follow-up PRs) needs to call
-        // a shadow-stack helper on every terminal shift and every rule
-        // reduction.  Lemon's `yy_shift` and `yy_reduce` functions are
-        // the natural hook points, and we inject our calls via the
-        // existing `patch_generated_parser_files` post-lemon patching
-        // step.  This test pins the anchor-based injection: if Lemon
-        // ever reorders or renames the lines we key off, the patch
-        // step (and therefore this test) will fail loudly.
+    fn patch_generated_parser_files_injects_extent_hook_calls() {
+        // The per-node extent tracking work needs to call a shadow-stack
+        // helper on every terminal shift and every rule reduction.
+        // Lemon's `yy_shift` and `yy_reduce` functions are the natural
+        // hook points, and we inject our calls via the existing
+        // `patch_generated_parser_files` post-lemon patching step.
         //
-        // At this point in the stack the hook sites are intentionally
-        // compile-time no-op C comments — a later change will replace
-        // them with the real `synq_on_shift` / `synq_on_reduce` calls
-        // once the runtime helpers land.
+        // This test pins the anchor-based injection:
+        // 1. A `#include "syntaqlite_dialect/extent_hooks.h"` is
+        //    injected after the existing includes so the generated
+        //    parse.c can resolve the hook macros.
+        // 2. `synq_on_shift(yypParser, yyMajor, &yyMinor)` is injected
+        //    after the stable `yytos->minor.yy0 = yyMinor;` anchor.
+        // 3. `synq_on_reduce(yypParser, yyruleno)` is injected after
+        //    the stable `yymsp = yypParser->yytos;` anchor, before
+        //    `switch(yyruleno)`.
+        //
+        // If Lemon ever reorders or renames the lines we key off,
+        // the hardened `CTransformer` will fail loudly instead of
+        // silently dropping the hooks.
         let dir = tempfile::TempDir::new().expect("temp dir");
         let parse_c = dir.path().join("parse.c");
         let parse_h = dir.path().join("parse.h");
@@ -493,18 +500,24 @@ mod tests {
 
         let parse_c_out = fs::read_to_string(&parse_c).expect("read parse.c");
 
-        // yy_shift hook site injected after the stable
-        // `yytos->minor.yy0 = yyMinor;` anchor.
+        // Header for the hook macros is included.
         assert!(
-            parse_c_out.contains("synq_on_shift hook site"),
-            "expected yy_shift extent hook marker in generated parse.c\n\n{parse_c_out}"
+            parse_c_out.contains("#include \"syntaqlite_dialect/extent_hooks.h\""),
+            "expected extent_hooks.h include in generated parse.c\n\n{parse_c_out}"
         );
 
-        // yy_reduce hook site injected after the stable
+        // yy_shift hook call injected after the stable
+        // `yytos->minor.yy0 = yyMinor;` anchor.
+        assert!(
+            parse_c_out.contains("synq_on_shift(yypParser, yyMajor, &yyMinor);"),
+            "expected yy_shift hook call in generated parse.c\n\n{parse_c_out}"
+        );
+
+        // yy_reduce hook call injected after the stable
         // `yymsp = yypParser->yytos;` anchor, before `switch(yyruleno)`.
         assert!(
-            parse_c_out.contains("synq_on_reduce hook site"),
-            "expected yy_reduce extent hook marker in generated parse.c\n\n{parse_c_out}"
+            parse_c_out.contains("synq_on_reduce(yypParser, yyruleno);"),
+            "expected yy_reduce hook call in generated parse.c\n\n{parse_c_out}"
         );
     }
 

@@ -95,6 +95,10 @@ pub const DIALECT_EXT_HEADERS: &[(&str, &str)] = &[
         include_str!("../include/syntaqlite_dialect/dialect_types.h"),
     ),
     (
+        "extent_hooks.h",
+        include_str!("../include/syntaqlite_dialect/extent_hooks.h"),
+    ),
+    (
         "sqlite_compat.h",
         include_str!("../include/syntaqlite_dialect/sqlite_compat.h"),
     ),

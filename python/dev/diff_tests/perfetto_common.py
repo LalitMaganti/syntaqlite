@@ -63,6 +63,7 @@ def _write_runtime_shims(csrc_dir: Path) -> None:
 #include \"syntaqlite_dialect/arena.h\"
 #include \"syntaqlite_dialect/vec.h\"
 #include \"syntaqlite_dialect/ast_builder.h\"
+#include \"syntaqlite_dialect/extent_hooks.h\"
 #endif
 """,
         encoding="utf-8",
