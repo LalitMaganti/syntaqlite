@@ -6220,6 +6220,7 @@ static void yy_shift(
   yytos->stateno = yyNewState;
   yytos->major = yyMajor;
   yytos->minor.yy0 = yyMinor;
+  /* synq_on_shift hook site */
   yyTraceShift(yypParser, yyNewState, "Shift");
 }
 
@@ -7140,6 +7141,7 @@ static YYACTIONTYPE yy_reduce(
   SynqSqliteParseARG_FETCH(void) yyLookahead;
   (void)yyLookaheadToken;
   yymsp = yypParser->yytos;
+  /* synq_on_reduce hook site */
 
   switch (yyruleno) {
     /* Beginning here are the reduction cases.  A typical example
