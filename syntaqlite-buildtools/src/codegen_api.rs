@@ -335,17 +335,23 @@ impl<'a> DialectCodegenJob<'a> {
         y_files: &'a [(String, String)],
         synq_files: &'a [(String, String)],
     ) -> Self {
+        let base_y_names: std::collections::HashSet<&str> = base_files::base_y_files()
+            .iter()
+            .map(|(name, _)| *name)
+            .collect();
         let ext_y_contents: Vec<&str> = y_files
             .iter()
-            .filter(|(name, _)| {
-                !base_files::base_y_files()
-                    .iter()
-                    .any(|(base_name, _)| *base_name == name.as_str())
-            })
+            .filter(|(name, _)| !base_y_names.contains(name.as_str()))
+            .map(|(_, content)| content.as_str())
+            .collect();
+        let base_y_contents: Vec<&str> = y_files
+            .iter()
+            .filter(|(name, _)| base_y_names.contains(name.as_str()))
             .map(|(_, content)| content.as_str())
             .collect();
         let all_y_contents: Vec<&str> = y_files.iter().map(|(_, c)| c.as_str()).collect();
-        let extra_keywords = extract_terminals_from_y(&ext_y_contents, &all_y_contents);
+        let extra_keywords =
+            extract_terminals_from_y(&ext_y_contents, &base_y_contents, &all_y_contents);
         Self {
             dialect,
             y_files,
@@ -433,11 +439,47 @@ pub(crate) fn base_keyword_token_names() -> std::collections::HashSet<String> {
 }
 
 /// Extract terminal symbols (potential keywords) from extension `.y` grammar files.
+///
+/// Explicit `%token` and `%fallback` declarations in the extension are always
+/// kept — those are intentional keyword promotions.  Terminals found only via
+/// rule-RHS scanning are filtered against the base grammar: if a symbol already
+/// appears in any base `.y` file it is assumed to be handled by the base
+/// tokenizer (e.g. punctuation like `LP`, `RP`) and is not re-added.
 pub(crate) fn extract_terminals_from_y(
     extension_y_contents: &[&str],
+    base_y_contents: &[&str],
     all_y_contents: &[&str],
 ) -> Vec<String> {
     use std::collections::HashSet;
+
+    // Collect all terminals referenced in the base grammar so we can exclude
+    // them from rule-RHS scanning.  This covers both base keywords (SELECT,
+    // CREATE, …) and punctuation terminals (LP, RP, COMMA, …).
+    let mut base_terminals: HashSet<String> = HashSet::new();
+    for content in base_y_contents {
+        let Ok(grammar) = util::grammar_parser::LemonGrammar::parse(content) else {
+            continue;
+        };
+        for tok in &grammar.tokens {
+            if is_keyword_like(tok.name) {
+                base_terminals.insert(tok.name.to_string());
+            }
+        }
+        for fb in &grammar.fallbacks {
+            for tok in &fb.tokens {
+                if is_keyword_like(tok) {
+                    base_terminals.insert(tok.to_string());
+                }
+            }
+        }
+        for rule in &grammar.rules {
+            for sym in &rule.rhs {
+                if is_keyword_like(sym.name) && sym.name != "ID" {
+                    base_terminals.insert(sym.name.to_string());
+                }
+            }
+        }
+    }
 
     let mut terminals: HashSet<String> = HashSet::new();
 
@@ -446,6 +488,8 @@ pub(crate) fn extract_terminals_from_y(
             continue;
         };
 
+        // Explicit %token and %fallback declarations are always honoured —
+        // the extension author intentionally introduced these keywords.
         for tok in &grammar.tokens {
             if is_keyword_like(tok.name) {
                 terminals.insert(tok.name.to_string());
@@ -460,9 +504,15 @@ pub(crate) fn extract_terminals_from_y(
             }
         }
 
+        // Rule-RHS symbols are implicit references.  Skip any that already
+        // exist in the base grammar — the extension is merely *using* them,
+        // not introducing them as new keywords.
         for rule in &grammar.rules {
             for sym in &rule.rhs {
-                if is_keyword_like(sym.name) && sym.name != "ID" {
+                if is_keyword_like(sym.name)
+                    && sym.name != "ID"
+                    && !base_terminals.contains(sym.name)
+                {
                     terminals.insert(sym.name.to_string());
                 }
             }
@@ -745,7 +795,7 @@ mod tests {
 cmd ::= INCLUDE PERFETTO MODULE ID DOT ID.
 cmd ::= CREATE PERFETTO MACRO ID LP RP AS ANY.
 ";
-        let got: BTreeSet<String> = super::extract_terminals_from_y(&[y], &[y])
+        let got: BTreeSet<String> = super::extract_terminals_from_y(&[y], &[], &[y])
             .into_iter()
             .collect();
         let want: BTreeSet<String> = [
@@ -768,7 +818,7 @@ macro_body ::= ANY.
 macro_body ::= macro_body ANY.
 cmd ::= CREATE MACRO ID LP RP AS macro_body.
 ";
-        let got: BTreeSet<String> = super::extract_terminals_from_y(&[ext], &[base, ext])
+        let got: BTreeSet<String> = super::extract_terminals_from_y(&[ext], &[base], &[base, ext])
             .into_iter()
             .collect();
         assert!(
@@ -777,5 +827,49 @@ cmd ::= CREATE MACRO ID LP RP AS macro_body.
         );
         assert!(got.contains("CREATE"));
         assert!(got.contains("MACRO"));
+    }
+
+    #[test]
+    fn extract_terminals_excludes_base_punctuation_but_keeps_explicit_declarations() {
+        let base = r"
+%token SELECT FROM FUNCTION.
+%fallback ID SELECT.
+cmd ::= SELECT expr FROM LP ID RP.
+cmd ::= FUNCTION LP RP.
+";
+        let ext = r"
+%token PERFETTO.
+%fallback ID PERFETTO FUNCTION.
+perfetto_table_schema(A) ::= LP perfetto_arg_def_list_ne(L) RP. { A = L; }
+cmd ::= CREATE PERFETTO TABLE ID perfetto_table_schema.
+";
+        let got: BTreeSet<String> = super::extract_terminals_from_y(&[ext], &[base], &[base, ext])
+            .into_iter()
+            .collect();
+        // LP, RP are base punctuation terminals only referenced in ext rules — excluded
+        assert!(
+            !got.contains("LP"),
+            "LP is a base terminal, should be excluded"
+        );
+        assert!(
+            !got.contains("RP"),
+            "RP is a base terminal, should be excluded"
+        );
+        // SELECT, FROM only appear in ext rule RHS — excluded (already in base)
+        assert!(
+            !got.contains("SELECT"),
+            "SELECT is a base terminal, should be excluded from rule-RHS"
+        );
+        // FUNCTION is in the base grammar but the extension explicitly promotes
+        // it via %fallback — must be kept
+        assert!(
+            got.contains("FUNCTION"),
+            "FUNCTION is explicitly declared in ext %fallback, should be kept"
+        );
+        // PERFETTO is a new extension keyword
+        assert!(got.contains("PERFETTO"));
+        // CREATE and TABLE only appear in ext rules and NOT in base — kept
+        assert!(got.contains("CREATE"));
+        assert!(got.contains("TABLE"));
     }
 }
