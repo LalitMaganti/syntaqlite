@@ -221,29 +221,6 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
         unsafe { (*self.raw_ptr()).node_count() }
     }
 
-    /// Mark subsequent fed tokens as originating from a macro expansion.
-    ///
-    /// `span` describes the macro call's byte range in the original source.
-    /// Calls may nest (for nested macro expansions).
-    ///
-    /// # Panics
-    ///
-    /// Panics if `span.start` or `span.len()` does not fit in `u32`.
-    pub fn begin_macro(&mut self, span: Range<usize>) {
-        self.assert_not_finished();
-        let call_offset = u32::try_from(span.start).expect("macro span start exceeds u32");
-        let call_length = u32::try_from(span.len()).expect("macro span length exceeds u32");
-        // SAFETY: raw is valid and exclusively borrowed via &mut self.
-        unsafe { (*self.raw_ptr()).begin_macro(call_offset, call_length) }
-    }
-
-    /// End the innermost macro expansion region.
-    pub fn end_macro(&mut self) {
-        self.assert_not_finished();
-        // SAFETY: raw is valid and exclusively borrowed via &mut self.
-        unsafe { (*self.raw_ptr()).end_macro() }
-    }
-
     pub(crate) fn stmt_result(&self) -> AnyParsedStatement<'_> {
         self.typed_stmt_result().erase()
     }
@@ -350,16 +327,6 @@ impl IncrementalParseSession {
     /// Return how many arena nodes have been built so far.
     pub fn node_count(&self) -> u32 {
         self.0.node_count()
-    }
-
-    /// Mark subsequent fed tokens as originating from a macro expansion.
-    pub fn begin_macro(&mut self, span: Range<usize>) {
-        self.0.begin_macro(span);
-    }
-
-    /// End the innermost macro expansion region.
-    pub fn end_macro(&mut self) {
-        self.0.end_macro();
     }
 
     #[expect(dead_code)]

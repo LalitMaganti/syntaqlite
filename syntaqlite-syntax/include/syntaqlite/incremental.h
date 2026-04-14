@@ -41,9 +41,7 @@
 // done:
 //   syntaqlite_parser_destroy(p);
 //
-// For macro region tracking, bracket expanded tokens with
-// syntaqlite_parser_begin_macro() / syntaqlite_parser_end_macro(). Read
-// accumulated regions via syntaqlite_result_macro_count() /
+// Read accumulated macro regions via syntaqlite_result_macro_count() /
 // syntaqlite_result_macro_at() after parsing.
 
 #ifndef SYNTAQLITE_INCREMENTAL_PARSER_H
@@ -91,20 +89,6 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_expected_tokens(SyntaqliteParser* p,
 // One of SYNTAQLITE_COMPLETION_CONTEXT_*.
 SYNTAQLITE_API SyntaqliteCompletionContext
 syntaqlite_parser_completion_context(SyntaqliteParser* p);
-
-// ---------------------------------------------------------------------------
-// Macro region tracking
-// ---------------------------------------------------------------------------
-
-// Mark subsequent fed tokens as being inside a macro expansion.
-// call_offset/call_length describe the macro call's byte range in the
-// original source. Calls may nest (for nested macro expansions).
-SYNTAQLITE_API void syntaqlite_parser_begin_macro(SyntaqliteParser* p,
-                                                  uint32_t call_offset,
-                                                  uint32_t call_length);
-
-// End the innermost macro expansion region.
-SYNTAQLITE_API void syntaqlite_parser_end_macro(SyntaqliteParser* p);
 
 // ---------------------------------------------------------------------------
 // Macro registration
