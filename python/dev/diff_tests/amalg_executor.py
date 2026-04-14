@@ -15,6 +15,7 @@ Two amalgamation modes are supported:
 """
 
 import enum
+import os
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -206,7 +207,7 @@ def compile_strict_warning_check(
 
     for src in c_sources:
         obj = str(obj_dir / (src.stem + ".o"))
-        cmd = ["cc", "-c", "-std=c11"] + strict_flags + include_flags + define_flags
+        cmd = [os.environ.get("CC", "cc"), "-c", "-std=c11"] + strict_flags + include_flags + define_flags
         cmd += ["-o", obj, str(src)]
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0:
@@ -218,7 +219,7 @@ def compile_strict_warning_check(
 
     # --- Compile C++ driver with strict warnings ---
     cpp_obj = str(obj_dir / "test_strict_warnings.o")
-    cmd = ["c++", "-c", "-std=c++17"] + strict_flags + include_flags + define_flags
+    cmd = [os.environ.get("CXX", "c++"), "-c", "-std=c++17"] + strict_flags + include_flags + define_flags
     cmd += ["-o", cpp_obj, str(test_cpp)]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
@@ -229,7 +230,7 @@ def compile_strict_warning_check(
     objects.append(cpp_obj)
 
     # --- Link ---
-    cmd = ["c++", "-o", str(output_binary)] + objects
+    cmd = [os.environ.get("CXX", "c++"), "-o", str(output_binary)] + objects
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
         raise RuntimeError(
