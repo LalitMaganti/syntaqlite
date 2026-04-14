@@ -57,6 +57,7 @@ const SUPPRESSED_WARNINGS_CLANG_ONLY: &[&str] = &[
     "-Wold-style-cast",
     "-Wmissing-variable-declarations",
     "-Wimplicit-int-conversion",
+    "-Wshorten-64-to-32",
 ];
 
 /// Warnings that only GCC understands; emitted inside
