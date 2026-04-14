@@ -19,6 +19,7 @@ pub(crate) struct TokenizerFragments {
     pub(crate) id_char: String,
     pub(crate) char_map: String,
     pub(crate) get_token_fn: String,
+    pub(crate) window_keyword_analysis: String,
 }
 
 /// Extract tokenizer fragments from raw `SQLite` source files.
@@ -80,6 +81,22 @@ pub(crate) fn extract_fragments(
     let char_map = tokenize_extractor.extract_defines_with_ifdef_context(&["charMap"])?;
     let get_token_fn = tokenize_extractor.extract_function("sqlite3GetToken")?;
 
+    // Window keyword analysis: getToken helper + analyze{Window,Over,Filter}Keyword.
+    // These are used to context-sensitively reclassify WINDOW/OVER/FILTER tokens.
+    let window_keyword_analysis = {
+        let get_token_helper = tokenize_extractor.extract_function("getToken")?;
+        let analyze_window = tokenize_extractor.extract_function("analyzeWindowKeyword")?;
+        let analyze_over = tokenize_extractor.extract_function("analyzeOverKeyword")?;
+        let analyze_filter = tokenize_extractor.extract_function("analyzeFilterKeyword")?;
+        [
+            get_token_helper.text.as_str(),
+            analyze_window.text.as_str(),
+            analyze_over.text.as_str(),
+            analyze_filter.text.as_str(),
+        ]
+        .join("\n")
+    };
+
     Ok(TokenizerFragments {
         cc_defines: cc_defines.text,
         ai_class: ai_class.text,
@@ -89,6 +106,7 @@ pub(crate) fn extract_fragments(
         id_char: id_char.text,
         char_map: char_map.text,
         get_token_fn: get_token_fn.text,
+        window_keyword_analysis,
     })
 }
 
@@ -113,6 +131,10 @@ pub(crate) fn write_fragments(
         ("id_char.c", &fragments.id_char),
         ("char_map.c", &fragments.char_map),
         ("get_token_fn.c", &fragments.get_token_fn),
+        (
+            "window_keyword_analysis.c",
+            &fragments.window_keyword_analysis,
+        ),
     ];
 
     for (name, content) in &files {

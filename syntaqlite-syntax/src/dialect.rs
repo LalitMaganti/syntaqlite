@@ -603,6 +603,10 @@ pub(crate) mod ffi {
         #[doc(hidden)]
         pub parser_completion_context: *const std::ffi::c_void,
 
+        // Lemon %fallback lookup
+        #[doc(hidden)]
+        pub parser_fallback: *const std::ffi::c_void,
+
         // Tokenizer (function pointer provided by the dialect's parser)
         #[doc(hidden)]
         pub get_token: *const std::ffi::c_void,

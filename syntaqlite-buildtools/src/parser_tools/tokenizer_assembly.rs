@@ -16,6 +16,12 @@ use crate::util::pascal_case;
 /// This replaces the old `extract_tokenizer()` path: instead of running
 /// `CExtractor` on raw `SQLite` source at codegen time, we read committed
 /// fragment files and apply only the dialect-specific `CTransformer` pass.
+///
+/// Note: `window_keyword_analysis.c` is vendored as a reference copy of
+/// `SQLite`'s analyze*Keyword functions but is NOT assembled into the
+/// tokenizer.  The engine (`parser.c`) implements the analysis directly
+/// using `SYNQ_GET_TOKEN` for lookahead and `SynqSqliteParseFallback` for
+/// the identifier-fallback check.
 pub(crate) fn assemble(
     fragments: &SqliteFragments,
     dialect: &str,

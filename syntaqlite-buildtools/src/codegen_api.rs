@@ -243,6 +243,11 @@ pub(crate) fn extract_token_defines(parse_h: &str) -> Vec<(String, u32)> {
 const RUNTIME_TOKEN_NAMES: &[&str] = &[
     "PTR", "MINUS", "QNUMBER", "FLOAT", "INTEGER", "SPACE", "SEMI", "COMMENT", "ID", "ILLEGAL",
     "BANG", "LP", "RP", "COMMA", "VARIABLE",
+    // Context-sensitive keyword analysis (mirrors SQLite's analyze*Keyword):
+    // WINDOW/OVER/FILTER can serve as identifiers; the parser reclassifies
+    // them based on surrounding tokens.  STRING/JOIN_KW are needed for the
+    // identifier-like lookahead check, AS for the WINDOW analysis.
+    "WINDOW", "OVER", "FILTER", "AS", "STRING", "JOIN_KW",
 ];
 
 /// Generate a minimal tokens header containing only the runtime-required tokens.
