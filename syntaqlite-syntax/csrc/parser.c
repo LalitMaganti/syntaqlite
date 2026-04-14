@@ -428,6 +428,76 @@ static int64_t next_token(SyntaqliteParser* p,
   return 0;
 }
 
+// ---------------------------------------------------------------------------
+// Context-sensitive keyword analysis (mirrors SQLite's analyze*Keyword).
+//
+// WINDOW, OVER, and FILTER are context-sensitive keywords in SQLite: they act
+// as keywords only in specific syntactic positions and are valid identifiers
+// everywhere else.  The Lemon grammar cannot handle this via %fallback because
+// that would create ambiguity (e.g. `SELECT sum(x) OVER ...` — OVER could be
+// a keyword or an alias).
+//
+// The logic here mirrors the vendored upstream functions in
+// sqlite-vendored/sources/fragments/window_keyword_analysis.c.
+// ---------------------------------------------------------------------------
+
+// Peek the next non-whitespace, non-comment token via the dialect tokenizer.
+// Normalizes identifier-like tokens to TK_ID (mirrors SQLite's getToken
+// helper from sqlite-vendored/sources/fragments/window_keyword_analysis.c).
+static int synq_peek_token(SyntaqliteParser* p, const unsigned char** pz) {
+  const unsigned char* z = *pz;
+  int t;
+  do {
+    int raw = 0;
+    z += SYNQ_GET_TOKEN(&p->dialect, z, &raw);
+    t = raw;
+  } while (t == SYNTAQLITE_TK_SPACE || t == SYNTAQLITE_TK_COMMENT);
+  if (t == SYNTAQLITE_TK_ID || t == SYNTAQLITE_TK_STRING ||
+      t == SYNTAQLITE_TK_JOIN_KW || t == SYNTAQLITE_TK_WINDOW ||
+      t == SYNTAQLITE_TK_OVER ||
+      p->dialect.tmpl->parser_fallback(t) == SYNTAQLITE_TK_ID) {
+    t = SYNTAQLITE_TK_ID;
+  }
+  *pz = z;
+  return t;
+}
+
+// WINDOW → keyword only when followed by <id> AS (a named window def).
+static uint32_t synq_analyze_window(SyntaqliteParser* p,
+                                    const unsigned char* z) {
+  int t = synq_peek_token(p, &z);
+  if (t != SYNTAQLITE_TK_ID)
+    return SYNTAQLITE_TK_ID;
+  t = synq_peek_token(p, &z);
+  if (t != SYNTAQLITE_TK_AS)
+    return SYNTAQLITE_TK_ID;
+  return SYNTAQLITE_TK_WINDOW;
+}
+
+// OVER → keyword only when prev was ')' and next is '(' or <id>.
+static uint32_t synq_analyze_over(SyntaqliteParser* p,
+                                  const unsigned char* z,
+                                  uint32_t last_token_type) {
+  if (last_token_type == SYNTAQLITE_TK_RP) {
+    int t = synq_peek_token(p, &z);
+    if (t == SYNTAQLITE_TK_LP || t == SYNTAQLITE_TK_ID)
+      return SYNTAQLITE_TK_OVER;
+  }
+  return SYNTAQLITE_TK_ID;
+}
+
+// FILTER → keyword only when prev was ')' and next is '('.
+static uint32_t synq_analyze_filter(SyntaqliteParser* p,
+                                    const unsigned char* z,
+                                    uint32_t last_token_type) {
+  if (last_token_type == SYNTAQLITE_TK_RP) {
+    int t = synq_peek_token(p, &z);
+    if (t == SYNTAQLITE_TK_LP)
+      return SYNTAQLITE_TK_FILTER;
+  }
+  return SYNTAQLITE_TK_ID;
+}
+
 SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
   reset_stmt(p);
 
@@ -455,6 +525,16 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     }
 
     p->offset = cur_offset + (uint32_t)cur_len;
+
+    // Context-sensitive keyword reclassification: WINDOW/OVER/FILTER may
+    // need to be demoted to TK_ID depending on surrounding tokens.
+    if (cur_type == SYNTAQLITE_TK_WINDOW) {
+      cur_type = synq_analyze_window(p, z + p->offset);
+    } else if (cur_type == SYNTAQLITE_TK_OVER) {
+      cur_type = synq_analyze_over(p, z + p->offset, p->last_token_type);
+    } else if (cur_type == SYNTAQLITE_TK_FILTER) {
+      cur_type = synq_analyze_filter(p, z + p->offset, p->last_token_type);
+    }
 
     // Tokenize the lookahead — always one token ahead.
     uint32_t la_offset = 0;

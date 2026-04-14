@@ -42,6 +42,7 @@ static const SyntaqliteDialectTemplate SQLITE_DIALECT = {
 #endif
     .parser_expected_tokens = SynqSqliteParseExpectedTokens,
     .parser_completion_context = SynqSqliteParseCompletionContext,
+    .parser_fallback = SynqSqliteParseFallback,
 
     // Tokenizer
     .get_token = SynqSqliteGetToken,

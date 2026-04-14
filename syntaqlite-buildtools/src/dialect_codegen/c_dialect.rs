@@ -183,6 +183,9 @@ pub(crate) fn generate_dialect_c(
     w.line(&format!(
         "    .parser_completion_context = Synq{pascal}ParseCompletionContext,"
     ));
+    w.line(&format!(
+        "    .parser_fallback = Synq{pascal}ParseFallback,"
+    ));
     w.newline();
     w.line("    // Tokenizer");
     w.line(&format!("    .get_token = Synq{pascal}GetToken,"));
@@ -378,6 +381,7 @@ pub(crate) fn generate_parse_h(dialect: &str) -> String {
     w.line(&format!(
         "uint32_t Synq{pascal}ParseCompletionContext(void* parser);"
     ));
+    w.line(&format!("int Synq{pascal}ParseFallback(int iToken);"));
     w.line("#ifndef NDEBUG");
     w.line(&format!(
         "void Synq{pascal}ParseTrace(FILE* trace_file, char* prompt);"

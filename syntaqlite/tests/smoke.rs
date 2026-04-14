@@ -286,3 +286,128 @@ fn whitespace_only_returns_done() {
     let mut session = parser.parse("   \n\t  ");
     assert!(matches!(session.next(), ParseOutcome::Done));
 }
+
+// -- WINDOW / OVER / FILTER as identifiers (issue #108) --
+//
+// SQLite treats these as context-sensitive keywords: they act as keywords
+// only in specific syntactic positions (window function clauses) and are
+// valid identifiers everywhere else.
+
+#[test]
+fn context_keyword_window_as_column_name() {
+    let parser = new_parser();
+    let mut session = parser.parse("SELECT window FROM t;");
+    let ParseOutcome::Ok(stmt) = session.next() else {
+        panic!("'window' should be usable as a column name");
+    };
+    assert!(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
+}
+
+#[test]
+fn context_keyword_over_as_column_name() {
+    let parser = new_parser();
+    let mut session = parser.parse("SELECT over FROM t;");
+    let ParseOutcome::Ok(stmt) = session.next() else {
+        panic!("'over' should be usable as a column name");
+    };
+    assert!(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
+}
+
+#[test]
+fn context_keyword_filter_as_column_name() {
+    let parser = new_parser();
+    let mut session = parser.parse("SELECT filter FROM t;");
+    let ParseOutcome::Ok(stmt) = session.next() else {
+        panic!("'filter' should be usable as a column name");
+    };
+    assert!(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
+}
+
+#[test]
+fn context_keyword_window_as_table_name() {
+    let parser = new_parser();
+    for sql in [
+        "CREATE TABLE window (id INT);",
+        "INSERT INTO window VALUES (1);",
+    ] {
+        let mut session = parser.parse(sql);
+        let outcome = session.next();
+        assert!(
+            matches!(outcome, ParseOutcome::Ok(_)),
+            "'window' should be usable as a table name in: {sql}"
+        );
+    }
+}
+
+#[test]
+fn context_keyword_as_column_definition() {
+    let parser = new_parser();
+    for sql in [
+        "CREATE TABLE t (over INT);",
+        "CREATE TABLE t (filter INT);",
+        "CREATE TABLE t (window INT);",
+    ] {
+        let mut session = parser.parse(sql);
+        let outcome = session.next();
+        assert!(
+            matches!(outcome, ParseOutcome::Ok(_)),
+            "keyword should be usable as column definition in: {sql}"
+        );
+    }
+}
+
+#[test]
+fn context_keyword_as_alias() {
+    let parser = new_parser();
+    for sql in ["SELECT 1 AS over;", "SELECT 1 AS filter;"] {
+        let mut session = parser.parse(sql);
+        let outcome = session.next();
+        assert!(
+            matches!(outcome, ParseOutcome::Ok(_)),
+            "keyword should be usable as alias in: {sql}"
+        );
+    }
+}
+
+#[test]
+fn context_keyword_qualified_column_ref() {
+    let parser = new_parser();
+    let mut session = parser.parse("SELECT t.window FROM t;");
+    let ParseOutcome::Ok(stmt) = session.next() else {
+        panic!("'t.window' should be a valid qualified column reference");
+    };
+    assert!(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
+}
+
+#[test]
+fn context_keyword_window_still_works_as_keyword() {
+    // WINDOW as actual keyword in a window function definition should still work.
+    let parser = new_parser();
+    let mut session = parser.parse("SELECT sum(x) OVER w FROM t WINDOW w AS (ORDER BY x);");
+    let ParseOutcome::Ok(stmt) = session.next() else {
+        panic!("WINDOW keyword in window clause should still parse");
+    };
+    assert!(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
+}
+
+#[test]
+fn context_keyword_over_still_works_as_keyword() {
+    // OVER as actual keyword after a window function should still work.
+    let parser = new_parser();
+    let mut session = parser.parse("SELECT sum(x) OVER (ORDER BY x) FROM t;");
+    let ParseOutcome::Ok(stmt) = session.next() else {
+        panic!("OVER keyword in window function should still parse");
+    };
+    assert!(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
+}
+
+#[test]
+fn context_keyword_filter_still_works_as_keyword() {
+    // FILTER as actual keyword after an aggregate should still work.
+    let parser = new_parser();
+    let mut session = parser.parse("SELECT sum(x) FILTER (WHERE x > 0) OVER (ORDER BY x) FROM t;");
+    let ParseOutcome::Ok(stmt) = session.next() else {
+        panic!("FILTER keyword in aggregate should still parse");
+    };
+    assert!(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
+}

@@ -122,6 +122,11 @@ typedef struct SyntaqliteDialectTemplate {
                                      uint32_t out_cap);
   uint32_t (*parser_completion_context)(void* parser);
 
+  // Lemon %fallback lookup: returns the fallback token for `iToken`,
+  // or 0 if it has none.  Used by the context-sensitive keyword analysis
+  // to determine whether a token can serve as an identifier.
+  int (*parser_fallback)(int iToken);
+
   // Tokenizer (provided by grammar)
   int64_t (*get_token)(const SyntaqliteDialect* env,
                        const unsigned char* z,
