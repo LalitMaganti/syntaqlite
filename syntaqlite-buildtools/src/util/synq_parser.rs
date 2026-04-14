@@ -300,13 +300,13 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
 
     let mut tokens = Vec::new();
     loop {
-        // skip whitespace and # comments
+        // skip whitespace and // comments
         loop {
             match b.get(i) {
                 Some(b' ' | b'\t' | b'\n' | b'\r') => {
                     advance(&mut i, &mut line, &mut col);
                 }
-                Some(b'#') => {
+                Some(b'/') if b.get(i + 1) == Some(&b'/') => {
                     while let Some(ch) = advance(&mut i, &mut line, &mut col) {
                         if ch == b'\n' {
                             break;
