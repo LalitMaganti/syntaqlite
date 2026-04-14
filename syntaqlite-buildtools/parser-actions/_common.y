@@ -93,13 +93,9 @@ static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
   if (pCtx->error_offset == 0xFFFFFFFF || pCtx->error_length == 0) {
     return SYNQ_NO_SPAN;
   }
-  uint32_t len = pCtx->error_length;
-  if (len > UINT16_MAX) {
-    len = UINT16_MAX;
-  }
   return (SyntaqliteTextSpan){
       .offset = pCtx->error_offset,
-      .length = (uint16_t)len,
+      .length = pCtx->error_length,
       .flags = 0,
   };
 }

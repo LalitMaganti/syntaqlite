@@ -38,9 +38,10 @@ typedef uint32_t SyntaqliteCompletionContext;
 //     drill-through fidelity for spans inside substituted macro args.
 typedef struct SyntaqliteTextSpan {
   uint32_t offset;
-  uint16_t length;
+  uint32_t length;
   uint8_t flags;
   uint8_t _layer_id;  // Internal: 0 = source, >0 = macro expansion layer.
+  uint8_t _pad[2];
 } SyntaqliteTextSpan;
 
 // ── Span flags ───────────────────────────────────────────────────────────────

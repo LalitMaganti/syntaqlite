@@ -615,9 +615,7 @@ mod tests {
         // `session.expanded_text()` materializes the whole input with
         // every currently-active macro call replaced by its expansion,
         // mirroring `syntaqlite_parser_expanded_text` at the C level.
-        let mut parser = Parser::with_config(
-            &ParserConfig::default().with_macro_fallback(true),
-        );
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         parser.register_macro("id", &["x"], "$x");
 
         let source = "SELECT id!(42);";

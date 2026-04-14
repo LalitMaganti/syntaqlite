@@ -155,9 +155,7 @@ impl CParser {
         }
         // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
         // UTF-8 within the parser's source buffer.
-        unsafe {
-            std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
-        }
+        unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
     }
 
     /// Post-expansion source text — the bound source with every
@@ -183,9 +181,7 @@ impl CParser {
         }
         // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
         // UTF-8 within the parser's scratch buffer.
-        unsafe {
-            std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
-        }
+        unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
     }
 
     /// Source text of AST node `node_id`, returned as `(slice, offset)`
