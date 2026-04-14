@@ -28,26 +28,22 @@ use std::path::Path;
 /// Warnings inherent to Lemon-generated parser code that cannot be fixed
 /// upstream.  The amalgamation wraps the entire .c in a diagnostic push/pop
 /// so consumers compiling with `-Wall -Wextra` need no extra `-Wno-*` flags.
+///
+/// These are supported by both GCC and Clang.
 const SUPPRESSED_WARNINGS: &[&str] = &[
-    // Lemon-generated parser inherent warnings
     "-Wunused-parameter",
     "-Wunused-variable",
     "-Wmissing-field-initializers",
     "-Wtype-limits",
-    "-Wold-style-declaration",
     "-Wimplicit-fallthrough",
     "-Wswitch-enum",
     "-Wdeclaration-after-statement",
     "-Wsign-conversion",
-    "-Wextra-semi-stmt",
     "-Wcast-qual",
-    "-Wold-style-cast",
     "-Wunused-macros",
     "-Wformat-nonliteral",
     "-Wformat",
     "-Wcast-align",
-    "-Wmissing-variable-declarations",
-    "-Wimplicit-int-conversion",
     "-Wmissing-prototypes",
     "-Wunreachable-code",
     "-Wunused-function",
@@ -55,15 +51,33 @@ const SUPPRESSED_WARNINGS: &[&str] = &[
     "-Wpadded",
 ];
 
+/// Warnings that only Clang understands; emitted inside `#ifdef __clang__`.
+const SUPPRESSED_WARNINGS_CLANG_ONLY: &[&str] = &[
+    "-Wextra-semi-stmt",
+    "-Wold-style-cast",
+    "-Wmissing-variable-declarations",
+    "-Wimplicit-int-conversion",
+];
+
+/// Warnings that only GCC understands; emitted inside
+/// `#if defined(__GNUC__) && !defined(__clang__)`.
+const SUPPRESSED_WARNINGS_GCC_ONLY: &[&str] = &["-Wold-style-declaration"];
+
 fn emit_diagnostic_push(out: &mut String) {
     out.push_str("#if defined(__GNUC__) || defined(__clang__)\n");
     out.push_str("#pragma GCC diagnostic push\n");
-    out.push_str("#ifdef __clang__\n");
-    out.push_str("#pragma clang diagnostic ignored \"-Wunknown-warning-option\"\n");
-    out.push_str("#endif\n");
     for w in SUPPRESSED_WARNINGS {
         let _ = writeln!(out, "#pragma GCC diagnostic ignored \"{w}\"");
     }
+    out.push_str("#ifdef __clang__\n");
+    for w in SUPPRESSED_WARNINGS_CLANG_ONLY {
+        let _ = writeln!(out, "#pragma clang diagnostic ignored \"{w}\"");
+    }
+    out.push_str("#elif defined(__GNUC__)\n");
+    for w in SUPPRESSED_WARNINGS_GCC_ONLY {
+        let _ = writeln!(out, "#pragma GCC diagnostic ignored \"{w}\"");
+    }
+    out.push_str("#endif\n");
     out.push_str("#endif\n\n");
 }
 
