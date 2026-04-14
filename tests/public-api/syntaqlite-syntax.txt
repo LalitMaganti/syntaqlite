@@ -774,9 +774,7 @@ pub fn syntaqlite_syntax::CommentSpan::length(&self) -> u32
 pub fn syntaqlite_syntax::CommentSpan::offset(&self) -> u32
 pub fn syntaqlite_syntax::CompletionContext::from_raw(v: u32) -> Self
 pub fn syntaqlite_syntax::CompletionContext::raw(self) -> u32
-pub fn syntaqlite_syntax::IncrementalParseSession::begin_macro(&mut self, span: core::ops::range::Range<usize>)
 pub fn syntaqlite_syntax::IncrementalParseSession::completion_context(&self) -> syntaqlite_syntax::CompletionContext
-pub fn syntaqlite_syntax::IncrementalParseSession::end_macro(&mut self)
 pub fn syntaqlite_syntax::IncrementalParseSession::expected_tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::TokenType>
 pub fn syntaqlite_syntax::IncrementalParseSession::feed_token(&mut self, token_type: syntaqlite_syntax::TokenType, span: core::ops::range::Range<usize>) -> core::option::Option<core::result::Result<ParsedStatement<'_>, ParseError<'_>>>
 pub fn syntaqlite_syntax::IncrementalParseSession::finish(&mut self) -> core::option::Option<core::result::Result<ParsedStatement<'_>, ParseError<'_>>>
@@ -1603,10 +1601,8 @@ pub fn syntaqlite_syntax::typed::Dialect::with_cflags(self, cflags: syntaqlite_s
 pub fn syntaqlite_syntax::typed::Dialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
 pub fn syntaqlite_syntax::typed::GrammarNodeType::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::typed::GrammarTokenType::from_token_type(raw: syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
-pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::begin_macro(&mut self, span: core::ops::range::Range<usize>)
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::completion_context(&self) -> syntaqlite_syntax::CompletionContext
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::drop(&mut self)
-pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::end_macro(&mut self)
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::expected_tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = <G as syntaqlite_syntax::typed::TypedDialect>::Token>
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::feed_token(&mut self, token_type: <G as syntaqlite_syntax::typed::TypedDialect>::Token, span: core::ops::range::Range<usize>) -> core::option::Option<core::result::Result<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>>
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::finish(&mut self) -> core::option::Option<core::result::Result<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>>

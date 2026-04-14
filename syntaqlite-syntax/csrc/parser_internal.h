@@ -86,7 +86,7 @@ typedef struct SynqMacroArg {
 // Template/name/def_line/def_col are borrowed pointers into the macro
 // registry entry that was expanded to produce this layer; they outlive the
 // layer because parse state is reset before any registry entries can be
-// freed.  For the sentinel (layer 0) and incremental-API begin_macro (no
+// freed.  For the sentinel (layer 0) and fallback macro calls (no
 // registry entry), these fields are all NULL/0.
 typedef struct SynqExpansionLayer {
   uint32_t call_offset;        // Byte offset of macro call in parent layer.

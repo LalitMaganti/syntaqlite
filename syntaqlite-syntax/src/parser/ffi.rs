@@ -447,16 +447,6 @@ impl CParser {
         }
     }
 
-    pub(crate) unsafe fn begin_macro(&mut self, call_offset: u32, call_length: u32) {
-        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
-        unsafe { syntaqlite_parser_begin_macro(self, call_offset, call_length) }
-    }
-
-    pub(crate) unsafe fn end_macro(&mut self) {
-        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
-        unsafe { syntaqlite_parser_end_macro(self) }
-    }
-
     #[expect(clippy::too_many_arguments, reason = "mirrors the C API surface 1:1")]
     pub(crate) unsafe fn register_macro(
         &mut self,
@@ -570,9 +560,6 @@ unsafe extern "C" {
         out_cap: u32,
     ) -> u32;
     fn syntaqlite_parser_completion_context(p: *mut CParser) -> CCompletionContext;
-    fn syntaqlite_parser_begin_macro(p: *mut CParser, call_offset: u32, call_length: u32);
-    fn syntaqlite_parser_end_macro(p: *mut CParser);
-
     // Macro registration
     fn syntaqlite_parser_register_macro(
         p: *mut CParser,

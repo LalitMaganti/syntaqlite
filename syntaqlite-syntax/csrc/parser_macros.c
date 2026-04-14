@@ -493,8 +493,8 @@ int synq_parser_expand_macro(SyntaqliteParser* p,
 // ---------------------------------------------------------------------------
 
 // Internal: push a new expansion layer with optional expansion data and
-// optional registry-entry provenance.  `entry` may be NULL for layers
-// created via the incremental begin/end_macro API (no definition metadata).
+// optional registry-entry provenance.  `entry` may be NULL for fallback
+// macro calls (no definition metadata).
 static void begin_macro_expansion(SyntaqliteParser* p,
                                   uint32_t call_offset,
                                   uint32_t call_length,
@@ -528,15 +528,7 @@ static void begin_macro_expansion(SyntaqliteParser* p,
   p->macro_depth++;
 }
 
-SYNTAQLITE_API void syntaqlite_parser_begin_macro(SyntaqliteParser* p,
-                                                  uint32_t call_offset,
-                                                  uint32_t call_length) {
-  begin_macro_expansion(p, call_offset, call_length, NULL, 0, NULL);
-  // Set layer_id so spans created while this macro is active reference it.
-  p->ctx.layer_id = syntaqlite_vec_len(&p->layers) - 1;
-}
-
-SYNTAQLITE_API void syntaqlite_parser_end_macro(SyntaqliteParser* p) {
+static void synq_end_macro(SyntaqliteParser* p) {
   if (p->macro_depth > 0) {
     p->macro_depth--;
     // Restore layer_id to parent. If we're back to depth 0, that's layer 0
@@ -558,7 +550,6 @@ SYNTAQLITE_API void syntaqlite_parser_end_macro(SyntaqliteParser* p) {
 // call_offset/call_length locate the macro call in the original source
 // (0/0 for nested expansions that have no source-level position).
 // Takes ownership of exp->data via the pushed expansion layer.
-// begin_macro and end_macro are called symmetrically within this function.
 // Returns 0 on success, -1 on error.
 int synq_parser_feed_macro_expansion(SyntaqliteParser* p,
                                      uint32_t call_offset,
@@ -596,7 +587,7 @@ int synq_parser_feed_macro_expansion(SyntaqliteParser* p,
   // Restore layer_id.
   p->ctx.layer_id = saved_layer_id;
 
-  syntaqlite_parser_end_macro(p);
+  synq_end_macro(p);
 
   return rc < 0 ? -1 : 0;
 }
@@ -663,8 +654,9 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
   uint32_t call_length = end_offset - id_offset;
 
   // Record macro region so formatter emits verbatim (no expansion data).
-  syntaqlite_parser_begin_macro(p, id_offset, call_length);
-  syntaqlite_parser_end_macro(p);
+  begin_macro_expansion(p, id_offset, call_length, NULL, 0, NULL);
+  p->ctx.layer_id = syntaqlite_vec_len(&p->layers) - 1;
+  synq_end_macro(p);
 
   // Feed the whole name!(args) span as a single TK_ID to Lemon.
   int rc =
