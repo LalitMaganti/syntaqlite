@@ -21,7 +21,7 @@ expr(A) ::= idj(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E) RP. {
     synq_mark_as_function(pCtx, B);
     A = synq_parse_aggregate_function_call(pCtx,
         synq_span(pCtx, B),
-        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)C},
+        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)(C & 0xFF)},
         D,
         E,
         SYNTAQLITE_NULL_NODE,
@@ -30,11 +30,11 @@ expr(A) ::= idj(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E) RP. {
 
 // Aggregate function call with filter/over
 expr(A) ::= idj(B) LP distinct(C) exprlist(D) ORDER BY sortlist(E) RP filter_over(F). {
-    SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)synq_arena_ptr(&pCtx->ast, F);
+    SyntaqliteFilterOver *fo = AST_NODE_AS(SyntaqliteFilterOver, &pCtx->ast, F);
     synq_mark_as_function(pCtx, B);
     A = synq_parse_aggregate_function_call(pCtx,
         synq_span(pCtx, B),
-        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)C},
+        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)(C & 0xFF)},
         D,
         E,
         fo->filter_expr,
@@ -48,7 +48,7 @@ expr(A) ::= idj(B) LP distinct(C) exprlist(D) RP WITHIN GROUP LP ORDER BY expr(E
     synq_mark_as_function(pCtx, B);
     A = synq_parse_ordered_set_function_call(pCtx,
         synq_span(pCtx, B),
-        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)C},
+        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)(C & 0xFF)},
         D,
         E,
         SYNTAQLITE_NULL_NODE,
@@ -57,11 +57,11 @@ expr(A) ::= idj(B) LP distinct(C) exprlist(D) RP WITHIN GROUP LP ORDER BY expr(E
 
 // Ordered-set aggregate with filter/over
 expr(A) ::= idj(B) LP distinct(C) exprlist(D) RP WITHIN GROUP LP ORDER BY expr(E) RP filter_over(F). {
-    SyntaqliteFilterOver *fo = (SyntaqliteFilterOver*)synq_arena_ptr(&pCtx->ast, F);
+    SyntaqliteFilterOver *fo = AST_NODE_AS(SyntaqliteFilterOver, &pCtx->ast, F);
     synq_mark_as_function(pCtx, B);
     A = synq_parse_ordered_set_function_call(pCtx,
         synq_span(pCtx, B),
-        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)C},
+        (SyntaqliteAggregateFunctionCallFlags){.raw = (uint8_t)(C & 0xFF)},
         D,
         E,
         fo->filter_expr,

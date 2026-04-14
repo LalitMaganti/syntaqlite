@@ -191,7 +191,7 @@ window_clause(A) ::= WINDOW windowdefn_list(B). {
 
 filter_over(A) ::= filter_clause(B) over_clause(C). {
     // Unpack the over_clause FilterOver to combine with filter expr
-    SyntaqliteFilterOver *fo_over = (SyntaqliteFilterOver*)synq_arena_ptr(&pCtx->ast, C);
+    SyntaqliteFilterOver *fo_over = AST_NODE_AS(SyntaqliteFilterOver, &pCtx->ast, C);
     A = synq_parse_filter_over(pCtx,
         B,
         fo_over->over_def,

@@ -149,6 +149,10 @@ typedef struct SynqListHeader {
 // Dialect code should further cast to the dialect-specific node union.
 #define AST_NODE(arena_ptr, id) ((void*)synq_arena_ptr((arena_ptr), (id)))
 
+// Type-safe arena access — casts through void* to suppress -Wcast-align.
+#define AST_NODE_AS(type, arena_ptr, id) \
+  ((type*)((void*)synq_arena_ptr((arena_ptr), (id))))
+
 // ---------------------------------------------------------------------------
 // AST builder functions
 // ---------------------------------------------------------------------------

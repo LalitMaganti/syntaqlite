@@ -32,11 +32,11 @@ selectnowith(A) ::= oneselect(B). {
 }
 
 oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_opt(F) having_opt(G) orderby_opt(H) limit_opt(I). {
-    A = synq_parse_select_stmt(pCtx, (SyntaqliteSelectStmtFlags){.raw = (uint8_t)B}, C, D, E, F, G, H, I, SYNTAQLITE_NULL_NODE);
+    A = synq_parse_select_stmt(pCtx, (SyntaqliteSelectStmtFlags){.raw = (uint8_t)(B & 0xFF)}, C, D, E, F, G, H, I, SYNTAQLITE_NULL_NODE);
 }
 
 oneselect(A) ::= SELECT distinct(B) selcollist(C) from(D) where_opt(E) groupby_opt(F) having_opt(G) window_clause(R) orderby_opt(H) limit_opt(I). {
-    A = synq_parse_select_stmt(pCtx, (SyntaqliteSelectStmtFlags){.raw = (uint8_t)B}, C, D, E, F, G, H, I, R);
+    A = synq_parse_select_stmt(pCtx, (SyntaqliteSelectStmtFlags){.raw = (uint8_t)(B & 0xFF)}, C, D, E, F, G, H, I, R);
 }
 
 // ============ Result columns ============
@@ -47,7 +47,7 @@ selcollist(A) ::= sclp(B) scanpt expr(C) scanpt as(D). {
 }
 
 selcollist(A) ::= sclp(B) scanpt STAR. {
-    uint32_t col = synq_parse_result_column(pCtx, (SyntaqliteResultColumnFlags){.bits = {.star = 1}}, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+    uint32_t col = synq_parse_result_column(pCtx, (SyntaqliteResultColumnFlags){.raw = 0x01}, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
     A = synq_parse_result_column_list(pCtx, B, col);
 }
 

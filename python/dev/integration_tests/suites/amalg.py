@@ -20,6 +20,7 @@ from python.dev.diff_tests.amalg_executor import (
     AmalgMode,
     AmalgTestContext,
     DialectConfig,
+    compile_strict_warning_check,
 )
 from python.dev.diff_tests.test_executor import execute_test
 from python.dev.diff_tests.test_loader import load_all_tests
@@ -89,6 +90,21 @@ def run(ctx: SuiteContext) -> int:
                 print(f"Building {config.name} ({config.mode.value}) amalgamation...")
             try:
                 amalg_ctx.get_binary(config)
+            except RuntimeError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
+            if ctx.verbose >= 1:
+                print(f"  {config.name} ({config.mode.value}): OK")
+
+        # Verify the amalgamation compiles cleanly under strict C++ warnings.
+        # This catches any -Wall/-Wextra warnings that would force downstream
+        # consumers to add -Wno-* suppressions.
+        for key in sorted(needed):
+            config = configs[key]
+            if ctx.verbose >= 1:
+                print(f"Strict-warning C++ compile check: {config.name} ({config.mode.value})...")
+            try:
+                amalg_ctx.check_strict_warnings(config)
             except RuntimeError as e:
                 print(f"Error: {e}", file=sys.stderr)
                 return 1

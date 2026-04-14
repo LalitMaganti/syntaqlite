@@ -79,6 +79,9 @@ jobs:
 
       - name: Run integration tests
         run: tools/run-integration-tests
+        env:
+          CC: clang
+          CXX: clang++
 
   upstream-sqlite-validation:
     name: Upstream SQLite validation

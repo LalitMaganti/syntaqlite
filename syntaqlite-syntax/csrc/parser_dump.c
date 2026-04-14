@@ -25,6 +25,7 @@ static void dump_append(DumpBuf* b,
   syntaqlite_vec_push_n(b, s, n, mem);
 }
 
+SYNQ_PRINTF(3, 4)
 static void dump_printf(DumpBuf* b,
                         SyntaqliteMemMethods mem,
                         const char* fmt,
@@ -57,7 +58,7 @@ static void dump_node_recursive(DumpBuf* b,
   if (node_id >= count)
     return;
 
-  const uint8_t* raw = (const uint8_t*)synq_arena_ptr(&p->ctx.ast, node_id);
+  const uint8_t* raw = synq_arena_cptr(&p->ctx.ast, node_id);
   uint32_t tag;
   memcpy(&tag, raw, sizeof(tag));
 

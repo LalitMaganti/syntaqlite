@@ -637,7 +637,7 @@ syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx) {
 
 SYNTAQLITE_API const void* syntaqlite_parser_node(SyntaqliteParser* p,
                                                   uint32_t node_id) {
-  return (const void*)synq_arena_ptr(&p->ctx.ast, node_id);
+  return synq_arena_cptr(&p->ctx.ast, node_id);
 }
 
 SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p) {
