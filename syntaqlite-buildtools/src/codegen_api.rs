@@ -335,17 +335,23 @@ impl<'a> DialectCodegenJob<'a> {
         y_files: &'a [(String, String)],
         synq_files: &'a [(String, String)],
     ) -> Self {
+        let base_y_names: std::collections::HashSet<&str> = base_files::base_y_files()
+            .iter()
+            .map(|(name, _)| *name)
+            .collect();
         let ext_y_contents: Vec<&str> = y_files
             .iter()
-            .filter(|(name, _)| {
-                !base_files::base_y_files()
-                    .iter()
-                    .any(|(base_name, _)| *base_name == name.as_str())
-            })
+            .filter(|(name, _)| !base_y_names.contains(name.as_str()))
+            .map(|(_, content)| content.as_str())
+            .collect();
+        let base_y_contents: Vec<&str> = y_files
+            .iter()
+            .filter(|(name, _)| base_y_names.contains(name.as_str()))
             .map(|(_, content)| content.as_str())
             .collect();
         let all_y_contents: Vec<&str> = y_files.iter().map(|(_, c)| c.as_str()).collect();
-        let extra_keywords = extract_terminals_from_y(&ext_y_contents, &all_y_contents);
+        let extra_keywords =
+            extract_terminals_from_y(&ext_y_contents, &base_y_contents, &all_y_contents);
         Self {
             dialect,
             y_files,
@@ -433,11 +439,45 @@ pub(crate) fn base_keyword_token_names() -> std::collections::HashSet<String> {
 }
 
 /// Extract terminal symbols (potential keywords) from extension `.y` grammar files.
+///
+/// Only returns terminals that are genuinely *new* in the extension grammars —
+/// any terminal already present in the base grammar (whether a keyword like
+/// `SELECT` or a punctuation terminal like `LP`) is excluded, since the base
+/// tokenizer already handles those.
 pub(crate) fn extract_terminals_from_y(
     extension_y_contents: &[&str],
+    base_y_contents: &[&str],
     all_y_contents: &[&str],
 ) -> Vec<String> {
     use std::collections::HashSet;
+
+    // Collect all terminals referenced in the base grammar so we can exclude
+    // them — extensions merely *reference* these, they don't introduce them.
+    let mut base_terminals: HashSet<String> = HashSet::new();
+    for content in base_y_contents {
+        let Ok(grammar) = util::grammar_parser::LemonGrammar::parse(content) else {
+            continue;
+        };
+        for tok in &grammar.tokens {
+            if is_keyword_like(tok.name) {
+                base_terminals.insert(tok.name.to_string());
+            }
+        }
+        for fb in &grammar.fallbacks {
+            for tok in &fb.tokens {
+                if is_keyword_like(tok) {
+                    base_terminals.insert(tok.to_string());
+                }
+            }
+        }
+        for rule in &grammar.rules {
+            for sym in &rule.rhs {
+                if is_keyword_like(sym.name) && sym.name != "ID" {
+                    base_terminals.insert(sym.name.to_string());
+                }
+            }
+        }
+    }
 
     let mut terminals: HashSet<String> = HashSet::new();
 
@@ -467,6 +507,11 @@ pub(crate) fn extract_terminals_from_y(
                 }
             }
         }
+    }
+
+    // Remove base grammar terminals — the extension only references them.
+    for base in &base_terminals {
+        terminals.remove(base);
     }
 
     // The %wildcard token must not be added to the keyword table — it is a
@@ -745,7 +790,7 @@ mod tests {
 cmd ::= INCLUDE PERFETTO MODULE ID DOT ID.
 cmd ::= CREATE PERFETTO MACRO ID LP RP AS ANY.
 ";
-        let got: BTreeSet<String> = super::extract_terminals_from_y(&[y], &[y])
+        let got: BTreeSet<String> = super::extract_terminals_from_y(&[y], &[], &[y])
             .into_iter()
             .collect();
         let want: BTreeSet<String> = [
@@ -768,7 +813,7 @@ macro_body ::= ANY.
 macro_body ::= macro_body ANY.
 cmd ::= CREATE MACRO ID LP RP AS macro_body.
 ";
-        let got: BTreeSet<String> = super::extract_terminals_from_y(&[ext], &[base, ext])
+        let got: BTreeSet<String> = super::extract_terminals_from_y(&[ext], &[base], &[base, ext])
             .into_iter()
             .collect();
         assert!(
@@ -777,5 +822,44 @@ cmd ::= CREATE MACRO ID LP RP AS macro_body.
         );
         assert!(got.contains("CREATE"));
         assert!(got.contains("MACRO"));
+    }
+
+    #[test]
+    fn extract_terminals_excludes_base_grammar_punctuation() {
+        let base = r"
+%token SELECT FROM.
+%fallback ID SELECT.
+cmd ::= SELECT expr FROM LP ID RP.
+";
+        let ext = r"
+%token PERFETTO.
+%fallback ID PERFETTO.
+perfetto_table_schema(A) ::= LP perfetto_arg_def_list_ne(L) RP. { A = L; }
+cmd ::= CREATE PERFETTO TABLE ID perfetto_table_schema.
+";
+        let got: BTreeSet<String> = super::extract_terminals_from_y(&[ext], &[base], &[base, ext])
+            .into_iter()
+            .collect();
+        // LP, RP, SELECT, FROM are in the base grammar — must NOT appear
+        assert!(
+            !got.contains("LP"),
+            "LP is a base terminal, should be excluded"
+        );
+        assert!(
+            !got.contains("RP"),
+            "RP is a base terminal, should be excluded"
+        );
+        assert!(
+            !got.contains("SELECT"),
+            "SELECT is a base terminal, should be excluded"
+        );
+        assert!(
+            !got.contains("FROM"),
+            "FROM is a base terminal, should be excluded"
+        );
+        // PERFETTO and CREATE are only in the extension
+        assert!(got.contains("PERFETTO"));
+        assert!(got.contains("CREATE"));
+        assert!(got.contains("TABLE"));
     }
 }
