@@ -693,7 +693,7 @@ int synq_parser_check_macro_straddle(SyntaqliteParser* p) {
   const SynqExpansionLayer* layers = p->layers.data;
 
   for (uint32_t nid = 0; nid < node_count; nid++) {
-    const uint8_t* raw = (const uint8_t*)synq_arena_ptr(&p->ctx.ast, nid);
+    const uint8_t* raw = synq_arena_cptr(&p->ctx.ast, nid);
     uint32_t tag;
     memcpy(&tag, raw, sizeof(tag));
     if (tag == 0 || tag >= p->dialect.tmpl->node_count)

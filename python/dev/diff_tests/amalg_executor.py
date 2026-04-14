@@ -148,6 +148,96 @@ def _compile_dialect_only_binary(
 
 
 # ---------------------------------------------------------------------------
+# Strict-warning compile check
+# ---------------------------------------------------------------------------
+
+def compile_strict_warning_check(
+    test_cpp: Path, amalg_dir: Path, dialect_name: str, output_binary: Path,
+    runtime_dir: Optional[Path] = None,
+) -> None:
+    """Compile a C++ driver with -Wall -Wextra -Werror.
+
+    Verifies the amalgamation produces zero warnings under strict settings.
+    The .c amalgamation sources are compiled as C; the .cpp driver is
+    compiled as C++; then both are linked.  This mirrors how downstream
+    projects actually consume the amalgamation.
+    """
+    grammar_header = f'"syntaqlite_{dialect_name}.h"'
+    grammar_fn = f"syntaqlite_{dialect_name}_dialect"
+    strict_flags = [
+        "-Weverything", "-Werror",
+        # Consumer-side suppressions: these are about the consumer's
+        # toolchain or style preferences, not syntaqlite's code.
+        # Mirrors what Perfetto uses with -Weverything.
+        "-Wno-c++98-compat-pedantic",
+        "-Wno-c++98-compat",
+        "-Wno-disabled-macro-expansion",
+        "-Wno-documentation-unknown-command",
+        "-Wno-gnu-include-next",
+        "-Wno-gnu-statement-expression",
+        "-Wno-gnu-zero-variadic-macro-arguments",
+        "-Wno-padded",
+        "-Wno-poison-system-directories",
+        "-Wno-pre-c11-compat",
+        "-Wno-reserved-id-macro",
+        "-Wno-reserved-identifier",
+        "-Wno-shadow-uncaptured-local",
+        "-Wno-unknown-sanitizers",
+        "-Wno-unknown-warning-option",
+        "-Wno-unsafe-buffer-usage",
+        "-Wno-switch-default",
+    ]
+    include_flags = [f"-I{amalg_dir}"]
+    define_flags = [
+        f"-DGRAMMAR_HEADER={grammar_header}",
+        f"-DGRAMMAR_FN={grammar_fn}",
+    ]
+
+    obj_dir = output_binary.parent
+    objects: list[str] = []
+
+    # --- Compile C amalgamation sources with strict warnings ---
+    c_sources = [amalg_dir / f"syntaqlite_{dialect_name}.c"]
+    if runtime_dir is not None:
+        c_sources.append(runtime_dir / "syntaqlite_runtime.c")
+        include_flags.append(f"-I{runtime_dir}")
+        if dialect_name != "sqlite":
+            define_flags.append("-DSYNTAQLITE_OMIT_SQLITE_API")
+
+    for src in c_sources:
+        obj = str(obj_dir / (src.stem + ".o"))
+        cmd = ["cc", "-c", "-std=c11"] + strict_flags + include_flags + define_flags
+        cmd += ["-o", obj, str(src)]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"Strict-warning C compilation failed for {src.name}:\n"
+                f"{proc.stderr}"
+            )
+        objects.append(obj)
+
+    # --- Compile C++ driver with strict warnings ---
+    cpp_obj = str(obj_dir / "test_strict_warnings.o")
+    cmd = ["c++", "-c", "-std=c++17"] + strict_flags + include_flags + define_flags
+    cmd += ["-o", cpp_obj, str(test_cpp)]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"Strict-warning C++ compilation failed for {test_cpp.name}:\n"
+            f"{proc.stderr}"
+        )
+    objects.append(cpp_obj)
+
+    # --- Link ---
+    cmd = ["c++", "-o", str(output_binary)] + objects
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"Strict-warning link failed for {dialect_name}:\n{proc.stderr}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Context
 # ---------------------------------------------------------------------------
 
@@ -209,3 +299,23 @@ class AmalgTestContext:
 
         self._binaries[key] = binary
         return binary
+
+    def check_strict_warnings(self, dialect: DialectConfig) -> None:
+        """Compile a C++ driver with -Wall -Wextra -Werror.
+
+        Must be called after get_binary() so the amalgamation is already
+        generated.
+        """
+        key = dialect.key
+        temp = Path(self._temp_dir.name)
+        amalg_dir = temp / key
+        test_cpp = self.root_dir / "tests/amalg_tests/test_strict_warnings.cpp"
+        output = temp / f"strict_{key}"
+        runtime_dir = (
+            self._runtime_dir
+            if dialect.mode == AmalgMode.DIALECT_ONLY
+            else None
+        )
+        compile_strict_warning_check(
+            test_cpp, amalg_dir, dialect.name, output, runtime_dir
+        )

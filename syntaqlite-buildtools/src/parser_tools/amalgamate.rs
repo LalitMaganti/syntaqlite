@@ -22,6 +22,58 @@ use std::fs;
 use std::path::Path;
 
 // ---------------------------------------------------------------------------
+// Warning suppressions emitted into the amalgamation .c file
+// ---------------------------------------------------------------------------
+
+/// Warnings inherent to Lemon-generated parser code that cannot be fixed
+/// upstream.  The amalgamation wraps the entire .c in a diagnostic push/pop
+/// so consumers compiling with `-Wall -Wextra` need no extra `-Wno-*` flags.
+const SUPPRESSED_WARNINGS: &[&str] = &[
+    // Lemon-generated parser inherent warnings
+    "-Wunused-parameter",
+    "-Wunused-variable",
+    "-Wmissing-field-initializers",
+    "-Wtype-limits",
+    "-Wold-style-declaration",
+    "-Wimplicit-fallthrough",
+    "-Wswitch-enum",
+    "-Wdeclaration-after-statement",
+    "-Wsign-conversion",
+    "-Wextra-semi-stmt",
+    "-Wcast-qual",
+    "-Wold-style-cast",
+    "-Wunused-macros",
+    "-Wformat-nonliteral",
+    "-Wformat",
+    "-Wcast-align",
+    "-Wmissing-variable-declarations",
+    "-Wimplicit-int-conversion",
+    "-Wmissing-prototypes",
+    "-Wunreachable-code",
+    "-Wunused-function",
+    "-Wswitch-default",
+    "-Wpadded",
+];
+
+fn emit_diagnostic_push(out: &mut String) {
+    out.push_str("#if defined(__GNUC__) || defined(__clang__)\n");
+    out.push_str("#pragma GCC diagnostic push\n");
+    out.push_str("#ifdef __clang__\n");
+    out.push_str("#pragma clang diagnostic ignored \"-Wunknown-warning-option\"\n");
+    out.push_str("#endif\n");
+    for w in SUPPRESSED_WARNINGS {
+        let _ = writeln!(out, "#pragma GCC diagnostic ignored \"{w}\"");
+    }
+    out.push_str("#endif\n\n");
+}
+
+fn emit_diagnostic_pop(out: &mut String) {
+    out.push_str("\n#if defined(__GNUC__) || defined(__clang__)\n");
+    out.push_str("#pragma GCC diagnostic pop\n");
+    out.push_str("#endif\n");
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
@@ -485,6 +537,7 @@ fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
     header.push_str("** syntaqlite amalgamation — machine generated, do not edit.\n");
     header.push_str("*/\n");
     let _ = write!(header, "#ifndef {guard}\n#define {guard}\n\n");
+    emit_diagnostic_push(&mut header);
 
     match &mode {
         EmitMode::DialectOnly {
@@ -515,6 +568,7 @@ fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
 
     let mut h_emitter = Emitter::new(files);
     h_emitter.emit_kind(FileKind::PublicHeader, &mut header, Section::Header);
+    emit_diagnostic_pop(&mut header);
     let _ = write!(header, "\n#endif  /* {guard} */\n");
 
     // ── Build ext header (runtime-only mode) ──
@@ -527,9 +581,11 @@ fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
             ext.push_str("** Extension header for dialect authors.\n");
             ext.push_str("*/\n");
             ext.push_str("#ifndef SYNTAQLITE_EXT_H\n#define SYNTAQLITE_EXT_H\n\n");
+            emit_diagnostic_push(&mut ext);
             ext.push_str("#include \"syntaqlite_runtime.h\"\n\n");
             let mut e_emitter = Emitter::new(files);
             e_emitter.emit_kind(FileKind::ExtHeader, &mut ext, Section::ExtHeader);
+            emit_diagnostic_pop(&mut ext);
             ext.push_str("\n#endif  /* SYNTAQLITE_EXT_H */\n");
             Some(ext)
         } else {
@@ -545,6 +601,11 @@ fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
     source.push_str("/*\n");
     source.push_str("** syntaqlite amalgamation — machine generated, do not edit.\n");
     source.push_str("*/\n\n");
+
+    // Suppress warnings inherent to Lemon-generated parser code.
+    // These are pushed here and popped at the end of the file so that
+    // consumers compiling with -Weverything -Werror need no -Wno-* flags.
+    emit_diagnostic_push(&mut source);
 
     if let EmitMode::DialectOnly {
         dialect,
@@ -581,6 +642,8 @@ fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
     // dependencies in encounter order (driven by the include graph).
     let mut s_emitter = Emitter::new(files);
     s_emitter.emit_kind(FileKind::Source, &mut source, Section::Source);
+
+    emit_diagnostic_pop(&mut source);
 
     AmalgamateOutput {
         header,

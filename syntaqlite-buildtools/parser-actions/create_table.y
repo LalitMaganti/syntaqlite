@@ -62,7 +62,7 @@ create_table(A) ::= createkw temp(T) TABLE ifnotexists(E) nm(Y) dbnm(Z). {
 create_table_args(A) ::= LP columnlist(CL) conslist_opt(CO) RP table_option_set(F). {
     A = synq_parse_create_table_stmt(pCtx,
         SYNQ_NO_SPAN, SYNQ_NO_SPAN, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
-        (SyntaqliteCreateTableStmtFlags){.raw = (uint8_t)F}, CL, CO, SYNTAQLITE_NULL_NODE);
+        (SyntaqliteCreateTableStmtFlags){.raw = (uint8_t)(F & 0xFF)}, CL, CO, SYNTAQLITE_NULL_NODE);
 }
 
 create_table_args(A) ::= AS select(S). {

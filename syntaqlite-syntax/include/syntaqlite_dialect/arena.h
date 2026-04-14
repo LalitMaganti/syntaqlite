@@ -25,6 +25,9 @@ typedef struct SynqArena {
 #define synq_arena_ptr(a, id) \
   (&syntaqlite_vec_at(&(a)->data, syntaqlite_vec_at(&(a)->offsets, id)))
 
+// Const-correct variant for read-only access.
+#define synq_arena_cptr(a, id) ((const uint8_t*)synq_arena_ptr((a), (id)))
+
 static inline void synq_arena_init(SynqArena* a) {
   syntaqlite_vec_init(&a->data);
   syntaqlite_vec_init(&a->offsets);
