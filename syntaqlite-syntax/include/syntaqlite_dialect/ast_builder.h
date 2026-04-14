@@ -322,10 +322,10 @@ static inline SyntaqliteTextSpan synq_span(SynqParseCtx* ctx,
                                            SynqParseToken tok) {
   (void)ctx;
   if (tok.z == NULL)
-    return (SyntaqliteTextSpan){0, 0, 0, 0};
+    return (SyntaqliteTextSpan){0};
   return (SyntaqliteTextSpan){
       .offset = tok.offset,
-      .length = (uint16_t)tok.n,
+      .length = tok.n,
       .flags = 0,
       ._layer_id = tok.layer_id,
   };
@@ -340,21 +340,28 @@ static inline SyntaqliteTextSpan synq_span_dequote(SynqParseCtx* ctx,
                                                    SynqParseToken tok) {
   (void)ctx;
   if (tok.z == NULL)
-    return (SyntaqliteTextSpan){0, 0, 0, 0};
+    return (SyntaqliteTextSpan){0};
   if (tok.n >= 2) {
     char open = tok.z[0];
     char close = tok.z[tok.n - 1];
     if ((open == '"' && close == '"') || (open == '`' && close == '`') ||
         (open == '[' && close == ']')) {
-      SyntaqliteTextSpan sp = {tok.offset + 1, (uint16_t)(tok.n - 2), 0,
-                               tok.layer_id};
+      SyntaqliteTextSpan sp = {
+          .offset = tok.offset + 1,
+          .length = tok.n - 2,
+          ._layer_id = tok.layer_id,
+      };
       return synq_span_set_quoted(sp);
     }
   }
-  return (SyntaqliteTextSpan){tok.offset, (uint16_t)tok.n, 0, tok.layer_id};
+  return (SyntaqliteTextSpan){
+      .offset = tok.offset,
+      .length = tok.n,
+      ._layer_id = tok.layer_id,
+  };
 }
 
-#define SYNQ_NO_SPAN ((SyntaqliteTextSpan){0, 0, 0, 0})
+#define SYNQ_NO_SPAN ((SyntaqliteTextSpan){0})
 
 // Mark a token as "used as identifier" (fallback from keyword).
 // O(1) — uses the token_idx stored in SynqParseToken at collection time.

@@ -32,7 +32,7 @@ cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
     uint32_t args_end = R.offset;
     vtab->create_virtual_table_stmt.module_args = (SyntaqliteTextSpan){
         .offset = args_start,
-        .length = (uint16_t)(args_end - args_start),
+        .length = args_end - args_start,
         .flags = 0,
         ._layer_id = L.layer_id,
     };

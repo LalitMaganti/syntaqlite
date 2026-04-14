@@ -242,8 +242,8 @@ const unsigned char synq_sqlite_aKWLen[149] = {
     8, 6,  4,  9, 5, 8, 4,  3,  9,  5, 5, 6, 4, 6, 2, 2,  7,
 };
 /* synq_sqlite_aKWOffset[i] is the index into synq_sqlite_zKWText[] of the start
-*of
-** the text for the i-th keyword. */
+ *of
+ ** the text for the i-th keyword. */
 const unsigned short int synq_sqlite_aKWOffset[149] = {
     0,   0,   2,   2,   8,   9,   14,  16,  20,  23,  25,  25,  29,  33,  36,
     41,  46,  48,  53,  54,  59,  62,  65,  67,  69,  78,  81,  86,  90,  90,

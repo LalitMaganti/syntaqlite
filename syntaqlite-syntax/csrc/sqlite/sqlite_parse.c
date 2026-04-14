@@ -94,13 +94,9 @@ static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
   if (pCtx->error_offset == 0xFFFFFFFF || pCtx->error_length == 0) {
     return SYNQ_NO_SPAN;
   }
-  uint32_t len = pCtx->error_length;
-  if (len > UINT16_MAX) {
-    len = UINT16_MAX;
-  }
   return (SyntaqliteTextSpan){
       .offset = pCtx->error_offset,
-      .length = (uint16_t)len,
+      .length = pCtx->error_length,
       .flags = 0,
   };
 }
@@ -9781,7 +9777,7 @@ static YYACTIONTYPE yy_reduce(
       uint32_t args_end = yymsp[0].minor.yy0.offset;
       vtab->create_virtual_table_stmt.module_args = (SyntaqliteTextSpan){
           .offset = args_start,
-          .length = (uint16_t)(args_end - args_start),
+          .length = args_end - args_start,
           .flags = 0,
           ._layer_id = yymsp[-2].minor.yy0.layer_id,
       };
@@ -10056,7 +10052,7 @@ static void yy_syntax_error(
   SynqSqliteParseARG_FETCH SynqSqliteParseCTX_FETCH
 #define TOKEN yyminor
       /************ Begin %syntax_error code
-         ****************************************/
+       ****************************************/
 
       (void) yymajor;
   (void)TOKEN;
