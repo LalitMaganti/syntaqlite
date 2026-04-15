@@ -695,7 +695,7 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
   p->macro_body_buf.count = 0;
   syntaqlite_vec_push_n(&p->macro_body_buf, (const uint8_t*)body, body_len,
                         p->mem);
-  syntaqlite_vec_push_n(&p->macro_body_buf, (const uint8_t*)"", 1, p->mem);
+  syntaqlite_vec_push(&p->macro_body_buf, 0, p->mem);
 
   // Collect arg mappings on the stack (max 64 params).
   SyntaqliteArgMapping mappings[64];
