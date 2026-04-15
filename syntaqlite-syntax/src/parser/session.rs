@@ -37,17 +37,12 @@ impl Parser {
         ))
     }
 
-    /// Register a template macro with the parser.
+    /// Install a macro lookup handler.
     ///
-    /// The macro body uses `$param` placeholders (e.g. `"$x + 1"`).
-    /// All strings are copied; the caller may free them after this call returns.
-    pub fn register_macro(&mut self, name: &str, params: &[&str], body: &str) {
-        self.0.register_macro(name, params, body);
-    }
-
-    /// Deregister a macro by name. Returns `true` if it was found and removed.
-    pub fn deregister_macro(&mut self, name: &str) -> bool {
-        self.0.deregister_macro(name)
+    /// When the parser encounters `name!(args)`, it calls the handler to
+    /// resolve the macro. Pass `None` to disable macro expansion.
+    pub fn set_macro_lookup(&mut self, handler: Option<Box<dyn super::MacroLookup>>) {
+        self.0.set_macro_lookup(handler);
     }
 
     /// Parse a SQL script and return a statement-by-statement session.
@@ -437,10 +432,54 @@ impl std::error::Error for ParseError<'_> {}
 
 #[cfg(all(test, feature = "sqlite"))]
 mod tests {
+    use std::cell::RefCell;
+    use std::collections::HashMap;
     use std::panic::{self, AssertUnwindSafe};
+    use std::rc::Rc;
 
     use super::{ParseErrorKind, ParseOutcome, Parser, ParserConfig};
+    use crate::parser::{MacroArg, MacroLookup, MacroOutput};
     use crate::{CommentKind, TokenType};
+
+    struct TestMacroRegistry {
+        macros: HashMap<String, (Vec<String>, String)>,
+    }
+
+    impl TestMacroRegistry {
+        fn new() -> Self {
+            Self {
+                macros: HashMap::new(),
+            }
+        }
+        fn register(&mut self, name: &str, params: &[&str], body: &str) {
+            self.macros.insert(
+                name.to_ascii_lowercase(),
+                (
+                    params.iter().map(ToString::to_string).collect(),
+                    body.to_string(),
+                ),
+            );
+        }
+        fn deregister(&mut self, name: &str) -> bool {
+            self.macros.remove(&name.to_ascii_lowercase()).is_some()
+        }
+    }
+
+    impl MacroLookup for TestMacroRegistry {
+        fn lookup(&mut self, name: &str, _args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool {
+            let Some((params, body)) = self.macros.get(&name.to_ascii_lowercase()) else {
+                return false;
+            };
+            out.expand_template(body, params)
+        }
+    }
+
+    struct SharedRegistry(Rc<RefCell<TestMacroRegistry>>);
+    impl MacroLookup for SharedRegistry {
+        fn lookup(&mut self, name: &str, args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool {
+            self.0.borrow_mut().lookup(name, args, out)
+        }
+    }
 
     #[test]
     fn parser_continues_after_statement_error() {
@@ -540,7 +579,9 @@ mod tests {
                 .with_collect_node_extents(true)
                 .with_macro_fallback(true),
         );
-        parser.register_macro("id", &["x"], "$x");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("id", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
 
         let source = "SELECT id!(42);";
         let mut session = parser.parse(source);
@@ -592,7 +633,9 @@ mod tests {
                 .with_collect_node_extents(true)
                 .with_macro_fallback(true),
         );
-        parser.register_macro("id", &["x"], "$x");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("id", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
 
         let source = "id!(SELECT 1);";
         let mut session = parser.parse(source);
@@ -616,7 +659,9 @@ mod tests {
         // every currently-active macro call replaced by its expansion,
         // mirroring `syntaqlite_parser_expanded_text` at the C level.
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.register_macro("id", &["x"], "$x");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("id", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
 
         let source = "SELECT id!(42);";
         let mut session = parser.parse(source);
@@ -742,7 +787,9 @@ mod tests {
     #[test]
     fn macro_expansion_simple_template() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.register_macro("double", &["x"], "($x + $x)");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("double", &["x"], "($x + $x)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
 
         let mut session = parser.parse("SELECT double!(1);");
         let stmt = match session.next() {
@@ -763,7 +810,9 @@ mod tests {
     #[test]
     fn macro_expansion_records_macro_region() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.register_macro("id", &["x"], "$x");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("id", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
 
         let source = "SELECT id!(42);";
         let mut session = parser.parse(source);
@@ -783,7 +832,9 @@ mod tests {
     #[test]
     fn macro_expansion_multi_param() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.register_macro("sum2", &["a", "b"], "($a + $b)");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("sum2", &["a", "b"], "($a + $b)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
 
         let mut session = parser.parse("SELECT sum2!(1, 2);");
         let stmt = match session.next() {
@@ -803,8 +854,10 @@ mod tests {
     #[test]
     fn macro_deregister_falls_back_to_legacy() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.register_macro("foo", &["x"], "$x");
-        assert!(parser.deregister_macro("foo"));
+        let reg = Rc::new(RefCell::new(TestMacroRegistry::new()));
+        reg.borrow_mut().register("foo", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(SharedRegistry(Rc::clone(&reg)))));
+        assert!(reg.borrow_mut().deregister("foo"));
 
         // After deregistering, the macro call should not expand.
         // Legacy behavior: `foo` is parsed as a plain identifier.
@@ -815,8 +868,8 @@ mod tests {
 
     #[test]
     fn macro_deregister_nonexistent_returns_false() {
-        let mut parser = Parser::new();
-        assert!(!parser.deregister_macro("nonexistent"));
+        let reg = TestMacroRegistry::new();
+        assert!(!RefCell::new(reg).borrow_mut().deregister("nonexistent"));
     }
 
     // ── span_text / span_expanded_text accessors ────────────────────────────
@@ -882,7 +935,9 @@ mod tests {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         // Body produces an identifier token ("inner") that lives entirely in
         // the template — no parameter substitution at the span location.
-        parser.register_macro("idmac", &[], "inner");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("idmac", &[], "inner");
+        parser.set_macro_lookup(Some(Box::new(reg)));
 
         let source = "SELECT idmac!()";
         let mut session = parser.parse(source);
@@ -910,7 +965,9 @@ mod tests {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         // Body is purely a $param substitution. The identifier token in the
         // expansion is an arg-copy of the caller's text.
-        parser.register_macro("idmac", &["x"], "$x");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("idmac", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
 
         let source = "SELECT idmac!(authored)";
         let mut session = parser.parse(source);
@@ -997,7 +1054,9 @@ mod tests {
     fn traceback_span_inside_macro_body_yields_two_frames() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         // Body has a hardcoded identifier; not an arg substitution.
-        parser.register_macro("idmac", &[], "inner");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("idmac", &[], "inner");
+        parser.set_macro_lookup(Some(Box::new(reg)));
         let source = "SELECT idmac!()";
         let mut session = parser.parse(source);
         let stmt = match session.next() {
@@ -1026,7 +1085,9 @@ mod tests {
     #[test]
     fn traceback_span_inside_substituted_arg_drills_to_origin() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.register_macro("idmac", &["x"], "$x");
+        let mut reg = TestMacroRegistry::new();
+        reg.register("idmac", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
         let source = "SELECT idmac!(authored)";
         let mut session = parser.parse(source);
         let stmt = match session.next() {

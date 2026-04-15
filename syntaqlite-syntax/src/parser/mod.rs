@@ -7,9 +7,13 @@ use std::marker::PhantomData;
 use std::ptr::NonNull;
 use std::rc::Rc;
 
+use std::ffi::c_void;
+
 use crate::any::{AnyNodeTag, AnyTokenType};
 use crate::ast::{AnyNodeId, ArenaNode, GrammarNodeType, GrammarTokenType, RawNodeList};
 use crate::dialect::{AnyDialect, TypedDialect};
+
+use ffi::{CParser, CToken};
 
 mod config;
 mod ffi;
@@ -28,6 +32,149 @@ pub use types::{
     AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, MacroRegion,
     ParseOutcome, ParserTokenFlags, TracebackFrame, TypedParserToken,
 };
+
+/// A single macro argument as presented to the lookup callback.
+///
+/// Each argument spans the raw tokens between commas in the invocation
+/// `name!(arg1, arg2, ...)`.
+#[derive(Debug)]
+pub struct MacroArg<'a> {
+    /// The raw text of this argument.
+    pub text: &'a str,
+}
+
+/// Handle for writing macro expansion results from inside a lookup callback.
+///
+/// Wraps a `*mut CParser` — the callback calls [`write`](Self::write)
+/// to set the expanded body, and optionally
+/// [`set_definition`](Self::set_definition) for traceback provenance.
+pub struct MacroOutput {
+    parser: *mut CParser,
+}
+
+impl MacroOutput {
+    fn new(parser: *mut CParser) -> Self {
+        Self { parser }
+    }
+
+    /// Write the expanded body text as the macro result.
+    #[expect(clippy::cast_possible_truncation)]
+    pub fn write(&mut self, body: &str) {
+        // SAFETY: parser is valid for the duration of the callback.
+        unsafe {
+            ffi::syntaqlite_macro_expansion_set_result(
+                self.parser,
+                body.as_ptr().cast(),
+                body.len() as u32,
+                0,
+                0,
+            );
+        }
+    }
+
+    /// Set the 1-based line/column of the macro definition for tracebacks.
+    /// Must be called *after* [`write`](Self::write).
+    pub fn set_definition(&mut self, line: u32, col: u32) {
+        // SAFETY: parser is valid for the duration of the callback.
+        unsafe {
+            ffi::syntaqlite_macro_expansion_set_result(self.parser, std::ptr::null(), 0, line, col);
+        }
+    }
+
+    /// Expand a template body by substituting `$param` placeholders and
+    /// set the result.
+    ///
+    /// Uses the SQL tokenizer to correctly skip `$param` inside string
+    /// literals and comments. Returns `true` on success, `false` if arg
+    /// count doesn't match or a placeholder references an unknown param.
+    #[expect(clippy::cast_possible_truncation)]
+    pub fn expand_template(&mut self, body: &str, params: &[String]) -> bool {
+        let param_ptrs: Vec<*const std::ffi::c_char> =
+            params.iter().map(|p| p.as_ptr().cast()).collect();
+        let param_lens: Vec<u32> = params.iter().map(|p| p.len() as u32).collect();
+
+        // SAFETY: All pointers are valid for the duration of the call.
+        let rc = unsafe {
+            ffi::syntaqlite_macro_expansion_expand_and_set_result(
+                self.parser,
+                body.as_ptr().cast(),
+                body.len() as u32,
+                param_ptrs.as_ptr(),
+                param_lens.as_ptr(),
+                params.len() as u32,
+            )
+        };
+        rc == 0
+    }
+}
+
+/// Trait for macro lookup callbacks.
+///
+/// Implement this to provide custom macro expansion logic. The parser
+/// calls [`lookup`](MacroLookup::lookup) when it encounters a `name!(args)`
+/// invocation.
+///
+/// For the common case of template macros (`$param` substitution), use
+/// [`TemplateMacroRegistry`] which implements this trait.
+pub trait MacroLookup {
+    /// Look up a macro by name and expand it.
+    ///
+    /// On success, write the expanded body into `out` and return `true`.
+    /// Return `false` if the macro is not found (the parser will fall
+    /// back to `TK_ID` when `macro_fallback` is enabled).
+    fn lookup(&mut self, name: &str, args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool;
+}
+
+/// Internal state for the macro lookup trampoline.
+struct MacroLookupState {
+    handler: Box<dyn MacroLookup>,
+}
+
+/// C trampoline for the macro lookup callback.
+///
+/// # Safety
+///
+/// `user_data` must be a valid pointer to a `MacroLookupState`.
+/// `parser` must be a valid pointer to the active `SyntaqliteParser`.
+unsafe extern "C" fn macro_lookup_trampoline(
+    user_data: *mut c_void,
+    parser: *mut CParser,
+    name: *const std::ffi::c_char,
+    name_len: u32,
+    args: *const CToken,
+    arg_count: u32,
+) -> i32 {
+    // SAFETY: `user_data` is a `Box<MacroLookupState>` pointer created in
+    // `set_macro_lookup` and valid for the lifetime of the parser.
+    let state: &mut MacroLookupState = unsafe { &mut *(user_data.cast::<MacroLookupState>()) };
+
+    // SAFETY: `name` points to `name_len` bytes of valid UTF-8 from the C parser.
+    let name_str = unsafe {
+        std::str::from_utf8_unchecked(std::slice::from_raw_parts(name.cast(), name_len as usize))
+    };
+
+    let macro_args: Vec<MacroArg<'_>> = (0..arg_count as usize)
+        .map(|i| {
+            // SAFETY: `args` points to `arg_count` contiguous CToken structs.
+            let tok = unsafe { &*args.add(i) };
+            // SAFETY: `tok.text` points to `tok.length` bytes of valid UTF-8.
+            let text = unsafe {
+                std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                    tok.text.cast(),
+                    tok.length as usize,
+                ))
+            };
+            MacroArg { text }
+        })
+        .collect();
+
+    let mut macro_out = MacroOutput::new(parser);
+    if state.handler.lookup(name_str, &macro_args, &mut macro_out) {
+        0
+    } else {
+        -1
+    }
+}
 
 /// Indicates whether parsing can continue after an error.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -98,6 +245,7 @@ impl<G: TypedDialect> TypedParser<G> {
             inner: Rc::new(RefCell::new(Some(ParserInner {
                 raw,
                 source_buf: Vec::new(),
+                macro_handler: None,
             }))),
             dialect: dialect_raw,
             _marker: PhantomData,
@@ -143,88 +291,51 @@ impl<G: TypedDialect> TypedParser<G> {
         }
     }
 
-    /// Start incremental parsing for dialect `G`.
+    /// Install a macro lookup callback.
     ///
-    /// Use this when tokens arrive over time (editor completion, interactive
-    /// parsing, macro-expansion pipelines).
+    /// When the parser encounters `name!(args)`, it calls `handler` to resolve
+    /// the macro. Pass `None` to disable macro expansion.
     ///
-    /// # Examples
-    ///
-    /// ```rust
-    /// use syntaqlite_syntax::typed::{dialect, TypedParser};
-    /// use syntaqlite_syntax::TokenType;
-    ///
-    /// let parser = TypedParser::new(dialect());
-    /// let mut session = parser.incremental_parse("SELECT 1");
-    ///
-    /// let _ = session.feed_token(TokenType::Select, 0..6);
-    /// let _ = session.feed_token(TokenType::Integer, 7..8);
-    /// let _ = session.finish();
-    /// ```
+    /// The handler is called with the macro name and its arguments. It should
+    /// return `Some(MacroExpansion)` on success, or `None` if the macro is not
+    /// found (fallback to `TK_ID` when `macro_fallback` is enabled).
     ///
     /// # Panics
     ///
     /// Panics if another session from this parser is still active.
-    /// Drop the previous session before starting a new one.
-    /// Register a template macro with the parser.
-    ///
-    /// The macro `name` will be expanded when `name!(args)` is encountered
-    /// during batch parsing (`parse()`). The `body` uses `$param` placeholders
-    /// that are substituted with the corresponding arguments.
-    ///
-    /// # Panics
-    ///
-    /// Panics if another session from this parser is still active.
-    pub fn register_macro(&mut self, name: &str, params: &[&str], body: &str) {
+    pub fn set_macro_lookup(&mut self, handler: Option<Box<dyn MacroLookup>>) {
         let mut inner_ref = self.inner.borrow_mut();
         let inner = inner_ref
             .as_mut()
-            .expect("register_macro called while a session is still active");
-        // The C side uses strlen() on param names, so they must be NUL-terminated.
-        let param_cstrings: Vec<std::ffi::CString> = params
-            .iter()
-            .map(|p| std::ffi::CString::new(*p).expect("param name must not contain NUL"))
-            .collect();
-        let param_ptrs: Vec<*const std::ffi::c_char> =
-            param_cstrings.iter().map(|c| c.as_ptr()).collect();
-        // SAFETY: inner.raw is valid; all string pointers are valid for the
-        // duration of the C call (which copies them).
-        #[expect(clippy::cast_possible_truncation)]
-        unsafe {
-            inner.raw.as_mut().register_macro(
-                name.as_ptr().cast(),
-                name.len() as u32,
-                param_ptrs.as_ptr(),
-                params.len() as u32,
-                body.as_ptr().cast(),
-                body.len() as u32,
-                0,
-                0,
-            );
+            .expect("set_macro_lookup called while a session is still active");
+        // Drop old handler if any.
+        if let Some(old) = inner.macro_handler.take() {
+            // SAFETY: ptr was created by Box::into_raw in a previous call.
+            let _: Box<MacroLookupState> = unsafe { Box::from_raw(old.cast()) };
         }
-    }
-
-    /// Deregister a macro by name.
-    ///
-    /// Returns `true` if the macro was found and removed.
-    ///
-    /// # Panics
-    ///
-    /// Panics if another session from this parser is still active.
-    pub fn deregister_macro(&mut self, name: &str) -> bool {
-        let mut inner_ref = self.inner.borrow_mut();
-        let inner = inner_ref
-            .as_mut()
-            .expect("deregister_macro called while a session is still active");
-        #[expect(clippy::cast_possible_truncation)]
-        // SAFETY: inner.raw is valid; name pointer is valid for the C call duration.
-        let rc = unsafe {
-            inner
-                .raw
-                .as_mut()
-                .deregister_macro(name.as_ptr().cast(), name.len() as u32)
-        };
-        rc == 0
+        match handler {
+            Some(handler) => {
+                let state = Box::new(MacroLookupState { handler });
+                let user_data = Box::into_raw(state).cast::<c_void>();
+                // SAFETY: user_data is a valid pointer to MacroLookupState.
+                unsafe {
+                    inner
+                        .raw
+                        .as_mut()
+                        .set_macro_lookup(Some(macro_lookup_trampoline), user_data);
+                }
+                inner.macro_handler = Some(user_data);
+            }
+            None => {
+                // SAFETY: passing NULL disables macro expansion.
+                unsafe {
+                    inner
+                        .raw
+                        .as_mut()
+                        .set_macro_lookup(None, std::ptr::null_mut());
+                }
+            }
+        }
     }
 
     /// Start incremental parsing for dialect `G`.
@@ -281,40 +392,46 @@ impl<G: TypedDialect> Drop for TypedParseSession<G> {
 }
 
 impl<G: TypedDialect> TypedParseSession<G> {
-    /// Register a template macro with the parser during an active session.
+    /// Install a macro lookup callback during an active session.
     ///
-    /// This is used by the formatter to auto-register macros defined by
-    /// `CREATE PERFETTO MACRO` statements so that subsequent macro calls
-    /// are expanded correctly.
+    /// This is used by the analyzer to install a callback that resolves
+    /// macro calls defined by `CREATE PERFETTO MACRO` statements during
+    /// parsing.
     ///
     /// # Panics
     ///
     /// Panics if the session has already finished.
-    pub fn register_macro(&mut self, name: &str, params: &[&str], body: &str) {
+    pub fn set_macro_lookup(&mut self, handler: Option<Box<dyn MacroLookup>>) {
         let inner = self
             .inner
             .as_mut()
-            .expect("register_macro called on finished session");
-        let param_cstrings: Vec<std::ffi::CString> = params
-            .iter()
-            .map(|p| std::ffi::CString::new(*p).expect("param name must not contain NUL"))
-            .collect();
-        let param_ptrs: Vec<*const std::ffi::c_char> =
-            param_cstrings.iter().map(|c| c.as_ptr()).collect();
-        // SAFETY: inner.raw is valid; all string pointers are valid for the
-        // duration of the C call (which copies them).
-        #[expect(clippy::cast_possible_truncation)]
-        unsafe {
-            inner.raw.as_mut().register_macro(
-                name.as_ptr().cast(),
-                name.len() as u32,
-                param_ptrs.as_ptr(),
-                params.len() as u32,
-                body.as_ptr().cast(),
-                body.len() as u32,
-                0,
-                0,
-            );
+            .expect("set_macro_lookup called on finished session");
+        // Drop old handler if any.
+        if let Some(old) = inner.macro_handler.take() {
+            // SAFETY: `old` was created via `Box::into_raw` in a previous call.
+            let _: Box<MacroLookupState> = unsafe { Box::from_raw(old.cast()) };
+        }
+        match handler {
+            Some(handler) => {
+                let state = Box::new(MacroLookupState { handler });
+                let user_data = Box::into_raw(state).cast::<c_void>();
+                // SAFETY: `inner.raw` is a valid parser pointer; the trampoline
+                // and user_data are compatible and outlive the parser.
+                unsafe {
+                    inner
+                        .raw
+                        .as_mut()
+                        .set_macro_lookup(Some(macro_lookup_trampoline), user_data);
+                }
+                inner.macro_handler = Some(user_data);
+            }
+            // SAFETY: passing null disables the callback; no dangling pointer.
+            None => unsafe {
+                inner
+                    .raw
+                    .as_mut()
+                    .set_macro_lookup(None, std::ptr::null_mut());
+            },
         }
     }
 
@@ -790,7 +907,7 @@ impl<'a> AnyParsedStatement<'a> {
     /// Dump an AST node tree as indented text into `out`.
     pub(crate) fn dump_node(&self, id: AnyNodeId, out: &mut String, indent: usize) {
         unsafe extern "C" {
-            fn free(ptr: *mut std::ffi::c_void);
+            fn free(ptr: *mut c_void);
         }
         // SAFETY: raw is valid; dump_node returns a malloc'd NUL-terminated string.
         #[expect(clippy::cast_possible_truncation)]
@@ -798,7 +915,7 @@ impl<'a> AnyParsedStatement<'a> {
             let ptr = self.raw.as_ref().dump_node(id.0, indent as u32);
             if !ptr.is_null() {
                 out.push_str(&CStr::from_ptr(ptr).to_string_lossy());
-                free(ptr.cast::<std::ffi::c_void>());
+                free(ptr.cast::<c_void>());
             }
         }
     }
@@ -1115,10 +1232,18 @@ pub type AnyParseError<'a> = TypedParseError<'a, AnyDialect>;
 pub(crate) struct ParserInner {
     pub(crate) raw: NonNull<CParser>,
     pub(crate) source_buf: Vec<u8>,
+    /// Raw pointer to the boxed macro handler closure, if installed.
+    /// Freed on drop.
+    pub(crate) macro_handler: Option<*mut c_void>,
 }
 
 impl Drop for ParserInner {
     fn drop(&mut self) {
+        // Free the macro lookup handler if set.
+        if let Some(ptr) = self.macro_handler.take() {
+            // SAFETY: ptr was created by Box::into_raw in set_macro_lookup.
+            let _: Box<MacroLookupState> = unsafe { Box::from_raw(ptr.cast()) };
+        }
         // SAFETY: self.raw was allocated by CParser::create and has not been
         // freed (Drop runs exactly once).
         unsafe { CParser::destroy(self.raw.as_ptr()) }
@@ -1144,5 +1269,3 @@ pub(crate) unsafe fn reset_parser(raw: *mut CParser, source_buf: &mut Vec<u8>, s
         (*raw).reset(c_text_ptr.cast(), source.len() as u32);
     }
 }
-
-pub(crate) use ffi::CParser;

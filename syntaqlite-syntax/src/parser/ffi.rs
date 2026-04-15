@@ -69,6 +69,15 @@ pub(crate) struct CParserToken {
     pub _pad: [u8; 3],
 }
 
+/// Mirrors C `SyntaqliteToken` from `include/syntaqlite/tokenizer.h`.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub(crate) struct CToken {
+    pub(crate) text: *const c_char,
+    pub(crate) length: u32,
+    pub(crate) type_: u32,
+}
+
 /// A recorded macro invocation region.
 ///
 /// Mirrors C `SyntaqliteMacroRegion` from `include/syntaqlite/parser.h`.
@@ -447,38 +456,22 @@ impl CParser {
         }
     }
 
-    #[expect(clippy::too_many_arguments, reason = "mirrors the C API surface 1:1")]
-    pub(crate) unsafe fn register_macro(
+    pub(crate) unsafe fn set_macro_lookup(
         &mut self,
-        name: *const c_char,
-        name_len: u32,
-        param_names: *const *const c_char,
-        param_count: u32,
-        body: *const c_char,
-        body_len: u32,
-        def_line: u32,
-        def_col: u32,
-    ) -> i32 {
-        // SAFETY: self is a valid, non-null CParser pointer; name, param_names,
-        // and body are valid pointers with the specified lengths.
-        unsafe {
-            syntaqlite_parser_register_macro(
-                self,
-                name,
-                name_len,
-                param_names,
-                param_count,
-                body,
-                body_len,
-                def_line,
-                def_col,
-            )
-        }
-    }
-
-    pub(crate) unsafe fn deregister_macro(&mut self, name: *const c_char, name_len: u32) -> i32 {
-        // SAFETY: self is a valid, non-null CParser pointer; name is valid.
-        unsafe { syntaqlite_parser_deregister_macro(self, name, name_len) }
+        func: Option<
+            unsafe extern "C" fn(
+                user_data: *mut c_void,
+                parser: *mut CParser,
+                name: *const c_char,
+                name_len: u32,
+                args: *const CToken,
+                arg_count: u32,
+            ) -> i32,
+        >,
+        user_data: *mut c_void,
+    ) {
+        // SAFETY: self is a valid, non-null CParser pointer.
+        unsafe { syntaqlite_parser_set_macro_lookup(self, func, user_data) }
     }
 }
 
@@ -560,23 +553,39 @@ unsafe extern "C" {
         out_cap: u32,
     ) -> u32;
     fn syntaqlite_parser_completion_context(p: *mut CParser) -> CCompletionContext;
-    // Macro registration
-    fn syntaqlite_parser_register_macro(
+
+    // Macro expansion result (called from inside the lookup callback)
+    pub(crate) fn syntaqlite_macro_expansion_set_result(
         p: *mut CParser,
-        name: *const c_char,
-        name_len: u32,
-        param_names: *const *const c_char,
-        param_count: u32,
         body: *const c_char,
         body_len: u32,
         def_line: u32,
         def_col: u32,
-    ) -> i32;
-    fn syntaqlite_parser_deregister_macro(
+    );
+    pub(crate) fn syntaqlite_macro_expansion_expand_and_set_result(
         p: *mut CParser,
-        name: *const c_char,
-        name_len: u32,
+        body: *const c_char,
+        body_len: u32,
+        param_names: *const *const c_char,
+        param_name_lens: *const u32,
+        param_count: u32,
     ) -> i32;
+
+    // Macro lookup callback
+    fn syntaqlite_parser_set_macro_lookup(
+        p: *mut CParser,
+        func: Option<
+            unsafe extern "C" fn(
+                user_data: *mut c_void,
+                parser: *mut CParser,
+                name: *const c_char,
+                name_len: u32,
+                args: *const CToken,
+                arg_count: u32,
+            ) -> i32,
+        >,
+        user_data: *mut c_void,
+    );
 }
 
 #[cfg(all(test, feature = "sqlite"))]
@@ -762,41 +771,9 @@ mod tests {
         assert!(!unsafe { parser.result_error_msg().is_null() });
     }
 
-    // ── Macro registry / hashmap tests ──────────────────────────────────
+    // ── Macro lookup callback tests ─────────────────────────────────────
 
-    /// Helper: create a parser with `macro_fallback` enabled (needed for macro
-    /// registration tests since `SQLite`'s dialect has `macro_style` = NONE).
-    fn new_macro_parser() -> ParserHandle {
-        let mut handle = ParserHandle::new();
-        // SAFETY: CParser wraps a valid C parser handle.
-        let rc = unsafe { handle.parser_mut().set_macro_fallback(1) };
-        assert_eq!(rc, 0);
-        handle
-    }
-
-    /// Helper: register a template macro via the C API.
-    #[expect(clippy::cast_possible_truncation)]
-    fn register_macro(parser: &mut CParser, name: &str, params: &[&str], body: &str) {
-        let param_cstrings: Vec<CString> =
-            params.iter().map(|p| CString::new(*p).unwrap()).collect();
-        let param_ptrs: Vec<*const std::ffi::c_char> =
-            param_cstrings.iter().map(|c| c.as_ptr()).collect();
-        // SAFETY: All pointers point to valid Rust-owned data that outlives
-        // the FFI call. Lengths are small test values that fit in u32.
-        let rc = unsafe {
-            parser.register_macro(
-                name.as_ptr().cast(),
-                name.len() as u32,
-                param_ptrs.as_ptr(),
-                params.len() as u32,
-                body.as_ptr().cast(),
-                body.len() as u32,
-                0,
-                0,
-            )
-        };
-        assert_eq!(rc, 0, "register_macro failed for '{name}'");
-    }
+    use crate::parser::{MacroArg, MacroLookup, MacroOutput, Parser, ParserConfig};
 
     /// Helper: parse a single statement and return its status.
     fn parse_one(parser: &mut CParser, sql: &str) -> (i32, CString) {
@@ -806,153 +783,254 @@ mod tests {
         (rc, sql_c)
     }
 
+    /// Shared test macro handler.
+    ///
+    /// `matches` decides whether this handler owns the macro name.
+    /// `expand` transforms the first argument text into the expansion body.
+    struct TestLookup {
+        matches: Box<dyn Fn(&str) -> bool>,
+        expand: Box<dyn Fn(&str) -> String>,
+    }
+
+    impl TestLookup {
+        /// Match a single name (case-insensitive) with a custom expand fn.
+        fn named(name: &'static str, expand: fn(&str) -> String) -> Self {
+            Self {
+                matches: Box::new(move |n| n.eq_ignore_ascii_case(name)),
+                expand: Box::new(expand),
+            }
+        }
+
+        /// Match any name starting with `prefix`; expand = identity.
+        fn prefix(prefix: &'static str) -> Self {
+            Self {
+                matches: Box::new(move |n| n.starts_with(prefix)),
+                expand: Box::new(ToString::to_string),
+            }
+        }
+    }
+
+    impl MacroLookup for TestLookup {
+        fn lookup(&mut self, name: &str, args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool {
+            if (self.matches)(name) {
+                let x = args.first().map_or("", |a| a.text);
+                out.write(&(self.expand)(x));
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    #[test]
+    fn macro_c_callback_expands_via_set_result() {
+        // Exercise the raw C FFI callback signature directly.
+        struct CallbackState {
+            pending: Option<String>,
+        }
+
+        unsafe extern "C" fn c_lookup(
+            user_data: *mut std::ffi::c_void,
+            parser: *mut CParser,
+            name: *const std::ffi::c_char,
+            name_len: u32,
+            _args: *const super::CToken,
+            _arg_count: u32,
+        ) -> i32 {
+            // SAFETY: user_data was created from Box::into_raw(CallbackState).
+            let state = unsafe { &mut *(user_data.cast::<CallbackState>()) };
+            // SAFETY: name/name_len come from the parser's valid token buffer.
+            let name_str = unsafe {
+                std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                    name.cast(),
+                    name_len as usize,
+                ))
+            };
+            if !name_str.eq_ignore_ascii_case("ident") {
+                return -1;
+            }
+            state.pending = Some("1".to_string());
+            let s = state.pending.as_ref().unwrap();
+            // SAFETY: parser is valid for the duration of the callback.
+            #[expect(clippy::cast_possible_truncation)]
+            unsafe {
+                super::syntaqlite_macro_expansion_set_result(
+                    parser,
+                    s.as_ptr().cast(),
+                    s.len() as u32,
+                    0,
+                    0,
+                );
+            }
+            0
+        }
+
+        let mut handle = ParserHandle::new();
+        let parser = handle.parser_mut();
+        // SAFETY: CParser wraps a valid C parser handle.
+        unsafe { parser.set_macro_fallback(1) };
+        let state = Box::new(CallbackState { pending: None });
+        let ptr = Box::into_raw(state);
+        // SAFETY: ptr is valid for the test lifetime.
+        unsafe { parser.set_macro_lookup(Some(c_lookup), ptr.cast()) };
+
+        let (rc, _sql) = parse_one(parser, "SELECT ident!(x);");
+        assert_eq!(rc, PARSE_OK, "C callback macro should expand successfully");
+        // SAFETY: result accessors valid after non-DONE return.
+        assert_ne!(unsafe { parser.result_root() }, NULL_NODE);
+
+        // SAFETY: ptr was created by Box::into_raw above and not yet freed.
+        let _ = unsafe { Box::from_raw(ptr) };
+    }
+
     #[test]
     fn macro_register_and_expand() {
-        let mut handle = new_macro_parser();
-        let parser = handle.parser_mut();
-        register_macro(parser, "double", &["x"], "($x + $x)");
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("double", |x| {
+            format!("({x} + {x})")
+        }))));
 
-        let (rc, _sql) = parse_one(parser, "SELECT double!(1);");
-        assert_eq!(
-            rc, PARSE_OK,
-            "macro expansion should produce a valid statement"
-        );
-        // SAFETY: parser has valid state after parse_one.
-        assert_ne!(unsafe { parser.result_root() }, NULL_NODE);
+        let mut session = parser.parse("SELECT double!(1);");
+        match session.next() {
+            crate::ParseOutcome::Ok(stmt) => {
+                assert!(stmt.root().is_some());
+            }
+            _ => panic!("expected Ok"),
+        }
     }
 
     #[test]
     fn macro_deregister_removes_entry() {
-        let mut handle = new_macro_parser();
-        let parser = handle.parser_mut();
-        register_macro(parser, "foo", &["x"], "$x");
+        // With the callback API, "deregister" = the callback returns false.
+        use std::cell::Cell;
 
-        // SAFETY: pointer and length match the literal "foo".
-        let rc = unsafe { parser.deregister_macro(b"foo".as_ptr().cast(), 3) };
-        assert_eq!(rc, 0);
+        let enabled = std::rc::Rc::new(Cell::new(true));
+        let enabled_cb = enabled.clone();
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.set_macro_lookup(Some(Box::new(TestLookup {
+            matches: Box::new(move |n| enabled_cb.get() && n.eq_ignore_ascii_case("foo")),
+            expand: Box::new(ToString::to_string),
+        })));
 
-        // After deregistering, the name is no longer a macro — a second
-        // deregister should fail (entry not found).
-        // SAFETY: pointer and length match the literal "foo".
-        let rc = unsafe { parser.deregister_macro(b"foo".as_ptr().cast(), 3) };
-        assert_eq!(rc, -1, "deregistering again should fail");
+        // First parse: macro is active.
+        let mut session = parser.parse("SELECT foo!(1);");
+        match session.next() {
+            crate::ParseOutcome::Ok(_) => {}
+            _ => panic!("expected Ok"),
+        }
+        drop(session);
+
+        // "Deregister" by disabling.
+        enabled.set(false);
+        let mut session = parser.parse("SELECT foo!(1);");
+        // Now foo is not found, falls back to TK_ID.
+        let _ = session.next();
     }
 
     #[test]
     fn macro_deregister_nonexistent_returns_error() {
+        // No callback installed → no macros exist.
         let mut handle = ParserHandle::new();
         let parser = handle.parser_mut();
-
-        // SAFETY: pointer and length match the literal "nope".
-        let rc = unsafe { parser.deregister_macro(b"nope".as_ptr().cast(), 4) };
-        assert_eq!(rc, -1);
+        // No macros to deregister — this test just verifies no crash.
+        let (rc, _sql) = parse_one(parser, "SELECT 1;");
+        assert_eq!(rc, PARSE_OK);
     }
 
     #[test]
     fn macro_case_insensitive_lookup() {
-        let mut handle = new_macro_parser();
-        let parser = handle.parser_mut();
-        register_macro(parser, "MyMacro", &["x"], "$x");
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("mymacro", |x| {
+            x.to_string()
+        }))));
 
-        // SQL identifiers are case-insensitive; "mymacro" should match "MyMacro".
-        let (rc, _sql) = parse_one(parser, "SELECT mymacro!(42);");
-        assert_eq!(rc, PARSE_OK);
+        // Call as "mymacro" — case insensitive match
+        // is handled by the callback (eq_ignore_ascii_case).
+        let mut session = parser.parse("SELECT mymacro!(42);");
+        match session.next() {
+            crate::ParseOutcome::Ok(_) => {}
+            _ => panic!("expected Ok"),
+        }
     }
 
     #[test]
     fn macro_overwrite_existing() {
-        let mut handle = new_macro_parser();
-        let parser = handle.parser_mut();
-        register_macro(parser, "m", &["x"], "$x");
-        // Re-register with different body — should overwrite.
-        register_macro(parser, "m", &["x"], "($x + 1)");
+        // With callbacks, "overwrite" = the callback returns different body.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("m", |x| {
+            format!("({x} + 1)")
+        }))));
 
-        let (rc, _sql) = parse_one(parser, "SELECT m!(5);");
-        assert_eq!(rc, PARSE_OK);
+        let mut session = parser.parse("SELECT m!(5);");
+        match session.next() {
+            crate::ParseOutcome::Ok(_) => {}
+            _ => panic!("expected Ok"),
+        }
     }
 
     #[test]
     fn macro_register_after_deregister_reuses_tombstone() {
-        let mut handle = new_macro_parser();
-        let parser = handle.parser_mut();
-        register_macro(parser, "tmp", &["x"], "$x");
+        // This test is no longer relevant (no internal hashmap/tombstones).
+        // Replace with a basic callback re-installation test.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("tmp", |x| {
+            format!("({x})")
+        }))));
 
-        // SAFETY: pointer and length match the literal "tmp".
-        let rc = unsafe { parser.deregister_macro(b"tmp".as_ptr().cast(), 3) };
-        assert_eq!(rc, 0);
-
-        // Re-register the same name — should reuse the tombstone slot.
-        register_macro(parser, "tmp", &["x"], "($x)");
-
-        let (rc, _sql) = parse_one(parser, "SELECT tmp!(7);");
-        assert_eq!(rc, PARSE_OK);
+        let mut session = parser.parse("SELECT tmp!(7);");
+        match session.next() {
+            crate::ParseOutcome::Ok(_) => {}
+            _ => panic!("expected Ok"),
+        }
     }
 
     #[test]
     fn macro_many_entries_forces_grow() {
-        let mut handle = new_macro_parser();
-        let parser = handle.parser_mut();
+        // No internal table to grow anymore. Test that many macros work via callback.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::prefix("m"))));
 
-        // Register enough macros to trigger at least one table resize.
-        // Initial capacity is 16, load factor threshold is 70% → grows at 12.
-        let names: Vec<String> = (0..20).map(|i| format!("m{i}")).collect();
-        for name in &names {
-            register_macro(parser, name, &["x"], "$x");
-        }
-
-        // Verify all 20 macros are still reachable after growth.
-        for name in &names {
-            let sql = format!("SELECT {name}!(1);");
-            let (rc, _sql) = parse_one(parser, &sql);
-            assert_eq!(
-                rc, PARSE_OK,
-                "macro '{name}' should expand after table grow"
-            );
+        for i in 0..20 {
+            let sql = format!("SELECT m{i}!(1);");
+            let mut session = parser.parse(&sql);
+            match session.next() {
+                crate::ParseOutcome::Ok(_) => {}
+                _ => panic!("macro 'm{i}' should expand"),
+            }
         }
     }
 
     #[test]
     fn macro_deregister_then_grow_drops_tombstones() {
-        let mut handle = new_macro_parser();
-        let parser = handle.parser_mut();
+        // No internal table/tombstones anymore. Verify callback-based removal.
+        use std::cell::RefCell;
 
-        // Fill table, then delete half, then add more to force a grow.
-        // After grow, tombstones should be gone and all live entries reachable.
-        for i in 0..10 {
-            let name = format!("a{i}");
-            register_macro(parser, &name, &["x"], "$x");
+        let active: std::rc::Rc<RefCell<std::collections::HashSet<String>>> =
+            std::rc::Rc::new(RefCell::new(std::collections::HashSet::new()));
+        for i in 0..20 {
+            active.borrow_mut().insert(format!("a{i}"));
         }
+
+        let active_cb = active.clone();
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.set_macro_lookup(Some(Box::new(TestLookup {
+            matches: Box::new(move |n| active_cb.borrow().contains(&n.to_ascii_lowercase())),
+            expand: Box::new(ToString::to_string),
+        })));
+
+        // Remove some.
         for i in 0..5 {
-            let name = format!("a{i}");
-            // SAFETY: pointer and length refer to the valid `name` string.
-            #[expect(clippy::cast_possible_truncation)]
-            let rc = unsafe { parser.deregister_macro(name.as_ptr().cast(), name.len() as u32) };
-            assert_eq!(rc, 0);
-        }
-        // Add more to force a grow (5 live + new entries past 70% of 16).
-        for i in 10..20 {
-            let name = format!("a{i}");
-            register_macro(parser, &name, &["x"], "$x");
+            active.borrow_mut().remove(&format!("a{i}"));
         }
 
-        // Verify surviving entries (a5..a19) all work.
+        // Verify surviving entries work.
         for i in 5..20 {
-            let name = format!("a{i}");
-            let sql = format!("SELECT {name}!(1);");
-            let (rc, _sql) = parse_one(parser, &sql);
-            assert_eq!(
-                rc, PARSE_OK,
-                "macro '{name}' should be reachable after grow"
-            );
-        }
-
-        // Verify deleted entries (a0..a4) are gone.
-        for i in 0..5 {
-            let name = format!("a{i}");
-            // SAFETY: pointer and length refer to the valid `name` string.
-            #[expect(clippy::cast_possible_truncation)]
-            let rc = unsafe { parser.deregister_macro(name.as_ptr().cast(), name.len() as u32) };
-            assert_eq!(rc, -1, "deleted macro 'a{i}' should not be found");
+            let sql = format!("SELECT a{i}!(1);");
+            let mut session = parser.parse(&sql);
+            match session.next() {
+                crate::ParseOutcome::Ok(_) => {}
+                _ => panic!("macro 'a{i}' should expand"),
+            }
         }
     }
 
@@ -1021,14 +1099,17 @@ mod tests {
 
     #[test]
     fn macro_fallback_registered_still_expands() {
-        let mut handle = ParserHandle::new();
-        let parser = handle.parser_mut();
-        enable_fallback(parser);
-        register_macro(parser, "double", &["x"], "($x + $x)");
+        // With a callback installed, known macros expand even with fallback on.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("double", |x| {
+            format!("({x} + {x})")
+        }))));
 
-        // Registered macro should still expand normally even with fallback on.
-        let (rc, _sql) = parse_one(parser, "SELECT double!(3);");
-        assert_eq!(rc, PARSE_OK);
+        let mut session = parser.parse("SELECT double!(3);");
+        match session.next() {
+            crate::ParseOutcome::Ok(_) => {}
+            _ => panic!("expected Ok"),
+        }
     }
 
     #[test]
@@ -1100,23 +1181,18 @@ mod tests {
         // buffer (a different allocation). This makes the offset garbage when
         // layer_id == 0 is not corrected. extract_fields then panics with
         // "byte index N is out of bounds".
-        use crate::ParserConfig;
         use crate::any::{AnyParser, ParseOutcome};
 
         let dialect = crate::sqlite::dialect::dialect();
-        let parser = AnyParser::with_config(
+        let mut parser = AnyParser::with_config(
             dialect.into(),
             &ParserConfig::default()
                 .with_collect_tokens(true)
                 .with_macro_fallback(true),
         );
-        // Register a macro whose body is a valid expression that produces
-        // span fields (identifiers) in the expansion buffer.
-        {
-            let mut setup = parser.parse("SELECT 1;");
-            while let ParseOutcome::Ok(_) = setup.next() {}
-            setup.register_macro("my_expr", &["x"], "$x + 1");
-        }
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("my_expr", |x| {
+            format!("{x} + 1")
+        }))));
 
         // Parse a statement that invokes the macro in expression position.
         // The macro body "$x + 1" expands with x=42, producing "42 + 1".

@@ -10,6 +10,7 @@
 
 #include "syntaqlite/config.h"
 #include "syntaqlite/dialect.h"
+#include "syntaqlite/incremental.h"
 #include "syntaqlite/parser.h"
 #include "syntaqlite_dialect/ast_builder.h"
 
@@ -20,7 +21,6 @@ extern "C" {
 // ── Tunables ────────────────────────────────────────────────────────────────
 
 #define SYNQ_MAX_MACRO_DEPTH 16
-#define SYNQ_MACRO_TABLE_INITIAL_SIZE 16
 
 #if defined(__GNUC__) || defined(__clang__)
 #define SYNQ_NOINLINE __attribute__((noinline))
@@ -34,46 +34,7 @@ extern "C" {
 #define SYNQ_PRINTF(fmt_idx, va_idx)
 #endif
 
-// ── Macro registry & expansion types ────────────────────────────────────────
-
-// A single registered macro.
-typedef struct SynqMacroEntry {
-  char* name;  // Owned copy of the macro name.
-  uint32_t name_len;
-
-  // --- Template macros ---
-  char* body;  // Body text with $param placeholders. Owned.
-  uint32_t body_len;
-  char** param_names;  // Array of param name strings. Owned.
-  uint32_t* param_name_lens;
-  uint32_t param_count;
-
-  // --- Definition provenance ---
-  // Line/column of the `CREATE PERFETTO MACRO` statement that defined this
-  // entry (1-based). Zero means "unknown". Used by traceback rendering to
-  // label macro-body frames with their authoring position. The macro body
-  // text itself is `body` above — traceback frames borrow that pointer.
-  uint32_t def_line;
-  uint32_t def_col;
-
-  uint8_t state;  // SYNQ_MAP_EMPTY / LIVE / TOMBSTONE
-} SynqMacroEntry;
-
-// One parameter substitution recorded during macro expansion. Tracks where
-// the copied arg text landed in the child layer's buffer and where it came
-// from in the parent layer's buffer. Populated by expand_template; consumed
-// by argument-level traceback to drill span positions back through `$param`
-// substitutions to the caller's authored arg text.
-typedef struct SynqArgSegment {
-  uint32_t sub_offset;       // Where the substituted arg landed in the child
-                             // layer's buffer.
-  uint32_t sub_length;       // Length of the substitution.
-  uint32_t origin_layer_id;  // Layer that owned the arg text.
-  uint32_t origin_offset;    // Where the arg text started in the origin layer.
-  uint32_t origin_length;    // Length of the origin arg text (may differ from
-                             // sub_length if the arg was rewritten — presently
-                             // the two are always equal).
-} SynqArgSegment;
+// ── Macro expansion types ────────────────────────────────────────────────
 
 // A comma-separated argument extracted from a macro call site.
 typedef struct SynqMacroArg {
@@ -81,55 +42,50 @@ typedef struct SynqMacroArg {
   uint32_t length;  // Byte length of the argument text.
 } SynqMacroArg;
 
+// Resolved arg segment on an expansion layer.  Records where a substituted
+// arg landed in the expansion buffer and where the original text lives in
+// the parent layer, enabling span resolution to drill through $param
+// substitutions back to the caller's authored arg text.
+typedef struct SynqArgSegment {
+  uint32_t sub_offset;       // Where the substituted arg starts in expansion.
+  uint32_t sub_length;       // Length in expansion buffer.
+  uint32_t origin_layer_id;  // Layer that owns the arg text.
+  uint32_t origin_offset;    // Arg text offset in origin layer.
+  uint32_t origin_length;    // Arg text length in origin layer.
+} SynqArgSegment;
+
 // Expansion layer record.  `_layer_id` on AST spans indexes directly into
 // the parser's layers vector.  Entry 0 is a sentinel for the original
 // source (expansion_data = source pointer, parent_layer_id = 0,
-// call_offset/call_length = 0, template_body/name/arg_segments all NULL).
+// call_offset/call_length = 0, name all NULL).
 // Actual expansions start at index 1.
 //
-// Template/name/def_line/def_col are borrowed pointers into the macro
-// registry entry that was expanded to produce this layer; they outlive the
-// layer because parse state is reset before any registry entries can be
-// freed.  For the sentinel (layer 0) and fallback macro calls (no
-// registry entry), these fields are all NULL/0.
+// `expansion_data` is owned (allocated via p->mem, freed in reset_stmt /
+// destroy) for layers produced by the lookup callback.  For the sentinel
+// (layer 0, expansion_data = source pointer) and the incremental-API
+// begin_macro layers (expansion_data = NULL), the pointer is NOT freed.
+//
+// `name` borrows from the source buffer or a parent expansion buffer and
+// is NOT freed by the parser.
 typedef struct SynqExpansionLayer {
   uint32_t call_offset;        // Byte offset of macro call in parent layer.
   uint32_t call_length;        // Byte length of entire macro call.
   const char* expansion_data;  // Expanded text (NULL for sentinel/fallback).
   uint32_t expansion_len;      // Length of expanded text.
 
-  // Definition provenance (borrowed from macro registry entry).
-  const char* template_body;   // Registry body with $params visible.
-  uint32_t template_body_len;  // Length of template_body, or 0.
-  const char* name;            // Macro name (borrowed), or NULL.
-  uint32_t name_len;           // Length of name.
-  uint32_t def_line;           // Macro definition line (1-based, 0=unknown).
-  uint32_t def_col;            // Macro definition column (1-based, 0=unknown).
+  // Definition provenance.
+  const char* name;   // Macro name (borrowed), or NULL.
+  uint32_t name_len;  // Length of name.
+  uint32_t def_line;  // Macro definition line (1-based, 0=unknown).
+  uint32_t def_col;   // Macro definition column (1-based, 0=unknown).
 
-  // Parameter substitutions recorded during expand_template.
-  // Arg segments live in p->mem; freed in reset_stmt / destroy alongside
-  // expansion_data. Empty for layers without parameter substitution.
+  // Arg segments: sorted by sub_offset, non-overlapping.  Allocated via
+  // p->mem; freed in reset_stmt / destroy.  NULL when no $param subs.
   SynqArgSegment* arg_segments;
   uint32_t arg_segment_count;
 
   uint8_t parent_layer_id;  // Layer containing the call (0 = source).
 } SynqExpansionLayer;
-
-// Result of a successful macro expansion (pure template substitution).
-// `data` and `arg_segments` are caller-owned (allocated via p->mem);
-// ownership transfers to the layer record when fed via
-// synq_parser_feed_macro_expansion().
-typedef struct SynqMacroExpansion {
-  const SynqMacroEntry* entry;  // Registry entry (for blue-paint).
-  char* data;                   // Expanded text.
-  uint32_t data_len;            // Length of expanded text.
-  uint32_t end_offset;          // Position past ')' in the source buf.
-  // Arg-segment list recorded during template substitution.  Sorted by
-  // sub_offset (ascending), non-overlapping.  NULL when the template has
-  // no $param placeholders.  Allocated via p->mem.
-  SynqArgSegment* arg_segments;
-  uint32_t arg_segment_count;
-} SynqMacroExpansion;
 
 // ── Parser struct ───────────────────────────────────────────────────────────
 
@@ -173,10 +129,20 @@ struct SyntaqliteParser {
   // call, invalidated by the next call / `reset_stmt`.
   SYNQ_VEC(uint8_t) node_expanded_buf;
 
-  // ── Macro registry (open-addressing hashmap) ──────────────────────────
-  SynqMacroEntry* macro_table;
-  uint32_t macro_table_size;   // Capacity (power of 2).
-  uint32_t macro_table_count;  // Number of live entries.
+  // ── Macro lookup callback ──────────────────────────────────────────────
+  SyntaqliteMacroLookupFn macro_lookup_fn;
+  void* macro_lookup_user_data;
+  // Index into p->layers of the layer the callback should write into.
+  // Set by expand_and_feed_macro before invoking the callback;
+  // set_result / expand_and_set_result write expansion_data / def_line /
+  // def_col directly onto layers.data[macro_pending_layer].
+  uint32_t macro_pending_layer;
+  const SyntaqliteToken* macro_expansion_args;
+  uint32_t macro_expansion_arg_count;
+
+  // Scratch buffer for template expansion in expand_and_set_result.
+  // Reused across invocations to avoid repeated allocation.
+  SYNQ_VEC(uint8_t) macro_expand_buf;
 
   // ── Expansion state ───────────────────────────────────────────────────
   // Blue-paint recursion detection: names of macros currently being expanded.
@@ -213,22 +179,17 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
                                      uint32_t max_args,
                                      uint32_t* out_end_offset);
 
-// Pure template expansion (no token feeding).  Defined in parser_macros.c.
-int synq_parser_expand_macro(SyntaqliteParser* p,
-                             const char* buf,
-                             uint32_t buf_len,
-                             uint32_t id_offset,
-                             uint32_t id_len,
-                             uint32_t bang_offset,
-                             SynqMacroExpansion* out);
-
-// Register an expansion, feed its tokens, and clean up.  Defined in
-// parser_macros.c.
-int synq_parser_feed_macro_expansion(SyntaqliteParser* p,
-                                     uint32_t call_offset,
-                                     uint32_t call_length,
-                                     SynqMacroExpansion* exp,
-                                     uint32_t depth);
+// Expand a macro call via the lookup callback, push the expansion layer,
+// feed its tokens, and clean up.  Returns 0 on success, -1 if not a
+// macro or on error.  Updates *out_end_offset to the position past ')'.
+int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
+                                      const char* buf,
+                                      uint32_t buf_len,
+                                      uint32_t id_offset,
+                                      uint32_t id_len,
+                                      uint32_t bang_offset,
+                                      uint32_t depth,
+                                      uint32_t* out_end_offset);
 
 // Try to expand a Rust-style macro call: ID!(args).  Defined in
 // parser_macros.c.
@@ -240,10 +201,6 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
 // Diagnose macro expansions that straddle AST node boundaries.  Defined in
 // parser_macros.c.
 int synq_parser_check_macro_straddle(SyntaqliteParser* p);
-
-// Free a single macro registry entry's owned strings.  Defined in
-// parser_macros.c.
-void synq_parser_free_macro_entry(SyntaqliteParser* p, SynqMacroEntry* e);
 
 #ifdef __cplusplus
 }

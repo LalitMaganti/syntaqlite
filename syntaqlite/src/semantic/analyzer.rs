@@ -3,7 +3,9 @@
 
 //! Single-pass semantic analysis engine.
 
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
 
 use syntaqlite_syntax::ParserConfig;
 #[cfg(feature = "lsp")]
@@ -13,6 +15,7 @@ use syntaqlite_syntax::any::TokenCategory;
 use syntaqlite_syntax::any::{
     AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, FieldValue, NodeFields, ParseOutcome,
 };
+use syntaqlite_syntax::{MacroArg, MacroLookup, MacroOutput};
 
 use crate::dialect::AnyDialect;
 use crate::dialect::{FIELD_ABSENT, MacroDef, SemanticRole};
@@ -289,14 +292,40 @@ impl SemanticAnalyzer {
 
     // ── Private ───────────────────────────────────────────────────────────────
 
+    #[expect(clippy::too_many_lines)]
     fn analyze_inner(&mut self, source: &str, config: &ValidationConfig) -> SemanticModel {
+        type MacroRegistry = HashMap<String, (Vec<String>, String)>;
+
+        struct SharedRegistryLookup(Rc<RefCell<MacroRegistry>>);
+        impl MacroLookup for SharedRegistryLookup {
+            fn lookup(
+                &mut self,
+                name: &str,
+                _args: &[MacroArg<'_>],
+                out: &mut MacroOutput,
+            ) -> bool {
+                let reg = self.0.borrow();
+                let Some((params, body)) = reg.get(&name.to_ascii_lowercase()) else {
+                    return false;
+                };
+                out.expand_template(body, params)
+            }
+        }
+
         let syntax = (*self.dialect).clone();
-        let parser = AnyParser::with_config(
+        let mut parser = AnyParser::with_config(
             syntax,
             &ParserConfig::default()
                 .with_collect_tokens(true)
                 .with_macro_fallback(self.macro_fallback),
         );
+
+        // Macro registry shared between the lookup callback and the
+        // analysis loop.  The callback borrows it via Rc<RefCell<…>>.
+        let registry: Rc<RefCell<MacroRegistry>> = Rc::new(RefCell::new(HashMap::new()));
+        let registry_for_cb = Rc::clone(&registry);
+        parser.set_macro_lookup(Some(Box::new(SharedRegistryLookup(registry_for_cb))));
+
         let mut session = parser.parse(source);
 
         #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
@@ -372,8 +401,9 @@ impl SemanticAnalyzer {
             // Register any macro defined by this statement so subsequent
             // `name!(args)` invocations are expanded inline by the parser.
             if let Some((name, params, body)) = macro_reg {
-                let param_refs: Vec<&str> = params.iter().map(String::as_str).collect();
-                session.register_macro(&name, &param_refs, &body);
+                registry
+                    .borrow_mut()
+                    .insert(name.to_ascii_lowercase(), (params, body));
             }
         }
 
