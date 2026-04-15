@@ -477,4 +477,3 @@ fn field_source_range_direct_span() {
         "expected to find span at range 7..8, got: {spans:?}"
     );
 }
-

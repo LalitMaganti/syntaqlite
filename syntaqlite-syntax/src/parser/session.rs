@@ -455,10 +455,7 @@ mod tests {
             self.macros.insert(
                 name.to_ascii_lowercase(),
                 (
-                    params
-                        .iter()
-                        .map(ToString::to_string)
-                        .collect(),
+                    params.iter().map(ToString::to_string).collect(),
                     body.to_string(),
                 ),
             );
@@ -470,9 +467,8 @@ mod tests {
 
     impl MacroLookup for TestMacroRegistry {
         fn lookup(&mut self, name: &str, _args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool {
-            let (params, body) = match self.macros.get(&name.to_ascii_lowercase()) {
-                Some(entry) => entry,
-                None => return false,
+            let Some((params, body)) = self.macros.get(&name.to_ascii_lowercase()) else {
+                return false;
             };
             out.expand_template(body, params)
         }

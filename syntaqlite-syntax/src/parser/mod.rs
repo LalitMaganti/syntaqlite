@@ -144,15 +144,20 @@ unsafe extern "C" fn macro_lookup_trampoline(
     args: *const CToken,
     arg_count: u32,
 ) -> i32 {
+    // SAFETY: `user_data` is a `Box<MacroLookupState>` pointer created in
+    // `set_macro_lookup` and valid for the lifetime of the parser.
     let state: &mut MacroLookupState = unsafe { &mut *(user_data.cast::<MacroLookupState>()) };
 
+    // SAFETY: `name` points to `name_len` bytes of valid UTF-8 from the C parser.
     let name_str = unsafe {
         std::str::from_utf8_unchecked(std::slice::from_raw_parts(name.cast(), name_len as usize))
     };
 
     let macro_args: Vec<MacroArg<'_>> = (0..arg_count as usize)
         .map(|i| {
+            // SAFETY: `args` points to `arg_count` contiguous CToken structs.
             let tok = unsafe { &*args.add(i) };
+            // SAFETY: `tok.text` points to `tok.length` bytes of valid UTF-8.
             let text = unsafe {
                 std::str::from_utf8_unchecked(std::slice::from_raw_parts(
                     tok.text.cast(),
@@ -403,12 +408,15 @@ impl<G: TypedDialect> TypedParseSession<G> {
             .expect("set_macro_lookup called on finished session");
         // Drop old handler if any.
         if let Some(old) = inner.macro_handler.take() {
+            // SAFETY: `old` was created via `Box::into_raw` in a previous call.
             let _: Box<MacroLookupState> = unsafe { Box::from_raw(old.cast()) };
         }
         match handler {
             Some(handler) => {
                 let state = Box::new(MacroLookupState { handler });
                 let user_data = Box::into_raw(state).cast::<c_void>();
+                // SAFETY: `inner.raw` is a valid parser pointer; the trampoline
+                // and user_data are compatible and outlive the parser.
                 unsafe {
                     inner
                         .raw
@@ -417,6 +425,7 @@ impl<G: TypedDialect> TypedParseSession<G> {
                 }
                 inner.macro_handler = Some(user_data);
             }
+            // SAFETY: passing null disables the callback; no dangling pointer.
             None => unsafe {
                 inner
                     .raw

@@ -292,20 +292,9 @@ impl SemanticAnalyzer {
 
     // ── Private ───────────────────────────────────────────────────────────────
 
+    #[expect(clippy::too_many_lines)]
     fn analyze_inner(&mut self, source: &str, config: &ValidationConfig) -> SemanticModel {
-        let syntax = (*self.dialect).clone();
-        let mut parser = AnyParser::with_config(
-            syntax,
-            &ParserConfig::default()
-                .with_collect_tokens(true)
-                .with_macro_fallback(self.macro_fallback),
-        );
-
-        // Macro registry shared between the lookup callback and the
-        // analysis loop.  The callback borrows it via Rc<RefCell<…>>.
         type MacroRegistry = HashMap<String, (Vec<String>, String)>;
-        let registry: Rc<RefCell<MacroRegistry>> = Rc::new(RefCell::new(HashMap::new()));
-        let registry_for_cb = Rc::clone(&registry);
 
         struct SharedRegistryLookup(Rc<RefCell<MacroRegistry>>);
         impl MacroLookup for SharedRegistryLookup {
@@ -316,13 +305,25 @@ impl SemanticAnalyzer {
                 out: &mut MacroOutput,
             ) -> bool {
                 let reg = self.0.borrow();
-                let (params, body) = match reg.get(&name.to_ascii_lowercase()) {
-                    Some(entry) => entry,
-                    None => return false,
+                let Some((params, body)) = reg.get(&name.to_ascii_lowercase()) else {
+                    return false;
                 };
                 out.expand_template(body, params)
             }
         }
+
+        let syntax = (*self.dialect).clone();
+        let mut parser = AnyParser::with_config(
+            syntax,
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_macro_fallback(self.macro_fallback),
+        );
+
+        // Macro registry shared between the lookup callback and the
+        // analysis loop.  The callback borrows it via Rc<RefCell<…>>.
+        let registry: Rc<RefCell<MacroRegistry>> = Rc::new(RefCell::new(HashMap::new()));
+        let registry_for_cb = Rc::clone(&registry);
         parser.set_macro_lookup(Some(Box::new(SharedRegistryLookup(registry_for_cb))));
 
         let mut session = parser.parse(source);
