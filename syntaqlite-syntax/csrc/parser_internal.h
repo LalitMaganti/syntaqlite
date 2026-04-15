@@ -144,6 +144,11 @@ struct SyntaqliteParser {
   // Reused across invocations to avoid repeated allocation.
   SYNQ_VEC(uint8_t) macro_expand_buf;
 
+  // NUL-terminated staging buffer for the macro body before tokenization.
+  // The tokenizer reads until NUL, but callers may pass non-NUL-terminated
+  // buffers (e.g. Rust &str), so we stage the body here first.
+  SYNQ_VEC(uint8_t) macro_body_buf;
+
   // ── Expansion state ───────────────────────────────────────────────────
   // Blue-paint recursion detection: names of macros currently being expanded.
   const char* expansion_names[SYNQ_MAX_MACRO_DEPTH];

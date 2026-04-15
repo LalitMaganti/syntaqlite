@@ -148,6 +148,7 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   syntaqlite_vec_init(&p->node_expanded_buf);
   // macro_lookup_fn, macro_result_*, expansion state already zeroed by memset
   syntaqlite_vec_init(&p->macro_expand_buf);
+  syntaqlite_vec_init(&p->macro_body_buf);
   return p;
 }
 
@@ -213,6 +214,7 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
     syntaqlite_vec_free(&p->traceback_buf, p->mem);
     syntaqlite_vec_free(&p->node_expanded_buf, p->mem);
     syntaqlite_vec_free(&p->macro_expand_buf, p->mem);
+    syntaqlite_vec_free(&p->macro_body_buf, p->mem);
     p->mem.xFree(p);
   }
 }
@@ -913,9 +915,8 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
   SynqNodeExpandedExtent e =
       syntaqlite_vec_at(&p->ctx.node_expanded_extents, node_id);
   if (e.length > 0) {
-    const char* buf = e.layer_id == 0
-                          ? p->source
-                          : p->layers.data[e.layer_id].expansion_data;
+    const char* buf =
+        e.layer_id == 0 ? p->source : p->layers.data[e.layer_id].expansion_data;
     if (out_len) {
       *out_len = e.length;
     }
