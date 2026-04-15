@@ -689,11 +689,20 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
   // Reuse the parser's scratch vec — reset count but keep the allocation.
   p->macro_expand_buf.count = 0;
 
+  // Stage the body into a NUL-terminated buffer before tokenizing.
+  // The tokenizer reads until NUL, but callers may pass non-NUL-terminated
+  // buffers (e.g. Rust &str), so we must ensure the NUL sentinel exists.
+  p->macro_body_buf.count = 0;
+  syntaqlite_vec_push_n(&p->macro_body_buf, (const uint8_t*)body, body_len,
+                        p->mem);
+  syntaqlite_vec_push_n(&p->macro_body_buf, (const uint8_t*)"", 1, p->mem);
+
   // Collect arg mappings on the stack (max 64 params).
   SyntaqliteArgMapping mappings[64];
   uint32_t mapping_count = 0;
 
-  const unsigned char* z = (const unsigned char*)body;
+  const unsigned char* z = (const unsigned char*)p->macro_body_buf.data;
+  const char* zbody = (const char*)p->macro_body_buf.data;
   uint32_t pos = 0;
   while (pos < body_len) {
     uint32_t ttype = 0;
@@ -702,8 +711,8 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
     if (tlen <= 0)
       break;
 
-    if (ttype == SYNTAQLITE_TK_VARIABLE && body[pos] == '$' && tlen > 1) {
-      const char* pname = body + pos + 1;
+    if (ttype == SYNTAQLITE_TK_VARIABLE && zbody[pos] == '$' && tlen > 1) {
+      const char* pname = zbody + pos + 1;
       uint32_t pname_len = (uint32_t)tlen - 1;
 
       int found = -1;
@@ -729,7 +738,7 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
                               args[found].length, p->mem);
       }
     } else {
-      syntaqlite_vec_push_n(&p->macro_expand_buf, (const uint8_t*)(body + pos),
+      syntaqlite_vec_push_n(&p->macro_expand_buf, (const uint8_t*)(zbody + pos),
                             (uint32_t)tlen, p->mem);
     }
 
