@@ -322,6 +322,13 @@ impl<'a> ParsedStatement<'a> {
         self.0.clone().erase()
     }
 
+    /// Returns `true` if all tokens of AST node `id` live in layer 0.
+    /// See [`AnyParsedStatement::node_is_macro_free`](
+    /// super::AnyParsedStatement::node_is_macro_free).
+    pub fn node_is_macro_free(&self, id: super::AnyNodeId) -> bool {
+        self.0.any.node_is_macro_free(id)
+    }
+
     /// Source text of AST node `id` as `(text, offset)`.  See
     /// [`AnyParsedStatement::node_text`](super::AnyParsedStatement::node_text).
     pub fn node_text(&self, id: super::AnyNodeId) -> Option<(&'a str, u32)> {
@@ -333,6 +340,13 @@ impl<'a> ParsedStatement<'a> {
     /// super::AnyParsedStatement::node_expanded_text).
     pub fn node_expanded_text(&self, id: super::AnyNodeId) -> Option<&'a str> {
         self.0.any.node_expanded_text(id)
+    }
+
+    /// Returns `true` if the statement contains no macro expansions.
+    /// See [`AnyParsedStatement::is_macro_free`](
+    /// super::AnyParsedStatement::is_macro_free).
+    pub fn is_macro_free(&self) -> bool {
+        self.0.any.is_macro_free()
     }
 
     /// Macro expansion call-site spans recorded during parsing.
@@ -1185,5 +1199,138 @@ mod tests {
         let off = frames[0].offset_in_snippet;
         let end = off + "authored".len();
         assert_eq!(&source[off..end], "authored");
+    }
+
+    #[test]
+    fn statement_is_macro_free_true_for_plain_sql() {
+        let parser = Parser::new();
+        let source = "SELECT foo FROM bar";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        assert!(
+            stmt.is_macro_free(),
+            "plain SQL statement should be macro-free"
+        );
+    }
+
+    #[test]
+    fn statement_is_macro_free_false_for_expansion() {
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("idmac", &[], "inner");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT idmac!()";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        assert!(
+            !stmt.is_macro_free(),
+            "statement with macro expansion should not be macro-free"
+        );
+    }
+
+    #[test]
+    fn span_is_macro_free_true_for_plain_sql() {
+        let parser = Parser::new();
+        let source = "SELECT foo FROM bar";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        let span = first_span_in_tree(&erased).expect("expected a Span field");
+        assert!(span.is_macro_free(), "plain SQL span should be macro-free");
+    }
+
+    #[test]
+    fn span_is_macro_free_false_for_expansion() {
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("idmac", &[], "inner");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT idmac!()";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        let span = first_span_in_tree(&erased).expect("expected a Span field");
+        assert!(
+            !span.is_macro_free(),
+            "span from macro expansion should not be macro-free"
+        );
+    }
+
+    #[test]
+    fn node_is_macro_free_true_for_plain_sql() {
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
+        let source = "SELECT foo FROM bar";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        assert!(
+            erased.node_is_macro_free(erased.root_id()),
+            "root node in plain SQL should be macro-free"
+        );
+    }
+
+    #[test]
+    fn node_is_macro_free_false_for_expansion() {
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_macro_fallback(true)
+                .with_collect_node_extents(true),
+        );
+        let mut reg = TestMacroRegistry::new();
+        reg.register("idmac", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT idmac!(col1) FROM t";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        // Root spans multiple layers (SELECT from source, col1 from expansion).
+        assert!(
+            !erased.node_is_macro_free(erased.root_id()),
+            "root node with macro expansion should not be macro-free"
+        );
+    }
+
+    #[test]
+    fn node_is_macro_free_false_without_extent_tracking() {
+        let parser = Parser::new(); // no extent tracking
+        let source = "SELECT 1";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        assert!(
+            !erased.node_is_macro_free(erased.root_id()),
+            "should return false when extent tracking is disabled"
+        );
     }
 }

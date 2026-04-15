@@ -470,6 +470,14 @@ mod ffi {
         pub fn is_quoted(self) -> bool {
             (self.flags & SPAN_FLAG_QUOTED) != 0
         }
+
+        /// Returns `true` if the span was tokenized from the original
+        /// source (layer 0), `false` if it was produced by a macro
+        /// expansion.  Returns `false` for empty spans.
+        #[expect(clippy::used_underscore_binding)]
+        pub fn is_macro_free(self) -> bool {
+            self.length > 0 && self._layer_id == 0
+        }
     }
 
     /// List node header — `tag` + `count`, followed by `count` child [`AnyNodeId`]s

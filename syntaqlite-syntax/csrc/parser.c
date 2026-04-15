@@ -942,3 +942,17 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
   }
   return (const char*)p->node_expanded_buf.data;
 }
+
+SYNTAQLITE_API int syntaqlite_node_is_macro_free(SyntaqliteParser* p,
+                                                 uint32_t node_id) {
+  if (!p->ctx.collect_node_extents) {
+    return 0;
+  }
+  if (node_id >= syntaqlite_vec_len(&p->ctx.node_expanded_extents)) {
+    return 0;
+  }
+  SynqNodeExpandedExtent e =
+      syntaqlite_vec_at(&p->ctx.node_expanded_extents, node_id);
+  // length == 0 is the sentinel for epsilon or multi-layer nodes.
+  return e.length > 0 && e.layer_id == 0;
+}
