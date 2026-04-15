@@ -602,6 +602,47 @@ mod tests {
     }
 
     #[test]
+    fn parser_collect_node_extents_cross_layer_sentinel_not_absorbed_by_parent_reduce() {
+        // Regression test for #120: when a macro call is nested inside a
+        // compound expression (e.g. CASE), the cross-layer sentinel from the
+        // inner reduce was absorbed by the parent reduce's merge loop (both
+        // epsilon and cross-layer used length==0).  The parent then gets a
+        // non-sentinel extent and the fast path returns un-expanded source.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_node_extents(true)
+                .with_macro_fallback(true),
+        );
+        let mut reg = TestMacroRegistry::new();
+        reg.register("cast_string", &["value"], "CAST($value AS TEXT)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT CASE WHEN 1 THEN cast_string!(y) END;";
+        let mut session = parser.parse(source);
+        let statement = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("statement is missing"),
+            ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+        };
+
+        let root_id = statement.erase().root_id();
+        // The root SELECT node crosses layers (SELECT/CASE/WHEN/THEN/END in
+        // layer 0, CAST(y AS TEXT) in layer 1).  node_expanded_text must
+        // return the post-expansion view, NOT the raw authored source.
+        let expanded = statement
+            .node_expanded_text(root_id)
+            .expect("cross-layer node should produce expanded text");
+        assert!(
+            expanded.contains("CAST(y AS TEXT)"),
+            "expected expanded macro in output, got: {expanded:?}",
+        );
+        assert!(
+            !expanded.contains("cast_string!(y)"),
+            "expanded text should not contain raw macro call, got: {expanded:?}",
+        );
+    }
+
+    #[test]
     fn parser_collect_node_extents_expanded_text_is_source_for_root_nodes() {
         // For nodes built entirely from root-layer tokens,
         // `node_expanded_text` and `node_text` both return slices of

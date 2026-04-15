@@ -47,9 +47,14 @@ typedef struct SynqExtentRange {
 
 // Layer-local byte range used by per-node *expanded*-text tracking —
 // the bytes the tokenizer saw for a node, in whichever layer buffer
-// they live.  `length == 0` is the sentinel: either an epsilon
-// reduction (no tokens) or a node whose tokens span multiple layers
-// (no contiguous expansion slice can represent it).
+// they live.
+//
+// Sentinel states:
+//   {0, 0, 0}                  — epsilon (no tokens); neutral in merges.
+//   {_, 0, SYNQ_CROSS_LAYER}   — cross-layer poison; propagates through
+//                                parent merges so the fast path falls
+//                                through to the slow path.
+#define SYNQ_CROSS_LAYER UINT32_MAX
 typedef struct SynqNodeExpandedExtent {
   uint32_t offset;
   uint32_t length;

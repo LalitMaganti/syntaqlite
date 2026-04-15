@@ -100,20 +100,24 @@ void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
   syntaqlite_vec_push(&pCtx->extent_stack, merged, pCtx->mem);
 
   // Merge expanded-layer spans: all same layer → merge in that layer;
-  // empty entries are neutral; any cross-layer or pre-existing sentinel
-  // collapses the result to the sentinel (length = 0).
+  // epsilon entries ({0,0,0}) are neutral; cross-layer poison
+  // (layer_id == SYNQ_CROSS_LAYER) propagates upward unconditionally.
   SynqNodeExpandedExtent exp_merged = {0, 0, 0};
   for (uint32_t i = len - nrhs; i < len; i++) {
     SynqNodeExpandedExtent e = syntaqlite_vec_at(&pCtx->expanded_stack, i);
+    if (e.layer_id == SYNQ_CROSS_LAYER) {
+      exp_merged = e;  // propagate poison
+      break;
+    }
     if (e.length == 0) {
-      continue;
+      continue;  // skip epsilon
     }
     if (exp_merged.length == 0) {
       exp_merged = e;
       continue;
     }
     if (exp_merged.layer_id != e.layer_id) {
-      exp_merged.length = 0;  // cross-layer → sentinel
+      exp_merged = (SynqNodeExpandedExtent){0, 0, SYNQ_CROSS_LAYER};
       break;
     }
     uint32_t start =
