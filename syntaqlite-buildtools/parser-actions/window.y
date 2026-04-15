@@ -184,7 +184,7 @@ frame_exclude(A) ::= GROUP|TIES(B). {
 // ============ WINDOW Clause ============
 
 window_clause(A) ::= WINDOW windowdefn_list(B). {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 // ============ Filter/Over ============
@@ -234,5 +234,5 @@ over_clause(A) ::= OVER nm(B). {
 // ============ Filter Clause ============
 
 filter_clause(A) ::= FILTER LP WHERE expr(B) RP. {
-    A = B;
+    A = synq_pass(pCtx, B);
 }

@@ -108,7 +108,7 @@ case_exprlist(A) ::= WHEN expr(B) THEN expr(C). {
 }
 
 case_else(A) ::= ELSE expr(B). {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 case_else(A) ::= . {

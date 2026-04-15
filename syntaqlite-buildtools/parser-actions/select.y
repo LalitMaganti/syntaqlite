@@ -52,7 +52,7 @@ selcollist(A) ::= sclp(B) scanpt STAR. {
 }
 
 sclp(A) ::= selcollist(B) COMMA. {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 sclp(A) ::= . {
@@ -66,7 +66,7 @@ scanpt(A) ::= . {
 
 // as is optional alias
 as(A) ::= AS nmorerr(B). {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 as(A) ::= ids(B). {
@@ -98,7 +98,7 @@ from(A) ::= . {
 }
 
 from(A) ::= FROM seltablist(B). {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 // ============ WHERE/GROUP BY/HAVING/ORDER BY/LIMIT stubs ============
@@ -108,7 +108,7 @@ where_opt(A) ::= . {
 }
 
 where_opt(A) ::= WHERE expr(B). {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 groupby_opt(A) ::= . {
@@ -116,7 +116,7 @@ groupby_opt(A) ::= . {
 }
 
 groupby_opt(A) ::= GROUP BY nexprlist(B). {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 having_opt(A) ::= . {
@@ -124,7 +124,7 @@ having_opt(A) ::= . {
 }
 
 having_opt(A) ::= HAVING expr(B). {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 orderby_opt(A) ::= . {
@@ -132,7 +132,7 @@ orderby_opt(A) ::= . {
 }
 
 orderby_opt(A) ::= ORDER BY sortlist(B). {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 limit_opt(A) ::= . {

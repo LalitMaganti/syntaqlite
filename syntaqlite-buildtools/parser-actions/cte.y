@@ -71,7 +71,7 @@ eidlist_opt(A) ::= . {
 }
 
 eidlist_opt(A) ::= LP eidlist(X) RP. {
-    A = X;
+    A = synq_pass(pCtx, X);
 }
 
 eidlist(A) ::= nm(Y) collate(C) sortorder(Z). {

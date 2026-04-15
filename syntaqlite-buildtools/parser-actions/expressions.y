@@ -28,7 +28,7 @@ expr(A) ::= term(B). {
 }
 
 expr(A) ::= LP expr(B) RP. {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 expr(A) ::= expr(L) PLUS|MINUS(OP) expr(R). {

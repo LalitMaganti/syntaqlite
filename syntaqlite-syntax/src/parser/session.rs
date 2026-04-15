@@ -567,6 +567,39 @@ mod tests {
     }
 
     #[test]
+    fn parser_collect_node_extents_passthrough_rules_cover_full_range() {
+        // Multi-RHS passthrough rules (A = B in grammar actions) must
+        // re-record the extent so node_text returns the full rule range,
+        // not just the child's original range.  Regression test for #118.
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
+
+        // CREATE TABLE t AS SELECT 1  —  the cmd rule does A = ARGS (passthrough)
+        let source = "CREATE TABLE t AS SELECT 1;";
+        let mut session = parser.parse(source);
+        let ParseOutcome::Ok(statement) = session.next() else {
+            panic!("expected Ok");
+        };
+        let root_id = statement.erase().root_id();
+        let (text, _) = statement
+            .node_text(root_id)
+            .expect("root node should have recorded text");
+        assert_eq!(text, "CREATE TABLE t AS SELECT 1");
+        drop(session);
+
+        // (1 + 2) — the expr rule does A = B (LP expr RP passthrough)
+        let source = "SELECT (1 + 2);";
+        let mut session = parser.parse(source);
+        let ParseOutcome::Ok(statement) = session.next() else {
+            panic!("expected Ok");
+        };
+        let root_id = statement.erase().root_id();
+        let (text, _) = statement
+            .node_text(root_id)
+            .expect("root node should have recorded text");
+        assert_eq!(text, "SELECT (1 + 2)");
+    }
+
+    #[test]
     fn parser_collect_node_extents_attributes_macro_tokens_to_call_site() {
         // The SELECT node crosses layers: `SELECT` comes from the root
         // source, `42` from `id`'s expansion buffer.  `node_text`
