@@ -380,6 +380,26 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
     uint32_t* out_len);
 
 // ---------------------------------------------------------------------------
+// Macro-expansion queries
+// ---------------------------------------------------------------------------
+
+// Returns 1 if `span` was tokenized from the original source (layer 0),
+// 0 if it was produced by a macro expansion.  Returns 0 for empty spans.
+static inline int syntaqlite_span_is_macro_free(
+    const SyntaqliteTextSpan* span) {
+  return span->length > 0 && span->_layer_id == 0;
+}
+
+// Returns 1 if all tokens of AST node `node_id` live in layer 0 (original
+// source), 0 otherwise.  Returns 0 when extent tracking is disabled, the
+// node id is unknown, or no extent was recorded.
+//
+// Requires `syntaqlite_parser_set_collect_node_extents(p, 1)` before the
+// first `reset()`.
+SYNTAQLITE_API int syntaqlite_node_is_macro_free(SyntaqliteParser* p,
+                                                 uint32_t node_id);
+
+// ---------------------------------------------------------------------------
 // Node and list helpers
 // ---------------------------------------------------------------------------
 

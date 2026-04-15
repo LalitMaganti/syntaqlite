@@ -248,6 +248,15 @@ impl CParser {
         Some(text)
     }
 
+    /// Returns `true` if all tokens of AST node `node_id` live in
+    /// layer 0 (original source).  Requires extent tracking.
+    pub(crate) unsafe fn node_is_macro_free(&self, node_id: u32) -> bool {
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        unsafe {
+            syntaqlite_node_is_macro_free(std::ptr::from_ref::<Self>(self).cast_mut(), node_id) != 0
+        }
+    }
+
     pub(crate) unsafe fn reset(&mut self, source: *const c_char, len: u32) {
         // SAFETY: self is a valid, non-null CParser pointer; source is a
         // null-terminated C string of at least `len` bytes.
@@ -535,6 +544,8 @@ unsafe extern "C" {
         node_id: u32,
         out_len: *mut u32,
     ) -> *const u8;
+
+    fn syntaqlite_node_is_macro_free(p: *mut CParser, node_id: u32) -> i32;
 
     // AST dump
     fn syntaqlite_dump_node(p: *mut CParser, node_id: u32, indent: u32) -> *mut c_char;

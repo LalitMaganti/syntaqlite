@@ -604,6 +604,20 @@ impl<'a> AnyParsedStatement<'a> {
         unsafe { self.raw.as_ref().node_expanded_text(id.0) }
     }
 
+    /// Returns `true` if all tokens of AST node `id` live in layer 0
+    /// (the original source), `false` if any came from a macro
+    /// expansion.  Returns `false` when extent tracking is disabled,
+    /// the node id is unknown, or the node is null.
+    ///
+    /// Requires [`ParserConfig::with_collect_node_extents`].
+    pub fn node_is_macro_free(&self, id: AnyNodeId) -> bool {
+        if id.is_null() {
+            return false;
+        }
+        // SAFETY: self.raw is valid for 'a.
+        unsafe { self.raw.as_ref().node_is_macro_free(id.0) }
+    }
+
     /// Post-expansion text for the whole bound source — the
     /// parser-level analogue of [`Self::node_expanded_text`].
     /// Materializes the source with every currently-active macro call
@@ -614,6 +628,13 @@ impl<'a> AnyParsedStatement<'a> {
         // SAFETY: self.raw is valid for 'a; the returned slice borrows
         // from the parser's scratch buffer which outlives 'a.
         unsafe { self.raw.as_ref().expanded_text() }
+    }
+
+    /// Returns `true` if the statement contains no macro expansions —
+    /// all tokens came from the original source text.
+    pub fn is_macro_free(&self) -> bool {
+        // SAFETY: self.raw is valid for 'a.
+        unsafe { self.raw.as_ref().result_macro_count() == 0 }
     }
 
     /// Macro expansion call-site spans recorded during parsing.
