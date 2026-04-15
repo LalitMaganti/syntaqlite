@@ -4,9 +4,10 @@
 // Core parser: lifecycle, main parse loop, result accessors, incremental
 // token-feeding API, configuration, arena accessors.
 //
-// Macro expansion and span resolution live in parser_macros.c.
-// AST dump lives in parser_dump.c.  Cross-file helpers are declared in
-// csrc/parser_internal.h.
+// Macro expansion lives in parser_macros.c.  Span resolution and
+// traceback live in parser_spans.c.  Per-node extent tracking hooks
+// live in parser_extents.c.  AST dump lives in parser_dump.c.
+// Cross-file helpers are declared in csrc/parser_internal.h.
 
 #include <stdio.h>
 #include <string.h>
