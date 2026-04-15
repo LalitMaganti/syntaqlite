@@ -908,29 +908,18 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
   }
 
   // Fast path: node's tokens all live in one layer → return a direct
-  // slice of that layer's buffer, no allocation.
+  // slice of that layer's buffer, no allocation.  Cross-layer nodes
+  // have layer_id == SYNQ_CROSS_LAYER and fall through to the slow path.
   SynqNodeExpandedExtent e =
       syntaqlite_vec_at(&p->ctx.node_expanded_extents, node_id);
   if (e.length > 0) {
-    if (e.layer_id == 0) {
-      if (e.offset + e.length > p->source_len) {
-        return NULL;
-      }
-      if (out_len) {
-        *out_len = e.length;
-      }
-      return p->source + e.offset;
+    const char* buf = e.layer_id == 0
+                          ? p->source
+                          : p->layers.data[e.layer_id].expansion_data;
+    if (out_len) {
+      *out_len = e.length;
     }
-    if (e.layer_id < syntaqlite_vec_len(&p->layers)) {
-      const SynqExpansionLayer* lyr = &p->layers.data[e.layer_id];
-      if (lyr->expansion_data && e.offset + e.length <= lyr->expansion_len) {
-        if (out_len) {
-          *out_len = e.length;
-        }
-        return lyr->expansion_data + e.offset;
-      }
-    }
-    return NULL;
+    return buf + e.offset;
   }
 
   // Slow path: the node's tokens cross layers.  Materialize the
