@@ -747,7 +747,7 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
 
   // Steal the scratch vec's buffer directly into the layer (no copy).
   // Null-terminate for safety.
-  syntaqlite_vec_push_n(&p->macro_expand_buf, (const uint8_t*)"", 1, p->mem);
+  syntaqlite_vec_push(&p->macro_expand_buf, 0, p->mem);
   SynqExpansionLayer* lyr = &p->layers.data[p->macro_pending_layer];
   layer_free_data(p, lyr);
   lyr->expansion_data = (const char*)p->macro_expand_buf.data;
