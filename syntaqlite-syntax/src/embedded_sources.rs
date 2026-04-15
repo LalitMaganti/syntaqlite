@@ -47,7 +47,6 @@ pub const RUNTIME_CSRC: &[(&str, &str)] = &[
         "dialect_dispatch.h",
         include_str!("../csrc/dialect_dispatch.h"),
     ),
-    ("hashmap.h", include_str!("../csrc/hashmap.h")),
     ("parser.c", include_str!("../csrc/parser.c")),
     ("parser_macros.c", include_str!("../csrc/parser_macros.c")),
     ("parser_dump.c", include_str!("../csrc/parser_dump.c")),

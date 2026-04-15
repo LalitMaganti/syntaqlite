@@ -159,6 +159,10 @@ pub mod nodes {
 #[doc(inline)]
 pub use parser::IncrementalParseSession;
 
+// Macro expansion types (used by downstream crates like syntaqlite).
+#[cfg(feature = "sqlite-minimal")]
+pub use parser::{MacroArg, MacroLookup, MacroOutput};
+
 // ==== Internal modules ====
 
 #[cfg(feature = "sqlite-minimal")]

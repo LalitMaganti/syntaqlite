@@ -4,7 +4,7 @@
 // Core parser: lifecycle, main parse loop, result accessors, incremental
 // token-feeding API, configuration, arena accessors.
 //
-// Macro registry, expansion, and span resolution live in parser_macros.c.
+// Macro expansion and span resolution live in parser_macros.c.
 // AST dump lives in parser_dump.c.  Cross-file helpers are declared in
 // csrc/parser_internal.h.
 
@@ -12,7 +12,6 @@
 #include <string.h>
 
 #include "csrc/dialect_dispatch.h"
-#include "csrc/hashmap.h"
 #include "csrc/token_wrapped.h"
 #include "csrc/tokens.h"
 #include "syntaqlite/dialect.h"
@@ -65,15 +64,12 @@ static void reset_stmt(SyntaqliteParser* p) {
   syntaqlite_vec_clear(&p->tokens);
   syntaqlite_vec_clear(&p->traceback_buf);
   syntaqlite_vec_clear(&p->node_expanded_buf);
-  // Free owned expansion buffers and arg-segment arrays from previous
-  // statement.  Skip index 0 (sentinel) — its expansion_data points to
-  // source (not malloc'd) and it has no arg_segments.
+  // Free owned expansion buffers from previous statement.  Skip index 0
+  // (sentinel) — its expansion_data points to source (not malloc'd).
   for (uint32_t i = 1; i < syntaqlite_vec_len(&p->layers); i++) {
     SynqExpansionLayer* lyr = &p->layers.data[i];
     if (lyr->expansion_data)
       p->mem.xFree((void*)lyr->expansion_data);
-    if (lyr->arg_segments)
-      p->mem.xFree(lyr->arg_segments);
   }
   syntaqlite_vec_clear(&p->layers);
   // Push sentinel at index 0 (source layer).  p->source may be NULL on
@@ -148,7 +144,8 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   syntaqlite_vec_init(&p->layers);
   syntaqlite_vec_init(&p->traceback_buf);
   syntaqlite_vec_init(&p->node_expanded_buf);
-  // macro_table, expansion state already zeroed by memset
+  // macro_lookup_fn, macro_result_*, expansion state already zeroed by memset
+  syntaqlite_vec_init(&p->macro_expand_buf);
   return p;
 }
 
@@ -201,27 +198,17 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
     synq_parse_ctx_free(&p->ctx);
     syntaqlite_vec_free(&p->comments, p->mem);
     syntaqlite_vec_free(&p->tokens, p->mem);
-    // Free owned expansion buffers, arg-segment arrays, and the layer
-    // vector.  Skip index 0 (sentinel) — its expansion_data points to
-    // source (not malloc'd) and it has no arg_segments.
+    // Free owned expansion buffers and the layer vector.  Skip index 0
+    // (sentinel) — its expansion_data points to source (not malloc'd).
     for (uint32_t i = 1; i < syntaqlite_vec_len(&p->layers); i++) {
       SynqExpansionLayer* lyr = &p->layers.data[i];
       if (lyr->expansion_data)
         p->mem.xFree((void*)lyr->expansion_data);
-      if (lyr->arg_segments)
-        p->mem.xFree(lyr->arg_segments);
     }
     syntaqlite_vec_free(&p->layers, p->mem);
     syntaqlite_vec_free(&p->traceback_buf, p->mem);
     syntaqlite_vec_free(&p->node_expanded_buf, p->mem);
-    // Free macro registry.
-    if (p->macro_table) {
-      for (uint32_t i = 0; i < p->macro_table_size; i++) {
-        if (p->macro_table[i].state == SYNQ_MAP_LIVE)
-          synq_parser_free_macro_entry(p, &p->macro_table[i]);
-      }
-      p->mem.xFree(p->macro_table);
-    }
+    syntaqlite_vec_free(&p->macro_expand_buf, p->mem);
     p->mem.xFree(p);
   }
 }

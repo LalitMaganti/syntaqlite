@@ -48,6 +48,7 @@
 #define SYNTAQLITE_INCREMENTAL_PARSER_H
 
 #include "syntaqlite/parser.h"
+#include "syntaqlite/tokenizer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,33 +92,46 @@ SYNTAQLITE_API SyntaqliteCompletionContext
 syntaqlite_parser_completion_context(SyntaqliteParser* p);
 
 // ---------------------------------------------------------------------------
-// Macro registration
+// Macro lookup callback
 // ---------------------------------------------------------------------------
 
-// Register a template macro.  Copies all strings.
-// The macro body uses $param placeholders (e.g. "$x + 1").
-//
-// `def_line` / `def_col` are the 1-based line/column of the defining
-// statement (e.g. `CREATE PERFETTO MACRO foo`).  They are stored on the
-// registry entry and surfaced by expansion tracebacks so error frames for
-// macro bodies can reference the authoring position.  Pass 0/0 if unknown.
-//
-// Returns 0 on success.
-SYNTAQLITE_API int syntaqlite_parser_register_macro(
+// Returns 0 on success (must call set_result first), -1 if the macro
+// does not exist, -2 on expansion error.
+typedef int (*SyntaqliteMacroLookupFn)(void* user_data,
+                                       SyntaqliteParser* parser,
+                                       const char* name,
+                                       uint32_t name_len,
+                                       const SyntaqliteToken* args,
+                                       uint32_t arg_count);
+
+SYNTAQLITE_API void syntaqlite_parser_set_macro_lookup(
     SyntaqliteParser* p,
-    const char* name,
-    uint32_t name_len,
-    const char* const* param_names,
-    uint32_t param_count,
+    SyntaqliteMacroLookupFn fn,
+    void* user_data);
+
+// ---------------------------------------------------------------------------
+// Macro expansion result (called from inside the lookup callback)
+// ---------------------------------------------------------------------------
+
+// Set the expanded body for the current macro invocation.
+// `def_line` / `def_col` are 1-based definition position for tracebacks
+// (pass 0/0 if unknown).
+SYNTAQLITE_API void syntaqlite_macro_expansion_set_result(
+    SyntaqliteParser* p,
     const char* body,
     uint32_t body_len,
     uint32_t def_line,
     uint32_t def_col);
 
-// Deregister a macro by name.  Returns 0 on success, -1 if not found.
-SYNTAQLITE_API int syntaqlite_parser_deregister_macro(SyntaqliteParser* p,
-                                                      const char* name,
-                                                      uint32_t name_len);
+// Template expansion helper: substitute `$param` placeholders with the
+// current invocation's args and call set_result.  Returns 0 on success.
+SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
+    SyntaqliteParser* p,
+    const char* body,
+    uint32_t body_len,
+    const char* const* param_names,
+    const uint32_t* param_name_lens,
+    uint32_t param_count);
 
 #ifdef __cplusplus
 }
