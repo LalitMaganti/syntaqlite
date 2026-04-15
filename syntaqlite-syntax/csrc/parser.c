@@ -64,30 +64,14 @@ static void reset_stmt(SyntaqliteParser* p) {
   syntaqlite_vec_clear(&p->tokens);
   syntaqlite_vec_clear(&p->traceback_buf);
   syntaqlite_vec_clear(&p->node_expanded_buf);
-  // Free owned expansion buffers from previous statement.  Skip index 0
-  // (sentinel) — its expansion_data points to source (not malloc'd).
-  for (uint32_t i = 1; i < syntaqlite_vec_len(&p->layers); i++) {
-    SynqExpansionLayer* lyr = &p->layers.data[i];
-    if (lyr->expansion_data)
-      p->mem.xFree((void*)lyr->expansion_data);
-    if (lyr->arg_segments)
-      p->mem.xFree(lyr->arg_segments);
-  }
+  synq_layers_free_owned(&p->layers, p->mem);
   syntaqlite_vec_clear(&p->layers);
   // Push sentinel at index 0 (source layer).  p->source may be NULL on
   // the very first reset_stmt call (before syntaqlite_parser_reset sets it),
   // which is fine — syntaqlite_parser_reset re-clears and re-pushes.
-  if (p->source) {
-    SynqExpansionLayer sentinel = {
-        .call_offset = 0,
-        .call_length = 0,
-        .expansion_data = p->source,
-        .expansion_len = p->source_len,
-        .parent_layer_id = 0,
-    };
-    syntaqlite_vec_push(&p->layers, sentinel, p->mem);
-  }
-  p->expansion_depth = 0;
+  if (p->source)
+    synq_layers_push_sentinel(&p->layers, p->source, p->source_len, p->mem);
+  p->macro.expansion_depth = 0;
   p->ctx.layer_id = 0;
   p->ctx.cur_shift_start = 0;
   p->ctx.last_shifted_end = 0;
@@ -146,9 +130,8 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   syntaqlite_vec_init(&p->layers);
   syntaqlite_vec_init(&p->traceback_buf);
   syntaqlite_vec_init(&p->node_expanded_buf);
-  // macro_lookup_fn, macro_result_*, expansion state already zeroed by memset
-  syntaqlite_vec_init(&p->macro_expand_buf);
-  syntaqlite_vec_init(&p->macro_body_buf);
+  // macro callback/expansion fields already zeroed by memset.
+  synq_macro_state_init(&p->macro);
   return p;
 }
 
@@ -175,21 +158,12 @@ SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
   p->finished = 0;
   p->pending_reset = 0;
   p->last_status = SYNTAQLITE_PARSE_DONE;
-  p->macro_depth = 0;
+  p->macro.depth = 0;
 
   // Re-push the sentinel with the correct source pointer (reset_stmt may
   // have pushed one with the old source, or none if source was NULL).
   syntaqlite_vec_clear(&p->layers);
-  {
-    SynqExpansionLayer sentinel = {
-        .call_offset = 0,
-        .call_length = 0,
-        .expansion_data = source,
-        .expansion_len = len,
-        .parent_layer_id = 0,
-    };
-    syntaqlite_vec_push(&p->layers, sentinel, p->mem);
-  }
+  synq_layers_push_sentinel(&p->layers, source, len, p->mem);
 
   p->ctx.source = source;
   p->ctx.env = &p->dialect;
@@ -201,20 +175,11 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
     synq_parse_ctx_free(&p->ctx);
     syntaqlite_vec_free(&p->comments, p->mem);
     syntaqlite_vec_free(&p->tokens, p->mem);
-    // Free owned expansion buffers and the layer vector.  Skip index 0
-    // (sentinel) — its expansion_data points to source (not malloc'd).
-    for (uint32_t i = 1; i < syntaqlite_vec_len(&p->layers); i++) {
-      SynqExpansionLayer* lyr = &p->layers.data[i];
-      if (lyr->expansion_data)
-        p->mem.xFree((void*)lyr->expansion_data);
-      if (lyr->arg_segments)
-        p->mem.xFree(lyr->arg_segments);
-    }
+    synq_layers_free_owned(&p->layers, p->mem);
     syntaqlite_vec_free(&p->layers, p->mem);
     syntaqlite_vec_free(&p->traceback_buf, p->mem);
     syntaqlite_vec_free(&p->node_expanded_buf, p->mem);
-    syntaqlite_vec_free(&p->macro_expand_buf, p->mem);
-    syntaqlite_vec_free(&p->macro_body_buf, p->mem);
+    synq_macro_state_free(&p->macro, p->mem);
     p->mem.xFree(p);
   }
 }

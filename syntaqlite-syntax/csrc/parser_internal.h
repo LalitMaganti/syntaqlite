@@ -87,73 +87,85 @@ typedef struct SynqExpansionLayer {
   uint8_t parent_layer_id;  // Layer containing the call (0 = source).
 } SynqExpansionLayer;
 
+typedef SYNQ_VEC(SynqExpansionLayer) SynqExpansionLayerVec;
+
+// ── Macro expansion state ────────────────────────────────────────────────
+//
+// Groups callback registration, per-invocation state, scratch buffers,
+// and recursion detection.  Accessed almost exclusively from
+// parser_macros.c; parser.c only touches init/free/reset.
+
+typedef struct SynqMacroState {
+  // Callback registration.
+  SyntaqliteMacroLookupFn lookup_fn;
+  void* lookup_user_data;
+
+  // Per-invocation state (set before callback, cleared after).
+  // `pending_layer` indexes into p->layers for the layer the callback
+  // should write into via set_result / expand_and_set_result.
+  uint32_t pending_layer;
+  const SyntaqliteToken* expansion_args;
+  uint32_t expansion_arg_count;
+
+  // Scratch buffers (reused across invocations, freed in destroy).
+  SYNQ_VEC(uint8_t) expand_buf;  // Template expansion output.
+  SYNQ_VEC(uint8_t) body_buf;    // NUL-terminated body staging.
+
+  // Blue-paint recursion detection: names of macros currently being expanded.
+  const char* expansion_names[SYNQ_MAX_MACRO_DEPTH];
+  uint32_t expansion_name_lens[SYNQ_MAX_MACRO_DEPTH];
+  uint32_t expansion_depth;
+
+  // Nesting depth (0 = not in macro).
+  uint32_t depth;
+} SynqMacroState;
+
 // ── Parser struct ───────────────────────────────────────────────────────────
 
 struct SyntaqliteParser {
+  // ── Core (shared by parser.c, parser_macros.c, parser_dump.c) ──────────
   SyntaqliteMemMethods mem;
   SyntaqliteDialect dialect;
   void* lemon;
   SynqParseCtx ctx;
   const char* source;
   uint32_t source_len;
-  uint32_t offset;           // Tokenizer cursor into source.
+  uint32_t offset;          // Tokenizer cursor into source.
+  uint32_t had_error;       // Sticky error flag for current result.
+  char error_msg[256];      // Error message buffer.
+  uint32_t macro_fallback;  // 1 = unregistered name!(args) becomes TK_ID.
+
+  // ── Parser-only state (only parser.c) ──────────────────────────────────
   uint32_t last_token_type;  // Last non-whitespace token fed to Lemon.
   uint32_t finished;         // 1 after EOF has been sent to Lemon.
   uint32_t had_comment;      // 1 if any comment token was seen this stmt.
-  uint32_t had_error;        // Sticky error flag for current result.
   int32_t last_status;       // Last SYNTAQLITE_PARSE_* status returned.
-  char error_msg[256];       // Error message buffer.
   uint32_t trace;
   uint32_t collect_tokens;
-  uint32_t macro_fallback;  // 1 = unregistered name!(args) becomes TK_ID.
   uint32_t sealed;
-  uint32_t pending_reset;  // 1 after feed_token signals completion; cleared on
-                           // the next feed_token call (arena reset deferred).
+  uint32_t pending_reset;  // 1 after feed_token signals completion;
+                           // cleared on next feed_token call.
   SYNQ_VEC(SyntaqliteComment) comments;
   SYNQ_VEC(SyntaqliteParserToken) tokens;
-  uint32_t macro_depth;  // Nesting depth (0 = not in macro).
 
-  // Unified layer tree.  Entry 0 is a sentinel representing the original
-  // source; actual expansions start at index 1.  `_layer_id` on AST spans
-  // indexes directly into this vector.
-  SYNQ_VEC(SynqExpansionLayer) layers;
-
-  // Scratch buffer owned by the parser for `syntaqlite_parser_traceback`.
-  // Rewritten on every call; pointers returned from one call are
-  // invalidated by the next (and by `reset_stmt`).
-  SYNQ_VEC(SyntaqliteTracebackFrame) traceback_buf;
-
-  // Scratch buffer owned by the parser for materializing the expanded
-  // text of mixed-layer nodes in `syntaqlite_parser_node_expanded_text`.
-  // Same lifetime semantics as `traceback_buf` — rewritten on every
+  // Scratch buffer for materializing the expanded text of mixed-layer
+  // nodes in `syntaqlite_parser_node_expanded_text`.  Rewritten on every
   // call, invalidated by the next call / `reset_stmt`.
   SYNQ_VEC(uint8_t) node_expanded_buf;
 
-  // ── Macro lookup callback ──────────────────────────────────────────────
-  SyntaqliteMacroLookupFn macro_lookup_fn;
-  void* macro_lookup_user_data;
-  // Index into p->layers of the layer the callback should write into.
-  // Set by expand_and_feed_macro before invoking the callback;
-  // set_result / expand_and_set_result write expansion_data / def_line /
-  // def_col directly onto layers.data[macro_pending_layer].
-  uint32_t macro_pending_layer;
-  const SyntaqliteToken* macro_expansion_args;
-  uint32_t macro_expansion_arg_count;
+  // ── Layer tree (shared — parser.c + parser_macros.c) ───────────────────
+  // Entry 0 is a sentinel representing the original source; actual
+  // expansions start at index 1.  `_layer_id` on AST spans indexes
+  // directly into this vector.
+  SynqExpansionLayerVec layers;
 
-  // Scratch buffer for template expansion in expand_and_set_result.
-  // Reused across invocations to avoid repeated allocation.
-  SYNQ_VEC(uint8_t) macro_expand_buf;
+  // Scratch buffer for `syntaqlite_parser_traceback`.  Rewritten on every
+  // call; pointers returned from one call are invalidated by the next
+  // (and by `reset_stmt`).
+  SYNQ_VEC(SyntaqliteTracebackFrame) traceback_buf;
 
-  // NUL-terminated staging buffer for the macro body before tokenization.
-  // The tokenizer reads until NUL, but callers may pass non-NUL-terminated
-  // buffers (e.g. Rust &str), so we stage the body here first.
-  SYNQ_VEC(uint8_t) macro_body_buf;
-
-  // ── Expansion state ───────────────────────────────────────────────────
-  // Blue-paint recursion detection: names of macros currently being expanded.
-  const char* expansion_names[SYNQ_MAX_MACRO_DEPTH];
-  uint32_t expansion_name_lens[SYNQ_MAX_MACRO_DEPTH];
-  uint32_t expansion_depth;
+  // ── Macro expansion state (mostly parser_macros.c) ─────────────────────
+  SynqMacroState macro;
 };
 
 // ── Cross-file helpers ──────────────────────────────────────────────────────
@@ -206,6 +218,26 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
 // Diagnose macro expansions that straddle AST node boundaries.  Defined in
 // parser_macros.c.
 int synq_parser_check_macro_straddle(SyntaqliteParser* p);
+
+// ── Macro state lifecycle ───────────────────────────────────────────────────
+
+// Initialize macro state vecs (callback/expansion fields zeroed by memset).
+void synq_macro_state_init(SynqMacroState* m);
+
+// Free macro state scratch buffers.
+void synq_macro_state_free(SynqMacroState* m, SyntaqliteMemMethods mem);
+
+// ── Layer helpers ───────────────────────────────────────────────────────────
+
+// Free owned expansion data and arg segments on layers 1..N (skip sentinel).
+void synq_layers_free_owned(SynqExpansionLayerVec* layers,
+                            SyntaqliteMemMethods mem);
+
+// Push the source sentinel at index 0.
+void synq_layers_push_sentinel(SynqExpansionLayerVec* layers,
+                               const char* source,
+                               uint32_t source_len,
+                               SyntaqliteMemMethods mem);
 
 #ifdef __cplusplus
 }
