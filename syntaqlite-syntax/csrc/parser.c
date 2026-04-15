@@ -70,6 +70,8 @@ static void reset_stmt(SyntaqliteParser* p) {
     SynqExpansionLayer* lyr = &p->layers.data[i];
     if (lyr->expansion_data)
       p->mem.xFree((void*)lyr->expansion_data);
+    if (lyr->arg_segments)
+      p->mem.xFree(lyr->arg_segments);
   }
   syntaqlite_vec_clear(&p->layers);
   // Push sentinel at index 0 (source layer).  p->source may be NULL on
@@ -204,6 +206,8 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
       SynqExpansionLayer* lyr = &p->layers.data[i];
       if (lyr->expansion_data)
         p->mem.xFree((void*)lyr->expansion_data);
+      if (lyr->arg_segments)
+        p->mem.xFree(lyr->arg_segments);
     }
     syntaqlite_vec_free(&p->layers, p->mem);
     syntaqlite_vec_free(&p->traceback_buf, p->mem);

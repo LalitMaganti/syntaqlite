@@ -42,6 +42,18 @@ typedef struct SynqMacroArg {
   uint32_t length;  // Byte length of the argument text.
 } SynqMacroArg;
 
+// Resolved arg segment on an expansion layer.  Records where a substituted
+// arg landed in the expansion buffer and where the original text lives in
+// the parent layer, enabling span resolution to drill through $param
+// substitutions back to the caller's authored arg text.
+typedef struct SynqArgSegment {
+  uint32_t sub_offset;       // Where the substituted arg starts in expansion.
+  uint32_t sub_length;       // Length in expansion buffer.
+  uint32_t origin_layer_id;  // Layer that owns the arg text.
+  uint32_t origin_offset;    // Arg text offset in origin layer.
+  uint32_t origin_length;    // Arg text length in origin layer.
+} SynqArgSegment;
+
 // Expansion layer record.  `_layer_id` on AST spans indexes directly into
 // the parser's layers vector.  Entry 0 is a sentinel for the original
 // source (expansion_data = source pointer, parent_layer_id = 0,
@@ -62,14 +74,18 @@ typedef struct SynqExpansionLayer {
   uint32_t expansion_len;      // Length of expanded text.
 
   // Definition provenance.
-  const char* name;            // Macro name (borrowed), or NULL.
-  uint32_t name_len;           // Length of name.
-  uint32_t def_line;           // Macro definition line (1-based, 0=unknown).
-  uint32_t def_col;            // Macro definition column (1-based, 0=unknown).
+  const char* name;   // Macro name (borrowed), or NULL.
+  uint32_t name_len;  // Length of name.
+  uint32_t def_line;  // Macro definition line (1-based, 0=unknown).
+  uint32_t def_col;   // Macro definition column (1-based, 0=unknown).
+
+  // Arg segments: sorted by sub_offset, non-overlapping.  Allocated via
+  // p->mem; freed in reset_stmt / destroy.  NULL when no $param subs.
+  SynqArgSegment* arg_segments;
+  uint32_t arg_segment_count;
 
   uint8_t parent_layer_id;  // Layer containing the call (0 = source).
 } SynqExpansionLayer;
-
 
 // ── Parser struct ───────────────────────────────────────────────────────────
 

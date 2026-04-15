@@ -116,15 +116,36 @@ SYNTAQLITE_API void syntaqlite_parser_set_macro_lookup(
 // Set the expanded body for the current macro invocation.
 // `def_line` / `def_col` are 1-based definition position for tracebacks
 // (pass 0/0 if unknown).
-SYNTAQLITE_API void syntaqlite_macro_expansion_set_result(
+SYNTAQLITE_API void syntaqlite_macro_expansion_set_result(SyntaqliteParser* p,
+                                                          const char* body,
+                                                          uint32_t body_len,
+                                                          uint32_t def_line,
+                                                          uint32_t def_col);
+
+// Describes where one macro argument was pasted into the expansion body.
+// Used by set_result_with_arg_map to enable span drilling through
+// $param substitutions.
+typedef struct SyntaqliteArgMapping {
+  uint32_t body_offset;  // Byte offset in `body` where arg text starts.
+  uint32_t arg_index;    // Index into the args array passed to the callback.
+} SyntaqliteArgMapping;
+
+// Like set_result, but with arg-mapping metadata for span drilling.
+// Each mapping says "at body_offset, I pasted arg[arg_index]".
+// Enables span_text to drill through substitutions to the caller's
+// authored arg text instead of collapsing to the whole call site.
+SYNTAQLITE_API void syntaqlite_macro_expansion_set_result_with_arg_map(
     SyntaqliteParser* p,
     const char* body,
     uint32_t body_len,
     uint32_t def_line,
-    uint32_t def_col);
+    uint32_t def_col,
+    const SyntaqliteArgMapping* mappings,
+    uint32_t mapping_count);
 
 // Template expansion helper: substitute `$param` placeholders with the
-// current invocation's args and call set_result.  Returns 0 on success.
+// current invocation's args and call set_result.  Arg segments are built
+// automatically.  Returns 0 on success.
 SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
     SyntaqliteParser* p,
     const char* body,

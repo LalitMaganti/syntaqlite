@@ -23,7 +23,6 @@ pub(crate) struct CMemMethods {
     pub x_free: unsafe extern "C" fn(*mut c_void),
 }
 
-
 /// The kind of a comment.
 #[expect(dead_code)] // C FFI mirror — variants match the C enum values
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,7 +77,6 @@ pub(crate) struct CToken {
     pub(crate) length: u32,
     pub(crate) type_: u32,
 }
-
 
 /// A recorded macro invocation region.
 ///
@@ -460,14 +458,16 @@ impl CParser {
 
     pub(crate) unsafe fn set_macro_lookup(
         &mut self,
-        func: Option<unsafe extern "C" fn(
-            user_data: *mut c_void,
-            parser: *mut CParser,
-            name: *const c_char,
-            name_len: u32,
-            args: *const CToken,
-            arg_count: u32,
-        ) -> i32>,
+        func: Option<
+            unsafe extern "C" fn(
+                user_data: *mut c_void,
+                parser: *mut CParser,
+                name: *const c_char,
+                name_len: u32,
+                args: *const CToken,
+                arg_count: u32,
+            ) -> i32,
+        >,
         user_data: *mut c_void,
     ) {
         // SAFETY: self is a valid, non-null CParser pointer.
@@ -574,14 +574,16 @@ unsafe extern "C" {
     // Macro lookup callback
     fn syntaqlite_parser_set_macro_lookup(
         p: *mut CParser,
-        func: Option<unsafe extern "C" fn(
-            user_data: *mut c_void,
-            parser: *mut CParser,
-            name: *const c_char,
-            name_len: u32,
-            args: *const CToken,
-            arg_count: u32,
-        ) -> i32>,
+        func: Option<
+            unsafe extern "C" fn(
+                user_data: *mut c_void,
+                parser: *mut CParser,
+                name: *const c_char,
+                name_len: u32,
+                args: *const CToken,
+                arg_count: u32,
+            ) -> i32,
+        >,
         user_data: *mut c_void,
     );
 }
@@ -803,7 +805,7 @@ mod tests {
         fn prefix(prefix: &'static str) -> Self {
             Self {
                 matches: Box::new(move |n| n.starts_with(prefix)),
-                expand: Box::new(|x| x.to_string()),
+                expand: Box::new(ToString::to_string),
             }
         }
     }
@@ -884,7 +886,9 @@ mod tests {
     #[test]
     fn macro_register_and_expand() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.set_macro_lookup(Some(Box::new(TestLookup::named("double", |x| format!("({x} + {x})")))));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("double", |x| {
+            format!("({x} + {x})")
+        }))));
 
         let mut session = parser.parse("SELECT double!(1);");
         match session.next() {
@@ -905,7 +909,7 @@ mod tests {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         parser.set_macro_lookup(Some(Box::new(TestLookup {
             matches: Box::new(move |n| enabled_cb.get() && n.eq_ignore_ascii_case("foo")),
-            expand: Box::new(|x| x.to_string()),
+            expand: Box::new(ToString::to_string),
         })));
 
         // First parse: macro is active.
@@ -936,7 +940,9 @@ mod tests {
     #[test]
     fn macro_case_insensitive_lookup() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.set_macro_lookup(Some(Box::new(TestLookup::named("mymacro", |x| x.to_string()))));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("mymacro", |x| {
+            x.to_string()
+        }))));
 
         // Call as "mymacro" — case insensitive match
         // is handled by the callback (eq_ignore_ascii_case).
@@ -951,7 +957,9 @@ mod tests {
     fn macro_overwrite_existing() {
         // With callbacks, "overwrite" = the callback returns different body.
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.set_macro_lookup(Some(Box::new(TestLookup::named("m", |x| format!("({x} + 1)")))));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("m", |x| {
+            format!("({x} + 1)")
+        }))));
 
         let mut session = parser.parse("SELECT m!(5);");
         match session.next() {
@@ -965,7 +973,9 @@ mod tests {
         // This test is no longer relevant (no internal hashmap/tombstones).
         // Replace with a basic callback re-installation test.
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.set_macro_lookup(Some(Box::new(TestLookup::named("tmp", |x| format!("({x})")))));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("tmp", |x| {
+            format!("({x})")
+        }))));
 
         let mut session = parser.parse("SELECT tmp!(7);");
         match session.next() {
@@ -1005,7 +1015,7 @@ mod tests {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         parser.set_macro_lookup(Some(Box::new(TestLookup {
             matches: Box::new(move |n| active_cb.borrow().contains(&n.to_ascii_lowercase())),
-            expand: Box::new(|x| x.to_string()),
+            expand: Box::new(ToString::to_string),
         })));
 
         // Remove some.
@@ -1091,7 +1101,9 @@ mod tests {
     fn macro_fallback_registered_still_expands() {
         // With a callback installed, known macros expand even with fallback on.
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        parser.set_macro_lookup(Some(Box::new(TestLookup::named("double", |x| format!("({x} + {x})")))));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("double", |x| {
+            format!("({x} + {x})")
+        }))));
 
         let mut session = parser.parse("SELECT double!(3);");
         match session.next() {
@@ -1178,9 +1190,9 @@ mod tests {
                 .with_collect_tokens(true)
                 .with_macro_fallback(true),
         );
-        parser.set_macro_lookup(Some(Box::new(
-            TestLookup::named("my_expr", |x| format!("{x} + 1")),
-        )));
+        parser.set_macro_lookup(Some(Box::new(TestLookup::named("my_expr", |x| {
+            format!("{x} + 1")
+        }))));
 
         // Parse a statement that invokes the macro in expression position.
         // The macro body "$x + 1" expands with x=42, producing "42 + 1".

@@ -77,13 +77,7 @@ impl MacroOutput {
     pub fn set_definition(&mut self, line: u32, col: u32) {
         // SAFETY: parser is valid for the duration of the callback.
         unsafe {
-            ffi::syntaqlite_macro_expansion_set_result(
-                self.parser,
-                std::ptr::null(),
-                0,
-                line,
-                col,
-            );
+            ffi::syntaqlite_macro_expansion_set_result(self.parser, std::ptr::null(), 0, line, col);
         }
     }
 
@@ -131,7 +125,6 @@ pub trait MacroLookup {
     fn lookup(&mut self, name: &str, args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool;
 }
 
-
 /// Internal state for the macro lookup trampoline.
 struct MacroLookupState {
     handler: Box<dyn MacroLookup>,
@@ -154,10 +147,7 @@ unsafe extern "C" fn macro_lookup_trampoline(
     let state: &mut MacroLookupState = unsafe { &mut *(user_data.cast::<MacroLookupState>()) };
 
     let name_str = unsafe {
-        std::str::from_utf8_unchecked(std::slice::from_raw_parts(
-            name.cast(),
-            name_len as usize,
-        ))
+        std::str::from_utf8_unchecked(std::slice::from_raw_parts(name.cast(), name_len as usize))
     };
 
     let macro_args: Vec<MacroArg<'_>> = (0..arg_count as usize)
@@ -308,10 +298,7 @@ impl<G: TypedDialect> TypedParser<G> {
     /// # Panics
     ///
     /// Panics if another session from this parser is still active.
-    pub fn set_macro_lookup(
-        &mut self,
-        handler: Option<Box<dyn MacroLookup>>,
-    ) {
+    pub fn set_macro_lookup(&mut self, handler: Option<Box<dyn MacroLookup>>) {
         let mut inner_ref = self.inner.borrow_mut();
         let inner = inner_ref
             .as_mut()
@@ -409,10 +396,7 @@ impl<G: TypedDialect> TypedParseSession<G> {
     /// # Panics
     ///
     /// Panics if the session has already finished.
-    pub fn set_macro_lookup(
-        &mut self,
-        handler: Option<Box<dyn MacroLookup>>,
-    ) {
+    pub fn set_macro_lookup(&mut self, handler: Option<Box<dyn MacroLookup>>) {
         let inner = self
             .inner
             .as_mut()
@@ -433,14 +417,12 @@ impl<G: TypedDialect> TypedParseSession<G> {
                 }
                 inner.macro_handler = Some(user_data);
             }
-            None => {
-                unsafe {
-                    inner
-                        .raw
-                        .as_mut()
-                        .set_macro_lookup(None, std::ptr::null_mut());
-                }
-            }
+            None => unsafe {
+                inner
+                    .raw
+                    .as_mut()
+                    .set_macro_lookup(None, std::ptr::null_mut());
+            },
         }
     }
 
@@ -1278,4 +1260,3 @@ pub(crate) unsafe fn reset_parser(raw: *mut CParser, source_buf: &mut Vec<u8>, s
         (*raw).reset(c_text_ptr.cast(), source.len() as u32);
     }
 }
-

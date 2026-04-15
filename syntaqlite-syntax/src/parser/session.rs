@@ -455,7 +455,10 @@ mod tests {
             self.macros.insert(
                 name.to_ascii_lowercase(),
                 (
-                    params.iter().map(|s| s.to_string()).collect(),
+                    params
+                        .iter()
+                        .map(ToString::to_string)
+                        .collect(),
                     body.to_string(),
                 ),
             );
