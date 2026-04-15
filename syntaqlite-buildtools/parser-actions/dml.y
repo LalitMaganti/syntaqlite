@@ -227,7 +227,7 @@ idlist_opt(A) ::= . {
 }
 
 idlist_opt(A) ::= LP idlist(X) RP. {
-    A = X;
+    A = synq_pass(pCtx, X);
 }
 
 // ============ UPSERT (ON CONFLICT clauses) ============
@@ -269,7 +269,7 @@ upsert(A) ::= ON CONFLICT DO UPDATE SET setlist(Z) where_opt(W) returning(V). {
 // ============ RETURNING ============
 
 returning(A) ::= RETURNING selcollist(X). {
-    A = X;
+    A = synq_pass(pCtx, X);
 }
 
 returning(A) ::= . {

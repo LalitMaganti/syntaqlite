@@ -7159,8 +7159,8 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 1: /* cmdlist ::= cmdlist ecmd */
     {
-      yymsp[-1].minor.yy277 =
-          yymsp[0].minor.yy277;  // Just use the last command for now
+      yymsp[-1].minor.yy277 = synq_pass(
+          pCtx, yymsp[0].minor.yy277);  // Just use the last command for now
     } break;
     case 2:  /* cmdlist ::= ecmd */
     case 55: /* case_operand ::= expr */
@@ -7199,7 +7199,7 @@ static YYACTIONTYPE yy_reduce(
     case 261: /* sclp ::= selcollist COMMA */
       yytestcase(yyruleno == 261);
       {
-        yylhsminor.yy277 = yymsp[-1].minor.yy277;
+        yylhsminor.yy277 = synq_pass(pCtx, yymsp[-1].minor.yy277);
       }
       yymsp[-1].minor.yy277 = yylhsminor.yy277;
       break;
@@ -7609,7 +7609,7 @@ static YYACTIONTYPE yy_reduce(
     case 408: /* window_clause ::= WINDOW windowdefn_list */
       yytestcase(yyruleno == 408);
       {
-        yymsp[-1].minor.yy277 = yymsp[0].minor.yy277;
+        yymsp[-1].minor.yy277 = synq_pass(pCtx, yymsp[0].minor.yy277);
       }
       break;
     case 54: /* case_else ::= */
@@ -7670,7 +7670,7 @@ static YYACTIONTYPE yy_reduce(
       args_node->create_table_stmt.is_temp = ct_node->create_table_stmt.is_temp;
       args_node->create_table_stmt.if_not_exists =
           ct_node->create_table_stmt.if_not_exists;
-      yylhsminor.yy277 = yymsp[0].minor.yy277;
+      yylhsminor.yy277 = synq_pass(pCtx, yymsp[0].minor.yy277);
     }
       yymsp[-1].minor.yy277 = yylhsminor.yy277;
       break;
@@ -8278,7 +8278,7 @@ static YYACTIONTYPE yy_reduce(
     case 324: /* trigger_cmd ::= scanpt select scanpt */
       yytestcase(yyruleno == 324);
       {
-        yymsp[-2].minor.yy277 = yymsp[-1].minor.yy277;
+        yymsp[-2].minor.yy277 = synq_pass(pCtx, yymsp[-1].minor.yy277);
       }
       break;
     case 133: /* eidlist ::= nm collate sortorder */
@@ -9136,7 +9136,7 @@ static YYACTIONTYPE yy_reduce(
     case 279: /* orderby_opt ::= ORDER BY sortlist */
       yytestcase(yyruleno == 279);
       {
-        yymsp[-2].minor.yy277 = yymsp[0].minor.yy277;
+        yymsp[-2].minor.yy277 = synq_pass(pCtx, yymsp[0].minor.yy277);
       }
       break;
     case 281: /* limit_opt ::= LIMIT expr */
@@ -9430,7 +9430,7 @@ static YYACTIONTYPE yy_reduce(
       // the body
       SyntaqliteNode* trig = AST_NODE(&pCtx->ast, yymsp[-3].minor.yy277);
       trig->create_trigger_stmt.body = yymsp[-1].minor.yy277;
-      yymsp[-4].minor.yy277 = yymsp[-3].minor.yy277;
+      yymsp[-4].minor.yy277 = synq_pass(pCtx, yymsp[-3].minor.yy277);
     } break;
     case 303: /* trigger_decl ::= temp TRIGGER ifnotexists nm dbnm trigger_time
                  trigger_event ON fullname foreach_clause when_clause */
@@ -9702,7 +9702,7 @@ static YYACTIONTYPE yy_reduce(
     case 354: /* ecmd ::= explain cmdx SEMI */
     {
       (void)yymsp[-2].minor.yy320;
-      yylhsminor.yy277 = yymsp[-1].minor.yy277;
+      yylhsminor.yy277 = synq_pass(pCtx, yymsp[-1].minor.yy277);
     }
       yymsp[-2].minor.yy277 = yylhsminor.yy277;
       break;
@@ -9988,7 +9988,7 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 414: /* filter_clause ::= FILTER LP WHERE expr RP */
     {
-      yymsp[-4].minor.yy277 = yymsp[-1].minor.yy277;
+      yymsp[-4].minor.yy277 = synq_pass(pCtx, yymsp[-1].minor.yy277);
     } break;
     default:
       break;

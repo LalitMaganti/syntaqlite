@@ -159,7 +159,7 @@ key_opt(A) ::= . {
 }
 
 key_opt(A) ::= KEY expr(X). {
-    A = X;
+    A = synq_pass(pCtx, X);
 }
 
 // ============ VACUUM ============
@@ -177,7 +177,7 @@ cmd(A) ::= VACUUM nm(X) vinto(Y). {
 }
 
 vinto(A) ::= INTO expr(X). {
-    A = X;
+    A = synq_pass(pCtx, X);
 }
 
 vinto(A) ::= . {
@@ -188,7 +188,7 @@ vinto(A) ::= . {
 
 ecmd(A) ::= explain(E) cmdx(B) SEMI. {
     (void)E;
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 explain(A) ::= EXPLAIN. {

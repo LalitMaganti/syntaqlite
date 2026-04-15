@@ -24,7 +24,7 @@ cmd(A) ::= createkw trigger_decl(D) BEGIN trigger_cmd_list(S) END. {
     // D is a partially-built CreateTriggerStmt, fill in the body
     SyntaqliteNode *trig = AST_NODE(&pCtx->ast, D);
     trig->create_trigger_stmt.body = S;
-    A = D;
+    A = synq_pass(pCtx, D);
 }
 
 // trigger_decl builds a partial CreateTriggerStmt (without body)
@@ -96,7 +96,7 @@ when_clause(A) ::= . {
 }
 
 when_clause(A) ::= WHEN expr(X). {
-    A = X;
+    A = synq_pass(pCtx, X);
 }
 
 // ============ Trigger command list ============
@@ -163,5 +163,5 @@ trigger_cmd(A) ::= DELETE FROM trnm(X) tridxby where_opt(Y) scanpt. {
 
 // SELECT within trigger
 trigger_cmd(A) ::= scanpt select(X) scanpt. {
-    A = X;
+    A = synq_pass(pCtx, X);
 }

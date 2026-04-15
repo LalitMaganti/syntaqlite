@@ -46,7 +46,7 @@ cmd(A) ::= create_table(CT) create_table_args(ARGS). {
     args_node->create_table_stmt.schema = ct_node->create_table_stmt.schema;
     args_node->create_table_stmt.is_temp = ct_node->create_table_stmt.is_temp;
     args_node->create_table_stmt.if_not_exists = ct_node->create_table_stmt.if_not_exists;
-    A = ARGS;
+    A = synq_pass(pCtx, ARGS);
 }
 
 create_table(A) ::= createkw temp(T) TABLE ifnotexists(E) nm(Y) dbnm(Z). {

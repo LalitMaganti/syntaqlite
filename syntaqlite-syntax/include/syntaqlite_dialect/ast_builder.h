@@ -245,6 +245,16 @@ static inline void synq_extent_record(SynqParseCtx* ctx, uint32_t node_id) {
   }
 }
 
+// Re-record the current shadow-stack extent for an existing node ID.
+// Use this in multi-RHS grammar rules that pass through a child node ID
+// without allocating a new node (e.g. `A = B;`).  Without this call,
+// node_extents[child] retains the child's original (narrower) range
+// instead of the merged range of the enclosing rule.
+static inline uint32_t synq_pass(SynqParseCtx* ctx, uint32_t child) {
+  synq_extent_record(ctx, child);
+  return child;
+}
+
 // Generic node builder: copy node data into the arena.
 static inline uint32_t synq_parse_build(SynqParseCtx* ctx,
                                         const void* node_data,

@@ -183,7 +183,7 @@ input ::= cmdlist(B). {
 // ============ Command list ============
 
 cmdlist(A) ::= cmdlist ecmd(B). {
-    A = B;  // Just use the last command for now
+    A = synq_pass(pCtx, B);  // Just use the last command for now
 }
 
 cmdlist(A) ::= ecmd(B). {
@@ -202,7 +202,7 @@ ecmd(A) ::= SEMI. {
 // SEMI — the first token of the next statement is never consumed as a lookahead.
 // This mirrors SQLite's own approach (sqlite3FinishCoding fires in cmdx ::= cmd).
 ecmd(A) ::= cmdx(B) SEMI. {
-    A = B;
+    A = synq_pass(pCtx, B);
 }
 
 // Error recovery: discard tokens until SEMI, then complete the statement.
