@@ -940,6 +940,85 @@ mod tests {
     }
 
     #[test]
+    fn macro_arg_trailing_comment_does_not_corrupt_nested_expansion() {
+        // Regression: scan_macro_args captured trailing whitespace/comments in
+        // arg text.  When substituted into a nested expansion, a `-- comment`
+        // consumed the rest of the line in the expansion buffer, corrupting
+        // sibling tokens (e.g. commas, closing parens).
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("mpass", &["x"], "$x");
+        reg.register("mwrap", &["x"], "(mpass!($x), mpass!($x))");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let sql = "SELECT mwrap!(\n  foo  -- a stray inline comment\n);";
+        let mut session = parser.parse(sql);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        };
+
+        // If the comment was trimmed correctly, the mwrap expansion produces
+        // "(mpass!(foo), mpass!(foo))" which further expands to "(foo, foo)".
+        // That parses as a parenthesized expression list — no syntax error.
+        let mut dump = String::new();
+        stmt.dump(&mut dump, 0);
+        assert!(
+            !dump.contains("error"),
+            "expansion should not produce errors, got:\n{dump}"
+        );
+    }
+
+    #[test]
+    fn macro_nested_expansion_basic() {
+        // Verify nested expansion works at all.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("mpass", &["x"], "$x");
+        reg.register("mwrap", &["x"], "mpass!($x)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let sql = "SELECT mwrap!(42);";
+        let mut session = parser.parse(sql);
+        match session.next() {
+            ParseOutcome::Ok(stmt) => {
+                let mut dump = String::new();
+                stmt.dump(&mut dump, 0);
+                assert!(
+                    stmt.root().is_some(),
+                    "nested expansion should work, got:\n{dump}"
+                );
+            }
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        }
+    }
+
+    #[test]
+    fn macro_arg_leading_whitespace_trimmed() {
+        // Args like `macro!(  x  )` should have leading/trailing whitespace
+        // trimmed so the substituted text is just `x`.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("mpass", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let sql = "SELECT mpass!(  42  );";
+        let mut session = parser.parse(sql);
+        match session.next() {
+            ParseOutcome::Ok(stmt) => {
+                let mut dump = String::new();
+                stmt.dump(&mut dump, 0);
+                // Should parse as SELECT 42 — no errors.
+                assert!(stmt.root().is_some());
+            }
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        }
+    }
+
+    #[test]
     fn macro_deregister_falls_back_to_legacy() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let reg = Rc::new(RefCell::new(TestMacroRegistry::new()));
