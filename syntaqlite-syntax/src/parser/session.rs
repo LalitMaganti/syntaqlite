@@ -1030,7 +1030,8 @@ mod tests {
         //
         // The inner n!(...) call is tokenized from the substituted text
         // of m's $x, not from m's authored body — downstream Rewriter
-        // consumers need body_call_length == 0 to signal "descend via
+        // consumers need the arg-internal sentinel (u32::MAX on both
+        // body_call_offset and body_call_length) to signal "descend via
         // arg segments" instead of "rewrite in the parent's body".
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let mut reg = TestMacroRegistry::new();

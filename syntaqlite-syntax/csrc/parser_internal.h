@@ -102,10 +102,11 @@ typedef struct SynqExpansionLayer {
 
   // Position of this nested call in the *parent's authored body*,
   // computed by inverting the length shifts from the parent's $param
-  // substitutions.  body_call_length == 0 means the call was tokenized
-  // from a substituted arg's text (no clean body position) and consumers
-  // should descend through the matching arg segment instead.  Zero for
-  // top-level layers (parent_layer_id == 0).
+  // substitutions.  Both fields equal SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL
+  // (UINT32_MAX) when the call was tokenized from a substituted arg's
+  // text (no clean body position) and consumers should descend through
+  // the matching arg segment instead.  Zero for top-level layers
+  // (parent_layer_id == 0).
   uint32_t body_call_offset;
   uint32_t body_call_length;
 
