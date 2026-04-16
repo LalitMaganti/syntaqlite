@@ -1086,6 +1086,54 @@ mod tests {
     }
 
     #[test]
+    fn unknown_macro_with_lookup_fn_emits_error_message() {
+        // When a lookup callback is registered but the macro is not found,
+        // the parser should produce a hard error with "unknown macro 'name'".
+        // We need macro_fallback to enable macro syntax for SQLite dialect.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default().with_macro_fallback(true),
+        );
+        // Lookup callback that always returns false (nothing registered).
+        parser.set_macro_lookup(Some(Box::new(TestLookup::prefix("__never__"))));
+
+        let mut session = parser.parse("SELECT foo!(1, 2);");
+        match session.next() {
+            crate::ParseOutcome::Err(e) => {
+                let msg = e.message();
+                assert!(
+                    msg.contains("unknown macro") && msg.contains("foo"),
+                    "expected 'unknown macro' error mentioning 'foo', got: '{msg}'"
+                );
+            }
+            crate::ParseOutcome::Ok(_) => {
+                panic!("expected parse error for unknown macro, got Ok");
+            }
+            crate::ParseOutcome::Done => {
+                panic!("expected parse error, got Done");
+            }
+        }
+    }
+
+    #[test]
+    fn unknown_macro_without_lookup_fn_falls_through() {
+        // When macro_fallback is enabled but NO lookup callback is
+        // registered, unknown macro calls should fall through to TK_ID.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default().with_macro_fallback(true),
+        );
+        // No set_macro_lookup — no callback.
+
+        let mut session = parser.parse("SELECT foo!(1, 2);");
+        match session.next() {
+            crate::ParseOutcome::Ok(_) => {} // Expected — no lookup, fallback mode.
+            crate::ParseOutcome::Err(e) => {
+                panic!("expected Ok without lookup_fn, got error: {}", e.message());
+            }
+            crate::ParseOutcome::Done => panic!("expected Ok, got Done"),
+        }
+    }
+
+    #[test]
     fn macro_fallback_records_macro_region() {
         let mut handle = ParserHandle::new();
         let parser = handle.parser_mut();

@@ -545,9 +545,18 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
     // Not found or error — if had_error was set, propagate.
     if (p->had_error)
       return -1;
+
+    // Lookup callback is registered but the macro was not found.
+    // This is a hard error — the user likely misspelled the macro name
+    // or forgot to define it.
+    snprintf(p->error_msg, sizeof(p->error_msg),
+             "unknown macro '%.*s'", (int)id_len,
+             (const char*)z + id_offset);
+    p->had_error = 1;
+    return -1;
   }
 
-  // No callback, or macro not found — fall through to TK_ID fallback.
+  // No callback — fall through to TK_ID fallback.
   // (We already checked macro_style/macro_fallback at the top.)
 
   // Scan balanced parens to find the end of name!(args).

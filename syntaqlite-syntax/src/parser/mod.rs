@@ -544,7 +544,7 @@ pub type AnyParseSession = TypedParseSession<AnyDialect>;
 /// Cheap to borrow — holds a raw parser pointer and dialect handle.  Nodes
 /// and lists store `&'a AnyParsedStatement<'a>` rather than an owned copy,
 /// making them `Copy` and eliminating dialect-handle clones.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AnyParsedStatement<'a> {
     pub(crate) raw: NonNull<CParser>,
     pub(crate) dialect: AnyDialect,
@@ -949,7 +949,7 @@ impl<'a> AnyParsedStatement<'a> {
 /// - AST traversal (`root()`).
 /// - Token/comment-aware tooling (`tokens()`, `comments()`).
 /// - Dialect-agnostic pipelines (`erase()`).
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct TypedParsedStatement<'a, G: TypedDialect> {
     pub(crate) any: AnyParsedStatement<'a>,
     _marker: PhantomData<G>,
