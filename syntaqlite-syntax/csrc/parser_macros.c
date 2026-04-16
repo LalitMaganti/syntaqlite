@@ -438,7 +438,6 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
   const char* data = lyr->expansion_data;
   uint32_t data_len = lyr->expansion_len;
 
-  uint32_t saved_layer_id = p->ctx.layer_id;
   p->ctx.layer_id = new_layer_idx;
 
   // Push blue-paint for recursion detection.
@@ -449,9 +448,7 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
   // Feed expanded tokens (may trigger nested macro expansions).
   int frc = expand_and_feed(p, data, data_len, depth);
 
-  // Pop blue-paint.
   p->macro.expansion_depth--;
-  p->ctx.layer_id = saved_layer_id;
   synq_end_macro(p);
 
   if (frc < 0)
@@ -479,6 +476,7 @@ static void begin_macro_expansion(SyntaqliteParser* p,
   if (p->ctx.layer_id == 0) {
     p->ctx.macro_root_start = call_offset;
     p->ctx.macro_root_end = call_offset + call_length;
+    p->ctx.macro_root_layer = syntaqlite_vec_len(&p->macro.layers);
   }
 
   SynqExpansionLayer layer = {
@@ -585,65 +583,12 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
 // ---------------------------------------------------------------------------
 
 int synq_parser_check_macro_straddle(SyntaqliteParser* p) {
-  uint32_t layer_count = syntaqlite_vec_len(&p->macro.layers);
-  // Sentinel occupies index 0; real expansion layers start at 1.
-  if (layer_count <= 1)
+  if (!p->ctx.has_macro_straddle)
     return 0;
-  if (!p->dialect.tmpl->range_meta) {
-    snprintf(p->error_msg, sizeof(p->error_msg),
-             "internal error: grammar has no range_meta but macros were used");
-    p->had_error = 1;
-    return -1;
-  }
-
-  uint32_t node_count = syntaqlite_vec_len(&p->ctx.ast.offsets);
-  const SynqExpansionLayer* layers = p->macro.layers.data;
-
-  for (uint32_t nid = 0; nid < node_count; nid++) {
-    const uint8_t* raw = synq_arena_cptr(&p->ctx.ast, nid);
-    uint32_t tag;
-    memcpy(&tag, raw, sizeof(tag));
-    if (tag == 0 || tag >= p->dialect.tmpl->node_count)
-      continue;
-
-    const SyntaqliteRangeMetaEntry* entry = &p->dialect.tmpl->range_meta[tag];
-    if (entry->fields == NULL || entry->count == 0)
-      continue;
-
-    for (uint32_t mi = 1; mi < layer_count; mi++) {
-      uint32_t r_start = layers[mi].call_offset;
-      uint32_t r_end = r_start + layers[mi].call_length;
-
-      int has_inside = 0;
-      int has_outside = 0;
-
-      for (uint8_t fi = 0; fi < entry->count; fi++) {
-        if (entry->fields[fi].kind != 1)
-          continue;  // Not a TextSpan.
-        const SyntaqliteTextSpan* sp =
-            (const SyntaqliteTextSpan*)(raw + entry->fields[fi].offset);
-        if (sp->length == 0)
-          continue;
-
-        uint32_t s_start = sp->offset;
-        uint32_t s_end = sp->offset + sp->length;
-
-        if (s_start >= r_start && s_end <= r_end) {
-          has_inside = 1;
-        } else {
-          has_outside = 1;
-        }
-      }
-
-      if (has_inside && has_outside) {
-        snprintf(p->error_msg, sizeof(p->error_msg),
-                 "macro expansion straddles node boundary");
-        p->had_error = 1;
-        return -1;
-      }
-    }
-  }
-  return 0;
+  snprintf(p->error_msg, sizeof(p->error_msg),
+           "macro expansion straddles node boundary");
+  p->had_error = 1;
+  return -1;
 }
 
 // ---------------------------------------------------------------------------

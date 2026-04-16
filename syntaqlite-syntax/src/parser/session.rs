@@ -1398,6 +1398,36 @@ mod tests {
     }
 
     #[test]
+    fn three_deep_nested_no_arg_macros_no_spurious_straddle() {
+        // Regression test for #125: check_macro_straddle fired a false
+        // positive on 3-deep nested no-arg macros because it compared
+        // span offsets across different expansion layers without
+        // accounting for _layer_id.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default().with_macro_fallback(true),
+        );
+        let mut reg = TestMacroRegistry::new();
+        reg.register("_dfs", &[], "(SELECT node_id AS id)");
+        reg.register("_tree_reach", &[], "(SELECT node_id FROM _dfs!())");
+        reg.register(
+            "_for_stack",
+            &[],
+            "(SELECT f.id, f.parent_id, f.name FROM _tree_reach!())",
+        );
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let mut session = parser.parse("SELECT * FROM _for_stack!();");
+        match session.next() {
+            ParseOutcome::Ok(_) => {} // expected
+            ParseOutcome::Done => panic!("expected a statement"),
+            ParseOutcome::Err(e) => panic!(
+                "should parse without straddle error: {}",
+                e.message()
+            ),
+        }
+    }
+
+    #[test]
     fn node_is_macro_free_false_without_extent_tracking() {
         let parser = Parser::new(); // no extent tracking
         let source = "SELECT 1";
