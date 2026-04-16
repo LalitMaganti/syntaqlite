@@ -322,9 +322,17 @@ impl SemanticAnalyzer {
 
         // Macro registry shared between the lookup callback and the
         // analysis loop.  The callback borrows it via Rc<RefCell<…>>.
+        //
+        // Only install the lookup callback for dialects with native macro
+        // support (macro_style).  For dialects without it (e.g. SQLite
+        // with macro_fallback for embedded SQL holes), unresolved macro
+        // calls fall through to TK_ID without hitting the lookup path.
+        // When a lookup IS installed, unresolved names are hard parse errors.
         let registry: Rc<RefCell<MacroRegistry>> = Rc::new(RefCell::new(HashMap::new()));
-        let registry_for_cb = Rc::clone(&registry);
-        parser.set_macro_lookup(Some(Box::new(SharedRegistryLookup(registry_for_cb))));
+        if self.dialect.has_macro_style() {
+            let registry_for_cb = Rc::clone(&registry);
+            parser.set_macro_lookup(Some(Box::new(SharedRegistryLookup(registry_for_cb))));
+        }
 
         let mut session = parser.parse(source);
 

@@ -11,7 +11,7 @@ use crate::util::{SqliteSyntaxFlags, SqliteVersion};
 ///
 /// Wraps an [`AnyDialect`] and implements [`TypedDialect`]. Obtain via [`dialect()`];
 /// configure with [`with_version`](Self::with_version) and [`with_cflags`](Self::with_cflags).
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Dialect {
     raw: AnyDialect,
 }

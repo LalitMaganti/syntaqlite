@@ -216,6 +216,14 @@ pub struct AnyDialect {
     _keep_alive: Option<std::sync::Arc<dyn Send + Sync>>,
 }
 
+impl std::fmt::Debug for AnyDialect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AnyDialect")
+            .field("inner", &self.inner)
+            .finish_non_exhaustive()
+    }
+}
+
 // SAFETY: The dialect wraps an immutable reference to static C data.
 unsafe impl Send for AnyDialect {}
 // SAFETY: AnyDialect wraps a *const CDialect to a static C dialect object; it is safe to share across threads.

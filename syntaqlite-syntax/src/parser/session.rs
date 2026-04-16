@@ -272,6 +272,7 @@ impl std::fmt::Debug for ParserToken<'_> {
 /// - Original source slice (`source()`).
 #[cfg(feature = "sqlite")]
 #[doc(hidden)]
+#[derive(Debug)]
 pub struct ParsedStatement<'a>(
     pub(super) TypedParsedStatement<'a, crate::sqlite::dialect::Dialect>,
 );
