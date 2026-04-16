@@ -147,13 +147,23 @@ SYNTAQLITE_API void syntaqlite_macro_expansion_set_result_with_arg_map(
 // Template expansion helper: substitute `$param` placeholders with the
 // current invocation's args and call set_result.  Arg segments are built
 // automatically.  Returns 0 on success.
+//
+// `flags` is a bitwise OR of SYNTAQLITE_EXPAND_* constants (0 for defaults).
+//
+// By default, encountering a `$param` that does not match any entry in
+// `param_names` is an error (returns -1).  Pass
+// SYNTAQLITE_EXPAND_PASSTHROUGH_UNKNOWN to copy unknown `$param` tokens
+// verbatim into the expansion buffer instead.
+#define SYNTAQLITE_EXPAND_PASSTHROUGH_UNKNOWN 0x1u
+
 SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
     SyntaqliteParser* p,
     const char* body,
     uint32_t body_len,
     const char* const* param_names,
     const uint32_t* param_name_lens,
-    uint32_t param_count);
+    uint32_t param_count,
+    uint32_t flags);
 
 #ifdef __cplusplus
 }

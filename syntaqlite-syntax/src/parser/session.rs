@@ -1397,15 +1397,123 @@ mod tests {
         );
     }
 
+    /// A macro registry that uses permissive expansion (unknown $params pass through).
+    struct PermissiveMacroRegistry {
+        macros: HashMap<String, (Vec<String>, String)>,
+    }
+    impl PermissiveMacroRegistry {
+        fn new() -> Self {
+            Self {
+                macros: HashMap::new(),
+            }
+        }
+        fn register(&mut self, name: &str, params: &[&str], body: &str) {
+            self.macros.insert(
+                name.to_ascii_lowercase(),
+                (
+                    params.iter().map(ToString::to_string).collect(),
+                    body.to_string(),
+                ),
+            );
+        }
+    }
+    impl MacroLookup for PermissiveMacroRegistry {
+        fn lookup(&mut self, name: &str, _args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool {
+            let Some((params, body)) = self.macros.get(&name.to_ascii_lowercase()) else {
+                return false;
+            };
+            out.expand_template_permissive(body, params)
+        }
+    }
+
+    #[test]
+    fn expand_template_strict_rejects_unknown_param() {
+        // Default (strict) expand_template should fail when the body
+        // references a $param not in the declared param list.
+        // We verify by checking that the lookup returns false.
+        struct StrictCheckRegistry {
+            lookup_failed: bool,
+        }
+        impl MacroLookup for StrictCheckRegistry {
+            fn lookup(
+                &mut self,
+                _name: &str,
+                _args: &[MacroArg<'_>],
+                out: &mut MacroOutput,
+            ) -> bool {
+                let params = vec!["x".to_string()];
+                let ok = out.expand_template("SELECT $x, $unknown", &params);
+                if !ok {
+                    self.lookup_failed = true;
+                }
+                ok
+            }
+        }
+
+        struct Wrapper(Rc<RefCell<StrictCheckRegistry>>);
+        impl MacroLookup for Wrapper {
+            fn lookup(&mut self, name: &str, args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool {
+                self.0.borrow_mut().lookup(name, args, out)
+            }
+        }
+
+        let reg = Rc::new(RefCell::new(StrictCheckRegistry {
+            lookup_failed: false,
+        }));
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        parser.set_macro_lookup(Some(Box::new(Wrapper(Rc::clone(&reg)))));
+
+        let mut session = parser.parse("SELECT foo!(1);");
+        let _ = session.next();
+        assert!(
+            reg.borrow().lookup_failed,
+            "strict expand_template should reject unknown $param"
+        );
+    }
+
+    #[test]
+    fn expand_template_permissive_passes_through_unknown_param() {
+        // Permissive expansion should copy unknown $params verbatim.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_macro_fallback(true)
+                .with_collect_node_extents(true),
+        );
+        let mut reg = PermissiveMacroRegistry::new();
+        // Body uses $x (declared) and $y (not declared — should pass through).
+        // $y is in a value position so the parser accepts it as a variable.
+        reg.register("foo", &["x"], "SELECT $x, $y");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let mut session = parser.parse("foo!(42);");
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        };
+
+        // The expanded text should contain `$y` verbatim and `42` substituted.
+        let root_id = stmt.erase().root_id();
+        let expanded = stmt
+            .node_expanded_text(root_id)
+            .expect("should have expanded text");
+        assert!(
+            expanded.contains("42"),
+            "expected substituted arg in expansion, got: {expanded:?}"
+        );
+        assert!(
+            expanded.contains("$y"),
+            "expected unknown $y to pass through verbatim, got: {expanded:?}"
+        );
+    }
+
     #[test]
     fn three_deep_nested_no_arg_macros_no_spurious_straddle() {
         // Regression test for #125: check_macro_straddle fired a false
         // positive on 3-deep nested no-arg macros because it compared
         // span offsets across different expansion layers without
         // accounting for _layer_id.
-        let mut parser = Parser::with_config(
-            &ParserConfig::default().with_macro_fallback(true),
-        );
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let mut reg = TestMacroRegistry::new();
         reg.register("_dfs", &[], "(SELECT node_id AS id)");
         reg.register("_tree_reach", &[], "(SELECT node_id FROM _dfs!())");
@@ -1420,10 +1528,7 @@ mod tests {
         match session.next() {
             ParseOutcome::Ok(_) => {} // expected
             ParseOutcome::Done => panic!("expected a statement"),
-            ParseOutcome::Err(e) => panic!(
-                "should parse without straddle error: {}",
-                e.message()
-            ),
+            ParseOutcome::Err(e) => panic!("should parse without straddle error: {}", e.message()),
         }
     }
 

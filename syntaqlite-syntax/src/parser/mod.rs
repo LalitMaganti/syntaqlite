@@ -87,8 +87,20 @@ impl MacroOutput {
     /// Uses the SQL tokenizer to correctly skip `$param` inside string
     /// literals and comments. Returns `true` on success, `false` if arg
     /// count doesn't match or a placeholder references an unknown param.
-    #[expect(clippy::cast_possible_truncation)]
     pub fn expand_template(&mut self, body: &str, params: &[String]) -> bool {
+        self.expand_template_inner(body, params, 0)
+    }
+
+    /// Like [`expand_template`](Self::expand_template), but unknown `$param`
+    /// tokens (those not in `params`) are copied verbatim into the expansion
+    /// buffer instead of causing a failure. This is useful for macros whose
+    /// bodies contain `$placeholders` intended for a nested macro.
+    pub fn expand_template_permissive(&mut self, body: &str, params: &[String]) -> bool {
+        self.expand_template_inner(body, params, EXPAND_PASSTHROUGH_UNKNOWN)
+    }
+
+    #[expect(clippy::cast_possible_truncation)]
+    fn expand_template_inner(&mut self, body: &str, params: &[String], flags: u32) -> bool {
         let param_ptrs: Vec<*const std::ffi::c_char> =
             params.iter().map(|p| p.as_ptr().cast()).collect();
         let param_lens: Vec<u32> = params.iter().map(|p| p.len() as u32).collect();
@@ -102,11 +114,15 @@ impl MacroOutput {
                 param_ptrs.as_ptr(),
                 param_lens.as_ptr(),
                 params.len() as u32,
+                flags,
             )
         };
         rc == 0
     }
 }
+
+/// Flag: copy unknown `$param` tokens verbatim instead of failing.
+const EXPAND_PASSTHROUGH_UNKNOWN: u32 = 0x1;
 
 /// Trait for macro lookup callbacks.
 ///

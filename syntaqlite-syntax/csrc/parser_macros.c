@@ -552,9 +552,8 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
     // Lookup callback is registered but the macro was not found.
     // This is a hard error — the user likely misspelled the macro name
     // or forgot to define it.
-    snprintf(p->error_msg, sizeof(p->error_msg),
-             "unknown macro '%.*s'", (int)id_len,
-             (const char*)z + id_offset);
+    snprintf(p->error_msg, sizeof(p->error_msg), "unknown macro '%.*s'",
+             (int)id_len, (const char*)z + id_offset);
     p->had_error = 1;
     return -1;
   }
@@ -606,7 +605,8 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
     uint32_t body_len,
     const char* const* param_names,
     const uint32_t* param_name_lens,
-    uint32_t param_count) {
+    uint32_t param_count,
+    uint32_t flags) {
   const SyntaqliteToken* args = p->macro.expansion_args;
   uint32_t arg_count = p->macro.expansion_arg_count;
 
@@ -651,8 +651,17 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
         }
       }
 
-      if (found < 0)
+      if (found < 0) {
+        if (flags & SYNTAQLITE_EXPAND_PASSTHROUGH_UNKNOWN) {
+          // Copy the unknown $param verbatim into the expansion buffer.
+          syntaqlite_vec_push_n(&p->macro.expand_buf,
+                                (const uint8_t*)(zbody + pos), (uint32_t)tlen,
+                                p->mem);
+          pos += (uint32_t)tlen;
+          continue;
+        }
         return -1;
+      }
 
       if ((uint32_t)found < arg_count && args[found].length > 0) {
         if (mapping_count < 64) {

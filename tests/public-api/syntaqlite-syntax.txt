@@ -140,6 +140,7 @@ impl core::convert::From<syntaqlite_syntax::nodes::WithClauseId> for syntaqlite_
 impl core::convert::From<syntaqlite_syntax::typed::Dialect> for syntaqlite_syntax::any::AnyDialect
 impl core::convert::From<syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::typed::Dialect>> for syntaqlite_syntax::IncrementalParseSession
 impl core::fmt::Debug for syntaqlite_syntax::ParserToken<'_>
+impl core::fmt::Debug for syntaqlite_syntax::any::AnyDialect
 impl core::fmt::Debug for syntaqlite_syntax::any::AnyNode<'_>
 impl core::fmt::Debug for syntaqlite_syntax::any::NodeFields
 impl core::fmt::Debug for syntaqlite_syntax::nodes::AggregateFunctionCall<'_>
@@ -783,6 +784,7 @@ pub fn syntaqlite_syntax::IncrementalParseSession::from(inner: syntaqlite_syntax
 pub fn syntaqlite_syntax::IncrementalParseSession::node_count(&self) -> u32
 pub fn syntaqlite_syntax::MacroLookup::lookup(&mut self, name: &str, args: &[syntaqlite_syntax::MacroArg<'_>], out: &mut syntaqlite_syntax::MacroOutput) -> bool
 pub fn syntaqlite_syntax::MacroOutput::expand_template(&mut self, body: &str, params: &[alloc::string::String]) -> bool
+pub fn syntaqlite_syntax::MacroOutput::expand_template_permissive(&mut self, body: &str, params: &[alloc::string::String]) -> bool
 pub fn syntaqlite_syntax::MacroOutput::set_definition(&mut self, line: u32, col: u32)
 pub fn syntaqlite_syntax::MacroOutput::write(&mut self, body: &str)
 pub fn syntaqlite_syntax::ParseOutcome<T, E>::map<U>(self, f: impl core::ops::function::FnOnce(T) -> U) -> syntaqlite_syntax::ParseOutcome<U, E>
@@ -810,6 +812,7 @@ pub fn syntaqlite_syntax::TokenType::from_token_type(raw: syntaqlite_syntax::any
 pub fn syntaqlite_syntax::any::AnyDialect::cflags(&self) -> syntaqlite_syntax::util::SqliteSyntaxFlags
 pub fn syntaqlite_syntax::any::AnyDialect::classify_token(&self, token_type: syntaqlite_syntax::any::AnyTokenType, flags: syntaqlite_syntax::ParserTokenFlags) -> syntaqlite_syntax::any::TokenCategory
 pub fn syntaqlite_syntax::any::AnyDialect::field_meta(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::FieldMeta<'static>>
+pub fn syntaqlite_syntax::any::AnyDialect::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::any::AnyDialect::from(g: syntaqlite_syntax::typed::Dialect) -> syntaqlite_syntax::any::AnyDialect
 pub fn syntaqlite_syntax::any::AnyDialect::has_macro_style(&self) -> bool
 pub fn syntaqlite_syntax::any::AnyDialect::is_list(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> bool
