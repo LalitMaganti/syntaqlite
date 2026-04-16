@@ -446,16 +446,15 @@ mod ffi {
     pub struct CTextSpan {
         pub(crate) offset: u32,
         pub(crate) length: u32,
-        pub(crate) flags: u8,
+        pub(crate) flags: u32,
         /// Internal: 0 = original source, >0 = macro expansion layer id.
         /// Read by the C-side span accessors; the Rust side passes the
         /// whole struct across the FFI boundary without inspecting it.
-        pub(crate) _layer_id: u8,
-        pub(crate) _pad: [u8; 2],
+        pub(crate) _layer_id: u32,
     }
 
     /// Mirror of C `SYNTAQLITE_SPAN_FLAG_QUOTED` from `types.h`.
-    const SPAN_FLAG_QUOTED: u8 = 1;
+    const SPAN_FLAG_QUOTED: u32 = 1;
 
     impl CTextSpan {
         /// Returns `true` if the span covers zero bytes.

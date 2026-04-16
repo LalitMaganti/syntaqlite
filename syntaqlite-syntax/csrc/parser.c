@@ -207,8 +207,7 @@ int synq_parser_feed_one_token(SyntaqliteParser* p,
       .type = token_type,
       .token_idx = token_idx,
       .offset = tok_offset,
-      .layer_id = (uint8_t)p->ctx.layer_id,
-      ._pad = {0, 0, 0},
+      .layer_id = p->ctx.layer_id,
   };
   SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, (int)token_type, minor);
   p->last_token_type = token_type;
@@ -278,8 +277,7 @@ static int finish_input(SyntaqliteParser* p) {
                         .type = 0,
                         .token_idx = 0xFFFFFFFF,
                         .offset = 0,
-                        .layer_id = 0,
-                        ._pad = {0, 0, 0}};
+                        .layer_id = 0};
   SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, 0, eof);
   p->finished = 1;
 
@@ -319,8 +317,8 @@ int synq_parser_record_and_feed(SyntaqliteParser* p,
                                 uint32_t cur_len) {
   uint32_t tidx = 0xFFFFFFFF;
   if (p->collect_tokens) {
-    SyntaqliteParserToken tp = {
-        cur_offset, cur_len, cur_type, 0, (uint8_t)p->ctx.layer_id, {0, 0, 0}};
+    SyntaqliteParserToken tp = {cur_offset, cur_len, cur_type, 0,
+                                p->ctx.layer_id};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
   }
@@ -673,8 +671,8 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
   uint32_t tidx = 0xFFFFFFFF;
   if (p->collect_tokens && text) {
     uint32_t tok_offset = (uint32_t)(text - p->source);
-    SyntaqliteParserToken tp = {
-        tok_offset, len, token_type, 0, (uint8_t)p->ctx.layer_id, {0, 0, 0}};
+    SyntaqliteParserToken tp = {tok_offset, len, token_type, 0,
+                                p->ctx.layer_id};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
   }

@@ -7,6 +7,7 @@ use syntaqlite::nodes::Stmt;
 use syntaqlite::parse::ParserConfig;
 use syntaqlite::parse::TokenType;
 use syntaqlite::{ParseOutcome, Parser};
+use syntaqlite_syntax::{MacroArg, MacroLookup, MacroOutput};
 
 /// Feed tokens for "SELECT 1" via the low-level API and verify same AST
 /// as the high-level parse.
@@ -475,5 +476,100 @@ fn field_source_range_direct_span() {
     assert!(
         spans.iter().any(|&(_, start, end)| start == 7 && end == 8),
         "expected to find span at range 7..8, got: {spans:?}"
+    );
+}
+
+/// Walk an AST collecting all non-empty `TextSpan` fields recursively.
+fn collect_all_spans(
+    stmt: &syntaqlite_syntax::any::AnyParsedStatement<'_>,
+    node_id: syntaqlite_syntax::any::AnyNodeId,
+    out: &mut Vec<syntaqlite_syntax::any::TextSpan>,
+) {
+    use syntaqlite_syntax::any::FieldValue;
+    if node_id.is_null() {
+        return;
+    }
+    if let Some((_, fields)) = stmt.extract_fields(node_id) {
+        for idx in 0..fields.len() {
+            match fields[idx] {
+                FieldValue::Span(sp) if !sp.is_empty() => out.push(sp),
+                FieldValue::NodeId(child) if !child.is_null() => {
+                    collect_all_spans(stmt, child, out);
+                }
+                _ => {}
+            }
+        }
+    }
+    if let Some(children) = stmt.list_children(node_id) {
+        for &child in children {
+            collect_all_spans(stmt, child, out);
+        }
+    }
+}
+
+/// When a single statement has more than 255 macro expansions, the parser
+/// must not wrap `_layer_id` at 256 (`uint8_t` overflow). Regression test
+/// for <https://github.com/LalitMaganti/syntaqlite/issues/128>.
+#[test]
+fn layer_id_no_overflow_at_256_expansions() {
+    struct ConstMacro;
+    impl MacroLookup for ConstMacro {
+        fn lookup(&mut self, _name: &str, _args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool {
+            out.write("42");
+            true
+        }
+    }
+
+    // Build a SELECT with 260 macro calls: SELECT mm!(), mm!(), ..., mm!();
+    // Each call creates one expansion layer, pushing well past 255.
+    let mut sql = String::from("SELECT ");
+    for i in 0..260 {
+        if i > 0 {
+            sql.push_str(", ");
+        }
+        sql.push_str("mm!()");
+    }
+    sql.push(';');
+
+    let config = ParserConfig::default()
+        .with_collect_tokens(true)
+        .with_collect_node_extents(true)
+        .with_macro_fallback(true);
+    let mut parser = Parser::with_config(&config);
+    parser.set_macro_lookup(Some(Box::new(ConstMacro)));
+    let mut session = parser.parse(&sql);
+
+    let ParseOutcome::Ok(stmt) = session.next() else {
+        panic!("expected successful parse with 260 macro calls")
+    };
+    let erased = stmt.erase();
+
+    // Walk the AST collecting all Span fields, then check span_expanded_text.
+    // Each mm!() expansion produces a span whose expanded text is "42".
+    // If _layer_id wraps at 256, span_expanded_text reads from the source
+    // buffer instead, returning garbage like "SE".
+    let mut spans = Vec::new();
+    collect_all_spans(&erased, erased.root_id(), &mut spans);
+
+    // Every span_expanded_text must be a valid SQL fragment: either a
+    // source token ("SELECT", ",") or the macro body ("42"). If _layer_id
+    // wraps, we get source bytes at wrong offsets.
+    let mut bad = Vec::new();
+    for (i, &span) in spans.iter().enumerate() {
+        let expanded = erased.span_expanded_text(span);
+        // Source-layer tokens and correct macro expansions produce
+        // recognizable text. The wrapped case returns "SE" (source[0..2])
+        // for spans that should contain "42".
+        if expanded == "42" || expanded == "SELECT" || expanded == "," {
+            continue;
+        }
+        bad.push((i, expanded.to_string()));
+    }
+    assert!(
+        bad.is_empty(),
+        "span_expanded_text returned unexpected text for {} spans \
+         (_layer_id likely wrapped at 256): {:?}",
+        bad.len(),
+        &bad[..5.min(bad.len())]
     );
 }

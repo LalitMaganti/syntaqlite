@@ -84,7 +84,7 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
     *out_len = 0;
     return NULL;
   }
-  uint8_t layer = span->_layer_id;
+  uint32_t layer = span->_layer_id;
   if (layer >= syntaqlite_vec_len(&p->layers)) {
     *out_len = 0;
     return NULL;
@@ -186,7 +186,7 @@ SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
   uint32_t count = 0;
   uint32_t off = sp->offset;
   uint32_t len = sp->length;
-  uint8_t layer_id = sp->_layer_id;
+  uint32_t layer_id = sp->_layer_id;
   uint32_t layers_count = syntaqlite_vec_len(&p->layers);
 
   for (uint32_t step = 0; step < 2 * (SYNQ_MAX_MACRO_DEPTH + 1) &&

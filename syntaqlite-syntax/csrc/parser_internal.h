@@ -84,7 +84,7 @@ typedef struct SynqExpansionLayer {
   SynqArgSegment* arg_segments;
   uint32_t arg_segment_count;
 
-  uint8_t parent_layer_id;  // Layer containing the call (0 = source).
+  uint32_t parent_layer_id;  // Layer containing the call (0 = source).
 } SynqExpansionLayer;
 
 typedef SYNQ_VEC(SynqExpansionLayer) SynqExpansionLayerVec;

@@ -39,9 +39,8 @@ typedef uint32_t SyntaqliteCompletionContext;
 typedef struct SyntaqliteTextSpan {
   uint32_t offset;
   uint32_t length;
-  uint8_t flags;
-  uint8_t _layer_id;  // Internal: 0 = source, >0 = macro expansion layer.
-  uint8_t _pad[2];
+  uint32_t flags;
+  uint32_t _layer_id;  // Internal: 0 = source, >0 = macro expansion layer.
 } SyntaqliteTextSpan;
 
 // ── Span flags ───────────────────────────────────────────────────────────────
@@ -49,7 +48,7 @@ typedef struct SyntaqliteTextSpan {
 // Identifier was quoted in source (`"..."`, `` `...` ``, or `[...]`).
 // The span points to the dequoted inner text; the formatter re-wraps in
 // `"..."`.
-#define SYNTAQLITE_SPAN_FLAG_QUOTED ((uint8_t)1u)
+#define SYNTAQLITE_SPAN_FLAG_QUOTED ((uint32_t)1u)
 
 static inline int synq_span_is_quoted(SyntaqliteTextSpan sp) {
   return (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTED) != 0;
