@@ -579,6 +579,7 @@ unsafe extern "C" {
         param_names: *const *const c_char,
         param_name_lens: *const u32,
         param_count: u32,
+        flags: u32,
     ) -> i32;
 
     // Macro lookup callback
@@ -1090,9 +1091,7 @@ mod tests {
         // When a lookup callback is registered but the macro is not found,
         // the parser should produce a hard error with "unknown macro 'name'".
         // We need macro_fallback to enable macro syntax for SQLite dialect.
-        let mut parser = Parser::with_config(
-            &ParserConfig::default().with_macro_fallback(true),
-        );
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         // Lookup callback that always returns false (nothing registered).
         parser.set_macro_lookup(Some(Box::new(TestLookup::prefix("__never__"))));
 
@@ -1118,9 +1117,7 @@ mod tests {
     fn unknown_macro_without_lookup_fn_falls_through() {
         // When macro_fallback is enabled but NO lookup callback is
         // registered, unknown macro calls should fall through to TK_ID.
-        let mut parser = Parser::with_config(
-            &ParserConfig::default().with_macro_fallback(true),
-        );
+        let parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         // No set_macro_lookup — no callback.
 
         let mut session = parser.parse("SELECT foo!(1, 2);");
