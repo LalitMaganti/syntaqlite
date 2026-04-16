@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.4.0
+
+**Breaking:**
+- Macro lookup is now callback-driven so dialects can resolve macros lazily ([#121](https://github.com/LalitMaganti/syntaqlite/pull/121)). The incremental parser API drops `begin_macro`/`end_macro` ([#110](https://github.com/LalitMaganti/syntaqlite/pull/110)).
+- Spans now cover SQL longer than 64KB; `SyntaqliteTextSpan.length` is `uint32_t` ([#109](https://github.com/LalitMaganti/syntaqlite/pull/109)).
+- `.synq` grammar files use `//` comments instead of `#` ([#115](https://github.com/LalitMaganti/syntaqlite/pull/115)).
+
+**Macros:**
+- Expansions are now exposed as a flat rewrite list with `$param` arg segments, nested call offsets, and APIs to ask whether a span/node/statement came from a macro — enough to map cleanly between expanded SQL and source for diagnostics, hovers, and refactors ([#124](https://github.com/LalitMaganti/syntaqlite/pull/124), [#142](https://github.com/LalitMaganti/syntaqlite/pull/142), [#145](https://github.com/LalitMaganti/syntaqlite/pull/145)).
+- Unknown macro names now produce a hard parse error instead of silently expanding to nothing ([#139](https://github.com/LalitMaganti/syntaqlite/pull/139)). A permissive mode lets tools inspect bodies with unknown `$param` references ([#141](https://github.com/LalitMaganti/syntaqlite/pull/141)).
+- Embedders can compile macros out entirely with `SYNTAQLITE_OMIT_MACROS` ([#135](https://github.com/LalitMaganti/syntaqlite/pull/135)).
+- Fixed OOB read on non-NUL-terminated bodies ([#132](https://github.com/LalitMaganti/syntaqlite/pull/132)), layer-id overflow past 256 layers ([#134](https://github.com/LalitMaganti/syntaqlite/pull/134)), and several spurious-straddle and whitespace-handling bugs in deeply-nested expansions.
+
+**Spans and AST:**
+- Every parse tree node carries a precise source range, with traceback through nested macro expansions so diagnostics report the original source location ([#96](https://github.com/LalitMaganti/syntaqlite/pull/96), [#101](https://github.com/LalitMaganti/syntaqlite/pull/101), [#102](https://github.com/LalitMaganti/syntaqlite/pull/102), [#103](https://github.com/LalitMaganti/syntaqlite/pull/103)). The Rust span API now mirrors C 1:1 ([#98](https://github.com/LalitMaganti/syntaqlite/pull/98)).
+- Fixed stale span info on AST nodes from multi-RHS passthrough reductions ([#122](https://github.com/LalitMaganti/syntaqlite/pull/122), [#123](https://github.com/LalitMaganti/syntaqlite/pull/123)).
+
+**Grammar and build:**
+- SQL using `window`, `over`, or `filter` as identifiers now parses correctly ([#113](https://github.com/LalitMaganti/syntaqlite/pull/113)).
+- Dialects can list base SQL keywords in `extra_keywords` without duplicate-keyword errors ([#111](https://github.com/LalitMaganti/syntaqlite/pull/111)).
+- LSP semantic analysis is feature-gated behind `lsp` ([#97](https://github.com/LalitMaganti/syntaqlite/pull/97)).
+
 ## 0.3.1
 
 - Restored Python 3.14 (cp314) wheel publishing, which had been silently dropped since 0.2.13 ([#91](https://github.com/LalitMaganti/syntaqlite/issues/91)).
