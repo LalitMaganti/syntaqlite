@@ -420,14 +420,20 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
   p->macro.expansion_arg_count = 0;
 
   if (rc == -1 || rc == -2) {
-    // Callback failed — tear down the layer we pushed.
-    synq_end_macro(p);
-    // Free any data the callback may have written before failing.
+    // Callback failed — tear down the layer we pushed.  We cannot call
+    // synq_end_macro here: its parent-walk assumes the success path's
+    // `ctx.layer_id = new_layer_idx` ran, and on the failure path it didn't.
+    // Walking from the outer layer steps one level too far and clobbers
+    // ctx.layer_id with the grandparent (breaking straddle attribution of
+    // every subsequent token fed by the enclosing expansion).  Instead, pop
+    // the layer directly and free whatever the callback may have stashed.
     SynqExpansionLayer* lyr = &p->macro.layers.data[new_layer_idx];
     if (lyr->expansion_data)
       p->mem.xFree((void*)lyr->expansion_data);
-    lyr->expansion_data = NULL;
-    lyr->expansion_len = 0;
+    if (lyr->arg_segments)
+      p->mem.xFree(lyr->arg_segments);
+    p->macro.layers.count--;
+    p->macro.depth--;
     if (rc == -2)
       p->had_error = 1;
     return -1;

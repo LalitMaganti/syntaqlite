@@ -1582,6 +1582,31 @@ mod tests {
     }
 
     #[test]
+    fn macro_expansion_with_ne_after_substituted_id_no_spurious_straddle() {
+        // Regression: inside a macro body, a substituted identifier followed by
+        // `!=` (or any `!<not-lp>`) triggered expand_and_feed's nested-macro
+        // detection (it sees `ID` then `!`). The lookup callback returned
+        // "not a macro" for that identifier, and the failure path in
+        // synq_parser_expand_and_feed_macro called synq_end_macro while
+        // ctx.layer_id was still the *outer* layer. synq_end_macro then walked
+        // one parent too far and clobbered ctx.layer_id from the outer macro's
+        // layer down to 0 (source), causing every subsequent token fed from the
+        // outer expansion to be tagged with layer_id=0. The straddle detector
+        // then correctly flagged the mixed-layer RHS as a spurious straddle.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("m", &["d"], "(SELECT * FROM t WHERE $d != 1)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let mut session = parser.parse("SELECT * FROM m!(dur);");
+        match session.next() {
+            ParseOutcome::Ok(_) => {}
+            ParseOutcome::Done => panic!("expected a statement"),
+            ParseOutcome::Err(e) => panic!("should parse without straddle error: {}", e.message()),
+        }
+    }
+
+    #[test]
     fn node_is_macro_free_false_without_extent_tracking() {
         let parser = Parser::new(); // no extent tracking
         let source = "SELECT 1";
