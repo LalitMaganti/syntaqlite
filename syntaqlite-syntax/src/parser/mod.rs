@@ -639,33 +639,41 @@ impl<'a> AnyParsedStatement<'a> {
 
     /// Macro rewrites recorded during parsing.  See [`MacroRewrite`] for
     /// the shape of each entry.
-    pub fn macro_rewrites(&self) -> impl Iterator<Item = MacroRewrite> + use<'_> {
+    pub fn macro_rewrites(&self) -> impl Iterator<Item = MacroRewrite<'a>> + use<'_, 'a> {
         // SAFETY: self.raw is valid for 'a; the indexed accessor is stable
         // until the next parser_next / reset / destroy call.
         let count = unsafe { self.raw.as_ref().result_macro_count() };
         (0..count).map(move |i| {
             // SAFETY: i < count, so the C side returns a valid rewrite.
             let r = unsafe { self.raw.as_ref().result_macro_rewrite_at(i) };
-            // Expansion and name pointers are borrowed from parser memory
-            // valid until the next reset/destroy; we copy them into owned
-            // Strings so the returned value has no lifetime tie to the parser.
-            let expansion = if r.expansion.is_null() {
-                String::new()
+            // `expansion` and `name` borrow from parser memory valid for
+            // 'a (until the next parser_next / reset / destroy, which
+            // requires ending the 'a-tied statement borrow).
+            let expansion: &'a str = if r.expansion.is_null() {
+                ""
             } else {
-                // SAFETY: `expansion` is non-null and points to
-                // `expansion_len` bytes owned by the parser, valid for
-                // this call.
-                let bytes =
-                    unsafe { std::slice::from_raw_parts(r.expansion, r.expansion_len as usize) };
-                String::from_utf8_lossy(bytes).into_owned()
+                // SAFETY: `expansion` points to `expansion_len` bytes
+                // owned by the parser, valid for 'a.  Parser buffers are
+                // UTF-8 by construction (source text or expansion text
+                // produced by the callback, which accepts a &str body).
+                unsafe {
+                    std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                        r.expansion,
+                        r.expansion_len as usize,
+                    ))
+                }
             };
-            let name = if r.name.is_null() {
-                String::new()
+            let name: &'a str = if r.name.is_null() {
+                ""
             } else {
-                // SAFETY: `name` is non-null and points to `name_len`
-                // bytes owned by the parser, valid for this call.
-                let bytes = unsafe { std::slice::from_raw_parts(r.name, r.name_len as usize) };
-                String::from_utf8_lossy(bytes).into_owned()
+                // SAFETY: `name` points to `name_len` bytes owned by the
+                // parser, valid for 'a; ASCII identifier by construction.
+                unsafe {
+                    std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                        r.name,
+                        r.name_len as usize,
+                    ))
+                }
             };
             let parent = if r.parent_idx == u32::MAX {
                 None
@@ -1056,7 +1064,7 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     /// expansion — enough to reconstruct a source-to-expanded rewrite
     /// tree (see [`MacroRewrite`] for details).  Populated automatically
     /// when the dialect's `macro_style` is set.
-    pub fn macro_rewrites(&self) -> impl Iterator<Item = MacroRewrite> + use<'_, 'a, G> {
+    pub fn macro_rewrites(&self) -> impl Iterator<Item = MacroRewrite<'a>> + use<'_, 'a, G> {
         self.any.macro_rewrites()
     }
 

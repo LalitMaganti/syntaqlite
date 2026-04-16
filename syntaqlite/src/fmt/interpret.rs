@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, MacroRewrite};
+use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
 
 use super::comment::{CommentCtx, DrainResult};
 use super::doc::{DocArena, DocId, NIL_DOC};
@@ -15,7 +15,10 @@ pub(crate) struct FmtCtx<'a> {
     pub reader: AnyParsedStatement<'a>,
     /// Owned comment context — no lifetime needed since `CommentCtx` owns its data.
     pub comment_ctx: Option<CommentCtx>,
-    pub macro_rewrites: Vec<MacroRewrite>,
+    /// `(call_offset, call_length)` for each macro call in the source.
+    /// Full `MacroRewrite` records are not needed here since the
+    /// formatter only uses positions to decide verbatim emission.
+    pub macro_rewrites: Vec<(u32, u32)>,
 }
 
 impl<'a> FmtCtx<'a> {

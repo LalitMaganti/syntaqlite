@@ -352,7 +352,7 @@ impl<'a> ParsedStatement<'a> {
 
     /// Macro rewrites recorded during parsing.  See [`super::MacroRewrite`]
     /// for the shape of each entry.
-    pub fn macro_rewrites(&self) -> impl Iterator<Item = super::MacroRewrite> + use<'_, 'a> {
+    pub fn macro_rewrites(&self) -> impl Iterator<Item = super::MacroRewrite<'a>> + use<'_, 'a> {
         self.0.macro_rewrites()
     }
 

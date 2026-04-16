@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, MacroRewrite, ParseOutcome,
+    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, ParseOutcome,
 };
 use syntaqlite_syntax::{CommentKind, ParserConfig};
 
@@ -50,7 +50,11 @@ pub struct Formatter {
     pub(super) arena: DocArena<'static>,
     pub(super) interpret_scratch: InterpretScratch,
     pub(super) render_bufs: RenderBuffers,
-    pub(super) macro_rewrites: Vec<MacroRewrite>,
+    /// Byte ranges (offset, length) of macro calls in the source.  The
+    /// formatter only needs positions to decide when to emit a call
+    /// verbatim; full `MacroRewrite` records would tie this buffer to
+    /// the statement lifetime and prevent reuse across statements.
+    pub(super) macro_rewrites: Vec<(u32, u32)>,
     pub(super) comment_entries: Vec<CommentEntry>,
     pub(super) token_entries: Vec<TokenEntry>,
     pub(super) parts: Vec<DocId>,
@@ -136,7 +140,11 @@ impl Formatter {
                 .token_spans()
                 .map(|(offset, length)| TokenEntry { offset, length }),
         );
-        self.macro_rewrites.extend(erased.macro_rewrites());
+        self.macro_rewrites.extend(
+            erased
+                .macro_rewrites()
+                .map(|r| (r.call_offset(), r.call_length())),
+        );
     }
 
     /// Format SQL source text. Handles multiple statements and preserves comments.
@@ -607,7 +615,7 @@ fn drain_gap_comments<'a>(
 /// the verbatim text at the appropriate level.
 pub(crate) fn try_macro_verbatim<'a>(
     ctx: &FmtCtx<'a>,
-    regions: &[MacroRewrite],
+    regions: &[(u32, u32)],
     arena: &mut DocArena<'a>,
     consumed: &mut [bool],
     tokenizer: &AnyTokenizer,
@@ -617,9 +625,8 @@ pub(crate) fn try_macro_verbatim<'a>(
     let (tok_offset, _) = cctx.peek_next_token()?;
     let source = ctx.text();
 
-    for (i, r) in regions.iter().enumerate() {
-        let r_start = r.call_offset();
-        let r_end = r_start + r.call_length();
+    for (i, &(r_start, r_len)) in regions.iter().enumerate() {
+        let r_end = r_start + r_len;
 
         if tok_offset >= r_start && tok_offset < r_end {
             // Check if this child node extends beyond the macro region

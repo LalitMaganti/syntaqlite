@@ -287,7 +287,6 @@ impl syntaqlite_syntax::any::AnyNodeTag
 impl syntaqlite_syntax::any::AnyTokenType
 impl syntaqlite_syntax::any::FieldMeta<'_>
 impl syntaqlite_syntax::any::KeywordEntry
-impl syntaqlite_syntax::any::MacroRewrite
 impl syntaqlite_syntax::any::NodeFields
 impl syntaqlite_syntax::any::TextSpan
 impl syntaqlite_syntax::nodes::AggregateFunctionCallFlags
@@ -598,6 +597,7 @@ impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaql
 impl<'a> syntaqlite_syntax::Comment<'a>
 impl<'a> syntaqlite_syntax::ParserToken<'a>
 impl<'a> syntaqlite_syntax::any::AnyParsedStatement<'a>
+impl<'a> syntaqlite_syntax::any::MacroRewrite<'a>
 impl<'a> syntaqlite_syntax::nodes::AggregateFunctionCall<'a>
 impl<'a> syntaqlite_syntax::nodes::AlterTableStmt<'a>
 impl<'a> syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>
@@ -917,7 +917,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::is_macro_free(&self) -> bool
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite> + use<'_>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_expanded_text(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_is_macro_free(&self, id: syntaqlite_syntax::any::AnyNodeId) -> bool
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_text(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(&'a str, u32)>
@@ -938,13 +938,13 @@ pub fn syntaqlite_syntax::any::FieldMeta<'_>::name(&self) -> &'static str
 pub fn syntaqlite_syntax::any::FieldMeta<'_>::offset(&self) -> u16
 pub fn syntaqlite_syntax::any::KeywordEntry::keyword(&self) -> &'static str
 pub fn syntaqlite_syntax::any::KeywordEntry::token_type(&self) -> syntaqlite_syntax::any::AnyTokenType
-pub fn syntaqlite_syntax::any::MacroRewrite::call_length(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite::call_offset(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite::def_col(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite::def_line(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite::expansion(&self) -> &str
-pub fn syntaqlite_syntax::any::MacroRewrite::name(&self) -> &str
-pub fn syntaqlite_syntax::any::MacroRewrite::parent(&self) -> core::option::Option<u32>
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_length(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_offset(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::def_col(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::def_line(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::expansion(&self) -> &'a str
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::name(&self) -> &'a str
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::parent(&self) -> core::option::Option<u32>
 pub fn syntaqlite_syntax::any::NodeFields::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::any::NodeFields::index(&self, idx: usize) -> &syntaqlite_syntax::any::FieldValue
 pub fn syntaqlite_syntax::any::NodeFields::is_empty(&self) -> bool
@@ -1650,7 +1650,7 @@ pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::comments(&self) ->
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::dump(&self, out: &mut alloc::string::String, indent: usize)
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::erase(self) -> syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::expanded_text(&self) -> &'a str
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite> + use<'_, 'a, G>
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a, G>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
@@ -1701,7 +1701,7 @@ pub struct syntaqlite_syntax::any::AnyNode<'a>
 pub struct syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub struct syntaqlite_syntax::any::FieldMeta<'a>(_)
 pub struct syntaqlite_syntax::any::KeywordEntry
-pub struct syntaqlite_syntax::any::MacroRewrite
+pub struct syntaqlite_syntax::any::MacroRewrite<'a>
 pub struct syntaqlite_syntax::any::NodeFields
 pub struct syntaqlite_syntax::any::TracebackFrame<'a>
 pub struct syntaqlite_syntax::nodes::AggregateFunctionCall<'a>

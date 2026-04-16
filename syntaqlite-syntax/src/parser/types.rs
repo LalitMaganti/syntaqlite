@@ -213,19 +213,23 @@ pub type AnyParserToken<'a> = TypedParserToken<'a, crate::dialect::AnyDialect>;
 /// source; a rewrite with `parent() == Some(i)` replaces a range in the
 /// `i`-th entry's [`expansion`](Self::expansion) buffer.
 ///
+/// [`expansion`](Self::expansion) and [`name`](Self::name) borrow from
+/// parser-owned memory — they are valid for the lifetime of the
+/// originating parsed statement.
+///
 /// Returned by [`super::AnyParsedStatement::macro_rewrites`].
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MacroRewrite {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MacroRewrite<'a> {
     pub(crate) parent: Option<u32>,
     pub(crate) call_offset: u32,
     pub(crate) call_length: u32,
-    pub(crate) expansion: String,
-    pub(crate) name: String,
+    pub(crate) expansion: &'a str,
+    pub(crate) name: &'a str,
     pub(crate) def_line: u32,
     pub(crate) def_col: u32,
 }
 
-impl MacroRewrite {
+impl<'a> MacroRewrite<'a> {
     /// Index of the parent rewrite, or `None` if this rewrite applies
     /// directly to the authored source.
     pub fn parent(&self) -> Option<u32> {
@@ -242,12 +246,12 @@ impl MacroRewrite {
     /// The replacement text for the macro call.  Nested macro calls that
     /// appear in this buffer are reported as separate [`MacroRewrite`]
     /// entries whose [`parent`](Self::parent) refers back to this one.
-    pub fn expansion(&self) -> &str {
-        &self.expansion
+    pub fn expansion(&self) -> &'a str {
+        self.expansion
     }
     /// The macro name as it appears at the call site.
-    pub fn name(&self) -> &str {
-        &self.name
+    pub fn name(&self) -> &'a str {
+        self.name
     }
     /// 1-based line of the macro definition (0 if unknown).
     pub fn def_line(&self) -> u32 {
