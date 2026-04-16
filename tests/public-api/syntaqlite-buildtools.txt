@@ -17,7 +17,7 @@ pub const fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_pyt
 pub enum syntaqlite_buildtools::codegen_api::MacroStyle
 pub fn alloc::string::String::from(v: syntaqlite_buildtools::version_analysis::SqliteVersion) -> Self
 pub fn syntaqlite_buildtools::amalgamate::amalgamate_dialect(dialect: &str, dialect_dir: &std::path::Path, runtime_header: core::option::Option<&str>, ext_header: core::option::Option<&str>) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
-pub fn syntaqlite_buildtools::amalgamate::amalgamate_full(dialect: &str, runtime_dir: &std::path::Path, dialect_dir: &std::path::Path) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
+pub fn syntaqlite_buildtools::amalgamate::amalgamate_full(dialect: &str, runtime_dir: &std::path::Path, dialect_dir: &std::path::Path, omit_macros: bool) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
 pub fn syntaqlite_buildtools::amalgamate::amalgamate_header(syntax_dir: &std::path::Path, lib_dir: &std::path::Path) -> core::result::Result<alloc::string::String, alloc::string::String>
 pub fn syntaqlite_buildtools::amalgamate::amalgamate_runtime(runtime_dir: &std::path::Path) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
 pub fn syntaqlite_buildtools::base_files::merge_file_sets(base: &[(&str, &str)], extensions: &[(alloc::string::String, alloc::string::String)]) -> alloc::vec::Vec<(alloc::string::String, alloc::string::String)>

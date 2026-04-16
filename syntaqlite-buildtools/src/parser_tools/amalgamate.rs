@@ -111,9 +111,20 @@ pub struct AmalgamateOutput {
 /// # Errors
 ///
 /// Returns an error if reading source files from `runtime_dir` fails.
+/// Emit `#ifndef / #define / #endif` for a compile-time omit flag.
+fn emit_omit_define(out: &mut String, name: &str) {
+    let _ = write!(out, "#ifndef {name}\n#define {name}\n#endif\n\n");
+}
+
+/// Produce the runtime-only amalgamation: `syntaqlite_runtime.{h,c}` +
+/// `syntaqlite_dialect.h`.
+///
+/// # Errors
+///
+/// Returns an error if reading source files from `runtime_dir` fails.
 pub fn amalgamate_runtime(runtime_dir: &Path) -> Result<AmalgamateOutput, String> {
     let files = collect_files(&[&runtime_dir.join("csrc"), &runtime_dir.join("include")])?;
-    Ok(emit(&files, EmitMode::RuntimeOnly))
+    Ok(emit(&files, EmitMode::RuntimeOnly, false))
 }
 
 /// Produce `syntaqlite_<dialect>.{h,c}` that references `syntaqlite_runtime.h`
@@ -145,10 +156,15 @@ pub fn amalgamate_dialect(
             runtime_header: runtime_header.unwrap_or("syntaqlite_runtime.h"),
             ext_header: ext_header.unwrap_or("syntaqlite_dialect.h"),
         },
+        false,
     ))
 }
 
 /// Produce `syntaqlite_<dialect>.{h,c}` with the runtime inlined.
+///
+/// When `omit_macros` is true, `SYNTAQLITE_OMIT_MACROS` is injected into
+/// the amalgamation header and source, compiling out all macro expansion
+/// code.
 ///
 /// # Errors
 ///
@@ -157,6 +173,7 @@ pub fn amalgamate_full(
     dialect: &str,
     runtime_dir: &Path,
     dialect_dir: &Path,
+    omit_macros: bool,
 ) -> Result<AmalgamateOutput, String> {
     let files = collect_files(&[
         &runtime_dir.join("csrc"),
@@ -164,7 +181,7 @@ pub fn amalgamate_full(
         &dialect_dir.join("csrc"),
         &dialect_dir.join("include"),
     ])?;
-    Ok(emit(&files, EmitMode::Full(dialect)))
+    Ok(emit(&files, EmitMode::Full(dialect), omit_macros))
 }
 
 // ---------------------------------------------------------------------------
@@ -534,7 +551,7 @@ fn detect_include_guard(content: &str) -> Option<String> {
     clippy::too_many_lines,
     reason = "large emit function; splitting would harm readability"
 )]
-fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
+fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput {
     let (guard, header_filename) = match &mode {
         EmitMode::DialectOnly { dialect: d, .. } | EmitMode::Full(d) => (
             format!("SYNTAQLITE_{}_H", d.to_uppercase()),
@@ -561,9 +578,10 @@ fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
             ..
         } => {
             if *dialect != "sqlite" {
-                header.push_str("#ifndef SYNTAQLITE_OMIT_SQLITE_API\n");
-                header.push_str("#define SYNTAQLITE_OMIT_SQLITE_API\n");
-                header.push_str("#endif\n\n");
+                emit_omit_define(&mut header, "SYNTAQLITE_OMIT_SQLITE_API");
+            }
+            if omit_macros {
+                emit_omit_define(&mut header, "SYNTAQLITE_OMIT_MACROS");
             }
             header.push_str("#ifndef SYNTAQLITE_RUNTIME_HEADER\n");
             let _ = writeln!(
@@ -574,9 +592,13 @@ fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
             header.push_str("#include SYNTAQLITE_RUNTIME_HEADER\n\n");
         }
         EmitMode::Full(dialect) if *dialect != "sqlite" => {
-            header.push_str("#ifndef SYNTAQLITE_OMIT_SQLITE_API\n");
-            header.push_str("#define SYNTAQLITE_OMIT_SQLITE_API\n");
-            header.push_str("#endif\n\n");
+            emit_omit_define(&mut header, "SYNTAQLITE_OMIT_SQLITE_API");
+            if omit_macros {
+                emit_omit_define(&mut header, "SYNTAQLITE_OMIT_MACROS");
+            }
+        }
+        EmitMode::Full(_) if omit_macros => {
+            emit_omit_define(&mut header, "SYNTAQLITE_OMIT_MACROS");
         }
         _ => {}
     }
@@ -629,9 +651,10 @@ fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
     } = &mode
     {
         if *dialect != "sqlite" {
-            source.push_str("#ifndef SYNTAQLITE_OMIT_SQLITE_API\n");
-            source.push_str("#define SYNTAQLITE_OMIT_SQLITE_API\n");
-            source.push_str("#endif\n\n");
+            emit_omit_define(&mut source, "SYNTAQLITE_OMIT_SQLITE_API");
+        }
+        if omit_macros {
+            emit_omit_define(&mut source, "SYNTAQLITE_OMIT_MACROS");
         }
         source.push_str("#ifndef SYNTAQLITE_RUNTIME_HEADER\n");
         let _ = writeln!(
@@ -647,9 +670,12 @@ fn emit(files: &FileMap, mode: EmitMode) -> AmalgamateOutput {
     } else if let EmitMode::Full(dialect) = &mode
         && *dialect != "sqlite"
     {
-        source.push_str("#ifndef SYNTAQLITE_OMIT_SQLITE_API\n");
-        source.push_str("#define SYNTAQLITE_OMIT_SQLITE_API\n");
-        source.push_str("#endif\n\n");
+        emit_omit_define(&mut source, "SYNTAQLITE_OMIT_SQLITE_API");
+        if omit_macros {
+            emit_omit_define(&mut source, "SYNTAQLITE_OMIT_MACROS");
+        }
+    } else if omit_macros {
+        emit_omit_define(&mut source, "SYNTAQLITE_OMIT_MACROS");
     }
     let _ = write!(source, "#include \"{header_filename}\"\n\n");
 
