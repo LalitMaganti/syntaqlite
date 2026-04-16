@@ -7,6 +7,7 @@
 #define SYNTAQLITE_CSRC_PARSER_INTERNAL_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "syntaqlite/config.h"
 #include "syntaqlite/dialect.h"
@@ -224,8 +225,14 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
                                uint32_t id_len,
                                uint32_t bang_offset);
 
-// Diagnose macro expansions that straddle AST node boundaries.
-int synq_parser_check_macro_straddle(SyntaqliteParser* p);
+static inline int synq_parser_check_macro_straddle(SyntaqliteParser* p) {
+  if (!p->ctx.has_macro_straddle)
+    return 0;
+  snprintf(p->error_msg, sizeof(p->error_msg),
+           "macro expansion straddles node boundary");
+  p->had_error = 1;
+  return -1;
+}
 
 // Initialize macro state vecs (callback/expansion fields zeroed by memset).
 void synq_macro_state_init(SynqMacroState* m);

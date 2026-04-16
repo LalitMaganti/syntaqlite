@@ -476,6 +476,11 @@ static void begin_macro_expansion(SyntaqliteParser* p,
   if (p->ctx.layer_id == 0) {
     p->ctx.macro_root_start = call_offset;
     p->ctx.macro_root_end = call_offset + call_length;
+    if (p->ctx.macro_root_layer == 0) {
+      for (uint32_t i = 0; i < p->ctx.lemon_depth; i++)
+        syntaqlite_vec_push(&p->ctx.straddle_stack, SYNQ_STRADDLE_NEUTRAL,
+                            p->mem);
+    }
     p->ctx.macro_root_layer = syntaqlite_vec_len(&p->macro.layers);
   }
 
@@ -576,19 +581,6 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
       synq_parser_record_and_feed(p, SYNTAQLITE_TK_ID, id_offset, call_length);
   p->offset = end_offset;
   return rc;
-}
-
-// ---------------------------------------------------------------------------
-// Macro straddle diagnostic
-// ---------------------------------------------------------------------------
-
-int synq_parser_check_macro_straddle(SyntaqliteParser* p) {
-  if (!p->ctx.has_macro_straddle)
-    return 0;
-  snprintf(p->error_msg, sizeof(p->error_msg),
-           "macro expansion straddles node boundary");
-  p->had_error = 1;
-  return -1;
 }
 
 // ---------------------------------------------------------------------------

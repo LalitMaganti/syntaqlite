@@ -13,14 +13,13 @@
 // Per-node extent tracking hooks
 // ---------------------------------------------------------------------------
 //
-// Two parallel shadow stacks mirror Lemon's symbol stack:
+// When enabled, two parallel shadow stacks mirror Lemon's symbol stack:
 //
 //   * `extent_stack` tracks the merged *authored* range in root-source
 //     coordinates — used by `syntaqlite_parser_node_text`.  Macro
 //     tokens push the outermost call-site range stashed in
 //     `begin_macro_expansion`.  Epsilon pushes the sentinel
 //     `(UINT32_MAX, 0)`, which is neutral under min/max merging.
-//     Only maintained when `collect_node_extents` is enabled.
 //
 //   * `expanded_stack` tracks the merged *expanded* range in the
 //     tokens' own layer — used by
@@ -28,24 +27,25 @@
 //     the layer; mixed-layer merges collapse to the sentinel
 //     `(length=0)`, since no contiguous expansion slice can represent
 //     a node whose tokens cross layers.
-//     Always maintained — also carries `macro_root` and `from_shift`
-//     for O(1) macro straddle detection.
+//
+// Independently, `straddle_stack` (a lightweight uint32_t vec) tracks
+// macro_root per Lemon stack symbol for O(1) straddle detection.  It
+// is lazily initialized on first macro use via `lemon_depth`; without
+// macros the only cost is one integer increment/decrement per
+// shift/reduce.
 
 void synq_extent_on_shift(SynqParseCtx* pCtx,
                           unsigned int major,
                           const SynqParseToken* token) {
   (void)major;
 
-  uint32_t macro_root =
-      (token->layer_id != 0) ? pCtx->macro_root_layer : 0;
-  SynqNodeExpandedExtent e = {
-      .offset = token->offset,
-      .length = token->n,
-      .layer_id = token->layer_id,
-      .macro_root = macro_root,
-      .from_shift = 1,
-  };
-  syntaqlite_vec_push(&pCtx->expanded_stack, e, pCtx->mem);
+  pCtx->lemon_depth++;
+
+  // Straddle stack: only active after first macro (macro_root_layer > 0).
+  if (pCtx->macro_root_layer) {
+    uint32_t mr = (token->layer_id != 0) ? pCtx->macro_root_layer : 0;
+    syntaqlite_vec_push(&pCtx->straddle_stack, mr, pCtx->mem);
+  }
 
   if (!pCtx->collect_node_extents) {
     return;
@@ -59,75 +59,40 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
     r.root_end = pCtx->macro_root_end;
   }
   syntaqlite_vec_push(&pCtx->extent_stack, r, pCtx->mem);
+
+  SynqNodeExpandedExtent e = {
+      .offset = token->offset,
+      .length = token->n,
+      .layer_id = token->layer_id,
+  };
+  syntaqlite_vec_push(&pCtx->expanded_stack, e, pCtx->mem);
 }
 
 void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
-  uint32_t exp_len = syntaqlite_vec_len(&pCtx->expanded_stack);
+  // Reduce pops nrhs symbols and pushes 1: net change = 1 - nrhs.
+  pCtx->lemon_depth = pCtx->lemon_depth + 1 - nrhs;
 
-  // Straddle detection: if any two terminal (from_shift=1) entries
-  // have different macro_root values, the expansion boundary cuts
-  // through this grammar production.
-  if (!pCtx->has_macro_straddle) {
-    uint32_t first_term_root = SYNQ_MACRO_ROOT_NEUTRAL;
-    for (uint32_t i = exp_len - nrhs; i < exp_len; i++) {
-      SynqNodeExpandedExtent e =
-          syntaqlite_vec_at(&pCtx->expanded_stack, i);
-      if (!e.from_shift)
-        continue;
-      if (first_term_root == SYNQ_MACRO_ROOT_NEUTRAL) {
-        first_term_root = e.macro_root;
-      } else if (e.macro_root != first_term_root) {
-        pCtx->has_macro_straddle = 1;
-        break;
+  // Straddle detection on the lightweight stack.
+  if (pCtx->macro_root_layer) {
+    uint32_t slen = syntaqlite_vec_len(&pCtx->straddle_stack);
+    if (!pCtx->has_macro_straddle) {
+      uint32_t first = SYNQ_STRADDLE_NEUTRAL;
+      for (uint32_t i = slen - nrhs; i < slen; i++) {
+        uint32_t v = syntaqlite_vec_at(&pCtx->straddle_stack, i);
+        if (v == SYNQ_STRADDLE_NEUTRAL)
+          continue;
+        if (first == SYNQ_STRADDLE_NEUTRAL) {
+          first = v;
+        } else if (v != first) {
+          pCtx->has_macro_straddle = 1;
+          break;
+        }
       }
     }
+    syntaqlite_vec_truncate(&pCtx->straddle_stack, slen - nrhs);
+    syntaqlite_vec_push(&pCtx->straddle_stack, SYNQ_STRADDLE_NEUTRAL,
+                        pCtx->mem);
   }
-
-  // Merge expanded-layer spans.
-  SynqNodeExpandedExtent exp_merged = {
-      0, 0, 0, SYNQ_MACRO_ROOT_NEUTRAL, 0};
-  for (uint32_t i = exp_len - nrhs; i < exp_len; i++) {
-    SynqNodeExpandedExtent e = syntaqlite_vec_at(&pCtx->expanded_stack, i);
-
-    if (exp_merged.macro_root == SYNQ_MACRO_ROOT_NEUTRAL &&
-        e.macro_root != SYNQ_MACRO_ROOT_NEUTRAL) {
-      exp_merged.macro_root = e.macro_root;
-    }
-
-    if (e.layer_id == SYNQ_CROSS_LAYER) {
-      uint32_t saved_mr = exp_merged.macro_root;
-      exp_merged = e;
-      exp_merged.macro_root = saved_mr;
-      exp_merged.from_shift = 0;
-      break;
-    }
-    if (e.length == 0) {
-      continue;
-    }
-    if (exp_merged.length == 0) {
-      exp_merged.layer_id = e.layer_id;
-      exp_merged.offset = e.offset;
-      exp_merged.length = e.length;
-      continue;
-    }
-    if (exp_merged.layer_id != e.layer_id) {
-      uint32_t saved_mr = exp_merged.macro_root;
-      exp_merged =
-          (SynqNodeExpandedExtent){0, 0, SYNQ_CROSS_LAYER, 0, 0};
-      exp_merged.macro_root = saved_mr;
-      break;
-    }
-    uint32_t start =
-        exp_merged.offset < e.offset ? exp_merged.offset : e.offset;
-    uint32_t end_a = exp_merged.offset + exp_merged.length;
-    uint32_t end_b = e.offset + e.length;
-    uint32_t end = end_a > end_b ? end_a : end_b;
-    exp_merged.offset = start;
-    exp_merged.length = end - start;
-  }
-  exp_merged.from_shift = 0;
-  syntaqlite_vec_truncate(&pCtx->expanded_stack, exp_len - nrhs);
-  syntaqlite_vec_push(&pCtx->expanded_stack, exp_merged, pCtx->mem);
 
   if (!pCtx->collect_node_extents) {
     return;
@@ -146,4 +111,36 @@ void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
   }
   syntaqlite_vec_truncate(&pCtx->extent_stack, len - nrhs);
   syntaqlite_vec_push(&pCtx->extent_stack, merged, pCtx->mem);
+
+  // Merge expanded-layer spans: all same layer → merge in that layer;
+  // epsilon entries ({0,0,0}) are neutral; cross-layer poison
+  // (layer_id == SYNQ_CROSS_LAYER) propagates upward unconditionally.
+  SynqNodeExpandedExtent exp_merged = {0, 0, 0};
+  for (uint32_t i = len - nrhs; i < len; i++) {
+    SynqNodeExpandedExtent e = syntaqlite_vec_at(&pCtx->expanded_stack, i);
+    if (e.layer_id == SYNQ_CROSS_LAYER) {
+      exp_merged = e;  // propagate poison
+      break;
+    }
+    if (e.length == 0) {
+      continue;  // skip epsilon
+    }
+    if (exp_merged.length == 0) {
+      exp_merged = e;
+      continue;
+    }
+    if (exp_merged.layer_id != e.layer_id) {
+      exp_merged = (SynqNodeExpandedExtent){0, 0, SYNQ_CROSS_LAYER};
+      break;
+    }
+    uint32_t start =
+        exp_merged.offset < e.offset ? exp_merged.offset : e.offset;
+    uint32_t end_a = exp_merged.offset + exp_merged.length;
+    uint32_t end_b = e.offset + e.length;
+    uint32_t end = end_a > end_b ? end_a : end_b;
+    exp_merged.offset = start;
+    exp_merged.length = end - start;
+  }
+  syntaqlite_vec_truncate(&pCtx->expanded_stack, len - nrhs);
+  syntaqlite_vec_push(&pCtx->expanded_stack, exp_merged, pCtx->mem);
 }
