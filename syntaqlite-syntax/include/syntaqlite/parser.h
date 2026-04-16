@@ -79,6 +79,18 @@ typedef struct SyntaqliteParser SyntaqliteParser;
 #define SYNTAQLITE_PARSE_OK 1
 #define SYNTAQLITE_PARSE_ERROR (-1)
 
+// Generic success/error codes for setters and other small APIs that
+// return 0/-1 status.  Stable ABI.
+//
+//   OK               = operation succeeded
+//   ERR_ALREADY_USED = configuration call made after the parser was sealed
+//                      (i.e. after the first reset()/next()/feed_token())
+//   ERR_OMITTED      = feature compiled out of this build (e.g. macros
+//                      disabled via SYNTAQLITE_OMIT_MACROS)
+#define SYNTAQLITE_OK 0
+#define SYNTAQLITE_ERR_ALREADY_USED (-1)
+#define SYNTAQLITE_ERR_OMITTED (-1)
+
 // ---------------------------------------------------------------------------
 // Core API — create, reset, parse, destroy
 // ---------------------------------------------------------------------------
@@ -115,12 +127,14 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p);
 
 // Enable token/comment collection for result_tokens/result_comments.
 // Default: off (0), in which case those arrays are empty.
-// Returns 0 on success, -1 if the parser has already been used.
+// Returns SYNTAQLITE_OK on success, SYNTAQLITE_ERR_ALREADY_USED if the
+// parser has already been used.
 SYNTAQLITE_API int32_t syntaqlite_parser_set_collect_tokens(SyntaqliteParser* p,
                                                             uint32_t enable);
 
 // Enable parser trace output (debug builds only). Default: off (0).
-// Returns 0 on success, -1 if the parser has already been used.
+// Returns SYNTAQLITE_OK on success, SYNTAQLITE_ERR_ALREADY_USED if the
+// parser has already been used.
 SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
                                                    uint32_t enable);
 
@@ -129,14 +143,17 @@ SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
 // consume the entire name!(args) as a single TK_ID token instead of raising
 // a parse error. A MacroRewrite is recorded so the formatter can emit the
 // call verbatim. Default: off (0).
-// Returns 0 on success, -1 if the parser has already been used.
+// Returns SYNTAQLITE_OK on success, SYNTAQLITE_ERR_ALREADY_USED if the
+// parser has already been used, SYNTAQLITE_ERR_OMITTED if macros are
+// compiled out (SYNTAQLITE_OMIT_MACROS).
 SYNTAQLITE_API int32_t syntaqlite_parser_set_macro_fallback(SyntaqliteParser* p,
                                                             uint32_t enable);
 
 // Enable per-node extent tracking.  When enabled, the parser records
 // the source byte range of every AST node it commits to the arena,
 // accessible via `syntaqlite_parser_node_text`.  Default: off (0).
-// Returns 0 on success, -1 if the parser has already been used.
+// Returns SYNTAQLITE_OK on success, SYNTAQLITE_ERR_ALREADY_USED if the
+// parser has already been used.
 SYNTAQLITE_API int32_t
 syntaqlite_parser_set_collect_node_extents(SyntaqliteParser* p,
                                            uint32_t enable);

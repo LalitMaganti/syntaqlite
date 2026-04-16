@@ -773,34 +773,34 @@ SYNTAQLITE_API int32_t syntaqlite_parser_finish(SyntaqliteParser* p) {
 SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
                                                    uint32_t enable) {
   if (p->sealed)
-    return -1;
+    return SYNTAQLITE_ERR_ALREADY_USED;
   p->trace = enable;
   if (enable) {
     SYNQ_PARSER_TRACE(p->dialect.tmpl, stderr, "parser> ");
   } else {
     SYNQ_PARSER_TRACE(p->dialect.tmpl, NULL, NULL);
   }
-  return 0;
+  return SYNTAQLITE_OK;
 }
 
 SYNTAQLITE_API int32_t syntaqlite_parser_set_collect_tokens(SyntaqliteParser* p,
                                                             uint32_t enable) {
   if (p->sealed)
-    return -1;
+    return SYNTAQLITE_ERR_ALREADY_USED;
   p->collect_tokens = enable;
-  return 0;
+  return SYNTAQLITE_OK;
 }
 
 SYNTAQLITE_API int32_t syntaqlite_parser_set_macro_fallback(SyntaqliteParser* p,
                                                             uint32_t enable) {
   if (p->sealed)
-    return -1;
+    return SYNTAQLITE_ERR_ALREADY_USED;
 #ifdef SYNTAQLITE_OMIT_MACROS
   (void)enable;
-  return -1;
+  return SYNTAQLITE_ERR_OMITTED;
 #else
   p->macro.macro_fallback = enable;
-  return 0;
+  return SYNTAQLITE_OK;
 #endif
 }
 
@@ -808,9 +808,9 @@ SYNTAQLITE_API int32_t
 syntaqlite_parser_set_collect_node_extents(SyntaqliteParser* p,
                                            uint32_t enable) {
   if (p->sealed)
-    return -1;
+    return SYNTAQLITE_ERR_ALREADY_USED;
   p->ctx.collect_node_extents = enable;
-  return 0;
+  return SYNTAQLITE_OK;
 }
 
 SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
@@ -1017,7 +1017,7 @@ syntaqlite_parser_set_macro_lookup(SyntaqliteParser* p,
   (void)p;
   (void)fn;
   (void)user_data;
-  return -1;
+  return SYNTAQLITE_ERR_OMITTED;
 }
 
 #endif  // SYNTAQLITE_OMIT_MACROS

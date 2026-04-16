@@ -591,7 +591,7 @@ syntaqlite_parser_set_macro_lookup(SyntaqliteParser* p,
                                    void* user_data) {
   p->macro.lookup_fn = fn;
   p->macro.lookup_user_data = user_data;
-  return 0;
+  return SYNTAQLITE_OK;
 }
 
 // ---------------------------------------------------------------------------
@@ -718,7 +718,7 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
     lyr->arg_segment_count = mapping_count;
   }
 
-  return 0;
+  return SYNTAQLITE_OK;
 }
 
 #endif  // !SYNTAQLITE_OMIT_MACROS
