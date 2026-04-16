@@ -29,7 +29,7 @@ use std::path::Path;
 /// upstream.  The amalgamation wraps the entire .c in a diagnostic push/pop
 /// so consumers compiling with `-Wall -Wextra` need no extra `-Wno-*` flags.
 ///
-/// These are supported by both GCC and Clang.
+/// These are supported by both GCC and Clang in C and C++.
 const SUPPRESSED_WARNINGS: &[&str] = &[
     "-Wunused-parameter",
     "-Wunused-variable",
@@ -37,18 +37,25 @@ const SUPPRESSED_WARNINGS: &[&str] = &[
     "-Wtype-limits",
     "-Wimplicit-fallthrough",
     "-Wswitch-enum",
-    "-Wdeclaration-after-statement",
     "-Wsign-conversion",
     "-Wcast-qual",
     "-Wunused-macros",
     "-Wformat-nonliteral",
     "-Wformat",
     "-Wcast-align",
-    "-Wmissing-prototypes",
     "-Wunreachable-code",
     "-Wunused-function",
     "-Wswitch-default",
     "-Wpadded",
+];
+
+/// Warnings valid only in C. GCC errors with `-Werror=pragmas` if these
+/// appear in a C++ translation unit, so they are guarded by
+/// `#ifndef __cplusplus`. The amalgamated header is `#include`d from C++
+/// consumers (e.g. perfetto) as well as C.
+const SUPPRESSED_WARNINGS_C_ONLY: &[&str] = &[
+    "-Wdeclaration-after-statement",
+    "-Wmissing-prototypes",
 ];
 
 /// Warnings that only Clang understands; emitted inside `#ifdef __clang__`.
@@ -60,9 +67,9 @@ const SUPPRESSED_WARNINGS_CLANG_ONLY: &[&str] = &[
     "-Wshorten-64-to-32",
 ];
 
-/// Warnings that only GCC understands; emitted inside
-/// `#if defined(__GNUC__) && !defined(__clang__)`.
-const SUPPRESSED_WARNINGS_GCC_ONLY: &[&str] = &["-Wold-style-declaration"];
+/// Warnings understood only by GCC and only in C mode; emitted inside
+/// `#elif defined(__GNUC__) && !defined(__cplusplus)`.
+const SUPPRESSED_WARNINGS_GCC_C_ONLY: &[&str] = &["-Wold-style-declaration"];
 
 fn emit_diagnostic_push(out: &mut String) {
     out.push_str("#if defined(__GNUC__) || defined(__clang__)\n");
@@ -70,12 +77,17 @@ fn emit_diagnostic_push(out: &mut String) {
     for w in SUPPRESSED_WARNINGS {
         let _ = writeln!(out, "#pragma GCC diagnostic ignored \"{w}\"");
     }
+    out.push_str("#ifndef __cplusplus\n");
+    for w in SUPPRESSED_WARNINGS_C_ONLY {
+        let _ = writeln!(out, "#pragma GCC diagnostic ignored \"{w}\"");
+    }
+    out.push_str("#endif\n");
     out.push_str("#ifdef __clang__\n");
     for w in SUPPRESSED_WARNINGS_CLANG_ONLY {
         let _ = writeln!(out, "#pragma clang diagnostic ignored \"{w}\"");
     }
-    out.push_str("#elif defined(__GNUC__)\n");
-    for w in SUPPRESSED_WARNINGS_GCC_ONLY {
+    out.push_str("#elif defined(__GNUC__) && !defined(__cplusplus)\n");
+    for w in SUPPRESSED_WARNINGS_GCC_C_ONLY {
         let _ = writeln!(out, "#pragma GCC diagnostic ignored \"{w}\"");
     }
     out.push_str("#endif\n");
