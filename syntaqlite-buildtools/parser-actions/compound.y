@@ -70,4 +70,4 @@ dbnm(A) ::= . { A.z = NULL; A.n = 0; }
 dbnm(A) ::= DOT nm(X). { A = X; }
 
 paren_exprlist(A) ::= . { A = SYNTAQLITE_NULL_NODE; }
-paren_exprlist(A) ::= LP exprlist(X) RP. { A = X; }
+paren_exprlist(A) ::= LP exprlist(X) RP. { A = synq_pass(pCtx, X); }

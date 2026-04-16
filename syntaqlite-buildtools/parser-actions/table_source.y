@@ -122,7 +122,7 @@ seltablist(A) ::= stl_prefix(A) LP select(S) RP as(Z) on_using(N). {
 seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
     (void)Z; (void)N;
     if (A == SYNTAQLITE_NULL_NODE) {
-        A = F;
+        A = synq_pass(pCtx, F);
     } else {
         SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
         A = synq_parse_join_clause(pCtx,

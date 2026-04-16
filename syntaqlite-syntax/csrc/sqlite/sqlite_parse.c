@@ -7442,7 +7442,7 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 36: /* paren_exprlist ::= LP exprlist RP */
     {
-      yymsp[-2].minor.yy277 = yymsp[-1].minor.yy277;
+      yymsp[-2].minor.yy277 = synq_pass(pCtx, yymsp[-1].minor.yy277);
     } break;
     case 37: /* expr ::= expr ISNULL|NOTNULL */
     {
@@ -9250,7 +9250,7 @@ static YYACTIONTYPE yy_reduce(
       (void)yymsp[-1].minor.yy277;
       (void)yymsp[0].minor.yy632;
       if (yymsp[-5].minor.yy277 == SYNTAQLITE_NULL_NODE) {
-        yymsp[-5].minor.yy277 = yymsp[-3].minor.yy277;
+        yymsp[-5].minor.yy277 = synq_pass(pCtx, yymsp[-3].minor.yy277);
       } else {
         SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-5].minor.yy277);
         yymsp[-5].minor.yy277 = synq_parse_join_clause(
@@ -9785,7 +9785,7 @@ static YYACTIONTYPE yy_reduce(
           .flags = 0,
           ._layer_id = yymsp[-2].minor.yy0.layer_id,
       };
-      yylhsminor.yy277 = yymsp[-3].minor.yy277;
+      yylhsminor.yy277 = synq_pass(pCtx, yymsp[-3].minor.yy277);
     }
       yymsp[-3].minor.yy277 = yylhsminor.yy277;
       break;
@@ -10056,7 +10056,7 @@ static void yy_syntax_error(
   SynqSqliteParseARG_FETCH SynqSqliteParseCTX_FETCH
 #define TOKEN yyminor
       /************ Begin %syntax_error code
-       ****************************************/
+         ****************************************/
 
       (void) yymajor;
   (void)TOKEN;
