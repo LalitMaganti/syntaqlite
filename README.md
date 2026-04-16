@@ -213,7 +213,7 @@ cargo install syntaqlite-cli
 
 ```toml
 [dependencies]
-syntaqlite = { version = "0.4.0", features = ["fmt"] }
+syntaqlite = { version = "0.4.1", features = ["fmt"] }
 ```
 
 **Python** ([API docs](https://docs.syntaqlite.com/latest/reference/python-api/))
