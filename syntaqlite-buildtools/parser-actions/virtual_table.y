@@ -36,7 +36,7 @@ cmd(A) ::= create_vtab(X) LP(L) vtabarglist RP(R). {
         .flags = 0,
         ._layer_id = L.layer_id,
     };
-    A = X;
+    A = synq_pass(pCtx, X);
 }
 
 // create_vtab builds the node with table name, schema, module name

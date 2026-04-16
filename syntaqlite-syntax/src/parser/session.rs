@@ -613,6 +613,21 @@ mod tests {
             .node_text(root_id)
             .expect("root node should have recorded text");
         assert_eq!(text, "SELECT (1 + 2)");
+        drop(session);
+
+        // CREATE VIRTUAL TABLE t USING mod(a, b) — the cmd rule does
+        // A = X (passthrough with LP vtabarglist RP consumed).  Regression
+        // test for #144.
+        let source = "CREATE VIRTUAL TABLE t USING mod(a, b);";
+        let mut session = parser.parse(source);
+        let ParseOutcome::Ok(statement) = session.next() else {
+            panic!("expected Ok");
+        };
+        let root_id = statement.erase().root_id();
+        let (text, _) = statement
+            .node_text(root_id)
+            .expect("root node should have recorded text");
+        assert_eq!(text, "CREATE VIRTUAL TABLE t USING mod(a, b)");
     }
 
     #[test]
