@@ -278,9 +278,10 @@ typedef struct SyntaqliteMacroRewrite {
   uint32_t def_col;
   // Position of this call in the *parent's authored body*, computed by
   // inverting the length shifts the parent's $param substitutions
-  // introduced.  body_call_length == 0 means the call was tokenized
-  // from a substituted arg's text (no meaningful body position) and
-  // consumers should descend through the matching arg segment instead.
+  // introduced.  Both fields equal SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL
+  // (UINT32_MAX) when the call was tokenized from a substituted arg's
+  // text (no meaningful body position) and consumers should descend
+  // through the matching arg segment instead.
   //
   // For top-level rewrites (parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE)
   // the parent is the authored source, so these equal call_offset /
