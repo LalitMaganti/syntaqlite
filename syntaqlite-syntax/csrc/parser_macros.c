@@ -289,25 +289,27 @@ static int expand_and_feed(SyntaqliteParser* p,
       continue;
     }
 
-    // Check for nested macro call: ID followed by '!'.
-    // Skip whitespace/comments between ID and '!' to mirror the main parse
+    // Check for nested macro call: ID followed by TK_BANG.
+    // Skip whitespace/comments between ID and BANG to mirror the main parse
     // loop's next_token() behaviour (issue #130).
     // Skip when inside a macro definition body — body should be verbatim.
     uint32_t bang_pos = pos + (uint32_t)tlen;
+    uint32_t la_type = 0;
     if (ttype == SYNTAQLITE_TK_ID && p->ctx.in_macro_def_body == 0) {
-      // Scan past whitespace/comments to find the next significant byte.
       while (bang_pos < buf_len) {
-        uint32_t la_type = 0;
+        uint32_t lt = 0;
         int64_t la_len = SynqSqliteGetTokenVersionWrapped(
-            &p->dialect, p->macro.macro_fallback, z + bang_pos, &la_type);
+            &p->dialect, p->macro.macro_fallback, z + bang_pos, &lt);
         if (la_len <= 0)
           break;
-        if (la_type != SYNTAQLITE_TK_SPACE && la_type != SYNTAQLITE_TK_COMMENT)
+        if (lt != SYNTAQLITE_TK_SPACE && lt != SYNTAQLITE_TK_COMMENT) {
+          la_type = lt;
           break;
+        }
         bang_pos += (uint32_t)la_len;
       }
     }
-    if (ttype == SYNTAQLITE_TK_ID && bang_pos < buf_len && z[bang_pos] == '!' &&
+    if (ttype == SYNTAQLITE_TK_ID && la_type == SYNTAQLITE_TK_BANG &&
         p->ctx.in_macro_def_body == 0) {
       uint32_t nested_end = 0;
       int erc = synq_parser_expand_and_feed_macro(p, buf, buf_len, pos,
