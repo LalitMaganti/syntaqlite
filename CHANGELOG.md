@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Amalgamated C sources no longer trigger `-Werror=pragmas` when `#include`d from C++ translation units; C-only warning pragmas (`-Wdeclaration-after-statement`, `-Wmissing-prototypes`, `-Wold-style-declaration`) are now guarded by `#ifndef __cplusplus` ([#153](https://github.com/LalitMaganti/syntaqlite/pull/153)).
+
 ## 0.4.0
 
 **Breaking:**

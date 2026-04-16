@@ -2,7 +2,7 @@
   "name": "syntaqlite",
   "displayName": "syntaqlite",
   "description": "SQL language support powered by syntaqlite — diagnostics, formatting, completions, and semantic highlighting",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "publisher": "syntaqlite",
   "license": "Apache-2.0",
   "icon": "icon.png",
