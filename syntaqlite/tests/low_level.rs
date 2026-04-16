@@ -507,6 +507,55 @@ fn collect_all_spans(
     }
 }
 
+/// Nested macro calls inside an expansion buffer must be detected even when
+/// whitespace or comments separate the ID from '!'. Regression test for
+/// <https://github.com/LalitMaganti/syntaqlite/issues/130>.
+#[test]
+fn nested_macro_with_whitespace_before_bang() {
+    struct TwoMacros;
+    impl MacroLookup for TwoMacros {
+        fn lookup(&mut self, name: &str, _args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool {
+            match name {
+                // omacro!() expands to "imacro\n  !(42)" — newline+spaces before "!".
+                "omacro" => {
+                    out.write("imacro\n  !(42)");
+                    true
+                }
+                // cmacro!() expands to "imacro/* comment */!(42)" — comment before "!".
+                "cmacro" => {
+                    out.write("imacro/* comment */!(42)");
+                    true
+                }
+                "imacro" => {
+                    out.write("100");
+                    true
+                }
+                _ => false,
+            }
+        }
+    }
+
+    let config = ParserConfig::default()
+        .with_collect_tokens(true)
+        .with_macro_fallback(true);
+
+    // Test whitespace (newline + spaces) between ID and '!'.
+    let mut parser = Parser::with_config(&config);
+    parser.set_macro_lookup(Some(Box::new(TwoMacros)));
+    let mut session = parser.parse("SELECT omacro!();");
+    let ParseOutcome::Ok(_) = session.next() else {
+        panic!("nested macro with whitespace before '!' should parse")
+    };
+
+    // Test comment between ID and '!'.
+    let mut parser = Parser::with_config(&config);
+    parser.set_macro_lookup(Some(Box::new(TwoMacros)));
+    let mut session = parser.parse("SELECT cmacro!();");
+    let ParseOutcome::Ok(_) = session.next() else {
+        panic!("nested macro with comment before '!' should parse")
+    };
+}
+
 /// When a single statement has more than 255 macro expansions, the parser
 /// must not wrap `_layer_id` at 256 (`uint8_t` overflow). Regression test
 /// for <https://github.com/LalitMaganti/syntaqlite/issues/128>.
