@@ -74,6 +74,7 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
   uint32_t arg_count = 0;
   uint32_t depth = 1;
   uint32_t arg_start = pos;
+  uint32_t arg_end = pos;  // end of last significant token in current arg
 
   while (pos < source_len && depth > 0) {
     ttype = 0;
@@ -82,6 +83,9 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
     if (tlen <= 0)
       return 0;
 
+    int is_skip =
+        (ttype == SYNTAQLITE_TK_SPACE || ttype == SYNTAQLITE_TK_COMMENT);
+
     if (ttype == SYNTAQLITE_TK_LP) {
       depth++;
     } else if (ttype == SYNTAQLITE_TK_RP) {
@@ -89,7 +93,7 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
       if (depth == 0) {
         if (arg_count < max_args) {
           out_args[arg_count].offset = arg_start;
-          out_args[arg_count].length = pos - arg_start;
+          out_args[arg_count].length = arg_end - arg_start;
         }
         arg_count++;
         *out_end_offset = pos + (uint32_t)tlen;
@@ -98,12 +102,22 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
     } else if (depth == 1 && ttype == SYNTAQLITE_TK_COMMA) {
       if (arg_count < max_args) {
         out_args[arg_count].offset = arg_start;
-        out_args[arg_count].length = pos - arg_start;
+        out_args[arg_count].length = arg_end - arg_start;
       }
       arg_count++;
       arg_start = pos + (uint32_t)tlen;
+      arg_end = arg_start;
     } else if (ttype == SYNTAQLITE_TK_SEMI) {
       return 0;
+    }
+
+    // Trim leading whitespace/comments by advancing arg_start.
+    // Trim trailing implicitly: arg_end only advances past significant tokens.
+    if (depth >= 1 && is_skip && pos == arg_start) {
+      arg_start = pos + (uint32_t)tlen;
+      arg_end = arg_start;
+    } else if (!is_skip) {
+      arg_end = pos + (uint32_t)tlen;
     }
 
     pos += (uint32_t)tlen;
