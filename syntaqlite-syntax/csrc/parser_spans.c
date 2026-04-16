@@ -52,14 +52,14 @@ static void span_walk_to_source(SyntaqliteParser* p,
   uint32_t off = offset;
   uint32_t len = length;
   uint32_t layer = layer_id;
-  uint32_t layers_count = syntaqlite_vec_len(&p->layers);
+  uint32_t layers_count = syntaqlite_vec_len(&p->macro.layers);
   // Each iteration either drills into an arg origin layer or moves up
   // to a parent layer; cap defensively at twice the max depth.
   for (uint32_t step = 0; step < 2 * (SYNQ_MAX_MACRO_DEPTH + 1); step++) {
     if (layer == 0 || layer >= layers_count) {
       break;
     }
-    const SynqExpansionLayer* cur = &p->layers.data[layer];
+    const SynqExpansionLayer* cur = &p->macro.layers.data[layer];
 
     // Arg-segment drill: if the span lies fully inside a substituted arg,
     // the authored bytes live in the segment's origin layer, not via the
@@ -85,11 +85,11 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
     return NULL;
   }
   uint32_t layer = span->_layer_id;
-  if (layer >= syntaqlite_vec_len(&p->layers)) {
+  if (layer >= syntaqlite_vec_len(&p->macro.layers)) {
     *out_len = 0;
     return NULL;
   }
-  const SynqExpansionLayer* lyr = &p->layers.data[layer];
+  const SynqExpansionLayer* lyr = &p->macro.layers.data[layer];
   if (!lyr->expansion_data ||
       span->offset + span->length > lyr->expansion_len) {
     *out_len = 0;
@@ -175,7 +175,7 @@ SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
     *out_count = 0;
   // Clear the scratch buffer from any previous call.  Keeps the
   // allocation so repeat calls reuse the same heap block.
-  syntaqlite_vec_clear(&p->traceback_buf);
+  syntaqlite_vec_clear(&p->macro.traceback_buf);
   if (!sp || sp->length == 0)
     return NULL;
 
@@ -187,14 +187,14 @@ SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
   uint32_t off = sp->offset;
   uint32_t len = sp->length;
   uint32_t layer_id = sp->_layer_id;
-  uint32_t layers_count = syntaqlite_vec_len(&p->layers);
+  uint32_t layers_count = syntaqlite_vec_len(&p->macro.layers);
 
   for (uint32_t step = 0; step < 2 * (SYNQ_MAX_MACRO_DEPTH + 1) &&
                           count < SYNQ_MAX_MACRO_DEPTH + 2;
        step++) {
     if (layer_id >= layers_count)
       break;
-    const SynqExpansionLayer* lyr = &p->layers.data[layer_id];
+    const SynqExpansionLayer* lyr = &p->macro.layers.data[layer_id];
 
     if (layer_id == 0) {
       // Root (sentinel) — emit final frame and terminate.
@@ -239,12 +239,12 @@ SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
     return NULL;
 
   // Reverse into the parser's owned buffer so frame[0] is outermost.
-  syntaqlite_vec_ensure(&p->traceback_buf, count, p->mem);
+  syntaqlite_vec_ensure(&p->macro.traceback_buf, count, p->mem);
   for (uint32_t i = 0; i < count; i++) {
-    p->traceback_buf.data[i] = tmp[count - 1 - i];
+    p->macro.traceback_buf.data[i] = tmp[count - 1 - i];
   }
-  p->traceback_buf.count = count;
+  p->macro.traceback_buf.count = count;
   if (out_count)
     *out_count = count;
-  return p->traceback_buf.data;
+  return p->macro.traceback_buf.data;
 }

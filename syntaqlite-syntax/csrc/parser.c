@@ -63,15 +63,16 @@ static void reset_stmt(SyntaqliteParser* p) {
   synq_parse_ctx_clear(&p->ctx);
   syntaqlite_vec_clear(&p->comments);
   syntaqlite_vec_clear(&p->tokens);
-  syntaqlite_vec_clear(&p->traceback_buf);
-  syntaqlite_vec_clear(&p->node_expanded_buf);
-  synq_layers_free_owned(&p->layers, p->mem);
-  syntaqlite_vec_clear(&p->layers);
+  syntaqlite_vec_clear(&p->macro.traceback_buf);
+  syntaqlite_vec_clear(&p->macro.node_expanded_buf);
+  synq_layers_free_owned(&p->macro.layers, p->mem);
+  syntaqlite_vec_clear(&p->macro.layers);
   // Push sentinel at index 0 (source layer).  p->source may be NULL on
   // the very first reset_stmt call (before syntaqlite_parser_reset sets it),
   // which is fine — syntaqlite_parser_reset re-clears and re-pushes.
   if (p->source)
-    synq_layers_push_sentinel(&p->layers, p->source, p->source_len, p->mem);
+    synq_layers_push_sentinel(&p->macro.layers, p->source, p->source_len,
+                              p->mem);
   p->macro.expansion_depth = 0;
   p->ctx.layer_id = 0;
   p->ctx.cur_shift_start = 0;
@@ -128,10 +129,8 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   synq_parse_ctx_init(&p->ctx, m);
   syntaqlite_vec_init(&p->comments);
   syntaqlite_vec_init(&p->tokens);
-  syntaqlite_vec_init(&p->layers);
-  syntaqlite_vec_init(&p->traceback_buf);
-  syntaqlite_vec_init(&p->node_expanded_buf);
-  // macro callback/expansion fields already zeroed by memset.
+  // All macro-related vecs (layers, traceback_buf, node_expanded_buf,
+  // expand_buf, body_buf) initialized inside synq_macro_state_init.
   synq_macro_state_init(&p->macro);
   return p;
 }
@@ -163,8 +162,8 @@ SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
 
   // Re-push the sentinel with the correct source pointer (reset_stmt may
   // have pushed one with the old source, or none if source was NULL).
-  syntaqlite_vec_clear(&p->layers);
-  synq_layers_push_sentinel(&p->layers, source, len, p->mem);
+  syntaqlite_vec_clear(&p->macro.layers);
+  synq_layers_push_sentinel(&p->macro.layers, source, len, p->mem);
 
   p->ctx.source = source;
   p->ctx.env = &p->dialect;
@@ -176,10 +175,6 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
     synq_parse_ctx_free(&p->ctx);
     syntaqlite_vec_free(&p->comments, p->mem);
     syntaqlite_vec_free(&p->tokens, p->mem);
-    synq_layers_free_owned(&p->layers, p->mem);
-    syntaqlite_vec_free(&p->layers, p->mem);
-    syntaqlite_vec_free(&p->traceback_buf, p->mem);
-    syntaqlite_vec_free(&p->node_expanded_buf, p->mem);
     synq_macro_state_free(&p->macro, p->mem);
     p->mem.xFree(p);
   }
@@ -369,7 +364,7 @@ static int64_t next_token(SyntaqliteParser* p,
   while (pos < p->source_len && z[pos] != '\0') {
     uint32_t type = 0;
     int64_t len = SynqSqliteGetTokenVersionWrapped(
-        &p->dialect, p->macro_fallback, z + pos, &type);
+        &p->dialect, p->macro.macro_fallback, z + pos, &type);
     if (len <= 0)
       return 0;
     if (type == SYNTAQLITE_TK_SPACE) {
@@ -572,7 +567,7 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
 }
 
 SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
-  uint32_t total = syntaqlite_vec_len(&p->layers);
+  uint32_t total = syntaqlite_vec_len(&p->macro.layers);
   // Entry 0 is the source sentinel; real expansion layers start at 1.
   return total <= 1 ? 0 : total - 1;
 }
@@ -581,10 +576,10 @@ SYNTAQLITE_API SyntaqliteMacroRegion
 syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx) {
   // +1 to skip the source sentinel at index 0.
   uint32_t layer_idx = idx + 1;
-  if (layer_idx >= syntaqlite_vec_len(&p->layers)) {
+  if (layer_idx >= syntaqlite_vec_len(&p->macro.layers)) {
     return (SyntaqliteMacroRegion){0, 0};
   }
-  const SynqExpansionLayer* lyr = &p->layers.data[layer_idx];
+  const SynqExpansionLayer* lyr = &p->macro.layers.data[layer_idx];
   return (SyntaqliteMacroRegion){lyr->call_offset, lyr->call_length};
 }
 
@@ -627,12 +622,12 @@ SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(SyntaqliteParser* p,
   // `syntaqlite_parser_node_expanded_text` and writes the result into
   // the parser's scratch buffer.  Returned pointer is valid until the
   // next call or `reset_stmt`.
-  syntaqlite_vec_clear(&p->node_expanded_buf);
+  syntaqlite_vec_clear(&p->macro.node_expanded_buf);
   append_expanded_range(p, 0, p->source, p->source_len, 0, p->source_len);
   if (out_len) {
-    *out_len = syntaqlite_vec_len(&p->node_expanded_buf);
+    *out_len = syntaqlite_vec_len(&p->macro.node_expanded_buf);
   }
-  return (const char*)p->node_expanded_buf.data;
+  return (const char*)p->macro.node_expanded_buf.data;
 }
 
 // ---------------------------------------------------------------------------
@@ -764,7 +759,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_set_macro_fallback(SyntaqliteParser* p,
                                                             uint32_t enable) {
   if (p->sealed)
     return -1;
-  p->macro_fallback = enable;
+  p->macro.macro_fallback = enable;
   return 0;
 }
 
@@ -823,14 +818,14 @@ static void append_expanded_range(SyntaqliteParser* p,
   if (end > buf_len)
     end = buf_len;
   uint32_t cursor = start;
-  uint32_t nlayers = syntaqlite_vec_len(&p->layers);
+  uint32_t nlayers = syntaqlite_vec_len(&p->macro.layers);
   for (;;) {
     // Find the next child layer (parent == layer_id) whose call site
     // begins at or after `cursor` and lies fully within `[start, end)`.
     uint32_t best_child = 0;
     uint32_t best_offset = UINT32_MAX;
     for (uint32_t i = 1; i < nlayers; i++) {
-      const SynqExpansionLayer* lyr = &p->layers.data[i];
+      const SynqExpansionLayer* lyr = &p->macro.layers.data[i];
       if (lyr->parent_layer_id != layer_id)
         continue;
       if (lyr->call_offset < cursor)
@@ -844,10 +839,11 @@ static void append_expanded_range(SyntaqliteParser* p,
     }
     if (best_child == 0)
       break;
-    const SynqExpansionLayer* child = &p->layers.data[best_child];
+    const SynqExpansionLayer* child = &p->macro.layers.data[best_child];
     if (best_offset > cursor) {
       uint32_t n = best_offset - cursor;
-      syntaqlite_vec_push_n(&p->node_expanded_buf, buf + cursor, n, p->mem);
+      syntaqlite_vec_push_n(&p->macro.node_expanded_buf, buf + cursor, n,
+                            p->mem);
     }
     append_expanded_range(p, best_child, child->expansion_data,
                           child->expansion_len, 0, child->expansion_len);
@@ -855,7 +851,7 @@ static void append_expanded_range(SyntaqliteParser* p,
   }
   if (end > cursor) {
     uint32_t n = end - cursor;
-    syntaqlite_vec_push_n(&p->node_expanded_buf, buf + cursor, n, p->mem);
+    syntaqlite_vec_push_n(&p->macro.node_expanded_buf, buf + cursor, n, p->mem);
   }
 }
 
@@ -879,8 +875,9 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
   SynqNodeExpandedExtent e =
       syntaqlite_vec_at(&p->ctx.node_expanded_extents, node_id);
   if (e.length > 0) {
-    const char* buf =
-        e.layer_id == 0 ? p->source : p->layers.data[e.layer_id].expansion_data;
+    const char* buf = e.layer_id == 0
+                          ? p->source
+                          : p->macro.layers.data[e.layer_id].expansion_data;
     if (out_len) {
       *out_len = e.length;
     }
@@ -899,13 +896,13 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
   if (r.root_start > r.root_end || r.root_end > p->source_len) {
     return NULL;
   }
-  syntaqlite_vec_clear(&p->node_expanded_buf);
+  syntaqlite_vec_clear(&p->macro.node_expanded_buf);
   append_expanded_range(p, 0, p->source, p->source_len, r.root_start,
                         r.root_end);
   if (out_len) {
-    *out_len = syntaqlite_vec_len(&p->node_expanded_buf);
+    *out_len = syntaqlite_vec_len(&p->macro.node_expanded_buf);
   }
-  return (const char*)p->node_expanded_buf.data;
+  return (const char*)p->macro.node_expanded_buf.data;
 }
 
 SYNTAQLITE_API int syntaqlite_node_is_macro_free(SyntaqliteParser* p,
