@@ -195,7 +195,8 @@ fn cmd_generate_dialect_full(
 
     let out = Path::new(output_dir);
     ensure_dir(out, "output dir")?;
-    let result = amalgamate::amalgamate_full(dialect, runtime_temp.path(), dialect_temp.path())?;
+    let result =
+        amalgamate::amalgamate_full(dialect, runtime_temp.path(), dialect_temp.path(), false)?;
     write_file(&out.join(format!("syntaqlite_{dialect}.h")), &result.header)?;
     write_file(&out.join(format!("syntaqlite_{dialect}.c")), &result.source)?;
     eprintln!(

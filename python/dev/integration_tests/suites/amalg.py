@@ -39,6 +39,10 @@ def _dialect_configs(root_dir: Path) -> dict[str, DialectConfig]:
     perfetto_nodes = str(root_dir / "dialects/perfetto/nodes")
     return {
         "sqliteamalgfull": DialectConfig(name="sqlite", mode=AmalgMode.FULL),
+        "sqliteamalgomitmacros": DialectConfig(
+            name="sqlite", mode=AmalgMode.FULL,
+            extra_cflags=("-DSYNTAQLITE_OMIT_MACROS",),
+        ),
         "sqliteamalgruntimeonly": DialectConfig(name="sqlite", mode=AmalgMode.DIALECT_ONLY),
         "perfettoamalgfull": DialectConfig(
             name="perfetto", mode=AmalgMode.FULL,

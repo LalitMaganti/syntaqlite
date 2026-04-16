@@ -168,6 +168,10 @@ struct AmalgamateSyntaxArgs {
     /// Output directory for the amalgamated .h and .c files.
     #[arg(long, required = true)]
     output_dir: String,
+    /// Compile out macro expansion support (`SYNTAQLITE_OMIT_MACROS`).
+    /// Use for dialects that do not use macro calls.
+    #[arg(long, default_value_t = false)]
+    omit_macros: bool,
 }
 
 // ── amalgamate ────────────────────────────────────────────────────────────────
@@ -228,6 +232,7 @@ fn main() {
                 &args.dialect,
                 runtime,
                 dialect,
+                args.omit_macros,
             )?;
             std::fs::create_dir_all(output).map_err(|e| format!("creating output dir: {e}"))?;
             let h_path = output.join(format!("syntaqlite_{}.h", args.dialect));

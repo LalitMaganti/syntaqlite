@@ -37,11 +37,14 @@ class DialectConfig:
     mode: AmalgMode = AmalgMode.FULL
     actions_dir: Optional[str] = None
     nodes_dir: Optional[str] = None
+    extra_cflags: tuple[str, ...] = ()
 
     @property
     def key(self) -> str:
         """Unique build-cache key."""
-        return f"{self.name}_{self.mode.value}"
+        suffix = "_".join(f.lstrip("-D").lower() for f in self.extra_cflags)
+        base = f"{self.name}_{self.mode.value}"
+        return f"{base}_{suffix}" if suffix else base
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +96,8 @@ def _build_runtime_only(cli_binary: Path, output_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 
 def _compile_full_binary(
-    test_c: Path, amalg_dir: Path, dialect_name: str, output_binary: Path
+    test_c: Path, amalg_dir: Path, dialect_name: str, output_binary: Path,
+    extra_cflags: tuple[str, ...] = (),
 ) -> None:
     """Compile test_ast.c against a self-contained full amalgamation."""
     grammar_header = f'"syntaqlite_{dialect_name}.h"'
@@ -106,6 +110,7 @@ def _compile_full_binary(
         f"-DGRAMMAR_HEADER={grammar_header}",
         f"-DGRAMMAR_FN={grammar_fn}",
         "-Werror",
+        *extra_cflags,
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
@@ -285,7 +290,8 @@ class AmalgTestContext:
         if dialect.mode == AmalgMode.FULL:
             _build_full(self.cli_binary, dialect, amalg_dir)
             binary = temp / f"test_{key}"
-            _compile_full_binary(self.test_c, amalg_dir, dialect.name, binary)
+            _compile_full_binary(self.test_c, amalg_dir, dialect.name, binary,
+                                extra_cflags=dialect.extra_cflags)
 
         elif dialect.mode == AmalgMode.DIALECT_ONLY:
             _build_dialect_only(self.cli_binary, dialect, amalg_dir)
