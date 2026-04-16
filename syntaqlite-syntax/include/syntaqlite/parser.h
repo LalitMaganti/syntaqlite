@@ -194,8 +194,7 @@ typedef struct SyntaqliteParserToken {
   uint32_t length;  // Byte length.
   uint32_t type;    // Original token type from tokenizer (pre-fallback).
   SyntaqliteParserTokenFlags flags;  // Bitmask of SYNQ_TOKEN_FLAG_* values.
-  uint8_t _layer_id;  // Internal: 0 = original source, >0 = expansion layer.
-  uint8_t _pad[3];
+  uint32_t _layer_id;  // Internal: 0 = original source, >0 = expansion layer.
 } SyntaqliteParserToken;
 
 // Per-statement token/comment arrays.

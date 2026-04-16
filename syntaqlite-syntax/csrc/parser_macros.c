@@ -291,8 +291,7 @@ static int expand_and_feed(SyntaqliteParser* p,
                             .type = ttype,
                             .token_idx = 0xFFFFFFFF,
                             .offset = pos,
-                            .layer_id = (uint8_t)p->ctx.layer_id,
-                            ._pad = {0, 0, 0}};
+                            .layer_id = p->ctx.layer_id};
     SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, (int)ttype, minor);
     p->last_token_type = ttype;
 
@@ -446,7 +445,7 @@ static void begin_macro_expansion(SyntaqliteParser* p,
       .call_length = call_length,
       .name = name,
       .name_len = name_len,
-      .parent_layer_id = (uint8_t)p->ctx.layer_id,
+      .parent_layer_id = p->ctx.layer_id,
   };
   syntaqlite_vec_push(&p->layers, layer, p->mem);
   p->macro.depth++;

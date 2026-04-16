@@ -65,8 +65,7 @@ pub(crate) struct CParserToken {
     /// Internal: 0 = original source, >0 = expansion layer id.
     /// Read only by C-side span accessors; the Rust side does not
     /// inspect it directly.
-    pub _layer_id: u8,
-    pub _pad: [u8; 3],
+    pub _layer_id: u32,
 }
 
 /// Mirrors C `SyntaqliteToken` from `include/syntaqlite/tokenizer.h`.

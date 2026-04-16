@@ -81,8 +81,7 @@ typedef struct SynqParseToken {
                        // shift time so reductions don't depend on
                        // ctx->source which may have been swapped back
                        // after a macro expansion
-  uint8_t layer_id;    // 0 = original source, 1+ = expansion layer index
-  uint8_t _pad[3];
+  uint32_t layer_id;   // 0 = original source, 1+ = expansion layer index
 } SynqParseToken;
 
 typedef struct SyntaqliteFieldRangeMeta SyntaqliteFieldRangeMeta;
