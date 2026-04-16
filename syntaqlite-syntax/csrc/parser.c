@@ -587,7 +587,24 @@ syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx) {
   (void)p;
   (void)idx;
   return (SyntaqliteMacroRewrite){
-      SYNTAQLITE_MACRO_PARENT_SOURCE, 0, 0, NULL, 0, NULL, 0, 0, 0};
+      .parent_idx = SYNTAQLITE_MACRO_PARENT_SOURCE,
+  };
+}
+SYNTAQLITE_API uint32_t
+syntaqlite_macro_rewrite_arg_segment_count(SyntaqliteParser* p,
+                                           uint32_t rewrite_idx) {
+  (void)p;
+  (void)rewrite_idx;
+  return 0;
+}
+SYNTAQLITE_API SyntaqliteMacroArgSegment
+syntaqlite_macro_rewrite_arg_segment_at(SyntaqliteParser* p,
+                                        uint32_t rewrite_idx,
+                                        uint32_t segment_idx) {
+  (void)p;
+  (void)rewrite_idx;
+  (void)segment_idx;
+  return (SyntaqliteMacroArgSegment){0};
 }
 #else
 SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
@@ -601,7 +618,8 @@ syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx) {
   uint32_t layer_idx = idx + 1;
   if (layer_idx >= syntaqlite_vec_len(&p->macro.layers)) {
     return (SyntaqliteMacroRewrite){
-        SYNTAQLITE_MACRO_PARENT_SOURCE, 0, 0, NULL, 0, NULL, 0, 0, 0};
+        .parent_idx = SYNTAQLITE_MACRO_PARENT_SOURCE,
+    };
   }
   const SynqExpansionLayer* lyr = &p->macro.layers.data[layer_idx];
   // Internal parent_layer_id 0 = authored source sentinel.  Map it to the
@@ -611,9 +629,53 @@ syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx) {
                             ? SYNTAQLITE_MACRO_PARENT_SOURCE
                             : lyr->parent_layer_id - 1;
   return (SyntaqliteMacroRewrite){
-      parent_idx,          lyr->call_offset,   lyr->call_length,
-      lyr->expansion_data, lyr->expansion_len, lyr->name,
-      lyr->name_len,       lyr->def_line,      lyr->def_col,
+      .parent_idx = parent_idx,
+      .call_offset = lyr->call_offset,
+      .call_length = lyr->call_length,
+      .expansion = lyr->expansion_data,
+      .expansion_len = lyr->expansion_len,
+      .name = lyr->name,
+      .name_len = lyr->name_len,
+      .def_line = lyr->def_line,
+      .def_col = lyr->def_col,
+      .body_call_offset = lyr->body_call_offset,
+      .body_call_length = lyr->body_call_length,
+  };
+}
+
+SYNTAQLITE_API uint32_t
+syntaqlite_macro_rewrite_arg_segment_count(SyntaqliteParser* p,
+                                           uint32_t rewrite_idx) {
+  uint32_t layer_idx = rewrite_idx + 1;
+  if (layer_idx >= syntaqlite_vec_len(&p->macro.layers))
+    return 0;
+  return p->macro.layers.data[layer_idx].arg_segment_count;
+}
+
+SYNTAQLITE_API SyntaqliteMacroArgSegment
+syntaqlite_macro_rewrite_arg_segment_at(SyntaqliteParser* p,
+                                        uint32_t rewrite_idx,
+                                        uint32_t segment_idx) {
+  uint32_t layer_idx = rewrite_idx + 1;
+  if (layer_idx >= syntaqlite_vec_len(&p->macro.layers))
+    return (SyntaqliteMacroArgSegment){0};
+  const SynqExpansionLayer* lyr = &p->macro.layers.data[layer_idx];
+  if (segment_idx >= lyr->arg_segment_count)
+    return (SyntaqliteMacroArgSegment){0};
+  const SynqArgSegment* seg = &lyr->arg_segments[segment_idx];
+  // Map internal origin_layer_id (0 = source sentinel) to the public
+  // sentinel / rewrite-index scheme used by parent_idx.
+  uint32_t origin_parent_idx = seg->origin_layer_id == 0
+                                   ? SYNTAQLITE_MACRO_PARENT_SOURCE
+                                   : seg->origin_layer_id - 1;
+  return (SyntaqliteMacroArgSegment){
+      .body_offset = seg->body_offset,
+      .body_length = seg->body_length,
+      .expansion_offset = seg->sub_offset,
+      .expansion_length = seg->sub_length,
+      .origin_parent_idx = origin_parent_idx,
+      .origin_offset = seg->origin_offset,
+      .origin_length = seg->origin_length,
   };
 }
 #endif

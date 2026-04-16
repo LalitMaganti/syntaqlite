@@ -287,6 +287,7 @@ impl syntaqlite_syntax::any::AnyNodeTag
 impl syntaqlite_syntax::any::AnyTokenType
 impl syntaqlite_syntax::any::FieldMeta<'_>
 impl syntaqlite_syntax::any::KeywordEntry
+impl syntaqlite_syntax::any::MacroArgSegment<'_>
 impl syntaqlite_syntax::any::NodeFields
 impl syntaqlite_syntax::any::TextSpan
 impl syntaqlite_syntax::nodes::AggregateFunctionCallFlags
@@ -756,6 +757,7 @@ impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedT
 impl<T, E> syntaqlite_syntax::ParseOutcome<T, E>
 pub enum syntaqlite_syntax::CommentKind
 pub enum syntaqlite_syntax::ParseOutcome<T, E>
+pub enum syntaqlite_syntax::any::ArgOrigin
 pub enum syntaqlite_syntax::any::FieldValue
 pub enum syntaqlite_syntax::any::ParseOutcome<T, E>
 pub enum syntaqlite_syntax::any::TokenCategory
@@ -939,6 +941,17 @@ pub fn syntaqlite_syntax::any::FieldMeta<'_>::name(&self) -> &'static str
 pub fn syntaqlite_syntax::any::FieldMeta<'_>::offset(&self) -> u16
 pub fn syntaqlite_syntax::any::KeywordEntry::keyword(&self) -> &'static str
 pub fn syntaqlite_syntax::any::KeywordEntry::token_type(&self) -> syntaqlite_syntax::any::AnyTokenType
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::body_length(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::body_offset(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::expansion_length(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::expansion_offset(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin(&self) -> syntaqlite_syntax::any::ArgOrigin
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_length(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_offset(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_parent(&self) -> core::option::Option<u32>
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::arg_segments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroArgSegment<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::body_call_length(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::body_call_offset(&self) -> u32
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_length(&self) -> u32
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_offset(&self) -> u32
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::def_col(&self) -> u32
@@ -1702,6 +1715,7 @@ pub struct syntaqlite_syntax::any::AnyNode<'a>
 pub struct syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub struct syntaqlite_syntax::any::FieldMeta<'a>(_)
 pub struct syntaqlite_syntax::any::KeywordEntry
+pub struct syntaqlite_syntax::any::MacroArgSegment<'a>
 pub struct syntaqlite_syntax::any::MacroRewrite<'a>
 pub struct syntaqlite_syntax::any::NodeFields
 pub struct syntaqlite_syntax::any::TracebackFrame<'a>
@@ -2064,6 +2078,8 @@ pub syntaqlite_syntax::TokenType::Window = 167
 pub syntaqlite_syntax::TokenType::With = 69
 pub syntaqlite_syntax::TokenType::Within = 86
 pub syntaqlite_syntax::TokenType::Without = 70
+pub syntaqlite_syntax::any::ArgOrigin::Rewrite(u32)
+pub syntaqlite_syntax::any::ArgOrigin::Source
 pub syntaqlite_syntax::any::FieldKind::Bool = 2
 pub syntaqlite_syntax::any::FieldKind::Enum = 4
 pub syntaqlite_syntax::any::FieldKind::Flags = 3

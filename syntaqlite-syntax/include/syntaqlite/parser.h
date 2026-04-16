@@ -229,6 +229,12 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
 // not nested inside another macro's expansion).
 #define SYNTAQLITE_MACRO_PARENT_SOURCE UINT32_MAX
 
+// Sentinel value for `SyntaqliteMacroRewrite::body_call_offset` and
+// `body_call_length` meaning "this call was tokenized from a $param
+// substitution — it has no position in the parent's authored body;
+// consumers should descend through the matching arg segment instead."
+#define SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL UINT32_MAX
+
 // A recorded macro invocation — enough information to reconstruct a
 // source-to-expanded rewrite tree (e.g. to drive Perfetto's
 // SqlSource::Rewriter or an equivalent).
@@ -270,6 +276,17 @@ typedef struct SyntaqliteMacroRewrite {
   uint32_t name_len;
   uint32_t def_line;
   uint32_t def_col;
+  // Position of this call in the *parent's authored body*, computed by
+  // inverting the length shifts the parent's $param substitutions
+  // introduced.  body_call_length == 0 means the call was tokenized
+  // from a substituted arg's text (no meaningful body position) and
+  // consumers should descend through the matching arg segment instead.
+  //
+  // For top-level rewrites (parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE)
+  // the parent is the authored source, so these equal call_offset /
+  // call_length.
+  uint32_t body_call_offset;
+  uint32_t body_call_length;
 } SyntaqliteMacroRewrite;
 
 // Number of macro rewrites recorded for the current statement.
@@ -279,6 +296,45 @@ SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p);
 // struct if `idx >= syntaqlite_result_macro_count(p)`.
 SYNTAQLITE_API SyntaqliteMacroRewrite
 syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx);
+
+// One $param substitution within a macro expansion.
+//
+// `body_offset` / `body_length` locate the `$param` token in the macro's
+// authored body.  Populated by the template-expansion path; zero for
+// macros registered via the raw set_result_with_arg_map API.
+//
+// `expansion_offset` / `expansion_length` locate the substituted arg
+// text in the rewrite's `expansion` buffer.
+//
+// `origin_parent_idx` + `origin_offset` + `origin_length` locate the
+// arg text where it was authored — either in the original source
+// (`origin_parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE`) or in another
+// rewrite's `expansion` buffer (rewrite index).  Consumers walk the
+// chain of $param substitutions by recursing into the origin rewrite's
+// arg segments.
+typedef struct SyntaqliteMacroArgSegment {
+  uint32_t body_offset;
+  uint32_t body_length;
+  uint32_t expansion_offset;
+  uint32_t expansion_length;
+  uint32_t origin_parent_idx;
+  uint32_t origin_offset;
+  uint32_t origin_length;
+} SyntaqliteMacroArgSegment;
+
+// Number of arg segments recorded on the rewrite at `rewrite_idx`.
+// Returns 0 if `rewrite_idx` is out of range.
+SYNTAQLITE_API uint32_t
+syntaqlite_macro_rewrite_arg_segment_count(SyntaqliteParser* p,
+                                           uint32_t rewrite_idx);
+
+// Returns the arg segment at `segment_idx` on the rewrite at
+// `rewrite_idx`.  Returns a zero-initialized struct if either index is
+// out of range.
+SYNTAQLITE_API SyntaqliteMacroArgSegment
+syntaqlite_macro_rewrite_arg_segment_at(SyntaqliteParser* p,
+                                        uint32_t rewrite_idx,
+                                        uint32_t segment_idx);
 
 // ---------------------------------------------------------------------------
 // Arena accessors

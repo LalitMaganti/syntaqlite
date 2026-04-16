@@ -55,7 +55,14 @@ typedef struct SynqMacroArg {
 // arg landed in the expansion buffer and where the original text lives in
 // the parent layer, enabling span resolution to drill through $param
 // substitutions back to the caller's authored arg text.
+//
+// `body_offset` / `body_length` record the `$param` token position in the
+// macro's authored body (pre-substitution).  Populated by the
+// template-expansion path; zero for the set_result_with_arg_map API where
+// the caller did not supply authored-body positions.
 typedef struct SynqArgSegment {
+  uint32_t body_offset;      // Position of $param token in authored body.
+  uint32_t body_length;      // Length of $param token in authored body.
   uint32_t sub_offset;       // Where the substituted arg starts in expansion.
   uint32_t sub_length;       // Length in expansion buffer.
   uint32_t origin_layer_id;  // Layer that owns the arg text.
@@ -92,6 +99,15 @@ typedef struct SynqExpansionLayer {
   // p->mem; freed in reset_stmt / destroy.  NULL when no $param subs.
   SynqArgSegment* arg_segments;
   uint32_t arg_segment_count;
+
+  // Position of this nested call in the *parent's authored body*,
+  // computed by inverting the length shifts from the parent's $param
+  // substitutions.  body_call_length == 0 means the call was tokenized
+  // from a substituted arg's text (no clean body position) and consumers
+  // should descend through the matching arg segment instead.  Zero for
+  // top-level layers (parent_layer_id == 0).
+  uint32_t body_call_offset;
+  uint32_t body_call_length;
 
   uint32_t parent_layer_id;  // Layer containing the call (0 = source).
 } SynqExpansionLayer;

@@ -29,8 +29,9 @@ pub use incremental::{AnyIncrementalParseSession, TypedIncrementalParseSession};
 #[cfg(feature = "sqlite")]
 pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken};
 pub use types::{
-    AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, MacroRewrite,
-    ParseOutcome, ParserTokenFlags, TracebackFrame, TypedParserToken,
+    AnyParserToken, ArgOrigin, Comment, CommentKind, CommentSpan, CompletionContext,
+    MacroArgSegment, MacroRewrite, ParseOutcome, ParserTokenFlags, TracebackFrame,
+    TypedParserToken,
 };
 
 /// A single macro argument as presented to the lookup callback.
@@ -698,12 +699,17 @@ impl<'a> AnyParsedStatement<'a> {
             };
             MacroRewrite {
                 parent,
+                rewrite_idx: i,
                 call_offset: r.call_offset,
                 call_length: r.call_length,
                 expansion,
                 name,
                 def_line: r.def_line,
                 def_col: r.def_col,
+                body_call_offset: r.body_call_offset,
+                body_call_length: r.body_call_length,
+                parser: self.raw,
+                _lifetime: PhantomData,
             }
         })
     }

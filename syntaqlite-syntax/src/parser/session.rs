@@ -983,6 +983,193 @@ mod tests {
     }
 
     #[test]
+    fn macro_rewrite_exposes_arg_segments_with_body_positions() {
+        // For macros defined via expand_template, each $param substitution
+        // should be exposed as a MacroArgSegment that records (a) where
+        // the $param token sits in the authored body, (b) where the arg
+        // text landed in the expansion buffer, and (c) the origin of the
+        // arg text so callers can drill back to authored source.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("id", &["x"], "($x)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT id!(42);";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        };
+
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 1);
+        let r = &rewrites[0];
+        let segs: Vec<_> = r.arg_segments().collect();
+        assert_eq!(segs.len(), 1, "$x is the only substitution in ($x)");
+        let seg = &segs[0];
+        // Authored body is "($x)" — $x sits at offset 1, length 2.
+        assert_eq!(seg.body_offset(), 1);
+        assert_eq!(seg.body_length(), 2);
+        // Expansion buffer is "(42)" — arg text sits at offset 1, length 2.
+        assert_eq!(seg.expansion_offset(), 1);
+        assert_eq!(seg.expansion_length(), 2);
+        // Origin is the authored source.
+        assert_eq!(seg.origin_parent(), None);
+        let origin_text = &source
+            [seg.origin_offset() as usize..(seg.origin_offset() + seg.origin_length()) as usize];
+        assert_eq!(origin_text, "42");
+    }
+
+    #[test]
+    fn macro_rewrite_nested_body_call_offsets_via_substituted_arg() {
+        // Repro of the traceback example from issue #145:
+        //   CREATE PERFETTO MACRO n(x Expr) RETURNS Expr AS ($x);
+        //   CREATE PERFETTO MACRO m(x Expr) RETURNS Expr AS ($x);
+        //   SELECT m!(n!(nonexistent_col));
+        //
+        // The inner n!(...) call is tokenized from the substituted text
+        // of m's $x, not from m's authored body — downstream Rewriter
+        // consumers need body_call_length == 0 to signal "descend via
+        // arg segments" instead of "rewrite in the parent's body".
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("n", &["x"], "($x)");
+        reg.register("m", &["x"], "($x)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT m!(n!(42));";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        };
+
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 2, "m + n");
+
+        let outer = &rewrites[0];
+        assert_eq!(outer.name(), "m");
+        assert_eq!(outer.parent(), None);
+        // For top-level calls the parent is the authored source, so
+        // body_call_offset/length fall through to call_offset/length.
+        assert_eq!(outer.body_call_offset(), outer.call_offset());
+        assert_eq!(outer.body_call_length(), outer.call_length());
+
+        let inner = &rewrites[1];
+        assert_eq!(inner.name(), "n");
+        assert_eq!(inner.parent(), Some(0));
+        // The nested n!(42) call lives entirely inside m's substituted
+        // $x arg — call_offset/length are in the post-substitution
+        // expansion buffer, but there's no clean position in m's
+        // authored body "($x)".  u32::MAX is the arg-internal sentinel.
+        assert_eq!(inner.body_call_offset(), u32::MAX);
+        assert_eq!(inner.body_call_length(), u32::MAX);
+    }
+
+    #[test]
+    fn macro_rewrite_nested_body_call_offsets_fixed_portion() {
+        // When a nested call appears verbatim in the parent macro's
+        // authored body (not via $param substitution), body_call_offset
+        // and body_call_length should locate the call in that authored
+        // body, with length shifts compensated by surrounding $param
+        // substitutions.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("leaf", &["v"], "$v");
+        // Body: "$a + leaf!(7)" — `leaf!(7)` is at body offset 5 length 8.
+        reg.register("wrap", &["a"], "$a + leaf!(7)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT wrap!(99);";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        };
+
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 2, "wrap + leaf");
+        let inner = &rewrites[1];
+        assert_eq!(inner.name(), "leaf");
+        assert_eq!(inner.parent(), Some(0));
+        // `leaf!(7)` sits at offset 5 in the authored body "$a + leaf!(7)".
+        assert_eq!(inner.body_call_offset(), 5);
+        assert_eq!(inner.body_call_length(), 8);
+    }
+
+    #[test]
+    fn macro_rewrite_arg_segment_chain_resolves_to_source() {
+        // Reproduces the chain from issue #145: for `m!(n!(nonexistent_col))`,
+        // downstream consumers walk each rewrite's arg_segments to anchor
+        // the innermost token back to its authored position in the source.
+        //
+        // The chain for `nonexistent_col`:
+        //   * n's $x segment: origin = rewrite(0) i.e. m's expansion buffer
+        //     at the position of "nonexistent_col" within "(n!(nonexistent_col))"
+        //     (n's arg text was tokenized from m's expansion, not the source).
+        //   * m's $x segment at that position: origin = source, pointing at
+        //     "n!(nonexistent_col)" in the authored SQL.
+        //
+        // Recursing one more step via n's arg text inside m's arg text gets
+        // back to the "nonexistent_col" position in the source.
+        use crate::parser::ArgOrigin;
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("n", &["x"], "($x)");
+        reg.register("m", &["x"], "($x)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT m!(n!(nonexistent_col));";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        };
+
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 2);
+
+        // m's arg segment points into the authored source.
+        let m_segs: Vec<_> = rewrites[0].arg_segments().collect();
+        assert_eq!(m_segs.len(), 1);
+        assert_eq!(m_segs[0].origin(), ArgOrigin::Source);
+        let m_arg_text = &source[m_segs[0].origin_offset() as usize
+            ..(m_segs[0].origin_offset() + m_segs[0].origin_length()) as usize];
+        assert_eq!(m_arg_text, "n!(nonexistent_col)");
+
+        // n's arg segment origin is m's expansion buffer — one link in
+        // the chain.  The consumer resolves by finding the m segment
+        // whose expansion range contains n's arg, then recursing.
+        let n_segs: Vec<_> = rewrites[1].arg_segments().collect();
+        assert_eq!(n_segs.len(), 1);
+        assert_eq!(n_segs[0].origin(), ArgOrigin::Rewrite(0));
+        let m_expansion = rewrites[0].expansion();
+        let n_arg_in_m_expansion = &m_expansion[n_segs[0].origin_offset() as usize
+            ..(n_segs[0].origin_offset() + n_segs[0].origin_length()) as usize];
+        assert_eq!(n_arg_in_m_expansion, "nonexistent_col");
+
+        // Walk the chain: n's arg inside m's expansion, intersected with
+        // m's segment, lands on the position of "nonexistent_col" in
+        // the source.
+        let n_arg_off_in_m = n_segs[0].origin_offset();
+        let m_seg = &m_segs[0];
+        assert!(
+            n_arg_off_in_m >= m_seg.expansion_offset()
+                && n_arg_off_in_m + n_segs[0].origin_length()
+                    <= m_seg.expansion_offset() + m_seg.expansion_length()
+        );
+        let delta = n_arg_off_in_m - m_seg.expansion_offset();
+        let source_off = m_seg.origin_offset() + delta;
+        let source_len = n_segs[0].origin_length();
+        let authored = &source[source_off as usize..(source_off + source_len) as usize];
+        assert_eq!(authored, "nonexistent_col");
+    }
+
+    #[test]
     fn macro_expansion_multi_param() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let mut reg = TestMacroRegistry::new();
