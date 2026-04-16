@@ -11,7 +11,7 @@
 //! with macro-call placeholders (`HOLE_PLACEHOLDER`), runs validation via
 //! [`SemanticAnalyzer`](crate::SemanticAnalyzer) with `macro_fallback` enabled,
 //! and maps diagnostic offsets back to host-file positions. The parser records a
-//! [`MacroRegion`](crate::parse::MacroRegion) for each hole, which is used to filter
+//! [`MacroRewrite`](crate::parse::MacroRewrite) for each hole, which is used to filter
 //! diagnostics that would otherwise reference the placeholder.
 //!
 //! Language-specific extractors live in submodules:
@@ -83,7 +83,7 @@ impl EmbeddedFragment {
 ///
 /// Holes are replaced with [`HOLE_PLACEHOLDER`] in `sql_text` and parsed as
 /// macro calls via the parser's `macro_fallback` mode. The parser records a
-/// [`MacroRegion`](syntaqlite_syntax::any::MacroRegion) for each one.
+/// [`MacroRewrite`](syntaqlite_syntax::any::MacroRewrite) for each one.
 #[derive(Debug)]
 pub struct Hole {
     /// Byte range of the hole expression in the host file.
@@ -106,7 +106,7 @@ impl Hole {
 /// Placeholder text inserted into `sql_text` for each interpolation hole.
 ///
 /// Uses macro-call syntax so the parser's `macro_fallback` mode treats it as a
-/// single identifier token and records a [`MacroRegion`](syntaqlite_syntax::any::MacroRegion).
+/// single identifier token and records a [`MacroRewrite`](syntaqlite_syntax::any::MacroRewrite).
 pub const HOLE_PLACEHOLDER: &str = "__h__!()";
 
 // ── Shared scanner utilities ────────────────────────────────────────────

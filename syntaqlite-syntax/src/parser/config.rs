@@ -51,7 +51,7 @@ impl ParserConfig {
     ///
     /// When enabled and the dialect uses Rust-style macros, unregistered
     /// `name!(args)` calls are consumed as a single `TK_ID` token instead
-    /// of causing a parse error. A `MacroRegion` is recorded so the
+    /// of causing a parse error. A `MacroRewrite` is recorded so the
     /// formatter can emit the call verbatim.
     pub fn macro_fallback(&self) -> bool {
         self.macro_fallback

@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, MacroRegion, ParseOutcome,
+    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, MacroRewrite, ParseOutcome,
 };
 use syntaqlite_syntax::{CommentKind, ParserConfig};
 
@@ -50,7 +50,7 @@ pub struct Formatter {
     pub(super) arena: DocArena<'static>,
     pub(super) interpret_scratch: InterpretScratch,
     pub(super) render_bufs: RenderBuffers,
-    pub(super) macro_regions: Vec<MacroRegion>,
+    pub(super) macro_rewrites: Vec<MacroRewrite>,
     pub(super) comment_entries: Vec<CommentEntry>,
     pub(super) token_entries: Vec<TokenEntry>,
     pub(super) parts: Vec<DocId>,
@@ -111,7 +111,7 @@ impl Formatter {
             arena: DocArena::with_capacity(256),
             interpret_scratch: InterpretScratch::new(),
             render_bufs: RenderBuffers::new(),
-            macro_regions: Vec::with_capacity(32),
+            macro_rewrites: Vec::with_capacity(32),
             comment_entries: Vec::with_capacity(64),
             token_entries: Vec::with_capacity(256),
             parts: Vec::with_capacity(64),
@@ -122,7 +122,7 @@ impl Formatter {
 
     /// Populate side-channel buffers (comments, tokens, macro regions) from an erased statement.
     fn collect_side_channels(&mut self, erased: &AnyParsedStatement<'_>) {
-        self.macro_regions.clear();
+        self.macro_rewrites.clear();
         self.comment_entries.clear();
         self.comment_entries
             .extend(erased.comment_spans().map(|c| CommentEntry {
@@ -136,7 +136,7 @@ impl Formatter {
                 .token_spans()
                 .map(|(offset, length)| TokenEntry { offset, length }),
         );
-        self.macro_regions.extend(erased.macro_regions());
+        self.macro_rewrites.extend(erased.macro_rewrites());
     }
 
     /// Format SQL source text. Handles multiple statements and preserves comments.
@@ -193,7 +193,7 @@ impl Formatter {
             last_has_root = !root_id.is_null();
             let semicolons = self.config.semicolons;
             let has_comments = !self.comment_entries.is_empty();
-            let has_macros = !self.macro_regions.is_empty();
+            let has_macros = !self.macro_rewrites.is_empty();
             let needs_token_ctx = has_comments || has_macros;
 
             let comment_ctx = if needs_token_ctx {
@@ -230,7 +230,7 @@ impl Formatter {
                 dialect: self.dialect.clone(),
                 reader: erased,
                 comment_ctx,
-                macro_regions: std::mem::take(&mut self.macro_regions),
+                macro_rewrites: std::mem::take(&mut self.macro_rewrites),
             };
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
             self.parts.push(interpreted);
@@ -255,7 +255,7 @@ impl Formatter {
                 self.comment_entries = comments;
                 self.token_entries = tokens;
             }
-            self.macro_regions = ctx.macro_regions;
+            self.macro_rewrites = ctx.macro_rewrites;
 
             // Recycle the arena, releasing all Doc borrows from this iteration.
             self.arena = DocArena::recycle(arena);
@@ -432,7 +432,7 @@ impl Formatter {
             }
 
             let has_comments = !self.comment_entries.is_empty();
-            let has_macros = !self.macro_regions.is_empty();
+            let has_macros = !self.macro_rewrites.is_empty();
             let needs_token_ctx = has_comments || has_macros;
 
             let comment_ctx = if needs_token_ctx {
@@ -467,7 +467,7 @@ impl Formatter {
                 dialect: self.dialect.clone(),
                 reader: erased,
                 comment_ctx,
-                macro_regions: std::mem::take(&mut self.macro_regions),
+                macro_rewrites: std::mem::take(&mut self.macro_rewrites),
             };
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
             self.parts.push(interpreted);
@@ -487,7 +487,7 @@ impl Formatter {
                 self.comment_entries = comments;
                 self.token_entries = tokens;
             }
-            self.macro_regions = ctx.macro_regions;
+            self.macro_rewrites = ctx.macro_rewrites;
             self.arena = DocArena::recycle(arena);
 
             stmt_num += 1;
@@ -607,7 +607,7 @@ fn drain_gap_comments<'a>(
 /// the verbatim text at the appropriate level.
 pub(crate) fn try_macro_verbatim<'a>(
     ctx: &FmtCtx<'a>,
-    regions: &[MacroRegion],
+    regions: &[MacroRewrite],
     arena: &mut DocArena<'a>,
     consumed: &mut [bool],
     tokenizer: &AnyTokenizer,

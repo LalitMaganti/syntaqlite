@@ -146,7 +146,7 @@ typedef struct SynqParseCtx {
   uint32_t macro_root_end;
   uint32_t macro_root_layer;    // Outermost expansion layer idx (set on entry).
   uint32_t has_macro_straddle;  // Sticky flag set during reduce.
-  uint32_t lemon_depth;         // Lemon stack depth (always tracked, for lazy init).
+  uint32_t lemon_depth;  // Lemon stack depth (always tracked, for lazy init).
   SYNQ_VEC(uint32_t) straddle_stack;  // Lazily initialized on first macro use.
 } SynqParseCtx;
 

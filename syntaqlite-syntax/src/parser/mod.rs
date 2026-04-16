@@ -29,7 +29,7 @@ pub use incremental::{AnyIncrementalParseSession, TypedIncrementalParseSession};
 #[cfg(feature = "sqlite")]
 pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken};
 pub use types::{
-    AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, MacroRegion,
+    AnyParserToken, Comment, CommentKind, CommentSpan, CompletionContext, MacroRewrite,
     ParseOutcome, ParserTokenFlags, TracebackFrame, TypedParserToken,
 };
 
@@ -637,17 +637,49 @@ impl<'a> AnyParsedStatement<'a> {
         unsafe { self.raw.as_ref().result_macro_count() == 0 }
     }
 
-    /// Macro expansion call-site spans recorded during parsing.
-    pub fn macro_regions(&self) -> impl Iterator<Item = MacroRegion> + use<'_> {
+    /// Macro rewrites recorded during parsing.  See [`MacroRewrite`] for
+    /// the shape of each entry.
+    pub fn macro_rewrites(&self) -> impl Iterator<Item = MacroRewrite> + use<'_> {
         // SAFETY: self.raw is valid for 'a; the indexed accessor is stable
         // until the next parser_next / reset / destroy call.
         let count = unsafe { self.raw.as_ref().result_macro_count() };
         (0..count).map(move |i| {
-            // SAFETY: i < count, so the C side returns a valid region.
-            let r = unsafe { self.raw.as_ref().result_macro_at(i) };
-            MacroRegion {
+            // SAFETY: i < count, so the C side returns a valid rewrite.
+            let r = unsafe { self.raw.as_ref().result_macro_rewrite_at(i) };
+            // Expansion and name pointers are borrowed from parser memory
+            // valid until the next reset/destroy; we copy them into owned
+            // Strings so the returned value has no lifetime tie to the parser.
+            let expansion = if r.expansion.is_null() {
+                String::new()
+            } else {
+                // SAFETY: `expansion` is non-null and points to
+                // `expansion_len` bytes owned by the parser, valid for
+                // this call.
+                let bytes =
+                    unsafe { std::slice::from_raw_parts(r.expansion, r.expansion_len as usize) };
+                String::from_utf8_lossy(bytes).into_owned()
+            };
+            let name = if r.name.is_null() {
+                String::new()
+            } else {
+                // SAFETY: `name` is non-null and points to `name_len`
+                // bytes owned by the parser, valid for this call.
+                let bytes = unsafe { std::slice::from_raw_parts(r.name, r.name_len as usize) };
+                String::from_utf8_lossy(bytes).into_owned()
+            };
+            let parent = if r.parent_idx == u32::MAX {
+                None
+            } else {
+                Some(r.parent_idx)
+            };
+            MacroRewrite {
+                parent,
                 call_offset: r.call_offset,
                 call_length: r.call_length,
+                expansion,
+                name,
+                def_line: r.def_line,
+                def_col: r.def_col,
             }
         })
     }
@@ -1018,13 +1050,14 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         self.any.expanded_text()
     }
 
-    /// Macro expansion call-site spans recorded during parsing.
+    /// Macro rewrites recorded during parsing.
     ///
-    /// Each [`MacroRegion`] describes a byte range in the original source
-    /// that was identified as a macro invocation (e.g. `name!(args)`).
-    /// Populated automatically when the dialect's `macro_style` is set.
-    pub fn macro_regions(&self) -> impl Iterator<Item = MacroRegion> + use<'_, 'a, G> {
-        self.any.macro_regions()
+    /// Each [`MacroRewrite`] describes a macro invocation and its
+    /// expansion — enough to reconstruct a source-to-expanded rewrite
+    /// tree (see [`MacroRewrite`] for details).  Populated automatically
+    /// when the dialect's `macro_style` is set.
+    pub fn macro_rewrites(&self) -> impl Iterator<Item = MacroRewrite> + use<'_, 'a, G> {
+        self.any.macro_rewrites()
     }
 
     /// Statement-local token stream for this parse result.

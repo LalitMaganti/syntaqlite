@@ -552,9 +552,8 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
     // Lookup callback is registered but the macro was not found.
     // This is a hard error — the user likely misspelled the macro name
     // or forgot to define it.
-    snprintf(p->error_msg, sizeof(p->error_msg),
-             "unknown macro '%.*s'", (int)id_len,
-             (const char*)z + id_offset);
+    snprintf(p->error_msg, sizeof(p->error_msg), "unknown macro '%.*s'",
+             (int)id_len, (const char*)z + id_offset);
     p->had_error = 1;
     return -1;
   }

@@ -77,16 +77,30 @@ pub(crate) struct CToken {
     pub(crate) type_: u32,
 }
 
-/// A recorded macro invocation region.
+/// A recorded macro rewrite.
 ///
-/// Mirrors C `SyntaqliteMacroRegion` from `include/syntaqlite/parser.h`.
+/// Mirrors C `SyntaqliteMacroRewrite` from `include/syntaqlite/parser.h`.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub(crate) struct CMacroRegion {
-    /// Byte offset of the macro call in the original source.
+pub(crate) struct CMacroRewrite {
+    /// Index of the parent rewrite (`u32::MAX` = authored source).
+    pub(crate) parent_idx: u32,
+    /// Byte offset of the macro call in the parent's text.
     pub(crate) call_offset: u32,
-    /// Byte length of the entire macro call.
+    /// Byte length of the entire macro call in the parent's text.
     pub(crate) call_length: u32,
+    /// Pointer to the expansion (replacement) text.  Not NUL-terminated.
+    pub(crate) expansion: *const u8,
+    /// Length of `expansion`.
+    pub(crate) expansion_len: u32,
+    /// Pointer to the macro name.  Not NUL-terminated; may be null.
+    pub(crate) name: *const u8,
+    /// Length of `name`.
+    pub(crate) name_len: u32,
+    /// 1-based line of the macro definition (0 = unknown).
+    pub(crate) def_line: u32,
+    /// 1-based column of the macro definition (0 = unknown).
+    pub(crate) def_col: u32,
 }
 
 /// One frame in a traceback produced by the span traceback API.
@@ -398,11 +412,13 @@ impl CParser {
         unsafe { syntaqlite_result_macro_count(std::ptr::from_ref::<Self>(self).cast_mut()) }
     }
 
-    pub(crate) unsafe fn result_macro_at(&self, idx: u32) -> CMacroRegion {
+    pub(crate) unsafe fn result_macro_rewrite_at(&self, idx: u32) -> CMacroRewrite {
         // SAFETY: self is a valid, non-null CParser pointer; result
         // accessors are valid after `next()` returns a non-DONE code.
-        // The C side clamps out-of-range indices to {0, 0}.
-        unsafe { syntaqlite_result_macro_at(std::ptr::from_ref::<Self>(self).cast_mut(), idx) }
+        // The C side clamps out-of-range indices to a zero-initialized rewrite.
+        unsafe {
+            syntaqlite_result_macro_rewrite_at(std::ptr::from_ref::<Self>(self).cast_mut(), idx)
+        }
     }
 
     // Arena accessors
@@ -502,7 +518,7 @@ unsafe extern "C" {
     fn syntaqlite_result_comments(p: *mut CParser, count: *mut u32) -> *const CComment;
     fn syntaqlite_result_tokens(p: *mut CParser, count: *mut u32) -> *const CParserToken;
     fn syntaqlite_result_macro_count(p: *mut CParser) -> u32;
-    fn syntaqlite_result_macro_at(p: *mut CParser, idx: u32) -> CMacroRegion;
+    fn syntaqlite_result_macro_rewrite_at(p: *mut CParser, idx: u32) -> CMacroRewrite;
 
     // Arena accessors
     fn syntaqlite_parser_node(p: *mut CParser, node_id: u32) -> *const u32;
@@ -1090,9 +1106,7 @@ mod tests {
         // When a lookup callback is registered but the macro is not found,
         // the parser should produce a hard error with "unknown macro 'name'".
         // We need macro_fallback to enable macro syntax for SQLite dialect.
-        let mut parser = Parser::with_config(
-            &ParserConfig::default().with_macro_fallback(true),
-        );
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         // Lookup callback that always returns false (nothing registered).
         parser.set_macro_lookup(Some(Box::new(TestLookup::prefix("__never__"))));
 
@@ -1118,9 +1132,7 @@ mod tests {
     fn unknown_macro_without_lookup_fn_falls_through() {
         // When macro_fallback is enabled but NO lookup callback is
         // registered, unknown macro calls should fall through to TK_ID.
-        let mut parser = Parser::with_config(
-            &ParserConfig::default().with_macro_fallback(true),
-        );
+        let parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         // No set_macro_lookup — no callback.
 
         let mut session = parser.parse("SELECT foo!(1, 2);");
@@ -1147,7 +1159,7 @@ mod tests {
         let count = unsafe { parser.result_macro_count() };
         assert_eq!(count, 1, "expected one macro region");
         // SAFETY: idx < count.
-        let r = unsafe { parser.result_macro_at(0) };
+        let r = unsafe { parser.result_macro_rewrite_at(0) };
         #[expect(clippy::cast_possible_truncation)]
         let call_start = sql.find("foo!").unwrap() as u32;
         assert_eq!(r.call_offset, call_start);
@@ -1224,7 +1236,7 @@ mod tests {
         let count = unsafe { parser.result_macro_count() };
         assert_eq!(count, 1);
         // SAFETY: idx < count.
-        let r = unsafe { parser.result_macro_at(0) };
+        let r = unsafe { parser.result_macro_rewrite_at(0) };
         let call_text = &sql[r.call_offset as usize..(r.call_offset + r.call_length) as usize];
         assert!(
             call_text.starts_with("graph!(") && call_text.ends_with(')'),

@@ -127,7 +127,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
 // Enable macro fallback: when the dialect uses SYNQ_MACRO_STYLE_RUST and a
 // name!(args) call is encountered but the name is NOT in the macro registry,
 // consume the entire name!(args) as a single TK_ID token instead of raising
-// a parse error. A MacroRegion is recorded so the formatter can emit the
+// a parse error. A MacroRewrite is recorded so the formatter can emit the
 // call verbatim. Default: off (0).
 // Returns 0 on success, -1 if the parser has already been used.
 SYNTAQLITE_API int32_t syntaqlite_parser_set_macro_fallback(SyntaqliteParser* p,
@@ -207,20 +207,61 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
     SyntaqliteParser* p,
     uint32_t* count);
 
-// A recorded macro invocation region.
-// For the input-side begin/end API see incremental.h.
-typedef struct SyntaqliteMacroRegion {
-  uint32_t call_offset;  // Byte offset of macro call in original source.
-  uint32_t call_length;  // Byte length of entire macro call.
-} SyntaqliteMacroRegion;
+// Sentinel value for `SyntaqliteMacroRewrite::parent_idx` meaning "this
+// rewrite applies directly to the authored source" (i.e. the rewrite is
+// not nested inside another macro's expansion).
+#define SYNTAQLITE_MACRO_PARENT_SOURCE UINT32_MAX
 
-// Macro-invocation call sites recorded during parsing.  Accessed via count
-// + indexed getter rather than an array pointer to avoid materializing a
-// separate view — the internal representation carries more data per entry
-// than `SyntaqliteMacroRegion` exposes.
+// A recorded macro invocation — enough information to reconstruct a
+// source-to-expanded rewrite tree (e.g. to drive Perfetto's
+// SqlSource::Rewriter or an equivalent).
+//
+// Entries are reported in insertion order: outer macros appear before the
+// nested macros they contain, and macros at the same nesting level appear
+// in source order.
+//
+// `parent_idx` is either SYNTAQLITE_MACRO_PARENT_SOURCE (the rewrite
+// replaces a range in the authored source) or the index of another entry
+// in this same flat list (the rewrite replaces a range in that entry's
+// `expansion` buffer).
+//
+// `call_offset` / `call_length` describe the byte range of the macro call
+// inside the parent's text (authored source if `parent_idx` is the
+// sentinel, otherwise the parent entry's `expansion` buffer).
+//
+// `expansion` is the replacement text for that range.  It is NOT
+// NUL-terminated; use `expansion_len`.  Nested macro calls appearing
+// inside `expansion` are reported as separate entries that reference this
+// entry via their `parent_idx`.
+//
+// `name` is the macro name as it appears at the call site (NOT
+// NUL-terminated; use `name_len`).
+//
+// `def_line` / `def_col` record the 1-based line/column of the macro
+// definition (0 if unknown), for traceback purposes.
+//
+// Pointers (`expansion`, `name`) are owned by the parser and remain valid
+// until the next `syntaqlite_parser_next`, `syntaqlite_parser_reset`, or
+// `syntaqlite_parser_destroy` call.
+typedef struct SyntaqliteMacroRewrite {
+  uint32_t parent_idx;
+  uint32_t call_offset;
+  uint32_t call_length;
+  const char* expansion;
+  uint32_t expansion_len;
+  const char* name;
+  uint32_t name_len;
+  uint32_t def_line;
+  uint32_t def_col;
+} SyntaqliteMacroRewrite;
+
+// Number of macro rewrites recorded for the current statement.
 SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p);
-SYNTAQLITE_API SyntaqliteMacroRegion
-syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx);
+
+// Returns the rewrite at `idx` (0-based).  Returns a zero-initialized
+// struct if `idx >= syntaqlite_result_macro_count(p)`.
+SYNTAQLITE_API SyntaqliteMacroRewrite
+syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx);
 
 // ---------------------------------------------------------------------------
 // Arena accessors
