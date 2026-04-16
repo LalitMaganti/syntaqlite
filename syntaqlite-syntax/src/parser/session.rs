@@ -350,9 +350,10 @@ impl<'a> ParsedStatement<'a> {
         self.0.any.is_macro_free()
     }
 
-    /// Macro expansion call-site spans recorded during parsing.
-    pub fn macro_regions(&self) -> impl Iterator<Item = super::MacroRegion> + use<'_, 'a> {
-        self.0.macro_regions()
+    /// Macro rewrites recorded during parsing.  See [`super::MacroRewrite`]
+    /// for the shape of each entry.
+    pub fn macro_rewrites(&self) -> impl Iterator<Item = super::MacroRewrite<'a>> + use<'_, 'a> {
+        self.0.macro_rewrites()
     }
 
     /// Dump the AST as indented text into `out`.
@@ -897,7 +898,7 @@ mod tests {
     }
 
     #[test]
-    fn macro_expansion_records_macro_region() {
+    fn macro_rewrites_records_single_expansion() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let mut reg = TestMacroRegistry::new();
         reg.register("id", &["x"], "$x");
@@ -911,11 +912,59 @@ mod tests {
             ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let regions: Vec<_> = stmt.macro_regions().collect();
-        assert_eq!(regions.len(), 1, "expected exactly one macro region");
-        let r = &regions[0];
-        let call_text = &source[r.call_offset as usize..(r.call_offset + r.call_length) as usize];
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 1, "expected exactly one macro rewrite");
+        let r = &rewrites[0];
+        assert_eq!(r.parent(), None, "top-level rewrite");
+        assert_eq!(r.name(), "id");
+        assert_eq!(r.expansion(), "42");
+        let call_text =
+            &source[r.call_offset() as usize..(r.call_offset() + r.call_length()) as usize];
         assert_eq!(call_text, "id!(42)");
+    }
+
+    #[test]
+    fn macro_rewrites_records_nested_expansion_tree() {
+        // `mwrap` body contains an `mpass!(...)` call, so expanding `mwrap`
+        // produces a nested expansion layer.  The flat rewrite list carries
+        // a `parent` pointer so callers (e.g. Perfetto's SqlSource::Rewriter)
+        // can reconstruct the tree.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("mpass", &["x"], "$x");
+        reg.register("mwrap", &["x"], "mpass!($x)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT mwrap!(42);";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        };
+
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 2, "mwrap + mpass");
+
+        // mwrap is top-level; call_offset/call_length are into `source`.
+        let outer = &rewrites[0];
+        assert_eq!(outer.parent(), None);
+        assert_eq!(outer.name(), "mwrap");
+        let outer_call = &source
+            [outer.call_offset() as usize..(outer.call_offset() + outer.call_length()) as usize];
+        assert_eq!(outer_call, "mwrap!(42)");
+        assert_eq!(outer.expansion(), "mpass!(42)");
+
+        // mpass is nested inside mwrap; call_offset/call_length are into
+        // outer.expansion().
+        let inner = &rewrites[1];
+        assert_eq!(inner.parent(), Some(0));
+        assert_eq!(inner.name(), "mpass");
+        let outer_exp = outer.expansion();
+        let inner_call = &outer_exp
+            [inner.call_offset() as usize..(inner.call_offset() + inner.call_length()) as usize];
+        assert_eq!(inner_call, "mpass!(42)");
+        assert_eq!(inner.expansion(), "42");
     }
 
     #[test]

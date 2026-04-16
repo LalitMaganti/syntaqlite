@@ -397,7 +397,7 @@ pub use syntaqlite::any::ffi::CDialectTemplate
 pub use syntaqlite::nodes::<<syntaqlite_syntax::nodes::*>>
 pub use syntaqlite::parse::CommentKind
 pub use syntaqlite::parse::IncrementalParseSession
-pub use syntaqlite::parse::MacroRegion
+pub use syntaqlite::parse::MacroRewrite
 pub use syntaqlite::parse::ParseErrorKind
 pub use syntaqlite::parse::ParseOutcome
 pub use syntaqlite::parse::ParserConfig

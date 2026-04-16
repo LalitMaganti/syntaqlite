@@ -582,11 +582,12 @@ SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
   (void)p;
   return 0;
 }
-SYNTAQLITE_API SyntaqliteMacroRegion
-syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx) {
+SYNTAQLITE_API SyntaqliteMacroRewrite
+syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx) {
   (void)p;
   (void)idx;
-  return (SyntaqliteMacroRegion){0, 0};
+  return (SyntaqliteMacroRewrite){
+      SYNTAQLITE_MACRO_PARENT_SOURCE, 0, 0, NULL, 0, NULL, 0, 0, 0};
 }
 #else
 SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
@@ -594,15 +595,26 @@ SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
   // Entry 0 is the source sentinel; real expansion layers start at 1.
   return total <= 1 ? 0 : total - 1;
 }
-SYNTAQLITE_API SyntaqliteMacroRegion
-syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx) {
+SYNTAQLITE_API SyntaqliteMacroRewrite
+syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx) {
   // +1 to skip the source sentinel at index 0.
   uint32_t layer_idx = idx + 1;
   if (layer_idx >= syntaqlite_vec_len(&p->macro.layers)) {
-    return (SyntaqliteMacroRegion){0, 0};
+    return (SyntaqliteMacroRewrite){
+        SYNTAQLITE_MACRO_PARENT_SOURCE, 0, 0, NULL, 0, NULL, 0, 0, 0};
   }
   const SynqExpansionLayer* lyr = &p->macro.layers.data[layer_idx];
-  return (SyntaqliteMacroRegion){lyr->call_offset, lyr->call_length};
+  // Internal parent_layer_id 0 = authored source sentinel.  Map it to the
+  // public sentinel value; otherwise subtract 1 to account for the skipped
+  // source entry.
+  uint32_t parent_idx = lyr->parent_layer_id == 0
+                            ? SYNTAQLITE_MACRO_PARENT_SOURCE
+                            : lyr->parent_layer_id - 1;
+  return (SyntaqliteMacroRewrite){
+      parent_idx,          lyr->call_offset,   lyr->call_length,
+      lyr->expansion_data, lyr->expansion_len, lyr->name,
+      lyr->name_len,       lyr->def_line,      lyr->def_col,
+  };
 }
 #endif
 

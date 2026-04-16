@@ -201,25 +201,65 @@ impl<'a, G: TypedDialect> TypedParserToken<'a, G> {
 /// Parser-token alias for dialect-independent pipelines.
 pub type AnyParserToken<'a> = TypedParserToken<'a, crate::dialect::AnyDialect>;
 
-/// Byte range of a macro call that contributed to this parse.
+/// A macro rewrite recorded during parsing.
 ///
-/// Returned by [`super::AnyParsedStatement::macro_regions`].
+/// Carries enough information to reconstruct a source-to-expanded rewrite
+/// tree (e.g. to drive Perfetto's `SqlSource::Rewriter` or an equivalent).
+///
+/// Entries are reported in insertion order: outer macros appear before the
+/// nested macros they contain, and macros at the same nesting level appear
+/// in source order.  Nesting is expressed via [`parent`](Self::parent): a
+/// rewrite with `parent() == None` replaces a range in the authored
+/// source; a rewrite with `parent() == Some(i)` replaces a range in the
+/// `i`-th entry's [`expansion`](Self::expansion) buffer.
+///
+/// [`expansion`](Self::expansion) and [`name`](Self::name) borrow from
+/// parser-owned memory — they are valid for the lifetime of the
+/// originating parsed statement.
+///
+/// Returned by [`super::AnyParsedStatement::macro_rewrites`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MacroRegion {
-    /// Byte offset of the macro call in the original source.
+pub struct MacroRewrite<'a> {
+    pub(crate) parent: Option<u32>,
     pub(crate) call_offset: u32,
-    /// Byte length of the entire macro call.
     pub(crate) call_length: u32,
+    pub(crate) expansion: &'a str,
+    pub(crate) name: &'a str,
+    pub(crate) def_line: u32,
+    pub(crate) def_col: u32,
 }
 
-impl MacroRegion {
-    /// Byte offset of the macro call in the original source.
+impl<'a> MacroRewrite<'a> {
+    /// Index of the parent rewrite, or `None` if this rewrite applies
+    /// directly to the authored source.
+    pub fn parent(&self) -> Option<u32> {
+        self.parent
+    }
+    /// Byte offset of the macro call in the parent's text.
     pub fn call_offset(&self) -> u32 {
         self.call_offset
     }
-    /// Byte length of the entire macro call.
+    /// Byte length of the entire macro call in the parent's text.
     pub fn call_length(&self) -> u32 {
         self.call_length
+    }
+    /// The replacement text for the macro call.  Nested macro calls that
+    /// appear in this buffer are reported as separate [`MacroRewrite`]
+    /// entries whose [`parent`](Self::parent) refers back to this one.
+    pub fn expansion(&self) -> &'a str {
+        self.expansion
+    }
+    /// The macro name as it appears at the call site.
+    pub fn name(&self) -> &'a str {
+        self.name
+    }
+    /// 1-based line of the macro definition (0 if unknown).
+    pub fn def_line(&self) -> u32 {
+        self.def_line
+    }
+    /// 1-based column of the macro definition (0 if unknown).
+    pub fn def_col(&self) -> u32 {
+        self.def_col
     }
 }
 

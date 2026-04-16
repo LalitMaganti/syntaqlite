@@ -146,7 +146,7 @@ impl SemanticAnalyzer {
     }
 
     /// Enable macro fallback: unregistered `name!(args)` calls parse as
-    /// identifiers and record [`MacroRegion`]s on the resulting model.
+    /// identifiers and record [`MacroRewrite`]s on the resulting model.
     #[must_use]
     pub(crate) fn with_macro_fallback(mut self, enabled: bool) -> Self {
         self.macro_fallback = enabled;
