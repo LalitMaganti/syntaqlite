@@ -1,11 +1,12 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// Macro expansion pipeline and span resolution.
+// Macro expansion pipeline: arg scanning, lookup callback dispatch,
+// template expansion, layer lifecycle, and straddle diagnostics.
 //
-// Split out of parser.c so the core parse loop and the macro machinery can
-// be read and maintained independently.  All cross-file helpers are
-// declared in `csrc/parser_internal.h`.
+// Span resolution and traceback live in parser_spans.c.
+// Per-node extent tracking hooks live in parser_extents.c.
+// Cross-file helpers are declared in csrc/parser_internal.h.
 
 #include <stdio.h>
 #include <string.h>
@@ -18,7 +19,6 @@
 #include "syntaqlite/parser.h"
 #include "syntaqlite_dialect/ast_builder.h"
 #include "syntaqlite_dialect/dialect_types.h"
-#include "syntaqlite_dialect/extent_hooks.h"
 
 #include "csrc/parser_internal.h"
 #include "csrc/util.h"
@@ -31,106 +31,6 @@ static void begin_macro_expansion(SyntaqliteParser* p,
                                   const char* name,
                                   uint32_t name_len);
 static void synq_end_macro(SyntaqliteParser* p);
-
-// ---------------------------------------------------------------------------
-// Per-node extent tracking hooks
-// ---------------------------------------------------------------------------
-//
-// Invoked from `yy_shift` / `yy_reduce` via the macros in
-// `extent_hooks.h`.  When enabled, two parallel shadow stacks mirror
-// Lemon's symbol stack:
-//
-//   * `extent_stack` tracks the merged *authored* range in root-source
-//     coordinates — used by `syntaqlite_parser_node_text`.  Macro
-//     tokens push the outermost call-site range stashed in
-//     `begin_macro_expansion`.  Epsilon pushes the sentinel
-//     `(UINT32_MAX, 0)`, which is neutral under min/max merging.
-//
-//   * `expanded_stack` tracks the merged *expanded* range in the
-//     tokens' own layer — used by
-//     `syntaqlite_parser_node_expanded_text`.  Same-layer merges keep
-//     the layer; mixed-layer merges collapse to the sentinel
-//     `(length=0)`, since no contiguous expansion slice can represent
-//     a node whose tokens cross layers.
-
-void synq_extent_on_shift(SynqParseCtx* pCtx,
-                          unsigned int major,
-                          const SynqParseToken* token) {
-  (void)major;
-  if (!pCtx->collect_node_extents) {
-    return;
-  }
-  SynqExtentRange r;
-  if (token->layer_id == 0) {
-    r.root_start = token->offset;
-    r.root_end = token->offset + token->n;
-  } else {
-    // Attribute tokens from inside a macro expansion to the outermost
-    // call-site range stashed in `begin_macro_expansion`.
-    r.root_start = pCtx->macro_root_start;
-    r.root_end = pCtx->macro_root_end;
-  }
-  syntaqlite_vec_push(&pCtx->extent_stack, r, pCtx->mem);
-
-  SynqNodeExpandedExtent e = {
-      .offset = token->offset,
-      .length = token->n,
-      .layer_id = token->layer_id,
-  };
-  syntaqlite_vec_push(&pCtx->expanded_stack, e, pCtx->mem);
-}
-
-void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
-  if (!pCtx->collect_node_extents) {
-    return;
-  }
-  uint32_t len = syntaqlite_vec_len(&pCtx->extent_stack);
-
-  SynqExtentRange merged = {UINT32_MAX, 0};
-  for (uint32_t i = len - nrhs; i < len; i++) {
-    SynqExtentRange e = syntaqlite_vec_at(&pCtx->extent_stack, i);
-    if (e.root_start < merged.root_start) {
-      merged.root_start = e.root_start;
-    }
-    if (e.root_end > merged.root_end) {
-      merged.root_end = e.root_end;
-    }
-  }
-  syntaqlite_vec_truncate(&pCtx->extent_stack, len - nrhs);
-  syntaqlite_vec_push(&pCtx->extent_stack, merged, pCtx->mem);
-
-  // Merge expanded-layer spans: all same layer → merge in that layer;
-  // epsilon entries ({0,0,0}) are neutral; cross-layer poison
-  // (layer_id == SYNQ_CROSS_LAYER) propagates upward unconditionally.
-  SynqNodeExpandedExtent exp_merged = {0, 0, 0};
-  for (uint32_t i = len - nrhs; i < len; i++) {
-    SynqNodeExpandedExtent e = syntaqlite_vec_at(&pCtx->expanded_stack, i);
-    if (e.layer_id == SYNQ_CROSS_LAYER) {
-      exp_merged = e;  // propagate poison
-      break;
-    }
-    if (e.length == 0) {
-      continue;  // skip epsilon
-    }
-    if (exp_merged.length == 0) {
-      exp_merged = e;
-      continue;
-    }
-    if (exp_merged.layer_id != e.layer_id) {
-      exp_merged = (SynqNodeExpandedExtent){0, 0, SYNQ_CROSS_LAYER};
-      break;
-    }
-    uint32_t start =
-        exp_merged.offset < e.offset ? exp_merged.offset : e.offset;
-    uint32_t end_a = exp_merged.offset + exp_merged.length;
-    uint32_t end_b = e.offset + e.length;
-    uint32_t end = end_a > end_b ? end_a : end_b;
-    exp_merged.offset = start;
-    exp_merged.length = end - start;
-  }
-  syntaqlite_vec_truncate(&pCtx->expanded_stack, len - nrhs);
-  syntaqlite_vec_push(&pCtx->expanded_stack, exp_merged, pCtx->mem);
-}
 
 // ---------------------------------------------------------------------------
 // Macro argument scanning
@@ -209,6 +109,45 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
 }
 
 // ---------------------------------------------------------------------------
+// Macro state + layer lifecycle helpers
+// ---------------------------------------------------------------------------
+
+void synq_macro_state_init(SynqMacroState* m) {
+  syntaqlite_vec_init(&m->expand_buf);
+  syntaqlite_vec_init(&m->body_buf);
+}
+
+void synq_macro_state_free(SynqMacroState* m, SyntaqliteMemMethods mem) {
+  syntaqlite_vec_free(&m->expand_buf, mem);
+  syntaqlite_vec_free(&m->body_buf, mem);
+}
+
+void synq_layers_free_owned(SynqExpansionLayerVec* layers,
+                            SyntaqliteMemMethods mem) {
+  for (uint32_t i = 1; i < syntaqlite_vec_len(layers); i++) {
+    SynqExpansionLayer* lyr = &layers->data[i];
+    if (lyr->expansion_data)
+      mem.xFree((void*)lyr->expansion_data);
+    if (lyr->arg_segments)
+      mem.xFree(lyr->arg_segments);
+  }
+}
+
+void synq_layers_push_sentinel(SynqExpansionLayerVec* layers,
+                               const char* source,
+                               uint32_t source_len,
+                               SyntaqliteMemMethods mem) {
+  SynqExpansionLayer sentinel = {
+      .call_offset = 0,
+      .call_length = 0,
+      .expansion_data = source,
+      .expansion_len = source_len,
+      .parent_layer_id = 0,
+  };
+  syntaqlite_vec_push(layers, sentinel, mem);
+}
+
+// ---------------------------------------------------------------------------
 // Macro expansion result (called from inside the lookup callback)
 // ---------------------------------------------------------------------------
 
@@ -229,7 +168,7 @@ SYNTAQLITE_API void syntaqlite_macro_expansion_set_result(SyntaqliteParser* p,
                                                           uint32_t body_len,
                                                           uint32_t def_line,
                                                           uint32_t def_col) {
-  SynqExpansionLayer* lyr = &p->layers.data[p->macro_pending_layer];
+  SynqExpansionLayer* lyr = &p->layers.data[p->macro.pending_layer];
   layer_free_data(p, lyr);
   char* d = p->mem.xMalloc(body_len + 1);
   memcpy(d, body, body_len);
@@ -254,9 +193,9 @@ SYNTAQLITE_API void syntaqlite_macro_expansion_set_result_with_arg_map(
     return;
 
   // Build resolved SynqArgSegment array from the caller's mappings.
-  SynqExpansionLayer* lyr = &p->layers.data[p->macro_pending_layer];
-  const SyntaqliteToken* args = p->macro_expansion_args;
-  uint32_t arg_count = p->macro_expansion_arg_count;
+  SynqExpansionLayer* lyr = &p->layers.data[p->macro.pending_layer];
+  const SyntaqliteToken* args = p->macro.expansion_args;
+  uint32_t arg_count = p->macro.expansion_arg_count;
   uint32_t origin_layer_id = lyr->parent_layer_id;
   // For layer 0, arg text lives in source; for nested layers, in
   // expansion_data.  Both are pointed to by args[i].text.
@@ -396,13 +335,14 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
                                       uint32_t bang_offset,
                                       uint32_t depth,
                                       uint32_t* out_end_offset) {
-  if (!p->macro_lookup_fn)
+  if (!p->macro.lookup_fn)
     return -1;
 
   // Check blue-paint: recursion detection.
-  for (uint32_t i = 0; i < p->expansion_depth; i++) {
-    if (synq_name_eq_ci(p->expansion_names[i], p->expansion_name_lens[i],
-                        buf + id_offset, id_len)) {
+  for (uint32_t i = 0; i < p->macro.expansion_depth; i++) {
+    if (synq_name_eq_ci(p->macro.expansion_names[i],
+                        p->macro.expansion_name_lens[i], buf + id_offset,
+                        id_len)) {
       snprintf(p->error_msg, sizeof(p->error_msg),
                "recursive macro expansion: '%.*s'", (int)id_len,
                buf + id_offset);
@@ -430,14 +370,14 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
   begin_macro_expansion(p, id_offset, call_length, buf + id_offset, id_len);
 
   uint32_t new_layer_idx = syntaqlite_vec_len(&p->layers) - 1;
-  p->macro_pending_layer = new_layer_idx;
-  p->macro_expansion_args = token_args;
-  p->macro_expansion_arg_count = token_arg_count;
+  p->macro.pending_layer = new_layer_idx;
+  p->macro.expansion_args = token_args;
+  p->macro.expansion_arg_count = token_arg_count;
 
-  int rc = p->macro_lookup_fn(p->macro_lookup_user_data, p, buf + id_offset,
+  int rc = p->macro.lookup_fn(p->macro.lookup_user_data, p, buf + id_offset,
                               id_len, token_args, token_arg_count);
-  p->macro_expansion_args = NULL;
-  p->macro_expansion_arg_count = 0;
+  p->macro.expansion_args = NULL;
+  p->macro.expansion_arg_count = 0;
 
   if (rc == -1 || rc == -2) {
     // Callback failed — tear down the layer we pushed.
@@ -462,15 +402,15 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
   p->ctx.layer_id = new_layer_idx;
 
   // Push blue-paint for recursion detection.
-  p->expansion_names[p->expansion_depth] = buf + id_offset;
-  p->expansion_name_lens[p->expansion_depth] = id_len;
-  p->expansion_depth++;
+  p->macro.expansion_names[p->macro.expansion_depth] = buf + id_offset;
+  p->macro.expansion_name_lens[p->macro.expansion_depth] = id_len;
+  p->macro.expansion_depth++;
 
   // Feed expanded tokens (may trigger nested macro expansions).
   int frc = expand_and_feed(p, data, data_len, depth);
 
   // Pop blue-paint.
-  p->expansion_depth--;
+  p->macro.expansion_depth--;
   p->ctx.layer_id = saved_layer_id;
   synq_end_macro(p);
 
@@ -509,15 +449,15 @@ static void begin_macro_expansion(SyntaqliteParser* p,
       .parent_layer_id = (uint8_t)p->ctx.layer_id,
   };
   syntaqlite_vec_push(&p->layers, layer, p->mem);
-  p->macro_depth++;
+  p->macro.depth++;
 }
 
 static void synq_end_macro(SyntaqliteParser* p) {
-  if (p->macro_depth > 0) {
-    p->macro_depth--;
+  if (p->macro.depth > 0) {
+    p->macro.depth--;
     // Restore layer_id to parent. If we're back to depth 0, that's layer 0
     // (source). Otherwise, find the parent from the current layer.
-    if (p->macro_depth == 0) {
+    if (p->macro.depth == 0) {
       p->ctx.layer_id = 0;
     } else {
       // Walk back to find the still-active parent layer.
@@ -553,7 +493,7 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
   if (p->ctx.in_macro_def_body > 0)
     return -1;
 
-  if (p->macro_lookup_fn) {
+  if (p->macro.lookup_fn) {
     uint32_t end_off = 0;
     int erc = synq_parser_expand_and_feed_macro(p, p->source, p->source_len,
                                                 id_offset, id_len, bang_offset,
@@ -665,8 +605,8 @@ SYNTAQLITE_API void syntaqlite_parser_set_macro_lookup(
     SyntaqliteParser* p,
     SyntaqliteMacroLookupFn fn,
     void* user_data) {
-  p->macro_lookup_fn = fn;
-  p->macro_lookup_user_data = user_data;
+  p->macro.lookup_fn = fn;
+  p->macro.lookup_user_data = user_data;
 }
 
 // ---------------------------------------------------------------------------
@@ -680,29 +620,29 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
     const char* const* param_names,
     const uint32_t* param_name_lens,
     uint32_t param_count) {
-  const SyntaqliteToken* args = p->macro_expansion_args;
-  uint32_t arg_count = p->macro_expansion_arg_count;
+  const SyntaqliteToken* args = p->macro.expansion_args;
+  uint32_t arg_count = p->macro.expansion_arg_count;
 
   if (param_count > 0 && arg_count != param_count)
     return -1;
 
   // Reuse the parser's scratch vec — reset count but keep the allocation.
-  p->macro_expand_buf.count = 0;
+  p->macro.expand_buf.count = 0;
 
   // Stage the body into a NUL-terminated buffer before tokenizing.
   // The tokenizer reads until NUL, but callers may pass non-NUL-terminated
   // buffers (e.g. Rust &str), so we must ensure the NUL sentinel exists.
-  p->macro_body_buf.count = 0;
-  syntaqlite_vec_push_n(&p->macro_body_buf, (const uint8_t*)body, body_len,
+  p->macro.body_buf.count = 0;
+  syntaqlite_vec_push_n(&p->macro.body_buf, (const uint8_t*)body, body_len,
                         p->mem);
-  syntaqlite_vec_push(&p->macro_body_buf, 0, p->mem);
+  syntaqlite_vec_push(&p->macro.body_buf, 0, p->mem);
 
   // Collect arg mappings on the stack (max 64 params).
   SyntaqliteArgMapping mappings[64];
   uint32_t mapping_count = 0;
 
-  const unsigned char* z = (const unsigned char*)p->macro_body_buf.data;
-  const char* zbody = (const char*)p->macro_body_buf.data;
+  const unsigned char* z = (const unsigned char*)p->macro.body_buf.data;
+  const char* zbody = (const char*)p->macro.body_buf.data;
   uint32_t pos = 0;
   while (pos < body_len) {
     uint32_t ttype = 0;
@@ -729,16 +669,16 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
 
       if ((uint32_t)found < arg_count && args[found].length > 0) {
         if (mapping_count < 64) {
-          mappings[mapping_count].body_offset = p->macro_expand_buf.count;
+          mappings[mapping_count].body_offset = p->macro.expand_buf.count;
           mappings[mapping_count].arg_index = (uint32_t)found;
           mapping_count++;
         }
-        syntaqlite_vec_push_n(&p->macro_expand_buf,
+        syntaqlite_vec_push_n(&p->macro.expand_buf,
                               (const uint8_t*)args[found].text,
                               args[found].length, p->mem);
       }
     } else {
-      syntaqlite_vec_push_n(&p->macro_expand_buf, (const uint8_t*)(zbody + pos),
+      syntaqlite_vec_push_n(&p->macro.expand_buf, (const uint8_t*)(zbody + pos),
                             (uint32_t)tlen, p->mem);
     }
 
@@ -747,17 +687,17 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
 
   // Steal the scratch vec's buffer directly into the layer (no copy).
   // Null-terminate for safety.
-  syntaqlite_vec_push(&p->macro_expand_buf, 0, p->mem);
-  SynqExpansionLayer* lyr = &p->layers.data[p->macro_pending_layer];
+  syntaqlite_vec_push(&p->macro.expand_buf, 0, p->mem);
+  SynqExpansionLayer* lyr = &p->layers.data[p->macro.pending_layer];
   layer_free_data(p, lyr);
-  lyr->expansion_data = (const char*)p->macro_expand_buf.data;
-  lyr->expansion_len = p->macro_expand_buf.count - 1;  // exclude NUL
+  lyr->expansion_data = (const char*)p->macro.expand_buf.data;
+  lyr->expansion_len = p->macro.expand_buf.count - 1;  // exclude NUL
   lyr->def_line = 0;
   lyr->def_col = 0;
   // Detach buffer from vec so it won't be freed when vec is reused.
-  p->macro_expand_buf.data = NULL;
-  p->macro_expand_buf.count = 0;
-  p->macro_expand_buf.capacity = 0;
+  p->macro.expand_buf.data = NULL;
+  p->macro.expand_buf.count = 0;
+  p->macro.expand_buf.capacity = 0;
 
   // Build arg segments from the mappings we collected.
   if (mapping_count > 0) {
@@ -783,235 +723,4 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
   }
 
   return 0;
-}
-
-// ---------------------------------------------------------------------------
-// Span accessors: span_text, span_expanded_text
-// ---------------------------------------------------------------------------
-
-// Try to drill an (offset, length) span through a layer's arg segments.
-// If the span lies fully inside a substituted arg, updates *off, *len,
-// *layer to the arg's origin and returns 1.  Otherwise returns 0.
-static int try_arg_drill(const SynqExpansionLayer* lyr,
-                         uint32_t* off,
-                         uint32_t* len,
-                         uint32_t* layer) {
-  for (uint32_t i = 0; i < lyr->arg_segment_count; i++) {
-    const SynqArgSegment* seg = &lyr->arg_segments[i];
-    if (*off >= seg->sub_offset &&
-        *off + *len <= seg->sub_offset + seg->sub_length) {
-      uint32_t delta = *off - seg->sub_offset;
-      *off = seg->origin_offset + delta;
-      *layer = seg->origin_layer_id;
-      return 1;
-    }
-  }
-  return 0;
-}
-
-// Walk the layer chain to resolve (layer, offset, length) to an authored
-// byte range in the source.  At each layer, collapse to the layer's call
-// site in the parent and continue walking.
-//
-// Bounded by SYNQ_MAX_MACRO_DEPTH; typical case is one or two iterations.
-static void span_walk_to_source(SyntaqliteParser* p,
-                                uint8_t layer_id,
-                                uint32_t offset,
-                                uint32_t length,
-                                uint32_t* out_offset,
-                                uint32_t* out_length) {
-  uint32_t off = offset;
-  uint32_t len = length;
-  uint32_t layer = layer_id;
-  uint32_t layers_count = syntaqlite_vec_len(&p->layers);
-  // Each iteration either drills into an arg origin layer or moves up
-  // to a parent layer; cap defensively at twice the max depth.
-  for (uint32_t step = 0; step < 2 * (SYNQ_MAX_MACRO_DEPTH + 1); step++) {
-    if (layer == 0 || layer >= layers_count) {
-      break;
-    }
-    const SynqExpansionLayer* cur = &p->layers.data[layer];
-
-    // Arg-segment drill: if the span lies fully inside a substituted arg,
-    // the authored bytes live in the segment's origin layer, not via the
-    // layer's call site.
-    if (try_arg_drill(cur, &off, &len, &layer))
-      continue;
-
-    // Collapse to the call site in the parent layer.
-    off = cur->call_offset;
-    len = cur->call_length;
-    layer = cur->parent_layer_id;
-  }
-  *out_offset = off;
-  *out_length = len;
-}
-
-SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
-    SyntaqliteParser* p,
-    const SyntaqliteTextSpan* span,
-    uint32_t* out_len) {
-  if (!span || span->length == 0) {
-    *out_len = 0;
-    return NULL;
-  }
-  uint8_t layer = span->_layer_id;
-  if (layer >= syntaqlite_vec_len(&p->layers)) {
-    *out_len = 0;
-    return NULL;
-  }
-  const SynqExpansionLayer* lyr = &p->layers.data[layer];
-  if (!lyr->expansion_data ||
-      span->offset + span->length > lyr->expansion_len) {
-    *out_len = 0;
-    return NULL;
-  }
-  *out_len = span->length;
-  return lyr->expansion_data + span->offset;
-}
-
-SYNTAQLITE_API const char* syntaqlite_parser_span_text(
-    SyntaqliteParser* p,
-    const SyntaqliteTextSpan* span,
-    uint32_t* out_len,
-    uint32_t* out_offset) {
-  if (out_offset)
-    *out_offset = 0;
-  if (!span || span->length == 0) {
-    *out_len = 0;
-    return NULL;
-  }
-  // Fast path: spans in the source layer are already authored positions.
-  if (span->_layer_id == 0) {
-    if (span->offset + span->length > p->source_len) {
-      *out_len = 0;
-      return NULL;
-    }
-    *out_len = span->length;
-    if (out_offset)
-      *out_offset = span->offset;
-    return p->source + span->offset;
-  }
-  // Walk the expansion chain to find the authored bytes.
-  uint32_t off = 0;
-  uint32_t len = 0;
-  span_walk_to_source(p, span->_layer_id, span->offset, span->length, &off,
-                      &len);
-  if (off + len > p->source_len) {
-    *out_len = 0;
-    return NULL;
-  }
-  *out_len = len;
-  if (out_offset)
-    *out_offset = off;
-  return p->source + off;
-}
-
-// Compute 1-based (line, col) for `offset` within `buf[..buf_len]`.  The
-// offset is clamped to `buf_len`.
-static void compute_line_col(const char* buf,
-                             uint32_t buf_len,
-                             uint32_t offset,
-                             uint32_t* out_line,
-                             uint32_t* out_col) {
-  if (offset > buf_len)
-    offset = buf_len;
-  // Walk newline-to-newline with memchr instead of char-by-char so
-  // long single-line SQL doesn't become O(offset) per frame.
-  uint32_t line = 1;
-  uint32_t last_nl_end = 0;  // byte position just past the most recent '\n'
-  uint32_t scanned = 0;
-  while (scanned < offset) {
-    const char* nl =
-        (const char*)memchr(buf + scanned, '\n', (size_t)(offset - scanned));
-    if (!nl)
-      break;
-    line++;
-    last_nl_end = (uint32_t)(nl - buf) + 1;
-    scanned = last_nl_end;
-  }
-  *out_line = line;
-  *out_col = offset - last_nl_end + 1;
-}
-
-SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
-    SyntaqliteParser* p,
-    const SyntaqliteTextSpan* sp,
-    uint32_t* out_count) {
-  if (out_count)
-    *out_count = 0;
-  // Clear the scratch buffer from any previous call.  Keeps the
-  // allocation so repeat calls reuse the same heap block.
-  syntaqlite_vec_clear(&p->traceback_buf);
-  if (!sp || sp->length == 0)
-    return NULL;
-
-  // Walk the layer chain, emitting one frame per layer into a small
-  // on-stack buffer (innermost first).  Then reverse into the parser's
-  // owned vec so the caller sees outermost first.
-  SyntaqliteTracebackFrame tmp[SYNQ_MAX_MACRO_DEPTH + 2];
-  uint32_t count = 0;
-  uint32_t off = sp->offset;
-  uint32_t len = sp->length;
-  uint8_t layer_id = sp->_layer_id;
-  uint32_t layers_count = syntaqlite_vec_len(&p->layers);
-
-  for (uint32_t step = 0; step < 2 * (SYNQ_MAX_MACRO_DEPTH + 1) &&
-                          count < SYNQ_MAX_MACRO_DEPTH + 2;
-       step++) {
-    if (layer_id >= layers_count)
-      break;
-    const SynqExpansionLayer* lyr = &p->layers.data[layer_id];
-
-    if (layer_id == 0) {
-      // Root (sentinel) — emit final frame and terminate.
-      SyntaqliteTracebackFrame* f = &tmp[count++];
-      f->name = lyr->name;
-      f->name_len = lyr->name_len;
-      f->snippet = lyr->expansion_data;
-      f->snippet_len = lyr->expansion_len;
-      f->offset_in_snippet = off;
-      f->length_in_snippet = len;
-      compute_line_col(lyr->expansion_data, lyr->expansion_len, off, &f->line,
-                       &f->col);
-      break;
-    }
-
-    // Arg-segment drill: if the span lies fully inside a substituted arg,
-    // skip this layer's frame and drill to the arg's origin.
-    uint32_t tb_layer = layer_id;
-    if (try_arg_drill(lyr, &off, &len, &tb_layer)) {
-      layer_id = (uint8_t)tb_layer;
-      continue;
-    }
-
-    // No drill — emit a frame for this expansion layer.
-    SyntaqliteTracebackFrame* f = &tmp[count++];
-    f->name = lyr->name;
-    f->name_len = lyr->name_len;
-    f->snippet = lyr->expansion_data;
-    f->snippet_len = lyr->expansion_len;
-    f->offset_in_snippet = off;
-    f->length_in_snippet = len;
-    compute_line_col(lyr->expansion_data, lyr->expansion_len, off, &f->line,
-                     &f->col);
-
-    // Walk up to parent at this layer's call site.
-    off = lyr->call_offset;
-    len = lyr->call_length;
-    layer_id = lyr->parent_layer_id;
-  }
-
-  if (count == 0)
-    return NULL;
-
-  // Reverse into the parser's owned buffer so frame[0] is outermost.
-  syntaqlite_vec_ensure(&p->traceback_buf, count, p->mem);
-  for (uint32_t i = 0; i < count; i++) {
-    p->traceback_buf.data[i] = tmp[count - 1 - i];
-  }
-  p->traceback_buf.count = count;
-  if (out_count)
-    *out_count = count;
-  return p->traceback_buf.data;
 }
