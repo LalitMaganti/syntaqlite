@@ -4,9 +4,11 @@
 // Span resolution and traceback.
 //
 // Navigates the expansion layer tree to resolve AST span coordinates
-// back to authored source positions.  Split out of parser_macros.c so
-// the macro expansion pipeline and the layer navigation / public span
-// API can evolve independently.
+// back to authored source positions.  Compiled out when
+// SYNTAQLITE_OMIT_MACROS is defined — without macro expansion, span_text
+// and traceback are stubbed in parser.c.
+
+#ifndef SYNTAQLITE_OMIT_MACROS
 
 #include <string.h>
 
@@ -248,3 +250,5 @@ SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
     *out_count = count;
   return p->macro.traceback_buf.data;
 }
+
+#endif  // !SYNTAQLITE_OMIT_MACROS

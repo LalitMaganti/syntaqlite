@@ -4,9 +4,13 @@
 // Macro expansion pipeline: arg scanning, lookup callback dispatch,
 // template expansion, layer lifecycle, and straddle diagnostics.
 //
+// Compiled out entirely when SYNTAQLITE_OMIT_MACROS is defined.
+//
 // Span resolution and traceback live in parser_spans.c.
 // Per-node extent tracking hooks live in parser_extents.c.
 // Cross-file helpers are declared in csrc/parser_internal.h.
+
+#ifndef SYNTAQLITE_OMIT_MACROS
 
 #include <stdio.h>
 #include <string.h>
@@ -608,12 +612,13 @@ int synq_parser_check_macro_straddle(SyntaqliteParser* p) {
 // Macro lookup callback API
 // ---------------------------------------------------------------------------
 
-SYNTAQLITE_API void syntaqlite_parser_set_macro_lookup(
-    SyntaqliteParser* p,
-    SyntaqliteMacroLookupFn fn,
-    void* user_data) {
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_macro_lookup(SyntaqliteParser* p,
+                                   SyntaqliteMacroLookupFn fn,
+                                   void* user_data) {
   p->macro.lookup_fn = fn;
   p->macro.lookup_user_data = user_data;
+  return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -732,3 +737,5 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
 
   return 0;
 }
+
+#endif  // !SYNTAQLITE_OMIT_MACROS

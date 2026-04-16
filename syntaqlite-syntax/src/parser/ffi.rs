@@ -477,7 +477,7 @@ impl CParser {
             ) -> i32,
         >,
         user_data: *mut c_void,
-    ) {
+    ) -> i32 {
         // SAFETY: self is a valid, non-null CParser pointer.
         unsafe { syntaqlite_parser_set_macro_lookup(self, func, user_data) }
     }
@@ -595,7 +595,7 @@ unsafe extern "C" {
             ) -> i32,
         >,
         user_data: *mut c_void,
-    );
+    ) -> i32;
 }
 
 #[cfg(all(test, feature = "sqlite"))]

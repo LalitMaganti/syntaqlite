@@ -63,17 +63,16 @@ static void reset_stmt(SyntaqliteParser* p) {
   synq_parse_ctx_clear(&p->ctx);
   syntaqlite_vec_clear(&p->comments);
   syntaqlite_vec_clear(&p->tokens);
+#ifndef SYNTAQLITE_OMIT_MACROS
   syntaqlite_vec_clear(&p->macro.traceback_buf);
   syntaqlite_vec_clear(&p->macro.node_expanded_buf);
   synq_layers_free_owned(&p->macro.layers, p->mem);
   syntaqlite_vec_clear(&p->macro.layers);
-  // Push sentinel at index 0 (source layer).  p->source may be NULL on
-  // the very first reset_stmt call (before syntaqlite_parser_reset sets it),
-  // which is fine — syntaqlite_parser_reset re-clears and re-pushes.
   if (p->source)
     synq_layers_push_sentinel(&p->macro.layers, p->source, p->source_len,
                               p->mem);
   p->macro.expansion_depth = 0;
+#endif
   p->ctx.layer_id = 0;
   p->ctx.cur_shift_start = 0;
   p->ctx.last_shifted_end = 0;
@@ -103,8 +102,10 @@ static int32_t stmt_boundary(SyntaqliteParser* p) {
   if (p->ctx.root == SYNTAQLITE_NULL_NODE && !p->had_error)
     return SYNTAQLITE_PARSE_DONE;
 
+#ifndef SYNTAQLITE_OMIT_MACROS
   if (synq_parser_check_macro_straddle(p) < 0)
     return SYNTAQLITE_PARSE_ERROR;
+#endif
 
   if (p->had_error) {
     p->had_error = 0;  // consumed for this result
@@ -129,9 +130,9 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   synq_parse_ctx_init(&p->ctx, m);
   syntaqlite_vec_init(&p->comments);
   syntaqlite_vec_init(&p->tokens);
-  // All macro-related vecs (layers, traceback_buf, node_expanded_buf,
-  // expand_buf, body_buf) initialized inside synq_macro_state_init.
+#ifndef SYNTAQLITE_OMIT_MACROS
   synq_macro_state_init(&p->macro);
+#endif
   return p;
 }
 
@@ -158,12 +159,11 @@ SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
   p->finished = 0;
   p->pending_reset = 0;
   p->last_status = SYNTAQLITE_PARSE_DONE;
+#ifndef SYNTAQLITE_OMIT_MACROS
   p->macro.depth = 0;
-
-  // Re-push the sentinel with the correct source pointer (reset_stmt may
-  // have pushed one with the old source, or none if source was NULL).
   syntaqlite_vec_clear(&p->macro.layers);
   synq_layers_push_sentinel(&p->macro.layers, source, len, p->mem);
+#endif
 
   p->ctx.source = source;
   p->ctx.env = &p->dialect;
@@ -175,7 +175,9 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
     synq_parse_ctx_free(&p->ctx);
     syntaqlite_vec_free(&p->comments, p->mem);
     syntaqlite_vec_free(&p->tokens, p->mem);
+#ifndef SYNTAQLITE_OMIT_MACROS
     synq_macro_state_free(&p->macro, p->mem);
+#endif
     p->mem.xFree(p);
   }
 }
@@ -288,8 +290,10 @@ static int finish_input(SyntaqliteParser* p) {
   }
 
   if (p->ctx.root != SYNTAQLITE_NULL_NODE) {
+#ifndef SYNTAQLITE_OMIT_MACROS
     if (synq_parser_check_macro_straddle(p) < 0)
       return set_result_status(p, SYNTAQLITE_PARSE_ERROR);
+#endif
     return set_result_status(
         p, p->had_error ? SYNTAQLITE_PARSE_ERROR : SYNTAQLITE_PARSE_OK);
   }
@@ -363,8 +367,13 @@ static int64_t next_token(SyntaqliteParser* p,
                           uint32_t* out_type) {
   while (pos < p->source_len && z[pos] != '\0') {
     uint32_t type = 0;
+#ifdef SYNTAQLITE_OMIT_MACROS
+    int64_t len =
+        SynqSqliteGetTokenVersionWrapped(&p->dialect, 0, z + pos, &type);
+#else
     int64_t len = SynqSqliteGetTokenVersionWrapped(
         &p->dialect, p->macro.macro_fallback, z + pos, &type);
+#endif
     if (len <= 0)
       return 0;
     if (type == SYNTAQLITE_TK_SPACE) {
@@ -493,6 +502,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     uint32_t la_type = 0;
     int64_t la_len = next_token(p, z, p->offset, &la_offset, &la_type);
 
+#ifndef SYNTAQLITE_OMIT_MACROS
     // Macro detection: ID followed by TK_BANG ('!').  The token wrapper
     // produces TK_BANG for any dialect that may have macro calls (Rust-style
     // dialects or any dialect with macro_fallback enabled).
@@ -507,6 +517,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
         continue;
       }
     }
+#endif
 
     // Normal token (or macro fallthrough): record + feed to Lemon.
     if (synq_parser_record_and_feed(p, cur_type, cur_offset, (uint32_t)cur_len))
@@ -566,12 +577,23 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
   return p->tokens.data;
 }
 
+#ifdef SYNTAQLITE_OMIT_MACROS
+SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
+  (void)p;
+  return 0;
+}
+SYNTAQLITE_API SyntaqliteMacroRegion
+syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx) {
+  (void)p;
+  (void)idx;
+  return (SyntaqliteMacroRegion){0, 0};
+}
+#else
 SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
   uint32_t total = syntaqlite_vec_len(&p->macro.layers);
   // Entry 0 is the source sentinel; real expansion layers start at 1.
   return total <= 1 ? 0 : total - 1;
 }
-
 SYNTAQLITE_API SyntaqliteMacroRegion
 syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx) {
   // +1 to skip the source sentinel at index 0.
@@ -582,6 +604,7 @@ syntaqlite_result_macro_at(SyntaqliteParser* p, uint32_t idx) {
   const SynqExpansionLayer* lyr = &p->macro.layers.data[layer_idx];
   return (SyntaqliteMacroRegion){lyr->call_offset, lyr->call_length};
 }
+#endif
 
 // ---------------------------------------------------------------------------
 // Arena accessors
@@ -596,12 +619,14 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p) {
   return syntaqlite_vec_len(&p->ctx.ast.offsets);
 }
 
+#ifndef SYNTAQLITE_OMIT_MACROS
 static void append_expanded_range(SyntaqliteParser* p,
                                   uint32_t layer_id,
                                   const char* buf,
                                   uint32_t buf_len,
                                   uint32_t start,
                                   uint32_t end);
+#endif
 
 SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
                                                   uint32_t* out_len) {
@@ -613,21 +638,20 @@ SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
 
 SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(SyntaqliteParser* p,
                                                            uint32_t* out_len) {
+#ifdef SYNTAQLITE_OMIT_MACROS
+  // Without macros, expanded text == source text.
+  return syntaqlite_parser_text(p, out_len);
+#else
   if (out_len) {
     *out_len = 0;
   }
-  // Materialize the whole input with every currently-active macro
-  // call replaced by its expansion buffer.  Walks the full source
-  // range `[0, source_len)` using the same recursive inliner as
-  // `syntaqlite_parser_node_expanded_text` and writes the result into
-  // the parser's scratch buffer.  Returned pointer is valid until the
-  // next call or `reset_stmt`.
   syntaqlite_vec_clear(&p->macro.node_expanded_buf);
   append_expanded_range(p, 0, p->source, p->source_len, 0, p->source_len);
   if (out_len) {
     *out_len = syntaqlite_vec_len(&p->macro.node_expanded_buf);
   }
   return (const char*)p->macro.node_expanded_buf.data;
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -759,8 +783,13 @@ SYNTAQLITE_API int32_t syntaqlite_parser_set_macro_fallback(SyntaqliteParser* p,
                                                             uint32_t enable) {
   if (p->sealed)
     return -1;
+#ifdef SYNTAQLITE_OMIT_MACROS
+  (void)enable;
+  return -1;
+#else
   p->macro.macro_fallback = enable;
   return 0;
+#endif
 }
 
 SYNTAQLITE_API int32_t
@@ -802,11 +831,7 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
   return p->source + r.root_start;
 }
 
-// Recursively append `buf[start..end]` to `out`, inlining any child
-// expansion layers whose parent is `layer_id` and whose call site
-// falls within `[start, end)`.  For each child found, writes the bytes
-// up to its call site, then recurses into the child's expansion data.
-// This materializes the post-expansion view of a byte range.
+#ifndef SYNTAQLITE_OMIT_MACROS
 static void append_expanded_range(SyntaqliteParser* p,
                                   uint32_t layer_id,
                                   const char* buf,
@@ -854,11 +879,16 @@ static void append_expanded_range(SyntaqliteParser* p,
     syntaqlite_vec_push_n(&p->macro.node_expanded_buf, buf + cursor, n, p->mem);
   }
 }
+#endif  // !SYNTAQLITE_OMIT_MACROS
 
 SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
     SyntaqliteParser* p,
     uint32_t node_id,
     uint32_t* out_len) {
+#ifdef SYNTAQLITE_OMIT_MACROS
+  // Without macros, expanded text == authored text.
+  return syntaqlite_parser_node_text(p, node_id, out_len, NULL);
+#else
   if (out_len) {
     *out_len = 0;
   }
@@ -869,9 +899,6 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
     return NULL;
   }
 
-  // Fast path: node's tokens all live in one layer → return a direct
-  // slice of that layer's buffer, no allocation.  Cross-layer nodes
-  // have layer_id == SYNQ_CROSS_LAYER and fall through to the slow path.
   SynqNodeExpandedExtent e =
       syntaqlite_vec_at(&p->ctx.node_expanded_extents, node_id);
   if (e.length > 0) {
@@ -884,11 +911,6 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
     return buf + e.offset;
   }
 
-  // Slow path: the node's tokens cross layers.  Materialize the
-  // post-expansion text by walking the node's root range and inlining
-  // each enclosed macro call's expansion buffer.  The result is
-  // written into the parser's scratch buffer and the returned pointer
-  // is valid until the next call or `reset_stmt`.
   if (node_id >= syntaqlite_vec_len(&p->ctx.node_extents)) {
     return NULL;
   }
@@ -903,10 +925,16 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
     *out_len = syntaqlite_vec_len(&p->macro.node_expanded_buf);
   }
   return (const char*)p->macro.node_expanded_buf.data;
+#endif
 }
 
 SYNTAQLITE_API int syntaqlite_node_is_macro_free(SyntaqliteParser* p,
                                                  uint32_t node_id) {
+#ifdef SYNTAQLITE_OMIT_MACROS
+  (void)p;
+  (void)node_id;
+  return 1;  // No macros → all nodes are macro-free.
+#else
   if (!p->ctx.collect_node_extents) {
     return 0;
   }
@@ -917,4 +945,67 @@ SYNTAQLITE_API int syntaqlite_node_is_macro_free(SyntaqliteParser* p,
       syntaqlite_vec_at(&p->ctx.node_expanded_extents, node_id);
   // length == 0 is the sentinel for epsilon or multi-layer nodes.
   return e.length > 0 && e.layer_id == 0;
+#endif
 }
+
+// ---------------------------------------------------------------------------
+// SYNTAQLITE_OMIT_MACROS stubs for span/traceback APIs
+// ---------------------------------------------------------------------------
+//
+// When macros are compiled out, parser_spans.c is empty.  These stubs
+// provide the same public API with trivial implementations: all spans
+// are in layer 0 (source), so span_text is a direct source slice and
+// traceback returns NULL (no expansion frames to report).
+
+#ifdef SYNTAQLITE_OMIT_MACROS
+
+SYNTAQLITE_API const char* syntaqlite_parser_span_text(
+    SyntaqliteParser* p,
+    const SyntaqliteTextSpan* span,
+    uint32_t* out_len,
+    uint32_t* out_offset) {
+  if (out_offset)
+    *out_offset = 0;
+  if (!span || span->length == 0) {
+    *out_len = 0;
+    return NULL;
+  }
+  if (span->offset + span->length > p->source_len) {
+    *out_len = 0;
+    return NULL;
+  }
+  *out_len = span->length;
+  if (out_offset)
+    *out_offset = span->offset;
+  return p->source + span->offset;
+}
+
+SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
+    SyntaqliteParser* p,
+    const SyntaqliteTextSpan* span,
+    uint32_t* out_len) {
+  return syntaqlite_parser_span_text(p, span, out_len, NULL);
+}
+
+SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
+    SyntaqliteParser* p,
+    const SyntaqliteTextSpan* sp,
+    uint32_t* out_count) {
+  (void)p;
+  (void)sp;
+  if (out_count)
+    *out_count = 0;
+  return NULL;
+}
+
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_macro_lookup(SyntaqliteParser* p,
+                                   SyntaqliteMacroLookupFn fn,
+                                   void* user_data) {
+  (void)p;
+  (void)fn;
+  (void)user_data;
+  return -1;
+}
+
+#endif  // SYNTAQLITE_OMIT_MACROS

@@ -104,10 +104,11 @@ typedef int (*SyntaqliteMacroLookupFn)(void* user_data,
                                        const SyntaqliteToken* args,
                                        uint32_t arg_count);
 
-SYNTAQLITE_API void syntaqlite_parser_set_macro_lookup(
-    SyntaqliteParser* p,
-    SyntaqliteMacroLookupFn fn,
-    void* user_data);
+// Returns 0 on success, -1 if macros are compiled out (SYNTAQLITE_OMIT_MACROS).
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_macro_lookup(SyntaqliteParser* p,
+                                   SyntaqliteMacroLookupFn fn,
+                                   void* user_data);
 
 // ---------------------------------------------------------------------------
 // Macro expansion result (called from inside the lookup callback)
