@@ -50,24 +50,22 @@ typedef struct SynqExtentRange {
 // they live.
 //
 // Sentinel states:
-//   {0, 0, 0, *, 0}            — epsilon (no tokens); neutral in merges.
-//   {_, 0, SYNQ_CROSS_LAYER, *, 0}
-//                               — cross-layer poison; propagates through
-//                                 parent merges so the fast path falls
-//                                 through to the slow path.
-//
-// The `macro_root` and `from_shift` fields support O(1) straddle
-// detection during reduce (see parser_extents.c).
+//   {0, 0, 0}                  — epsilon (no tokens); neutral in merges.
+//   {_, 0, SYNQ_CROSS_LAYER}   — cross-layer poison; propagates through
+//                                parent merges so the fast path falls
+//                                through to the slow path.
 #define SYNQ_CROSS_LAYER UINT32_MAX
-#define SYNQ_MACRO_ROOT_NEUTRAL UINT32_MAX
 typedef struct SynqNodeExpandedExtent {
   uint32_t offset;
   uint32_t length;
   uint32_t layer_id;
-  uint32_t macro_root;  // 0 = source, >0 = outermost expansion layer idx,
-                         // SYNQ_MACRO_ROOT_NEUTRAL = epsilon / neutral.
-  uint32_t from_shift;  // 1 = terminal (pushed at shift), 0 = non-terminal.
 } SynqNodeExpandedExtent;
+
+// Straddle stack entry values (packed into uint32_t):
+//   0              = source terminal
+//   1..N           = terminal from outermost expansion layer N
+//   SYNQ_STRADDLE_NEUTRAL = non-terminal / epsilon (neutral in checks)
+#define SYNQ_STRADDLE_NEUTRAL UINT32_MAX
 
 // ---------------------------------------------------------------------------
 // Parse context — threaded through grammar actions via %extra_argument
@@ -148,6 +146,8 @@ typedef struct SynqParseCtx {
   uint32_t macro_root_end;
   uint32_t macro_root_layer;    // Outermost expansion layer idx (set on entry).
   uint32_t has_macro_straddle;  // Sticky flag set during reduce.
+  uint32_t lemon_depth;         // Lemon stack depth (always tracked, for lazy init).
+  SYNQ_VEC(uint32_t) straddle_stack;  // Lazily initialized on first macro use.
 } SynqParseCtx;
 
 // Common header for all list nodes in the arena.
@@ -205,6 +205,8 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   ctx->macro_root_end = 0;
   ctx->macro_root_layer = 0;
   ctx->has_macro_straddle = 0;
+  ctx->lemon_depth = 0;
+  syntaqlite_vec_init(&ctx->straddle_stack);
 }
 
 static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
@@ -214,6 +216,7 @@ static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
   syntaqlite_vec_free(&ctx->node_extents, ctx->mem);
   syntaqlite_vec_free(&ctx->expanded_stack, ctx->mem);
   syntaqlite_vec_free(&ctx->node_expanded_extents, ctx->mem);
+  syntaqlite_vec_free(&ctx->straddle_stack, ctx->mem);
   synq_arena_free(&ctx->ast, ctx->mem);
 }
 
@@ -230,6 +233,8 @@ static inline void synq_parse_ctx_clear(SynqParseCtx* ctx) {
   ctx->macro_root_end = 0;
   ctx->macro_root_layer = 0;
   ctx->has_macro_straddle = 0;
+  ctx->lemon_depth = 0;
+  syntaqlite_vec_clear(&ctx->straddle_stack);
 }
 
 // Record the current shadow-stack tops (authored + expanded) as the
