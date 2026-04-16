@@ -14,6 +14,14 @@ pub(crate) const PARSE_OK: i32 = 1;
 #[cfg(test)]
 pub(crate) const PARSE_ERROR: i32 = -1;
 
+/// Generic success code for C APIs that return 0/-1 status.
+pub(crate) const SYNTAQLITE_OK: i32 = 0;
+
+/// `SyntaqliteMacroLookupFn`: macro expansion completed successfully.
+pub(crate) const MACRO_LOOKUP_OK: i32 = 0;
+/// `SyntaqliteMacroLookupFn`: no macro with the given name is registered.
+pub(crate) const MACRO_LOOKUP_NOT_FOUND: i32 = -1;
+
 /// Mirrors C `SyntaqliteMemMethods` (xMalloc, xRealloc, xFree).
 #[repr(C)]
 #[expect(clippy::struct_field_names)]

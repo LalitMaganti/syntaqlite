@@ -117,7 +117,7 @@ impl MacroOutput {
                 flags,
             )
         };
-        rc == 0
+        rc == ffi::SYNTAQLITE_OK
     }
 }
 
@@ -186,9 +186,9 @@ unsafe extern "C" fn macro_lookup_trampoline(
 
     let mut macro_out = MacroOutput::new(parser);
     if state.handler.lookup(name_str, &macro_args, &mut macro_out) {
-        0
+        ffi::MACRO_LOOKUP_OK
     } else {
-        -1
+        ffi::MACRO_LOOKUP_NOT_FOUND
     }
 }
 

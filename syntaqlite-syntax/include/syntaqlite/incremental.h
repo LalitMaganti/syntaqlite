@@ -95,8 +95,17 @@ syntaqlite_parser_completion_context(SyntaqliteParser* p);
 // Macro lookup callback
 // ---------------------------------------------------------------------------
 
-// Returns 0 on success (must call set_result first), -1 if the macro
-// does not exist, -2 on expansion error.
+// Return codes for SyntaqliteMacroLookupFn callbacks. Stable ABI.
+//   OK        = macro found and expansion set via set_result*
+//   NOT_FOUND = no macro with that name is registered
+//   ERROR     = macro was found but expansion failed
+#define SYNTAQLITE_MACRO_LOOKUP_OK 0
+#define SYNTAQLITE_MACRO_LOOKUP_NOT_FOUND (-1)
+#define SYNTAQLITE_MACRO_LOOKUP_ERROR (-2)
+
+// Returns SYNTAQLITE_MACRO_LOOKUP_OK on success (the callback must call
+// set_result first), SYNTAQLITE_MACRO_LOOKUP_NOT_FOUND if the macro does
+// not exist, SYNTAQLITE_MACRO_LOOKUP_ERROR on expansion error.
 typedef int (*SyntaqliteMacroLookupFn)(void* user_data,
                                        SyntaqliteParser* parser,
                                        const char* name,
@@ -104,7 +113,8 @@ typedef int (*SyntaqliteMacroLookupFn)(void* user_data,
                                        const SyntaqliteToken* args,
                                        uint32_t arg_count);
 
-// Returns 0 on success, -1 if macros are compiled out (SYNTAQLITE_OMIT_MACROS).
+// Returns SYNTAQLITE_OK on success, SYNTAQLITE_ERR_OMITTED if macros are
+// compiled out (SYNTAQLITE_OMIT_MACROS).
 SYNTAQLITE_API int32_t
 syntaqlite_parser_set_macro_lookup(SyntaqliteParser* p,
                                    SyntaqliteMacroLookupFn fn,
@@ -146,7 +156,7 @@ SYNTAQLITE_API void syntaqlite_macro_expansion_set_result_with_arg_map(
 
 // Template expansion helper: substitute `$param` placeholders with the
 // current invocation's args and call set_result.  Arg segments are built
-// automatically.  Returns 0 on success.
+// automatically.  Returns SYNTAQLITE_OK on success.
 //
 // `flags` is a bitwise OR of SYNTAQLITE_EXPAND_* constants (0 for defaults).
 //
