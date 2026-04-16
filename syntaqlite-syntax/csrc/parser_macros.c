@@ -483,11 +483,62 @@ static void begin_macro_expansion(SyntaqliteParser* p,
     p->ctx.macro_root_layer = syntaqlite_vec_len(&p->macro.layers);
   }
 
+  // Compute position of this call in the parent's *authored* body by
+  // inverting the length shifts introduced by the parent's $param
+  // substitutions.  For top-level calls the parent is the source layer
+  // (no arg segments), so the shifts stay zero and body_call_offset /
+  // body_call_length equal call_offset / call_length.
+  //
+  // A segment's relationship to the call range determines its effect:
+  //   * fully before call → its length delta shifts body_call_offset
+  //   * fully after call  → no effect
+  //   * seg contains call (incl. equal bounds) → arg-internal: the call
+  //     was tokenized from this arg's substituted text
+  //   * seg strictly inside call → its length delta shrinks body_call_length
+  //   * partial overlap → arg-internal
+  //
+  // The "contains" check must run before "strictly inside" so the
+  // equal-bounds case (common for `m!(arg)` where arg is itself a
+  // macro call) is classified as arg-internal rather than inside.
+  const SynqExpansionLayer* parent = &p->macro.layers.data[p->ctx.layer_id];
+  uint32_t call_end = call_offset + call_length;
+  uint32_t prefix_shift = 0;
+  uint32_t inner_shift = 0;
+  int arg_internal = 0;
+  for (uint32_t i = 0; i < parent->arg_segment_count; i++) {
+    const SynqArgSegment* seg = &parent->arg_segments[i];
+    uint32_t seg_end = seg->sub_offset + seg->sub_length;
+    uint32_t body_shift = seg->sub_length >= seg->body_length
+                              ? seg->sub_length - seg->body_length
+                              : 0;
+    if (seg_end <= call_offset) {
+      prefix_shift += body_shift;
+    } else if (seg->sub_offset >= call_end) {
+      // Fully after the call — no effect.
+    } else if (seg->sub_offset <= call_offset && seg_end >= call_end) {
+      arg_internal = 1;
+      break;
+    } else if (seg->sub_offset >= call_offset && seg_end <= call_end) {
+      inner_shift += body_shift;
+    } else {
+      arg_internal = 1;
+      break;
+    }
+  }
+  uint32_t body_call_offset = arg_internal
+                                  ? SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL
+                                  : call_offset - prefix_shift;
+  uint32_t body_call_length = arg_internal
+                                  ? SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL
+                                  : call_length - inner_shift;
+
   SynqExpansionLayer layer = {
       .call_offset = call_offset,
       .call_length = call_length,
       .name = name,
       .name_len = name_len,
+      .body_call_offset = body_call_offset,
+      .body_call_length = body_call_length,
       .parent_layer_id = p->ctx.layer_id,
   };
   syntaqlite_vec_push(&p->macro.layers, layer, p->mem);
@@ -623,8 +674,16 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
                         p->mem);
   syntaqlite_vec_push(&p->macro.body_buf, 0, p->mem);
 
-  // Collect arg mappings on the stack (max 64 params).
-  SyntaqliteArgMapping mappings[64];
+  // Collect arg mappings on the stack (max 64 params).  We extend the
+  // public SyntaqliteArgMapping with the authored-body position of the
+  // $param token (pre-substitution) so downstream tracebacks can anchor
+  // substitutions back to the macro definition.
+  struct Mapping {
+    uint32_t sub_offset;      // Offset in expansion buffer.
+    uint32_t arg_index;       // Index into callback args.
+    uint32_t body_token_off;  // Offset of $param token in authored body.
+    uint32_t body_token_len;  // Length of $param token in authored body.
+  } mappings[64];
   uint32_t mapping_count = 0;
 
   const unsigned char* z = (const unsigned char*)p->macro.body_buf.data;
@@ -664,8 +723,10 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
 
       if ((uint32_t)found < arg_count && args[found].length > 0) {
         if (mapping_count < 64) {
-          mappings[mapping_count].body_offset = p->macro.expand_buf.count;
+          mappings[mapping_count].sub_offset = p->macro.expand_buf.count;
           mappings[mapping_count].arg_index = (uint32_t)found;
+          mappings[mapping_count].body_token_off = pos;
+          mappings[mapping_count].body_token_len = (uint32_t)tlen;
           mapping_count++;
         }
         syntaqlite_vec_push_n(&p->macro.expand_buf,
@@ -707,7 +768,9 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
     for (uint32_t i = 0; i < mapping_count; i++) {
       uint32_t ai = mappings[i].arg_index;
       segs[i] = (SynqArgSegment){
-          .sub_offset = mappings[i].body_offset,
+          .body_offset = mappings[i].body_token_off,
+          .body_length = mappings[i].body_token_len,
+          .sub_offset = mappings[i].sub_offset,
           .sub_length = args[ai].length,
           .origin_layer_id = origin_layer_id,
           .origin_offset = (uint32_t)(args[ai].text - origin_base),

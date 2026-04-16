@@ -221,12 +221,17 @@ pub type AnyParserToken<'a> = TypedParserToken<'a, crate::dialect::AnyDialect>;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MacroRewrite<'a> {
     pub(crate) parent: Option<u32>,
+    pub(crate) rewrite_idx: u32,
     pub(crate) call_offset: u32,
     pub(crate) call_length: u32,
     pub(crate) expansion: &'a str,
     pub(crate) name: &'a str,
     pub(crate) def_line: u32,
     pub(crate) def_col: u32,
+    pub(crate) body_call_offset: u32,
+    pub(crate) body_call_length: u32,
+    pub(crate) parser: std::ptr::NonNull<crate::parser::ffi::CParser>,
+    pub(crate) _lifetime: std::marker::PhantomData<&'a ()>,
 }
 
 impl<'a> MacroRewrite<'a> {
@@ -260,6 +265,123 @@ impl<'a> MacroRewrite<'a> {
     /// 1-based column of the macro definition (0 if unknown).
     pub fn def_col(&self) -> u32 {
         self.def_col
+    }
+    /// Byte offset of this call in the parent's *authored* body, computed
+    /// by inverting the length shifts the parent's `$param` substitutions
+    /// introduced.  For top-level rewrites the parent is the authored
+    /// source, so this equals [`call_offset`](Self::call_offset).
+    ///
+    /// Returns [`u32::MAX`] (the arg-internal sentinel) when the call was
+    /// tokenized from a `$param` substitution — consumers should descend
+    /// through the matching arg segment instead of rewriting in the body.
+    /// [`body_call_length`](Self::body_call_length) mirrors the sentinel.
+    pub fn body_call_offset(&self) -> u32 {
+        self.body_call_offset
+    }
+    /// Length counterpart of [`body_call_offset`](Self::body_call_offset).
+    pub fn body_call_length(&self) -> u32 {
+        self.body_call_length
+    }
+    /// Iterator over the `$param` substitutions recorded on this rewrite.
+    pub fn arg_segments(&self) -> impl Iterator<Item = MacroArgSegment<'a>> + use<'_, 'a> {
+        // SAFETY: the parser pointer is live for 'a (the parsed
+        // statement's lifetime); the C accessors clamp out-of-range
+        // indices so count is authoritative.
+        let count = unsafe {
+            self.parser
+                .as_ref()
+                .macro_rewrite_arg_segment_count(self.rewrite_idx)
+        };
+        let rewrite_idx = self.rewrite_idx;
+        let parser = self.parser;
+        (0..count).map(move |i| {
+            // SAFETY: i < count; the C side returns a valid segment.
+            let s = unsafe { parser.as_ref().macro_rewrite_arg_segment_at(rewrite_idx, i) };
+            let origin = if s.origin_parent_idx == u32::MAX {
+                ArgOrigin::Source
+            } else {
+                ArgOrigin::Rewrite(s.origin_parent_idx)
+            };
+            MacroArgSegment {
+                body_offset: s.body_offset,
+                body_length: s.body_length,
+                expansion_offset: s.expansion_offset,
+                expansion_length: s.expansion_length,
+                origin,
+                origin_offset: s.origin_offset,
+                origin_length: s.origin_length,
+                _lifetime: std::marker::PhantomData,
+            }
+        })
+    }
+}
+
+/// Where a macro argument's text was authored.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArgOrigin {
+    /// The arg text lives in the authored source.
+    Source,
+    /// The arg text lives in the expansion buffer of the referenced
+    /// rewrite (which in turn may have its own arg segments to descend).
+    Rewrite(u32),
+}
+
+/// One `$param` substitution recorded on a [`MacroRewrite`].
+///
+/// Enables downstream tracebacks to anchor each substitution back to the
+/// authored source, possibly via a chain of earlier substitutions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MacroArgSegment<'a> {
+    pub(crate) body_offset: u32,
+    pub(crate) body_length: u32,
+    pub(crate) expansion_offset: u32,
+    pub(crate) expansion_length: u32,
+    pub(crate) origin: ArgOrigin,
+    pub(crate) origin_offset: u32,
+    pub(crate) origin_length: u32,
+    pub(crate) _lifetime: std::marker::PhantomData<&'a ()>,
+}
+
+impl MacroArgSegment<'_> {
+    /// Byte offset of the `$param` token in the macro's authored body.
+    /// Zero when the rewrite was registered via the raw arg-map API
+    /// (which doesn't supply authored-body positions).
+    pub fn body_offset(&self) -> u32 {
+        self.body_offset
+    }
+    /// Byte length of the `$param` token in the authored body.
+    pub fn body_length(&self) -> u32 {
+        self.body_length
+    }
+    /// Byte offset of the substituted arg text in the rewrite's
+    /// [`expansion`](MacroRewrite::expansion) buffer.
+    pub fn expansion_offset(&self) -> u32 {
+        self.expansion_offset
+    }
+    /// Byte length of the substituted arg text in the expansion buffer.
+    pub fn expansion_length(&self) -> u32 {
+        self.expansion_length
+    }
+    /// Where the arg text was authored — the source, or another rewrite's
+    /// expansion buffer.
+    pub fn origin(&self) -> ArgOrigin {
+        self.origin
+    }
+    /// Convenience: parent rewrite index if the origin is a rewrite,
+    /// `None` if the origin is the authored source.
+    pub fn origin_parent(&self) -> Option<u32> {
+        match self.origin {
+            ArgOrigin::Source => None,
+            ArgOrigin::Rewrite(i) => Some(i),
+        }
+    }
+    /// Byte offset of the arg text in its origin.
+    pub fn origin_offset(&self) -> u32 {
+        self.origin_offset
+    }
+    /// Byte length of the arg text in its origin.
+    pub fn origin_length(&self) -> u32 {
+        self.origin_length
     }
 }
 

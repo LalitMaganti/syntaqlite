@@ -101,6 +101,34 @@ pub(crate) struct CMacroRewrite {
     pub(crate) def_line: u32,
     /// 1-based column of the macro definition (0 = unknown).
     pub(crate) def_col: u32,
+    /// Call position in the parent's *authored* body.
+    /// `u32::MAX` (`ARG_INTERNAL`) means the call came from a $param
+    /// substitution and has no body position.
+    pub(crate) body_call_offset: u32,
+    pub(crate) body_call_length: u32,
+}
+
+/// One $param substitution within a macro expansion.
+///
+/// Mirrors C `SyntaqliteMacroArgSegment` from `include/syntaqlite/parser.h`.
+#[derive(Debug, Clone, Copy)]
+#[repr(C)]
+pub(crate) struct CMacroArgSegment {
+    /// Position of the $param token in the authored body (0 if unknown).
+    pub(crate) body_offset: u32,
+    /// Length of the $param token in the authored body (0 if unknown).
+    pub(crate) body_length: u32,
+    /// Position of the substituted arg text in the rewrite's expansion.
+    pub(crate) expansion_offset: u32,
+    /// Length of the substituted arg text in the rewrite's expansion.
+    pub(crate) expansion_length: u32,
+    /// Origin of the arg text: `u32::MAX` = authored source, else a
+    /// rewrite index.
+    pub(crate) origin_parent_idx: u32,
+    /// Byte offset of the arg text in the origin.
+    pub(crate) origin_offset: u32,
+    /// Byte length of the arg text in the origin.
+    pub(crate) origin_length: u32,
 }
 
 /// One frame in a traceback produced by the span traceback API.
@@ -421,6 +449,33 @@ impl CParser {
         }
     }
 
+    pub(crate) unsafe fn macro_rewrite_arg_segment_count(&self, rewrite_idx: u32) -> u32 {
+        // SAFETY: self is a valid CParser pointer; the C side clamps
+        // out-of-range indices to zero.
+        unsafe {
+            syntaqlite_macro_rewrite_arg_segment_count(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                rewrite_idx,
+            )
+        }
+    }
+
+    pub(crate) unsafe fn macro_rewrite_arg_segment_at(
+        &self,
+        rewrite_idx: u32,
+        segment_idx: u32,
+    ) -> CMacroArgSegment {
+        // SAFETY: self is a valid CParser pointer; the C side clamps
+        // out-of-range indices to a zero-initialized segment.
+        unsafe {
+            syntaqlite_macro_rewrite_arg_segment_at(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                rewrite_idx,
+                segment_idx,
+            )
+        }
+    }
+
     // Arena accessors
     pub(crate) unsafe fn node(&self, node_id: u32) -> *const u32 {
         // SAFETY: self is a valid, non-null CParser pointer; node_id is a
@@ -519,6 +574,12 @@ unsafe extern "C" {
     fn syntaqlite_result_tokens(p: *mut CParser, count: *mut u32) -> *const CParserToken;
     fn syntaqlite_result_macro_count(p: *mut CParser) -> u32;
     fn syntaqlite_result_macro_rewrite_at(p: *mut CParser, idx: u32) -> CMacroRewrite;
+    fn syntaqlite_macro_rewrite_arg_segment_count(p: *mut CParser, rewrite_idx: u32) -> u32;
+    fn syntaqlite_macro_rewrite_arg_segment_at(
+        p: *mut CParser,
+        rewrite_idx: u32,
+        segment_idx: u32,
+    ) -> CMacroArgSegment;
 
     // Arena accessors
     fn syntaqlite_parser_node(p: *mut CParser, node_id: u32) -> *const u32;
