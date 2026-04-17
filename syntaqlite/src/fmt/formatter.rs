@@ -3,7 +3,7 @@
 
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, ParseOutcome,
+    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, ParseOutcome,
 };
 
 use super::FormatConfig;
@@ -105,7 +105,8 @@ impl Formatter {
             syntax,
             &ParserConfig::default()
                 .with_collect_tokens(true)
-                .with_macro_fallback(has_macros),
+                .with_macro_fallback(has_macros)
+                .with_collect_node_extents(has_macros),
         );
         let macro_tokenizer = AnyTokenizer::new((*dialect).clone());
         Formatter {
@@ -564,11 +565,21 @@ fn drain_gap_comments<'a>(
 /// this precondition by building a `CommentCtx` from the statement's collected
 /// tokens (which requires `collect_tokens: true` at parse time).
 ///
-/// Only matches at the *innermost* node that fully contains the macro.
-/// If the child node has inline enum/flag fields with non-default values,
-/// it likely carries additional keywords (e.g. `FOLLOWING` in a `FrameBound`)
-/// and should format normally — the inner expression handler will emit
-/// the verbatim text at the appropriate level.
+/// Emits verbatim only at a node whose bytecode-emitted content is exactly
+/// the macro: any additional content the node would emit (keywords,
+/// aliases, siblings) would be silently dropped by `ReturnAction::Discard`
+/// in the caller.
+///
+/// The decision boils down to three position checks:
+/// - `tok_offset == r_start`: the next unconsumed token *is* the macro's
+///   first token.  Guards against *leading* content the node's bytecode
+///   would emit — such a token would sit before `r_start`.
+/// - `node_end == r_end`: the node's extent ends exactly where the macro
+///   ends.  Guards against *trailing* content (e.g. a `ResultColumn`
+///   alias).
+/// - Node extent start is intentionally *not* checked: extents include
+///   preceding keyword glue already consumed by the parent (e.g. `FROM`
+///   before a `TableRef`, `AS` before an alias `IdentName`).
 pub(crate) fn try_macro_verbatim<'a>(
     ctx: &FmtCtx<'a>,
     regions: &[(u32, u32)],
@@ -581,28 +592,13 @@ pub(crate) fn try_macro_verbatim<'a>(
     let (tok_offset, _) = cctx.peek_next_token()?;
     let source = ctx.text();
 
+    let (node_text, node_off) = ctx.reader.node_text(child_id)?;
+    let node_end = node_off + node_text.len() as u32;
+
     for (i, &(r_start, r_len)) in regions.iter().enumerate() {
         let r_end = r_start + r_len;
 
-        if tok_offset >= r_start && tok_offset < r_end {
-            // Check if this child node extends beyond the macro region
-            // by examining its fields. If it has enum fields with non-zero
-            // values or spans beyond the region, it's an intermediate node
-            // (like FrameBound with EXPR_FOLLOWING) — skip and let the
-            // inner expression handler emit verbatim at the right level.
-            if let Some((_, child_fields)) = ctx.reader.extract_fields(child_id) {
-                for i in 0..child_fields.len() {
-                    match child_fields[i] {
-                        // Non-zero enum → node has keyword variants
-                        // (e.g. EXPR_FOLLOWING)
-                        FieldValue::Enum(v) if v != 0 => return None,
-                        // Non-zero flags → node has keyword modifiers
-                        FieldValue::Flags(f) if f != 0 => return None,
-                        _ => {}
-                    }
-                }
-            }
-
+        if tok_offset == r_start && node_end == r_end {
             if consumed[i] {
                 return Some(NIL_DOC);
             }

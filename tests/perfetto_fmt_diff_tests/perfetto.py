@@ -212,6 +212,148 @@ class PerfettoMacroCallFormat(TestSuite):
             """,
         )
 
+    def test_macro_call_with_alias(self):
+        return DiffTestBlueprint(
+            sql="SELECT cast_int!(value) AS x FROM t",
+            out="SELECT cast_int!(value) AS x FROM t",
+        )
+
+    def test_macro_call_with_alias_multiple(self):
+        return DiffTestBlueprint(
+            sql="SELECT foo!(a) AS x, bar!(b) AS y FROM t",
+            out="SELECT foo!(a) AS x, bar!(b) AS y FROM t",
+        )
+
+    def test_macro_call_in_from_with_alias(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM my_macro!(t) AS mt",
+            out="SELECT * FROM my_macro!(t) AS mt",
+        )
+
+    def test_macro_call_in_update_set(self):
+        return DiffTestBlueprint(
+            sql="UPDATE t SET col = cast_int!(value)",
+            out="UPDATE t SET col = cast_int!(value)",
+        )
+
+    def test_macro_call_in_values(self):
+        return DiffTestBlueprint(
+            sql="INSERT INTO t VALUES (cast_int!(value))",
+            out="INSERT INTO t VALUES (cast_int!(value))",
+        )
+
+    def test_macro_call_in_cte(self):
+        return DiffTestBlueprint(
+            sql="WITH c AS (SELECT cast_int!(value) AS x FROM t) SELECT * FROM c",
+            out="""\
+                WITH c AS (SELECT cast_int!(value) AS x FROM t)
+                SELECT * FROM c
+            """,
+        )
+
+    # ── Similar-style risks: trailing keywords/spans on the macro's parent ──
+
+    def test_macro_call_with_trailing_collate(self):
+        return DiffTestBlueprint(
+            sql="SELECT cast_int!(value) COLLATE NOCASE FROM t",
+            out="SELECT cast_int!(value) COLLATE NOCASE FROM t",
+        )
+
+    def test_macro_call_with_trailing_sort_order(self):
+        return DiffTestBlueprint(
+            sql="SELECT x FROM t ORDER BY cast_int!(value) DESC",
+            out="SELECT x FROM t ORDER BY cast_int!(value) DESC",
+        )
+
+    def test_macro_call_with_trailing_nulls_order(self):
+        return DiffTestBlueprint(
+            sql="SELECT x FROM t ORDER BY cast_int!(value) NULLS FIRST",
+            out="SELECT x FROM t ORDER BY cast_int!(value) NULLS FIRST",
+        )
+
+    # ── Macro nested inside an outer wrapper (inner position) ──
+
+    def test_macro_inside_cast(self):
+        return DiffTestBlueprint(
+            sql="SELECT CAST(cast_int!(value) AS INT) FROM t",
+            out="SELECT CAST(cast_int!(value) AS INT) FROM t",
+        )
+
+    def test_macro_inside_binary_expr(self):
+        return DiffTestBlueprint(
+            sql="SELECT cast_int!(a) + cast_int!(b) FROM t",
+            out="SELECT cast_int!(a) + cast_int!(b) FROM t",
+        )
+
+    def test_macro_inside_not_expr(self):
+        return DiffTestBlueprint(
+            sql="SELECT NOT cast_int!(value) FROM t",
+            out="SELECT NOT cast_int!(value) FROM t",
+        )
+
+    def test_macro_inside_case_arm(self):
+        return DiffTestBlueprint(
+            sql="SELECT CASE WHEN x > 0 THEN cast_int!(value) ELSE 0 END FROM t",
+            out="SELECT CASE WHEN x > 0 THEN cast_int!(value) ELSE 0 END FROM t",
+        )
+
+    def test_macro_inside_in_list(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM t WHERE x IN (cast_int!(a), cast_int!(b))",
+            out="SELECT * FROM t WHERE x IN (cast_int!(a), cast_int!(b))",
+        )
+
+    # ── Macro in DML contexts ──
+
+    def test_macro_in_delete_where(self):
+        return DiffTestBlueprint(
+            sql="DELETE FROM t WHERE id = cast_int!(value)",
+            out="DELETE FROM t WHERE id = cast_int!(value)",
+        )
+
+    def test_macro_in_update_where(self):
+        return DiffTestBlueprint(
+            sql="UPDATE t SET col = 1 WHERE id = cast_int!(value)",
+            out="UPDATE t SET col = 1 WHERE id = cast_int!(value)",
+        )
+
+    def test_macro_in_returning_with_alias(self):
+        return DiffTestBlueprint(
+            sql="DELETE FROM t RETURNING cast_int!(value) AS x",
+            out="DELETE FROM t RETURNING cast_int!(value) AS x",
+        )
+
+    def test_macro_in_insert_values_multi(self):
+        return DiffTestBlueprint(
+            sql="INSERT INTO t VALUES (cast_int!(a), cast_int!(b))",
+            out="INSERT INTO t VALUES (cast_int!(a), cast_int!(b))",
+        )
+
+    # ── Macro with surrounding trivia ──
+
+    def test_macro_call_with_line_comment_after(self):
+        return DiffTestBlueprint(
+            sql="SELECT cast_int!(value) -- trailing comment\nFROM t",
+            out="""\
+                SELECT cast_int!(value) -- trailing comment
+                FROM t
+            """,
+        )
+
+    def test_macro_call_with_block_comment_before_alias(self):
+        return DiffTestBlueprint(
+            sql="SELECT cast_int!(value) /* inline */ AS x FROM t",
+            out="SELECT cast_int!(value) /* inline */ AS x FROM t",
+        )
+
+    # ── Nested macros ──
+
+    def test_nested_macro_calls(self):
+        return DiffTestBlueprint(
+            sql="SELECT cast_int!(cast_int!(value)) FROM t",
+            out="SELECT cast_int!(cast_int!(value)) FROM t",
+        )
+
     def test_macro_in_frame_bound_preserves_following(self):
         return DiffTestBlueprint(
             sql="SELECT count() OVER (ORDER BY ts RANGE BETWEEN CURRENT ROW AND my_macro!(x) FOLLOWING) FROM t",
