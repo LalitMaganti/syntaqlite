@@ -1244,6 +1244,40 @@ mod tests {
     }
 
     #[test]
+    fn macro_rewrite_nested_body_call_offsets_shorter_substitution() {
+        // Symmetric to the fixed_portion test, but with $param
+        // substitutions that are *shorter* than the $param tokens
+        // themselves.  body_shift must carry a signed delta so segments
+        // before the nested call shift body_call_offset forward, and
+        // segments strictly inside it grow body_call_length.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("leaf", &["v"], "$v");
+        // Authored body "$a + leaf!($b + 7)" — `leaf!($b + 7)` sits at
+        // offset 5 with length 13.
+        reg.register("wrap", &["a", "b"], "$a + leaf!($b + 7)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        // Both args are 1 char, so each substitution shortens the body
+        // by 1: "$a" (2) → "9" (1), "$b" (2) → "8" (1).
+        let source = "SELECT wrap!(9, 8);";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
+        };
+
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 2, "wrap + leaf");
+        let inner = &rewrites[1];
+        assert_eq!(inner.name(), "leaf");
+        assert_eq!(inner.parent(), Some(0));
+        assert_eq!(inner.body_call_offset(), 5);
+        assert_eq!(inner.body_call_length(), 13);
+    }
+
+    #[test]
     fn macro_rewrite_arg_segment_chain_resolves_to_source() {
         // Reproduces the chain from issue #145: for `m!(n!(nonexistent_col))`,
         // downstream consumers walk each rewrite's arg_segments to anchor

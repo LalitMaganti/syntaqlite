@@ -510,20 +510,22 @@ static void begin_macro_expansion(SyntaqliteParser* p,
   //   * seg strictly inside call → its length delta shrinks body_call_length
   //   * partial overlap → arg-internal
   //
+  // `body_shift` is signed: positive when the substitution is longer
+  // than the `$param` token (body grows), negative when shorter (body
+  // shrinks).  Either way, `body_coord = sub_coord - accumulated_shift`.
+  //
   // The "contains" check must run before "strictly inside" so the
   // equal-bounds case (common for `m!(arg)` where arg is itself a
   // macro call) is classified as arg-internal rather than inside.
   const SynqExpansionLayer* parent = &p->macro.layers.data[p->ctx.layer_id];
   uint32_t call_end = call_offset + call_length;
-  uint32_t prefix_shift = 0;
-  uint32_t inner_shift = 0;
+  int64_t prefix_shift = 0;
+  int64_t inner_shift = 0;
   int arg_internal = 0;
   for (uint32_t i = 0; i < parent->arg_segment_count; i++) {
     const SynqArgSegment* seg = &parent->arg_segments[i];
     uint32_t seg_end = seg->sub_offset + seg->sub_length;
-    uint32_t body_shift = seg->sub_length >= seg->body_length
-                              ? seg->sub_length - seg->body_length
-                              : 0;
+    int64_t body_shift = (int64_t)seg->sub_length - (int64_t)seg->body_length;
     if (seg_end <= call_offset) {
       prefix_shift += body_shift;
     } else if (seg->sub_offset >= call_end) {
@@ -538,12 +540,12 @@ static void begin_macro_expansion(SyntaqliteParser* p,
       break;
     }
   }
-  uint32_t body_call_offset = arg_internal
-                                  ? SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL
-                                  : call_offset - prefix_shift;
-  uint32_t body_call_length = arg_internal
-                                  ? SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL
-                                  : call_length - inner_shift;
+  uint32_t body_call_offset =
+      arg_internal ? SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL
+                   : (uint32_t)((int64_t)call_offset - prefix_shift);
+  uint32_t body_call_length =
+      arg_internal ? SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL
+                   : (uint32_t)((int64_t)call_length - inner_shift);
 
   SynqExpansionLayer layer = {
       .call_offset = call_offset,
