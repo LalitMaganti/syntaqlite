@@ -261,7 +261,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Download Playwright report
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v7
         with:
           name: playwright-report
           path: playwright-report
@@ -275,7 +275,7 @@ jobs:
           command: pages deploy playwright-report --project-name=syntaqlite-playwright-reports --branch=pr-${{ github.event.number }}
 
       - name: Comment PR with report URL
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const url = '${{ steps.deploy.outputs.deployment-url }}';
