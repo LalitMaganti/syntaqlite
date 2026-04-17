@@ -340,3 +340,144 @@ impl CliApp for Stock {
         true
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct Locked;
+    impl CliApp for Locked {
+        fn name(&self) -> &str {
+            "locked"
+        }
+        fn about(&self) -> &str {
+            "locked-down test CLI"
+        }
+    }
+
+    struct Open;
+    impl CliApp for Open {
+        fn name(&self) -> &str {
+            "open"
+        }
+        fn allow_dialect_override(&self) -> bool {
+            true
+        }
+        fn allow_sqlite_tuning(&self) -> bool {
+            true
+        }
+    }
+
+    fn parse(app: &impl CliApp, argv: &[&str]) -> Result<Cli, clap::Error> {
+        use clap::FromArgMatches;
+        let matches = build_command(app).try_get_matches_from(argv)?;
+        Cli::from_arg_matches(&matches)
+    }
+
+    fn help_text(app: &impl CliApp) -> String {
+        build_command(app).render_help().to_string()
+    }
+
+    #[test]
+    fn build_command_uses_app_name_and_about() {
+        let help = help_text(&Locked);
+        assert!(help.contains("locked"), "name missing from help:\n{help}");
+        assert!(
+            help.contains("locked-down test CLI"),
+            "about missing from help:\n{help}"
+        );
+    }
+
+    #[test]
+    fn sqlite_tuning_flags_hidden_when_disallowed() {
+        let help = help_text(&Locked);
+        assert!(
+            !help.contains("--sqlite-version"),
+            "--sqlite-version should be hidden:\n{help}"
+        );
+        assert!(
+            !help.contains("--sqlite-cflag"),
+            "--sqlite-cflag should be hidden:\n{help}"
+        );
+    }
+
+    #[test]
+    fn sqlite_tuning_flags_visible_when_allowed() {
+        let help = help_text(&Open);
+        assert!(
+            help.contains("--sqlite-version"),
+            "--sqlite-version should be visible:\n{help}"
+        );
+    }
+
+    #[test]
+    fn enforce_visibility_rejects_sqlite_tuning_when_disallowed() {
+        let cli = parse(&Locked, &["locked", "--sqlite-version", "3.47.0", "parse"])
+            .expect("clap parse");
+        let err = enforce_visibility(&Locked, &cli).expect_err("should reject");
+        assert!(err.contains("--sqlite-version"), "got: {err}");
+    }
+
+    #[test]
+    fn enforce_visibility_rejects_sqlite_cflag_when_disallowed() {
+        let cli = parse(
+            &Locked,
+            &["locked", "--sqlite-cflag", "SQLITE_ENABLE_FTS5", "parse"],
+        )
+        .expect("clap parse");
+        let err = enforce_visibility(&Locked, &cli).expect_err("should reject");
+        assert!(err.contains("--sqlite-cflag"), "got: {err}");
+    }
+
+    #[test]
+    fn enforce_visibility_accepts_sqlite_tuning_when_allowed() {
+        let cli =
+            parse(&Open, &["open", "--sqlite-version", "3.47.0", "parse"]).expect("clap parse");
+        enforce_visibility(&Open, &cli).expect("should accept");
+    }
+
+    #[cfg(feature = "dynload")]
+    #[test]
+    fn dialect_override_flags_hidden_when_disallowed() {
+        let help = help_text(&Locked);
+        assert!(
+            !help.contains("--dialect "),
+            "--dialect should be hidden:\n{help}"
+        );
+    }
+
+    #[cfg(feature = "dynload")]
+    #[test]
+    fn dialect_override_flags_visible_when_allowed() {
+        let help = help_text(&Open);
+        assert!(
+            help.contains("--dialect "),
+            "--dialect should be visible:\n{help}"
+        );
+    }
+
+    #[cfg(feature = "dynload")]
+    #[test]
+    fn enforce_visibility_rejects_dialect_when_disallowed() {
+        let cli = parse(&Locked, &["locked", "--dialect", "/tmp/x.so", "parse"])
+            .expect("clap parse");
+        let err = enforce_visibility(&Locked, &cli).expect_err("should reject");
+        assert!(err.contains("--dialect"), "got: {err}");
+    }
+
+    #[cfg(feature = "dynload")]
+    #[test]
+    fn enforce_visibility_accepts_dialect_when_allowed() {
+        let cli =
+            parse(&Open, &["open", "--dialect", "/tmp/x.so", "parse"]).expect("clap parse");
+        enforce_visibility(&Open, &cli).expect("should accept");
+    }
+
+    #[cfg(feature = "bundled-sqlite-dialect")]
+    #[test]
+    fn stock_impl_exposes_all_override_surfaces() {
+        assert!(Stock.allow_dialect_override());
+        assert!(Stock.allow_sqlite_tuning());
+        assert!(Stock.default_dialect().is_some());
+    }
+}
