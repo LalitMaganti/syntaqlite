@@ -881,7 +881,11 @@ impl<'a> AnyParsedStatement<'a> {
                 ffi::CCommentKind::LineComment => CommentKind::Line,
                 ffi::CCommentKind::BlockComment => CommentKind::Block,
             };
-            CommentSpan::new(c.offset, c.length, kind)
+            let side = match c.side {
+                ffi::CCommentSide::Leading => CommentSide::Leading,
+                ffi::CCommentSide::Trailing => CommentSide::Trailing,
+            };
+            CommentSpan::new(c.offset, c.length, kind, c.token_idx, side)
         })
     }
 

@@ -364,18 +364,10 @@ void synq_parser_record_comment(SyntaqliteParser* p,
   uint8_t side = SYNQ_COMMENT_LEADING;
   uint32_t owner_idx = syntaqlite_vec_len(&p->tokens);
   uint32_t prev_end = p->last_layer0_token_end;
-  if (prev_end != UINT32_MAX && prev_end <= offset) {
-    int saw_newline = 0;
-    for (uint32_t i = prev_end; i < offset; i++) {
-      if (z[i] == '\n') {
-        saw_newline = 1;
-        break;
-      }
-    }
-    if (!saw_newline) {
-      side = SYNQ_COMMENT_TRAILING;
-      owner_idx = syntaqlite_vec_len(&p->tokens) - 1;
-    }
+  if (prev_end != UINT32_MAX && prev_end <= offset &&
+      memchr(z + prev_end, '\n', offset - prev_end) == NULL) {
+    side = SYNQ_COMMENT_TRAILING;
+    owner_idx = syntaqlite_vec_len(&p->tokens) - 1;
   }
 
   SyntaqliteComment t = {
@@ -555,8 +547,36 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
 #endif
 
     // Normal token (or macro fallthrough): record + feed to Lemon.
-    if (synq_parser_record_and_feed(p, cur_type, cur_offset, (uint32_t)cur_len))
+    if (synq_parser_record_and_feed(p, cur_type, cur_offset,
+                                    (uint32_t)cur_len)) {
+      // Eagerly consume same-line trailing comments after the statement
+      // terminator so they attach to this statement's last token instead
+      // of the next statement's first.  Stop at the first newline or
+      // non-skip token; own-line comments belong to the next statement.
+      uint32_t scan = p->offset;
+      while (scan < p->source_len && z[scan] != '\0') {
+        uint32_t tt = 0;
+        int64_t tl =
+            SynqSqliteGetTokenVersionWrapped(&p->dialect, 0, z + scan, &tt);
+        if (tl <= 0)
+          break;
+        if (tt == SYNTAQLITE_TK_SPACE) {
+          if (memchr(z + scan, '\n', (size_t)tl) != NULL)
+            break;
+          scan += (uint32_t)tl;
+          continue;
+        }
+        if (tt == SYNTAQLITE_TK_COMMENT) {
+          if (p->collect_tokens)
+            synq_parser_record_comment(p, scan, (uint32_t)tl);
+          scan += (uint32_t)tl;
+          p->offset = scan;
+          continue;
+        }
+        break;
+      }
       return set_result_status(p, stmt_boundary(p));
+    }
 
     // Shift: lookahead becomes current.
     cur_type = la_type;

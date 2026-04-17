@@ -654,6 +654,39 @@ mod tests {
     }
 
     #[test]
+    fn inter_statement_same_line_comment_attaches_to_prev_semi() {
+        // `SELECT 1; -- trailing` — the comment is on the same source line
+        // as stmt 1's `;`, so it belongs to stmt 1 (TRAILING the SEMI),
+        // not to stmt 2.
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+        let mut session = parser.parse("SELECT 1; -- trailing\nSELECT 2;");
+
+        let stmt1 = ok_stmt!(session);
+        let tokens1: Vec<ParserToken<'_>> = stmt1.tokens().collect();
+        let semi_idx = tokens1
+            .iter()
+            .rposition(|t| t.text() == ";")
+            .map(|i| u32::try_from(i).unwrap())
+            .expect("`;` token in stmt 1");
+
+        let trailing: Vec<_> = stmt1.trailing_comments(semi_idx).collect();
+        assert_eq!(
+            trailing.len(),
+            1,
+            "same-line comment should trail stmt 1's `;`"
+        );
+        assert!(trailing[0].text().contains("trailing"));
+        drop(stmt1);
+
+        let stmt2 = ok_stmt!(session);
+        assert_eq!(
+            stmt2.comments().count(),
+            0,
+            "stmt 2 should have no comments"
+        );
+    }
+
+    #[test]
     fn inter_statement_comment_rolls_forward_as_leading() {
         let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
         let mut session = parser.parse("SELECT 1;\n-- between\nSELECT 2;");

@@ -28,7 +28,7 @@ class TrailingLineComment(TestSuite):
     def test_end_of_statement(self):
         return DiffTestBlueprint(
             sql="SELECT a FROM t -- trailing",
-            out="SELECT a FROM t -- trailing;",
+            out="SELECT a FROM t; -- trailing",
         )
 
     def test_after_column(self):
@@ -50,7 +50,7 @@ class TrailingLineComment(TestSuite):
     def test_after_where(self):
         return DiffTestBlueprint(
             sql="SELECT a FROM t WHERE x = 1 -- filter active",
-            out="SELECT a FROM t WHERE x = 1 -- filter active;",
+            out="SELECT a FROM t WHERE x = 1; -- filter active",
         )
 
     def test_after_select(self):

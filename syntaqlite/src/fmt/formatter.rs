@@ -1,10 +1,10 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
+use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
     AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, ParseOutcome,
 };
-use syntaqlite_syntax::{CommentKind, ParserConfig};
 
 use super::FormatConfig;
 use super::FormatError;
@@ -133,6 +133,7 @@ impl Formatter {
                 offset: c.offset(),
                 length: c.length(),
                 kind: c.kind(),
+                side: c.side(),
             }));
         self.token_entries.clear();
         self.token_entries.extend(
@@ -177,7 +178,6 @@ impl Formatter {
         let mut session = self.parser.parse(source);
         let mut result = String::with_capacity(source.len());
         let mut stmt_num: usize = 0;
-        let mut last_has_root = false;
 
         loop {
             let stmt = match session.next() {
@@ -197,8 +197,6 @@ impl Formatter {
             let stmt_source = erased.text();
 
             let root_id = erased.root_id();
-            let prev_has_root = last_has_root;
-            last_has_root = !root_id.is_null();
             let semicolons = self.config.semicolons;
             let has_comments = !self.comment_entries.is_empty();
             let has_macros = !self.macro_rewrites.is_empty();
@@ -222,7 +220,6 @@ impl Formatter {
             if stmt_num > 0 {
                 emit_stmt_separator(
                     comment_ctx.as_ref(),
-                    semicolons && prev_has_root,
                     stmt_source,
                     &mut arena,
                     &mut self.parts,
@@ -242,6 +239,16 @@ impl Formatter {
             };
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
             self.parts.push(interpreted);
+
+            // Emit this statement's terminator.  Trailing comments now
+            // live on the SEMI's token attachment, so they belong in the
+            // *same* render cycle as the SEMI; the previous design that
+            // added the SEMI in the next statement's emit_stmt_separator
+            // would render the trailing line_suffix in the wrong cycle.
+            if semicolons && !root_id.is_null() {
+                let semi = arena.text(";");
+                self.parts.push(semi);
+            }
 
             if let Some(cctx) = ctx.comment_ctx.as_ref() {
                 self.parts
@@ -275,9 +282,6 @@ impl Formatter {
             return Ok(String::new());
         }
 
-        if self.config.semicolons && last_has_root {
-            result.push(';');
-        }
         result.push('\n');
 
         Ok(result)
@@ -460,7 +464,6 @@ impl Formatter {
             if stmt_num > 0 {
                 emit_stmt_separator(
                     comment_ctx.as_ref(),
-                    false, // no semicolons in debug output
                     stmt_source,
                     &mut arena,
                     &mut self.parts,
@@ -509,63 +512,16 @@ impl Formatter {
 
 fn emit_stmt_separator<'a>(
     comment_ctx: Option<&CommentCtx>,
-    semicolons: bool,
     source: &'a str,
     arena: &mut DocArena<'a>,
     parts: &mut Vec<DocId>,
 ) {
+    parts.push(arena.hardline());
+    parts.push(arena.hardline());
     if let Some(cctx) = comment_ctx
         && let Some((next_offset, _)) = cctx.peek_next_token()
     {
-        if semicolons {
-            parts.push(arena.text(";"));
-        }
-        drain_trailing_gap(cctx, next_offset, source, arena, parts);
-        parts.push(arena.hardline());
-        parts.push(arena.hardline());
         drain_gap_comments(cctx, next_offset, source, arena, parts);
-        return;
-    }
-    if semicolons {
-        parts.push(arena.text(";"));
-    }
-    parts.push(arena.hardline());
-    parts.push(arena.hardline());
-}
-
-fn drain_trailing_gap<'a>(
-    ctx: &CommentCtx,
-    before: u32,
-    source: &'a str,
-    arena: &mut DocArena<'a>,
-    parts: &mut Vec<DocId>,
-) {
-    let mut last_end = ctx.prev_token_end();
-    while let Some(c) = ctx.peek_comment() {
-        if c.offset >= before {
-            break;
-        }
-        let gap_start = (last_end as usize).min(source.len());
-        let gap_end = (c.offset as usize).min(source.len());
-        if gap_start < gap_end && source[gap_start..gap_end].contains('\n') {
-            break;
-        }
-        let text = &source[c.offset as usize..(c.offset + c.length) as usize];
-        match c.kind {
-            CommentKind::Line => {
-                let space = arena.text(" ");
-                let comment = arena.text(text);
-                let inner = arena.cat(space, comment);
-                parts.push(arena.line_suffix(inner));
-                parts.push(arena.break_parent());
-            }
-            CommentKind::Block => {
-                parts.push(arena.text(" "));
-                parts.push(arena.text(text));
-            }
-        }
-        last_end = c.offset + c.length;
-        ctx.advance_comment();
     }
 }
 
@@ -772,6 +728,7 @@ fn reindent_macro<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use syntaqlite_syntax::{CommentKind, CommentSide};
 
     /// Verify that `Formatter` stores an `AnyParser` derived from the dialect,
     /// not a hardcoded `SQLite` `Parser`.
@@ -795,31 +752,27 @@ mod tests {
     }
 
     #[test]
-    fn emit_stmt_separator_without_comments_with_semicolon() {
+    fn emit_stmt_separator_without_comments_emits_blank_line() {
         let source = "SELECT 1";
         let mut arena = DocArena::new();
         let mut parts = Vec::new();
-        emit_stmt_separator(None, true, source, &mut arena, &mut parts);
-        assert_eq!(render_parts(&mut arena, &parts), ";\n\n");
-    }
-
-    #[test]
-    fn emit_stmt_separator_without_comments_without_semicolon() {
-        let source = "SELECT 1";
-        let mut arena = DocArena::new();
-        let mut parts = Vec::new();
-        emit_stmt_separator(None, false, source, &mut arena, &mut parts);
+        emit_stmt_separator(None, source, &mut arena, &mut parts);
         assert_eq!(render_parts(&mut arena, &parts), "\n\n");
     }
 
     #[test]
-    fn emit_stmt_separator_emits_inline_block_comment_before_break() {
+    fn emit_stmt_separator_drains_leading_block_comment_after_break() {
+        // emit_stmt_separator now only handles the inter-statement break
+        // and drains LEADING comments of the next statement.  The
+        // statement terminator (`;`) and any TRAILING comments on it are
+        // emitted by per-statement processing in `format`, not here.
         let source = "/*x*/SELECT";
         let ctx = CommentCtx::new(
             vec![CommentEntry {
                 offset: 0,
                 length: 5,
                 kind: CommentKind::Block,
+                side: CommentSide::Leading,
             }],
             vec![TokenEntry {
                 offset: 5,
@@ -828,8 +781,8 @@ mod tests {
         );
         let mut arena = DocArena::new();
         let mut parts = Vec::new();
-        emit_stmt_separator(Some(&ctx), true, source, &mut arena, &mut parts);
-        assert_eq!(render_parts(&mut arena, &parts), "; /*x*/\n\n");
+        emit_stmt_separator(Some(&ctx), source, &mut arena, &mut parts);
+        assert_eq!(render_parts(&mut arena, &parts), "\n\n/*x*/\n");
     }
 
     #[test]
@@ -841,11 +794,13 @@ mod tests {
                     offset: 0,
                     length: 3,
                     kind: CommentKind::Line,
+                    side: CommentSide::Leading,
                 },
                 CommentEntry {
                     offset: 4,
                     length: 5,
                     kind: CommentKind::Block,
+                    side: CommentSide::Leading,
                 },
             ],
             vec![TokenEntry {
