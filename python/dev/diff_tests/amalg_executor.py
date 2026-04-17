@@ -6,12 +6,16 @@
 Generates dialect amalgamations, compiles test binaries, and runs
 diff tests against them.
 
-Two amalgamation modes are supported:
+Three amalgamation modes are supported:
 
-  FULL         -- runtime inlined into dialect amalgam; self-contained
-                  syntaqlite_<name>.{h,c} that compiles with no extra deps.
-  DIALECT_ONLY -- dialect references an external syntaqlite_runtime.h;
-                  runtime must be compiled and linked separately.
+  FULL              -- runtime inlined into dialect amalgam; self-contained
+                       syntaqlite_<name>.{h,c} that compiles with no extra deps.
+  DIALECT_ONLY      -- dialect references an external syntaqlite_runtime.h;
+                       runtime must be compiled and linked separately.
+  FULL_OMIT_RUNTIME -- same checked-in full amalgamation, but compiled with
+                       -DSYNTAQLITE_OMIT_RUNTIME to strip runtime bodies;
+                       a separate runtime-only .c is linked in. Models the
+                       cdylib dialect-plugin use case from issue #166.
 """
 
 import enum
@@ -28,6 +32,7 @@ from python.dev.diff_tests.testing import DiffTestBlueprint
 class AmalgMode(enum.Enum):
     FULL = "full"
     DIALECT_ONLY = "dialect_only"
+    FULL_OMIT_RUNTIME = "full_omit_runtime"
 
 
 @dataclass
@@ -116,6 +121,43 @@ def _compile_full_binary(
     if proc.returncode != 0:
         raise RuntimeError(
             f"Compilation failed (full) for {dialect_name}:\n{proc.stderr}"
+        )
+
+
+def _compile_full_omit_runtime_binary(
+    test_c: Path,
+    amalg_dir: Path,
+    runtime_dir: Path,
+    dialect_name: str,
+    output_binary: Path,
+) -> None:
+    """Compile test_ast.c against a full amalgamation built with
+    -DSYNTAQLITE_OMIT_RUNTIME, linked against a separately-generated
+    runtime-only .c.
+
+    Models the cdylib dialect-plugin use case: the host binary already
+    provides the runtime, so the plugin's copy of the full amalgamation
+    strips runtime implementations to avoid duplication. Here we stand
+    in for the host runtime by linking a runtime-only .c directly.
+    """
+    grammar_header = f'"syntaqlite_{dialect_name}.h"'
+    grammar_fn = f"syntaqlite_{dialect_name}_dialect"
+    dialect_src = amalg_dir / f"syntaqlite_{dialect_name}.c"
+    runtime_src = runtime_dir / "syntaqlite_runtime.c"
+    cmd = [
+        "cc", "-o", str(output_binary),
+        str(test_c), str(dialect_src), str(runtime_src),
+        f"-I{amalg_dir}",
+        f"-I{runtime_dir}",
+        f"-DGRAMMAR_HEADER={grammar_header}",
+        f"-DGRAMMAR_FN={grammar_fn}",
+        "-DSYNTAQLITE_OMIT_RUNTIME",
+        "-Werror",
+    ]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"Compilation failed (full + OMIT_RUNTIME) for {dialect_name}:\n{proc.stderr}"
         )
 
 
@@ -301,6 +343,14 @@ class AmalgTestContext:
                 self.test_c, amalg_dir, runtime_dir, dialect.name, binary
             )
 
+        elif dialect.mode == AmalgMode.FULL_OMIT_RUNTIME:
+            _build_full(self.cli_binary, dialect, amalg_dir)
+            runtime_dir = self._ensure_runtime()
+            binary = temp / f"test_{key}"
+            _compile_full_omit_runtime_binary(
+                self.test_c, amalg_dir, runtime_dir, dialect.name, binary
+            )
+
         else:
             raise ValueError(f"Unknown AmalgMode: {dialect.mode}")
 
@@ -320,7 +370,7 @@ class AmalgTestContext:
         output = temp / f"strict_{key}"
         runtime_dir = (
             self._runtime_dir
-            if dialect.mode == AmalgMode.DIALECT_ONLY
+            if dialect.mode in (AmalgMode.DIALECT_ONLY, AmalgMode.FULL_OMIT_RUNTIME)
             else None
         )
         compile_strict_warning_check(

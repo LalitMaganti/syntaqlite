@@ -43,6 +43,9 @@ def _dialect_configs(root_dir: Path) -> dict[str, DialectConfig]:
             name="sqlite", mode=AmalgMode.FULL,
             extra_cflags=("-DSYNTAQLITE_OMIT_MACROS",),
         ),
+        "sqliteamalgomitruntime": DialectConfig(
+            name="sqlite", mode=AmalgMode.FULL_OMIT_RUNTIME,
+        ),
         "sqliteamalgruntimeonly": DialectConfig(name="sqlite", mode=AmalgMode.DIALECT_ONLY),
         "perfettoamalgfull": DialectConfig(
             name="perfetto", mode=AmalgMode.FULL,
@@ -105,6 +108,10 @@ def run(ctx: SuiteContext) -> int:
         # consumers to add -Wno-* suppressions.
         for key in sorted(needed):
             config = configs[key]
+            if config.mode == AmalgMode.FULL_OMIT_RUNTIME:
+                # Same source file as the FULL variant, only with some bodies
+                # stripped by the preprocessor — strict-check is transitive.
+                continue
             if ctx.verbose >= 1:
                 print(f"Strict-warning C++ compile check: {config.name} ({config.mode.value})...")
             try:
