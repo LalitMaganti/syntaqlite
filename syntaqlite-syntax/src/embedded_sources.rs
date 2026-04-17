@@ -26,6 +26,10 @@ pub const RUNTIME_HEADERS: &[(&str, &str)] = &[
         "cflags.h",
         include_str!(concat!(env!("OUT_DIR"), "/embedded_cflags.h")),
     ),
+    (
+        "compiler.h",
+        include_str!("../include/syntaqlite/compiler.h"),
+    ),
     ("config.h", include_str!("../include/syntaqlite/config.h")),
     ("parser.h", include_str!("../include/syntaqlite/parser.h")),
     (
