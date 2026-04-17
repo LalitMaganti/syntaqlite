@@ -271,3 +271,15 @@ class TableValuedFunctionFormat(TestSuite):
             sql="SELECT name FROM users",
             out="SELECT name FROM users;",
         )
+
+    def test_empty_double_quoted_literal_preserved(self):
+        return DiffTestBlueprint(
+            sql='SELECT iif(x = "", \'empty\', x);',
+            out='SELECT iif(x = "", \'empty\', x);',
+        )
+
+    def test_empty_double_quoted_in_select_list(self):
+        return DiffTestBlueprint(
+            sql='SELECT "", 1;',
+            out='SELECT "", 1;',
+        )

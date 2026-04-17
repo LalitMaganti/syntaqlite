@@ -221,8 +221,11 @@ impl Formatter {
                     };
 
                     let (s, span_start) = ctx.reader.span_text(span);
-                    if !s.is_empty() {
-                        let quoted = span.is_quoted();
+                    let quoted = span.is_quoted();
+                    // A zero-length unquoted span means the field is absent
+                    // (optional, unset). A zero-length *quoted* span is a
+                    // real `""` token and must round-trip as `""`.
+                    if quoted || !s.is_empty() {
                         if let Some(ref cctx) = ctx.comment_ctx {
                             // For quoted spans, the original token in source
                             // starts one byte earlier (the opening quote) and
