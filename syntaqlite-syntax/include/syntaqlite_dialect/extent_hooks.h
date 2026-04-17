@@ -11,6 +11,7 @@
 #define SYNTAQLITE_INTERNAL_EXTENT_HOOKS_H
 
 #include "syntaqlite_dialect/ast_builder.h"  // for SynqParseCtx, SynqParseToken
+#include "syntaqlite_dialect/dialect_abi.h"  // for SYNTAQLITE_DIALECT_API
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,14 +20,15 @@ extern "C" {
 // Called from the top of Lemon's `yy_shift` for every terminal shift.
 // Pushes a `(root_start, root_end)` range onto the shadow stack when
 // per-node extent tracking is enabled.
-void synq_extent_on_shift(SynqParseCtx* pCtx,
-                          unsigned int major,
-                          const SynqParseToken* token);
+SYNTAQLITE_DIALECT_API void synq_extent_on_shift(SynqParseCtx* pCtx,
+                                                 unsigned int major,
+                                                 const SynqParseToken* token);
 
 // Called from the top of Lemon's `yy_reduce` for every rule reduction,
 // before the user action switch.  Pops `nrhs` entries from the shadow
 // stack and pushes their merged range.
-void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs);
+SYNTAQLITE_DIALECT_API void synq_extent_on_reduce(SynqParseCtx* pCtx,
+                                                  unsigned int nrhs);
 
 // Lemon stores `yyRuleInfoNRhs[r]` as the negative of the rule's RHS
 // symbol count, so the reduce macro negates it to recover `nrhs`.

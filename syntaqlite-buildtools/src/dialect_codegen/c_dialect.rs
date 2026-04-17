@@ -357,34 +357,39 @@ pub(crate) fn generate_parse_h(dialect: &str) -> String {
     w.line("#include <stdio.h>");
     w.newline();
     w.include_local("syntaqlite_dialect/ast_builder.h");
+    w.include_local("syntaqlite_dialect/dialect_abi.h");
     w.newline();
     w.line("#ifdef __cplusplus");
     w.line("extern \"C\" {");
     w.line("#endif");
     w.newline();
     w.line(&format!(
-        "void* Synq{pascal}ParseAlloc(void* (*mallocProc)(size_t), SynqParseCtx* pCtx);"
+        "SYNTAQLITE_DIALECT_API void* Synq{pascal}ParseAlloc(void* (*mallocProc)(size_t), SynqParseCtx* pCtx);"
     ));
     w.line(&format!(
-        "void Synq{pascal}ParseInit(void* parser, SynqParseCtx* pCtx);"
-    ));
-    w.line(&format!("void Synq{pascal}ParseFinalize(void* parser);"));
-    w.line(&format!(
-        "void Synq{pascal}ParseFree(void* parser, void (*freeProc)(void*));"
+        "SYNTAQLITE_DIALECT_API void Synq{pascal}ParseInit(void* parser, SynqParseCtx* pCtx);"
     ));
     w.line(&format!(
-        "void Synq{pascal}Parse(void* parser, int token_type, SynqParseToken minor);"
+        "SYNTAQLITE_DIALECT_API void Synq{pascal}ParseFinalize(void* parser);"
     ));
     w.line(&format!(
-        "uint32_t Synq{pascal}ParseExpectedTokens(void* parser, uint32_t* out_tokens, uint32_t out_cap);"
+        "SYNTAQLITE_DIALECT_API void Synq{pascal}ParseFree(void* parser, void (*freeProc)(void*));"
     ));
     w.line(&format!(
-        "uint32_t Synq{pascal}ParseCompletionContext(void* parser);"
+        "SYNTAQLITE_DIALECT_API void Synq{pascal}Parse(void* parser, int token_type, SynqParseToken minor);"
     ));
-    w.line(&format!("int Synq{pascal}ParseFallback(int iToken);"));
+    w.line(&format!(
+        "SYNTAQLITE_DIALECT_API uint32_t Synq{pascal}ParseExpectedTokens(void* parser, uint32_t* out_tokens, uint32_t out_cap);"
+    ));
+    w.line(&format!(
+        "SYNTAQLITE_DIALECT_API uint32_t Synq{pascal}ParseCompletionContext(void* parser);"
+    ));
+    w.line(&format!(
+        "SYNTAQLITE_DIALECT_API int Synq{pascal}ParseFallback(int iToken);"
+    ));
     w.line("#ifndef NDEBUG");
     w.line(&format!(
-        "void Synq{pascal}ParseTrace(FILE* trace_file, char* prompt);"
+        "SYNTAQLITE_DIALECT_API void Synq{pascal}ParseTrace(FILE* trace_file, char* prompt);"
     ));
     w.line("#endif");
     w.newline();
@@ -406,9 +411,10 @@ pub(crate) fn generate_tokenize_h(dialect: &str) -> String {
     w.header_guard_start(&guard);
     w.include_local("syntaqlite_dialect/sqlite_compat.h");
     w.include_local("syntaqlite/dialect.h");
+    w.include_local("syntaqlite_dialect/dialect_abi.h");
     w.newline();
     w.line(&format!(
-        "i64 Synq{pascal}GetToken(const SyntaqliteDialect* env, const unsigned char* z, int* tokenType);"
+        "SYNTAQLITE_DIALECT_API i64 Synq{pascal}GetToken(const SyntaqliteDialect* env, const unsigned char* z, int* tokenType);"
     ));
     w.newline();
     w.header_guard_end(&guard);

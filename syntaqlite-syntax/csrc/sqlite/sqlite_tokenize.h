@@ -7,10 +7,11 @@
 #define SYNTAQLITE_INTERNAL_SQLITE_TOKENIZE_H
 
 #include "syntaqlite/dialect.h"
+#include "syntaqlite_dialect/dialect_abi.h"
 #include "syntaqlite_dialect/sqlite_compat.h"
 
-i64 SynqSqliteGetToken(const SyntaqliteDialect* env,
-                       const unsigned char* z,
-                       int* tokenType);
+SYNTAQLITE_DIALECT_API i64 SynqSqliteGetToken(const SyntaqliteDialect* env,
+                                              const unsigned char* z,
+                                              int* tokenType);
 
 #endif  // SYNTAQLITE_INTERNAL_SQLITE_TOKENIZE_H

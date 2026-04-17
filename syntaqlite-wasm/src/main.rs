@@ -111,8 +111,35 @@ fn decode_input(ptr: u32, len: u32) -> Result<String, String> {
     Ok(source.to_string())
 }
 
+/// Installs a panic hook that prints the panic location and message to stderr
+/// (which emscripten routes to `console.error`). Without this the default hook
+/// runs, but the message can get swallowed by the nounwind guard inserted at
+/// `extern "C"` boundaries, leaving the JS side with only a generic wasm trap.
+/// `main` is not called by the emscripten loader for `MAIN_MODULE` builds, so
+/// we install lazily on first export call.
+fn install_panic_hook() {
+    use std::sync::Once;
+    static ONCE: Once = Once::new();
+    ONCE.call_once(|| {
+        std::panic::set_hook(Box::new(|info| {
+            let loc = info.location().map_or_else(
+                || "unknown location".to_string(),
+                |l| format!("{}:{}:{}", l.file(), l.line(), l.column()),
+            );
+            let msg = info
+                .payload()
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("<non-string panic payload>");
+            eprintln!("syntaqlite-wasm panic at {loc}: {msg}");
+        }));
+    });
+}
+
 /// Runs `f`, catching any panic and writing `msg` to the result buffer on failure.
 fn catch_unwind<F: FnOnce() -> i32>(f: F, msg: &'static str) -> i32 {
+    install_panic_hook();
     if let Ok(result) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
         result
     } else {

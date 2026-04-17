@@ -11,23 +11,31 @@
 #include <stdio.h>
 
 #include "syntaqlite_dialect/ast_builder.h"
+#include "syntaqlite_dialect/dialect_abi.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void* SynqSqliteParseAlloc(void* (*mallocProc)(size_t), SynqParseCtx* pCtx);
-void SynqSqliteParseInit(void* parser, SynqParseCtx* pCtx);
-void SynqSqliteParseFinalize(void* parser);
-void SynqSqliteParseFree(void* parser, void (*freeProc)(void*));
-void SynqSqliteParse(void* parser, int token_type, SynqParseToken minor);
-uint32_t SynqSqliteParseExpectedTokens(void* parser,
-                                       uint32_t* out_tokens,
-                                       uint32_t out_cap);
-uint32_t SynqSqliteParseCompletionContext(void* parser);
-int SynqSqliteParseFallback(int iToken);
+SYNTAQLITE_DIALECT_API void* SynqSqliteParseAlloc(void* (*mallocProc)(size_t),
+                                                  SynqParseCtx* pCtx);
+SYNTAQLITE_DIALECT_API void SynqSqliteParseInit(void* parser,
+                                                SynqParseCtx* pCtx);
+SYNTAQLITE_DIALECT_API void SynqSqliteParseFinalize(void* parser);
+SYNTAQLITE_DIALECT_API void SynqSqliteParseFree(void* parser,
+                                                void (*freeProc)(void*));
+SYNTAQLITE_DIALECT_API void SynqSqliteParse(void* parser,
+                                            int token_type,
+                                            SynqParseToken minor);
+SYNTAQLITE_DIALECT_API uint32_t
+SynqSqliteParseExpectedTokens(void* parser,
+                              uint32_t* out_tokens,
+                              uint32_t out_cap);
+SYNTAQLITE_DIALECT_API uint32_t SynqSqliteParseCompletionContext(void* parser);
+SYNTAQLITE_DIALECT_API int SynqSqliteParseFallback(int iToken);
 #ifndef NDEBUG
-void SynqSqliteParseTrace(FILE* trace_file, char* prompt);
+SYNTAQLITE_DIALECT_API void SynqSqliteParseTrace(FILE* trace_file,
+                                                 char* prompt);
 #endif
 
 #ifdef __cplusplus
