@@ -346,7 +346,9 @@ int synq_parser_record_and_feed(SyntaqliteParser* p,
 
 // Record a comment token (outlined from the hot loop).
 SYNQ_NOINLINE
-static void record_comment(SyntaqliteParser* p, uint32_t offset, uint32_t len) {
+void synq_parser_record_comment(SyntaqliteParser* p,
+                                uint32_t offset,
+                                uint32_t len) {
   const unsigned char* z = (const unsigned char*)p->source;
   SyntaqliteComment t = {offset, len,
                          z[offset] == '-' ? (uint8_t)0 : (uint8_t)1};
@@ -479,7 +481,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     if (cur_type == SYNTAQLITE_TK_COMMENT) {
       p->had_comment = 1;
       if (p->collect_tokens)
-        record_comment(p, cur_offset, (uint32_t)cur_len);
+        synq_parser_record_comment(p, cur_offset, (uint32_t)cur_len);
       cur_len = next_token(p, z, cur_offset + (uint32_t)cur_len, &cur_offset,
                            &cur_type);
       continue;
@@ -744,18 +746,10 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
     p->pending_reset = 0;
   }
 
-  // Skip whitespace silently.
-  if (token_type == SYNTAQLITE_TK_SPACE) {
-    return set_result_status(p, SYNTAQLITE_PARSE_DONE);
-  }
-
-  // Record comments but don't feed to Lemon.
-  if (token_type == SYNTAQLITE_TK_COMMENT) {
-    if (p->collect_tokens && text) {
-      uint32_t tok_offset = (uint32_t)(text - p->source);
-      SyntaqliteComment t = {tok_offset, len,
-                             (uint8_t)(text[0] == '-' ? 0 : 1)};
-      syntaqlite_vec_push(&p->comments, t, p->mem);
+  // Skip trivia (whitespace and comments) without feeding to Lemon.
+  if (synq_token_is_trivia(token_type)) {
+    if (token_type == SYNTAQLITE_TK_COMMENT && p->collect_tokens && text) {
+      synq_parser_record_comment(p, (uint32_t)(text - p->source), len);
     }
     return set_result_status(p, SYNTAQLITE_PARSE_DONE);
   }
