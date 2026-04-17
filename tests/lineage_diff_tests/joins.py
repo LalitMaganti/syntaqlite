@@ -15,9 +15,36 @@ class Joins(TestSuite):
                 "SELECT users.name, orders.id FROM users JOIN orders ON users.id = orders.user_id;\n"
             ),
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"users","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":{"name":"orders","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":2,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"name","index":0,"origin":{"table":"users","column":"name"}},{"name":"id","index":1,"origin":{"table":"orders","column":"id"}}],"relations":[{"name":"orders","kind":"table"},{"name":"users","kind":"table"}],"physical_tables":[{"name":"orders"},{"name":"users"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: users (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: orders (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 2
+              status: complete
+              target: (none)
+              columns:
+                name <- users.name
+                id <- orders.id
+              relations:
+                orders (table)
+                users (table)
+              physical_tables:
+                orders
+                users
+              partial_reasons: (none)
 """,
         )
 
@@ -29,8 +56,35 @@ class Joins(TestSuite):
                 "SELECT a.x, b.y FROM a, b;\n"
             ),
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"a","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":{"name":"b","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":2,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"x","index":0,"origin":{"table":"a","column":"x"}},{"name":"y","index":1,"origin":{"table":"b","column":"y"}}],"relations":[{"name":"a","kind":"table"},{"name":"b","kind":"table"}],"physical_tables":[{"name":"a"},{"name":"b"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: a (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: b (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 2
+              status: complete
+              target: (none)
+              columns:
+                x <- a.x
+                y <- b.y
+              relations:
+                a (table)
+                b (table)
+              physical_tables:
+                a
+                b
+              partial_reasons: (none)
 """,
         )

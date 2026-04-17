@@ -11,6 +11,9 @@ class Errors(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT FROM;\n",
             out="""\
-            {"kind":"error","schema_version":0,"file":"<stdin>","statement_index":0,"stage":"parse","message":"syntax error near 'FROM'"}
+            Error
+              statement: 0
+              stage: parse
+              message: syntax error near 'FROM'
 """,
         )

@@ -13,8 +13,25 @@ class Direct(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE users (id INTEGER, name TEXT);\nSELECT name FROM users;\n",
             out="""\
-{"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"users","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-{"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"name","index":0,"origin":{"table":"users","column":"name"}}],"relations":[{"name":"users","kind":"table"}],"physical_tables":[{"name":"users"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: users (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: (none)
+              columns:
+                name <- users.name
+              relations:
+                users (table)
+              physical_tables:
+                users
+              partial_reasons: (none)
 """,
         )
 
@@ -22,8 +39,26 @@ class Direct(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE users (id INTEGER, name TEXT);\nSELECT id, name FROM users;\n",
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"users","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"id","index":0,"origin":{"table":"users","column":"id"}},{"name":"name","index":1,"origin":{"table":"users","column":"name"}}],"relations":[{"name":"users","kind":"table"}],"physical_tables":[{"name":"users"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: users (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: (none)
+              columns:
+                id <- users.id
+                name <- users.name
+              relations:
+                users (table)
+              physical_tables:
+                users
+              partial_reasons: (none)
 """,
         )
 
@@ -31,7 +66,24 @@ class Direct(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INTEGER);\nSELECT a AS aa FROM t;\n",
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"t","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"aa","index":0,"origin":{"table":"t","column":"a"}}],"relations":[{"name":"t","kind":"table"}],"physical_tables":[{"name":"t"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: t (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: (none)
+              columns:
+                aa <- t.a
+              relations:
+                t (table)
+              physical_tables:
+                t
+              partial_reasons: (none)
 """,
         )

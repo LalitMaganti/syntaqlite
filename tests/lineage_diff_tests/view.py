@@ -19,8 +19,37 @@ class View(TestSuite):
                 "SELECT name FROM u;\n"
             ),
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"users","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":{"name":"u","kind":"view"},"columns":[{"name":"id","index":0,"origin":{"table":"users","column":"id"}},{"name":"name","index":1,"origin":{"table":"users","column":"name"}}],"relations":[{"name":"users","kind":"table"}],"physical_tables":[{"name":"users"}]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":2,"status":"partial","partial_reasons":[{"code":"unexpanded_view","view":"u"}],"target":null,"columns":[{"name":"name","index":0,"origin":null}],"relations":[{"name":"u","kind":"view"}],"physical_tables":[{"name":"u"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: users (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: u (view)
+              columns:
+                id <- users.id
+                name <- users.name
+              relations:
+                users (table)
+              physical_tables:
+                users
+              partial_reasons: (none)
+            Lineage
+              statement: 2
+              status: partial
+              target: (none)
+              columns:
+                name <- (transformed)
+              relations:
+                u (view)
+              physical_tables:
+                u
+              partial_reasons:
+                unexpanded_view: u
 """,
         )

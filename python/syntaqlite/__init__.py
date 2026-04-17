@@ -163,13 +163,14 @@ class RelationAccess:
 class Lineage:
     """Column lineage for a SELECT statement."""
 
-    __slots__ = ("complete", "columns", "relations", "tables")
+    __slots__ = ("complete", "columns", "relations", "physical_tables", "unexpanded_views")
 
     def __init__(self, d: dict):
         self.complete: bool = d["complete"]
         self.columns: list[ColumnLineage] = [ColumnLineage(c) for c in d["columns"]]
         self.relations: list[RelationAccess] = [RelationAccess(r) for r in d["relations"]]
-        self.tables: list[str] = d["tables"]
+        self.physical_tables: list[str] = d["physical_tables"]
+        self.unexpanded_views: list[str] = d.get("unexpanded_views", [])
 
     def __repr__(self):
         status = "complete" if self.complete else "partial"

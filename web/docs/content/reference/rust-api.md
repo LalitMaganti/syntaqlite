@@ -76,17 +76,28 @@ After `analyze()`, the returned `SemanticModel` provides column-level lineage
 for SELECT statements. Lineage traces each result column back to its source
 table and column.
 
+`model.statements()` yields one `StatementModel` per statement; lineage
+methods are per-statement.
+
 | Type / Method | Description |
 |---------------|-------------|
-| `model.lineage()` | Per-column lineage: `Option<LineageResult<&[ColumnLineage]>>` |
-| `model.relations_accessed()` | Relations in FROM: `Option<LineageResult<&[RelationAccess]>>` |
-| `model.physical_tables_accessed()` | Physical tables after resolving CTEs/views: `Option<LineageResult<&[PhysicalTableAccess]>>` |
+| `stmt.lineage()` | Per-column lineage: `Option<LineageResult<&[ColumnLineage]>>` |
+| `stmt.relations_accessed()` | Relations in FROM: `Option<LineageResult<&[RelationAccess]>>` |
+| `stmt.physical_tables_accessed()` | Physical tables after resolving CTEs/views: `Option<LineageResult<&[PhysicalTableAccess]>>` |
+| `stmt.defined_relations()` | `&[DefinedRelation]` — targets created by DDL (`CREATE TABLE`/`CREATE VIEW`) |
+| `stmt.unexpanded_views()` | `&[String]` — canonical names of views whose bodies weren't available for expansion |
 | `LineageResult<T>` | `Complete(T)` — fully resolved, or `Partial(T)` — some view bodies unavailable |
 | `ColumnLineage` | `name: String`, `index: u32`, `origin: Option<ColumnOrigin>` |
 | `ColumnOrigin` | `table: String`, `column: String` |
 | `RelationAccess` | `name: String`, `kind: RelationKind` |
 | `RelationKind` | `Table` or `View` |
 | `PhysicalTableAccess` | `name: String` |
+| `DefinedRelation` | `name: String`, `is_view: bool` |
 
-Returns `None` for non-query statements (CREATE, INSERT, etc.). Returns
-`Partial` when a view is referenced but its body is unavailable for resolution.
+Lineage methods return `None` for non-query statements (CREATE, INSERT,
+etc.). A column's `origin` is populated only when the column is an
+untransformed passthrough — a direct column reference or a pure rename
+alias. Expressions, casts, aggregates, and set-op (`UNION`, etc.)
+columns have `origin: None`. Result is `Partial` when a referenced view's
+body is unavailable for tracing through; `unexpanded_views()` lists the
+view names.

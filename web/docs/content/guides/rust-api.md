@@ -194,27 +194,32 @@ let model = analyzer.analyze(
     &config,
 );
 
-if let Some(lineage) = model.lineage() {
-    println!("Complete: {}", lineage.is_complete());
-    for col in lineage.into_inner() {
-        print!("  column {}: {}", col.index, col.name);
-        if let Some(ref origin) = col.origin {
-            print!(" <- {}.{}", origin.table, origin.column);
+for stmt in model.statements() {
+    if let Some(lineage) = stmt.lineage() {
+        println!("Complete: {}", lineage.is_complete());
+        for col in lineage.into_inner() {
+            print!("  column {}: {}", col.index, col.name);
+            if let Some(ref origin) = col.origin {
+                print!(" <- {}.{}", origin.table, origin.column);
+            }
+            println!();
         }
-        println!();
     }
-}
-
-if let Some(physical_tables) = model.physical_tables_accessed() {
-    for t in physical_tables.into_inner() {
-        println!("  table: {}", t.name);
+    if let Some(physical_tables) = stmt.physical_tables_accessed() {
+        for t in physical_tables.into_inner() {
+            println!("  physical table: {}", t.name);
+        }
+    }
+    for view in stmt.unexpanded_views() {
+        println!("  view body not available: {view}");
     }
 }
 ```
 
 `lineage()` returns `None` for non-query statements. It returns
 `LineageResult::Partial` when a view is referenced but its body is unavailable
-for resolution.
+for resolution; `unexpanded_views()` surfaces which view names caused the
+partial result.
 
 ## Next steps
 

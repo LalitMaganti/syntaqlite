@@ -14,7 +14,7 @@ def run(ctx: SuiteContext) -> int:
 
     argv = [
         "--binary", str(ctx.binary),
-        "--subcommand", "lineage -o json",
+        "--subcommand", "lineage -o text",
         "--test-dir", "tests/lineage_diff_tests",
     ]
     if ctx.filter_pattern:

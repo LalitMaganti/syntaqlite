@@ -97,6 +97,13 @@ typedef struct {
   uint32_t is_view;   // 0 = table, 1 = view
 } SyntaqliteDefinedRelation;
 
+// A view whose body was not available for expansion during lineage
+// resolution. Its presence means the statement's lineage result is
+// Partial; the name identifies which view body would have been needed.
+typedef struct {
+  const char* name;
+} SyntaqliteUnexpandedView;
+
 // Analysis mode — controls whether DDL persists across analyze() calls.
 typedef enum {
   // Statements are being analyzed (e.g. editing a SQL file).
@@ -253,6 +260,17 @@ SYNTAQLITE_API uint32_t syntaqlite_validator_physical_table_count(
 SYNTAQLITE_API const SyntaqlitePhysicalTableAccess* syntaqlite_validator_physical_tables(
     const SyntaqliteValidator* v);
 
+// Number of views whose bodies were not available for expansion during
+// lineage resolution across all statements. A non-zero count means at
+// least one statement's lineage is Partial.
+SYNTAQLITE_API uint32_t syntaqlite_validator_unexpanded_view_count(
+    const SyntaqliteValidator* v);
+
+// Pointer to the unexpanded views array from the last analyze() call.
+// Returns NULL when the count is 0.
+SYNTAQLITE_API const SyntaqliteUnexpandedView* syntaqlite_validator_unexpanded_views(
+    const SyntaqliteValidator* v);
+
 // ---------------------------------------------------------------------------
 // Per-statement access (valid until next analyze() or destroy())
 // ---------------------------------------------------------------------------
@@ -311,6 +329,17 @@ SYNTAQLITE_API uint32_t syntaqlite_validator_statement_defined_relation_count(
 // Defined relations for statement `idx`. NULL when count is 0.
 SYNTAQLITE_API const SyntaqliteDefinedRelation*
 syntaqlite_validator_statement_defined_relations(
+    SyntaqliteValidator* v, uint32_t idx);
+
+// Number of views referenced in statement `idx` whose bodies were not
+// available for expansion during lineage resolution. A non-zero count
+// means the statement's lineage is Partial.
+SYNTAQLITE_API uint32_t syntaqlite_validator_statement_unexpanded_view_count(
+    SyntaqliteValidator* v, uint32_t idx);
+
+// Unexpanded views for statement `idx`. NULL when count is 0.
+SYNTAQLITE_API const SyntaqliteUnexpandedView*
+syntaqlite_validator_statement_unexpanded_views(
     SyntaqliteValidator* v, uint32_t idx);
 
 // Free a string returned by a syntaqlite_* function that documents

@@ -121,15 +121,20 @@ for col in result.lineage.columns:
   email <- users.email
 ```
 
-The `lineage` object also lists the relations referenced by the query:
+The `lineage` object also lists the catalog relations referenced in FROM
+(tables and views as written in the query) and the physical tables
+accessed after CTE/view expansion:
 
 ```python
 for rel in result.lineage.relations:
-    print(f"  {rel.name} ({rel.kind})")
+    print(f"  relation: {rel.name} ({rel.kind})")
+for t in result.lineage.physical_tables:
+    print(f"  physical table: {t}")
 ```
 
 ```text
-  users (table)
+  relation: users (table)
+  physical table: users
 ```
 
 ## 4. Parse and inspect the AST

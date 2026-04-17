@@ -3,7 +3,12 @@
 ## Unreleased
 
 **Breaking:**
-- Renamed `TableAccess` → `PhysicalTableAccess` and `StatementModel::tables_accessed()` → `physical_tables_accessed()` in the Rust API. The corresponding C symbols `SyntaqliteTableAccess`, `syntaqlite_validator_table_count`, `syntaqlite_validator_tables`, `syntaqlite_validator_statement_table_count`, and `syntaqlite_validator_statement_tables` are renamed with a `physical_` infix.
+- Renamed `TableAccess` → `PhysicalTableAccess` and `StatementModel::tables_accessed()` → `physical_tables_accessed()` in the Rust API. The corresponding C symbols `SyntaqliteTableAccess`, `syntaqlite_validator_table_count`, `syntaqlite_validator_tables`, `syntaqlite_validator_statement_table_count`, and `syntaqlite_validator_statement_tables` are renamed with a `physical_` infix. The Python `Lineage` attribute is renamed `tables` → `physical_tables`.
+
+**Added:**
+- New `syntaqlite lineage [tables|columns] [FILES]` CLI subcommand. Emits NDJSON (`schema_version: 0`, pre-stable) or human-readable text for column and table lineage. Exit 1 when any statement fails to parse or validate.
+- New `StatementModel::unexpanded_views()` accessor — canonical names of views whose bodies weren't available for expansion (surfaces as a structured partial-reason in the CLI output).
+- Matching C FFI: `SyntaqliteUnexpandedView` struct plus aggregate (`syntaqlite_validator_unexpanded_view_count` / `syntaqlite_validator_unexpanded_views`) and per-statement (`syntaqlite_validator_statement_unexpanded_view_count` / `syntaqlite_validator_statement_unexpanded_views`) accessors. Python `Lineage` objects expose the same data via `unexpanded_views: list[str]`.
 
 ## 0.4.2
 

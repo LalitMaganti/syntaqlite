@@ -163,7 +163,7 @@ True
 ...     print(f"{col.name} <- {col.origin}")
 id <- users.id
 name <- users.name
->>> r.lineage.tables
+>>> r.lineage.physical_tables
 ['users']
 ```
 
@@ -185,7 +185,8 @@ name <- users.name
 | `complete` | `bool` | `True` if all sources fully resolved |
 | `columns` | `list[ColumnLineage]` | Per-column lineage |
 | `relations` | `list[RelationAccess]` | Catalog relations referenced in FROM |
-| `tables` | `list[str]` | Physical table names accessed |
+| `physical_tables` | `list[str]` | Physical table names accessed after CTE/view expansion |
+| `unexpanded_views` | `list[str]` | View names whose bodies weren't available for expansion (non-empty means `complete=False`) |
 
 **`ColumnLineage`** — lineage for a single result column:
 

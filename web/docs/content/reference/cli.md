@@ -112,6 +112,58 @@ Exit codes:
 - `0` — parsed successfully
 - `1` — parse error
 
+## syntaqlite lineage
+
+Extract column and table lineage from SQL.
+
+```bash
+syntaqlite lineage [OPTIONS] [FILES...]
+syntaqlite lineage tables [OPTIONS] [FILES...]
+syntaqlite lineage columns [OPTIONS] [FILES...]
+```
+
+Reads from stdin if no files are given. For each statement, emits a
+lineage record listing the output columns, their origin table/column
+(when the column is an untransformed passthrough), the catalog
+relations referenced in FROM, and the physical tables accessed after
+CTE/view expansion. Statements that fail parsing or validation emit an
+error record instead and cause a non-zero exit.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `-e, --expression <SQL>` | | SQL to analyze directly (instead of files or stdin) |
+| `--schema <FILE>` | | Schema DDL file(s) to load (repeatable, supports globs) |
+| `-o, --output <FORMAT>` | `json` | Output format: `json` or `text` |
+| `--dialect <PATH>` | | Path to custom dialect shared library |
+| `--dialect-name <NAME>` | | Symbol name in dialect library |
+| `--sqlite-version <VER>` | `latest` | Target SQLite version |
+| `--sqlite-cflag <FLAG>` | | Enable a compile-time flag (repeatable) |
+
+Output formats:
+- `json` — newline-delimited JSON (NDJSON), one record per statement or
+  error. Each record includes `schema_version` (currently `0`, pre-stable),
+  `file`, `statement_index`, `status` (`complete` or `partial`),
+  `partial_reasons`, `target`, `columns`, `relations`, and
+  `physical_tables`. Suitable for piping into lineage tooling.
+- `text` — human-readable indented format, one record per statement or error.
+
+Scope subcommands project the output to a subset:
+- `tables` — emit only relations and physical tables (drops `columns`)
+- `columns` — emit only column lineage (drops `relations` and `physical_tables`)
+
+A column's `origin` is populated only when the column is an untransformed
+passthrough (direct reference or pure rename alias). Expressions, casts,
+aggregates, window functions, and set-operation (`UNION`, etc.) columns
+have `origin: null`. Views and CTEs are transparent (expanded into
+`physical_tables`); real tables and temp tables are opaque boundaries.
+When a view body is not available for expansion, the record's `status`
+becomes `partial` and `partial_reasons` includes an `unexpanded_view`
+entry with the view name.
+
+Exit codes:
+- `0` — all statements produced a lineage record
+- `1` — one or more error records were emitted
+
 ## syntaqlite lsp
 
 Start the language server on stdio. On startup, the server discovers

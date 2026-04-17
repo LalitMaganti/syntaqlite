@@ -72,6 +72,13 @@ pub struct SyntaqliteDefinedRelation {
     pub is_view: u32,
 }
 
+/// A view whose body was not available for expansion during lineage
+/// resolution.
+#[repr(C)]
+pub struct SyntaqliteUnexpandedView {
+    pub name: *const c_char,
+}
+
 /// Lazily-cached C-compatible data for a single statement.
 /// Each field is populated on first access by the corresponding accessor
 /// function and remains valid until the next `analyze()` call.
@@ -83,6 +90,7 @@ struct PerStatementCache {
     relations: Option<(Vec<SyntaqliteRelationAccess>, Vec<CString>)>,
     physical_tables: Option<(Vec<SyntaqlitePhysicalTableAccess>, Vec<CString>)>,
     defined_relations: Option<(Vec<SyntaqliteDefinedRelation>, Vec<CString>)>,
+    unexpanded_views: Option<(Vec<SyntaqliteUnexpandedView>, Vec<CString>)>,
 }
 
 /// Opaque validator handle exposed to C.
@@ -113,6 +121,8 @@ struct ValidatorState {
     c_relations: Vec<SyntaqliteRelationAccess>,
     /// C-compatible table access from the most recent `analyze()` call.
     c_physical_tables: Vec<SyntaqlitePhysicalTableAccess>,
+    /// C-compatible unexpanded views from the most recent `analyze()` call.
+    c_unexpanded_views: Vec<SyntaqliteUnexpandedView>,
     /// Rendered lineage strings, kept alive for the C pointers.
     lineage_strings: Vec<CString>,
     /// The model from the most recent `analyze()` call.
@@ -162,11 +172,13 @@ fn severity_to_c(s: Severity) -> u32 {
 use super::model::SemanticModel;
 
 /// Populate lineage C structs from the analysis model.
+#[expect(clippy::too_many_lines)]
 fn populate_lineage(state: &mut ValidatorState, model: &SemanticModel) {
     state.lineage_strings.clear();
     state.c_column_lineage.clear();
     state.c_relations.clear();
     state.c_physical_tables.clear();
+    state.c_unexpanded_views.clear();
     state.lineage_complete = false;
 
     if let Some(lineage_result) = model.lineage() {
@@ -271,6 +283,24 @@ fn populate_lineage(state: &mut ValidatorState, model: &SemanticModel) {
             });
         }
     }
+
+    {
+        let base = state.lineage_strings.len();
+        let mut view_count = 0;
+        for stmt in model.statements() {
+            for view in stmt.unexpanded_views() {
+                state
+                    .lineage_strings
+                    .push(CString::new(view.as_str()).unwrap_or_default());
+                view_count += 1;
+            }
+        }
+        for i in 0..view_count {
+            state.c_unexpanded_views.push(SyntaqliteUnexpandedView {
+                name: state.lineage_strings[base + i].as_ptr(),
+            });
+        }
+    }
 }
 
 // ── Exported C functions ────────────────────────────────────────────────────
@@ -294,6 +324,7 @@ fn create_validator(dialect: AnyDialect) -> *mut SyntaqliteValidator {
         c_column_lineage: Vec::new(),
         c_relations: Vec::new(),
         c_physical_tables: Vec::new(),
+        c_unexpanded_views: Vec::new(),
         lineage_strings: Vec::new(),
         last_model: None,
         per_statement_cache: Vec::new(),
@@ -844,7 +875,9 @@ pub unsafe extern "C" fn syntaqlite_validator_relations(
 /// `v` must be a valid pointer from `syntaqlite_validator_create_sqlite`.
 #[unsafe(no_mangle)]
 #[expect(clippy::cast_possible_truncation)]
-pub unsafe extern "C" fn syntaqlite_validator_physical_table_count(v: *const SyntaqliteValidator) -> u32 {
+pub unsafe extern "C" fn syntaqlite_validator_physical_table_count(
+    v: *const SyntaqliteValidator,
+) -> u32 {
     // SAFETY: caller guarantees `v` is valid.
     let v = unsafe { &*v };
     v.state().c_physical_tables.len() as u32
@@ -867,6 +900,43 @@ pub unsafe extern "C" fn syntaqlite_validator_physical_tables(
         std::ptr::null()
     } else {
         state.c_physical_tables.as_ptr()
+    }
+}
+
+/// Number of views whose bodies were not available for expansion during
+/// lineage resolution across all statements. A non-zero count means at
+/// least one statement had a Partial lineage result.
+///
+/// # Safety
+///
+/// `v` must be a valid pointer from `syntaqlite_validator_create_sqlite`.
+#[unsafe(no_mangle)]
+#[expect(clippy::cast_possible_truncation)]
+pub unsafe extern "C" fn syntaqlite_validator_unexpanded_view_count(
+    v: *const SyntaqliteValidator,
+) -> u32 {
+    // SAFETY: caller guarantees `v` is valid.
+    let v = unsafe { &*v };
+    v.state().c_unexpanded_views.len() as u32
+}
+
+/// Pointer to the unexpanded views array. Returns NULL when count is 0.
+///
+/// # Safety
+///
+/// `v` must be a valid pointer from `syntaqlite_validator_create_sqlite`.
+/// The returned pointer is valid until the next `analyze()` or `destroy()`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_unexpanded_views(
+    v: *const SyntaqliteValidator,
+) -> *const SyntaqliteUnexpandedView {
+    // SAFETY: caller guarantees `v` is valid.
+    let v = unsafe { &*v };
+    let state = v.state();
+    if state.c_unexpanded_views.is_empty() {
+        std::ptr::null()
+    } else {
+        state.c_unexpanded_views.as_ptr()
     }
 }
 
@@ -1030,6 +1100,25 @@ fn ensure_defined_relations<'a>(
             });
         }
         (defs, strings)
+    })
+}
+
+/// Build C unexpanded views from a `StatementModel`.
+fn ensure_unexpanded_views<'a>(
+    cache: &'a mut PerStatementCache,
+    stmt: &StatementModel,
+) -> &'a (Vec<SyntaqliteUnexpandedView>, Vec<CString>) {
+    cache.unexpanded_views.get_or_insert_with(|| {
+        let strings: Vec<CString> = stmt
+            .unexpanded_views()
+            .iter()
+            .map(|v| CString::new(v.as_str()).unwrap_or_default())
+            .collect();
+        let views = strings
+            .iter()
+            .map(|s| SyntaqliteUnexpandedView { name: s.as_ptr() })
+            .collect();
+        (views, strings)
     })
 }
 
@@ -1210,6 +1299,42 @@ pub unsafe extern "C" fn syntaqlite_validator_statement_defined_relations(
         return std::ptr::null();
     };
     cached_slice(&ensure_defined_relations(c, s).0).0
+}
+
+/// Number of views referenced in statement `idx` whose bodies were not
+/// available for expansion. A non-zero count means lineage is Partial.
+///
+/// # Safety
+///
+/// `v` must be a valid pointer from `syntaqlite_validator_create_*`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_unexpanded_view_count(
+    v: *mut SyntaqliteValidator,
+    idx: u32,
+) -> u32 {
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return 0;
+    };
+    cached_slice(&ensure_unexpanded_views(c, s).0).1
+}
+
+/// Unexpanded views for statement `idx`. NULL when count is 0.
+///
+/// # Safety
+///
+/// `v` must be a valid pointer from `syntaqlite_validator_create_*`.
+/// Returned pointer is valid until the next `analyze()` or `destroy()`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_statement_unexpanded_views(
+    v: *mut SyntaqliteValidator,
+    idx: u32,
+) -> *const SyntaqliteUnexpandedView {
+    // SAFETY: caller guarantees `v` is valid; `stmt_cache` documents its safety requirements.
+    let Some((s, c)) = (unsafe { stmt_cache(v, idx) }) else {
+        return std::ptr::null();
+    };
+    cached_slice(&ensure_unexpanded_views(c, s).0).0
 }
 
 /// Free a string returned by `syntaqlite_string_*` functions.
@@ -1916,6 +2041,13 @@ mod tests {
                 "view lineage should be partial"
             );
 
+            let view_count = syntaqlite_validator_statement_unexpanded_view_count(v, 0);
+            assert_eq!(view_count, 1, "one unexpanded view expected");
+            let views = syntaqlite_validator_statement_unexpanded_views(v, 0);
+            assert!(!views.is_null());
+            let first = &*views;
+            assert_eq!(CStr::from_ptr(first.name).to_str().unwrap(), "active_users",);
+
             syntaqlite_validator_destroy(v);
         }
     }
@@ -2154,7 +2286,10 @@ mod tests {
             assert!(syntaqlite_validator_statement_column_lineage(v, 99).is_null());
             assert_eq!(syntaqlite_validator_statement_relation_count(v, 99), 0);
             assert!(syntaqlite_validator_statement_relations(v, 99).is_null());
-            assert_eq!(syntaqlite_validator_statement_physical_table_count(v, 99), 0);
+            assert_eq!(
+                syntaqlite_validator_statement_physical_table_count(v, 99),
+                0
+            );
             assert!(syntaqlite_validator_statement_physical_tables(v, 99).is_null());
             assert_eq!(
                 syntaqlite_validator_statement_defined_relation_count(v, 99),

@@ -15,8 +15,32 @@ class Union(TestSuite):
                 "SELECT x FROM a UNION ALL SELECT y FROM b;\n"
             ),
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"a","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":{"name":"b","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":2,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"x","index":0,"origin":{"table":"a","column":"x"}}],"relations":[{"name":"a","kind":"table"}],"physical_tables":[{"name":"a"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: a (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: b (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 2
+              status: complete
+              target: (none)
+              columns:
+                x <- a.x
+              relations:
+                a (table)
+              physical_tables:
+                a
+              partial_reasons: (none)
 """,
         )

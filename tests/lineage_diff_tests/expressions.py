@@ -13,8 +13,25 @@ class Expressions(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INTEGER, b INTEGER);\nSELECT a + b FROM t;\n",
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"t","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"a + b","index":0,"origin":null}],"relations":[{"name":"t","kind":"table"}],"physical_tables":[{"name":"t"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: t (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: (none)
+              columns:
+                a + b <- (transformed)
+              relations:
+                t (table)
+              physical_tables:
+                t
+              partial_reasons: (none)
 """,
         )
 
@@ -22,8 +39,25 @@ class Expressions(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INTEGER);\nSELECT CAST(a AS TEXT) FROM t;\n",
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"t","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"a as text","index":0,"origin":null}],"relations":[{"name":"t","kind":"table"}],"physical_tables":[{"name":"t"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: t (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: (none)
+              columns:
+                a as text <- (transformed)
+              relations:
+                t (table)
+              physical_tables:
+                t
+              partial_reasons: (none)
 """,
         )
 
@@ -31,8 +65,25 @@ class Expressions(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INTEGER);\nSELECT SUM(a) FROM t;\n",
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"t","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"sum(a","index":0,"origin":null}],"relations":[{"name":"t","kind":"table"}],"physical_tables":[{"name":"t"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: t (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: (none)
+              columns:
+                sum(a <- (transformed)
+              relations:
+                t (table)
+              physical_tables:
+                t
+              partial_reasons: (none)
 """,
         )
 
@@ -40,6 +91,15 @@ class Expressions(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT 1 AS x, 'lit' AS y;\n",
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"x","index":0,"origin":null},{"name":"y","index":1,"origin":null}],"relations":[],"physical_tables":[]}
+            Lineage
+              statement: 0
+              status: complete
+              target: (none)
+              columns:
+                x <- (transformed)
+                y <- (transformed)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
 """,
         )

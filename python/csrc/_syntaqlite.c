@@ -586,8 +586,24 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
                     Py_DECREF(tname);
                 }
             }
-            PyDict_SetItemString(lineage_dict, "tables", tbl_list);
+            PyDict_SetItemString(lineage_dict, "physical_tables", tbl_list);
             Py_DECREF(tbl_list);
+        }
+
+        /* Unexpanded views */
+        uint32_t uv_count = syntaqlite_validator_unexpanded_view_count(v);
+        PyObject *uv_list = PyList_New(0);
+        if (uv_list) {
+            const SyntaqliteUnexpandedView *uvs = syntaqlite_validator_unexpanded_views(v);
+            for (uint32_t i = 0; i < uv_count; i++) {
+                PyObject *uname = PyUnicode_FromString(uvs[i].name ? uvs[i].name : "");
+                if (uname) {
+                    PyList_Append(uv_list, uname);
+                    Py_DECREF(uname);
+                }
+            }
+            PyDict_SetItemString(lineage_dict, "unexpanded_views", uv_list);
+            Py_DECREF(uv_list);
         }
 
         PyDict_SetItemString(result, "lineage", lineage_dict);
@@ -730,7 +746,7 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
                             PyObject *tname = PyUnicode_FromString(st[i].name ? st[i].name : "");
                             if (tname) { PyList_Append(tbl_list, tname); Py_DECREF(tname); }
                         }
-                        PyDict_SetItemString(lin, "tables", tbl_list);
+                        PyDict_SetItemString(lin, "physical_tables", tbl_list);
                         Py_DECREF(tbl_list);
                     }
 

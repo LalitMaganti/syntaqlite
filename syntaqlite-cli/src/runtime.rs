@@ -201,22 +201,15 @@ fn dispatch_commands(
             schema,
             output,
             scope,
-        } => require_dialect(dialect).and_then(|d| {
-            let file_config = discover_config_for_paths(&files, config);
-            let resolved_schemas = if schema.is_empty() {
-                resolve_schemas_from_config_with(&files, file_config.as_ref())
-            } else {
-                schema
-            };
-            cmd_lineage(
-                &d,
-                &files,
-                expression.as_deref(),
-                &resolved_schemas,
-                output,
-                scope,
-            )
-        }),
+        } => dispatch_lineage(
+            dialect,
+            config,
+            &files,
+            expression.as_deref(),
+            schema,
+            output,
+            scope,
+        ),
         Command::Lsp => require_dialect(dialect).and_then(|d| cmd_lsp(d, config)),
         #[cfg(feature = "mcp")]
         Command::Mcp => require_dialect(dialect).and_then(crate::mcp::cmd_mcp),
@@ -968,6 +961,26 @@ use crate::lineage_output::{
 };
 use syntaqlite::semantic::{RelationKind, StatementModel};
 
+fn dispatch_lineage(
+    dialect: Option<AnyDialect>,
+    config: &ConfigMode<'_>,
+    files: &[String],
+    expression: Option<&str>,
+    schema: Vec<String>,
+    output: LineageOutput,
+    scope: Option<LineageScope>,
+) -> Result<(), String> {
+    require_dialect(dialect).and_then(|d| {
+        let file_config = discover_config_for_paths(files, config);
+        let resolved_schemas = if schema.is_empty() {
+            resolve_schemas_from_config_with(files, file_config.as_ref())
+        } else {
+            schema
+        };
+        cmd_lineage(&d, files, expression, &resolved_schemas, output, scope)
+    })
+}
+
 fn cmd_lineage(
     dialect: &AnyDialect,
     files: &[String],
@@ -1033,7 +1046,7 @@ fn lineage_process_source(
     let model = analyzer.analyze(source, schema_catalog, config);
     let mut had_error = false;
     for (idx, stmt) in model.statements().iter().enumerate() {
-        let idx = idx as u32;
+        let idx = u32::try_from(idx).unwrap_or(u32::MAX);
         let errors: Vec<_> = stmt
             .diagnostics()
             .iter()
@@ -1182,17 +1195,19 @@ fn emit_error(d: &Diagnostic, file: &str, index: u32, output: LineageOutput) {
             Ok(s) => println!("{s}"),
             Err(e) => eprintln!("error serializing error record: {e}"),
         },
-        LineageOutput::Text => {
-            let stage = match record.stage {
-                ErrorStage::Parse => "parse",
-                ErrorStage::Validate => "validate",
-            };
-            println!(
-                "error [{}]: {}:{}: {}",
-                stage, record.file, record.statement_index, record.message
-            );
-        }
+        LineageOutput::Text => print_error_text(&record),
     }
+}
+
+fn print_error_text(record: &ErrorRecord) {
+    let stage = match record.stage {
+        ErrorStage::Parse => "parse",
+        ErrorStage::Validate => "validate",
+    };
+    println!("Error");
+    println!("  statement: {}", record.statement_index);
+    println!("  stage: {stage}");
+    println!("  message: {}", record.message);
 }
 
 fn print_lineage_text(record: &LineageRecord) {
@@ -1200,43 +1215,70 @@ fn print_lineage_text(record: &LineageRecord) {
         Status::Complete => "complete",
         Status::Partial => "partial",
     };
-    println!(
-        "# {}:{} ({})",
-        record.file, record.statement_index, status
-    );
-    if let Some(target) = &record.target {
-        let kind = match target.kind {
-            JsonTargetKind::Table => "table",
-            JsonTargetKind::View => "view",
-        };
-        println!("  target: {} ({})", target.name, kind);
+    println!("Lineage");
+    println!("  statement: {}", record.statement_index);
+    println!("  status: {status}");
+
+    match &record.target {
+        Some(t) => {
+            let kind = match t.kind {
+                JsonTargetKind::Table => "table",
+                JsonTargetKind::View => "view",
+            };
+            println!("  target: {} ({kind})", t.name);
+        }
+        None => println!("  target: (none)"),
     }
+
     if let Some(columns) = &record.columns {
-        for c in columns {
-            match &c.origin {
-                Some(o) => println!("  column {}: {} <- {}.{}", c.index, c.name, o.table, o.column),
-                None => println!("  column {}: {} <- <transformed>", c.index, c.name),
+        if columns.is_empty() {
+            println!("  columns: (none)");
+        } else {
+            println!("  columns:");
+            for c in columns {
+                match &c.origin {
+                    Some(o) => println!("    {} <- {}.{}", c.name, o.table, o.column),
+                    None => println!("    {} <- (transformed)", c.name),
+                }
             }
         }
     }
+
     if let Some(relations) = &record.relations {
-        for r in relations {
-            let kind = match r.kind {
-                JsonRelationKind::Table => "table",
-                JsonRelationKind::View => "view",
-            };
-            println!("  relation: {} ({})", r.name, kind);
+        if relations.is_empty() {
+            println!("  relations: (none)");
+        } else {
+            println!("  relations:");
+            for r in relations {
+                let kind = match r.kind {
+                    JsonRelationKind::Table => "table",
+                    JsonRelationKind::View => "view",
+                };
+                println!("    {} ({kind})", r.name);
+            }
         }
     }
+
     if let Some(physical_tables) = &record.physical_tables {
-        for t in physical_tables {
-            println!("  physical_table: {}", t.name);
+        if physical_tables.is_empty() {
+            println!("  physical_tables: (none)");
+        } else {
+            println!("  physical_tables:");
+            for t in physical_tables {
+                println!("    {}", t.name);
+            }
         }
     }
-    for reason in &record.partial_reasons {
-        match reason {
-            JsonPartialReason::UnexpandedView { view } => {
-                println!("  partial: unexpanded view `{view}`");
+
+    if record.partial_reasons.is_empty() {
+        println!("  partial_reasons: (none)");
+    } else {
+        println!("  partial_reasons:");
+        for reason in &record.partial_reasons {
+            match reason {
+                JsonPartialReason::UnexpandedView { view } => {
+                    println!("    unexpanded_view: {view}");
+                }
             }
         }
     }

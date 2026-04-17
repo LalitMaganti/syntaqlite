@@ -14,8 +14,25 @@ class Ctas(TestSuite):
                 "CREATE TABLE scratch AS SELECT name FROM users;\n"
             ),
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"users","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":{"name":"scratch","kind":"table"},"columns":[{"name":"name","index":0,"origin":{"table":"users","column":"name"}}],"relations":[{"name":"users","kind":"table"}],"physical_tables":[{"name":"users"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: users (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: scratch (table)
+              columns:
+                name <- users.name
+              relations:
+                users (table)
+              physical_tables:
+                users
+              partial_reasons: (none)
 """,
         )
 
@@ -31,8 +48,35 @@ class Ctas(TestSuite):
                 "SELECT name FROM scratch;\n"
             ),
             out="""\
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":0,"status":"complete","partial_reasons":[],"target":{"name":"users","kind":"table"},"columns":[],"relations":[],"physical_tables":[]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":1,"status":"complete","partial_reasons":[],"target":{"name":"scratch","kind":"table"},"columns":[{"name":"name","index":0,"origin":{"table":"users","column":"name"}}],"relations":[{"name":"users","kind":"table"}],"physical_tables":[{"name":"users"}]}
-            {"kind":"lineage","schema_version":0,"file":"<stdin>","statement_index":2,"status":"complete","partial_reasons":[],"target":null,"columns":[{"name":"name","index":0,"origin":{"table":"scratch","column":"name"}}],"relations":[{"name":"scratch","kind":"table"}],"physical_tables":[{"name":"scratch"}]}
+            Lineage
+              statement: 0
+              status: complete
+              target: users (table)
+              columns: (none)
+              relations: (none)
+              physical_tables: (none)
+              partial_reasons: (none)
+            Lineage
+              statement: 1
+              status: complete
+              target: scratch (table)
+              columns:
+                name <- users.name
+              relations:
+                users (table)
+              physical_tables:
+                users
+              partial_reasons: (none)
+            Lineage
+              statement: 2
+              status: complete
+              target: (none)
+              columns:
+                name <- scratch.name
+              relations:
+                scratch (table)
+              physical_tables:
+                scratch
+              partial_reasons: (none)
 """,
         )
