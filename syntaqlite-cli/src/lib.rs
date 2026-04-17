@@ -1,23 +1,22 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-#![expect(
-    missing_docs,
-    reason = "bin crate; internal lib shim exists only to support integration tests"
-)]
+//! Library entry point for the `syntaqlite` CLI.
+//!
+//! Downstream crates can build their own CLI binary that pre-specifies a
+//! dialect by implementing [`CliApp`] and calling [`run`]. The default
+//! `syntaqlite` binary in this crate is a thin wrapper that does exactly that
+//! with the bundled SQLite dialect.
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use syntaqlite::any::AnyDialect;
 
-#[cfg(feature = "builtin-sqlite")]
 mod config;
-
-#[cfg(feature = "builtin-sqlite")]
 mod runtime;
 
-#[cfg(feature = "builtin-sqlite")]
+#[cfg(feature = "codegen")]
 mod codegen;
 
-#[cfg(feature = "builtin-sqlite")]
 mod lineage_output;
 
 #[cfg(feature = "mcp")]
@@ -26,6 +25,51 @@ mod lineage_output;
     reason = "rmcp #[tool(aggr)] requires by-value params"
 )]
 mod mcp;
+
+/// Configuration trait for a `syntaqlite` CLI binary.
+///
+/// Implementors describe the program name, default dialect, and which dialect
+/// override surfaces are exposed. Default methods produce the stock CLI's
+/// behaviour minus the dialect itself; downstream wrappers typically override
+/// [`CliApp::name`] and [`CliApp::default_dialect`].
+///
+/// All methods have defaults so adding new ones is non-breaking.
+pub trait CliApp {
+    /// Program name shown in `--help` and used as `argv[0]`.
+    fn name(&self) -> &str;
+
+    /// One-line description for `--help`.
+    fn about(&self) -> &str {
+        "SQL formatting and analysis tools"
+    }
+
+    /// Version string for `--version`.
+    ///
+    /// The default returns this crate's version. Wrapper crates should
+    /// override to report their own version.
+    fn version(&self) -> &str {
+        env!("CARGO_PKG_VERSION")
+    }
+
+    /// Dialect baked into this binary. `None` means the user must supply one
+    /// via `--dialect` (which requires [`CliApp::allow_dialect_override`]).
+    fn default_dialect(&self) -> Option<AnyDialect> {
+        None
+    }
+
+    /// Whether `--dialect` / `--dialect-name` are exposed to end users.
+    /// When the `dynload` feature is disabled the flags are absent
+    /// regardless of this setting.
+    fn allow_dialect_override(&self) -> bool {
+        false
+    }
+
+    /// Whether `--sqlite-version` / `--sqlite-cflag` are exposed.
+    /// Set to `true` only for SQLite-derived dialects where these knobs apply.
+    fn allow_sqlite_tuning(&self) -> bool {
+        false
+    }
+}
 
 #[derive(Clone, Copy, ValueEnum)]
 pub(crate) enum ParseOutput {
@@ -66,43 +110,35 @@ pub(crate) enum LineageScope {
 }
 
 #[derive(Parser)]
-#[command(
-    name = "syntaqlite",
-    about = "SQL formatting and analysis tools",
-    version
-)]
+#[command(about = "SQL formatting and analysis tools")]
 pub(crate) struct Cli {
     /// Path to `syntaqlite.toml` config file.
     /// When omitted, discovered by walking up from the current directory.
-    #[cfg(feature = "builtin-sqlite")]
     #[arg(short = 'c', long = "config", global = true)]
     pub(crate) config: Option<String>,
 
     /// Disable automatic config file discovery.
-    #[cfg(feature = "builtin-sqlite")]
     #[arg(long = "no-config", global = true, conflicts_with = "config")]
     pub(crate) no_config: bool,
 
     /// Path to a shared library (.so/.dylib/.dll) providing a dialect.
-    #[cfg(feature = "builtin-sqlite")]
+    #[cfg(feature = "dynload")]
     #[arg(long = "dialect", global = true)]
     pub(crate) dialect_path: Option<String>,
 
     /// Dialect name for symbol lookup.
     /// When omitted, the loader resolves `syntaqlite_grammar`.
     /// With a name, it resolves `syntaqlite_<name>_grammar`.
-    #[cfg(feature = "builtin-sqlite")]
+    #[cfg(feature = "dynload")]
     #[arg(long, requires = "dialect_path", global = true)]
     pub(crate) dialect_name: Option<String>,
 
     /// `SQLite` version to emulate (e.g. "3.47.0", "latest").
-    #[cfg(feature = "builtin-sqlite")]
     #[arg(long, global = true)]
     pub(crate) sqlite_version: Option<String>,
 
     /// Enable a `SQLite` compile-time flag (e.g. `SQLITE_ENABLE_ORDERED_SET_AGGREGATES`).
     /// Can be specified multiple times.
-    #[cfg(feature = "builtin-sqlite")]
     #[arg(long, global = true)]
     pub(crate) sqlite_cflag: Vec<String>,
 
@@ -113,7 +149,6 @@ pub(crate) struct Cli {
 #[derive(Subcommand)]
 pub(crate) enum Command {
     /// Parse SQL and report results
-    #[cfg(feature = "builtin-sqlite")]
     Parse {
         /// SQL files or glob patterns (reads stdin if omitted)
         files: Vec<String>,
@@ -125,7 +160,6 @@ pub(crate) enum Command {
         output: ParseOutput,
     },
     /// Format SQL
-    #[cfg(feature = "builtin-sqlite")]
     Fmt {
         /// SQL files or glob patterns (reads stdin if omitted)
         files: Vec<String>,
@@ -155,7 +189,6 @@ pub(crate) enum Command {
         output: FmtOutput,
     },
     /// Validate SQL and report diagnostics
-    #[cfg(feature = "builtin-sqlite")]
     Validate {
         /// SQL files or glob patterns (reads stdin if omitted)
         files: Vec<String>,
@@ -179,7 +212,6 @@ pub(crate) enum Command {
         lang: Option<runtime::HostLanguage>,
     },
     /// Extract column and table lineage from SQL
-    #[cfg(feature = "builtin-sqlite")]
     Lineage {
         /// SQL files or glob patterns (reads stdin if omitted)
         files: Vec<String>,
@@ -197,32 +229,114 @@ pub(crate) enum Command {
         scope: Option<LineageScope>,
     },
     /// Start the language server (stdio)
-    #[cfg(feature = "builtin-sqlite")]
     Lsp,
     /// Start the MCP server (stdio)
     #[cfg(feature = "mcp")]
     Mcp,
     /// Generate dialect C sources and Rust bindings for external dialects.
-    #[cfg(feature = "builtin-sqlite")]
+    #[cfg(feature = "codegen")]
     Dialect(codegen::DialectArgs),
     /// Print version information
     Version,
-    #[cfg(feature = "builtin-sqlite")]
+    #[cfg(feature = "codegen")]
     #[command(flatten)]
     DialectTool(codegen::ToolCommand),
 }
 
-/// Run the CLI.
-#[cfg(feature = "builtin-sqlite")]
-pub fn run(name: &str, dialect: Option<syntaqlite::any::AnyDialect>) {
-    let cli =
-        Cli::try_parse_from(std::iter::once(name.to_string()).chain(std::env::args().skip(1)))
-            .unwrap_or_else(|e| e.exit());
+/// Build the [`clap::Command`] for the given app, applying runtime visibility
+/// rules from the [`CliApp`] trait.
+fn build_command<A: CliApp>(app: &A) -> clap::Command {
+    // clap's `name`/`about`/`version` builders want `'static` strings.
+    // Leaking is fine: these live for the lifetime of the process.
+    let name: &'static str = Box::leak(app.name().to_owned().into_boxed_str());
+    let about: &'static str = Box::leak(app.about().to_owned().into_boxed_str());
+    let version: &'static str = Box::leak(app.version().to_owned().into_boxed_str());
 
-    let result = runtime::dispatch(cli, dialect);
+    let cmd = Cli::command()
+        .name(name)
+        .bin_name(name)
+        .about(about)
+        .version(version);
 
-    if let Err(e) = result {
+    let cmd = if app.allow_sqlite_tuning() {
+        cmd
+    } else {
+        cmd.mut_arg("sqlite_version", |a: clap::Arg| a.hide(true))
+            .mut_arg("sqlite_cflag", |a: clap::Arg| a.hide(true))
+    };
+
+    #[cfg(feature = "dynload")]
+    let cmd = if app.allow_dialect_override() {
+        cmd
+    } else {
+        cmd.mut_arg("dialect_path", |a: clap::Arg| a.hide(true))
+            .mut_arg("dialect_name", |a: clap::Arg| a.hide(true))
+    };
+
+    cmd
+}
+
+/// Run the CLI with the given app configuration.
+///
+/// Reads `argv` from the process. On error, prints the message to stderr and
+/// exits with status 1. On `--help` / `--version`, exits 0.
+pub fn run<A: CliApp>(app: &A) {
+    use clap::FromArgMatches;
+
+    let cmd = build_command(app);
+    let matches = cmd.try_get_matches_from(std::env::args()).unwrap_or_else(|e| e.exit());
+    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
+
+    if let Err(e) = enforce_visibility(app, &cli) {
+        eprintln!("error: {e}");
+        std::process::exit(2);
+    }
+
+    if let Err(e) = runtime::dispatch(cli, app.default_dialect()) {
         eprintln!("error: {e}");
         std::process::exit(1);
+    }
+}
+
+/// Reject hidden flags that the trait says aren't allowed but were still passed.
+fn enforce_visibility<A: CliApp>(app: &A, cli: &Cli) -> Result<(), String> {
+    if !app.allow_sqlite_tuning() {
+        if cli.sqlite_version.is_some() {
+            return Err("--sqlite-version is not supported by this CLI".to_owned());
+        }
+        if !cli.sqlite_cflag.is_empty() {
+            return Err("--sqlite-cflag is not supported by this CLI".to_owned());
+        }
+    }
+
+    #[cfg(feature = "dynload")]
+    if !app.allow_dialect_override() && cli.dialect_path.is_some() {
+        return Err("--dialect is not supported by this CLI".to_owned());
+    }
+
+    Ok(())
+}
+
+/// Stock CLI configuration: the bundled SQLite dialect with all override
+/// surfaces enabled.
+#[cfg(feature = "bundled-sqlite-dialect")]
+pub struct Stock;
+
+#[cfg(feature = "bundled-sqlite-dialect")]
+impl CliApp for Stock {
+    fn name(&self) -> &str {
+        "syntaqlite"
+    }
+
+    fn default_dialect(&self) -> Option<AnyDialect> {
+        Some(syntaqlite::sqlite_dialect().into())
+    }
+
+    fn allow_dialect_override(&self) -> bool {
+        true
+    }
+
+    fn allow_sqlite_tuning(&self) -> bool {
+        true
     }
 }

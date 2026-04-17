@@ -4,6 +4,5 @@
 //! `syntaqlite` command-line interface.
 
 fn main() {
-    #[cfg(feature = "builtin-sqlite")]
-    syntaqlite_cli::run("syntaqlite", Some(syntaqlite::sqlite_dialect().into()));
+    syntaqlite_cli::run(&syntaqlite_cli::Stock);
 }

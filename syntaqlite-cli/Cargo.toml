@@ -15,11 +15,23 @@ workspace = true
 name = "syntaqlite"
 path = "src/main.rs"
 doc = false
+required-features = ["bundled-sqlite-dialect"]
+
+[[example]]
+name = "cli_wrapper"
+path = "examples/cli_wrapper.rs"
+required-features = ["bundled-sqlite-dialect"]
 
 [features]
-default = ["builtin-sqlite", "mcp"]
-builtin-sqlite = ["dep:syntaqlite", "syntaqlite/lsp", "syntaqlite/dynload", "syntaqlite/experimental-embedded", "dep:syntaqlite-buildtools"]
-mcp = ["builtin-sqlite", "dep:rmcp", "dep:tokio", "dep:schemars"]
+default = ["bundled-sqlite-dialect", "dynload", "codegen", "mcp"]
+# Bake in the SQLite dialect and ship the default `syntaqlite` binary.
+bundled-sqlite-dialect = ["syntaqlite/sqlite"]
+# Expose `--dialect` / `--dialect-name` flags for loading dialects from shared libraries.
+dynload = ["syntaqlite/dynload"]
+# Expose `dialect` / dialect-tool subcommands for generating dialect sources.
+codegen = ["dep:syntaqlite-buildtools"]
+# Expose the `mcp` (Model Context Protocol) subcommand.
+mcp = ["dep:rmcp", "dep:tokio", "dep:schemars"]
 
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
@@ -30,7 +42,7 @@ rmcp = { version = "0.1", features = ["server", "transport-io"], optional = true
 schemars = { version = "0.8", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-syntaqlite = { version = "0.4.2", path = "../syntaqlite", optional = true, features = ["fmt", "lsp", "validation", "experimental-embedded", "serde-json"] }
+syntaqlite = { version = "0.4.2", path = "../syntaqlite", default-features = false, features = ["fmt", "lsp", "validation", "experimental-embedded", "serde-json"] }
 syntaqlite-syntax = { version = "0.4.2", path = "../syntaqlite-syntax" }
 syntaqlite-buildtools = { version = "0.4.2", path = "../syntaqlite-buildtools", optional = true }
 tempfile = "3.8"

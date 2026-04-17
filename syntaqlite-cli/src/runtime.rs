@@ -59,12 +59,14 @@ fn expand_paths(patterns: &[String]) -> Result<Vec<PathBuf>, String> {
 
 fn require_dialect(dialect: Option<AnyDialect>) -> Result<AnyDialect, String> {
     dialect.ok_or_else(|| {
-        "this command requires a dialect; build with --features=builtin-sqlite or use --dialect"
+        "this command requires a dialect; rebuild with --features=bundled-sqlite-dialect \
+         or pass --dialect (with --features=dynload)"
             .to_string()
     })
 }
 
 pub(crate) fn dispatch(cli: Cli, dialect: Option<AnyDialect>) -> Result<(), String> {
+    #[cfg(feature = "dynload")]
     let base = if let Some(path) = &cli.dialect_path {
         Some(
             AnyDialect::load(path, cli.dialect_name.as_deref()).unwrap_or_else(|e| {
@@ -75,6 +77,8 @@ pub(crate) fn dispatch(cli: Cli, dialect: Option<AnyDialect>) -> Result<(), Stri
     } else {
         dialect
     };
+    #[cfg(not(feature = "dynload"))]
+    let base = dialect;
 
     let config_mode = if cli.no_config {
         ConfigMode::Disabled
@@ -248,7 +252,9 @@ fn dispatch_commands(
             println!("syntaqlite {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
+        #[cfg(feature = "codegen")]
         Command::Dialect(args) => crate::codegen::dispatch_dialect(&args),
+        #[cfg(feature = "codegen")]
         Command::DialectTool(cmd) => crate::codegen::dispatch_tool(cmd),
     }
 }
