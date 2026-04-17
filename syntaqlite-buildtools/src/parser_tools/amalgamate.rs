@@ -53,10 +53,8 @@ const SUPPRESSED_WARNINGS: &[&str] = &[
 /// appear in a C++ translation unit, so they are guarded by
 /// `#ifndef __cplusplus`. The amalgamated header is `#include`d from C++
 /// consumers (e.g. perfetto) as well as C.
-const SUPPRESSED_WARNINGS_C_ONLY: &[&str] = &[
-    "-Wdeclaration-after-statement",
-    "-Wmissing-prototypes",
-];
+const SUPPRESSED_WARNINGS_C_ONLY: &[&str] =
+    &["-Wdeclaration-after-statement", "-Wmissing-prototypes"];
 
 /// Warnings that only Clang understands; emitted inside `#ifdef __clang__`.
 const SUPPRESSED_WARNINGS_CLANG_ONLY: &[&str] = &[

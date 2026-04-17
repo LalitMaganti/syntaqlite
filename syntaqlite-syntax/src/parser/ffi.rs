@@ -40,13 +40,25 @@ pub(crate) enum CCommentKind {
     BlockComment = 1,
 }
 
+/// Which side of a token a comment attaches to.  Matches C
+/// `SYNQ_COMMENT_LEADING` / `SYNQ_COMMENT_TRAILING`.
+#[expect(dead_code)] // C FFI mirror — variants match the C enum values
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub(crate) enum CCommentSide {
+    Leading = 0,
+    Trailing = 1,
+}
+
 /// Mirrors C `SyntaqliteComment`.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
 pub(crate) struct CComment {
     pub offset: u32,
     pub length: u32,
+    pub token_idx: u32,
     pub kind: CCommentKind,
+    pub side: CCommentSide,
 }
 
 #[expect(dead_code)] // C FFI mirrors — not yet consumed on the Rust side
@@ -384,6 +396,44 @@ impl CParser {
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
+    pub(crate) unsafe fn token_leading_comments(&self, token_idx: u32) -> &[CComment] {
+        let mut count: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer; result
+        // accessors are valid after `next()` returns a non-DONE code.
+        let ptr = unsafe {
+            syntaqlite_token_leading_comments(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                token_idx,
+                &raw mut count,
+            )
+        };
+        if count == 0 || ptr.is_null() {
+            return &[];
+        }
+        // SAFETY: ptr+count describe a contiguous slice of CComment values
+        // inside the parser's comments vec; valid for the parser's lifetime.
+        unsafe { std::slice::from_raw_parts(ptr, count as usize) }
+    }
+
+    pub(crate) unsafe fn token_trailing_comments(&self, token_idx: u32) -> &[CComment] {
+        let mut count: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer; result
+        // accessors are valid after `next()` returns a non-DONE code.
+        let ptr = unsafe {
+            syntaqlite_token_trailing_comments(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                token_idx,
+                &raw mut count,
+            )
+        };
+        if count == 0 || ptr.is_null() {
+            return &[];
+        }
+        // SAFETY: ptr+count describe a contiguous slice of CComment values
+        // inside the parser's comments vec; valid for the parser's lifetime.
+        unsafe { std::slice::from_raw_parts(ptr, count as usize) }
+    }
+
     pub(crate) unsafe fn span_expanded_text(
         &self,
         span: crate::ast::TextSpan,
@@ -580,6 +630,16 @@ unsafe extern "C" {
     fn syntaqlite_result_error_length(p: *mut CParser) -> u32;
     fn syntaqlite_result_comments(p: *mut CParser, count: *mut u32) -> *const CComment;
     fn syntaqlite_result_tokens(p: *mut CParser, count: *mut u32) -> *const CParserToken;
+    fn syntaqlite_token_leading_comments(
+        p: *mut CParser,
+        token_idx: u32,
+        count: *mut u32,
+    ) -> *const CComment;
+    fn syntaqlite_token_trailing_comments(
+        p: *mut CParser,
+        token_idx: u32,
+        count: *mut u32,
+    ) -> *const CComment;
     fn syntaqlite_result_macro_count(p: *mut CParser) -> u32;
     fn syntaqlite_result_macro_rewrite_at(p: *mut CParser, idx: u32) -> CMacroRewrite;
     fn syntaqlite_macro_rewrite_arg_segment_count(p: *mut CParser, rewrite_idx: u32) -> u32;

@@ -61,6 +61,22 @@ pub enum CommentKind {
     Block,
 }
 
+/// Which token a comment is attached to, and on which side.
+///
+/// Set at parse time so consumers can ask "what comments belong to
+/// token N?" without walking the source.  See
+/// [`super::TypedParsedStatement::leading_comments`] /
+/// [`super::TypedParsedStatement::trailing_comments`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommentSide {
+    /// The comment appears on its own line (or before any token of the
+    /// statement) and immediately precedes the owning token.
+    Leading,
+    /// The comment appears on the same source line as the owning token,
+    /// after it.
+    Trailing,
+}
+
 /// Comment captured from source during parsing.
 ///
 /// Returned by [`super::TypedParsedStatement::comments`]. Requires
@@ -71,15 +87,26 @@ pub struct Comment<'a> {
     kind: CommentKind,
     offset: u32,
     length: u32,
+    token_idx: u32,
+    side: CommentSide,
 }
 
 impl<'a> Comment<'a> {
-    pub(super) fn new(text: &'a str, kind: CommentKind, offset: u32, length: u32) -> Self {
+    pub(super) fn new(
+        text: &'a str,
+        kind: CommentKind,
+        offset: u32,
+        length: u32,
+        token_idx: u32,
+        side: CommentSide,
+    ) -> Self {
         Comment {
             text,
             kind,
             offset,
             length,
+            token_idx,
+            side,
         }
     }
 
@@ -101,6 +128,18 @@ impl<'a> Comment<'a> {
     /// Byte length of the comment text.
     pub fn length(&self) -> u32 {
         self.length
+    }
+
+    /// Index of the owning token in the statement's token stream.
+    /// May equal the token count when the comment trails the last token
+    /// of the statement and no following statement exists.
+    pub fn token_idx(&self) -> u32 {
+        self.token_idx
+    }
+
+    /// Whether this comment leads or trails its owning token.
+    pub fn side(&self) -> CommentSide {
+        self.side
     }
 }
 

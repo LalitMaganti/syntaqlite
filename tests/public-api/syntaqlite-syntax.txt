@@ -756,6 +756,7 @@ impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedP
 impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedTokenizer<G>
 impl<T, E> syntaqlite_syntax::ParseOutcome<T, E>
 pub enum syntaqlite_syntax::CommentKind
+pub enum syntaqlite_syntax::CommentSide
 pub enum syntaqlite_syntax::ParseOutcome<T, E>
 pub enum syntaqlite_syntax::any::ArgOrigin
 pub enum syntaqlite_syntax::any::FieldValue
@@ -772,7 +773,9 @@ pub enum syntaqlite_syntax::typed::ParseOutcome<T, E>
 pub fn syntaqlite_syntax::Comment<'a>::kind(&self) -> syntaqlite_syntax::CommentKind
 pub fn syntaqlite_syntax::Comment<'a>::length(&self) -> u32
 pub fn syntaqlite_syntax::Comment<'a>::offset(&self) -> u32
+pub fn syntaqlite_syntax::Comment<'a>::side(&self) -> syntaqlite_syntax::CommentSide
 pub fn syntaqlite_syntax::Comment<'a>::text(&self) -> &'a str
+pub fn syntaqlite_syntax::Comment<'a>::token_idx(&self) -> u32
 pub fn syntaqlite_syntax::CommentSpan::kind(&self) -> syntaqlite_syntax::CommentKind
 pub fn syntaqlite_syntax::CommentSpan::length(&self) -> u32
 pub fn syntaqlite_syntax::CommentSpan::offset(&self) -> u32
@@ -1664,10 +1667,12 @@ pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::comments(&self) ->
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::dump(&self, out: &mut alloc::string::String, indent: usize)
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::erase(self) -> syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::expanded_text(&self) -> &'a str
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::leading_comments(&self, token_idx: u32) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a, G>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::trailing_comments(&self, token_idx: u32) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::typed::TypedParser<G>::incremental_parse(&self, source: &str) -> syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
 pub fn syntaqlite_syntax::typed::TypedParser<G>::new(dialect: G) -> Self
 pub fn syntaqlite_syntax::typed::TypedParser<G>::parse(&self, source: &str) -> syntaqlite_syntax::typed::TypedParseSession<G>
@@ -1881,6 +1886,8 @@ pub struct syntaqlite_syntax::typed::TypedTokenizer<G: syntaqlite_syntax::typed:
 pub struct syntaqlite_syntax::util::SqliteSyntaxFlags(_)
 pub syntaqlite_syntax::CommentKind::Block
 pub syntaqlite_syntax::CommentKind::Line
+pub syntaqlite_syntax::CommentSide::Leading
+pub syntaqlite_syntax::CommentSide::Trailing
 pub syntaqlite_syntax::CompletionContext::Expression = 1
 pub syntaqlite_syntax::CompletionContext::TableRef = 2
 pub syntaqlite_syntax::CompletionContext::Unknown = 0
