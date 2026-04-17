@@ -364,18 +364,10 @@ void synq_parser_record_comment(SyntaqliteParser* p,
   uint8_t side = SYNQ_COMMENT_LEADING;
   uint32_t owner_idx = syntaqlite_vec_len(&p->tokens);
   uint32_t prev_end = p->last_layer0_token_end;
-  if (prev_end != UINT32_MAX && prev_end <= offset) {
-    int saw_newline = 0;
-    for (uint32_t i = prev_end; i < offset; i++) {
-      if (z[i] == '\n') {
-        saw_newline = 1;
-        break;
-      }
-    }
-    if (!saw_newline) {
-      side = SYNQ_COMMENT_TRAILING;
-      owner_idx = syntaqlite_vec_len(&p->tokens) - 1;
-    }
+  if (prev_end != UINT32_MAX && prev_end <= offset &&
+      memchr(z + prev_end, '\n', offset - prev_end) == NULL) {
+    side = SYNQ_COMMENT_TRAILING;
+    owner_idx = syntaqlite_vec_len(&p->tokens) - 1;
   }
 
   SyntaqliteComment t = {
@@ -569,14 +561,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
         if (tl <= 0)
           break;
         if (tt == SYNTAQLITE_TK_SPACE) {
-          int hit_newline = 0;
-          for (uint32_t i = 0; i < (uint32_t)tl; i++) {
-            if (z[scan + i] == '\n') {
-              hit_newline = 1;
-              break;
-            }
-          }
-          if (hit_newline)
+          if (memchr(z + scan, '\n', (size_t)tl) != NULL)
             break;
           scan += (uint32_t)tl;
           continue;
