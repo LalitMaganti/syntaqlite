@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "csrc/tokens.h"
 #include "syntaqlite/config.h"
 #include "syntaqlite/dialect.h"
 #include "syntaqlite/incremental.h"
@@ -194,6 +195,20 @@ struct SyntaqliteParser {
 };
 
 // ── Cross-file helpers ──────────────────────────────────────────────────────
+
+// Whitespace-or-comment classifier. Centralizes the trivia predicate used by
+// every site that needs to skip over insignificant tokens (the high-level
+// feed_token path, scan_macro_args, and the macro-expansion loop and its
+// ID-BANG lookahead).
+static inline int synq_token_is_trivia(uint32_t type) {
+  return type == SYNTAQLITE_TK_SPACE || type == SYNTAQLITE_TK_COMMENT;
+}
+
+// Record a comment span into p->comments. `offset` is the byte offset into
+// p->source. Caller must check p->collect_tokens before calling.
+void synq_parser_record_comment(SyntaqliteParser* p,
+                                uint32_t offset,
+                                uint32_t len);
 
 // Set the parser's last_status and return it (used by both parser.c and
 // parser_macros.c as a convenient exit helper).

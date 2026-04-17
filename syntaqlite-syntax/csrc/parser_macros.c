@@ -36,6 +36,36 @@ static void begin_macro_expansion(SyntaqliteParser* p,
                                   uint32_t name_len);
 static void synq_end_macro(SyntaqliteParser* p);
 
+// Forward-scan an expansion buffer past trivia (whitespace + comments) and
+// return the next significant token. `*out_pos` is updated to that token's
+// offset; `*out_type` and the return value give its type and length. Returns
+// 0 (with *out_type == 0) at end-of-buffer or tokenizer failure. Comments
+// inside expansion buffers are intentionally not recorded — only source
+// comments are kept on p->comments.
+static int64_t synq_macro_skip_trivia(SyntaqliteParser* p,
+                                      const unsigned char* z,
+                                      uint32_t buf_len,
+                                      uint32_t* out_pos,
+                                      uint32_t* out_type) {
+  uint32_t pos = *out_pos;
+  while (pos < buf_len) {
+    uint32_t ttype = 0;
+    int64_t tlen = SynqSqliteGetTokenVersionWrapped(
+        &p->dialect, p->macro.macro_fallback, z + pos, &ttype);
+    if (tlen <= 0)
+      break;
+    if (!synq_token_is_trivia(ttype)) {
+      *out_pos = pos;
+      *out_type = ttype;
+      return tlen;
+    }
+    pos += (uint32_t)tlen;
+  }
+  *out_pos = pos;
+  *out_type = 0;
+  return 0;
+}
+
 // ---------------------------------------------------------------------------
 // Macro argument scanning
 // ---------------------------------------------------------------------------
@@ -83,8 +113,7 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
     if (tlen <= 0)
       return 0;
 
-    int is_skip =
-        (ttype == SYNTAQLITE_TK_SPACE || ttype == SYNTAQLITE_TK_COMMENT);
+    int is_skip = synq_token_is_trivia(ttype);
 
     if (ttype == SYNTAQLITE_TK_LP) {
       depth++;
@@ -279,36 +308,18 @@ static int expand_and_feed(SyntaqliteParser* p,
 
   while (pos < buf_len) {
     uint32_t ttype = 0;
-    int64_t tlen = SynqSqliteGetTokenVersionWrapped(
-        &p->dialect, p->macro.macro_fallback, z + pos, &ttype);
+    int64_t tlen = synq_macro_skip_trivia(p, z, buf_len, &pos, &ttype);
     if (tlen <= 0)
       break;
 
-    if (ttype == SYNTAQLITE_TK_SPACE || ttype == SYNTAQLITE_TK_COMMENT) {
-      pos += (uint32_t)tlen;
-      continue;
-    }
-
-    // Check for nested macro call: ID followed by TK_BANG.
-    // Skip whitespace/comments between ID and BANG to mirror the main parse
-    // loop's next_token() behaviour (issue #130).
-    // Skip when inside a macro definition body — body should be verbatim.
+    // Check for nested macro call: ID followed by TK_BANG, mirroring the
+    // main parse loop's next_token() behaviour and skipping any trivia
+    // between the two (issue #130). Suppressed inside macro definition
+    // bodies — those should be tokenized verbatim.
     uint32_t bang_pos = pos + (uint32_t)tlen;
     uint32_t la_type = 0;
-    if (ttype == SYNTAQLITE_TK_ID && p->ctx.in_macro_def_body == 0) {
-      while (bang_pos < buf_len) {
-        uint32_t lt = 0;
-        int64_t la_len = SynqSqliteGetTokenVersionWrapped(
-            &p->dialect, p->macro.macro_fallback, z + bang_pos, &lt);
-        if (la_len <= 0)
-          break;
-        if (lt != SYNTAQLITE_TK_SPACE && lt != SYNTAQLITE_TK_COMMENT) {
-          la_type = lt;
-          break;
-        }
-        bang_pos += (uint32_t)la_len;
-      }
-    }
+    if (ttype == SYNTAQLITE_TK_ID && p->ctx.in_macro_def_body == 0)
+      synq_macro_skip_trivia(p, z, buf_len, &bang_pos, &la_type);
     if (ttype == SYNTAQLITE_TK_ID && la_type == SYNTAQLITE_TK_BANG &&
         p->ctx.in_macro_def_body == 0) {
       uint32_t nested_end = 0;
