@@ -89,7 +89,7 @@ pub struct RelationAccess {
 
 /// A physical table accessed by the query (after resolving CTEs and subqueries).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TableAccess {
+pub struct PhysicalTableAccess {
     /// The physical table name.
     pub name: String,
 }
@@ -104,5 +104,8 @@ pub(crate) struct QueryLineage {
     /// Relations referenced directly in FROM clauses.
     pub(crate) relations: Vec<RelationAccess>,
     /// Physical tables accessed (after resolving CTEs/subqueries/views).
-    pub(crate) tables: Vec<TableAccess>,
+    pub(crate) physical_tables: Vec<PhysicalTableAccess>,
+    /// Canonical names of views that could not be expanded because no body
+    /// was available. Sorted and deduplicated.
+    pub(crate) unexpanded_views: Vec<String>,
 }

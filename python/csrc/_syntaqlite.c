@@ -575,10 +575,10 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
         }
 
         /* Tables */
-        uint32_t tbl_count = syntaqlite_validator_table_count(v);
+        uint32_t tbl_count = syntaqlite_validator_physical_table_count(v);
         PyObject *tbl_list = PyList_New(0);
         if (tbl_list) {
-            const SyntaqliteTableAccess *tbls = syntaqlite_validator_tables(v);
+            const SyntaqlitePhysicalTableAccess *tbls = syntaqlite_validator_physical_tables(v);
             for (uint32_t i = 0; i < tbl_count; i++) {
                 PyObject *tname = PyUnicode_FromString(tbls[i].name ? tbls[i].name : "");
                 if (tname) {
@@ -722,10 +722,10 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
                     }
 
                     /* Per-statement tables */
-                    uint32_t st_count = syntaqlite_validator_statement_table_count(v, si);
+                    uint32_t st_count = syntaqlite_validator_statement_physical_table_count(v, si);
                     PyObject *tbl_list = PyList_New(0);
                     if (tbl_list) {
-                        const SyntaqliteTableAccess *st = syntaqlite_validator_statement_tables(v, si);
+                        const SyntaqlitePhysicalTableAccess *st = syntaqlite_validator_statement_physical_tables(v, si);
                         for (uint32_t i = 0; i < st_count; i++) {
                             PyObject *tname = PyUnicode_FromString(st[i].name ? st[i].name : "");
                             if (tname) { PyList_Append(tbl_list, tname); Py_DECREF(tname); }

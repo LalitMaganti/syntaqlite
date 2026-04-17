@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+**Breaking:**
+- Renamed `TableAccess` → `PhysicalTableAccess` and `StatementModel::tables_accessed()` → `physical_tables_accessed()` in the Rust API. The corresponding C symbols `SyntaqliteTableAccess`, `syntaqlite_validator_table_count`, `syntaqlite_validator_tables`, `syntaqlite_validator_statement_table_count`, and `syntaqlite_validator_statement_tables` are renamed with a `physical_` infix.
+
 ## 0.4.2
 
 - Fixed the web playground failing on load with `TypeError: resolved is not a function`: runtime → dialect hook symbols were being stripped under emscripten `MAIN_MODULE=2` ([#157](https://github.com/LalitMaganti/syntaqlite/pull/157)).

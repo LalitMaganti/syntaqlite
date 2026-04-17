@@ -72,7 +72,7 @@ pub use diagnostics::{Diagnostic, DiagnosticMessage, Help, Severity};
 #[doc(inline)]
 #[cfg(feature = "validation")]
 pub use lineage::{
-    ColumnLineage, ColumnOrigin, LineageResult, RelationAccess, RelationKind, TableAccess,
+    ColumnLineage, ColumnOrigin, LineageResult, PhysicalTableAccess, RelationAccess, RelationKind,
 };
 #[doc(inline)]
 #[cfg(feature = "validation")]

@@ -39,6 +39,7 @@ _SUITE_MODULES = [
     "python.dev.integration_tests.suites.upstream_sqlite",
     "python.dev.integration_tests.suites.lsp",
     "python.dev.integration_tests.suites.validate",
+    "python.dev.integration_tests.suites.lineage",
 ]
 
 _BLUE = "\033[1;34m"

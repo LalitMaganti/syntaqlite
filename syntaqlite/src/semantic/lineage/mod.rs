@@ -11,7 +11,7 @@ mod types;
 
 pub(crate) use types::QueryLineage;
 pub use types::{
-    ColumnLineage, ColumnOrigin, LineageResult, RelationAccess, RelationKind, TableAccess,
+    ColumnLineage, ColumnOrigin, LineageResult, PhysicalTableAccess, RelationAccess, RelationKind,
 };
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement};

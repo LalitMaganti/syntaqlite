@@ -210,7 +210,7 @@ typedef struct {
 // A physical table accessed by the query.
 typedef struct {
   const char* name;
-} SyntaqliteTableAccess;
+} SyntaqlitePhysicalTableAccess;
 ```
 
 ### Functions
@@ -231,8 +231,8 @@ typedef struct {
 | `syntaqlite_validator_column_lineage(v)` | Pointer to `SyntaqliteColumnLineage` array, or `NULL` |
 | `syntaqlite_validator_relation_count(v)` | Number of relations in FROM clauses. `0` for non-queries |
 | `syntaqlite_validator_relations(v)` | Pointer to `SyntaqliteRelationAccess` array, or `NULL` |
-| `syntaqlite_validator_table_count(v)` | Number of physical tables accessed. `0` for non-queries |
-| `syntaqlite_validator_tables(v)` | Pointer to `SyntaqliteTableAccess` array, or `NULL` |
+| `syntaqlite_validator_physical_table_count(v)` | Number of physical tables accessed. `0` for non-queries |
+| `syntaqlite_validator_physical_tables(v)` | Pointer to `SyntaqlitePhysicalTableAccess` array, or `NULL` |
 | `syntaqlite_validator_reset_catalog(v)` | Clear registered schema (preserves dialect builtins) |
 | `syntaqlite_validator_destroy(v)` | Free the validator. No-op if `NULL` |
 
@@ -256,7 +256,7 @@ typedef struct {
 - Output strings from `syntaqlite_formatter_output()`,
   `syntaqlite_validator_diagnostics()`, and lineage accessors
   (`syntaqlite_validator_column_lineage()`, `syntaqlite_validator_relations()`,
-  `syntaqlite_validator_tables()`) are **borrowed**, valid until the next
+  `syntaqlite_validator_physical_tables()`) are **borrowed**, valid until the next
   call to analyze or destroy.
 - Strings from `syntaqlite_validator_render_diagnostics()` are **borrowed**,
   valid until the next `analyze()`, `render_diagnostics()`, or `destroy()` call.

@@ -4050,12 +4050,12 @@ mod lineage_tests {
         assert_eq!(rels[0].name, "users");
         assert_eq!(rels[0].kind, RelationKind::Table);
 
-        // tables_accessed
+        // physical_tables_accessed
         let tbls = model
             .statements()
             .last()
             .unwrap()
-            .tables_accessed()
+            .physical_tables_accessed()
             .unwrap()
             .into_inner();
         assert_eq!(tbls.len(), 1);
@@ -4150,7 +4150,7 @@ mod lineage_tests {
             .statements()
             .last()
             .unwrap()
-            .tables_accessed()
+            .physical_tables_accessed()
             .unwrap()
             .into_inner();
         assert!(tbls.iter().any(|t| t.name == "users"));
@@ -4203,7 +4203,7 @@ mod lineage_tests {
             .statements()
             .last()
             .unwrap()
-            .tables_accessed()
+            .physical_tables_accessed()
             .unwrap()
             .into_inner();
         assert_eq!(tbls.len(), 1);
@@ -4241,7 +4241,7 @@ mod lineage_tests {
             .statements()
             .last()
             .unwrap()
-            .tables_accessed()
+            .physical_tables_accessed()
             .unwrap()
             .into_inner();
         assert_eq!(tbls.len(), 1);
@@ -4300,6 +4300,36 @@ mod lineage_tests {
         assert_eq!(rels[0].kind, RelationKind::View);
     }
 
+    // ── Test 8b: Unexpanded view name is surfaced ────────────────────────────
+
+    #[test]
+    fn lineage_view_exposes_unexpanded_name() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_view("active_users", Some(vec!["id".into(), "name".into()]));
+
+        let model = analyzer.analyze("SELECT id FROM active_users", &catalog, &lenient());
+
+        let unresolved = model.statements().last().unwrap().unexpanded_views();
+        assert_eq!(unresolved, ["active_users".to_string()].as_slice());
+    }
+
+    #[test]
+    fn lineage_table_has_no_unexpanded_views() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "users",
+            Some(vec!["id".into()]),
+            false,
+        );
+        let model = analyzer.analyze("SELECT id FROM users", &catalog, &lenient());
+        let unresolved = model.statements().last().unwrap().unexpanded_views();
+        assert!(unresolved.is_empty());
+    }
+
     // ── Test 9: Non-SELECT returns None ──────────────────────────────────────
 
     #[test]
@@ -4322,7 +4352,7 @@ mod lineage_tests {
                 .statements()
                 .last()
                 .unwrap()
-                .tables_accessed()
+                .physical_tables_accessed()
                 .is_none()
         );
     }

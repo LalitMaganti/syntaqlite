@@ -199,8 +199,8 @@ int main(void) {
     }
 
     // Physical tables accessed
-    uint32_t tbl_count = syntaqlite_validator_table_count(v);
-    const SyntaqliteTableAccess* tbls = syntaqlite_validator_tables(v);
+    uint32_t tbl_count = syntaqlite_validator_physical_table_count(v);
+    const SyntaqlitePhysicalTableAccess* tbls = syntaqlite_validator_physical_tables(v);
     for (uint32_t i = 0; i < tbl_count; i++) {
         printf("  table: %s\n", tbls[i].name);
     }

@@ -80,13 +80,13 @@ table and column.
 |---------------|-------------|
 | `model.lineage()` | Per-column lineage: `Option<LineageResult<&[ColumnLineage]>>` |
 | `model.relations_accessed()` | Relations in FROM: `Option<LineageResult<&[RelationAccess]>>` |
-| `model.tables_accessed()` | Physical tables after resolving CTEs/views: `Option<LineageResult<&[TableAccess]>>` |
+| `model.physical_tables_accessed()` | Physical tables after resolving CTEs/views: `Option<LineageResult<&[PhysicalTableAccess]>>` |
 | `LineageResult<T>` | `Complete(T)` — fully resolved, or `Partial(T)` — some view bodies unavailable |
 | `ColumnLineage` | `name: String`, `index: u32`, `origin: Option<ColumnOrigin>` |
 | `ColumnOrigin` | `table: String`, `column: String` |
 | `RelationAccess` | `name: String`, `kind: RelationKind` |
 | `RelationKind` | `Table` or `View` |
-| `TableAccess` | `name: String` |
+| `PhysicalTableAccess` | `name: String` |
 
 Returns `None` for non-query statements (CREATE, INSERT, etc.). Returns
 `Partial` when a view is referenced but its body is unavailable for resolution.

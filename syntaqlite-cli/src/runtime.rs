@@ -22,7 +22,7 @@ use syntaqlite::{
 
 use crate::config::{self, FormatOptions, ProjectConfig};
 
-use super::{Cli, Command};
+use super::{Cli, Command, LineageOutput, LineageScope};
 
 #[derive(Clone, Copy, ValueEnum)]
 pub(crate) enum KeywordCasing {
@@ -193,6 +193,28 @@ fn dispatch_commands(
                 &resolved_schemas,
                 lang,
                 checks,
+            )
+        }),
+        Command::Lineage {
+            files,
+            expression,
+            schema,
+            output,
+            scope,
+        } => require_dialect(dialect).and_then(|d| {
+            let file_config = discover_config_for_paths(&files, config);
+            let resolved_schemas = if schema.is_empty() {
+                resolve_schemas_from_config_with(&files, file_config.as_ref())
+            } else {
+                schema
+            };
+            cmd_lineage(
+                &d,
+                &files,
+                expression.as_deref(),
+                &resolved_schemas,
+                output,
+                scope,
             )
         }),
         Command::Lsp => require_dialect(dialect).and_then(|d| cmd_lsp(d, config)),
@@ -935,4 +957,287 @@ fn build_check_config(
     }
 
     Ok(checks)
+}
+
+// ── Lineage command ─────────────────────────────────────────────────────────
+
+use crate::lineage_output::{
+    ErrorRecord, ErrorStage, JsonColumn, JsonOrigin, JsonPartialReason, JsonPhysicalTable,
+    JsonRelation, JsonRelationKind, JsonTarget, JsonTargetKind, LineageRecord, SCHEMA_VERSION,
+    Status,
+};
+use syntaqlite::semantic::{RelationKind, StatementModel};
+
+fn cmd_lineage(
+    dialect: &AnyDialect,
+    files: &[String],
+    expression: Option<&str>,
+    schemas: &[String],
+    output: LineageOutput,
+    scope: Option<LineageScope>,
+) -> Result<(), String> {
+    let schema_catalog = build_schema_catalog(dialect, schemas)?;
+    let config = ValidationConfig::default();
+    let any_errors = std::cell::Cell::new(false);
+
+    process_files(
+        files,
+        expression,
+        |source, label| {
+            if lineage_process_source(
+                dialect,
+                &schema_catalog,
+                &config,
+                source,
+                label,
+                output,
+                scope,
+            ) {
+                any_errors.set(true);
+            }
+            Ok(())
+        },
+        |source, path, _multi| {
+            let file = path.display().to_string();
+            if lineage_process_source(
+                dialect,
+                &schema_catalog,
+                &config,
+                source,
+                &file,
+                output,
+                scope,
+            ) {
+                any_errors.set(true);
+            }
+            Ok(())
+        },
+    )?;
+
+    if any_errors.get() {
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+fn lineage_process_source(
+    dialect: &AnyDialect,
+    schema_catalog: &Catalog,
+    config: &ValidationConfig,
+    source: &str,
+    label: &str,
+    output: LineageOutput,
+    scope: Option<LineageScope>,
+) -> bool {
+    let mut analyzer = SemanticAnalyzer::with_dialect(dialect.clone());
+    let model = analyzer.analyze(source, schema_catalog, config);
+    let mut had_error = false;
+    for (idx, stmt) in model.statements().iter().enumerate() {
+        let idx = idx as u32;
+        let errors: Vec<_> = stmt
+            .diagnostics()
+            .iter()
+            .filter(|d| d.severity() == Severity::Error)
+            .collect();
+        if errors.is_empty() {
+            emit_lineage(stmt, label, idx, output, scope);
+        } else {
+            for d in &errors {
+                emit_error(d, label, idx, output);
+            }
+            had_error = true;
+        }
+    }
+    had_error
+}
+
+fn emit_lineage(
+    stmt: &StatementModel,
+    file: &str,
+    index: u32,
+    output: LineageOutput,
+    scope: Option<LineageScope>,
+) {
+    let (status, partial_reasons) = if stmt.unexpanded_views().is_empty() {
+        (Status::Complete, Vec::new())
+    } else {
+        let reasons = stmt
+            .unexpanded_views()
+            .iter()
+            .map(|v| JsonPartialReason::UnexpandedView { view: v.clone() })
+            .collect();
+        (Status::Partial, reasons)
+    };
+
+    let target = stmt.defined_relations().first().map(|d| JsonTarget {
+        name: d.name.clone(),
+        kind: if d.is_view {
+            JsonTargetKind::View
+        } else {
+            JsonTargetKind::Table
+        },
+    });
+
+    let include_columns = matches!(scope, None | Some(LineageScope::Columns));
+    let include_tables = matches!(scope, None | Some(LineageScope::Tables));
+
+    let columns = if include_columns {
+        Some(
+            stmt.lineage()
+                .map(|l| {
+                    l.into_inner()
+                        .iter()
+                        .map(|c| JsonColumn {
+                            name: c.name.clone(),
+                            index: c.index,
+                            origin: c.origin.as_ref().map(|o| JsonOrigin {
+                                table: o.table.clone(),
+                                column: o.column.clone(),
+                            }),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+        )
+    } else {
+        None
+    };
+
+    let relations = if include_tables {
+        Some(
+            stmt.relations_accessed()
+                .map(|r| {
+                    r.into_inner()
+                        .iter()
+                        .map(|r| JsonRelation {
+                            name: r.name.clone(),
+                            kind: match r.kind {
+                                RelationKind::Table => JsonRelationKind::Table,
+                                RelationKind::View => JsonRelationKind::View,
+                            },
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+        )
+    } else {
+        None
+    };
+
+    let physical_tables = if include_tables {
+        Some(
+            stmt.physical_tables_accessed()
+                .map(|t| {
+                    t.into_inner()
+                        .iter()
+                        .map(|t| JsonPhysicalTable {
+                            name: t.name.clone(),
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
+        )
+    } else {
+        None
+    };
+
+    let record = LineageRecord {
+        kind: "lineage",
+        schema_version: SCHEMA_VERSION,
+        file: file.to_string(),
+        statement_index: index,
+        status,
+        partial_reasons,
+        target,
+        columns,
+        relations,
+        physical_tables,
+    };
+
+    match output {
+        LineageOutput::Json => match serde_json::to_string(&record) {
+            Ok(s) => println!("{s}"),
+            Err(e) => eprintln!("error serializing lineage record: {e}"),
+        },
+        LineageOutput::Text => print_lineage_text(&record),
+    }
+}
+
+fn emit_error(d: &Diagnostic, file: &str, index: u32, output: LineageOutput) {
+    let stage = match d.message() {
+        DiagnosticMessage::ParseError(_) => ErrorStage::Parse,
+        _ => ErrorStage::Validate,
+    };
+    let record = ErrorRecord {
+        kind: "error",
+        schema_version: SCHEMA_VERSION,
+        file: file.to_string(),
+        statement_index: index,
+        stage,
+        message: format!("{}", d.message()),
+    };
+
+    match output {
+        LineageOutput::Json => match serde_json::to_string(&record) {
+            Ok(s) => println!("{s}"),
+            Err(e) => eprintln!("error serializing error record: {e}"),
+        },
+        LineageOutput::Text => {
+            let stage = match record.stage {
+                ErrorStage::Parse => "parse",
+                ErrorStage::Validate => "validate",
+            };
+            println!(
+                "error [{}]: {}:{}: {}",
+                stage, record.file, record.statement_index, record.message
+            );
+        }
+    }
+}
+
+fn print_lineage_text(record: &LineageRecord) {
+    let status = match record.status {
+        Status::Complete => "complete",
+        Status::Partial => "partial",
+    };
+    println!(
+        "# {}:{} ({})",
+        record.file, record.statement_index, status
+    );
+    if let Some(target) = &record.target {
+        let kind = match target.kind {
+            JsonTargetKind::Table => "table",
+            JsonTargetKind::View => "view",
+        };
+        println!("  target: {} ({})", target.name, kind);
+    }
+    if let Some(columns) = &record.columns {
+        for c in columns {
+            match &c.origin {
+                Some(o) => println!("  column {}: {} <- {}.{}", c.index, c.name, o.table, o.column),
+                None => println!("  column {}: {} <- <transformed>", c.index, c.name),
+            }
+        }
+    }
+    if let Some(relations) = &record.relations {
+        for r in relations {
+            let kind = match r.kind {
+                JsonRelationKind::Table => "table",
+                JsonRelationKind::View => "view",
+            };
+            println!("  relation: {} ({})", r.name, kind);
+        }
+    }
+    if let Some(physical_tables) = &record.physical_tables {
+        for t in physical_tables {
+            println!("  physical_table: {}", t.name);
+        }
+    }
+    for reason in &record.partial_reasons {
+        match reason {
+            JsonPartialReason::UnexpandedView { view } => {
+                println!("  partial: unexpanded view `{view}`");
+            }
+        }
+    }
 }

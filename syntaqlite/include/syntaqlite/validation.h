@@ -89,7 +89,7 @@ typedef struct {
 // A physical table accessed by the query.
 typedef struct {
   const char* name;
-} SyntaqliteTableAccess;
+} SyntaqlitePhysicalTableAccess;
 
 // A relation defined by a DDL statement (CREATE TABLE, CREATE VIEW).
 typedef struct {
@@ -245,12 +245,12 @@ SYNTAQLITE_API const SyntaqliteRelationAccess* syntaqlite_validator_relations(
 
 // Number of physical tables accessed (after resolving CTEs/views).
 // Returns 0 if the last analyzed statement was not a query.
-SYNTAQLITE_API uint32_t syntaqlite_validator_table_count(
+SYNTAQLITE_API uint32_t syntaqlite_validator_physical_table_count(
     const SyntaqliteValidator* v);
 
 // Pointer to the table access array from the last analyze() call.
 // Returns NULL when table_count is 0.
-SYNTAQLITE_API const SyntaqliteTableAccess* syntaqlite_validator_tables(
+SYNTAQLITE_API const SyntaqlitePhysicalTableAccess* syntaqlite_validator_physical_tables(
     const SyntaqliteValidator* v);
 
 // ---------------------------------------------------------------------------
@@ -296,12 +296,12 @@ syntaqlite_validator_statement_relations(
     SyntaqliteValidator* v, uint32_t idx);
 
 // Number of physical tables accessed for statement `idx`.
-SYNTAQLITE_API uint32_t syntaqlite_validator_statement_table_count(
+SYNTAQLITE_API uint32_t syntaqlite_validator_statement_physical_table_count(
     SyntaqliteValidator* v, uint32_t idx);
 
 // Physical table access array for statement `idx`. NULL when count is 0.
-SYNTAQLITE_API const SyntaqliteTableAccess*
-syntaqlite_validator_statement_tables(
+SYNTAQLITE_API const SyntaqlitePhysicalTableAccess*
+syntaqlite_validator_statement_physical_tables(
     SyntaqliteValidator* v, uint32_t idx);
 
 // Number of relations defined by DDL in statement `idx`.

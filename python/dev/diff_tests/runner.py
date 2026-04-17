@@ -19,10 +19,14 @@ from python.dev.diff_tests.utils import Colors, colorize, format_diff
 def _run_single_test(args: tuple) -> TestResult:
     """Worker function for parallel test execution."""
     binary, subcommand, name, blueprint = args
+    # Lineage reads stdout but exits non-zero when error records are emitted;
+    # accept that like `validate` accepts non-zero exits.
+    lineage = subcommand is not None and subcommand.split()[0] == "lineage"
     return execute_test(
         Path(binary), name, blueprint,
         subcommand=subcommand,
         use_stderr=(subcommand == "validate"),
+        ignore_exit_code=lineage,
     )
 
 

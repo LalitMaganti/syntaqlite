@@ -205,8 +205,8 @@ if let Some(lineage) = model.lineage() {
     }
 }
 
-if let Some(tables) = model.tables_accessed() {
-    for t in tables.into_inner() {
+if let Some(physical_tables) = model.physical_tables_accessed() {
+    for t in physical_tables.into_inner() {
         println!("  table: {}", t.name);
     }
 }

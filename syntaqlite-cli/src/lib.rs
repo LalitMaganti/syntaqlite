@@ -17,6 +17,9 @@ mod runtime;
 #[cfg(feature = "builtin-sqlite")]
 mod codegen;
 
+#[cfg(feature = "builtin-sqlite")]
+mod lineage_output;
+
 #[cfg(feature = "mcp")]
 #[expect(
     clippy::needless_pass_by_value,
@@ -43,6 +46,23 @@ pub(crate) enum FmtOutput {
     Bytecode,
     /// Dump the Wadler-Lindig document tree after interpretation [maintainer]
     DocTree,
+}
+
+#[derive(Clone, Copy, Default, ValueEnum)]
+pub(crate) enum LineageOutput {
+    /// Newline-delimited JSON, one record per statement/error (default)
+    #[default]
+    Json,
+    /// Human-readable text
+    Text,
+}
+
+#[derive(Clone, Copy, Subcommand)]
+pub(crate) enum LineageScope {
+    /// Emit only relations and physical tables (drop columns)
+    Tables,
+    /// Emit only column lineage (drop relations and physical tables)
+    Columns,
 }
 
 #[derive(Parser)]
@@ -157,6 +177,24 @@ pub(crate) enum Command {
         /// [experimental] Host language for embedded SQL extraction (python, typescript)
         #[arg(long = "experimental-lang")]
         lang: Option<runtime::HostLanguage>,
+    },
+    /// Extract column and table lineage from SQL
+    #[cfg(feature = "builtin-sqlite")]
+    Lineage {
+        /// SQL files or glob patterns (reads stdin if omitted)
+        files: Vec<String>,
+        /// SQL expression to analyze directly (instead of files or stdin)
+        #[arg(short = 'e', long = "expression", conflicts_with = "files")]
+        expression: Option<String>,
+        /// Schema DDL file(s) to load before analysis (repeatable, supports globs)
+        #[arg(long)]
+        schema: Vec<String>,
+        /// Output format
+        #[arg(short, long, value_enum, default_value_t = LineageOutput::Json)]
+        output: LineageOutput,
+        /// Restrict output to a subset (combined output is the default)
+        #[command(subcommand)]
+        scope: Option<LineageScope>,
     },
     /// Start the language server (stdio)
     #[cfg(feature = "builtin-sqlite")]

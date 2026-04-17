@@ -12,7 +12,9 @@ use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
 use std::collections::HashMap;
 
 use super::diagnostics::Diagnostic;
-use super::lineage::{ColumnLineage, LineageResult, QueryLineage, RelationAccess, TableAccess};
+use super::lineage::{
+    ColumnLineage, LineageResult, PhysicalTableAccess, QueryLineage, RelationAccess,
+};
 
 // ── Stored per-statement positions ───────────────────────────────────────────
 
@@ -228,12 +230,12 @@ impl StatementModel {
     /// subqueries, views).
     ///
     /// Returns `None` if this statement did not contain a query body.
-    pub fn tables_accessed(&self) -> Option<LineageResult<&[TableAccess]>> {
+    pub fn physical_tables_accessed(&self) -> Option<LineageResult<&[PhysicalTableAccess]>> {
         self.lineage.as_ref().map(|ql| {
             if ql.complete {
-                LineageResult::Complete(ql.tables.as_slice())
+                LineageResult::Complete(ql.physical_tables.as_slice())
             } else {
-                LineageResult::Partial(ql.tables.as_slice())
+                LineageResult::Partial(ql.physical_tables.as_slice())
             }
         })
     }
@@ -241,6 +243,15 @@ impl StatementModel {
     /// Relations defined by this DDL statement (e.g. `CREATE TABLE`, `CREATE VIEW`).
     pub fn defined_relations(&self) -> &[DefinedRelation] {
         &self.defined_relations
+    }
+
+    /// Canonical names of views referenced in this statement whose bodies
+    /// could not be expanded (no DDL available). Empty when all sources were
+    /// fully resolved or when the statement is not a query.
+    pub fn unexpanded_views(&self) -> &[String] {
+        self.lineage
+            .as_ref()
+            .map_or(&[], |ql| ql.unexpanded_views.as_slice())
     }
 }
 
