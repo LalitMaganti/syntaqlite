@@ -20,6 +20,11 @@ use std::collections::{BTreeMap, HashSet};
 use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
+use std::sync::OnceLock;
+
+/// Empty runtime-keys set reused by `Emitter::new` for modes that don't
+/// wrap any files in the `SYNTAQLITE_OMIT_RUNTIME` guard.
+static EMPTY_KEYS: OnceLock<HashSet<String>> = OnceLock::new();
 
 // ---------------------------------------------------------------------------
 // Warning suppressions emitted into the amalgamation .c file
@@ -176,6 +181,11 @@ pub fn amalgamate_dialect(
 /// the amalgamation header and source, compiling out all macro expansion
 /// code.
 ///
+/// The generated `.c` wraps runtime-origin sources (from `runtime_dir`) in
+/// an `#ifndef SYNTAQLITE_OMIT_RUNTIME` guard so callers loading the output
+/// as a plugin (`cdylib`) can compile with `-DSYNTAQLITE_OMIT_RUNTIME` to
+/// exclude runtime implementations and rely on the host binary's copy.
+///
 /// # Errors
 ///
 /// Returns an error if reading source files from `runtime_dir` or `dialect_dir` fails.
@@ -185,13 +195,65 @@ pub fn amalgamate_full(
     dialect_dir: &Path,
     omit_macros: bool,
 ) -> Result<AmalgamateOutput, String> {
-    let files = collect_files(&[
-        &runtime_dir.join("csrc"),
-        &runtime_dir.join("include"),
-        &dialect_dir.join("csrc"),
-        &dialect_dir.join("include"),
-    ])?;
-    Ok(emit(&files, EmitMode::Full(dialect), omit_macros))
+    let runtime_files =
+        collect_files(&[&runtime_dir.join("csrc"), &runtime_dir.join("include")])?;
+    let dialect_files =
+        collect_files(&[&dialect_dir.join("csrc"), &dialect_dir.join("include")])?;
+
+    let mut files = FileMap::new();
+    for (k, v) in &runtime_files {
+        files.insert(k.clone(), v.clone());
+    }
+    for (k, v) in &dialect_files {
+        files.insert(k.clone(), v.clone());
+    }
+
+    let runtime_keys: HashSet<String> = files
+        .keys()
+        .filter(|k| is_runtime_origin(k, dialect, &runtime_files, &dialect_files))
+        .filter(|k| matches!(classify(k), FileKind::InternalHeader | FileKind::Source))
+        .cloned()
+        .collect();
+
+    Ok(emit(
+        &files,
+        EmitMode::Full {
+            dialect,
+            runtime_keys: &runtime_keys,
+        },
+        omit_macros,
+    ))
+}
+
+/// Classify a file's origin.
+///
+/// Primary signal: which collection the key was found in.
+///   - only in runtime     → runtime origin
+///   - only in dialect     → dialect origin
+///   - in both (overlap)   → path-based fallback (happens when the caller
+///     passes the same on-disk tree for both runtime and dialect dirs,
+///     e.g. `tools/build-amalgamation` reading the source checkout).
+///
+/// Path-based fallback: keys under `csrc/<dialect>/` or `syntaqlite_<dialect>/`
+/// are dialect; everything else is runtime.
+fn is_runtime_origin(
+    key: &str,
+    dialect: &str,
+    runtime_files: &FileMap,
+    dialect_files: &FileMap,
+) -> bool {
+    let in_rt = runtime_files.contains_key(key);
+    let in_dl = dialect_files.contains_key(key);
+    match (in_rt, in_dl) {
+        (true, false) => true,
+        (false, true) => false,
+        (true, true) => {
+            let dialect_csrc = format!("csrc/{dialect}/");
+            let dialect_pub = format!("syntaqlite_{dialect}/");
+            !(key.starts_with(&dialect_csrc) || key.starts_with(&dialect_pub))
+        }
+        (false, false) => false,
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -323,7 +385,15 @@ enum EmitMode<'a> {
         ext_header: &'a str,
     },
     /// Full: runtime + dialect inlined into `syntaqlite_<name>.{h,c}`.
-    Full(&'a str),
+    ///
+    /// `runtime_keys` identifies files that originate from the runtime tree.
+    /// Runtime-origin sources are wrapped in an `#ifndef SYNTAQLITE_OMIT_RUNTIME`
+    /// guard; runtime-origin headers are emitted before dialect-origin headers
+    /// so dialect declarations can reference runtime types.
+    Full {
+        dialect: &'a str,
+        runtime_keys: &'a HashSet<String>,
+    },
 }
 
 // ---------------------------------------------------------------------------
@@ -354,21 +424,46 @@ enum Section {
     Source,
 }
 
+fn section_expands(section: Section, kind: FileKind) -> bool {
+    match section {
+        Section::Header => kind == FileKind::PublicHeader,
+        Section::ExtHeader => kind == FileKind::ExtHeader,
+        Section::Source => matches!(kind, FileKind::InternalHeader | FileKind::ExtHeader),
+    }
+}
+
 struct Emitter<'a> {
     files: &'a FileMap,
     seen: HashSet<String>,
+    /// Keys that should have their emitted content wrapped in
+    /// `#ifndef SYNTAQLITE_OMIT_RUNTIME`. Empty means no wrapping (used by
+    /// all modes except `Full`).
+    runtime_keys: &'a HashSet<String>,
 }
 
 impl<'a> Emitter<'a> {
     fn new(files: &'a FileMap) -> Self {
+        Self::with_runtime_keys(files, EMPTY_KEYS.get_or_init(HashSet::new))
+    }
+
+    fn with_runtime_keys(files: &'a FileMap, runtime_keys: &'a HashSet<String>) -> Self {
         Self {
             files,
             seen: HashSet::new(),
+            runtime_keys,
         }
     }
 
-    /// Emit one file, recursively expanding local `#include "..."` directives
-    /// according to `section`. Already-seen files are skipped (deduplication).
+    /// Emit one file. Children (locally-included files allowed by `section`)
+    /// are emitted first in post-order DFS, each via this same function.
+    /// Then the file's own body is emitted, with resolved local includes
+    /// suppressed (their content was written earlier).
+    ///
+    /// If the file's key is in `runtime_keys`, its own body — but *not* its
+    /// hoisted children — is wrapped in `#ifndef SYNTAQLITE_OMIT_RUNTIME`.
+    /// Shared headers (like extension SPI) reached from both runtime and
+    /// dialect files thus land outside any wrap, so dedup never traps their
+    /// declarations inside a stripped region.
     fn emit_file(&mut self, key: &str, out: &mut String, section: Section) {
         if !self.seen.insert(key.to_string()) {
             return;
@@ -378,7 +473,22 @@ impl<'a> Emitter<'a> {
             None => return,
         };
 
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if let Some(IncludeDirective::Quoted(path)) = parse_include_directive(trimmed)
+                && self.files.contains_key(path)
+                && section_expands(section, classify(path))
+            {
+                self.emit_file(path, out, section);
+            }
+        }
+
+        let wrap_runtime = self.runtime_keys.contains(key);
+
         let _ = writeln!(out, "/* ======== begin: {key} ======== */");
+        if wrap_runtime {
+            out.push_str("#ifndef SYNTAQLITE_OMIT_RUNTIME\n");
+        }
 
         let guard = detect_include_guard(&content);
         if let Some(ref g) = guard {
@@ -387,8 +497,6 @@ impl<'a> Emitter<'a> {
 
         let mut lines: Vec<&str> = content.lines().collect();
 
-        // Strip the trailing `#endif` of the original guard so we can re-emit
-        // our own below (prevents the guard from spanning the end-marker comment).
         if guard.is_some() {
             for i in (0..lines.len()).rev() {
                 let t = lines[i].trim();
@@ -409,8 +517,6 @@ impl<'a> Emitter<'a> {
         for line in &lines {
             let trimmed = line.trim();
 
-            // Strip the original `#ifndef GUARD` / `#define GUARD` pair — we
-            // re-emitted them above, before the content block.
             if let Some(ref g) = guard {
                 if !guard_ifndef_seen {
                     if let Some(rest) = trimmed.strip_prefix("#ifndef")
@@ -432,30 +538,15 @@ impl<'a> Emitter<'a> {
                 match directive {
                     IncludeDirective::Quoted(path) => {
                         if self.files.contains_key(path) {
-                            // Resolved: inline it if appropriate for this section,
-                            // otherwise silently drop the directive.
-                            let kind = classify(path);
-                            let should_expand = match section {
-                                Section::Header => kind == FileKind::PublicHeader,
-                                Section::ExtHeader => kind == FileKind::ExtHeader,
-                                Section::Source => {
-                                    matches!(kind, FileKind::InternalHeader | FileKind::ExtHeader)
-                                }
-                            };
-                            if should_expand {
-                                self.emit_file(path, out, section);
-                            }
+                            // Resolved locally — children were hoisted above,
+                            // so drop the directive regardless of whether it
+                            // expanded.
                             continue;
                         }
-                        // Unresolved: strip runtime-style paths in all sections.
-                        // In Full/RuntimeOnly modes these never arise (all runtime
-                        // files are in the map). In DialectOnly mode they must be
-                        // stripped since the runtime header is included explicitly.
                         if is_runtime_path(path) {
                             continue;
                         }
                     }
-                    // System includes (`<...>`) and macro includes are always kept.
                     IncludeDirective::System | IncludeDirective::Other => {}
                 }
             }
@@ -466,6 +557,9 @@ impl<'a> Emitter<'a> {
 
         if let Some(ref g) = guard {
             let _ = writeln!(out, "#endif  /* {g} */");
+        }
+        if wrap_runtime {
+            out.push_str("#endif /* !SYNTAQLITE_OMIT_RUNTIME */\n");
         }
         let _ = write!(out, "/* ======== end: {key} ======== */\n\n");
     }
@@ -563,7 +657,7 @@ fn detect_include_guard(content: &str) -> Option<String> {
 )]
 fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput {
     let (guard, header_filename) = match &mode {
-        EmitMode::DialectOnly { dialect: d, .. } | EmitMode::Full(d) => (
+        EmitMode::DialectOnly { dialect: d, .. } | EmitMode::Full { dialect: d, .. } => (
             format!("SYNTAQLITE_{}_H", d.to_uppercase()),
             format!("syntaqlite_{d}.h"),
         ),
@@ -601,13 +695,13 @@ fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput 
             header.push_str("#endif\n");
             header.push_str("#include SYNTAQLITE_RUNTIME_HEADER\n\n");
         }
-        EmitMode::Full(dialect) if *dialect != "sqlite" => {
+        EmitMode::Full { dialect, .. } if *dialect != "sqlite" => {
             emit_omit_define(&mut header, "SYNTAQLITE_OMIT_SQLITE_API");
             if omit_macros {
                 emit_omit_define(&mut header, "SYNTAQLITE_OMIT_MACROS");
             }
         }
-        EmitMode::Full(_) if omit_macros => {
+        EmitMode::Full { .. } if omit_macros => {
             emit_omit_define(&mut header, "SYNTAQLITE_OMIT_MACROS");
         }
         _ => {}
@@ -677,7 +771,7 @@ fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput 
         let _ = writeln!(source, "#define SYNTAQLITE_EXT_HEADER \"{ext_header}\"");
         source.push_str("#endif\n");
         source.push_str("#include SYNTAQLITE_EXT_HEADER\n\n");
-    } else if let EmitMode::Full(dialect) = &mode
+    } else if let EmitMode::Full { dialect, .. } = &mode
         && *dialect != "sqlite"
     {
         emit_omit_define(&mut source, "SYNTAQLITE_OMIT_SQLITE_API");
@@ -689,9 +783,10 @@ fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput 
     }
     let _ = write!(source, "#include \"{header_filename}\"\n\n");
 
-    // Emit sources. They recursively pull in their internal and ext-header
-    // dependencies in encounter order (driven by the include graph).
-    let mut s_emitter = Emitter::new(files);
+    let mut s_emitter = match &mode {
+        EmitMode::Full { runtime_keys, .. } => Emitter::with_runtime_keys(files, runtime_keys),
+        _ => Emitter::new(files),
+    };
     s_emitter.emit_kind(FileKind::Source, &mut source, Section::Source);
 
     emit_diagnostic_pop(&mut source);
@@ -828,5 +923,201 @@ mod tests {
         assert!(is_runtime_path("syntaqlite_dialect/arena.h"));
         assert!(is_runtime_path("csrc/dialect_dispatch.h"));
         assert!(!is_runtime_path("vendor/custom.h"));
+    }
+
+    fn runtime_set(keys: &[&str]) -> HashSet<String> {
+        keys.iter().map(|s| (*s).to_string()).collect()
+    }
+
+    #[test]
+    fn full_mode_wraps_each_runtime_source_individually() {
+        let mut files = FileMap::new();
+        files.insert(
+            "csrc/parser.c".to_string(),
+            "void runtime_api(void) {}\n".to_string(),
+        );
+        files.insert(
+            "csrc/tokenizer.c".to_string(),
+            "void runtime_tok(void) {}\n".to_string(),
+        );
+        files.insert(
+            "csrc/sqlite/dialect.c".to_string(),
+            "void sqlite_dialect_fn(void) {}\n".to_string(),
+        );
+
+        let runtime_keys = runtime_set(&["csrc/parser.c", "csrc/tokenizer.c"]);
+
+        let out = emit(
+            &files,
+            EmitMode::Full {
+                dialect: "sqlite",
+                runtime_keys: &runtime_keys,
+            },
+            false,
+        );
+
+        let src = &out.source;
+
+        fn block_for<'a>(src: &'a str, key: &str) -> &'a str {
+            let begin = src.find(&format!("begin: {key}")).expect("missing begin");
+            let end = src.find(&format!("end: {key}")).expect("missing end");
+            &src[begin..end]
+        }
+
+        let parser_block = block_for(src, "csrc/parser.c");
+        let tok_block = block_for(src, "csrc/tokenizer.c");
+        let dialect_block = block_for(src, "csrc/sqlite/dialect.c");
+
+        assert!(
+            parser_block.contains("#ifndef SYNTAQLITE_OMIT_RUNTIME"),
+            "runtime parser.c block should open the OMIT_RUNTIME guard"
+        );
+        assert!(
+            parser_block.contains("#endif /* !SYNTAQLITE_OMIT_RUNTIME */"),
+            "runtime parser.c block should close the OMIT_RUNTIME guard"
+        );
+        assert!(
+            tok_block.contains("#ifndef SYNTAQLITE_OMIT_RUNTIME"),
+            "runtime tokenizer.c block should open the OMIT_RUNTIME guard"
+        );
+        assert!(
+            !dialect_block.contains("#ifndef SYNTAQLITE_OMIT_RUNTIME"),
+            "dialect source block must not be wrapped"
+        );
+    }
+
+    #[test]
+    fn full_mode_shared_ext_header_survives_omit_runtime() {
+        // Regression: when a runtime source and a dialect source both include
+        // the same extension SPI header, dedup must not trap the header's
+        // declarations inside the runtime source's OMIT_RUNTIME guard — the
+        // dialect source needs those declarations after the guard strips the
+        // runtime body.
+        let mut files = FileMap::new();
+        files.insert(
+            "syntaqlite_dialect/shared.h".to_string(),
+            "#ifndef SYNTAQLITE_DIALECT_SHARED_H\n\
+             #define SYNTAQLITE_DIALECT_SHARED_H\n\
+             typedef int shared_type;\n\
+             #endif\n"
+                .to_string(),
+        );
+        files.insert(
+            "csrc/parser.c".to_string(),
+            "#include \"syntaqlite_dialect/shared.h\"\n\
+             void runtime_fn(shared_type x) { (void)x; }\n"
+                .to_string(),
+        );
+        files.insert(
+            "csrc/sqlite/dialect.c".to_string(),
+            "#include \"syntaqlite_dialect/shared.h\"\n\
+             void dialect_fn(shared_type x) { (void)x; }\n"
+                .to_string(),
+        );
+
+        let runtime_keys = runtime_set(&["csrc/parser.c"]);
+
+        let out = emit(
+            &files,
+            EmitMode::Full {
+                dialect: "sqlite",
+                runtime_keys: &runtime_keys,
+            },
+            false,
+        );
+
+        let src = &out.source;
+
+        // Emitted exactly once (dedup).
+        assert_eq!(
+            src.matches("begin: syntaqlite_dialect/shared.h").count(),
+            1,
+            "shared header should be emitted exactly once"
+        );
+
+        // Simulate the preprocessor with OMIT_RUNTIME defined: every
+        // `#ifndef SYNTAQLITE_OMIT_RUNTIME` block is stripped. The shared
+        // header's declarations must survive.
+        let stripped = strip_omit_runtime_blocks(src);
+        assert!(
+            stripped.contains("typedef int shared_type"),
+            "shared header declarations must survive OMIT_RUNTIME; stripped output:\n{stripped}"
+        );
+        // Dialect function definition still present (it was never wrapped).
+        assert!(
+            stripped.contains("void dialect_fn("),
+            "dialect source must survive OMIT_RUNTIME"
+        );
+        // Runtime implementation removed.
+        assert!(
+            !stripped.contains("void runtime_fn("),
+            "runtime source must be stripped under OMIT_RUNTIME"
+        );
+    }
+
+    /// Strip every `#ifndef SYNTAQLITE_OMIT_RUNTIME` ... `#endif /* !SYNTAQLITE_OMIT_RUNTIME */`
+    /// block from `src`, simulating what the C preprocessor does when
+    /// `SYNTAQLITE_OMIT_RUNTIME` is defined at compile time.
+    fn strip_omit_runtime_blocks(src: &str) -> String {
+        let mut out = String::new();
+        let mut inside = false;
+        for line in src.lines() {
+            let t = line.trim();
+            if !inside && t == "#ifndef SYNTAQLITE_OMIT_RUNTIME" {
+                inside = true;
+                continue;
+            }
+            if inside && t == "#endif /* !SYNTAQLITE_OMIT_RUNTIME */" {
+                inside = false;
+                continue;
+            }
+            if !inside {
+                out.push_str(line);
+                out.push('\n');
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn is_runtime_origin_prefers_collection_membership() {
+        let mut rt = FileMap::new();
+        rt.insert("csrc/parser.c".to_string(), String::new());
+        let mut dl = FileMap::new();
+        dl.insert("csrc/dialect.c".to_string(), String::new());
+
+        assert!(is_runtime_origin("csrc/parser.c", "sqlite", &rt, &dl));
+        assert!(!is_runtime_origin("csrc/dialect.c", "sqlite", &rt, &dl));
+    }
+
+    #[test]
+    fn is_runtime_origin_falls_back_to_path_when_dirs_overlap() {
+        // Both collections contain the same keys — simulates the caller
+        // passing the same on-disk tree for both runtime_dir and dialect_dir.
+        let mut both = FileMap::new();
+        both.insert("csrc/parser.c".to_string(), String::new());
+        both.insert("csrc/sqlite/dialect.c".to_string(), String::new());
+        both.insert("syntaqlite_sqlite/node.h".to_string(), String::new());
+        both.insert("syntaqlite_dialect/arena.h".to_string(), String::new());
+
+        assert!(is_runtime_origin("csrc/parser.c", "sqlite", &both, &both));
+        assert!(!is_runtime_origin(
+            "csrc/sqlite/dialect.c",
+            "sqlite",
+            &both,
+            &both
+        ));
+        assert!(!is_runtime_origin(
+            "syntaqlite_sqlite/node.h",
+            "sqlite",
+            &both,
+            &both
+        ));
+        assert!(is_runtime_origin(
+            "syntaqlite_dialect/arena.h",
+            "sqlite",
+            &both,
+            &both
+        ));
     }
 }
