@@ -118,6 +118,15 @@ fn write_cflag_struct(
     }
     out.push_str("} SyntaqliteCflags;\n");
     out.push('\n');
+    writeln!(
+        out,
+        "SYNQ_STATIC_ASSERT(sizeof(SyntaqliteCflags) == {byte_count},"
+    )
+    .expect("write to String");
+    out.push_str(
+        "                   \"SyntaqliteCflags layout must match byte-wise accessor assumptions\");\n",
+    );
+    out.push('\n');
     out.push_str("#define SYNQ_CFLAGS_DEFAULT {0}\n");
     out.push('\n');
 }
@@ -194,6 +203,8 @@ pub(crate) fn generate_cflags_h(group: &str) -> String {
     out.push('\n');
     out.push_str("#include <stdint.h>\n");
     out.push_str("#include <string.h>\n");
+    out.push('\n');
+    out.push_str("#include \"syntaqlite/compiler.h\"\n");
     out.push('\n');
     write_cflag_defines(&mut out, &entries_ref, count);
     write_cflag_struct(&mut out, &entries_ref, bits_total, padding, byte_count);
@@ -323,5 +334,17 @@ mod tests {
                 "cflags.h defines {name}={val} but it is not a parser-group entry in CFLAG_REGISTRY"
             );
         }
+    }
+
+    /// The byte-wise accessor `synq_has_cflag` reads `SyntaqliteCflags` as
+    /// a flat byte array. A `SYNQ_STATIC_ASSERT` on the struct size catches
+    /// any layout drift at compile time.
+    #[test]
+    fn generate_cflags_h_emits_struct_size_assertion() {
+        let generated = super::generate_cflags_h("parser");
+        assert!(
+            generated.contains("SYNQ_STATIC_ASSERT(sizeof(SyntaqliteCflags) =="),
+            "expected SyntaqliteCflags size assertion, got:\n{generated}"
+        );
     }
 }

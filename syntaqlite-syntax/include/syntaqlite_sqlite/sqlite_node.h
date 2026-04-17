@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "syntaqlite/compiler.h"
 #include "syntaqlite/types.h"
 
 #ifdef __cplusplus
@@ -386,6 +387,8 @@ typedef enum SyntaqliteNodeTag {
   SYNTAQLITE_NODE_FILTER_OVER = 78,
   SYNTAQLITE_NODE_COUNT
 } SyntaqliteNodeTag;
+SYNQ_STATIC_ASSERT(sizeof(SyntaqliteNodeTag) == sizeof(uint32_t),
+                   "SyntaqliteNodeTag must be 32 bits for FFI compatibility");
 
 // ============ Node Structs ============
 

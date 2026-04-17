@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "syntaqlite/compiler.h"
+
 // ── Cflag index constants ───────────────────────────────────────────────
 //
 // These are group-local indices used in keyword/parser tables.
@@ -75,6 +77,10 @@ typedef struct SyntaqliteCflags {
   // Padding to 24 bits (3 bytes):
   uint8_t _reserved : 2;
 } SyntaqliteCflags;
+
+SYNQ_STATIC_ASSERT(
+    sizeof(SyntaqliteCflags) == 3,
+    "SyntaqliteCflags layout must match byte-wise accessor assumptions");
 
 #define SYNQ_CFLAGS_DEFAULT {0}
 

@@ -23,6 +23,7 @@ impl AstModel<'_> {
         w.include_system("stddef.h");
         w.include_system("stdint.h");
         w.newline();
+        w.include_local("syntaqlite/compiler.h");
         w.include_local("syntaqlite/types.h");
         w.newline();
         // C++ doesn't have flexible array members; use [1] as a common workaround.
@@ -85,6 +86,8 @@ impl AstModel<'_> {
         }
         tag_variants.push(("SYNTAQLITE_NODE_COUNT".into(), None));
         w.typedef_enum("SyntaqliteNodeTag", &refs_i32(&tag_variants));
+        w.line("SYNQ_STATIC_ASSERT(sizeof(SyntaqliteNodeTag) == sizeof(uint32_t),");
+        w.line("                   \"SyntaqliteNodeTag must be 32 bits for FFI compatibility\");");
         w.newline();
 
         // Node structs
@@ -340,4 +343,21 @@ fn field_c_type(field: &Field, enum_names: &HashSet<&str>, flags_names: &HashSet
 
 fn refs_i32(owned: &[(String, Option<i32>)]) -> Vec<(&str, Option<i32>)> {
     owned.iter().map(|(s, v)| (s.as_str(), *v)).collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::AstModel;
+    use crate::util::synq_parser::parse_synq_file;
+
+    #[test]
+    fn node_tag_size_is_statically_asserted() {
+        let items = parse_synq_file("node Foo { x: inline Bool }").expect("parse");
+        let model = AstModel::new(&items);
+        let header = model.generate_ast_nodes_header("sqlite");
+        assert!(
+            header.contains("SYNQ_STATIC_ASSERT(sizeof(SyntaqliteNodeTag) == sizeof(uint32_t),"),
+            "expected node tag size assertion, got:\n{header}"
+        );
+    }
 }
