@@ -179,7 +179,12 @@ struct SyntaqliteParser {
   uint32_t last_token_type;  // Last non-whitespace token fed to Lemon.
   uint32_t finished;         // 1 after EOF has been sent to Lemon.
   uint32_t had_comment;      // 1 if any comment token was seen this stmt.
-  int32_t last_status;       // Last SYNTAQLITE_PARSE_* status returned.
+  // End offset (in p->source) of the most recent layer-0 significant
+  // token recorded into p->tokens this statement, or UINT32_MAX if none.
+  // Used to classify a recorded comment as TRAILING (same source line as
+  // the preceding token) vs LEADING (its own line / before any token).
+  uint32_t last_layer0_token_end;
+  int32_t last_status;  // Last SYNTAQLITE_PARSE_* status returned.
   uint32_t trace;
   uint32_t collect_tokens;
   uint32_t sealed;
@@ -205,7 +210,11 @@ static inline int synq_token_is_skip(uint32_t type) {
 }
 
 // Record a comment span into p->comments. `offset` is the byte offset into
-// p->source. Caller must check p->collect_tokens before calling.
+// p->source. The owning token_idx and side are computed from the parser's
+// current state (last_layer0_token_end + p->tokens length): TRAILING when
+// the previous layer-0 token ends on the same source line as this comment,
+// LEADING otherwise (in which case the predicted owner is the next token
+// to be pushed). Caller must check p->collect_tokens before calling.
 void synq_parser_record_comment(SyntaqliteParser* p,
                                 uint32_t offset,
                                 uint32_t len);

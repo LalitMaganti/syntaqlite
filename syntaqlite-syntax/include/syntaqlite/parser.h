@@ -182,10 +182,30 @@ SYNTAQLITE_API uint32_t syntaqlite_result_error_offset(SyntaqliteParser* p);
 SYNTAQLITE_API uint32_t syntaqlite_result_error_length(SyntaqliteParser* p);
 
 // A comment captured during parsing.
+//
+// Each comment is bound at parse time to one of the statement's tokens:
+//   - `side == SYNQ_COMMENT_LEADING` and `token_idx == N` means the comment
+//     appears immediately before token N (no significant token between them
+//     in the source) and either token N is the first token of the statement
+//     or the comment is on its own source line.
+//   - `side == SYNQ_COMMENT_TRAILING` and `token_idx == N` means the comment
+//     appears on the same source line as token N's end, with no significant
+//     token between them.
+// `token_idx` indexes into the same per-statement token array returned by
+// `syntaqlite_result_tokens`.  When the comment trails the last token of a
+// statement and no following statement exists, `token_idx` may equal
+// `count` (one past the last token) — consumers should treat that as
+// "statement-trailing with no owner."
+typedef uint8_t SyntaqliteCommentSide;
+#define SYNQ_COMMENT_LEADING ((SyntaqliteCommentSide)0)
+#define SYNQ_COMMENT_TRAILING ((SyntaqliteCommentSide)1)
+
 typedef struct SyntaqliteComment {
-  uint32_t offset;  // Byte offset in source.
-  uint32_t length;  // Byte length.
-  uint8_t kind;     // 0 = line comment (--), 1 = block comment (/* */).
+  uint32_t offset;     // Byte offset in source.
+  uint32_t length;     // Byte length.
+  uint32_t token_idx;  // Index of the owning token in p->tokens.
+  uint8_t kind;        // 0 = line comment (--), 1 = block comment (/* */).
+  uint8_t side;        // SYNQ_COMMENT_LEADING or SYNQ_COMMENT_TRAILING.
 } SyntaqliteComment;
 
 // Token-usage flags: set by the parser during disambiguation to record how
@@ -222,6 +242,24 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_result_comments(
     uint32_t* count);
 SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
     SyntaqliteParser* p,
+    uint32_t* count);
+
+// Get the comments attached to a specific token.
+//
+// Returns a pointer to the first comment in `p->comments` whose
+// `token_idx == token_idx` and `side == side`, and writes the count of
+// such comments to `*count`.  Comments attached to the same token are
+// contiguous in `p->comments` and recorded in source order.
+//
+// Returns NULL with `*count == 0` when there are no matching comments.
+SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_leading_comments(
+    SyntaqliteParser* p,
+    uint32_t token_idx,
+    uint32_t* count);
+
+SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_trailing_comments(
+    SyntaqliteParser* p,
+    uint32_t token_idx,
     uint32_t* count);
 
 // Sentinel value for `SyntaqliteMacroRewrite::parent_idx` meaning "this

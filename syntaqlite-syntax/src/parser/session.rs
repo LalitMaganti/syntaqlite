@@ -316,6 +316,21 @@ impl<'a> ParsedStatement<'a> {
         self.0.comments()
     }
 
+    /// Comments that appear immediately before token `token_idx`.
+    ///
+    /// Requires `collect_tokens: true` in [`ParserConfig`].
+    pub fn leading_comments(&self, token_idx: u32) -> impl Iterator<Item = Comment<'a>> {
+        self.0.leading_comments(token_idx)
+    }
+
+    /// Comments that appear on the same source line as token `token_idx`,
+    /// after it.
+    ///
+    /// Requires `collect_tokens: true` in [`ParserConfig`].
+    pub fn trailing_comments(&self, token_idx: u32) -> impl Iterator<Item = Comment<'a>> {
+        self.0.trailing_comments(token_idx)
+    }
+
     /// Convert this result into the dialect-agnostic [`AnyParsedStatement`].
     ///
     /// Use this when handing statement data to dialect-independent tooling.
@@ -453,7 +468,7 @@ mod tests {
     use std::panic::{self, AssertUnwindSafe};
     use std::rc::Rc;
 
-    use super::{ParseErrorKind, ParseOutcome, Parser, ParserConfig};
+    use super::{ParseErrorKind, ParseOutcome, Parser, ParserConfig, ParserToken};
     use crate::parser::{MacroArg, MacroLookup, MacroOutput};
     use crate::{CommentKind, TokenType};
 
@@ -558,6 +573,100 @@ mod tests {
                 .any(|comment| comment.kind() == CommentKind::Line
                     && comment.text().contains("tail"))
         );
+    }
+
+    macro_rules! ok_stmt {
+        ($session:expr) => {
+            match $session.next() {
+                ParseOutcome::Ok(stmt) => stmt,
+                ParseOutcome::Done => panic!("statement is missing"),
+                ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
+            }
+        };
+    }
+
+    #[test]
+    fn comment_attaches_as_trailing_when_same_line() {
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+        let mut session = parser.parse("SELECT 1 -- inline\nFROM t;");
+        let stmt = ok_stmt!(session);
+
+        let tokens: Vec<ParserToken<'_>> = stmt.tokens().collect();
+        let one_idx = tokens
+            .iter()
+            .position(|t| t.text() == "1")
+            .map(|i| u32::try_from(i).unwrap())
+            .expect("`1` token");
+
+        let trailing: Vec<_> = stmt.trailing_comments(one_idx).collect();
+        assert_eq!(trailing.len(), 1, "comment should be trailing of `1`");
+        assert!(trailing[0].text().contains("inline"));
+
+        let leading_one: Vec<_> = stmt.leading_comments(one_idx).collect();
+        assert!(leading_one.is_empty(), "no leading comments on `1`");
+    }
+
+    #[test]
+    fn comment_attaches_as_leading_when_on_own_line() {
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+        let mut session = parser.parse("SELECT 1\n-- standalone\nFROM t;");
+        let stmt = ok_stmt!(session);
+
+        let tokens: Vec<ParserToken<'_>> = stmt.tokens().collect();
+        let from_idx = tokens
+            .iter()
+            .position(|t| t.token_type() == TokenType::From)
+            .map(|i| u32::try_from(i).unwrap())
+            .expect("FROM token");
+
+        let leading: Vec<_> = stmt.leading_comments(from_idx).collect();
+        assert_eq!(leading.len(), 1, "comment should be leading of FROM");
+        assert!(leading[0].text().contains("standalone"));
+    }
+
+    #[test]
+    fn header_comment_attaches_as_leading_to_first_token() {
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+        let mut session = parser.parse("-- header\nSELECT 1;");
+        let stmt = ok_stmt!(session);
+
+        let leading: Vec<_> = stmt.leading_comments(0).collect();
+        assert_eq!(leading.len(), 1);
+        assert!(leading[0].text().contains("header"));
+    }
+
+    #[test]
+    fn block_comment_same_line_attaches_as_trailing() {
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+        let mut session = parser.parse("SELECT 1 /* inline */\nFROM t;");
+        let stmt = ok_stmt!(session);
+
+        let tokens: Vec<ParserToken<'_>> = stmt.tokens().collect();
+        let one_idx = tokens
+            .iter()
+            .position(|t| t.text() == "1")
+            .map(|i| u32::try_from(i).unwrap())
+            .expect("`1` token");
+
+        let trailing: Vec<_> = stmt.trailing_comments(one_idx).collect();
+        assert_eq!(trailing.len(), 1);
+        assert_eq!(trailing[0].kind(), CommentKind::Block);
+    }
+
+    #[test]
+    fn inter_statement_comment_rolls_forward_as_leading() {
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+        let mut session = parser.parse("SELECT 1;\n-- between\nSELECT 2;");
+
+        let stmt1 = ok_stmt!(session);
+        // Inter-statement comment belongs to stmt2, not stmt1.
+        assert_eq!(stmt1.comments().count(), 0);
+        drop(stmt1);
+
+        let stmt2 = ok_stmt!(session);
+        let leading_first: Vec<_> = stmt2.leading_comments(0).collect();
+        assert_eq!(leading_first.len(), 1);
+        assert!(leading_first[0].text().contains("between"));
     }
 
     #[test]

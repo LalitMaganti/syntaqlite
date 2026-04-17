@@ -83,6 +83,7 @@ static void reset_stmt(SyntaqliteParser* p) {
   p->ctx.saw_subquery = 0;
   p->ctx.saw_update_delete_limit = 0;
   p->had_comment = 0;
+  p->last_layer0_token_end = UINT32_MAX;
   p->had_error = 0;
   p->error_msg[0] = '\0';
   p->ctx.error_offset = 0xFFFFFFFF;
@@ -320,6 +321,8 @@ int synq_parser_record_and_feed(SyntaqliteParser* p,
                                 p->ctx.layer_id};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
+    if (p->ctx.layer_id == 0)
+      p->last_layer0_token_end = cur_offset + cur_len;
   }
   // Publish the upcoming token's start *before* Lemon processes it so
   // that BEFORE-style empty-marker reductions firing inside feed_one_token
@@ -345,13 +348,43 @@ int synq_parser_record_and_feed(SyntaqliteParser* p,
 }
 
 // Record a comment token (outlined from the hot loop).
+//
+// Computes attachment from the parser's current state: a comment is
+// TRAILING the previous layer-0 token when there is no '\n' in the source
+// gap between that token's end and the comment's start; otherwise LEADING
+// the next token to be pushed. The predicted owner index for LEADING
+// comments equals `vec_len(p->tokens)` — the index the next push will
+// land on.
 SYNQ_NOINLINE
 void synq_parser_record_comment(SyntaqliteParser* p,
                                 uint32_t offset,
                                 uint32_t len) {
   const unsigned char* z = (const unsigned char*)p->source;
-  SyntaqliteComment t = {offset, len,
-                         z[offset] == '-' ? (uint8_t)0 : (uint8_t)1};
+
+  uint8_t side = SYNQ_COMMENT_LEADING;
+  uint32_t owner_idx = syntaqlite_vec_len(&p->tokens);
+  uint32_t prev_end = p->last_layer0_token_end;
+  if (prev_end != UINT32_MAX && prev_end <= offset) {
+    int saw_newline = 0;
+    for (uint32_t i = prev_end; i < offset; i++) {
+      if (z[i] == '\n') {
+        saw_newline = 1;
+        break;
+      }
+    }
+    if (!saw_newline) {
+      side = SYNQ_COMMENT_TRAILING;
+      owner_idx = syntaqlite_vec_len(&p->tokens) - 1;
+    }
+  }
+
+  SyntaqliteComment t = {
+      .offset = offset,
+      .length = len,
+      .token_idx = owner_idx,
+      .kind = z[offset] == '-' ? (uint8_t)0 : (uint8_t)1,
+      .side = side,
+  };
   syntaqlite_vec_push(&p->comments, t, p->mem);
 }
 
@@ -579,6 +612,45 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
   return p->tokens.data;
 }
 
+// Locate the contiguous run of comments owned by `token_idx` with the
+// requested side. Comments for a given (token_idx, side) are recorded in
+// source order and live as a contiguous slice within p->comments because
+// each is emitted at the moment the owning token is being processed.
+static const SyntaqliteComment* token_side_comments(SyntaqliteParser* p,
+                                                    uint32_t token_idx,
+                                                    uint8_t side,
+                                                    uint32_t* count) {
+  uint32_t total = syntaqlite_vec_len(&p->comments);
+  const SyntaqliteComment* base = NULL;
+  uint32_t found = 0;
+  for (uint32_t i = 0; i < total; i++) {
+    const SyntaqliteComment* c = &p->comments.data[i];
+    if (c->token_idx == token_idx && c->side == side) {
+      if (base == NULL)
+        base = c;
+      found++;
+    } else if (base != NULL) {
+      break;
+    }
+  }
+  *count = found;
+  return base;
+}
+
+SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_leading_comments(
+    SyntaqliteParser* p,
+    uint32_t token_idx,
+    uint32_t* count) {
+  return token_side_comments(p, token_idx, SYNQ_COMMENT_LEADING, count);
+}
+
+SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_trailing_comments(
+    SyntaqliteParser* p,
+    uint32_t token_idx,
+    uint32_t* count) {
+  return token_side_comments(p, token_idx, SYNQ_COMMENT_TRAILING, count);
+}
+
 #ifdef SYNTAQLITE_OMIT_MACROS
 SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
   (void)p;
@@ -762,6 +834,8 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
                                 p->ctx.layer_id};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
+    if (p->ctx.layer_id == 0)
+      p->last_layer0_token_end = tok_offset + len;
   }
 
   int rc = feed_one_token(p, token_type, text, len, tidx);

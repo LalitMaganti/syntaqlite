@@ -31,7 +31,9 @@ pub use parser::{
 // Token/comment data types shared across dialects.
 #[cfg(feature = "sqlite-minimal")]
 #[doc(inline)]
-pub use parser::{Comment, CommentKind, CommentSpan, CompletionContext, ParserTokenFlags};
+pub use parser::{
+    Comment, CommentKind, CommentSide, CommentSpan, CompletionContext, ParserTokenFlags,
+};
 
 // Top-level tokenizer types.
 #[cfg(feature = "sqlite-minimal")]

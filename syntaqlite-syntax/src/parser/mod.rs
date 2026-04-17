@@ -29,7 +29,7 @@ pub use incremental::{AnyIncrementalParseSession, TypedIncrementalParseSession};
 #[cfg(feature = "sqlite")]
 pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken};
 pub use types::{
-    AnyParserToken, ArgOrigin, Comment, CommentKind, CommentSpan, CompletionContext,
+    AnyParserToken, ArgOrigin, Comment, CommentKind, CommentSide, CommentSpan, CompletionContext,
     MacroArgSegment, MacroRewrite, ParseOutcome, ParserTokenFlags, TracebackFrame,
     TypedParserToken,
 };
@@ -1117,14 +1117,31 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         let source = self.any.text();
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CComment] = unsafe { self.any.raw.as_ref().result_comments() };
-        raw.iter().map(move |c| {
-            let text = &source[c.offset as usize..(c.offset + c.length) as usize];
-            let kind = match c.kind {
-                ffi::CCommentKind::LineComment => CommentKind::Line,
-                ffi::CCommentKind::BlockComment => CommentKind::Block,
-            };
-            Comment::new(text, kind, c.offset, c.length)
-        })
+        raw.iter().map(move |c| ffi_comment(source, c))
+    }
+
+    /// Comments that appear immediately before token `token_idx`, in source
+    /// order.  See [`Comment`] for attachment semantics.
+    ///
+    /// Requires `collect_tokens: true` in [`ParserConfig`].
+    pub fn leading_comments(&self, token_idx: u32) -> impl Iterator<Item = Comment<'a>> {
+        let source = self.any.text();
+        // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
+        let raw: &'a [ffi::CComment] =
+            unsafe { self.any.raw.as_ref().token_leading_comments(token_idx) };
+        raw.iter().map(move |c| ffi_comment(source, c))
+    }
+
+    /// Comments that appear on the same source line as token `token_idx`,
+    /// after it, in source order.  See [`Comment`] for attachment semantics.
+    ///
+    /// Requires `collect_tokens: true` in [`ParserConfig`].
+    pub fn trailing_comments(&self, token_idx: u32) -> impl Iterator<Item = Comment<'a>> {
+        let source = self.any.text();
+        // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
+        let raw: &'a [ffi::CComment] =
+            unsafe { self.any.raw.as_ref().token_trailing_comments(token_idx) };
+        raw.iter().map(move |c| ffi_comment(source, c))
     }
 
     // ── Result accessors (mirror syntaqlite_result_*) ──────────────────────
@@ -1180,6 +1197,21 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         }
         G::Node::from_result(&self.any, id)
     }
+}
+
+/// Build a public [`Comment`] from an FFI [`ffi::CComment`] borrowing into
+/// `source`.
+fn ffi_comment<'a>(source: &'a str, c: &ffi::CComment) -> Comment<'a> {
+    let text = &source[c.offset as usize..(c.offset + c.length) as usize];
+    let kind = match c.kind {
+        ffi::CCommentKind::LineComment => CommentKind::Line,
+        ffi::CCommentKind::BlockComment => CommentKind::Block,
+    };
+    let side = match c.side {
+        ffi::CCommentSide::Leading => CommentSide::Leading,
+        ffi::CCommentSide::Trailing => CommentSide::Trailing,
+    };
+    Comment::new(text, kind, c.offset, c.length, c.token_idx, side)
 }
 
 /// Extract a single [`crate::ast::FieldValue`] from a raw arena node pointer.
