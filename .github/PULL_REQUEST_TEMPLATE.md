@@ -1,7 +1,13 @@
+<!--
+Keep this PR description SHORT. Aim for a few sentences total — not paragraphs.
+Convey the minimum context a reviewer needs. No headers, no bullet lists, no
+restating the diff. If a section below has nothing meaningful to add, omit it.
+-->
+
 ## Motivation
 
-<!-- Why is this change needed? What problem exists, what's missing, or what broke? -->
+<!-- One or two sentences: why this change exists. -->
 
 ## Changes
 
-<!-- What does this PR do to address the motivation? -->
+<!-- One or two sentences: what was done. Skip if obvious from the diff. -->
