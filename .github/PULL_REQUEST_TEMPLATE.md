@@ -1,7 +1,5 @@
-## Motivation
-
-<!-- Why is this change needed? What problem exists, what's missing, or what broke? -->
-
-## Changes
-
-<!-- What does this PR do to address the motivation? -->
+<!--
+Keep this PR description SHORT. A few sentences total — not paragraphs of
+detail. Convey only the minimum context a reviewer needs: why the change
+exists, and anything about the approach that isn't obvious from the diff.
+-->
