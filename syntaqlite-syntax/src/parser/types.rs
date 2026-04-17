@@ -152,6 +152,8 @@ pub struct CommentSpan {
     offset: u32,
     length: u32,
     kind: CommentKind,
+    token_idx: u32,
+    side: CommentSide,
 }
 
 impl CommentSpan {
@@ -170,11 +172,30 @@ impl CommentSpan {
         self.kind
     }
 
-    pub(super) fn new(offset: u32, length: u32, kind: CommentKind) -> Self {
+    /// Index of the owning token in the statement's token stream.
+    /// See [`Comment::token_idx`] for attachment semantics.
+    pub fn token_idx(&self) -> u32 {
+        self.token_idx
+    }
+
+    /// Whether this comment leads or trails its owning token.
+    pub fn side(&self) -> CommentSide {
+        self.side
+    }
+
+    pub(super) fn new(
+        offset: u32,
+        length: u32,
+        kind: CommentKind,
+        token_idx: u32,
+        side: CommentSide,
+    ) -> Self {
         CommentSpan {
             offset,
             length,
             kind,
+            token_idx,
+            side,
         }
     }
 }

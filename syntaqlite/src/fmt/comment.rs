@@ -3,16 +3,18 @@
 
 use std::cell::Cell;
 
-use syntaqlite_syntax::CommentKind;
+use syntaqlite_syntax::{CommentKind, CommentSide};
 
 use super::doc::{DocArena, DocId, NIL_DOC};
 
-/// A collected comment entry with pre-computed byte offset and length.
+/// A collected comment entry with pre-computed byte offset, length, and
+/// parser-supplied attachment (`side` + `token_idx`).
 #[derive(Clone, Copy)]
 pub(crate) struct CommentEntry {
     pub offset: u32,
     pub length: u32,
     pub kind: CommentKind,
+    pub side: CommentSide,
 }
 
 /// A collected token entry with pre-computed byte offset and length.
@@ -131,13 +133,17 @@ impl CommentCtx {
 
             let text = &source[t.offset as usize..comment_end];
 
+            // Leading vs trailing is fixed at parse time
+            // (see synq_parser_record_comment).  The gap text is still
+            // scanned below for blank-line preservation between adjacent
+            // leading comments.
             let gap_start = (last_end as usize).min(source.len());
             let gap_end = (t.offset as usize).min(source.len());
-            let has_newline = gap_start < gap_end && source[gap_start..gap_end].contains('\n');
+            let is_leading = matches!(t.side, CommentSide::Leading);
 
             match t.kind {
                 CommentKind::Line => {
-                    if has_newline {
+                    if is_leading {
                         // Preserve blank lines between separate comment blocks.
                         let has_blank_line = {
                             let gs = gap_start.min(source.len());
@@ -193,7 +199,7 @@ impl CommentCtx {
                     }
                 }
                 CommentKind::Block => {
-                    if has_newline {
+                    if is_leading {
                         let hl = arena.hardline();
                         let comment_doc = arena.text(text);
                         let chunk = arena.cat(hl, comment_doc);

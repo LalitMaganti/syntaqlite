@@ -133,6 +133,7 @@ impl Formatter {
                 offset: c.offset(),
                 length: c.length(),
                 kind: c.kind(),
+                side: c.side(),
             }));
         self.token_entries.clear();
         self.token_entries.extend(
@@ -772,6 +773,7 @@ fn reindent_macro<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use syntaqlite_syntax::CommentSide;
 
     /// Verify that `Formatter` stores an `AnyParser` derived from the dialect,
     /// not a hardcoded `SQLite` `Parser`.
@@ -820,6 +822,7 @@ mod tests {
                 offset: 0,
                 length: 5,
                 kind: CommentKind::Block,
+                side: CommentSide::Leading,
             }],
             vec![TokenEntry {
                 offset: 5,
@@ -841,11 +844,13 @@ mod tests {
                     offset: 0,
                     length: 3,
                     kind: CommentKind::Line,
+                    side: CommentSide::Leading,
                 },
                 CommentEntry {
                     offset: 4,
                     length: 5,
                     kind: CommentKind::Block,
+                    side: CommentSide::Leading,
                 },
             ],
             vec![TokenEntry {

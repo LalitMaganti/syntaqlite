@@ -779,6 +779,8 @@ pub fn syntaqlite_syntax::Comment<'a>::token_idx(&self) -> u32
 pub fn syntaqlite_syntax::CommentSpan::kind(&self) -> syntaqlite_syntax::CommentKind
 pub fn syntaqlite_syntax::CommentSpan::length(&self) -> u32
 pub fn syntaqlite_syntax::CommentSpan::offset(&self) -> u32
+pub fn syntaqlite_syntax::CommentSpan::side(&self) -> syntaqlite_syntax::CommentSide
+pub fn syntaqlite_syntax::CommentSpan::token_idx(&self) -> u32
 pub fn syntaqlite_syntax::CompletionContext::from_raw(v: u32) -> Self
 pub fn syntaqlite_syntax::CompletionContext::raw(self) -> u32
 pub fn syntaqlite_syntax::IncrementalParseSession::completion_context(&self) -> syntaqlite_syntax::CompletionContext
