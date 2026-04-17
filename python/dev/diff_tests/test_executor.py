@@ -41,6 +41,7 @@ def execute_test(
     timeout: Optional[float] = 30.0,
     subcommand: Optional[str] = None,
     use_stderr: bool = False,
+    ignore_exit_code: bool = False,
 ) -> TestResult:
     """Execute a single test.
 
@@ -98,7 +99,7 @@ def execute_test(
         )
     elapsed_ms = int((time.monotonic() - t0) * 1000)
 
-    if proc.returncode != 0 and not use_stderr:
+    if proc.returncode != 0 and not use_stderr and not ignore_exit_code:
         return TestResult(
             name=name,
             passed=False,

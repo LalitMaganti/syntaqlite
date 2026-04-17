@@ -208,9 +208,10 @@ pub fn syntaqlite::semantic::Severity::serialize<S: serde_core::ser::Serializer>
 pub fn syntaqlite::semantic::StatementModel::defined_relations(&self) -> &[syntaqlite::semantic::DefinedRelation]
 pub fn syntaqlite::semantic::StatementModel::diagnostics(&self) -> &[syntaqlite::Diagnostic]
 pub fn syntaqlite::semantic::StatementModel::lineage(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::ColumnLineage]>>
+pub fn syntaqlite::semantic::StatementModel::physical_tables_accessed(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::PhysicalTableAccess]>>
 pub fn syntaqlite::semantic::StatementModel::relations_accessed(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::RelationAccess]>>
 pub fn syntaqlite::semantic::StatementModel::source(&self) -> &str
-pub fn syntaqlite::semantic::StatementModel::tables_accessed(&self) -> core::option::Option<syntaqlite::semantic::LineageResult<&[syntaqlite::semantic::TableAccess]>>
+pub fn syntaqlite::semantic::StatementModel::unexpanded_views(&self) -> &[alloc::string::String]
 pub fn syntaqlite::semantic::ValidationConfig::checks(&self) -> syntaqlite::semantic::CheckConfig
 pub fn syntaqlite::semantic::ValidationConfig::default() -> Self
 pub fn syntaqlite::semantic::ValidationConfig::suggestion_threshold(&self) -> usize
@@ -270,11 +271,11 @@ pub struct syntaqlite::semantic::ColumnOrigin
 pub struct syntaqlite::semantic::DefinedRelation
 pub struct syntaqlite::semantic::Diagnostic
 pub struct syntaqlite::semantic::DirectoryModuleResolver
+pub struct syntaqlite::semantic::PhysicalTableAccess
 pub struct syntaqlite::semantic::RelationAccess
 pub struct syntaqlite::semantic::SemanticAnalyzer
 pub struct syntaqlite::semantic::SemanticModel
 pub struct syntaqlite::semantic::StatementModel
-pub struct syntaqlite::semantic::TableAccess
 pub struct syntaqlite::semantic::ValidationConfig
 pub struct syntaqlite::util::DiagnosticRenderer<'a>
 pub struct syntaqlite::util::SqliteFlags(_)
@@ -334,6 +335,7 @@ pub syntaqlite::semantic::FunctionCategory::Window
 pub syntaqlite::semantic::Help::Suggestion(alloc::string::String)
 pub syntaqlite::semantic::LineageResult::Complete(T)
 pub syntaqlite::semantic::LineageResult::Partial(T)
+pub syntaqlite::semantic::PhysicalTableAccess::name: alloc::string::String
 pub syntaqlite::semantic::RelationAccess::kind: syntaqlite::semantic::RelationKind
 pub syntaqlite::semantic::RelationAccess::name: alloc::string::String
 pub syntaqlite::semantic::RelationKind::Table
@@ -342,7 +344,6 @@ pub syntaqlite::semantic::Severity::Error
 pub syntaqlite::semantic::Severity::Hint
 pub syntaqlite::semantic::Severity::Info
 pub syntaqlite::semantic::Severity::Warning
-pub syntaqlite::semantic::TableAccess::name: alloc::string::String
 pub syntaqlite::util::SqliteFlag::EnableBytecodeVtab = 27
 pub syntaqlite::util::SqliteFlag::EnableCarray = 28
 pub syntaqlite::util::SqliteFlag::EnableDbpageVtab = 29

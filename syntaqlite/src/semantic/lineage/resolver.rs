@@ -11,7 +11,7 @@ use crate::dialect::SemanticRole;
 use crate::semantic::catalog::Catalog;
 
 use super::types::{
-    ColumnLineage, ColumnOrigin, QueryLineage, RelationAccess, RelationKind, TableAccess,
+    ColumnLineage, ColumnOrigin, PhysicalTableAccess, QueryLineage, RelationAccess, RelationKind,
 };
 
 /// What kind of FROM source this is.
@@ -176,9 +176,10 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         // 2. Resolve result columns.
         let columns = self.resolve_result_columns(select_id, cols_idx, &sources)?;
 
-        // 3. Build relations (catalog only) and tables (physical, transitive).
+        // 3. Build relations (catalog only) and physical_tables (transitive).
         let mut relations = Vec::new();
-        let mut tables = Vec::new();
+        let mut physical_tables = Vec::new();
+        let mut unexpanded_views = Vec::new();
         for info in sources.values() {
             match info.kind {
                 SourceKind::Table => {
@@ -186,7 +187,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                         name: info.canonical.clone(),
                         kind: RelationKind::Table,
                     });
-                    tables.push(TableAccess {
+                    physical_tables.push(PhysicalTableAccess {
                         name: info.canonical.clone(),
                     });
                 }
@@ -195,14 +196,20 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                         name: info.canonical.clone(),
                         kind: RelationKind::View,
                     });
-                    tables.push(TableAccess {
+                    physical_tables.push(PhysicalTableAccess {
                         name: info.canonical.clone(),
                     });
+                    unexpanded_views.push(info.canonical.clone());
                     self.complete = false;
                 }
                 SourceKind::Cte(body) | SourceKind::Subquery(body) => {
                     if self.tracing.insert(body) {
-                        self.collect_physical_tables(body, &mut relations, &mut tables);
+                        self.collect_physical_tables(
+                            body,
+                            &mut relations,
+                            &mut physical_tables,
+                            &mut unexpanded_views,
+                        );
                         self.tracing.remove(&body);
                     }
                 }
@@ -211,14 +218,17 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
 
         relations.sort_by(|a, b| a.name.cmp(&b.name));
         relations.dedup_by(|a, b| a.name == b.name);
-        tables.sort_by(|a, b| a.name.cmp(&b.name));
-        tables.dedup_by(|a, b| a.name == b.name);
+        physical_tables.sort_by(|a, b| a.name.cmp(&b.name));
+        physical_tables.dedup_by(|a, b| a.name == b.name);
+        unexpanded_views.sort();
+        unexpanded_views.dedup();
 
         Some(QueryLineage {
             complete: self.complete,
             columns,
             relations,
-            tables,
+            physical_tables,
+            unexpanded_views,
         })
     }
 
@@ -298,7 +308,8 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         &mut self,
         body_id: AnyNodeId,
         relations: &mut Vec<RelationAccess>,
-        tables: &mut Vec<TableAccess>,
+        physical_tables: &mut Vec<PhysicalTableAccess>,
+        unexpanded_views: &mut Vec<String>,
     ) {
         let Some(select_id) = self.find_select_node(body_id) else {
             return;
@@ -322,7 +333,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                         name: info.canonical.clone(),
                         kind: RelationKind::Table,
                     });
-                    tables.push(TableAccess {
+                    physical_tables.push(PhysicalTableAccess {
                         name: info.canonical.clone(),
                     });
                 }
@@ -331,14 +342,20 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                         name: info.canonical.clone(),
                         kind: RelationKind::View,
                     });
-                    tables.push(TableAccess {
+                    physical_tables.push(PhysicalTableAccess {
                         name: info.canonical.clone(),
                     });
+                    unexpanded_views.push(info.canonical.clone());
                     self.complete = false;
                 }
                 SourceKind::Cte(body) | SourceKind::Subquery(body) => {
                     if self.tracing.insert(body) {
-                        self.collect_physical_tables(body, relations, tables);
+                        self.collect_physical_tables(
+                            body,
+                            relations,
+                            physical_tables,
+                            unexpanded_views,
+                        );
                         self.tracing.remove(&body);
                     }
                 }
