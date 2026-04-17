@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2
+
+- Fixed the web playground failing on load with `TypeError: resolved is not a function`: runtime → dialect hook symbols were being stripped under emscripten `MAIN_MODULE=2` ([#157](https://github.com/LalitMaganti/syntaqlite/pull/157)).
+- Added `syntaqlite_dialect/dialect_abi.h` with the new `SYNTAQLITE_DIALECT_API` macro documenting and enforcing the runtime↔dialect symbol boundary; relevant for anyone building custom dialects as side modules ([#157](https://github.com/LalitMaganti/syntaqlite/pull/157)).
+
 ## 0.4.1
 
 - Amalgamated C sources no longer trigger `-Werror=pragmas` when `#include`d from C++ translation units; C-only warning pragmas (`-Wdeclaration-after-statement`, `-Wmissing-prototypes`, `-Wold-style-declaration`) are now guarded by `#ifndef __cplusplus` ([#153](https://github.com/LalitMaganti/syntaqlite/pull/153)).
