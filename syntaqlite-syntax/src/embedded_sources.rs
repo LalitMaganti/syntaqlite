@@ -93,6 +93,10 @@ pub const DIALECT_EXT_HEADERS: &[(&str, &str)] = &[
         include_str!("../include/syntaqlite_dialect/ast_builder.h"),
     ),
     (
+        "dialect_abi.h",
+        include_str!("../include/syntaqlite_dialect/dialect_abi.h"),
+    ),
+    (
         "dialect_macros.h",
         include_str!("../include/syntaqlite_dialect/dialect_macros.h"),
     ),
