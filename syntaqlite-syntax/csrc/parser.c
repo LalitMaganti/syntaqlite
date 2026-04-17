@@ -746,8 +746,8 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
     p->pending_reset = 0;
   }
 
-  // Skip trivia (whitespace and comments) without feeding to Lemon.
-  if (synq_token_is_trivia(token_type)) {
+  // Skip whitespace and comments without feeding to Lemon.
+  if (synq_token_is_skip(token_type)) {
     if (token_type == SYNTAQLITE_TK_COMMENT && p->collect_tokens && text) {
       synq_parser_record_comment(p, (uint32_t)(text - p->source), len);
     }

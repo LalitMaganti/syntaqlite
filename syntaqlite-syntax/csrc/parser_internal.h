@@ -196,11 +196,11 @@ struct SyntaqliteParser {
 
 // ── Cross-file helpers ──────────────────────────────────────────────────────
 
-// Whitespace-or-comment classifier. Centralizes the trivia predicate used by
+// Whitespace-or-comment classifier. Centralizes the skip predicate used by
 // every site that needs to skip over insignificant tokens (the high-level
 // feed_token path, scan_macro_args, and the macro-expansion loop and its
 // ID-BANG lookahead).
-static inline int synq_token_is_trivia(uint32_t type) {
+static inline int synq_token_is_skip(uint32_t type) {
   return type == SYNTAQLITE_TK_SPACE || type == SYNTAQLITE_TK_COMMENT;
 }
 
