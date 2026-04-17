@@ -313,9 +313,13 @@ impl CommentCtx {
         self.tokens.get(idx).map(|tp| (tp.offset, tp.length))
     }
 
-    /// Flush all remaining comments.
+    /// Flush all remaining comments.  Bypasses the `has_non_comment_text`
+    /// guard because, at end-of-statement drain, every remaining comment
+    /// is a trailing comment that this statement owns; the guard's check
+    /// for "syntax text past the comment" would spuriously fire when the
+    /// source text continues into the next statement.
     pub(crate) fn drain_remaining<'a>(&self, source: &'a str, arena: &mut DocArena<'a>) -> DocId {
-        let drain = self.drain_before(u32::MAX, source, arena);
+        let drain = self.drain_impl(u32::MAX, source, arena, true);
         arena.cat(drain.trailing, drain.leading)
     }
 }
