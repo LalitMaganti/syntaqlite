@@ -4,6 +4,7 @@ import os
 import stat
 import subprocess
 import sys
+from enum import IntEnum
 
 __version__ = "0.4.2"
 
@@ -102,16 +103,32 @@ class Dialect:
 # ── Result types ─────────────────────────────────────────────────────────────
 
 
+class DiagnosticCode(IntEnum):
+    """Machine-readable kind for a :class:`Diagnostic`.
+
+    Mirrors ``SyntaqliteDiagnosticCode`` in the C header.
+    """
+
+    PARSE_ERROR = 0
+    UNKNOWN_TABLE = 1
+    UNKNOWN_COLUMN = 2
+    UNKNOWN_FUNCTION = 3
+    UNKNOWN_MODULE = 4
+    FUNCTION_ARITY = 5
+    CTE_COLUMN_COUNT_MISMATCH = 6
+
+
 class Diagnostic:
     """A single diagnostic from validation."""
 
-    __slots__ = ("severity", "message", "start_offset", "end_offset")
+    __slots__ = ("severity", "message", "start_offset", "end_offset", "code")
 
     def __init__(self, d: dict):
         self.severity: str = d["severity"]
         self.message: str = d["message"]
         self.start_offset: int = d["start_offset"]
         self.end_offset: int = d["end_offset"]
+        self.code: DiagnosticCode = DiagnosticCode(d["code"])
 
     def __repr__(self):
         return f"Diagnostic({self.severity}: {self.message!r})"
