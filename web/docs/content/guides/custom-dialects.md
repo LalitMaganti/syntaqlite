@@ -48,11 +48,11 @@ node CreatePerfettoMacroStmt {
 
 ## Building a dialect
 
-Use the `syntaqlite dialect` command to generate C sources and Rust bindings
-from your `.synq` definitions:
+Use the `syntaqlite dialect generate` command to generate C sources and Rust
+bindings from your `.synq` definitions:
 
 ```bash
-syntaqlite dialect --name mydialect --nodes-dir path/to/nodes --output-dir generated/
+syntaqlite dialect generate --name mydialect --nodes-dir path/to/nodes --output-dir generated/
 ```
 
 Then compile the generated sources into a shared library. See the

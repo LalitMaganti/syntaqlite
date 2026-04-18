@@ -176,32 +176,18 @@ fn dispatch_commands(
             deny,
             lang,
             output,
-        } => require_dialect(dialect).and_then(|d| {
-            let file_config = discover_config_for_paths(&files, config);
-            // If --schema is given, use it directly. Otherwise, resolve from config file.
-            let resolved_schemas = if schema.is_empty() {
-                resolve_schemas_from_config_with(&files, file_config.as_ref())
-            } else {
-                schema
-            };
-            let has_schema = !resolved_schemas.is_empty();
-            let checks = build_check_config(
-                has_schema,
-                file_config.as_ref().map(|(c, _)| &c.checks),
-                &allow,
-                &warn,
-                &deny,
-            )?;
-            cmd_validate(
-                &d,
-                &files,
-                expression.as_deref(),
-                &resolved_schemas,
-                lang,
-                checks,
-                output,
-            )
-        }),
+        } => dispatch_validate(
+            dialect,
+            config,
+            &files,
+            expression.as_deref(),
+            schema,
+            &allow,
+            &warn,
+            &deny,
+            lang,
+            output,
+        ),
         Command::Lineage {
             files,
             expression,
@@ -255,11 +241,62 @@ fn dispatch_commands(
             println!("syntaqlite {}", env!("CARGO_PKG_VERSION"));
             Ok(())
         }
+        Command::Tokenize {
+            files,
+            expression,
+            output,
+        } => require_dialect(dialect).and_then(|d| {
+            crate::introspect::cmd_tokenize(&d, &files, expression.as_deref(), output)
+        }),
         #[cfg(feature = "codegen")]
-        Command::Dialect(args) => crate::codegen::dispatch_dialect(&args),
+        Command::Dialect { command } => match command {
+            crate::DialectSubcommand::Generate(args) => crate::codegen::dispatch_dialect(&args),
+        },
         #[cfg(feature = "codegen")]
         Command::DialectTool(cmd) => crate::codegen::dispatch_tool(cmd),
     }
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "split out to keep dispatch_commands under the line limit"
+)]
+fn dispatch_validate(
+    dialect: Option<AnyDialect>,
+    config: &ConfigMode<'_>,
+    files: &[String],
+    expression: Option<&str>,
+    schema: Vec<String>,
+    allow: &[String],
+    warn: &[String],
+    deny: &[String],
+    lang: Option<HostLanguage>,
+    output: ValidateOutput,
+) -> Result<(), String> {
+    let d = require_dialect(dialect)?;
+    let file_config = discover_config_for_paths(files, config);
+    let resolved_schemas = if schema.is_empty() {
+        resolve_schemas_from_config_with(files, file_config.as_ref())
+    } else {
+        schema
+    };
+    let has_schema = !resolved_schemas.is_empty();
+    let checks = build_check_config(
+        has_schema,
+        file_config.as_ref().map(|(c, _)| &c.checks),
+        allow,
+        warn,
+        deny,
+    )?;
+    cmd_validate(
+        &d,
+        files,
+        expression,
+        &resolved_schemas,
+        lang,
+        checks,
+        output,
+    )
 }
 
 fn read_stdin() -> Result<String, String> {

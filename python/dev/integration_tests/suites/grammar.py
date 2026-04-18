@@ -45,7 +45,7 @@ def _generate_full_amalg(
     actions_dir: str | None = None,
     nodes_dir: str | None = None,
 ) -> None:
-    cmd = [str(binary), "dialect", "--name", name]
+    cmd = [str(binary), "dialect", "generate", "--name", name]
     if actions_dir:
         cmd += ["--actions-dir", actions_dir]
     if nodes_dir:

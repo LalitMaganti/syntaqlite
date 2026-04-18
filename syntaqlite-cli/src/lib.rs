@@ -17,6 +17,8 @@ mod runtime;
 #[cfg(feature = "codegen")]
 mod codegen;
 
+mod introspect;
+
 mod lineage_output;
 
 mod validate_output;
@@ -109,6 +111,15 @@ pub(crate) enum ValidateOutput {
     #[default]
     Text,
     /// Newline-delimited JSON, one record per diagnostic
+    Json,
+}
+
+#[derive(Clone, Copy, Default, ValueEnum)]
+pub(crate) enum IntrospectOutput {
+    /// Human-readable text (default)
+    #[default]
+    Text,
+    /// JSON or newline-delimited JSON
     Json,
 }
 
@@ -247,14 +258,35 @@ pub(crate) enum Command {
     /// Start the MCP server (stdio)
     #[cfg(feature = "mcp")]
     Mcp,
-    /// Generate dialect C sources and Rust bindings for external dialects.
+    /// Tokenize SQL and print the token stream
+    Tokenize {
+        /// SQL files or glob patterns (reads stdin if omitted)
+        files: Vec<String>,
+        /// SQL expression to tokenize directly (instead of files or stdin)
+        #[arg(short = 'e', long = "expression", conflicts_with = "files")]
+        expression: Option<String>,
+        /// Output format
+        #[arg(short, long, value_enum, default_value_t = IntrospectOutput::Text)]
+        output: IntrospectOutput,
+    },
+    /// Dialect codegen (generate C + Rust sources for custom dialects)
     #[cfg(feature = "codegen")]
-    Dialect(codegen::DialectArgs),
+    Dialect {
+        #[command(subcommand)]
+        command: DialectSubcommand,
+    },
     /// Print version information
     Version,
     #[cfg(feature = "codegen")]
     #[command(flatten)]
     DialectTool(codegen::ToolCommand),
+}
+
+#[cfg(feature = "codegen")]
+#[derive(Subcommand)]
+pub(crate) enum DialectSubcommand {
+    /// Generate dialect C sources and Rust bindings for external dialects
+    Generate(codegen::DialectArgs),
 }
 
 /// Build the [`clap::Command`] for the given app, applying runtime visibility

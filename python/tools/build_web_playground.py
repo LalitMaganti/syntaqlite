@@ -246,7 +246,7 @@ def main() -> int:
         [
             sys.executable, cargo, *cargo_flags,
             "run", "-p", "syntaqlite-cli", "--",
-            "dialect", "--name", "perfetto",
+            "dialect", "generate", "--name", "perfetto",
             "--actions-dir", os.path.join(ROOT_DIR, "dialects", "perfetto", "actions"),
             "--nodes-dir", os.path.join(ROOT_DIR, "dialects", "perfetto", "nodes"),
             "--macro-style", "rust",
