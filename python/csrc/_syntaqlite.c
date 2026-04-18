@@ -400,12 +400,16 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
     if (!v)
         return PyErr_NoMemory();
 
+    int has_schema = 0;
+
     /* Register tables */
     if (register_relations(v, tables_list, "table",
                            syntaqlite_validator_add_tables) < 0) {
         syntaqlite_validator_destroy(v);
         return NULL;
     }
+    if (tables_list && tables_list != Py_None && PyList_Size(tables_list) > 0)
+        has_schema = 1;
 
     /* Register views */
     if (register_relations(v, views_list, "view",
@@ -413,10 +417,18 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
         syntaqlite_validator_destroy(v);
         return NULL;
     }
+    if (views_list && views_list != Py_None && PyList_Size(views_list) > 0)
+        has_schema = 1;
 
     /* Load schema from DDL */
     if (schema_ddl) {
         syntaqlite_validator_load_schema_ddl(v, schema_ddl, (uint32_t)schema_ddl_len);
+        has_schema = 1;
+    }
+
+    /* Any schema → strict mode so unresolved names are errors. */
+    if (has_schema) {
+        syntaqlite_validator_set_strict_schema(v, 1);
     }
 
     /* Set module resolver if provided */
