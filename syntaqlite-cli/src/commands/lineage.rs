@@ -22,7 +22,8 @@ pub(crate) fn run(
 ) -> Result<(), String> {
     let runner = LineageRun::new(dialect, config_mode, args)?;
     let sources = util::load_sources(&args.files, args.expression.as_deref())?;
-    if runner.run(&sources) {
+    let renderer = select_renderer(args.output);
+    if runner.run(&sources, renderer.as_ref()) {
         std::process::exit(1);
     }
     Ok(())
@@ -32,7 +33,6 @@ struct LineageRun<'a> {
     dialect: &'a AnyDialect,
     schema_catalog: Catalog,
     validation: ValidationConfig,
-    output: LineageOutput,
     scope: Option<LineageScope>,
 }
 
@@ -53,26 +53,29 @@ impl<'a> LineageRun<'a> {
             dialect,
             schema_catalog,
             validation: ValidationConfig::default(),
-            output: args.output,
             scope: args.scope,
         })
     }
 
     /// Returns `true` if any statement produced an error-level diagnostic.
-    fn run(&self, sources: &[Source]) -> bool {
+    fn run(&self, sources: &[Source], renderer: &dyn Renderer) -> bool {
         let mut any_errors = false;
         for src in sources {
-            if self.process_source(src) {
-                any_errors = true;
+            let records = self.analyze(src);
+            any_errors |= records.iter().any(|r| matches!(r, Record::Error(_)));
+            for record in &records {
+                renderer.render(record);
             }
         }
         any_errors
     }
 
-    fn process_source(&self, src: &Source) -> bool {
+    // ── Computation ────────────────────────────────────────────────────────
+
+    fn analyze(&self, src: &Source) -> Vec<Record> {
         let mut analyzer = SemanticAnalyzer::with_dialect(self.dialect.clone());
         let model = analyzer.analyze(&src.text, &self.schema_catalog, &self.validation);
-        let mut had_error = false;
+        let mut records = Vec::new();
         for (idx, stmt) in model.statements().iter().enumerate() {
             let idx = u32::try_from(idx).unwrap_or(u32::MAX);
             let errors: Vec<_> = stmt
@@ -81,49 +84,80 @@ impl<'a> LineageRun<'a> {
                 .filter(|d| d.severity() == Severity::Error)
                 .collect();
             if errors.is_empty() {
-                self.emit_lineage(stmt, &src.label, idx);
+                records.push(Record::Lineage(build_lineage_record(
+                    stmt, &src.label, idx, self.scope,
+                )));
             } else {
                 for d in &errors {
-                    self.emit_error(d, &src.label, idx);
+                    records.push(Record::Error(build_error_record(d, &src.label, idx)));
                 }
-                had_error = true;
             }
         }
-        had_error
+        records
     }
+}
 
-    fn emit_lineage(&self, stmt: &StatementModel, file: &str, index: u32) {
-        let record = build_lineage_record(stmt, file, index, self.scope);
-        match self.output {
-            LineageOutput::Json => match serde_json::to_string(&record) {
-                Ok(s) => println!("{s}"),
-                Err(e) => eprintln!("error serializing lineage record: {e}"),
-            },
-            LineageOutput::Text => print_lineage_text(&record),
+/// One emitted record — either a statement's lineage, or an error describing
+/// why lineage could not be produced.
+enum Record {
+    Lineage(LineageRecord),
+    Error(ErrorRecord),
+}
+
+// ── Renderer strategy ──────────────────────────────────────────────────────
+
+/// Output strategy for emitted records. Adding a new `--output` mode is a
+/// new struct + `impl Renderer`; the [`LineageRun`] doesn't change.
+trait Renderer {
+    fn render(&self, record: &Record);
+}
+
+fn select_renderer(output: LineageOutput) -> Box<dyn Renderer> {
+    match output {
+        LineageOutput::Json => Box::new(JsonRenderer),
+        LineageOutput::Text => Box::new(TextRenderer),
+    }
+}
+
+struct JsonRenderer;
+
+impl Renderer for JsonRenderer {
+    fn render(&self, record: &Record) {
+        let result = match record {
+            Record::Lineage(r) => serde_json::to_string(r),
+            Record::Error(r) => serde_json::to_string(r),
+        };
+        match result {
+            Ok(s) => println!("{s}"),
+            Err(e) => eprintln!("error serializing lineage record: {e}"),
         }
     }
+}
 
-    fn emit_error(&self, d: &Diagnostic, file: &str, index: u32) {
-        let stage = if let DiagnosticMessage::ParseError(_) = d.message() {
-            ErrorStage::Parse
-        } else {
-            ErrorStage::Validate
-        };
-        let record = ErrorRecord {
-            kind: "error",
-            schema_version: SCHEMA_VERSION,
-            file: file.to_string(),
-            statement_index: index,
-            stage,
-            message: format!("{}", d.message()),
-        };
-        match self.output {
-            LineageOutput::Json => match serde_json::to_string(&record) {
-                Ok(s) => println!("{s}"),
-                Err(e) => eprintln!("error serializing error record: {e}"),
-            },
-            LineageOutput::Text => print_error_text(&record),
+struct TextRenderer;
+
+impl Renderer for TextRenderer {
+    fn render(&self, record: &Record) {
+        match record {
+            Record::Lineage(r) => print_lineage_text(r),
+            Record::Error(r) => print_error_text(r),
         }
+    }
+}
+
+fn build_error_record(d: &Diagnostic, file: &str, index: u32) -> ErrorRecord {
+    let stage = if let DiagnosticMessage::ParseError(_) = d.message() {
+        ErrorStage::Parse
+    } else {
+        ErrorStage::Validate
+    };
+    ErrorRecord {
+        kind: "error",
+        schema_version: SCHEMA_VERSION,
+        file: file.to_string(),
+        statement_index: index,
+        stage,
+        message: format!("{}", d.message()),
     }
 }
 

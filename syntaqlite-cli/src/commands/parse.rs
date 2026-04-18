@@ -10,132 +10,172 @@ use syntaqlite::Diagnostic;
 use syntaqlite::any::{AnyDialect, AnyParser, ParseOutcome};
 use syntaqlite::semantic::{DiagnosticMessage, Severity};
 use syntaqlite::util::DiagnosticRenderer;
+use syntaqlite_syntax::any::AnyDialect as SyntaxAnyDialect;
+use syntaqlite_syntax::typed::TypedParsedStatement;
 
 use crate::cli::{ParseArgs, ParseOutput};
 use crate::util::{self, Source};
 
 pub(crate) fn run(dialect: &AnyDialect, args: &ParseArgs) -> Result<(), String> {
     let sources = util::load_sources(&args.files, args.expression.as_deref())?;
-    let mut runner = ParseRun::new(dialect, args.output);
+    let mut sink = select_sink(args.output);
     let multi = sources.len() > 1;
+    let mut total_errors: u64 = 0;
+
     for src in &sources {
-        runner.feed(src, multi);
-    }
-    runner.finish()
-}
-
-struct ParseRun<'a> {
-    dialect: &'a AnyDialect,
-    output: ParseOutput,
-    totals: Totals,
-}
-
-#[derive(Default)]
-struct Totals {
-    statements: u64,
-    errors: u64,
-    json_nodes: Vec<serde_json::Value>,
-}
-
-impl<'a> ParseRun<'a> {
-    fn new(dialect: &'a AnyDialect, output: ParseOutput) -> Self {
-        Self {
-            dialect,
-            output,
-            totals: Totals::default(),
-        }
-    }
-
-    fn feed(&mut self, src: &Source, multi: bool) {
-        if let ParseOutput::Text = self.output
-            && multi
-            && src.is_file()
-        {
-            println!("==> {} <==", src.label);
-        }
-        self.parse_one(src);
-    }
-
-    fn parse_one(&mut self, src: &Source) {
-        let parser = AnyParser::new(self.dialect.deref().clone());
-        let mut session = parser.parse(&src.text);
-        let mut ast_out = String::new();
-        let mut error_diags: Vec<Diagnostic> = Vec::new();
-        let mut count: u64 = 0;
-
-        loop {
-            match session.next() {
-                ParseOutcome::Ok(stmt) => {
-                    match self.output {
-                        ParseOutput::Text => {
-                            if count > 0 {
-                                ast_out.push_str("----\n");
-                            }
-                            stmt.dump(&mut ast_out, 0);
-                        }
-                        ParseOutput::Json => {
-                            let val = stmt
-                                .erase()
-                                .root_node()
-                                .map_or(serde_json::Value::Null, |n| {
-                                    serde_json::to_value(n).unwrap_or(serde_json::Value::Null)
-                                });
-                            self.totals.json_nodes.push(val);
-                        }
-                        ParseOutput::Summary => {}
-                    }
-                    count += 1;
-                }
-                ParseOutcome::Err(err) => {
-                    let start = err.offset().unwrap_or(0);
-                    let end = start + err.length().unwrap_or(0);
-                    error_diags.push(Diagnostic::new(
-                        start,
-                        end,
-                        DiagnosticMessage::ParseError(err.message().to_string()),
-                        Severity::Error,
-                        None,
-                    ));
-                }
-                ParseOutcome::Done => break,
-            }
-        }
-
-        if let ParseOutput::Text = self.output {
-            print!("{ast_out}");
-        }
-
-        self.totals.statements += count;
-        self.totals.errors += error_diags.len() as u64;
-        if !error_diags.is_empty() {
+        sink.on_source_start(src, multi);
+        let errors = parse_source(dialect, src, sink.as_mut());
+        total_errors += errors.len() as u64;
+        sink.on_source_end(errors.len() as u64);
+        if !errors.is_empty() {
             DiagnosticRenderer::new(&src.text, &src.label)
-                .render_diagnostics(&error_diags, &mut io::stderr())
+                .render_diagnostics(&errors, &mut io::stderr())
                 .ok();
         }
     }
 
-    fn finish(self) -> Result<(), String> {
-        match self.output {
-            ParseOutput::Summary => {
-                println!(
-                    "{} statements parsed, {} errors",
-                    self.totals.statements, self.totals.errors
-                );
-            }
-            ParseOutput::Json => {
-                println!(
-                    "{}",
-                    serde_json::to_string_pretty(&self.totals.json_nodes)
-                        .map_err(|e| format!("JSON serialization failed: {e}"))?
-                );
-            }
-            ParseOutput::Text => {}
-        }
+    sink.finish()?;
+    if total_errors > 0 {
+        Err(format!("{total_errors} syntax error(s)"))
+    } else {
+        Ok(())
+    }
+}
 
-        if self.totals.errors > 0 {
-            Err(format!("{} syntax error(s)", self.totals.errors))
-        } else {
-            Ok(())
+/// Drive the parser to exhaustion, handing each successful statement to the
+/// sink and collecting error diagnostics to render after the loop. The
+/// parser borrows from its own session buffer, so sinks receive statements
+/// inside the loop rather than via a collected Vec.
+fn parse_source(dialect: &AnyDialect, src: &Source, sink: &mut dyn Sink) -> Vec<Diagnostic> {
+    let parser = AnyParser::new(dialect.deref().clone());
+    let mut session = parser.parse(&src.text);
+    let mut errors = Vec::new();
+    loop {
+        match session.next() {
+            ParseOutcome::Ok(stmt) => sink.on_stmt(StmtView { inner: stmt }),
+            ParseOutcome::Err(err) => {
+                let start = err.offset().unwrap_or(0);
+                let end = start + err.length().unwrap_or(0);
+                errors.push(Diagnostic::new(
+                    start,
+                    end,
+                    DiagnosticMessage::ParseError(err.message().to_string()),
+                    Severity::Error,
+                    None,
+                ));
+            }
+            ParseOutcome::Done => break,
         }
+    }
+    errors
+}
+
+// ── StmtView ───────────────────────────────────────────────────────────────
+
+/// Minimal handle over a parsed statement, exposing only the operations
+/// sinks need. Shields sinks from the full [`TypedParsedStatement`] API.
+struct StmtView<'a> {
+    inner: TypedParsedStatement<'a, SyntaxAnyDialect>,
+}
+
+impl StmtView<'_> {
+    fn dump(&self) -> String {
+        let mut out = String::new();
+        self.inner.dump(&mut out, 0);
+        out
+    }
+
+    fn into_json(self) -> serde_json::Value {
+        self.inner
+            .erase()
+            .root_node()
+            .map_or(serde_json::Value::Null, |n| {
+                serde_json::to_value(n).unwrap_or(serde_json::Value::Null)
+            })
+    }
+}
+
+// ── Sink strategy ──────────────────────────────────────────────────────────
+
+/// Output strategy for parsed statements. Adding a new `--output` mode is a
+/// new struct + `impl Sink`; the parse loop and top-level [`run`] don't need
+/// to change.
+trait Sink {
+    fn on_source_start(&mut self, _src: &Source, _multi: bool) {}
+    fn on_stmt(&mut self, stmt: StmtView<'_>);
+    fn on_source_end(&mut self, _error_count: u64) {}
+    fn finish(&mut self) -> Result<(), String>;
+}
+
+fn select_sink(output: ParseOutput) -> Box<dyn Sink> {
+    match output {
+        ParseOutput::Text => Box::new(TextSink::default()),
+        ParseOutput::Json => Box::new(JsonSink::default()),
+        ParseOutput::Summary => Box::new(SummarySink::default()),
+    }
+}
+
+#[derive(Default)]
+struct TextSink {
+    stmts_this_source: u64,
+}
+
+impl Sink for TextSink {
+    fn on_source_start(&mut self, src: &Source, multi: bool) {
+        if multi && src.is_file() {
+            println!("==> {} <==", src.label);
+        }
+        self.stmts_this_source = 0;
+    }
+
+    fn on_stmt(&mut self, stmt: StmtView<'_>) {
+        if self.stmts_this_source > 0 {
+            println!("----");
+        }
+        print!("{}", stmt.dump());
+        self.stmts_this_source += 1;
+    }
+
+    fn finish(&mut self) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct JsonSink {
+    nodes: Vec<serde_json::Value>,
+}
+
+impl Sink for JsonSink {
+    fn on_stmt(&mut self, stmt: StmtView<'_>) {
+        self.nodes.push(stmt.into_json());
+    }
+
+    fn finish(&mut self) -> Result<(), String> {
+        let out = serde_json::to_string_pretty(&self.nodes)
+            .map_err(|e| format!("JSON serialization failed: {e}"))?;
+        println!("{out}");
+        Ok(())
+    }
+}
+
+#[derive(Default)]
+struct SummarySink {
+    stmts: u64,
+    errors: u64,
+}
+
+impl Sink for SummarySink {
+    fn on_stmt(&mut self, _stmt: StmtView<'_>) {
+        self.stmts += 1;
+    }
+
+    fn on_source_end(&mut self, error_count: u64) {
+        self.errors += error_count;
+    }
+
+    fn finish(&mut self) -> Result<(), String> {
+        println!("{} statements parsed, {} errors", self.stmts, self.errors);
+        Ok(())
     }
 }

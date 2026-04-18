@@ -23,7 +23,8 @@ pub(crate) fn run(
 ) -> Result<(), String> {
     let validator = Validator::new(dialect, config_mode, args)?;
     let sources = util::load_sources(&args.files, args.expression.as_deref())?;
-    if validator.run(&sources) {
+    let renderer = select_renderer(args.output);
+    if validator.run(&sources, renderer.as_ref()) {
         std::process::exit(1);
     }
     Ok(())
@@ -33,7 +34,6 @@ struct Validator<'a> {
     dialect: &'a AnyDialect,
     config: ValidationConfig,
     lang: Option<HostLanguage>,
-    output: ValidateOutput,
     schema_catalog: Catalog,
     schema_files: Vec<String>,
     has_schema: bool,
@@ -65,7 +65,6 @@ impl<'a> Validator<'a> {
             dialect,
             config: ValidationConfig::default().with_checks(checks),
             lang: args.lang,
-            output: args.output,
             schema_catalog,
             schema_files,
             has_schema,
@@ -73,19 +72,16 @@ impl<'a> Validator<'a> {
     }
 
     /// Returns `true` if any source produced an error-level diagnostic.
-    fn run(&self, sources: &[Source]) -> bool {
+    fn run(&self, sources: &[Source], renderer: &dyn Renderer) -> bool {
         let multi = sources.len() > 1;
         let mut any_errors = false;
         let mut any_diagnostics = false;
 
         for src in sources {
-            if let ValidateOutput::Text = self.output
-                && multi
-                && src.is_file()
-            {
-                println!("==> {} <==", src.label);
+            if multi && src.is_file() {
+                renderer.on_source_start(src);
             }
-            let (errors, diags) = self.validate_one(src);
+            let (errors, diags) = self.validate_one(src, renderer);
             // Inline input (-e / stdin) exits eagerly on errors and never
             // contributes to the post-loop "no schema" hint — matches the
             // legacy runtime.rs behaviour the integration suites expect.
@@ -99,108 +95,138 @@ impl<'a> Validator<'a> {
             any_diagnostics |= diags;
         }
 
-        if any_diagnostics
-            && !self.has_schema
-            && let ValidateOutput::Text = self.output
-        {
-            emit_no_schema_hint();
+        if any_diagnostics && !self.has_schema {
+            renderer.on_no_schema_hint();
         }
         any_errors
     }
 
     /// Validate one source; returns `(has_errors, has_any_diagnostics)`.
-    fn validate_one(&self, src: &Source) -> (bool, bool) {
-        match (self.lang, self.output) {
-            (Some(lang), ValidateOutput::Text) => {
-                let e = self.embedded_text(src, lang);
-                (e, e)
+    fn validate_one(&self, src: &Source, renderer: &dyn Renderer) -> (bool, bool) {
+        match self.analyze(src) {
+            Analysis::Diagnostics(diags) => {
+                let any_diags = !diags.is_empty();
+                let has_errors = renderer.render(src, &diags);
+                (has_errors, any_diags)
             }
-            (Some(lang), ValidateOutput::Json) => {
-                let e = self.embedded_json(src, lang);
-                (e, e)
+            Analysis::NoEmbeddedFragments => {
+                renderer.on_no_fragments(src);
+                (false, false)
             }
-            (None, ValidateOutput::Text) => self.standalone_text(src),
-            (None, ValidateOutput::Json) => self.standalone_json(src),
+            Analysis::CatalogError => (true, true),
         }
     }
 
-    fn standalone_text(&self, src: &Source) -> (bool, bool) {
-        let mut analyzer = SemanticAnalyzer::with_dialect(self.dialect.clone());
-        let model = analyzer.analyze(&src.text, &self.schema_catalog, &self.config);
-        let any_diags = model.has_diagnostics();
-        let all_diags: Vec<_> = model.diagnostics().cloned().collect();
-        let has_errors = DiagnosticRenderer::new(&src.text, &src.label)
-            .render_diagnostics(&all_diags, &mut io::stderr())
-            .unwrap_or(false);
-        (has_errors, any_diags)
-    }
+    // ── Computation ────────────────────────────────────────────────────────
 
-    fn standalone_json(&self, src: &Source) -> (bool, bool) {
-        let mut analyzer = SemanticAnalyzer::with_dialect(self.dialect.clone());
-        let model = analyzer.analyze(&src.text, &self.schema_catalog, &self.config);
-        let mut has_errors = false;
-        let mut any_diags = false;
-        for diag in model.diagnostics() {
-            any_diags = true;
-            if let Severity::Error = diag.severity() {
-                has_errors = true;
-            }
-            emit_diagnostic_json(&src.label, diag);
+    fn analyze(&self, src: &Source) -> Analysis {
+        match self.lang {
+            Some(lang) => self.analyze_embedded(src, lang),
+            None => Analysis::Diagnostics(self.analyze_standalone(src)),
         }
-        (has_errors, any_diags)
     }
 
-    fn embedded_text(&self, src: &Source, lang: HostLanguage) -> bool {
+    fn analyze_standalone(&self, src: &Source) -> Vec<Diagnostic> {
+        let mut analyzer = SemanticAnalyzer::with_dialect(self.dialect.clone());
+        let model = analyzer.analyze(&src.text, &self.schema_catalog, &self.config);
+        model.diagnostics().cloned().collect()
+    }
+
+    fn analyze_embedded(&self, src: &Source, lang: HostLanguage) -> Analysis {
         let fragments = extract_fragments(&src.text, lang);
         if fragments.is_empty() {
-            eprintln!("no SQL fragments found in {}", src.label);
-            return false;
+            return Analysis::NoEmbeddedFragments;
         }
-        let Some(catalog) = self.reload_embedded_catalog() else {
-            return true;
+        // The embedded analyzer consumes the catalog by value, so each
+        // embedded source has to build its own.
+        let catalog = match util::build_schema_catalog(self.dialect, &self.schema_files) {
+            Ok(c) => c,
+            Err(e) => {
+                eprintln!("error: {e}");
+                return Analysis::CatalogError;
+            }
         };
         let diags = syntaqlite::embedded::EmbeddedAnalyzer::new(self.dialect.clone())
             .with_catalog(catalog)
             .with_config(self.config)
             .validate(&fragments);
+        Analysis::Diagnostics(diags)
+    }
+}
+
+/// Output of a single source analysis — common shape across standalone and
+/// embedded analyzers. Rendering is the caller's problem.
+enum Analysis {
+    /// The analyzer ran and produced zero or more diagnostics.
+    Diagnostics(Vec<Diagnostic>),
+    /// Embedded-mode scan found no SQL fragments in the host source.
+    NoEmbeddedFragments,
+    /// Embedded-mode schema catalog failed to load. The error was already
+    /// printed to stderr; the caller should treat this as an errored source.
+    CatalogError,
+}
+
+// ── Renderer strategy ──────────────────────────────────────────────────────
+
+/// Output strategy for validation results. Adding a new `--output` mode is a
+/// new struct + `impl Renderer`; the [`Validator`] doesn't change.
+trait Renderer {
+    /// Render the diagnostics for one source; returns `true` if any were errors.
+    fn render(&self, src: &Source, diagnostics: &[Diagnostic]) -> bool;
+    /// Per-file header emitted only when there are multiple file sources.
+    fn on_source_start(&self, _src: &Source) {}
+    /// Called when an embedded-mode scan found no SQL fragments in `src`.
+    fn on_no_fragments(&self, _src: &Source) {}
+    /// Called at the end of a run when any diagnostics were emitted but no
+    /// schema was loaded — a hint to point users at `--schema`.
+    fn on_no_schema_hint(&self) {}
+}
+
+fn select_renderer(output: ValidateOutput) -> Box<dyn Renderer> {
+    match output {
+        ValidateOutput::Text => Box::new(TextRenderer),
+        ValidateOutput::Json => Box::new(JsonRenderer),
+    }
+}
+
+struct TextRenderer;
+
+impl Renderer for TextRenderer {
+    fn render(&self, src: &Source, diagnostics: &[Diagnostic]) -> bool {
         DiagnosticRenderer::new(&src.text, &src.label)
-            .render_diagnostics(&diags, &mut io::stderr())
+            .render_diagnostics(diagnostics, &mut io::stderr())
             .unwrap_or(false)
     }
 
-    fn embedded_json(&self, src: &Source, lang: HostLanguage) -> bool {
-        let fragments = extract_fragments(&src.text, lang);
-        if fragments.is_empty() {
-            return false;
-        }
-        let Some(catalog) = self.reload_embedded_catalog() else {
-            return true;
-        };
-        let diags = syntaqlite::embedded::EmbeddedAnalyzer::new(self.dialect.clone())
-            .with_catalog(catalog)
-            .with_config(self.config)
-            .validate(&fragments);
+    fn on_source_start(&self, src: &Source) {
+        println!("==> {} <==", src.label);
+    }
+
+    fn on_no_fragments(&self, src: &Source) {
+        eprintln!("no SQL fragments found in {}", src.label);
+    }
+
+    fn on_no_schema_hint(&self) {
+        eprintln!(
+            "note: no schema provided; unresolved names are reported as warnings. \
+             Add a `syntaqlite.toml` with `schema = [\"schema.sql\"]` or pass `--schema` \
+             to treat them as errors."
+        );
+    }
+}
+
+struct JsonRenderer;
+
+impl Renderer for JsonRenderer {
+    fn render(&self, src: &Source, diagnostics: &[Diagnostic]) -> bool {
         let mut has_errors = false;
-        for diag in &diags {
+        for diag in diagnostics {
             if let Severity::Error = diag.severity() {
                 has_errors = true;
             }
             emit_diagnostic_json(&src.label, diag);
         }
         has_errors
-    }
-
-    /// The embedded analyzer consumes the catalog by value, so each embedded
-    /// source has to build its own. Returns `None` and prints the error (the
-    /// caller should treat this as an errored source).
-    fn reload_embedded_catalog(&self) -> Option<Catalog> {
-        match util::build_schema_catalog(self.dialect, &self.schema_files) {
-            Ok(c) => Some(c),
-            Err(e) => {
-                eprintln!("error: {e}");
-                None
-            }
-        }
     }
 }
 
@@ -220,14 +246,6 @@ fn emit_diagnostic_json(file: &str, diag: &Diagnostic) {
         Ok(s) => println!("{s}"),
         Err(e) => eprintln!("error serializing diagnostic: {e}"),
     }
-}
-
-fn emit_no_schema_hint() {
-    eprintln!(
-        "note: no schema provided; unresolved names are reported as warnings. \
-         Add a `syntaqlite.toml` with `schema = [\"schema.sql\"]` or pass `--schema` \
-         to treat them as errors."
-    );
 }
 
 // ── JSON output schema ─────────────────────────────────────────────────────
