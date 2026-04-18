@@ -38,7 +38,7 @@ mod mcp;
 /// All methods have defaults so adding new ones is non-breaking.
 pub trait CliApp {
     /// Program name shown in `--help` and used as `argv[0]`.
-    fn name(&self) -> &str;
+    fn name(&self) -> &'static str;
 
     /// One-line description for `--help`.
     fn about(&self) -> &'static str {
@@ -260,17 +260,12 @@ pub(crate) enum Command {
 /// Build the [`clap::Command`] for the given app, applying runtime visibility
 /// rules from the [`CliApp`] trait.
 fn build_command<A: CliApp>(app: &A) -> clap::Command {
-    // clap's `name`/`about`/`version` builders want `'static` strings.
-    // Leaking is fine: these live for the lifetime of the process.
-    let name: &'static str = Box::leak(app.name().to_owned().into_boxed_str());
-    let about: &'static str = Box::leak(app.about().to_owned().into_boxed_str());
-    let version: &'static str = Box::leak(app.version().to_owned().into_boxed_str());
-
+    let name = app.name();
     let cmd = Cli::command()
         .name(name)
         .bin_name(name)
-        .about(about)
-        .version(version);
+        .about(app.about())
+        .version(app.version());
 
     let cmd = if app.allow_sqlite_tuning() {
         cmd

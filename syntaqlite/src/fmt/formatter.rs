@@ -593,11 +593,9 @@ pub(crate) fn try_macro_verbatim<'a>(
     let source = ctx.text();
 
     let (node_text, node_off) = ctx.reader.node_text(child_id)?;
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "node_text is a slice of the source buffer whose length is already bounded by u32 offsets"
-    )]
-    let node_end = node_off + node_text.len() as u32;
+    let node_len = u32::try_from(node_text.len())
+        .expect("node text length fits in u32; source buffer is addressed via u32 offsets");
+    let node_end = node_off + node_len;
 
     for (i, &(r_start, r_len)) in regions.iter().enumerate() {
         let r_end = r_start + r_len;

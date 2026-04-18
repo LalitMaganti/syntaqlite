@@ -680,6 +680,51 @@ fn build_schema_catalog(dialect: &AnyDialect, schema_files: &[String]) -> Result
     Ok(catalog)
 }
 
+/// Per-invocation context for `validate_one` — the things that stay
+/// constant while iterating over multiple input files.
+struct ValidateCtx<'a> {
+    dialect: &'a AnyDialect,
+    config: ValidationConfig,
+    lang: Option<HostLanguage>,
+    output: ValidateOutput,
+    schema_catalog: Catalog,
+    schema_files: &'a [String],
+}
+
+/// Validate one source buffer; returns (`has_errors`, `has_any_diagnostics`).
+fn validate_one(ctx: &ValidateCtx<'_>, source: &str, file: &str) -> (bool, bool) {
+    match (ctx.lang, ctx.output) {
+        (Some(host_lang), ValidateOutput::Text) => {
+            let e = validate_embedded_source(
+                ctx.dialect,
+                source,
+                file,
+                &ctx.config,
+                host_lang,
+                ctx.schema_files,
+            );
+            (e, e)
+        }
+        (Some(host_lang), ValidateOutput::Json) => {
+            let e = validate_embedded_source_json(
+                ctx.dialect,
+                source,
+                file,
+                &ctx.config,
+                host_lang,
+                ctx.schema_files,
+            );
+            (e, e)
+        }
+        (None, ValidateOutput::Text) => {
+            validate_source(ctx.dialect, source, file, &ctx.config, &ctx.schema_catalog)
+        }
+        (None, ValidateOutput::Json) => {
+            validate_source_json(ctx.dialect, source, file, &ctx.config, &ctx.schema_catalog)
+        }
+    }
+}
+
 fn cmd_validate(
     dialect: &AnyDialect,
     files: &[String],
@@ -690,63 +735,25 @@ fn cmd_validate(
     output: ValidateOutput,
 ) -> Result<(), String> {
     let has_schema = !schema_files.is_empty();
-    let schema_catalog = build_schema_catalog(dialect, schema_files)?;
-    let config = ValidationConfig::default().with_checks(checks);
+    let ctx = ValidateCtx {
+        dialect,
+        config: ValidationConfig::default().with_checks(checks),
+        lang,
+        output,
+        schema_catalog: build_schema_catalog(dialect, schema_files)?,
+        schema_files,
+    };
     let mut any_errors = false;
     let mut any_diagnostics = false;
-
-    let validate_one =
-        |source: &str, file: &str, any_errors: &mut bool, any_diagnostics: &mut bool| {
-            let (errors, diags) = match lang {
-                Some(host_lang) => {
-                    let e = match output {
-                        ValidateOutput::Text => validate_embedded_source(
-                            dialect,
-                            source,
-                            file,
-                            &config,
-                            host_lang,
-                            schema_files,
-                        ),
-                        ValidateOutput::Json => validate_embedded_source_json(
-                            dialect,
-                            source,
-                            file,
-                            &config,
-                            host_lang,
-                            schema_files,
-                        ),
-                    };
-                    (e, e)
-                }
-                None => match output {
-                    ValidateOutput::Text => {
-                        validate_source(dialect, source, file, &config, &schema_catalog)
-                    }
-                    ValidateOutput::Json => {
-                        validate_source_json(dialect, source, file, &config, &schema_catalog)
-                    }
-                },
-            };
-            if errors {
-                *any_errors = true;
-            }
-            if diags {
-                *any_diagnostics = true;
-            }
-        };
 
     process_files(
         files,
         expression,
         |source, label| {
-            let mut errors = false;
-            let mut diags = false;
-            validate_one(source, label, &mut errors, &mut diags);
+            let (errors, _diags) = validate_one(&ctx, source, label);
             if errors {
                 std::process::exit(1);
             }
-            let _ = diags;
             Ok(())
         },
         |source, path, multi| {
@@ -754,7 +761,13 @@ fn cmd_validate(
             if multi && matches!(output, ValidateOutput::Text) {
                 println!("==> {file} <==");
             }
-            validate_one(source, &file, &mut any_errors, &mut any_diagnostics);
+            let (errors, diags) = validate_one(&ctx, source, &file);
+            if errors {
+                any_errors = true;
+            }
+            if diags {
+                any_diagnostics = true;
+            }
             Ok(())
         },
     )?;
