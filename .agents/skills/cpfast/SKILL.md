@@ -54,21 +54,17 @@ Skips pre-push checks for speed — CI will catch issues.
    git push -u origin HEAD
    ```
 
-7. **Create a PR** using `gh pr create`:
+7. **Create a PR** using `gh pr create`. Body should be as long as needed
+   and no longer — a one-liner is fine when the title and diff speak for
+   themselves. Skip section headings. Add context only if the change would
+   be surprising without it.
    ```sh
    gh pr create --title "<title>" --body "$(cat <<'EOF'
-   ## Motivation
-
-   <Why this change is needed — what problem exists, what's missing, what broke>
-
-   ## Changes
-
-   <What this PR does to address the motivation>
+   <body>
    EOF
    )"
    ```
    - Keep the title under 70 characters, prefixed with `synq: `
-   - Motivation section: explain the problem/need driving this change
-   - Changes section: describe what you're doing about it
+   - Don't restate the title in the body.
 
 8. **Report the PR URL** to the user.
