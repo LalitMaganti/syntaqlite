@@ -53,6 +53,18 @@ typedef enum {
   SYNTAQLITE_CHECK_DENY  = 2,
 } SyntaqliteCheckLevel;
 
+// Machine-readable diagnostic kind. Mirrors the Rust DiagnosticMessage
+// enum variants so consumers can branch without regexing `message`.
+typedef enum {
+  SYNTAQLITE_DIAG_PARSE_ERROR              = 0,
+  SYNTAQLITE_DIAG_UNKNOWN_TABLE            = 1,
+  SYNTAQLITE_DIAG_UNKNOWN_COLUMN           = 2,
+  SYNTAQLITE_DIAG_UNKNOWN_FUNCTION         = 3,
+  SYNTAQLITE_DIAG_UNKNOWN_MODULE           = 4,
+  SYNTAQLITE_DIAG_FUNCTION_ARITY           = 5,
+  SYNTAQLITE_DIAG_CTE_COLUMN_COUNT_MISMATCH = 6,
+} SyntaqliteDiagnosticCode;
+
 // A single diagnostic from validation. Pointers are valid until the next
 // analyze() or destroy() call.
 typedef struct {
@@ -60,6 +72,7 @@ typedef struct {
   const char* message;
   uint32_t start_offset;
   uint32_t end_offset;
+  uint32_t kind_code;  // SyntaqliteDiagnosticCode value
 } SyntaqliteDiagnostic;
 
 // Relation definition for batch catalog registration (tables and views).

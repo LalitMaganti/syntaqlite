@@ -490,11 +490,13 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
             PyObject *msg = PyUnicode_FromString(diags[i].message ? diags[i].message : "");
             PyObject *start = PyLong_FromUnsignedLong(diags[i].start_offset);
             PyObject *end = PyLong_FromUnsignedLong(diags[i].end_offset);
+            PyObject *code = PyLong_FromUnsignedLong(diags[i].kind_code);
 
             if (sev) { PyDict_SetItemString(d, "severity", sev); Py_DECREF(sev); }
             if (msg) { PyDict_SetItemString(d, "message", msg); Py_DECREF(msg); }
             if (start) { PyDict_SetItemString(d, "start_offset", start); Py_DECREF(start); }
             if (end) { PyDict_SetItemString(d, "end_offset", end); Py_DECREF(end); }
+            if (code) { PyDict_SetItemString(d, "code", code); Py_DECREF(code); }
 
             PyList_Append(diag_list, d);
             Py_DECREF(d);
@@ -664,10 +666,12 @@ syntaqlite_py_validate(PyObject *self, PyObject *args, PyObject *kwargs)
                     PyObject *msg = PyUnicode_FromString(sd[i].message ? sd[i].message : "");
                     PyObject *start = PyLong_FromUnsignedLong(sd[i].start_offset);
                     PyObject *end = PyLong_FromUnsignedLong(sd[i].end_offset);
+                    PyObject *code = PyLong_FromUnsignedLong(sd[i].kind_code);
                     if (sev) { PyDict_SetItemString(d, "severity", sev); Py_DECREF(sev); }
                     if (msg) { PyDict_SetItemString(d, "message", msg); Py_DECREF(msg); }
                     if (start) { PyDict_SetItemString(d, "start_offset", start); Py_DECREF(start); }
                     if (end) { PyDict_SetItemString(d, "end_offset", end); Py_DECREF(end); }
+                    if (code) { PyDict_SetItemString(d, "code", code); Py_DECREF(code); }
                     PyList_Append(sd_list, d);
                     Py_DECREF(d);
                 }

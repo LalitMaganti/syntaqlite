@@ -27,6 +27,7 @@ pub struct SyntaqliteDiagnostic {
     pub message: *const c_char,
     pub start_offset: u32,
     pub end_offset: u32,
+    pub kind_code: u32,
 }
 
 /// Mirrors `SyntaqliteRelationDef` from the C header.
@@ -164,6 +165,31 @@ fn severity_to_c(s: Severity) -> u32 {
         Severity::Warning => SEVERITY_WARNING,
         Severity::Info => SEVERITY_INFO,
         Severity::Hint => SEVERITY_HINT,
+    }
+}
+
+// ── Diagnostic code mapping ────────────────────────────────────────────────
+
+/// C-ABI codes for [`DiagnosticMessage`] variants. Must match
+/// `SyntaqliteDiagnosticCode` in `syntaqlite/include/syntaqlite/validation.h`.
+pub(crate) const DIAG_CODE_PARSE_ERROR: u32 = 0;
+pub(crate) const DIAG_CODE_UNKNOWN_TABLE: u32 = 1;
+pub(crate) const DIAG_CODE_UNKNOWN_COLUMN: u32 = 2;
+pub(crate) const DIAG_CODE_UNKNOWN_FUNCTION: u32 = 3;
+pub(crate) const DIAG_CODE_UNKNOWN_MODULE: u32 = 4;
+pub(crate) const DIAG_CODE_FUNCTION_ARITY: u32 = 5;
+pub(crate) const DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH: u32 = 6;
+
+fn diagnostic_code_to_c(msg: &super::diagnostics::DiagnosticMessage) -> u32 {
+    use super::diagnostics::DiagnosticMessage;
+    match msg {
+        DiagnosticMessage::ParseError(_) => DIAG_CODE_PARSE_ERROR,
+        DiagnosticMessage::UnknownTable { .. } => DIAG_CODE_UNKNOWN_TABLE,
+        DiagnosticMessage::UnknownColumn { .. } => DIAG_CODE_UNKNOWN_COLUMN,
+        DiagnosticMessage::UnknownFunction { .. } => DIAG_CODE_UNKNOWN_FUNCTION,
+        DiagnosticMessage::UnknownModule { .. } => DIAG_CODE_UNKNOWN_MODULE,
+        DiagnosticMessage::FunctionArity { .. } => DIAG_CODE_FUNCTION_ARITY,
+        DiagnosticMessage::CteColumnCountMismatch { .. } => DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH,
     }
 }
 
@@ -631,6 +657,7 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
             message: msg.as_ptr(),
             start_offset: d.start_offset() as u32,
             end_offset: d.end_offset() as u32,
+            kind_code: diagnostic_code_to_c(d.message()),
         });
     }
 
@@ -1072,6 +1099,7 @@ fn ensure_diagnostics<'a>(
                 message: msg.as_ptr(),
                 start_offset: d.start_offset() as u32,
                 end_offset: d.end_offset() as u32,
+                kind_code: diagnostic_code_to_c(d.message()),
             });
         }
         (diags, msgs)
@@ -2620,5 +2648,149 @@ mod tests {
             );
             syntaqlite_validator_destroy(v);
         }
+    }
+
+    // ── Diagnostic kind codes ────────────────────────────────────────────
+
+    /// Helper: find the first diagnostic with the given `kind_code`, panicking
+    /// if none is present.
+    unsafe fn find_code(v: *const SyntaqliteValidator, code: u32) -> bool {
+        // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
+        unsafe {
+            let n = syntaqlite_validator_diagnostic_count(v) as usize;
+            let ptr = syntaqlite_validator_diagnostics(v);
+            (0..n).any(|i| (*ptr.add(i)).kind_code == code)
+        }
+    }
+
+    #[test]
+    fn kind_code_parse_error() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "SELCT 1");
+            assert!(
+                find_code(v, DIAG_CODE_PARSE_ERROR),
+                "expected ParseError kind_code",
+            );
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn kind_code_unknown_table() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "SELECT id FROM no_such_table");
+            assert!(find_code(v, DIAG_CODE_UNKNOWN_TABLE));
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn kind_code_unknown_column() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_table(v, "t", &["a"]);
+            analyze(v, "SELECT bogus FROM t");
+            assert!(find_code(v, DIAG_CODE_UNKNOWN_COLUMN));
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn kind_code_unknown_function() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "SELECT no_such_fn(1)");
+            assert!(find_code(v, DIAG_CODE_UNKNOWN_FUNCTION));
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn kind_code_function_arity() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            // substr accepts 0/2/3 args; calling with 1 triggers WrongArity.
+            analyze(v, "SELECT substr('x')");
+            assert!(
+                find_code(v, DIAG_CODE_FUNCTION_ARITY),
+                "expected FunctionArity kind_code",
+            );
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn kind_code_cte_column_count_mismatch() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "WITH cte(a) AS (SELECT 1, 2) SELECT a FROM cte");
+            assert!(find_code(v, DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH));
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn kind_code_per_statement_matches_aggregate() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            analyze(v, "SELECT id FROM no_such_table");
+            let ptr = syntaqlite_validator_statement_diagnostics(v, 0);
+            assert!(!ptr.is_null());
+            assert_eq!((*ptr).kind_code, DIAG_CODE_UNKNOWN_TABLE);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn diagnostic_code_to_c_covers_all_variants() {
+        use super::super::diagnostics::DiagnosticMessage;
+        assert_eq!(
+            diagnostic_code_to_c(&DiagnosticMessage::ParseError("x".into())),
+            DIAG_CODE_PARSE_ERROR,
+        );
+        assert_eq!(
+            diagnostic_code_to_c(&DiagnosticMessage::UnknownTable { name: "t".into() }),
+            DIAG_CODE_UNKNOWN_TABLE,
+        );
+        assert_eq!(
+            diagnostic_code_to_c(&DiagnosticMessage::UnknownColumn {
+                column: "c".into(),
+                table: None,
+            }),
+            DIAG_CODE_UNKNOWN_COLUMN,
+        );
+        assert_eq!(
+            diagnostic_code_to_c(&DiagnosticMessage::UnknownFunction { name: "f".into() }),
+            DIAG_CODE_UNKNOWN_FUNCTION,
+        );
+        assert_eq!(
+            diagnostic_code_to_c(&DiagnosticMessage::UnknownModule { name: "m".into() }),
+            DIAG_CODE_UNKNOWN_MODULE,
+        );
+        assert_eq!(
+            diagnostic_code_to_c(&DiagnosticMessage::FunctionArity {
+                name: "f".into(),
+                expected: vec![1],
+                got: 0,
+            }),
+            DIAG_CODE_FUNCTION_ARITY,
+        );
+        assert_eq!(
+            diagnostic_code_to_c(&DiagnosticMessage::CteColumnCountMismatch {
+                name: "c".into(),
+                declared: 1,
+                actual: 2,
+            }),
+            DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH,
+        );
     }
 }
