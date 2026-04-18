@@ -195,10 +195,8 @@ pub fn amalgamate_full(
     dialect_dir: &Path,
     omit_macros: bool,
 ) -> Result<AmalgamateOutput, String> {
-    let runtime_files =
-        collect_files(&[&runtime_dir.join("csrc"), &runtime_dir.join("include")])?;
-    let dialect_files =
-        collect_files(&[&dialect_dir.join("csrc"), &dialect_dir.join("include")])?;
+    let runtime_files = collect_files(&[&runtime_dir.join("csrc"), &runtime_dir.join("include")])?;
+    let dialect_files = collect_files(&[&dialect_dir.join("csrc"), &dialect_dir.join("include")])?;
 
     let mut files = FileMap::new();
     for (k, v) in &runtime_files {
@@ -246,13 +244,12 @@ fn is_runtime_origin(
     let in_dl = dialect_files.contains_key(key);
     match (in_rt, in_dl) {
         (true, false) => true,
-        (false, true) => false,
+        (false, true | false) => false,
         (true, true) => {
             let dialect_csrc = format!("csrc/{dialect}/");
             let dialect_pub = format!("syntaqlite_{dialect}/");
             !(key.starts_with(&dialect_csrc) || key.starts_with(&dialect_pub))
         }
-        (false, false) => false,
     }
 }
 
@@ -958,15 +955,15 @@ mod tests {
 
         let src = &out.source;
 
-        fn block_for<'a>(src: &'a str, key: &str) -> &'a str {
+        let block_for = |key: &str| -> &str {
             let begin = src.find(&format!("begin: {key}")).expect("missing begin");
             let end = src.find(&format!("end: {key}")).expect("missing end");
             &src[begin..end]
-        }
+        };
 
-        let parser_block = block_for(src, "csrc/parser.c");
-        let tok_block = block_for(src, "csrc/tokenizer.c");
-        let dialect_block = block_for(src, "csrc/sqlite/dialect.c");
+        let parser_block = block_for("csrc/parser.c");
+        let tok_block = block_for("csrc/tokenizer.c");
+        let dialect_block = block_for("csrc/sqlite/dialect.c");
 
         assert!(
             parser_block.contains("#ifndef SYNTAQLITE_OMIT_RUNTIME"),

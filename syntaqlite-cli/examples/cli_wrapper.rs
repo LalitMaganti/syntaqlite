@@ -9,17 +9,17 @@
 //!
 //! Run with: `cargo run --example cli_wrapper -- --help`
 
-use syntaqlite_cli::{CliApp, run};
 use syntaqlite::any::AnyDialect;
+use syntaqlite_cli::{CliApp, run};
 
 struct MyCli;
 
 impl CliApp for MyCli {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "syntaqlite-example"
     }
 
-    fn about(&self) -> &str {
+    fn about(&self) -> &'static str {
         "Example wrapper that pre-specifies the SQLite dialect"
     }
 

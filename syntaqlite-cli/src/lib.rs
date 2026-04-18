@@ -6,7 +6,7 @@
 //! Downstream crates can build their own CLI binary that pre-specifies a
 //! dialect by implementing [`CliApp`] and calling [`run`]. The default
 //! `syntaqlite` binary in this crate is a thin wrapper that does exactly that
-//! with the bundled SQLite dialect.
+//! with the bundled `SQLite` dialect.
 
 use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
 use syntaqlite::any::AnyDialect;
@@ -18,6 +18,8 @@ mod runtime;
 mod codegen;
 
 mod lineage_output;
+
+mod validate_output;
 
 #[cfg(feature = "mcp")]
 #[expect(
@@ -39,7 +41,7 @@ pub trait CliApp {
     fn name(&self) -> &str;
 
     /// One-line description for `--help`.
-    fn about(&self) -> &str {
+    fn about(&self) -> &'static str {
         "SQL formatting and analysis tools"
     }
 
@@ -47,7 +49,7 @@ pub trait CliApp {
     ///
     /// The default returns this crate's version. Wrapper crates should
     /// override to report their own version.
-    fn version(&self) -> &str {
+    fn version(&self) -> &'static str {
         env!("CARGO_PKG_VERSION")
     }
 
@@ -99,6 +101,15 @@ pub(crate) enum LineageOutput {
     Json,
     /// Human-readable text
     Text,
+}
+
+#[derive(Clone, Copy, Default, ValueEnum)]
+pub(crate) enum ValidateOutput {
+    /// Rustc-style rendered diagnostics on stderr (default)
+    #[default]
+    Text,
+    /// Newline-delimited JSON, one record per diagnostic
+    Json,
 }
 
 #[derive(Clone, Copy, Subcommand)]
@@ -210,6 +221,9 @@ pub(crate) enum Command {
         /// [experimental] Host language for embedded SQL extraction (python, typescript)
         #[arg(long = "experimental-lang")]
         lang: Option<runtime::HostLanguage>,
+        /// Output format
+        #[arg(short, long, value_enum, default_value_t = ValidateOutput::Text)]
+        output: ValidateOutput,
     },
     /// Extract column and table lineage from SQL
     Lineage {
@@ -284,7 +298,9 @@ pub fn run<A: CliApp>(app: &A) {
     use clap::FromArgMatches;
 
     let cmd = build_command(app);
-    let matches = cmd.try_get_matches_from(std::env::args()).unwrap_or_else(|e| e.exit());
+    let matches = cmd
+        .try_get_matches_from(std::env::args())
+        .unwrap_or_else(|e| e.exit());
     let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
 
     if let Err(e) = enforce_visibility(app, &cli) {
@@ -317,14 +333,14 @@ fn enforce_visibility<A: CliApp>(app: &A, cli: &Cli) -> Result<(), String> {
     Ok(())
 }
 
-/// Stock CLI configuration: the bundled SQLite dialect with all override
+/// Stock CLI configuration: the bundled `SQLite` dialect with all override
 /// surfaces enabled.
 #[cfg(feature = "bundled-sqlite-dialect")]
 pub struct Stock;
 
 #[cfg(feature = "bundled-sqlite-dialect")]
 impl CliApp for Stock {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "syntaqlite"
     }
 
@@ -347,17 +363,17 @@ mod tests {
 
     struct Locked;
     impl CliApp for Locked {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "locked"
         }
-        fn about(&self) -> &str {
+        fn about(&self) -> &'static str {
             "locked-down test CLI"
         }
     }
 
     struct Open;
     impl CliApp for Open {
-        fn name(&self) -> &str {
+        fn name(&self) -> &'static str {
             "open"
         }
         fn allow_dialect_override(&self) -> bool {
@@ -412,8 +428,8 @@ mod tests {
 
     #[test]
     fn enforce_visibility_rejects_sqlite_tuning_when_disallowed() {
-        let cli = parse(&Locked, &["locked", "--sqlite-version", "3.47.0", "parse"])
-            .expect("clap parse");
+        let cli =
+            parse(&Locked, &["locked", "--sqlite-version", "3.47.0", "parse"]).expect("clap parse");
         let err = enforce_visibility(&Locked, &cli).expect_err("should reject");
         assert!(err.contains("--sqlite-version"), "got: {err}");
     }
@@ -459,8 +475,8 @@ mod tests {
     #[cfg(feature = "dynload")]
     #[test]
     fn enforce_visibility_rejects_dialect_when_disallowed() {
-        let cli = parse(&Locked, &["locked", "--dialect", "/tmp/x.so", "parse"])
-            .expect("clap parse");
+        let cli =
+            parse(&Locked, &["locked", "--dialect", "/tmp/x.so", "parse"]).expect("clap parse");
         let err = enforce_visibility(&Locked, &cli).expect_err("should reject");
         assert!(err.contains("--dialect"), "got: {err}");
     }
@@ -468,8 +484,7 @@ mod tests {
     #[cfg(feature = "dynload")]
     #[test]
     fn enforce_visibility_accepts_dialect_when_allowed() {
-        let cli =
-            parse(&Open, &["open", "--dialect", "/tmp/x.so", "parse"]).expect("clap parse");
+        let cli = parse(&Open, &["open", "--dialect", "/tmp/x.so", "parse"]).expect("clap parse");
         enforce_visibility(&Open, &cli).expect("should accept");
     }
 

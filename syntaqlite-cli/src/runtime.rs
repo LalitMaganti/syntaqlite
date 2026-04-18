@@ -22,7 +22,8 @@ use syntaqlite::{
 
 use crate::config::{self, FormatOptions, ProjectConfig};
 
-use super::{Cli, Command, LineageOutput, LineageScope};
+use super::{Cli, Command, LineageOutput, LineageScope, ValidateOutput};
+use crate::validate_output::DiagnosticRecord;
 
 #[derive(Clone, Copy, ValueEnum)]
 pub(crate) enum KeywordCasing {
@@ -174,6 +175,7 @@ fn dispatch_commands(
             warn,
             deny,
             lang,
+            output,
         } => require_dialect(dialect).and_then(|d| {
             let file_config = discover_config_for_paths(&files, config);
             // If --schema is given, use it directly. Otherwise, resolve from config file.
@@ -197,6 +199,7 @@ fn dispatch_commands(
                 &resolved_schemas,
                 lang,
                 checks,
+                output,
             )
         }),
         Command::Lineage {
@@ -684,6 +687,7 @@ fn cmd_validate(
     schema_files: &[String],
     lang: Option<HostLanguage>,
     checks: syntaqlite::CheckConfig,
+    output: ValidateOutput,
 ) -> Result<(), String> {
     let has_schema = !schema_files.is_empty();
     let schema_catalog = build_schema_catalog(dialect, schema_files)?;
@@ -691,59 +695,71 @@ fn cmd_validate(
     let mut any_errors = false;
     let mut any_diagnostics = false;
 
+    let validate_one =
+        |source: &str, file: &str, any_errors: &mut bool, any_diagnostics: &mut bool| {
+            let (errors, diags) = match lang {
+                Some(host_lang) => {
+                    let e = match output {
+                        ValidateOutput::Text => validate_embedded_source(
+                            dialect,
+                            source,
+                            file,
+                            &config,
+                            host_lang,
+                            schema_files,
+                        ),
+                        ValidateOutput::Json => validate_embedded_source_json(
+                            dialect,
+                            source,
+                            file,
+                            &config,
+                            host_lang,
+                            schema_files,
+                        ),
+                    };
+                    (e, e)
+                }
+                None => match output {
+                    ValidateOutput::Text => {
+                        validate_source(dialect, source, file, &config, &schema_catalog)
+                    }
+                    ValidateOutput::Json => {
+                        validate_source_json(dialect, source, file, &config, &schema_catalog)
+                    }
+                },
+            };
+            if errors {
+                *any_errors = true;
+            }
+            if diags {
+                *any_diagnostics = true;
+            }
+        };
+
     process_files(
         files,
         expression,
         |source, label| {
-            let (errors, _diags) = match lang {
-                Some(lang) => {
-                    let e = validate_embedded_source(
-                        dialect,
-                        source,
-                        label,
-                        &config,
-                        lang,
-                        schema_files,
-                    );
-                    (e, e)
-                }
-                None => validate_source(dialect, source, label, &config, &schema_catalog),
-            };
+            let mut errors = false;
+            let mut diags = false;
+            validate_one(source, label, &mut errors, &mut diags);
             if errors {
                 std::process::exit(1);
             }
+            let _ = diags;
             Ok(())
         },
         |source, path, multi| {
             let file = path.display().to_string();
-            if multi {
+            if multi && matches!(output, ValidateOutput::Text) {
                 println!("==> {file} <==");
             }
-            let (errors, diags) = match lang {
-                Some(lang) => {
-                    let e = validate_embedded_source(
-                        dialect,
-                        source,
-                        &file,
-                        &config,
-                        lang,
-                        schema_files,
-                    );
-                    (e, e)
-                }
-                None => validate_source(dialect, source, &file, &config, &schema_catalog),
-            };
-            if errors {
-                any_errors = true;
-            }
-            if diags {
-                any_diagnostics = true;
-            }
+            validate_one(source, &file, &mut any_errors, &mut any_diagnostics);
             Ok(())
         },
     )?;
 
-    if any_diagnostics && !has_schema {
+    if any_diagnostics && !has_schema && matches!(output, ValidateOutput::Text) {
         emit_no_schema_hint();
     }
 
@@ -804,6 +820,72 @@ fn validate_embedded_source(
     DiagnosticRenderer::new(source, file)
         .render_diagnostics(&diags, &mut io::stderr())
         .unwrap_or(false)
+}
+
+/// Returns `(has_errors, has_any_diagnostics)`.
+fn validate_source_json(
+    dialect: &AnyDialect,
+    source: &str,
+    file: &str,
+    config: &ValidationConfig,
+    schema_catalog: &Catalog,
+) -> (bool, bool) {
+    let mut analyzer = SemanticAnalyzer::with_dialect(dialect.clone());
+    let model = analyzer.analyze(source, schema_catalog, config);
+    let mut has_errors = false;
+    let mut any_diags = false;
+    for diag in model.diagnostics() {
+        any_diags = true;
+        if matches!(diag.severity(), Severity::Error) {
+            has_errors = true;
+        }
+        emit_diagnostic_json(file, diag);
+    }
+    (has_errors, any_diags)
+}
+
+fn validate_embedded_source_json(
+    dialect: &AnyDialect,
+    source: &str,
+    file: &str,
+    config: &ValidationConfig,
+    lang: HostLanguage,
+    schema_files: &[String],
+) -> bool {
+    let fragments = match lang {
+        HostLanguage::Python => syntaqlite::embedded::extract_python(source),
+        HostLanguage::Typescript => syntaqlite::embedded::extract_typescript(source),
+    };
+    if fragments.is_empty() {
+        return false;
+    }
+    let catalog = match build_schema_catalog(dialect, schema_files) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("error: {e}");
+            return true;
+        }
+    };
+    let diags = syntaqlite::embedded::EmbeddedAnalyzer::new(dialect.clone())
+        .with_catalog(catalog)
+        .with_config(*config)
+        .validate(&fragments);
+    let mut has_errors = false;
+    for diag in &diags {
+        if matches!(diag.severity(), Severity::Error) {
+            has_errors = true;
+        }
+        emit_diagnostic_json(file, diag);
+    }
+    has_errors
+}
+
+fn emit_diagnostic_json(file: &str, diag: &Diagnostic) {
+    let record = DiagnosticRecord::from_diag(file, diag);
+    match serde_json::to_string(&record) {
+        Ok(s) => println!("{s}"),
+        Err(e) => eprintln!("error serializing diagnostic: {e}"),
+    }
 }
 
 fn emit_no_schema_hint() {
