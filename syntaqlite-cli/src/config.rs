@@ -96,6 +96,28 @@ pub(crate) fn discover(start: &Path) -> Option<(ProjectConfig, PathBuf)> {
     }
 }
 
+/// How the project config file should be resolved for a given invocation.
+pub(crate) enum ConfigMode<'a> {
+    /// Use an explicit config file path (`--config`).
+    Explicit(&'a str),
+    /// Auto-discover by walking up from the current directory (default).
+    Discover,
+    /// Disable config file loading entirely (`--no-config`).
+    Disabled,
+}
+
+/// Resolve the config for a given mode — explicit path, walk up from CWD, or skip.
+pub(crate) fn resolve(mode: &ConfigMode<'_>) -> Option<(ProjectConfig, PathBuf)> {
+    match mode {
+        ConfigMode::Explicit(p) => load(Path::new(p)),
+        ConfigMode::Discover => {
+            let cwd = std::env::current_dir().unwrap_or_default();
+            discover(&cwd)
+        }
+        ConfigMode::Disabled => None,
+    }
+}
+
 /// Given a SQL file path and a config, resolve which schema files apply.
 pub(crate) fn resolve_schemas(
     sql_path: &Path,

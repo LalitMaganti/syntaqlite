@@ -33,7 +33,11 @@ All pre-push checks must pass before pushing.
 4. **Write a commit message** following the project convention:
    - Prefix with `synq: ` (lowercase)
    - Concise summary line describing the "why"
-   - Add detail in the body for non-trivial changes
+   - For non-trivial changes, add a structured body: a short lead-in
+     paragraph explaining the motivation, then a bullet list covering
+     the specifics (e.g. one bullet per file / module / subsystem
+     touched). This body also becomes the PR description in step 8,
+     so invest in it once.
 
 5. **Commit using a HEREDOC**:
    ```sh
@@ -58,17 +62,18 @@ All pre-push checks must pass before pushing.
    git push -u origin HEAD
    ```
 
-8. **Create a PR** using `gh pr create`. Body should be as long as needed
-   and no longer — a one-liner is fine when the title and diff speak for
-   themselves. Skip section headings. Add context only if the change would
-   be surprising without it.
+8. **Create a PR** using `gh pr create`. For single-commit PRs the
+   body should be the commit body verbatim — the lead-in + bullets
+   structure from step 4 is exactly the structure a PR wants. Don't
+   rewrite it into a single paragraph, don't add section headings,
+   don't restate the title. The shortcut:
    ```sh
-   gh pr create --title "<title>" --body "$(cat <<'EOF'
-   <body>
-   EOF
-   )"
+   git log -1 --format=%b HEAD | gh pr create --title "<title>" --body-file -
    ```
+   For multi-commit PRs, write the body in the same shape (short
+   lead-in + bullets covering the important changes across commits).
+   One-liners are fine only when the title and diff genuinely speak
+   for themselves.
    - Keep the title under 70 characters, prefixed with `synq: `
-   - Don't restate the title in the body.
 
 9. **Report the PR URL** to the user.
