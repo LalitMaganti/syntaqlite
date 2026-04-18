@@ -78,6 +78,7 @@ def _compile_perfetto_dialect(cli_binary: Path, work_dir: Path) -> Path:
         [
             str(cli_binary),
             "dialect",
+            "generate",
             "--name",
             "perfetto",
             "--actions-dir",
