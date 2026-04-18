@@ -88,6 +88,23 @@ typedef enum {
   SYNTAQLITE_RELATION_VIEW  = 1,
 } SyntaqliteRelationKind;
 
+// Category for a user-registered function overload.
+typedef enum {
+  SYNTAQLITE_FUNCTION_SCALAR    = 0,
+  SYNTAQLITE_FUNCTION_AGGREGATE = 1,
+  SYNTAQLITE_FUNCTION_WINDOW    = 2,
+} SyntaqliteFunctionCategory;
+
+// Arity spec kind for a user-registered function overload.
+//   EXACT    — accepts exactly `arity_value` arguments.
+//   AT_LEAST — accepts `arity_value` or more arguments (variadic).
+//   ANY      — accepts any number of arguments; `arity_value` is ignored.
+typedef enum {
+  SYNTAQLITE_ARITY_EXACT    = 0,
+  SYNTAQLITE_ARITY_AT_LEAST = 1,
+  SYNTAQLITE_ARITY_ANY      = 2,
+} SyntaqliteAritySpecKind;
+
 // Origin of a result column — which table.column it traces back to.
 // Both fields are NULL when the column is an expression, literal, or
 // aggregate with no single-column origin.
@@ -237,6 +254,35 @@ SYNTAQLITE_API uint32_t syntaqlite_validator_load_schema_ddl(
     SyntaqliteValidator* v,
     const char* source,
     uint32_t len);
+
+// Register a scalar / aggregate / window function overload in the database
+// layer. Repeat calls with the same `name` build up an overload set — any
+// registered arity will be accepted by the analyzer; calls that match no
+// overload produce a FunctionArity diagnostic.
+//
+// `arity_value` is ignored when `arity_kind` is SYNTAQLITE_ARITY_ANY.
+// Out-of-range `category` or `arity_kind` is a no-op.
+SYNTAQLITE_API void syntaqlite_validator_add_function_overload(
+    SyntaqliteValidator* v,
+    const char* name,
+    SyntaqliteFunctionCategory category,
+    SyntaqliteAritySpecKind arity_kind,
+    uint32_t arity_value);
+
+// Register a table-valued function (usable in FROM clauses) in the database
+// layer.
+//
+// `arity_value` is ignored when `arity_kind` is SYNTAQLITE_ARITY_ANY.
+// `output_columns` may be NULL; when provided, references to the listed
+// columns are validated (otherwise any column reference is accepted).
+// Out-of-range `arity_kind` is a no-op.
+SYNTAQLITE_API void syntaqlite_validator_add_table_function(
+    SyntaqliteValidator* v,
+    const char* name,
+    SyntaqliteAritySpecKind arity_kind,
+    uint32_t arity_value,
+    const char* const* output_columns,
+    uint32_t output_column_count);
 
 // ---------------------------------------------------------------------------
 // Diagnostic access (valid until next analyze() or destroy())

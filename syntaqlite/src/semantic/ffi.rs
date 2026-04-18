@@ -12,7 +12,7 @@ use std::ffi::{CStr, CString, c_char};
 use crate::dialect::AnyDialect;
 
 use super::analyzer::SemanticAnalyzer;
-use super::catalog::{Catalog, CatalogLayer};
+use super::catalog::{AritySpec, Catalog, CatalogLayer, FunctionCategory};
 use super::diagnostics::Severity;
 use super::lineage::RelationKind;
 use super::render::DiagnosticRenderer;
@@ -200,6 +200,38 @@ fn diagnostic_code_to_c(msg: &super::diagnostics::DiagnosticMessage) -> u32 {
 pub(crate) const SYNTAQLITE_CHECK_ALLOW: u32 = 0;
 pub(crate) const SYNTAQLITE_CHECK_WARN: u32 = 1;
 pub(crate) const SYNTAQLITE_CHECK_DENY: u32 = 2;
+
+// ── Function category / arity mapping ──────────────────────────────────────
+
+/// C-ABI codes for [`FunctionCategory`]. Must match
+/// `SyntaqliteFunctionCategory` in `syntaqlite/include/syntaqlite/validation.h`.
+pub(crate) const SYNTAQLITE_FUNCTION_SCALAR: u32 = 0;
+pub(crate) const SYNTAQLITE_FUNCTION_AGGREGATE: u32 = 1;
+pub(crate) const SYNTAQLITE_FUNCTION_WINDOW: u32 = 2;
+
+/// C-ABI codes for [`AritySpec`]. Must match `SyntaqliteAritySpecKind` in
+/// `syntaqlite/include/syntaqlite/validation.h`.
+pub(crate) const SYNTAQLITE_ARITY_EXACT: u32 = 0;
+pub(crate) const SYNTAQLITE_ARITY_AT_LEAST: u32 = 1;
+pub(crate) const SYNTAQLITE_ARITY_ANY: u32 = 2;
+
+fn function_category_from_c(category: u32) -> Option<FunctionCategory> {
+    match category {
+        SYNTAQLITE_FUNCTION_SCALAR => Some(FunctionCategory::Scalar),
+        SYNTAQLITE_FUNCTION_AGGREGATE => Some(FunctionCategory::Aggregate),
+        SYNTAQLITE_FUNCTION_WINDOW => Some(FunctionCategory::Window),
+        _ => None,
+    }
+}
+
+fn arity_spec_from_c(kind: u32, value: u32) -> Option<AritySpec> {
+    match kind {
+        SYNTAQLITE_ARITY_EXACT => Some(AritySpec::Exact(value as usize)),
+        SYNTAQLITE_ARITY_AT_LEAST => Some(AritySpec::AtLeast(value as usize)),
+        SYNTAQLITE_ARITY_ANY => Some(AritySpec::Any),
+        _ => None,
+    }
+}
 
 fn check_level_from_c(level: u32) -> Option<CheckLevel> {
     match level {
@@ -820,6 +852,106 @@ pub unsafe extern "C" fn syntaqlite_validator_load_schema_ddl(
     let (catalog, errors) = Catalog::from_ddl(state.dialect.clone(), &[(src, None)]);
     state.user_catalog.copy_schema_layers_from(&catalog);
     errors.len() as u32
+}
+
+/// Register a scalar / aggregate / window function overload in the database
+/// layer. Repeat calls with the same `name` build up an overload set — any
+/// registered arity will be accepted; calls that match no overload produce a
+/// `FunctionArity` diagnostic.
+///
+/// `arity_value` is ignored when `arity_kind` is `SYNTAQLITE_ARITY_ANY`.
+/// Out-of-range `category` or `arity_kind` is a no-op.
+///
+/// # Safety
+///
+/// - `v` must be a valid pointer from `syntaqlite_validator_create_sqlite`.
+/// - `name` must be a valid NUL-terminated C string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_add_function_overload(
+    v: *mut SyntaqliteValidator,
+    name: *const c_char,
+    category: u32,
+    arity_kind: u32,
+    arity_value: u32,
+) {
+    let Some(category) = function_category_from_c(category) else {
+        return;
+    };
+    let Some(arity) = arity_spec_from_c(arity_kind, arity_value) else {
+        return;
+    };
+
+    // SAFETY: caller guarantees `v` is valid.
+    let v = unsafe { &mut *v };
+    let state = v.state_mut();
+
+    // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.
+    let name = unsafe { CStr::from_ptr(name) }
+        .to_str()
+        .unwrap_or("")
+        .to_owned();
+
+    state
+        .user_catalog
+        .layer_mut(CatalogLayer::Database)
+        .insert_function_overload(name, category, arity);
+}
+
+/// Register a table-valued function (usable in `FROM` clauses) in the
+/// database layer.
+///
+/// `arity_value` is ignored when `arity_kind` is `SYNTAQLITE_ARITY_ANY`.
+/// `output_columns` may be NULL or empty; when provided, references to the
+/// listed columns are validated (otherwise any column reference is accepted).
+/// Out-of-range `arity_kind` is a no-op.
+///
+/// # Safety
+///
+/// - `v` must be a valid pointer from `syntaqlite_validator_create_sqlite`.
+/// - `name` must be a valid NUL-terminated C string.
+/// - `output_columns` may be NULL. If non-NULL, must point to
+///   `output_column_count` valid NUL-terminated C string pointers.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_add_table_function(
+    v: *mut SyntaqliteValidator,
+    name: *const c_char,
+    arity_kind: u32,
+    arity_value: u32,
+    output_columns: *const *const c_char,
+    output_column_count: u32,
+) {
+    let Some(arity) = arity_spec_from_c(arity_kind, arity_value) else {
+        return;
+    };
+
+    // SAFETY: caller guarantees `v` is valid.
+    let v = unsafe { &mut *v };
+    let state = v.state_mut();
+
+    // SAFETY: caller guarantees `name` is a valid NUL-terminated C string.
+    let name = unsafe { CStr::from_ptr(name) }
+        .to_str()
+        .unwrap_or("")
+        .to_owned();
+
+    let cols: Vec<String> = if output_columns.is_null() {
+        Vec::new()
+    } else {
+        (0..output_column_count as usize)
+            .map(|i| {
+                // SAFETY: caller guarantees `output_columns[i]` is valid.
+                unsafe { CStr::from_ptr(*output_columns.add(i)) }
+                    .to_str()
+                    .unwrap_or("")
+                    .to_owned()
+            })
+            .collect()
+    };
+
+    state
+        .user_catalog
+        .layer_mut(CatalogLayer::Database)
+        .insert_table_function(name, arity, cols);
 }
 
 /// Number of diagnostics from the last `analyze()` call.
@@ -2792,5 +2924,287 @@ mod tests {
             }),
             DIAG_CODE_CTE_COLUMN_COUNT_MISMATCH,
         );
+    }
+
+    // ── Custom function / table-function registration ────────────────────
+
+    unsafe fn add_scalar(
+        v: *mut SyntaqliteValidator,
+        name: &str,
+        arity_kind: u32,
+        arity_value: u32,
+    ) {
+        // SAFETY: FFI test.
+        unsafe {
+            let c_name = CString::new(name).unwrap();
+            syntaqlite_validator_add_function_overload(
+                v,
+                c_name.as_ptr(),
+                SYNTAQLITE_FUNCTION_SCALAR,
+                arity_kind,
+                arity_value,
+            );
+        }
+    }
+
+    unsafe fn add_aggregate(
+        v: *mut SyntaqliteValidator,
+        name: &str,
+        arity_kind: u32,
+        arity_value: u32,
+    ) {
+        // SAFETY: FFI test.
+        unsafe {
+            let c_name = CString::new(name).unwrap();
+            syntaqlite_validator_add_function_overload(
+                v,
+                c_name.as_ptr(),
+                SYNTAQLITE_FUNCTION_AGGREGATE,
+                arity_kind,
+                arity_value,
+            );
+        }
+    }
+
+    unsafe fn add_window(
+        v: *mut SyntaqliteValidator,
+        name: &str,
+        arity_kind: u32,
+        arity_value: u32,
+    ) {
+        // SAFETY: FFI test.
+        unsafe {
+            let c_name = CString::new(name).unwrap();
+            syntaqlite_validator_add_function_overload(
+                v,
+                c_name.as_ptr(),
+                SYNTAQLITE_FUNCTION_WINDOW,
+                arity_kind,
+                arity_value,
+            );
+        }
+    }
+
+    unsafe fn add_tfn(
+        v: *mut SyntaqliteValidator,
+        name: &str,
+        arity_kind: u32,
+        arity_value: u32,
+        cols: &[&str],
+    ) {
+        // SAFETY: FFI test.
+        unsafe {
+            let c_name = CString::new(name).unwrap();
+            let c_cols: Vec<CString> = cols.iter().map(|c| CString::new(*c).unwrap()).collect();
+            let c_col_ptrs: Vec<*const c_char> = c_cols.iter().map(|c| c.as_ptr()).collect();
+            let (cols_ptr, col_count) = if c_col_ptrs.is_empty() {
+                (std::ptr::null(), 0u32)
+            } else {
+                (
+                    c_col_ptrs.as_ptr(),
+                    u32::try_from(c_col_ptrs.len()).expect("test column count fits in u32"),
+                )
+            };
+            syntaqlite_validator_add_table_function(
+                v,
+                c_name.as_ptr(),
+                arity_kind,
+                arity_value,
+                cols_ptr,
+                col_count,
+            );
+        }
+    }
+
+    #[test]
+    fn add_function_overload_registers_scalar() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_scalar(v, "my_udf", SYNTAQLITE_ARITY_EXACT, 1);
+            let n = analyze(v, "SELECT my_udf(1)");
+            assert_eq!(n, 0, "custom scalar should validate clean");
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_function_overload_wrong_arity_emits_diagnostic() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_scalar(v, "my_udf", SYNTAQLITE_ARITY_EXACT, 1);
+            analyze(v, "SELECT my_udf(1, 2)");
+            let ptr = syntaqlite_validator_diagnostics(v);
+            assert!(!ptr.is_null());
+            assert_eq!((*ptr).kind_code, DIAG_CODE_FUNCTION_ARITY);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_function_overload_multiple_arities_build_overload_set() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_scalar(v, "my_udf", SYNTAQLITE_ARITY_EXACT, 1);
+            add_scalar(v, "my_udf", SYNTAQLITE_ARITY_EXACT, 3);
+            // Either arity 1 or 3 should be accepted; arity 2 should fail.
+            assert_eq!(analyze(v, "SELECT my_udf(1)"), 0);
+            assert_eq!(analyze(v, "SELECT my_udf(1, 2, 3)"), 0);
+            let n = analyze(v, "SELECT my_udf(1, 2)");
+            assert!(n > 0);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_function_overload_at_least_accepts_variadic() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_scalar(v, "vararg", SYNTAQLITE_ARITY_AT_LEAST, 2);
+            assert_eq!(analyze(v, "SELECT vararg(1, 2)"), 0);
+            assert_eq!(analyze(v, "SELECT vararg(1, 2, 3, 4)"), 0);
+            // One arg is below the minimum.
+            assert!(analyze(v, "SELECT vararg(1)") > 0);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_function_overload_any_accepts_any_arity() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_scalar(v, "anything", SYNTAQLITE_ARITY_ANY, 0);
+            assert_eq!(analyze(v, "SELECT anything()"), 0);
+            assert_eq!(analyze(v, "SELECT anything(1, 2, 3)"), 0);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_function_overload_aggregate_registers() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_aggregate(v, "my_sum", SYNTAQLITE_ARITY_EXACT, 1);
+            assert_eq!(analyze(v, "SELECT my_sum(1)"), 0);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_function_overload_window_registers() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_window(v, "my_rank", SYNTAQLITE_ARITY_EXACT, 0);
+            assert_eq!(analyze(v, "SELECT my_rank() OVER ()"), 0);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_function_overload_unknown_category_is_noop() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            let c_name = CString::new("garbage").unwrap();
+            // Bogus category ordinal — must not register anything or crash.
+            syntaqlite_validator_add_function_overload(
+                v,
+                c_name.as_ptr(),
+                99,
+                SYNTAQLITE_ARITY_ANY,
+                0,
+            );
+            let n = analyze(v, "SELECT garbage()");
+            assert!(n > 0, "unregistered garbage() should still be unknown");
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_function_overload_persists_across_analyze_calls() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_scalar(v, "my_udf", SYNTAQLITE_ARITY_EXACT, 1);
+            assert_eq!(analyze(v, "SELECT my_udf(1)"), 0);
+            assert_eq!(analyze(v, "SELECT my_udf(1) FROM (SELECT 1)"), 0);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_function_overload_reset_catalog_clears_registration() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_scalar(v, "my_udf", SYNTAQLITE_ARITY_EXACT, 1);
+            syntaqlite_validator_reset_catalog(v);
+            let n = analyze(v, "SELECT my_udf(1)");
+            assert!(n > 0, "my_udf should be unknown after reset");
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_table_function_registers_with_columns() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_tfn(v, "json_each", SYNTAQLITE_ARITY_ANY, 0, &["key", "value"]);
+            let n = analyze(v, "SELECT key, value FROM json_each('[]')");
+            assert_eq!(n, 0, "json_each should resolve with declared columns");
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_table_function_without_columns_accepts_any_ref() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_tfn(v, "some_tfn", SYNTAQLITE_ARITY_ANY, 0, &[]);
+            let n = analyze(v, "SELECT * FROM some_tfn(1, 2)");
+            assert_eq!(n, 0, "tfn without columns should accept any query");
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_table_function_null_cols_accepted() {
+        // SAFETY: FFI test — pass NULL directly for output_columns.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            let c_name = CString::new("raw_tfn").unwrap();
+            syntaqlite_validator_add_table_function(
+                v,
+                c_name.as_ptr(),
+                SYNTAQLITE_ARITY_ANY,
+                0,
+                std::ptr::null(),
+                0,
+            );
+            let n = analyze(v, "SELECT * FROM raw_tfn()");
+            assert_eq!(n, 0);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn add_table_function_reset_catalog_clears_registration() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_tfn(v, "tfn", SYNTAQLITE_ARITY_ANY, 0, &["x"]);
+            syntaqlite_validator_reset_catalog(v);
+            let n = analyze(v, "SELECT x FROM tfn()");
+            assert!(n > 0, "tfn should be unknown after reset");
+            syntaqlite_validator_destroy(v);
+        }
     }
 }
