@@ -413,10 +413,6 @@ pub unsafe extern "C" fn syntaqlite_validator_set_mode(v: *mut SyntaqliteValidat
 /// Returns `0` on success, `-1` if `name` is not a recognised category or
 /// `level` is out of range.
 ///
-/// Note: schema loading (`add_tables`, `add_views`, `load_schema_ddl`)
-/// currently resets validation config to strict-schema defaults — call this
-/// setter **after** those functions for the override to take effect.
-///
 /// # Safety
 ///
 /// - `v` must be a valid pointer from `syntaqlite_validator_create_*`.
@@ -714,9 +710,6 @@ pub unsafe extern "C" fn syntaqlite_validator_add_tables(
             .layer_mut(CatalogLayer::Database)
             .insert_table(name, columns, false);
     }
-
-    // Schema was provided — switch to strict mode so unresolved names are errors.
-    state.validation_config = ValidationConfig::default().with_strict_schema();
 }
 
 /// Add views to the database layer of the catalog.
@@ -767,8 +760,6 @@ pub unsafe extern "C" fn syntaqlite_validator_add_views(
             .layer_mut(CatalogLayer::Database)
             .insert_view(name, columns);
     }
-
-    state.validation_config = ValidationConfig::default().with_strict_schema();
 }
 
 /// Load schema from DDL statements (CREATE TABLE, CREATE VIEW, etc.).
@@ -801,7 +792,6 @@ pub unsafe extern "C" fn syntaqlite_validator_load_schema_ddl(
 
     let (catalog, errors) = Catalog::from_ddl(state.dialect.clone(), &[(src, None)]);
     state.user_catalog.copy_schema_layers_from(&catalog);
-    state.validation_config = ValidationConfig::default().with_strict_schema();
     errors.len() as u32
 }
 
@@ -1878,6 +1868,8 @@ mod tests {
         };
         // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
         unsafe { syntaqlite_validator_add_tables(v, &raw const table, 1) };
+        // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
+        unsafe { syntaqlite_validator_set_strict_schema(v, 1) };
 
         // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
         unsafe { analyze(v, "SELECT bogus FROM users") };
@@ -1893,7 +1885,6 @@ mod tests {
     fn with_schema_unknown_table_is_error() {
         let v = syntaqlite_validator_create_sqlite();
 
-        // Add a table so strict_schema activates.
         let name = CString::new("users").unwrap();
         let table = SyntaqliteRelationDef {
             name: name.as_ptr(),
@@ -1902,6 +1893,8 @@ mod tests {
         };
         // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
         unsafe { syntaqlite_validator_add_tables(v, &raw const table, 1) };
+        // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
+        unsafe { syntaqlite_validator_set_strict_schema(v, 1) };
 
         // Query a different table that doesn't exist.
         // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
@@ -1930,6 +1923,8 @@ mod tests {
         };
         // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
         unsafe { syntaqlite_validator_add_tables(v, &raw const table, 1) };
+        // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
+        unsafe { syntaqlite_validator_set_strict_schema(v, 1) };
 
         // Verify it's error-level.
         // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
@@ -2589,6 +2584,23 @@ mod tests {
                 !rendered.contains("did you mean"),
                 "threshold=0 should suppress suggestions; got: {rendered}"
             );
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn user_config_survives_schema_load() {
+        // Setting a custom suggestion threshold + allow-override for a
+        // category before schema load must persist after add_tables.
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            syntaqlite_validator_set_suggestion_threshold(v, 7);
+            let cat = CString::new("unknown-table").unwrap();
+            syntaqlite_validator_set_check_level(v, cat.as_ptr(), SYNTAQLITE_CHECK_ALLOW);
+            add_table(v, "users", &["id"]);
+            let n = analyze(v, "SELECT 1 FROM no_such");
+            assert_eq!(n, 0, "allow set before schema load must persist");
             syntaqlite_validator_destroy(v);
         }
     }

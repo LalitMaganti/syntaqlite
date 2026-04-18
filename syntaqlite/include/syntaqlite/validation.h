@@ -144,9 +144,10 @@ SYNTAQLITE_API void syntaqlite_validator_set_mode(SyntaqliteValidator* v,
 // Returns 0 on success, or -1 when `name` is unknown or `level` is out
 // of range.
 //
-// Note: schema loading (`add_tables`, `add_views`, `load_schema_ddl`)
-// currently resets the validation config to strict-schema defaults.
-// Call this setter AFTER those functions for the override to take effect.
+// Check-level, strict-schema, and suggestion-threshold settings are
+// *sticky*: they survive across add_tables, add_views, load_schema_ddl,
+// and analyze calls. Only syntaqlite_validator_reset_catalog (or
+// destroy) clears them.
 SYNTAQLITE_API int32_t syntaqlite_validator_set_check_level(
     SyntaqliteValidator* v,
     const char* name,
