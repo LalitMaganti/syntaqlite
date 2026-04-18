@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! The `dialect` subcommand: generate C sources and Rust bindings for external dialects.
+//! `dialect` subcommand: generate C sources and Rust bindings for external dialects.
 
 use std::fs;
 use std::path::Path;
@@ -93,11 +93,11 @@ pub(crate) enum ToolCommand {
     },
 }
 
-pub(crate) fn dispatch_dialect(args: &DialectArgs) -> Result<(), String> {
+pub(crate) fn generate(args: &DialectArgs) -> Result<(), String> {
     let name = &args.name;
     let actions_dir = args.actions_dir.as_deref();
     let nodes_dir = args.nodes_dir.as_deref();
-    let macro_style_val = match args.macro_style {
+    let macro_style = match args.macro_style {
         CliMacroStyle::None => MacroStyle::None,
         CliMacroStyle::Rust => MacroStyle::Rust,
     };
@@ -108,30 +108,30 @@ pub(crate) fn dispatch_dialect(args: &DialectArgs) -> Result<(), String> {
     };
 
     match &args.output_type {
-        OutputType::TypedDialectEnv => cmd_generate_dialect(
+        OutputType::TypedDialectEnv => generate_dialect(
             name,
             actions_dir,
             nodes_dir,
             &require_output_dir("dialect")?,
             &args.runtime_header,
             &args.ext_header,
-            macro_style_val,
+            macro_style,
         ),
-        OutputType::Raw => cmd_generate_dialect_raw(
+        OutputType::Raw => generate_dialect_raw(
             name,
             actions_dir,
             nodes_dir,
             &require_output_dir("raw")?,
-            macro_style_val,
+            macro_style,
         ),
-        OutputType::Full => cmd_generate_dialect_full(
+        OutputType::Full => generate_dialect_full(
             name,
             actions_dir,
             nodes_dir,
             &require_output_dir("full")?,
-            macro_style_val,
+            macro_style,
         ),
-        OutputType::RuntimeOnly => cmd_generate_runtime(&require_output_dir("runtime-only")?),
+        OutputType::RuntimeOnly => generate_runtime(&require_output_dir("runtime-only")?),
     }
 }
 
@@ -142,7 +142,7 @@ pub(crate) fn dispatch_tool(cmd: ToolCommand) -> Result<(), String> {
     }
 }
 
-fn cmd_generate_dialect(
+fn generate_dialect(
     dialect: &str,
     actions_dir: Option<&str>,
     nodes_dir: Option<&str>,
@@ -156,7 +156,7 @@ fn cmd_generate_dialect(
     let temp_dir = tempfile::TempDir::new().map_err(|e| format!("creating temp directory: {e}"))?;
     let temp = temp_dir.path();
     let (merged_y, merged_synq) = load_extensions(actions_dir, nodes_dir)?;
-    codegen_to_dir_with_base(&merged_y, &merged_synq, temp, dialect, macro_style)?;
+    codegen_to_dir(&merged_y, &merged_synq, temp, dialect, macro_style)?;
 
     let out = Path::new(output_dir);
     ensure_dir(out, "output dir")?;
@@ -168,7 +168,7 @@ fn cmd_generate_dialect(
     Ok(())
 }
 
-fn cmd_generate_dialect_full(
+fn generate_dialect_full(
     dialect: &str,
     actions_dir: Option<&str>,
     nodes_dir: Option<&str>,
@@ -185,7 +185,7 @@ fn cmd_generate_dialect_full(
     let dialect_temp =
         tempfile::TempDir::new().map_err(|e| format!("creating dialect temp directory: {e}"))?;
     let (merged_y, merged_synq) = load_extensions(actions_dir, nodes_dir)?;
-    codegen_to_dir_with_base(
+    codegen_to_dir(
         &merged_y,
         &merged_synq,
         dialect_temp.path(),
@@ -206,7 +206,7 @@ fn cmd_generate_dialect_full(
     Ok(())
 }
 
-fn cmd_generate_runtime(output_dir: &str) -> Result<(), String> {
+fn generate_runtime(output_dir: &str) -> Result<(), String> {
     use syntaqlite_buildtools::amalgamate;
 
     let temp_dir = tempfile::TempDir::new().map_err(|e| format!("creating temp directory: {e}"))?;
@@ -229,7 +229,7 @@ fn cmd_generate_runtime(output_dir: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn cmd_generate_dialect_raw(
+fn generate_dialect_raw(
     dialect: &str,
     actions_dir: Option<&str>,
     nodes_dir: Option<&str>,
@@ -283,7 +283,7 @@ fn load_extensions(
 }
 
 /// Run the codegen pipeline from merged in-memory file sets into a temp directory.
-fn codegen_to_dir_with_base(
+fn codegen_to_dir(
     y_files: &NamedFiles,
     synq_files: &NamedFiles,
     temp_root: &Path,

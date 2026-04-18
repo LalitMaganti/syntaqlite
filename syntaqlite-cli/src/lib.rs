@@ -8,27 +8,18 @@
 //! `syntaqlite` binary in this crate is a thin wrapper that does exactly that
 //! with the bundled `SQLite` dialect.
 
-use clap::{CommandFactory, Parser, Subcommand, ValueEnum};
+use std::path::PathBuf;
+
+use clap::CommandFactory;
 use syntaqlite::any::AnyDialect;
 
+mod cli;
+mod commands;
 mod config;
-mod runtime;
+mod util;
 
-#[cfg(feature = "codegen")]
-mod codegen;
-
-mod introspect;
-
-mod lineage_output;
-
-mod validate_output;
-
-#[cfg(feature = "mcp")]
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "rmcp #[tool(aggr)] requires by-value params"
-)]
-mod mcp;
+use cli::{Cli, Command};
+use config::{ConfigMode, ProjectConfig};
 
 /// Configuration trait for a `syntaqlite` CLI binary.
 ///
@@ -75,218 +66,28 @@ pub trait CliApp {
     }
 }
 
-#[derive(Clone, Copy, ValueEnum)]
-pub(crate) enum ParseOutput {
-    /// Print statement/error counts (compact, for benchmarks) [maintainer]
-    Summary,
-    /// Print the AST as human-readable text
-    Text,
-    /// Print the AST as JSON
-    Json,
-}
+/// Run the CLI with the given app configuration.
+///
+/// Reads `argv` from the process. On error, prints the message to stderr and
+/// exits with status 1. On `--help` / `--version`, exits 0.
+pub fn run<A: CliApp>(app: &A) {
+    use clap::FromArgMatches;
 
-#[derive(Clone, Copy, Default, ValueEnum)]
-pub(crate) enum FmtOutput {
-    /// Formatted SQL (default)
-    #[default]
-    Formatted,
-    /// Dump raw interpreter bytecode for each statement [maintainer]
-    Bytecode,
-    /// Dump the Wadler-Lindig document tree after interpretation [maintainer]
-    DocTree,
-}
+    let cmd = build_command(app);
+    let matches = cmd
+        .try_get_matches_from(std::env::args())
+        .unwrap_or_else(|e| e.exit());
+    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
 
-#[derive(Clone, Copy, Default, ValueEnum)]
-pub(crate) enum LineageOutput {
-    /// Newline-delimited JSON, one record per statement/error (default)
-    #[default]
-    Json,
-    /// Human-readable text
-    Text,
-}
+    if let Err(e) = enforce_visibility(app, &cli) {
+        eprintln!("error: {e}");
+        std::process::exit(2);
+    }
 
-#[derive(Clone, Copy, Default, ValueEnum)]
-pub(crate) enum ValidateOutput {
-    /// Rustc-style rendered diagnostics on stderr (default)
-    #[default]
-    Text,
-    /// Newline-delimited JSON, one record per diagnostic
-    Json,
-}
-
-#[derive(Clone, Copy, Default, ValueEnum)]
-pub(crate) enum IntrospectOutput {
-    /// Human-readable text (default)
-    #[default]
-    Text,
-    /// JSON or newline-delimited JSON
-    Json,
-}
-
-#[derive(Clone, Copy, Subcommand)]
-pub(crate) enum LineageScope {
-    /// Emit only relations and physical tables (drop columns)
-    Tables,
-    /// Emit only column lineage (drop relations and physical tables)
-    Columns,
-}
-
-#[derive(Parser)]
-#[command(about = "SQL formatting and analysis tools")]
-pub(crate) struct Cli {
-    /// Path to `syntaqlite.toml` config file.
-    /// When omitted, discovered by walking up from the current directory.
-    #[arg(short = 'c', long = "config", global = true)]
-    pub(crate) config: Option<String>,
-
-    /// Disable automatic config file discovery.
-    #[arg(long = "no-config", global = true, conflicts_with = "config")]
-    pub(crate) no_config: bool,
-
-    /// Path to a shared library (.so/.dylib/.dll) providing a dialect.
-    #[cfg(feature = "dynload")]
-    #[arg(long = "dialect", global = true)]
-    pub(crate) dialect_path: Option<String>,
-
-    /// Dialect name for symbol lookup.
-    /// When omitted, the loader resolves `syntaqlite_grammar`.
-    /// With a name, it resolves `syntaqlite_<name>_grammar`.
-    #[cfg(feature = "dynload")]
-    #[arg(long, requires = "dialect_path", global = true)]
-    pub(crate) dialect_name: Option<String>,
-
-    /// `SQLite` version to emulate (e.g. "3.47.0", "latest").
-    #[arg(long, global = true)]
-    pub(crate) sqlite_version: Option<String>,
-
-    /// Enable a `SQLite` compile-time flag (e.g. `SQLITE_ENABLE_ORDERED_SET_AGGREGATES`).
-    /// Can be specified multiple times.
-    #[arg(long, global = true)]
-    pub(crate) sqlite_cflag: Vec<String>,
-
-    #[command(subcommand)]
-    pub(crate) command: Command,
-}
-
-#[derive(Subcommand)]
-pub(crate) enum Command {
-    /// Parse SQL and report results
-    Parse {
-        /// SQL files or glob patterns (reads stdin if omitted)
-        files: Vec<String>,
-        /// SQL expression to process directly (instead of files or stdin)
-        #[arg(short = 'e', long = "expression", conflicts_with = "files")]
-        expression: Option<String>,
-        /// Output format
-        #[arg(short, long, value_enum, default_value_t = ParseOutput::Text)]
-        output: ParseOutput,
-    },
-    /// Format SQL
-    Fmt {
-        /// SQL files or glob patterns (reads stdin if omitted)
-        files: Vec<String>,
-        /// SQL expression to format directly (instead of files or stdin)
-        #[arg(short = 'e', long = "expression", conflicts_with = "files")]
-        expression: Option<String>,
-        /// Maximum line width
-        #[arg(short = 'w', long)]
-        line_width: Option<usize>,
-        /// Spaces per indentation level
-        #[arg(short = 't', long)]
-        indent_width: Option<usize>,
-        /// Keyword casing
-        #[arg(short = 'k', long, value_enum)]
-        keyword_case: Option<runtime::KeywordCasing>,
-        /// Write formatted output back to file(s) in place
-        #[arg(short = 'i', long)]
-        in_place: bool,
-        /// Check if files are formatted (exit 1 if not)
-        #[arg(long, conflicts_with = "in_place")]
-        check: bool,
-        /// Append semicolons after each statement
-        #[arg(long)]
-        semicolons: Option<bool>,
-        /// Output mode (formatted, bytecode, doc-tree)
-        #[arg(short, long, value_enum, default_value_t = FmtOutput::Formatted)]
-        output: FmtOutput,
-    },
-    /// Validate SQL and report diagnostics
-    Validate {
-        /// SQL files or glob patterns (reads stdin if omitted)
-        files: Vec<String>,
-        /// SQL expression to validate directly (instead of files or stdin)
-        #[arg(short = 'e', long = "expression", conflicts_with = "files")]
-        expression: Option<String>,
-        /// Schema DDL file(s) to load before validation (repeatable, supports globs)
-        #[arg(long)]
-        schema: Vec<String>,
-        /// Allow (suppress) a check category (repeatable; use "schema" or "all" for groups)
-        #[arg(short = 'A', long = "allow")]
-        allow: Vec<String>,
-        /// Warn on a check category (repeatable)
-        #[arg(short = 'W', long = "warn")]
-        warn: Vec<String>,
-        /// Deny (error) a check category (repeatable)
-        #[arg(short = 'D', long = "deny")]
-        deny: Vec<String>,
-        /// [experimental] Host language for embedded SQL extraction (python, typescript)
-        #[arg(long = "experimental-lang")]
-        lang: Option<runtime::HostLanguage>,
-        /// Output format
-        #[arg(short, long, value_enum, default_value_t = ValidateOutput::Text)]
-        output: ValidateOutput,
-    },
-    /// Extract column and table lineage from SQL
-    Lineage {
-        /// SQL files or glob patterns (reads stdin if omitted)
-        files: Vec<String>,
-        /// SQL expression to analyze directly (instead of files or stdin)
-        #[arg(short = 'e', long = "expression", conflicts_with = "files")]
-        expression: Option<String>,
-        /// Schema DDL file(s) to load before analysis (repeatable, supports globs)
-        #[arg(long)]
-        schema: Vec<String>,
-        /// Output format
-        #[arg(short, long, value_enum, default_value_t = LineageOutput::Json)]
-        output: LineageOutput,
-        /// Restrict output to a subset (combined output is the default)
-        #[command(subcommand)]
-        scope: Option<LineageScope>,
-    },
-    /// Start the language server (stdio)
-    Lsp,
-    /// Start the MCP server (stdio)
-    #[cfg(feature = "mcp")]
-    Mcp,
-    /// Tokenize SQL and print the token stream
-    Tokenize {
-        /// SQL files or glob patterns (reads stdin if omitted)
-        files: Vec<String>,
-        /// SQL expression to tokenize directly (instead of files or stdin)
-        #[arg(short = 'e', long = "expression", conflicts_with = "files")]
-        expression: Option<String>,
-        /// Output format
-        #[arg(short, long, value_enum, default_value_t = IntrospectOutput::Text)]
-        output: IntrospectOutput,
-    },
-    /// Dialect codegen (generate C + Rust sources for custom dialects)
-    #[cfg(feature = "codegen")]
-    Dialect {
-        #[command(subcommand)]
-        command: DialectSubcommand,
-    },
-    /// Print version information
-    Version,
-    #[cfg(feature = "codegen")]
-    #[command(flatten)]
-    DialectTool(codegen::ToolCommand),
-}
-
-#[cfg(feature = "codegen")]
-#[derive(Subcommand)]
-pub(crate) enum DialectSubcommand {
-    /// Generate dialect C sources and Rust bindings for external dialects
-    Generate(codegen::DialectArgs),
+    if let Err(e) = dispatch(cli, app.default_dialect()) {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    }
 }
 
 /// Build the [`clap::Command`] for the given app, applying runtime visibility
@@ -317,30 +118,6 @@ fn build_command<A: CliApp>(app: &A) -> clap::Command {
     cmd
 }
 
-/// Run the CLI with the given app configuration.
-///
-/// Reads `argv` from the process. On error, prints the message to stderr and
-/// exits with status 1. On `--help` / `--version`, exits 0.
-pub fn run<A: CliApp>(app: &A) {
-    use clap::FromArgMatches;
-
-    let cmd = build_command(app);
-    let matches = cmd
-        .try_get_matches_from(std::env::args())
-        .unwrap_or_else(|e| e.exit());
-    let cli = Cli::from_arg_matches(&matches).unwrap_or_else(|e| e.exit());
-
-    if let Err(e) = enforce_visibility(app, &cli) {
-        eprintln!("error: {e}");
-        std::process::exit(2);
-    }
-
-    if let Err(e) = runtime::dispatch(cli, app.default_dialect()) {
-        eprintln!("error: {e}");
-        std::process::exit(1);
-    }
-}
-
 /// Reject hidden flags that the trait says aren't allowed but were still passed.
 fn enforce_visibility<A: CliApp>(app: &A, cli: &Cli) -> Result<(), String> {
     if !app.allow_sqlite_tuning() {
@@ -358,6 +135,137 @@ fn enforce_visibility<A: CliApp>(app: &A, cli: &Cli) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+// ── Dispatch ──────────────────────────────────────────────────────────────
+
+fn require_dialect(dialect: Option<AnyDialect>) -> Result<AnyDialect, String> {
+    dialect.ok_or_else(|| {
+        "this command requires a dialect; rebuild with --features=bundled-sqlite-dialect \
+         or pass --dialect (with --features=dynload)"
+            .to_string()
+    })
+}
+
+/// Resolve the dialect, merge sqlite tuning from CLI + config file, then
+/// hand off to the appropriate command module.
+fn dispatch(cli: Cli, default_dialect: Option<AnyDialect>) -> Result<(), String> {
+    // Destructure upfront so the global-arg fields can be borrowed while
+    // `command` is later moved into the match.
+    let Cli {
+        config,
+        no_config,
+        #[cfg(feature = "dynload")]
+        dialect_path,
+        #[cfg(feature = "dynload")]
+        dialect_name,
+        sqlite_version,
+        sqlite_cflag,
+        command,
+    } = cli;
+
+    let config_mode = if no_config {
+        ConfigMode::Disabled
+    } else if let Some(ref path) = config {
+        ConfigMode::Explicit(path)
+    } else {
+        ConfigMode::Discover
+    };
+
+    #[cfg(feature = "dynload")]
+    let base = match dialect_path {
+        Some(path) => Some(
+            AnyDialect::load(&path, dialect_name.as_deref()).unwrap_or_else(|e| {
+                eprintln!("error: {e}");
+                std::process::exit(1);
+            }),
+        ),
+        None => default_dialect,
+    };
+    #[cfg(not(feature = "dynload"))]
+    let base = default_dialect;
+
+    // Discover config early so it can contribute sqlite-version / sqlite-cflags
+    // merging, and so commands can reuse the discovered config.
+    let project_config = config::resolve(&config_mode);
+    let configured = base
+        .map(|d| {
+            apply_sqlite_tuning(
+                d,
+                sqlite_version.as_ref(),
+                &sqlite_cflag,
+                project_config.as_ref(),
+            )
+        })
+        .transpose()?;
+
+    run_command(command, configured, &config_mode)
+}
+
+fn apply_sqlite_tuning(
+    dialect: AnyDialect,
+    cli_version: Option<&String>,
+    cli_cflags: &[String],
+    project_config: Option<&(ProjectConfig, PathBuf)>,
+) -> Result<AnyDialect, String> {
+    use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
+
+    // CLI flags take precedence over config file values.
+    let version =
+        cli_version.or_else(|| project_config.and_then(|(c, _)| c.sqlite_version.as_ref()));
+    let cflags: &[String] = if cli_cflags.is_empty() {
+        project_config
+            .map(|(c, _)| c.sqlite_cflags.as_slice())
+            .unwrap_or_default()
+    } else {
+        cli_cflags
+    };
+
+    let mut dialect = dialect;
+    if let Some(v) = version {
+        let ver = SqliteVersion::parse_with_latest(v)
+            .map_err(|e| format!("invalid sqlite-version {v:?}: {e}"))?;
+        dialect = dialect.with_version(ver);
+    }
+    if !cflags.is_empty() {
+        let mut flags = SqliteFlags::default();
+        for name in cflags {
+            let flag = SqliteFlag::from_name(name)
+                .ok_or_else(|| format!("unknown sqlite-cflag: {name}"))?;
+            flags = flags.with(flag);
+        }
+        dialect = dialect.with_cflags(flags);
+    }
+    Ok(dialect)
+}
+
+fn run_command(
+    command: Command,
+    dialect: Option<AnyDialect>,
+    config: &ConfigMode<'_>,
+) -> Result<(), String> {
+    match command {
+        Command::Parse(args) => commands::parse::run(&require_dialect(dialect)?, &args),
+        Command::Fmt(args) => commands::fmt::run(&require_dialect(dialect)?, config, &args),
+        Command::Validate(args) => {
+            commands::validate::run(&require_dialect(dialect)?, config, &args)
+        }
+        Command::Lineage(args) => commands::lineage::run(&require_dialect(dialect)?, config, &args),
+        Command::Tokenize(args) => commands::tokenize::run(&require_dialect(dialect)?, &args),
+        Command::Lsp => commands::lsp::run(require_dialect(dialect)?, config),
+        #[cfg(feature = "mcp")]
+        Command::Mcp => commands::mcp::run(require_dialect(dialect)?),
+        #[cfg(feature = "codegen")]
+        Command::Dialect { command } => match command {
+            cli::DialectSubcommand::Generate(args) => commands::codegen::generate(&args),
+        },
+        #[cfg(feature = "codegen")]
+        Command::DialectTool(cmd) => commands::codegen::dispatch_tool(cmd),
+        Command::Version => {
+            println!("syntaqlite {}", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
+    }
 }
 
 /// Stock CLI configuration: the bundled `SQLite` dialect with all override

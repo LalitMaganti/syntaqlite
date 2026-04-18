@@ -1,7 +1,13 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! MCP (Model Context Protocol) server exposing format, parse, and validate tools over stdio.
+//! `mcp` subcommand — Model Context Protocol server exposing format, parse,
+//! and validate tools over stdio.
+
+#![expect(
+    clippy::needless_pass_by_value,
+    reason = "rmcp #[tool(aggr)] requires by-value params"
+)]
 
 use std::fmt::Write;
 use std::ops::Deref;
@@ -46,13 +52,13 @@ struct SqlParams {
 }
 
 #[derive(Clone)]
-pub(crate) struct McpServer {
+struct McpServer {
     dialect: AnyDialect,
 }
 
 #[tool(tool_box)]
 impl McpServer {
-    pub(crate) fn new(dialect: AnyDialect) -> Self {
+    fn new(dialect: AnyDialect) -> Self {
         Self { dialect }
     }
 
@@ -152,7 +158,7 @@ impl ServerHandler for McpServer {
     }
 }
 
-pub(crate) fn cmd_mcp(dialect: AnyDialect) -> Result<(), String> {
+pub(crate) fn run(dialect: AnyDialect) -> Result<(), String> {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
