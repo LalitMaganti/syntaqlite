@@ -10,6 +10,7 @@ schema is provided.
 
 from __future__ import annotations
 
+import json
 import subprocess
 import tempfile
 from pathlib import Path
@@ -671,6 +672,127 @@ def _test_bracket_table_in_ddl(ctx: SuiteContext) -> bool:
     return True
 
 
+# ── JSON output (-o json) ────────────────────────────────────────────────
+
+
+def _run_json(
+    binary: Path,
+    sql: str,
+    *extra_args: str,
+) -> tuple[list[dict], int]:
+    """Run `validate -o json` on stdin; return (records, exit_code)."""
+    result = subprocess.run(
+        [str(binary), "validate", "-o", "json", *extra_args],
+        input=sql,
+        capture_output=True,
+        text=True,
+    )
+    records = [
+        json.loads(line)
+        for line in result.stdout.splitlines()
+        if line.strip()
+    ]
+    return records, result.returncode
+
+
+def _test_json_clean_input_emits_no_records(ctx: SuiteContext) -> bool:
+    """Clean SQL should produce no ndjson records and exit 0."""
+    records, code = _run_json(
+        ctx.binary, "CREATE TABLE t(a INTEGER);\nSELECT a FROM t;\n",
+    )
+    if code != 0:
+        _fail("json_clean_input_emits_no_records", f"exit {code}")
+        return False
+    if records:
+        _fail("json_clean_input_emits_no_records",
+              f"expected no records, got: {records}")
+        return False
+    _pass("json_clean_input_emits_no_records")
+    return True
+
+
+def _test_json_parse_error_record(ctx: SuiteContext) -> bool:
+    """A parse error should emit one diagnostic record and exit 1."""
+    records, code = _run_json(ctx.binary, "SELECT FROM;\n")
+    if code != 1:
+        _fail("json_parse_error_record", f"expected exit 1, got {code}")
+        return False
+    if not records:
+        _fail("json_parse_error_record", "expected at least one record")
+        return False
+    r = records[0]
+    for field in ("kind", "schema_version", "file", "severity",
+                  "message", "start_offset", "end_offset"):
+        if field not in r:
+            _fail("json_parse_error_record", f"missing field {field!r}: {r}")
+            return False
+    if r["kind"] != "diagnostic" or r["schema_version"] != 0:
+        _fail("json_parse_error_record", f"wrong envelope: {r}")
+        return False
+    if r["file"] != "<stdin>" or r["severity"] != "error":
+        _fail("json_parse_error_record", f"wrong file/severity: {r}")
+        return False
+    _pass("json_parse_error_record")
+    return True
+
+
+def _test_json_unknown_table_includes_help(ctx: SuiteContext) -> bool:
+    """Under -D schema, unknown table should include a 'did you mean' help."""
+    sql = "CREATE TABLE users(id INTEGER);\nSELECT id FROM usr;\n"
+    records, code = _run_json(ctx.binary, sql, "-D", "schema")
+    if code != 1:
+        _fail("json_unknown_table_includes_help", f"expected exit 1, got {code}")
+        return False
+    match = next(
+        (r for r in records
+         if r.get("severity") == "error" and "usr" in r.get("message", "")),
+        None,
+    )
+    if match is None:
+        _fail("json_unknown_table_includes_help",
+              f"no error mentioning 'usr' in: {records}")
+        return False
+    help_text = match.get("help", "")
+    if "users" not in help_text:
+        _fail("json_unknown_table_includes_help",
+              f"expected 'users' in help, got {help_text!r}")
+        return False
+    _pass("json_unknown_table_includes_help")
+    return True
+
+
+def _test_json_allow_suppresses_records(ctx: SuiteContext) -> bool:
+    """-A unknown-table should suppress the record entirely."""
+    records, code = _run_json(
+        ctx.binary, "SELECT id FROM usr;\n", "-A", "unknown-table",
+    )
+    if code != 0:
+        _fail("json_allow_suppresses_records", f"expected exit 0, got {code}")
+        return False
+    if records:
+        _fail("json_allow_suppresses_records",
+              f"expected no records with -A, got: {records}")
+        return False
+    _pass("json_allow_suppresses_records")
+    return True
+
+
+def _test_json_multiple_statements_multiple_records(ctx: SuiteContext) -> bool:
+    """Two bad statements under -D schema should emit at least two records."""
+    sql = "SELECT id FROM a;\nSELECT x FROM b;\n"
+    records, code = _run_json(ctx.binary, sql, "-D", "schema")
+    if code != 1:
+        _fail("json_multiple_statements_multiple_records",
+              f"expected exit 1, got {code}")
+        return False
+    if len(records) < 2:
+        _fail("json_multiple_statements_multiple_records",
+              f"expected >=2 records, got {len(records)}")
+        return False
+    _pass("json_multiple_statements_multiple_records")
+    return True
+
+
 # ── Suite entry point ─────────────────────────────────────────────────────
 
 def run(ctx: SuiteContext) -> int:
@@ -712,6 +834,12 @@ def run(ctx: SuiteContext) -> int:
         _test_reserved_word_column,
         _test_backtick_table_in_ddl,
         _test_bracket_table_in_ddl,
+        # JSON output (-o json)
+        _test_json_clean_input_emits_no_records,
+        _test_json_parse_error_record,
+        _test_json_unknown_table_includes_help,
+        _test_json_allow_suppresses_records,
+        _test_json_multiple_statements_multiple_records,
     ]
     results = [t(ctx) for t in tests]
     passed = sum(results)
