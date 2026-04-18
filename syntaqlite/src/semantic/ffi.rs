@@ -16,7 +16,7 @@ use super::catalog::{Catalog, CatalogLayer};
 use super::diagnostics::Severity;
 use super::lineage::RelationKind;
 use super::render::DiagnosticRenderer;
-use super::{AnalysisMode, ValidationConfig};
+use super::{AnalysisMode, CheckConfig, CheckLevel, ValidationConfig};
 
 // ── C-compatible structs ────────────────────────────────────────────────────
 
@@ -169,17 +169,17 @@ fn severity_to_c(s: Severity) -> u32 {
 
 // ── Check-level mapping ─────────────────────────────────────────────────────
 
-/// C-ABI codes for [`super::CheckLevel`]. Must match `SyntaqliteCheckLevel`
+/// C-ABI codes for [`CheckLevel`]. Must match `SyntaqliteCheckLevel`
 /// in `syntaqlite/include/syntaqlite/validation.h`.
 pub(crate) const SYNTAQLITE_CHECK_ALLOW: u32 = 0;
 pub(crate) const SYNTAQLITE_CHECK_WARN: u32 = 1;
 pub(crate) const SYNTAQLITE_CHECK_DENY: u32 = 2;
 
-fn check_level_from_c(level: u32) -> Option<super::CheckLevel> {
+fn check_level_from_c(level: u32) -> Option<CheckLevel> {
     match level {
-        SYNTAQLITE_CHECK_ALLOW => Some(super::CheckLevel::Allow),
-        SYNTAQLITE_CHECK_WARN => Some(super::CheckLevel::Warn),
-        SYNTAQLITE_CHECK_DENY => Some(super::CheckLevel::Deny),
+        SYNTAQLITE_CHECK_ALLOW => Some(CheckLevel::Allow),
+        SYNTAQLITE_CHECK_WARN => Some(CheckLevel::Warn),
+        SYNTAQLITE_CHECK_DENY => Some(CheckLevel::Deny),
         _ => None,
     }
 }
@@ -404,8 +404,8 @@ pub unsafe extern "C" fn syntaqlite_validator_set_mode(v: *mut SyntaqliteValidat
 }
 
 /// Set the severity level for a check category (`"unknown-table"`,
-/// `"unknown-column"`, etc. — see [`super::CheckConfig::CATEGORY_NAMES`]
-/// and [`super::CheckConfig::GROUP_NAMES`]).
+/// `"unknown-column"`, etc. — see [`CheckConfig::CATEGORY_NAMES`]
+/// and [`CheckConfig::GROUP_NAMES`]).
 ///
 /// `level` is one of `SYNTAQLITE_CHECK_ALLOW` (0), `SYNTAQLITE_CHECK_WARN`
 /// (1), `SYNTAQLITE_CHECK_DENY` (2).
@@ -465,7 +465,7 @@ pub unsafe extern "C" fn syntaqlite_validator_set_strict_schema(
     if enabled != 0 {
         state.validation_config = state.validation_config.with_strict_schema();
     } else {
-        let checks = super::CheckConfig::default();
+        let checks = CheckConfig::default();
         state.validation_config = state.validation_config.with_checks(checks);
     }
 }
