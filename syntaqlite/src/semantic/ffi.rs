@@ -167,6 +167,23 @@ fn severity_to_c(s: Severity) -> u32 {
     }
 }
 
+// ── Check-level mapping ─────────────────────────────────────────────────────
+
+/// C-ABI codes for [`super::CheckLevel`]. Must match `SyntaqliteCheckLevel`
+/// in `syntaqlite/include/syntaqlite/validation.h`.
+pub(crate) const SYNTAQLITE_CHECK_ALLOW: u32 = 0;
+pub(crate) const SYNTAQLITE_CHECK_WARN: u32 = 1;
+pub(crate) const SYNTAQLITE_CHECK_DENY: u32 = 2;
+
+fn check_level_from_c(level: u32) -> Option<super::CheckLevel> {
+    match level {
+        SYNTAQLITE_CHECK_ALLOW => Some(super::CheckLevel::Allow),
+        SYNTAQLITE_CHECK_WARN => Some(super::CheckLevel::Warn),
+        SYNTAQLITE_CHECK_DENY => Some(super::CheckLevel::Deny),
+        _ => None,
+    }
+}
+
 // ── Lineage helper ───────────────────────────────────────────────────────────
 
 use super::model::SemanticModel;
@@ -384,6 +401,98 @@ pub unsafe extern "C" fn syntaqlite_validator_set_mode(v: *mut SyntaqliteValidat
         1 => AnalysisMode::Execute,
         _ => AnalysisMode::Document,
     });
+}
+
+/// Set the severity level for a check category (`"unknown-table"`,
+/// `"unknown-column"`, etc. — see [`super::CheckConfig::CATEGORY_NAMES`]
+/// and [`super::CheckConfig::GROUP_NAMES`]).
+///
+/// `level` is one of `SYNTAQLITE_CHECK_ALLOW` (0), `SYNTAQLITE_CHECK_WARN`
+/// (1), `SYNTAQLITE_CHECK_DENY` (2).
+///
+/// Returns `0` on success, `-1` if `name` is not a recognised category or
+/// `level` is out of range.
+///
+/// Note: schema loading (`add_tables`, `add_views`, `load_schema_ddl`)
+/// currently resets validation config to strict-schema defaults — call this
+/// setter **after** those functions for the override to take effect.
+///
+/// # Safety
+///
+/// - `v` must be a valid pointer from `syntaqlite_validator_create_*`.
+/// - `name` must be a NUL-terminated UTF-8 string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_set_check_level(
+    v: *mut SyntaqliteValidator,
+    name: *const c_char,
+    level: u32,
+) -> i32 {
+    if v.is_null() || name.is_null() {
+        return -1;
+    }
+    let Some(cl) = check_level_from_c(level) else {
+        return -1;
+    };
+    // SAFETY: caller guarantees `name` is a NUL-terminated UTF-8 string.
+    let Ok(name_str) = unsafe { CStr::from_ptr(name) }.to_str() else {
+        return -1;
+    };
+    // SAFETY: caller guarantees `v` is a valid pointer.
+    let state = unsafe { &mut *v }.state_mut();
+    let checks = state.validation_config.checks();
+    match checks.set_by_name(name_str, cl) {
+        Ok(new_checks) => {
+            state.validation_config = state.validation_config.with_checks(new_checks);
+            0
+        }
+        Err(_) => -1,
+    }
+}
+
+/// Toggle strict-schema mode. When `enabled` is non-zero, all schema
+/// checks (unknown-table/column/function, function-arity) are promoted
+/// to errors. When zero, checks revert to the default mix (warnings).
+///
+/// # Safety
+///
+/// `v` must be a valid pointer from `syntaqlite_validator_create_*`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_set_strict_schema(
+    v: *mut SyntaqliteValidator,
+    enabled: u32,
+) {
+    if v.is_null() {
+        return;
+    }
+    // SAFETY: caller guarantees `v` is a valid pointer.
+    let state = unsafe { &mut *v }.state_mut();
+    if enabled != 0 {
+        state.validation_config = state.validation_config.with_strict_schema();
+    } else {
+        let checks = super::CheckConfig::default();
+        state.validation_config = state.validation_config.with_checks(checks);
+    }
+}
+
+/// Set the maximum Levenshtein distance for "did you mean?" suggestions.
+/// Pass `0` to disable suggestions entirely. The default is `2`.
+///
+/// # Safety
+///
+/// `v` must be a valid pointer from `syntaqlite_validator_create_*`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn syntaqlite_validator_set_suggestion_threshold(
+    v: *mut SyntaqliteValidator,
+    threshold: u32,
+) {
+    if v.is_null() {
+        return;
+    }
+    // SAFETY: caller guarantees `v` is a valid pointer.
+    let state = unsafe { &mut *v }.state_mut();
+    state.validation_config = state
+        .validation_config
+        .with_suggestion_threshold(threshold as usize);
 }
 
 // ── Module resolver callback ────────────────────────────────────────────────
@@ -2367,6 +2476,136 @@ mod tests {
                 per_stmt_total += syntaqlite_validator_statement_diagnostic_count(v, i);
             }
             assert_eq!(total, per_stmt_total);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    // ── Check level / strict schema / suggestion threshold ───────────────
+
+    /// Helper: severity of the first diagnostic as the public u32 code.
+    unsafe fn first_severity(v: *const SyntaqliteValidator) -> u32 {
+        // SAFETY: FFI test — pointer obtained from `syntaqlite_validator_create_sqlite`.
+        unsafe {
+            let ptr = syntaqlite_validator_diagnostics(v);
+            assert!(!ptr.is_null());
+            (*ptr).severity
+        }
+    }
+
+    #[test]
+    fn set_check_level_allow_suppresses_unknown_table() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            let name = CString::new("unknown-table").unwrap();
+            let rc = syntaqlite_validator_set_check_level(v, name.as_ptr(), SYNTAQLITE_CHECK_ALLOW);
+            assert_eq!(rc, 0);
+            let n = analyze(v, "SELECT 1 FROM no_such");
+            assert_eq!(n, 0, "allow should suppress the diagnostic");
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn set_check_level_deny_raises_unknown_table_to_error() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            let name = CString::new("unknown-table").unwrap();
+            let rc = syntaqlite_validator_set_check_level(v, name.as_ptr(), SYNTAQLITE_CHECK_DENY);
+            assert_eq!(rc, 0);
+            let n = analyze(v, "SELECT 1 FROM no_such");
+            assert!(n >= 1);
+            assert_eq!(first_severity(v), SEVERITY_ERROR);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn set_check_level_unknown_name_returns_error() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            let name = CString::new("not-a-real-category").unwrap();
+            let rc = syntaqlite_validator_set_check_level(v, name.as_ptr(), SYNTAQLITE_CHECK_WARN);
+            assert_eq!(rc, -1);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn set_check_level_schema_group_promotes_all_schema_checks() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            let name = CString::new("schema").unwrap();
+            let rc = syntaqlite_validator_set_check_level(v, name.as_ptr(), SYNTAQLITE_CHECK_DENY);
+            assert_eq!(rc, 0);
+            let n = analyze(v, "SELECT 1 FROM no_such");
+            assert!(n >= 1);
+            assert_eq!(first_severity(v), SEVERITY_ERROR);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn set_strict_schema_raises_unknown_table_to_error() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            syntaqlite_validator_set_strict_schema(v, 1);
+            let n = analyze(v, "SELECT 1 FROM no_such");
+            assert!(n >= 1);
+            assert_eq!(first_severity(v), SEVERITY_ERROR);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn set_strict_schema_zero_reverts_to_warning() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            syntaqlite_validator_set_strict_schema(v, 1);
+            syntaqlite_validator_set_strict_schema(v, 0);
+            let n = analyze(v, "SELECT 1 FROM no_such");
+            assert!(n >= 1);
+            assert_eq!(first_severity(v), SEVERITY_WARNING);
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn set_suggestion_threshold_zero_disables_help() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_table(v, "users", &["id"]);
+            syntaqlite_validator_set_suggestion_threshold(v, 0);
+            // "usr" is 1 edit from "users" — would normally trigger "did you mean".
+            analyze(v, "SELECT 1 FROM usr");
+            let rendered = render(v, None);
+            assert!(
+                !rendered.contains("did you mean"),
+                "threshold=0 should suppress suggestions; got: {rendered}"
+            );
+            syntaqlite_validator_destroy(v);
+        }
+    }
+
+    #[test]
+    fn set_suggestion_threshold_permissive_emits_help() {
+        // SAFETY: FFI test.
+        unsafe {
+            let v = syntaqlite_validator_create_sqlite();
+            add_table(v, "users", &["id"]);
+            syntaqlite_validator_set_suggestion_threshold(v, 5);
+            analyze(v, "SELECT 1 FROM usr");
+            let rendered = render(v, None);
+            assert!(
+                rendered.contains("did you mean") && rendered.contains("users"),
+                "threshold=5 should emit a 'users' suggestion; got: {rendered}"
+            );
             syntaqlite_validator_destroy(v);
         }
     }

@@ -43,6 +43,16 @@ typedef enum {
   SYNTAQLITE_SEVERITY_HINT = 3,
 } SyntaqliteSeverity;
 
+// Severity level for a check category.
+//
+// Follows the Rust/Clippy convention: ALLOW suppresses the diagnostic,
+// WARN emits a warning, DENY emits an error.
+typedef enum {
+  SYNTAQLITE_CHECK_ALLOW = 0,
+  SYNTAQLITE_CHECK_WARN  = 1,
+  SYNTAQLITE_CHECK_DENY  = 2,
+} SyntaqliteCheckLevel;
+
 // A single diagnostic from validation. Pointers are valid until the next
 // analyze() or destroy() call.
 typedef struct {
@@ -124,6 +134,36 @@ SYNTAQLITE_API void syntaqlite_validator_destroy(SyntaqliteValidator* v);
 // Set the analysis mode. See SyntaqliteAnalysisMode for details.
 SYNTAQLITE_API void syntaqlite_validator_set_mode(SyntaqliteValidator* v,
                                                    SyntaqliteAnalysisMode mode);
+
+// Set the severity level for a check category.
+//
+// Category names: "parse-errors", "unknown-table", "unknown-column",
+// "unknown-function", "function-arity", "cte-columns", plus the groups
+// "schema" (schema-related categories) and "all" (every category).
+//
+// Returns 0 on success, or -1 when `name` is unknown or `level` is out
+// of range.
+//
+// Note: schema loading (`add_tables`, `add_views`, `load_schema_ddl`)
+// currently resets the validation config to strict-schema defaults.
+// Call this setter AFTER those functions for the override to take effect.
+SYNTAQLITE_API int32_t syntaqlite_validator_set_check_level(
+    SyntaqliteValidator* v,
+    const char* name,
+    SyntaqliteCheckLevel level);
+
+// Toggle strict-schema mode. When non-zero, all schema checks
+// (unknown-table, unknown-column, unknown-function, function-arity) are
+// promoted to errors. When zero, checks revert to default (warnings).
+SYNTAQLITE_API void syntaqlite_validator_set_strict_schema(
+    SyntaqliteValidator* v,
+    uint32_t enabled);
+
+// Set the maximum Levenshtein distance for "did you mean?" suggestions.
+// Pass 0 to disable suggestions entirely. Default is 2.
+SYNTAQLITE_API void syntaqlite_validator_set_suggestion_threshold(
+    SyntaqliteValidator* v,
+    uint32_t threshold);
 
 // ---------------------------------------------------------------------------
 // Module resolution
