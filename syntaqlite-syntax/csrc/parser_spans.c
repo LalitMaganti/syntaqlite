@@ -112,30 +112,36 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_text(
     *out_len = 0;
     return NULL;
   }
-  // Fast path: spans in the source layer are already authored positions.
+  uint32_t stmt_len = p->stmt_end_offset > p->stmt_start_offset
+                          ? p->stmt_end_offset - p->stmt_start_offset
+                          : 0;
+  // Layer-0 spans are already statement-relative.
   if (span->_layer_id == 0) {
-    if (span->offset + span->length > p->source_len) {
+    if (span->offset + span->length > stmt_len) {
       *out_len = 0;
       return NULL;
     }
     *out_len = span->length;
     if (out_offset)
       *out_offset = span->offset;
-    return p->source + span->offset;
+    return p->stmt_source + span->offset;
   }
-  // Walk the expansion chain to find the authored bytes.
+  // Walk the expansion chain.  call_offsets with parent==layer 0 and
+  // origin_offsets with origin_layer_id==0 are statement-relative, so
+  // a walk that terminates at layer 0 yields a statement-relative
+  // offset; deeper layers yield buffer-local offsets.
   uint32_t off = 0;
   uint32_t len = 0;
   span_walk_to_source(p, span->_layer_id, span->offset, span->length, &off,
                       &len);
-  if (off + len > p->source_len) {
+  if (off + len > stmt_len) {
     *out_len = 0;
     return NULL;
   }
   *out_len = len;
   if (out_offset)
     *out_offset = off;
-  return p->source + off;
+  return p->stmt_source + off;
 }
 
 // ---------------------------------------------------------------------------

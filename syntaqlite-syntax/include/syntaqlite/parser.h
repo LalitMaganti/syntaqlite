@@ -286,9 +286,10 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_trailing_comments(
 // in this same flat list (the rewrite replaces a range in that entry's
 // `expansion` buffer).
 //
-// `call_offset` / `call_length` describe the byte range of the macro call
-// inside the parent's text (authored source if `parent_idx` is the
-// sentinel, otherwise the parent entry's `expansion` buffer).
+// `call_offset` / `call_length` describe the byte range of the macro
+// call inside the parent's text: statement-relative when `parent_idx`
+// is the source sentinel, otherwise relative to the parent entry's
+// `expansion` buffer.
 //
 // `expansion` is the replacement text for that range.  It is NOT
 // NUL-terminated; use `expansion_len`.  Nested macro calls appearing
@@ -386,20 +387,27 @@ syntaqlite_macro_rewrite_arg_segment_at(SyntaqliteParser* p,
 SYNTAQLITE_API const void* syntaqlite_parser_node(SyntaqliteParser* p,
                                                   uint32_t node_id);
 
-// Source text bound by the last reset() call.  Writes the byte length
-// to `*out_len` (optional) and returns a direct pointer into the
-// parser's source buffer.
+// Source slice for the last-completed statement.  Writes the
+// statement's absolute byte offset within the bound source to
+// `*out_offset` (optional) and its length to `*out_len` (optional).
+// Every offset the parser emits for this statement — tokens, comments,
+// node extents, spans, error offset, macro rewrite call offsets — is
+// measured from the returned pointer.  Returns NULL / 0 / 0 when no
+// statement has been produced yet.
 SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
+                                                  uint32_t* out_offset,
                                                   uint32_t* out_len);
 
-// Post-expansion text for the whole input — the parser-level
-// analogue of `syntaqlite_parser_node_expanded_text`.  Materializes
-// the source with every currently-active macro call replaced by its
-// expansion into a parser-owned scratch buffer and returns a pointer
-// valid until the next call to `syntaqlite_parser_expanded_text` /
-// `syntaqlite_parser_node_expanded_text` on the same parser or until
-// the parser advances to the next statement.  Writes the byte length
-// to `*out_len` (optional).
+// Full SQL source bound by the last reset() call.  For multi-statement
+// input, this is the whole input.
+SYNTAQLITE_API const char* syntaqlite_parser_full_text(SyntaqliteParser* p,
+                                                      uint32_t* out_len);
+
+// Post-expansion text for the current statement — materializes the
+// statement's source with every currently-active macro call replaced
+// by its expansion into a parser-owned scratch buffer.  The returned
+// pointer is valid until the next `*_expanded_text` call on the same
+// parser or until the parser advances to the next statement.
 SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(SyntaqliteParser* p,
                                                            uint32_t* out_len);
 

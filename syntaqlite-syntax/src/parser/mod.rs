@@ -497,19 +497,19 @@ impl<G: TypedDialect> TypedParseSession<G> {
         }
     }
 
-    /// Original SQL source bound to this session.
+    /// Full SQL source bound to this session.
     ///
     /// # Panics
     ///
     /// Panics only if session invariants were violated.
-    pub fn text(&self) -> &str {
+    pub fn full_text(&self) -> &str {
         let inner = self
             .inner
             .as_ref()
             .expect("inner is Some while session is not finished");
         // SAFETY: inner.raw is valid for `&self`; the returned slice
         // borrows from the parser's source buffer.
-        unsafe { inner.raw.as_ref().text() }
+        unsafe { inner.raw.as_ref().full_text() }
     }
 
     /// Post-expansion source — the bound source with every
@@ -591,7 +591,9 @@ impl<'a> AnyParsedStatement<'a> {
 
     /// Source text of AST node `id` as `(text, offset)`, or `None` when
     /// extent tracking is disabled or no extent was recorded for this
-    /// node.  Requires [`ParserConfig::with_collect_node_extents`].
+    /// node.  `offset` is relative to [`text`](Self::text).
+    ///
+    /// Requires [`ParserConfig::with_collect_node_extents`].
     pub fn node_text(&self, id: AnyNodeId) -> Option<(&'a str, u32)> {
         if id.is_null() {
             return None;
@@ -800,9 +802,9 @@ impl<'a> AnyParsedStatement<'a> {
     }
 
     /// Resolve a [`TextSpan`](crate::ast::TextSpan) to `(authored_text,
-    /// source_offset)` where `authored_text` is a direct slice of the
-    /// user's input source and `source_offset` is its byte offset in
-    /// that source.
+    /// offset)` where `authored_text` is a direct slice of the user's
+    /// input source and `offset` is its byte offset relative to
+    /// [`text`](Self::text).
     ///
     /// For direct (macro-free) spans, this is the span's own bytes and
     /// position.  For spans inside a macro expansion, this walks the
@@ -852,11 +854,43 @@ impl<'a> AnyParsedStatement<'a> {
         })
     }
 
-    /// The source text bound to this result.
+    /// Full SQL source bound to the parse session — the whole input
+    /// for multi-statement parses.  Use [`Self::text`] for just this
+    /// statement.
+    pub fn full_text(&self) -> &'a str {
+        // SAFETY: self.raw is valid for 'a; the returned slice borrows
+        // from the parser's source buffer which outlives 'a.
+        unsafe { self.raw.as_ref().full_text() }
+    }
+
+    /// Source slice for just this statement, including any attached
+    /// leading/trailing comments.  Every offset the parser emits for
+    /// this statement — tokens, comments, spans, node extents, error
+    /// offsets, macro rewrite call offsets — is relative to this slice.
+    /// Empty if no statement was produced.
     pub fn text(&self) -> &'a str {
         // SAFETY: self.raw is valid for 'a; the returned slice borrows
         // from the parser's source buffer which outlives 'a.
-        unsafe { self.raw.as_ref().text() }
+        let (s, _) = unsafe { self.raw.as_ref().text() };
+        s
+    }
+
+    /// Byte offset of this statement's start within [`Self::full_text`].
+    /// Add to any statement-relative offset to get an absolute position.
+    pub fn statement_base_offset(&self) -> u32 {
+        // SAFETY: self.raw is valid for 'a.
+        let (_, off) = unsafe { self.raw.as_ref().text() };
+        off
+    }
+
+    /// Resolve a span to `(text, abs_start, abs_end)` in
+    /// [`Self::full_text`].  Convenience for diagnostic emission sites
+    /// that need full-source positions.
+    pub fn span_text_abs(&self, span: crate::ast::TextSpan) -> (&'a str, usize, usize) {
+        let (text, off) = self.span_text(span);
+        let base = self.statement_base_offset() as usize;
+        let start = base + off as usize;
+        (text, start, start + text.len())
     }
 
     /// Raw token spans `(offset, length)` for all collected tokens.
@@ -1072,9 +1106,19 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         serde_json::to_string(&self.any.root_node())
     }
 
-    /// The source text bound to this result.
+    /// See [`AnyParsedStatement::text`].
     pub fn text(&self) -> &'a str {
         self.any.text()
+    }
+
+    /// See [`AnyParsedStatement::full_text`].
+    pub fn full_text(&self) -> &'a str {
+        self.any.full_text()
+    }
+
+    /// See [`AnyParsedStatement::statement_base_offset`].
+    pub fn statement_base_offset(&self) -> u32 {
+        self.any.statement_base_offset()
     }
 
     /// Post-expansion source — the bound source with every currently-
@@ -1305,6 +1349,11 @@ impl<'a, G: TypedDialect> TypedParseError<'a, G> {
     /// The partial recovery tree, if error recovery produced one.
     pub fn recovery_root(&'a self) -> Option<G::Node<'a>> {
         self.0.recovery_root()
+    }
+
+    /// See [`AnyParsedStatement::statement_base_offset`].
+    pub fn statement_base_offset(&self) -> u32 {
+        self.0.any.statement_base_offset()
     }
 
     /// The source text bound to this result.

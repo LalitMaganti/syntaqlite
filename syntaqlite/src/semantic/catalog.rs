@@ -1001,9 +1001,8 @@ fn ddl_name_span(
     if sp.is_empty() {
         return None;
     }
-    let (s, off_u32) = stmt.span_text(sp);
-    let off = off_u32 as usize;
-    Some((s.to_ascii_lowercase(), off, off + s.len()))
+    let (s, start, end) = stmt.span_text_abs(sp);
+    Some((s.to_ascii_lowercase(), start, end))
 }
 
 /// Extract column name spans from a `CREATE TABLE` statement.
@@ -1068,9 +1067,8 @@ fn column_def_name_span<'a>(
         if let FieldValue::Span(sp) = name_fields[j]
             && !sp.is_empty()
         {
-            let (s, off) = stmt.span_text(sp);
-            let start = off as usize;
-            return Some((s, start, start + s.len()));
+            let (s, start, end) = stmt.span_text_abs(sp);
+            return Some((s, start, end));
         }
     }
     None

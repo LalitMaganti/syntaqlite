@@ -207,15 +207,43 @@ impl CParser {
         unsafe { syntaqlite_parser_set_collect_node_extents(self, enable) }
     }
 
-    /// Source text bound by the last `reset()` call.
+    /// Source slice for the last-completed statement and its absolute
+    /// offset within the bound source.  Returns `("", 0)` when no
+    /// statement has been produced yet.
     ///
     /// # Safety
     /// The returned slice must not outlive the borrow underlying `self`.
-    pub(crate) unsafe fn text<'a>(&self) -> &'a str {
+    pub(crate) unsafe fn text<'a>(&self) -> (&'a str, u32) {
+        let mut out_offset: u32 = 0;
         let mut out_len: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
         let ptr = unsafe {
             syntaqlite_parser_text(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                &raw mut out_offset,
+                &raw mut out_len,
+            )
+        };
+        if ptr.is_null() || out_len == 0 {
+            return ("", 0);
+        }
+        // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
+        // UTF-8 within the parser's source buffer.
+        let s = unsafe {
+            std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
+        };
+        (s, out_offset)
+    }
+
+    /// Full SQL source bound by the last `reset()` call.
+    ///
+    /// # Safety
+    /// The returned slice must not outlive the borrow underlying `self`.
+    pub(crate) unsafe fn full_text<'a>(&self) -> &'a str {
+        let mut out_len: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        let ptr = unsafe {
+            syntaqlite_parser_full_text(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
                 &raw mut out_len,
             )
@@ -255,7 +283,7 @@ impl CParser {
     }
 
     /// Source text of AST node `node_id`, returned as `(slice, offset)`
-    /// where `slice` borrows from the parser's source buffer.
+    /// where `offset` is statement-relative (see the C side).
     ///
     /// # Safety
     /// The returned slice must not outlive the borrow underlying `self`.
@@ -675,7 +703,12 @@ unsafe extern "C" {
     fn syntaqlite_parser_set_collect_tokens(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_macro_fallback(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_collect_node_extents(p: *mut CParser, enable: u32) -> i32;
-    fn syntaqlite_parser_text(p: *mut CParser, out_len: *mut u32) -> *const u8;
+    fn syntaqlite_parser_text(
+        p: *mut CParser,
+        out_offset: *mut u32,
+        out_len: *mut u32,
+    ) -> *const u8;
+    fn syntaqlite_parser_full_text(p: *mut CParser, out_len: *mut u32) -> *const u8;
     fn syntaqlite_parser_expanded_text(p: *mut CParser, out_len: *mut u32) -> *const u8;
     fn syntaqlite_parser_node_text(
         p: *mut CParser,

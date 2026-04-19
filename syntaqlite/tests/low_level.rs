@@ -398,10 +398,11 @@ fn sqlite_type_tokens_are_marked_as_type() {
     loop {
         match session.next() {
             ParseOutcome::Ok(stmt) => {
+                let stmt_text = stmt.text();
                 for t in stmt.tokens() {
                     if t.flags().used_as_type() {
                         marked.push(
-                            source[t.offset() as usize..(t.offset() + t.length()) as usize]
+                            stmt_text[t.offset() as usize..(t.offset() + t.length()) as usize]
                                 .to_string(),
                         );
                     }

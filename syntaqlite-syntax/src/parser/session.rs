@@ -143,9 +143,9 @@ impl ParseSession {
         self.0.next().map(ParsedStatement).map_err(ParseError)
     }
 
-    /// Original SQL source bound to this session.
-    pub fn text(&self) -> &str {
-        self.0.text()
+    /// Full SQL source bound to this session.
+    pub fn full_text(&self) -> &str {
+        self.0.full_text()
     }
 
     /// Post-expansion source — the bound source with every currently-
@@ -289,9 +289,19 @@ impl<'a> ParsedStatement<'a> {
         self.0.root()
     }
 
-    /// The source text bound to this result.
+    /// See [`AnyParsedStatement::text`](super::AnyParsedStatement::text).
     pub fn text(&self) -> &'a str {
         self.0.text()
+    }
+
+    /// See [`AnyParsedStatement::full_text`](super::AnyParsedStatement::full_text).
+    pub fn full_text(&self) -> &'a str {
+        self.0.full_text()
+    }
+
+    /// See [`AnyParsedStatement::statement_base_offset`](super::AnyParsedStatement::statement_base_offset).
+    pub fn statement_base_offset(&self) -> u32 {
+        self.0.statement_base_offset()
     }
 
     /// Post-expansion source — the bound source with every currently-
@@ -428,9 +438,14 @@ impl<'a> ParseError<'a> {
         self.0.recovery_root()
     }
 
-    /// The source text bound to this result.
+    /// Source slice for just the failing statement.
     pub fn text(&self) -> &'a str {
         self.0.0.text()
+    }
+
+    /// Full SQL source bound to the parse session.
+    pub fn full_text(&self) -> &'a str {
+        self.0.0.full_text()
     }
 
     /// Tokens collected during the (partial) parse, if `collect_tokens` was enabled.
@@ -510,6 +525,40 @@ mod tests {
         fn lookup(&mut self, name: &str, args: &[MacroArg<'_>], out: &mut MacroOutput) -> bool {
             self.0.borrow_mut().lookup(name, args, out)
         }
+    }
+
+    #[test]
+    fn statement_text_isolates_current_statement() {
+        let parser = Parser::new();
+        let mut session = parser.parse("CREATE TABLE t(x);\n  SELECT * FROM t;");
+
+        let first = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            _ => panic!("first statement should parse"),
+        };
+        assert_eq!(first.text(), "CREATE TABLE t(x);");
+        assert_eq!(first.statement_base_offset(), 0);
+        assert_eq!(first.full_text(), "CREATE TABLE t(x);\n  SELECT * FROM t;");
+
+        let second = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            _ => panic!("second statement should parse"),
+        };
+        assert_eq!(second.text(), "SELECT * FROM t;");
+        assert_eq!(second.statement_base_offset(), 21);
+        assert_eq!(second.full_text(), "CREATE TABLE t(x);\n  SELECT * FROM t;");
+    }
+
+    #[test]
+    fn statement_text_includes_leading_comments() {
+        let parser = Parser::new();
+        let mut session = parser.parse("/* hi */ SELECT 1;");
+        let stmt = match session.next() {
+            ParseOutcome::Ok(s) => s,
+            _ => panic!("should parse"),
+        };
+        assert_eq!(stmt.text(), "/* hi */ SELECT 1;");
+        assert_eq!(stmt.statement_base_offset(), 0);
     }
 
     #[test]
@@ -919,7 +968,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("statement should parse: {err}"),
         }
 
-        assert_eq!(session.text(), "SELECT id!(42);");
+        assert_eq!(session.full_text(), "SELECT id!(42);");
         assert_eq!(session.expanded_text(), "SELECT 42;");
     }
 
