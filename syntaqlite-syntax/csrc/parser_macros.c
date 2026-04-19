@@ -251,11 +251,11 @@ SYNTAQLITE_API void syntaqlite_macro_expansion_set_result_with_arg_map(
   const SyntaqliteToken* args = p->macro.expansion_args;
   uint32_t arg_count = p->macro.expansion_arg_count;
   uint32_t origin_layer_id = lyr->parent_layer_id;
-  // For layer 0, arg text lives in source; for nested layers, in
-  // expansion_data.  Both are pointed to by args[i].text.
+  // Origin-layer base: stmt_source for layer 0 (so origin_offset is
+  // statement-relative), expansion buffer otherwise.
   const char* origin_base =
       origin_layer_id == 0
-          ? p->source
+          ? p->stmt_source
           : p->macro.layers.data[origin_layer_id].expansion_data;
 
   SynqArgSegment* segs = p->mem.xMalloc(mapping_count * sizeof(SynqArgSegment));
@@ -482,6 +482,13 @@ static void begin_macro_expansion(SyntaqliteParser* p,
                                   uint32_t call_length,
                                   const char* name,
                                   uint32_t name_len) {
+  // Top-level call_offset is absolute; rebase to statement-relative
+  // so layer call_offset / macro_root_start / body_call_offset match
+  // every other per-statement offset.
+  if (p->ctx.layer_id == 0) {
+    call_offset -= p->stmt_start_offset;
+  }
+
   // Stash the outermost macro call-site range so per-node extent
   // tracking can attribute tokens from inside this (or any nested)
   // expansion back to the authored source.
@@ -775,7 +782,7 @@ SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
     uint32_t origin_layer_id = lyr->parent_layer_id;
     const char* origin_base =
         origin_layer_id == 0
-            ? p->source
+            ? p->stmt_source
             : p->macro.layers.data[origin_layer_id].expansion_data;
 
     SynqArgSegment* segs =

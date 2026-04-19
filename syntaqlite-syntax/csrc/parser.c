@@ -30,8 +30,27 @@ static void reset_stmt(SyntaqliteParser* p);
 static int32_t stmt_boundary(SyntaqliteParser* p);
 static int finish_input(SyntaqliteParser* p);
 
+// Record the first byte consumed for the current statement and sync
+// the layer-0 macro sentinel so span walkers resolve layer-0 spans
+// against the statement slice.
+static void synq_open_statement(SyntaqliteParser* p, uint32_t offset) {
+  p->stmt_start_offset = offset;
+  p->stmt_source = p->source + offset;
+#ifndef SYNTAQLITE_OMIT_MACROS
+  if (syntaqlite_vec_len(&p->macro.layers) > 0) {
+    SynqExpansionLayer* root = &p->macro.layers.data[0];
+    root->expansion_data = p->stmt_source;
+    root->expansion_len = p->source_len - offset;
+  }
+#endif
+}
+
 int32_t synq_parser_set_result_status(SyntaqliteParser* p, int32_t rc) {
   p->last_status = rc;
+  if (p->stmt_start_offset != UINT32_MAX) {
+    p->stmt_end_offset =
+        p->offset > p->stmt_start_offset ? p->offset : p->stmt_start_offset;
+  }
   return rc;
 }
 
@@ -89,6 +108,9 @@ static void reset_stmt(SyntaqliteParser* p) {
   p->ctx.error_offset = 0xFFFFFFFF;
   p->ctx.error_length = 0;
   p->ctx.tokens = p->collect_tokens ? &p->tokens : NULL;
+  p->stmt_start_offset = UINT32_MAX;
+  p->stmt_end_offset = 0;
+  p->stmt_source = p->source;
 }
 
 // Handle a statement boundary after feed_one_token returns 1.
@@ -160,6 +182,9 @@ SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
   p->finished = 0;
   p->pending_reset = 0;
   p->last_status = SYNTAQLITE_PARSE_DONE;
+  p->stmt_start_offset = UINT32_MAX;
+  p->stmt_end_offset = 0;
+  p->stmt_source = source;
 #ifndef SYNTAQLITE_OMIT_MACROS
   p->macro.depth = 0;
   syntaqlite_vec_clear(&p->macro.layers);
@@ -193,12 +218,9 @@ int synq_parser_feed_one_token(SyntaqliteParser* p,
                                const char* text,
                                uint32_t len,
                                uint32_t token_idx) {
-  uint32_t tok_offset = 0;
-  if (text != NULL) {
-    // Compute offset relative to the current buffer (which may be the
-    // original source or a macro expansion buffer during expand_and_feed).
-    tok_offset = (uint32_t)(text - p->ctx.source);
-  }
+  // Only called from layer-0 paths — macro expansion bypasses this —
+  // so the offset Lemon stores into TextSpans is statement-relative.
+  uint32_t tok_offset = text ? (uint32_t)(text - p->stmt_source) : 0;
   SynqParseToken minor = {
       .z = text,
       .n = len,
@@ -214,7 +236,7 @@ int synq_parser_feed_one_token(SyntaqliteParser* p,
     p->had_error = 1;
     if (p->error_msg[0] == '\0') {
       if (text) {
-        p->ctx.error_offset = (uint32_t)(text - p->source);
+        p->ctx.error_offset = (uint32_t)(text - p->stmt_source);
         p->ctx.error_length = (uint32_t)len;
         snprintf(p->error_msg, sizeof(p->error_msg), "syntax error near '%.*s'",
                  len, text);
@@ -282,7 +304,7 @@ static int finish_input(SyntaqliteParser* p) {
   if (p->ctx.error) {
     p->had_error = 1;
     if (p->ctx.error_offset == 0xFFFFFFFF) {
-      p->ctx.error_offset = p->offset;
+      p->ctx.error_offset = p->offset - p->stmt_start_offset;
     }
     if (p->error_msg[0] == '\0') {
       snprintf(p->error_msg, sizeof(p->error_msg), "incomplete SQL statement");
@@ -311,33 +333,31 @@ static int finish_input(SyntaqliteParser* p) {
 
 // Record a token and feed it to Lemon.  Returns 1 if a real statement
 // boundary was reached (caller should return stmt_boundary()), 0 otherwise.
+// Always called at layer 0; stores offsets relative to stmt_source.
 int synq_parser_record_and_feed(SyntaqliteParser* p,
                                 uint32_t cur_type,
                                 uint32_t cur_offset,
                                 uint32_t cur_len) {
   uint32_t tidx = 0xFFFFFFFF;
+  uint32_t cur_offset_rel = cur_offset - p->stmt_start_offset;
   if (p->collect_tokens) {
-    SyntaqliteParserToken tp = {cur_offset, cur_len, cur_type, 0,
+    SyntaqliteParserToken tp = {cur_offset_rel, cur_len, cur_type, 0,
                                 p->ctx.layer_id};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
-    if (p->ctx.layer_id == 0)
-      p->last_layer0_token_end = cur_offset + cur_len;
+    p->last_layer0_token_end = cur_offset + cur_len;
   }
   // Publish the upcoming token's start *before* Lemon processes it so
   // that BEFORE-style empty-marker reductions firing inside feed_one_token
   // see the start of the token about to be shifted (whitespace between
-  // the previous terminal and this one is excluded).  Only track
-  // positions for tokens shifted from the root source layer.
-  if (p->ctx.layer_id == 0)
-    p->ctx.cur_shift_start = cur_offset;
+  // the previous terminal and this one is excluded).
+  p->ctx.cur_shift_start = cur_offset_rel;
   int rc = feed_one_token(p, cur_type, p->source + cur_offset, cur_len, tidx);
   // Advance the "last shifted terminal end" cursor *after* Lemon finishes
   // processing `cur`, so that any empty-rule reductions that fired inside
   // feed_one_token observed the previous shifted token's end.  AFTER-style
   // markers use this to capture the end position of a non-terminal.
-  if (p->ctx.layer_id == 0)
-    p->ctx.last_shifted_end = cur_offset + cur_len;
+  p->ctx.last_shifted_end = cur_offset_rel + cur_len;
   // After parse_failure, Lemon stops reducing — force a boundary on SEMI
   // so errors don't bleed into subsequent statements.
   if (p->had_error && rc == 0 && cur_type == SYNTAQLITE_TK_SEMI)
@@ -371,7 +391,7 @@ void synq_parser_record_comment(SyntaqliteParser* p,
   }
 
   SyntaqliteComment t = {
-      .offset = offset,
+      .offset = offset - p->stmt_start_offset,
       .length = len,
       .token_idx = owner_idx,
       .kind = z[offset] == '-' ? (uint8_t)0 : (uint8_t)1,
@@ -499,6 +519,10 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
   uint32_t cur_offset = 0;
   int64_t cur_len = next_token(p, z, p->offset, &cur_offset, &cur_type);
 
+  if (cur_len > 0 && p->stmt_start_offset == UINT32_MAX) {
+    synq_open_statement(p, cur_offset);
+  }
+
   while (cur_len > 0) {
     // Handle comments: record and advance without feeding to Lemon.
     // This keeps comment recording in the main loop so that lookahead
@@ -507,8 +531,10 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
       p->had_comment = 1;
       if (p->collect_tokens)
         synq_parser_record_comment(p, cur_offset, (uint32_t)cur_len);
-      cur_len = next_token(p, z, cur_offset + (uint32_t)cur_len, &cur_offset,
-                           &cur_type);
+      // Advance p->offset so this comment is covered by stmt_end_offset
+      // (otherwise text() would not span trailing/comment-only comments).
+      p->offset = cur_offset + (uint32_t)cur_len;
+      cur_len = next_token(p, z, p->offset, &cur_offset, &cur_type);
       continue;
     }
 
@@ -796,25 +822,51 @@ static void append_expanded_range(SyntaqliteParser* p,
                                   uint32_t end);
 #endif
 
-SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
-                                                  uint32_t* out_len) {
+SYNTAQLITE_API const char* syntaqlite_parser_full_text(SyntaqliteParser* p,
+                                                       uint32_t* out_len) {
   if (out_len) {
     *out_len = p->source_len;
   }
   return p->source;
 }
 
+SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
+                                                  uint32_t* out_offset,
+                                                  uint32_t* out_len) {
+  if (p->stmt_start_offset == UINT32_MAX ||
+      p->stmt_end_offset <= p->stmt_start_offset ||
+      p->stmt_end_offset > p->source_len) {
+    if (out_offset)
+      *out_offset = 0;
+    if (out_len)
+      *out_len = 0;
+    return NULL;
+  }
+  if (out_offset)
+    *out_offset = p->stmt_start_offset;
+  if (out_len)
+    *out_len = p->stmt_end_offset - p->stmt_start_offset;
+  return p->stmt_source;
+}
+
 SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(SyntaqliteParser* p,
                                                            uint32_t* out_len) {
 #ifdef SYNTAQLITE_OMIT_MACROS
-  // Without macros, expanded text == source text.
-  return syntaqlite_parser_text(p, out_len);
+  uint32_t ignored_offset = 0;
+  const char* s = syntaqlite_parser_text(p, &ignored_offset, out_len);
+  return s ? s : "";
 #else
   if (out_len) {
     *out_len = 0;
   }
+  if (p->stmt_start_offset == UINT32_MAX ||
+      p->stmt_end_offset <= p->stmt_start_offset ||
+      p->stmt_end_offset > p->source_len) {
+    return "";
+  }
+  uint32_t stmt_len = p->stmt_end_offset - p->stmt_start_offset;
   syntaqlite_vec_clear(&p->macro.node_expanded_buf);
-  append_expanded_range(p, 0, p->source, p->source_len, 0, p->source_len);
+  append_expanded_range(p, 0, p->stmt_source, stmt_len, 0, stmt_len);
   if (out_len) {
     *out_len = syntaqlite_vec_len(&p->macro.node_expanded_buf);
   }
@@ -838,6 +890,22 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
     p->pending_reset = 0;
   }
 
+  if (text) {
+    // Open the statement at the first non-whitespace byte, matching
+    // parser_next (which never sees TK_SPACE because the tokenizer
+    // skips it).  Leading TK_COMMENT still opens a statement.
+    if (p->stmt_start_offset == UINT32_MAX &&
+        token_type != SYNTAQLITE_TK_SPACE) {
+      synq_open_statement(p, (uint32_t)(text - p->source));
+    }
+    // Advance p->offset so set_result_status can finalize stmt_end_offset;
+    // parser_next updates it during tokenization but feed_token never
+    // touches it otherwise.
+    uint32_t tok_end = (uint32_t)(text - p->source) + len;
+    if (tok_end > p->offset)
+      p->offset = tok_end;
+  }
+
   // Skip whitespace and comments without feeding to Lemon.
   if (synq_token_is_skip(token_type)) {
     if (token_type == SYNTAQLITE_TK_COMMENT && p->collect_tokens && text) {
@@ -849,13 +917,11 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
   // Capture non-whitespace, non-comment token positions.
   uint32_t tidx = 0xFFFFFFFF;
   if (p->collect_tokens && text) {
-    uint32_t tok_offset = (uint32_t)(text - p->source);
-    SyntaqliteParserToken tp = {tok_offset, len, token_type, 0,
-                                p->ctx.layer_id};
+    SyntaqliteParserToken tp = {(uint32_t)(text - p->stmt_source), len,
+                                token_type, 0, p->ctx.layer_id};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
-    if (p->ctx.layer_id == 0)
-      p->last_layer0_token_end = tok_offset + len;
+    p->last_layer0_token_end = (uint32_t)(text - p->source) + len;
   }
 
   int rc = feed_one_token(p, token_type, text, len, tidx);
@@ -980,8 +1046,11 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
     return NULL;
   }
   SynqExtentRange r = syntaqlite_vec_at(&p->ctx.node_extents, node_id);
-  // Sentinel `(UINT32_MAX, 0)` or any out-of-source range → not recorded.
-  if (r.root_start > r.root_end || r.root_end > p->source_len) {
+  // Sentinel `(UINT32_MAX, 0)` → not recorded.
+  uint32_t stmt_len = p->stmt_end_offset > p->stmt_start_offset
+                          ? p->stmt_end_offset - p->stmt_start_offset
+                          : 0;
+  if (r.root_start > r.root_end || r.root_end > stmt_len) {
     return NULL;
   }
   if (out_len) {
@@ -990,7 +1059,7 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
   if (out_offset) {
     *out_offset = r.root_start;
   }
-  return p->source + r.root_start;
+  return p->stmt_source + r.root_start;
 }
 
 #ifndef SYNTAQLITE_OMIT_MACROS
@@ -1065,7 +1134,7 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
       syntaqlite_vec_at(&p->ctx.node_expanded_extents, node_id);
   if (e.length > 0) {
     const char* buf = e.layer_id == 0
-                          ? p->source
+                          ? p->stmt_source
                           : p->macro.layers.data[e.layer_id].expansion_data;
     if (out_len) {
       *out_len = e.length;
@@ -1077,11 +1146,14 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
     return NULL;
   }
   SynqExtentRange r = syntaqlite_vec_at(&p->ctx.node_extents, node_id);
-  if (r.root_start > r.root_end || r.root_end > p->source_len) {
+  uint32_t stmt_len = p->stmt_end_offset > p->stmt_start_offset
+                          ? p->stmt_end_offset - p->stmt_start_offset
+                          : 0;
+  if (r.root_start > r.root_end || r.root_end > stmt_len) {
     return NULL;
   }
   syntaqlite_vec_clear(&p->macro.node_expanded_buf);
-  append_expanded_range(p, 0, p->source, p->source_len, r.root_start,
+  append_expanded_range(p, 0, p->stmt_source, stmt_len, r.root_start,
                         r.root_end);
   if (out_len) {
     *out_len = syntaqlite_vec_len(&p->macro.node_expanded_buf);
@@ -1132,14 +1204,17 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_text(
     *out_len = 0;
     return NULL;
   }
-  if (span->offset + span->length > p->source_len) {
+  uint32_t stmt_len = p->stmt_end_offset > p->stmt_start_offset
+                          ? p->stmt_end_offset - p->stmt_start_offset
+                          : 0;
+  if (span->offset + span->length > stmt_len) {
     *out_len = 0;
     return NULL;
   }
   *out_len = span->length;
   if (out_offset)
     *out_offset = span->offset;
-  return p->source + span->offset;
+  return p->stmt_source + span->offset;
 }
 
 SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(

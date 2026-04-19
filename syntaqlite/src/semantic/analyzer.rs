@@ -371,8 +371,9 @@ impl SemanticAnalyzer {
                     }
                     #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
                     {
-                        collect_tokens(e.tokens(), &mut tokens);
-                        collect_comments(e.comments(), &mut comments);
+                        let base = e.statement_base_offset();
+                        collect_tokens(e.tokens(), base, &mut tokens);
+                        collect_comments(e.comments(), base, &mut comments);
                     }
                     continue;
                 }
@@ -380,8 +381,9 @@ impl SemanticAnalyzer {
 
             #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
             {
-                collect_tokens(stmt.tokens(), &mut tokens);
-                collect_comments(stmt.comments(), &mut comments);
+                let base = stmt.statement_base_offset();
+                collect_tokens(stmt.tokens(), base, &mut tokens);
+                collect_comments(stmt.comments(), base, &mut comments);
             }
 
             // Process the statement and extract macro registration info.
@@ -476,7 +478,7 @@ impl SemanticAnalyzer {
         let defined_relations = extract_defined_relations(erased, root_id, self.dialect.roles());
 
         // Extract the statement source text from token spans.
-        let stmt_source = statement_source(erased);
+        let stmt_source = erased.text().to_string();
 
         StatementModel::new(stmt_source, diagnostics, lineage, defined_relations)
     }
@@ -518,11 +520,10 @@ impl SemanticAnalyzer {
 
         // Resolve the module source.
         let Some(source) = self.resolver.as_ref().and_then(|r| r.resolve(&module_name)) else {
-            // Emit diagnostic for unresolvable module.
             let (start, end) = match fields[module as usize] {
                 FieldValue::Span(sp) => {
-                    let (authored, off) = erased.span_text(sp);
-                    (off as usize, off as usize + authored.len())
+                    let (_, start, end) = erased.span_text_abs(sp);
+                    (start, end)
                 }
                 _ => (0, 0),
             };
@@ -548,28 +549,6 @@ impl Default for SemanticAnalyzer {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-/// Extract the source text for a single parsed statement from its token spans.
-fn statement_source(stmt: &AnyParsedStatement<'_>) -> String {
-    let source = stmt.text();
-    let mut start = usize::MAX;
-    let mut end = 0usize;
-    for (offset, length) in stmt.token_spans() {
-        let o = offset as usize;
-        let l = length as usize;
-        if o < start {
-            start = o;
-        }
-        if o + l > end {
-            end = o + l;
-        }
-    }
-    if start <= end && end <= source.len() {
-        source[start..end].to_string()
-    } else {
-        String::new()
-    }
-}
 
 /// Extract relations defined by a DDL statement (CREATE TABLE / CREATE VIEW).
 fn extract_defined_relations(
@@ -647,11 +626,13 @@ fn format_arity(name: &str, arity: AritySpec) -> String {
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 fn collect_tokens<'a>(
     iter: impl Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>>,
+    stmt_base: u32,
     tokens: &mut Vec<StoredToken>,
 ) {
+    let base = stmt_base as usize;
     for tok in iter {
         tokens.push(StoredToken {
-            offset: tok.offset() as usize,
+            offset: base + tok.offset() as usize,
             length: tok.length() as usize,
             token_type: tok.token_type(),
             flags: tok.flags(),
@@ -662,24 +643,28 @@ fn collect_tokens<'a>(
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 fn collect_comments<'a>(
     iter: impl Iterator<Item = syntaqlite_syntax::Comment<'a>>,
+    stmt_base: u32,
     comments: &mut Vec<StoredComment>,
 ) {
+    let base = stmt_base as usize;
     for c in iter {
         comments.push(StoredComment {
-            offset: c.offset() as usize,
+            offset: base + c.offset() as usize,
             length: c.length() as usize,
         });
     }
 }
 
 fn parse_error_span(err: &AnyParseError<'_>, source: &str) -> (usize, usize) {
+    let base = err.statement_base_offset() as usize;
     match (err.offset(), err.length()) {
-        (Some(off), Some(len)) if len > 0 => (off, off + len),
+        (Some(off), Some(len)) if len > 0 => (base + off, base + off + len),
         (Some(off), _) => {
-            if off >= source.len() && !source.is_empty() {
+            let abs = base + off;
+            if abs >= source.len() && !source.is_empty() {
                 (source.len() - 1, source.len())
             } else {
-                (off, (off + 1).min(source.len()))
+                (abs, (abs + 1).min(source.len()))
             }
         }
         _ => {
@@ -961,9 +946,7 @@ fn ddl_name_offset(
         return None;
     }
     let name = stmt.span_expanded_text(sp);
-    let (authored, off) = stmt.span_text(sp);
-    let start = off as usize;
-    let end = start + authored.len();
+    let (_, start, end) = stmt.span_text_abs(sp);
     Some((name.to_ascii_lowercase(), (start, end)))
 }
 
@@ -1305,12 +1288,9 @@ impl<'a> ValidationPass<'a> {
         }
         match fields[0] {
             FieldValue::Span(sp) => {
-                // Identifier spelling uses the post-expansion bytes;
-                // source position uses the authored byte range.
                 let name = stmt.span_expanded_text(sp);
-                let (authored, off) = stmt.span_text(sp);
-                let start = off as usize;
-                (name, start, start + authored.len())
+                let (_, start, end) = stmt.span_text_abs(sp);
+                (name, start, end)
             }
             _ => ("", 0, 0),
         }
@@ -1332,17 +1312,13 @@ impl<'a> ValidationPass<'a> {
         if sp.is_empty() {
             return;
         }
-        // Identifier spelling comes from the post-expansion bytes (what
-        // the tokenizer saw), so a reference produced from a macro body
-        // resolves against the catalog by its expanded name.  Source
-        // position comes from `span_text`, which walks the expansion
-        // chain back to the authored byte range in the user's input —
-        // so diagnostics anchor at the macro call site when the token
-        // lives inside a macro body.
+        // Identifier spelling comes from post-expansion bytes — a
+        // reference produced from a macro body resolves by its expanded
+        // name — while source position walks the expansion chain back
+        // to the authored byte range so diagnostics anchor at the macro
+        // call site.
         let name = stmt.span_expanded_text(sp);
-        let (authored, off) = stmt.span_text(sp);
-        let start = off as usize;
-        let end = start + authored.len();
+        let (_, start, end) = stmt.span_text_abs(sp);
 
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
@@ -1411,13 +1387,8 @@ impl<'a> ValidationPass<'a> {
         if let FieldValue::Span(sp) = fields[name_idx as usize]
             && !sp.is_empty()
         {
-            // Identifier spelling from post-expansion bytes; source
-            // position from `span_text` (walks expansion chain back to
-            // authored byte range).
             let name = stmt.span_expanded_text(sp);
-            let (authored, off) = stmt.span_text(sp);
-            let start = off as usize;
-            let end = start + authored.len();
+            let (_, start, end) = stmt.span_text_abs(sp);
             let args_id = Self::field_node_id(fields, args_idx);
             let arg_count = args_id
                 .and_then(|id| stmt.list_children(id))
@@ -1496,17 +1467,12 @@ impl<'a> ValidationPass<'a> {
         if col_sp.is_empty() {
             return;
         }
-        // Identifier spelling comes from post-expansion bytes; source
-        // position from `span_text` (walks expansion chain back to
-        // authored byte range for diagnostic placement).
         let column = stmt.span_expanded_text(col_sp);
         let table = match fields[table_idx as usize] {
             FieldValue::Span(sp) if !sp.is_empty() => Some(stmt.span_expanded_text(sp)),
             _ => None,
         };
-        let (authored, col_off) = stmt.span_text(col_sp);
-        let start = col_off as usize;
-        let end = start + authored.len();
+        let (_, start, end) = stmt.span_text_abs(col_sp);
 
         match self.scope.resolve_column(table, column) {
             ColumnResolution::Found {
@@ -1870,9 +1836,8 @@ impl<'a> ValidationPass<'a> {
         let (name, name_range) = match fields[name_idx as usize] {
             FieldValue::Span(sp) => {
                 let name = stmt.span_expanded_text(sp);
-                let (authored, off) = stmt.span_text(sp);
-                let start = off as usize;
-                (name, (start, start + authored.len()))
+                let (_, start, end) = stmt.span_text_abs(sp);
+                (name, (start, end))
             }
             _ => ("", (0, 0)),
         };

@@ -175,6 +175,18 @@ struct SyntaqliteParser {
   uint32_t had_error;   // Sticky error flag for current result.
   char error_msg[256];  // Error message buffer.
 
+  // Current statement's byte range.  Set by parser_next / feed_token on
+  // the first byte consumed; stmt_end_offset is finalized at statement
+  // completion.  `stmt_start_offset == UINT32_MAX` means no statement
+  // has been produced yet; `stmt_source` then equals `p->source`.
+  //
+  // Every layer-0 offset the parser emits (tokens, comments, node
+  // extents, arena TextSpan.offset, macro rewrite call_offset with
+  // source parent, error_offset) is measured from `stmt_source`.
+  uint32_t stmt_start_offset;
+  uint32_t stmt_end_offset;
+  const char* stmt_source;
+
   // ── Parser-only state (only parser.c) ──────────────────────────────────
   uint32_t last_token_type;  // Last non-whitespace token fed to Lemon.
   uint32_t finished;         // 1 after EOF has been sent to Lemon.
