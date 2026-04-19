@@ -886,7 +886,11 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
   }
 
   if (text) {
-    if (p->stmt_start_offset == UINT32_MAX) {
+    // Open the statement at the first non-whitespace byte, matching
+    // parser_next (which never sees TK_SPACE because the tokenizer
+    // skips it).  Leading TK_COMMENT still opens a statement.
+    if (p->stmt_start_offset == UINT32_MAX &&
+        token_type != SYNTAQLITE_TK_SPACE) {
       synq_open_statement(p, (uint32_t)(text - p->source));
     }
     // Advance p->offset so set_result_status can finalize stmt_end_offset;

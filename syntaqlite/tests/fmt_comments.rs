@@ -68,6 +68,7 @@ fn debug_comment_token_offsets() {
             ParseOutcome::Ok(stmt) => {
                 eprintln!("=== Statement {stmt_num} ===");
                 let comments: Vec<_> = stmt.comments().collect();
+                let stmt_text = stmt.text();
                 eprintln!("  Comments ({}):", comments.len());
                 for c in &comments {
                     let end = c.offset() as usize + c.length() as usize;
@@ -75,7 +76,7 @@ fn debug_comment_token_offsets() {
                         "    offset={} len={} text={:?}",
                         c.offset(),
                         c.length(),
-                        &input[c.offset() as usize..end]
+                        &stmt_text[c.offset() as usize..end]
                     );
                 }
                 let tokens: Vec<_> = stmt.tokens().collect();

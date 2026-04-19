@@ -118,6 +118,33 @@ fn feed_token_records_comment() {
     assert_eq!(comments[0].length(), 8);
 }
 
+/// Leading `TK_SPACE` fed via `feed_token` should NOT open the statement:
+/// stmt_start should match parser_next semantics (first significant byte).
+/// This keeps statement-relative offsets consistent between the tokenizer-
+/// driven and incremental paths.
+#[test]
+fn feed_token_leading_whitespace_does_not_open_statement() {
+    let source = "   SELECT 1";
+    let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+    let mut session = parser.incremental_parse(source);
+
+    session.feed_token(TokenType::Space, 0..3);
+    session.feed_token(TokenType::Select, 3..9);
+    session.feed_token(TokenType::Integer, 10..11);
+
+    let stmt = session
+        .finish()
+        .expect("expected Some")
+        .expect("expected a statement");
+
+    // Statement opens at `SELECT`, not at byte 0 — matches parser_next.
+    assert_eq!(stmt.text(), "SELECT 1");
+    assert_eq!(stmt.statement_base_offset(), 3);
+    let tokens: Vec<_> = stmt.tokens().collect();
+    assert_eq!(tokens[0].offset(), 0);
+    assert_eq!(tokens[0].text(), "SELECT");
+}
+
 /// Multi-statement via `feed_token`: both statements produce correct AST roots.
 #[test]
 fn feed_tokens_multi_statement_both_roots() {

@@ -51,7 +51,10 @@ loop {
             // stmt.root() returns the typed AST node
         }
         ParseOutcome::Err(err) => {
-            eprintln!("parse error at offset {}: {}", err.offset(), err.message());
+            // `err.offset()` is relative to the failing statement; add
+            // `err.statement_base_offset()` for a position in the full
+            // source.
+            eprintln!("parse error at offset {:?}: {}", err.offset(), err.message());
         }
         ParseOutcome::Done => break,
     }

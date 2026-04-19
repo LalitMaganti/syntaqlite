@@ -1124,8 +1124,10 @@ mod tests {
         assert_eq!(r.parent(), None, "top-level rewrite");
         assert_eq!(r.name(), "id");
         assert_eq!(r.expansion(), "42");
-        let call_text =
-            &source[r.call_offset() as usize..(r.call_offset() + r.call_length()) as usize];
+        // call_offset is relative to stmt.text() for source-parent rewrites.
+        let stmt_text = stmt.text();
+        let call_text = &stmt_text
+            [r.call_offset() as usize..(r.call_offset() + r.call_length()) as usize];
         assert_eq!(call_text, "id!(42)");
     }
 
@@ -1359,11 +1361,13 @@ mod tests {
         let rewrites: Vec<_> = stmt.macro_rewrites().collect();
         assert_eq!(rewrites.len(), 2);
 
-        // m's arg segment points into the authored source.
+        // m's arg segment points into the authored source; origin_offset
+        // is statement-relative when origin is Source.
+        let stmt_text = stmt.text();
         let m_segs: Vec<_> = rewrites[0].arg_segments().collect();
         assert_eq!(m_segs.len(), 1);
         assert_eq!(m_segs[0].origin(), ArgOrigin::Source);
-        let m_arg_text = &source[m_segs[0].origin_offset() as usize
+        let m_arg_text = &stmt_text[m_segs[0].origin_offset() as usize
             ..(m_segs[0].origin_offset() + m_segs[0].origin_length()) as usize];
         assert_eq!(m_arg_text, "n!(nonexistent_col)");
 
