@@ -10,6 +10,9 @@
 //! Use the [`syntaqlite`](https://crates.io/crates/syntaqlite) crate instead.
 
 #[doc(hidden)]
+pub mod offsets;
+
+#[doc(hidden)]
 /// Semantic role types shared between the codegen tool and the runtime.
 ///
 /// `SemanticRole` is `#[repr(C, u8)]` so the Rust in-memory layout
