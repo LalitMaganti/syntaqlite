@@ -24,6 +24,7 @@ class DiffTestBlueprint:
     version: Optional[str] = None
     line_width: Optional[int] = None
     indent_width: Optional[int] = None
+    strict_schema: bool = False
 
 
 class TestSuite:

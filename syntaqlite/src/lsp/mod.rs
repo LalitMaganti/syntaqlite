@@ -116,6 +116,7 @@ impl CompletionKind {
     }
 }
 
+mod completion;
 mod host;
 mod server;
 

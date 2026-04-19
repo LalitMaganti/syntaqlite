@@ -1450,3 +1450,165 @@ fn push_unique(seen: &mut HashSet<String>, out: &mut Vec<String>, name: &str) {
         out.push(name.to_string());
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sqlite_catalog() -> Catalog {
+        Catalog::new(crate::sqlite::dialect::dialect())
+    }
+
+    #[test]
+    fn add_table_and_resolve() {
+        let mut cat = sqlite_catalog();
+        cat.layer_mut(CatalogLayer::Database).insert_table(
+            "users",
+            Some(vec!["id".to_string(), "name".to_string()]),
+            false,
+        );
+        assert!(cat.resolve_relation("users"));
+        assert!(cat.resolve_relation("USERS"));
+        assert!(!cat.resolve_relation("orders"));
+    }
+
+    #[test]
+    fn add_view_and_resolve() {
+        let mut cat = sqlite_catalog();
+        cat.layer_mut(CatalogLayer::Database)
+            .insert_view("active_users", Some(vec!["id".to_string()]));
+        assert!(cat.resolve_relation("active_users"));
+    }
+
+    #[test]
+    fn add_function_and_check() {
+        let mut cat = sqlite_catalog();
+        cat.layer_mut(CatalogLayer::Database)
+            .insert_function_overload("my_func", FunctionCategory::Scalar, AritySpec::Exact(2));
+        assert!(matches!(
+            cat.check_function("my_func", 2),
+            FunctionCheckResult::Ok
+        ));
+        assert!(matches!(
+            cat.check_function("my_func", 1),
+            FunctionCheckResult::WrongArity { .. }
+        ));
+    }
+
+    #[test]
+    fn add_variadic_function() {
+        let mut cat = sqlite_catalog();
+        cat.layer_mut(CatalogLayer::Database)
+            .insert_function_overload("variadic_fn", FunctionCategory::Scalar, AritySpec::Any);
+        assert!(matches!(
+            cat.check_function("variadic_fn", 0),
+            FunctionCheckResult::Ok
+        ));
+        assert!(matches!(
+            cat.check_function("variadic_fn", 100),
+            FunctionCheckResult::Ok
+        ));
+    }
+
+    #[test]
+    fn builtin_functions_resolved() {
+        let cat = sqlite_catalog();
+        assert!(!matches!(
+            cat.check_function("abs", 1),
+            FunctionCheckResult::Unknown
+        ));
+        assert!(!matches!(
+            cat.check_function("coalesce", 2),
+            FunctionCheckResult::Unknown
+        ));
+    }
+
+    #[test]
+    fn from_ddl_populates_tables() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(
+            dialect,
+            &[("CREATE TABLE users (id INTEGER, name TEXT);", None)],
+        )
+        .0;
+        assert!(cat.resolve_relation("users"));
+    }
+
+    #[test]
+    fn from_ddl_populates_virtual_tables() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(
+            dialect,
+            &[("CREATE VIRTUAL TABLE fts USING fts5(content);", None)],
+        )
+        .0;
+        assert!(cat.resolve_relation("fts"));
+    }
+
+    #[test]
+    fn clear_database() {
+        let mut cat = sqlite_catalog();
+        cat.layer_mut(CatalogLayer::Database).insert_table(
+            "tmp",
+            Some(vec!["id".to_string()]),
+            false,
+        );
+        assert!(cat.resolve_relation("tmp"));
+        cat.new_database();
+        assert!(!cat.resolve_relation("tmp"));
+    }
+
+    #[test]
+    fn clear_connection() {
+        let mut cat = sqlite_catalog();
+        cat.layer_mut(CatalogLayer::Connection).insert_table(
+            "conn_tbl",
+            Some(vec!["id".to_string()]),
+            false,
+        );
+        cat.new_connection();
+        assert!(!cat.resolve_relation("conn_tbl"));
+    }
+
+    #[test]
+    fn connection_layer_resolves() {
+        let mut cat = sqlite_catalog();
+        cat.layer_mut(CatalogLayer::Connection).insert_table(
+            "conn_tbl",
+            Some(vec!["id".to_string()]),
+            false,
+        );
+        assert!(cat.resolve_relation("conn_tbl"));
+    }
+
+    #[test]
+    fn is_view_matches_inserted_views_only() {
+        let mut cat = sqlite_catalog();
+        cat.layer_mut(CatalogLayer::Database)
+            .insert_table("users", Some(vec!["id".into()]), false);
+        cat.layer_mut(CatalogLayer::Database)
+            .insert_view("active_users", Some(vec!["id".into()]));
+
+        assert!(!cat.is_view("users"));
+        assert!(cat.is_view("active_users"));
+        assert!(!cat.is_view("nonexistent"));
+    }
+
+    #[test]
+    fn relation_names_enumerates_tables_and_views() {
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t1", Some(vec!["a".into()]), false);
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_view("v1", Some(vec!["b".into()]));
+
+        let names: HashSet<&str> = catalog
+            .layer(CatalogLayer::Database)
+            .relation_names()
+            .collect();
+        assert!(names.contains("t1"));
+        assert!(names.contains("v1"));
+    }
+}

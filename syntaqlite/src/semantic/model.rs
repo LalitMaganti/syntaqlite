@@ -346,6 +346,36 @@ impl SemanticModel {
             .rev()
             .find_map(StatementModel::lineage)
     }
+
+    /// Semantic tokens (for syntax highlighting) derived from the analyzed
+    /// tokens plus comments, classified by `dialect`.
+    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
+    pub(crate) fn semantic_tokens(
+        &self,
+        dialect: &crate::dialect::AnyDialect,
+    ) -> Vec<SemanticToken> {
+        use syntaqlite_syntax::any::TokenCategory;
+        let mut out = Vec::new();
+        for t in &self.tokens {
+            let cat = dialect.classify_token(t.token_type, t.flags);
+            if cat != TokenCategory::Other {
+                out.push(SemanticToken {
+                    offset: t.offset,
+                    length: t.length,
+                    category: cat,
+                });
+            }
+        }
+        for c in &self.comments {
+            out.push(SemanticToken {
+                offset: c.offset,
+                length: c.length,
+                category: TokenCategory::Comment,
+            });
+        }
+        out.sort_by_key(|t| t.offset);
+        out
+    }
 }
 
 #[cfg(feature = "lsp")]
@@ -433,5 +463,194 @@ impl SymbolIdentity {
             SymbolIdentity::Table(name) => name.clone(),
             SymbolIdentity::Column { table, column } => format!("{table}.{column}"),
         }
+    }
+}
+
+#[cfg(test)]
+#[cfg(feature = "sqlite")]
+mod tests {
+    use super::super::ValidationConfig;
+    use super::super::analyzer::SemanticAnalyzer;
+    use super::super::catalog::{Catalog, CatalogLayer};
+
+    fn lenient() -> ValidationConfig {
+        ValidationConfig::default()
+    }
+
+    fn sqlite_catalog() -> Catalog {
+        Catalog::new(crate::sqlite::dialect::dialect())
+    }
+
+    #[test]
+    fn statements_returns_one_per_statement() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT 1; SELECT 2; SELECT 3;", &catalog, &lenient());
+        assert_eq!(model.statements().len(), 3);
+    }
+
+    #[test]
+    fn diagnostics_isolated_per_statement() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "users",
+            Some(vec!["id".into()]),
+            false,
+        );
+        let model = analyzer.analyze(
+            "SELECT id FROM users; SELECT * FROM missing;",
+            &catalog,
+            &lenient(),
+        );
+        assert_eq!(model.statements().len(), 2);
+        assert!(model.statements()[0].diagnostics().is_empty());
+        assert!(!model.statements()[1].diagnostics().is_empty());
+        assert_eq!(model.diagnostic_count(), 1);
+    }
+
+    #[test]
+    fn lineage_delegates_to_last_statement() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("a", Some(vec!["x".into()]), false);
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("b", Some(vec!["y".into()]), false);
+        let model = analyzer.analyze("SELECT x FROM a; SELECT y FROM b;", &catalog, &lenient());
+
+        let cols0 = model.statements()[0].lineage().unwrap().into_inner();
+        assert_eq!(cols0[0].origin.as_ref().unwrap().table, "a");
+
+        let cols1 = model.statements()[1].lineage().unwrap().into_inner();
+        assert_eq!(cols1[0].origin.as_ref().unwrap().table, "b");
+
+        let last_cols = model.lineage().unwrap().into_inner();
+        assert_eq!(last_cols[0].origin.as_ref().unwrap().table, "b");
+    }
+
+    #[test]
+    fn defined_relations_for_create_table() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze(
+            "CREATE TABLE users (id INTEGER, name TEXT);",
+            &catalog,
+            &lenient(),
+        );
+        let defs = model.statements()[0].defined_relations();
+        assert_eq!(defs.len(), 1);
+        assert_eq!(defs[0].name, "users");
+        assert!(!defs[0].is_view);
+    }
+
+    #[test]
+    fn defined_relations_for_create_view() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("CREATE VIEW v AS SELECT 1;", &catalog, &lenient());
+        let defs = model.statements()[0].defined_relations();
+        assert_eq!(defs.len(), 1);
+        assert_eq!(defs[0].name, "v");
+        assert!(defs[0].is_view);
+    }
+
+    #[test]
+    fn defined_relations_empty_for_select() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT 1;", &catalog, &lenient());
+        assert!(model.statements()[0].defined_relations().is_empty());
+    }
+
+    #[test]
+    fn parse_error_produces_statement_model_with_diagnostic() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT;", &catalog, &lenient());
+        assert!(model.has_diagnostics());
+        assert!(
+            model
+                .statements()
+                .iter()
+                .any(|s| !s.diagnostics().is_empty())
+        );
+    }
+
+    #[test]
+    fn clean_source_has_no_diagnostics() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT 1;", &catalog, &lenient());
+        assert!(!model.has_diagnostics());
+        assert_eq!(model.diagnostic_count(), 0);
+    }
+
+    #[test]
+    fn unexpanded_view_surfaced_on_view_access() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_view("active_users", Some(vec!["id".into(), "name".into()]));
+
+        let model = analyzer.analyze("SELECT id FROM active_users", &catalog, &lenient());
+
+        let unresolved = model.statements().last().unwrap().unexpanded_views();
+        assert_eq!(unresolved, ["active_users".to_string()].as_slice());
+    }
+
+    #[test]
+    fn table_access_has_no_unexpanded_views() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "users",
+            Some(vec!["id".into()]),
+            false,
+        );
+        let model = analyzer.analyze("SELECT id FROM users", &catalog, &lenient());
+        assert!(
+            model
+                .statements()
+                .last()
+                .unwrap()
+                .unexpanded_views()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn non_select_has_no_lineage() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("CREATE TABLE t(x)", &catalog, &lenient());
+        assert!(model.lineage().is_none());
+    }
+
+    #[test]
+    fn recursive_cte_does_not_stack_overflow() {
+        let mut analyzer = SemanticAnalyzer::new();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "users",
+            Some(vec!["id".into(), "name".into()]),
+            false,
+        );
+        let model = analyzer.analyze(
+            "WITH RECURSIVE cte(id) AS (
+                SELECT id FROM users
+                UNION ALL
+                SELECT id FROM cte
+            ) SELECT id FROM cte",
+            &catalog,
+            &lenient(),
+        );
+        let lineage = model.lineage().expect("should be a query");
+        let cols = lineage.into_inner();
+        assert_eq!(cols.len(), 1);
+        assert_eq!(cols[0].name, "id");
     }
 }

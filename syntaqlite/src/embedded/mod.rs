@@ -270,8 +270,8 @@ impl EmbeddedAnalyzer {
     ) -> Vec<(usize, usize, TokenCategory)> {
         let mut analyzer = self.make_analyzer();
         let model = analyzer.analyze(fragment.sql_text(), &self.catalog, &self.config);
-        analyzer
-            .semantic_tokens(&model)
+        model
+            .semantic_tokens(&analyzer.dialect())
             .into_iter()
             .map(|t| (t.offset, t.length, t.category))
             .collect()
