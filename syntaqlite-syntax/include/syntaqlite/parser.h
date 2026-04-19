@@ -108,7 +108,7 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create(
 // new input without reallocating — all previous nodes are invalidated.
 SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
                                             const char* source,
-                                            uint32_t len);
+                                            SyntaqliteDocLen len);
 
 // Parse the next SQL statement. Call in a loop until SYNTAQLITE_PARSE_DONE.
 // Bare semicolons between statements are skipped automatically.
@@ -175,11 +175,13 @@ SYNTAQLITE_API uint32_t syntaqlite_result_recovery_root(SyntaqliteParser* p);
 // Human-readable error message, or NULL.
 SYNTAQLITE_API const char* syntaqlite_result_error_msg(SyntaqliteParser* p);
 
-// Byte offset of error token (0xFFFFFFFF = unknown).
-SYNTAQLITE_API uint32_t syntaqlite_result_error_offset(SyntaqliteParser* p);
+// Statement-relative byte offset of error token (0xFFFFFFFF = unknown).
+SYNTAQLITE_API SyntaqliteStmtOffset
+syntaqlite_result_error_offset(SyntaqliteParser* p);
 
 // Byte length of error token (0 = unknown).
-SYNTAQLITE_API uint32_t syntaqlite_result_error_length(SyntaqliteParser* p);
+SYNTAQLITE_API SyntaqliteStmtLen
+syntaqlite_result_error_length(SyntaqliteParser* p);
 
 // A comment captured during parsing.
 //
@@ -201,11 +203,11 @@ typedef uint8_t SyntaqliteCommentSide;
 #define SYNQ_COMMENT_TRAILING ((SyntaqliteCommentSide)1)
 
 typedef struct SyntaqliteComment {
-  uint32_t offset;     // Byte offset in source.
-  uint32_t length;     // Byte length.
-  uint32_t token_idx;  // Index of the owning token in p->tokens.
-  uint8_t kind;        // 0 = line comment (--), 1 = block comment (/* */).
-  uint8_t side;        // SYNQ_COMMENT_LEADING or SYNQ_COMMENT_TRAILING.
+  SyntaqliteStmtOffset offset;  // Statement-relative byte offset.
+  SyntaqliteStmtLen length;     // Byte length.
+  SyntaqliteTokenIdx token_idx;     // Index of the owning token in p->tokens.
+  uint8_t kind;  // 0 = line comment (--), 1 = block comment (/* */).
+  uint8_t side;  // SYNQ_COMMENT_LEADING or SYNQ_COMMENT_TRAILING.
 } SyntaqliteComment;
 
 // Token-usage flags: set by the parser during disambiguation to record how
@@ -227,9 +229,9 @@ typedef uint32_t SyntaqliteParserTokenFlags;
 // positions should resolve the token's span via the parser's span
 // accessors rather than using `offset` directly.
 typedef struct SyntaqliteParserToken {
-  uint32_t offset;  // Byte offset in the token's layer buffer.
-  uint32_t length;  // Byte length.
-  uint32_t type;    // Original token type from tokenizer (pre-fallback).
+  SyntaqliteLayerOffset offset;  // Byte offset in the token's layer buffer.
+  SyntaqliteLayerLen length;     // Byte length.
+  uint32_t type;  // Original token type from tokenizer (pre-fallback).
   SyntaqliteParserTokenFlags flags;  // Bitmask of SYNQ_TOKEN_FLAG_* values.
   uint32_t _layer_id;  // Internal: 0 = original source, >0 = expansion layer.
 } SyntaqliteParserToken;
@@ -254,12 +256,12 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
 // Returns NULL with `*count == 0` when there are no matching comments.
 SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_leading_comments(
     SyntaqliteParser* p,
-    uint32_t token_idx,
+    SyntaqliteTokenIdx token_idx,
     uint32_t* count);
 
 SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_trailing_comments(
     SyntaqliteParser* p,
-    uint32_t token_idx,
+    SyntaqliteTokenIdx token_idx,
     uint32_t* count);
 
 // Sentinel value for `SyntaqliteMacroRewrite::parent_idx` meaning "this
@@ -307,14 +309,16 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_trailing_comments(
 // `syntaqlite_parser_destroy` call.
 typedef struct SyntaqliteMacroRewrite {
   uint32_t parent_idx;
-  uint32_t call_offset;
-  uint32_t call_length;
+  // Statement-relative when parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE,
+  // otherwise relative to the parent entry's `expansion` buffer.
+  SyntaqliteLayerOffset call_offset;
+  SyntaqliteLayerLen call_length;
   const char* expansion;
-  uint32_t expansion_len;
+  SyntaqliteLayerLen expansion_len;
   const char* name;
   uint32_t name_len;
-  uint32_t def_line;
-  uint32_t def_col;
+  SyntaqliteLineNumber def_line;
+  SyntaqliteColumnNumber def_col;
   // Position of this call in the *parent's authored body*, computed by
   // inverting the length shifts the parent's $param substitutions
   // introduced.  Both fields equal SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL
@@ -325,8 +329,8 @@ typedef struct SyntaqliteMacroRewrite {
   // For top-level rewrites (parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE)
   // the parent is the authored source, so these equal call_offset /
   // call_length.
-  uint32_t body_call_offset;
-  uint32_t body_call_length;
+  SyntaqliteLayerOffset body_call_offset;
+  SyntaqliteLayerLen body_call_length;
 } SyntaqliteMacroRewrite;
 
 // Number of macro rewrites recorded for the current statement.
@@ -353,13 +357,13 @@ syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx);
 // chain of $param substitutions by recursing into the origin rewrite's
 // arg segments.
 typedef struct SyntaqliteMacroArgSegment {
-  uint32_t body_offset;
-  uint32_t body_length;
-  uint32_t expansion_offset;
-  uint32_t expansion_length;
+  SyntaqliteLayerOffset body_offset;
+  SyntaqliteLayerLen body_length;
+  SyntaqliteLayerOffset expansion_offset;
+  SyntaqliteLayerLen expansion_length;
   uint32_t origin_parent_idx;
-  uint32_t origin_offset;
-  uint32_t origin_length;
+  SyntaqliteLayerOffset origin_offset;
+  SyntaqliteLayerLen origin_length;
 } SyntaqliteMacroArgSegment;
 
 // Number of arg segments recorded on the rewrite at `rewrite_idx`.
@@ -388,20 +392,22 @@ SYNTAQLITE_API const void* syntaqlite_parser_node(SyntaqliteParser* p,
                                                   uint32_t node_id);
 
 // Source slice for the last-completed statement.  Writes the
-// statement's absolute byte offset within the bound source to
+// statement's document-absolute byte offset within the bound source to
 // `*out_offset` (optional) and its length to `*out_len` (optional).
 // Every offset the parser emits for this statement — tokens, comments,
 // node extents, spans, error offset, macro rewrite call offsets — is
 // measured from the returned pointer.  Returns NULL / 0 / 0 when no
 // statement has been produced yet.
-SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
-                                                  uint32_t* out_offset,
-                                                  uint32_t* out_len);
+SYNTAQLITE_API const char* syntaqlite_parser_text(
+    SyntaqliteParser* p,
+    SyntaqliteDocOffset* out_offset,
+    SyntaqliteStmtLen* out_len);
 
 // Full SQL source bound by the last reset() call.  For multi-statement
 // input, this is the whole input.
-SYNTAQLITE_API const char* syntaqlite_parser_full_text(SyntaqliteParser* p,
-                                                       uint32_t* out_len);
+SYNTAQLITE_API const char* syntaqlite_parser_full_text(
+    SyntaqliteParser* p,
+    SyntaqliteDocLen* out_len);
 
 // Post-expansion text for the current statement — materializes the
 // statement's source with every currently-active macro call replaced
@@ -434,12 +440,12 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
 typedef struct SyntaqliteTracebackFrame {
   const char* name;
   uint32_t name_len;
-  uint32_t line;
-  uint32_t col;
+  SyntaqliteLineNumber line;
+  SyntaqliteColumnNumber col;
   const char* snippet;
-  uint32_t snippet_len;
-  uint32_t offset_in_snippet;
-  uint32_t length_in_snippet;
+  SyntaqliteLayerLen snippet_len;
+  SyntaqliteLayerOffset offset_in_snippet;
+  SyntaqliteLayerLen length_in_snippet;
 } SyntaqliteTracebackFrame;
 
 // Build a traceback for a span and return a pointer to a parser-owned

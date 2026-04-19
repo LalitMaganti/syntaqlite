@@ -14,6 +14,43 @@ extern "C" {
 
 #define SYNTAQLITE_NULL_NODE 0xFFFFFFFFu
 
+// ── Position / length / index typedefs ───────────────────────────────────────
+//
+// These typedefs are documentation aliases over `uint32_t` — they describe
+// what *kind* of value a field or parameter holds (which is essential when
+// reading the API at a glance) without changing the binary layout or
+// imposing any compile-time enforcement.  Mixing them at the call site is
+// not a type error in C.
+//
+// The kinds (all byte-based; UTF-16 positions are LSP-only and live on the
+// Rust side):
+//   - Stmt*       — byte offset/length measured from the start of the
+//                   current statement's source slice
+//                   (`syntaqlite_parser_text`).
+//   - Doc*        — byte offset/length measured from the start of the full
+//                   bound source (`syntaqlite_parser_full_text`).
+//   - Layer*      — byte offset/length measured from the start of an
+//                   expansion layer's internal buffer (e.g.
+//                   `SyntaqliteTextSpan`, `SyntaqliteMacroArgSegment`).
+//                   Resolve via the parser's span accessors; never use
+//                   directly as a source offset.
+//   - TokenIdx    — 0-based index into a statement's token stream.
+//   - LineNumber / ColumnNumber — 1-based, with `0` meaning "unknown".
+
+typedef uint32_t SyntaqliteStmtOffset;
+typedef uint32_t SyntaqliteStmtLen;
+
+typedef uint32_t SyntaqliteDocOffset;
+typedef uint32_t SyntaqliteDocLen;
+
+typedef uint32_t SyntaqliteLayerOffset;
+typedef uint32_t SyntaqliteLayerLen;
+
+typedef uint32_t SyntaqliteTokenIdx;
+
+typedef uint32_t SyntaqliteLineNumber;
+typedef uint32_t SyntaqliteColumnNumber;
+
 typedef uint32_t SyntaqliteCompletionContext;
 #define SYNTAQLITE_COMPLETION_CONTEXT_UNKNOWN ((SyntaqliteCompletionContext)0)
 #define SYNTAQLITE_COMPLETION_CONTEXT_EXPRESSION \
@@ -37,8 +74,8 @@ typedef uint32_t SyntaqliteCompletionContext;
 //     → innermost expansion chain for diagnostics, with argument-level
 //     drill-through fidelity for spans inside substituted macro args.
 typedef struct SyntaqliteTextSpan {
-  uint32_t offset;
-  uint32_t length;
+  SyntaqliteLayerOffset offset;
+  SyntaqliteLayerLen length;
   uint32_t flags;
   uint32_t _layer_id;  // Internal: 0 = source, >0 = macro expansion layer.
 } SyntaqliteTextSpan;
