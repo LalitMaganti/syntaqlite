@@ -115,9 +115,13 @@ static void dump_node_recursive(DumpBuf* b,
           dump_printf(b, mem, "%s: (none)\n", fm->name);
         } else {
           const char* base =
+#ifdef SYNTAQLITE_OMIT_MACROS
+              p->stmt_source;
+#else
               sp._layer_id == 0
                   ? p->stmt_source
                   : p->macro.layers.data[sp._layer_id].expansion_data;
+#endif
           dump_printf(b, mem, "%s: \"%.*s\"\n", fm->name, (int)sp.length,
                       base + sp.offset);
         }

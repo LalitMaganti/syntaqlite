@@ -401,7 +401,7 @@ SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
 // Full SQL source bound by the last reset() call.  For multi-statement
 // input, this is the whole input.
 SYNTAQLITE_API const char* syntaqlite_parser_full_text(SyntaqliteParser* p,
-                                                      uint32_t* out_len);
+                                                       uint32_t* out_len);
 
 // Post-expansion text for the current statement — materializes the
 // statement's source with every currently-active macro call replaced

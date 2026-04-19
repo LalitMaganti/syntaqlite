@@ -532,17 +532,15 @@ mod tests {
         let parser = Parser::new();
         let mut session = parser.parse("CREATE TABLE t(x);\n  SELECT * FROM t;");
 
-        let first = match session.next() {
-            ParseOutcome::Ok(stmt) => stmt,
-            _ => panic!("first statement should parse"),
+        let ParseOutcome::Ok(first) = session.next() else {
+            panic!("first statement should parse");
         };
         assert_eq!(first.text(), "CREATE TABLE t(x);");
         assert_eq!(first.statement_base_offset(), 0);
         assert_eq!(first.full_text(), "CREATE TABLE t(x);\n  SELECT * FROM t;");
 
-        let second = match session.next() {
-            ParseOutcome::Ok(stmt) => stmt,
-            _ => panic!("second statement should parse"),
+        let ParseOutcome::Ok(second) = session.next() else {
+            panic!("second statement should parse");
         };
         assert_eq!(second.text(), "SELECT * FROM t;");
         assert_eq!(second.statement_base_offset(), 21);
@@ -553,9 +551,8 @@ mod tests {
     fn statement_text_includes_leading_comments() {
         let parser = Parser::new();
         let mut session = parser.parse("/* hi */ SELECT 1;");
-        let stmt = match session.next() {
-            ParseOutcome::Ok(s) => s,
-            _ => panic!("should parse"),
+        let ParseOutcome::Ok(stmt) = session.next() else {
+            panic!("should parse");
         };
         assert_eq!(stmt.text(), "/* hi */ SELECT 1;");
         assert_eq!(stmt.statement_base_offset(), 0);
@@ -1126,8 +1123,8 @@ mod tests {
         assert_eq!(r.expansion(), "42");
         // call_offset is relative to stmt.text() for source-parent rewrites.
         let stmt_text = stmt.text();
-        let call_text = &stmt_text
-            [r.call_offset() as usize..(r.call_offset() + r.call_length()) as usize];
+        let call_text =
+            &stmt_text[r.call_offset() as usize..(r.call_offset() + r.call_length()) as usize];
         assert_eq!(call_text, "id!(42)");
     }
 

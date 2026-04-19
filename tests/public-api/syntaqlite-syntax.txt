@@ -923,6 +923,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id:
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::is_macro_free(&self) -> bool
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a>
@@ -933,6 +934,8 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaql
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_node(&self) -> core::option::Option<syntaqlite_syntax::any::AnyNode<'_>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_expanded_text(&self, span: syntaqlite_syntax::any::TextSpan) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, u32)
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, usize, usize)
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base_offset(&self) -> u32
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::token_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = (u32, u32)> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&mut self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'_, 'a>
@@ -1657,21 +1660,24 @@ pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::length(&self) -> core::
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::message(&self) -> &str
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::offset(&self) -> core::option::Option<usize>
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::recovery_root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
+pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::statement_base_offset(&self) -> u32
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::arena_result(&self) -> syntaqlite_syntax::any::AnyParsedStatement<'_>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::drop(&mut self)
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::expanded_text(&self) -> &str
+pub fn syntaqlite_syntax::typed::TypedParseSession<G>::full_text(&self) -> &str
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::next(&mut self) -> syntaqlite_syntax::ParseOutcome<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::set_macro_lookup(&mut self, handler: core::option::Option<alloc::boxed::Box<dyn syntaqlite_syntax::MacroLookup>>)
-pub fn syntaqlite_syntax::typed::TypedParseSession<G>::text(&self) -> &str
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::dump(&self, out: &mut alloc::string::String, indent: usize)
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::erase(self) -> syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::expanded_text(&self) -> &'a str
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::full_text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::leading_comments(&self, token_idx: u32) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a, G>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::statement_base_offset(&self) -> u32
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::trailing_comments(&self, token_idx: u32) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>

@@ -531,8 +531,10 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
       p->had_comment = 1;
       if (p->collect_tokens)
         synq_parser_record_comment(p, cur_offset, (uint32_t)cur_len);
-      cur_len = next_token(p, z, cur_offset + (uint32_t)cur_len, &cur_offset,
-                           &cur_type);
+      // Advance p->offset so this comment is covered by stmt_end_offset
+      // (otherwise text() would not span trailing/comment-only comments).
+      p->offset = cur_offset + (uint32_t)cur_len;
+      cur_len = next_token(p, z, p->offset, &cur_offset, &cur_type);
       continue;
     }
 
@@ -821,26 +823,29 @@ static void append_expanded_range(SyntaqliteParser* p,
 #endif
 
 SYNTAQLITE_API const char* syntaqlite_parser_full_text(SyntaqliteParser* p,
-                                                      uint32_t* out_len) {
+                                                       uint32_t* out_len) {
   if (out_len) {
     *out_len = p->source_len;
   }
   return p->source;
 }
 
-SYNTAQLITE_API const char* syntaqlite_parser_text(
-    SyntaqliteParser* p,
-    uint32_t* out_offset,
-    uint32_t* out_len) {
+SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
+                                                  uint32_t* out_offset,
+                                                  uint32_t* out_len) {
   if (p->stmt_start_offset == UINT32_MAX ||
       p->stmt_end_offset <= p->stmt_start_offset ||
       p->stmt_end_offset > p->source_len) {
-    if (out_offset) *out_offset = 0;
-    if (out_len) *out_len = 0;
+    if (out_offset)
+      *out_offset = 0;
+    if (out_len)
+      *out_len = 0;
     return NULL;
   }
-  if (out_offset) *out_offset = p->stmt_start_offset;
-  if (out_len) *out_len = p->stmt_end_offset - p->stmt_start_offset;
+  if (out_offset)
+    *out_offset = p->stmt_start_offset;
+  if (out_len)
+    *out_len = p->stmt_end_offset - p->stmt_start_offset;
   return p->stmt_source;
 }
 
@@ -897,7 +902,8 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
     // parser_next updates it during tokenization but feed_token never
     // touches it otherwise.
     uint32_t tok_end = (uint32_t)(text - p->source) + len;
-    if (tok_end > p->offset) p->offset = tok_end;
+    if (tok_end > p->offset)
+      p->offset = tok_end;
   }
 
   // Skip whitespace and comments without feeding to Lemon.

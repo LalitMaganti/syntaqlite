@@ -119,7 +119,7 @@ fn feed_token_records_comment() {
 }
 
 /// Leading `TK_SPACE` fed via `feed_token` should NOT open the statement:
-/// stmt_start should match parser_next semantics (first significant byte).
+/// `stmt_start` should match `parser_next` semantics (first significant byte).
 /// This keeps statement-relative offsets consistent between the tokenizer-
 /// driven and incremental paths.
 #[test]
