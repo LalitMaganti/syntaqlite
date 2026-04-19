@@ -8,6 +8,8 @@
 use std::collections::{HashMap, HashSet};
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
+#[cfg(feature = "lsp")]
+use syntaqlite_syntax::source::DocRange;
 
 use super::ddl::DdlReader;
 use crate::dialect::AnyDialect;
@@ -103,10 +105,8 @@ impl From<DialectFunctionCategory> for FunctionCategory {
 pub(crate) struct DefinitionSite {
     /// File URI (e.g. `"file:///path/to/schema.sql"`).
     pub file_uri: String,
-    /// Byte offset of the start of the name in the source file.
-    pub start: usize,
-    /// Byte offset of the end of the name in the source file.
-    pub end: usize,
+    /// Document-absolute byte range of the name in the source file.
+    pub range: DocRange,
 }
 
 #[derive(Debug, Clone)]
@@ -876,7 +876,7 @@ impl Catalog {
     ) {
         let Some(uri) = file_uri else { return };
         let reader = DdlReader::new(stmt, dialect.roles());
-        let Some((name, start, end)) = reader.name_span(root) else {
+        let Some((name, range)) = reader.name_span(root) else {
             return;
         };
         let Some(entry) = self.layers[CatalogLayer::Database.index()]
@@ -887,16 +887,14 @@ impl Catalog {
         };
         entry.definition_site = Some(DefinitionSite {
             file_uri: uri.to_string(),
-            start,
-            end,
+            range,
         });
-        for (col_name, col_start, col_end) in reader.column_spans(root) {
+        for (col_name, col_range) in reader.column_spans(root) {
             entry.column_definition_sites.insert(
                 col_name,
                 DefinitionSite {
                     file_uri: uri.to_string(),
-                    start: col_start,
-                    end: col_end,
+                    range: col_range,
                 },
             );
         }

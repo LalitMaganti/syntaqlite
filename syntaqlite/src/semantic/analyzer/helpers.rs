@@ -5,6 +5,9 @@
 //! span lookup, macro registration extraction, rowid aliasing.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParseError, AnyParsedStatement, FieldValue};
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
+use syntaqlite_syntax::source::StatementBase;
+use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, StmtLen};
 
 use crate::dialect::{FIELD_ABSENT, MacroDef, SemanticRole};
 #[cfg(feature = "lsp")]
@@ -62,14 +65,13 @@ pub(super) fn format_arity(name: &str, arity: AritySpec) -> String {
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 pub(super) fn collect_tokens<'a>(
     iter: impl Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>>,
-    stmt_base: u32,
+    stmt_base: StatementBase,
     tokens: &mut Vec<StoredToken>,
 ) {
-    let base = stmt_base as usize;
     for tok in iter {
         tokens.push(StoredToken {
-            offset: base + tok.offset() as usize,
-            length: tok.length() as usize,
+            offset: tok.offset().to_doc(stmt_base),
+            length: tok.length().into(),
             token_type: tok.token_type(),
             flags: tok.flags(),
         });
@@ -79,34 +81,50 @@ pub(super) fn collect_tokens<'a>(
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 pub(super) fn collect_comments<'a>(
     iter: impl Iterator<Item = syntaqlite_syntax::Comment<'a>>,
-    stmt_base: u32,
+    stmt_base: StatementBase,
     comments: &mut Vec<StoredComment>,
 ) {
-    let base = stmt_base as usize;
     for c in iter {
         comments.push(StoredComment {
-            offset: base + c.offset() as usize,
-            length: c.length() as usize,
+            offset: c.offset().to_doc(stmt_base),
+            length: c.length().into(),
         });
     }
 }
 
-pub(super) fn parse_error_span(err: &AnyParseError<'_>, source: &str) -> (usize, usize) {
-    let base = err.statement_base_offset() as usize;
+pub(super) fn parse_error_span(err: &AnyParseError<'_>, source: &str) -> DocRange {
+    let base = err.statement_base();
+    let source_end = DocOffset::from_raw(u32::try_from(source.len()).unwrap_or(u32::MAX));
     match (err.offset(), err.length()) {
-        (Some(off), Some(len)) if len > 0 => (base + off, base + off + len),
+        (Some(off), Some(len)) if len > StmtLen::default() => {
+            let start = off.to_doc(base);
+            DocRange::from_offset_len(start, len.into())
+        }
         (Some(off), _) => {
-            let abs = base + off;
-            if abs >= source.len() && !source.is_empty() {
-                (source.len() - 1, source.len())
+            let abs = off.to_doc(base);
+            if abs >= source_end && !source.is_empty() {
+                DocRange {
+                    start: source_end - DocLen::from_raw(1),
+                    end: source_end,
+                }
             } else {
-                (abs, (abs + 1).min(source.len()))
+                DocRange {
+                    start: abs,
+                    end: std::cmp::min(abs + DocLen::from_raw(1), source_end),
+                }
             }
         }
         _ => {
-            let end = source.len();
-            let start = if end > 0 { end - 1 } else { 0 };
-            (start, end)
+            let one = DocLen::from_raw(1);
+            let start = if source_end > DocOffset::default() {
+                source_end - one
+            } else {
+                DocOffset::default()
+            };
+            DocRange {
+                start,
+                end: source_end,
+            }
         }
     }
 }

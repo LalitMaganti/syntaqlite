@@ -9,6 +9,7 @@ use std::ops::Deref;
 use syntaqlite::Diagnostic;
 use syntaqlite::any::{AnyDialect, AnyParser, ParseOutcome};
 use syntaqlite::semantic::{DiagnosticMessage, Severity};
+use syntaqlite::source::StmtRange;
 use syntaqlite::util::DiagnosticRenderer;
 use syntaqlite_syntax::any::AnyDialect as SyntaxAnyDialect;
 use syntaqlite_syntax::typed::TypedParsedStatement;
@@ -54,11 +55,11 @@ fn parse_source(dialect: &AnyDialect, src: &Source, sink: &mut dyn Sink) -> Vec<
         match session.next() {
             ParseOutcome::Ok(stmt) => sink.on_stmt(StmtView { inner: stmt }),
             ParseOutcome::Err(err) => {
-                let start = err.offset().unwrap_or(0);
-                let end = start + err.length().unwrap_or(0);
+                let start = err.offset().unwrap_or_default();
+                let length = err.length().unwrap_or_default();
+                let range = StmtRange::from_offset_len(start, length).to_doc(err.statement_base());
                 errors.push(Diagnostic::new(
-                    start,
-                    end,
+                    range,
                     DiagnosticMessage::ParseError(err.message().to_string()),
                     Severity::Error,
                     None,

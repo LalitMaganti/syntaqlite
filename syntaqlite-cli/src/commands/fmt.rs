@@ -155,11 +155,9 @@ impl<'a> FmtRun<'a> {
 }
 
 fn render_format_error(e: &FormatError, source: &str, file: &str) {
-    let start = e.offset().unwrap_or(0);
-    let end = start + e.length().unwrap_or(0);
+    let range = e.range().unwrap_or_default();
     let diag = Diagnostic::new(
-        start,
-        end,
+        range,
         DiagnosticMessage::ParseError(e.message().to_owned()),
         Severity::Error,
         None,

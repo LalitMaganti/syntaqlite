@@ -11,6 +11,7 @@ use std::collections::HashSet;
 
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{AnyParser, AnyTokenType, TokenCategory};
+use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, DocText};
 
 use crate::dialect::AnyDialect;
 use crate::semantic::model::{CompletionContext, CompletionInfo, SemanticModel, StoredToken};
@@ -19,18 +20,23 @@ use crate::semantic::model::{CompletionContext, CompletionInfo, SemanticModel, S
 pub(crate) fn completion_info(
     dialect: &AnyDialect,
     model: &SemanticModel,
-    offset: usize,
+    offset: DocOffset,
 ) -> CompletionInfo {
-    let source = model.source();
+    let source = DocText::new(model.source());
     let tokens = &model.tokens;
-    let cursor = offset.min(source.len());
+    let end_of_doc = source.byte_len();
+    let cursor = if offset.as_usize() > end_of_doc.as_usize() {
+        DocOffset::default() + end_of_doc
+    } else {
+        offset
+    };
     let (boundary, backtracked) = completion_boundary(source, tokens, cursor);
     let start = statement_token_start(tokens, boundary);
     let stmt_tokens = &tokens[start..boundary];
 
     let syntax = (**dialect).clone();
     let parser = AnyParser::with_config(syntax, &ParserConfig::default());
-    let mut cursor_p = parser.incremental_parse(source);
+    let mut cursor_p = parser.incremental_parse(source.as_str());
     // Do not call expected_tokens() before feeding any tokens: the C parser
     // returns a garbage `total` count when no tokens have been fed yet,
     // which would trigger a multi-GiB allocation and SIGKILL.
@@ -74,14 +80,20 @@ pub(crate) fn completion_info(
 /// If the last two tokens are `Identifier` then `.`, return the identifier
 /// text as the qualifier (used to detect `table.` prefixes for qualified
 /// column completion).
-fn detect_qualifier(source: &str, tokens: &[StoredToken], dialect: &AnyDialect) -> Option<String> {
+fn detect_qualifier(
+    source: &DocText,
+    tokens: &[StoredToken],
+    dialect: &AnyDialect,
+) -> Option<String> {
     if tokens.len() < 2 {
         return None;
     }
     let dot_tok = &tokens[tokens.len() - 1];
     let ident_tok = &tokens[tokens.len() - 2];
 
-    if dot_tok.length != 1 || source.as_bytes().get(dot_tok.offset) != Some(&b'.') {
+    if dot_tok.length != DocLen::from_raw(1)
+        || source.as_str().as_bytes().get(dot_tok.offset.as_usize()) != Some(&b'.')
+    {
         return None;
     }
 
@@ -90,20 +102,20 @@ fn detect_qualifier(source: &str, tokens: &[StoredToken], dialect: &AnyDialect) 
         return None;
     }
 
-    let name = &source[ident_tok.offset..ident_tok.offset + ident_tok.length];
+    let name = &source[DocRange::from_offset_len(ident_tok.offset, ident_tok.length)];
     Some(name.to_string())
 }
 
 fn completion_boundary(
-    source: &str,
+    source: &DocText,
     tokens: &[StoredToken],
-    cursor_offset: usize,
+    cursor_offset: DocOffset,
 ) -> (usize, bool) {
     let mut boundary = tokens.partition_point(|t| t.offset + t.length <= cursor_offset);
 
     while boundary > 0 {
         let tok = &tokens[boundary - 1];
-        if tok.length == 0 && tok.offset == cursor_offset {
+        if tok.length == DocLen::default() && tok.offset == cursor_offset {
             boundary -= 1;
         } else {
             break;
@@ -113,9 +125,9 @@ fn completion_boundary(
     let mut backtracked = false;
     if boundary > 0
         && tokens[boundary - 1].offset + tokens[boundary - 1].length == cursor_offset
-        && cursor_offset > 0
+        && cursor_offset > DocOffset::default()
     {
-        let prev = source.as_bytes()[cursor_offset - 1];
+        let prev = source.as_str().as_bytes()[cursor_offset.as_usize() - 1];
         if prev.is_ascii_alphanumeric() || prev == b'_' {
             boundary -= 1;
             backtracked = true;
@@ -154,20 +166,20 @@ mod tests {
     #[test]
     fn detect_qualifier_basic() {
         let dialect = crate::sqlite::dialect::dialect();
-        let source = "SELECT t1.";
+        let source = DocText::new("SELECT t1.");
         let id_type = AnyTokenType::from(syntaqlite_syntax::TokenType::Id);
         let dot_type = AnyTokenType::from(syntaqlite_syntax::TokenType::Dot);
 
         let tokens = vec![
             StoredToken {
-                offset: 7,
-                length: 2,
+                offset: DocOffset::from_raw(7),
+                length: DocLen::from_raw(2),
                 token_type: id_type,
                 flags: ParserTokenFlags::default(),
             },
             StoredToken {
-                offset: 9,
-                length: 1,
+                offset: DocOffset::from_raw(9),
+                length: DocLen::from_raw(1),
                 token_type: dot_type,
                 flags: ParserTokenFlags::default(),
             },

@@ -3,8 +3,9 @@
 
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, ParseOutcome,
+    AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, AnyTokenizer, ParseOutcome,
 };
+use syntaqlite_syntax::source::{DocLen, DocRange};
 
 use super::FormatConfig;
 use super::FormatError;
@@ -12,6 +13,21 @@ use super::comment::{CommentCtx, CommentEntry, TokenEntry};
 use super::doc::{DocArena, DocId, NIL_DOC, RenderBuffers};
 use super::interpret::{FmtCtx, InterpretScratch};
 use crate::dialect::AnyDialect;
+
+/// Convert a parse error (statement-relative offsets) to a
+/// [`FormatError`] with a document-absolute range.
+fn parse_error_to_format_error(e: &AnyParseError<'_>) -> FormatError {
+    let base = e.statement_base();
+    let range = match (e.offset(), e.length()) {
+        (Some(off), Some(len)) => Some(DocRange::from_offset_len(off.to_doc(base), len.into())),
+        (Some(off), None) => Some(DocRange::from_offset_len(
+            off.to_doc(base),
+            DocLen::default(),
+        )),
+        _ => None,
+    };
+    FormatError::new(e.message().to_owned(), range)
+}
 
 /// High-level SQL formatter that pretty-prints SQL source text.
 ///
@@ -131,21 +147,21 @@ impl Formatter {
         self.comment_entries.clear();
         self.comment_entries
             .extend(erased.comment_spans().map(|c| CommentEntry {
-                offset: c.offset(),
-                length: c.length(),
+                offset: c.offset().as_u32(),
+                length: c.length().as_u32(),
                 kind: c.kind(),
                 side: c.side(),
             }));
         self.token_entries.clear();
-        self.token_entries.extend(
-            erased
-                .token_spans()
-                .map(|(offset, length)| TokenEntry { offset, length }),
-        );
+        self.token_entries
+            .extend(erased.token_spans().map(|range| TokenEntry {
+                offset: range.start.as_u32(),
+                length: range.len().as_u32(),
+            }));
         self.macro_rewrites.extend(
             erased
                 .macro_rewrites()
-                .map(|r| (r.call_offset(), r.call_length())),
+                .map(|r| (r.call_offset().as_u32(), r.call_length().as_u32())),
         );
     }
 
@@ -185,17 +201,13 @@ impl Formatter {
                 ParseOutcome::Done => break,
                 ParseOutcome::Ok(stmt) => stmt,
                 ParseOutcome::Err(e) => {
-                    return Err(FormatError {
-                        message: e.message().to_owned(),
-                        offset: e.offset(),
-                        length: e.length(),
-                    });
+                    return Err(parse_error_to_format_error(&e));
                 }
             };
 
             let erased = stmt.erase();
             self.collect_side_channels(&erased);
-            let stmt_source = erased.text();
+            let stmt_source = erased.text().as_str();
 
             let root_id = erased.root_id();
             let semicolons = self.config.semicolons;
@@ -306,11 +318,7 @@ impl Formatter {
                 ParseOutcome::Done => break,
                 ParseOutcome::Ok(stmt) => stmt,
                 ParseOutcome::Err(e) => {
-                    return Err(FormatError {
-                        message: e.message().to_owned(),
-                        offset: e.offset(),
-                        length: e.length(),
-                    });
+                    return Err(parse_error_to_format_error(&e));
                 }
             };
 
@@ -427,11 +435,7 @@ impl Formatter {
                 ParseOutcome::Done => break,
                 ParseOutcome::Ok(stmt) => stmt,
                 ParseOutcome::Err(e) => {
-                    return Err(FormatError {
-                        message: e.message().to_owned(),
-                        offset: e.offset(),
-                        length: e.length(),
-                    });
+                    return Err(parse_error_to_format_error(&e));
                 }
             };
 
@@ -461,7 +465,7 @@ impl Formatter {
             let mut arena = DocArena::recycle(prev_arena);
             self.parts.clear();
 
-            let stmt_source = erased.text();
+            let stmt_source = erased.text().as_str();
             if stmt_num > 0 {
                 emit_stmt_separator(
                     comment_ctx.as_ref(),

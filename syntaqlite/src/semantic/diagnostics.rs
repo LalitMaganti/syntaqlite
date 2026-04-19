@@ -7,6 +7,8 @@
 //! optional "did you mean?" suggestions. Both parse errors and semantic
 //! issues (unknown table, wrong arity, etc.) are represented uniformly.
 
+use crate::source::{DocOffset, DocRange, LayerRange};
+
 /// A diagnostic produced by parsing or semantic analysis.
 ///
 /// Every diagnostic carries a byte-offset range into the source text,
@@ -33,8 +35,8 @@
 ///     println!(
 ///         "[{:?}] bytes {}..{}: {}",
 ///         diag.severity(),
-///         diag.start_offset(),
-///         diag.end_offset(),
+///         diag.range().start,
+///         diag.range().end,
 ///         diag.message(),
 ///     );
 ///     if let Some(help) = diag.help() {
@@ -52,18 +54,15 @@ pub struct DiagnosticFrame {
     /// Buffer text — the original source for the outermost frame, or an
     /// expansion buffer for inner frames.
     pub buffer: String,
-    /// Byte offset of this frame's span within `buffer`.
-    pub start: usize,
-    /// Byte offset of the end of this frame's span within `buffer`.
-    pub end: usize,
+    /// Byte range within `buffer` for this frame's span.
+    pub range: LayerRange,
 }
 
 /// A semantic diagnostic produced by validation, with location, message,
 /// severity, optional help, and an optional macro expansion traceback.
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
-    pub(crate) start_offset: usize,
-    pub(crate) end_offset: usize,
+    pub(crate) range: DocRange,
     pub(crate) message: DiagnosticMessage,
     pub(crate) severity: Severity,
     pub(crate) help: Option<Help>,
@@ -76,15 +75,13 @@ pub struct Diagnostic {
 impl Diagnostic {
     /// Create a new diagnostic.
     pub fn new(
-        start_offset: usize,
-        end_offset: usize,
+        range: DocRange,
         message: DiagnosticMessage,
         severity: Severity,
         help: Option<Help>,
     ) -> Self {
         Self {
-            start_offset,
-            end_offset,
+            range,
             message,
             severity,
             help,
@@ -92,13 +89,17 @@ impl Diagnostic {
         }
     }
 
-    /// Byte offset of the start of the diagnostic range.
-    pub fn start_offset(&self) -> usize {
-        self.start_offset
+    /// Document-absolute byte range of the diagnostic.
+    pub fn range(&self) -> DocRange {
+        self.range
     }
-    /// Byte offset of the end of the diagnostic range.
-    pub fn end_offset(&self) -> usize {
-        self.end_offset
+    /// Document-absolute byte offset of the start of the diagnostic range.
+    pub fn start(&self) -> DocOffset {
+        self.range.start
+    }
+    /// Document-absolute byte offset of the end of the diagnostic range.
+    pub fn end(&self) -> DocOffset {
+        self.range.end
     }
     /// Structured diagnostic message.
     pub fn message(&self) -> &DiagnosticMessage {
@@ -391,8 +392,8 @@ impl serde::Serialize for Diagnostic {
         use serde::ser::SerializeMap;
         let len = if self.help.is_some() { 7 } else { 5 };
         let mut m = serializer.serialize_map(Some(len))?;
-        m.serialize_entry("startOffset", &self.start_offset)?;
-        m.serialize_entry("endOffset", &self.end_offset)?;
+        m.serialize_entry("startOffset", &self.range.start.as_u32())?;
+        m.serialize_entry("endOffset", &self.range.end.as_u32())?;
         m.serialize_entry("message", &self.message.to_string())?;
         m.serialize_entry("detail", &self.message)?;
         m.serialize_entry("severity", &self.severity)?;

@@ -63,8 +63,8 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
         state.c_diagnostics.push(SyntaqliteDiagnostic {
             severity: severity_to_c(d.severity()),
             message: msg.as_ptr(),
-            start_offset: d.start_offset() as u32,
-            end_offset: d.end_offset() as u32,
+            start_offset: d.range().start.as_u32(),
+            end_offset: d.range().end.as_u32(),
             kind_code: diagnostic_code_to_c(d.message()),
         });
     }

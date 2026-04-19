@@ -9,6 +9,7 @@
 
 use syntaqlite::parse::Tokenizer;
 use syntaqlite::parse::{IncrementalParseSession, ParseSession};
+use syntaqlite::source::DocOffset;
 use syntaqlite::{ParseOutcome, Parser};
 
 // ── Parser + ParseSession coexistence ────────────────────────────────────
@@ -60,8 +61,14 @@ fn parser_and_incremental_session_coexist() {
         session,
     };
 
-    s.session.feed_token(TokenType::Select, 0..6);
-    s.session.feed_token(TokenType::Integer, 7..8);
+    s.session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
+    s.session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(7)..DocOffset::from_raw(8),
+    );
     assert!(s.session.finish().is_some());
 }
 
@@ -72,14 +79,26 @@ fn parser_incremental_reuse_after_session_drop() {
     let parser = Parser::new();
     {
         let mut s = parser.incremental_parse("SELECT 1");
-        s.feed_token(TokenType::Select, 0..6);
-        s.feed_token(TokenType::Integer, 7..8);
+        s.feed_token(
+            TokenType::Select,
+            DocOffset::from_raw(0)..DocOffset::from_raw(6),
+        );
+        s.feed_token(
+            TokenType::Integer,
+            DocOffset::from_raw(7)..DocOffset::from_raw(8),
+        );
         assert!(s.finish().is_some());
     }
     {
         let mut s = parser.incremental_parse("SELECT 2");
-        s.feed_token(TokenType::Select, 0..6);
-        s.feed_token(TokenType::Integer, 7..8);
+        s.feed_token(
+            TokenType::Select,
+            DocOffset::from_raw(0)..DocOffset::from_raw(6),
+        );
+        s.feed_token(
+            TokenType::Integer,
+            DocOffset::from_raw(7)..DocOffset::from_raw(8),
+        );
         assert!(s.finish().is_some());
     }
 }

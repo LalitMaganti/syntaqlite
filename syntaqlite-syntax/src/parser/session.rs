@@ -2,6 +2,9 @@
 // Licensed under the Apache License, Version 2.0.
 
 #[cfg(feature = "sqlite")]
+use crate::source::{DocText, StatementBase, StmtLen, StmtOffset, StmtText};
+
+#[cfg(feature = "sqlite")]
 use super::{
     AnyParsedStatement, Comment, IncrementalParseSession, ParseErrorKind, ParseOutcome,
     ParserConfig, ParserTokenFlags, TypedParseError, TypedParseSession, TypedParsedStatement,
@@ -91,13 +94,14 @@ impl Parser {
     /// # Examples
     ///
     /// ```rust
+    /// use syntaqlite_syntax::source::DocOffset;
     /// use syntaqlite_syntax::{Parser, TokenType};
     ///
     /// let parser = Parser::new();
     /// let mut session = parser.incremental_parse("SELECT 1");
     ///
-    /// assert!(session.feed_token(TokenType::Select, 0..6).is_none());
-    /// assert!(session.feed_token(TokenType::Integer, 7..8).is_none());
+    /// assert!(session.feed_token(TokenType::Select, DocOffset::from_raw(0)..DocOffset::from_raw(6)).is_none());
+    /// assert!(session.feed_token(TokenType::Integer, DocOffset::from_raw(7)..DocOffset::from_raw(8)).is_none());
     ///
     /// let stmt = session.finish().and_then(Result::ok).unwrap();
     /// let _ = stmt.root();
@@ -240,13 +244,13 @@ impl<'a> ParserToken<'a> {
         self.0.flags()
     }
 
-    /// Byte offset of the token start within the statement source.
-    pub fn offset(&self) -> u32 {
+    /// Statement-relative byte offset of the token start.
+    pub fn offset(&self) -> StmtOffset {
         self.0.offset()
     }
 
     /// Byte length of the token text.
-    pub fn length(&self) -> u32 {
+    pub fn length(&self) -> StmtLen {
         self.0.length()
     }
 }
@@ -290,18 +294,18 @@ impl<'a> ParsedStatement<'a> {
     }
 
     /// See [`AnyParsedStatement::text`](super::AnyParsedStatement::text).
-    pub fn text(&self) -> &'a str {
+    pub fn text(&self) -> &'a StmtText {
         self.0.text()
     }
 
     /// See [`AnyParsedStatement::full_text`](super::AnyParsedStatement::full_text).
-    pub fn full_text(&self) -> &'a str {
+    pub fn full_text(&self) -> &'a DocText {
         self.0.full_text()
     }
 
-    /// See [`AnyParsedStatement::statement_base_offset`](super::AnyParsedStatement::statement_base_offset).
-    pub fn statement_base_offset(&self) -> u32 {
-        self.0.statement_base_offset()
+    /// See [`AnyParsedStatement::statement_base`](super::AnyParsedStatement::statement_base).
+    pub fn statement_base(&self) -> StatementBase {
+        self.0.statement_base()
     }
 
     /// Post-expansion source — the bound source with every currently-
@@ -421,14 +425,21 @@ impl<'a> ParseError<'a> {
         self.0.message()
     }
 
-    /// Byte offset in the original source, if known.
-    pub fn offset(&self) -> Option<usize> {
+    /// Statement-relative byte offset of the error token, if known.
+    pub fn offset(&self) -> Option<StmtOffset> {
         self.0.offset()
     }
 
     /// Byte length of the offending range, if known.
-    pub fn length(&self) -> Option<usize> {
+    pub fn length(&self) -> Option<StmtLen> {
         self.0.length()
+    }
+
+    /// Document-absolute offset of the failing statement's first byte.
+    /// Combine with [`Self::offset`] / [`Self::length`] to produce a
+    /// document-absolute range.
+    pub fn statement_base(&self) -> StatementBase {
+        self.0.statement_base()
     }
 
     /// Partial AST recovered from invalid input, if available.
@@ -439,12 +450,12 @@ impl<'a> ParseError<'a> {
     }
 
     /// Source slice for just the failing statement.
-    pub fn text(&self) -> &'a str {
+    pub fn text(&self) -> &'a StmtText {
         self.0.0.text()
     }
 
     /// Full SQL source bound to the parse session.
-    pub fn full_text(&self) -> &'a str {
+    pub fn full_text(&self) -> &'a DocText {
         self.0.0.full_text()
     }
 
@@ -482,6 +493,8 @@ mod tests {
     use std::collections::HashMap;
     use std::panic::{self, AssertUnwindSafe};
     use std::rc::Rc;
+
+    use crate::source::{LayerLen, LayerOffset};
 
     use super::{ParseErrorKind, ParseOutcome, Parser, ParserConfig, ParserToken};
     use crate::parser::{MacroArg, MacroLookup, MacroOutput};
@@ -536,14 +549,14 @@ mod tests {
             panic!("first statement should parse");
         };
         assert_eq!(first.text(), "CREATE TABLE t(x);");
-        assert_eq!(first.statement_base_offset(), 0);
+        assert_eq!(first.statement_base().as_doc_offset().as_u32(), 0);
         assert_eq!(first.full_text(), "CREATE TABLE t(x);\n  SELECT * FROM t;");
 
         let ParseOutcome::Ok(second) = session.next() else {
             panic!("second statement should parse");
         };
         assert_eq!(second.text(), "SELECT * FROM t;");
-        assert_eq!(second.statement_base_offset(), 21);
+        assert_eq!(second.statement_base().as_doc_offset().as_u32(), 21);
         assert_eq!(second.full_text(), "CREATE TABLE t(x);\n  SELECT * FROM t;");
     }
 
@@ -555,7 +568,7 @@ mod tests {
             panic!("should parse");
         };
         assert_eq!(stmt.text(), "/* hi */ SELECT 1;");
-        assert_eq!(stmt.statement_base_offset(), 0);
+        assert_eq!(stmt.statement_base().as_doc_offset().as_u32(), 0);
     }
 
     #[test]
@@ -1122,9 +1135,15 @@ mod tests {
         assert_eq!(r.name(), "id");
         assert_eq!(r.expansion(), "42");
         // call_offset is relative to stmt.text() for source-parent rewrites.
+        // call_offset is a LayerOffset (generic "byte offset in parent's
+        // text"); at the top level the parent is the statement, so the
+        // pair reinterprets as a StmtRange.
         let stmt_text = stmt.text();
-        let call_text =
-            &stmt_text[r.call_offset() as usize..(r.call_offset() + r.call_length()) as usize];
+        let call_range = crate::source::StmtRange::from_offset_len(
+            crate::source::StmtOffset::from_raw(r.call_offset().as_u32()),
+            crate::source::StmtLen::from_raw(r.call_length().as_u32()),
+        );
+        let call_text = &stmt_text[call_range];
         assert_eq!(call_text, "id!(42)");
     }
 
@@ -1155,19 +1174,22 @@ mod tests {
         let outer = &rewrites[0];
         assert_eq!(outer.parent(), None);
         assert_eq!(outer.name(), "mwrap");
-        let outer_call = &source
-            [outer.call_offset() as usize..(outer.call_offset() + outer.call_length()) as usize];
+        let outer_range =
+            crate::source::LayerRange::from_offset_len(outer.call_offset(), outer.call_length());
+        let outer_call = &source[outer_range.start.as_usize()..outer_range.end.as_usize()];
         assert_eq!(outer_call, "mwrap!(42)");
         assert_eq!(outer.expansion(), "mpass!(42)");
 
         // mpass is nested inside mwrap; call_offset/call_length are into
-        // outer.expansion().
+        // outer.expansion() — the nested-rewrite case where parent is a
+        // LayerText, and the Index<LayerRange> impl slices directly.
         let inner = &rewrites[1];
         assert_eq!(inner.parent(), Some(0));
         assert_eq!(inner.name(), "mpass");
         let outer_exp = outer.expansion();
-        let inner_call = &outer_exp
-            [inner.call_offset() as usize..(inner.call_offset() + inner.call_length()) as usize];
+        let inner_range =
+            crate::source::LayerRange::from_offset_len(inner.call_offset(), inner.call_length());
+        let inner_call = &outer_exp[inner_range];
         assert_eq!(inner_call, "mpass!(42)");
         assert_eq!(inner.expansion(), "42");
     }
@@ -1199,15 +1221,16 @@ mod tests {
         assert_eq!(segs.len(), 1, "$x is the only substitution in ($x)");
         let seg = &segs[0];
         // Authored body is "($x)" — $x sits at offset 1, length 2.
-        assert_eq!(seg.body_offset(), 1);
-        assert_eq!(seg.body_length(), 2);
+        assert_eq!(seg.body_offset(), LayerOffset::from_raw(1));
+        assert_eq!(seg.body_length(), LayerLen::from_raw(2));
         // Expansion buffer is "(42)" — arg text sits at offset 1, length 2.
-        assert_eq!(seg.expansion_offset(), 1);
-        assert_eq!(seg.expansion_length(), 2);
+        assert_eq!(seg.expansion_offset(), LayerOffset::from_raw(1));
+        assert_eq!(seg.expansion_length(), LayerLen::from_raw(2));
         // Origin is the authored source.
         assert_eq!(seg.origin_parent(), None);
-        let origin_text = &source
-            [seg.origin_offset() as usize..(seg.origin_offset() + seg.origin_length()) as usize];
+        let off = seg.origin_offset().as_usize();
+        let len = seg.origin_length().as_usize();
+        let origin_text = &source[off..off + len];
         assert_eq!(origin_text, "42");
     }
 
@@ -1254,9 +1277,12 @@ mod tests {
         // The nested n!(42) call lives entirely inside m's substituted
         // $x arg — call_offset/length are in the post-substitution
         // expansion buffer, but there's no clean position in m's
-        // authored body "($x)".  u32::MAX is the arg-internal sentinel.
-        assert_eq!(inner.body_call_offset(), u32::MAX);
-        assert_eq!(inner.body_call_length(), u32::MAX);
+        // authored body "($x)".  The arg-internal sentinel signals this.
+        assert_eq!(
+            inner.body_call_offset(),
+            crate::MACRO_BODY_CALL_ARG_INTERNAL
+        );
+        assert_eq!(inner.body_call_length(), LayerLen::from_raw(u32::MAX));
     }
 
     #[test]
@@ -1287,8 +1313,8 @@ mod tests {
         assert_eq!(inner.name(), "leaf");
         assert_eq!(inner.parent(), Some(0));
         // `leaf!(7)` sits at offset 5 in the authored body "$a + leaf!(7)".
-        assert_eq!(inner.body_call_offset(), 5);
-        assert_eq!(inner.body_call_length(), 8);
+        assert_eq!(inner.body_call_offset(), LayerOffset::from_raw(5));
+        assert_eq!(inner.body_call_length(), LayerLen::from_raw(8));
     }
 
     #[test]
@@ -1321,8 +1347,8 @@ mod tests {
         let inner = &rewrites[1];
         assert_eq!(inner.name(), "leaf");
         assert_eq!(inner.parent(), Some(0));
-        assert_eq!(inner.body_call_offset(), 5);
-        assert_eq!(inner.body_call_length(), 13);
+        assert_eq!(inner.body_call_offset(), LayerOffset::from_raw(5));
+        assert_eq!(inner.body_call_length(), LayerLen::from_raw(13));
     }
 
     #[test]
@@ -1364,8 +1390,13 @@ mod tests {
         let m_segs: Vec<_> = rewrites[0].arg_segments().collect();
         assert_eq!(m_segs.len(), 1);
         assert_eq!(m_segs[0].origin(), ArgOrigin::Source);
-        let m_arg_text = &stmt_text[m_segs[0].origin_offset() as usize
-            ..(m_segs[0].origin_offset() + m_segs[0].origin_length()) as usize];
+        // Arg-segment origin_offset is a LayerOffset; at Source origin
+        // the "layer" is the statement, so reinterpret as StmtRange.
+        let m_arg_range = crate::source::StmtRange::from_offset_len(
+            crate::source::StmtOffset::from_raw(m_segs[0].origin_offset().as_u32()),
+            crate::source::StmtLen::from_raw(m_segs[0].origin_length().as_u32()),
+        );
+        let m_arg_text = &stmt_text[m_arg_range];
         assert_eq!(m_arg_text, "n!(nonexistent_col)");
 
         // n's arg segment origin is m's expansion buffer — one link in
@@ -1375,8 +1406,11 @@ mod tests {
         assert_eq!(n_segs.len(), 1);
         assert_eq!(n_segs[0].origin(), ArgOrigin::Rewrite(0));
         let m_expansion = rewrites[0].expansion();
-        let n_arg_in_m_expansion = &m_expansion[n_segs[0].origin_offset() as usize
-            ..(n_segs[0].origin_offset() + n_segs[0].origin_length()) as usize];
+        let n_arg_range = crate::source::LayerRange::from_offset_len(
+            n_segs[0].origin_offset(),
+            n_segs[0].origin_length(),
+        );
+        let n_arg_in_m_expansion = &m_expansion[n_arg_range];
         assert_eq!(n_arg_in_m_expansion, "nonexistent_col");
 
         // Walk the chain: n's arg inside m's expansion, intersected with
@@ -1392,7 +1426,9 @@ mod tests {
         let delta = n_arg_off_in_m - m_seg.expansion_offset();
         let source_off = m_seg.origin_offset() + delta;
         let source_len = n_segs[0].origin_length();
-        let authored = &source[source_off as usize..(source_off + source_len) as usize];
+        let off = source_off.as_usize();
+        let len = source_len.as_usize();
+        let authored = &source[off..off + len];
         assert_eq!(authored, "nonexistent_col");
     }
 
@@ -1692,8 +1728,8 @@ mod tests {
         let f = &frames[0];
         assert_eq!(f.name, None, "root frame has no macro name");
         assert_eq!(f.snippet, source, "root snippet is the authored source");
-        // Offset points somewhere inside source.
-        assert!(f.offset_in_snippet < source.len());
+        // Offset points somewhere inside the snippet.
+        assert!(f.offset_in_snippet < f.snippet.as_range().end);
     }
 
     #[test]
@@ -1725,7 +1761,7 @@ mod tests {
         // Innermost = macro expansion
         assert_eq!(frames[1].name, Some("idmac"));
         assert_eq!(frames[1].snippet, "inner");
-        assert_eq!(frames[1].offset_in_snippet, 0);
+        assert_eq!(frames[1].offset_in_snippet, LayerOffset::default());
     }
 
     #[test]
@@ -1754,9 +1790,11 @@ mod tests {
         );
         assert_eq!(frames[0].name, None, "root frame after drill");
         assert_eq!(frames[0].snippet, source);
-        let off = frames[0].offset_in_snippet;
-        let end = off + "authored".len();
-        assert_eq!(&source[off..end], "authored");
+        let range = crate::source::LayerRange::from_offset_len(
+            frames[0].offset_in_snippet,
+            LayerLen::from_raw(u32::try_from("authored".len()).unwrap()),
+        );
+        assert_eq!(&frames[0].snippet[range], "authored");
     }
 
     #[test]

@@ -23,7 +23,7 @@ pub(crate) struct FmtCtx<'a> {
 
 impl<'a> FmtCtx<'a> {
     pub(crate) fn text(&self) -> &'a str {
-        self.reader.text()
+        self.reader.text().as_str()
     }
 }
 
@@ -227,15 +227,25 @@ impl Formatter {
                     // real `""` token and must round-trip as `""`.
                     if quoted || !s.is_empty() {
                         if let Some(ref cctx) = ctx.comment_ctx {
+                            use syntaqlite_syntax::source::StmtLen;
                             // For quoted spans, the original token in source
                             // starts one byte earlier (the opening quote) and
                             // extends one byte past (the closing quote).
-                            let span_len = u32::try_from(s.len()).unwrap_or(u32::MAX);
-                            let drain_offset = if quoted { span_start - 1 } else { span_start };
-                            let token_len = span_len + if quoted { 2 } else { 0 };
-                            let drain = cctx.drain_before(drain_offset, source, arena);
+                            let span_len =
+                                StmtLen::from_raw(u32::try_from(s.len()).unwrap_or(u32::MAX));
+                            let drain_offset = if quoted {
+                                span_start - StmtLen::from_raw(1)
+                            } else {
+                                span_start
+                            };
+                            let token_len = if quoted {
+                                span_len + StmtLen::from_raw(2)
+                            } else {
+                                span_len
+                            };
+                            let drain = cctx.drain_before(drain_offset.as_u32(), source, arena);
                             flush_drain(&drain, &mut pending, &mut running, arena);
-                            cctx.advance_past(drain_offset + token_len);
+                            cctx.advance_past((drain_offset + token_len).as_u32());
                         }
                         if quoted {
                             let q = arena.text("\"");

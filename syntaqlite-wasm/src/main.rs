@@ -11,6 +11,7 @@ use serde::Serialize;
 use syntaqlite::any::AnyDialect;
 use syntaqlite::fmt::KeywordCase;
 use syntaqlite::lsp::LspHost;
+use syntaqlite::source::{DocLen, DocOffset, DocRange};
 use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
 use syntaqlite::{FormatConfig, Formatter, ValidationConfig};
 
@@ -390,7 +391,10 @@ fn run_semantic_tokens(ptr: u32, len: u32, range_start: u32, range_end: u32, ver
     let range = if range_start == 0 && range_end == 0xFFFF_FFFF {
         None
     } else {
-        Some((range_start as usize, range_end as usize))
+        Some(DocRange::from_offset_len(
+            DocOffset::from_raw(range_start),
+            DocLen::from_raw(range_end.saturating_sub(range_start)),
+        ))
     };
     let encoded = lsp.semantic_tokens_encoded(WASM_DOC_URI, range);
     let token_count = i32::try_from(encoded.len() / 5).expect("token count fits i32");
@@ -409,7 +413,7 @@ fn run_completions(ptr: u32, len: u32, offset: u32, version: u32) -> i32 {
     let source = try_wasm!(decode_input(ptr, len), -1);
     let mut lsp = try_wasm!(take_or_create_lsp_host(), -1);
     lsp.update_document(WASM_DOC_URI, version.cast_signed(), source);
-    let entries = lsp.completion_items(WASM_DOC_URI, offset as usize);
+    let entries = lsp.completion_items(WASM_DOC_URI, DocOffset::from_raw(offset));
     let count = i32::try_from(entries.len()).expect("completion count fits i32");
     let items: Vec<CompletionItem> = entries
         .into_iter()

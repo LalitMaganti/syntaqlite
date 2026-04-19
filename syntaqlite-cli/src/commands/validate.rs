@@ -300,8 +300,8 @@ impl<'a> DiagnosticRecord<'a> {
             file,
             severity: diag.severity().into(),
             message: diag.message().to_string(),
-            start_offset: diag.start_offset(),
-            end_offset: diag.end_offset(),
+            start_offset: diag.start().as_usize(),
+            end_offset: diag.end().as_usize(),
             help,
         }
     }

@@ -9,6 +9,11 @@ use std::rc::Rc;
 
 use std::ffi::c_void;
 
+use crate::source::{
+    ColumnNumber, DocLen, DocOffset, DocRange, DocText, LayerLen, LayerOffset, LayerText,
+    LineNumber, StatementBase, StmtLen, StmtOffset, StmtRange, StmtText, TokenIdx,
+};
+
 use crate::any::{AnyNodeTag, AnyTokenType};
 use crate::ast::{AnyNodeId, ArenaNode, GrammarNodeType, GrammarTokenType, RawNodeList};
 use crate::dialect::{AnyDialect, TypedDialect};
@@ -30,8 +35,8 @@ pub use incremental::{AnyIncrementalParseSession, TypedIncrementalParseSession};
 pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken};
 pub use types::{
     AnyParserToken, ArgOrigin, Comment, CommentKind, CommentSide, CommentSpan, CompletionContext,
-    MacroArgSegment, MacroRewrite, ParseOutcome, ParserTokenFlags, TracebackFrame,
-    TypedParserToken,
+    MACRO_BODY_CALL_ARG_INTERNAL, MacroArgSegment, MacroRewrite, ParseOutcome, ParserTokenFlags,
+    TracebackFrame, TypedParserToken,
 };
 
 /// A single macro argument as presented to the lookup callback.
@@ -668,19 +673,20 @@ impl<'a> AnyParsedStatement<'a> {
             // `expansion` and `name` borrow from parser memory valid for
             // 'a (until the next parser_next / reset / destroy, which
             // requires ending the 'a-tied statement borrow).
-            let expansion: &'a str = if r.expansion.is_null() {
-                ""
+            let expansion: &'a LayerText = if r.expansion.is_null() {
+                LayerText::new("")
             } else {
                 // SAFETY: `expansion` points to `expansion_len` bytes
                 // owned by the parser, valid for 'a.  Parser buffers are
                 // UTF-8 by construction (source text or expansion text
                 // produced by the callback, which accepts a &str body).
-                unsafe {
+                let s = unsafe {
                     std::str::from_utf8_unchecked(std::slice::from_raw_parts(
                         r.expansion,
                         r.expansion_len as usize,
                     ))
-                }
+                };
+                LayerText::new(s)
             };
             let name: &'a str = if r.name.is_null() {
                 ""
@@ -702,14 +708,14 @@ impl<'a> AnyParsedStatement<'a> {
             MacroRewrite {
                 parent,
                 rewrite_idx: i,
-                call_offset: r.call_offset,
-                call_length: r.call_length,
+                call_offset: LayerOffset::from_raw(r.call_offset),
+                call_length: LayerLen::from_raw(r.call_length),
                 expansion,
                 name,
-                def_line: r.def_line,
-                def_col: r.def_col,
-                body_call_offset: r.body_call_offset,
-                body_call_length: r.body_call_length,
+                def_line: LineNumber::from_raw(r.def_line),
+                def_col: ColumnNumber::from_raw(r.def_col),
+                body_call_offset: LayerOffset::from_raw(r.body_call_offset),
+                body_call_length: LayerLen::from_raw(r.body_call_length),
                 parser: self.raw,
                 _lifetime: PhantomData,
             }
@@ -762,22 +768,23 @@ impl<'a> AnyParsedStatement<'a> {
                     ))
                 })
             },
-            line: f.line,
-            col: f.col,
+            line: LineNumber::from_raw(f.line),
+            col: ColumnNumber::from_raw(f.col),
             snippet: if f.snippet.is_null() || f.snippet_len == 0 {
-                ""
+                LayerText::new("")
             } else {
                 // SAFETY: C guarantees snippet points to snippet_len bytes
                 // of valid UTF-8 in a parser-owned buffer valid for 'a.
-                unsafe {
+                let s = unsafe {
                     std::str::from_utf8_unchecked(std::slice::from_raw_parts(
                         f.snippet,
                         f.snippet_len as usize,
                     ))
-                }
+                };
+                LayerText::new(s)
             },
-            offset_in_snippet: f.offset_in_snippet as usize,
-            length_in_snippet: f.length_in_snippet as usize,
+            offset_in_snippet: LayerOffset::from_raw(f.offset_in_snippet),
+            length_in_snippet: LayerLen::from_raw(f.length_in_snippet),
         })
     }
 
@@ -813,7 +820,7 @@ impl<'a> AnyParsedStatement<'a> {
     /// the caller's source; otherwise it collapses to the outermost
     /// `name!(...)` call site.  Always a direct slice — no allocation.
     /// Returns `("", 0)` for empty or invalid spans.
-    pub fn span_text(&self, span: crate::ast::TextSpan) -> (&'a str, u32) {
+    pub fn span_text(&self, span: crate::ast::TextSpan) -> (&'a str, StmtOffset) {
         let mut out_len: u32 = 0;
         let mut out_offset: u32 = 0;
         // SAFETY: self.raw is valid for 'a; span is a copy of an arena value.
@@ -823,14 +830,14 @@ impl<'a> AnyParsedStatement<'a> {
                 .span_text(span, &raw mut out_len, &raw mut out_offset)
         };
         if ptr.is_null() || out_len == 0 {
-            return ("", 0);
+            return ("", StmtOffset::default());
         }
         // SAFETY: C guarantees ptr points to out_len bytes of valid UTF-8
         // in a parser-owned buffer valid for 'a.
         let text = unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
         };
-        (text, out_offset)
+        (text, StmtOffset::from_raw(out_offset))
     }
 
     pub(crate) fn field_span(
@@ -857,10 +864,14 @@ impl<'a> AnyParsedStatement<'a> {
     /// Full SQL source bound to the parse session — the whole input
     /// for multi-statement parses.  Use [`Self::text`] for just this
     /// statement.
-    pub fn full_text(&self) -> &'a str {
+    ///
+    /// Returned as a [`DocText`], which can be indexed by [`DocRange`]
+    /// for type-safe slicing.  Call [`DocText::as_str`] for interop with
+    /// `std::str` APIs.
+    pub fn full_text(&self) -> &'a DocText {
         // SAFETY: self.raw is valid for 'a; the returned slice borrows
         // from the parser's source buffer which outlives 'a.
-        unsafe { self.raw.as_ref().full_text() }
+        DocText::new(unsafe { self.raw.as_ref().full_text() })
     }
 
     /// Source slice for just this statement, including any attached
@@ -868,40 +879,47 @@ impl<'a> AnyParsedStatement<'a> {
     /// this statement — tokens, comments, spans, node extents, error
     /// offsets, macro rewrite call offsets — is relative to this slice.
     /// Empty if no statement was produced.
-    pub fn text(&self) -> &'a str {
+    ///
+    /// Returned as a [`StmtText`], which can be indexed by [`StmtRange`]
+    /// for type-safe slicing.  Call [`StmtText::as_str`] for interop
+    /// with `std::str` APIs.
+    pub fn text(&self) -> &'a StmtText {
         // SAFETY: self.raw is valid for 'a; the returned slice borrows
         // from the parser's source buffer which outlives 'a.
         let (s, _) = unsafe { self.raw.as_ref().text() };
-        s
+        StmtText::new(s)
     }
 
-    /// Byte offset of this statement's start within [`Self::full_text`].
-    /// Add to any statement-relative offset to get an absolute position.
-    pub fn statement_base_offset(&self) -> u32 {
+    /// Document-absolute offset of this statement's start within
+    /// [`Self::full_text`].  Use [`StatementBase::to_doc`] to convert any
+    /// statement-relative offset into an absolute one.
+    pub fn statement_base(&self) -> StatementBase {
         // SAFETY: self.raw is valid for 'a.
         let (_, off) = unsafe { self.raw.as_ref().text() };
-        off
+        StatementBase::new(DocOffset::from_raw(off))
     }
 
-    /// Resolve a span to `(text, abs_start, abs_end)` in
+    /// Resolve a span to its document-absolute `(text, range)` in
     /// [`Self::full_text`].  Convenience for diagnostic emission sites
     /// that need full-source positions.
-    pub fn span_text_abs(&self, span: crate::ast::TextSpan) -> (&'a str, usize, usize) {
+    pub fn span_text_abs(&self, span: crate::ast::TextSpan) -> (&'a str, DocRange) {
         let (text, off) = self.span_text(span);
-        let base = self.statement_base_offset() as usize;
-        let start = base + off as usize;
-        (text, start, start + text.len())
+        let start = off.to_doc(self.statement_base());
+        let end = start + DocLen::from_raw(u32::try_from(text.len()).unwrap_or(u32::MAX));
+        (text, DocRange { start, end })
     }
 
-    /// Raw token spans `(offset, length)` for all collected tokens.
+    /// Statement-relative byte ranges for all collected tokens.
     ///
     /// Returns an empty iterator if `collect_tokens` was not enabled.
     /// Always non-empty when the result comes from [`TypedParser::incremental_parse`],
     /// which unconditionally enables token collection.
-    pub fn token_spans(&self) -> impl Iterator<Item = (u32, u32)> + use<'_> {
+    pub fn token_spans(&self) -> impl Iterator<Item = StmtRange> + use<'_> {
         // SAFETY: self.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &[ffi::CParserToken] = unsafe { self.raw.as_ref().result_tokens() };
-        raw.iter().map(|t| (t.offset, t.length))
+        raw.iter().map(|t| {
+            StmtRange::from_offset_len(StmtOffset::from_raw(t.offset), StmtLen::from_raw(t.length))
+        })
     }
 
     /// Lightweight comment descriptors without source text borrows.
@@ -919,7 +937,13 @@ impl<'a> AnyParsedStatement<'a> {
                 ffi::CCommentSide::Leading => CommentSide::Leading,
                 ffi::CCommentSide::Trailing => CommentSide::Trailing,
             };
-            CommentSpan::new(c.offset, c.length, kind, c.token_idx, side)
+            CommentSpan::new(
+                StmtOffset::from_raw(c.offset),
+                StmtLen::from_raw(c.length),
+                kind,
+                TokenIdx::from_raw(c.token_idx),
+                side,
+            )
         })
     }
 
@@ -1107,18 +1131,18 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     }
 
     /// See [`AnyParsedStatement::text`].
-    pub fn text(&self) -> &'a str {
+    pub fn text(&self) -> &'a StmtText {
         self.any.text()
     }
 
     /// See [`AnyParsedStatement::full_text`].
-    pub fn full_text(&self) -> &'a str {
+    pub fn full_text(&self) -> &'a DocText {
         self.any.full_text()
     }
 
-    /// See [`AnyParsedStatement::statement_base_offset`].
-    pub fn statement_base_offset(&self) -> u32 {
-        self.any.statement_base_offset()
+    /// See [`AnyParsedStatement::statement_base`].
+    pub fn statement_base(&self) -> StatementBase {
+        self.any.statement_base()
     }
 
     /// Post-expansion source — the bound source with every currently-
@@ -1147,13 +1171,15 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         let raw: &'a [ffi::CParserToken] = unsafe { self.any.raw.as_ref().result_tokens() };
         raw.iter().filter_map(move |t| {
             let token_type = G::Token::from_token_type(AnyTokenType(t.type_))?;
-            let text = &source[t.offset as usize..(t.offset + t.length) as usize];
+            let offset = StmtOffset::from_raw(t.offset);
+            let length = StmtLen::from_raw(t.length);
+            let text = &source[StmtRange::from_offset_len(offset, length)];
             Some(TypedParserToken::new(
                 text,
                 token_type,
                 ParserTokenFlags::from_raw(t.flags),
-                t.offset,
-                t.length,
+                offset,
+                length,
             ))
         })
     }
@@ -1207,22 +1233,26 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         }
     }
 
-    /// Byte offset of the error token, or `None` if unknown.
-    pub(crate) fn error_offset(&self) -> Option<usize> {
+    /// Statement-relative byte offset of the error token, or `None` if unknown.
+    pub(crate) fn error_offset(&self) -> Option<StmtOffset> {
         // SAFETY: self.any.raw is a valid, non-null parser pointer for lifetime 'a.
         let v = unsafe { self.any.raw.as_ref().result_error_offset() };
         if v == 0xFFFF_FFFF {
             None
         } else {
-            Some(v as usize)
+            Some(StmtOffset::from_raw(v))
         }
     }
 
     /// Byte length of the error token, or `None` if unknown.
-    pub(crate) fn error_length(&self) -> Option<usize> {
+    pub(crate) fn error_length(&self) -> Option<StmtLen> {
         // SAFETY: self.any.raw is a valid, non-null parser pointer for lifetime 'a.
         let v = unsafe { self.any.raw.as_ref().result_error_length() };
-        if v == 0 { None } else { Some(v as usize) }
+        if v == 0 {
+            None
+        } else {
+            Some(StmtLen::from_raw(v))
+        }
     }
 
     /// Error classification for the current result.
@@ -1248,9 +1278,11 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
 }
 
 /// Build a public [`Comment`] from an FFI [`ffi::CComment`] borrowing into
-/// `source`.
-fn ffi_comment<'a>(source: &'a str, c: &ffi::CComment) -> Comment<'a> {
-    let text = &source[c.offset as usize..(c.offset + c.length) as usize];
+/// the statement's source text.
+fn ffi_comment<'a>(source: &'a StmtText, c: &ffi::CComment) -> Comment<'a> {
+    let offset = StmtOffset::from_raw(c.offset);
+    let length = StmtLen::from_raw(c.length);
+    let text = &source[StmtRange::from_offset_len(offset, length)];
     let kind = match c.kind {
         ffi::CCommentKind::LineComment => CommentKind::Line,
         ffi::CCommentKind::BlockComment => CommentKind::Block,
@@ -1259,7 +1291,14 @@ fn ffi_comment<'a>(source: &'a str, c: &ffi::CComment) -> Comment<'a> {
         ffi::CCommentSide::Leading => CommentSide::Leading,
         ffi::CCommentSide::Trailing => CommentSide::Trailing,
     };
-    Comment::new(text, kind, c.offset, c.length, c.token_idx, side)
+    Comment::new(
+        text,
+        kind,
+        offset,
+        length,
+        TokenIdx::from_raw(c.token_idx),
+        side,
+    )
 }
 
 /// Extract a single [`crate::ast::FieldValue`] from a raw arena node pointer.
@@ -1338,12 +1377,12 @@ impl<'a, G: TypedDialect> TypedParseError<'a, G> {
     pub fn message(&self) -> &str {
         self.0.error_msg().unwrap_or("parse error")
     }
-    /// Returns the byte offset of the error token, or `None` if unknown.
-    pub fn offset(&self) -> Option<usize> {
+    /// Statement-relative byte offset of the error token, or `None` if unknown.
+    pub fn offset(&self) -> Option<StmtOffset> {
         self.0.error_offset()
     }
-    /// Returns the byte length of the error token, or `None` if unknown.
-    pub fn length(&self) -> Option<usize> {
+    /// Byte length of the error token, or `None` if unknown.
+    pub fn length(&self) -> Option<StmtLen> {
         self.0.error_length()
     }
     /// The partial recovery tree, if error recovery produced one.
@@ -1351,13 +1390,13 @@ impl<'a, G: TypedDialect> TypedParseError<'a, G> {
         self.0.recovery_root()
     }
 
-    /// See [`AnyParsedStatement::statement_base_offset`].
-    pub fn statement_base_offset(&self) -> u32 {
-        self.0.any.statement_base_offset()
+    /// See [`AnyParsedStatement::statement_base`].
+    pub fn statement_base(&self) -> StatementBase {
+        self.0.any.statement_base()
     }
 
     /// The source text bound to this result.
-    pub fn text(&self) -> &'a str {
+    pub fn text(&self) -> &'a StmtText {
         self.0.text()
     }
 
