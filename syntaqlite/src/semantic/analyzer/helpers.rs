@@ -4,11 +4,9 @@
 //! Pure helper functions used by the analyzer: source extraction, definition
 //! span lookup, macro registration extraction, rowid aliasing.
 
-use syntaqlite_syntax::any::{AnyParseError, AnyParsedStatement, AnyNodeId, FieldValue};
+use syntaqlite_syntax::any::{AnyNodeId, AnyParseError, AnyParsedStatement, FieldValue};
 
 use crate::dialect::{FIELD_ABSENT, MacroDef, SemanticRole};
-#[cfg(feature = "lsp")]
-use crate::dialect::AnyDialect;
 #[cfg(feature = "lsp")]
 use crate::semantic::catalog::AritySpec;
 use crate::semantic::model::DefinedRelation;
@@ -111,33 +109,6 @@ pub(super) fn parse_error_span(err: &AnyParseError<'_>, source: &str) -> (usize,
             (start, end)
         }
     }
-}
-
-/// Extract the definition name and byte-offset range from a DDL statement.
-///
-/// Returns `(lowercase_name, (start, end))` for CREATE TABLE / CREATE VIEW,
-/// or `None` for non-DDL statements.
-#[cfg(feature = "lsp")]
-pub(super) fn ddl_name_offset(
-    stmt: &AnyParsedStatement<'_>,
-    root: AnyNodeId,
-    dialect: &AnyDialect,
-) -> Option<(String, (usize, usize))> {
-    let (tag, fields) = stmt.extract_fields(root)?;
-    let role = dialect.roles().get(u32::from(tag) as usize)?;
-    let name_idx = match role {
-        SemanticRole::DefineTable { name, .. } | SemanticRole::DefineView { name, .. } => *name,
-        _ => return None,
-    };
-    let FieldValue::Span(sp) = fields[name_idx as usize] else {
-        return None;
-    };
-    if sp.is_empty() {
-        return None;
-    }
-    let name = stmt.span_expanded_text(sp);
-    let (_, start, end) = stmt.span_text_abs(sp);
-    Some((name.to_ascii_lowercase(), (start, end)))
 }
 
 /// Check if the root node of a statement defines a template macro and, if so,

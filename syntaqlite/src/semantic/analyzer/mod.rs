@@ -23,11 +23,12 @@ use super::model::{SemanticModel, StatementModel};
 use super::model::{StoredComment, StoredToken};
 use super::{AnalysisMode, ValidationConfig};
 
-use helpers::{extract_defined_relations, extract_macro_registration, parse_error_span};
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 use helpers::{collect_comments, collect_tokens};
+use helpers::{extract_defined_relations, extract_macro_registration, parse_error_span};
+
 #[cfg(feature = "lsp")]
-use helpers::ddl_name_offset;
+use super::ddl::DdlReader;
 
 mod helpers;
 mod pass;
@@ -366,14 +367,15 @@ impl SemanticAnalyzer {
 
         // Record DDL definition offsets for go-to-definition (same-file).
         #[cfg(feature = "lsp")]
-        if let Some((table_name, off)) = ddl_name_offset(erased, root_id, &self.dialect) {
-            for (col_name, col_start, col_end) in
-                super::catalog::ddl_column_spans(erased, root_id, self.dialect.roles())
-            {
-                let key = format!("{table_name}.{col_name}");
-                definition_offsets.insert(key, (col_start, col_end));
+        {
+            let reader = DdlReader::new(erased, self.dialect.roles());
+            if let Some((table_name, start, end)) = reader.name_span(root_id) {
+                for (col_name, col_start, col_end) in reader.column_spans(root_id) {
+                    let key = format!("{table_name}.{col_name}");
+                    definition_offsets.insert(key, (col_start, col_end));
+                }
+                definition_offsets.insert(table_name, (start, end));
             }
-            definition_offsets.insert(table_name, off);
         }
 
         ValidationPass::run(
