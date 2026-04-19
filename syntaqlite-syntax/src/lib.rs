@@ -32,7 +32,8 @@ pub use parser::{
 #[cfg(feature = "sqlite-minimal")]
 #[doc(inline)]
 pub use parser::{
-    Comment, CommentKind, CommentSide, CommentSpan, CompletionContext, ParserTokenFlags,
+    Comment, CommentKind, CommentSide, CommentSpan, CompletionContext, MACRO_BODY_CALL_ARG_INTERNAL,
+    ParserTokenFlags,
 };
 
 // Top-level tokenizer types.
@@ -173,6 +174,7 @@ pub(crate) mod ast;
 mod dialect;
 #[cfg(feature = "sqlite-minimal")]
 pub(crate) mod parser;
+pub mod source;
 #[cfg(feature = "sqlite-minimal")]
 pub(crate) mod tokenizer;
 

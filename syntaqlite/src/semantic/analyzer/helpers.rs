@@ -62,14 +62,14 @@ pub(super) fn format_arity(name: &str, arity: AritySpec) -> String {
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 pub(super) fn collect_tokens<'a>(
     iter: impl Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>>,
-    stmt_base: u32,
+    stmt_base: syntaqlite_syntax::source::StatementBase,
     tokens: &mut Vec<StoredToken>,
 ) {
-    let base = stmt_base as usize;
+    let base = stmt_base.as_doc_offset().as_usize();
     for tok in iter {
         tokens.push(StoredToken {
-            offset: base + tok.offset() as usize,
-            length: tok.length() as usize,
+            offset: base + tok.offset().as_usize(),
+            length: tok.length().as_usize(),
             token_type: tok.token_type(),
             flags: tok.flags(),
         });
@@ -79,20 +79,20 @@ pub(super) fn collect_tokens<'a>(
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 pub(super) fn collect_comments<'a>(
     iter: impl Iterator<Item = syntaqlite_syntax::Comment<'a>>,
-    stmt_base: u32,
+    stmt_base: syntaqlite_syntax::source::StatementBase,
     comments: &mut Vec<StoredComment>,
 ) {
-    let base = stmt_base as usize;
+    let base = stmt_base.as_doc_offset().as_usize();
     for c in iter {
         comments.push(StoredComment {
-            offset: base + c.offset() as usize,
-            length: c.length() as usize,
+            offset: base + c.offset().as_usize(),
+            length: c.length().as_usize(),
         });
     }
 }
 
 pub(super) fn parse_error_span(err: &AnyParseError<'_>, source: &str) -> (usize, usize) {
-    let base = err.statement_base_offset() as usize;
+    let base = err.statement_base().as_doc_offset().as_usize();
     match (err.offset(), err.length()) {
         (Some(off), Some(len)) if len > 0 => (base + off, base + off + len),
         (Some(off), _) => {

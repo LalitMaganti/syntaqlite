@@ -71,12 +71,13 @@ fn debug_comment_token_offsets() {
                 let stmt_text = stmt.text();
                 eprintln!("  Comments ({}):", comments.len());
                 for c in &comments {
-                    let end = c.offset() as usize + c.length() as usize;
+                    let range =
+                        syntaqlite::source::StmtRange::from_offset_len(c.offset(), c.length());
                     eprintln!(
                         "    offset={} len={} text={:?}",
                         c.offset(),
                         c.length(),
-                        &stmt_text[c.offset() as usize..end]
+                        &stmt_text[range]
                     );
                 }
                 let tokens: Vec<_> = stmt.tokens().collect();

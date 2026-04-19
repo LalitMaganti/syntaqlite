@@ -131,21 +131,21 @@ impl Formatter {
         self.comment_entries.clear();
         self.comment_entries
             .extend(erased.comment_spans().map(|c| CommentEntry {
-                offset: c.offset(),
-                length: c.length(),
+                offset: c.offset().as_u32(),
+                length: c.length().as_u32(),
                 kind: c.kind(),
                 side: c.side(),
             }));
         self.token_entries.clear();
-        self.token_entries.extend(
-            erased
-                .token_spans()
-                .map(|(offset, length)| TokenEntry { offset, length }),
-        );
+        self.token_entries
+            .extend(erased.token_spans().map(|range| TokenEntry {
+                offset: range.start.as_u32(),
+                length: range.len().as_u32(),
+            }));
         self.macro_rewrites.extend(
             erased
                 .macro_rewrites()
-                .map(|r| (r.call_offset(), r.call_length())),
+                .map(|r| (r.call_offset().as_u32(), r.call_length().as_u32())),
         );
     }
 
@@ -195,7 +195,7 @@ impl Formatter {
 
             let erased = stmt.erase();
             self.collect_side_channels(&erased);
-            let stmt_source = erased.text();
+            let stmt_source = erased.text().as_str();
 
             let root_id = erased.root_id();
             let semicolons = self.config.semicolons;
@@ -461,7 +461,7 @@ impl Formatter {
             let mut arena = DocArena::recycle(prev_arena);
             self.parts.clear();
 
-            let stmt_source = erased.text();
+            let stmt_source = erased.text().as_str();
             if stmt_num > 0 {
                 emit_stmt_separator(
                     comment_ctx.as_ref(),

@@ -115,7 +115,7 @@ fn feed_token_records_comment() {
 
     let comments: Vec<_> = stmt.comments().collect();
     assert_eq!(comments.len(), 1);
-    assert_eq!(comments[0].length(), 8);
+    assert_eq!(comments[0].length(), syntaqlite_syntax::source::StmtLen::from_raw(8));
 }
 
 /// Leading `TK_SPACE` fed via `feed_token` should NOT open the statement:
@@ -139,9 +139,9 @@ fn feed_token_leading_whitespace_does_not_open_statement() {
 
     // Statement opens at `SELECT`, not at byte 0 — matches parser_next.
     assert_eq!(stmt.text(), "SELECT 1");
-    assert_eq!(stmt.statement_base_offset(), 3);
+    assert_eq!(stmt.statement_base().as_doc_offset().as_u32(), 3);
     let tokens: Vec<_> = stmt.tokens().collect();
-    assert_eq!(tokens[0].offset(), 0);
+    assert_eq!(tokens[0].offset(), syntaqlite_syntax::source::StmtOffset::default());
     assert_eq!(tokens[0].text(), "SELECT");
 }
 
@@ -428,10 +428,11 @@ fn sqlite_type_tokens_are_marked_as_type() {
                 let stmt_text = stmt.text();
                 for t in stmt.tokens() {
                     if t.flags().used_as_type() {
-                        marked.push(
-                            stmt_text[t.offset() as usize..(t.offset() + t.length()) as usize]
-                                .to_string(),
+                        let range = syntaqlite_syntax::source::StmtRange::from_offset_len(
+                            t.offset(),
+                            t.length(),
                         );
+                        marked.push(stmt_text[range].to_string());
                     }
                 }
             }
@@ -460,7 +461,7 @@ fn collect_span_ranges(
             match fields[idx] {
                 FieldValue::Span(sp) => {
                     let (text, off) = erased.span_text(sp);
-                    let start = off as usize;
+                    let start = off.as_usize();
                     spans.push((field_idx, start, start + text.len()));
                 }
                 FieldValue::NodeId(child) if !child.is_null() => {

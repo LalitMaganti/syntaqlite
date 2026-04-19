@@ -159,6 +159,14 @@ pub use syntaqlite_syntax::ParseOutcome;
 #[cfg(feature = "sqlite")]
 pub use syntaqlite_syntax::Parser;
 
+/// Typed source coordinates — offsets, lengths, ranges, and source-text
+/// wrappers.  Every position-like value the parser emits is modeled by a
+/// newtype in this module so coordinate-system confusion is caught at
+/// compile time rather than surfacing as a runtime bug.
+pub mod source {
+    pub use syntaqlite_syntax::source::*;
+}
+
 // Formatting — the formatter and its config.
 #[doc(inline)]
 #[cfg(feature = "fmt")]

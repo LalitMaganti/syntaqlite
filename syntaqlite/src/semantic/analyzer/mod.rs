@@ -289,7 +289,7 @@ impl SemanticAnalyzer {
                     }
                     #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
                     {
-                        let base = e.statement_base_offset();
+                        let base = e.statement_base();
                         collect_tokens(e.tokens(), base, &mut tokens);
                         collect_comments(e.comments(), base, &mut comments);
                     }
@@ -299,7 +299,7 @@ impl SemanticAnalyzer {
 
             #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
             {
-                let base = stmt.statement_base_offset();
+                let base = stmt.statement_base();
                 collect_tokens(stmt.tokens(), base, &mut tokens);
                 collect_comments(stmt.comments(), base, &mut comments);
             }
@@ -397,7 +397,7 @@ impl SemanticAnalyzer {
         let defined_relations = extract_defined_relations(erased, root_id, self.dialect.roles());
 
         StatementModel::new(
-            erased.text().to_owned(),
+            erased.text().as_str().to_owned(),
             diagnostics,
             lineage,
             defined_relations,
@@ -440,8 +440,8 @@ impl SemanticAnalyzer {
         let Some(source) = self.resolver.as_ref().and_then(|r| r.resolve(&module_name)) else {
             let (start, end) = match fields[module as usize] {
                 FieldValue::Span(sp) => {
-                    let (_, start, end) = erased.span_text_abs(sp);
-                    (start, end)
+                    let (_, range) = erased.span_text_abs(sp);
+                    (range.start.as_usize(), range.end.as_usize())
                 }
                 _ => (0, 0),
             };

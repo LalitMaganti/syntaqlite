@@ -4,12 +4,15 @@
 //! The statement-level validation pass: visits an AST once, emitting
 //! diagnostics and populating LSP resolutions as it goes.
 
+#[cfg(feature = "lsp")]
 use std::collections::HashMap;
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 
 use crate::dialect::{AnyDialect, FIELD_ABSENT, SemanticRole};
-use crate::semantic::catalog::{Catalog, ColumnResolution, FunctionCategory, FunctionCheckResult};
+use crate::semantic::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
+#[cfg(feature = "lsp")]
+use crate::semantic::catalog::FunctionCategory;
 use crate::semantic::ddl::DdlReader;
 use crate::semantic::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use crate::semantic::fuzzy::best_suggestion;
@@ -73,10 +76,14 @@ impl<'a> ValidationPass<'a> {
         };
         let frames = stmt
             .traceback(node_id, field_idx)
-            .map(|f| crate::semantic::diagnostics::DiagnosticFrame {
-                buffer: f.snippet.to_string(),
-                start: f.offset_in_snippet,
-                end: f.offset_in_snippet + f.length_in_snippet,
+            .map(|f| {
+                let start = f.offset_in_snippet.as_usize();
+                let end = start + f.length_in_snippet.as_usize();
+                crate::semantic::diagnostics::DiagnosticFrame {
+                    buffer: f.snippet.to_string(),
+                    start,
+                    end,
+                }
             })
             .collect::<Vec<_>>();
         // Only attach if there's actual expansion (more than 1 frame).
@@ -282,8 +289,8 @@ impl<'a> ValidationPass<'a> {
                 // Identifier spelling uses the post-expansion bytes;
                 // source position uses the authored byte range.
                 let name = stmt.span_expanded_text(sp);
-                let (_, start, end) = stmt.span_text_abs(sp);
-                (name, start, end)
+                let (_, range) = stmt.span_text_abs(sp);
+                (name, range.start.as_usize(), range.end.as_usize())
             }
             _ => ("", 0, 0),
         }
@@ -311,7 +318,9 @@ impl<'a> ValidationPass<'a> {
         // to the authored byte range so diagnostics anchor at the macro
         // call site.
         let name = stmt.span_expanded_text(sp);
-        let (_, start, end) = stmt.span_text_abs(sp);
+        let (_, range) = stmt.span_text_abs(sp);
+        let start = range.start.as_usize();
+        let end = range.end.as_usize();
 
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
@@ -381,7 +390,9 @@ impl<'a> ValidationPass<'a> {
             && !sp.is_empty()
         {
             let name = stmt.span_expanded_text(sp);
-            let (_, start, end) = stmt.span_text_abs(sp);
+            let (_, range) = stmt.span_text_abs(sp);
+            let start = range.start.as_usize();
+            let end = range.end.as_usize();
             let args_id = Self::field_node_id(fields, args_idx);
             let arg_count = args_id
                 .and_then(|id| stmt.list_children(id))
@@ -465,7 +476,9 @@ impl<'a> ValidationPass<'a> {
             FieldValue::Span(sp) if !sp.is_empty() => Some(stmt.span_expanded_text(sp)),
             _ => None,
         };
-        let (_, start, end) = stmt.span_text_abs(col_sp);
+        let (_, range) = stmt.span_text_abs(col_sp);
+        let start = range.start.as_usize();
+        let end = range.end.as_usize();
 
         match self.scope.resolve_column(table, column) {
             ColumnResolution::Found {

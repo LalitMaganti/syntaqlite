@@ -61,8 +61,8 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         if sp.is_empty() {
             return None;
         }
-        let (s, start, end) = self.stmt.span_text_abs(sp);
-        Some((s.to_ascii_lowercase(), start, end))
+        let (s, range) = self.stmt.span_text_abs(sp);
+        Some((s.to_ascii_lowercase(), range.start.as_usize(), range.end.as_usize()))
     }
 
     /// Per-column `(lowercase_name, start, end)` triples for a `CREATE TABLE`.
@@ -115,8 +115,8 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
             if let FieldValue::Span(sp) = name_fields[j]
                 && !sp.is_empty()
             {
-                let (s, start, end) = self.stmt.span_text_abs(sp);
-                return Some((s, start, end));
+                let (s, range) = self.stmt.span_text_abs(sp);
+                return Some((s, range.start.as_usize(), range.end.as_usize()));
             }
         }
         None
@@ -332,17 +332,24 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
 
     /// Source slice spanning every byte covered by `id`'s subtree.
     pub(crate) fn expr_source_text(&self, id: AnyNodeId) -> Option<&'stmt str> {
-        let mut min = usize::MAX;
-        let mut max = 0usize;
+        use syntaqlite_syntax::source::{StmtOffset, StmtRange};
+        let mut min = StmtOffset::from_raw(u32::MAX);
+        let mut max = StmtOffset::default();
         self.collect_spans(id, &mut min, &mut max);
         if min < max {
-            Some(&self.stmt.text()[min..max])
+            Some(&self.stmt.text()[StmtRange { start: min, end: max }])
         } else {
             None
         }
     }
 
-    fn collect_spans(&self, id: AnyNodeId, min: &mut usize, max: &mut usize) {
+    fn collect_spans(
+        &self,
+        id: AnyNodeId,
+        min: &mut syntaqlite_syntax::source::StmtOffset,
+        max: &mut syntaqlite_syntax::source::StmtOffset,
+    ) {
+        use syntaqlite_syntax::source::StmtLen;
         if id.is_null() {
             return;
         }
@@ -351,8 +358,9 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
                 match fields[i] {
                     FieldValue::Span(sp) if !sp.is_empty() => {
                         let (text, off) = self.stmt.span_text(sp);
-                        let start = off as usize;
-                        let end = start + text.len();
+                        let start = off;
+                        let end = start
+                            + StmtLen::from_raw(u32::try_from(text.len()).unwrap_or(u32::MAX));
                         if start < *min {
                             *min = start;
                         }

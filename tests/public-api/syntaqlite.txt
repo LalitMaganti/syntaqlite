@@ -241,6 +241,7 @@ pub mod syntaqlite::lsp
 pub mod syntaqlite::nodes
 pub mod syntaqlite::parse
 pub mod syntaqlite::semantic
+pub mod syntaqlite::source
 pub mod syntaqlite::typed
 pub mod syntaqlite::util
 pub struct syntaqlite::Catalog
@@ -405,6 +406,7 @@ pub use syntaqlite::parse::ParserConfig
 pub use syntaqlite::parse::ParserToken
 pub use syntaqlite::parse::ParserTokenFlags
 pub use syntaqlite::parse::TokenType
+pub use syntaqlite::source::<<syntaqlite_syntax::source::*>>
 pub use syntaqlite::typed::<<syntaqlite_syntax::typed::*>>
 pub use syntaqlite::util::SqliteSyntaxFlag
 pub use syntaqlite::util::SqliteSyntaxFlags

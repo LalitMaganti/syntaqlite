@@ -8,6 +8,20 @@
 #[repr(transparent)] pub struct syntaqlite_syntax::nodes::FunctionCallFlags(_)
 #[repr(transparent)] pub struct syntaqlite_syntax::nodes::ResultColumnFlags(_)
 #[repr(transparent)] pub struct syntaqlite_syntax::nodes::SelectStmtFlags(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::ColumnNumber(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::DocLen(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::DocOffset(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::DocText(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::LayerLen(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::LayerOffset(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::LayerText(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::LineNumber(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::StmtLen(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::StmtOffset(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::StmtText(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::TokenIdx(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::Utf16Col(_)
+#[repr(transparent)] pub struct syntaqlite_syntax::source::Utf16Line(_)
 #[repr(u32)] pub enum syntaqlite_syntax::CompletionContext
 #[repr(u32)] pub enum syntaqlite_syntax::ParseErrorKind
 #[repr(u32)] pub enum syntaqlite_syntax::TokenType
@@ -45,6 +59,24 @@
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::UpsertAction
 #[repr(u32)] pub enum syntaqlite_syntax::util::SqliteSyntaxFlag
 #[repr(u8)] pub enum syntaqlite_syntax::any::FieldKind
+impl core::cmp::Eq for syntaqlite_syntax::source::DocText
+impl core::cmp::Eq for syntaqlite_syntax::source::LayerText
+impl core::cmp::Eq for syntaqlite_syntax::source::StmtText
+impl core::cmp::PartialEq for syntaqlite_syntax::source::DocText
+impl core::cmp::PartialEq for syntaqlite_syntax::source::LayerText
+impl core::cmp::PartialEq for syntaqlite_syntax::source::StmtText
+impl core::cmp::PartialEq<&str> for syntaqlite_syntax::source::DocText
+impl core::cmp::PartialEq<&str> for syntaqlite_syntax::source::LayerText
+impl core::cmp::PartialEq<&str> for syntaqlite_syntax::source::StmtText
+impl core::cmp::PartialEq<str> for syntaqlite_syntax::source::DocText
+impl core::cmp::PartialEq<str> for syntaqlite_syntax::source::LayerText
+impl core::cmp::PartialEq<str> for syntaqlite_syntax::source::StmtText
+impl core::cmp::PartialEq<syntaqlite_syntax::source::DocText> for str
+impl core::cmp::PartialEq<syntaqlite_syntax::source::LayerText> for str
+impl core::cmp::PartialEq<syntaqlite_syntax::source::StmtText> for str
+impl core::convert::AsRef<str> for syntaqlite_syntax::source::DocText
+impl core::convert::AsRef<str> for syntaqlite_syntax::source::LayerText
+impl core::convert::AsRef<str> for syntaqlite_syntax::source::StmtText
 impl core::convert::From<syntaqlite_syntax::CompletionContext> for u32
 impl core::convert::From<syntaqlite_syntax::TokenType> for syntaqlite_syntax::any::AnyTokenType
 impl core::convert::From<syntaqlite_syntax::TokenType> for u32
@@ -207,6 +239,20 @@ impl core::fmt::Debug for syntaqlite_syntax::nodes::ValuesClause<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::Variable<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::WindowDef<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::WithClause<'_>
+impl core::fmt::Debug for syntaqlite_syntax::source::ColumnNumber
+impl core::fmt::Debug for syntaqlite_syntax::source::DocLen
+impl core::fmt::Debug for syntaqlite_syntax::source::DocOffset
+impl core::fmt::Debug for syntaqlite_syntax::source::DocText
+impl core::fmt::Debug for syntaqlite_syntax::source::LayerLen
+impl core::fmt::Debug for syntaqlite_syntax::source::LayerOffset
+impl core::fmt::Debug for syntaqlite_syntax::source::LayerText
+impl core::fmt::Debug for syntaqlite_syntax::source::LineNumber
+impl core::fmt::Debug for syntaqlite_syntax::source::StmtLen
+impl core::fmt::Debug for syntaqlite_syntax::source::StmtOffset
+impl core::fmt::Debug for syntaqlite_syntax::source::StmtText
+impl core::fmt::Debug for syntaqlite_syntax::source::TokenIdx
+impl core::fmt::Debug for syntaqlite_syntax::source::Utf16Col
+impl core::fmt::Debug for syntaqlite_syntax::source::Utf16Line
 impl core::fmt::Display for syntaqlite_syntax::any::AnyNode<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::AggregateFunctionCall<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::AlterTableStmt<'_>
@@ -272,8 +318,55 @@ impl core::fmt::Display for syntaqlite_syntax::nodes::ValuesClause<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::Variable<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::WindowDef<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::WithClause<'_>
+impl core::fmt::Display for syntaqlite_syntax::source::ColumnNumber
+impl core::fmt::Display for syntaqlite_syntax::source::DocLen
+impl core::fmt::Display for syntaqlite_syntax::source::DocOffset
+impl core::fmt::Display for syntaqlite_syntax::source::DocText
+impl core::fmt::Display for syntaqlite_syntax::source::LayerLen
+impl core::fmt::Display for syntaqlite_syntax::source::LayerOffset
+impl core::fmt::Display for syntaqlite_syntax::source::LayerText
+impl core::fmt::Display for syntaqlite_syntax::source::LineNumber
+impl core::fmt::Display for syntaqlite_syntax::source::StmtLen
+impl core::fmt::Display for syntaqlite_syntax::source::StmtOffset
+impl core::fmt::Display for syntaqlite_syntax::source::StmtText
+impl core::fmt::Display for syntaqlite_syntax::source::TokenIdx
+impl core::fmt::Display for syntaqlite_syntax::source::Utf16Col
+impl core::fmt::Display for syntaqlite_syntax::source::Utf16Line
+impl core::hash::Hash for syntaqlite_syntax::source::DocText
+impl core::hash::Hash for syntaqlite_syntax::source::LayerText
+impl core::hash::Hash for syntaqlite_syntax::source::StmtText
 impl core::marker::Send for syntaqlite_syntax::any::AnyDialect
 impl core::marker::Sync for syntaqlite_syntax::any::AnyDialect
+impl core::ops::arith::Add for syntaqlite_syntax::source::DocLen
+impl core::ops::arith::Add for syntaqlite_syntax::source::LayerLen
+impl core::ops::arith::Add for syntaqlite_syntax::source::StmtLen
+impl core::ops::arith::Add<syntaqlite_syntax::source::DocLen> for syntaqlite_syntax::source::DocOffset
+impl core::ops::arith::Add<syntaqlite_syntax::source::LayerLen> for syntaqlite_syntax::source::LayerOffset
+impl core::ops::arith::Add<syntaqlite_syntax::source::StmtLen> for syntaqlite_syntax::source::StmtOffset
+impl core::ops::arith::AddAssign for syntaqlite_syntax::source::DocLen
+impl core::ops::arith::AddAssign for syntaqlite_syntax::source::LayerLen
+impl core::ops::arith::AddAssign for syntaqlite_syntax::source::StmtLen
+impl core::ops::arith::AddAssign<syntaqlite_syntax::source::DocLen> for syntaqlite_syntax::source::DocOffset
+impl core::ops::arith::AddAssign<syntaqlite_syntax::source::LayerLen> for syntaqlite_syntax::source::LayerOffset
+impl core::ops::arith::AddAssign<syntaqlite_syntax::source::StmtLen> for syntaqlite_syntax::source::StmtOffset
+impl core::ops::arith::Sub for syntaqlite_syntax::source::DocLen
+impl core::ops::arith::Sub for syntaqlite_syntax::source::DocOffset
+impl core::ops::arith::Sub for syntaqlite_syntax::source::LayerLen
+impl core::ops::arith::Sub for syntaqlite_syntax::source::LayerOffset
+impl core::ops::arith::Sub for syntaqlite_syntax::source::StmtLen
+impl core::ops::arith::Sub for syntaqlite_syntax::source::StmtOffset
+impl core::ops::arith::Sub<syntaqlite_syntax::source::DocLen> for syntaqlite_syntax::source::DocOffset
+impl core::ops::arith::Sub<syntaqlite_syntax::source::LayerLen> for syntaqlite_syntax::source::LayerOffset
+impl core::ops::arith::Sub<syntaqlite_syntax::source::StmtLen> for syntaqlite_syntax::source::StmtOffset
+impl core::ops::arith::SubAssign for syntaqlite_syntax::source::DocLen
+impl core::ops::arith::SubAssign for syntaqlite_syntax::source::LayerLen
+impl core::ops::arith::SubAssign for syntaqlite_syntax::source::StmtLen
+impl core::ops::arith::SubAssign<syntaqlite_syntax::source::DocLen> for syntaqlite_syntax::source::DocOffset
+impl core::ops::arith::SubAssign<syntaqlite_syntax::source::LayerLen> for syntaqlite_syntax::source::LayerOffset
+impl core::ops::arith::SubAssign<syntaqlite_syntax::source::StmtLen> for syntaqlite_syntax::source::StmtOffset
+impl core::ops::index::Index<syntaqlite_syntax::source::DocRange> for syntaqlite_syntax::source::DocText
+impl core::ops::index::Index<syntaqlite_syntax::source::LayerRange> for syntaqlite_syntax::source::LayerText
+impl core::ops::index::Index<syntaqlite_syntax::source::StmtRange> for syntaqlite_syntax::source::StmtText
 impl core::ops::index::Index<usize> for syntaqlite_syntax::any::NodeFields
 impl syntaqlite_syntax::CommentSpan
 impl syntaqlite_syntax::CompletionContext
@@ -411,6 +504,24 @@ impl syntaqlite_syntax::nodes::VariableId
 impl syntaqlite_syntax::nodes::WindowDefId
 impl syntaqlite_syntax::nodes::WindowDefListId
 impl syntaqlite_syntax::nodes::WithClauseId
+impl syntaqlite_syntax::source::ColumnNumber
+impl syntaqlite_syntax::source::DocLen
+impl syntaqlite_syntax::source::DocOffset
+impl syntaqlite_syntax::source::DocRange
+impl syntaqlite_syntax::source::DocText
+impl syntaqlite_syntax::source::LayerLen
+impl syntaqlite_syntax::source::LayerOffset
+impl syntaqlite_syntax::source::LayerRange
+impl syntaqlite_syntax::source::LayerText
+impl syntaqlite_syntax::source::LineNumber
+impl syntaqlite_syntax::source::StatementBase
+impl syntaqlite_syntax::source::StmtLen
+impl syntaqlite_syntax::source::StmtOffset
+impl syntaqlite_syntax::source::StmtRange
+impl syntaqlite_syntax::source::StmtText
+impl syntaqlite_syntax::source::TokenIdx
+impl syntaqlite_syntax::source::Utf16Col
+impl syntaqlite_syntax::source::Utf16Line
 impl syntaqlite_syntax::typed::Dialect
 impl syntaqlite_syntax::typed::GrammarTokenType for syntaqlite_syntax::TokenType
 impl syntaqlite_syntax::typed::GrammarTokenType for syntaqlite_syntax::any::AnyTokenType
@@ -755,6 +866,54 @@ impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedP
 impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedParser<G>
 impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedTokenizer<G>
 impl<T, E> syntaqlite_syntax::ParseOutcome<T, E>
+pub const fn syntaqlite_syntax::source::ColumnNumber::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::ColumnNumber::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::ColumnNumber::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::DocLen::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::DocLen::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::DocLen::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::DocOffset::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::DocOffset::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::DocOffset::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::DocRange::from_offset_len(start: syntaqlite_syntax::source::DocOffset, len: syntaqlite_syntax::source::DocLen) -> Self
+pub const fn syntaqlite_syntax::source::DocRange::is_empty(self) -> bool
+pub const fn syntaqlite_syntax::source::DocRange::len(self) -> syntaqlite_syntax::source::DocLen
+pub const fn syntaqlite_syntax::source::LayerLen::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::LayerLen::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::LayerLen::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::LayerOffset::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::LayerOffset::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::LayerOffset::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::LayerRange::from_offset_len(start: syntaqlite_syntax::source::LayerOffset, len: syntaqlite_syntax::source::LayerLen) -> Self
+pub const fn syntaqlite_syntax::source::LayerRange::is_empty(self) -> bool
+pub const fn syntaqlite_syntax::source::LayerRange::len(self) -> syntaqlite_syntax::source::LayerLen
+pub const fn syntaqlite_syntax::source::LineNumber::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::LineNumber::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::LineNumber::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::StatementBase::as_doc_offset(self) -> syntaqlite_syntax::source::DocOffset
+pub const fn syntaqlite_syntax::source::StatementBase::from_doc(self, off: syntaqlite_syntax::source::DocOffset) -> core::option::Option<syntaqlite_syntax::source::StmtOffset>
+pub const fn syntaqlite_syntax::source::StatementBase::new(base: syntaqlite_syntax::source::DocOffset) -> Self
+pub const fn syntaqlite_syntax::source::StatementBase::to_doc(self, off: syntaqlite_syntax::source::StmtOffset) -> syntaqlite_syntax::source::DocOffset
+pub const fn syntaqlite_syntax::source::StatementBase::to_doc_range(self, range: syntaqlite_syntax::source::StmtRange) -> syntaqlite_syntax::source::DocRange
+pub const fn syntaqlite_syntax::source::StmtLen::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::StmtLen::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::StmtLen::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::StmtOffset::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::StmtOffset::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::StmtOffset::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::StmtRange::from_offset_len(start: syntaqlite_syntax::source::StmtOffset, len: syntaqlite_syntax::source::StmtLen) -> Self
+pub const fn syntaqlite_syntax::source::StmtRange::is_empty(self) -> bool
+pub const fn syntaqlite_syntax::source::StmtRange::len(self) -> syntaqlite_syntax::source::StmtLen
+pub const fn syntaqlite_syntax::source::TokenIdx::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::TokenIdx::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::TokenIdx::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::Utf16Col::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::Utf16Col::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::Utf16Col::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::Utf16Line::as_u32(self) -> u32
+pub const fn syntaqlite_syntax::source::Utf16Line::as_usize(self) -> usize
+pub const fn syntaqlite_syntax::source::Utf16Line::from_raw(v: u32) -> Self
+pub const syntaqlite_syntax::MACRO_BODY_CALL_ARG_INTERNAL: syntaqlite_syntax::source::LayerOffset
 pub enum syntaqlite_syntax::CommentKind
 pub enum syntaqlite_syntax::CommentSide
 pub enum syntaqlite_syntax::ParseOutcome<T, E>
@@ -770,17 +929,20 @@ pub enum syntaqlite_syntax::nodes::Select<'a>
 pub enum syntaqlite_syntax::nodes::Stmt<'a>
 pub enum syntaqlite_syntax::nodes::TableSource<'a>
 pub enum syntaqlite_syntax::typed::ParseOutcome<T, E>
+pub fn str::eq(&self, other: &syntaqlite_syntax::source::DocText) -> bool
+pub fn str::eq(&self, other: &syntaqlite_syntax::source::LayerText) -> bool
+pub fn str::eq(&self, other: &syntaqlite_syntax::source::StmtText) -> bool
 pub fn syntaqlite_syntax::Comment<'a>::kind(&self) -> syntaqlite_syntax::CommentKind
-pub fn syntaqlite_syntax::Comment<'a>::length(&self) -> u32
-pub fn syntaqlite_syntax::Comment<'a>::offset(&self) -> u32
+pub fn syntaqlite_syntax::Comment<'a>::length(&self) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::Comment<'a>::offset(&self) -> syntaqlite_syntax::source::StmtOffset
 pub fn syntaqlite_syntax::Comment<'a>::side(&self) -> syntaqlite_syntax::CommentSide
 pub fn syntaqlite_syntax::Comment<'a>::text(&self) -> &'a str
-pub fn syntaqlite_syntax::Comment<'a>::token_idx(&self) -> u32
+pub fn syntaqlite_syntax::Comment<'a>::token_idx(&self) -> syntaqlite_syntax::source::TokenIdx
 pub fn syntaqlite_syntax::CommentSpan::kind(&self) -> syntaqlite_syntax::CommentKind
-pub fn syntaqlite_syntax::CommentSpan::length(&self) -> u32
-pub fn syntaqlite_syntax::CommentSpan::offset(&self) -> u32
+pub fn syntaqlite_syntax::CommentSpan::length(&self) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::CommentSpan::offset(&self) -> syntaqlite_syntax::source::StmtOffset
 pub fn syntaqlite_syntax::CommentSpan::side(&self) -> syntaqlite_syntax::CommentSide
-pub fn syntaqlite_syntax::CommentSpan::token_idx(&self) -> u32
+pub fn syntaqlite_syntax::CommentSpan::token_idx(&self) -> syntaqlite_syntax::source::TokenIdx
 pub fn syntaqlite_syntax::CompletionContext::from_raw(v: u32) -> Self
 pub fn syntaqlite_syntax::CompletionContext::raw(self) -> u32
 pub fn syntaqlite_syntax::IncrementalParseSession::completion_context(&self) -> syntaqlite_syntax::CompletionContext
@@ -807,8 +969,8 @@ pub fn syntaqlite_syntax::ParserConfig::with_macro_fallback(self, macro_fallback
 pub fn syntaqlite_syntax::ParserConfig::with_trace(self, trace: bool) -> Self
 pub fn syntaqlite_syntax::ParserToken<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::ParserToken<'a>::flags(&self) -> syntaqlite_syntax::ParserTokenFlags
-pub fn syntaqlite_syntax::ParserToken<'a>::length(&self) -> u32
-pub fn syntaqlite_syntax::ParserToken<'a>::offset(&self) -> u32
+pub fn syntaqlite_syntax::ParserToken<'a>::length(&self) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::ParserToken<'a>::offset(&self) -> syntaqlite_syntax::source::StmtOffset
 pub fn syntaqlite_syntax::ParserToken<'a>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::ParserToken<'a>::token_type(&self) -> syntaqlite_syntax::TokenType
 pub fn syntaqlite_syntax::ParserTokenFlags::bits(self) -> u8
@@ -923,7 +1085,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id:
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a str
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::is_macro_free(&self) -> bool
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a>
@@ -933,11 +1095,11 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_text(&self, id: synt
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_node(&self) -> core::option::Option<syntaqlite_syntax::any::AnyNode<'_>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_expanded_text(&self, span: syntaqlite_syntax::any::TextSpan) -> &'a str
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, u32)
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, usize, usize)
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base_offset(&self) -> u32
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a str
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::token_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = (u32, u32)> + use<'_>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::StmtOffset)
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::DocRange)
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::token_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::source::StmtRange> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&mut self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyTokenType::from(t: syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
 pub fn syntaqlite_syntax::any::AnyTokenType::from_raw(v: u32) -> Self
@@ -949,22 +1111,22 @@ pub fn syntaqlite_syntax::any::FieldMeta<'_>::name(&self) -> &'static str
 pub fn syntaqlite_syntax::any::FieldMeta<'_>::offset(&self) -> u16
 pub fn syntaqlite_syntax::any::KeywordEntry::keyword(&self) -> &'static str
 pub fn syntaqlite_syntax::any::KeywordEntry::token_type(&self) -> syntaqlite_syntax::any::AnyTokenType
-pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::body_length(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::body_offset(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::expansion_length(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::expansion_offset(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::body_length(&self) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::body_offset(&self) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::expansion_length(&self) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::expansion_offset(&self) -> syntaqlite_syntax::source::LayerOffset
 pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin(&self) -> syntaqlite_syntax::any::ArgOrigin
-pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_length(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_offset(&self) -> u32
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_length(&self) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_offset(&self) -> syntaqlite_syntax::source::LayerOffset
 pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_parent(&self) -> core::option::Option<u32>
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::arg_segments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroArgSegment<'a>> + use<'_, 'a>
-pub fn syntaqlite_syntax::any::MacroRewrite<'a>::body_call_length(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite<'a>::body_call_offset(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_length(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_offset(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite<'a>::def_col(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite<'a>::def_line(&self) -> u32
-pub fn syntaqlite_syntax::any::MacroRewrite<'a>::expansion(&self) -> &'a str
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::body_call_length(&self) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::body_call_offset(&self) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_length(&self) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_offset(&self) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::def_col(&self) -> syntaqlite_syntax::source::ColumnNumber
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::def_line(&self) -> syntaqlite_syntax::source::LineNumber
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::expansion(&self) -> &'a syntaqlite_syntax::source::LayerText
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::name(&self) -> &'a str
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::parent(&self) -> core::option::Option<u32>
 pub fn syntaqlite_syntax::any::NodeFields::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1632,6 +1794,80 @@ pub fn syntaqlite_syntax::nodes::WithClause<'a>::recursive(&self) -> bool
 pub fn syntaqlite_syntax::nodes::WithClause<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
 pub fn syntaqlite_syntax::nodes::WithClauseId::from(n: syntaqlite_syntax::nodes::WithClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::WithClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::source::ColumnNumber::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::DocLen::add(self, rhs: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocLen
+pub fn syntaqlite_syntax::source::DocLen::add_assign(&mut self, rhs: syntaqlite_syntax::source::DocLen)
+pub fn syntaqlite_syntax::source::DocLen::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::DocLen::sub(self, rhs: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocLen
+pub fn syntaqlite_syntax::source::DocLen::sub_assign(&mut self, rhs: syntaqlite_syntax::source::DocLen)
+pub fn syntaqlite_syntax::source::DocOffset::add(self, rhs: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocOffset
+pub fn syntaqlite_syntax::source::DocOffset::add_assign(&mut self, rhs: syntaqlite_syntax::source::DocLen)
+pub fn syntaqlite_syntax::source::DocOffset::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::DocOffset::sub(self, rhs: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocOffset
+pub fn syntaqlite_syntax::source::DocOffset::sub(self, rhs: syntaqlite_syntax::source::DocOffset) -> syntaqlite_syntax::source::DocLen
+pub fn syntaqlite_syntax::source::DocOffset::sub_assign(&mut self, rhs: syntaqlite_syntax::source::DocLen)
+pub fn syntaqlite_syntax::source::DocText::as_range(&self) -> syntaqlite_syntax::source::DocRange
+pub fn syntaqlite_syntax::source::DocText::as_ref(&self) -> &str
+pub fn syntaqlite_syntax::source::DocText::as_str(&self) -> &str
+pub fn syntaqlite_syntax::source::DocText::byte_len(&self) -> syntaqlite_syntax::source::DocLen
+pub fn syntaqlite_syntax::source::DocText::eq(&self, other: &&str) -> bool
+pub fn syntaqlite_syntax::source::DocText::eq(&self, other: &Self) -> bool
+pub fn syntaqlite_syntax::source::DocText::eq(&self, other: &str) -> bool
+pub fn syntaqlite_syntax::source::DocText::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::DocText::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn syntaqlite_syntax::source::DocText::index(&self, r: syntaqlite_syntax::source::DocRange) -> &str
+pub fn syntaqlite_syntax::source::DocText::is_empty(&self) -> bool
+pub fn syntaqlite_syntax::source::DocText::new(s: &str) -> &syntaqlite_syntax::source::DocText
+pub fn syntaqlite_syntax::source::LayerLen::add(self, rhs: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::source::LayerLen::add_assign(&mut self, rhs: syntaqlite_syntax::source::LayerLen)
+pub fn syntaqlite_syntax::source::LayerLen::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::LayerLen::sub(self, rhs: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::source::LayerLen::sub_assign(&mut self, rhs: syntaqlite_syntax::source::LayerLen)
+pub fn syntaqlite_syntax::source::LayerOffset::add(self, rhs: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::source::LayerOffset::add_assign(&mut self, rhs: syntaqlite_syntax::source::LayerLen)
+pub fn syntaqlite_syntax::source::LayerOffset::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::LayerOffset::sub(self, rhs: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::source::LayerOffset::sub(self, rhs: syntaqlite_syntax::source::LayerOffset) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::source::LayerOffset::sub_assign(&mut self, rhs: syntaqlite_syntax::source::LayerLen)
+pub fn syntaqlite_syntax::source::LayerText::as_range(&self) -> syntaqlite_syntax::source::LayerRange
+pub fn syntaqlite_syntax::source::LayerText::as_ref(&self) -> &str
+pub fn syntaqlite_syntax::source::LayerText::as_str(&self) -> &str
+pub fn syntaqlite_syntax::source::LayerText::byte_len(&self) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::source::LayerText::eq(&self, other: &&str) -> bool
+pub fn syntaqlite_syntax::source::LayerText::eq(&self, other: &Self) -> bool
+pub fn syntaqlite_syntax::source::LayerText::eq(&self, other: &str) -> bool
+pub fn syntaqlite_syntax::source::LayerText::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::LayerText::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn syntaqlite_syntax::source::LayerText::index(&self, r: syntaqlite_syntax::source::LayerRange) -> &str
+pub fn syntaqlite_syntax::source::LayerText::is_empty(&self) -> bool
+pub fn syntaqlite_syntax::source::LayerText::new(s: &str) -> &syntaqlite_syntax::source::LayerText
+pub fn syntaqlite_syntax::source::LineNumber::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::StmtLen::add(self, rhs: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::source::StmtLen::add_assign(&mut self, rhs: syntaqlite_syntax::source::StmtLen)
+pub fn syntaqlite_syntax::source::StmtLen::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::StmtLen::sub(self, rhs: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::source::StmtLen::sub_assign(&mut self, rhs: syntaqlite_syntax::source::StmtLen)
+pub fn syntaqlite_syntax::source::StmtOffset::add(self, rhs: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtOffset
+pub fn syntaqlite_syntax::source::StmtOffset::add_assign(&mut self, rhs: syntaqlite_syntax::source::StmtLen)
+pub fn syntaqlite_syntax::source::StmtOffset::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::StmtOffset::sub(self, rhs: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtOffset
+pub fn syntaqlite_syntax::source::StmtOffset::sub(self, rhs: syntaqlite_syntax::source::StmtOffset) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::source::StmtOffset::sub_assign(&mut self, rhs: syntaqlite_syntax::source::StmtLen)
+pub fn syntaqlite_syntax::source::StmtText::as_range(&self) -> syntaqlite_syntax::source::StmtRange
+pub fn syntaqlite_syntax::source::StmtText::as_ref(&self) -> &str
+pub fn syntaqlite_syntax::source::StmtText::as_str(&self) -> &str
+pub fn syntaqlite_syntax::source::StmtText::byte_len(&self) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::source::StmtText::eq(&self, other: &&str) -> bool
+pub fn syntaqlite_syntax::source::StmtText::eq(&self, other: &Self) -> bool
+pub fn syntaqlite_syntax::source::StmtText::eq(&self, other: &str) -> bool
+pub fn syntaqlite_syntax::source::StmtText::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::StmtText::hash<H: core::hash::Hasher>(&self, state: &mut H)
+pub fn syntaqlite_syntax::source::StmtText::index(&self, r: syntaqlite_syntax::source::StmtRange) -> &str
+pub fn syntaqlite_syntax::source::StmtText::is_empty(&self) -> bool
+pub fn syntaqlite_syntax::source::StmtText::new(s: &str) -> &syntaqlite_syntax::source::StmtText
+pub fn syntaqlite_syntax::source::TokenIdx::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::Utf16Col::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::Utf16Line::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::typed::Dialect::from_raw(raw: syntaqlite_syntax::any::AnyDialect) -> Self
 pub fn syntaqlite_syntax::typed::Dialect::into_raw(self) -> syntaqlite_syntax::any::AnyDialect
 pub fn syntaqlite_syntax::typed::Dialect::with_cflags(self, cflags: syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
@@ -1660,8 +1896,8 @@ pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::length(&self) -> core::
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::message(&self) -> &str
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::offset(&self) -> core::option::Option<usize>
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::recovery_root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
-pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::statement_base_offset(&self) -> u32
-pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::text(&self) -> &'a str
+pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
+pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::arena_result(&self) -> syntaqlite_syntax::any::AnyParsedStatement<'_>
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::drop(&mut self)
@@ -1673,12 +1909,12 @@ pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::comments(&self) ->
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::dump(&self, out: &mut alloc::string::String, indent: usize)
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::erase(self) -> syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::expanded_text(&self) -> &'a str
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::full_text(&self) -> &'a str
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::leading_comments(&self, token_idx: u32) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a, G>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::statement_base_offset(&self) -> u32
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::text(&self) -> &'a str
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::trailing_comments(&self, token_idx: u32) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::typed::TypedParser<G>::incremental_parse(&self, source: &str) -> syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
@@ -1687,8 +1923,8 @@ pub fn syntaqlite_syntax::typed::TypedParser<G>::parse(&self, source: &str) -> s
 pub fn syntaqlite_syntax::typed::TypedParser<G>::set_macro_lookup(&mut self, handler: core::option::Option<alloc::boxed::Box<dyn syntaqlite_syntax::MacroLookup>>)
 pub fn syntaqlite_syntax::typed::TypedParser<G>::with_config(dialect: G, config: &syntaqlite_syntax::ParserConfig) -> Self
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::flags(&self) -> syntaqlite_syntax::ParserTokenFlags
-pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::length(&self) -> u32
-pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::offset(&self) -> u32
+pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::length(&self) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::offset(&self) -> syntaqlite_syntax::source::StmtOffset
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::token_type(&self) -> <G as syntaqlite_syntax::typed::TypedDialect>::Token
 pub fn syntaqlite_syntax::typed::TypedToken<'a, G>::text(&self) -> &'a str
@@ -1713,6 +1949,7 @@ pub fn u32::from(v: syntaqlite_syntax::CompletionContext) -> u32
 pub mod syntaqlite_syntax
 pub mod syntaqlite_syntax::any
 pub mod syntaqlite_syntax::nodes
+pub mod syntaqlite_syntax::source
 pub mod syntaqlite_syntax::typed
 pub mod syntaqlite_syntax::util
 pub struct syntaqlite_syntax::Comment<'a>
@@ -1881,6 +2118,10 @@ pub struct syntaqlite_syntax::nodes::WindowDefId(_)
 pub struct syntaqlite_syntax::nodes::WindowDefListId(_)
 pub struct syntaqlite_syntax::nodes::WithClause<'a>
 pub struct syntaqlite_syntax::nodes::WithClauseId(_)
+pub struct syntaqlite_syntax::source::DocRange
+pub struct syntaqlite_syntax::source::LayerRange
+pub struct syntaqlite_syntax::source::StatementBase(_)
+pub struct syntaqlite_syntax::source::StmtRange
 pub struct syntaqlite_syntax::typed::Dialect
 pub struct syntaqlite_syntax::typed::TypedIncrementalParseSession<G: syntaqlite_syntax::typed::TypedDialect>
 pub struct syntaqlite_syntax::typed::TypedNodeList<'a, G: syntaqlite_syntax::typed::TypedDialect, T>
@@ -2119,12 +2360,12 @@ pub syntaqlite_syntax::any::TokenCategory::Parameter
 pub syntaqlite_syntax::any::TokenCategory::Punctuation
 pub syntaqlite_syntax::any::TokenCategory::String
 pub syntaqlite_syntax::any::TokenCategory::Type
-pub syntaqlite_syntax::any::TracebackFrame::col: u32
-pub syntaqlite_syntax::any::TracebackFrame::length_in_snippet: usize
-pub syntaqlite_syntax::any::TracebackFrame::line: u32
+pub syntaqlite_syntax::any::TracebackFrame::col: syntaqlite_syntax::source::ColumnNumber
+pub syntaqlite_syntax::any::TracebackFrame::length_in_snippet: syntaqlite_syntax::source::LayerLen
+pub syntaqlite_syntax::any::TracebackFrame::line: syntaqlite_syntax::source::LineNumber
 pub syntaqlite_syntax::any::TracebackFrame::name: core::option::Option<&'a str>
-pub syntaqlite_syntax::any::TracebackFrame::offset_in_snippet: usize
-pub syntaqlite_syntax::any::TracebackFrame::snippet: &'a str
+pub syntaqlite_syntax::any::TracebackFrame::offset_in_snippet: syntaqlite_syntax::source::LayerOffset
+pub syntaqlite_syntax::any::TracebackFrame::snippet: &'a syntaqlite_syntax::source::LayerText
 pub syntaqlite_syntax::nodes::AlterOp::AddColumn = 3
 pub syntaqlite_syntax::nodes::AlterOp::DropColumn = 2
 pub syntaqlite_syntax::nodes::AlterOp::RenameColumn = 1
@@ -2484,6 +2725,12 @@ pub syntaqlite_syntax::nodes::UnaryOp::Not = 3
 pub syntaqlite_syntax::nodes::UnaryOp::Plus = 1
 pub syntaqlite_syntax::nodes::UpsertAction::Nothing = 0
 pub syntaqlite_syntax::nodes::UpsertAction::Update = 1
+pub syntaqlite_syntax::source::DocRange::end: syntaqlite_syntax::source::DocOffset
+pub syntaqlite_syntax::source::DocRange::start: syntaqlite_syntax::source::DocOffset
+pub syntaqlite_syntax::source::LayerRange::end: syntaqlite_syntax::source::LayerOffset
+pub syntaqlite_syntax::source::LayerRange::start: syntaqlite_syntax::source::LayerOffset
+pub syntaqlite_syntax::source::StmtRange::end: syntaqlite_syntax::source::StmtOffset
+pub syntaqlite_syntax::source::StmtRange::start: syntaqlite_syntax::source::StmtOffset
 pub syntaqlite_syntax::typed::ParseOutcome::Done
 pub syntaqlite_syntax::typed::ParseOutcome::Err(E)
 pub syntaqlite_syntax::typed::ParseOutcome::Ok(T)
@@ -2665,6 +2912,18 @@ pub type syntaqlite_syntax::nodes::WindowDefId::Node<'a> = syntaqlite_syntax::no
 pub type syntaqlite_syntax::nodes::WindowDefList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::WindowDef<'a>>
 pub type syntaqlite_syntax::nodes::WindowDefListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::WindowDef<'a>>
 pub type syntaqlite_syntax::nodes::WithClauseId::Node<'a> = syntaqlite_syntax::nodes::WithClause<'a>
+pub type syntaqlite_syntax::source::DocLen::Output = syntaqlite_syntax::source::DocLen
+pub type syntaqlite_syntax::source::DocOffset::Output = syntaqlite_syntax::source::DocLen
+pub type syntaqlite_syntax::source::DocOffset::Output = syntaqlite_syntax::source::DocOffset
+pub type syntaqlite_syntax::source::DocText::Output = str
+pub type syntaqlite_syntax::source::LayerLen::Output = syntaqlite_syntax::source::LayerLen
+pub type syntaqlite_syntax::source::LayerOffset::Output = syntaqlite_syntax::source::LayerLen
+pub type syntaqlite_syntax::source::LayerOffset::Output = syntaqlite_syntax::source::LayerOffset
+pub type syntaqlite_syntax::source::LayerText::Output = str
+pub type syntaqlite_syntax::source::StmtLen::Output = syntaqlite_syntax::source::StmtLen
+pub type syntaqlite_syntax::source::StmtOffset::Output = syntaqlite_syntax::source::StmtLen
+pub type syntaqlite_syntax::source::StmtOffset::Output = syntaqlite_syntax::source::StmtOffset
+pub type syntaqlite_syntax::source::StmtText::Output = str
 pub type syntaqlite_syntax::typed::Dialect::Node<'a> = syntaqlite_syntax::nodes::Stmt<'a>
 pub type syntaqlite_syntax::typed::Dialect::NodeId = syntaqlite_syntax::nodes::NodeId
 pub type syntaqlite_syntax::typed::Dialect::Token = syntaqlite_syntax::TokenType

@@ -1,7 +1,8 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Newtypes for source positions, lengths, ranges, and indices.
+//! Typed source coordinates — positions, lengths, ranges, token indices,
+//! line/column numbers, and source-text wrappers.
 //!
 //! Every position-like value crossing the syntaqlite API surface lives in one
 //! of a small number of distinct *kinds*:
@@ -15,6 +16,10 @@
 //!   the first byte of the full bound source
 //!   (`AnyParsedStatement::full_text()`).  The semantic layer and LSP
 //!   protocol use these.
+//! * **Layer-relative byte offsets** ([`LayerOffset`]) — measured from
+//!   the start of an unspecified-but-contextual buffer (a macro expansion
+//!   layer, a traceback snippet, a parent rewrite's expansion).  Used by
+//!   APIs where the buffer is identified by a sibling field.
 //! * **Token indices** ([`TokenIdx`]) — 0-based index into a statement's
 //!   token stream.
 //! * **1-based line / column** ([`LineNumber`], [`ColumnNumber`]) — as
@@ -39,9 +44,28 @@
 //! positions and line/UTF-16 positions requires the source text and lives
 //! on a separate `SourceMap` type (added in a later change); these are not
 //! `From` impls because they are not free.
+//!
+//! ## Typed source text
+//!
+//! Paired with the offset newtypes are three wrappers around `str` that
+//! model the buffer each offset kind measures into:
+//!
+//! | Offset        | Corresponding text   |
+//! |---------------|----------------------|
+//! | [`StmtOffset`]  | [`StmtText`]         |
+//! | [`DocOffset`]   | [`DocText`]          |
+//! | [`LayerOffset`] | [`LayerText`]        |
+//!
+//! Each is `#[repr(transparent)]` over `str`, so wrapping a `&str` is
+//! zero-cost.  They implement `Index<Range>` for their matching
+//! range newtype, so `&stmt_text[stmt_range]` compiles but
+//! `&stmt_text[doc_range]` does not — the type system rules out slicing
+//! a statement-relative buffer with a document-absolute range.  Use
+//! [`StmtText::as_str`] (and its peers) as the escape hatch when
+//! interoperating with `std::str` APIs.
 
 use core::fmt;
-use core::ops::{Add, AddAssign, Sub, SubAssign};
+use core::ops::{Add, AddAssign, Index, Sub, SubAssign};
 
 // ── Macro: define a u32 newtype with the standard set of impls ──────────────
 
@@ -216,6 +240,7 @@ impl StmtRange {
     pub const fn is_empty(self) -> bool {
         self.start.0 == self.end.0
     }
+
 }
 
 // ── Document-absolute byte position / length ────────────────────────────────
@@ -265,6 +290,60 @@ impl DocRange {
     pub const fn is_empty(self) -> bool {
         self.start.0 == self.end.0
     }
+
+}
+
+// ── Layer-relative byte position / length ──────────────────────────────────
+
+define_u32_newtype! {
+    /// A byte offset measured from the start of an unspecified-but-contextual
+    /// buffer — typically a macro expansion layer's buffer, a traceback
+    /// snippet, or a parent rewrite's expansion text.
+    ///
+    /// Used by APIs whose offsets are interpreted relative to a buffer
+    /// identified by a sibling field (e.g. `MacroRewrite`'s `parent`,
+    /// `MacroArgSegment`'s `origin`).  Distinct from [`StmtOffset`] and
+    /// [`DocOffset`] at the type level so callers can't accidentally use
+    /// one in place of another.
+    LayerOffset
+}
+
+define_u32_newtype! {
+    /// A byte length, paired with [`LayerOffset`].  See [`StmtLen`] for the
+    /// arithmetic rationale.
+    LayerLen
+}
+
+impl_pos_len_arith!(pos: LayerOffset, len: LayerLen);
+
+/// A half-open range of layer-relative byte offsets `[start, end)`.
+#[derive(Copy, Clone, Default, PartialEq, Eq, Hash, Debug)]
+pub struct LayerRange {
+    /// Inclusive start of the range.
+    pub start: LayerOffset,
+    /// Exclusive end of the range.
+    pub end: LayerOffset,
+}
+
+impl LayerRange {
+    /// Construct a range from `(offset, length)`.
+    pub const fn from_offset_len(start: LayerOffset, len: LayerLen) -> Self {
+        Self {
+            start,
+            end: LayerOffset(start.0 + len.0),
+        }
+    }
+
+    /// The length of this range.
+    pub const fn len(self) -> LayerLen {
+        LayerLen(self.end.0 - self.start.0)
+    }
+
+    /// Whether this range covers zero bytes.
+    pub const fn is_empty(self) -> bool {
+        self.start.0 == self.end.0
+    }
+
 }
 
 // ── Statement base offset ───────────────────────────────────────────────────
@@ -359,6 +438,149 @@ define_u32_newtype! {
     /// A 0-based column number in UTF-16 code units, per the LSP
     /// protocol's `Position.character` field.  See [`Utf16Line`].
     Utf16Col
+}
+
+// ── Typed source text ──────────────────────────────────────────────────────
+
+macro_rules! define_text_newtype {
+    (
+        $(#[$meta:meta])*
+        $name:ident,
+        offset = $offset:ident,
+        len = $len:ident,
+        range = $range:ident,
+    ) => {
+        $(#[$meta])*
+        #[repr(transparent)]
+        pub struct $name(str);
+
+        impl $name {
+            /// Wrap a `&str` as a reference to this typed text.
+            ///
+            /// The caller asserts that positions into the string are in
+            /// the coordinate system this newtype represents (e.g. for
+            /// [`StmtText`], offsets are statement-relative).
+            pub fn new(s: &str) -> &$name {
+                // SAFETY: $name is `#[repr(transparent)]` over `str`, so
+                // the layouts of `&str` and `&$name` are identical.
+                unsafe { &*(std::ptr::from_ref(s) as *const $name) }
+            }
+
+            /// Underlying `&str` — use when interoperating with `std::str`
+            /// APIs that don't understand the newtype.
+            pub fn as_str(&self) -> &str {
+                &self.0
+            }
+
+            /// Byte length, as a typed length.  Returns `u32::MAX` if the
+            /// underlying string is longer than `u32::MAX` bytes (not
+            /// possible for any syntaqlite-managed buffer).
+            pub fn byte_len(&self) -> $len {
+                $len::from_raw(u32::try_from(self.0.len()).unwrap_or(u32::MAX))
+            }
+
+            /// Whether the text is empty.
+            pub fn is_empty(&self) -> bool {
+                self.0.is_empty()
+            }
+
+            /// Range spanning the whole text `[0, byte_len())`.
+            pub fn as_range(&self) -> $range {
+                $range::from_offset_len($offset::default(), self.byte_len())
+            }
+        }
+
+        impl AsRef<str> for $name {
+            fn as_ref(&self) -> &str {
+                &self.0
+            }
+        }
+
+        impl fmt::Debug for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                fmt::Debug::fmt(&self.0, f)
+            }
+        }
+
+        impl fmt::Display for $name {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                fmt::Display::fmt(&self.0, f)
+            }
+        }
+
+        impl PartialEq<str> for $name {
+            fn eq(&self, other: &str) -> bool {
+                &self.0 == other
+            }
+        }
+
+        impl PartialEq<&str> for $name {
+            fn eq(&self, other: &&str) -> bool {
+                &self.0 == *other
+            }
+        }
+
+        impl PartialEq<$name> for str {
+            fn eq(&self, other: &$name) -> bool {
+                self == &other.0
+            }
+        }
+
+        impl PartialEq for $name {
+            fn eq(&self, other: &Self) -> bool {
+                self.0 == other.0
+            }
+        }
+
+        impl Eq for $name {}
+
+        impl core::hash::Hash for $name {
+            fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
+                self.0.hash(state);
+            }
+        }
+
+        impl Index<$range> for $name {
+            type Output = str;
+            fn index(&self, r: $range) -> &str {
+                &self.0[r.start.as_usize()..r.end.as_usize()]
+            }
+        }
+    };
+}
+
+define_text_newtype! {
+    /// Source text for a single statement — the slice returned by
+    /// `AnyParsedStatement::text()`.  Positions into a `StmtText` are
+    /// measured in [`StmtOffset`] / [`StmtLen`] / [`StmtRange`].
+    ///
+    /// Slicing uses the typed range: `&stmt_text[range]` where
+    /// `range: StmtRange`.  Indexing with a [`DocRange`] is a type error.
+    StmtText,
+    offset = StmtOffset,
+    len = StmtLen,
+    range = StmtRange,
+}
+
+define_text_newtype! {
+    /// Full document source — the slice returned by
+    /// `AnyParsedStatement::full_text()`.  Positions into a `DocText`
+    /// are measured in [`DocOffset`] / [`DocLen`] / [`DocRange`].
+    DocText,
+    offset = DocOffset,
+    len = DocLen,
+    range = DocRange,
+}
+
+define_text_newtype! {
+    /// Source text in an unspecified contextual buffer — typically a
+    /// macro expansion layer, traceback snippet, or parent rewrite's
+    /// expansion text.  Positions into a `LayerText` are measured in
+    /// [`LayerOffset`] / [`LayerLen`] / [`LayerRange`].
+    LayerText,
+    offset = LayerOffset,
+    len = LayerLen,
+    range = LayerRange,
 }
 
 #[cfg(test)]
@@ -461,11 +683,62 @@ mod tests {
     }
 
     #[test]
+    fn stmt_text_slice_by_range_returns_str() {
+        let t = StmtText::new("SELECT 1");
+        let r = StmtRange::from_offset_len(StmtOffset::from_raw(0), StmtLen::from_raw(6));
+        let s: &str = &t[r];
+        assert_eq!(s, "SELECT");
+    }
+
+    #[test]
+    fn stmt_text_basic_queries() {
+        let t = StmtText::new("SELECT 1");
+        assert_eq!(t.byte_len().as_u32(), 8);
+        assert!(!t.is_empty());
+        assert_eq!(t.as_range().start.as_u32(), 0);
+        assert_eq!(t.as_range().end.as_u32(), 8);
+    }
+
+    #[test]
+    fn doc_text_slice_by_doc_range() {
+        let d = DocText::new("create table t; select 1");
+        let r = DocRange::from_offset_len(DocOffset::from_raw(16), DocLen::from_raw(8));
+        assert_eq!(&d[r], "select 1");
+    }
+
+    #[test]
+    fn layer_text_slice_by_layer_range() {
+        let l = LayerText::new("(inner)");
+        let r = LayerRange::from_offset_len(LayerOffset::from_raw(1), LayerLen::from_raw(5));
+        assert_eq!(&l[r], "inner");
+    }
+
+    #[test]
+    fn text_wrapping_is_zero_cost() {
+        let s = "SELECT 1";
+        let t = StmtText::new(s);
+        // `#[repr(transparent)]`: pointer-identical.
+        assert_eq!(
+            std::ptr::from_ref::<str>(s).cast::<u8>(),
+            std::ptr::from_ref::<StmtText>(t).cast::<u8>(),
+        );
+    }
+
+    #[test]
+    fn text_equality_with_str() {
+        let t = StmtText::new("SELECT 1");
+        assert_eq!(t, "SELECT 1");
+        assert_eq!("SELECT 1", t.as_str());
+    }
+
+    #[test]
     fn types_are_expected_size() {
         assert_eq!(size_of::<StmtOffset>(), 4);
         assert_eq!(size_of::<StmtLen>(), 4);
         assert_eq!(size_of::<DocOffset>(), 4);
         assert_eq!(size_of::<DocLen>(), 4);
+        assert_eq!(size_of::<LayerOffset>(), 4);
+        assert_eq!(size_of::<LayerLen>(), 4);
         assert_eq!(size_of::<TokenIdx>(), 4);
         assert_eq!(size_of::<LineNumber>(), 4);
         assert_eq!(size_of::<ColumnNumber>(), 4);
@@ -473,6 +746,7 @@ mod tests {
         assert_eq!(size_of::<Utf16Col>(), 4);
         assert_eq!(size_of::<StmtRange>(), 8);
         assert_eq!(size_of::<DocRange>(), 8);
+        assert_eq!(size_of::<LayerRange>(), 8);
         assert_eq!(size_of::<StatementBase>(), 4);
     }
 

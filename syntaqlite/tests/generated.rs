@@ -191,7 +191,8 @@ fn debug_multi_stmt_comments() {
             eprintln!("stmt {stmt_num}: source={stmt_text:?}");
             eprintln!("  {} comment(s):", comments.len());
             for c in &comments {
-                let text = &stmt_text[c.offset() as usize..(c.offset() + c.length()) as usize];
+                let range = syntaqlite::source::StmtRange::from_offset_len(c.offset(), c.length());
+                let text = &stmt_text[range];
                 eprintln!(
                     "    offset={} kind={:?} text={text:?}",
                     c.offset(),

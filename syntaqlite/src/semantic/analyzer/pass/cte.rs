@@ -186,8 +186,8 @@ impl ValidationPass<'_> {
         let (name, name_range) = match fields[name_idx as usize] {
             FieldValue::Span(sp) => {
                 let name = stmt.span_expanded_text(sp);
-                let (_, start, end) = stmt.span_text_abs(sp);
-                (name, (start, end))
+                let (_, range) = stmt.span_text_abs(sp);
+                (name, (range.start.as_usize(), range.end.as_usize()))
             }
             _ => ("", (0, 0)),
         };
