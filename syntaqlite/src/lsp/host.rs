@@ -359,9 +359,11 @@ impl LspHost {
             .get_mut(uri)
             .expect("ensure_model_for guarantees document exists");
         if doc.cached_sem_tokens.is_none() {
-            let tokens = self
-                .analyzer
-                .semantic_tokens(doc.model.as_ref().expect("ensure_model sets model"));
+            let tokens = doc
+                .model
+                .as_ref()
+                .expect("ensure_model sets model")
+                .semantic_tokens(&self.analyzer.dialect());
             doc.cached_sem_tokens = Some(tokens);
         }
         let tokens = doc
@@ -391,8 +393,11 @@ impl LspHost {
             .documents
             .get(uri)
             .expect("ensure_model_for guarantees document exists");
-        self.analyzer
-            .completion_info(doc.model.as_ref().expect("ensure_model sets model"), offset)
+        super::completion::completion_info(
+            &self.analyzer.dialect(),
+            doc.model.as_ref().expect("ensure_model sets model"),
+            offset,
+        )
     }
 
     /// Completion items (keywords + functions) at a byte offset.
@@ -1852,5 +1857,155 @@ mod tests {
             errors.is_empty(),
             "unmatched file should have no errors (lenient mode), got: {errors:?}"
         );
+    }
+
+    #[test]
+    fn goto_definition_cte_reference() {
+        let mut host = LspHost::new();
+        let uri = "file:///test.sql";
+        let src = "WITH cte AS (SELECT 1) SELECT * FROM cte";
+        host.open_document(uri, 1, src.to_string());
+
+        let ref_offset = src.rfind("cte").unwrap();
+        let def = host.definition_info(uri, ref_offset).expect("definition");
+        let cte_def_offset = src.find("cte").unwrap();
+        assert_eq!(def.target.start, cte_def_offset);
+        assert_eq!(def.target.end, cte_def_offset + "cte".len());
+    }
+
+    #[test]
+    fn goto_definition_ddl_table_reference() {
+        let mut host = LspHost::new();
+        let uri = "file:///test.sql";
+        let src = "CREATE TABLE users (id INTEGER); SELECT id FROM users;";
+        host.open_document(uri, 1, src.to_string());
+
+        let ref_offset = src.rfind("users").unwrap();
+        let def = host.definition_info(uri, ref_offset).expect("definition");
+        let ddl_offset = src.find("users").unwrap();
+        assert_eq!(def.target.start, ddl_offset);
+        assert_eq!(def.target.end, ddl_offset + "users".len());
+    }
+
+    #[test]
+    fn goto_definition_cte_shadows_ddl() {
+        let mut host = LspHost::new();
+        let uri = "file:///test.sql";
+        let src = "CREATE TABLE t (id INTEGER); WITH t AS (SELECT 1 AS id) SELECT * FROM t;";
+        host.open_document(uri, 1, src.to_string());
+
+        let from_t_offset = src.rfind("FROM t").unwrap() + 5;
+        let def = host
+            .definition_info(uri, from_t_offset)
+            .expect("definition");
+        let cte_t_offset = src[29..].find('t').unwrap() + 29;
+        assert_eq!(def.target.start, cte_t_offset);
+    }
+
+    #[test]
+    fn goto_definition_unknown_table_returns_none() {
+        let mut host = LspHost::new();
+        let uri = "file:///test.sql";
+        let src = "SELECT * FROM nonexistent";
+        host.open_document(uri, 1, src.to_string());
+
+        let from_offset = src.find("nonexistent").unwrap();
+        assert!(host.definition_info(uri, from_offset).is_none());
+    }
+
+    #[test]
+    fn goto_definition_column_in_ddl_table() {
+        let mut host = LspHost::new();
+        let uri = "file:///test.sql";
+        let src = "CREATE TABLE users (id INTEGER, name TEXT);\nSELECT name FROM users;";
+        host.open_document(uri, 1, src.to_string());
+
+        let select_name_offset = src.rfind("name").unwrap();
+        let def = host
+            .definition_info(uri, select_name_offset)
+            .expect("definition");
+        let ddl_name_offset = src.find("name").unwrap();
+        assert_eq!(def.target.start, ddl_name_offset);
+    }
+
+    #[test]
+    fn goto_definition_unknown_column_returns_none() {
+        let mut host = LspHost::new();
+        let uri = "file:///test.sql";
+        let src = "CREATE TABLE t (a INT);\nSELECT b FROM t;";
+        host.open_document(uri, 1, src.to_string());
+
+        let b_offset = src.find('b').unwrap();
+        assert!(host.definition_info(uri, b_offset).is_none());
+    }
+
+    #[test]
+    fn goto_definition_cte_column_inferred_from_alias() {
+        let mut host = LspHost::new();
+        let uri = "file:///test.sql";
+        let src = "WITH foo AS (SELECT 1 AS a)\nSELECT a FROM foo;";
+        host.open_document(uri, 1, src.to_string());
+
+        let a_offset = src.find("SELECT a").unwrap() + "SELECT ".len();
+        let def = host.definition_info(uri, a_offset).expect("definition");
+        let cte_a_offset = src.find("AS a").unwrap() + "AS ".len();
+        assert_eq!(def.target.start, cte_a_offset);
+    }
+
+    #[test]
+    fn goto_definition_cte_column_from_declared_list() {
+        let mut host = LspHost::new();
+        let uri = "file:///test.sql";
+        let src = "WITH foo(x) AS (SELECT 1)\nSELECT x FROM foo;";
+        host.open_document(uri, 1, src.to_string());
+
+        let x_offset = src.find("SELECT x").unwrap() + "SELECT ".len();
+        let def = host.definition_info(uri, x_offset).expect("definition");
+        let decl_x_offset = src.find("(x)").unwrap() + 1;
+        assert_eq!(def.target.start, decl_x_offset);
+    }
+
+    #[test]
+    fn goto_definition_schema_table_jumps_to_external_file() {
+        use crate::semantic::catalog::Catalog;
+        let schema = "CREATE TABLE users (id INTEGER, name TEXT);";
+        let file_uri = "file:///path/to/schema.sql";
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(dialect, &[(schema, Some(file_uri))]).0;
+
+        let mut host = LspHost::new();
+        host.set_session_context(cat);
+
+        let uri = "file:///test.sql";
+        let src = "SELECT * FROM users";
+        host.open_document(uri, 1, src.to_string());
+
+        let ref_offset = src.find("users").unwrap();
+        let def = host.definition_info(uri, ref_offset).expect("definition");
+        assert_eq!(def.target.file_uri.as_deref(), Some(file_uri));
+        let schema_offset = schema.find("users").unwrap();
+        assert_eq!(def.target.start, schema_offset);
+        assert_eq!(def.target.end, schema_offset + "users".len());
+    }
+
+    #[test]
+    fn goto_definition_same_file_ddl_shadows_schema() {
+        use crate::semantic::catalog::Catalog;
+        let schema = "CREATE TABLE t (x INTEGER);";
+        let file_uri = "file:///schema.sql";
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(dialect, &[(schema, Some(file_uri))]).0;
+
+        let mut host = LspHost::new();
+        host.set_session_context(cat);
+
+        let uri = "file:///test.sql";
+        let src = "CREATE TABLE t (y INTEGER); SELECT * FROM t;";
+        host.open_document(uri, 1, src.to_string());
+
+        let ref_offset = src.rfind(" t").unwrap() + 1;
+        let def = host.definition_info(uri, ref_offset).expect("definition");
+        assert!(def.target.file_uri.is_none());
+        assert_eq!(def.target.start, src.find('t').unwrap());
     }
 }

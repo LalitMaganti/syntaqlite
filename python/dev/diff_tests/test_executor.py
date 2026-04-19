@@ -70,6 +70,8 @@ def execute_test(
         cmd.extend(["--line-width", str(blueprint.line_width)])
     if blueprint.indent_width is not None:
         cmd.extend(["--indent-width", str(blueprint.indent_width)])
+    if blueprint.strict_schema:
+        cmd.extend(["-D", "schema"])
     t0 = time.monotonic()
     try:
         proc = subprocess.run(

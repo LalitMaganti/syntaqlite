@@ -46,6 +46,8 @@
 pub(crate) mod analyzer;
 #[cfg(feature = "validation")]
 pub(crate) mod catalog;
+#[cfg(feature = "validation")]
+pub(crate) mod ddl;
 pub(crate) mod diagnostics;
 #[cfg(feature = "validation")]
 #[expect(unreachable_pub)]

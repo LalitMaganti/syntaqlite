@@ -256,8 +256,8 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                 let canonical = sn.to_ascii_lowercase();
 
                 let (columns, kind) = if let Some(&body) = self.cte_bodies.get(&canonical) {
-                    let cols =
-                        super::super::catalog::columns_from_select(self.stmt, body, self.roles);
+                    let cols = super::super::ddl::DdlReader::new(self.stmt, self.roles)
+                        .columns_from_select(body);
                     (cols, SourceKind::Cte(body))
                 } else {
                     let (cols, _) = self.catalog.table_source_info(&canonical);
@@ -283,8 +283,8 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                     && let FieldValue::NodeId(body_id) = fields[body as usize]
                 {
                     let alias_lower = alias_text.to_ascii_lowercase();
-                    let cols =
-                        super::super::catalog::columns_from_select(self.stmt, body_id, self.roles);
+                    let cols = super::super::ddl::DdlReader::new(self.stmt, self.roles)
+                        .columns_from_select(body_id);
                     target.insert(
                         alias_lower.clone(),
                         SourceInfo {
@@ -636,7 +636,8 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         if let FieldValue::NodeId(expr_id) = child_fields[expr_idx as usize]
             && !expr_id.is_null()
         {
-            return super::super::catalog::expr_source_text(self.stmt, expr_id)
+            return super::super::ddl::DdlReader::new(self.stmt, self.roles)
+                .expr_source_text(expr_id)
                 .map(str::to_ascii_lowercase);
         }
 
