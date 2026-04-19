@@ -81,8 +81,8 @@ impl<'a> DiagnosticRenderer<'a> {
                 file: self.file,
                 severity,
                 message: &message,
-                start_offset: diag.start_offset(),
-                end_offset: diag.end_offset(),
+                start_offset: diag.range().start.as_usize(),
+                end_offset: diag.range().end.as_usize(),
                 help: help.as_deref(),
             },
         )?;
@@ -99,8 +99,8 @@ impl<'a> DiagnosticRenderer<'a> {
                     file: "<macro expansion>",
                     severity: "note",
                     message: "in macro expansion",
-                    start_offset: frame.start,
-                    end_offset: frame.end,
+                    start_offset: frame.range.start.as_usize(),
+                    end_offset: frame.range.end.as_usize(),
                     help: None,
                 },
             )?;

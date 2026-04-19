@@ -37,6 +37,8 @@ mod interpret;
 #[doc(inline)]
 pub use formatter::Formatter;
 
+use crate::source::DocRange;
+
 // ── Config types (formerly config.rs) ────────────────────────────────────
 
 /// Controls how SQL keywords are cased in formatted output.
@@ -152,24 +154,22 @@ impl FormatConfig {
 #[derive(Debug, Clone)]
 pub struct FormatError {
     message: String,
-    offset: Option<usize>,
-    length: Option<usize>,
+    range: Option<DocRange>,
 }
 
 impl FormatError {
+    pub(crate) fn new(message: String, range: Option<DocRange>) -> Self {
+        Self { message, range }
+    }
+
     /// Human-readable error message.
     pub fn message(&self) -> &str {
         &self.message
     }
 
-    /// Byte offset of the error token in the source, if known.
-    pub fn offset(&self) -> Option<usize> {
-        self.offset
-    }
-
-    /// Byte length of the error token, if known.
-    pub fn length(&self) -> Option<usize> {
-        self.length
+    /// Document-absolute byte range of the error token, if known.
+    pub fn range(&self) -> Option<DocRange> {
+        self.range
     }
 }
 

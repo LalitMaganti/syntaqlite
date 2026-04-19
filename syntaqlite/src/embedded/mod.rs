@@ -30,6 +30,7 @@ pub use typescript::extract_typescript;
 use std::ops::Range;
 
 use syntaqlite_syntax::any::TokenCategory;
+use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 
 use crate::dialect::AnyDialect;
 use crate::semantic::ValidationConfig;
@@ -246,12 +247,11 @@ impl EmbeddedAnalyzer {
             let offset_map = OffsetMap::new(fragment);
 
             for mut d in diags {
-                let Some(start) = offset_map.to_host(d.start_offset()) else {
+                let Some(start) = offset_map.to_host(d.range.start) else {
                     continue;
                 };
-                let end = offset_map.to_host(d.end_offset()).unwrap_or(start);
-                d.start_offset = start;
-                d.end_offset = end;
+                let end = offset_map.to_host(d.range.end).unwrap_or(start);
+                d.range = DocRange { start, end };
                 all_diags.push(d);
             }
         }
@@ -267,7 +267,7 @@ impl EmbeddedAnalyzer {
     pub(crate) fn fragment_semantic_tokens(
         &self,
         fragment: &EmbeddedFragment,
-    ) -> Vec<(usize, usize, TokenCategory)> {
+    ) -> Vec<(DocOffset, DocLen, TokenCategory)> {
         let mut analyzer = self.make_analyzer();
         let model = analyzer.analyze(fragment.sql_text(), &self.catalog, &self.config);
         model
@@ -292,9 +292,10 @@ impl EmbeddedAnalyzer {
         source: &str,
     ) -> Vec<u32> {
         let source_bytes = source.as_bytes();
+        let source_end = DocOffset::from_raw(u32::try_from(source.len()).unwrap_or(u32::MAX));
 
         // Collect (host_offset, length, legend_idx) for all fragments.
-        let mut all_tokens: Vec<(usize, usize, u32)> = Vec::new();
+        let mut all_tokens: Vec<(DocOffset, DocLen, u32)> = Vec::new();
         for fragment in fragments {
             let offset_map = OffsetMap::new(fragment);
             for (sql_offset, length, cat) in self.fragment_semantic_tokens(fragment) {
@@ -305,8 +306,13 @@ impl EmbeddedAnalyzer {
                 let Some(host_offset) = offset_map.to_host(sql_offset) else {
                     continue;
                 };
-                let host_len = length.min(source.len().saturating_sub(host_offset));
-                if host_len == 0 {
+                let remaining: DocLen = if host_offset >= source_end {
+                    DocLen::default()
+                } else {
+                    source_end - host_offset
+                };
+                let host_len = std::cmp::min(length, remaining);
+                if host_len == DocLen::default() {
                     continue;
                 }
                 all_tokens.push((host_offset, host_len, legend_idx));
@@ -322,17 +328,18 @@ impl EmbeddedAnalyzer {
         let mut prev_col: u32 = 0;
         let mut cur_line: u32 = 0;
         let mut cur_col: u32 = 0;
-        let mut src_pos: usize = 0;
+        let mut src_pos = DocOffset::default();
+        let one = DocLen::from_raw(1);
 
         for (host_offset, host_len, legend_idx) in all_tokens {
-            while src_pos < host_offset && src_pos < source_bytes.len() {
-                if source_bytes[src_pos] == b'\n' {
+            while src_pos < host_offset && src_pos < source_end {
+                if source_bytes[src_pos.as_usize()] == b'\n' {
                     cur_line += 1;
                     cur_col = 0;
                 } else {
                     cur_col += 1;
                 }
-                src_pos += 1;
+                src_pos += one;
             }
             let delta_line = cur_line - prev_line;
             let delta_start = if delta_line == 0 {
@@ -342,7 +349,7 @@ impl EmbeddedAnalyzer {
             };
             result.push(delta_line);
             result.push(delta_start);
-            result.push(u32::try_from(host_len).expect("host token length fits u32"));
+            result.push(host_len.as_u32());
             result.push(legend_idx);
             result.push(0); // modifiers
             prev_line = cur_line;
@@ -374,6 +381,7 @@ mod tests {
     use super::*;
     use crate::embedded::{python::extract_python, typescript::extract_typescript};
     use crate::semantic::diagnostics::{DiagnosticMessage, Severity};
+    use syntaqlite_syntax::source::DocText;
 
     fn analyzer() -> EmbeddedAnalyzer {
         EmbeddedAnalyzer::new(crate::sqlite::dialect::dialect())
@@ -439,9 +447,9 @@ mod tests {
         assert!(!parse_diags.is_empty(), "expected parse error");
         let fstring_start = source.find("SELECT").unwrap();
         assert!(
-            parse_diags[0].start_offset >= fstring_start,
+            parse_diags[0].start().as_usize() >= fstring_start,
             "expected offset >= {fstring_start}, got {}",
-            parse_diags[0].start_offset,
+            parse_diags[0].start(),
         );
     }
 
@@ -457,9 +465,9 @@ mod tests {
         let second_select = source.rfind("SELECT").unwrap();
         for d in &diags {
             assert!(
-                d.start_offset >= second_select,
+                d.start().as_usize() >= second_select,
                 "error at offset {} is before second fragment start {second_select}",
-                d.start_offset,
+                d.start(),
             );
         }
     }
@@ -540,14 +548,16 @@ mod tests {
         let valus_start = source.find("VALUS").unwrap();
         let valus_end = valus_start + "VALUS".len();
         assert_eq!(
-            parse_diags[0].start_offset, valus_start,
+            parse_diags[0].start().as_usize(),
+            valus_start,
             "error start should point to VALUS (offset {valus_start}), got {}",
-            parse_diags[0].start_offset,
+            parse_diags[0].start(),
         );
         assert_eq!(
-            parse_diags[0].end_offset, valus_end,
+            parse_diags[0].end().as_usize(),
+            valus_end,
             "error end should span VALUS (offset {valus_end}), got {}",
-            parse_diags[0].end_offset,
+            parse_diags[0].end(),
         );
     }
 
@@ -574,7 +584,10 @@ mod tests {
             .fragment_semantic_tokens(&fragments[0]);
         let datetime_tokens: Vec<_> = tokens
             .iter()
-            .filter(|(off, len, _)| &fragments[0].sql_text()[*off..*off + *len] == "datetime")
+            .filter(|(off, len, _)| {
+                let sql = DocText::new(fragments[0].sql_text());
+                &sql[DocRange::from_offset_len(*off, *len)] == "datetime"
+            })
             .collect();
         assert_eq!(
             datetime_tokens.len(),

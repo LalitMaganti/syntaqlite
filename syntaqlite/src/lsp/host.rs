@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use syntaqlite_syntax::any::TokenCategory;
+use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, DocText};
 use syntaqlite_syntax::util::is_suggestable_keyword;
 
 use crate::dialect::AnyDialect;
@@ -165,6 +166,7 @@ fn ensure_model_for(
 ///
 /// ```
 /// use syntaqlite::lsp::LspHost;
+/// use syntaqlite::source::DocOffset;
 ///
 /// let mut host = LspHost::new(); // SQLite dialect by default
 ///
@@ -175,7 +177,7 @@ fn ensure_model_for(
 /// let tokens = host.semantic_tokens_encoded("file:///query.sql", None);
 ///
 /// // Retrieve completions at a cursor position.
-/// let items = host.completion_items("file:///query.sql", 9);
+/// let items = host.completion_items("file:///query.sql", DocOffset::from_raw(9));
 /// ```
 pub struct LspHost {
     dialect: AnyDialect,
@@ -339,11 +341,7 @@ impl LspHost {
     /// # Panics
     /// Panics if the internal model or token cache is in an inconsistent state
     /// (this indicates a bug in `ensure_model`).
-    pub fn semantic_tokens_encoded(
-        &mut self,
-        uri: &str,
-        range: Option<(usize, usize)>,
-    ) -> Vec<u32> {
+    pub fn semantic_tokens_encoded(&mut self, uri: &str, range: Option<DocRange>) -> Vec<u32> {
         if !ensure_model_for(
             uri,
             &mut self.documents,
@@ -374,7 +372,11 @@ impl LspHost {
     }
 
     /// Expected parser tokens and semantic context at a byte offset.
-    pub(crate) fn completion_info_at_offset(&mut self, uri: &str, offset: usize) -> CompletionInfo {
+    pub(crate) fn completion_info_at_offset(
+        &mut self,
+        uri: &str,
+        offset: DocOffset,
+    ) -> CompletionInfo {
         if !ensure_model_for(
             uri,
             &mut self.documents,
@@ -401,7 +403,7 @@ impl LspHost {
     }
 
     /// Completion items (keywords + functions) at a byte offset.
-    pub fn completion_items(&mut self, uri: &str, offset: usize) -> Vec<CompletionEntry> {
+    pub fn completion_items(&mut self, uri: &str, offset: DocOffset) -> Vec<CompletionEntry> {
         use std::collections::HashSet;
 
         let info = self.completion_info_at_offset(uri, offset);
@@ -545,12 +547,12 @@ impl LspHost {
 
     // ── Hover ──────────────────────────────────────────────────────────────────
 
-    /// Hover information at a byte offset: returns (`hover_text`, `token_offset`, `token_length`).
+    /// Hover information at a byte offset: returns (`hover_text`, `token_range`).
     pub(crate) fn hover_info(
         &mut self,
         uri: &str,
-        offset: usize,
-    ) -> Option<(String, usize, usize)> {
+        offset: DocOffset,
+    ) -> Option<(String, DocRange)> {
         ensure_model_for(
             uri,
             &mut self.documents,
@@ -563,20 +565,24 @@ impl LspHost {
         let model = doc.model.as_ref().expect("ensure_model sets model");
 
         let resolution = model.resolution_at(offset)?;
-        let (start, end) = model
+        let range = model
             .resolutions
             .iter()
-            .find(|r| offset >= r.start && offset < r.end)
-            .map(|r| (r.start, r.end))?;
+            .find(|r| offset >= r.range.start && offset < r.range.end)
+            .map(|r| r.range)?;
 
         let hover = format_resolved_hover(resolution);
-        Some((hover, start, end - start))
+        Some((hover, range))
     }
 
     // ── Go-to-definition ───────────────────────────────────────────────────
 
     /// Return the definition location for the symbol at `offset`.
-    pub(crate) fn definition_info(&mut self, uri: &str, offset: usize) -> Option<DefinitionResult> {
+    pub(crate) fn definition_info(
+        &mut self,
+        uri: &str,
+        offset: DocOffset,
+    ) -> Option<DefinitionResult> {
         ensure_model_for(
             uri,
             &mut self.documents,
@@ -594,14 +600,14 @@ impl LspHost {
 
     /// Find all references to the symbol at `offset` across all open documents.
     ///
-    /// Returns a list of `(uri, start, end)` tuples. When `include_declaration`
+    /// Returns a list of `(uri, range)` tuples. When `include_declaration`
     /// is true, the definition site (if known) is included in the results.
     pub(crate) fn find_references(
         &mut self,
         uri: &str,
-        offset: usize,
+        offset: DocOffset,
         include_declaration: bool,
-    ) -> Vec<(String, usize, usize)> {
+    ) -> Vec<(String, DocRange)> {
         // Identify the symbol at the cursor.
         let identity = self.symbol_identity_at(uri, offset);
         let Some(identity) = identity else {
@@ -626,18 +632,16 @@ impl LspHost {
                 .get(doc_uri.as_str())
                 .expect("doc_uri came from keys()");
             let model = doc.model.as_ref().expect("ensure_model sets model");
-            for (start, end) in model.references_matching(&identity) {
-                results.push((doc_uri.clone(), start, end));
+            for range in model.references_matching(&identity) {
+                results.push((doc_uri.clone(), range));
             }
             if include_declaration {
                 let key = identity.definition_key();
-                if let Some(&(start, end)) = model.definition_offsets.get(&key) {
+                if let Some(&range) = model.definition_offsets.get(&key) {
                     // Avoid duplicates (definition might also be in resolutions).
-                    let already = results
-                        .iter()
-                        .any(|(u, s, e)| u == doc_uri && *s == start && *e == end);
+                    let already = results.iter().any(|(u, r)| u == doc_uri && *r == range);
                     if !already {
-                        results.push((doc_uri.clone(), start, end));
+                        results.push((doc_uri.clone(), range));
                     }
                 }
             }
@@ -647,7 +651,7 @@ impl LspHost {
         if include_declaration && let Some(def_site) = self.external_definition_site(&identity) {
             let already = results
                 .iter()
-                .any(|(u, s, e)| *u == def_site.0 && *s == def_site.1 && *e == def_site.2);
+                .any(|(u, r)| *u == def_site.0 && *r == def_site.1);
             if !already {
                 results.push(def_site);
             }
@@ -658,12 +662,12 @@ impl LspHost {
 
     // ── Rename ──────────────────────────────────────────────────────────────
 
-    /// Check if the symbol at `offset` is renameable, returning `(start, end, current_name)`.
+    /// Check if the symbol at `offset` is renameable, returning `(range, current_name)`.
     pub(crate) fn prepare_rename(
         &mut self,
         uri: &str,
-        offset: usize,
-    ) -> Option<(usize, usize, String)> {
+        offset: DocOffset,
+    ) -> Option<(DocRange, String)> {
         ensure_model_for(
             uri,
             &mut self.documents,
@@ -677,31 +681,31 @@ impl LspHost {
         let res = model
             .resolutions
             .iter()
-            .find(|r| offset >= r.start && offset < r.end)?;
+            .find(|r| offset >= r.range.start && offset < r.range.end)?;
         let name = match &res.symbol {
             ResolvedSymbol::Table { name, .. } => name.clone(),
             ResolvedSymbol::Column { column, .. } => column.clone(),
             ResolvedSymbol::Function { .. } => return None,
         };
-        Some((res.start, res.end, name))
+        Some((res.range, name))
     }
 
     /// Rename the symbol at `offset` to `new_name` across all open documents.
     ///
-    /// Returns a map of `uri -> Vec<(start, end, new_text)>` edits.
+    /// Returns a map of `uri -> Vec<(range, new_text)>` edits.
     pub(crate) fn rename(
         &mut self,
         uri: &str,
-        offset: usize,
+        offset: DocOffset,
         new_name: &str,
-    ) -> HashMap<String, Vec<(usize, usize, String)>> {
+    ) -> HashMap<String, Vec<(DocRange, String)>> {
         let refs = self.find_references(uri, offset, true);
-        let mut edits: HashMap<String, Vec<(usize, usize, String)>> = HashMap::new();
-        for (ref_uri, start, end) in refs {
+        let mut edits: HashMap<String, Vec<(DocRange, String)>> = HashMap::new();
+        for (ref_uri, range) in refs {
             edits
                 .entry(ref_uri)
                 .or_default()
-                .push((start, end, new_name.to_string()));
+                .push((range, new_name.to_string()));
         }
         edits
     }
@@ -710,7 +714,7 @@ impl LspHost {
 
     /// Determine the symbol identity at `offset` — either from a resolution or
     /// from a definition site (CREATE TABLE / column-def).
-    fn symbol_identity_at(&mut self, uri: &str, offset: usize) -> Option<SymbolIdentity> {
+    fn symbol_identity_at(&mut self, uri: &str, offset: DocOffset) -> Option<SymbolIdentity> {
         ensure_model_for(
             uri,
             &mut self.documents,
@@ -728,8 +732,8 @@ impl LspHost {
         }
 
         // Fall back to definition_offsets (cursor on a CREATE TABLE name, etc).
-        for (key, &(start, end)) in &model.definition_offsets {
-            if offset >= start && offset < end {
+        for (key, &range) in &model.definition_offsets {
+            if offset >= range.start && offset < range.end {
                 return if let Some((table, col)) = key.split_once('.') {
                     Some(SymbolIdentity::Column {
                         table: table.to_string(),
@@ -744,18 +748,15 @@ impl LspHost {
     }
 
     /// Look up an external (schema-file) definition site for a symbol from the catalog.
-    fn external_definition_site(
-        &self,
-        identity: &SymbolIdentity,
-    ) -> Option<(String, usize, usize)> {
+    fn external_definition_site(&self, identity: &SymbolIdentity) -> Option<(String, DocRange)> {
         match identity {
             SymbolIdentity::Table(name) => {
                 let site = self.user_catalog.relation_definition_site(name)?;
-                Some((site.file_uri.clone(), site.start, site.end))
+                Some((site.file_uri.clone(), site.range))
             }
             SymbolIdentity::Column { table, column } => {
                 let site = self.user_catalog.column_definition_site(table, column)?;
-                Some((site.file_uri.clone(), site.start, site.end))
+                Some((site.file_uri.clone(), site.range))
             }
         }
     }
@@ -764,7 +765,11 @@ impl LspHost {
 
     /// Signature help at a byte offset: finds enclosing function call and returns
     /// (`function_name`, `active_parameter`, overloads).
-    pub(crate) fn signature_help(&mut self, uri: &str, offset: usize) -> Option<SignatureHelpInfo> {
+    pub(crate) fn signature_help(
+        &mut self,
+        uri: &str,
+        offset: DocOffset,
+    ) -> Option<SignatureHelpInfo> {
         ensure_model_for(
             uri,
             &mut self.documents,
@@ -778,7 +783,8 @@ impl LspHost {
         let source = model.source();
 
         // Walk backwards from offset to find enclosing `name(` and count commas.
-        let before = &source[..offset.min(source.len())];
+        let cursor_byte = std::cmp::min(offset.as_usize(), source.len());
+        let before = &source[..cursor_byte];
         let (func_name, active_param) = find_enclosing_call(before, &model.tokens, &self.dialect)?;
 
         let (_category, arities) = self.user_catalog.function_signature(&func_name)?;
@@ -849,28 +855,36 @@ impl LspHost {
 fn encode_semantic_tokens(
     source: &str,
     semantic_tokens: &[SemanticToken],
-    range: Option<(usize, usize)>,
+    range: Option<DocRange>,
 ) -> Vec<u32> {
     let src = source.as_bytes();
-    let (range_start, range_end) = range.unwrap_or((0, src.len()));
+    let src_end = DocOffset::from_raw(u32::try_from(src.len()).unwrap_or(u32::MAX));
+    let DocRange {
+        start: range_start,
+        end: range_end,
+    } = range.unwrap_or(DocRange {
+        start: DocOffset::default(),
+        end: src_end,
+    });
 
     let mut result = Vec::with_capacity(semantic_tokens.len() * 5);
     let mut prev_line: u32 = 0;
     let mut prev_col: u32 = 0;
     let mut cur_line: u32 = 0;
     let mut cur_col: u32 = 0;
-    let mut src_pos: usize = 0;
+    let mut src_pos = DocOffset::default();
 
     for tok in semantic_tokens {
-        while src_pos < tok.offset && src_pos < src.len() {
-            if src[src_pos] == b'\n' {
+        while src_pos < tok.offset && src_pos < src_end {
+            let i = src_pos.as_usize();
+            if src[i] == b'\n' {
                 cur_line += 1;
                 cur_col = 0;
-                src_pos += 1;
+                src_pos += DocLen::from_raw(1);
             } else {
-                let char_len = utf8_char_len(src[src_pos]);
+                let char_len = utf8_char_len(src[i]);
                 cur_col += if char_len == 4 { 2 } else { 1 };
-                src_pos += char_len;
+                src_pos += DocLen::from_raw(u32::try_from(char_len).unwrap_or(1));
             }
         }
 
@@ -893,8 +907,8 @@ fn encode_semantic_tokens(
         };
 
         // Compute token length in UTF-16 code units.
-        let tok_end = (tok.offset + tok.length).min(src.len());
-        let length_utf16 = utf16_len(&src[tok.offset..tok_end]);
+        let tok_end = std::cmp::min(tok.offset + tok.length, src_end);
+        let length_utf16 = utf16_len(&src[tok.offset.as_usize()..tok_end.as_usize()]);
 
         result.push(delta_line);
         result.push(delta_start);
@@ -973,6 +987,7 @@ fn find_enclosing_call(
     tokens: &[StoredToken],
     dialect: &AnyDialect,
 ) -> Option<(String, u32)> {
+    let before_doc = DocText::new(before);
     let bytes = before.as_bytes();
     let mut depth: i32 = 0;
     let mut commas: u32 = 0;
@@ -986,7 +1001,7 @@ fn find_enclosing_call(
             b'(' => {
                 if depth == 0 {
                     // Found the opening paren — look for the function name token before it.
-                    let paren_offset = pos;
+                    let paren_offset = DocOffset::from_raw(u32::try_from(pos).unwrap_or(u32::MAX));
                     let func_token = tokens.iter().rev().find(|t| {
                         t.offset + t.length <= paren_offset
                             && dialect.classify_token(t.token_type, t.flags)
@@ -994,10 +1009,15 @@ fn find_enclosing_call(
                     })?;
                     // Make sure the function token is immediately before the paren
                     // (only whitespace between).
-                    let between = &before[func_token.offset + func_token.length..paren_offset];
+                    let tok_end = func_token.offset + func_token.length;
+                    let between = &before_doc[DocRange {
+                        start: tok_end,
+                        end: paren_offset,
+                    }];
                     if between.trim().is_empty() {
-                        let name = before[func_token.offset..func_token.offset + func_token.length]
-                            .to_string();
+                        let name = before_doc
+                            [DocRange::from_offset_len(func_token.offset, func_token.length)]
+                        .to_string();
                         return Some((name, commas));
                     }
                     return None;
@@ -1038,7 +1058,7 @@ impl std::error::Error for FormatError {}
 #[cfg(test)]
 impl LspHost {
     /// Expected terminal token IDs (as `u32` ordinals) at a byte offset.
-    pub(crate) fn expected_tokens_at_offset(&mut self, uri: &str, offset: usize) -> Vec<u32> {
+    pub(crate) fn expected_tokens_at_offset(&mut self, uri: &str, offset: DocOffset) -> Vec<u32> {
         self.completion_info_at_offset(uri, offset)
             .tokens
             .iter()
@@ -1051,6 +1071,7 @@ impl LspHost {
 #[cfg(feature = "sqlite")]
 mod tests {
     use syntaqlite_syntax::TokenType;
+    use syntaqlite_syntax::source::DocOffset;
 
     use super::LspHost;
     use crate::lsp::CompletionKind;
@@ -1065,7 +1086,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "SELECT * FR";
         host.open_document(uri, 1, sql.to_string());
-        let expected = host.expected_tokens_at_offset(uri, sql.len());
+        let expected = host
+            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert!(
             expected.contains(&(TokenType::From as u32)),
             "expected From after SELECT *, got {expected:?}"
@@ -1078,7 +1100,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "SELEC 1; SELECT * FR";
         host.open_document(uri, 1, sql.to_string());
-        let expected = host.expected_tokens_at_offset(uri, sql.len());
+        let expected = host
+            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert!(
             expected.contains(&(TokenType::From as u32)),
             "expected From in second statement context, got {expected:?}"
@@ -1091,7 +1114,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "SELECT * FROM s AS x J";
         host.open_document(uri, 1, sql.to_string());
-        let expected = host.expected_tokens_at_offset(uri, sql.len());
+        let expected = host
+            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert!(
             expected.contains(&(TokenType::JoinKw as u32)),
             "expected JoinKw after FROM alias, got {expected:?}"
@@ -1104,7 +1128,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "SELECT * FROM slice ";
         host.open_document(uri, 1, sql.to_string());
-        let expected = host.expected_tokens_at_offset(uri, sql.len());
+        let expected = host
+            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert!(
             expected.contains(&(TokenType::Join as u32)),
             "expected Join"
@@ -1154,7 +1179,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "SELECT acos() as foo FROM ";
         host.open_document(uri, 1, sql.to_string());
-        let info = host.completion_info_at_offset(uri, sql.len());
+        let info = host
+            .completion_info_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert_eq!(info.context, super::super::CompletionContext::TableRef);
     }
 
@@ -1164,7 +1190,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "SELECT ";
         host.open_document(uri, 1, sql.to_string());
-        let info = host.completion_info_at_offset(uri, sql.len());
+        let info = host
+            .completion_info_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert_ne!(info.context, super::super::CompletionContext::TableRef);
     }
 
@@ -1174,7 +1201,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "SELECT * FROM t WHERE ";
         host.open_document(uri, 1, sql.to_string());
-        let info = host.completion_info_at_offset(uri, sql.len());
+        let info = host
+            .completion_info_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert_eq!(info.context, super::super::CompletionContext::Expression);
     }
 
@@ -1184,7 +1212,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "SELECT * FROM slice";
         host.open_document(uri, 1, sql.to_string());
-        let expected = host.expected_tokens_at_offset(uri, sql.len());
+        let expected = host
+            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert!(expected.contains(&(TokenType::Join as u32)));
     }
 
@@ -1320,12 +1349,13 @@ mod tests {
         let diag = &diags[0];
         assert_eq!(diag.severity, Severity::Error);
         let second_where = sql[31..].find("where").map(|i| i + 31).unwrap();
+        let start = diag.start().as_usize();
         assert_eq!(
-            diag.start_offset,
+            start,
             second_where,
             "got '{}' at {}",
-            &sql[diag.start_offset..=diag.start_offset],
-            diag.start_offset
+            &sql[start..=start],
+            start
         );
     }
 
@@ -1379,13 +1409,17 @@ mod tests {
         host.open_document(uri, 1, "SELECT * FROM orders".to_string());
 
         let ref_offset = "SELECT * FROM ".len();
-        let result = host.definition_info(uri, ref_offset);
+        let result =
+            host.definition_info(uri, DocOffset::from_raw(u32::try_from(ref_offset).unwrap()));
         assert!(result.is_some(), "expected definition for schema table");
         let def = result.unwrap();
         assert_eq!(def.target.file_uri.as_deref(), Some(file_uri));
         let schema_offset = schema.find("orders").unwrap();
-        assert_eq!(def.target.start, schema_offset);
-        assert_eq!(def.target.end, schema_offset + "orders".len());
+        assert_eq!(def.target.range.start.as_usize(), schema_offset);
+        assert_eq!(
+            def.target.range.end.as_usize(),
+            schema_offset + "orders".len()
+        );
     }
 
     #[test]
@@ -1400,13 +1434,17 @@ mod tests {
         host.open_document(uri, 1, "SELECT total FROM orders".to_string());
 
         let ref_offset = "SELECT ".len(); // points to "total"
-        let result = host.definition_info(uri, ref_offset);
+        let result =
+            host.definition_info(uri, DocOffset::from_raw(u32::try_from(ref_offset).unwrap()));
         assert!(result.is_some(), "expected definition for schema column");
         let def = result.unwrap();
         assert_eq!(def.target.file_uri.as_deref(), Some(file_uri));
         let schema_offset = schema.find("total").unwrap();
-        assert_eq!(def.target.start, schema_offset);
-        assert_eq!(def.target.end, schema_offset + "total".len());
+        assert_eq!(def.target.range.start.as_usize(), schema_offset);
+        assert_eq!(
+            def.target.range.end.as_usize(),
+            schema_offset + "total".len()
+        );
     }
 
     #[test]
@@ -1436,7 +1474,11 @@ mod tests {
 
         // Click on "users" in the SELECT statement.
         let offset = sql.find("SELECT").unwrap() + "SELECT * FROM ".len();
-        let refs = host.find_references(uri, offset, false);
+        let refs = host.find_references(
+            uri,
+            DocOffset::from_raw(u32::try_from(offset).unwrap()),
+            false,
+        );
         // Should find the two DML references (SELECT + DELETE), not the CREATE.
         assert_eq!(refs.len(), 2, "expected 2 refs, got: {refs:?}");
     }
@@ -1449,7 +1491,11 @@ mod tests {
         host.open_document(uri, 1, sql.to_string());
 
         let offset = sql.find("SELECT").unwrap() + "SELECT * FROM ".len();
-        let refs = host.find_references(uri, offset, true);
+        let refs = host.find_references(
+            uri,
+            DocOffset::from_raw(u32::try_from(offset).unwrap()),
+            true,
+        );
         // Should find the two DML references + the CREATE TABLE definition.
         assert_eq!(refs.len(), 3, "expected 3 refs (incl decl), got: {refs:?}");
     }
@@ -1463,7 +1509,11 @@ mod tests {
 
         // Click on "id" in the first SELECT.
         let offset = sql.find("SELECT id").unwrap() + "SELECT ".len();
-        let refs = host.find_references(uri, offset, false);
+        let refs = host.find_references(
+            uri,
+            DocOffset::from_raw(u32::try_from(offset).unwrap()),
+            false,
+        );
         assert_eq!(refs.len(), 2, "expected 2 column refs, got: {refs:?}");
     }
 
@@ -1482,7 +1532,11 @@ mod tests {
 
         // Click on "orders" in a.sql.
         let offset = "SELECT * FROM ".len();
-        let refs = host.find_references(uri1, offset, false);
+        let refs = host.find_references(
+            uri1,
+            DocOffset::from_raw(u32::try_from(offset).unwrap()),
+            false,
+        );
         assert_eq!(refs.len(), 2, "expected refs in both files, got: {refs:?}");
         let ref_uris: Vec<&str> = refs.iter().map(|r| r.0.as_str()).collect();
         assert!(ref_uris.contains(&uri1));
@@ -1498,7 +1552,11 @@ mod tests {
 
         // Click on "users" in CREATE TABLE — should still find the SELECT reference.
         let offset = sql.find("users").unwrap();
-        let refs = host.find_references(uri, offset, false);
+        let refs = host.find_references(
+            uri,
+            DocOffset::from_raw(u32::try_from(offset).unwrap()),
+            false,
+        );
         assert_eq!(
             refs.len(),
             1,
@@ -1514,7 +1572,11 @@ mod tests {
         host.open_document(uri, 1, sql.to_string());
 
         let offset = sql.find("users").unwrap();
-        let refs = host.find_references(uri, offset, true);
+        let refs = host.find_references(
+            uri,
+            DocOffset::from_raw(u32::try_from(offset).unwrap()),
+            true,
+        );
         assert_eq!(refs.len(), 2, "expected 2 refs (incl decl), got: {refs:?}");
     }
 
@@ -1528,11 +1590,11 @@ mod tests {
         host.open_document(uri, 1, sql.to_string());
 
         let offset = sql.find("SELECT").unwrap() + "SELECT * FROM ".len();
-        let result = host.prepare_rename(uri, offset);
+        let result = host.prepare_rename(uri, DocOffset::from_raw(u32::try_from(offset).unwrap()));
         assert!(result.is_some(), "expected rename range");
-        let (start, end, text) = result.unwrap();
+        let (range, text) = result.unwrap();
         assert_eq!(text, "users");
-        assert_eq!(&sql[start..end], "users");
+        assert_eq!(&sql[range.start.as_usize()..range.end.as_usize()], "users");
     }
 
     #[test]
@@ -1543,11 +1605,15 @@ mod tests {
         host.open_document(uri, 1, sql.to_string());
 
         let offset = sql.find("SELECT").unwrap() + "SELECT * FROM ".len();
-        let edits = host.rename(uri, offset, "accounts");
+        let edits = host.rename(
+            uri,
+            DocOffset::from_raw(u32::try_from(offset).unwrap()),
+            "accounts",
+        );
         // Should produce edits for all 3 occurrences (definition + 2 refs).
         let file_edits = edits.get(uri).expect("expected edits for test file");
         assert_eq!(file_edits.len(), 3, "expected 3 edits, got: {file_edits:?}");
-        for (_, _, text) in file_edits {
+        for (_, text) in file_edits {
             assert_eq!(text.as_str(), "accounts");
         }
     }
@@ -1560,7 +1626,11 @@ mod tests {
         host.open_document(uri, 1, sql.to_string());
 
         let offset = sql.find("SELECT id").unwrap() + "SELECT ".len();
-        let edits = host.rename(uri, offset, "user_id");
+        let edits = host.rename(
+            uri,
+            DocOffset::from_raw(u32::try_from(offset).unwrap()),
+            "user_id",
+        );
         let file_edits = edits.get(uri).expect("expected edits for test file");
         // 2 column refs + 1 definition = 3 edits.
         assert_eq!(file_edits.len(), 3, "expected 3 edits, got: {file_edits:?}");
@@ -1580,7 +1650,11 @@ mod tests {
         host.open_document(uri2, 1, "DELETE FROM orders;".to_string());
 
         let offset = "SELECT * FROM ".len();
-        let edits = host.rename(uri1, offset, "invoices");
+        let edits = host.rename(
+            uri1,
+            DocOffset::from_raw(u32::try_from(offset).unwrap()),
+            "invoices",
+        );
         // Should have edits in both open files.
         assert!(edits.contains_key(uri1), "expected edits in a.sql");
         assert!(edits.contains_key(uri2), "expected edits in b.sql");
@@ -1592,7 +1666,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "SELECT * FROM slice JOIN thread ";
         host.open_document(uri, 1, sql.to_string());
-        let items = host.completion_items(uri, sql.len());
+        let items =
+            host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         let labels: Vec<&str> = items.iter().map(|e| e.label.as_str()).collect();
         assert!(
             labels.contains(&"ON"),
@@ -1606,7 +1681,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "CREATE TABLE t1 (a INT, b TEXT);\nCREATE TABLE t2 (c INT);\nSELECT t1.";
         host.open_document(uri, 1, sql.to_string());
-        let info = host.completion_info_at_offset(uri, sql.len());
+        let info = host
+            .completion_info_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert_eq!(
             info.qualifier.as_deref(),
             Some("t1"),
@@ -1621,7 +1697,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "CREATE TABLE t1 (a INT, b TEXT);\nCREATE TABLE t2 (c INT);\nSELECT t1.";
         host.open_document(uri, 1, sql.to_string());
-        let items = host.completion_items(uri, sql.len());
+        let items =
+            host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         let labels: Vec<&str> = items.iter().map(|e| e.label.as_str()).collect();
         assert!(labels.contains(&"a"), "should suggest column a");
         assert!(labels.contains(&"b"), "should suggest column b");
@@ -1641,7 +1718,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "CREATE TABLE users (id INT);\nSELECT * FROM ";
         host.open_document(uri, 1, sql.to_string());
-        let items = host.completion_items(uri, sql.len());
+        let items =
+            host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         let labels: Vec<&str> = items.iter().map(|e| e.label.as_str()).collect();
         assert!(
             labels.contains(&"users"),
@@ -1655,7 +1733,8 @@ mod tests {
         let uri = "file:///test.sql";
         let sql = "CREATE TABLE users (id INT, name TEXT);\nSELECT ";
         host.open_document(uri, 1, sql.to_string());
-        let items = host.completion_items(uri, sql.len());
+        let items =
+            host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         let labels: Vec<&str> = items.iter().map(|e| e.label.as_str()).collect();
         assert!(labels.contains(&"id"), "should suggest column id");
         assert!(labels.contains(&"name"), "should suggest column name");
@@ -1670,7 +1749,8 @@ mod tests {
                    CREATE TABLE thread (tid INT, parent INT);\n\
                    SELECT slice.id, thread.tid\nFROM slice\nJOIN thread ON ";
         host.open_document(uri, 1, sql.to_string());
-        let items = host.completion_items(uri, sql.len());
+        let items =
+            host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
 
         // Find the first column and first function in the list.
         let first_column_pos = items
@@ -1867,10 +1947,15 @@ mod tests {
         host.open_document(uri, 1, src.to_string());
 
         let ref_offset = src.rfind("cte").unwrap();
-        let def = host.definition_info(uri, ref_offset).expect("definition");
+        let def = host
+            .definition_info(uri, DocOffset::from_raw(u32::try_from(ref_offset).unwrap()))
+            .expect("definition");
         let cte_def_offset = src.find("cte").unwrap();
-        assert_eq!(def.target.start, cte_def_offset);
-        assert_eq!(def.target.end, cte_def_offset + "cte".len());
+        assert_eq!(def.target.range.start.as_usize(), cte_def_offset);
+        assert_eq!(
+            def.target.range.end.as_usize(),
+            cte_def_offset + "cte".len()
+        );
     }
 
     #[test]
@@ -1881,10 +1966,12 @@ mod tests {
         host.open_document(uri, 1, src.to_string());
 
         let ref_offset = src.rfind("users").unwrap();
-        let def = host.definition_info(uri, ref_offset).expect("definition");
+        let def = host
+            .definition_info(uri, DocOffset::from_raw(u32::try_from(ref_offset).unwrap()))
+            .expect("definition");
         let ddl_offset = src.find("users").unwrap();
-        assert_eq!(def.target.start, ddl_offset);
-        assert_eq!(def.target.end, ddl_offset + "users".len());
+        assert_eq!(def.target.range.start.as_usize(), ddl_offset);
+        assert_eq!(def.target.range.end.as_usize(), ddl_offset + "users".len());
     }
 
     #[test]
@@ -1896,10 +1983,13 @@ mod tests {
 
         let from_t_offset = src.rfind("FROM t").unwrap() + 5;
         let def = host
-            .definition_info(uri, from_t_offset)
+            .definition_info(
+                uri,
+                DocOffset::from_raw(u32::try_from(from_t_offset).unwrap()),
+            )
             .expect("definition");
         let cte_t_offset = src[29..].find('t').unwrap() + 29;
-        assert_eq!(def.target.start, cte_t_offset);
+        assert_eq!(def.target.range.start.as_usize(), cte_t_offset);
     }
 
     #[test]
@@ -1910,7 +2000,13 @@ mod tests {
         host.open_document(uri, 1, src.to_string());
 
         let from_offset = src.find("nonexistent").unwrap();
-        assert!(host.definition_info(uri, from_offset).is_none());
+        assert!(
+            host.definition_info(
+                uri,
+                DocOffset::from_raw(u32::try_from(from_offset).unwrap())
+            )
+            .is_none()
+        );
     }
 
     #[test]
@@ -1922,10 +2018,13 @@ mod tests {
 
         let select_name_offset = src.rfind("name").unwrap();
         let def = host
-            .definition_info(uri, select_name_offset)
+            .definition_info(
+                uri,
+                DocOffset::from_raw(u32::try_from(select_name_offset).unwrap()),
+            )
             .expect("definition");
         let ddl_name_offset = src.find("name").unwrap();
-        assert_eq!(def.target.start, ddl_name_offset);
+        assert_eq!(def.target.range.start.as_usize(), ddl_name_offset);
     }
 
     #[test]
@@ -1936,7 +2035,10 @@ mod tests {
         host.open_document(uri, 1, src.to_string());
 
         let b_offset = src.find('b').unwrap();
-        assert!(host.definition_info(uri, b_offset).is_none());
+        assert!(
+            host.definition_info(uri, DocOffset::from_raw(u32::try_from(b_offset).unwrap()))
+                .is_none()
+        );
     }
 
     #[test]
@@ -1947,9 +2049,11 @@ mod tests {
         host.open_document(uri, 1, src.to_string());
 
         let a_offset = src.find("SELECT a").unwrap() + "SELECT ".len();
-        let def = host.definition_info(uri, a_offset).expect("definition");
+        let def = host
+            .definition_info(uri, DocOffset::from_raw(u32::try_from(a_offset).unwrap()))
+            .expect("definition");
         let cte_a_offset = src.find("AS a").unwrap() + "AS ".len();
-        assert_eq!(def.target.start, cte_a_offset);
+        assert_eq!(def.target.range.start.as_usize(), cte_a_offset);
     }
 
     #[test]
@@ -1960,9 +2064,11 @@ mod tests {
         host.open_document(uri, 1, src.to_string());
 
         let x_offset = src.find("SELECT x").unwrap() + "SELECT ".len();
-        let def = host.definition_info(uri, x_offset).expect("definition");
+        let def = host
+            .definition_info(uri, DocOffset::from_raw(u32::try_from(x_offset).unwrap()))
+            .expect("definition");
         let decl_x_offset = src.find("(x)").unwrap() + 1;
-        assert_eq!(def.target.start, decl_x_offset);
+        assert_eq!(def.target.range.start.as_usize(), decl_x_offset);
     }
 
     #[test]
@@ -1981,11 +2087,16 @@ mod tests {
         host.open_document(uri, 1, src.to_string());
 
         let ref_offset = src.find("users").unwrap();
-        let def = host.definition_info(uri, ref_offset).expect("definition");
+        let def = host
+            .definition_info(uri, DocOffset::from_raw(u32::try_from(ref_offset).unwrap()))
+            .expect("definition");
         assert_eq!(def.target.file_uri.as_deref(), Some(file_uri));
         let schema_offset = schema.find("users").unwrap();
-        assert_eq!(def.target.start, schema_offset);
-        assert_eq!(def.target.end, schema_offset + "users".len());
+        assert_eq!(def.target.range.start.as_usize(), schema_offset);
+        assert_eq!(
+            def.target.range.end.as_usize(),
+            schema_offset + "users".len()
+        );
     }
 
     #[test]
@@ -2004,8 +2115,10 @@ mod tests {
         host.open_document(uri, 1, src.to_string());
 
         let ref_offset = src.rfind(" t").unwrap() + 1;
-        let def = host.definition_info(uri, ref_offset).expect("definition");
+        let def = host
+            .definition_info(uri, DocOffset::from_raw(u32::try_from(ref_offset).unwrap()))
+            .expect("definition");
         assert!(def.target.file_uri.is_none());
-        assert_eq!(def.target.start, src.find('t').unwrap());
+        assert_eq!(def.target.range.start.as_usize(), src.find('t').unwrap());
     }
 }

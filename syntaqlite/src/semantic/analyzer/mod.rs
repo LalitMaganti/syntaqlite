@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, AnyParser, FieldValue, ParseOutcome};
+use syntaqlite_syntax::source::DocRange;
 use syntaqlite_syntax::{MacroArg, MacroLookup, MacroOutput};
 
 use crate::dialect::AnyDialect;
@@ -260,7 +261,7 @@ impl SemanticAnalyzer {
         let mut comments: Vec<StoredComment> = Vec::new();
         let mut statements: Vec<StatementModel> = Vec::new();
         #[cfg(feature = "lsp")]
-        let mut definition_offsets: HashMap<String, (usize, usize)> = HashMap::new();
+        let mut definition_offsets: HashMap<String, DocRange> = HashMap::new();
         #[cfg(feature = "lsp")]
         let mut resolutions: Vec<Resolution> = Vec::new();
 
@@ -271,10 +272,9 @@ impl SemanticAnalyzer {
                 ParseOutcome::Err(e) => {
                     let message = DiagnosticMessage::ParseError(e.message().to_owned());
                     if let Some(severity) = config.checks().level_for(&message).to_severity() {
-                        let (start, end) = parse_error_span(&e, source);
+                        let range = parse_error_span(&e, source);
                         let diag = Diagnostic {
-                            start_offset: start,
-                            end_offset: end,
+                            range,
                             message,
                             severity,
                             help: None,
@@ -354,7 +354,7 @@ impl SemanticAnalyzer {
         erased: &mut AnyParsedStatement<'_>,
         config: &ValidationConfig,
         #[cfg(feature = "lsp")] resolutions: &mut Vec<Resolution>,
-        #[cfg(feature = "lsp")] definition_offsets: &mut HashMap<String, (usize, usize)>,
+        #[cfg(feature = "lsp")] definition_offsets: &mut HashMap<String, DocRange>,
     ) -> StatementModel {
         let root_id = erased.root_id();
         let mut diagnostics: Vec<Diagnostic> = Vec::new();
@@ -369,12 +369,12 @@ impl SemanticAnalyzer {
         #[cfg(feature = "lsp")]
         {
             let reader = DdlReader::new(erased, self.dialect.roles());
-            if let Some((table_name, start, end)) = reader.name_span(root_id) {
-                for (col_name, col_start, col_end) in reader.column_spans(root_id) {
+            if let Some((table_name, table_range)) = reader.name_span(root_id) {
+                for (col_name, col_range) in reader.column_spans(root_id) {
                     let key = format!("{table_name}.{col_name}");
-                    definition_offsets.insert(key, (col_start, col_end));
+                    definition_offsets.insert(key, col_range);
                 }
-                definition_offsets.insert(table_name, (start, end));
+                definition_offsets.insert(table_name, table_range);
             }
         }
 
@@ -438,16 +438,13 @@ impl SemanticAnalyzer {
         }
 
         let Some(source) = self.resolver.as_ref().and_then(|r| r.resolve(&module_name)) else {
-            let (start, end) = match fields[module as usize] {
-                FieldValue::Span(sp) => {
-                    let (_, range) = erased.span_text_abs(sp);
-                    (range.start.as_usize(), range.end.as_usize())
-                }
-                _ => (0, 0),
+            let range = match fields[module as usize] {
+                FieldValue::Span(sp) => erased.span_text_abs(sp).1,
+                _ => DocRange::default(),
             };
             let message = DiagnosticMessage::UnknownModule { name: module_name };
             if let Some(severity) = config.checks().level_for(&message).to_severity() {
-                diagnostics.push(Diagnostic::new(start, end, message, severity, None));
+                diagnostics.push(Diagnostic::new(range, message, severity, None));
             }
             return;
         };

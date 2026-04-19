@@ -94,13 +94,14 @@ impl Parser {
     /// # Examples
     ///
     /// ```rust
+    /// use syntaqlite_syntax::source::DocOffset;
     /// use syntaqlite_syntax::{Parser, TokenType};
     ///
     /// let parser = Parser::new();
     /// let mut session = parser.incremental_parse("SELECT 1");
     ///
-    /// assert!(session.feed_token(TokenType::Select, 0..6).is_none());
-    /// assert!(session.feed_token(TokenType::Integer, 7..8).is_none());
+    /// assert!(session.feed_token(TokenType::Select, DocOffset::from_raw(0)..DocOffset::from_raw(6)).is_none());
+    /// assert!(session.feed_token(TokenType::Integer, DocOffset::from_raw(7)..DocOffset::from_raw(8)).is_none());
     ///
     /// let stmt = session.finish().and_then(Result::ok).unwrap();
     /// let _ = stmt.root();
@@ -424,14 +425,21 @@ impl<'a> ParseError<'a> {
         self.0.message()
     }
 
-    /// Byte offset in the original source, if known.
-    pub fn offset(&self) -> Option<usize> {
+    /// Statement-relative byte offset of the error token, if known.
+    pub fn offset(&self) -> Option<StmtOffset> {
         self.0.offset()
     }
 
     /// Byte length of the offending range, if known.
-    pub fn length(&self) -> Option<usize> {
+    pub fn length(&self) -> Option<StmtLen> {
         self.0.length()
+    }
+
+    /// Document-absolute offset of the failing statement's first byte.
+    /// Combine with [`Self::offset`] / [`Self::length`] to produce a
+    /// document-absolute range.
+    pub fn statement_base(&self) -> StatementBase {
+        self.0.statement_base()
     }
 
     /// Partial AST recovered from invalid input, if available.
@@ -1166,10 +1174,8 @@ mod tests {
         let outer = &rewrites[0];
         assert_eq!(outer.parent(), None);
         assert_eq!(outer.name(), "mwrap");
-        let outer_range = crate::source::LayerRange::from_offset_len(
-            outer.call_offset(),
-            outer.call_length(),
-        );
+        let outer_range =
+            crate::source::LayerRange::from_offset_len(outer.call_offset(), outer.call_length());
         let outer_call = &source[outer_range.start.as_usize()..outer_range.end.as_usize()];
         assert_eq!(outer_call, "mwrap!(42)");
         assert_eq!(outer.expansion(), "mpass!(42)");
@@ -1181,10 +1187,8 @@ mod tests {
         assert_eq!(inner.parent(), Some(0));
         assert_eq!(inner.name(), "mpass");
         let outer_exp = outer.expansion();
-        let inner_range = crate::source::LayerRange::from_offset_len(
-            inner.call_offset(),
-            inner.call_length(),
-        );
+        let inner_range =
+            crate::source::LayerRange::from_offset_len(inner.call_offset(), inner.call_length());
         let inner_call = &outer_exp[inner_range];
         assert_eq!(inner_call, "mpass!(42)");
         assert_eq!(inner.expansion(), "42");
@@ -1278,10 +1282,7 @@ mod tests {
             inner.body_call_offset(),
             crate::MACRO_BODY_CALL_ARG_INTERNAL
         );
-        assert_eq!(
-            inner.body_call_length(),
-            LayerLen::from_raw(u32::MAX)
-        );
+        assert_eq!(inner.body_call_length(), LayerLen::from_raw(u32::MAX));
     }
 
     #[test]

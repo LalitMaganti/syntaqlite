@@ -904,7 +904,7 @@ impl<'a> AnyParsedStatement<'a> {
     /// that need full-source positions.
     pub fn span_text_abs(&self, span: crate::ast::TextSpan) -> (&'a str, DocRange) {
         let (text, off) = self.span_text(span);
-        let start = self.statement_base().to_doc(off);
+        let start = off.to_doc(self.statement_base());
         let end = start + DocLen::from_raw(u32::try_from(text.len()).unwrap_or(u32::MAX));
         (text, DocRange { start, end })
     }
@@ -1233,22 +1233,26 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         }
     }
 
-    /// Byte offset of the error token, or `None` if unknown.
-    pub(crate) fn error_offset(&self) -> Option<usize> {
+    /// Statement-relative byte offset of the error token, or `None` if unknown.
+    pub(crate) fn error_offset(&self) -> Option<StmtOffset> {
         // SAFETY: self.any.raw is a valid, non-null parser pointer for lifetime 'a.
         let v = unsafe { self.any.raw.as_ref().result_error_offset() };
         if v == 0xFFFF_FFFF {
             None
         } else {
-            Some(v as usize)
+            Some(StmtOffset::from_raw(v))
         }
     }
 
     /// Byte length of the error token, or `None` if unknown.
-    pub(crate) fn error_length(&self) -> Option<usize> {
+    pub(crate) fn error_length(&self) -> Option<StmtLen> {
         // SAFETY: self.any.raw is a valid, non-null parser pointer for lifetime 'a.
         let v = unsafe { self.any.raw.as_ref().result_error_length() };
-        if v == 0 { None } else { Some(v as usize) }
+        if v == 0 {
+            None
+        } else {
+            Some(StmtLen::from_raw(v))
+        }
     }
 
     /// Error classification for the current result.
@@ -1373,12 +1377,12 @@ impl<'a, G: TypedDialect> TypedParseError<'a, G> {
     pub fn message(&self) -> &str {
         self.0.error_msg().unwrap_or("parse error")
     }
-    /// Returns the byte offset of the error token, or `None` if unknown.
-    pub fn offset(&self) -> Option<usize> {
+    /// Statement-relative byte offset of the error token, or `None` if unknown.
+    pub fn offset(&self) -> Option<StmtOffset> {
         self.0.error_offset()
     }
-    /// Returns the byte length of the error token, or `None` if unknown.
-    pub fn length(&self) -> Option<usize> {
+    /// Byte length of the error token, or `None` if unknown.
+    pub fn length(&self) -> Option<StmtLen> {
         self.0.error_length()
     }
     /// The partial recovery tree, if error recovery produced one.

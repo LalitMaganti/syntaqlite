@@ -9,6 +9,9 @@
 //! grouped on a single [`DdlReader`] handle.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
+#[cfg(feature = "lsp")]
+use syntaqlite_syntax::source::DocRange;
+use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtRange};
 
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 use crate::semantic::catalog::AritySpec;
@@ -45,10 +48,10 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
 
     // ── DDL definition spans (LSP go-to-definition) ───────────────────────
 
-    /// `(lowercase_name, start, end)` for `CREATE TABLE` / `CREATE VIEW`.
+    /// `(lowercase_name, range)` for `CREATE TABLE` / `CREATE VIEW`.
     /// Returns `None` for non-DDL statements.
     #[cfg(feature = "lsp")]
-    pub(super) fn name_span(&self, root: AnyNodeId) -> Option<(String, usize, usize)> {
+    pub(super) fn name_span(&self, root: AnyNodeId) -> Option<(String, DocRange)> {
         let (tag, fields) = self.stmt.extract_fields(root)?;
         let (SemanticRole::DefineTable { name: name_idx, .. }
         | SemanticRole::DefineView { name: name_idx, .. }) = self.role_for(tag)?
@@ -62,12 +65,12 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
             return None;
         }
         let (s, range) = self.stmt.span_text_abs(sp);
-        Some((s.to_ascii_lowercase(), range.start.as_usize(), range.end.as_usize()))
+        Some((s.to_ascii_lowercase(), range))
     }
 
-    /// Per-column `(lowercase_name, start, end)` triples for a `CREATE TABLE`.
+    /// Per-column `(lowercase_name, range)` pairs for a `CREATE TABLE`.
     #[cfg(feature = "lsp")]
-    pub(super) fn column_spans(&self, root: AnyNodeId) -> Vec<(String, usize, usize)> {
+    pub(super) fn column_spans(&self, root: AnyNodeId) -> Vec<(String, DocRange)> {
         let mut out = Vec::new();
         let Some((tag, fields)) = self.stmt.extract_fields(root) else {
             return out;
@@ -91,15 +94,15 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
             if child_id.is_null() {
                 continue;
             }
-            if let Some((name, start, end)) = self.column_def_name_span(child_id) {
-                out.push((name.to_ascii_lowercase(), start, end));
+            if let Some((name, range)) = self.column_def_name_span(child_id) {
+                out.push((name.to_ascii_lowercase(), range));
             }
         }
         out
     }
 
     #[cfg(feature = "lsp")]
-    fn column_def_name_span(&self, node_id: AnyNodeId) -> Option<(&'stmt str, usize, usize)> {
+    fn column_def_name_span(&self, node_id: AnyNodeId) -> Option<(&'stmt str, DocRange)> {
         let (tag, fields) = self.stmt.extract_fields(node_id)?;
         let SemanticRole::ColumnDef { name: name_idx, .. } = self.role_for(tag)? else {
             return None;
@@ -116,7 +119,7 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
                 && !sp.is_empty()
             {
                 let (s, range) = self.stmt.span_text_abs(sp);
-                return Some((s, range.start.as_usize(), range.end.as_usize()));
+                return Some((s, range));
             }
         }
         None
@@ -332,24 +335,22 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
 
     /// Source slice spanning every byte covered by `id`'s subtree.
     pub(crate) fn expr_source_text(&self, id: AnyNodeId) -> Option<&'stmt str> {
-        use syntaqlite_syntax::source::{StmtOffset, StmtRange};
         let mut min = StmtOffset::from_raw(u32::MAX);
         let mut max = StmtOffset::default();
         self.collect_spans(id, &mut min, &mut max);
         if min < max {
-            Some(&self.stmt.text()[StmtRange { start: min, end: max }])
+            Some(
+                &self.stmt.text()[StmtRange {
+                    start: min,
+                    end: max,
+                }],
+            )
         } else {
             None
         }
     }
 
-    fn collect_spans(
-        &self,
-        id: AnyNodeId,
-        min: &mut syntaqlite_syntax::source::StmtOffset,
-        max: &mut syntaqlite_syntax::source::StmtOffset,
-    ) {
-        use syntaqlite_syntax::source::StmtLen;
+    fn collect_spans(&self, id: AnyNodeId, min: &mut StmtOffset, max: &mut StmtOffset) {
         if id.is_null() {
             return;
         }

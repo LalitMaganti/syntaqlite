@@ -9,6 +9,7 @@
 //! definition offsets — so it lives in its own file.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
+use syntaqlite_syntax::source::DocRange;
 
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 use crate::semantic::ddl::DdlReader;
@@ -19,12 +20,12 @@ use super::ValidationPass;
 /// Extracted info for a single CTE binding.
 struct CteBindingInfo<'a> {
     name: &'a str,
-    /// Source-level byte range of the CTE name (start, end).  For CTEs
-    /// inside a macro expansion, points at the macro call site.
-    name_range: (usize, usize),
+    /// Document-absolute byte range of the CTE name.  For CTEs inside a
+    /// macro expansion, points at the macro call site.
+    name_range: DocRange,
     body_id: Option<AnyNodeId>,
-    /// Each declared column: text and source-level byte range.
-    declared_cols: Option<Vec<(&'a str, usize, usize)>>,
+    /// Each declared column: text and document-absolute byte range.
+    declared_cols: Option<Vec<(&'a str, DocRange)>>,
 }
 
 impl ValidationPass<'_> {
@@ -57,7 +58,7 @@ impl ValidationPass<'_> {
                 let cols = binding
                     .declared_cols
                     .as_ref()
-                    .map(|v| v.iter().map(|(s, _, _)| s.to_string()).collect());
+                    .map(|v| v.iter().map(|(s, _)| s.to_string()).collect());
                 self.catalog.add_query_table(binding.name, cols);
             }
 
@@ -78,7 +79,7 @@ impl ValidationPass<'_> {
             #[cfg(feature = "lsp")]
             let cte_key = binding.name.to_ascii_lowercase();
             let cols = if let Some(ref declared) = binding.declared_cols {
-                let col_names: Vec<&str> = declared.iter().map(|(s, _, _)| *s).collect();
+                let col_names: Vec<&str> = declared.iter().map(|(s, _)| *s).collect();
                 self.check_cte_column_count(
                     stmt,
                     binding.name,
@@ -87,11 +88,11 @@ impl ValidationPass<'_> {
                     binding.body_id,
                 );
                 #[cfg(feature = "lsp")]
-                for &(col_name, col_start, col_end) in declared {
+                for &(col_name, col_range) in declared {
                     let key = format!("{cte_key}.{}", col_name.to_ascii_lowercase());
-                    self.definition_offsets.insert(key, (col_start, col_end));
+                    self.definition_offsets.insert(key, col_range);
                 }
-                Some(declared.iter().map(|(s, _, _)| s.to_string()).collect())
+                Some(declared.iter().map(|(s, _)| s.to_string()).collect())
             } else {
                 #[cfg(feature = "lsp")]
                 self.record_select_column_offsets(stmt, binding.body_id, &cte_key);
@@ -152,11 +153,10 @@ impl ValidationPass<'_> {
                 continue;
             };
             let alias_node = Self::field_node_id(&child_fields, alias_idx);
-            let (alias_text, alias_start, alias_end) = Self::name_text(stmt, alias_node);
+            let (alias_text, alias_range) = Self::name_text(stmt, alias_node);
             if !alias_text.is_empty() {
                 let key = format!("{table_key}.{}", alias_text.to_ascii_lowercase());
-                self.definition_offsets
-                    .insert(key, (alias_start, alias_end));
+                self.definition_offsets.insert(key, alias_range);
             }
         }
     }
@@ -187,9 +187,9 @@ impl ValidationPass<'_> {
             FieldValue::Span(sp) => {
                 let name = stmt.span_expanded_text(sp);
                 let (_, range) = stmt.span_text_abs(sp);
-                (name, (range.start.as_usize(), range.end.as_usize()))
+                (name, range)
             }
-            _ => ("", (0, 0)),
+            _ => ("", DocRange::default()),
         };
         Some(CteBindingInfo {
             name,
@@ -204,18 +204,18 @@ impl ValidationPass<'_> {
         stmt: &mut AnyParsedStatement<'b>,
         fields: &NodeFields,
         cols_idx: u8,
-    ) -> Option<Vec<(&'b str, usize, usize)>> {
+    ) -> Option<Vec<(&'b str, DocRange)>> {
         if cols_idx == FIELD_ABSENT {
             return None;
         }
         let list_id = Self::field_node_id(fields, cols_idx)?;
         let children = stmt.list_children(list_id)?;
-        let names: Vec<(&'b str, usize, usize)> = children
+        let names: Vec<(&'b str, DocRange)> = children
             .iter()
             .copied()
             .filter(|id| !id.is_null())
             .map(|id| Self::name_text(stmt, Some(id)))
-            .filter(|(s, _, _)| !s.is_empty())
+            .filter(|(s, _)| !s.is_empty())
             .collect();
         if names.is_empty() { None } else { Some(names) }
     }
@@ -225,7 +225,7 @@ impl ValidationPass<'_> {
         &mut self,
         stmt: &mut AnyParsedStatement<'_>,
         cte_name: &str,
-        cte_name_range: (usize, usize),
+        cte_name_range: DocRange,
         declared: &[&str],
         body_id: Option<AnyNodeId>,
     ) {
@@ -233,8 +233,7 @@ impl ValidationPass<'_> {
             && actual != declared.len()
         {
             self.emit_at(
-                cte_name_range.0,
-                cte_name_range.1,
+                cte_name_range,
                 DiagnosticMessage::CteColumnCountMismatch {
                     name: cte_name.to_string(),
                     declared: declared.len(),

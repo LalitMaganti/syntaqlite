@@ -149,7 +149,7 @@ fn validate_offsets_mapped_to_host_file() {
     if let Some(d) = table_diag {
         // The word "nonexistent" starts at offset 20 in the host source
         // (after `q = f"SELECT * FROM `).
-        let referenced = &source[d.start_offset()..d.end_offset()];
+        let referenced = &source[d.start().as_usize()..d.end().as_usize()];
         assert_eq!(referenced, "nonexistent");
     }
 }
@@ -270,7 +270,7 @@ fn ts_validate_offsets_mapped_to_host_file() {
         .iter()
         .find(|d| d.message().to_string().contains("nonexistent"));
     if let Some(d) = table_diag {
-        let referenced = &source[d.start_offset()..d.end_offset()];
+        let referenced = &source[d.start().as_usize()..d.end().as_usize()];
         assert_eq!(referenced, "nonexistent");
     }
 }

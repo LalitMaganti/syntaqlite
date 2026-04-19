@@ -8,11 +8,12 @@
 use std::collections::HashMap;
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
+use syntaqlite_syntax::source::{DocRange, LayerRange};
 
 use crate::dialect::{AnyDialect, FIELD_ABSENT, SemanticRole};
-use crate::semantic::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
 #[cfg(feature = "lsp")]
 use crate::semantic::catalog::FunctionCategory;
+use crate::semantic::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
 use crate::semantic::ddl::DdlReader;
 use crate::semantic::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use crate::semantic::fuzzy::best_suggestion;
@@ -37,7 +38,7 @@ pub(super) struct ValidationPass<'a> {
     /// Maps `lowercase(name)` → `(start_offset, end_offset)` for definition sites.
     /// Populated from DDL (per-document) and CTE bindings (per-WITH scope).
     #[cfg(feature = "lsp")]
-    definition_offsets: &'a mut HashMap<String, (usize, usize)>,
+    definition_offsets: &'a mut HashMap<String, DocRange>,
 }
 
 impl CheckConfig {
@@ -67,7 +68,7 @@ impl<'a> ValidationPass<'a> {
         stmt: &mut AnyParsedStatement<'_>,
         node_id: AnyNodeId,
         field_idx: u8,
-        text_range: (usize, usize),
+        range: DocRange,
         message: DiagnosticMessage,
         help: Option<Help>,
     ) {
@@ -76,21 +77,15 @@ impl<'a> ValidationPass<'a> {
         };
         let frames = stmt
             .traceback(node_id, field_idx)
-            .map(|f| {
-                let start = f.offset_in_snippet.as_usize();
-                let end = start + f.length_in_snippet.as_usize();
-                crate::semantic::diagnostics::DiagnosticFrame {
-                    buffer: f.snippet.to_string(),
-                    start,
-                    end,
-                }
+            .map(|f| crate::semantic::diagnostics::DiagnosticFrame {
+                buffer: f.snippet.as_str().to_string(),
+                range: LayerRange::from_offset_len(f.offset_in_snippet, f.length_in_snippet),
             })
             .collect::<Vec<_>>();
         // Only attach if there's actual expansion (more than 1 frame).
         let expansion_frames = if frames.len() > 1 { frames } else { Vec::new() };
         self.diagnostics.push(Diagnostic {
-            start_offset: text_range.0,
-            end_offset: text_range.1,
+            range,
             message,
             severity,
             help,
@@ -98,20 +93,13 @@ impl<'a> ValidationPass<'a> {
         });
     }
 
-    /// Push a diagnostic with explicit source offsets and no expansion
+    /// Push a diagnostic with an explicit source range and no expansion
     /// traceback.  Use only when there is no associated span field
     /// (e.g. computed-from-tokens locations).
-    fn emit_at(
-        &mut self,
-        start_offset: usize,
-        end_offset: usize,
-        message: DiagnosticMessage,
-        help: Option<Help>,
-    ) {
+    fn emit_at(&mut self, range: DocRange, message: DiagnosticMessage, help: Option<Help>) {
         if let Some(severity) = self.config.checks().level_for(&message).to_severity() {
             self.diagnostics.push(Diagnostic {
-                start_offset,
-                end_offset,
+                range,
                 message,
                 severity,
                 help,
@@ -129,7 +117,7 @@ impl<'a> ValidationPass<'a> {
         config: &'a ValidationConfig,
         diagnostics: &'a mut Vec<Diagnostic>,
         #[cfg(feature = "lsp")] resolutions: &'a mut Vec<Resolution>,
-        #[cfg(feature = "lsp")] definition_offsets: &'a mut HashMap<String, (usize, usize)>,
+        #[cfg(feature = "lsp")] definition_offsets: &'a mut HashMap<String, DocRange>,
     ) {
         let roles = dialect.roles();
         let mut pass = ValidationPass {
@@ -269,20 +257,20 @@ impl<'a> ValidationPass<'a> {
 
     /// Extract source text and source-level byte range from a `Name` node
     /// (`IdentName` or `Error`).  Both node kinds store their span at field 0.
-    /// Returns `(text, source_start, source_end)`.  For spans inside a macro
-    /// expansion, the source range points at the macro call site.
+    /// For spans inside a macro expansion, the returned range points at the
+    /// macro call site.
     fn name_text<'b>(
         stmt: &AnyParsedStatement<'b>,
         node_id: Option<AnyNodeId>,
-    ) -> (&'b str, usize, usize) {
+    ) -> (&'b str, DocRange) {
         let Some(node_id) = node_id else {
-            return ("", 0, 0);
+            return ("", DocRange::default());
         };
         let Some((_, fields)) = stmt.extract_fields(node_id) else {
-            return ("", 0, 0);
+            return ("", DocRange::default());
         };
         if fields.is_empty() {
-            return ("", 0, 0);
+            return ("", DocRange::default());
         }
         match fields[0] {
             FieldValue::Span(sp) => {
@@ -290,9 +278,9 @@ impl<'a> ValidationPass<'a> {
                 // source position uses the authored byte range.
                 let name = stmt.span_expanded_text(sp);
                 let (_, range) = stmt.span_text_abs(sp);
-                (name, range.start.as_usize(), range.end.as_usize())
+                (name, range)
             }
-            _ => ("", 0, 0),
+            _ => ("", DocRange::default()),
         }
     }
 
@@ -319,8 +307,6 @@ impl<'a> ValidationPass<'a> {
         // call site.
         let name = stmt.span_expanded_text(sp);
         let (_, range) = stmt.span_text_abs(sp);
-        let start = range.start.as_usize();
-        let end = range.end.as_usize();
 
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
@@ -332,7 +318,7 @@ impl<'a> ValidationPass<'a> {
                 stmt,
                 node_id,
                 name_idx,
-                (start, end),
+                range,
                 DiagnosticMessage::UnknownTable {
                     name: name.to_string(),
                 },
@@ -340,7 +326,7 @@ impl<'a> ValidationPass<'a> {
             );
         }
 
-        let (alias, _, _) = Self::name_text(stmt, Self::field_node_id(fields, alias_idx));
+        let (alias, _) = Self::name_text(stmt, Self::field_node_id(fields, alias_idx));
         let scope_name = if alias.is_empty() { name } else { alias };
         let (columns, without_rowid) = self.catalog.table_source_info(name);
 
@@ -349,23 +335,20 @@ impl<'a> ValidationPass<'a> {
             let definition = self
                 .definition_offsets
                 .get(&name.to_ascii_lowercase())
-                .map(|&(start, end)| DefinitionLocation {
-                    start,
-                    end,
+                .map(|&range| DefinitionLocation {
+                    range,
                     file_uri: None,
                 })
                 .or_else(|| {
                     self.catalog
                         .relation_definition_site(name)
                         .map(|site| DefinitionLocation {
-                            start: site.start,
-                            end: site.end,
+                            range: site.range,
                             file_uri: Some(site.file_uri.clone()),
                         })
                 });
             self.resolutions.push(Resolution {
-                start,
-                end,
+                range,
                 symbol: ResolvedSymbol::Table {
                     name: name.to_string(),
                     columns: columns.clone(),
@@ -391,8 +374,6 @@ impl<'a> ValidationPass<'a> {
         {
             let name = stmt.span_expanded_text(sp);
             let (_, range) = stmt.span_text_abs(sp);
-            let start = range.start.as_usize();
-            let end = range.end.as_usize();
             let args_id = Self::field_node_id(fields, args_idx);
             let arg_count = args_id
                 .and_then(|id| stmt.list_children(id))
@@ -409,8 +390,7 @@ impl<'a> ValidationPass<'a> {
                         let arity_strs: Vec<String> =
                             arities.iter().map(|a| format_arity(name, *a)).collect();
                         self.resolutions.push(Resolution {
-                            start,
-                            end,
+                            range,
                             symbol: ResolvedSymbol::Function {
                                 category: cat_str.to_string(),
                                 arities: arity_strs,
@@ -426,7 +406,7 @@ impl<'a> ValidationPass<'a> {
                         stmt,
                         node_id,
                         name_idx,
-                        (start, end),
+                        range,
                         DiagnosticMessage::UnknownFunction {
                             name: name.to_string(),
                         },
@@ -438,7 +418,7 @@ impl<'a> ValidationPass<'a> {
                         stmt,
                         node_id,
                         name_idx,
-                        (start, end),
+                        range,
                         DiagnosticMessage::FunctionArity {
                             name: name.to_string(),
                             expected,
@@ -477,8 +457,6 @@ impl<'a> ValidationPass<'a> {
             _ => None,
         };
         let (_, range) = stmt.span_text_abs(col_sp);
-        let start = range.start.as_usize();
-        let end = range.end.as_usize();
 
         match self.scope.resolve_column(table, column) {
             ColumnResolution::Found {
@@ -486,7 +464,7 @@ impl<'a> ValidationPass<'a> {
                 all_columns,
             } => {
                 #[cfg(feature = "lsp")]
-                self.record_column_resolution(start, end, column, resolved_table, all_columns);
+                self.record_column_resolution(range, column, resolved_table, all_columns);
                 #[cfg(not(feature = "lsp"))]
                 let _ = (resolved_table, all_columns);
             }
@@ -500,7 +478,7 @@ impl<'a> ValidationPass<'a> {
                     stmt,
                     node_id,
                     column_idx,
-                    (start, end),
+                    range,
                     DiagnosticMessage::UnknownColumn {
                         column: column.to_string(),
                         table: Some(tbl.to_string()),
@@ -522,7 +500,7 @@ impl<'a> ValidationPass<'a> {
                     stmt,
                     node_id,
                     column_idx,
-                    (start, end),
+                    range,
                     DiagnosticMessage::UnknownColumn {
                         column: column.to_string(),
                         table: None,
@@ -538,8 +516,7 @@ impl<'a> ValidationPass<'a> {
     #[cfg(feature = "lsp")]
     fn record_column_resolution(
         &mut self,
-        start: usize,
-        end: usize,
+        range: DocRange,
         column: &str,
         resolved_table: String,
         all_columns: Vec<String>,
@@ -555,23 +532,20 @@ impl<'a> ValidationPass<'a> {
         let definition = self
             .definition_offsets
             .get(&def_key)
-            .map(|&(start, end)| DefinitionLocation {
-                start,
-                end,
+            .map(|&range| DefinitionLocation {
+                range,
                 file_uri: None,
             })
             .or_else(|| {
                 self.catalog
                     .column_definition_site(&resolved_table, column)
                     .map(|site| DefinitionLocation {
-                        start: site.start,
-                        end: site.end,
+                        range: site.range,
                         file_uri: Some(site.file_uri.clone()),
                     })
             });
         self.resolutions.push(Resolution {
-            start,
-            end,
+            range,
             symbol: ResolvedSymbol::Column {
                 column: column.to_string(),
                 table: resolved_table,
@@ -592,7 +566,7 @@ impl<'a> ValidationPass<'a> {
         self.visit_opt(stmt, Self::field_node_id(fields, body_idx));
         self.scope.pop();
 
-        let (alias, _, _) = Self::name_text(stmt, Self::field_node_id(fields, alias_idx));
+        let (alias, _) = Self::name_text(stmt, Self::field_node_id(fields, alias_idx));
         let cols = Self::field_node_id(fields, body_idx)
             .and_then(|id| DdlReader::new(stmt, self.roles).columns_from_select(id));
         if alias.is_empty() {
@@ -671,7 +645,7 @@ impl<'a> ValidationPass<'a> {
                 continue;
             };
             let alias_node = Self::field_node_id(&child_fields, alias_idx);
-            let (alias_text, _, _) = Self::name_text(stmt, alias_node);
+            let (alias_text, _) = Self::name_text(stmt, alias_node);
             if !alias_text.is_empty() {
                 aliases.push(alias_text.to_string());
             }

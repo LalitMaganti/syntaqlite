@@ -7,6 +7,8 @@
 use syntaqlite_syntax::ParserTokenFlags;
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
+#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
+use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 
 #[cfg(feature = "lsp")]
 use std::collections::HashMap;
@@ -25,8 +27,8 @@ use super::lineage::{
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 #[derive(Debug, Clone)]
 pub(crate) struct StoredToken {
-    pub(crate) offset: usize,
-    pub(crate) length: usize,
+    pub(crate) offset: DocOffset,
+    pub(crate) length: DocLen,
     pub(crate) token_type: AnyTokenType,
     pub(crate) flags: ParserTokenFlags,
 }
@@ -35,8 +37,8 @@ pub(crate) struct StoredToken {
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 #[derive(Debug, Clone)]
 pub(crate) struct StoredComment {
-    pub(crate) offset: usize,
-    pub(crate) length: usize,
+    pub(crate) offset: DocOffset,
+    pub(crate) length: DocLen,
 }
 
 // ── Output types ──────────────────────────────────────────────────────────────
@@ -45,10 +47,10 @@ pub(crate) struct StoredComment {
 #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
 #[derive(Debug, Clone)]
 pub(crate) struct SemanticToken {
-    /// Byte offset in the source text.
-    pub offset: usize,
+    /// Document-absolute byte offset in the source text.
+    pub offset: DocOffset,
     /// Length in bytes.
-    pub length: usize,
+    pub length: DocLen,
     /// Token category for highlighting.
     pub category: TokenCategory,
 }
@@ -95,8 +97,7 @@ pub(crate) struct CompletionInfo {
 #[cfg(feature = "lsp")]
 #[derive(Debug, Clone)]
 pub(crate) struct DefinitionLocation {
-    pub start: usize,
-    pub end: usize,
+    pub range: DocRange,
     /// If `Some`, the definition is in a different file (e.g. an external schema).
     pub file_uri: Option<String>,
 }
@@ -106,10 +107,8 @@ pub(crate) struct DefinitionLocation {
 #[cfg(feature = "lsp")]
 #[derive(Debug, Clone)]
 pub(crate) struct DefinitionResult {
-    /// Byte offset of the start of the reference token.
-    pub origin_start: usize,
-    /// Byte offset of the end of the reference token.
-    pub origin_end: usize,
+    /// Document-absolute byte range of the reference token.
+    pub origin: DocRange,
     /// The definition site this reference resolves to.
     pub target: DefinitionLocation,
 }
@@ -144,8 +143,7 @@ pub(crate) enum ResolvedSymbol {
 #[cfg(feature = "lsp")]
 #[derive(Debug, Clone)]
 pub(crate) struct Resolution {
-    pub start: usize,
-    pub end: usize,
+    pub range: DocRange,
     pub symbol: ResolvedSymbol,
 }
 
@@ -302,7 +300,7 @@ pub struct SemanticModel {
     /// `table.column` (column). Used by find-references and rename to
     /// locate definition sites within the document.
     #[cfg(feature = "lsp")]
-    pub(crate) definition_offsets: HashMap<String, (usize, usize)>,
+    pub(crate) definition_offsets: HashMap<String, DocRange>,
 }
 
 impl SemanticModel {
@@ -381,24 +379,23 @@ impl SemanticModel {
 #[cfg(feature = "lsp")]
 impl SemanticModel {
     /// Find the resolved symbol at a byte offset, if any.
-    pub(crate) fn resolution_at(&self, offset: usize) -> Option<&ResolvedSymbol> {
+    pub(crate) fn resolution_at(&self, offset: DocOffset) -> Option<&ResolvedSymbol> {
         self.resolutions
             .iter()
-            .find(|r| offset >= r.start && offset < r.end)
+            .find(|r| offset >= r.range.start && offset < r.range.end)
             .map(|r| &r.symbol)
     }
 
     /// Find the definition location for the symbol at a byte offset, if any.
-    pub(crate) fn definition_at(&self, offset: usize) -> Option<DefinitionResult> {
+    pub(crate) fn definition_at(&self, offset: DocOffset) -> Option<DefinitionResult> {
         self.resolutions
             .iter()
-            .find(|r| offset >= r.start && offset < r.end)
+            .find(|r| offset >= r.range.start && offset < r.range.end)
             .and_then(|r| match &r.symbol {
                 ResolvedSymbol::Table { definition, .. }
                 | ResolvedSymbol::Column { definition, .. } => {
                     definition.as_ref().map(|d| DefinitionResult {
-                        origin_start: r.start,
-                        origin_end: r.end,
+                        origin: r.range,
                         target: d.clone(),
                     })
                 }
@@ -407,11 +404,11 @@ impl SemanticModel {
     }
 
     /// Find all resolutions in this model that match the given symbol identity.
-    pub(crate) fn references_matching(&self, kind: &SymbolIdentity) -> Vec<(usize, usize)> {
+    pub(crate) fn references_matching(&self, kind: &SymbolIdentity) -> Vec<DocRange> {
         self.resolutions
             .iter()
             .filter(|r| kind.matches(&r.symbol))
-            .map(|r| (r.start, r.end))
+            .map(|r| r.range)
             .collect()
     }
 }

@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 use crate::ast::GrammarTokenType;
 use crate::dialect::{AnyDialect, TypedDialect};
+use crate::source::DocOffset;
 
 use super::{
     AnyParsedStatement, CParser, CompletionContext, ParserInner, TypedParseError,
@@ -116,28 +117,29 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
     /// # Examples
     ///
     /// ```rust
+    /// use syntaqlite_syntax::source::DocOffset;
     /// use syntaqlite_syntax::typed::{dialect, TypedParser};
     /// use syntaqlite_syntax::TokenType;
     ///
     /// let parser = TypedParser::new(dialect());
     /// let mut session = parser.incremental_parse("SELECT 1");
     ///
-    /// assert!(session.feed_token(TokenType::Select, 0..6).is_none());
-    /// assert!(session.feed_token(TokenType::Integer, 7..8).is_none());
+    /// assert!(session.feed_token(TokenType::Select, DocOffset::from_raw(0)..DocOffset::from_raw(6)).is_none());
+    /// assert!(session.feed_token(TokenType::Integer, DocOffset::from_raw(7)..DocOffset::from_raw(8)).is_none());
     /// assert!(session.finish().is_some());
     /// ```
     pub fn feed_token(
         &mut self,
         token_type: G::Token,
-        span: Range<usize>,
+        span: Range<DocOffset>,
     ) -> Option<Result<TypedParsedStatement<'_, G>, TypedParseError<'_, G>>> {
         self.assert_not_finished();
         // SAFETY: c_text_ptr is valid for the source length; raw is valid.
         let rc = unsafe {
-            let c_text = self.c_text_ptr.as_ptr().add(span.start);
+            let c_text = self.c_text_ptr.as_ptr().add(span.start.as_usize());
             let raw_token_type: u32 = token_type.into();
-            #[expect(clippy::cast_possible_truncation)]
-            (*self.raw_ptr()).feed_token(raw_token_type, c_text as *const _, span.len() as u32)
+            let length = (span.end - span.start).as_u32();
+            (*self.raw_ptr()).feed_token(raw_token_type, c_text as *const _, length)
         };
         self.result_from_rc(rc)
     }
@@ -168,12 +170,13 @@ impl<G: TypedDialect> TypedIncrementalParseSession<G> {
     /// # Examples
     ///
     /// ```rust
+    /// use syntaqlite_syntax::source::DocOffset;
     /// use syntaqlite_syntax::typed::{dialect, TypedParser};
     /// use syntaqlite_syntax::TokenType;
     ///
     /// let parser = TypedParser::new(dialect());
     /// let mut session = parser.incremental_parse("SELECT x FROM t");
-    /// let _ = session.feed_token(TokenType::Select, 0..6);
+    /// let _ = session.feed_token(TokenType::Select, DocOffset::from_raw(0)..DocOffset::from_raw(6));
     ///
     /// let expected: Vec<_> = session.expected_tokens().collect();
     /// assert!(!expected.is_empty());
@@ -265,18 +268,19 @@ impl IncrementalParseSession {
     /// # Examples
     ///
     /// ```rust
+    /// use syntaqlite_syntax::source::DocOffset;
     /// use syntaqlite_syntax::{Parser, TokenType};
     ///
     /// let parser = Parser::new();
     /// let mut session = parser.incremental_parse("SELECT 1");
     ///
-    /// assert!(session.feed_token(TokenType::Select, 0..6).is_none());
-    /// assert!(session.feed_token(TokenType::Integer, 7..8).is_none());
+    /// assert!(session.feed_token(TokenType::Select, DocOffset::from_raw(0)..DocOffset::from_raw(6)).is_none());
+    /// assert!(session.feed_token(TokenType::Integer, DocOffset::from_raw(7)..DocOffset::from_raw(8)).is_none());
     /// ```
     pub fn feed_token(
         &mut self,
         token_type: crate::sqlite::tokens::TokenType,
-        span: Range<usize>,
+        span: Range<DocOffset>,
     ) -> Option<Result<ParsedStatement<'_>, ParseError<'_>>> {
         Some(match self.0.feed_token(token_type, span)? {
             Ok(result) => Ok(ParsedStatement(result)),
@@ -297,12 +301,13 @@ impl IncrementalParseSession {
     /// # Examples
     ///
     /// ```rust
+    /// use syntaqlite_syntax::source::DocOffset;
     /// use syntaqlite_syntax::{Parser, TokenType};
     ///
     /// let parser = Parser::new();
     /// let mut session = parser.incremental_parse("SELECT 1");
-    /// let _ = session.feed_token(TokenType::Select, 0..6);
-    /// let _ = session.feed_token(TokenType::Integer, 7..8);
+    /// let _ = session.feed_token(TokenType::Select, DocOffset::from_raw(0)..DocOffset::from_raw(6));
+    /// let _ = session.feed_token(TokenType::Integer, DocOffset::from_raw(7)..DocOffset::from_raw(8));
     ///
     /// let stmt = session.finish().and_then(Result::ok).unwrap();
     /// let _ = stmt.root();

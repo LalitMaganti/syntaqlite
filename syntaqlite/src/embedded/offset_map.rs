@@ -7,6 +7,8 @@
 //! offsets shift because `{some_long_expr}` might become `__hole_0__` (or
 //! vice-versa). The `OffsetMap` handles this translation.
 
+use syntaqlite_syntax::source::DocOffset;
+
 use super::{EmbeddedFragment, HOLE_PLACEHOLDER};
 
 /// An entry in the offset map: a region where the SQL text and host text differ.
@@ -51,15 +53,16 @@ impl OffsetMap {
     ///
     /// Returns `None` if the offset falls inside a hole placeholder, since
     /// those regions correspond to host-language expressions, not SQL.
-    pub(crate) fn to_host(&self, sql_offset: usize) -> Option<usize> {
+    pub(crate) fn to_host(&self, sql_offset: DocOffset) -> Option<DocOffset> {
         // Walk through segments to compute the cumulative drift.
         let mut drift: isize = 0;
+        let sql = sql_offset.as_usize();
 
         for seg in &self.segments {
-            if sql_offset < seg.sql_start {
+            if sql < seg.sql_start {
                 break;
             }
-            if sql_offset < seg.sql_start + seg.sql_len {
+            if sql < seg.sql_start + seg.sql_len {
                 // Inside a hole placeholder — no meaningful host mapping.
                 return None;
             }
@@ -68,7 +71,8 @@ impl OffsetMap {
         }
 
         // Apply base offset and accumulated drift.
-        Some((sql_offset.cast_signed() + self.base_offset.cast_signed() + drift).cast_unsigned())
+        let host = (sql.cast_signed() + self.base_offset.cast_signed() + drift).cast_unsigned();
+        Some(DocOffset::from_raw(u32::try_from(host).ok()?))
     }
 }
 
@@ -86,8 +90,14 @@ mod tests {
         };
         let map = OffsetMap::new(&fragment);
         // Offset 0 in SQL → offset 10 in host.
-        assert_eq!(map.to_host(0), Some(10));
-        assert_eq!(map.to_host(7), Some(17));
+        assert_eq!(
+            map.to_host(DocOffset::from_raw(0)),
+            Some(DocOffset::from_raw(10))
+        );
+        assert_eq!(
+            map.to_host(DocOffset::from_raw(7)),
+            Some(DocOffset::from_raw(17))
+        );
     }
 
     #[test]
@@ -108,12 +118,18 @@ mod tests {
         let map = OffsetMap::new(&fragment);
 
         // Before hole: offset 0 → 10, offset 13 → 23.
-        assert_eq!(map.to_host(0), Some(10));
-        assert_eq!(map.to_host(13), Some(23));
+        assert_eq!(
+            map.to_host(DocOffset::from_raw(0)),
+            Some(DocOffset::from_raw(10))
+        );
+        assert_eq!(
+            map.to_host(DocOffset::from_raw(13)),
+            Some(DocOffset::from_raw(23))
+        );
 
         // Inside hole: returns None (host-language expression, not SQL).
-        assert_eq!(map.to_host(14), None);
-        assert_eq!(map.to_host(18), None);
+        assert_eq!(map.to_host(DocOffset::from_raw(14)), None);
+        assert_eq!(map.to_host(DocOffset::from_raw(18)), None);
     }
 
     #[test]
@@ -148,17 +164,29 @@ mod tests {
         let map = OffsetMap::new(&fragment);
 
         // Inside holes: must return None so no semantic token is emitted.
-        assert_eq!(map.to_host(8), None, "first placeholder start");
-        assert_eq!(map.to_host(18), None, "second placeholder start");
-        assert_eq!(map.to_host(22), None, "second placeholder mid");
+        assert_eq!(
+            map.to_host(DocOffset::from_raw(8)),
+            None,
+            "first placeholder start"
+        );
+        assert_eq!(
+            map.to_host(DocOffset::from_raw(18)),
+            None,
+            "second placeholder start"
+        );
+        assert_eq!(
+            map.to_host(DocOffset::from_raw(22)),
+            None,
+            "second placeholder mid"
+        );
 
         // `datetime` sits after both placeholders in SQL text.
         // sql_offset of "datetime" = 8 + 8 + 2 + 8 + 2 = 28
-        let datetime_sql_offset = 28;
+        let datetime_sql_offset = DocOffset::from_raw(28);
         let datetime_host = map.to_host(datetime_sql_offset);
         assert_eq!(
             datetime_host,
-            Some(36),
+            Some(DocOffset::from_raw(36)),
             "datetime must map to host offset 36"
         );
     }

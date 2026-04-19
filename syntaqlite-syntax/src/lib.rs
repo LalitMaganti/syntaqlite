@@ -32,8 +32,8 @@ pub use parser::{
 #[cfg(feature = "sqlite-minimal")]
 #[doc(inline)]
 pub use parser::{
-    Comment, CommentKind, CommentSide, CommentSpan, CompletionContext, MACRO_BODY_CALL_ARG_INTERNAL,
-    ParserTokenFlags,
+    Comment, CommentKind, CommentSide, CommentSpan, CompletionContext,
+    MACRO_BODY_CALL_ARG_INTERNAL, ParserTokenFlags,
 };
 
 // Top-level tokenizer types.

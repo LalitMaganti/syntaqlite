@@ -33,6 +33,7 @@ use lsp_types::{
     SignatureInformation, TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit, Uri,
     WorkDoneProgressOptions, WorkspaceEdit,
 };
+use syntaqlite_syntax::source::{DocOffset, DocRange};
 
 use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
@@ -305,12 +306,12 @@ impl LspServer {
         let offset = SourcePositionMap::new(source).position_to_offset(position);
 
         match host.hover_info(uri_str, offset) {
-            Some((text, tok_offset, tok_length)) => {
+            Some((text, tok_range)) => {
                 let source = host
                     .document_source(uri_str)
                     .expect("document must exist for hover");
                 let map = SourcePositionMap::new(source);
-                let positions = map.offsets_to_positions(&[tok_offset, tok_offset + tok_length]);
+                let positions = map.offsets_to_positions(&[tok_range.start, tok_range.end]);
                 let range = Range::new(positions[0], positions[1]);
                 let hover = Hover {
                     contents: HoverContents::Markup(MarkupContent {
@@ -356,7 +357,7 @@ impl LspServer {
             .document_source(uri_str)
             .expect("document must exist")
             .to_string();
-        let origin_range = offsets_to_range(&source, def.origin_start, def.origin_end);
+        let origin_range = offsets_to_range(&source, def.origin);
 
         let (target_uri, target_source) = if let Some(ref file_uri) = def.target.file_uri {
             let target: Uri = file_uri.parse().unwrap_or(uri);
@@ -368,7 +369,7 @@ impl LspServer {
         } else {
             (uri, source.clone())
         };
-        let target_range = offsets_to_range(&target_source, def.target.start, def.target.end);
+        let target_range = offsets_to_range(&target_source, def.target.range);
         let link = lsp_types::LocationLink {
             origin_selection_range: Some(origin_range),
             target_uri,
@@ -548,7 +549,7 @@ impl LspServer {
         let refs = host.find_references(uri_str, offset, true);
         let same_file: Vec<_> = refs
             .into_iter()
-            .filter(|(ref_uri, _, _)| ref_uri == uri_str)
+            .filter(|(ref_uri, _)| ref_uri == uri_str)
             .collect();
         if same_file.is_empty() {
             return Response::new_ok(req.id, Option::<Vec<lsp_types::DocumentHighlight>>::None);
@@ -560,8 +561,8 @@ impl LspServer {
             .to_string();
         let highlights: Vec<lsp_types::DocumentHighlight> = same_file
             .into_iter()
-            .map(|(_, start, end)| lsp_types::DocumentHighlight {
-                range: offsets_to_range(&source, start, end),
+            .map(|(_, range)| lsp_types::DocumentHighlight {
+                range: offsets_to_range(&source, range),
                 kind: Some(lsp_types::DocumentHighlightKind::READ),
             })
             .collect();
@@ -597,7 +598,7 @@ impl LspServer {
 
         let locations: Vec<Location> = refs
             .into_iter()
-            .filter_map(|(ref_uri, start, end)| {
+            .filter_map(|(ref_uri, doc_range)| {
                 let source = if ref_uri == uri_str {
                     host.document_source(&ref_uri)?.to_string()
                 } else if let Some(s) = host.document_source(&ref_uri) {
@@ -606,7 +607,7 @@ impl LspServer {
                     let file_path = ref_uri.strip_prefix("file://")?;
                     std::fs::read_to_string(file_path).ok()?
                 };
-                let range = offsets_to_range(&source, start, end);
+                let range = offsets_to_range(&source, doc_range);
                 let target_uri: Uri = ref_uri.parse().ok()?;
                 Some(Location {
                     uri: target_uri,
@@ -639,7 +640,7 @@ impl LspServer {
         };
         let offset = SourcePositionMap::new(source).position_to_offset(position);
 
-        let Some((start, end, placeholder)) = host.prepare_rename(uri_str, offset) else {
+        let Some((doc_range, placeholder)) = host.prepare_rename(uri_str, offset) else {
             return Response::new_ok(req.id, Option::<PrepareRenameResponse>::None);
         };
 
@@ -647,7 +648,7 @@ impl LspServer {
             .document_source(uri_str)
             .expect("document must exist for prepare_rename")
             .to_string();
-        let range = offsets_to_range(&source, start, end);
+        let range = offsets_to_range(&source, doc_range);
         Response::new_ok(
             req.id,
             PrepareRenameResponse::RangeWithPlaceholder { range, placeholder },
@@ -702,8 +703,8 @@ impl LspServer {
             };
             let text_edits: Vec<TextEdit> = edits
                 .into_iter()
-                .map(|(start, end, text)| TextEdit {
-                    range: offsets_to_range(&source, start, end),
+                .map(|(doc_range, text)| TextEdit {
+                    range: offsets_to_range(&source, doc_range),
                     new_text: text,
                 })
                 .collect();
@@ -854,10 +855,10 @@ impl DiagnosticPublisher {
         };
 
         // Collect all offsets and convert in a single O(n) pass.
-        let mut offsets: Vec<usize> = Vec::with_capacity(diags.len() * 2);
+        let mut offsets: Vec<DocOffset> = Vec::with_capacity(diags.len() * 2);
         for d in &diags {
-            offsets.push(d.start_offset());
-            offsets.push(d.end_offset());
+            offsets.push(d.start());
+            offsets.push(d.end());
         }
         let map = SourcePositionMap::new(&source);
         let positions = map.offsets_to_positions(&offsets);
@@ -897,10 +898,10 @@ impl DiagnosticPublisher {
     }
 }
 
-/// Convert byte offsets to an LSP `Range`.
-fn offsets_to_range(source: &str, start: usize, end: usize) -> Range {
+/// Convert a `DocRange` to an LSP `Range`.
+fn offsets_to_range(source: &str, range: DocRange) -> Range {
     let map = SourcePositionMap::new(source);
-    let positions = map.offsets_to_positions(&[start, end]);
+    let positions = map.offsets_to_positions(&[range.start, range.end]);
     Range::new(positions[0], positions[1])
 }
 
@@ -926,14 +927,14 @@ impl<'a> SourcePositionMap<'a> {
     /// Internally sorts the offsets, walks the source once, then returns
     /// results in the original order. Character offsets are UTF-16 code
     /// units per the LSP specification.
-    pub(crate) fn offsets_to_positions(&self, offsets: &[usize]) -> Vec<Position> {
+    pub(crate) fn offsets_to_positions(&self, offsets: &[DocOffset]) -> Vec<Position> {
         if offsets.is_empty() {
             return Vec::new();
         }
 
         let mut indexed: Vec<(usize, usize)> = offsets
             .iter()
-            .copied()
+            .map(|o| o.as_usize())
             .enumerate()
             .map(|(i, o)| (o, i))
             .collect();
@@ -967,8 +968,8 @@ impl<'a> SourcePositionMap<'a> {
         result
     }
 
-    /// Convert an LSP `Position` (with UTF-16 character offset) to a byte offset.
-    pub(crate) fn position_to_offset(&self, pos: Position) -> usize {
+    /// Convert an LSP `Position` (with UTF-16 character offset) to a document-absolute byte offset.
+    pub(crate) fn position_to_offset(&self, pos: Position) -> DocOffset {
         let len = self.src.len();
         let mut line = 0usize;
         let mut line_start = 0usize;
@@ -979,7 +980,7 @@ impl<'a> SourcePositionMap<'a> {
                     line_start += nl + 1;
                     line += 1;
                 }
-                None => return len,
+                None => return DocOffset::from_raw(u32::try_from(len).unwrap_or(u32::MAX)),
             }
         }
 
@@ -997,7 +998,7 @@ impl<'a> SourcePositionMap<'a> {
             utf16_col += if char_len == 4 { 2 } else { 1 };
             byte_pos += char_len;
         }
-        byte_pos
+        DocOffset::from_raw(u32::try_from(byte_pos).unwrap_or(u32::MAX))
     }
 }
 
@@ -1012,7 +1013,13 @@ mod tests {
     #[test]
     fn ascii_positions() {
         let map = SourcePositionMap::new("ab\ncd");
-        let positions = map.offsets_to_positions(&[0, 1, 2, 3, 4]);
+        let positions = map.offsets_to_positions(&[
+            DocOffset::from_raw(0),
+            DocOffset::from_raw(1),
+            DocOffset::from_raw(2),
+            DocOffset::from_raw(3),
+            DocOffset::from_raw(4),
+        ]);
         assert_eq!(positions[0], Position::new(0, 0)); // 'a'
         assert_eq!(positions[1], Position::new(0, 1)); // 'b'
         assert_eq!(positions[2], Position::new(0, 2)); // '\n'
@@ -1026,7 +1033,11 @@ mod tests {
         let src = "aé b";
         let map = SourcePositionMap::new(src);
         // byte offsets: a=0, é=1..3, ' '=3, 'b'=4
-        let positions = map.offsets_to_positions(&[0, 3, 4]);
+        let positions = map.offsets_to_positions(&[
+            DocOffset::from_raw(0),
+            DocOffset::from_raw(3),
+            DocOffset::from_raw(4),
+        ]);
         assert_eq!(positions[0], Position::new(0, 0)); // 'a'
         assert_eq!(positions[1], Position::new(0, 2)); // ' ' — after 'a' (1) + 'é' (1)
         assert_eq!(positions[2], Position::new(0, 3)); // 'b'
@@ -1038,7 +1049,7 @@ mod tests {
         let src = "a中b";
         let map = SourcePositionMap::new(src);
         // byte offsets: a=0, 中=1..4, b=4
-        let positions = map.offsets_to_positions(&[0, 4]);
+        let positions = map.offsets_to_positions(&[DocOffset::from_raw(0), DocOffset::from_raw(4)]);
         assert_eq!(positions[0], Position::new(0, 0)); // 'a'
         assert_eq!(positions[1], Position::new(0, 2)); // 'b' — after 'a' (1) + '中' (1)
     }
@@ -1049,7 +1060,7 @@ mod tests {
         let src = "a😀b";
         let map = SourcePositionMap::new(src);
         // byte offsets: a=0, 😀=1..5, b=5
-        let positions = map.offsets_to_positions(&[0, 5]);
+        let positions = map.offsets_to_positions(&[DocOffset::from_raw(0), DocOffset::from_raw(5)]);
         assert_eq!(positions[0], Position::new(0, 0)); // 'a'
         assert_eq!(positions[1], Position::new(0, 3)); // 'b' — after 'a' (1) + '😀' (2)
     }
@@ -1059,7 +1070,7 @@ mod tests {
         let src = "x\né";
         let map = SourcePositionMap::new(src);
         // byte offsets: x=0, \n=1, é=2..4
-        let positions = map.offsets_to_positions(&[2, 4]);
+        let positions = map.offsets_to_positions(&[DocOffset::from_raw(2), DocOffset::from_raw(4)]);
         assert_eq!(positions[0], Position::new(1, 0)); // start of 'é'
         assert_eq!(positions[1], Position::new(1, 1)); // after 'é'
     }
@@ -1069,10 +1080,22 @@ mod tests {
     #[test]
     fn ascii_position_to_offset() {
         let map = SourcePositionMap::new("ab\ncd");
-        assert_eq!(map.position_to_offset(Position::new(0, 0)), 0);
-        assert_eq!(map.position_to_offset(Position::new(0, 1)), 1);
-        assert_eq!(map.position_to_offset(Position::new(1, 0)), 3);
-        assert_eq!(map.position_to_offset(Position::new(1, 1)), 4);
+        assert_eq!(
+            map.position_to_offset(Position::new(0, 0)),
+            DocOffset::from_raw(0)
+        );
+        assert_eq!(
+            map.position_to_offset(Position::new(0, 1)),
+            DocOffset::from_raw(1)
+        );
+        assert_eq!(
+            map.position_to_offset(Position::new(1, 0)),
+            DocOffset::from_raw(3)
+        );
+        assert_eq!(
+            map.position_to_offset(Position::new(1, 1)),
+            DocOffset::from_raw(4)
+        );
     }
 
     #[test]
@@ -1084,10 +1107,22 @@ mod tests {
         // UTF-16 col 1 = byte 1 (start of 'é')
         // UTF-16 col 2 = byte 3 (' ')
         // UTF-16 col 3 = byte 4 ('b')
-        assert_eq!(map.position_to_offset(Position::new(0, 0)), 0);
-        assert_eq!(map.position_to_offset(Position::new(0, 1)), 1);
-        assert_eq!(map.position_to_offset(Position::new(0, 2)), 3);
-        assert_eq!(map.position_to_offset(Position::new(0, 3)), 4);
+        assert_eq!(
+            map.position_to_offset(Position::new(0, 0)),
+            DocOffset::from_raw(0)
+        );
+        assert_eq!(
+            map.position_to_offset(Position::new(0, 1)),
+            DocOffset::from_raw(1)
+        );
+        assert_eq!(
+            map.position_to_offset(Position::new(0, 2)),
+            DocOffset::from_raw(3)
+        );
+        assert_eq!(
+            map.position_to_offset(Position::new(0, 3)),
+            DocOffset::from_raw(4)
+        );
     }
 
     #[test]
@@ -1098,8 +1133,17 @@ mod tests {
         // UTF-16 col 0 = byte 0 ('a')
         // UTF-16 col 1 = byte 1 (start of '😀')
         // UTF-16 col 3 = byte 5 ('b')
-        assert_eq!(map.position_to_offset(Position::new(0, 0)), 0);
-        assert_eq!(map.position_to_offset(Position::new(0, 1)), 1);
-        assert_eq!(map.position_to_offset(Position::new(0, 3)), 5);
+        assert_eq!(
+            map.position_to_offset(Position::new(0, 0)),
+            DocOffset::from_raw(0)
+        );
+        assert_eq!(
+            map.position_to_offset(Position::new(0, 1)),
+            DocOffset::from_raw(1)
+        );
+        assert_eq!(
+            map.position_to_offset(Position::new(0, 3)),
+            DocOffset::from_raw(5)
+        );
     }
 }

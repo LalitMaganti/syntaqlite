@@ -76,14 +76,15 @@ pub fn syntaqlite::Catalog::new(dialect: impl core::convert::Into<syntaqlite::an
 pub fn syntaqlite::Catalog::new_connection(&mut self)
 pub fn syntaqlite::Catalog::new_database(&mut self)
 pub fn syntaqlite::Catalog::new_document(&mut self)
-pub fn syntaqlite::Diagnostic::end_offset(&self) -> usize
+pub fn syntaqlite::Diagnostic::end(&self) -> syntaqlite_syntax::source::DocOffset
 pub fn syntaqlite::Diagnostic::expansion_frames(&self) -> &[syntaqlite::semantic::diagnostics::DiagnosticFrame]
 pub fn syntaqlite::Diagnostic::help(&self) -> core::option::Option<&syntaqlite::semantic::Help>
 pub fn syntaqlite::Diagnostic::message(&self) -> &syntaqlite::semantic::DiagnosticMessage
-pub fn syntaqlite::Diagnostic::new(start_offset: usize, end_offset: usize, message: syntaqlite::semantic::DiagnosticMessage, severity: syntaqlite::semantic::Severity, help: core::option::Option<syntaqlite::semantic::Help>) -> Self
+pub fn syntaqlite::Diagnostic::new(range: syntaqlite_syntax::source::DocRange, message: syntaqlite::semantic::DiagnosticMessage, severity: syntaqlite::semantic::Severity, help: core::option::Option<syntaqlite::semantic::Help>) -> Self
+pub fn syntaqlite::Diagnostic::range(&self) -> syntaqlite_syntax::source::DocRange
 pub fn syntaqlite::Diagnostic::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub fn syntaqlite::Diagnostic::severity(&self) -> syntaqlite::semantic::Severity
-pub fn syntaqlite::Diagnostic::start_offset(&self) -> usize
+pub fn syntaqlite::Diagnostic::start(&self) -> syntaqlite_syntax::source::DocOffset
 pub fn syntaqlite::Dialect::default() -> Self
 pub fn syntaqlite::Dialect::deref(&self) -> &syntaqlite::any::AnyDialect
 pub fn syntaqlite::Dialect::deref_mut(&mut self) -> &mut syntaqlite::any::AnyDialect
@@ -138,19 +139,18 @@ pub fn syntaqlite::fmt::FormatConfig::with_keyword_case(self, case: syntaqlite::
 pub fn syntaqlite::fmt::FormatConfig::with_line_width(self, width: usize) -> Self
 pub fn syntaqlite::fmt::FormatConfig::with_semicolons(self, semicolons: bool) -> Self
 pub fn syntaqlite::fmt::FormatError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite::fmt::FormatError::length(&self) -> core::option::Option<usize>
 pub fn syntaqlite::fmt::FormatError::message(&self) -> &str
-pub fn syntaqlite::fmt::FormatError::offset(&self) -> core::option::Option<usize>
+pub fn syntaqlite::fmt::FormatError::range(&self) -> core::option::Option<syntaqlite_syntax::source::DocRange>
 pub fn syntaqlite::lsp::CompletionEntry::kind(&self) -> syntaqlite::lsp::CompletionKind
 pub fn syntaqlite::lsp::CompletionEntry::label(&self) -> &str
 pub fn syntaqlite::lsp::CompletionKind::as_str(self) -> &'static str
 pub fn syntaqlite::lsp::CompletionKind::sort_priority(self) -> u8
 pub fn syntaqlite::lsp::LspHost::all_diagnostics(&mut self, uri: &str, config: &syntaqlite::semantic::ValidationConfig) -> alloc::vec::Vec<syntaqlite::Diagnostic>
 pub fn syntaqlite::lsp::LspHost::available_function_names(&self) -> alloc::vec::Vec<alloc::string::String>
-pub fn syntaqlite::lsp::LspHost::completion_items(&mut self, uri: &str, offset: usize) -> alloc::vec::Vec<syntaqlite::lsp::CompletionEntry>
+pub fn syntaqlite::lsp::LspHost::completion_items(&mut self, uri: &str, offset: syntaqlite_syntax::source::DocOffset) -> alloc::vec::Vec<syntaqlite::lsp::CompletionEntry>
 pub fn syntaqlite::lsp::LspHost::default() -> Self
 pub fn syntaqlite::lsp::LspHost::new() -> Self
-pub fn syntaqlite::lsp::LspHost::semantic_tokens_encoded(&mut self, uri: &str, range: core::option::Option<(usize, usize)>) -> alloc::vec::Vec<u32>
+pub fn syntaqlite::lsp::LspHost::semantic_tokens_encoded(&mut self, uri: &str, range: core::option::Option<syntaqlite_syntax::source::DocRange>) -> alloc::vec::Vec<u32>
 pub fn syntaqlite::lsp::LspHost::set_format_config(&mut self, config: syntaqlite::fmt::FormatConfig)
 pub fn syntaqlite::lsp::LspHost::set_schema_map(&mut self, map: syntaqlite::lsp::SchemaMap)
 pub fn syntaqlite::lsp::LspHost::set_session_context(&mut self, ctx: syntaqlite::Catalog)

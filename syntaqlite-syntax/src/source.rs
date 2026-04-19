@@ -240,7 +240,6 @@ impl StmtRange {
     pub const fn is_empty(self) -> bool {
         self.start.0 == self.end.0
     }
-
 }
 
 // ── Document-absolute byte position / length ────────────────────────────────
@@ -290,7 +289,6 @@ impl DocRange {
     pub const fn is_empty(self) -> bool {
         self.start.0 == self.end.0
     }
-
 }
 
 // ── Layer-relative byte position / length ──────────────────────────────────
@@ -315,6 +313,31 @@ define_u32_newtype! {
 }
 
 impl_pos_len_arith!(pos: LayerOffset, len: LayerLen);
+
+// ── Length inter-convertibility ────────────────────────────────────────────
+//
+// A byte length is a context-free quantity — 10 bytes is 10 bytes regardless
+// of which buffer it was measured in.  Only *offsets* carry a coordinate
+// system.  These `From` impls let callers move a length across boundaries
+// without a named-argument round-trip, while keeping the offset distinctions
+// intact.
+
+macro_rules! impl_len_from {
+    ($from:ident => $to:ident) => {
+        impl From<$from> for $to {
+            fn from(v: $from) -> $to {
+                $to(v.0)
+            }
+        }
+    };
+}
+
+impl_len_from!(StmtLen => DocLen);
+impl_len_from!(StmtLen => LayerLen);
+impl_len_from!(DocLen => StmtLen);
+impl_len_from!(DocLen => LayerLen);
+impl_len_from!(LayerLen => StmtLen);
+impl_len_from!(LayerLen => DocLen);
 
 /// A half-open range of layer-relative byte offsets `[start, end)`.
 #[derive(Copy, Clone, Default, PartialEq, Eq, Hash, Debug)]
@@ -343,7 +366,6 @@ impl LayerRange {
     pub const fn is_empty(self) -> bool {
         self.start.0 == self.end.0
     }
-
 }
 
 // ── Statement base offset ───────────────────────────────────────────────────
@@ -366,29 +388,41 @@ impl StatementBase {
     pub const fn as_doc_offset(self) -> DocOffset {
         self.0
     }
+}
 
-    /// Convert a statement-relative offset to a document-absolute offset.
-    pub const fn to_doc(self, off: StmtOffset) -> DocOffset {
-        DocOffset(self.0.0 + off.0)
+// ── Cross-coordinate conversions ────────────────────────────────────────────
+//
+// The receiver is the value being converted; the `StatementBase` is passed
+// in.  Reads naturally: `off.to_doc(base)` ("this offset, expressed in
+// document coordinates given this statement's base").
+
+impl StmtOffset {
+    /// Convert to a document-absolute offset given the statement's base.
+    pub const fn to_doc(self, base: StatementBase) -> DocOffset {
+        DocOffset(base.0.0 + self.0)
     }
+}
 
-    /// Convert a statement-relative range to a document-absolute range.
-    pub const fn to_doc_range(self, range: StmtRange) -> DocRange {
+impl StmtRange {
+    /// Convert to a document-absolute range given the statement's base.
+    pub const fn to_doc(self, base: StatementBase) -> DocRange {
         DocRange {
-            start: self.to_doc(range.start),
-            end: self.to_doc(range.end),
+            start: self.start.to_doc(base),
+            end: self.end.to_doc(base),
         }
     }
+}
 
-    /// Convert a document-absolute offset to a statement-relative offset.
+impl DocOffset {
+    /// Convert to a statement-relative offset given the statement's base.
     ///
-    /// Returns `None` if `off` precedes the statement's start, in which
-    /// case the offset cannot be expressed as statement-relative.
-    pub const fn from_doc(self, off: DocOffset) -> Option<StmtOffset> {
-        if off.0 < self.0.0 {
+    /// Returns `None` if this offset precedes the statement's start, in
+    /// which case the value cannot be expressed as statement-relative.
+    pub const fn to_stmt(self, base: StatementBase) -> Option<StmtOffset> {
+        if self.0 < base.0.0 {
             None
         } else {
-            Some(StmtOffset(off.0 - self.0.0))
+            Some(StmtOffset(self.0 - base.0.0))
         }
     }
 }
@@ -620,10 +654,7 @@ mod tests {
 
     #[test]
     fn stmt_range_from_offset_len() {
-        let r = StmtRange::from_offset_len(
-            StmtOffset::from_raw(10),
-            StmtLen::from_raw(5),
-        );
+        let r = StmtRange::from_offset_len(StmtOffset::from_raw(10), StmtLen::from_raw(5));
         assert_eq!(r.start.as_u32(), 10);
         assert_eq!(r.end.as_u32(), 15);
         assert_eq!(r.len().as_u32(), 5);
@@ -632,45 +663,39 @@ mod tests {
 
     #[test]
     fn empty_range() {
-        let r = StmtRange::from_offset_len(
-            StmtOffset::from_raw(10),
-            StmtLen::from_raw(0),
-        );
+        let r = StmtRange::from_offset_len(StmtOffset::from_raw(10), StmtLen::from_raw(0));
         assert!(r.is_empty());
     }
 
     #[test]
-    fn statement_base_to_doc() {
+    fn stmt_offset_to_doc() {
         let base = StatementBase::new(DocOffset::from_raw(100));
         let off = StmtOffset::from_raw(7);
-        let doc: DocOffset = base.to_doc(off);
+        let doc: DocOffset = off.to_doc(base);
         assert_eq!(doc.as_u32(), 107);
     }
 
     #[test]
-    fn statement_base_to_doc_range() {
+    fn stmt_range_to_doc() {
         let base = StatementBase::new(DocOffset::from_raw(100));
-        let r = StmtRange::from_offset_len(
-            StmtOffset::from_raw(5),
-            StmtLen::from_raw(3),
-        );
-        let doc = base.to_doc_range(r);
+        let r = StmtRange::from_offset_len(StmtOffset::from_raw(5), StmtLen::from_raw(3));
+        let doc = r.to_doc(base);
         assert_eq!(doc.start.as_u32(), 105);
         assert_eq!(doc.end.as_u32(), 108);
     }
 
     #[test]
-    fn statement_base_from_doc_in_range() {
+    fn doc_offset_to_stmt_in_range() {
         let base = StatementBase::new(DocOffset::from_raw(100));
         let doc = DocOffset::from_raw(107);
-        assert_eq!(base.from_doc(doc).map(StmtOffset::as_u32), Some(7));
+        assert_eq!(doc.to_stmt(base).map(StmtOffset::as_u32), Some(7));
     }
 
     #[test]
-    fn statement_base_from_doc_before_base() {
+    fn doc_offset_to_stmt_before_base() {
         let base = StatementBase::new(DocOffset::from_raw(100));
         let doc = DocOffset::from_raw(50);
-        assert!(base.from_doc(doc).is_none());
+        assert!(doc.to_stmt(base).is_none());
     }
 
     #[test]

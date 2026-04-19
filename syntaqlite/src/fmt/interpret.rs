@@ -231,9 +231,8 @@ impl Formatter {
                             // For quoted spans, the original token in source
                             // starts one byte earlier (the opening quote) and
                             // extends one byte past (the closing quote).
-                            let span_len = StmtLen::from_raw(
-                                u32::try_from(s.len()).unwrap_or(u32::MAX),
-                            );
+                            let span_len =
+                                StmtLen::from_raw(u32::try_from(s.len()).unwrap_or(u32::MAX));
                             let drain_offset = if quoted {
                                 span_start - StmtLen::from_raw(1)
                             } else {
@@ -244,8 +243,7 @@ impl Formatter {
                             } else {
                                 span_len
                             };
-                            let drain =
-                                cctx.drain_before(drain_offset.as_u32(), source, arena);
+                            let drain = cctx.drain_before(drain_offset.as_u32(), source, arena);
                             flush_drain(&drain, &mut pending, &mut running, arena);
                             cctx.advance_past((drain_offset + token_len).as_u32());
                         }

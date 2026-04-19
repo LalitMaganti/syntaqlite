@@ -6,6 +6,7 @@
 use syntaqlite::nodes::Stmt;
 use syntaqlite::parse::ParserConfig;
 use syntaqlite::parse::TokenType;
+use syntaqlite::source::DocOffset;
 use syntaqlite::{ParseOutcome, Parser};
 use syntaqlite_syntax::{MacroArg, MacroLookup, MacroOutput};
 
@@ -18,10 +19,24 @@ fn feed_tokens_select_1() {
     let mut session = parser.incremental_parse(source);
 
     // Feed SELECT token.
-    assert!(session.feed_token(TokenType::Select, 0..6).is_none());
+    assert!(
+        session
+            .feed_token(
+                TokenType::Select,
+                DocOffset::from_raw(0)..DocOffset::from_raw(6)
+            )
+            .is_none()
+    );
 
     // Feed integer literal token.
-    assert!(session.feed_token(TokenType::Integer, 7..8).is_none());
+    assert!(
+        session
+            .feed_token(
+                TokenType::Integer,
+                DocOffset::from_raw(7)..DocOffset::from_raw(8)
+            )
+            .is_none()
+    );
 
     // finish() synthesizes SEMI + EOF, triggering the ecmd reduction.
     let stmt = session
@@ -39,12 +54,21 @@ fn feed_tokens_with_semicolon() {
     let parser = Parser::new();
     let mut session = parser.incremental_parse(source);
 
-    session.feed_token(TokenType::Select, 0..6);
-    session.feed_token(TokenType::Integer, 7..8);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(7)..DocOffset::from_raw(8),
+    );
 
     // SEMI completes the statement immediately.
     let stmt = session
-        .feed_token(TokenType::Semi, 8..9)
+        .feed_token(
+            TokenType::Semi,
+            DocOffset::from_raw(8)..DocOffset::from_raw(9),
+        )
         .expect("SEMI should complete the statement")
         .expect("expected Ok");
     assert!(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
@@ -59,16 +83,31 @@ fn feed_tokens_multi_statement() {
     let mut session = parser.incremental_parse(source);
 
     // First statement: SELECT 1 ;
-    session.feed_token(TokenType::Select, 0..6);
-    session.feed_token(TokenType::Integer, 7..8);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(7)..DocOffset::from_raw(8),
+    );
 
     // SEMI completes stmt 1 immediately.
-    let stmt1 = session.feed_token(TokenType::Semi, 8..9);
+    let stmt1 = session.feed_token(
+        TokenType::Semi,
+        DocOffset::from_raw(8)..DocOffset::from_raw(9),
+    );
     assert!(stmt1.is_some(), "first statement should complete on SEMI");
 
     // Second statement tokens belong entirely to stmt 2.
-    session.feed_token(TokenType::Select, 10..16);
-    session.feed_token(TokenType::Integer, 17..18);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(10)..DocOffset::from_raw(16),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(17)..DocOffset::from_raw(18),
+    );
 
     assert!(
         session.finish().is_some(),
@@ -83,12 +122,25 @@ fn feed_token_skips_space() {
     let parser = Parser::new();
     let mut session = parser.incremental_parse(source);
 
-    session.feed_token(TokenType::Select, 0..6);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
 
     // Feed a space — should be silently skipped.
-    assert!(session.feed_token(TokenType::Space, 6..7).is_none());
+    assert!(
+        session
+            .feed_token(
+                TokenType::Space,
+                DocOffset::from_raw(6)..DocOffset::from_raw(7)
+            )
+            .is_none()
+    );
 
-    session.feed_token(TokenType::Integer, 7..8);
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(7)..DocOffset::from_raw(8),
+    );
 
     let stmt = session
         .finish()
@@ -104,9 +156,18 @@ fn feed_token_records_comment() {
     let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
     let mut session = parser.incremental_parse(source);
 
-    session.feed_token(TokenType::Select, 0..6);
-    session.feed_token(TokenType::Comment, 7..15);
-    session.feed_token(TokenType::Integer, 16..17);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
+    session.feed_token(
+        TokenType::Comment,
+        DocOffset::from_raw(7)..DocOffset::from_raw(15),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(16)..DocOffset::from_raw(17),
+    );
 
     let stmt = session
         .finish()
@@ -115,7 +176,10 @@ fn feed_token_records_comment() {
 
     let comments: Vec<_> = stmt.comments().collect();
     assert_eq!(comments.len(), 1);
-    assert_eq!(comments[0].length(), syntaqlite_syntax::source::StmtLen::from_raw(8));
+    assert_eq!(
+        comments[0].length(),
+        syntaqlite_syntax::source::StmtLen::from_raw(8)
+    );
 }
 
 /// Leading `TK_SPACE` fed via `feed_token` should NOT open the statement:
@@ -128,9 +192,18 @@ fn feed_token_leading_whitespace_does_not_open_statement() {
     let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
     let mut session = parser.incremental_parse(source);
 
-    session.feed_token(TokenType::Space, 0..3);
-    session.feed_token(TokenType::Select, 3..9);
-    session.feed_token(TokenType::Integer, 10..11);
+    session.feed_token(
+        TokenType::Space,
+        DocOffset::from_raw(0)..DocOffset::from_raw(3),
+    );
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(3)..DocOffset::from_raw(9),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(10)..DocOffset::from_raw(11),
+    );
 
     let stmt = session
         .finish()
@@ -141,7 +214,10 @@ fn feed_token_leading_whitespace_does_not_open_statement() {
     assert_eq!(stmt.text(), "SELECT 1");
     assert_eq!(stmt.statement_base().as_doc_offset().as_u32(), 3);
     let tokens: Vec<_> = stmt.tokens().collect();
-    assert_eq!(tokens[0].offset(), syntaqlite_syntax::source::StmtOffset::default());
+    assert_eq!(
+        tokens[0].offset(),
+        syntaqlite_syntax::source::StmtOffset::default()
+    );
     assert_eq!(tokens[0].text(), "SELECT");
 }
 
@@ -153,17 +229,32 @@ fn feed_tokens_multi_statement_both_roots() {
     let mut session = parser.incremental_parse(source);
 
     // First statement.
-    session.feed_token(TokenType::Select, 0..6);
-    session.feed_token(TokenType::Integer, 7..8);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(7)..DocOffset::from_raw(8),
+    );
     let stmt1 = session
-        .feed_token(TokenType::Semi, 8..9)
+        .feed_token(
+            TokenType::Semi,
+            DocOffset::from_raw(8)..DocOffset::from_raw(9),
+        )
         .expect("stmt 1 should complete")
         .expect("stmt 1 should be Ok");
     assert!(matches!(stmt1.root(), Some(Stmt::SelectStmt(_))));
 
     // Second statement.
-    session.feed_token(TokenType::Select, 10..16);
-    session.feed_token(TokenType::Integer, 17..18);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(10)..DocOffset::from_raw(16),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(17)..DocOffset::from_raw(18),
+    );
     let stmt2 = session
         .finish()
         .expect("stmt 2 should complete")
@@ -179,18 +270,50 @@ fn feed_tokens_three_statements() {
     let mut session = parser.incremental_parse(source);
 
     // Statement 1.
-    session.feed_token(TokenType::Select, 0..6);
-    session.feed_token(TokenType::Integer, 7..8);
-    assert!(session.feed_token(TokenType::Semi, 8..9).is_some());
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(7)..DocOffset::from_raw(8),
+    );
+    assert!(
+        session
+            .feed_token(
+                TokenType::Semi,
+                DocOffset::from_raw(8)..DocOffset::from_raw(9)
+            )
+            .is_some()
+    );
 
     // Statement 2.
-    session.feed_token(TokenType::Select, 10..16);
-    session.feed_token(TokenType::Integer, 17..18);
-    assert!(session.feed_token(TokenType::Semi, 18..19).is_some());
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(10)..DocOffset::from_raw(16),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(17)..DocOffset::from_raw(18),
+    );
+    assert!(
+        session
+            .feed_token(
+                TokenType::Semi,
+                DocOffset::from_raw(18)..DocOffset::from_raw(19)
+            )
+            .is_some()
+    );
 
     // Statement 3 — completed by finish().
-    session.feed_token(TokenType::Select, 20..26);
-    session.feed_token(TokenType::Integer, 27..28);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(20)..DocOffset::from_raw(26),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(27)..DocOffset::from_raw(28),
+    );
     let stmt3 = session
         .finish()
         .expect("stmt 3 should complete")
@@ -207,22 +330,41 @@ fn feed_tokens_bare_semicolons() {
 
     // Leading bare semicolon — should not produce a statement.
     assert!(
-        session.feed_token(TokenType::Semi, 0..1).is_none(),
+        session
+            .feed_token(
+                TokenType::Semi,
+                DocOffset::from_raw(0)..DocOffset::from_raw(1)
+            )
+            .is_none(),
         "bare semicolon should not produce a statement"
     );
 
     // Real statement.
-    session.feed_token(TokenType::Select, 2..8);
-    session.feed_token(TokenType::Integer, 9..10);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(2)..DocOffset::from_raw(8),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(9)..DocOffset::from_raw(10),
+    );
     let stmt = session
-        .feed_token(TokenType::Semi, 10..11)
+        .feed_token(
+            TokenType::Semi,
+            DocOffset::from_raw(10)..DocOffset::from_raw(11),
+        )
         .expect("should complete")
         .expect("should be Ok");
     assert!(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
 
     // Trailing bare semicolon.
     assert!(
-        session.feed_token(TokenType::Semi, 12..13).is_none(),
+        session
+            .feed_token(
+                TokenType::Semi,
+                DocOffset::from_raw(12)..DocOffset::from_raw(13)
+            )
+            .is_none(),
         "trailing bare semicolon should not produce a statement"
     );
 
@@ -237,11 +379,23 @@ fn feed_tokens_explain_then_normal() {
     let mut session = parser.incremental_parse(source);
 
     // EXPLAIN SELECT 1;
-    session.feed_token(TokenType::Explain, 0..7);
-    session.feed_token(TokenType::Select, 8..14);
-    session.feed_token(TokenType::Integer, 15..16);
+    session.feed_token(
+        TokenType::Explain,
+        DocOffset::from_raw(0)..DocOffset::from_raw(7),
+    );
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(8)..DocOffset::from_raw(14),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(15)..DocOffset::from_raw(16),
+    );
     let stmt1 = session
-        .feed_token(TokenType::Semi, 16..17)
+        .feed_token(
+            TokenType::Semi,
+            DocOffset::from_raw(16)..DocOffset::from_raw(17),
+        )
         .expect("stmt 1 should complete")
         .expect("stmt 1 should be Ok");
     assert!(
@@ -250,8 +404,14 @@ fn feed_tokens_explain_then_normal() {
     );
 
     // SELECT 2 — should NOT be wrapped in EXPLAIN.
-    session.feed_token(TokenType::Select, 18..24);
-    session.feed_token(TokenType::Integer, 25..26);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(18)..DocOffset::from_raw(24),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(25)..DocOffset::from_raw(26),
+    );
     let stmt2 = session
         .finish()
         .expect("stmt 2 should complete")
@@ -270,18 +430,36 @@ fn feed_tokens_normal_then_explain() {
     let mut session = parser.incremental_parse(source);
 
     // SELECT 1;
-    session.feed_token(TokenType::Select, 0..6);
-    session.feed_token(TokenType::Integer, 7..8);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(7)..DocOffset::from_raw(8),
+    );
     let stmt1 = session
-        .feed_token(TokenType::Semi, 8..9)
+        .feed_token(
+            TokenType::Semi,
+            DocOffset::from_raw(8)..DocOffset::from_raw(9),
+        )
         .expect("stmt 1 should complete")
         .expect("stmt 1 should be Ok");
     assert!(matches!(stmt1.root(), Some(Stmt::SelectStmt(_))));
 
     // EXPLAIN SELECT 2
-    session.feed_token(TokenType::Explain, 10..17);
-    session.feed_token(TokenType::Select, 18..24);
-    session.feed_token(TokenType::Integer, 25..26);
+    session.feed_token(
+        TokenType::Explain,
+        DocOffset::from_raw(10)..DocOffset::from_raw(17),
+    );
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(18)..DocOffset::from_raw(24),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(25)..DocOffset::from_raw(26),
+    );
     let stmt2 = session
         .finish()
         .expect("stmt 2 should complete")
@@ -299,7 +477,10 @@ fn feed_tokens_incomplete_statement_error() {
     let parser = Parser::new();
     let mut session = parser.incremental_parse(source);
 
-    session.feed_token(TokenType::Select, 0..6);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
     // finish() synthesizes SEMI + EOF; SELECT alone is incomplete.
     let result = session.finish().expect("should return Some");
     assert!(result.is_err(), "incomplete SELECT should be a parse error");
@@ -313,10 +494,19 @@ fn feed_tokens_comments_between_statements() {
     let mut session = parser.incremental_parse(source);
 
     // Statement 1.
-    session.feed_token(TokenType::Select, 0..6);
-    session.feed_token(TokenType::Integer, 7..8);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(7)..DocOffset::from_raw(8),
+    );
     let stmt1 = session
-        .feed_token(TokenType::Semi, 8..9)
+        .feed_token(
+            TokenType::Semi,
+            DocOffset::from_raw(8)..DocOffset::from_raw(9),
+        )
         .expect("stmt 1 should complete")
         .expect("stmt 1 should be Ok");
     assert_eq!(
@@ -326,9 +516,18 @@ fn feed_tokens_comments_between_statements() {
     );
 
     // Inter-statement comment belongs to statement 2.
-    session.feed_token(TokenType::Comment, 10..20);
-    session.feed_token(TokenType::Select, 21..27);
-    session.feed_token(TokenType::Integer, 28..29);
+    session.feed_token(
+        TokenType::Comment,
+        DocOffset::from_raw(10)..DocOffset::from_raw(20),
+    );
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(21)..DocOffset::from_raw(27),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(28)..DocOffset::from_raw(29),
+    );
     let stmt2 = session
         .finish()
         .expect("stmt 2 should complete")
@@ -487,8 +686,14 @@ fn field_source_range_direct_span() {
     let parser = Parser::new();
     let mut session = parser.incremental_parse(source);
 
-    session.feed_token(TokenType::Select, 0..6);
-    session.feed_token(TokenType::Integer, 7..8);
+    session.feed_token(
+        TokenType::Select,
+        DocOffset::from_raw(0)..DocOffset::from_raw(6),
+    );
+    session.feed_token(
+        TokenType::Integer,
+        DocOffset::from_raw(7)..DocOffset::from_raw(8),
+    );
 
     let stmt = session
         .finish()

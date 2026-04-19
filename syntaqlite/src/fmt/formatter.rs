@@ -3,8 +3,9 @@
 
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, ParseOutcome,
+    AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, AnyTokenizer, ParseOutcome,
 };
+use syntaqlite_syntax::source::{DocLen, DocRange};
 
 use super::FormatConfig;
 use super::FormatError;
@@ -12,6 +13,21 @@ use super::comment::{CommentCtx, CommentEntry, TokenEntry};
 use super::doc::{DocArena, DocId, NIL_DOC, RenderBuffers};
 use super::interpret::{FmtCtx, InterpretScratch};
 use crate::dialect::AnyDialect;
+
+/// Convert a parse error (statement-relative offsets) to a
+/// [`FormatError`] with a document-absolute range.
+fn parse_error_to_format_error(e: &AnyParseError<'_>) -> FormatError {
+    let base = e.statement_base();
+    let range = match (e.offset(), e.length()) {
+        (Some(off), Some(len)) => Some(DocRange::from_offset_len(off.to_doc(base), len.into())),
+        (Some(off), None) => Some(DocRange::from_offset_len(
+            off.to_doc(base),
+            DocLen::default(),
+        )),
+        _ => None,
+    };
+    FormatError::new(e.message().to_owned(), range)
+}
 
 /// High-level SQL formatter that pretty-prints SQL source text.
 ///
@@ -185,11 +201,7 @@ impl Formatter {
                 ParseOutcome::Done => break,
                 ParseOutcome::Ok(stmt) => stmt,
                 ParseOutcome::Err(e) => {
-                    return Err(FormatError {
-                        message: e.message().to_owned(),
-                        offset: e.offset(),
-                        length: e.length(),
-                    });
+                    return Err(parse_error_to_format_error(&e));
                 }
             };
 
@@ -306,11 +318,7 @@ impl Formatter {
                 ParseOutcome::Done => break,
                 ParseOutcome::Ok(stmt) => stmt,
                 ParseOutcome::Err(e) => {
-                    return Err(FormatError {
-                        message: e.message().to_owned(),
-                        offset: e.offset(),
-                        length: e.length(),
-                    });
+                    return Err(parse_error_to_format_error(&e));
                 }
             };
 
@@ -427,11 +435,7 @@ impl Formatter {
                 ParseOutcome::Done => break,
                 ParseOutcome::Ok(stmt) => stmt,
                 ParseOutcome::Err(e) => {
-                    return Err(FormatError {
-                        message: e.message().to_owned(),
-                        offset: e.offset(),
-                        length: e.length(),
-                    });
+                    return Err(parse_error_to_format_error(&e));
                 }
             };
 
