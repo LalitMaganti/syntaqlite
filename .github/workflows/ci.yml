@@ -48,18 +48,22 @@ jobs:
           key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: cargo-${{ runner.os }}-
 
-      - name: Install nightly Rust toolchain (for cargo-public-api rustdoc JSON)
-        run: rustup toolchain install nightly --profile minimal --no-self-update
-
-      - name: Cache cargo-public-api binary
-        id: cache-cargo-public-api
+      - name: Cache cargo-public-api binary and nightly toolchain
+        id: cache-public-api
         uses: actions/cache@v5
         with:
-          path: ~/.cargo/bin/cargo-public-api
-          key: cargo-public-api-${{ runner.os }}-v1
+          path: |
+            ~/.cargo/bin/cargo-public-api
+            ~/.rustup/toolchains/nightly-*
+            ~/.rustup/update-hashes/nightly-*
+          key: cargo-public-api-nightly-${{ runner.os }}-v1
+
+      - name: Install nightly Rust toolchain (for cargo-public-api rustdoc JSON)
+        if: steps.cache-public-api.outputs.cache-hit != 'true'
+        run: rustup toolchain install nightly --profile minimal --no-self-update
 
       - name: Install cargo-public-api
-        if: steps.cache-cargo-public-api.outputs.cache-hit != 'true'
+        if: steps.cache-public-api.outputs.cache-hit != 'true'
         run: cargo install --locked cargo-public-api
 
       - name: Run pre-push checks
