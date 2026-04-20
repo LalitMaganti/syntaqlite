@@ -27,6 +27,35 @@ class DiffTestBlueprint:
     strict_schema: bool = False
 
 
+@dataclass
+class LspDiffTestBlueprint:
+    """Defines a single LSP diff test.
+
+    The query is driven against the real `syntaqlite lsp` server over
+    JSON-RPC. The response is rendered to deterministic text and compared
+    against `out`.
+
+    Attributes:
+        sql: SQL opened as the document. Must contain exactly one cursor
+             marker `<|>` indicating where the LSP query runs. The marker
+             is stripped before the document is sent. Any schema DDL that
+             the test needs can be included inline in this SQL (CREATE
+             TABLE, CREATE VIEW, WITH binding, etc.) — the LSP host
+             analyzes it as part of the document.
+        op: One of "hover", "definition", "completion", "references",
+            "prepare-rename", "rename", "diagnostics".
+        out: Expected rendered output.
+        new_name: New symbol name (required for op="rename").
+        include_declaration: When true (default), find-references includes
+            the symbol's definition site.
+    """
+    sql: str
+    op: str
+    out: str
+    new_name: Optional[str] = None
+    include_declaration: bool = True
+
+
 class TestSuite:
     """Base class for test suites.
 
@@ -43,13 +72,13 @@ class TestSuite:
                 )
     """
 
-    def fetch(self) -> List[Tuple[str, DiffTestBlueprint]]:
+    def fetch(self) -> List[Tuple[str, object]]:
         """Discover and return all test methods.
 
         Returns:
-            List of (test_name, blueprint) tuples.
-            Test names are formatted as "ClassName#method_name" where
-            method_name has the "test_" prefix stripped.
+            List of (test_name, blueprint) tuples. The blueprint is any
+            recognized `*TestBlueprint` dataclass; the test runner dispatches
+            on type.
         """
         tests = []
         for name in sorted(dir(self)):
@@ -57,7 +86,7 @@ class TestSuite:
                 method = getattr(self, name)
                 if callable(method):
                     blueprint = method()
-                    if isinstance(blueprint, DiffTestBlueprint):
+                    if isinstance(blueprint, (DiffTestBlueprint, LspDiffTestBlueprint)):
                         # Format: ClassName.method_name (without test_ prefix)
                         test_name = f"{self.__class__.__name__}.{name[5:]}"
                         tests.append((test_name, blueprint))
