@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-import {defineConfig} from "@playwright/test";
+import {defineConfig, devices} from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests",
@@ -15,7 +15,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    {name: "chromium", use: {browserName: "chromium"}},
+    {name: "chromium", use: {...devices["Desktop Chrome"]}},
   ],
   webServer: {
     command: "python3 -m http.server 4174 --directory tests/fixture",
