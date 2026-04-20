@@ -45,6 +45,7 @@ _SUITE_MODULES = [
     "python.dev.integration_tests.suites.introspect",
     "python.dev.integration_tests.suites.serve",
     "python.dev.integration_tests.suites.python_api",
+    "python.dev.integration_tests.suites.c_api",
 ]
 
 _BLUE = "\033[1;34m"
