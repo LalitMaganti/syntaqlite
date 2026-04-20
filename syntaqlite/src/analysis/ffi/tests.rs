@@ -1055,7 +1055,7 @@ fn add_function_overload_registers_scalar() {
     let v = Validator::new();
     v.add_scalar("my_udf", SYNTAQLITE_ARITY_EXACT, 1);
     let n = v.analyze("SELECT my_udf(1)");
-    assert_eq!(n, 0, "custom scalar should validate clean");
+    assert_eq!(n, 0, "custom scalar should accept as clean");
 }
 
 #[test]

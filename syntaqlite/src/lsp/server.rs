@@ -51,7 +51,7 @@ pub struct LspConfig {
     pub format_config: Option<FormatConfig>,
     /// Pre-loaded schema catalog from project config file.
     pub schema_catalog: Option<Catalog>,
-    /// Validation config (check levels) from project config file.
+    /// Analysis config (check levels) from project config file.
     pub analysis_config: Option<AnalysisConfig>,
     /// Per-file schema resolution from `[schemas]` globs.
     pub schema_map: Option<SchemaMap>,
@@ -179,7 +179,7 @@ impl LspServer {
             eprintln!("syntaqlite-lsp: using per-file schema map");
         } else if let Some(catalog) = config.schema_catalog {
             host.set_session_context(catalog);
-            // If no explicit validation config was provided, default schema
+            // If no explicit analysis config was provided, default schema
             // checks to deny when a schema is present.
             if !has_analysis_config {
                 host.set_analysis_config(AnalysisConfig::default().with_strict_schema());

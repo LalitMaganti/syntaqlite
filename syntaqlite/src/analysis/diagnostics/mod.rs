@@ -1,20 +1,20 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Diagnostic types for semantic analysis.
+//! Diagnostic types for analysis.
 //!
 //! [`Diagnostic`] values carry byte-offset spans, structured messages, and
 //! optional "did you mean?" suggestions. Both parse errors and semantic
 //! issues (unknown table, wrong arity, etc.) are represented uniformly.
 
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod fuzzy;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod render;
 
 use crate::source::{DocOffset, DocRange, LayerRange};
 
-/// A diagnostic produced by parsing or semantic analysis.
+/// A diagnostic produced by parsing or analysis.
 ///
 /// Every diagnostic carries a byte-offset range into the source text,
 /// a structured [`DiagnosticMessage`], a [`Severity`] level, and an
@@ -63,7 +63,7 @@ pub struct DiagnosticFrame {
     pub range: LayerRange,
 }
 
-/// A semantic diagnostic produced by validation, with location, message,
+/// A diagnostic produced by analysis, with location, message,
 /// severity, optional help, and an optional macro expansion traceback.
 #[derive(Debug, Clone)]
 pub struct Diagnostic {
@@ -287,7 +287,7 @@ impl std::fmt::Display for Help {
 /// | [`Hint`](Self::Hint)       | Style suggestion or minor improvement.   |
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Severity {
-    /// Blocking issue that should fail validation.
+    /// Blocking issue that should fail analysis.
     Error,
     /// Suspicious but non-fatal issue.
     Warning,

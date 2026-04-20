@@ -4,7 +4,7 @@
 //! Module resolution for `INCLUDE` statements during analysis.
 
 /// Callback for resolving `INCLUDE PERFETTO MODULE` (or similar) import
-/// statements during semantic analysis.
+/// statements during analysis.
 ///
 /// Implement this trait to teach the [`Analyzer`] how to locate
 /// module source text. The analyzer calls [`resolve`](Self::resolve) when

@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Semantic analysis and validation.
+//! Analysis and validation.
 //!
 //! Validates SQL against a known database schema — resolving table, column,
 //! and function references and producing structured [`Diagnostic`] values with
@@ -38,53 +38,53 @@
 //! assert!(model.has_diagnostics());
 //! ```
 
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod catalog;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod completion;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod config;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod context;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod ddl;
 pub(crate) mod diagnostics;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod engine;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 #[expect(unreachable_pub)]
 pub(crate) mod ffi;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 mod lineage;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod model;
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub(crate) mod resolver;
 
 // ── Public re-exports ─────────────────────────────────────────────────────────
 
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use catalog::{AritySpec, Catalog, CatalogLayer, CatalogLayerContents, FunctionCategory};
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use config::{AnalysisConfig, AnalysisMode, CheckConfig, CheckLevel};
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use context::AnalysisContext;
 #[doc(inline)]
 pub use diagnostics::{Diagnostic, DiagnosticMessage, Help, Severity};
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use engine::Analyzer;
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use lineage::{
     ColumnLineage, ColumnOrigin, LineageResult, PhysicalTableAccess, RelationAccess, RelationKind,
 };
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use model::{Analysis, DefinedRelation, StatementAnalysis};
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use resolver::{DirectoryModuleResolver, ModuleResolver};

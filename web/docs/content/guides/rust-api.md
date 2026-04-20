@@ -127,7 +127,7 @@ Add the `validation` and `sqlite` features:
 
 ```toml
 [dependencies]
-syntaqlite = { version = "0.4.2", features = ["validation", "sqlite"] }
+syntaqlite = { version = "0.4.2", features = ["analysis", "sqlite"] }
 ```
 
 ```rust

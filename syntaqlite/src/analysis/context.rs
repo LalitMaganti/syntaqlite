@@ -9,7 +9,7 @@ use super::resolver::ModuleResolver;
 
 /// Per-call context passed to [`Analyzer::analyze`]. Bundles the
 /// catalog (mutated in place as DDL accumulates and imports are recorded),
-/// the validation config, and an optional module resolver.
+/// the analysis config, and an optional module resolver.
 ///
 /// Construct via [`AnalysisContext::new`] with a `&mut Catalog`, then chain
 /// [`with_config`](Self::with_config) and
@@ -46,7 +46,7 @@ impl<'a> AnalysisContext<'a> {
         }
     }
 
-    /// Set the validation config.
+    /// Set the analysis config.
     #[must_use]
     pub fn with_config(mut self, config: AnalysisConfig) -> Self {
         self.config = config;
@@ -71,7 +71,7 @@ impl<'a> AnalysisContext<'a> {
         self.catalog
     }
 
-    /// The validation config.
+    /// The analysis config.
     pub fn config(&self) -> &AnalysisConfig {
         &self.config
     }

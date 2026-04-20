@@ -87,7 +87,7 @@ is designed to minimize the human effort needed:
 1. Grammar rules and the state machine are regenerated automatically
 2. AST node structure is defined in
    [`.synq` files](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-syntax/parser-nodes).
-   New nodes need a `.synq` entry for formatting and validation
+   New nodes need a `.synq` entry for formatting and analysis
 3. Build tooling detects any divergence and guides the update
 
 The only manual decision is which AST nodes to fold together (e.g., whether a

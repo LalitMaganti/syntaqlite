@@ -42,7 +42,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "syntaqlite/validation.h"
+#include "syntaqlite/analysis.h"
 
 static char g_line[64 * 1024];
 static char g_body[256 * 1024];
@@ -163,7 +163,7 @@ static void print_diag(const SyntaqliteDiagnostic* d, const char* prefix, uint32
          d->message ? d->message : "");
 }
 
-static void add_relation_one(SyntaqliteValidator* v, int is_view,
+static void add_relation_one(SyntaqliteAnalyzer* v, int is_view,
                               const char* name, const char* cols_csv) {
   char** cols = NULL;
   uint32_t n = split_csv(cols_csv, &cols);
@@ -172,13 +172,13 @@ static void add_relation_one(SyntaqliteValidator* v, int is_view,
   def.columns = (const char* const*)cols;
   def.column_count = n;
   if (cols_csv && cols_csv[0] == '\0') def.columns = NULL;  // treat "" as unknown cols
-  if (is_view) syntaqlite_validator_add_views(v, &def, 1);
-  else         syntaqlite_validator_add_tables(v, &def, 1);
+  if (is_view) syntaqlite_analyzer_add_views(v, &def, 1);
+  else         syntaqlite_analyzer_add_tables(v, &def, 1);
   free_argv(cols, n);
 }
 
 int main(void) {
-  SyntaqliteValidator* v = NULL;
+  SyntaqliteAnalyzer* v = NULL;
 
   while (fgets(g_line, sizeof(g_line), stdin)) {
     chomp(g_line);
@@ -190,25 +190,25 @@ int main(void) {
     const char* verb = argv[0];
 
     if (strcmp(verb, "create") == 0) {
-      if (v) syntaqlite_validator_destroy(v);
-      v = syntaqlite_validator_create_sqlite();
+      if (v) syntaqlite_analyzer_destroy(v);
+      v = syntaqlite_analyzer_create_sqlite();
       printf("create %s\n", v ? "ok" : "err null");
     } else if (strcmp(verb, "destroy") == 0) {
-      syntaqlite_validator_destroy(v);
+      syntaqlite_analyzer_destroy(v);
       v = NULL;
       printf("destroy ok\n");
     } else if (strcmp(verb, "load_ddl") == 0) {
       int n = read_block(g_body, sizeof(g_body));
       if (n < 0) { printf("load_ddl err no_terminator\n"); break; }
       if (!v) { printf("load_ddl err no_handle\n"); continue; }
-      uint32_t errs = syntaqlite_validator_load_schema_ddl(v, g_body, (uint32_t)n);
+      uint32_t errs = syntaqlite_analyzer_load_schema_ddl(v, g_body, (uint32_t)n);
       printf("load_ddl ok errs=%u\n", errs);
     } else if (strcmp(verb, "analyze") == 0) {
       int n = read_block(g_body, sizeof(g_body));
       if (n < 0) { printf("analyze err no_terminator\n"); break; }
       if (!v) { printf("analyze err no_handle\n"); continue; }
-      uint32_t diags = syntaqlite_validator_analyze(v, g_body, (uint32_t)n);
-      uint32_t stmts = syntaqlite_validator_statement_count(v);
+      uint32_t diags = syntaqlite_analyzer_analyze(v, g_body, (uint32_t)n);
+      uint32_t stmts = syntaqlite_analyzer_statement_count(v);
       printf("analyze ok stmts=%u diags=%u\n", stmts, diags);
     } else if (!v) {
       printf("%s err no_handle\n", verb);
@@ -217,16 +217,16 @@ int main(void) {
       if (argc < 2 || parse_mode(argv[1], &m) != 0) {
         printf("mode err bad_arg\n");
       } else {
-        syntaqlite_validator_set_mode(v, m);
+        syntaqlite_analyzer_set_mode(v, m);
         printf("mode ok\n");
       }
     } else if (strcmp(verb, "strict_schema") == 0) {
       if (argc < 2) { printf("strict_schema err bad_arg\n"); continue; }
-      syntaqlite_validator_set_strict_schema(v, (uint32_t)strtoul(argv[1], NULL, 10));
+      syntaqlite_analyzer_set_strict_schema(v, (uint32_t)strtoul(argv[1], NULL, 10));
       printf("strict_schema ok\n");
     } else if (strcmp(verb, "suggestion_threshold") == 0) {
       if (argc < 2) { printf("suggestion_threshold err bad_arg\n"); continue; }
-      syntaqlite_validator_set_suggestion_threshold(v, (uint32_t)strtoul(argv[1], NULL, 10));
+      syntaqlite_analyzer_set_suggestion_threshold(v, (uint32_t)strtoul(argv[1], NULL, 10));
       printf("suggestion_threshold ok\n");
     } else if (strcmp(verb, "check_level") == 0) {
       SyntaqliteCheckLevel lv;
@@ -234,7 +234,7 @@ int main(void) {
         printf("check_level err bad_arg\n");
         continue;
       }
-      int32_t rc = syntaqlite_validator_set_check_level(v, argv[1], lv);
+      int32_t rc = syntaqlite_analyzer_set_check_level(v, argv[1], lv);
       printf("check_level %s\n", rc == 0 ? "ok" : "err unknown");
     } else if (strcmp(verb, "add_table") == 0 || strcmp(verb, "add_view") == 0) {
       if (argc < 2) { printf("%s err bad_arg\n", verb); continue; }
@@ -249,7 +249,7 @@ int main(void) {
         printf("add_function err bad_arg\n");
         continue;
       }
-      syntaqlite_validator_add_function_overload(
+      syntaqlite_analyzer_add_function_overload(
           v, argv[1], cat, ar, (uint32_t)strtoul(argv[4], NULL, 10));
       printf("add_function ok\n");
     } else if (strcmp(verb, "add_table_function") == 0) {
@@ -261,42 +261,42 @@ int main(void) {
       const char* cols = argc >= 5 ? argv[4] : "-";
       char** out_cols = NULL;
       uint32_t out_n = split_csv(cols, &out_cols);
-      syntaqlite_validator_add_table_function(
+      syntaqlite_analyzer_add_table_function(
           v, argv[1], ar, (uint32_t)strtoul(argv[3], NULL, 10),
           (const char* const*)out_cols, out_n);
       free_argv(out_cols, out_n);
       printf("add_table_function ok\n");
     } else if (strcmp(verb, "reset_catalog") == 0) {
-      syntaqlite_validator_reset_catalog(v);
+      syntaqlite_analyzer_reset_catalog(v);
       printf("reset_catalog ok\n");
     } else if (strcmp(verb, "dump_diagnostics") == 0) {
-      uint32_t n = syntaqlite_validator_diagnostic_count(v);
+      uint32_t n = syntaqlite_analyzer_diagnostic_count(v);
       printf("diagnostics count=%u\n", n);
-      const SyntaqliteDiagnostic* d = syntaqlite_validator_diagnostics(v);
+      const SyntaqliteDiagnostic* d = syntaqlite_analyzer_diagnostics(v);
       for (uint32_t i = 0; i < n; i++) print_diag(&d[i], "diag", i);
       printf(".\n");
     } else if (strcmp(verb, "render") == 0) {
       const char* file = argc >= 2 ? argv[1] : NULL;
-      const char* out = syntaqlite_validator_render_diagnostics(v, file);
+      const char* out = syntaqlite_analyzer_render_diagnostics(v, file);
       printf("render ok\n");
       if (out && out[0]) fputs(out, stdout);
       printf(".\n");
     } else if (strcmp(verb, "stmt_count") == 0) {
-      printf("stmt_count %u\n", syntaqlite_validator_statement_count(v));
+      printf("stmt_count %u\n", syntaqlite_analyzer_statement_count(v));
     } else if (strcmp(verb, "stmt_diagnostics") == 0) {
       if (argc < 2) { printf("stmt_diagnostics err bad_arg\n"); continue; }
       uint32_t idx = (uint32_t)strtoul(argv[1], NULL, 10);
-      uint32_t n = syntaqlite_validator_statement_diagnostic_count(v, idx);
+      uint32_t n = syntaqlite_analyzer_statement_diagnostic_count(v, idx);
       printf("stmt_diagnostics idx=%u count=%u\n", idx, n);
-      const SyntaqliteDiagnostic* d = syntaqlite_validator_statement_diagnostics(v, idx);
+      const SyntaqliteDiagnostic* d = syntaqlite_analyzer_statement_diagnostics(v, idx);
       for (uint32_t i = 0; i < n; i++) print_diag(&d[i], "diag", i);
       printf(".\n");
     } else if (strcmp(verb, "dump_relations") == 0) {
-      uint32_t stmts = syntaqlite_validator_statement_count(v);
+      uint32_t stmts = syntaqlite_analyzer_statement_count(v);
       printf("relations stmts=%u\n", stmts);
       for (uint32_t s = 0; s < stmts; s++) {
-        uint32_t n = syntaqlite_validator_statement_relation_count(v, s);
-        const SyntaqliteRelationAccess* r = syntaqlite_validator_statement_relations(v, s);
+        uint32_t n = syntaqlite_analyzer_statement_relation_count(v, s);
+        const SyntaqliteRelationAccess* r = syntaqlite_analyzer_statement_relations(v, s);
         printf("stmt[%u] count=%u\n", s, n);
         for (uint32_t i = 0; i < n; i++) {
           const char* kind = r[i].kind == SYNTAQLITE_RELATION_VIEW ? "view" : "table";
@@ -305,11 +305,11 @@ int main(void) {
       }
       printf(".\n");
     } else if (strcmp(verb, "dump_physical_tables") == 0) {
-      uint32_t stmts = syntaqlite_validator_statement_count(v);
+      uint32_t stmts = syntaqlite_analyzer_statement_count(v);
       printf("physical_tables stmts=%u\n", stmts);
       for (uint32_t s = 0; s < stmts; s++) {
-        uint32_t n = syntaqlite_validator_statement_physical_table_count(v, s);
-        const SyntaqlitePhysicalTableAccess* t = syntaqlite_validator_statement_physical_tables(v, s);
+        uint32_t n = syntaqlite_analyzer_statement_physical_table_count(v, s);
+        const SyntaqlitePhysicalTableAccess* t = syntaqlite_analyzer_statement_physical_tables(v, s);
         printf("stmt[%u] count=%u\n", s, n);
         for (uint32_t i = 0; i < n; i++) {
           printf("  tbl[%u] name=%s\n", i, t[i].name ? t[i].name : "");
@@ -317,11 +317,11 @@ int main(void) {
       }
       printf(".\n");
     } else if (strcmp(verb, "dump_lineage") == 0) {
-      uint32_t stmts = syntaqlite_validator_statement_count(v);
+      uint32_t stmts = syntaqlite_analyzer_statement_count(v);
       printf("lineage stmts=%u\n", stmts);
       for (uint32_t s = 0; s < stmts; s++) {
-        uint32_t n = syntaqlite_validator_statement_column_lineage_count(v, s);
-        const SyntaqliteColumnLineage* c = syntaqlite_validator_statement_column_lineage(v, s);
+        uint32_t n = syntaqlite_analyzer_statement_column_lineage_count(v, s);
+        const SyntaqliteColumnLineage* c = syntaqlite_analyzer_statement_column_lineage(v, s);
         printf("stmt[%u] count=%u\n", s, n);
         for (uint32_t i = 0; i < n; i++) {
           const char* t = c[i].origin.table;
@@ -334,11 +334,11 @@ int main(void) {
       }
       printf(".\n");
     } else if (strcmp(verb, "dump_defined_relations") == 0) {
-      uint32_t stmts = syntaqlite_validator_statement_count(v);
+      uint32_t stmts = syntaqlite_analyzer_statement_count(v);
       printf("defined_relations stmts=%u\n", stmts);
       for (uint32_t s = 0; s < stmts; s++) {
-        uint32_t n = syntaqlite_validator_statement_defined_relation_count(v, s);
-        const SyntaqliteDefinedRelation* r = syntaqlite_validator_statement_defined_relations(v, s);
+        uint32_t n = syntaqlite_analyzer_statement_defined_relation_count(v, s);
+        const SyntaqliteDefinedRelation* r = syntaqlite_analyzer_statement_defined_relations(v, s);
         printf("stmt[%u] count=%u\n", s, n);
         for (uint32_t i = 0; i < n; i++) {
           const char* kind = r[i].is_view ? "view" : "table";
@@ -351,6 +351,6 @@ int main(void) {
     }
   }
 
-  if (v) syntaqlite_validator_destroy(v);
+  if (v) syntaqlite_analyzer_destroy(v);
   return 0;
 }

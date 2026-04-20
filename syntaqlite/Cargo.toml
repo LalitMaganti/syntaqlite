@@ -14,12 +14,12 @@ readme = "README.md"
 crate-type = ["rlib", "staticlib"]
 
 [features]
-default = ["sqlite", "fmt", "validation"]
+default = ["sqlite", "fmt", "analysis"]
 fmt = ["syntaqlite-syntax/fmt"]                     # formatter (bytecode interpreter)
-validation = ["syntaqlite-syntax/validation"]       # semantic validation (schema checks, fuzzy suggestions)
-experimental-embedded = ["validation"]    # [experimental] embedded SQL extraction from host languages (Python f-strings, etc.)
+analysis = ["syntaqlite-syntax/analysis"]       # schema analysis (unknown refs, fuzzy suggestions, lineage)
+experimental-embedded = ["analysis"]    # [experimental] embedded SQL extraction from host languages (Python f-strings, etc.)
 dynload = ["dep:libloading"]             # dynamic dialect loading from .so/.dylib/.dll
-lsp = ["fmt", "validation", "sqlite", "dep:glob", "dep:lsp-server", "dep:lsp-types", "dep:serde_json"]  # LSP analysis host + protocol server
+lsp = ["fmt", "analysis", "sqlite", "dep:glob", "dep:lsp-server", "dep:lsp-types", "dep:serde_json"]  # LSP analysis host + protocol server
 sqlite = ["syntaqlite-syntax/sqlite"]  # SQLite dialect (grammar, tokens, cflags, functions)
 serde = ["dep:serde", "syntaqlite-syntax/serde"]         # serde::Serialize/Deserialize impls for diagnostics and AST nodes
 serde-json = ["serde", "dep:serde_json", "syntaqlite-syntax/serde-json"]  # JSON convenience helpers (dump_json, from_json)

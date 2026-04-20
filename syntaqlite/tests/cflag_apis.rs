@@ -99,7 +99,7 @@ fn formatter_rejects_returning_with_omit_returning() {
 // ── Formatter: non-parser cflags do not affect parse ─────────────────────────
 //
 // EnableMathFunctions, OmitDatetimeFuncs, etc. are non-parser cflags: they
-// control function catalog availability in the semantic analyzer but do NOT
+// control function catalog availability in the analyzer but do NOT
 // affect whether SQL parses. The formatter should succeed regardless.
 
 #[test]
@@ -110,7 +110,7 @@ fn formatter_accepts_sin_regardless_of_math_functions_flag() {
     let result_with = format_with_flags("SELECT sin(1.0);", flags);
     assert!(
         result_without.is_ok(),
-        "sin() should format without EnableMathFunctions (no semantic validation)"
+        "sin() should format without EnableMathFunctions (no analysis)"
     );
     assert!(
         result_with.is_ok(),

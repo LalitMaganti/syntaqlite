@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-// Semantic validation C API — validates SQL against a catalog of known
+// Analysis C API — validates SQL against a catalog of known
 // tables, columns, and functions.
 //
 // The validator works incrementally: DDL statements (CREATE TABLE, etc.)

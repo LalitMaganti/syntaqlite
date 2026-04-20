@@ -118,7 +118,7 @@ Check whether a SQL string is syntactically valid.
 ```
 
 Note: `validate_sql` checks syntax only (successful parse). It does not run
-semantic analysis (unknown table/column detection). For schema-aware
+analysis (unknown table/column detection). For schema-aware
 validation, use the CLI directly:
 
 ```bash

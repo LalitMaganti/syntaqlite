@@ -165,10 +165,10 @@ pub(super) fn ensure_analysis_for(
 /// 3. **Optionally set schema context** via [`set_session_context`](Self::set_session_context),
 ///    [`set_session_context_from_ddl`](Self::set_session_context_from_ddl), or
 ///    [`set_session_context_from_json`](Self::set_session_context_from_json) to
-///    enable table/column/function validation.
+///    enable table/column/function analysis.
 ///
 /// Analysis is cached per-document and invalidated automatically when the
-/// source text or catalog context changes. Semantic validation delegates to
+/// source text or catalog context changes. Analysis delegates to
 /// [`Analyzer`].
 ///
 /// Use this when you are building an LSP server, a web-based editor plugin,
@@ -205,7 +205,7 @@ pub struct LspHost {
     documents: DocumentStore,
     /// Format config from project config file. `None` means use defaults.
     format_config: Option<FormatConfig>,
-    /// Validation config (`strict_schema` is set when a schema is provided).
+    /// Analysis config (`strict_schema` is set when a schema is provided).
     analysis_config: AnalysisConfig,
     /// Per-file schema resolution from `[schemas]` globs.
     schema_map: Option<SchemaMap>,
@@ -262,7 +262,7 @@ impl LspHost {
         self.format_config.clone().unwrap_or_default()
     }
 
-    /// Set the validation config.
+    /// Set the analysis config.
     pub fn set_analysis_config(&mut self, config: AnalysisConfig) {
         self.analysis_config = config;
         self.documents.invalidate_all();
@@ -407,7 +407,7 @@ impl LspHost {
         super::completion_service::build_completion_items(&info, &self.dialect, &self.user_catalog)
     }
 
-    // ── Semantic validation ────────────────────────────────────────────────────
+    // ── Analysis ────────────────────────────────────────────────────
 
     /// Version, source text, and all diagnostics (parse + semantic) in one call.
     ///
@@ -442,12 +442,12 @@ impl LspHost {
         Some((version, source, diags))
     }
 
-    /// Semantic validation diagnostics for a document (non-parse-error issues only).
+    /// Analysis diagnostics for a document (non-parse-error issues only).
     ///
     /// Always re-analyzes with `user_catalog` and `config`; use
     /// [`diagnostics`](Self::diagnostics) for the cheaper cached parse-error path.
-    #[cfg(feature = "validation")]
-    pub(crate) fn validate(&mut self, uri: &str, config: &AnalysisConfig) -> Vec<Diagnostic> {
+    #[cfg(feature = "analysis")]
+    pub(crate) fn analyze(&mut self, uri: &str, config: &AnalysisConfig) -> Vec<Diagnostic> {
         let Some(source) = self.documents.get(uri).map(|d| d.source.as_str()) else {
             return Vec::new();
         };
@@ -461,10 +461,10 @@ impl LspHost {
     }
 
     /// Parse + semantic diagnostics combined.
-    #[cfg(feature = "validation")]
+    #[cfg(feature = "analysis")]
     pub fn all_diagnostics(&mut self, uri: &str, config: &AnalysisConfig) -> Vec<Diagnostic> {
         let mut result = self.diagnostics(uri).to_vec();
-        result.extend(self.validate(uri, config));
+        result.extend(self.analyze(uri, config));
         result
     }
 
@@ -814,11 +814,11 @@ mod tests {
     }
 
     #[test]
-    fn validate_does_not_duplicate_parse_error_diagnostics() {
+    fn analyze_does_not_duplicate_parse_error_diagnostics() {
         let mut host = LspHost::new();
         let uri = "file:///test.sql";
         host.open_document(uri, 1, "SELECT ;\nSELECT 1;".to_string());
-        let diags = host.validate(uri, &AnalysisConfig::default());
+        let diags = host.analyze(uri, &AnalysisConfig::default());
         assert_eq!(diags.len(), 0, "got: {diags:?}");
     }
 
@@ -849,7 +849,7 @@ mod tests {
         let uri = "file:///test.sql";
         host.open_document(uri, 1, "SELECT ;\nSELECT * FROM no_such_table;".to_string());
         let parse_diags = host.diagnostics(uri).to_vec();
-        let val_diags = host.validate(uri, &AnalysisConfig::default());
+        let val_diags = host.analyze(uri, &AnalysisConfig::default());
         let all: Vec<_> = parse_diags.iter().chain(val_diags.iter()).collect();
         let errors = all.iter().filter(|d| d.severity == Severity::Error).count();
         let warnings = all

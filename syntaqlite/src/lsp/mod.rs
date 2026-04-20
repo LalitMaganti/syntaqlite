@@ -9,7 +9,7 @@
 //! - [`LspHost`] — stateful document store with lazy per-document
 //!   analysis (diagnostics, semantic tokens, completions, formatting,
 //!   hover, signature help).
-//!   Delegates semantic validation to [`Analyzer`](crate::analysis::Analyzer).
+//!   Delegates analysis to [`Analyzer`](crate::analysis::Analyzer).
 //! - [`LspServer`] — stdio JSON-RPC server that drives an `LspHost`
 //!   in response to LSP messages from an editor.
 //!

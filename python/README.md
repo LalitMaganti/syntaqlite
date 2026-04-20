@@ -95,7 +95,7 @@ SELECT keyword
 
 Each token is a dict with `text`, `offset`, `length`, `type`, and `category` fields.
 
-### Validation
+### Analysis
 
 Check SQL against a schema without touching a database. Catches unknown tables, columns, functions, CTE column mismatches, and more.
 

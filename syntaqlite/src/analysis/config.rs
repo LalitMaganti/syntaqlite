@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Configuration types for semantic analysis.
+//! Configuration types for analysis.
 
 use super::diagnostics::Severity;
 
@@ -235,7 +235,7 @@ impl CheckConfig {
     }
 }
 
-/// Configuration for semantic validation.
+/// Configuration for analysis.
 ///
 /// Controls how the [`Analyzer`] reports diagnostics and
 /// generates "did you mean?" suggestions:

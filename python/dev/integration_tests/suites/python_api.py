@@ -510,7 +510,7 @@ def _test_validate_schema_modules_passthrough(stq) -> bool:
 def _test_validate_statements_breakdown(stq) -> bool:
     """Each top-level statement gets its own per-stmt row with its SQL source."""
     with stq.Syntaqlite() as sq:
-        result = sq.validate("CREATE TABLE users (id INT); SELECT id FROM users;")
+        result = sq.analyze("CREATE TABLE users (id INT); SELECT id FROM users;")
     if len(result.statements) != 2:
         _fail("validate_statements_breakdown", f"expected 2 statements, got {len(result.statements)}")
         return False
@@ -530,7 +530,7 @@ def _test_validate_statements_breakdown(stq) -> bool:
 
 def _test_defined_relations_table(stq) -> bool:
     with stq.Syntaqlite() as sq:
-        result = sq.validate("CREATE TABLE users (id INT)")
+        result = sq.analyze("CREATE TABLE users (id INT)")
     stmt = result.statements[0]
     if len(stmt.defined_relations) != 1:
         _fail("defined_relations_table", f"got {stmt.defined_relations!r}")
@@ -545,7 +545,7 @@ def _test_defined_relations_table(stq) -> bool:
 
 def _test_defined_relations_view(stq) -> bool:
     with stq.Syntaqlite() as sq:
-        result = sq.validate("CREATE VIEW v AS SELECT 1 AS x")
+        result = sq.analyze("CREATE VIEW v AS SELECT 1 AS x")
     stmt = result.statements[0]
     if not stmt.defined_relations:
         _fail("defined_relations_view", f"no relations: {stmt!r}")
@@ -561,7 +561,7 @@ def _test_defined_relations_view(stq) -> bool:
 def _test_column_lineage_index(stq) -> bool:
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("users", ["id", "name"])])
-        result = sq.validate("SELECT id, name FROM users", schema)
+        result = sq.analyze("SELECT id, name FROM users", schema)
     indices = [c.index for c in result.lineage.columns]
     if indices != [0, 1]:
         _fail("column_lineage_index", f"expected [0, 1], got {indices!r}")
@@ -574,7 +574,7 @@ def _test_lineage_unexpanded_views(stq) -> bool:
     """A view registered by name only (no SQL body) appears in `unexpanded_views`."""
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(views=[stq.View("v", ["n"])])
-        result = sq.validate("SELECT n FROM v", schema)
+        result = sq.analyze("SELECT n FROM v", schema)
     if result.lineage is None:
         _fail("lineage_unexpanded_views", "no lineage")
         return False
@@ -662,15 +662,14 @@ def _test_validate_output_enum_values(stq) -> bool:
     return True
 
 
-def _test_validate_rejects_string_output(stq) -> bool:
-    """`validate` must refuse raw strings for `output`; only ValidateOutput members."""
+def _test_analyze_accepts_string_output(stq) -> bool:
+    """`analyze` accepts raw strings for `output` and coerces to AnalysisOutput."""
     with stq.Syntaqlite() as sq:
-        try:
-            sq.validate("SELECT 1", output="text")
-        except TypeError:
-            _pass("validate_rejects_string_output")
+        rendered = sq.analyze("SELECT 1", output="text")
+        if isinstance(rendered, str):
+            _pass("analyze_accepts_string_output")
             return True
-    _fail("validate_rejects_string_output", "expected TypeError for output='text'")
+    _fail("analyze_accepts_string_output", "expected str for output='text'")
     return False
 
 
@@ -743,7 +742,7 @@ def _test_dialect_parses_perfetto_syntax(stq, ctx: SuiteContext, work_dir: Path)
     """CREATE PERFETTO TABLE is a PARSE_ERROR in SQLite but parses with the dialect."""
     # Baseline: the SQL fails under SQLite.
     with stq.Syntaqlite() as sq:
-        r = sq.validate("CREATE PERFETTO TABLE t AS SELECT 1 AS x")
+        r = sq.analyze("CREATE PERFETTO TABLE t AS SELECT 1 AS x")
     if not any(d.code is stq.DiagnosticCode.PARSE_ERROR for d in r.diagnostics):
         _fail("dialect_parses_perfetto_syntax", f"SQLite baseline should PARSE_ERROR, got {r.diagnostics!r}")
         return False
@@ -815,7 +814,7 @@ _TESTS = [
     _test_parse_returns_wrapped_node_type,
     _test_diagnostic_code_enum_members,
     _test_validate_output_enum_values,
-    _test_validate_rejects_string_output,
+    _test_analyze_accepts_string_output,
     # Bundled binary dispatch
     _test_get_binary_path_honours_env,
     _test_syntaqlite_binary_kwarg,

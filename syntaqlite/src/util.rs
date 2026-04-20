@@ -8,7 +8,7 @@ use std::io::{self, Write};
 use syntaqlite_syntax::source::DocRange;
 
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use crate::analysis::diagnostics::render::{DiagnosticRenderer, SourceContext};
 #[doc(inline)]
 pub use crate::sqlite::cflags::SqliteFlag;

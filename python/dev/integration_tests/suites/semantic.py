@@ -1,7 +1,7 @@
 # Copyright 2025 The syntaqlite Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0.
 
-"""Semantic analyzer diff test suite.
+"""Analyzer diff test suite.
 
 Runs declarative input-and-rendered-diagnostic tests against the `validate`
 subcommand for the default SQLite dialect. Catalog population is done inline
@@ -11,7 +11,7 @@ via DDL in the test SQL.
 from python.dev.integration_tests.suite import SuiteContext
 
 NAME = "semantic"
-DESCRIPTION = "Semantic analyzer diff tests (tests/semantic_diff_tests/)"
+DESCRIPTION = "Analyzer diff tests (tests/semantic_diff_tests/)"
 
 
 def run(ctx: SuiteContext) -> int:

@@ -203,7 +203,7 @@ fn skip_single_line_string(bytes: &[u8], pos: usize, end: usize) -> usize {
 ///
 /// **Experimental:** this type is part of the experimental embedded SQL API.
 ///
-/// Holds the dialect, optional catalog context, and validation config so they
+/// Holds the dialect, optional catalog context, and analysis config so they
 /// don't need to be threaded through every call. Use this when you want to
 /// lint SQL embedded in Python, TypeScript, or other host languages.
 ///
@@ -235,7 +235,7 @@ pub struct EmbeddedAnalyzer {
 }
 
 impl EmbeddedAnalyzer {
-    /// Create a new analyzer with an empty catalog and default validation config.
+    /// Create a new analyzer with an empty catalog and default analysis config.
     pub fn new(dialect: impl Into<AnyDialect>) -> Self {
         let dialect = dialect.into();
         let catalog = Catalog::new(dialect.clone());
@@ -253,7 +253,7 @@ impl EmbeddedAnalyzer {
         self
     }
 
-    /// Override the default validation config.
+    /// Override the default analysis config.
     #[must_use]
     pub fn with_config(mut self, config: AnalysisConfig) -> Self {
         self.config = config;
@@ -268,7 +268,7 @@ impl EmbeddedAnalyzer {
         let mut all_diags = Vec::new();
 
         for fragment in fragments {
-            let diags = self.validate_fragment(fragment);
+            let diags = self.analyze_fragment(fragment);
             let offset_map = OffsetMap::new(fragment);
 
             for mut d in diags {
@@ -403,7 +403,7 @@ impl EmbeddedAnalyzer {
     /// Parse and validate a single fragment.
     ///
     /// Returns diagnostics with SQL-text byte offsets (not yet mapped to host).
-    fn validate_fragment(&mut self, fragment: &EmbeddedFragment) -> Vec<Diagnostic> {
+    fn analyze_fragment(&mut self, fragment: &EmbeddedFragment) -> Vec<Diagnostic> {
         let mut analyzer = self.make_analyzer();
         let mut ctx = AnalysisContext::new(&mut self.catalog).with_config(self.config);
         let model = analyzer.analyze(fragment.sql_text(), &mut ctx);

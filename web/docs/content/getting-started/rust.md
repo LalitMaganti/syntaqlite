@@ -20,7 +20,7 @@ cd sql-check
 Add syntaqlite with the features you need:
 
 ```bash
-cargo add syntaqlite --features fmt,validation,sqlite
+cargo add syntaqlite --features fmt,analysis,sqlite
 ```
 
 ## 2. Format a query

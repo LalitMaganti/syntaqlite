@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--validate", action="store_true",
-        help="Enable semantic validation (upstream-sqlite suite).",
+        help="Enable analysis (upstream-sqlite suite).",
     )
     args = parser.parse_args(argv)
 

@@ -63,7 +63,7 @@ loop {
 
 The parser is incremental: it yields one statement at a time, so you can process multi-statement inputs without buffering everything upfront.
 
-## Validation
+## Analysis
 
 Check SQL against a schema without touching a database. Catches unknown tables, columns, functions, CTE column mismatches, and more.
 

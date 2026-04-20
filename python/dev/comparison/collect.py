@@ -743,7 +743,7 @@ def collect_validator():
         "finds_all": synq_errors >= 2,
         "did_you_mean": "did you mean" in synq_output.lower(),
         "approach": "static semantic",
-        "description": "Static semantic analysis — offline, no database needed. Finds **both** errors in one pass:",
+        "description": "Static analysis — offline, no database needed. Finds **both** errors in one pass:",
     }
 
     # sqlite3

@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Single-pass semantic analysis engine.
+//! Single-pass analysis engine.
 
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -34,10 +34,10 @@ use pass::{DiagnosticsPass, StatementWalkPass};
 use query_scope::QueryScope;
 use walker::{NoopWalkPass, WalkCtx, WalkPass, walk};
 
-/// Stateless semantic analysis engine.
+/// Stateless analysis engine.
 ///
 /// Holds only per-session policy (dialect, analysis mode, macro-fallback flag).
-/// All per-call state (catalog, validation config, module resolver) is
+/// All per-call state (catalog, analysis config, module resolver) is
 /// bundled into an [`AnalysisContext`] the caller passes in by `&mut`. The
 /// analyzer mutates the catalog in place (accumulating DDL, recording imports).
 ///
@@ -498,7 +498,7 @@ mod tests {
         }
     }
 
-    fn diag_messages(model: &SemanticModel) -> Vec<String> {
+    fn diag_messages(model: &Analysis) -> Vec<String> {
         model
             .diagnostics()
             .map(|d: &Diagnostic| match d.message() {
@@ -516,8 +516,9 @@ mod tests {
     #[test]
     fn unqualified_column_suppressed_when_source_unresolved() {
         let mut analyzer = sqlite_analyzer();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze("SELECT x FROM does_not_exist", &catalog, &lenient());
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT x FROM does_not_exist", &mut ctx);
         let msgs = diag_messages(&model);
         assert_eq!(
             msgs,
@@ -529,12 +530,9 @@ mod tests {
     #[test]
     fn qualified_column_suppressed_when_source_unresolved() {
         let mut analyzer = sqlite_analyzer();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze(
-            "SELECT does_not_exist.x FROM does_not_exist",
-            &catalog,
-            &lenient(),
-        );
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT does_not_exist.x FROM does_not_exist", &mut ctx);
         let msgs = diag_messages(&model);
         assert_eq!(
             msgs,
@@ -552,11 +550,8 @@ mod tests {
             Some(vec!["id".into()]),
             false,
         );
-        let model = analyzer.analyze(
-            "SELECT y FROM known_tbl JOIN missing_tbl ON 1=1",
-            &catalog,
-            &lenient(),
-        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT y FROM known_tbl JOIN missing_tbl ON 1=1", &mut ctx);
         let msgs = diag_messages(&model);
         assert_eq!(
             msgs,
@@ -571,20 +566,18 @@ mod tests {
     #[test]
     fn dqs_fallback_no_scope() {
         let mut analyzer = sqlite_analyzer();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze("SELECT \"hello\"", &catalog, &lenient());
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT \"hello\"", &mut ctx);
         assert_eq!(diag_messages(&model), Vec::<String>::new());
     }
 
     #[test]
     fn dqs_fallback_in_function_argument() {
         let mut analyzer = sqlite_analyzer();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze(
-            "SELECT sqlite_compileoption_used(\"THREADSAFE\")",
-            &catalog,
-            &lenient(),
-        );
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT sqlite_compileoption_used(\"THREADSAFE\")", &mut ctx);
         assert_eq!(diag_messages(&model), Vec::<String>::new());
     }
 
@@ -597,11 +590,8 @@ mod tests {
             Some(vec!["a".into(), "b".into()]),
             false,
         );
-        let model = analyzer.analyze(
-            "SELECT b FROM t1 WHERE a IN (\"hello\", 'there')",
-            &catalog,
-            &lenient(),
-        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT b FROM t1 WHERE a IN (\"hello\", 'there')", &mut ctx);
         assert_eq!(diag_messages(&model), Vec::<String>::new());
     }
 
@@ -612,9 +602,10 @@ mod tests {
         catalog
             .layer_mut(CatalogLayer::Database)
             .insert_table("t1", Some(vec!["a".into()]), false);
+        let mut ctx = AnalysisContext::new(&mut catalog);
         // Backtick- and bracket-quoted identifiers are always identifiers —
         // no DQS fallback.  `nope` is a real unknown column ref here.
-        let model = analyzer.analyze("SELECT `nope` FROM t1", &catalog, &lenient());
+        let model = analyzer.analyze("SELECT `nope` FROM t1", &mut ctx);
         assert_eq!(
             diag_messages(&model),
             vec!["unknown column: nope".to_string()],

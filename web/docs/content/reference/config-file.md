@@ -81,7 +81,7 @@ format as `sqlite3 mydb.db .schema` output.
 ## `sqlite-version`
 
 SQLite version to emulate. Controls which keywords and functions are recognized
-by the parser and semantic analyzer.
+by the parser and analyzer.
 
 - Type: string (e.g. `"3.47.0"`, `"latest"`)
 - Optional, defaults to latest

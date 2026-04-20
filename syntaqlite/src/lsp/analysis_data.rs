@@ -45,7 +45,7 @@ pub(crate) struct DefinitionResult {
     pub(crate) target: DefinitionLocation,
 }
 
-/// A symbol resolution recorded during the validation pass.
+/// A symbol resolution recorded during the analysis pass.
 #[derive(Debug, Clone)]
 pub(crate) enum ResolvedSymbol {
     Table {

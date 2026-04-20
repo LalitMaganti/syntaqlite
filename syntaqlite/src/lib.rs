@@ -6,13 +6,13 @@
 
 //! Fast, accurate SQL tooling for `SQLite` and its dialects.
 //!
-//! This crate provides parsing, formatting, and semantic validation for SQL,
+//! This crate provides parsing, formatting, and analysis for SQL,
 //! built on `SQLite`'s own tokenizer and parser rules. Four design principles
 //! guide the library:
 //!
 //! - **Reliability** — uses `SQLite`'s own parser rules; formatting is round-trip safe and validation mirrors real engine behaviour.
 //! - **Speed** — all core types ([`Formatter`], [`Analyzer`], [`Catalog`]) are designed for reuse across many inputs without re-allocation.
-//! - **Portability** — the core formatting and validation engine has no runtime dependencies beyond the standard library; optional features (`lsp`, `serde`) pull in additional crates.
+//! - **Portability** — the core formatting and analysis engine has no runtime dependencies beyond the standard library; optional features (`lsp`, `serde`) pull in additional crates.
 //! - **Flexibility** — supports multiple database dialects that extend `SQLite`'s syntax with their own tokens and rules.
 //!
 //! # Parsing
@@ -42,7 +42,7 @@
 //! [`ParserConfig`](parse::ParserConfig), and
 //! [`ParserToken`](parse::ParserToken).
 //!
-//! # Validation
+//! # Analysis
 //!
 //! Use [`Analyzer`] to check SQL against a known schema. The analyzer
 //! produces a [`Analysis`](analysis::Analysis) containing structured
@@ -127,7 +127,7 @@ pub(crate) mod dialect;
 #[cfg(feature = "fmt")]
 pub mod fmt;
 
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub mod analysis;
 
 // `sqlite` module is always present; individual sub-modules are gated inside it.
@@ -173,24 +173,24 @@ pub use fmt::FormatConfig;
 #[cfg(feature = "fmt")]
 pub use fmt::formatter::Formatter;
 
-// Validation — the core types needed for a validation pass.
+// Validation — the core types needed for a analysis pass.
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use analysis::AnalysisConfig;
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use analysis::AnalysisContext;
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use analysis::Analyzer;
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use analysis::Catalog;
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use analysis::Diagnostic;
 #[doc(inline)]
-#[cfg(feature = "validation")]
+#[cfg(feature = "analysis")]
 pub use analysis::{CheckConfig, CheckLevel};
 
 // Dialect.

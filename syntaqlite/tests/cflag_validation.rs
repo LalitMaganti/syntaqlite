@@ -3,13 +3,13 @@
 
 //! End-to-end cflag validation tests.
 //!
-//! Verifies that semantic analysis (function catalog, parse behavior) correctly
+//! Verifies that analysis (function catalog, parse behavior) correctly
 //! respects compile-time flags set on the dialect:
 //!
 //! - Non-parser flags (indices 22–41) gate function availability.
 //! - Parser flags (indices 0–21) affect keyword recognition during analysis.
 
-#![cfg(all(feature = "sqlite", feature = "validation"))]
+#![cfg(all(feature = "sqlite", feature = "analysis"))]
 
 use syntaqlite::analysis::DiagnosticMessage;
 use syntaqlite::util::{SqliteFlag, SqliteFlags};
@@ -195,7 +195,7 @@ fn json_flagged_with_omit_json() {
 // ── Parser-level cflag: OMIT_CTE gates WITH keyword ──────────────────────────
 //
 // When OMIT_CTE is set, the WITH keyword is suppressed at the tokenizer level
-// and CTE syntax fails to parse. The semantic analyzer should reflect this.
+// and CTE syntax fails to parse. The analyzer should reflect this.
 
 #[test]
 fn cte_parses_ok_without_omit_cte() {

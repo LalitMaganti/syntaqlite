@@ -84,7 +84,7 @@ Review the diff before committing.
 
 ## Validation tests
 
-Validation tests verify that the semantic analyzer correctly catches schema
+Validation tests verify that the analyzer correctly catches schema
 errors. These exist at two levels.
 
 ### Compile-time flag tests (Rust)

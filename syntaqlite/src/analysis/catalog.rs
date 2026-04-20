@@ -271,7 +271,7 @@ impl CatalogLayerContents {
     /// Insert a single function overload into this layer.
     ///
     /// Use this to register application-defined functions so the analyzer can
-    /// validate calls and arity. Call multiple times with the same name to
+    /// analyze calls and arity. Call multiple times with the same name to
     /// register multiple overloads (e.g. one accepting 1 argument and another
     /// accepting 2).
     ///

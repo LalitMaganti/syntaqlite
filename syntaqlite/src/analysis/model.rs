@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Result types for a single semantic analysis pass.
+//! Result types for a single analysis pass.
 
 use super::diagnostics::Diagnostic;
 use super::lineage::{
