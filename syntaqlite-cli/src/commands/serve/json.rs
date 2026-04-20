@@ -57,9 +57,14 @@ pub(crate) fn run(dialect: &AnyDialect) -> Result<(), String> {
     writeln!(writer, "READY").map_err(|e| format!("write READY: {e}"))?;
     writer.flush().map_err(|e| format!("flush READY: {e}"))?;
 
+    // Long-lived workers reused across all requests in this session. Parser,
+    // tokenizer, and analyzer are stateless between requests; the Formatter
+    // cache keeps the per-config one alive so its internal arenas and
+    // render buffers survive across format calls with the same config.
     let parser = AnyParser::new(dialect.deref().clone());
     let tokenizer = AnyTokenizer::new(dialect.deref().clone());
     let mut analyzer = SemanticAnalyzer::with_dialect(dialect.clone());
+    let mut formatter_cache: Option<(FormatConfig, Formatter)> = None;
 
     let mut line = String::new();
     loop {
@@ -93,7 +98,8 @@ pub(crate) fn run(dialect: &AnyDialect) -> Result<(), String> {
 
         let outcome = match op {
             "parse" => handle_parse(&parser, &req).and_then(|r| write_ok(&mut writer, &r)),
-            "format" => handle_format(dialect, &req).and_then(|r| write_ok(&mut writer, &r)),
+            "format" => handle_format(dialect, &mut formatter_cache, &req)
+                .and_then(|r| write_ok(&mut writer, &r)),
             "tokenize" => {
                 handle_tokenize(dialect, &tokenizer, &req).and_then(|r| write_ok(&mut writer, &r))
             }
@@ -212,7 +218,11 @@ struct FormatResp {
     formatted: String,
 }
 
-fn handle_format(dialect: &AnyDialect, req: &Value) -> Result<FormatResp, String> {
+fn handle_format(
+    dialect: &AnyDialect,
+    cache: &mut Option<(FormatConfig, Formatter)>,
+    req: &Value,
+) -> Result<FormatResp, String> {
     let req: FormatReq = serde_json::from_value(req.clone()).map_err(|e| format!("format: {e}"))?;
     let mut config = FormatConfig::default();
     if let Some(w) = req.line_width {
@@ -237,11 +247,30 @@ fn handle_format(dialect: &AnyDialect, req: &Value) -> Result<FormatResp, String
         config = config.with_semicolons(s);
     }
 
-    let mut formatter = Formatter::with_dialect_config(dialect.clone(), &config);
+    // Reuse the cached formatter when its config matches — its arenas and
+    // render buffers survive across calls. On a config change (rare in
+    // practice) rebuild once and cache the new one.
+    let formatter = match cache {
+        Some((cfg, f)) if format_config_eq(cfg, &config) => f,
+        slot => {
+            *slot = Some((
+                config.clone(),
+                Formatter::with_dialect_config(dialect.clone(), &config),
+            ));
+            &mut slot.as_mut().expect("just inserted").1
+        }
+    };
     formatter
         .format(&req.sql)
         .map(|formatted| FormatResp { formatted })
         .map_err(|e| format!("{e}"))
+}
+
+fn format_config_eq(a: &FormatConfig, b: &FormatConfig) -> bool {
+    a.line_width() == b.line_width()
+        && a.indent_width() == b.indent_width()
+        && a.keyword_case() == b.keyword_case()
+        && a.semicolons() == b.semicolons()
 }
 
 // ── tokenize ─────────────────────────────────────────────────────────────
@@ -351,7 +380,19 @@ struct ValidateReq {
     /// expect to be referenced (transitively). Programmatic / lazy
     /// resolution is tracked in `docs/python-rpc-module-resolver-plan.md`.
     modules: Option<HashMap<String, String>>,
-    render: Option<bool>,
+    /// Output format: `"structured"` (default) returns a typed result
+    /// object; `"text"` returns rendered diagnostics.
+    output: Option<String>,
+    /// Per-call render options (only honoured when `output == "text"`).
+    render_options: Option<RenderOptions>,
+}
+
+#[derive(Deserialize, Default)]
+struct RenderOptions {
+    /// Source label shown in rendered diagnostics (analogous to a file path).
+    /// Defaults to the empty string.
+    #[serde(default)]
+    source_name: String,
 }
 
 /// Construct the [`ModuleResolver`] for this request, if any.
@@ -430,14 +471,22 @@ fn handle_validate<W: Write>(
     let model = analyzer.analyze(&req.sql, &catalog, &config);
     analyzer.set_module_resolver(None);
 
-    if req.render.unwrap_or(false) {
-        let diags: Vec<_> = model.diagnostics().cloned().collect();
-        let mut buf: Vec<u8> = Vec::new();
-        DiagnosticRenderer::new(&req.sql, "<stdin>")
-            .render_diagnostics(&diags, &mut buf)
-            .map_err(|e| format!("render: {e}"))?;
-        let rendered = String::from_utf8(buf).map_err(|e| format!("utf-8: {e}"))?;
-        return write_ok(writer, &RenderedResp { rendered });
+    match req.output.as_deref().unwrap_or("structured") {
+        "structured" => {} // fall through to the structured path below.
+        "text" => {
+            let opts = req.render_options.unwrap_or_default();
+            let r = DiagnosticRenderer::new(&req.sql, &opts.source_name);
+            let mut buf: Vec<u8> = Vec::new();
+            for d in model.diagnostics() {
+                r.render_diagnostic(d, &mut buf)
+                    .map_err(|e| format!("render: {e}"))?;
+            }
+            // `from_utf8` reuses the buffer (no extra allocation); the
+            // renderer only writes UTF-8 so this can't fail in practice.
+            let text = String::from_utf8(buf).map_err(|e| format!("utf-8: {e}"))?;
+            return write_ok(writer, &RenderedResp { rendered: text });
+        }
+        other => return Err(format!("unknown output format: {other:?}")),
     }
 
     // `ValidationResult.lineage` exposes the lineage of the final

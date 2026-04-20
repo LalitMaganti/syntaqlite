@@ -288,6 +288,33 @@ def _test_py_validate(ctx: SuiteContext) -> bool:
     return True
 
 
+_TEXT_OUTPUT_SCRIPT = """
+import syntaqlite
+
+with syntaqlite.Syntaqlite() as sq:
+    schema = syntaqlite.Schema(tables=[syntaqlite.Table("users", ["id", "name"])])
+    rendered = sq.validate(
+        "SELECT nme FROM users",
+        schema,
+        output=syntaqlite.ValidateOutput.TEXT,
+        render_options=syntaqlite.RenderOptions(source_name="query.sql"),
+    )
+    assert isinstance(rendered, str), type(rendered)
+    assert "nme" in rendered, rendered
+    assert "query.sql" in rendered, rendered
+    print("ok")
+"""
+
+
+def _test_py_validate_text_output(ctx: SuiteContext) -> bool:
+    r = _py_run(ctx, _TEXT_OUTPUT_SCRIPT)
+    if r.returncode != 0 or "ok" not in r.stdout:
+        _fail("py_validate_text_output", f"{r.returncode} {r.stdout!r} {r.stderr!r}")
+        return False
+    _pass("py_validate_text_output")
+    return True
+
+
 def _test_py_schema_modules_passthrough(ctx: SuiteContext) -> bool:
     """Supplying `modules` on `Schema` shouldn't break validation for
     dialects that don't implement imports — it's dialect-specific and
@@ -386,6 +413,7 @@ _TESTS = [
     _test_py_tokenize,
     _test_py_validate,
     _test_py_validate_lineage,
+    _test_py_validate_text_output,
     _test_py_schema_modules_passthrough,
     _test_py_context_manager,
 ]

@@ -111,10 +111,13 @@ for d in result.diagnostics:
 error: unknown column 'nme'
 ```
 
-Pass `render=True` to get formatted diagnostics with source locations and suggestions:
+Switch `output` to get formatted diagnostics with source locations and suggestions:
 
 ```python
-print(sq.validate("SELECT nme FROM users", schema, render=True))
+print(sq.validate(
+    "SELECT nme FROM users", schema,
+    output=syntaqlite.ValidateOutput.TEXT,
+))
 ```
 ```
 error: unknown column 'nme'

@@ -17,7 +17,7 @@ import os
 import stat
 import subprocess
 import sys
-from enum import IntEnum
+from enum import IntEnum, StrEnum
 from typing import Any
 
 from .nodes import _wrap
@@ -63,6 +63,39 @@ class DiagnosticCode(IntEnum):
     UNKNOWN_MODULE = 4
     FUNCTION_ARITY = 5
     CTE_COLUMN_COUNT_MISMATCH = 6
+
+
+class ValidateOutput(StrEnum):
+    """Output format for :meth:`Syntaqlite.validate`.
+
+    - :attr:`STRUCTURED` — returns a :class:`ValidationResult` with typed
+      diagnostics, lineage, and per-statement data. The default.
+    - :attr:`TEXT` — returns a rendered string with source locations and
+      help suggestions, matching the CLI's output.
+    """
+
+    STRUCTURED = "structured"
+    TEXT = "text"
+
+
+class RenderOptions:
+    """Options controlling :attr:`ValidateOutput.TEXT` rendering.
+
+    Only consulted when ``output=ValidateOutput.TEXT``.
+    """
+
+    __slots__ = ("source_name",)
+
+    def __init__(self, *, source_name: str = ""):
+        #: Source label shown in rendered diagnostics (analogous to a file
+        #: path). Defaults to an empty string.
+        self.source_name: str = source_name
+
+    def _to_request(self) -> dict:
+        return {"source_name": self.source_name}
+
+    def __repr__(self):
+        return f"RenderOptions(source_name={self.source_name!r})"
 
 
 class Diagnostic:
@@ -459,22 +492,31 @@ class Syntaqlite:
         sql: str,
         schema: Schema | None = None,
         *,
-        render: bool = False,
+        output: ValidateOutput | str = ValidateOutput.STRUCTURED,
+        render_options: RenderOptions | None = None,
     ) -> ValidationResult | str:
         """Validate SQL against an optional schema.
 
         Args:
             sql: SQL to validate.
             schema: Catalog schema (tables, views, DDL, optional modules).
-            render: If True, return a human-readable rendered diagnostics
-                string instead of a structured :class:`ValidationResult`.
+            output: :class:`ValidateOutput` (or its string value) selecting
+                the return shape. :attr:`ValidateOutput.STRUCTURED`
+                returns a :class:`ValidationResult`; :attr:`ValidateOutput.TEXT`
+                returns a rendered diagnostics string.
+            render_options: Fine-grained options for
+                :attr:`ValidateOutput.TEXT` (e.g. source label). Ignored
+                for other outputs.
         """
-        params: dict[str, Any] = {"sql": sql, "render": render}
+        output = ValidateOutput(output)
+        params: dict[str, Any] = {"sql": sql, "output": output.value}
         if schema is not None:
             params.update(schema._to_request())
+        if render_options is not None:
+            params["render_options"] = render_options._to_request()
 
         resp = self._call("validate", **params)
-        if render:
+        if output is ValidateOutput.TEXT:
             return resp["rendered"]
         return ValidationResult(resp)
 

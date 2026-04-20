@@ -129,19 +129,19 @@ doesn't need attribute-style access.
 Validate SQL against an optional [`Schema`](#syntaqliteschema).
 
 ```python
-sq.validate(sql, schema=None, *, render=False)
+sq.validate(sql, schema=None, *, output=ValidateOutput.STRUCTURED, render_options=None)
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `sql` | `str` | — | SQL to validate |
 | `schema` | [`Schema`](#syntaqliteschema) `\| None` | `None` | Catalog schema to validate against |
-| `render` | `bool` | `False` | Return a human-readable diagnostics string instead of a structured result |
+| `output` | [`ValidateOutput`](#validateoutput) `\| str` | `STRUCTURED` | Return shape — typed result or rendered string |
+| `render_options` | [`RenderOptions`](#renderoptions) `\| None` | `None` | Fine-grained options for text rendering (source label, etc.). Ignored unless `output=TEXT`. |
 
 `Schema` can be built from explicit tables/views, from DDL text, or both:
 
 ```python
-# Explicit tables and views
 sq.validate(
     sql,
     syntaqlite.Schema(
@@ -149,19 +149,11 @@ sq.validate(
         views=[syntaqlite.View("active", ["id"])],
     ),
 )
-
-# From DDL
-sq.validate(
-    sql,
-    syntaqlite.Schema(
-        ddl="CREATE TABLE users(id, name); CREATE VIEW active AS SELECT id FROM users;",
-    ),
-)
 ```
 
-**Returns** (when `render=False`): a [`ValidationResult`](#validationresult).
+**Returns** (when `output=ValidateOutput.STRUCTURED`): a [`ValidationResult`](#validationresult).
 
-**Returns** (when `render=True`): `str` with the diagnostics rendered
+**Returns** (when `output=ValidateOutput.TEXT`): `str` with the diagnostics rendered
 with source context, matching the CLI output.
 
 ```python
@@ -169,8 +161,17 @@ with source context, matching the CLI output.
 >>> r = sq.validate("SELECT id FROM users", schema)
 >>> r.diagnostics
 []
->>> len(r.statements)
-1
+
+>>> # Rendered text output with a custom file label
+>>> text = sq.validate(
+...     "SELECT nme FROM users", schema,
+...     output=syntaqlite.ValidateOutput.TEXT,
+...     render_options=syntaqlite.RenderOptions(source_name="query.sql"),
+... )
+>>> print(text)
+error: unknown column 'nme'
+ --> query.sql:1:8
+...
 ```
 
 ### `sq.tokenize`
@@ -316,6 +317,27 @@ Column lineage for a query-bearing statement.
 | `start_offset` | `int` | Byte offset of the start of the span |
 | `end_offset` | `int` | Byte offset of the end of the span |
 | `code` | [`DiagnosticCode`](#diagnosticcode) | Machine-readable kind |
+
+### `ValidateOutput`
+
+`StrEnum` selecting the return shape of [`validate`](#sqvalidate):
+
+| Name | Value | Meaning |
+|------|-------|---------|
+| `STRUCTURED` | `"structured"` | Return a [`ValidationResult`](#validationresult) (default) |
+| `TEXT` | `"text"` | Return a rendered diagnostics string |
+
+### `RenderOptions`
+
+Options that shape [`ValidateOutput.TEXT`](#validateoutput) output.
+
+```python
+syntaqlite.RenderOptions(*, source_name="")
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `source_name` | `str` | `""` | Source label shown in rendered diagnostics (analogous to a file path). |
 
 ### `DiagnosticCode`
 

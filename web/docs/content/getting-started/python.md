@@ -97,13 +97,17 @@ schema = Schema(ddl="CREATE TABLE users (id INT, name TEXT, email TEXT, active I
 result = sq.validate("SELECT nme FROM users WHERE active = 1", schema)
 ```
 
-For human-readable output with source locations, pass `render=True`:
+For human-readable output with source locations, switch the output
+format:
 
 ```python
+from syntaqlite import RenderOptions, ValidateOutput
+
 print(sq.validate(
     "SELECT nme FROM users WHERE active = 1",
     schema,
-    render=True,
+    output=ValidateOutput.TEXT,
+    render_options=RenderOptions(source_name="query.sql"),
 ))
 ```
 
