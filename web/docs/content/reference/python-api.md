@@ -126,7 +126,7 @@ doesn't need attribute-style access.
 
 ### `sq.analyze`
 
-Analyze SQL against an optional [`Schema`](#syntaqliteschema).
+Analyze SQL against an optional [`Schema`](#syntaqlite-schema).
 
 ```python
 sq.analyze(sql, schema=None, *, output=AnalysisOutput.STRUCTURED, render_options=None)
@@ -135,7 +135,7 @@ sq.analyze(sql, schema=None, *, output=AnalysisOutput.STRUCTURED, render_options
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `sql` | `str` | — | SQL to analyze |
-| `schema` | [`Schema`](#syntaqliteschema) `\| None` | `None` | Catalog schema to analyze against |
+| `schema` | [`Schema`](#syntaqlite-schema) `\| None` | `None` | Catalog schema to analyze against |
 | `output` | [`AnalysisOutput`](#analysisoutput) `\| str` | `STRUCTURED` | Return shape — typed result or rendered string |
 | `render_options` | [`RenderOptions`](#renderoptions) `\| None` | `None` | Fine-grained options for text rendering (source label, etc.). Ignored unless `output=TEXT`. |
 
@@ -151,7 +151,7 @@ sq.analyze(
 )
 ```
 
-**Returns** (when `output=AnalysisOutput.STRUCTURED`): a [`Analysis`](#validationresult).
+**Returns** (when `output=AnalysisOutput.STRUCTURED`): an [`Analysis`](#analysis).
 
 **Returns** (when `output=AnalysisOutput.TEXT`): `str` with the diagnostics rendered
 with source context, matching the CLI output.
@@ -255,7 +255,7 @@ Same fields as [`Table`](#syntaqlite-table).
 
 ### `Analysis`
 
-Returned by [`validate`](#sq-validate) when `render=False`.
+Returned by [`analyze`](#sq-analyze) when `output=AnalysisOutput.STRUCTURED`.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
@@ -320,16 +320,16 @@ Column lineage for a query-bearing statement.
 
 ### `AnalysisOutput`
 
-`StrEnum` selecting the return shape of [`validate`](#sq-validate):
+`StrEnum` selecting the return shape of [`analyze`](#sq-analyze):
 
 | Name | Value | Meaning |
 |------|-------|---------|
-| `STRUCTURED` | `"structured"` | Return a [`Analysis`](#validationresult) (default) |
+| `STRUCTURED` | `"structured"` | Return an [`Analysis`](#analysis) (default) |
 | `TEXT` | `"text"` | Return a rendered diagnostics string |
 
 ### `RenderOptions`
 
-Options that shape [`AnalysisOutput.TEXT`](#validateoutput) output.
+Options that shape [`AnalysisOutput.TEXT`](#analysisoutput) output.
 
 ```python
 syntaqlite.RenderOptions(*, source_name="")
