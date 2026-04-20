@@ -738,21 +738,8 @@ impl std::error::Error for FormatError {}
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
-impl LspHost {
-    /// Expected terminal token IDs (as `u32` ordinals) at a byte offset.
-    pub(crate) fn expected_tokens_at_offset(&mut self, uri: &str, offset: DocOffset) -> Vec<u32> {
-        self.completion_info_at_offset(uri, offset)
-            .tokens
-            .iter()
-            .map(|&t| u32::from(t))
-            .collect()
-    }
-}
-
-#[cfg(test)]
 #[cfg(feature = "sqlite")]
 mod tests {
-    use syntaqlite_syntax::TokenType;
     use syntaqlite_syntax::source::DocOffset;
 
     use super::LspHost;
@@ -760,75 +747,7 @@ mod tests {
     use crate::semantic::Catalog;
     use crate::semantic::ValidationConfig;
     use crate::semantic::catalog::{AritySpec, CatalogLayer, FunctionCategory};
-    use crate::semantic::diagnostics::{DiagnosticMessage, Severity};
-
-    #[test]
-    fn completions_fall_back_to_last_good_state_on_parse_error() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "SELECT * FR";
-        host.open_document(uri, 1, sql.to_string());
-        let expected = host
-            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        assert!(
-            expected.contains(&(TokenType::From as u32)),
-            "expected From after SELECT *, got {expected:?}"
-        );
-    }
-
-    #[test]
-    fn completions_ignore_prior_statement_errors_after_semicolon() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "SELEC 1; SELECT * FR";
-        host.open_document(uri, 1, sql.to_string());
-        let expected = host
-            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        assert!(
-            expected.contains(&(TokenType::From as u32)),
-            "expected From in second statement context, got {expected:?}"
-        );
-    }
-
-    #[test]
-    fn completions_include_join_after_from_alias_with_partial_next_token() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "SELECT * FROM s AS x J";
-        host.open_document(uri, 1, sql.to_string());
-        let expected = host
-            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        assert!(
-            expected.contains(&(TokenType::JoinKw as u32)),
-            "expected JoinKw after FROM alias, got {expected:?}"
-        );
-    }
-
-    #[test]
-    fn completions_include_join_after_from_table_with_trailing_space() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "SELECT * FROM slice ";
-        host.open_document(uri, 1, sql.to_string());
-        let expected = host
-            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        assert!(
-            expected.contains(&(TokenType::Join as u32)),
-            "expected Join"
-        );
-        assert!(
-            !expected.contains(&(TokenType::Create as u32)),
-            "Create should not appear"
-        );
-        assert!(
-            !expected.contains(&(TokenType::Select as u32)),
-            "Select should not appear"
-        );
-        assert!(
-            !expected.contains(&(TokenType::Virtual as u32)),
-            "Virtual should not appear"
-        );
-    }
+    use crate::semantic::diagnostics::Severity;
 
     #[test]
     fn available_functions_default_config_includes_baseline() {
@@ -856,17 +775,6 @@ mod tests {
     }
 
     #[test]
-    fn completion_context_after_from_is_table_ref() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "SELECT acos() as foo FROM ";
-        host.open_document(uri, 1, sql.to_string());
-        let info = host
-            .completion_info_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        assert_eq!(info.context, super::super::CompletionContext::TableRef);
-    }
-
-    #[test]
     fn completion_context_after_select_is_not_table_ref() {
         let mut host = LspHost::new();
         let uri = "file:///test.sql";
@@ -889,135 +797,12 @@ mod tests {
     }
 
     #[test]
-    fn completions_include_join_after_from_table_no_trailing_space() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "SELECT * FROM slice";
-        host.open_document(uri, 1, sql.to_string());
-        let expected = host
-            .expected_tokens_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        assert!(expected.contains(&(TokenType::Join as u32)));
-    }
-
-    #[test]
-    fn validate_select_after_create_table_as_select_no_diags() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(
-            uri,
-            1,
-            "CREATE TABLE orders AS SELECT 1 AS order_id;\nSELECT o.order_id FROM orders o;"
-                .to_string(),
-        );
-        let diags = host.validate(uri, &ValidationConfig::default());
-        assert!(diags.is_empty(), "unexpected diagnostics: {diags:?}");
-    }
-
-    #[test]
-    fn validate_select_from_unknown_table_still_warns() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(uri, 1, "SELECT * FROM nonexistent;".to_string());
-        let diags = host.validate(uri, &ValidationConfig::default());
-        assert!(!diags.is_empty());
-    }
-
-    #[test]
-    fn validate_forward_reference_warns() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(
-            uri,
-            1,
-            "SELECT * FROM t;\nCREATE TABLE t (id INTEGER);".to_string(),
-        );
-        let diags = host.validate(uri, &ValidationConfig::default());
-        assert!(!diags.is_empty());
-    }
-
-    #[test]
-    fn syntax_error_produces_diagnostic_for_bare_select() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(uri, 1, "SELECT ".to_string());
-        let diags = host.diagnostics(uri);
-        assert!(!diags.is_empty());
-        assert_eq!(diags[0].severity, Severity::Error);
-    }
-
-    #[test]
-    fn syntax_error_produces_diagnostic_for_incomplete_from() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(uri, 1, "SELECT * FROM".to_string());
-        let diags = host.diagnostics(uri);
-        assert!(!diags.is_empty());
-    }
-
-    #[test]
-    fn validation_returns_error_for_syntax_invalid_sql() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(uri, 1, "NOT VALID SQL;".to_string());
-        let diags = host.diagnostics(uri);
-        assert!(!diags.is_empty());
-    }
-
-    #[test]
-    fn multiple_syntax_errors_all_reported() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(uri, 1, "include ;\ninclude ;\nSELECT 1;".to_string());
-        let diags = host.diagnostics(uri);
-        let errors: Vec<_> = diags
-            .iter()
-            .filter(|d| d.severity == Severity::Error)
-            .collect();
-        assert_eq!(errors.len(), 2, "got {}: {:?}", errors.len(), errors);
-    }
-
-    #[test]
-    fn syntax_errors_do_not_suppress_later_valid_statements() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(uri, 1, "NOT VALID;\nSELECT 1;".to_string());
-        let diags = host.diagnostics(uri);
-        assert_eq!(diags.len(), 1, "got {}: {:?}", diags.len(), diags);
-    }
-
-    #[test]
-    fn syntax_error_after_valid_statement_is_reported() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(uri, 1, "SELECT 1;\nNOT VALID;".to_string());
-        let diags = host.diagnostics(uri);
-        assert_eq!(diags.len(), 1, "got {}: {:?}", diags.len(), diags);
-    }
-
-    #[test]
     fn validate_does_not_duplicate_parse_error_diagnostics() {
         let mut host = LspHost::new();
         let uri = "file:///test.sql";
         host.open_document(uri, 1, "SELECT ;\nSELECT 1;".to_string());
         let diags = host.validate(uri, &ValidationConfig::default());
         assert_eq!(diags.len(), 0, "got: {diags:?}");
-    }
-
-    #[test]
-    fn validate_continues_past_errors_to_check_later_statements() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(
-            uri,
-            1,
-            "SELECT ;\nSELECT ;\nSELECT * FROM no_such_table;".to_string(),
-        );
-        let diags = host.validate(uri, &ValidationConfig::default());
-        let table_diags: Vec<_> = diags
-            .iter()
-            .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownTable { .. }))
-            .collect();
-        assert_eq!(table_diags.len(), 1, "got: {diags:?}");
     }
 
     #[test]
@@ -1129,75 +914,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn syntax_error_for_create_table_as_missing_select() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        host.open_document(uri, 1, "create table orders as;".to_string());
-        let diags = host.all_diagnostics(uri, &ValidationConfig::default());
-        assert!(
-            !diags.is_empty(),
-            "expected syntax error for 'create table orders as;', got none"
-        );
-        assert!(
-            diags.iter().any(|d| d.severity == Severity::Error),
-            "expected an error-severity diagnostic, got: {diags:?}"
-        );
-    }
-
     // ── Find-references tests ──────────────────────────────────────────────
-
-    #[test]
-    fn find_references_table_in_single_file() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE users (id INT);\nSELECT * FROM users;\nDELETE FROM users;";
-        host.open_document(uri, 1, sql.to_string());
-
-        // Click on "users" in the SELECT statement.
-        let offset = sql.find("SELECT").unwrap() + "SELECT * FROM ".len();
-        let refs = host.find_references(
-            uri,
-            DocOffset::from_raw(u32::try_from(offset).unwrap()),
-            false,
-        );
-        // Should find the two DML references (SELECT + DELETE), not the CREATE.
-        assert_eq!(refs.len(), 2, "expected 2 refs, got: {refs:?}");
-    }
-
-    #[test]
-    fn find_references_table_include_declaration() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE users (id INT);\nSELECT * FROM users;\nDELETE FROM users;";
-        host.open_document(uri, 1, sql.to_string());
-
-        let offset = sql.find("SELECT").unwrap() + "SELECT * FROM ".len();
-        let refs = host.find_references(
-            uri,
-            DocOffset::from_raw(u32::try_from(offset).unwrap()),
-            true,
-        );
-        // Should find the two DML references + the CREATE TABLE definition.
-        assert_eq!(refs.len(), 3, "expected 3 refs (incl decl), got: {refs:?}");
-    }
-
-    #[test]
-    fn find_references_column_in_single_file() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE t (id INT, name TEXT);\nSELECT id FROM t;\nSELECT id, name FROM t;";
-        host.open_document(uri, 1, sql.to_string());
-
-        // Click on "id" in the first SELECT.
-        let offset = sql.find("SELECT id").unwrap() + "SELECT ".len();
-        let refs = host.find_references(
-            uri,
-            DocOffset::from_raw(u32::try_from(offset).unwrap()),
-            false,
-        );
-        assert_eq!(refs.len(), 2, "expected 2 column refs, got: {refs:?}");
-    }
 
     #[test]
     fn find_references_cross_file() {
@@ -1225,98 +942,7 @@ mod tests {
         assert!(ref_uris.contains(&uri2));
     }
 
-    #[test]
-    fn find_references_cursor_on_definition() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE users (id INT);\nSELECT * FROM users;";
-        host.open_document(uri, 1, sql.to_string());
-
-        // Click on "users" in CREATE TABLE — should still find the SELECT reference.
-        let offset = sql.find("users").unwrap();
-        let refs = host.find_references(
-            uri,
-            DocOffset::from_raw(u32::try_from(offset).unwrap()),
-            false,
-        );
-        assert_eq!(
-            refs.len(),
-            1,
-            "expected 1 ref from definition site, got: {refs:?}"
-        );
-    }
-
-    #[test]
-    fn find_references_cursor_on_definition_include_declaration() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE users (id INT);\nSELECT * FROM users;";
-        host.open_document(uri, 1, sql.to_string());
-
-        let offset = sql.find("users").unwrap();
-        let refs = host.find_references(
-            uri,
-            DocOffset::from_raw(u32::try_from(offset).unwrap()),
-            true,
-        );
-        assert_eq!(refs.len(), 2, "expected 2 refs (incl decl), got: {refs:?}");
-    }
-
     // ── Rename tests ────────────────────────────────────────────────────────
-
-    #[test]
-    fn prepare_rename_returns_range_for_table() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE users (id INT);\nSELECT * FROM users;";
-        host.open_document(uri, 1, sql.to_string());
-
-        let offset = sql.find("SELECT").unwrap() + "SELECT * FROM ".len();
-        let result = host.prepare_rename(uri, DocOffset::from_raw(u32::try_from(offset).unwrap()));
-        assert!(result.is_some(), "expected rename range");
-        let (range, text) = result.unwrap();
-        assert_eq!(text, "users");
-        assert_eq!(&sql[range.start.as_usize()..range.end.as_usize()], "users");
-    }
-
-    #[test]
-    fn rename_table_in_single_file() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE users (id INT);\nSELECT * FROM users;\nDELETE FROM users;";
-        host.open_document(uri, 1, sql.to_string());
-
-        let offset = sql.find("SELECT").unwrap() + "SELECT * FROM ".len();
-        let edits = host.rename(
-            uri,
-            DocOffset::from_raw(u32::try_from(offset).unwrap()),
-            "accounts",
-        );
-        // Should produce edits for all 3 occurrences (definition + 2 refs).
-        let file_edits = edits.get(uri).expect("expected edits for test file");
-        assert_eq!(file_edits.len(), 3, "expected 3 edits, got: {file_edits:?}");
-        for (_, text) in file_edits {
-            assert_eq!(text.as_str(), "accounts");
-        }
-    }
-
-    #[test]
-    fn rename_column_in_single_file() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE t (id INT, name TEXT);\nSELECT id FROM t;\nSELECT id, name FROM t;";
-        host.open_document(uri, 1, sql.to_string());
-
-        let offset = sql.find("SELECT id").unwrap() + "SELECT ".len();
-        let edits = host.rename(
-            uri,
-            DocOffset::from_raw(u32::try_from(offset).unwrap()),
-            "user_id",
-        );
-        let file_edits = edits.get(uri).expect("expected edits for test file");
-        // 2 column refs + 1 definition = 3 edits.
-        assert_eq!(file_edits.len(), 3, "expected 3 edits, got: {file_edits:?}");
-    }
 
     #[test]
     fn rename_cross_file() {
@@ -1340,87 +966,6 @@ mod tests {
         // Should have edits in both open files.
         assert!(edits.contains_key(uri1), "expected edits in a.sql");
         assert!(edits.contains_key(uri2), "expected edits in b.sql");
-    }
-
-    #[test]
-    fn completion_on_suggested_after_join_target() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "SELECT * FROM slice JOIN thread ";
-        host.open_document(uri, 1, sql.to_string());
-        let items =
-            host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        let labels: Vec<&str> = items.iter().map(|e| e.label.as_str()).collect();
-        assert!(
-            labels.contains(&"ON"),
-            "ON should be suggested, got: {labels:?}"
-        );
-    }
-
-    #[test]
-    fn completion_qualifier_detected_after_dot() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE t1 (a INT, b TEXT);\nCREATE TABLE t2 (c INT);\nSELECT t1.";
-        host.open_document(uri, 1, sql.to_string());
-        let info = host
-            .completion_info_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        assert_eq!(
-            info.qualifier.as_deref(),
-            Some("t1"),
-            "should detect t1 as qualifier, got: {:?}",
-            info.qualifier
-        );
-    }
-
-    #[test]
-    fn completion_qualified_column_only_from_table() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE t1 (a INT, b TEXT);\nCREATE TABLE t2 (c INT);\nSELECT t1.";
-        host.open_document(uri, 1, sql.to_string());
-        let items =
-            host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        let labels: Vec<&str> = items.iter().map(|e| e.label.as_str()).collect();
-        assert!(labels.contains(&"a"), "should suggest column a");
-        assert!(labels.contains(&"b"), "should suggest column b");
-        assert!(
-            !labels.contains(&"c"),
-            "should NOT suggest column c from t2"
-        );
-        assert!(
-            items.iter().all(|e| e.kind == CompletionKind::Column),
-            "all items should be columns, got: {labels:?}"
-        );
-    }
-
-    #[test]
-    fn completion_tables_after_from() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE users (id INT);\nSELECT * FROM ";
-        host.open_document(uri, 1, sql.to_string());
-        let items =
-            host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        let labels: Vec<&str> = items.iter().map(|e| e.label.as_str()).collect();
-        assert!(
-            labels.contains(&"users"),
-            "should suggest table users, got: {labels:?}"
-        );
-    }
-
-    #[test]
-    fn completion_columns_after_select() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let sql = "CREATE TABLE users (id INT, name TEXT);\nSELECT ";
-        host.open_document(uri, 1, sql.to_string());
-        let items =
-            host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
-        let labels: Vec<&str> = items.iter().map(|e| e.label.as_str()).collect();
-        assert!(labels.contains(&"id"), "should suggest column id");
-        assert!(labels.contains(&"name"), "should suggest column name");
-        assert!(labels.contains(&"abs"), "should suggest function abs");
     }
 
     #[test]
@@ -1619,138 +1164,6 @@ mod tests {
             errors.is_empty(),
             "unmatched file should have no errors (lenient mode), got: {errors:?}"
         );
-    }
-
-    #[test]
-    fn goto_definition_cte_reference() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let src = "WITH cte AS (SELECT 1) SELECT * FROM cte";
-        host.open_document(uri, 1, src.to_string());
-
-        let ref_offset = src.rfind("cte").unwrap();
-        let def = host
-            .definition_info(uri, DocOffset::from_raw(u32::try_from(ref_offset).unwrap()))
-            .expect("definition");
-        let cte_def_offset = src.find("cte").unwrap();
-        assert_eq!(def.target.range.start.as_usize(), cte_def_offset);
-        assert_eq!(
-            def.target.range.end.as_usize(),
-            cte_def_offset + "cte".len()
-        );
-    }
-
-    #[test]
-    fn goto_definition_ddl_table_reference() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let src = "CREATE TABLE users (id INTEGER); SELECT id FROM users;";
-        host.open_document(uri, 1, src.to_string());
-
-        let ref_offset = src.rfind("users").unwrap();
-        let def = host
-            .definition_info(uri, DocOffset::from_raw(u32::try_from(ref_offset).unwrap()))
-            .expect("definition");
-        let ddl_offset = src.find("users").unwrap();
-        assert_eq!(def.target.range.start.as_usize(), ddl_offset);
-        assert_eq!(def.target.range.end.as_usize(), ddl_offset + "users".len());
-    }
-
-    #[test]
-    fn goto_definition_cte_shadows_ddl() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let src = "CREATE TABLE t (id INTEGER); WITH t AS (SELECT 1 AS id) SELECT * FROM t;";
-        host.open_document(uri, 1, src.to_string());
-
-        let from_t_offset = src.rfind("FROM t").unwrap() + 5;
-        let def = host
-            .definition_info(
-                uri,
-                DocOffset::from_raw(u32::try_from(from_t_offset).unwrap()),
-            )
-            .expect("definition");
-        let cte_t_offset = src[29..].find('t').unwrap() + 29;
-        assert_eq!(def.target.range.start.as_usize(), cte_t_offset);
-    }
-
-    #[test]
-    fn goto_definition_unknown_table_returns_none() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let src = "SELECT * FROM nonexistent";
-        host.open_document(uri, 1, src.to_string());
-
-        let from_offset = src.find("nonexistent").unwrap();
-        assert!(
-            host.definition_info(
-                uri,
-                DocOffset::from_raw(u32::try_from(from_offset).unwrap())
-            )
-            .is_none()
-        );
-    }
-
-    #[test]
-    fn goto_definition_column_in_ddl_table() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let src = "CREATE TABLE users (id INTEGER, name TEXT);\nSELECT name FROM users;";
-        host.open_document(uri, 1, src.to_string());
-
-        let select_name_offset = src.rfind("name").unwrap();
-        let def = host
-            .definition_info(
-                uri,
-                DocOffset::from_raw(u32::try_from(select_name_offset).unwrap()),
-            )
-            .expect("definition");
-        let ddl_name_offset = src.find("name").unwrap();
-        assert_eq!(def.target.range.start.as_usize(), ddl_name_offset);
-    }
-
-    #[test]
-    fn goto_definition_unknown_column_returns_none() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let src = "CREATE TABLE t (a INT);\nSELECT b FROM t;";
-        host.open_document(uri, 1, src.to_string());
-
-        let b_offset = src.find('b').unwrap();
-        assert!(
-            host.definition_info(uri, DocOffset::from_raw(u32::try_from(b_offset).unwrap()))
-                .is_none()
-        );
-    }
-
-    #[test]
-    fn goto_definition_cte_column_inferred_from_alias() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let src = "WITH foo AS (SELECT 1 AS a)\nSELECT a FROM foo;";
-        host.open_document(uri, 1, src.to_string());
-
-        let a_offset = src.find("SELECT a").unwrap() + "SELECT ".len();
-        let def = host
-            .definition_info(uri, DocOffset::from_raw(u32::try_from(a_offset).unwrap()))
-            .expect("definition");
-        let cte_a_offset = src.find("AS a").unwrap() + "AS ".len();
-        assert_eq!(def.target.range.start.as_usize(), cte_a_offset);
-    }
-
-    #[test]
-    fn goto_definition_cte_column_from_declared_list() {
-        let mut host = LspHost::new();
-        let uri = "file:///test.sql";
-        let src = "WITH foo(x) AS (SELECT 1)\nSELECT x FROM foo;";
-        host.open_document(uri, 1, src.to_string());
-
-        let x_offset = src.find("SELECT x").unwrap() + "SELECT ".len();
-        let def = host
-            .definition_info(uri, DocOffset::from_raw(u32::try_from(x_offset).unwrap()))
-            .expect("definition");
-        let decl_x_offset = src.find("(x)").unwrap() + 1;
-        assert_eq!(def.target.range.start.as_usize(), decl_x_offset);
     }
 
     #[test]

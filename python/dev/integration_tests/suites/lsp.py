@@ -9,147 +9,17 @@ stdio to verify schema loading and diagnostic behaviour.
 
 from __future__ import annotations
 
-import json
 import shutil
 import subprocess
-import sys
 import tempfile
-import time
 from pathlib import Path
 from typing import Any
 
+from python.dev.diff_tests.lsp_client import LspClient, spawn_lsp
 from python.dev.integration_tests.suite import SuiteContext
 
 NAME = "lsp"
 DESCRIPTION = "LSP server integration tests (schema loading, diagnostics)"
-
-
-# ── Minimal LSP JSON-RPC client ──────────────────────────────────────────
-
-class LspClient:
-    """Tiny JSON-RPC client that talks to an LSP server over stdin/stdout."""
-
-    def __init__(self, proc: subprocess.Popen[bytes]):
-        self._proc = proc
-        self._id = 0
-
-    def send_request(self, method: str, params: Any = None) -> Any:
-        self._id += 1
-        msg: dict[str, Any] = {"jsonrpc": "2.0", "id": self._id, "method": method}
-        if params is not None:
-            msg["params"] = params
-        self._write(msg)
-        return self._read_response(self._id)
-
-    def send_notification(self, method: str, params: Any = None) -> None:
-        msg: dict[str, Any] = {"jsonrpc": "2.0", "method": method}
-        if params is not None:
-            msg["params"] = params
-        self._write(msg)
-
-    def collect_diagnostics(self, timeout: float = 5.0) -> list[dict[str, Any]]:
-        """Read notifications until we get publishDiagnostics or timeout."""
-        deadline = time.monotonic() + timeout
-        while time.monotonic() < deadline:
-            msg = self._read_message(timeout=deadline - time.monotonic())
-            if msg is None:
-                continue
-            if msg.get("method") == "textDocument/publishDiagnostics":
-                return msg.get("params", {}).get("diagnostics", [])
-        return []
-
-    def shutdown(self) -> None:
-        try:
-            self.send_request("shutdown")
-            self.send_notification("exit")
-        except (BrokenPipeError, OSError):
-            pass
-        self._proc.wait(timeout=5)
-
-    # ── Wire protocol ────────────────────────────────────────────────────
-
-    def _write(self, msg: dict[str, Any]) -> None:
-        body = json.dumps(msg).encode("utf-8")
-        header = f"Content-Length: {len(body)}\r\n\r\n".encode("ascii")
-        assert self._proc.stdin is not None
-        self._proc.stdin.write(header + body)
-        self._proc.stdin.flush()
-
-    def _read_message(self, timeout: float = 5.0) -> dict[str, Any] | None:
-        import select
-
-        assert self._proc.stdout is not None
-        fd = self._proc.stdout.fileno()
-
-        # Wait for data to be available.
-        ready, _, _ = select.select([fd], [], [], timeout)
-        if not ready:
-            return None
-
-        # Read Content-Length header.
-        header = b""
-        while b"\r\n\r\n" not in header:
-            ready, _, _ = select.select([fd], [], [], 2.0)
-            if not ready:
-                return None
-            chunk = self._proc.stdout.read(1)
-            if not chunk:
-                return None
-            header += chunk
-
-        length = 0
-        for line in header.split(b"\r\n"):
-            if line.startswith(b"Content-Length:"):
-                length = int(line.split(b":")[1].strip())
-
-        if length == 0:
-            return None
-
-        body = b""
-        while len(body) < length:
-            chunk = self._proc.stdout.read(length - len(body))
-            if not chunk:
-                return None
-            body += chunk
-
-        return json.loads(body.decode("utf-8"))
-
-    def _read_response(self, req_id: int) -> Any:
-        """Read messages until we find the response matching req_id."""
-        deadline = time.monotonic() + 10.0
-        while time.monotonic() < deadline:
-            msg = self._read_message(timeout=deadline - time.monotonic())
-            if msg is None:
-                continue
-            if msg.get("id") == req_id:
-                if "error" in msg:
-                    raise RuntimeError(f"LSP error: {msg['error']}")
-                return msg.get("result")
-        raise TimeoutError(f"No response for request id={req_id}")
-
-
-def _spawn_lsp(binary: Path, init_options: dict[str, Any] | None = None) -> LspClient:
-    """Spawn the LSP server and complete the initialize handshake."""
-    proc = subprocess.Popen(
-        [str(binary), "--no-config", "lsp"],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        bufsize=0,
-    )
-    client = LspClient(proc)
-
-    init_params: dict[str, Any] = {
-        "processId": None,
-        "capabilities": {},
-        "rootUri": None,
-    }
-    if init_options is not None:
-        init_params["initializationOptions"] = init_options
-
-    client.send_request("initialize", init_params)
-    client.send_notification("initialized", {})
-    return client
 
 
 def _open_and_get_diagnostics(
@@ -189,7 +59,7 @@ def _test_schema_from_ddl(ctx: SuiteContext) -> bool:
     schema_file = ctx.root_dir / "tests" / "lsp_tests" / "schema.sql"
     query_text = (ctx.root_dir / "tests" / "lsp_tests" / "query.sql").read_text()
 
-    client = _spawn_lsp(ctx.binary, {"schemaPath": str(schema_file)})
+    client = spawn_lsp(ctx.binary, {"schemaPath": str(schema_file)})
     try:
         diags = _open_and_get_diagnostics(client, "file:///test.sql", query_text)
         # Filter to only error-severity diagnostics about unknown tables/columns.
@@ -207,7 +77,7 @@ def _test_no_schema_warns(ctx: SuiteContext) -> bool:
     """Without schemaPath, SELECT from unknown table should emit a diagnostic."""
     query_text = (ctx.root_dir / "tests" / "lsp_tests" / "query.sql").read_text()
 
-    client = _spawn_lsp(ctx.binary)
+    client = spawn_lsp(ctx.binary)
     try:
         diags = _open_and_get_diagnostics(client, "file:///test.sql", query_text)
         table_diags = [d for d in diags if "users" in d.get("message", "").lower()]
@@ -276,7 +146,7 @@ def _test_sqlite3_dot_schema(ctx: SuiteContext) -> bool:
         schema_path.write_text(result.stdout)
 
         # Feed the real .schema output to the LSP.
-        client = _spawn_lsp(ctx.binary, {"schemaPath": str(schema_path)})
+        client = spawn_lsp(ctx.binary, {"schemaPath": str(schema_path)})
         try:
             # Query both tables using columns from the schema.
             diags = _open_and_get_diagnostics(
@@ -299,7 +169,7 @@ def _test_schema_reload(ctx: SuiteContext) -> bool:
     schema_file = ctx.root_dir / "tests" / "lsp_tests" / "schema.sql"
 
     # Start without schema — should warn.
-    client = _spawn_lsp(ctx.binary)
+    client = spawn_lsp(ctx.binary)
     try:
         diags = _open_and_get_diagnostics(client, "file:///test.sql", query_text)
         table_diags = [d for d in diags if "users" in d.get("message", "").lower()]
@@ -338,7 +208,7 @@ def _test_multi_schema(ctx: SuiteContext) -> bool:
         schema_b.write_text("CREATE TABLE orders (id INTEGER PRIMARY KEY, amount REAL);\n")
 
         # Start with schema_a (users table).
-        client = _spawn_lsp(ctx.binary, {"schemaPath": str(schema_a)})
+        client = spawn_lsp(ctx.binary, {"schemaPath": str(schema_a)})
         try:
             # Query users — should be fine with schema_a.
             diags = _open_and_get_diagnostics(
