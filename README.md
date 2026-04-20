@@ -32,7 +32,7 @@ We've tested against ~396K statements from [SQLite's upstream test suite](https:
 
 ## What it does
 
-### Analyze ([docs](https://docs.syntaqlite.com/latest/concepts/validation/))
+### Validate ([docs](https://docs.syntaqlite.com/latest/concepts/validation/))
 
 Finds unknown tables, columns, and functions against your schema, the same errors `sqlite3_prepare` would catch but without needing a database. Unlike `sqlite3`, syntaqlite finds **all** errors in one pass:
 
@@ -100,7 +100,7 @@ syntaqlite --sqlite-version 3.32.0 validate query.sql
 syntaqlite --sqlite-cflag SQLITE_ENABLE_MATH_FUNCTIONS validate query.sql
 ```
 
-### Analyze SQL inside other languages *(experimental)*
+### Validate SQL inside other languages *(experimental)*
 
 SQL lives inside Python and TypeScript strings in most real codebases. syntaqlite extracts and validates it, handling interpolation holes:
 

@@ -121,7 +121,7 @@ fn walk(stmt: &AnyParsedStatement, node_id: u32, depth: usize) {
 }
 ```
 
-## Analyze SQL
+## Validate SQL
 
 Add the `validation` and `sqlite` features:
 

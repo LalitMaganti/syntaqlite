@@ -23,7 +23,7 @@ depend on each other:
 <div class="mermaid">
 graph LR
     AST --> Formatter --> Formatted["Formatted SQL"]
-    AST --> Analyzer["Analyzer"] --> Diagnostics
+    AST --> Analyzer["Semantic analyzer"] --> Diagnostics
 </div>
 
 The LSP server ties both together for editor integration. You can also use any
@@ -35,7 +35,7 @@ validate without formatting, or do both.
 syntaqlite's parser is not a hand-written Rust parser. It uses SQLite's
 Lemon-generated grammar and tokenizer, compiled from C and linked into Rust
 via FFI. The Rust layer wraps the C parser in safe APIs and builds the
-formatter, analyzer, and LSP on top.
+formatter, semantic analyzer, and LSP on top.
 
 There's also an outbound FFI layer: the Rust formatter and validator are
 exported back to C consumers through `#[no_mangle]` functions, so non-Rust
@@ -79,7 +79,7 @@ graph LR
     Codegen --> CH["C headers"]
     Codegen --> RS["Rust code"]
     CH --> Parser["C parser"]
-    RS --> Analyzer["Analyzer"]
+    RS --> Analyzer["Semantic analyzer"]
     RS --> Formatter["Formatter"]
 </div>
 
@@ -124,7 +124,7 @@ functions (create, use, destroy).
 | Crate | Role |
 |-------|------|
 | `syntaqlite-syntax` | Tokenizer, parser, AST arena, grammar system (Rust + C) |
-| `syntaqlite` | Formatter, analyzer, LSP, dialect interface (Rust) |
+| `syntaqlite` | Formatter, semantic analyzer, LSP, dialect interface (Rust) |
 | `syntaqlite-common` | Shared types (semantic roles) (Rust) |
 | `syntaqlite-buildtools` | Code generation from `.synq` grammar definitions |
 | `syntaqlite-cli` | Command-line interface |
@@ -167,7 +167,7 @@ Driven by the Lemon-generated state machine. Key properties:
 - **Macro expansion** — registered macros are expanded during parsing with
   recursion tracking
 
-## Analyzer
+## Semantic analyzer
 
 Single-pass walk over the AST that validates references against a layered
 catalog:

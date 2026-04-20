@@ -39,7 +39,7 @@ Also works on files and globs:
 syntaqlite fmt 'migrations/**/*.sql'
 ```
 
-### Analyze
+### Validate
 
 Check SQL against a schema without touching a database:
 

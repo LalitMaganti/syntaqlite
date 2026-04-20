@@ -1,6 +1,6 @@
 +++
 title = "CI integration"
-description = "Enforce SQL formatting and analysis in your CI pipeline."
+description = "Enforce SQL formatting and validation in your CI pipeline."
 weight = 5
 +++
 
@@ -23,7 +23,7 @@ them. It exits with code 1 if any file would change:
 syntaqlite fmt --check "**/*.sql"
 ```
 
-## Analysis
+## Validation
 
 Run schema-aware validation to catch unknown tables, columns, and functions:
 

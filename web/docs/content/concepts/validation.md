@@ -1,12 +1,12 @@
 +++
 title = "Validation model"
-description = "How analysis works: catalog layers, scope resolution, and diagnostic generation."
+description = "How semantic analysis works: catalog layers, scope resolution, and diagnostic generation."
 weight = 3
 +++
 
 # Validation model
 
-syntaqlite's validator is a single-pass analyzer. It walks the AST
+syntaqlite's validator is a single-pass semantic analyzer. It walks the AST
 once, resolving names against a layered catalog and emitting diagnostics
 inline. This page explains the design. For practical usage, see
 [project setup](@/guides/project-setup.md).

@@ -179,7 +179,7 @@ SYNTAQLITE_SQLITE_VERSION=3035000 cargo build --features pin-version
 |---------|---------|-------------|
 | `sqlite` | Yes | SQLite dialect (grammar, tokens, built-in functions) |
 | `fmt` | Yes | SQL formatter |
-| `validation` | Yes | Analysis (schema checks, suggestions) |
+| `analysis` | Yes | Semantic validation (schema checks, suggestions) |
 | `serde` | No | `Serialize`/`Deserialize` for diagnostics and AST nodes |
 | `serde-json` | No | JSON convenience helpers |
 | `lsp` | No | Language server protocol implementation |

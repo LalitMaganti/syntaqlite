@@ -39,7 +39,7 @@ from SQLite's grammar rules as part of
 [syntaqlite's build pipeline](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite-buildtools/src/parser_tools/parser_pipeline.rs),
 which concatenates `.y` action files and runs them through an embedded copy of
 Lemon. The Rust layer wraps the C parser in safe APIs and builds everything
-else (formatter, analyzer, LSP) on top.
+else (formatter, semantic analyzer, LSP) on top.
 
 The parser action files in
 [`syntaqlite-syntax/parser-actions/`](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-syntax/parser-actions)
@@ -87,7 +87,7 @@ is designed to minimize the human effort needed:
 1. Grammar rules and the state machine are regenerated automatically
 2. AST node structure is defined in
    [`.synq` files](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-syntax/parser-nodes).
-   New nodes need a `.synq` entry for formatting and analysis
+   New nodes need a `.synq` entry for formatting and validation
 3. Build tooling detects any divergence and guides the update
 
 The only manual decision is which AST nodes to fold together (e.g., whether a
