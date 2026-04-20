@@ -117,7 +117,10 @@ impl CompletionKind {
 
 mod analysis_data;
 mod completion;
+mod completion_service;
+mod document_store;
 mod host;
+mod hover_service;
 mod server;
 mod source_map;
 

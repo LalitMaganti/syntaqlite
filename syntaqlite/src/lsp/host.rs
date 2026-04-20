@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 
 use syntaqlite_syntax::any::TokenCategory;
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, DocText};
-use syntaqlite_syntax::util::is_suggestable_keyword;
 
 use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
@@ -17,10 +16,10 @@ use crate::semantic::analyzer::SemanticAnalyzer;
 use crate::semantic::diagnostics::Diagnostic;
 
 use super::analysis_data::{
-    DefinitionResult, DocumentAnalysisData, ExternalDefinitions, LspObserver, ResolvedSymbol,
-    SemanticToken, StoredToken, SymbolIdentity,
+    DefinitionResult, ExternalDefinitions, LspObserver, SemanticToken, StoredToken, SymbolIdentity,
 };
-use super::{CompletionEntry, CompletionInfo, CompletionKind};
+use super::document_store::{Document, DocumentStore};
+use super::{CompletionEntry, CompletionInfo};
 
 // ── SchemaMap ─────────────────────────────────────────────────────────────────
 
@@ -79,29 +78,7 @@ impl SchemaMap {
     }
 }
 
-// ── Document store ────────────────────────────────────────────────────────────
-
-struct Document {
-    version: i32,
-    source: String,
-    /// Cached parse-error diagnostics. `None` when dirty.
-    cached_parse_diags: Option<Vec<Diagnostic>>,
-    /// All diagnostics produced by the last analysis pass (parse + semantic).
-    cached_all_diags: Option<Vec<Diagnostic>>,
-    /// Analysis events captured by [`LspObserver`]. `None` when dirty.
-    analysis: Option<DocumentAnalysisData>,
-    /// Semantic tokens derived from `analysis`. Populated on first request.
-    cached_sem_tokens: Option<Vec<SemanticToken>>,
-}
-
-impl Document {
-    fn invalidate(&mut self) {
-        self.cached_parse_diags = None;
-        self.cached_all_diags = None;
-        self.analysis = None;
-        self.cached_sem_tokens = None;
-    }
-}
+// ── Analysis dispatch ────────────────────────────────────────────────────────
 
 /// Run analysis for `doc` if nothing is cached yet.
 fn ensure_analysis(
@@ -132,7 +109,7 @@ fn ensure_analysis(
 /// [`ensure_analysis`]. Returns `false` if the document is not found.
 fn ensure_analysis_for(
     uri: &str,
-    documents: &mut HashMap<String, Document>,
+    documents: &mut DocumentStore,
     analyzer: &mut SemanticAnalyzer,
     schema_map: Option<&SchemaMap>,
     user_catalog: &Catalog,
@@ -206,7 +183,7 @@ pub struct LspHost {
     /// go-to-definition targets.
     external_defs: ExternalDefinitions,
     analyzer: SemanticAnalyzer,
-    documents: HashMap<String, Document>,
+    documents: DocumentStore,
     /// Format config from project config file. `None` means use defaults.
     format_config: Option<FormatConfig>,
     /// Validation config (`strict_schema` is set when a schema is provided).
@@ -232,7 +209,7 @@ impl LspHost {
             external_defs: ExternalDefinitions::new(),
             analyzer: SemanticAnalyzer::new(),
             dialect,
-            documents: HashMap::new(),
+            documents: DocumentStore::new(),
             format_config: None,
             validation_config: ValidationConfig::default(),
             schema_map: None,
@@ -247,7 +224,7 @@ impl LspHost {
             external_defs: ExternalDefinitions::new(),
             analyzer: SemanticAnalyzer::with_dialect(dialect.clone()),
             dialect,
-            documents: HashMap::new(),
+            documents: DocumentStore::new(),
             format_config: None,
             validation_config: ValidationConfig::default(),
             schema_map: None,
@@ -269,9 +246,7 @@ impl LspHost {
     /// Set the validation config.
     pub fn set_validation_config(&mut self, config: ValidationConfig) {
         self.validation_config = config;
-        for doc in self.documents.values_mut() {
-            doc.invalidate();
-        }
+        self.documents.invalidate_all();
     }
 
     /// Set the per-file schema map from `[schemas]` config globs.
@@ -279,56 +254,36 @@ impl LspHost {
     /// matching catalog and `strict_schema` is set automatically.
     pub fn set_schema_map(&mut self, map: SchemaMap) {
         self.schema_map = Some(map);
-        for doc in self.documents.values_mut() {
-            doc.invalidate();
-        }
+        self.documents.invalidate_all();
     }
 
     /// Set the session context (user-provided schema and functions).
     /// Invalidates all cached analysis.
     pub fn set_session_context(&mut self, ctx: Catalog) {
         self.user_catalog = ctx;
-        for doc in self.documents.values_mut() {
-            doc.invalidate();
-        }
+        self.documents.invalidate_all();
     }
 
     // ── Document lifecycle ─────────────────────────────────────────────────────
 
     /// Register a newly opened document.
     pub(crate) fn open_document(&mut self, uri: &str, version: i32, text: String) {
-        self.documents.insert(
-            uri.to_string(),
-            Document {
-                version,
-                source: text,
-                cached_parse_diags: None,
-                cached_all_diags: None,
-                analysis: None,
-                cached_sem_tokens: None,
-            },
-        );
+        self.documents.open(uri, version, text);
     }
 
     /// Update a document's content, invalidating cached analysis.
     pub fn update_document(&mut self, uri: &str, version: i32, text: String) {
-        if let Some(doc) = self.documents.get_mut(uri) {
-            doc.version = version;
-            doc.source = text;
-            doc.invalidate();
-        } else {
-            self.open_document(uri, version, text);
-        }
+        self.documents.update(uri, version, text);
     }
 
     /// Remove a document from the host.
     pub(crate) fn close_document(&mut self, uri: &str) {
-        self.documents.remove(uri);
+        self.documents.close(uri);
     }
 
     /// Source text for a document.
     pub(crate) fn document_source(&self, uri: &str) -> Option<&str> {
-        self.documents.get(uri).map(|doc| doc.source.as_str())
+        self.documents.source(uri)
     }
 
     // ── Analysis queries ───────────────────────────────────────────────────────
@@ -427,71 +382,12 @@ impl LspHost {
 
     /// Completion items (keywords + functions) at a byte offset.
     pub fn completion_items(&mut self, uri: &str, offset: DocOffset) -> Vec<CompletionEntry> {
-        use std::collections::HashSet;
-
         let info = self.completion_info_at_offset(uri, offset);
-        let expected_set: HashSet<u32> = info.tokens.iter().map(|&t| u32::from(t)).collect();
-
-        let mut seen: HashSet<String> = HashSet::new();
-        let mut items: Vec<CompletionEntry> = Vec::new();
-
-        for entry in self.dialect.keywords() {
-            let code = u32::from(entry.token_type());
-            if !expected_set.contains(&code) || !is_suggestable_keyword(entry.keyword()) {
-                continue;
-            }
-            if seen.insert(entry.keyword().to_string()) {
-                items.push(CompletionEntry::new(
-                    entry.keyword().to_string(),
-                    CompletionKind::Keyword,
-                ));
-            }
-        }
-
-        let catalog = self.analyzer.catalog();
-
-        // When the cursor follows `qualifier.`, only suggest columns from that
-        // table — no keywords, functions, or other tables.
-        if let Some(ref qualifier) = info.qualifier {
-            items.clear();
-            seen.clear();
-            for name in catalog.all_column_names(Some(qualifier)) {
-                if seen.insert(name.clone()) {
-                    items.push(CompletionEntry::new(name, CompletionKind::Column));
-                }
-            }
-            return items;
-        }
-
-        match info.context {
-            super::CompletionContext::TableRef => {
-                for name in catalog.all_relation_names() {
-                    if seen.insert(name.clone()) {
-                        items.push(CompletionEntry::new(name, CompletionKind::Table));
-                    }
-                }
-            }
-            super::CompletionContext::Expression | super::CompletionContext::Unknown => {
-                for name in catalog.all_function_names() {
-                    if seen.insert(name.clone()) {
-                        items.push(CompletionEntry::new(name, CompletionKind::Function));
-                    }
-                }
-                for name in catalog.all_column_names(None) {
-                    if seen.insert(name.clone()) {
-                        items.push(CompletionEntry::new(name, CompletionKind::Column));
-                    }
-                }
-                for name in catalog.all_relation_names() {
-                    if seen.insert(name.clone()) {
-                        items.push(CompletionEntry::new(name, CompletionKind::Table));
-                    }
-                }
-            }
-        }
-
-        items.sort_by_key(|a| a.kind().sort_priority());
-        items
+        super::completion_service::build_completion_items(
+            info,
+            &self.dialect,
+            self.analyzer.catalog(),
+        )
     }
 
     // ── Semantic validation ────────────────────────────────────────────────────
@@ -589,10 +485,7 @@ impl LspHost {
             .analysis
             .as_ref()
             .expect("ensure_analysis sets analysis");
-
-        let resolution = data.resolution_at(offset)?;
-        let hover = format_resolved_hover(&resolution.symbol);
-        Some((hover, resolution.range))
+        super::hover_service::hover_info(data, offset)
     }
 
     // ── Go-to-definition ───────────────────────────────────────────────────
@@ -617,7 +510,7 @@ impl LspHost {
             .analysis
             .as_ref()
             .expect("ensure_analysis sets analysis");
-        data.definition_at(offset)
+        super::hover_service::definition_info(data, offset)
     }
 
     // ── Find references ──────────────────────────────────────────────────────
@@ -641,7 +534,7 @@ impl LspHost {
         let mut results = Vec::new();
 
         // Collect matching resolutions from all open documents.
-        let uris: Vec<String> = self.documents.keys().cloned().collect();
+        let uris: Vec<String> = self.documents.uris();
         for doc_uri in &uris {
             ensure_analysis_for(
                 doc_uri,
@@ -710,13 +603,7 @@ impl LspHost {
             .analysis
             .as_ref()
             .expect("ensure_analysis sets analysis");
-        let res = data.resolution_at(offset)?;
-        let name = match &res.symbol {
-            ResolvedSymbol::Table { name, .. } => name.clone(),
-            ResolvedSymbol::Column { column, .. } => column.clone(),
-            ResolvedSymbol::Function { .. } => return None,
-        };
-        Some((res.range, name))
+        super::hover_service::prepare_rename(data, offset)
     }
 
     /// Rename the symbol at `offset` to `new_name` across all open documents.
@@ -758,26 +645,7 @@ impl LspHost {
             .analysis
             .as_ref()
             .expect("ensure_analysis sets analysis");
-
-        // First check resolutions (references in DML/queries).
-        if let Some(res) = data.resolution_at(offset) {
-            return SymbolIdentity::from_resolved(&res.symbol);
-        }
-
-        // Fall back to definition_offsets (cursor on a CREATE TABLE name, etc).
-        for (key, &range) in &data.definition_offsets {
-            if offset >= range.start && offset < range.end {
-                return if let Some((table, col)) = key.split_once('.') {
-                    Some(SymbolIdentity::Column {
-                        table: table.to_string(),
-                        column: col.to_string(),
-                    })
-                } else {
-                    Some(SymbolIdentity::Table(key.clone()))
-                };
-            }
-        }
-        None
+        super::hover_service::symbol_identity_at(data, offset)
     }
 
     /// Look up an external (schema-file) definition site for a symbol from the
@@ -1021,38 +889,6 @@ pub(crate) struct SignatureHelpInfo {
     pub name: String,
     pub arities: Vec<AritySpec>,
     pub active_parameter: u32,
-}
-
-fn format_resolved_hover(symbol: &ResolvedSymbol) -> String {
-    match symbol {
-        ResolvedSymbol::Table { name, columns, .. } => match columns {
-            Some(cols) => format!("**table** `{name}`\n\n```\n{}\n```", cols.join(", ")),
-            None => format!("**table** `{name}`"),
-        },
-        ResolvedSymbol::Column {
-            column,
-            table,
-            all_columns,
-            ..
-        } => {
-            let col_list: Vec<String> = all_columns
-                .iter()
-                .map(|c| {
-                    if c.eq_ignore_ascii_case(column) {
-                        format!("**{c}**")
-                    } else {
-                        c.clone()
-                    }
-                })
-                .collect();
-            format!("**column** in `{table}`\n\n{}", col_list.join(", "))
-        }
-        ResolvedSymbol::Function {
-            category, arities, ..
-        } => {
-            format!("**{category}**\n\n```\n{}\n```", arities.join("\n"))
-        }
-    }
 }
 
 /// Walk backwards from cursor to find enclosing `func_name(` and count commas
