@@ -539,6 +539,129 @@ mod tests {
         }
     }
 
+    fn diag_messages(model: &SemanticModel) -> Vec<String> {
+        model
+            .diagnostics()
+            .map(|d: &Diagnostic| match d.message() {
+                DiagnosticMessage::UnknownTable { name } => format!("unknown table: {name}"),
+                DiagnosticMessage::UnknownColumn { column, table } => match table {
+                    Some(t) => format!("unknown column: {t}.{column}"),
+                    None => format!("unknown column: {column}"),
+                },
+                DiagnosticMessage::UnknownFunction { name } => format!("unknown function: {name}"),
+                other => format!("{other:?}"),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn unqualified_column_suppressed_when_source_unresolved() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT x FROM does_not_exist", &catalog, &lenient());
+        let msgs = diag_messages(&model);
+        assert_eq!(
+            msgs,
+            vec!["unknown table: does_not_exist".to_string()],
+            "bare column lookup must not FP when a FROM source failed to resolve",
+        );
+    }
+
+    #[test]
+    fn qualified_column_suppressed_when_source_unresolved() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze(
+            "SELECT does_not_exist.x FROM does_not_exist",
+            &catalog,
+            &lenient(),
+        );
+        let msgs = diag_messages(&model);
+        assert_eq!(
+            msgs,
+            vec!["unknown table: does_not_exist".to_string()],
+            "qualified column whose qualifier is unresolved must not FP",
+        );
+    }
+
+    #[test]
+    fn mixed_scope_partial_resolution_suppresses_column_fp() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "known_tbl",
+            Some(vec!["id".into()]),
+            false,
+        );
+        let model = analyzer.analyze(
+            "SELECT y FROM known_tbl JOIN missing_tbl ON 1=1",
+            &catalog,
+            &lenient(),
+        );
+        let msgs = diag_messages(&model);
+        assert_eq!(
+            msgs,
+            vec!["unknown table: missing_tbl".to_string()],
+            "bare `y` might live in missing_tbl — must not FP",
+        );
+    }
+
+    // SQLite double-quoted-string (DQS) bug-compat: a `"foo"` in expression
+    // position that doesn't resolve to a column is re-interpreted as a string
+    // literal rather than rejected.  See https://www.sqlite.org/quirks.html.
+    #[test]
+    fn dqs_fallback_no_scope() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze("SELECT \"hello\"", &catalog, &lenient());
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+    }
+
+    #[test]
+    fn dqs_fallback_in_function_argument() {
+        let mut analyzer = sqlite_analyzer();
+        let catalog = sqlite_catalog();
+        let model = analyzer.analyze(
+            "SELECT sqlite_compileoption_used(\"THREADSAFE\")",
+            &catalog,
+            &lenient(),
+        );
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+    }
+
+    #[test]
+    fn dqs_fallback_against_known_scope() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "t1",
+            Some(vec!["a".into(), "b".into()]),
+            false,
+        );
+        let model = analyzer.analyze(
+            "SELECT b FROM t1 WHERE a IN (\"hello\", 'there')",
+            &catalog,
+            &lenient(),
+        );
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+    }
+
+    #[test]
+    fn dqs_does_not_fire_for_backtick_or_bracket_quotes() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t1", Some(vec!["a".into()]), false);
+        // Backtick- and bracket-quoted identifiers are always identifiers —
+        // no DQS fallback.  `nope` is a real unknown column ref here.
+        let model = analyzer.analyze("SELECT `nope` FROM t1", &catalog, &lenient());
+        assert_eq!(
+            diag_messages(&model),
+            vec!["unknown column: nope".to_string()],
+        );
+    }
+
     #[test]
     fn module_resolver_with_analyzer_does_not_panic() {
         let resolver = MapResolver(HashMap::new());
