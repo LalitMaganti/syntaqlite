@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
+use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, AnyTokenizer, FieldValue};
 use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtText};
 
 use super::comment::{CommentCtx, DrainResult};
@@ -65,373 +65,248 @@ enum ReturnAction {
     Discard,
 }
 
-#[expect(clippy::too_many_lines)]
 impl Formatter {
     pub(super) fn interpret_node<'a>(
         &mut self,
         ctx: &FmtCtx<'a>,
+        macro_docs: &[Option<DocId>],
         root_id: AnyNodeId,
         arena: &mut DocArena<'a>,
     ) -> DocId {
         self.consumed_regions.clear();
         self.consumed_regions
             .resize(ctx.macro_rewrites.len(), false);
-        let consumed_regions = &mut self.consumed_regions;
-        let scratch = &mut self.interpret_scratch;
-        let macro_tokenizer = &self.macro_tokenizer;
+        interpret_core(
+            ctx,
+            macro_docs,
+            root_id,
+            arena,
+            &mut self.interpret_scratch,
+            &mut self.consumed_regions,
+            &self.macro_tokenizer,
+        )
+    }
+}
 
-        if root_id.is_null() {
-            return NIL_DOC;
-        }
+#[expect(clippy::too_many_lines)]
+pub(super) fn interpret_core<'a>(
+    ctx: &FmtCtx<'a>,
+    macro_docs: &[Option<DocId>],
+    root_id: AnyNodeId,
+    arena: &mut DocArena<'a>,
+    scratch: &mut InterpretScratch,
+    consumed_regions: &mut [bool],
+    macro_tokenizer: &AnyTokenizer,
+) -> DocId {
+    if root_id.is_null() {
+        return NIL_DOC;
+    }
 
-        let source = ctx.text();
-        let Some((tag, fields)) = ctx.reader.extract_fields(root_id) else {
-            return NIL_DOC;
-        };
-        let Some((ops_bytes, ops_len)) = ctx.dialect.fmt_dispatch(tag) else {
-            return NIL_DOC;
-        };
-        scratch.group_nest.clear();
-        scratch.calls.clear();
-        scratch.for_each.clear();
+    let source = ctx.text();
+    let Some((tag, fields)) = ctx.reader.extract_fields(root_id) else {
+        return NIL_DOC;
+    };
+    let Some((ops_bytes, ops_len)) = ctx.dialect.fmt_dispatch(tag) else {
+        return NIL_DOC;
+    };
+    scratch.group_nest.clear();
+    scratch.calls.clear();
+    scratch.for_each.clear();
 
-        let mut cur_node_id: AnyNodeId = root_id;
-        let mut ops: &[u8] = &ops_bytes[..ops_len * 6];
-        let mut ops_count: usize = ops_len;
-        let mut fields = fields;
-        let mut running: DocId = NIL_DOC;
-        let mut pending: DocId = NIL_DOC;
-        let mut gn_save = scratch.group_nest.len();
-        let mut fe_save = scratch.for_each.len();
-        let mut ip: usize = 0;
-        let has_comments = ctx.comment_ctx.is_some();
+    let mut cur_node_id: AnyNodeId = root_id;
+    let mut ops: &[u8] = &ops_bytes[..ops_len * 6];
+    let mut ops_count: usize = ops_len;
+    let mut fields = fields;
+    let mut running: DocId = NIL_DOC;
+    let mut pending: DocId = NIL_DOC;
+    let mut gn_save = scratch.group_nest.len();
+    let mut fe_save = scratch.for_each.len();
+    let mut ip: usize = 0;
+    let has_comments = ctx.comment_ctx.is_some();
 
-        macro_rules! push_call_frame {
-            ($child_id:expr, $child_ops_bytes:expr, $child_ops_len:expr,
+    macro_rules! push_call_frame {
+        ($child_id:expr, $child_ops_bytes:expr, $child_ops_len:expr,
          $child_fields:expr, $return_action_val:expr) => {{
-                let frame = CallFrame {
-                    ip: ip + 1,
-                    node_id: cur_node_id,
-                    running,
-                    pending,
-                    gn_save,
-                    fe_save,
-                    return_action: $return_action_val,
-                };
-                scratch.calls.push(frame);
+            let frame = CallFrame {
+                ip: ip + 1,
+                node_id: cur_node_id,
+                running,
+                pending,
+                gn_save,
+                fe_save,
+                return_action: $return_action_val,
+            };
+            scratch.calls.push(frame);
 
-                cur_node_id = $child_id;
-                ops = &$child_ops_bytes[..$child_ops_len * 6];
-                ops_count = $child_ops_len;
-                fields = $child_fields;
-                running = NIL_DOC;
-                pending = NIL_DOC;
-                gn_save = scratch.group_nest.len();
-                fe_save = scratch.for_each.len();
-                ip = 0;
-                continue;
-            }};
-        }
+            cur_node_id = $child_id;
+            ops = &$child_ops_bytes[..$child_ops_len * 6];
+            ops_count = $child_ops_len;
+            fields = $child_fields;
+            running = NIL_DOC;
+            pending = NIL_DOC;
+            gn_save = scratch.group_nest.len();
+            fe_save = scratch.for_each.len();
+            ip = 0;
+            continue;
+        }};
+    }
 
-        loop {
-            if ip >= ops_count {
-                let result = arena.cat(running, pending);
-                scratch.group_nest.truncate(gn_save);
-                scratch.for_each.truncate(fe_save);
+    loop {
+        if ip >= ops_count {
+            let result = arena.cat(running, pending);
+            scratch.group_nest.truncate(gn_save);
+            scratch.for_each.truncate(fe_save);
 
-                if scratch.calls.is_empty() {
-                    return result;
-                }
-
-                let frame = scratch
-                    .calls
-                    .pop()
-                    .expect("call_stack must contain a parent frame");
-                cur_node_id = frame.node_id;
-                ip = frame.ip;
-                let Some((restored_tag, restored_fields)) = ctx.reader.extract_fields(cur_node_id)
-                else {
-                    panic!("restored node must resolve to fields");
-                };
-                let Some((restored_ops, restored_ops_len)) = ctx.dialect.fmt_dispatch(restored_tag)
-                else {
-                    panic!("restored node must resolve to formatter ops");
-                };
-                ops = &restored_ops[..restored_ops_len * 6];
-                ops_count = restored_ops_len;
-                fields = restored_fields;
-                running = frame.running;
-                pending = frame.pending;
-                gn_save = frame.gn_save;
-                fe_save = frame.fe_save;
-
-                match frame.return_action {
-                    ReturnAction::CatOntoRunning => {
-                        running = arena.cat(running, result);
-                    }
-                    ReturnAction::WrapInParens => {
-                        let lp = arena.text("(");
-                        let inner = arena.cat(lp, result);
-                        let rp = arena.text(")");
-                        let wrapped = arena.cat(inner, rp);
-                        let grouped = arena.group(wrapped);
-                        running = arena.cat(running, grouped);
-                    }
-                    ReturnAction::Discard => {}
-                }
-                continue;
+            if scratch.calls.is_empty() {
+                return result;
             }
 
-            let op = op_at(ops, ip);
-            match op {
-                FmtOp::Keyword(sid) => {
-                    let kw_text = ctx.dialect.fmt_string(sid);
+            let frame = scratch
+                .calls
+                .pop()
+                .expect("call_stack must contain a parent frame");
+            cur_node_id = frame.node_id;
+            ip = frame.ip;
+            let Some((restored_tag, restored_fields)) = ctx.reader.extract_fields(cur_node_id)
+            else {
+                panic!("restored node must resolve to fields");
+            };
+            let Some((restored_ops, restored_ops_len)) = ctx.dialect.fmt_dispatch(restored_tag)
+            else {
+                panic!("restored node must resolve to formatter ops");
+            };
+            ops = &restored_ops[..restored_ops_len * 6];
+            ops_count = restored_ops_len;
+            fields = restored_fields;
+            running = frame.running;
+            pending = frame.pending;
+            gn_save = frame.gn_save;
+            fe_save = frame.fe_save;
 
-                    if let Some(ref cctx) = ctx.comment_ctx {
-                        if let Some((tok_offset, word_count)) =
-                            cctx.peek_keyword_tokens(kw_text, source)
-                        {
-                            let drain = cctx.drain_before(tok_offset, source, arena);
-                            if word_count > 1 {
-                                // For multi-word keywords, only flush drain_before
-                                // if it found comments; otherwise defer pending to
-                                // drain_keyword_interior to avoid a double hardline
-                                // before interior comments.
-                                if drain.trailing != NIL_DOC || drain.leading != NIL_DOC {
-                                    flush_drain(&drain, &mut pending, &mut running, arena);
-                                }
-                                let interior =
-                                    cctx.drain_keyword_interior(word_count, source, arena);
-                                flush_drain(&interior, &mut pending, &mut running, arena);
-                            } else {
+            match frame.return_action {
+                ReturnAction::CatOntoRunning => {
+                    running = arena.cat(running, result);
+                }
+                ReturnAction::WrapInParens => {
+                    let lp = arena.text("(");
+                    let inner = arena.cat(lp, result);
+                    let rp = arena.text(")");
+                    let wrapped = arena.cat(inner, rp);
+                    let grouped = arena.group(wrapped);
+                    running = arena.cat(running, grouped);
+                }
+                ReturnAction::Discard => {}
+            }
+            continue;
+        }
+
+        let op = op_at(ops, ip);
+        match op {
+            FmtOp::Keyword(sid) => {
+                let kw_text = ctx.dialect.fmt_string(sid);
+
+                if let Some(ref cctx) = ctx.comment_ctx {
+                    if let Some((tok_offset, word_count)) =
+                        cctx.peek_keyword_tokens(kw_text, source)
+                    {
+                        let drain = cctx.drain_before(tok_offset, source, arena);
+                        if word_count > 1 {
+                            // For multi-word keywords, only flush drain_before
+                            // if it found comments; otherwise defer pending to
+                            // drain_keyword_interior to avoid a double hardline
+                            // before interior comments.
+                            if drain.trailing != NIL_DOC || drain.leading != NIL_DOC {
                                 flush_drain(&drain, &mut pending, &mut running, arena);
                             }
-                            cctx.advance_token_cursor(word_count);
+                            let interior = cctx.drain_keyword_interior(word_count, source, arena);
+                            flush_drain(&interior, &mut pending, &mut running, arena);
                         } else {
-                            running = arena.cat(running, pending);
-                            pending = NIL_DOC;
-                        }
-                    }
-                    let kw = arena.keyword(kw_text);
-                    running = arena.cat(running, kw);
-                }
-                FmtOp::Span(idx) => {
-                    // INVARIANT: Span ops only target Span fields.
-                    let FieldValue::Span(span) = fields[idx as usize] else {
-                        panic!("Span: field {idx} is not a Span");
-                    };
-
-                    let (s, span_start) = ctx.reader.span_text(span);
-                    let quoted = span.is_quoted();
-                    // A zero-length unquoted span means the field is absent
-                    // (optional, unset). A zero-length *quoted* span is a
-                    // real `""` token and must round-trip as `""`.
-                    if quoted || !s.is_empty() {
-                        if let Some(ref cctx) = ctx.comment_ctx {
-                            // For quoted spans, the original token in source
-                            // starts one byte earlier (the opening quote) and
-                            // extends one byte past (the closing quote).
-                            let span_len =
-                                StmtLen::from_raw(u32::try_from(s.len()).unwrap_or(u32::MAX));
-                            let drain_offset = if quoted {
-                                span_start - StmtLen::from_raw(1)
-                            } else {
-                                span_start
-                            };
-                            let token_len = if quoted {
-                                span_len + StmtLen::from_raw(2)
-                            } else {
-                                span_len
-                            };
-                            let drain = cctx.drain_before(drain_offset, source, arena);
                             flush_drain(&drain, &mut pending, &mut running, arena);
-                            cctx.advance_past(drain_offset + token_len);
                         }
-                        if quoted {
-                            let q = arena.text("\"");
-                            let txt = arena.text(s);
-                            running = arena.cat(running, q);
-                            running = arena.cat(running, txt);
-                            running = arena.cat(running, q);
-                        } else {
-                            let txt = arena.text(s);
-                            running = arena.cat(running, txt);
-                        }
-                    }
-                }
-                FmtOp::Child(idx) => {
-                    // INVARIANT: Child ops only target NodeId fields.
-                    let FieldValue::NodeId(child_id) = fields[idx as usize] else {
-                        panic!("Child: field {idx} is not a NodeId");
-                    };
-
-                    if !child_id.is_null() {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
-                            arena,
-                        );
-
-                        let mut return_action = ReturnAction::CatOntoRunning;
-                        let macro_rewrites = &ctx.macro_rewrites;
-                        if !macro_rewrites.is_empty()
-                            && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
-                                ctx,
-                                macro_rewrites,
-                                arena,
-                                consumed_regions,
-                                macro_tokenizer,
-                                child_id,
-                            )
-                        {
-                            running = arena.cat(running, doc);
-                            return_action = ReturnAction::Discard;
-                        }
-
-                        if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
-                            && let Some((child_ops_bytes, child_ops_len)) =
-                                ctx.dialect.fmt_dispatch(ctag)
-                        {
-                            push_call_frame!(
-                                child_id,
-                                child_ops_bytes,
-                                child_ops_len,
-                                child_fields,
-                                return_action
-                            );
-                        }
-                    }
-                }
-                FmtOp::Line | FmtOp::SoftLine | FmtOp::HardLine => {
-                    let doc = match op {
-                        FmtOp::Line => arena.line(),
-                        FmtOp::SoftLine => arena.softline(),
-                        FmtOp::HardLine => arena.hardline(),
-                        _ => unreachable!(),
-                    };
-                    if has_comments {
-                        pending = arena.cat(pending, doc);
+                        cctx.advance_token_cursor(word_count);
                     } else {
-                        running = arena.cat(running, doc);
+                        running = arena.cat(running, pending);
+                        pending = NIL_DOC;
                     }
                 }
-                FmtOp::GroupStart => {
-                    scratch.group_nest.push(GroupNestFrame::Group(running));
-                    running = NIL_DOC;
-                }
-                FmtOp::GroupEnd => {
-                    running = arena.cat(running, pending);
-                    pending = NIL_DOC;
-                    let inner = running;
-                    match scratch.group_nest.pop().expect("unmatched GroupEnd") {
-                        GroupNestFrame::Group(parent) => {
-                            let g = arena.group(inner);
-                            running = arena.cat(parent, g);
-                        }
-                        GroupNestFrame::Nest(..) => panic!("expected Group frame"),
-                    }
-                }
-                FmtOp::NestStart => {
-                    scratch.group_nest.push(GroupNestFrame::Nest(running));
-                    running = NIL_DOC;
-                }
-                FmtOp::NestEnd => {
-                    running = arena.cat(running, pending);
-                    pending = NIL_DOC;
-                    let inner = running;
-                    match scratch.group_nest.pop().expect("unmatched NestEnd") {
-                        GroupNestFrame::Nest(parent) => {
-                            let n = arena.nest(1, inner);
-                            running = arena.cat(parent, n);
-                        }
-                        GroupNestFrame::Group(_) => panic!("expected Nest frame"),
-                    }
-                }
-                FmtOp::IfSet(idx, skip) => {
-                    // INVARIANT: IfSet ops only target NodeId fields.
-                    let FieldValue::NodeId(id) = fields[idx as usize] else {
-                        panic!("IfSet: field {idx} is not a NodeId");
-                    };
-                    if id.is_null() {
-                        ip += skip as usize;
-                    }
-                }
-                FmtOp::Else(skip) => {
-                    ip += skip as usize;
-                }
-                FmtOp::EndIf => {}
-                FmtOp::ForEachStart(idx) => {
-                    // INVARIANT: ForEachStart ops only target NodeId fields.
-                    let FieldValue::NodeId(list_id) = fields[idx as usize] else {
-                        panic!("ForEachStart: field {idx} is not a NodeId");
-                    };
-                    if list_id.is_null() {
-                        ip = skip_to_foreach_end(ops, ops_count, ip);
-                    } else {
-                        let children: &'a [AnyNodeId] =
-                            ctx.reader.list_children(list_id).unwrap_or(&[]);
-                        if children.is_empty() {
-                            ip = skip_to_foreach_end(ops, ops_count, ip);
-                        } else {
-                            scratch.for_each.push(ForEachState {
-                                list_id,
-                                index: 0,
-                                body_start: ip + 1,
-                                sep_checkpoint: None,
-                            });
-                        }
-                    }
-                }
-                FmtOp::ChildItem => {
-                    let state = scratch.for_each.last().expect("ChildItem outside ForEach");
-                    let children = ctx.reader.list_children(state.list_id).unwrap_or(&[]);
-                    let child_id = children[state.index];
+                let kw = arena.keyword(kw_text);
+                running = arena.cat(running, kw);
+            }
+            FmtOp::Span(idx) => {
+                // INVARIANT: Span ops only target Span fields.
+                let FieldValue::Span(span) = fields[idx as usize] else {
+                    panic!("Span: field {idx} is not a Span");
+                };
 
+                let (s, span_start) = ctx.reader.span_text(span);
+                let quoted = span.is_quoted();
+                // A zero-length unquoted span means the field is absent
+                // (optional, unset). A zero-length *quoted* span is a
+                // real `""` token and must round-trip as `""`.
+                if quoted || !s.is_empty() {
+                    if let Some(ref cctx) = ctx.comment_ctx {
+                        // For quoted spans, the original token in source
+                        // starts one byte earlier (the opening quote) and
+                        // extends one byte past (the closing quote).
+                        let span_len =
+                            StmtLen::from_raw(u32::try_from(s.len()).unwrap_or(u32::MAX));
+                        let drain_offset = if quoted {
+                            span_start - StmtLen::from_raw(1)
+                        } else {
+                            span_start
+                        };
+                        let token_len = if quoted {
+                            span_len + StmtLen::from_raw(2)
+                        } else {
+                            span_len
+                        };
+                        let drain = cctx.drain_before(drain_offset, source, arena);
+                        flush_drain(&drain, &mut pending, &mut running, arena);
+                        cctx.advance_past(drain_offset + token_len);
+                    }
+                    if quoted {
+                        let q = arena.text("\"");
+                        let txt = arena.text(s);
+                        running = arena.cat(running, q);
+                        running = arena.cat(running, txt);
+                        running = arena.cat(running, q);
+                    } else {
+                        let txt = arena.text(s);
+                        running = arena.cat(running, txt);
+                    }
+                }
+            }
+            FmtOp::Child(idx) => {
+                // INVARIANT: Child ops only target NodeId fields.
+                let FieldValue::NodeId(child_id) = fields[idx as usize] else {
+                    panic!("Child: field {idx} is not a NodeId");
+                };
+
+                if !child_id.is_null() {
+                    drain_comments_before_child(
+                        ctx.comment_ctx.as_ref(),
+                        source,
+                        &mut pending,
+                        &mut running,
+                        arena,
+                    );
+
+                    let mut return_action = ReturnAction::CatOntoRunning;
                     let macro_rewrites = &ctx.macro_rewrites;
-                    let macro_doc = if !macro_rewrites.is_empty()
+                    if !macro_rewrites.is_empty()
                         && ctx.reader.list_children(child_id).is_none()
-                    {
-                        super::formatter::try_macro_verbatim(
+                        && let Some(doc) = super::formatter::try_macro_call(
                             ctx,
                             macro_rewrites,
+                            macro_docs,
                             arena,
                             consumed_regions,
                             macro_tokenizer,
                             child_id,
                         )
-                    } else {
-                        None
-                    };
-                    let return_action;
-
-                    if macro_doc == Some(NIL_DOC) {
-                        let state = scratch
-                            .for_each
-                            .last_mut()
-                            .expect("ForEachState must exist while handling ChildItem");
-                        if let Some((saved_running, saved_pending)) = state.sep_checkpoint.take() {
-                            running = saved_running;
-                            pending = saved_pending;
-                        }
+                    {
+                        running = arena.cat(running, doc);
                         return_action = ReturnAction::Discard;
-                    } else {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
-                            arena,
-                        );
-
-                        if let Some(verbatim) = macro_doc {
-                            running = arena.cat(running, verbatim);
-                            return_action = ReturnAction::Discard;
-                        } else {
-                            return_action = ReturnAction::CatOntoRunning;
-                        }
                     }
 
                     if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
@@ -447,301 +322,443 @@ impl Formatter {
                         );
                     }
                 }
-                FmtOp::ForEachSep(sid) => {
-                    let state = scratch
-                        .for_each
-                        .last_mut()
-                        .expect("ForEachSep outside ForEach");
-                    let children = ctx.reader.list_children(state.list_id).unwrap_or(&[]);
-                    if state.index < children.len() - 1 {
-                        state.sep_checkpoint = Some((running, pending));
-                        let sep_text = ctx.dialect.fmt_string(sid);
-                        if let Some(ref cctx) = ctx.comment_ctx
-                            && let Some((_, word_count)) =
-                                cctx.peek_keyword_tokens(sep_text, source)
-                        {
-                            cctx.advance_token_cursor(word_count);
-                        }
-                        let sep = arena.text(sep_text);
-                        running = arena.cat(running, sep);
-                    } else {
-                        ip = skip_to_foreach_end(ops, ops_count, ip);
-                        continue;
-                    }
+            }
+            FmtOp::Line | FmtOp::SoftLine | FmtOp::HardLine => {
+                let doc = match op {
+                    FmtOp::Line => arena.line(),
+                    FmtOp::SoftLine => arena.softline(),
+                    FmtOp::HardLine => arena.hardline(),
+                    _ => unreachable!(),
+                };
+                if has_comments {
+                    pending = arena.cat(pending, doc);
+                } else {
+                    running = arena.cat(running, doc);
                 }
-                FmtOp::ForEachEnd => {
-                    let state = scratch
-                        .for_each
-                        .last_mut()
-                        .expect("ForEachEnd outside ForEach");
-                    state.index += 1;
-                    let children = ctx.reader.list_children(state.list_id).unwrap_or(&[]);
-                    if state.index < children.len() {
-                        ip = state.body_start;
-                        continue;
+            }
+            FmtOp::GroupStart => {
+                scratch.group_nest.push(GroupNestFrame::Group(running));
+                running = NIL_DOC;
+            }
+            FmtOp::GroupEnd => {
+                running = arena.cat(running, pending);
+                pending = NIL_DOC;
+                let inner = running;
+                match scratch.group_nest.pop().expect("unmatched GroupEnd") {
+                    GroupNestFrame::Group(parent) => {
+                        let g = arena.group(inner);
+                        running = arena.cat(parent, g);
                     }
-                    scratch.for_each.pop();
+                    GroupNestFrame::Nest(..) => panic!("expected Group frame"),
                 }
-                FmtOp::IfBool(idx, skip) => {
-                    // INVARIANT: IfBool ops only target Bool fields.
-                    let FieldValue::Bool(val) = fields[idx as usize] else {
-                        panic!("IfBool: field {idx} is not a Bool");
-                    };
-                    if !val {
-                        ip += skip as usize;
+            }
+            FmtOp::NestStart => {
+                scratch.group_nest.push(GroupNestFrame::Nest(running));
+                running = NIL_DOC;
+            }
+            FmtOp::NestEnd => {
+                running = arena.cat(running, pending);
+                pending = NIL_DOC;
+                let inner = running;
+                match scratch.group_nest.pop().expect("unmatched NestEnd") {
+                    GroupNestFrame::Nest(parent) => {
+                        let n = arena.nest(1, inner);
+                        running = arena.cat(parent, n);
                     }
+                    GroupNestFrame::Group(_) => panic!("expected Nest frame"),
                 }
-                FmtOp::IfFlag(idx, mask, skip) => {
-                    // INVARIANT: IfFlag ops only target Flags fields.
-                    let FieldValue::Flags(f) = fields[idx as usize] else {
-                        panic!("IfFlag: field {idx} is not Flags");
-                    };
-                    if f & mask == 0 {
-                        ip += skip as usize;
-                    }
+            }
+            FmtOp::IfSet(idx, skip) => {
+                // INVARIANT: IfSet ops only target NodeId fields.
+                let FieldValue::NodeId(id) = fields[idx as usize] else {
+                    panic!("IfSet: field {idx} is not a NodeId");
+                };
+                if id.is_null() {
+                    ip += skip as usize;
                 }
-                FmtOp::IfEnum(idx, ordinal, skip) => {
-                    // INVARIANT: IfEnum ops only target Enum fields.
-                    let FieldValue::Enum(val) = fields[idx as usize] else {
-                        panic!("IfEnum: field {idx} is not an Enum");
-                    };
-                    if val != u32::from(ordinal) {
-                        ip += skip as usize;
-                    }
-                }
-                FmtOp::IfSpan(idx, skip) => {
-                    // INVARIANT: IfSpan ops only target Span fields.
-                    let FieldValue::Span(span) = fields[idx as usize] else {
-                        panic!("IfSpan: field {idx} is not a Span");
-                    };
-                    if span.is_empty() {
-                        ip += skip as usize;
-                    }
-                }
-                FmtOp::EnumDisplay(idx, base) => {
-                    // INVARIANT: EnumDisplay ops only target Enum fields.
-                    let FieldValue::Enum(ordinal) = fields[idx as usize] else {
-                        panic!("EnumDisplay: field {idx} is not an Enum");
-                    };
-                    let string_id = ctx
-                        .dialect
-                        .fmt_enum_display_val(base as usize + ordinal as usize);
-                    let kw_text = ctx.dialect.fmt_string(string_id);
-                    if let Some(ref cctx) = ctx.comment_ctx {
-                        if let Some((tok_offset, word_count)) =
-                            cctx.peek_keyword_tokens(kw_text, source)
-                        {
-                            let drain = cctx.drain_before(tok_offset, source, arena);
-                            if word_count > 1 {
-                                if drain.trailing != NIL_DOC || drain.leading != NIL_DOC {
-                                    flush_drain(&drain, &mut pending, &mut running, arena);
-                                }
-                                let interior =
-                                    cctx.drain_keyword_interior(word_count, source, arena);
-                                flush_drain(&interior, &mut pending, &mut running, arena);
-                            } else {
-                                flush_drain(&drain, &mut pending, &mut running, arena);
-                            }
-                            cctx.advance_token_cursor(word_count);
-                        } else {
-                            running = arena.cat(running, pending);
-                            pending = NIL_DOC;
-                        }
-                    }
-                    let kw = arena.keyword(kw_text);
-                    running = arena.cat(running, kw);
-                }
-                FmtOp::ForEachSelfStart => {
-                    let children = ctx
-                        .reader
-                        .list_children(cur_node_id)
-                        .expect("ForEachSelfStart on non-list node");
+            }
+            FmtOp::Else(skip) => {
+                ip += skip as usize;
+            }
+            FmtOp::EndIf => {}
+            FmtOp::ForEachStart(idx) => {
+                // INVARIANT: ForEachStart ops only target NodeId fields.
+                let FieldValue::NodeId(list_id) = fields[idx as usize] else {
+                    panic!("ForEachStart: field {idx} is not a NodeId");
+                };
+                if list_id.is_null() {
+                    ip = skip_to_foreach_end(ops, ops_count, ip);
+                } else {
+                    let children: &'a [AnyNodeId] =
+                        ctx.reader.list_children(list_id).unwrap_or(&[]);
                     if children.is_empty() {
                         ip = skip_to_foreach_end(ops, ops_count, ip);
                     } else {
                         scratch.for_each.push(ForEachState {
-                            list_id: cur_node_id,
+                            list_id,
                             index: 0,
                             body_start: ip + 1,
                             sep_checkpoint: None,
                         });
                     }
                 }
-                FmtOp::ChildPrec(child_idx, prec_base, packed_c) => {
-                    let op_field_idx = (packed_c >> 8) as usize;
-                    let is_right = (packed_c & 0xFF) != 0;
+            }
+            FmtOp::ChildItem => {
+                let state = scratch.for_each.last().expect("ChildItem outside ForEach");
+                let children = ctx.reader.list_children(state.list_id).unwrap_or(&[]);
+                let child_id = children[state.index];
 
-                    // Read the parent's operator ordinal.
-                    let FieldValue::Enum(parent_op_ordinal) = fields[op_field_idx] else {
-                        panic!("ChildPrec: op field {op_field_idx} is not an Enum");
-                    };
-                    let (parent_prec, parent_group_and_flags) =
-                        ctx.dialect.fmt_prec_lookup(prec_base, parent_op_ordinal);
-
-                    let FieldValue::NodeId(child_id) = fields[child_idx as usize] else {
-                        panic!("ChildPrec: child field {child_idx} is not a NodeId");
-                    };
-
-                    if !child_id.is_null() {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
+                let macro_rewrites = &ctx.macro_rewrites;
+                let macro_doc =
+                    if !macro_rewrites.is_empty() && ctx.reader.list_children(child_id).is_none() {
+                        super::formatter::try_macro_call(
+                            ctx,
+                            macro_rewrites,
+                            macro_docs,
                             arena,
-                        );
+                            consumed_regions,
+                            macro_tokenizer,
+                            child_id,
+                        )
+                    } else {
+                        None
+                    };
+                let return_action;
 
-                        let mut return_action = ReturnAction::CatOntoRunning;
-                        let macro_rewrites = &ctx.macro_rewrites;
-                        if !macro_rewrites.is_empty()
-                            && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
-                                ctx,
-                                macro_rewrites,
-                                arena,
-                                consumed_regions,
-                                macro_tokenizer,
-                                child_id,
-                            )
-                        {
-                            running = arena.cat(running, doc);
-                            return_action = ReturnAction::Discard;
-                        }
+                if macro_doc == Some(NIL_DOC) {
+                    let state = scratch
+                        .for_each
+                        .last_mut()
+                        .expect("ForEachState must exist while handling ChildItem");
+                    if let Some((saved_running, saved_pending)) = state.sep_checkpoint.take() {
+                        running = saved_running;
+                        pending = saved_pending;
+                    }
+                    return_action = ReturnAction::Discard;
+                } else {
+                    drain_comments_before_child(
+                        ctx.comment_ctx.as_ref(),
+                        source,
+                        &mut pending,
+                        &mut running,
+                        arena,
+                    );
 
-                        if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
-                            && let Some((child_ops_bytes, child_ops_len)) =
-                                ctx.dialect.fmt_dispatch(ctag)
-                        {
-                            if return_action != ReturnAction::Discard && parent_prec > 0 {
-                                return_action = child_prec_action(
-                                    ctx,
-                                    parent_prec,
-                                    parent_group_and_flags,
-                                    is_right,
-                                    ctag,
-                                    &child_fields,
-                                );
-                            }
-                            push_call_frame!(
-                                child_id,
-                                child_ops_bytes,
-                                child_ops_len,
-                                child_fields,
-                                return_action
-                            );
-                        }
+                    if let Some(verbatim) = macro_doc {
+                        running = arena.cat(running, verbatim);
+                        return_action = ReturnAction::Discard;
+                    } else {
+                        return_action = ReturnAction::CatOntoRunning;
                     }
                 }
-                FmtOp::ChildParenList(child_idx) => {
-                    let FieldValue::NodeId(child_id) = fields[child_idx as usize] else {
-                        panic!("ChildParenList: field {child_idx} is not a NodeId");
-                    };
 
-                    if !child_id.is_null() {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
-                            arena,
-                        );
-
-                        let mut return_action = ReturnAction::CatOntoRunning;
-                        let macro_rewrites = &ctx.macro_rewrites;
-                        if !macro_rewrites.is_empty()
-                            && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
-                                ctx,
-                                macro_rewrites,
-                                arena,
-                                consumed_regions,
-                                macro_tokenizer,
-                                child_id,
-                            )
-                        {
-                            running = arena.cat(running, doc);
-                            return_action = ReturnAction::Discard;
-                        }
-
-                        if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
-                            && let Some((child_ops_bytes, child_ops_len)) =
-                                ctx.dialect.fmt_dispatch(ctag)
-                        {
-                            if return_action != ReturnAction::Discard && ctx.dialect.is_list(ctag) {
-                                return_action = ReturnAction::WrapInParens;
+                if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
+                    && let Some((child_ops_bytes, child_ops_len)) = ctx.dialect.fmt_dispatch(ctag)
+                {
+                    push_call_frame!(
+                        child_id,
+                        child_ops_bytes,
+                        child_ops_len,
+                        child_fields,
+                        return_action
+                    );
+                }
+            }
+            FmtOp::ForEachSep(sid) => {
+                let state = scratch
+                    .for_each
+                    .last_mut()
+                    .expect("ForEachSep outside ForEach");
+                let children = ctx.reader.list_children(state.list_id).unwrap_or(&[]);
+                if state.index < children.len() - 1 {
+                    state.sep_checkpoint = Some((running, pending));
+                    let sep_text = ctx.dialect.fmt_string(sid);
+                    if let Some(ref cctx) = ctx.comment_ctx
+                        && let Some((_, word_count)) = cctx.peek_keyword_tokens(sep_text, source)
+                    {
+                        cctx.advance_token_cursor(word_count);
+                    }
+                    let sep = arena.text(sep_text);
+                    running = arena.cat(running, sep);
+                } else {
+                    ip = skip_to_foreach_end(ops, ops_count, ip);
+                    continue;
+                }
+            }
+            FmtOp::ForEachEnd => {
+                let state = scratch
+                    .for_each
+                    .last_mut()
+                    .expect("ForEachEnd outside ForEach");
+                state.index += 1;
+                let children = ctx.reader.list_children(state.list_id).unwrap_or(&[]);
+                if state.index < children.len() {
+                    ip = state.body_start;
+                    continue;
+                }
+                scratch.for_each.pop();
+            }
+            FmtOp::IfBool(idx, skip) => {
+                // INVARIANT: IfBool ops only target Bool fields.
+                let FieldValue::Bool(val) = fields[idx as usize] else {
+                    panic!("IfBool: field {idx} is not a Bool");
+                };
+                if !val {
+                    ip += skip as usize;
+                }
+            }
+            FmtOp::IfFlag(idx, mask, skip) => {
+                // INVARIANT: IfFlag ops only target Flags fields.
+                let FieldValue::Flags(f) = fields[idx as usize] else {
+                    panic!("IfFlag: field {idx} is not Flags");
+                };
+                if f & mask == 0 {
+                    ip += skip as usize;
+                }
+            }
+            FmtOp::IfEnum(idx, ordinal, skip) => {
+                // INVARIANT: IfEnum ops only target Enum fields.
+                let FieldValue::Enum(val) = fields[idx as usize] else {
+                    panic!("IfEnum: field {idx} is not an Enum");
+                };
+                if val != u32::from(ordinal) {
+                    ip += skip as usize;
+                }
+            }
+            FmtOp::IfSpan(idx, skip) => {
+                // INVARIANT: IfSpan ops only target Span fields.
+                let FieldValue::Span(span) = fields[idx as usize] else {
+                    panic!("IfSpan: field {idx} is not a Span");
+                };
+                if span.is_empty() {
+                    ip += skip as usize;
+                }
+            }
+            FmtOp::EnumDisplay(idx, base) => {
+                // INVARIANT: EnumDisplay ops only target Enum fields.
+                let FieldValue::Enum(ordinal) = fields[idx as usize] else {
+                    panic!("EnumDisplay: field {idx} is not an Enum");
+                };
+                let string_id = ctx
+                    .dialect
+                    .fmt_enum_display_val(base as usize + ordinal as usize);
+                let kw_text = ctx.dialect.fmt_string(string_id);
+                if let Some(ref cctx) = ctx.comment_ctx {
+                    if let Some((tok_offset, word_count)) =
+                        cctx.peek_keyword_tokens(kw_text, source)
+                    {
+                        let drain = cctx.drain_before(tok_offset, source, arena);
+                        if word_count > 1 {
+                            if drain.trailing != NIL_DOC || drain.leading != NIL_DOC {
+                                flush_drain(&drain, &mut pending, &mut running, arena);
                             }
-                            push_call_frame!(
-                                child_id,
-                                child_ops_bytes,
-                                child_ops_len,
-                                child_fields,
-                                return_action
-                            );
+                            let interior = cctx.drain_keyword_interior(word_count, source, arena);
+                            flush_drain(&interior, &mut pending, &mut running, arena);
+                        } else {
+                            flush_drain(&drain, &mut pending, &mut running, arena);
                         }
+                        cctx.advance_token_cursor(word_count);
+                    } else {
+                        running = arena.cat(running, pending);
+                        pending = NIL_DOC;
                     }
                 }
-                FmtOp::ChildPrecFixed(child_idx, packed_b, is_right_flag) => {
-                    let parent_prec = (packed_b >> 8) as u8;
-                    let parent_group_and_flags = (packed_b & 0xFF) as u8;
-                    let is_right = is_right_flag != 0;
+                let kw = arena.keyword(kw_text);
+                running = arena.cat(running, kw);
+            }
+            FmtOp::ForEachSelfStart => {
+                let children = ctx
+                    .reader
+                    .list_children(cur_node_id)
+                    .expect("ForEachSelfStart on non-list node");
+                if children.is_empty() {
+                    ip = skip_to_foreach_end(ops, ops_count, ip);
+                } else {
+                    scratch.for_each.push(ForEachState {
+                        list_id: cur_node_id,
+                        index: 0,
+                        body_start: ip + 1,
+                        sep_checkpoint: None,
+                    });
+                }
+            }
+            FmtOp::ChildPrec(child_idx, prec_base, packed_c) => {
+                let op_field_idx = (packed_c >> 8) as usize;
+                let is_right = (packed_c & 0xFF) != 0;
 
-                    let FieldValue::NodeId(child_id) = fields[child_idx as usize] else {
-                        panic!("ChildPrecFixed: field {child_idx} is not a NodeId");
-                    };
+                // Read the parent's operator ordinal.
+                let FieldValue::Enum(parent_op_ordinal) = fields[op_field_idx] else {
+                    panic!("ChildPrec: op field {op_field_idx} is not an Enum");
+                };
+                let (parent_prec, parent_group_and_flags) =
+                    ctx.dialect.fmt_prec_lookup(prec_base, parent_op_ordinal);
 
-                    if !child_id.is_null() {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
+                let FieldValue::NodeId(child_id) = fields[child_idx as usize] else {
+                    panic!("ChildPrec: child field {child_idx} is not a NodeId");
+                };
+
+                if !child_id.is_null() {
+                    drain_comments_before_child(
+                        ctx.comment_ctx.as_ref(),
+                        source,
+                        &mut pending,
+                        &mut running,
+                        arena,
+                    );
+
+                    let mut return_action = ReturnAction::CatOntoRunning;
+                    let macro_rewrites = &ctx.macro_rewrites;
+                    if !macro_rewrites.is_empty()
+                        && ctx.reader.list_children(child_id).is_none()
+                        && let Some(doc) = super::formatter::try_macro_call(
+                            ctx,
+                            macro_rewrites,
+                            macro_docs,
                             arena,
-                        );
+                            consumed_regions,
+                            macro_tokenizer,
+                            child_id,
+                        )
+                    {
+                        running = arena.cat(running, doc);
+                        return_action = ReturnAction::Discard;
+                    }
 
-                        let mut return_action = ReturnAction::CatOntoRunning;
-                        let macro_rewrites = &ctx.macro_rewrites;
-                        if !macro_rewrites.is_empty()
-                            && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
+                    if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
+                        && let Some((child_ops_bytes, child_ops_len)) =
+                            ctx.dialect.fmt_dispatch(ctag)
+                    {
+                        if return_action != ReturnAction::Discard && parent_prec > 0 {
+                            return_action = child_prec_action(
                                 ctx,
-                                macro_rewrites,
-                                arena,
-                                consumed_regions,
-                                macro_tokenizer,
-                                child_id,
-                            )
-                        {
-                            running = arena.cat(running, doc);
-                            return_action = ReturnAction::Discard;
-                        }
-
-                        if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
-                            && let Some((child_ops_bytes, child_ops_len)) =
-                                ctx.dialect.fmt_dispatch(ctag)
-                        {
-                            if return_action != ReturnAction::Discard && parent_prec > 0 {
-                                return_action = child_prec_action(
-                                    ctx,
-                                    parent_prec,
-                                    parent_group_and_flags,
-                                    is_right,
-                                    ctag,
-                                    &child_fields,
-                                );
-                            }
-                            push_call_frame!(
-                                child_id,
-                                child_ops_bytes,
-                                child_ops_len,
-                                child_fields,
-                                return_action
+                                parent_prec,
+                                parent_group_and_flags,
+                                is_right,
+                                ctag,
+                                &child_fields,
                             );
                         }
+                        push_call_frame!(
+                            child_id,
+                            child_ops_bytes,
+                            child_ops_len,
+                            child_fields,
+                            return_action
+                        );
                     }
                 }
             }
-            ip += 1;
+            FmtOp::ChildParenList(child_idx) => {
+                let FieldValue::NodeId(child_id) = fields[child_idx as usize] else {
+                    panic!("ChildParenList: field {child_idx} is not a NodeId");
+                };
+
+                if !child_id.is_null() {
+                    drain_comments_before_child(
+                        ctx.comment_ctx.as_ref(),
+                        source,
+                        &mut pending,
+                        &mut running,
+                        arena,
+                    );
+
+                    let mut return_action = ReturnAction::CatOntoRunning;
+                    let macro_rewrites = &ctx.macro_rewrites;
+                    if !macro_rewrites.is_empty()
+                        && ctx.reader.list_children(child_id).is_none()
+                        && let Some(doc) = super::formatter::try_macro_call(
+                            ctx,
+                            macro_rewrites,
+                            macro_docs,
+                            arena,
+                            consumed_regions,
+                            macro_tokenizer,
+                            child_id,
+                        )
+                    {
+                        running = arena.cat(running, doc);
+                        return_action = ReturnAction::Discard;
+                    }
+
+                    if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
+                        && let Some((child_ops_bytes, child_ops_len)) =
+                            ctx.dialect.fmt_dispatch(ctag)
+                    {
+                        if return_action != ReturnAction::Discard && ctx.dialect.is_list(ctag) {
+                            return_action = ReturnAction::WrapInParens;
+                        }
+                        push_call_frame!(
+                            child_id,
+                            child_ops_bytes,
+                            child_ops_len,
+                            child_fields,
+                            return_action
+                        );
+                    }
+                }
+            }
+            FmtOp::ChildPrecFixed(child_idx, packed_b, is_right_flag) => {
+                let parent_prec = (packed_b >> 8) as u8;
+                let parent_group_and_flags = (packed_b & 0xFF) as u8;
+                let is_right = is_right_flag != 0;
+
+                let FieldValue::NodeId(child_id) = fields[child_idx as usize] else {
+                    panic!("ChildPrecFixed: field {child_idx} is not a NodeId");
+                };
+
+                if !child_id.is_null() {
+                    drain_comments_before_child(
+                        ctx.comment_ctx.as_ref(),
+                        source,
+                        &mut pending,
+                        &mut running,
+                        arena,
+                    );
+
+                    let mut return_action = ReturnAction::CatOntoRunning;
+                    let macro_rewrites = &ctx.macro_rewrites;
+                    if !macro_rewrites.is_empty()
+                        && ctx.reader.list_children(child_id).is_none()
+                        && let Some(doc) = super::formatter::try_macro_call(
+                            ctx,
+                            macro_rewrites,
+                            macro_docs,
+                            arena,
+                            consumed_regions,
+                            macro_tokenizer,
+                            child_id,
+                        )
+                    {
+                        running = arena.cat(running, doc);
+                        return_action = ReturnAction::Discard;
+                    }
+
+                    if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
+                        && let Some((child_ops_bytes, child_ops_len)) =
+                            ctx.dialect.fmt_dispatch(ctag)
+                    {
+                        if return_action != ReturnAction::Discard && parent_prec > 0 {
+                            return_action = child_prec_action(
+                                ctx,
+                                parent_prec,
+                                parent_group_and_flags,
+                                is_right,
+                                ctag,
+                                &child_fields,
+                            );
+                        }
+                        push_call_frame!(
+                            child_id,
+                            child_ops_bytes,
+                            child_ops_len,
+                            child_fields,
+                            return_action
+                        );
+                    }
+                }
+            }
         }
+        ip += 1;
     }
 }
 

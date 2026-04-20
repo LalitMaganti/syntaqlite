@@ -3,7 +3,8 @@
 
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, AnyTokenizer, ParseOutcome,
+    AnyNodeId, AnyParseError, AnyParseSession, AnyParsedStatement, AnyParser, AnyTokenizer,
+    FieldValue, ParseOutcome,
 };
 use syntaqlite_syntax::source::{DocLen, DocRange, StmtLen, StmtOffset, StmtRange, StmtText};
 
@@ -11,7 +12,7 @@ use super::FormatConfig;
 use super::FormatError;
 use super::comment::{CommentCtx, CommentEntry, TokenEntry};
 use super::doc::{DocArena, DocId, NIL_DOC, RenderBuffers};
-use super::interpret::{FmtCtx, InterpretScratch};
+use super::interpret::{FmtCtx, InterpretScratch, interpret_core};
 use crate::dialect::AnyDialect;
 
 /// Convert a parse error (statement-relative offsets) to a
@@ -71,6 +72,11 @@ pub struct Formatter {
     /// verbatim; full `MacroRewrite` records would tie this buffer to
     /// the statement lifetime and prevent reuse across statements.
     pub(super) macro_rewrites: Vec<(StmtOffset, StmtLen)>,
+    /// Mini-parses created during the structured pre-compute for each
+    /// macro argument.  Held on the formatter so that the arena's
+    /// borrows into their parser buffers remain valid through render.
+    /// Cleared at the start of each statement iteration.
+    pub(super) mini_parses: Vec<MiniParse>,
     pub(super) comment_entries: Vec<CommentEntry>,
     pub(super) token_entries: Vec<TokenEntry>,
     pub(super) parts: Vec<DocId>,
@@ -133,6 +139,7 @@ impl Formatter {
             interpret_scratch: InterpretScratch::new(),
             render_bufs: RenderBuffers::new(),
             macro_rewrites: Vec::with_capacity(32),
+            mini_parses: Vec::new(),
             comment_entries: Vec::with_capacity(64),
             token_entries: Vec::with_capacity(256),
             parts: Vec::with_capacity(64),
@@ -162,17 +169,11 @@ impl Formatter {
         // coincides with the statement-relative offset the formatter
         // compares against.  Nested rewrites measure into their parent's
         // expansion and belong to a different coordinate system.
-        self.macro_rewrites.extend(
-            erased
-                .macro_rewrites()
-                .filter(|r| r.parent().is_none())
-                .map(|r| {
-                    (
-                        StmtOffset::from_raw(r.call_offset().as_u32()),
-                        StmtLen::from(r.call_length()),
-                    )
-                }),
-        );
+        for r in erased.macro_rewrites().filter(|r| r.parent().is_none()) {
+            let call_off = StmtOffset::from_raw(r.call_offset().as_u32());
+            let call_len = StmtLen::from(r.call_length());
+            self.macro_rewrites.push((call_off, call_len));
+        }
     }
 
     /// Format SQL source text. Handles multiple statements and preserves comments.
@@ -253,6 +254,24 @@ impl Formatter {
                 drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
             }
 
+            // Stage 1.5: Pre-compute structured macro-call DocIds.  The
+            // mini-parses are pulled out of `self` so that precompute
+            // can hold a long-lived `&mut Vec<MiniParse>` alongside
+            // the later `self.interpret_node` call; the Vec is moved
+            // back onto `self` after render.  Boxes' pointees don't
+            // move across the swap, so span borrows into them survive.
+            let mut mini_parses = std::mem::take(&mut self.mini_parses);
+            mini_parses.clear();
+            let macro_docs = precompute_macro_docs(
+                &self.dialect,
+                &self.config,
+                stmt_source,
+                &self.macro_rewrites,
+                &mut mini_parses,
+                &mut arena,
+                &self.macro_tokenizer,
+            );
+
             // Stage 2: Interpret bytecode for this AST into Doc fragments.
             let ctx = FmtCtx {
                 dialect: self.dialect.clone(),
@@ -260,7 +279,7 @@ impl Formatter {
                 comment_ctx,
                 macro_rewrites: std::mem::take(&mut self.macro_rewrites),
             };
-            let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
+            let interpreted = self.interpret_node(&ctx, &macro_docs, root_id, &mut arena);
             self.parts.push(interpreted);
 
             // Emit this statement's terminator.  Trailing comments now
@@ -297,6 +316,9 @@ impl Formatter {
 
             // Recycle the arena, releasing all Doc borrows from this iteration.
             self.arena = DocArena::recycle(arena);
+            // Drop mini-parses now that the arena has been rendered.
+            mini_parses.clear();
+            self.mini_parses = mini_parses;
 
             stmt_num += 1;
         }
@@ -315,7 +337,6 @@ impl Formatter {
     /// # Errors
     ///
     /// Returns `FormatError` if the source cannot be parsed.
-    #[expect(clippy::too_many_lines)]
     pub fn dump_bytecode(&mut self, source: &str) -> Result<String, FormatError> {
         use std::fmt::Write;
         use syntaqlite_common::fmt::bytecode::opcodes;
@@ -489,13 +510,25 @@ impl Formatter {
                 drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
             }
 
+            let mut mini_parses = std::mem::take(&mut self.mini_parses);
+            mini_parses.clear();
+            let macro_docs = precompute_macro_docs(
+                &self.dialect,
+                &self.config,
+                stmt_source,
+                &self.macro_rewrites,
+                &mut mini_parses,
+                &mut arena,
+                &self.macro_tokenizer,
+            );
+
             let ctx = FmtCtx {
                 dialect: self.dialect.clone(),
                 reader: erased,
                 comment_ctx,
                 macro_rewrites: std::mem::take(&mut self.macro_rewrites),
             };
-            let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
+            let interpreted = self.interpret_node(&ctx, &macro_docs, root_id, &mut arena);
             self.parts.push(interpreted);
 
             if let Some(cctx) = ctx.comment_ctx.as_ref() {
@@ -515,6 +548,8 @@ impl Formatter {
             }
             self.macro_rewrites = ctx.macro_rewrites;
             self.arena = DocArena::recycle(arena);
+            mini_parses.clear();
+            self.mini_parses = mini_parses;
 
             stmt_num += 1;
         }
@@ -632,6 +667,318 @@ pub(crate) fn try_macro_verbatim<'a>(
         }
     }
     None
+}
+
+/// Try to format a macro call structurally, falling back to verbatim.
+pub(crate) fn try_macro_call<'a>(
+    ctx: &FmtCtx<'a>,
+    regions: &[(StmtOffset, StmtLen)],
+    macro_docs: &[Option<DocId>],
+    arena: &mut DocArena<'a>,
+    consumed: &mut [bool],
+    tokenizer: &AnyTokenizer,
+    child_id: AnyNodeId,
+) -> Option<DocId> {
+    if let Some(doc) = try_macro_structured(ctx, regions, macro_docs, arena, consumed, child_id) {
+        return Some(doc);
+    }
+    try_macro_verbatim(ctx, regions, arena, consumed, tokenizer, child_id)
+}
+
+/// Emit a macro call using the pre-computed structured format in
+/// `macro_fmt_results`.  Returns `None` if no region matches or the
+/// slot holds `None` (structured formatting wasn't available for this
+/// call, so the caller should fall back to verbatim).
+pub(crate) fn try_macro_structured<'a>(
+    ctx: &FmtCtx<'a>,
+    regions: &[(StmtOffset, StmtLen)],
+    macro_docs: &[Option<DocId>],
+    _arena: &mut DocArena<'a>,
+    consumed: &mut [bool],
+    child_id: AnyNodeId,
+) -> Option<DocId> {
+    let cctx = ctx.comment_ctx.as_ref()?;
+    let (tok_offset, _) = cctx.peek_next_token()?;
+
+    let (node_text, node_off) = ctx.reader.node_text(child_id)?;
+    let node_len = StmtLen::from_raw(u32::try_from(node_text.len()).ok()?);
+    let node_end = node_off + node_len;
+
+    let mut matched_i: Option<usize> = None;
+    let mut r_end_matched = StmtOffset::default();
+    for (i, &(r_start, r_len)) in regions.iter().enumerate() {
+        if tok_offset == r_start && node_end == r_start + r_len {
+            matched_i = Some(i);
+            r_end_matched = r_start + r_len;
+            break;
+        }
+    }
+    let i = matched_i?;
+    if consumed[i] {
+        return Some(NIL_DOC);
+    }
+    let doc = (*macro_docs.get(i)?)?;
+    consumed[i] = true;
+    let _ = r_end_matched;
+    // Deliberately do NOT advance the cctx cursor here — let the child
+    // frame's Span op advance it via `advance_past` when it emits the
+    // fallback `TK_ID`.  Manually advancing here caused trailing-comment
+    // drains to land inside the inner group rather than after it.
+    Some(doc)
+}
+
+/// Self-contained mini-parse holder.  Owns its own `AnyParseSession`
+/// (which in turn owns the parser inner + source buffer).  Kept alive
+/// on the outer `Formatter` through render so that `DocId` trees
+/// produced from its AST remain valid.
+pub(super) struct MiniParse {
+    session: AnyParseSession,
+}
+
+impl MiniParse {
+    fn parse_select(dialect: &AnyDialect, wrapped: &str) -> Option<Self> {
+        let parser = AnyParser::with_config(
+            (**dialect).clone(),
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true)
+                .with_macro_fallback(dialect.has_macro_style()),
+        );
+        let mut session = parser.parse(wrapped);
+        match session.next() {
+            ParseOutcome::Ok(_stmt) => {
+                // `_stmt` borrows `session`; drop it here so we can move session.
+            }
+            _ => return None,
+        }
+        Some(MiniParse { session })
+    }
+
+    fn statement(&self) -> AnyParsedStatement<'_> {
+        self.session.arena_result()
+    }
+}
+
+/// Walk descendants of `root` looking for the node whose source extent
+/// equals `(offset, length)`.  Returns the first match found via a
+/// depth-first traversal.
+fn find_descendant_by_extent(
+    reader: &AnyParsedStatement<'_>,
+    root: AnyNodeId,
+    target_off: StmtOffset,
+    target_len: StmtLen,
+) -> Option<AnyNodeId> {
+    if let Some((text, off)) = reader.node_text(root) {
+        let len = StmtLen::from_raw(u32::try_from(text.len()).ok()?);
+        if off == target_off && len == target_len {
+            return Some(root);
+        }
+    }
+    if let Some((_, fields)) = reader.extract_fields(root) {
+        for i in 0..fields.len() {
+            if let FieldValue::NodeId(child) = fields[i]
+                && !child.is_null()
+                && let Some(found) =
+                    find_descendant_by_extent(reader, child, target_off, target_len)
+            {
+                return Some(found);
+            }
+        }
+    }
+    if let Some(children) = reader.list_children(root) {
+        for &c in children {
+            if let Some(found) = find_descendant_by_extent(reader, c, target_off, target_len) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+/// For each top-level macro call recorded in `regions`, produce a
+/// structured `DocId` (or `None` on any failure, meaning "verbatim").
+/// Each argument is parsed as `SELECT <arg>` via a `MiniParse` held on
+/// the outer formatter so that resulting span borrows survive render.
+struct ArgEntry {
+    mini_idx: usize,
+    sub_off: StmtOffset,
+    sub_len: StmtLen,
+}
+
+struct CallEntry {
+    name: String,
+    args: Vec<ArgEntry>,
+}
+
+pub(super) fn precompute_macro_docs<'a>(
+    dialect: &AnyDialect,
+    _config: &FormatConfig,
+    source: &'a StmtText,
+    regions: &[(StmtOffset, StmtLen)],
+    mini_parses: &'a mut Vec<MiniParse>,
+    arena: &mut DocArena<'a>,
+    macro_tokenizer: &AnyTokenizer,
+) -> Vec<Option<DocId>> {
+    let mut results: Vec<Option<DocId>> = Vec::with_capacity(regions.len());
+    // First pass: parse all args, stash MiniParses in `mini_parses`, and
+    // record per-call metadata.  We cannot build DocIds in-place because
+    // that would need simultaneous &'a refs to `mini_parses` and &mut
+    // to `arena`; splitting the two phases lets the borrow checker see
+    // that the final &'a borrow comes solely from `mini_parses`.
+    let mut calls: Vec<Option<CallEntry>> = Vec::with_capacity(regions.len());
+    for &(r_start, r_len) in regions {
+        let call_text = &source[StmtRange {
+            start: r_start,
+            end: r_start + r_len,
+        }];
+        let Some((name, arg_texts)) = parse_call_envelope_owned(call_text) else {
+            calls.push(None);
+            continue;
+        };
+        let mut args: Vec<ArgEntry> = Vec::with_capacity(arg_texts.len());
+        let mut failed = false;
+        for arg_text in &arg_texts {
+            let wrapped = format!("SELECT {arg_text}");
+            let Some(mini) = MiniParse::parse_select(dialect, &wrapped) else {
+                failed = true;
+                break;
+            };
+            let mini_idx = mini_parses.len();
+            mini_parses.push(mini);
+            let sub_off = StmtOffset::from_raw(7); // length of "SELECT "
+            let sub_len =
+                StmtLen::from_raw(u32::try_from(arg_text.len()).expect("arg length fits in u32"));
+            args.push(ArgEntry {
+                mini_idx,
+                sub_off,
+                sub_len,
+            });
+        }
+        if failed {
+            calls.push(None);
+        } else {
+            calls.push(Some(CallEntry {
+                name: name.to_string(),
+                args,
+            }));
+        }
+    }
+    // Second pass: now that all mini-parses are in `mini_parses`, build
+    // DocIds into `arena`.  Borrows into `mini_parses[i].session` are
+    // live for &'a, which outlives arena.
+    for call in calls {
+        let Some(call) = call else {
+            results.push(None);
+            continue;
+        };
+        let mut arg_docs: Vec<DocId> = Vec::with_capacity(call.args.len());
+        let mut any_fail = false;
+        for arg in &call.args {
+            let mini: &'a MiniParse = &mini_parses[arg.mini_idx];
+            let reader: AnyParsedStatement<'a> = mini.statement();
+            let root = reader.root_id();
+            if root.is_null() {
+                any_fail = true;
+                break;
+            }
+            let Some(sub) = find_descendant_by_extent(&reader, root, arg.sub_off, arg.sub_len)
+            else {
+                any_fail = true;
+                break;
+            };
+            let sub_ctx = FmtCtx {
+                dialect: dialect.clone(),
+                reader,
+                comment_ctx: None,
+                macro_rewrites: Vec::new(),
+            };
+            let mut sub_scratch = InterpretScratch::new();
+            let mut sub_consumed: Vec<bool> = Vec::new();
+            let sub_docs: Vec<Option<DocId>> = Vec::new();
+            let doc = interpret_core(
+                &sub_ctx,
+                &sub_docs,
+                sub,
+                arena,
+                &mut sub_scratch,
+                &mut sub_consumed,
+                macro_tokenizer,
+            );
+            arg_docs.push(doc);
+        }
+        if any_fail {
+            results.push(None);
+            continue;
+        }
+        // Assemble: name + "!(" + arg0 + ", " + arg1 + ... + ")"
+        // Prototype shortcut: leak the macro name so that `arena.text`
+        // gets the `&'a str` lifetime it needs.  A production
+        // implementation would stash the owned name in a per-statement
+        // arena on `Formatter`.
+        let name_str: &'a str = Box::leak(call.name.into_boxed_str());
+        let name_doc = arena.text(name_str);
+        let open = arena.text("!(");
+        let close = arena.text(")");
+        let sep = arena.text(", ");
+        let mut d = arena.cat(name_doc, open);
+        for (i, ad) in arg_docs.iter().enumerate() {
+            if i > 0 {
+                d = arena.cat(d, sep);
+            }
+            d = arena.cat(d, *ad);
+        }
+        d = arena.cat(d, close);
+        results.push(Some(d));
+    }
+    results
+}
+
+/// Owned-string variant of [`parse_call_envelope`] used by the pre-
+/// computation pass.  Returns the macro name and the trimmed arg text
+/// for each comma-separated argument.
+fn parse_call_envelope_owned(call_text: &str) -> Option<(&str, Vec<&str>)> {
+    let bang_pos = call_text.find("!(")?;
+    let name = &call_text[..bang_pos];
+    if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        return None;
+    }
+    let bytes = call_text.as_bytes();
+    let inner_start = bang_pos + 2;
+    let last = call_text.len().checked_sub(1)?;
+    if bytes[last] != b')' {
+        return None;
+    }
+    let inner = &call_text[inner_start..last];
+    let bytes = inner.as_bytes();
+    let mut args: Vec<&str> = Vec::new();
+    let mut depth: i32 = 0;
+    let mut seg_start = 0usize;
+    for i in 0..bytes.len() {
+        match bytes[i] {
+            b'(' => depth += 1,
+            b')' => depth -= 1,
+            b',' if depth == 0 => {
+                let slice = inner[seg_start..i].trim();
+                if !slice.is_empty() {
+                    args.push(slice);
+                }
+                seg_start = i + 1;
+            }
+            b'\'' | b'"' => return None,
+            _ => {}
+        }
+        if depth < 0 {
+            return None;
+        }
+    }
+    if depth != 0 {
+        return None;
+    }
+    let tail = inner[seg_start..].trim();
+    if !tail.is_empty() {
+        args.push(tail);
+    }
+    Some((name, args))
 }
 
 /// Raw LP/RP token type values from the `SQLite` tokenizer. These are stable

@@ -76,6 +76,12 @@ class PerfettoMacroCallFormat(TestSuite):
             out="SELECT foo!(1 + 2), 3",
         )
 
+    def test_macro_arg_expression_canonicalized(self):
+        return DiffTestBlueprint(
+            sql="SELECT cast_int!(1+2)",
+            out="SELECT cast_int!(1 + 2)",
+        )
+
     def test_macro_call_in_from(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM my_macro!(t1)",
@@ -120,13 +126,7 @@ class PerfettoMacroCallFormat(TestSuite):
             """,
             out="""\
                 SELECT *
-                FROM graph_next_sibling!(
-                  (
-                    SELECT id, parent_id, ts
-                    FROM slice
-                    WHERE dur = 0
-                  )
-                )
+                FROM graph_next_sibling!((SELECT id, parent_id, ts FROM slice WHERE dur = 0))
             """,
         )
 
@@ -168,20 +168,7 @@ class PerfettoMacroCallFormat(TestSuite):
                   )
                 )
             """,
-            out="""\
-                SELECT *
-                FROM scan!(
-                  (
-                    SELECT
-                    IIF(
-                      x > 0,
-                      1,
-                      0
-                    ) AS flag
-                    FROM t
-                  )
-                )
-            """,
+            out="SELECT * FROM scan!((SELECT IIF(x > 0, 1, 0) AS flag FROM t))",
         )
 
     def test_macro_comma_separated_args(self):
@@ -198,18 +185,7 @@ class PerfettoMacroCallFormat(TestSuite):
                     )
                   )
             """,
-            out="""\
-                SELECT *
-                FROM scan!(
-                  edges,
-                  inits,
-                  (a, b, c),
-                  (
-                    SELECT id
-                    FROM t
-                  )
-                )
-            """,
+            out="SELECT * FROM scan!(edges, inits, (a, b, c), (SELECT id FROM t))",
         )
 
     def test_macro_call_with_alias(self):
