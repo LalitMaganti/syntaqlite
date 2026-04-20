@@ -172,65 +172,70 @@ pub(crate) fn generate_functions_catalog(json_content: &str) -> Result<String, S
     w.line("pub(crate) static SQLITE_FUNCTIONS: &[FunctionEntry<'static>] = &[");
     w.indent();
     for func in &file.functions {
-        let cat = match func.category.as_str() {
-            "scalar" => "Sc",
-            "aggregate" => "Ag",
-            "window" => "Wn",
-            "table_valued" => "Tv",
-            other => {
-                return Err(format!(
-                    "unknown category '{other}' for function '{}'",
-                    func.name
-                ));
-            }
-        };
-        let name_escaped = func.name.replace('\\', "\\\\").replace('"', "\\\"");
-        let arities = func
-            .arities
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join(", ");
-        let mut rules: Vec<String> = Vec::new();
-        for avail in &func.availability {
-            let since = short_version(&avail.since)?;
-            let until = match &avail.until {
-                Some(v) => format!("Some({})", short_version(v)?),
-                None => "None".to_string(),
-            };
-            let (cflag_idx_str, polarity) = match &avail.cflag {
-                Some(name) => {
-                    let idx = cflag_index(name).ok_or_else(|| {
-                        format!("unknown cflag '{}' in function '{}'", name, func.name)
-                    })?;
-                    let pol = match avail.polarity.as_deref() {
-                        Some("enable") => "E",
-                        Some("omit") => "O",
-                        other => {
-                            return Err(format!(
-                                "unknown polarity '{:?}' for cflag '{}' in function '{}'",
-                                other, name, func.name
-                            ));
-                        }
-                    };
-                    (idx.to_string(), pol)
-                }
-                None => ("u32::MAX".to_string(), "E"),
-            };
-            rules.push(format!(
-                "A {{ since: {since}, until: {until}, cflag_index: {cflag_idx_str}, cflag_polarity: {polarity} }}"
-            ));
-        }
-        let rules_str = rules.join(", ");
-        let _ = writeln!(
-            w,
-            "F {{ info: I {{ name: \"{name_escaped}\", arities: &[{arities}], category: {cat} }}, availability: &[{rules_str}] }},"
-        );
+        emit_function_entry(&mut w, func)?;
     }
     w.close_block("];");
     w.newline();
 
     Ok(w.finish())
+}
+
+fn emit_function_entry(w: &mut RustWriter, func: &JsonFunction) -> Result<(), String> {
+    let cat = match func.category.as_str() {
+        "scalar" => "Sc",
+        "aggregate" => "Ag",
+        "window" => "Wn",
+        "table_valued" => "Tv",
+        other => {
+            return Err(format!(
+                "unknown category '{other}' for function '{}'",
+                func.name
+            ));
+        }
+    };
+    let name_escaped = func.name.replace('\\', "\\\\").replace('"', "\\\"");
+    let arities = func
+        .arities
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut rules: Vec<String> = Vec::new();
+    for avail in &func.availability {
+        let since = short_version(&avail.since)?;
+        let until = match &avail.until {
+            Some(v) => format!("Some({})", short_version(v)?),
+            None => "None".to_string(),
+        };
+        let (cflag_idx_str, polarity) = match &avail.cflag {
+            Some(name) => {
+                let idx = cflag_index(name).ok_or_else(|| {
+                    format!("unknown cflag '{}' in function '{}'", name, func.name)
+                })?;
+                let pol = match avail.polarity.as_deref() {
+                    Some("enable") => "E",
+                    Some("omit") => "O",
+                    other => {
+                        return Err(format!(
+                            "unknown polarity '{:?}' for cflag '{}' in function '{}'",
+                            other, name, func.name
+                        ));
+                    }
+                };
+                (idx.to_string(), pol)
+            }
+            None => ("u32::MAX".to_string(), "E"),
+        };
+        rules.push(format!(
+            "A {{ since: {since}, until: {until}, cflag_index: {cflag_idx_str}, cflag_polarity: {polarity} }}"
+        ));
+    }
+    let rules_str = rules.join(", ");
+    let _ = writeln!(
+        w,
+        "F {{ info: I {{ name: \"{name_escaped}\", arities: &[{arities}], category: {cat} }}, availability: &[{rules_str}] }},"
+    );
+    Ok(())
 }
 
 /// Like [`encode_version`] but returns the short `V::V3_NN` form for the

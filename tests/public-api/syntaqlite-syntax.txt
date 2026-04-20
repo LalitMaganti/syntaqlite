@@ -1369,6 +1369,8 @@ pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::orderby(&self) -> core::option:
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::returning(&self) -> core::option::Option<syntaqlite_syntax::nodes::ResultColumnList<'a>>
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::table(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableRef<'a>>
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::where_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
+pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::with_ctes(&self) -> core::option::Option<syntaqlite_syntax::nodes::CteList<'a>>
+pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::with_recursive(&self) -> bool
 pub fn syntaqlite_syntax::nodes::DeleteStmtId::from(n: syntaqlite_syntax::nodes::DeleteStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::DeleteStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::DetachStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1492,6 +1494,8 @@ pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::returning(&self) -> core::optio
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::source(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::table(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableRef<'a>>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::upsert(&self) -> core::option::Option<syntaqlite_syntax::nodes::UpsertClauseList<'a>>
+pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::with_ctes(&self) -> core::option::Option<syntaqlite_syntax::nodes::CteList<'a>>
+pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::with_recursive(&self) -> bool
 pub fn syntaqlite_syntax::nodes::InsertStmtId::from(n: syntaqlite_syntax::nodes::InsertStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::InsertStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::IsExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1752,6 +1756,8 @@ pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::returning(&self) -> core::optio
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::setlist(&self) -> core::option::Option<syntaqlite_syntax::nodes::SetClauseList<'a>>
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::table(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableRef<'a>>
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::where_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
+pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::with_ctes(&self) -> core::option::Option<syntaqlite_syntax::nodes::CteList<'a>>
+pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::with_recursive(&self) -> bool
 pub fn syntaqlite_syntax::nodes::UpdateStmtId::from(n: syntaqlite_syntax::nodes::UpdateStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::UpdateStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::UpsertAction::as_str(&self) -> &'static str
