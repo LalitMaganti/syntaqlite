@@ -1,0 +1,128 @@
+# Nightly: build libsyntaqlite.a with -Zsanitizer=address, link the C API
+# integration drivers against it with matching -fsanitize flags, and run
+# every c-api scenario. On failure, open or update a tracking issue so
+# regressions are visible without relying on workflow-failure email.
+name: Nightly C API sanitizer
+
+on:
+  schedule:
+    # 04:00 UTC nightly.
+    - cron: '0 4 * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: c-api-sanitize
+  cancel-in-progress: true
+
+jobs:
+  c-api-sanitize:
+    name: ASan + UBSan (Rust staticlib + C drivers)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install Rust nightly with rust-src
+        run: |
+          rustup toolchain install nightly --component rust-src
+          rustup default nightly
+          rustc --version
+
+      - name: Install clang (matches Rust nightly LLVM runtime)
+        run: sudo apt-get update && sudo apt-get install -y clang
+
+      - name: Cache Rust build artifacts
+        uses: actions/cache@v5
+        with:
+          path: target
+          key: cargo-sanitize-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-sanitize-${{ runner.os }}-
+
+      - name: Build sanitized libsyntaqlite.a
+        env:
+          # -Zsanitizer=address instruments Rust code. -Cforce-frame-pointers
+          # keeps useful backtraces even at -O.
+          RUSTFLAGS: "-Zsanitizer=address -Cforce-frame-pointers=yes"
+        run: |
+          cargo +nightly build \
+            -Zbuild-std \
+            --target x86_64-unknown-linux-gnu \
+            -p syntaqlite
+
+      - name: Run c-api suite with sanitizers
+        env:
+          CC: clang
+          SYNTAQLITE_CAPI_SANITIZE: "1"
+          SYNTAQLITE_STATIC_LIB: ${{ github.workspace }}/target/x86_64-unknown-linux-gnu/debug/libsyntaqlite.a
+          # Rust side is now instrumented; leak detection is meaningful.
+          ASAN_OPTIONS: "abort_on_error=1:halt_on_error=1:detect_leaks=1"
+          UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1"
+        run: tools/run-integration-tests --suite c-api -v
+
+      - name: Open or update tracking issue on failure
+        if: failure()
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = 'Nightly C API sanitizer run is failing';
+            const label = 'ci-failure:sanitizer';
+            const body = [
+              '`c-api-sanitize` nightly workflow failed.',
+              '',
+              `- Run: ${runUrl}`,
+              `- Commit: \`${context.sha}\``,
+              `- Date:   ${new Date().toISOString()}`,
+              '',
+              'Reproduce locally:',
+              '```',
+              'rustup toolchain install nightly --component rust-src',
+              'RUSTFLAGS="-Zsanitizer=address -Cforce-frame-pointers=yes" \\',
+              '  cargo +nightly build -Zbuild-std \\',
+              '  --target x86_64-unknown-linux-gnu -p syntaqlite',
+              'SYNTAQLITE_CAPI_SANITIZE=1 \\',
+              '  SYNTAQLITE_STATIC_LIB="$PWD/target/x86_64-unknown-linux-gnu/debug/libsyntaqlite.a" \\',
+              '  CC=clang tools/run-integration-tests --suite c-api -v',
+              '```',
+            ].join('\n');
+
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: label,
+            });
+
+            if (open.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: open[0].number,
+                body,
+              });
+              core.info(`Commented on existing issue #${open[0].number}`);
+              return;
+            }
+
+            try {
+              await github.rest.issues.createLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                name: label,
+                color: 'b60205',
+                description: 'Nightly sanitizer CI failure',
+              });
+            } catch (e) { /* label may already exist */ }
+
+            const created = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: [label],
+            });
+            core.info(`Opened issue #${created.data.number}`);

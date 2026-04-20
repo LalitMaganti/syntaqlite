@@ -10,12 +10,19 @@ against the scenario's expected output.
 Scenarios are defined in Python under `tests/c_api_tests/<area>.py` as
 classes deriving from `CApiTestSuite`; the module filename selects the
 driver area (e.g. `formatter.py` → `formatter_driver.c`).
+
+Sanitizer mode: when `SYNTAQLITE_CAPI_SANITIZE=1`, drivers compile and
+link with `-fsanitize=address,undefined`. Point at a sanitizer-built
+libsyntaqlite.a via `SYNTAQLITE_STATIC_LIB=<path>`; otherwise the stock
+debug lib is used (catches C-side bugs only). Stderr from failing
+scenarios is printed so sanitizer reports are visible.
 """
 
 from __future__ import annotations
 
 import importlib
 import inspect
+import os
 import re
 import subprocess
 import sys
@@ -86,13 +93,30 @@ _DRIVERS = [
     Driver(area="parser",    source="tests/c_api_tests/parser_driver.c"),
 ]
 
-_STATIC_LIB_REL = "target/debug/libsyntaqlite.a"
+_DEFAULT_STATIC_LIB_REL = "target/debug/libsyntaqlite.a"
+
+
+def _env_truthy(name: str) -> bool:
+    return os.environ.get(name, "").lower() in ("1", "true", "yes", "on")
+
+
+def _sanitize_enabled() -> bool:
+    return _env_truthy("SYNTAQLITE_CAPI_SANITIZE")
+
+
+def _resolve_static_lib(root_dir: Path) -> Path:
+    override = os.environ.get("SYNTAQLITE_STATIC_LIB")
+    if override:
+        return Path(override)
+    return root_dir / _DEFAULT_STATIC_LIB_REL
 
 
 def _ensure_static_lib(root_dir: Path, verbose: int) -> Path:
-    lib = root_dir / _STATIC_LIB_REL
+    lib = _resolve_static_lib(root_dir)
     if lib.exists():
         return lib
+    if os.environ.get("SYNTAQLITE_STATIC_LIB"):
+        raise RuntimeError(f"SYNTAQLITE_STATIC_LIB set but not found: {lib}")
     if verbose >= 1:
         print(f"Building {lib.name} via cargo...")
     subprocess.check_call(
@@ -113,9 +137,23 @@ def _platform_link_args() -> list[str]:
     return []
 
 
+def _sanitize_flags() -> list[str]:
+    return ["-fsanitize=address,undefined", "-fno-omit-frame-pointer",
+            "-fno-sanitize-recover=undefined"]
+
+
+def _sanitizer_env() -> dict[str, str]:
+    env = dict(os.environ)
+    # Rust's global allocator holds process-lifetime state that LSan would
+    # flag. Disable leak detection unless the caller explicitly opts in.
+    env.setdefault("ASAN_OPTIONS", "detect_leaks=0:abort_on_error=1:halt_on_error=1")
+    env.setdefault("UBSAN_OPTIONS", "print_stacktrace=1:halt_on_error=1")
+    return env
+
+
 def _compile_driver(
     root_dir: Path, driver: Driver, static_lib: Path, out_dir: Path,
-    verbose: int,
+    verbose: int, sanitize: bool,
 ) -> Path:
     out_bin = out_dir / (Path(driver.source).stem + (".exe" if sys.platform == "win32" else ""))
     src = root_dir / driver.source
@@ -127,9 +165,11 @@ def _compile_driver(
            "-o", str(out_bin), str(src), str(static_lib)]
     for inc in inc_dirs:
         cmd.extend(["-I", str(inc)])
+    if sanitize:
+        cmd.extend(_sanitize_flags())
     cmd.extend(_platform_link_args())
     if verbose >= 1:
-        print(f"Compiling {driver.source} -> {out_bin.name}")
+        print(f"Compiling {driver.source} -> {out_bin.name}{' [sanitize]' if sanitize else ''}")
     subprocess.check_call(cmd)
     return out_bin
 
@@ -158,21 +198,29 @@ def _load_scenarios(root_dir: Path, area: str) -> list[tuple[str, CApiScenario]]
 # Execution
 # ---------------------------------------------------------------------------
 
-def _run_scenario(binary: Path, scenario: CApiScenario) -> tuple[bool, str]:
+def _run_scenario(
+    binary: Path, scenario: CApiScenario, env: dict[str, str] | None,
+) -> tuple[bool, str, str]:
     proc = subprocess.run(
         [str(binary)], input=scenario.input.encode("utf-8"),
-        capture_output=True, timeout=30,
+        capture_output=True, timeout=30, env=env,
     )
     actual = proc.stdout.decode("utf-8", errors="replace")
+    stderr = proc.stderr.decode("utf-8", errors="replace")
     ok = proc.returncode == 0 and actual == scenario.expected
-    return ok, actual
+    return ok, actual, stderr
 
 
 def run(ctx: SuiteContext) -> int:
     root_dir = ctx.root_dir
+    sanitize = _sanitize_enabled()
     static_lib = _ensure_static_lib(root_dir, ctx.verbose)
 
+    if sanitize and ctx.verbose >= 0:
+        print(f"Sanitize mode: ASan+UBSan on C drivers, lib={static_lib}")
+
     filter_re = re.compile(ctx.filter_pattern) if ctx.filter_pattern else None
+    child_env = _sanitizer_env() if sanitize else None
 
     with tempfile.TemporaryDirectory(prefix="syntaqlite_c_api_") as tmp:
         out_dir = Path(tmp)
@@ -190,12 +238,13 @@ def run(ctx: SuiteContext) -> int:
                 if ctx.verbose >= 1:
                     print(f"No scenarios for driver '{driver.area}', skipping.")
                 continue
-            binary = _compile_driver(root_dir, driver, static_lib, out_dir, ctx.verbose)
+            binary = _compile_driver(root_dir, driver, static_lib, out_dir,
+                                      ctx.verbose, sanitize)
 
             for name, scenario in scenarios:
                 full = f"{driver.area}.{name}"
                 start = time.time()
-                ok, actual = _run_scenario(binary, scenario)
+                ok, actual, stderr = _run_scenario(binary, scenario, child_env)
                 elapsed_ms = int((time.time() - start) * 1000)
                 results.append((full, ok))
                 if ok:
@@ -207,6 +256,9 @@ def run(ctx: SuiteContext) -> int:
                     print(f"{tag} {full} ({elapsed_ms} ms)")
                     for line in format_diff(scenario.expected, actual):
                         print(line)
+                    if stderr:
+                        print("--- stderr ---")
+                        print(stderr.rstrip())
                     failed.append(full)
 
         passed = sum(1 for _, ok in results if ok)
