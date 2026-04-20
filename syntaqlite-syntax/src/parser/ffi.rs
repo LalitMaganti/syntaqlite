@@ -289,10 +289,7 @@ impl CParser {
     ///
     /// # Safety
     /// The returned slice must not outlive the borrow underlying `self`.
-    pub(crate) unsafe fn node_text<'a>(
-        &self,
-        node_id: u32,
-    ) -> Option<(&'a str, StmtOffset)> {
+    pub(crate) unsafe fn node_text<'a>(&self, node_id: u32) -> Option<(&'a str, StmtOffset)> {
         let mut out_len: u32 = 0;
         let mut out_offset: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
@@ -429,10 +426,7 @@ impl CParser {
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
-    pub(crate) unsafe fn token_leading_comments(
-        &self,
-        token_idx: TokenIdx,
-    ) -> &[CComment] {
+    pub(crate) unsafe fn token_leading_comments(&self, token_idx: TokenIdx) -> &[CComment] {
         let mut count: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer; result
         // accessors are valid after `next()` returns a non-DONE code.
@@ -451,10 +445,7 @@ impl CParser {
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
-    pub(crate) unsafe fn token_trailing_comments(
-        &self,
-        token_idx: TokenIdx,
-    ) -> &[CComment] {
+    pub(crate) unsafe fn token_trailing_comments(&self, token_idx: TokenIdx) -> &[CComment] {
         let mut count: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer; result
         // accessors are valid after `next()` returns a non-DONE code.

@@ -19,11 +19,11 @@ pub(crate) struct CommentEntry {
 }
 
 impl CommentEntry {
-    fn range(&self) -> StmtRange {
+    fn range(self) -> StmtRange {
         StmtRange::from_offset_len(self.offset, self.length)
     }
 
-    fn end(&self) -> StmtOffset {
+    fn end(self) -> StmtOffset {
         self.offset + self.length
     }
 }
@@ -36,11 +36,11 @@ pub(crate) struct TokenEntry {
 }
 
 impl TokenEntry {
-    fn range(&self) -> StmtRange {
+    fn range(self) -> StmtRange {
         StmtRange::from_offset_len(self.offset, self.length)
     }
 
-    fn end(&self) -> StmtOffset {
+    fn end(self) -> StmtOffset {
         self.offset + self.length
     }
 }
@@ -138,13 +138,7 @@ impl CommentCtx {
             if !skip_text_check {
                 let scan_end = before.min(source_end);
                 if t.end() < scan_end
-                    && has_non_comment_text(
-                        source,
-                        t.end(),
-                        scan_end,
-                        &self.comments,
-                        cursor + 1,
-                    )
+                    && has_non_comment_text(source, t.end(), scan_end, &self.comments, cursor + 1)
                 {
                     break;
                 }

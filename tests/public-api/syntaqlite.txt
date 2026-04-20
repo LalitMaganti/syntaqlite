@@ -69,7 +69,7 @@ pub enum syntaqlite::semantic::Help
 pub enum syntaqlite::semantic::LineageResult<T>
 pub enum syntaqlite::semantic::RelationKind
 pub enum syntaqlite::semantic::Severity
-pub fn syntaqlite::Catalog::from_ddl(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>, sources: &[(&str, core::option::Option<&str>)]) -> (Self, alloc::vec::Vec<alloc::string::String>)
+pub fn syntaqlite::Catalog::from_ddl(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>, sources: &[&str]) -> (Self, alloc::vec::Vec<alloc::string::String>)
 pub fn syntaqlite::Catalog::layer(&self, which: syntaqlite::semantic::CatalogLayer) -> &syntaqlite::semantic::CatalogLayerContents
 pub fn syntaqlite::Catalog::layer_mut(&mut self, which: syntaqlite::semantic::CatalogLayer) -> &mut syntaqlite::semantic::CatalogLayerContents
 pub fn syntaqlite::Catalog::new(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self

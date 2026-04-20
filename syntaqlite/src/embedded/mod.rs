@@ -27,7 +27,8 @@ pub use python::extract_python;
 #[doc(inline)]
 pub use typescript::extract_typescript;
 
-use syntaqlite_syntax::any::TokenCategory;
+use syntaqlite_syntax::ParserTokenFlags;
+use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 
 use crate::dialect::AnyDialect;
@@ -35,6 +36,7 @@ use crate::semantic::ValidationConfig;
 use crate::semantic::analyzer::SemanticAnalyzer;
 use crate::semantic::catalog::Catalog;
 use crate::semantic::diagnostics::Diagnostic;
+use crate::semantic::observer::AnalysisObserver;
 
 use offset_map::OffsetMap;
 
@@ -291,12 +293,26 @@ impl EmbeddedAnalyzer {
         fragment: &EmbeddedFragment,
     ) -> Vec<(DocOffset, DocLen, TokenCategory)> {
         let mut analyzer = self.make_analyzer();
-        let model = analyzer.analyze(fragment.sql_text(), &self.catalog, &self.config);
-        model
-            .semantic_tokens(&analyzer.dialect())
-            .into_iter()
-            .map(|t| (t.offset, t.length, t.category))
-            .collect()
+        let mut observer = TokenObserver::default();
+        let _ = analyzer.analyze_with_observer(
+            fragment.sql_text(),
+            &self.catalog,
+            &self.config,
+            &mut observer,
+        );
+        let dialect = analyzer.dialect();
+        let mut out: Vec<(DocOffset, DocLen, TokenCategory)> = Vec::new();
+        for (offset, length, tt, flags) in observer.tokens {
+            let cat = dialect.classify_token(tt, flags);
+            if cat != TokenCategory::Other {
+                out.push((offset, length, cat));
+            }
+        }
+        for (offset, length) in observer.comments {
+            out.push((offset, length, TokenCategory::Comment));
+        }
+        out.sort_by_key(|t| t.0);
+        out
     }
 
     /// Produce LSP-encoded semantic tokens for a host-language source containing
@@ -394,6 +410,35 @@ impl EmbeddedAnalyzer {
         let mut analyzer = self.make_analyzer();
         let model = analyzer.analyze(fragment.sql_text(), &self.catalog, &self.config);
         model.diagnostics().cloned().collect()
+    }
+}
+
+/// Observer that captures only tokens and comments, for
+/// [`EmbeddedAnalyzer::fragment_semantic_tokens`].
+#[derive(Default)]
+struct TokenObserver {
+    tokens: Vec<(DocOffset, DocLen, AnyTokenType, ParserTokenFlags)>,
+    comments: Vec<(DocOffset, DocLen)>,
+}
+
+impl AnalysisObserver for TokenObserver {
+    fn wants_tokens(&self) -> bool {
+        true
+    }
+    fn wants_comments(&self) -> bool {
+        true
+    }
+    fn on_token(
+        &mut self,
+        offset: DocOffset,
+        length: DocLen,
+        token_type: AnyTokenType,
+        flags: ParserTokenFlags,
+    ) {
+        self.tokens.push((offset, length, token_type, flags));
+    }
+    fn on_comment(&mut self, offset: DocOffset, length: DocLen) {
+        self.comments.push((offset, length));
     }
 }
 

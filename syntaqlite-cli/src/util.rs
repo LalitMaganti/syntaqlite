@@ -115,19 +115,13 @@ pub(crate) fn build_schema_catalog(
     }
     let paths = expand_paths(schema_files)?;
     let mut sources = Vec::new();
-    let mut uris = Vec::new();
     for path in &paths {
         let source =
             fs::read_to_string(path).map_err(|e| format!("schema {}: {e}", path.display()))?;
-        uris.push(format!("file://{}", path.display()));
         sources.push(source);
     }
-    let pairs: Vec<(&str, Option<&str>)> = sources
-        .iter()
-        .zip(uris.iter())
-        .map(|(s, u)| (s.as_str(), Some(u.as_str())))
-        .collect();
-    let (catalog, errors) = Catalog::from_ddl(dialect.clone(), &pairs);
+    let source_refs: Vec<&str> = sources.iter().map(String::as_str).collect();
+    let (catalog, errors) = Catalog::from_ddl(dialect.clone(), &source_refs);
     for err in &errors {
         eprintln!("warning: schema: {err}");
     }

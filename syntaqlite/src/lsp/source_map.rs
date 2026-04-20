@@ -28,7 +28,7 @@ impl<'a> SourceMap<'a> {
     /// one O(n) pass, returning results in the same order as `offsets`.
     ///
     /// Batching amortizes the source walk: `n` offsets cost
-    /// O(n + source_len), versus O(n × source_len) for single conversions.
+    /// O(n + `source_len`), versus O(n × `source_len`) for single conversions.
     pub(crate) fn byte_offsets_to_utf16(
         &self,
         offsets: &[DocOffset],

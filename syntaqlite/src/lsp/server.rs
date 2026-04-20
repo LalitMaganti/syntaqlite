@@ -932,8 +932,10 @@ impl<'a> SourcePositionMap<'a> {
 
     /// Convert an LSP `Position` (with UTF-16 character offset) to a document-absolute byte offset.
     pub(crate) fn position_to_offset(&self, pos: Position) -> DocOffset {
-        self.inner
-            .utf16_to_byte_offset(Utf16Line::from_raw(pos.line), Utf16Col::from_raw(pos.character))
+        self.inner.utf16_to_byte_offset(
+            Utf16Line::from_raw(pos.line),
+            Utf16Col::from_raw(pos.character),
+        )
     }
 }
 

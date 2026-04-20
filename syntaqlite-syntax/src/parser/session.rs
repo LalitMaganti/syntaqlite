@@ -1404,7 +1404,10 @@ mod tests {
         // whose expansion range contains n's arg, then recursing.
         let n_segs: Vec<_> = rewrites[1].arg_segments().collect();
         assert_eq!(n_segs.len(), 1);
-        assert_eq!(n_segs[0].origin(), ArgOrigin::Rewrite(RewriteIdx::from_raw(0)));
+        assert_eq!(
+            n_segs[0].origin(),
+            ArgOrigin::Rewrite(RewriteIdx::from_raw(0))
+        );
         let m_expansion = rewrites[0].expansion();
         let n_arg_range = crate::source::LayerRange::from_offset_len(
             n_segs[0].origin_offset(),
