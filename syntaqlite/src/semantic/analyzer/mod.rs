@@ -16,10 +16,8 @@ use crate::dialect::AnyDialect;
 use crate::dialect::SemanticRole;
 
 use super::catalog::{Catalog, CatalogLayer};
-use super::ddl::DdlReader;
 use super::diagnostics::{Diagnostic, DiagnosticMessage};
 use super::model::{SemanticModel, StatementModel};
-use super::observer::{AnalysisObserver, NoopObserver};
 use super::{AnalysisMode, ValidationConfig};
 
 use helpers::{extract_defined_relations, extract_macro_registration, parse_error_span};
@@ -27,9 +25,11 @@ use helpers::{extract_defined_relations, extract_macro_registration, parse_error
 mod helpers;
 mod pass;
 mod query_scope;
-mod walker;
+pub(crate) mod walker;
 
-use pass::ValidationPass;
+use pass::{DiagnosticsPass, StatementWalkPass};
+use query_scope::QueryScope;
+use walker::{NoopWalkPass, WalkCtx, WalkPass, walk};
 
 /// Long-lived semantic analysis engine.
 ///
@@ -188,21 +188,23 @@ impl SemanticAnalyzer {
         user_catalog: &Catalog,
         config: &ValidationConfig,
     ) -> SemanticModel {
-        self.analyze_with_observer(source, user_catalog, config, &mut NoopObserver)
+        self.analyze_with_pass(source, user_catalog, config, &mut NoopWalkPass)
     }
 
-    /// Run a complete single-pass analysis, forwarding resolution / token /
-    /// comment / definition events to `observer` as they occur.
+    /// Run a complete single-pass analysis, forwarding walk events to
+    /// `user_pass` alongside the built-in diagnostics pass.
     ///
-    /// This is the hook that in-crate LSP and embedded-SQL consumers use to
+    /// This is the entry point in-crate LSP and embedded-SQL consumers use to
     /// capture the data they need (go-to-definition, find-references, semantic
-    /// tokens, completion) without the analyzer knowing anything about them.
-    pub(crate) fn analyze_with_observer(
+    /// tokens, completion). The analyzer always runs its own
+    /// [`DiagnosticsPass`] in composition with `user_pass` via
+    /// [`StatementWalkPass`].
+    pub(crate) fn analyze_with_pass<P: WalkPass>(
         &mut self,
         source: &str,
         user_catalog: &Catalog,
         config: &ValidationConfig,
-        observer: &mut dyn AnalysisObserver,
+        user_pass: &mut P,
     ) -> SemanticModel {
         self.catalog.new_document();
         match self.mode {
@@ -214,19 +216,18 @@ impl SemanticAnalyzer {
                 self.catalog.copy_database_from(user_catalog);
             }
         }
-        let model = self.analyze_inner(source, config, observer);
+        let model = self.analyze_inner(source, config, user_pass);
         if self.mode == AnalysisMode::Execute {
             self.catalog.promote_document_to_connection();
         }
         model
     }
 
-    #[expect(clippy::too_many_lines)]
-    fn analyze_inner(
+    fn analyze_inner<P: WalkPass>(
         &mut self,
         source: &str,
         config: &ValidationConfig,
-        observer: &mut dyn AnalysisObserver,
+        user_pass: &mut P,
     ) -> SemanticModel {
         type MacroRegistry = HashMap<String, (Vec<String>, String)>;
 
@@ -271,8 +272,6 @@ impl SemanticAnalyzer {
         let mut session = parser.parse(source);
 
         let mut statements: Vec<StatementModel> = Vec::new();
-        let wants_tokens = observer.wants_tokens();
-        let wants_comments = observer.wants_comments();
 
         loop {
             let stmt = match session.next() {
@@ -296,49 +295,22 @@ impl SemanticAnalyzer {
                             Vec::new(),
                         ));
                     }
-                    let base = e.statement_base();
-                    if wants_tokens {
-                        for tok in e.tokens() {
-                            observer.on_token(
-                                tok.offset().to_doc(base),
-                                tok.length().into(),
-                                tok.token_type(),
-                                tok.flags(),
-                            );
-                        }
-                    }
-                    if wants_comments {
-                        for c in e.comments() {
-                            observer.on_comment(c.offset().to_doc(base), c.length().into());
-                        }
+                    if P::WANTS_STATEMENT_CONTEXT {
+                        user_pass.on_parse_error(&e);
                     }
                     continue;
                 }
             };
-
-            let base = stmt.statement_base();
-            if wants_tokens {
-                for tok in stmt.tokens() {
-                    observer.on_token(
-                        tok.offset().to_doc(base),
-                        tok.length().into(),
-                        tok.token_type(),
-                        tok.flags(),
-                    );
-                }
-            }
-            if wants_comments {
-                for c in stmt.comments() {
-                    observer.on_comment(c.offset().to_doc(base), c.length().into());
-                }
-            }
 
             // Process the statement and extract macro registration info.
             // The erased statement borrows the session, so we must extract
             // owned macro data before dropping it and calling register_macro.
             let (stmt_model, macro_reg) = {
                 let mut erased = stmt.erase();
-                let model = self.analyze_statement(&mut erased, config, observer);
+                if P::WANTS_STATEMENT_CONTEXT {
+                    user_pass.on_parsed_statement(&erased);
+                }
+                let model = self.analyze_statement(&mut erased, config, user_pass);
                 let reg = extract_macro_registration(
                     &erased,
                     erased.root_id(),
@@ -363,11 +335,11 @@ impl SemanticAnalyzer {
         }
     }
 
-    fn analyze_statement(
+    fn analyze_statement<P: WalkPass>(
         &mut self,
         erased: &mut AnyParsedStatement<'_>,
         config: &ValidationConfig,
-        observer: &mut dyn AnalysisObserver,
+        user_pass: &mut P,
     ) -> StatementModel {
         let root_id = erased.root_id();
         let mut diagnostics: Vec<Diagnostic> = Vec::new();
@@ -378,26 +350,19 @@ impl SemanticAnalyzer {
         // Handle module imports: resolve and analyze imported source.
         self.handle_import(erased, root_id, config, &mut diagnostics);
 
-        // Emit DDL definition events (tables/views and their columns).
-        if observer.wants_definitions() {
-            let reader = DdlReader::new(erased, self.dialect.roles());
-            if let Some((table_name, table_range)) = reader.name_span(root_id) {
-                observer.on_relation_definition(&table_name, table_range);
-                for (col_name, col_range) in reader.column_spans(root_id) {
-                    observer.on_column_definition(&table_name, &col_name, col_range);
-                }
-            }
-        }
-
-        ValidationPass::run(
-            erased,
-            root_id,
-            &self.dialect,
-            &mut self.catalog,
-            config,
-            &mut diagnostics,
-            observer,
-        );
+        // Compose DiagnosticsPass + the user's pass for this statement, then
+        // run the walker. DDL definition events (CREATE TABLE / VIEW names
+        // and columns) are emitted by the walker itself.
+        let mut stmt_pass = StatementWalkPass {
+            diagnostics: DiagnosticsPass::new(config, &mut diagnostics),
+            extra: user_pass,
+        };
+        let mut cx = WalkCtx {
+            roles: self.dialect.roles(),
+            catalog: &mut self.catalog,
+            scope: QueryScope::default(),
+        };
+        walk(erased, &mut cx, &mut stmt_pass, root_id);
 
         let lineage =
             super::lineage::compute_lineage(erased, root_id, &self.catalog, self.dialect.roles());
@@ -459,7 +424,7 @@ impl SemanticAnalyzer {
 
         // DDL accumulates into the Document layer (visible to subsequent
         // statements in the importing file).
-        let _ = self.analyze_inner(&source, config, &mut NoopObserver);
+        let _ = self.analyze_inner(&source, config, &mut NoopWalkPass);
     }
 }
 

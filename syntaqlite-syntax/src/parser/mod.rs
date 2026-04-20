@@ -930,6 +930,41 @@ impl<'a> AnyParsedStatement<'a> {
         })
     }
 
+    /// Statement-local token stream with full per-token data
+    /// (text, type, flags, offset, length).
+    ///
+    /// Like [`token_spans`](Self::token_spans) but returns full
+    /// [`AnyParserToken`] values including token type and flags. Used by
+    /// analysis passes that need to classify tokens (semantic highlighting,
+    /// completion, etc.). Requires `collect_tokens: true`.
+    pub fn tokens(&self) -> impl Iterator<Item = AnyParserToken<'a>> + use<'_, 'a> {
+        let source = self.text();
+        // SAFETY: self.raw is valid for 'a; the returned slice lives for 'a.
+        let raw: &'a [ffi::CParserToken] = unsafe { self.raw.as_ref().result_tokens() };
+        raw.iter().map(move |t| {
+            let offset = StmtOffset::from_raw(t.offset);
+            let length = StmtLen::from_raw(t.length);
+            let text = &source[StmtRange::from_offset_len(offset, length)];
+            AnyParserToken::new(
+                text,
+                AnyTokenType(t.type_),
+                ParserTokenFlags::from_raw(t.flags),
+                offset,
+                length,
+            )
+        })
+    }
+
+    /// Comments attached to this statement with full per-comment data.
+    ///
+    /// Requires `collect_tokens: true`.
+    pub fn comments(&self) -> impl Iterator<Item = Comment<'a>> + use<'_, 'a> {
+        let source = self.text();
+        // SAFETY: self.raw is valid for 'a; the returned slice lives for 'a.
+        let raw: &'a [ffi::CComment] = unsafe { self.raw.as_ref().result_comments() };
+        raw.iter().map(move |c| ffi_comment(source, c))
+    }
+
     /// Lightweight comment descriptors without source text borrows.
     ///
     /// Returns an empty iterator if `collect_tokens` was not enabled.

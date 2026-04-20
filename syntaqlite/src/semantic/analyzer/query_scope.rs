@@ -16,7 +16,7 @@ use crate::semantic::catalog::ColumnResolution;
 use super::helpers::is_rowid_alias;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(super) enum RowIdPolicy {
+pub(crate) enum RowIdPolicy {
     /// Normal table — `rowid`, `oid`, `_rowid_` are valid implicit columns.
     WithRowId,
     /// WITHOUT ROWID table — no implicit rowid column exists.
@@ -33,7 +33,7 @@ impl From<bool> for RowIdPolicy {
     }
 }
 
-pub(super) struct ActiveTable {
+pub(crate) struct ActiveTable {
     /// `None` = table exists but column list is unknown (accept any ref).
     columns: Option<Vec<String>>,
     rowid: RowIdPolicy,
@@ -52,7 +52,7 @@ impl ActiveTable {
 }
 
 #[derive(Default)]
-pub(super) struct ScopeFrame {
+pub(crate) struct ScopeFrame {
     /// Named tables/aliases, keyed by lowercase name.
     named: HashMap<String, ActiveTable>,
     /// Anonymous sources (unaliased subqueries). Participate in unqualified
@@ -61,24 +61,24 @@ pub(super) struct ScopeFrame {
 }
 
 #[derive(Default)]
-pub(super) struct QueryScope {
+pub(crate) struct QueryScope {
     frames: Vec<ScopeFrame>,
 }
 
 impl QueryScope {
-    pub(super) fn has_frames(&self) -> bool {
+    pub(crate) fn has_frames(&self) -> bool {
         !self.frames.is_empty()
     }
 
-    pub(super) fn push(&mut self) {
+    pub(crate) fn push(&mut self) {
         self.frames.push(ScopeFrame::default());
     }
 
-    pub(super) fn pop(&mut self) {
+    pub(crate) fn pop(&mut self) {
         self.frames.pop();
     }
 
-    pub(super) fn add_table(
+    pub(crate) fn add_table(
         &mut self,
         name: &str,
         columns: Option<Vec<String>>,
@@ -91,7 +91,7 @@ impl QueryScope {
         }
     }
 
-    pub(super) fn add_anonymous(&mut self, columns: Option<Vec<String>>) {
+    pub(crate) fn add_anonymous(&mut self, columns: Option<Vec<String>>) {
         if let Some(frame) = self.frames.last_mut() {
             frame.anonymous.push(ActiveTable {
                 columns,
@@ -100,7 +100,7 @@ impl QueryScope {
         }
     }
 
-    pub(super) fn resolve_column(&self, table: Option<&str>, column: &str) -> ColumnResolution {
+    pub(crate) fn resolve_column(&self, table: Option<&str>, column: &str) -> ColumnResolution {
         if let Some(tbl) = table {
             self.resolve_qualified(tbl, column)
         } else {
@@ -172,7 +172,7 @@ impl QueryScope {
     }
 
     /// Collect all known column names (for fuzzy suggestions).
-    pub(super) fn all_column_names(&self, table: Option<&str>) -> Vec<String> {
+    pub(crate) fn all_column_names(&self, table: Option<&str>) -> Vec<String> {
         let mut names: Vec<String> = Vec::new();
         for frame in self.frames.iter().rev() {
             for (tbl_name, entry) in &frame.named {
