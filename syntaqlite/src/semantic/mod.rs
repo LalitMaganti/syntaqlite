@@ -42,12 +42,14 @@
 //! assert!(model.has_diagnostics());
 //! ```
 
-#[cfg(feature = "lsp")]
+#[cfg(feature = "validation")]
 pub(crate) mod analysis;
 #[cfg(feature = "validation")]
 pub(crate) mod analyzer;
 #[cfg(feature = "validation")]
 pub(crate) mod catalog;
+#[cfg(feature = "validation")]
+pub(crate) mod completion;
 #[cfg(feature = "validation")]
 pub(crate) mod ddl;
 pub(crate) mod diagnostics;

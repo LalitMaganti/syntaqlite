@@ -15,7 +15,8 @@ use syntaqlite_syntax::util::is_suggestable_keyword;
 use crate::dialect::AnyDialect;
 use crate::semantic::Catalog;
 
-use super::analysis_data::CompletionContext;
+use crate::semantic::completion::CompletionContext;
+
 use super::{CompletionEntry, CompletionInfo, CompletionKind};
 
 /// Assemble completion items from the given completion info, dialect, and

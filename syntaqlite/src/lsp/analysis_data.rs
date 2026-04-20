@@ -1,28 +1,26 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! LSP-side capture pass and per-file glue.
+//! LSP-shaped analysis data and the capture pass that populates it.
 //!
-//! The core analysis output types live in [`crate::semantic::analysis`]. This
-//! module owns:
+//! The types in this module describe analysis results in the shape LSP
+//! services want: resolved symbols with markdown-friendly fields, cross-file
+//! definition locations, per-document bundles. Generic token/comment data
+//! lives in [`crate::semantic::analysis`].
 //!
 //! - [`LspCapturePass`] — a [`WalkPass`] impl that fills a
-//!   [`DocumentAnalysisData`] directly during analysis. Replaces the old
-//!   observer-based capture.
+//!   [`DocumentAnalysisData`] directly during analysis.
 //! - [`ExternalDefinitions`] — a cross-file definition-site registry consulted
 //!   by the capture pass to correlate resolutions with schema files.
-//! - [`CompletionInfo`] / [`CompletionContext`] — the completion-probe output
-//!   consumed by the LSP completion service.
 
 use std::collections::HashMap;
 
-use syntaqlite_syntax::any::{AnyParseError, AnyParsedStatement, AnyTokenType};
-use syntaqlite_syntax::source::DocRange;
+use syntaqlite_syntax::any::TokenCategory;
+use syntaqlite_syntax::any::{AnyParseError, AnyParsedStatement};
+use syntaqlite_syntax::source::{DocOffset, DocRange};
 
-use crate::semantic::analysis::{
-    DefinitionLocation, DocumentAnalysisData, Resolution, ResolvedSymbol, StoredComment,
-    StoredToken,
-};
+use crate::dialect::AnyDialect;
+use crate::semantic::analysis::{SemanticToken, StoredComment, StoredToken};
 use crate::semantic::analyzer::walker::{
     CallEvent, ColumnRefEvent, SourceRefEvent, WalkCtx, WalkPass,
 };
@@ -30,36 +28,167 @@ use crate::semantic::catalog::{
     AritySpec, ColumnResolution, FunctionCategory, FunctionCheckResult,
 };
 
-// ── Completion ───────────────────────────────────────────────────────────────
+// ── Resolved symbols ──────────────────────────────────────────────────────────
 
-/// Semantic completion context derived from parser stack state.
-#[repr(u32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum CompletionContext {
-    Unknown = 0,
-    Expression = 1,
-    TableRef = 2,
+/// A definition site that a reference points to.
+#[derive(Debug, Clone)]
+pub(crate) struct DefinitionLocation {
+    pub(crate) range: DocRange,
+    /// `Some` when the definition lives in another file (external schema).
+    pub(crate) file_uri: Option<String>,
 }
 
-impl CompletionContext {
-    pub(crate) fn from_parser(v: syntaqlite_syntax::CompletionContext) -> Self {
-        match v {
-            syntaqlite_syntax::CompletionContext::Expression => Self::Expression,
-            syntaqlite_syntax::CompletionContext::TableRef => Self::TableRef,
-            syntaqlite_syntax::CompletionContext::Unknown => Self::Unknown,
+/// Result of a go-to-definition lookup.
+#[derive(Debug, Clone)]
+pub(crate) struct DefinitionResult {
+    pub(crate) origin: DocRange,
+    pub(crate) target: DefinitionLocation,
+}
+
+/// A symbol resolution recorded during the validation pass.
+#[derive(Debug, Clone)]
+pub(crate) enum ResolvedSymbol {
+    Table {
+        name: String,
+        columns: Option<Vec<String>>,
+        definition: Option<DefinitionLocation>,
+    },
+    Column {
+        column: String,
+        table: String,
+        all_columns: Vec<String>,
+        definition: Option<DefinitionLocation>,
+    },
+    Function {
+        category: String,
+        arities: Vec<String>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Resolution {
+    pub(crate) range: DocRange,
+    pub(crate) symbol: ResolvedSymbol,
+}
+
+/// Identity of a symbol for matching across resolutions.
+#[derive(Debug)]
+pub(crate) enum SymbolIdentity {
+    Table(String),
+    Column { table: String, column: String },
+}
+
+impl SymbolIdentity {
+    pub(crate) fn from_resolved(sym: &ResolvedSymbol) -> Option<Self> {
+        match sym {
+            ResolvedSymbol::Table { name, .. } => {
+                Some(SymbolIdentity::Table(name.to_ascii_lowercase()))
+            }
+            ResolvedSymbol::Column { column, table, .. } => Some(SymbolIdentity::Column {
+                table: table.to_ascii_lowercase(),
+                column: column.to_ascii_lowercase(),
+            }),
+            ResolvedSymbol::Function { .. } => None,
+        }
+    }
+
+    fn matches(&self, sym: &ResolvedSymbol) -> bool {
+        match (self, sym) {
+            (SymbolIdentity::Table(name), ResolvedSymbol::Table { name: n, .. }) => {
+                n.eq_ignore_ascii_case(name)
+            }
+            (
+                SymbolIdentity::Column { table, column },
+                ResolvedSymbol::Column {
+                    table: t,
+                    column: c,
+                    ..
+                },
+            ) => t.eq_ignore_ascii_case(table) && c.eq_ignore_ascii_case(column),
+            _ => false,
+        }
+    }
+
+    /// Key into `definition_offsets` for this symbol.
+    pub(crate) fn definition_key(&self) -> String {
+        match self {
+            SymbolIdentity::Table(name) => name.clone(),
+            SymbolIdentity::Column { table, column } => format!("{table}.{column}"),
         }
     }
 }
 
-/// Expected tokens and semantic context at a cursor position.
-#[derive(Debug)]
-pub(crate) struct CompletionInfo {
-    pub(crate) tokens: Vec<AnyTokenType>,
-    pub(crate) context: CompletionContext,
-    pub(crate) qualifier: Option<String>,
+// ── DocumentAnalysisData ──────────────────────────────────────────────────────
+
+/// Per-document bundle of everything LSP services query after analysis:
+/// tokens, comments, resolved references, definition sites. Populated by
+/// [`LspCapturePass`] during a semantic-analyzer pass.
+#[derive(Debug, Default)]
+pub(crate) struct DocumentAnalysisData {
+    pub(crate) tokens: Vec<StoredToken>,
+    pub(crate) comments: Vec<StoredComment>,
+    pub(crate) resolutions: Vec<Resolution>,
+    /// Maps `lowercase(name)` → `DocRange` for same-file definition sites.
+    /// Keys for columns look like `"table.column"` (lowercased).
+    pub(crate) definition_offsets: HashMap<String, DocRange>,
 }
 
-// ── External definition registry ─────────────────────────────────────────────
+impl DocumentAnalysisData {
+    pub(crate) fn semantic_tokens(&self, dialect: &AnyDialect) -> Vec<SemanticToken> {
+        let mut out = Vec::new();
+        for t in &self.tokens {
+            let cat = dialect.classify_token(t.token_type, t.flags);
+            if cat != TokenCategory::Other {
+                out.push(SemanticToken {
+                    offset: t.offset,
+                    length: t.length,
+                    category: cat,
+                });
+            }
+        }
+        for c in &self.comments {
+            out.push(SemanticToken {
+                offset: c.offset,
+                length: c.length,
+                category: TokenCategory::Comment,
+            });
+        }
+        out.sort_by_key(|t| t.offset);
+        out
+    }
+
+    /// The resolution whose span contains `offset`, if any.
+    pub(crate) fn resolution_at(&self, offset: DocOffset) -> Option<&Resolution> {
+        self.resolutions
+            .iter()
+            .find(|r| offset >= r.range.start && offset < r.range.end)
+    }
+
+    /// Find all resolutions in this document that match the given identity.
+    pub(crate) fn references_matching(&self, kind: &SymbolIdentity) -> Vec<DocRange> {
+        self.resolutions
+            .iter()
+            .filter(|r| kind.matches(&r.symbol))
+            .map(|r| r.range)
+            .collect()
+    }
+
+    /// Go-to-definition target for the resolution at `offset`, if any.
+    pub(crate) fn definition_at(&self, offset: DocOffset) -> Option<DefinitionResult> {
+        self.resolution_at(offset).and_then(|r| match &r.symbol {
+            ResolvedSymbol::Table { definition, .. }
+            | ResolvedSymbol::Column { definition, .. } => {
+                definition.as_ref().map(|d| DefinitionResult {
+                    origin: r.range,
+                    target: d.clone(),
+                })
+            }
+            ResolvedSymbol::Function { .. } => None,
+        })
+    }
+}
+
+// ── External definition registry ──────────────────────────────────────────────
 
 /// A definition site in a source file other than the one being analyzed
 /// (e.g. an external schema that was loaded via `from_ddl`).
@@ -132,9 +261,6 @@ impl ExternalDefinitions {
 
 /// Walk-time pass that fills a [`DocumentAnalysisData`] with everything LSP
 /// services need: resolved references, definition sites, tokens, comments.
-///
-/// The pass holds a reference to an optional external-definition registry so it
-/// can correlate resolutions with cross-file definition sites.
 pub(crate) struct LspCapturePass<'a> {
     pub(crate) data: DocumentAnalysisData,
     external: Option<&'a ExternalDefinitions>,
