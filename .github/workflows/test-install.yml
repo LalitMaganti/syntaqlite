@@ -55,6 +55,52 @@ jobs:
           echo "SELECT 1" | syntaqlite fmt
           echo "SELECT 1" | syntaqlite validate
 
+  test-npm:
+    name: npm (browser e2e against registry)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      # npm publishing is async — retry until the registry has the package.
+      - name: Wait for registry availability
+        shell: bash
+        working-directory: web/syntaqlite-js
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if npm view syntaqlite@latest version >/dev/null 2>&1; then
+              echo "available: $(npm view syntaqlite@latest version)"
+              break
+            fi
+            echo "Attempt $attempt: not yet, waiting 60s..."
+            sleep 60
+          done
+
+      - name: Install test deps
+        working-directory: web/syntaqlite-js
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: web/syntaqlite-js
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser e2e smoke against published package
+        working-directory: web/syntaqlite-js
+        run: npm run test:package:registry
+
+      - name: Upload Playwright report on failure
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: test-install-npm-report
+          path: |
+            web/syntaqlite-js/playwright-report/
+            web/syntaqlite-js/test-results/
+          retention-days: 30
+
   test-download-script:
     name: Download script (${{ matrix.os }})
     strategy:

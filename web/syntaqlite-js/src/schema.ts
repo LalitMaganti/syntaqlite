@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-import type {Engine} from "./engine";
+import type {Engine} from "./engine.js";
 
 export type SchemaFormat = "simple" | "ddl";
 

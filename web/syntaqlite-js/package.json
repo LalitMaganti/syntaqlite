@@ -21,9 +21,13 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "prepublishOnly": "node scripts/verify-tarball.mjs",
+    "test:package": "node tests/setup-fixture.mjs local && playwright test",
+    "test:package:registry": "node tests/setup-fixture.mjs registry && playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "typescript": "^5.7.2"
   }
 }

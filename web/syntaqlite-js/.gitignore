@@ -1,3 +1,8 @@
 dist/
 node_modules/
 wasm/
+*.tgz
+tests/fixture/node_modules/
+tests/fixture/package-lock.json
+test-results/
+playwright-report/
