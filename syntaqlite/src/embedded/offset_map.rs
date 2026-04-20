@@ -57,11 +57,13 @@ impl OffsetMap {
     /// Returns `None` if the offset falls inside a hole placeholder, since
     /// those regions correspond to host-language expressions, not SQL.
     pub(crate) fn to_host(&self, sql_offset: DocOffset) -> Option<DocOffset> {
-        // Walk segments accumulating cumulative drift.  Drift can be
-        // negative when a host expression is shorter than the placeholder,
-        // so arithmetic happens in `i64` before projecting back to
-        // `DocOffset`.
-        let mut drift: i64 = 0;
+        // Sum the SQL and host widths of every placeholder that
+        // `sql_offset` has passed.  The loop only advances a sum when
+        // `sql_offset >= seg.sql_start + seg.sql_len`, so the invariant
+        // `sql_offset >= sql_sum` holds after the walk — keeping every
+        // subtraction below within unsigned-length arithmetic.
+        let mut host_sum = DocLen::default();
+        let mut sql_sum = DocLen::default();
         for seg in &self.segments {
             if sql_offset < seg.sql_start {
                 break;
@@ -69,11 +71,15 @@ impl OffsetMap {
             if sql_offset < seg.sql_start + seg.sql_len {
                 return None;
             }
-            drift += i64::from(seg.host_len.as_u32()) - i64::from(seg.sql_len.as_u32());
+            host_sum += seg.host_len;
+            sql_sum += seg.sql_len;
         }
 
-        let host = i64::from(sql_offset.as_u32()) + i64::from(self.base_offset.as_u32()) + drift;
-        Some(DocOffset::from_raw(u32::try_from(host).ok()?))
+        // Bytes of non-placeholder SQL content before `sql_offset`.
+        // Re-expressing `sql_offset` as a length from zero lets the final
+        // subtraction stay in `DocLen`.
+        let non_placeholder = (sql_offset - DocOffset::default()) - sql_sum;
+        Some(self.base_offset + host_sum + non_placeholder)
     }
 }
 
