@@ -3,7 +3,10 @@
 
 //! Python f-string SQL extraction.
 
-use super::{EmbeddedFragment, HOLE_PLACEHOLDER, Hole, starts_with_sql_keyword};
+use super::{
+    EmbeddedFragment, HOLE_PLACEHOLDER, Hole, doc_offset_from_usize, doc_range_from_usize,
+    starts_with_sql_keyword,
+};
 
 /// Extract SQL fragments from Python source code.
 ///
@@ -157,11 +160,11 @@ fn extract_fstring_fragment(
             let hole_content_end = find_matching_brace(bytes, j + 1, content_end)?;
             let hole_end = hole_content_end + 1;
 
-            let sql_offset = sql_text.len();
+            let sql_offset = doc_offset_from_usize(sql_text.len());
             sql_text.push_str(HOLE_PLACEHOLDER);
 
             holes.push(Hole {
-                host_range: hole_start..hole_end,
+                host_range: doc_range_from_usize(hole_start, hole_end),
                 sql_offset,
             });
             j = hole_end;
@@ -175,7 +178,7 @@ fn extract_fstring_fragment(
     }
 
     Some(EmbeddedFragment {
-        sql_range: content_start..content_end,
+        sql_range: doc_range_from_usize(content_start, content_end),
         sql_text,
         holes,
     })

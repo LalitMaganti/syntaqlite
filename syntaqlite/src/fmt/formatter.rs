@@ -5,7 +5,7 @@ use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
     AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, AnyTokenizer, ParseOutcome,
 };
-use syntaqlite_syntax::source::{DocLen, DocRange};
+use syntaqlite_syntax::source::{DocLen, DocRange, StmtLen, StmtOffset, StmtRange, StmtText};
 
 use super::FormatConfig;
 use super::FormatError;
@@ -70,7 +70,7 @@ pub struct Formatter {
     /// formatter only needs positions to decide when to emit a call
     /// verbatim; full `MacroRewrite` records would tie this buffer to
     /// the statement lifetime and prevent reuse across statements.
-    pub(super) macro_rewrites: Vec<(u32, u32)>,
+    pub(super) macro_rewrites: Vec<(StmtOffset, StmtLen)>,
     pub(super) comment_entries: Vec<CommentEntry>,
     pub(super) token_entries: Vec<TokenEntry>,
     pub(super) parts: Vec<DocId>,
@@ -147,22 +147,30 @@ impl Formatter {
         self.comment_entries.clear();
         self.comment_entries
             .extend(erased.comment_spans().map(|c| CommentEntry {
-                offset: c.offset().as_u32(),
-                length: c.length().as_u32(),
+                offset: c.offset(),
+                length: c.length(),
                 kind: c.kind(),
                 side: c.side(),
             }));
         self.token_entries.clear();
         self.token_entries
             .extend(erased.token_spans().map(|range| TokenEntry {
-                offset: range.start.as_u32(),
-                length: range.len().as_u32(),
+                offset: range.start,
+                length: range.len(),
             }));
-        self.macro_rewrites.extend(
-            erased
-                .macro_rewrites()
-                .map(|r| (r.call_offset().as_u32(), r.call_length().as_u32())),
-        );
+        // Only top-level rewrites are meaningful here: their `LayerOffset`
+        // coincides with the statement-relative offset the formatter
+        // compares against.  Nested rewrites measure into their parent's
+        // expansion and belong to a different coordinate system.
+        self.macro_rewrites
+            .extend(erased.macro_rewrites().filter(|r| r.parent().is_none()).map(
+                |r| {
+                    (
+                        StmtOffset::from_raw(r.call_offset().as_u32()),
+                        StmtLen::from(r.call_length()),
+                    )
+                },
+            ));
     }
 
     /// Format SQL source text. Handles multiple statements and preserves comments.
@@ -207,7 +215,7 @@ impl Formatter {
 
             let erased = stmt.erase();
             self.collect_side_channels(&erased);
-            let stmt_source = erased.text().as_str();
+            let stmt_source = erased.text();
 
             let root_id = erased.root_id();
             let semicolons = self.config.semicolons;
@@ -465,7 +473,7 @@ impl Formatter {
             let mut arena = DocArena::recycle(prev_arena);
             self.parts.clear();
 
-            let stmt_source = erased.text().as_str();
+            let stmt_source = erased.text();
             if stmt_num > 0 {
                 emit_stmt_separator(
                     comment_ctx.as_ref(),
@@ -517,7 +525,7 @@ impl Formatter {
 
 fn emit_stmt_separator<'a>(
     comment_ctx: Option<&CommentCtx>,
-    source: &'a str,
+    source: &'a StmtText,
     arena: &mut DocArena<'a>,
     parts: &mut Vec<DocId>,
 ) {
@@ -532,13 +540,14 @@ fn emit_stmt_separator<'a>(
 
 fn drain_gap_comments<'a>(
     ctx: &CommentCtx,
-    before: u32,
-    source: &'a str,
+    before: StmtOffset,
+    source: &'a StmtText,
     arena: &mut DocArena<'a>,
     parts: &mut Vec<DocId>,
 ) {
     let mut prev_was_comment = false;
     let mut last_end = ctx.prev_token_end();
+    let source_end = StmtOffset::default() + source.byte_len();
     while let Some(c) = ctx.peek_comment() {
         if c.offset >= before {
             break;
@@ -546,13 +555,15 @@ fn drain_gap_comments<'a>(
         // Preserve blank lines between separate comment blocks
         // (but not between code tokens and the first comment).
         if prev_was_comment {
-            let gap_start = (last_end as usize).min(source.len());
-            let gap_end = (c.offset as usize).min(source.len());
-            if gap_start < gap_end && source[gap_start..gap_end].contains("\n\n") {
+            let gap = StmtRange {
+                start: last_end.min(source_end),
+                end: c.offset.min(source_end),
+            };
+            if !gap.is_empty() && source[gap].contains("\n\n") {
                 parts.push(arena.hardline());
             }
         }
-        let text = &source[c.offset as usize..(c.offset + c.length) as usize];
+        let text = &source[StmtRange::from_offset_len(c.offset, c.length)];
         parts.push(arena.text(text));
         parts.push(arena.hardline());
         last_end = c.offset + c.length;
@@ -586,7 +597,7 @@ fn drain_gap_comments<'a>(
 ///   before a `TableRef`, `AS` before an alias `IdentName`).
 pub(crate) fn try_macro_verbatim<'a>(
     ctx: &FmtCtx<'a>,
-    regions: &[(u32, u32)],
+    regions: &[(StmtOffset, StmtLen)],
     arena: &mut DocArena<'a>,
     consumed: &mut [bool],
     tokenizer: &AnyTokenizer,
@@ -597,8 +608,10 @@ pub(crate) fn try_macro_verbatim<'a>(
     let source = ctx.text();
 
     let (node_text, node_off) = ctx.reader.node_text(child_id)?;
-    let node_len = u32::try_from(node_text.len())
-        .expect("node text length fits in u32; source buffer is addressed via u32 offsets");
+    let node_len = StmtLen::from_raw(
+        u32::try_from(node_text.len())
+            .expect("node text length fits in u32; source buffer is addressed via u32 offsets"),
+    );
     let node_end = node_off + node_len;
 
     for (i, &(r_start, r_len)) in regions.iter().enumerate() {
@@ -609,7 +622,10 @@ pub(crate) fn try_macro_verbatim<'a>(
                 return Some(NIL_DOC);
             }
             consumed[i] = true;
-            let macro_text = &source[r_start as usize..r_end as usize];
+            let macro_text = &source[StmtRange {
+                start: r_start,
+                end: r_end,
+            }];
             return Some(reindent_macro(macro_text, tokenizer, arena));
         }
     }
@@ -755,7 +771,7 @@ mod tests {
 
     #[test]
     fn emit_stmt_separator_without_comments_emits_blank_line() {
-        let source = "SELECT 1";
+        let source = StmtText::new("SELECT 1");
         let mut arena = DocArena::new();
         let mut parts = Vec::new();
         emit_stmt_separator(None, source, &mut arena, &mut parts);
@@ -768,17 +784,17 @@ mod tests {
         // and drains LEADING comments of the next statement.  The
         // statement terminator (`;`) and any TRAILING comments on it are
         // emitted by per-statement processing in `format`, not here.
-        let source = "/*x*/SELECT";
+        let source = StmtText::new("/*x*/SELECT");
         let ctx = CommentCtx::new(
             vec![CommentEntry {
-                offset: 0,
-                length: 5,
+                offset: StmtOffset::from_raw(0),
+                length: StmtLen::from_raw(5),
                 kind: CommentKind::Block,
                 side: CommentSide::Leading,
             }],
             vec![TokenEntry {
-                offset: 5,
-                length: 6,
+                offset: StmtOffset::from_raw(5),
+                length: StmtLen::from_raw(6),
             }],
         );
         let mut arena = DocArena::new();
@@ -789,30 +805,30 @@ mod tests {
 
     #[test]
     fn drain_gap_comments_writes_each_comment_on_own_line() {
-        let source = "--a\n/*b*/SELECT";
+        let source = StmtText::new("--a\n/*b*/SELECT");
         let ctx = CommentCtx::new(
             vec![
                 CommentEntry {
-                    offset: 0,
-                    length: 3,
+                    offset: StmtOffset::from_raw(0),
+                    length: StmtLen::from_raw(3),
                     kind: CommentKind::Line,
                     side: CommentSide::Leading,
                 },
                 CommentEntry {
-                    offset: 4,
-                    length: 5,
+                    offset: StmtOffset::from_raw(4),
+                    length: StmtLen::from_raw(5),
                     kind: CommentKind::Block,
                     side: CommentSide::Leading,
                 },
             ],
             vec![TokenEntry {
-                offset: 9,
-                length: 6,
+                offset: StmtOffset::from_raw(9),
+                length: StmtLen::from_raw(6),
             }],
         );
         let mut arena = DocArena::new();
         let mut parts = Vec::new();
-        drain_gap_comments(&ctx, 9, source, &mut arena, &mut parts);
+        drain_gap_comments(&ctx, StmtOffset::from_raw(9), source, &mut arena, &mut parts);
         assert_eq!(render_parts(&mut arena, &parts), "--a\n/*b*/\n");
     }
 }

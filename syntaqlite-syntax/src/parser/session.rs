@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 #[cfg(feature = "sqlite")]
-use crate::source::{DocText, StatementBase, StmtLen, StmtOffset, StmtText};
+use crate::source::{DocText, StatementBase, StmtLen, StmtOffset, StmtText, TokenIdx};
 
 #[cfg(feature = "sqlite")]
 use super::{
@@ -333,7 +333,7 @@ impl<'a> ParsedStatement<'a> {
     /// Comments that appear immediately before token `token_idx`.
     ///
     /// Requires `collect_tokens: true` in [`ParserConfig`].
-    pub fn leading_comments(&self, token_idx: u32) -> impl Iterator<Item = Comment<'a>> {
+    pub fn leading_comments(&self, token_idx: TokenIdx) -> impl Iterator<Item = Comment<'a>> {
         self.0.leading_comments(token_idx)
     }
 
@@ -341,7 +341,7 @@ impl<'a> ParsedStatement<'a> {
     /// after it.
     ///
     /// Requires `collect_tokens: true` in [`ParserConfig`].
-    pub fn trailing_comments(&self, token_idx: u32) -> impl Iterator<Item = Comment<'a>> {
+    pub fn trailing_comments(&self, token_idx: TokenIdx) -> impl Iterator<Item = Comment<'a>> {
         self.0.trailing_comments(token_idx)
     }
 
@@ -361,7 +361,7 @@ impl<'a> ParsedStatement<'a> {
 
     /// Source text of AST node `id` as `(text, offset)`.  See
     /// [`AnyParsedStatement::node_text`](super::AnyParsedStatement::node_text).
-    pub fn node_text(&self, id: super::AnyNodeId) -> Option<(&'a str, u32)> {
+    pub fn node_text(&self, id: super::AnyNodeId) -> Option<(&'a str, StmtOffset)> {
         self.0.any.node_text(id)
     }
 
@@ -494,7 +494,7 @@ mod tests {
     use std::panic::{self, AssertUnwindSafe};
     use std::rc::Rc;
 
-    use crate::source::{LayerLen, LayerOffset};
+    use crate::source::{LayerLen, LayerOffset, RewriteIdx, StmtLen, StmtOffset, TokenIdx};
 
     use super::{ParseErrorKind, ParseOutcome, Parser, ParserConfig, ParserToken};
     use crate::parser::{MacroArg, MacroLookup, MacroOutput};
@@ -654,7 +654,7 @@ mod tests {
         let one_idx = tokens
             .iter()
             .position(|t| t.text() == "1")
-            .map(|i| u32::try_from(i).unwrap())
+            .map(|i| TokenIdx::from_raw(u32::try_from(i).unwrap()))
             .expect("`1` token");
 
         let trailing: Vec<_> = stmt.trailing_comments(one_idx).collect();
@@ -675,7 +675,7 @@ mod tests {
         let from_idx = tokens
             .iter()
             .position(|t| t.token_type() == TokenType::From)
-            .map(|i| u32::try_from(i).unwrap())
+            .map(|i| TokenIdx::from_raw(u32::try_from(i).unwrap()))
             .expect("FROM token");
 
         let leading: Vec<_> = stmt.leading_comments(from_idx).collect();
@@ -689,7 +689,7 @@ mod tests {
         let mut session = parser.parse("-- header\nSELECT 1;");
         let stmt = ok_stmt!(session);
 
-        let leading: Vec<_> = stmt.leading_comments(0).collect();
+        let leading: Vec<_> = stmt.leading_comments(TokenIdx::default()).collect();
         assert_eq!(leading.len(), 1);
         assert!(leading[0].text().contains("header"));
     }
@@ -704,7 +704,7 @@ mod tests {
         let one_idx = tokens
             .iter()
             .position(|t| t.text() == "1")
-            .map(|i| u32::try_from(i).unwrap())
+            .map(|i| TokenIdx::from_raw(u32::try_from(i).unwrap()))
             .expect("`1` token");
 
         let trailing: Vec<_> = stmt.trailing_comments(one_idx).collect();
@@ -725,7 +725,7 @@ mod tests {
         let semi_idx = tokens1
             .iter()
             .rposition(|t| t.text() == ";")
-            .map(|i| u32::try_from(i).unwrap())
+            .map(|i| TokenIdx::from_raw(u32::try_from(i).unwrap()))
             .expect("`;` token in stmt 1");
 
         let trailing: Vec<_> = stmt1.trailing_comments(semi_idx).collect();
@@ -756,7 +756,7 @@ mod tests {
         drop(stmt1);
 
         let stmt2 = ok_stmt!(session);
-        let leading_first: Vec<_> = stmt2.leading_comments(0).collect();
+        let leading_first: Vec<_> = stmt2.leading_comments(TokenIdx::default()).collect();
         assert_eq!(leading_first.len(), 1);
         assert!(leading_first[0].text().contains("between"));
     }
@@ -780,7 +780,7 @@ mod tests {
             .node_text(root_id)
             .expect("root node should have recorded text");
         assert_eq!(text, "SELECT 1");
-        assert_eq!(offset, 0);
+        assert_eq!(offset, StmtOffset::default());
     }
 
     #[test]
@@ -861,7 +861,7 @@ mod tests {
             .node_text(root_id)
             .expect("root node should have recorded text");
         assert_eq!(text, "SELECT id!(42)");
-        assert_eq!(offset, 0);
+        assert_eq!(offset, StmtOffset::default());
 
         assert_eq!(statement.node_expanded_text(root_id), Some("SELECT 42"));
     }
@@ -1140,8 +1140,8 @@ mod tests {
         // pair reinterprets as a StmtRange.
         let stmt_text = stmt.text();
         let call_range = crate::source::StmtRange::from_offset_len(
-            crate::source::StmtOffset::from_raw(r.call_offset().as_u32()),
-            crate::source::StmtLen::from_raw(r.call_length().as_u32()),
+            StmtOffset::from_raw(r.call_offset().as_u32()),
+            StmtLen::from_raw(r.call_length().as_u32()),
         );
         let call_text = &stmt_text[call_range];
         assert_eq!(call_text, "id!(42)");
@@ -1184,7 +1184,7 @@ mod tests {
         // outer.expansion() — the nested-rewrite case where parent is a
         // LayerText, and the Index<LayerRange> impl slices directly.
         let inner = &rewrites[1];
-        assert_eq!(inner.parent(), Some(0));
+        assert_eq!(inner.parent(), Some(RewriteIdx::from_raw(0)));
         assert_eq!(inner.name(), "mpass");
         let outer_exp = outer.expansion();
         let inner_range =
@@ -1273,7 +1273,7 @@ mod tests {
 
         let inner = &rewrites[1];
         assert_eq!(inner.name(), "n");
-        assert_eq!(inner.parent(), Some(0));
+        assert_eq!(inner.parent(), Some(RewriteIdx::from_raw(0)));
         // The nested n!(42) call lives entirely inside m's substituted
         // $x arg — call_offset/length are in the post-substitution
         // expansion buffer, but there's no clean position in m's
@@ -1311,7 +1311,7 @@ mod tests {
         assert_eq!(rewrites.len(), 2, "wrap + leaf");
         let inner = &rewrites[1];
         assert_eq!(inner.name(), "leaf");
-        assert_eq!(inner.parent(), Some(0));
+        assert_eq!(inner.parent(), Some(RewriteIdx::from_raw(0)));
         // `leaf!(7)` sits at offset 5 in the authored body "$a + leaf!(7)".
         assert_eq!(inner.body_call_offset(), LayerOffset::from_raw(5));
         assert_eq!(inner.body_call_length(), LayerLen::from_raw(8));
@@ -1346,7 +1346,7 @@ mod tests {
         assert_eq!(rewrites.len(), 2, "wrap + leaf");
         let inner = &rewrites[1];
         assert_eq!(inner.name(), "leaf");
-        assert_eq!(inner.parent(), Some(0));
+        assert_eq!(inner.parent(), Some(RewriteIdx::from_raw(0)));
         assert_eq!(inner.body_call_offset(), LayerOffset::from_raw(5));
         assert_eq!(inner.body_call_length(), LayerLen::from_raw(13));
     }
@@ -1393,8 +1393,8 @@ mod tests {
         // Arg-segment origin_offset is a LayerOffset; at Source origin
         // the "layer" is the statement, so reinterpret as StmtRange.
         let m_arg_range = crate::source::StmtRange::from_offset_len(
-            crate::source::StmtOffset::from_raw(m_segs[0].origin_offset().as_u32()),
-            crate::source::StmtLen::from_raw(m_segs[0].origin_length().as_u32()),
+            StmtOffset::from_raw(m_segs[0].origin_offset().as_u32()),
+            StmtLen::from_raw(m_segs[0].origin_length().as_u32()),
         );
         let m_arg_text = &stmt_text[m_arg_range];
         assert_eq!(m_arg_text, "n!(nonexistent_col)");
@@ -1404,7 +1404,7 @@ mod tests {
         // whose expansion range contains n's arg, then recursing.
         let n_segs: Vec<_> = rewrites[1].arg_segments().collect();
         assert_eq!(n_segs.len(), 1);
-        assert_eq!(n_segs[0].origin(), ArgOrigin::Rewrite(0));
+        assert_eq!(n_segs[0].origin(), ArgOrigin::Rewrite(RewriteIdx::from_raw(0)));
         let m_expansion = rewrites[0].expansion();
         let n_arg_range = crate::source::LayerRange::from_offset_len(
             n_segs[0].origin_offset(),

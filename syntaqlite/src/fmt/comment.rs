@@ -3,6 +3,7 @@
 
 use std::cell::Cell;
 
+use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtRange, StmtText};
 use syntaqlite_syntax::{CommentKind, CommentSide};
 
 use super::doc::{DocArena, DocId, NIL_DOC};
@@ -11,17 +12,37 @@ use super::doc::{DocArena, DocId, NIL_DOC};
 /// parser-supplied attachment (`side` + `token_idx`).
 #[derive(Clone, Copy)]
 pub(crate) struct CommentEntry {
-    pub offset: u32,
-    pub length: u32,
+    pub offset: StmtOffset,
+    pub length: StmtLen,
     pub kind: CommentKind,
     pub side: CommentSide,
+}
+
+impl CommentEntry {
+    fn range(&self) -> StmtRange {
+        StmtRange::from_offset_len(self.offset, self.length)
+    }
+
+    fn end(&self) -> StmtOffset {
+        self.offset + self.length
+    }
 }
 
 /// A collected token entry with pre-computed byte offset and length.
 #[derive(Clone, Copy)]
 pub(crate) struct TokenEntry {
-    pub offset: u32,
-    pub length: u32,
+    pub offset: StmtOffset,
+    pub length: StmtLen,
+}
+
+impl TokenEntry {
+    fn range(&self) -> StmtRange {
+        StmtRange::from_offset_len(self.offset, self.length)
+    }
+
+    fn end(&self) -> StmtOffset {
+        self.offset + self.length
+    }
 }
 
 /// Result of draining comment items. Trailing docs (e.g. `LineSuffix` for
@@ -61,13 +82,12 @@ impl CommentCtx {
 
     /// End offset of the token just before the current token cursor position.
     /// Returns 0 if the cursor is at the start.
-    pub(crate) fn prev_token_end(&self) -> u32 {
+    pub(crate) fn prev_token_end(&self) -> StmtOffset {
         let idx = self.token_cursor.get();
         if idx > 0 {
-            let tp = &self.tokens[idx - 1];
-            tp.offset + tp.length
+            self.tokens[idx - 1].end()
         } else {
-            0
+            StmtOffset::default()
         }
     }
 
@@ -77,8 +97,8 @@ impl CommentCtx {
     /// between a comment and `before`.
     pub(crate) fn drain_before<'a>(
         &self,
-        before: u32,
-        source: &'a str,
+        before: StmtOffset,
+        source: &'a StmtText,
         arena: &mut DocArena<'a>,
     ) -> DrainResult {
         self.drain_impl(before, source, arena, false)
@@ -91,20 +111,19 @@ impl CommentCtx {
     pub(crate) fn drain_keyword_interior<'a>(
         &self,
         word_count: usize,
-        source: &'a str,
+        source: &'a StmtText,
         arena: &mut DocArena<'a>,
     ) -> DrainResult {
         let first_idx = self.token_cursor.get();
-        let last_tok = &self.tokens[first_idx + word_count - 1];
-        let end = last_tok.offset + last_tok.length;
+        let end = self.tokens[first_idx + word_count - 1].end();
         self.drain_impl(end, source, arena, true)
     }
 
     #[expect(clippy::too_many_lines)]
     fn drain_impl<'a>(
         &self,
-        before: u32,
-        source: &'a str,
+        before: StmtOffset,
+        source: &'a StmtText,
         arena: &mut DocArena<'a>,
         skip_text_check: bool,
     ) -> DrainResult {
@@ -112,17 +131,17 @@ impl CommentCtx {
         let mut leading = NIL_DOC;
         let mut cursor = self.cursor.get();
         let mut last_end = self.prev_token_end();
+        let source_end = StmtOffset::default() + source.byte_len();
         while cursor < self.comments.len() && self.comments[cursor].offset < before {
             let t = &self.comments[cursor];
-            let comment_end = (t.offset + t.length) as usize;
 
             if !skip_text_check {
-                let before_usize = (before as usize).min(source.len());
-                if comment_end < before_usize
+                let scan_end = before.min(source_end);
+                if t.end() < scan_end
                     && has_non_comment_text(
                         source,
-                        comment_end,
-                        before_usize,
+                        t.end(),
+                        scan_end,
                         &self.comments,
                         cursor + 1,
                     )
@@ -131,25 +150,23 @@ impl CommentCtx {
                 }
             }
 
-            let text = &source[t.offset as usize..comment_end];
+            let text = &source[t.range()];
 
             // Leading vs trailing is fixed at parse time
             // (see synq_parser_record_comment).  The gap text is still
             // scanned below for blank-line preservation between adjacent
             // leading comments.
-            let gap_start = (last_end as usize).min(source.len());
-            let gap_end = (t.offset as usize).min(source.len());
+            let gap = StmtRange {
+                start: last_end.min(source_end),
+                end: t.offset.min(source_end),
+            };
             let is_leading = matches!(t.side, CommentSide::Leading);
 
             match t.kind {
                 CommentKind::Line => {
                     if is_leading {
                         // Preserve blank lines between separate comment blocks.
-                        let has_blank_line = {
-                            let gs = gap_start.min(source.len());
-                            let ge = gap_end.min(source.len());
-                            gs < ge && source[gs..ge].contains("\n\n")
-                        };
+                        let has_blank_line = !gap.is_empty() && source[gap].contains("\n\n");
                         let hl1 = arena.hardline();
                         let prefix = if has_blank_line && leading != NIL_DOC {
                             let extra = arena.hardline();
@@ -161,16 +178,19 @@ impl CommentCtx {
                         // Only emit a trailing hardline if the next comment
                         // does NOT immediately follow on the next line — that
                         // comment's leading hardline will provide the break.
-                        let next_end = t.offset + t.length;
                         let next_is_contiguous_comment = cursor + 1 < self.comments.len()
                             && self.comments[cursor + 1].offset < before
                             && {
-                                let gap_s = (next_end as usize).min(source.len());
-                                let gap_e =
-                                    (self.comments[cursor + 1].offset as usize).min(source.len());
-                                gap_s < gap_e
-                                    && source[gap_s..gap_e].contains('\n')
-                                    && !source[gap_s..gap_e].contains("\n\n")
+                                let next_gap = StmtRange {
+                                    start: t.end().min(source_end),
+                                    end: self.comments[cursor + 1].offset.min(source_end),
+                                };
+                                if next_gap.is_empty() {
+                                    false
+                                } else {
+                                    let text = &source[next_gap];
+                                    text.contains('\n') && !text.contains("\n\n")
+                                }
                             };
                         let chunk = if next_is_contiguous_comment {
                             arena.cat(prefix, comment_doc)
@@ -221,7 +241,7 @@ impl CommentCtx {
                 }
             }
 
-            last_end = t.offset + t.length;
+            last_end = t.end();
             cursor += 1;
         }
 
@@ -242,7 +262,11 @@ impl CommentCtx {
     /// On match, the token cursor is advanced past any skipped tokens so it
     /// points to the first word of the keyword. Returns `None` if the
     /// keyword is not present in the source (e.g., an inserted `AS`).
-    pub(crate) fn peek_keyword_tokens(&self, kw_text: &str, source: &str) -> Option<(u32, usize)> {
+    pub(crate) fn peek_keyword_tokens(
+        &self,
+        kw_text: &str,
+        source: &StmtText,
+    ) -> Option<(StmtOffset, usize)> {
         const MAX_SCAN: usize = 8;
         let start_idx = self.token_cursor.get();
 
@@ -260,7 +284,7 @@ impl CommentCtx {
                     break;
                 }
                 let tok = &self.tokens[tok_idx];
-                let tok_text = &source[tok.offset as usize..(tok.offset + tok.length) as usize];
+                let tok_text = &source[tok.range()];
                 if !tok_text.eq_ignore_ascii_case(word) {
                     matched = false;
                     break;
@@ -285,7 +309,7 @@ impl CommentCtx {
     }
 
     /// Advance the token cursor past all tokens whose offset is `< end_offset`.
-    pub(crate) fn advance_past(&self, end_offset: u32) {
+    pub(crate) fn advance_past(&self, end_offset: StmtOffset) {
         let mut idx = self.token_cursor.get();
         while idx < self.tokens.len() && self.tokens[idx].offset < end_offset {
             idx += 1;
@@ -308,7 +332,7 @@ impl CommentCtx {
     }
 
     /// Peek at the next token's offset and length without advancing.
-    pub(crate) fn peek_next_token(&self) -> Option<(u32, u32)> {
+    pub(crate) fn peek_next_token(&self) -> Option<(StmtOffset, StmtLen)> {
         let idx = self.token_cursor.get();
         self.tokens.get(idx).map(|tp| (tp.offset, tp.length))
     }
@@ -318,27 +342,31 @@ impl CommentCtx {
     /// is a trailing comment that this statement owns; the guard's check
     /// for "syntax text past the comment" would spuriously fire when the
     /// source text continues into the next statement.
-    pub(crate) fn drain_remaining<'a>(&self, source: &'a str, arena: &mut DocArena<'a>) -> DocId {
-        let drain = self.drain_impl(u32::MAX, source, arena, true);
+    pub(crate) fn drain_remaining<'a>(
+        &self,
+        source: &'a StmtText,
+        arena: &mut DocArena<'a>,
+    ) -> DocId {
+        let drain = self.drain_impl(StmtOffset::from_raw(u32::MAX), source, arena, true);
         arena.cat(drain.trailing, drain.leading)
     }
 }
 
 fn has_non_comment_text(
-    source: &str,
-    start: usize,
-    end: usize,
+    source: &StmtText,
+    start: StmtOffset,
+    end: StmtOffset,
     comments: &[CommentEntry],
     comment_start_idx: usize,
 ) -> bool {
-    let src = source.as_bytes();
+    let src = source.as_str().as_bytes();
     let mut pos = start;
     let mut ci = comment_start_idx;
 
     while pos < end {
         while ci < comments.len() {
-            let c_start = comments[ci].offset as usize;
-            let c_end = (comments[ci].offset + comments[ci].length) as usize;
+            let c_start = comments[ci].offset;
+            let c_end = comments[ci].end();
             if pos >= c_start && pos < c_end {
                 pos = c_end;
                 ci += 1;
@@ -351,10 +379,10 @@ fn has_non_comment_text(
         if pos >= end {
             break;
         }
-        if !src[pos].is_ascii_whitespace() {
+        if !src[pos.as_usize()].is_ascii_whitespace() {
             return true;
         }
-        pos += 1;
+        pos += StmtLen::from_raw(1);
     }
     false
 }

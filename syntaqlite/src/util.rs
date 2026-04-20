@@ -5,6 +5,8 @@
 
 use std::io::{self, Write};
 
+use syntaqlite_syntax::source::DocRange;
+
 #[doc(inline)]
 #[cfg(feature = "validation")]
 pub use crate::semantic::render::{DiagnosticRenderer, SourceContext};
@@ -115,13 +117,16 @@ impl From<SqliteSyntaxFlags> for SqliteFlags {
 // ── Rustc-style source error rendering ───────────────────────────────────────
 
 /// Parameters for rendering a rustc-style source error snippet.
+///
+/// `range` is treated as byte offsets into `source` — callers rendering
+/// a span from a macro expansion buffer pass offsets relative to that
+/// buffer (see `DiagnosticRenderer::render_diagnostic`).
 pub(crate) struct SourceError<'a> {
     pub source: &'a str,
     pub file: &'a str,
     pub severity: &'a str,
     pub message: &'a str,
-    pub start_offset: usize,
-    pub end_offset: usize,
+    pub range: DocRange,
     pub help: Option<&'a str>,
 }
 
@@ -142,8 +147,10 @@ pub(crate) struct SourceError<'a> {
 /// # Errors
 /// Returns `Err` if writing to `out` fails.
 pub(crate) fn render_source_error(out: &mut impl Write, err: &SourceError<'_>) -> io::Result<()> {
-    let (line, col) = offset_to_line_col(err.source, err.start_offset);
-    let line_text = source_line_at(err.source, err.start_offset);
+    let start = err.range.start.as_usize();
+    let end = err.range.end.as_usize();
+    let (line, col) = offset_to_line_col(err.source, start);
+    let line_text = source_line_at(err.source, start);
     let gutter_width = line.to_string().len();
 
     writeln!(out, "{}: {}", err.severity, err.message)?;
@@ -151,9 +158,9 @@ pub(crate) fn render_source_error(out: &mut impl Write, err: &SourceError<'_>) -
     writeln!(out, "{:>gutter_width$} |", " ")?;
     writeln!(out, "{line} | {line_text}")?;
 
-    let underline_len = if err.end_offset > err.start_offset {
-        let line_end = err.start_offset + (line_text.len().saturating_sub(col - 1));
-        (err.end_offset.min(line_end) - err.start_offset).max(1)
+    let underline_len = if end > start {
+        let line_end = start + (line_text.len().saturating_sub(col - 1));
+        (end.min(line_end) - start).max(1)
     } else {
         1
     };

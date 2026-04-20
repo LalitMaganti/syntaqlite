@@ -2,7 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 use crate::source::{
-    ColumnNumber, LayerLen, LayerOffset, LayerText, LineNumber, StmtLen, StmtOffset, TokenIdx,
+    ColumnNumber, LayerLen, LayerOffset, LayerText, LineNumber, RewriteIdx, StmtLen, StmtOffset,
+    TokenIdx,
 };
 
 use crate::dialect::TypedDialect;
@@ -284,8 +285,8 @@ pub type AnyParserToken<'a> = TypedParserToken<'a, crate::dialect::AnyDialect>;
 /// Returned by [`super::AnyParsedStatement::macro_rewrites`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MacroRewrite<'a> {
-    pub(crate) parent: Option<u32>,
-    pub(crate) rewrite_idx: u32,
+    pub(crate) parent: Option<RewriteIdx>,
+    pub(crate) rewrite_idx: RewriteIdx,
     pub(crate) call_offset: LayerOffset,
     pub(crate) call_length: LayerLen,
     pub(crate) expansion: &'a LayerText,
@@ -307,7 +308,7 @@ pub const MACRO_BODY_CALL_ARG_INTERNAL: LayerOffset = LayerOffset::from_raw(u32:
 impl<'a> MacroRewrite<'a> {
     /// Index of the parent rewrite, or `None` if this rewrite applies
     /// directly to the authored source.
-    pub fn parent(&self) -> Option<u32> {
+    pub fn parent(&self) -> Option<RewriteIdx> {
         self.parent
     }
     /// Byte offset of the macro call in the parent's text.
@@ -378,7 +379,7 @@ impl<'a> MacroRewrite<'a> {
             let origin = if s.origin_parent_idx == u32::MAX {
                 ArgOrigin::Source
             } else {
-                ArgOrigin::Rewrite(s.origin_parent_idx)
+                ArgOrigin::Rewrite(RewriteIdx::from_raw(s.origin_parent_idx))
             };
             MacroArgSegment {
                 body_offset: LayerOffset::from_raw(s.body_offset),
@@ -401,7 +402,7 @@ pub enum ArgOrigin {
     Source,
     /// The arg text lives in the expansion buffer of the referenced
     /// rewrite (which in turn may have its own arg segments to descend).
-    Rewrite(u32),
+    Rewrite(RewriteIdx),
 }
 
 /// One `$param` substitution recorded on a [`MacroRewrite`].
@@ -447,7 +448,7 @@ impl MacroArgSegment<'_> {
     }
     /// Convenience: parent rewrite index if the origin is a rewrite,
     /// `None` if the origin is the authored source.
-    pub fn origin_parent(&self) -> Option<u32> {
+    pub fn origin_parent(&self) -> Option<RewriteIdx> {
         match self.origin {
             ArgOrigin::Source => None,
             ArgOrigin::Rewrite(i) => Some(i),

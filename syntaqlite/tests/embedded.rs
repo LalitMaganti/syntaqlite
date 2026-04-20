@@ -79,8 +79,9 @@ fn fstring_with_holes_in_multiple_positions() {
     assert_eq!(f.holes().len(), 4);
     // All holes use the same constant placeholder.
     for hole in f.holes() {
-        let end = hole.sql_offset() + HOLE_PLACEHOLDER.len();
-        assert_eq!(&f.sql_text()[hole.sql_offset()..end], HOLE_PLACEHOLDER);
+        let start = hole.sql_offset().as_usize();
+        let end = start + HOLE_PLACEHOLDER.len();
+        assert_eq!(&f.sql_text()[start..end], HOLE_PLACEHOLDER);
     }
 }
 
@@ -208,8 +209,9 @@ fn ts_template_with_multiple_holes() {
     let f = &fragments[0];
     assert_eq!(f.holes().len(), 4);
     for hole in f.holes() {
-        let end = hole.sql_offset() + HOLE_PLACEHOLDER.len();
-        assert_eq!(&f.sql_text()[hole.sql_offset()..end], HOLE_PLACEHOLDER);
+        let start = hole.sql_offset().as_usize();
+        let end = start + HOLE_PLACEHOLDER.len();
+        assert_eq!(&f.sql_text()[start..end], HOLE_PLACEHOLDER);
     }
 }
 

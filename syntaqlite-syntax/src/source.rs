@@ -438,6 +438,15 @@ define_u32_newtype! {
     TokenIdx
 }
 
+define_u32_newtype! {
+    /// A 0-based index into a statement's macro-rewrite list.
+    ///
+    /// Identifies a specific `MacroRewrite` within the flat list emitted by
+    /// `AnyParsedStatement::macro_rewrites`.  Distinct from byte offsets
+    /// and token indices at the type level.
+    RewriteIdx
+}
+
 // ── 1-based line / column (C parser, traceback) ─────────────────────────────
 
 define_u32_newtype! {

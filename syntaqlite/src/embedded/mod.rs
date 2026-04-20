@@ -27,8 +27,6 @@ pub use python::extract_python;
 #[doc(inline)]
 pub use typescript::extract_typescript;
 
-use std::ops::Range;
-
 use syntaqlite_syntax::any::TokenCategory;
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 
@@ -58,7 +56,7 @@ use offset_map::OffsetMap;
 #[derive(Debug)]
 pub struct EmbeddedFragment {
     /// Byte range of the SQL content in the host file (excluding quotes).
-    pub(crate) sql_range: Range<usize>,
+    pub(crate) sql_range: DocRange,
     /// SQL text with holes replaced by placeholder identifiers.
     pub(crate) sql_text: String,
     /// Information about each interpolation hole.
@@ -67,8 +65,8 @@ pub struct EmbeddedFragment {
 
 impl EmbeddedFragment {
     /// Byte range of the SQL content in the host file (excluding quotes).
-    pub fn sql_range(&self) -> &Range<usize> {
-        &self.sql_range
+    pub fn sql_range(&self) -> DocRange {
+        self.sql_range
     }
     /// SQL text with holes replaced by placeholder identifiers.
     pub fn sql_text(&self) -> &str {
@@ -88,18 +86,18 @@ impl EmbeddedFragment {
 #[derive(Debug)]
 pub struct Hole {
     /// Byte range of the hole expression in the host file.
-    pub(crate) host_range: Range<usize>,
+    pub(crate) host_range: DocRange,
     /// Byte offset in `sql_text` where the placeholder sits.
-    pub(crate) sql_offset: usize,
+    pub(crate) sql_offset: DocOffset,
 }
 
 impl Hole {
     /// Byte range of the hole expression in the host file.
-    pub fn host_range(&self) -> &Range<usize> {
-        &self.host_range
+    pub fn host_range(&self) -> DocRange {
+        self.host_range
     }
     /// Byte offset in `sql_text` where the placeholder sits.
-    pub fn sql_offset(&self) -> usize {
+    pub fn sql_offset(&self) -> DocOffset {
         self.sql_offset
     }
 }
@@ -109,6 +107,30 @@ impl Hole {
 /// Uses macro-call syntax so the parser's `macro_fallback` mode treats it as a
 /// single identifier token and records a [`MacroRewrite`](syntaqlite_syntax::any::MacroRewrite).
 pub const HOLE_PLACEHOLDER: &str = "__h__!()";
+
+// ── Conversion helpers for extractors ──────────────────────────────────
+
+/// Convert a `usize` byte offset from a host-language scanner into a
+/// [`DocOffset`].  Host files addressable within `u32` are the supported
+/// range; anything larger saturates.
+pub(super) fn doc_offset_from_usize(n: usize) -> DocOffset {
+    DocOffset::from_raw(u32::try_from(n).unwrap_or(u32::MAX))
+}
+
+/// Convert a `usize` byte length into a [`DocLen`] with the same saturation
+/// rule as [`doc_offset_from_usize`].
+pub(super) fn doc_len_from_usize(n: usize) -> DocLen {
+    DocLen::from_raw(u32::try_from(n).unwrap_or(u32::MAX))
+}
+
+/// Construct a [`DocRange`] from a half-open `usize` byte range, as produced
+/// by host-language scanners.
+pub(super) fn doc_range_from_usize(start: usize, end: usize) -> DocRange {
+    DocRange::from_offset_len(
+        doc_offset_from_usize(start),
+        doc_len_from_usize(end.saturating_sub(start)),
+    )
+}
 
 // ── Shared scanner utilities ────────────────────────────────────────────
 

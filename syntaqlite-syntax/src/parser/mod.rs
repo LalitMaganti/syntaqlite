@@ -11,7 +11,7 @@ use std::ffi::c_void;
 
 use crate::source::{
     ColumnNumber, DocLen, DocOffset, DocRange, DocText, LayerLen, LayerOffset, LayerText,
-    LineNumber, StatementBase, StmtLen, StmtOffset, StmtRange, StmtText, TokenIdx,
+    LineNumber, RewriteIdx, StatementBase, StmtLen, StmtOffset, StmtRange, StmtText, TokenIdx,
 };
 
 use crate::any::{AnyNodeTag, AnyTokenType};
@@ -79,11 +79,19 @@ impl MacroOutput {
     }
 
     /// Set the 1-based line/column of the macro definition for tracebacks.
-    /// Must be called *after* [`write`](Self::write).
-    pub fn set_definition(&mut self, line: u32, col: u32) {
+    /// Must be called *after* [`write`](Self::write).  Use
+    /// [`LineNumber::from_raw`] / [`ColumnNumber::from_raw`] to construct
+    /// the inputs; `0` means "unknown".
+    pub fn set_definition(&mut self, line: LineNumber, col: ColumnNumber) {
         // SAFETY: parser is valid for the duration of the callback.
         unsafe {
-            ffi::syntaqlite_macro_expansion_set_result(self.parser, std::ptr::null(), 0, line, col);
+            ffi::syntaqlite_macro_expansion_set_result(
+                self.parser,
+                std::ptr::null(),
+                0,
+                line.as_u32(),
+                col.as_u32(),
+            );
         }
     }
 
@@ -596,10 +604,10 @@ impl<'a> AnyParsedStatement<'a> {
 
     /// Source text of AST node `id` as `(text, offset)`, or `None` when
     /// extent tracking is disabled or no extent was recorded for this
-    /// node.  `offset` is relative to [`text`](Self::text).
+    /// node.  `offset` is statement-relative.
     ///
     /// Requires [`ParserConfig::with_collect_node_extents`].
-    pub fn node_text(&self, id: AnyNodeId) -> Option<(&'a str, u32)> {
+    pub fn node_text(&self, id: AnyNodeId) -> Option<(&'a str, StmtOffset)> {
         if id.is_null() {
             return None;
         }
@@ -703,11 +711,11 @@ impl<'a> AnyParsedStatement<'a> {
             let parent = if r.parent_idx == u32::MAX {
                 None
             } else {
-                Some(r.parent_idx)
+                Some(RewriteIdx::from_raw(r.parent_idx))
             };
             MacroRewrite {
                 parent,
-                rewrite_idx: i,
+                rewrite_idx: RewriteIdx::from_raw(i),
                 call_offset: LayerOffset::from_raw(r.call_offset),
                 call_length: LayerLen::from_raw(r.call_length),
                 expansion,
@@ -1198,7 +1206,7 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     /// order.  See [`Comment`] for attachment semantics.
     ///
     /// Requires `collect_tokens: true` in [`ParserConfig`].
-    pub fn leading_comments(&self, token_idx: u32) -> impl Iterator<Item = Comment<'a>> {
+    pub fn leading_comments(&self, token_idx: TokenIdx) -> impl Iterator<Item = Comment<'a>> {
         let source = self.any.text();
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CComment] =
@@ -1210,7 +1218,7 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     /// after it, in source order.  See [`Comment`] for attachment semantics.
     ///
     /// Requires `collect_tokens: true` in [`ParserConfig`].
-    pub fn trailing_comments(&self, token_idx: u32) -> impl Iterator<Item = Comment<'a>> {
+    pub fn trailing_comments(&self, token_idx: TokenIdx) -> impl Iterator<Item = Comment<'a>> {
         let source = self.any.text();
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CComment] =

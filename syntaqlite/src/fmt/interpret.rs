@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
+use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtText};
 
 use super::comment::{CommentCtx, DrainResult};
 use super::doc::{DocArena, DocId, NIL_DOC};
@@ -18,12 +19,12 @@ pub(crate) struct FmtCtx<'a> {
     /// `(call_offset, call_length)` for each macro call in the source.
     /// Full `MacroRewrite` records are not needed here since the
     /// formatter only uses positions to decide verbatim emission.
-    pub macro_rewrites: Vec<(u32, u32)>,
+    pub macro_rewrites: Vec<(StmtOffset, StmtLen)>,
 }
 
 impl<'a> FmtCtx<'a> {
-    pub(crate) fn text(&self) -> &'a str {
-        self.reader.text().as_str()
+    pub(crate) fn text(&self) -> &'a StmtText {
+        self.reader.text()
     }
 }
 
@@ -227,7 +228,6 @@ impl Formatter {
                     // real `""` token and must round-trip as `""`.
                     if quoted || !s.is_empty() {
                         if let Some(ref cctx) = ctx.comment_ctx {
-                            use syntaqlite_syntax::source::StmtLen;
                             // For quoted spans, the original token in source
                             // starts one byte earlier (the opening quote) and
                             // extends one byte past (the closing quote).
@@ -243,9 +243,9 @@ impl Formatter {
                             } else {
                                 span_len
                             };
-                            let drain = cctx.drain_before(drain_offset.as_u32(), source, arena);
+                            let drain = cctx.drain_before(drain_offset, source, arena);
                             flush_drain(&drain, &mut pending, &mut running, arena);
-                            cctx.advance_past((drain_offset + token_len).as_u32());
+                            cctx.advance_past(drain_offset + token_len);
                         }
                         if quoted {
                             let q = arena.text("\"");
@@ -848,7 +848,7 @@ fn flush_drain(
 #[inline]
 fn drain_comments_before_child<'a>(
     comment_ctx: Option<&CommentCtx>,
-    source: &'a str,
+    source: &'a StmtText,
     pending: &mut DocId,
     running: &mut DocId,
     arena: &mut DocArena<'a>,

@@ -33,12 +33,12 @@ use lsp_types::{
     SignatureInformation, TextDocumentSyncCapability, TextDocumentSyncKind, TextEdit, Uri,
     WorkDoneProgressOptions, WorkspaceEdit,
 };
-use syntaqlite_syntax::source::{DocOffset, DocRange};
+use syntaqlite_syntax::source::{DocOffset, DocRange, DocText, Utf16Col, Utf16Line};
 
 use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
 use crate::lsp::host::SchemaMap;
-use crate::lsp::{CompletionKind, LspHost, SEMANTIC_TOKEN_LEGEND};
+use crate::lsp::{CompletionKind, LspHost, SEMANTIC_TOKEN_LEGEND, SourceMap};
 use crate::semantic::Catalog;
 use crate::semantic::diagnostics::Severity;
 
@@ -907,102 +907,35 @@ fn offsets_to_range(source: &str, range: DocRange) -> Range {
 
 // ── SourcePositionMap ─────────────────────────────────────────────────────
 
-/// Converts between byte offsets and LSP `Position` (line/character) values
-/// for a fixed source string.
-///
-/// Both directions use a single O(n) walk over the source bytes.
+/// Thin adapter around [`SourceMap`] that translates to and from
+/// `lsp_types::Position`.  The position-mapping arithmetic lives in
+/// [`SourceMap`]; this adapter only packs/unpacks the LSP wire types.
 pub(super) struct SourcePositionMap<'a> {
-    src: &'a [u8],
+    inner: SourceMap<'a>,
 }
 
 impl<'a> SourcePositionMap<'a> {
     pub(crate) fn new(source: &'a str) -> Self {
         SourcePositionMap {
-            src: source.as_bytes(),
+            inner: SourceMap::new(DocText::new(source)),
         }
     }
 
     /// Convert multiple byte offsets to LSP `Position`s in one O(n) pass.
-    ///
-    /// Internally sorts the offsets, walks the source once, then returns
-    /// results in the original order. Character offsets are UTF-16 code
-    /// units per the LSP specification.
     pub(crate) fn offsets_to_positions(&self, offsets: &[DocOffset]) -> Vec<Position> {
-        if offsets.is_empty() {
-            return Vec::new();
-        }
-
-        let mut indexed: Vec<(usize, usize)> = offsets
-            .iter()
-            .map(|o| o.as_usize())
-            .enumerate()
-            .map(|(i, o)| (o, i))
-            .collect();
-        indexed.sort_unstable_by_key(|&(o, _)| o);
-
-        let mut result = vec![Position::new(0, 0); offsets.len()];
-        let len = self.src.len();
-        let mut line = 0u32;
-        let mut col_utf16 = 0u32;
-        let mut pos = 0usize;
-
-        for (offset, orig_idx) in indexed {
-            let offset = offset.min(len);
-            while pos < offset {
-                if self.src[pos] == b'\n' {
-                    line += 1;
-                    col_utf16 = 0;
-                    pos += 1;
-                } else {
-                    let byte = self.src[pos];
-                    let char_len = utf8_char_len(byte);
-                    // Supplementary characters (4-byte UTF-8) need 2 UTF-16 code units;
-                    // all others need 1.
-                    col_utf16 += if char_len == 4 { 2 } else { 1 };
-                    pos += char_len;
-                }
-            }
-            result[orig_idx] = Position::new(line, col_utf16);
-        }
-
-        result
+        self.inner
+            .byte_offsets_to_utf16(offsets)
+            .into_iter()
+            .map(|(line, col)| Position::new(line.as_u32(), col.as_u32()))
+            .collect()
     }
 
     /// Convert an LSP `Position` (with UTF-16 character offset) to a document-absolute byte offset.
     pub(crate) fn position_to_offset(&self, pos: Position) -> DocOffset {
-        let len = self.src.len();
-        let mut line = 0usize;
-        let mut line_start = 0usize;
-
-        while line < pos.line as usize && line_start < len {
-            match self.src[line_start..].iter().position(|&b| b == b'\n') {
-                Some(nl) => {
-                    line_start += nl + 1;
-                    line += 1;
-                }
-                None => return DocOffset::from_raw(u32::try_from(len).unwrap_or(u32::MAX)),
-            }
-        }
-
-        let line_end = self.src[line_start..]
-            .iter()
-            .position(|&b| b == b'\n')
-            .map_or(len, |rel| line_start + rel);
-
-        // Walk UTF-8 characters, counting UTF-16 code units, until we reach
-        // the requested character offset or end of line.
-        let mut byte_pos = line_start;
-        let mut utf16_col = 0u32;
-        while byte_pos < line_end && utf16_col < pos.character {
-            let char_len = utf8_char_len(self.src[byte_pos]);
-            utf16_col += if char_len == 4 { 2 } else { 1 };
-            byte_pos += char_len;
-        }
-        DocOffset::from_raw(u32::try_from(byte_pos).unwrap_or(u32::MAX))
+        self.inner
+            .utf16_to_byte_offset(Utf16Line::from_raw(pos.line), Utf16Col::from_raw(pos.character))
     }
 }
-
-use super::utf8_char_len;
 
 #[cfg(test)]
 mod tests {
