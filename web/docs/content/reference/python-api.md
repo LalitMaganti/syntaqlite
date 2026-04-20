@@ -1,27 +1,49 @@
 +++
 title = "Python API reference"
-description = "Functions, parameters, and return types for the syntaqlite Python library."
+description = "The Syntaqlite class and its methods, exceptions, and result types."
 weight = 6
 +++
 
 # Python API reference
 
-The Python library is a thin JSON-RPC client for the bundled `syntaqlite`
-CLI binary. On first use it spawns `syntaqlite serve` as a long-lived
-subprocess and multiplexes all calls over stdio. Requires Python 3.10+;
-wheels are published for macOS (arm64, x86_64), Linux (x86_64, aarch64),
-and Windows (x86_64).
+The Python package is pure Python and ships with a bundled `syntaqlite`
+CLI binary. Requires Python 3.10+. Wheels are published for macOS
+(arm64, x86_64), Linux (x86_64, aarch64), and Windows (x86_64).
 
 ```python
 import syntaqlite
+
+with syntaqlite.Syntaqlite() as sq:
+    print(sq.format_sql("select 1"))
+    stmts = sq.parse("select * from users")
 ```
 
-## `syntaqlite.format_sql`
+## `syntaqlite.Syntaqlite`
+
+The entry point for all SQL operations. Create one instance and reuse it
+across many calls — each instance spins up a worker on construction and
+keeps it alive until `close()` is called.
+
+```python
+syntaqlite.Syntaqlite(*, dialect_path=None, dialect_name=None, binary=None)
+```
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `dialect_path` | `str \| None` | `None` | Path to a dialect shared library (`.so`/`.dylib`/`.dll`). Defaults to SQLite. |
+| `dialect_name` | `str \| None` | `None` | Dialect name. Required only when `dialect_path` exports more than one dialect. |
+| `binary` | `str \| None` | `None` | Override the path to the `syntaqlite` CLI. Defaults to the binary shipped with the wheel (or `SYNTAQLITE_BIN`). |
+
+Supports the context-manager protocol, so `with syntaqlite.Syntaqlite() as sq:`
+cleans up automatically. Not intended for concurrent use — if you want
+parallelism, create one instance per thread.
+
+### `sq.format_sql`
 
 Format SQL with configurable options.
 
 ```python
-syntaqlite.format_sql(sql, *, line_width=80, indent_width=2, keyword_case="upper", semicolons=True)
+sq.format_sql(sql, *, line_width=80, indent_width=2, keyword_case="upper", semicolons=True)
 ```
 
 | Parameter | Type | Default | Description |
@@ -32,34 +54,36 @@ syntaqlite.format_sql(sql, *, line_width=80, indent_width=2, keyword_case="upper
 | `keyword_case` | `str` | `"upper"` | `"upper"` or `"lower"` |
 | `semicolons` | `bool` | `True` | Append semicolons to statements |
 
-**Returns:** `str`. The formatted SQL.
+**Returns:** `str` — the formatted SQL.
 
-**Raises:** `syntaqlite.FormatError` on parse error (the original SQL is syntactically invalid).
+**Raises:** [`FormatError`](#syntaqliteformaterror) when the input cannot
+be parsed.
 
 ```python
->>> syntaqlite.format_sql("select 1")
+>>> sq.format_sql("select 1")
 'SELECT 1;\n'
->>> syntaqlite.format_sql("select 1", keyword_case="lower", semicolons=False)
+>>> sq.format_sql("select 1", keyword_case="lower", semicolons=False)
 'select 1\n'
 ```
 
-## `syntaqlite.parse`
+### `sq.parse`
 
 Parse SQL into a list of typed AST nodes.
 
 ```python
-syntaqlite.parse(sql)
+sq.parse(sql)
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `sql` | `str` | SQL to parse (may contain multiple statements) |
 
-**Returns:** `list`. One typed AST node per statement. Each node is a
-`__slots__` class (e.g. `SelectStmt`, `CreateTableStmt`) with typed attributes:
+**Returns:** `list` — one typed AST node per statement. Each node is a
+`__slots__` class (e.g. `SelectStmt`, `CreateTableStmt`) with typed
+attributes.
 
 ```python
->>> stmt = syntaqlite.parse("SELECT 1 + 2 FROM foo")[0]
+>>> stmt = sq.parse("SELECT 1 + 2 FROM foo")[0]
 >>> type(stmt).__name__
 'SelectStmt'
 >>> stmt.columns[0].expr
@@ -70,158 +94,98 @@ TableRef(...)
 True
 ```
 
-Enum and flag fields are wrapped as `IntEnum`/`IntFlag` from `syntaqlite.enums`:
+Enum and flag fields are `IntEnum`/`IntFlag` from `syntaqlite.enums`:
 
 ```python
 >>> from syntaqlite.enums import BinaryOp
->>> BinaryOp(stmt.columns[0].expr.op).name
-'PLUS'
+>>> stmt.columns[0].expr.op
+<BinaryOp.PLUS: 0>
 ```
 
 Node classes support `isinstance` checks:
 
 ```python
->>> from syntaqlite.nodes import SelectStmt, BinaryExpr
+>>> from syntaqlite.nodes import SelectStmt
 >>> isinstance(stmt, SelectStmt)
 True
 ```
 
-On parse error, the entry is a plain dict (not wrapped):
+The parser recovers from errors and continues; any unparseable fragment
+comes through as an `Error` node in the list.
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `type` | `str` | `"Error"` |
-| `message` | `str` | Error message |
-| `offset` | `int` | Byte offset of the error |
-| `length` | `int` | Length of the error span |
+### `sq.parse_raw`
 
-The parser recovers from errors and continues parsing subsequent statements.
-
-### Raw dict access
-
-For performance-sensitive code, use `syntaqlite.parse_raw()` to skip the
-wrapping and get plain dicts:
+Same as [`parse`](#sqparse) but returns plain JSON-shaped dicts without
+the typed-class wrapping. Use this for performance-sensitive code that
+doesn't need attribute-style access.
 
 ```python
->>> syntaqlite.parse_raw("SELECT 1")[0]["type"]
+>>> sq.parse_raw("SELECT 1")[0]["type"]
 'SelectStmt'
 ```
 
-## `syntaqlite.validate`
+### `sq.validate`
 
-Validate SQL against an optional schema.
+Validate SQL against an optional [`Schema`](#syntaqliteschema).
 
 ```python
-syntaqlite.validate(sql, *, tables=None, views=None, schema_ddl=None, render=False)
+sq.validate(sql, schema=None, *, render=False)
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `sql` | `str` | — | SQL to validate |
-| `tables` | `list[Table] \| None` | `None` | Schema tables |
-| `views` | `list[View] \| None` | `None` | Schema views |
-| `schema_ddl` | `str \| None` | `None` | DDL to parse as schema (CREATE TABLE/VIEW) |
-| `render` | `bool` | `False` | Return rendered diagnostics string instead |
+| `schema` | [`Schema`](#syntaqliteschema) `\| None` | `None` | Catalog schema to validate against |
+| `render` | `bool` | `False` | Return a human-readable diagnostics string instead of a structured result |
 
-Schema can be provided three ways (or combined):
+`Schema` can be built from explicit tables/views, from DDL text, or both:
 
 ```python
 # Explicit tables and views
-syntaqlite.validate(sql,
-    tables=[syntaqlite.Table(name="users", columns=["id", "name"])],
-    views=[syntaqlite.View(name="active", columns=["id"])],
+sq.validate(
+    sql,
+    syntaqlite.Schema(
+        tables=[syntaqlite.Table("users", ["id", "name"])],
+        views=[syntaqlite.View("active", ["id"])],
+    ),
 )
 
 # From DDL
-syntaqlite.validate(sql,
-    schema_ddl="CREATE TABLE users(id, name); CREATE VIEW active AS SELECT id FROM users;",
+sq.validate(
+    sql,
+    syntaqlite.Schema(
+        ddl="CREATE TABLE users(id, name); CREATE VIEW active AS SELECT id FROM users;",
+    ),
 )
 ```
 
-`Table` and `View` accept `name` (required) and `columns` (optional; omit to
-accept any column reference).
+**Returns** (when `render=False`): a [`ValidationResult`](#validationresult).
 
-**Returns (render=False):** `ValidationResult` with attributes:
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `diagnostics` | `list[Diagnostic]` | Parse and semantic diagnostics |
-| `lineage` | `Lineage \| None` | Column lineage for SELECT statements, `None` for non-queries |
-
-**Returns (render=True):** `str`. Human-readable diagnostics with source
-context, similar to CLI output.
+**Returns** (when `render=True`): `str` with the diagnostics rendered
+with source context, matching the CLI output.
 
 ```python
->>> r = syntaqlite.validate("SELECT id, name FROM users",
-...     tables=[syntaqlite.Table(name="users", columns=["id", "name"])])
+>>> schema = syntaqlite.Schema(tables=[syntaqlite.Table("users", ["id", "name"])])
+>>> r = sq.validate("SELECT id FROM users", schema)
 >>> r.diagnostics
 []
->>> r.lineage.complete
-True
->>> for col in r.lineage.columns:
-...     print(f"{col.name} <- {col.origin}")
-id <- users.id
-name <- users.name
->>> r.lineage.physical_tables
-['users']
+>>> len(r.statements)
+1
 ```
 
-### Result types
-
-**`Diagnostic`** — a single diagnostic:
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `severity` | `str` | `"error"`, `"warning"`, `"info"`, or `"hint"` |
-| `message` | `str` | Diagnostic message |
-| `start_offset` | `int` | Byte offset of the start of the span |
-| `end_offset` | `int` | Byte offset of the end of the span |
-
-**`Lineage`** — column lineage for a SELECT statement:
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `complete` | `bool` | `True` if all sources fully resolved |
-| `columns` | `list[ColumnLineage]` | Per-column lineage |
-| `relations` | `list[RelationAccess]` | Catalog relations referenced in FROM |
-| `physical_tables` | `list[str]` | Physical table names accessed after CTE/view expansion |
-| `unexpanded_views` | `list[str]` | View names whose bodies weren't available for expansion (non-empty means `complete=False`) |
-
-**`ColumnLineage`** — lineage for a single result column:
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `name` | `str` | Output column name (alias or inferred) |
-| `index` | `int` | Zero-based position in the result column list |
-| `origin` | `ColumnOrigin \| None` | Origin, or `None` for expressions |
-
-**`ColumnOrigin`** — physical table and column:
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `table` | `str` | Table name |
-| `column` | `str` | Column name |
-
-**`RelationAccess`** — a catalog relation in FROM:
-
-| Attribute | Type | Description |
-|-----------|------|-------------|
-| `name` | `str` | Relation name |
-| `kind` | `str` | `"table"` or `"view"` |
-
-## `syntaqlite.tokenize`
+### `sq.tokenize`
 
 Tokenize SQL into a list of token dicts.
 
 ```python
-syntaqlite.tokenize(sql)
+sq.tokenize(sql)
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `sql` | `str` | SQL to tokenize |
 
-**Returns:** `list[dict]`. One entry per token:
+**Returns:** `list[dict]` — one entry per token:
 
 | Key | Type | Description |
 |-----|------|-------------|
@@ -229,22 +193,167 @@ syntaqlite.tokenize(sql)
 | `offset` | `int` | Byte offset in the source |
 | `length` | `int` | Length of the token in bytes |
 | `type` | `int` | Internal token type ID |
+| `category` | `str` | `"keyword"`, `"identifier"`, `"string"`, `"number"`, `"operator"`, `"punctuation"`, `"comment"`, `"parameter"`, `"function"`, `"type"`, or `"other"` |
 
 ```python
->>> syntaqlite.tokenize("SELECT 1")
-[{'text': 'SELECT', 'offset': 0, 'length': 6, 'type': ...},
- {'text': '1', 'offset': 7, 'length': 1, 'type': ...}]
+>>> sq.tokenize("SELECT 1")
+[{'text': 'SELECT', 'offset': 0, 'length': 6, 'type': 161, 'category': 'keyword'},
+ ...]
 ```
 
-## `syntaqlite.FormatError`
+### `sq.close`
 
-Exception raised by `syntaqlite.format_sql` when the input SQL cannot be parsed.
+Release the worker and stop accepting calls. Called automatically when
+the instance is used as a context manager.
+
+```python
+sq.close()
+```
+
+After `close()`, any method call raises
+[`SyntaqliteError`](#syntaqlitesyntaqliteerror).
+
+## Schema types
+
+### `syntaqlite.Schema`
+
+A catalog schema. Everything that contributes to the validator's catalog
+lives here — pick whichever combination fits your use case.
+
+```python
+syntaqlite.Schema(*, tables=None, views=None, ddl=None, modules=None)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `tables` | `list[Table] \| None` | Structured table definitions |
+| `views` | `list[View] \| None` | Structured view definitions |
+| `ddl` | `str \| None` | Raw DDL (`CREATE TABLE` / `CREATE VIEW`) text, parsed once |
+| `modules` | `dict[str, str] \| None` | **Dialect-specific.** Map from dotted module path to SQL source, loaded lazily when the analyzer encounters an import (e.g. Perfetto's `INCLUDE PERFETTO MODULE`). Ignored by dialects without module support. |
+
+### `syntaqlite.Table`
+
+```python
+syntaqlite.Table(name, columns=None)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Table name |
+| `columns` | `list[str] \| None` | Column names. When `None`, any column reference is accepted. |
+
+### `syntaqlite.View`
+
+```python
+syntaqlite.View(name, columns=None)
+```
+
+Same fields as [`Table`](#syntaqlitetable).
+
+## Result types
+
+### `ValidationResult`
+
+Returned by [`validate`](#sqvalidate) when `render=False`.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `diagnostics` | `list[Diagnostic]` | All diagnostics, aggregated across statements |
+| `statements` | `list[Statement]` | Per-statement analysis |
+| `lineage` | [`Lineage`](#lineage) `\| None` | Column lineage of the final query-bearing statement; `None` when no statement had a query body |
+
+### `Statement`
+
+Per-statement analysis, available on `ValidationResult.statements`.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `source` | `str` | The SQL source text for this statement |
+| `diagnostics` | `list[Diagnostic]` | Diagnostics for this statement |
+| `defined_relations` | `list[DefinedRelation]` | Tables/views defined by DDL statements |
+| `lineage` | [`Lineage`](#lineage) `\| None` | Column lineage; `None` if this statement has no query body |
+
+### `Lineage`
+
+Column lineage for a query-bearing statement.
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `complete` | `bool` | `True` if all sources were fully resolved |
+| `columns` | `list[ColumnLineage]` | Per-column lineage |
+| `relations` | `list[RelationAccess]` | Catalog relations referenced directly in `FROM` |
+| `physical_tables` | `list[str]` | Physical table names accessed after CTE/view expansion |
+| `unexpanded_views` | `list[str]` | Views whose bodies weren't available for expansion (non-empty implies `complete=False`) |
+
+### `ColumnLineage`
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Output column name (alias or inferred) |
+| `index` | `int` | Zero-based position in the result column list |
+| `origin` | [`ColumnOrigin`](#columnorigin) `\| None` | Origin table/column, or `None` for expressions/literals/aggregates |
+
+### `ColumnOrigin`
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `table` | `str` | Physical table name |
+| `column` | `str` | Column name in that table |
+
+### `RelationAccess`
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Relation name as it appears in the catalog |
+| `kind` | `str` | `"table"` or `"view"` |
+
+### `Diagnostic`
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `severity` | `str` | `"error"`, `"warning"`, `"info"`, or `"hint"` |
+| `message` | `str` | Diagnostic message |
+| `start_offset` | `int` | Byte offset of the start of the span |
+| `end_offset` | `int` | Byte offset of the end of the span |
+| `code` | [`DiagnosticCode`](#diagnosticcode) | Machine-readable kind |
+
+### `DiagnosticCode`
+
+`IntEnum` of machine-readable diagnostic kinds:
+
+| Name | Value |
+|------|-------|
+| `PARSE_ERROR` | `0` |
+| `UNKNOWN_TABLE` | `1` |
+| `UNKNOWN_COLUMN` | `2` |
+| `UNKNOWN_FUNCTION` | `3` |
+| `UNKNOWN_MODULE` | `4` |
+| `FUNCTION_ARITY` | `5` |
+| `CTE_COLUMN_COUNT_MISMATCH` | `6` |
+
+### `DefinedRelation`
+
+| Attribute | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Relation name |
+| `is_view` | `bool` | `True` for views, `False` for tables |
+
+## Exceptions
+
+### `syntaqlite.FormatError`
+
+Raised by [`format_sql`](#sqformat_sql) when the input SQL cannot be
+parsed. Inherits from `Exception`.
 
 ```python
 try:
-    syntaqlite.format_sql("SELECT FROM")
+    sq.format_sql("SELECT FROM")
 except syntaqlite.FormatError as e:
-    print(e)  # syntax error near 'FROM'
+    print(e)
 ```
 
-Inherits from `Exception`.
+### `syntaqlite.SyntaqliteError`
+
+Base class for runtime errors raised by a [`Syntaqlite`](#syntaqlitesyntaqlite)
+instance — for example, calls made after [`close`](#sqclose). Inherits
+from `RuntimeError`.

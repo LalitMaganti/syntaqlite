@@ -3,8 +3,11 @@
 ## Status
 
 Deferred. The current PR (#196) ships the CLI+RPC Python client on
-**line-delimited JSON**. This doc captures the msgpack/msgspec path we
-considered and deferred, so future work has the shape in hand.
+**line-delimited JSON**, invoked as `syntaqlite serve json`. The CLI
+already takes a protocol subcommand; a future `syntaqlite serve msgpack`
+would live side-by-side under `syntaqlite-cli/src/commands/serve/`.
+This doc captures the msgpack/msgspec path we considered and deferred,
+so future work has the shape in hand.
 
 ## Motivation
 
@@ -166,9 +169,10 @@ Abstract types (`Expr`, `Stmt`, `TableSource`, …) become
   plus accessors (`AnyNode::id()`, `AnyNode::statement()`,
   `AnyParsedStatement::dialect()`) so external serializers can traverse
   without touching private fields. ~300 LOC.
-- `syntaqlite-cli/src/commands/serve.rs`: add `tags` op, switch `parse`
-  response to tagged-array msgpack, keep others as msgpack maps.
-  ~150 LOC delta.
+- `syntaqlite-cli/src/commands/serve/msgpack.rs`: new sibling of
+  `serve/json.rs`. Implements the length-prefixed msgpack framing and
+  the `tags` handshake; keeps other ops as msgpack maps. Wired in via
+  a new `ServeProtocol::Msgpack` variant in `cli.rs`. ~400 LOC.
 - `syntaqlite-buildtools/src/dialect_codegen/python_codegen.rs`:
   regenerate `nodes.py` as msgspec structs. ~250 LOC delta.
 - `python/syntaqlite/__init__.py`: swap `json` → `msgspec.msgpack`

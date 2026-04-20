@@ -12,15 +12,20 @@ Requires Python 3.10+. Wheels for Linux (x86_64, aarch64), macOS (x86_64, arm64)
 
 ## Library
 
-The package includes a C extension linked directly against syntaqlite. No subprocesses, no shelling out.
-
-### Formatting
+Everything goes through a `Syntaqlite` instance. Create one and reuse it across many calls:
 
 ```python
 import syntaqlite
 
+with syntaqlite.Syntaqlite() as sq:
+    print(sq.format_sql("select 1"))
+```
+
+### Formatting
+
+```python
 sql = "select u.id, u.name, p.title from users u join posts p on u.id = p.user_id where u.active = 1 and p.published = true order by p.created_at desc limit 10"
-print(syntaqlite.format_sql(sql))
+print(sq.format_sql(sql))
 ```
 ```
 SELECT u.id, u.name, p.title
@@ -38,12 +43,10 @@ Raises `syntaqlite.FormatError` on invalid input.
 
 ### Parsing
 
-`syntaqlite.parse()` returns a full AST as typed Python objects, one per statement:
+`sq.parse()` returns a full AST as typed Python objects, one per statement:
 
 ```python
-import syntaqlite
-
-stmts = syntaqlite.parse("SELECT 1 + 2 FROM foo")
+stmts = sq.parse("SELECT 1 + 2 FROM foo")
 stmt = stmts[0]  # SelectStmt
 
 print(type(stmt).__name__)       # SelectStmt
@@ -62,80 +65,45 @@ assert isinstance(stmt, SelectStmt)
 assert isinstance(stmt.columns[0].expr, BinaryExpr)
 ```
 
-Enum and flag fields are wrapped as `IntEnum`/`IntFlag` from `syntaqlite.enums`:
+Enum and flag fields are `IntEnum`/`IntFlag` from `syntaqlite.enums`:
 
 ```python
 from syntaqlite.enums import BinaryOp
 
 expr = stmt.columns[0].expr
-print(BinaryOp(expr.op).name)  # PLUS
+print(expr.op)  # BinaryOp.PLUS
 ```
 
-For performance-sensitive code, use `syntaqlite.parse_raw()` to get plain dicts
-instead of typed objects:
-
-```python
-import syntaqlite, json
-
-stmts = syntaqlite.parse_raw("SELECT 1 + 2; SELECT 3")
-print(json.dumps(stmts[0], indent=2))
-```
-```json
-{
-  "type": "SelectStmt",
-  "flags": 0,
-  "columns": [
-    {
-      "type": "ResultColumn",
-      "flags": 0,
-      "alias": null,
-      "expr": {
-        "type": "BinaryExpr",
-        "op": 0,
-        "left": { "type": "Literal", "literal_type": 0, "source": "1" },
-        "right": { "type": "Literal", "literal_type": 0, "source": "2" }
-      }
-    }
-  ],
-  "from_clause": null,
-  "where_clause": null,
-  ...
-}
-```
-
-Error nodes have `"type": "Error"` with a `"message"` field.
+For performance-sensitive code, use `sq.parse_raw()` to get plain dicts
+instead of typed objects.
 
 ### Tokenizing
 
 ```python
-import syntaqlite
-
-for tok in syntaqlite.tokenize("SELECT 1 + 2"):
-    print(tok["text"], tok["type"])
+for tok in sq.tokenize("SELECT 1 + 2"):
+    print(tok["text"], tok["category"])
 ```
 ```
-SELECT 161
-  185
-1 110
-  185
-+ 97
-  185
-2 110
+SELECT keyword
+  other
+1 number
+  other
++ operator
+  other
+2 number
 ```
 
-Each token is a dict with `text`, `offset`, `length`, and `type` fields.
+Each token is a dict with `text`, `offset`, `length`, `type`, and `category` fields.
 
 ### Validation
 
 Check SQL against a schema without touching a database. Catches unknown tables, columns, functions, CTE column mismatches, and more.
 
 ```python
-import syntaqlite
-
-result = syntaqlite.validate(
-    "SELECT nme FROM users",
+schema = syntaqlite.Schema(
     tables=[syntaqlite.Table("users", columns=["id", "name", "email"])],
 )
+result = sq.validate("SELECT nme FROM users", schema)
 for d in result.diagnostics:
     print(f"{d.severity}: {d.message}")
 ```
@@ -146,9 +114,7 @@ error: unknown column 'nme'
 Pass `render=True` to get formatted diagnostics with source locations and suggestions:
 
 ```python
-print(syntaqlite.validate("SELECT nme FROM users",
-    tables=[syntaqlite.Table("users", columns=["id", "name", "email"])],
-    render=True))
+print(sq.validate("SELECT nme FROM users", schema, render=True))
 ```
 ```
 error: unknown column 'nme'
@@ -159,26 +125,22 @@ error: unknown column 'nme'
   = help: did you mean 'name'?
 ```
 
-Schema can come from `syntaqlite.Table`/`syntaqlite.View` objects or raw DDL:
+`Schema` also accepts raw DDL:
 
 ```python
-result = syntaqlite.validate(
-    "SELECT * FROM orders",
-    schema_ddl="CREATE TABLE orders (id INTEGER, total REAL);",
-)
+schema = syntaqlite.Schema(ddl="CREATE TABLE orders (id INTEGER, total REAL);")
+result = sq.validate("SELECT * FROM orders", schema)
 ```
 
 #### Column lineage
 
-For SELECT statements, validation results include column lineage tracing each output column back to its source:
+For query-bearing statements, the result includes column lineage:
 
 ```python
-import syntaqlite
-
-result = syntaqlite.validate(
-    "SELECT id, name FROM users",
+schema = syntaqlite.Schema(
     tables=[syntaqlite.Table("users", columns=["id", "name", "email"])],
 )
+result = sq.validate("SELECT id, name FROM users", schema)
 for col in result.lineage.columns:
     print(f"{col.name} <- {col.origin}")
 ```
