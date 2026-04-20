@@ -120,6 +120,7 @@ mod completion_service;
 mod document_store;
 mod host;
 mod hover_service;
+mod semantic_tokens_codec;
 mod server;
 mod source_map;
 

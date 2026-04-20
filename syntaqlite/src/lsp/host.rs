@@ -4,8 +4,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use syntaqlite_syntax::any::TokenCategory;
-use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
+use syntaqlite_syntax::source::{DocOffset, DocRange};
 
 use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
@@ -13,13 +12,12 @@ use crate::fmt::formatter::Formatter;
 use crate::semantic::Catalog;
 use crate::semantic::ValidationConfig;
 use crate::semantic::analyzer::SemanticAnalyzer;
-use crate::semantic::diagnostics::Diagnostic;
-
-use crate::semantic::analysis::SemanticToken;
 use crate::semantic::completion::{self, SignatureHelpInfo};
+use crate::semantic::diagnostics::Diagnostic;
 
 use super::analysis_data::{DefinitionResult, ExternalDefinitions, LspCapturePass, SymbolIdentity};
 use super::document_store::{Document, DocumentStore};
+use super::semantic_tokens_codec::encode_semantic_tokens;
 use super::{CompletionEntry, CompletionInfo};
 
 // ── SchemaMap ─────────────────────────────────────────────────────────────────
@@ -792,97 +790,6 @@ fn record_external_definitions(
         }
     }
 }
-
-// ── Semantic tokens encoding ───────────────────────────────────────────────────
-
-/// Delta-encode semantic tokens as a flat `u32` array (5 values per token:
-/// `deltaLine`, `deltaStartChar`, `length`, `legendIndex`, `modifiers`).
-///
-/// Character offsets and lengths are in UTF-16 code units per the LSP spec.
-fn encode_semantic_tokens(
-    source: &str,
-    semantic_tokens: &[SemanticToken],
-    range: Option<DocRange>,
-) -> Vec<u32> {
-    let src = source.as_bytes();
-    let src_end = DocOffset::from_raw(u32::try_from(src.len()).unwrap_or(u32::MAX));
-    let DocRange {
-        start: range_start,
-        end: range_end,
-    } = range.unwrap_or(DocRange {
-        start: DocOffset::default(),
-        end: src_end,
-    });
-
-    let mut result = Vec::with_capacity(semantic_tokens.len() * 5);
-    let mut prev_line: u32 = 0;
-    let mut prev_col: u32 = 0;
-    let mut cur_line: u32 = 0;
-    let mut cur_col: u32 = 0;
-    let mut src_pos = DocOffset::default();
-
-    for tok in semantic_tokens {
-        while src_pos < tok.offset && src_pos < src_end {
-            let i = src_pos.as_usize();
-            if src[i] == b'\n' {
-                cur_line += 1;
-                cur_col = 0;
-                src_pos += DocLen::from_raw(1);
-            } else {
-                let char_len = utf8_char_len(src[i]);
-                cur_col += if char_len == 4 { 2 } else { 1 };
-                src_pos += DocLen::from_raw(u32::try_from(char_len).unwrap_or(1));
-            }
-        }
-
-        if tok.offset < range_start || tok.offset >= range_end {
-            continue;
-        }
-        if matches!(
-            tok.category,
-            TokenCategory::Other | TokenCategory::Operator | TokenCategory::Punctuation
-        ) {
-            continue;
-        }
-
-        let legend_idx = tok.category as u32;
-        let delta_line = cur_line - prev_line;
-        let delta_start = if delta_line == 0 {
-            cur_col - prev_col
-        } else {
-            cur_col
-        };
-
-        // Compute token length in UTF-16 code units.
-        let tok_end = std::cmp::min(tok.offset + tok.length, src_end);
-        let length_utf16 = utf16_len(&src[tok.offset.as_usize()..tok_end.as_usize()]);
-
-        result.push(delta_line);
-        result.push(delta_start);
-        result.push(length_utf16);
-        result.push(legend_idx);
-        result.push(0);
-
-        prev_line = cur_line;
-        prev_col = cur_col;
-    }
-
-    result
-}
-
-/// Count the number of UTF-16 code units in a byte slice of valid UTF-8.
-fn utf16_len(bytes: &[u8]) -> u32 {
-    let mut n = 0u32;
-    let mut i = 0;
-    while i < bytes.len() {
-        let char_len = utf8_char_len(bytes[i]);
-        n += if char_len == 4 { 2 } else { 1 };
-        i += char_len;
-    }
-    n
-}
-
-use super::utf8_char_len;
 
 // ── FormatError ───────────────────────────────────────────────────────────────
 
