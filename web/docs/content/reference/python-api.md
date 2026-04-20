@@ -56,7 +56,7 @@ sq.format_sql(sql, *, line_width=80, indent_width=2, keyword_case="upper", semic
 
 **Returns:** `str` — the formatted SQL.
 
-**Raises:** [`FormatError`](#syntaqliteformaterror) when the input cannot
+**Raises:** [`FormatError`](#syntaqlite-formaterror) when the input cannot
 be parsed.
 
 ```python
@@ -115,7 +115,7 @@ comes through as an `Error` node in the list.
 
 ### `sq.parse_raw`
 
-Same as [`parse`](#sqparse) but returns plain JSON-shaped dicts without
+Same as [`parse`](#sq-parse) but returns plain JSON-shaped dicts without
 the typed-class wrapping. Use this for performance-sensitive code that
 doesn't need attribute-style access.
 
@@ -126,7 +126,7 @@ doesn't need attribute-style access.
 
 ### `sq.validate`
 
-Validate SQL against an optional [`Schema`](#syntaqliteschema).
+Validate SQL against an optional [`Schema`](#syntaqlite-schema).
 
 ```python
 sq.validate(sql, schema=None, *, output=ValidateOutput.STRUCTURED, render_options=None)
@@ -135,7 +135,7 @@ sq.validate(sql, schema=None, *, output=ValidateOutput.STRUCTURED, render_option
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `sql` | `str` | — | SQL to validate |
-| `schema` | [`Schema`](#syntaqliteschema) `\| None` | `None` | Catalog schema to validate against |
+| `schema` | [`Schema`](#syntaqlite-schema) `\| None` | `None` | Catalog schema to validate against |
 | `output` | [`ValidateOutput`](#validateoutput) `\| str` | `STRUCTURED` | Return shape — typed result or rendered string |
 | `render_options` | [`RenderOptions`](#renderoptions) `\| None` | `None` | Fine-grained options for text rendering (source label, etc.). Ignored unless `output=TEXT`. |
 
@@ -212,7 +212,7 @@ sq.close()
 ```
 
 After `close()`, any method call raises
-[`SyntaqliteError`](#syntaqlitesyntaqliteerror).
+[`SyntaqliteError`](#syntaqlite-syntaqliteerror).
 
 ## Schema types
 
@@ -249,13 +249,13 @@ syntaqlite.Table(name, columns=None)
 syntaqlite.View(name, columns=None)
 ```
 
-Same fields as [`Table`](#syntaqlitetable).
+Same fields as [`Table`](#syntaqlite-table).
 
 ## Result types
 
 ### `ValidationResult`
 
-Returned by [`validate`](#sqvalidate) when `render=False`.
+Returned by [`validate`](#sq-validate) when `render=False`.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
@@ -320,7 +320,7 @@ Column lineage for a query-bearing statement.
 
 ### `ValidateOutput`
 
-`StrEnum` selecting the return shape of [`validate`](#sqvalidate):
+`StrEnum` selecting the return shape of [`validate`](#sq-validate):
 
 | Name | Value | Meaning |
 |------|-------|---------|
@@ -364,7 +364,7 @@ syntaqlite.RenderOptions(*, source_name="")
 
 ### `syntaqlite.FormatError`
 
-Raised by [`format_sql`](#sqformat_sql) when the input SQL cannot be
+Raised by [`format_sql`](#sq-format-sql) when the input SQL cannot be
 parsed. Inherits from `Exception`.
 
 ```python
@@ -376,6 +376,6 @@ except syntaqlite.FormatError as e:
 
 ### `syntaqlite.SyntaqliteError`
 
-Base class for runtime errors raised by a [`Syntaqlite`](#syntaqlitesyntaqlite)
-instance — for example, calls made after [`close`](#sqclose). Inherits
+Base class for runtime errors raised by a [`Syntaqlite`](#syntaqlite-syntaqlite)
+instance — for example, calls made after [`close`](#sq-close). Inherits
 from `RuntimeError`.
