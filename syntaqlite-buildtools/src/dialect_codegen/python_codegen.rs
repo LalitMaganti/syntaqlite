@@ -1,9 +1,8 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Python codegen: generates `enums.py` (IntEnum/IntFlag types),
-//! `nodes.py` (typed AST node classes), and
-//! `_py_ast_wrap.h` (C function for building Python dicts from AST nodes).
+//! Python codegen: generates `enums.py` (IntEnum/IntFlag types) and
+//! `nodes.py` (typed AST node classes).
 
 use std::fmt::Write as _;
 
@@ -17,8 +16,6 @@ use super::AstModel;
 pub(crate) struct PythonCodegenArtifacts {
     /// IntEnum/IntFlag types (`enums.py`).
     pub enums: String,
-    /// C header with `syntaqlite_py_wrap_node()` (`_py_ast_wrap.h`).
-    pub ast_wrap_h: String,
     /// Typed AST node classes (`nodes.py`).
     pub nodes: String,
 }
@@ -27,7 +24,6 @@ pub(crate) struct PythonCodegenArtifacts {
 pub(crate) fn generate_python_artifacts(model: &AstModel<'_>) -> PythonCodegenArtifacts {
     PythonCodegenArtifacts {
         enums: model.generate_python_enums(),
-        ast_wrap_h: model.generate_python_c_wrap(),
         nodes: model.generate_python_nodes(),
     }
 }
@@ -207,7 +203,9 @@ impl AstModel<'_> {
         w.newline();
         w.newline();
 
-        // _wrap dispatch function.
+        // _wrap: JSON shape matches `serde_json::to_value(AnyNode)` — list
+        // nodes come as `{"type": "XList", "count": N, "children": [...]}`,
+        // so unwrap them to flat Python lists.
         w.line("def _wrap(d):");
         w.indent();
         w.line("\"\"\"Wrap a raw dict (or list/None) into a typed AST node.\"\"\"");
@@ -219,12 +217,29 @@ impl AstModel<'_> {
         w.indent();
         w.line("return [_wrap(x) for x in d]");
         w.dedent();
+        w.line("if \"children\" in d:");
+        w.indent();
+        w.line("return [_wrap(x) for x in d[\"children\"]]");
+        w.dedent();
         w.line("cls = _NODE_MAP.get(d[\"type\"])");
         w.line("if cls is not None:");
         w.indent();
         w.line("return cls(d)");
         w.dedent();
         w.line("return d");
+        w.dedent();
+        w.newline();
+        w.newline();
+
+        // _flags: named flags list → IntFlag via `cls[name]` lookup.
+        w.line("def _flags(cls, names):");
+        w.indent();
+        w.line("result = cls(0)");
+        w.line("for n in names:");
+        w.indent();
+        w.line("result |= cls[n]");
+        w.dedent();
+        w.line("return result");
         w.dedent();
 
         w.finish()
@@ -325,8 +340,12 @@ fn field_type_and_expr(
                 ("bool".to_string(), format!("d[\"{py_name}\"]"))
             } else if t == "SyntaqliteTextSpan" {
                 ("str | None".to_string(), format!("d.get(\"{py_name}\")"))
-            } else if enum_names.contains(t.as_str()) || flags_names.contains(t.as_str()) {
-                (t.clone(), format!("{t}(d[\"{py_name}\"])"))
+            } else if enum_names.contains(t.as_str()) {
+                // Enums come through as display-name strings; look up by name.
+                (t.clone(), format!("{t}[d[\"{py_name}\"]]"))
+            } else if flags_names.contains(t.as_str()) {
+                // Flags come through as an array of active flag names.
+                (t.clone(), format!("_flags({t}, d[\"{py_name}\"])"))
             } else {
                 ("object".to_string(), format!("d.get(\"{py_name}\")"))
             }
@@ -403,9 +422,9 @@ mod tests {
             "{nodes}"
         );
 
-        // Enum field.
+        // Enum field (display-name string lookup).
         assert!(
-            nodes.contains("self.order: SortOrder = SortOrder(d[\"order\"])"),
+            nodes.contains("self.order: SortOrder = SortOrder[d[\"order\"]]"),
             "{nodes}"
         );
 
@@ -415,9 +434,9 @@ mod tests {
             "{nodes}"
         );
 
-        // Flags field.
+        // Flags field (active-name list).
         assert!(
-            nodes.contains("self.flags: SelectStmtFlags = SelectStmtFlags(d[\"flags\"])"),
+            nodes.contains("self.flags: SelectStmtFlags = _flags(SelectStmtFlags, d[\"flags\"])"),
             "{nodes}"
         );
 

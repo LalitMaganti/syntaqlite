@@ -15,7 +15,7 @@ class AggregateFunctionCall:
 
     def __init__(self, d: dict):
         self.func_name: str | None = d.get("func_name")
-        self.flags: AggregateFunctionCallFlags = AggregateFunctionCallFlags(d["flags"])
+        self.flags: AggregateFunctionCallFlags = _flags(AggregateFunctionCallFlags, d["flags"])
         self.args: list[Expr] | None = _wrap(d.get("args"))
         self.orderby: list[OrderingTerm] | None = _wrap(d.get("orderby"))
         self.filter_clause: Expr | None = _wrap(d.get("filter_clause"))
@@ -32,7 +32,7 @@ class OrderedSetFunctionCall:
 
     def __init__(self, d: dict):
         self.func_name: str | None = d.get("func_name")
-        self.flags: AggregateFunctionCallFlags = AggregateFunctionCallFlags(d["flags"])
+        self.flags: AggregateFunctionCallFlags = _flags(AggregateFunctionCallFlags, d["flags"])
         self.args: list[Expr] | None = _wrap(d.get("args"))
         self.orderby_expr: Expr | None = _wrap(d.get("orderby_expr"))
         self.filter_clause: Expr | None = _wrap(d.get("filter_clause"))
@@ -75,7 +75,7 @@ class CompoundSelect:
     __slots__ = ("op", "left", "right")
 
     def __init__(self, d: dict):
-        self.op: CompoundOp = CompoundOp(d["op"])
+        self.op: CompoundOp = CompoundOp[d["op"]]
         self.left: Select | None = _wrap(d.get("left"))
         self.right: Select | None = _wrap(d.get("right"))
 
@@ -127,7 +127,7 @@ class IsExpr:
     __slots__ = ("op", "left", "right")
 
     def __init__(self, d: dict):
-        self.op: IsOp = IsOp(d["op"])
+        self.op: IsOp = IsOp[d["op"]]
         self.left: Expr | None = _wrap(d.get("left"))
         self.right: Expr | None = _wrap(d.get("right"))
 
@@ -157,7 +157,7 @@ class LikeExpr:
 
     def __init__(self, d: dict):
         self.negated: bool = d["negated"]
-        self.keyword: LikeKeyword = LikeKeyword(d["keyword"])
+        self.keyword: LikeKeyword = LikeKeyword[d["keyword"]]
         self.operand: Expr | None = _wrap(d.get("operand"))
         self.pattern: Expr | None = _wrap(d.get("pattern"))
         self.escape: Expr | None = _wrap(d.get("escape"))
@@ -201,8 +201,8 @@ class ForeignKeyClause:
     def __init__(self, d: dict):
         self.ref_table: str | None = d.get("ref_table")
         self.ref_columns: list[Expr] | None = _wrap(d.get("ref_columns"))
-        self.on_delete: ForeignKeyAction = ForeignKeyAction(d["on_delete"])
-        self.on_update: ForeignKeyAction = ForeignKeyAction(d["on_update"])
+        self.on_delete: ForeignKeyAction = ForeignKeyAction[d["on_delete"]]
+        self.on_update: ForeignKeyAction = ForeignKeyAction[d["on_update"]]
         self.is_deferred: bool = d["is_deferred"]
 
     def __repr__(self):
@@ -215,13 +215,13 @@ class ColumnConstraint:
     __slots__ = ("kind", "constraint_name", "onconf", "sort_order", "is_autoincrement", "collation_name", "generated_storage", "default_expr", "check_expr", "generated_expr", "fk_clause")
 
     def __init__(self, d: dict):
-        self.kind: ColumnConstraintType = ColumnConstraintType(d["kind"])
+        self.kind: ColumnConstraintType = ColumnConstraintType[d["kind"]]
         self.constraint_name: str | None = d.get("constraint_name")
-        self.onconf: ConflictAction = ConflictAction(d["onconf"])
-        self.sort_order: SortOrder = SortOrder(d["sort_order"])
+        self.onconf: ConflictAction = ConflictAction[d["onconf"]]
+        self.sort_order: SortOrder = SortOrder[d["sort_order"]]
         self.is_autoincrement: bool = d["is_autoincrement"]
         self.collation_name: str | None = d.get("collation_name")
-        self.generated_storage: GeneratedColumnStorage = GeneratedColumnStorage(d["generated_storage"])
+        self.generated_storage: GeneratedColumnStorage = GeneratedColumnStorage[d["generated_storage"]]
         self.default_expr: Expr | None = _wrap(d.get("default_expr"))
         self.check_expr: Expr | None = _wrap(d.get("check_expr"))
         self.generated_expr: Expr | None = _wrap(d.get("generated_expr"))
@@ -251,9 +251,9 @@ class TableConstraint:
     __slots__ = ("kind", "constraint_name", "onconf", "is_autoincrement", "pk_columns", "fk_columns", "check_expr", "fk_clause")
 
     def __init__(self, d: dict):
-        self.kind: TableConstraintType = TableConstraintType(d["kind"])
+        self.kind: TableConstraintType = TableConstraintType[d["kind"]]
         self.constraint_name: str | None = d.get("constraint_name")
-        self.onconf: ConflictAction = ConflictAction(d["onconf"])
+        self.onconf: ConflictAction = ConflictAction[d["onconf"]]
         self.is_autoincrement: bool = d["is_autoincrement"]
         self.pk_columns: list[OrderingTerm] | None = _wrap(d.get("pk_columns"))
         self.fk_columns: list[Expr] | None = _wrap(d.get("fk_columns"))
@@ -274,7 +274,7 @@ class CreateTableStmt:
         self.schema: str | None = d.get("schema")
         self.is_temp: bool = d["is_temp"]
         self.if_not_exists: bool = d["if_not_exists"]
-        self.flags: CreateTableStmtFlags = CreateTableStmtFlags(d["flags"])
+        self.flags: CreateTableStmtFlags = _flags(CreateTableStmtFlags, d["flags"])
         self.columns: list[ColumnDef] | None = _wrap(d.get("columns"))
         self.table_constraints: list[TableConstraint] | None = _wrap(d.get("table_constraints"))
         self.as_select: Select | None = _wrap(d.get("as_select"))
@@ -290,7 +290,7 @@ class CteDefinition:
 
     def __init__(self, d: dict):
         self.cte_name: str | None = d.get("cte_name")
-        self.materialized: Materialized = Materialized(d["materialized"])
+        self.materialized: Materialized = Materialized[d["materialized"]]
         self.columns: list[Expr] | None = _wrap(d.get("columns"))
         self.select: Select | None = _wrap(d.get("select"))
 
@@ -320,7 +320,7 @@ class UpsertClause:
     def __init__(self, d: dict):
         self.columns: list[OrderingTerm] | None = _wrap(d.get("columns"))
         self.target_where: Expr | None = _wrap(d.get("target_where"))
-        self.action: UpsertAction = UpsertAction(d["action"])
+        self.action: UpsertAction = UpsertAction[d["action"]]
         self.setlist: list[SetClause] | None = _wrap(d.get("setlist"))
         self.update_where: Expr | None = _wrap(d.get("update_where"))
 
@@ -337,7 +337,7 @@ class DeleteStmt:
         self.with_ctes: list[CteDefinition] | None = _wrap(d.get("with_ctes"))
         self.with_recursive: bool = d["with_recursive"]
         self.table: TableRef | None = _wrap(d.get("table"))
-        self.index_hint: IndexHint = IndexHint(d["index_hint"])
+        self.index_hint: IndexHint = IndexHint[d["index_hint"]]
         self.index_name: str | None = d.get("index_name")
         self.where_clause: Expr | None = _wrap(d.get("where_clause"))
         self.orderby: list[OrderingTerm] | None = _wrap(d.get("orderby"))
@@ -370,9 +370,9 @@ class UpdateStmt:
     def __init__(self, d: dict):
         self.with_ctes: list[CteDefinition] | None = _wrap(d.get("with_ctes"))
         self.with_recursive: bool = d["with_recursive"]
-        self.conflict_action: ConflictAction = ConflictAction(d["conflict_action"])
+        self.conflict_action: ConflictAction = ConflictAction[d["conflict_action"]]
         self.table: TableRef | None = _wrap(d.get("table"))
-        self.index_hint: IndexHint = IndexHint(d["index_hint"])
+        self.index_hint: IndexHint = IndexHint[d["index_hint"]]
         self.index_name: str | None = d.get("index_name")
         self.setlist: list[SetClause] | None = _wrap(d.get("setlist"))
         self.from_clause: TableSource | None = _wrap(d.get("from_clause"))
@@ -393,7 +393,7 @@ class InsertStmt:
     def __init__(self, d: dict):
         self.with_ctes: list[CteDefinition] | None = _wrap(d.get("with_ctes"))
         self.with_recursive: bool = d["with_recursive"]
-        self.conflict_action: ConflictAction = ConflictAction(d["conflict_action"])
+        self.conflict_action: ConflictAction = ConflictAction[d["conflict_action"]]
         self.table: TableRef | None = _wrap(d.get("table"))
         self.columns: list[Expr] | None = _wrap(d.get("columns"))
         self.source: Select | None = _wrap(d.get("source"))
@@ -410,7 +410,7 @@ class BinaryExpr:
     __slots__ = ("op", "left", "right")
 
     def __init__(self, d: dict):
-        self.op: BinaryOp = BinaryOp(d["op"])
+        self.op: BinaryOp = BinaryOp[d["op"]]
         self.left: Expr | None = _wrap(d.get("left"))
         self.right: Expr | None = _wrap(d.get("right"))
 
@@ -424,7 +424,7 @@ class UnaryExpr:
     __slots__ = ("op", "operand")
 
     def __init__(self, d: dict):
-        self.op: UnaryOp = UnaryOp(d["op"])
+        self.op: UnaryOp = UnaryOp[d["op"]]
         self.operand: Expr | None = _wrap(d.get("operand"))
 
     def __repr__(self):
@@ -437,7 +437,7 @@ class Literal:
     __slots__ = ("literal_type", "source")
 
     def __init__(self, d: dict):
-        self.literal_type: LiteralType = LiteralType(d["literal_type"])
+        self.literal_type: LiteralType = LiteralType[d["literal_type"]]
         self.source: str | None = d.get("source")
 
     def __repr__(self):
@@ -475,7 +475,7 @@ class FunctionCall:
 
     def __init__(self, d: dict):
         self.func_name: str | None = d.get("func_name")
-        self.flags: FunctionCallFlags = FunctionCallFlags(d["flags"])
+        self.flags: FunctionCallFlags = _flags(FunctionCallFlags, d["flags"])
         self.args: list[Expr] | None = _wrap(d.get("args"))
         self.filter_clause: Expr | None = _wrap(d.get("filter_clause"))
         self.over_clause: WindowDef | None = _wrap(d.get("over_clause"))
@@ -515,7 +515,7 @@ class RaiseExpr:
     __slots__ = ("raise_type", "error_message")
 
     def __init__(self, d: dict):
-        self.raise_type: RaiseType = RaiseType(d["raise_type"])
+        self.raise_type: RaiseType = RaiseType[d["raise_type"]]
         self.error_message: Expr | None = _wrap(d.get("error_message"))
 
     def __repr__(self):
@@ -541,7 +541,7 @@ class DropStmt:
     __slots__ = ("object_type", "if_exists", "target")
 
     def __init__(self, d: dict):
-        self.object_type: DropObjectType = DropObjectType(d["object_type"])
+        self.object_type: DropObjectType = DropObjectType[d["object_type"]]
         self.if_exists: bool = d["if_exists"]
         self.target: QualifiedName | None = _wrap(d.get("target"))
 
@@ -555,7 +555,7 @@ class AlterTableStmt:
     __slots__ = ("op", "target", "new_name", "old_name")
 
     def __init__(self, d: dict):
-        self.op: AlterOp = AlterOp(d["op"])
+        self.op: AlterOp = AlterOp[d["op"]]
         self.target: QualifiedName | None = _wrap(d.get("target"))
         self.new_name: Name | None = _wrap(d.get("new_name"))
         self.old_name: Name | None = _wrap(d.get("old_name"))
@@ -570,8 +570,8 @@ class TransactionStmt:
     __slots__ = ("op", "trans_type")
 
     def __init__(self, d: dict):
-        self.op: TransactionOp = TransactionOp(d["op"])
-        self.trans_type: TransactionType = TransactionType(d["trans_type"])
+        self.op: TransactionOp = TransactionOp[d["op"]]
+        self.trans_type: TransactionType = TransactionType[d["trans_type"]]
 
     def __repr__(self):
         return "TransactionStmt(...)"
@@ -583,7 +583,7 @@ class SavepointStmt:
     __slots__ = ("op", "savepoint_name")
 
     def __init__(self, d: dict):
-        self.op: SavepointOp = SavepointOp(d["op"])
+        self.op: SavepointOp = SavepointOp[d["op"]]
         self.savepoint_name: Name | None = _wrap(d.get("savepoint_name"))
 
     def __repr__(self):
@@ -596,7 +596,7 @@ class ResultColumn:
     __slots__ = ("flags", "alias", "expr")
 
     def __init__(self, d: dict):
-        self.flags: ResultColumnFlags = ResultColumnFlags(d["flags"])
+        self.flags: ResultColumnFlags = _flags(ResultColumnFlags, d["flags"])
         self.alias: Name | None = _wrap(d.get("alias"))
         self.expr: Expr | None = _wrap(d.get("expr"))
 
@@ -610,7 +610,7 @@ class SelectStmt:
     __slots__ = ("flags", "columns", "from_clause", "where_clause", "groupby", "having", "orderby", "limit_clause", "window_clause")
 
     def __init__(self, d: dict):
-        self.flags: SelectStmtFlags = SelectStmtFlags(d["flags"])
+        self.flags: SelectStmtFlags = _flags(SelectStmtFlags, d["flags"])
         self.columns: list[ResultColumn] | None = _wrap(d.get("columns"))
         self.from_clause: TableSource | None = _wrap(d.get("from_clause"))
         self.where_clause: Expr | None = _wrap(d.get("where_clause"))
@@ -631,8 +631,8 @@ class OrderingTerm:
 
     def __init__(self, d: dict):
         self.expr: Expr | None = _wrap(d.get("expr"))
-        self.sort_order: SortOrder = SortOrder(d["sort_order"])
-        self.nulls_order: NullsOrder = NullsOrder(d["nulls_order"])
+        self.sort_order: SortOrder = SortOrder[d["sort_order"]]
+        self.nulls_order: NullsOrder = NullsOrder[d["nulls_order"]]
 
     def __repr__(self):
         return "OrderingTerm(...)"
@@ -685,7 +685,7 @@ class JoinClause:
     __slots__ = ("join_type", "left", "right", "on_expr", "using_columns")
 
     def __init__(self, d: dict):
-        self.join_type: JoinType = JoinType(d["join_type"])
+        self.join_type: JoinType = JoinType[d["join_type"]]
         self.left: TableSource | None = _wrap(d.get("left"))
         self.right: TableSource | None = _wrap(d.get("right"))
         self.on_expr: Expr | None = _wrap(d.get("on_expr"))
@@ -702,7 +702,7 @@ class JoinPrefix:
 
     def __init__(self, d: dict):
         self.source: TableSource | None = _wrap(d.get("source"))
-        self.join_type: JoinType = JoinType(d["join_type"])
+        self.join_type: JoinType = JoinType[d["join_type"]]
 
     def __repr__(self):
         return "JoinPrefix(...)"
@@ -714,7 +714,7 @@ class TriggerEvent:
     __slots__ = ("event_type", "columns")
 
     def __init__(self, d: dict):
-        self.event_type: TriggerEventType = TriggerEventType(d["event_type"])
+        self.event_type: TriggerEventType = TriggerEventType[d["event_type"]]
         self.columns: list[Expr] | None = _wrap(d.get("columns"))
 
     def __repr__(self):
@@ -731,7 +731,7 @@ class CreateTriggerStmt:
         self.schema: str | None = d.get("schema")
         self.is_temp: bool = d["is_temp"]
         self.if_not_exists: bool = d["if_not_exists"]
-        self.timing: TriggerTiming = TriggerTiming(d["timing"])
+        self.timing: TriggerTiming = TriggerTiming[d["timing"]]
         self.event: TriggerEvent | None = _wrap(d.get("event"))
         self.table: QualifiedName | None = _wrap(d.get("table"))
         self.when_expr: Expr | None = _wrap(d.get("when_expr"))
@@ -766,7 +766,7 @@ class PragmaStmt:
         self.pragma_name: str | None = d.get("pragma_name")
         self.schema: str | None = d.get("schema")
         self.value: str | None = d.get("value")
-        self.pragma_form: PragmaForm = PragmaForm(d["pragma_form"])
+        self.pragma_form: PragmaForm = PragmaForm[d["pragma_form"]]
 
     def __repr__(self):
         return "PragmaStmt(...)"
@@ -780,7 +780,7 @@ class AnalyzeOrReindexStmt:
     def __init__(self, d: dict):
         self.target_name: str | None = d.get("target_name")
         self.schema: str | None = d.get("schema")
-        self.kind: AnalyzeOrReindexOp = AnalyzeOrReindexOp(d["kind"])
+        self.kind: AnalyzeOrReindexOp = AnalyzeOrReindexOp[d["kind"]]
 
     def __repr__(self):
         return "AnalyzeOrReindexStmt(...)"
@@ -831,7 +831,7 @@ class ExplainStmt:
     __slots__ = ("explain_mode", "stmt")
 
     def __init__(self, d: dict):
-        self.explain_mode: ExplainMode = ExplainMode(d["explain_mode"])
+        self.explain_mode: ExplainMode = ExplainMode[d["explain_mode"]]
         self.stmt: Stmt | None = _wrap(d.get("stmt"))
 
     def __repr__(self):
@@ -891,7 +891,7 @@ class FrameBound:
     __slots__ = ("bound_type", "expr")
 
     def __init__(self, d: dict):
-        self.bound_type: FrameBoundType = FrameBoundType(d["bound_type"])
+        self.bound_type: FrameBoundType = FrameBoundType[d["bound_type"]]
         self.expr: Expr | None = _wrap(d.get("expr"))
 
     def __repr__(self):
@@ -904,8 +904,8 @@ class FrameSpec:
     __slots__ = ("frame_type", "exclude", "start_bound", "end_bound")
 
     def __init__(self, d: dict):
-        self.frame_type: FrameType = FrameType(d["frame_type"])
-        self.exclude: FrameExclude = FrameExclude(d["exclude"])
+        self.frame_type: FrameType = FrameType[d["frame_type"]]
+        self.exclude: FrameExclude = FrameExclude[d["exclude"]]
         self.start_bound: FrameBound | None = _wrap(d.get("start_bound"))
         self.end_bound: FrameBound | None = _wrap(d.get("end_bound"))
 
@@ -1029,7 +1029,16 @@ def _wrap(d):
         return None
     if isinstance(d, list):
         return [_wrap(x) for x in d]
+    if "children" in d:
+        return [_wrap(x) for x in d["children"]]
     cls = _NODE_MAP.get(d["type"])
     if cls is not None:
         return cls(d)
     return d
+
+
+def _flags(cls, names):
+    result = cls(0)
+    for n in names:
+        result |= cls[n]
+    return result

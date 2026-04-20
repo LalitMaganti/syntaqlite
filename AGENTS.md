@@ -97,7 +97,7 @@ Generated files live, roughly, under:
 - `syntaqlite-syntax/include/syntaqlite/cflags.h` — `SQLite` cflag index constants
 - `syntaqlite-syntax/src/sqlite/{ast,cflags,dialect,ffi,tokens}.rs` — Rust AST and FFI for the syntax crate
 - `syntaqlite/src/sqlite/{cflags,functions_catalog}.rs` — Rust outputs consumed by the semantic crate
-- `python/syntaqlite/{enums,nodes}.py` + `python/csrc/_py_ast_wrap.h` — Python bindings
+- `python/syntaqlite/{enums,nodes}.py` — Python bindings
 
 If changes are needed, modify the `.synq` files in `syntaqlite-buildtools/parser-nodes/` or the SQLite grammar, then run `tools/run-codegen` to regenerate.
 

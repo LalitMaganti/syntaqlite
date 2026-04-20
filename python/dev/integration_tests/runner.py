@@ -42,6 +42,7 @@ _SUITE_MODULES = [
     "python.dev.integration_tests.suites.semantic",
     "python.dev.integration_tests.suites.lineage",
     "python.dev.integration_tests.suites.introspect",
+    "python.dev.integration_tests.suites.serve",
 ]
 
 _BLUE = "\033[1;34m"

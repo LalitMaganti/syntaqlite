@@ -6,16 +6,15 @@ weight = 6
 
 # Python API reference
 
-The Python library is a C extension (`_syntaqlite`) bundled with the pip
-package. It requires Python 3.10+ and is available on macOS (arm64, x86_64),
-Linux (x86_64, aarch64), and Windows (x86_64).
+The Python library is a thin JSON-RPC client for the bundled `syntaqlite`
+CLI binary. On first use it spawns `syntaqlite serve` as a long-lived
+subprocess and multiplexes all calls over stdio. Requires Python 3.10+;
+wheels are published for macOS (arm64, x86_64), Linux (x86_64, aarch64),
+and Windows (x86_64).
 
 ```python
 import syntaqlite
 ```
-
-If the C extension is not available (e.g. Windows arm64), the library functions
-are not importable. The CLI binary is still usable.
 
 ## `syntaqlite.format_sql`
 

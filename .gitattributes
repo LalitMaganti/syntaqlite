@@ -41,4 +41,3 @@ syntaqlite-syntax/src/sqlite/cflags.rs linguist-generated=true
 # ── Python ────────────────────────────────────────────────────────────────
 python/syntaqlite/enums.py linguist-generated=true
 python/syntaqlite/nodes.py linguist-generated=true
-python/csrc/_py_ast_wrap.h linguist-generated=true

@@ -125,6 +125,8 @@ pub(crate) enum Command {
     /// Start the MCP server (stdio)
     #[cfg(feature = "mcp")]
     Mcp,
+    /// Start the long-lived JSON RPC server over stdio
+    Serve,
     /// Tokenize SQL and print the token stream
     Tokenize(TokenizeArgs),
     /// Dialect codegen (generate C + Rust sources for custom dialects)

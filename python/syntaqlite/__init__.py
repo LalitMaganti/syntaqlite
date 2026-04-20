@@ -1,83 +1,200 @@
-"""syntaqlite — SQLite SQL tools."""
+"""syntaqlite — SQLite SQL tools (CLI+RPC Python client).
 
+Spawns the bundled `syntaqlite serve` subprocess once and speaks a
+line-delimited JSON protocol over stdio. See
+`syntaqlite-cli/src/commands/serve.rs` for the wire spec.
+"""
+
+from __future__ import annotations
+
+import atexit
+import json
 import os
 import stat
 import subprocess
 import sys
+import threading
 from enum import IntEnum
+from typing import Any
+
+from .nodes import _wrap
 
 __version__ = "0.4.2"
 
-# Library API (requires _syntaqlite C extension).
-try:
-    from ._syntaqlite import FormatError
-    from ._syntaqlite import format_sql as _format_sql_raw
-    from ._syntaqlite import load_dialect as _load_dialect
-    from ._syntaqlite import parse as _parse_raw_c
-    from ._syntaqlite import tokenize as _tokenize_raw
-    from ._syntaqlite import validate as _validate_raw
 
-    from .nodes import _wrap
+# ── Binary discovery ──────────────────────────────────────────────────────────
 
-    _HAS_C_EXT = True
 
-    def parse(sql: str, *, dialect: "Dialect | None" = None) -> list:
-        """Parse SQL into typed AST nodes."""
-        capsule = dialect._capsule if dialect else None
-        return [_wrap(d) for d in _parse_raw_c(sql, dialect=capsule)]
+def get_binary_path() -> str:
+    """Return the path to the bundled syntaqlite binary.
 
-    def parse_raw(sql: str, *, dialect: "Dialect | None" = None) -> list[dict]:
-        """Parse SQL into plain dicts (no typed wrapping)."""
-        capsule = dialect._capsule if dialect else None
-        return _parse_raw_c(sql, dialect=capsule)
+    Resolution order:
+    1. ``SYNTAQLITE_BIN`` environment variable (used by dev/CI).
+    2. The binary bundled inside the wheel under ``syntaqlite/bin/``.
+    """
+    override = os.environ.get("SYNTAQLITE_BIN")
+    if override:
+        return override
 
-    def format_sql(
-        sql: str,
-        *,
-        dialect: "Dialect | None" = None,
-        line_width: int = 80,
-        indent_width: int = 2,
-        keyword_case: str = "upper",
-        semicolons: bool = True,
-    ) -> str:
-        """Format SQL with configurable options.
+    binary = os.path.join(os.path.dirname(__file__), "bin", "syntaqlite")
+    if sys.platform == "win32":
+        binary += ".exe"
 
-        Args:
-            sql: SQL to format.
-            dialect: Loaded dialect (default: SQLite).
-            line_width: Max line width (default 80).
-            indent_width: Spaces per indent level (default 2).
-            keyword_case: 'upper' or 'lower' (default 'upper').
-            semicolons: Append semicolons (default True).
+    if sys.platform != "win32" and os.path.exists(binary):
+        current_mode = os.stat(binary).st_mode
+        if not (current_mode & stat.S_IXUSR):
+            os.chmod(binary, current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    return binary
 
-        Raises:
-            FormatError: On parse error.
-        """
-        capsule = dialect._capsule if dialect else None
-        return _format_sql_raw(
-            sql,
+
+# ── RPC client ────────────────────────────────────────────────────────────────
+
+
+class _ServeError(RuntimeError):
+    """Raised when the serve subprocess returns `{"ok": false, ...}`."""
+
+
+class _ServeClient:
+    """Synchronous JSON-RPC client for the `syntaqlite serve` protocol.
+
+    Owns a long-lived subprocess and a lock so the same client is safe to
+    share across threads. Construct additional clients for parallelism.
+    """
+
+    def __init__(self, binary: str, extra_args: list[str] | None = None):
+        argv = [binary, "--no-config"] + (extra_args or []) + ["serve"]
+        self._proc = subprocess.Popen(
+            argv,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=0,
+        )
+        self._stdin = self._proc.stdin
+        self._stdout = self._proc.stdout
+        self._lock = threading.Lock()
+        self._closed = False
+        self._wait_ready()
+        atexit.register(self.close)
+
+    def _wait_ready(self) -> None:
+        line = self._stdout.readline()
+        if line.strip() != b"READY":
+            stderr = self._proc.stderr.read().decode("utf-8", errors="replace")
+            raise RuntimeError(
+                f"syntaqlite serve failed to start: expected 'READY', got {line!r}.\n{stderr}"
+            )
+
+    def call(self, op: str, **params: Any) -> Any:
+        """Send `{"op": op, **params}` and return `result` on success."""
+        req = {"op": op, **params}
+        payload = (json.dumps(req) + "\n").encode("utf-8")
+        with self._lock:
+            if self._closed:
+                raise _ServeError("serve client is closed")
+            self._stdin.write(payload)
+            self._stdin.flush()
+            resp_bytes = self._stdout.readline()
+        if not resp_bytes:
+            raise _ServeError("serve subprocess closed stdout unexpectedly")
+        resp = json.loads(resp_bytes)
+        if not resp.get("ok"):
+            raise _ServeError(resp.get("error", "unknown error"))
+        return resp["result"]
+
+    def close(self) -> None:
+        with self._lock:
+            if self._closed:
+                return
+            self._closed = True
+            try:
+                self._stdin.write(b'{"op":"quit"}\n')
+                self._stdin.flush()
+            except (BrokenPipeError, OSError):
+                pass
+            try:
+                self._stdin.close()
+            except OSError:
+                pass
+            try:
+                self._stdout.close()
+            except OSError:
+                pass
+        try:
+            self._proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self._proc.kill()
+
+
+_default_client: _ServeClient | None = None
+_default_lock = threading.Lock()
+
+
+def _get_default_client() -> _ServeClient:
+    global _default_client
+    if _default_client is None:
+        with _default_lock:
+            if _default_client is None:
+                _default_client = _ServeClient(get_binary_path())
+    return _default_client
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+
+
+class FormatError(Exception):
+    """Raised by :func:`format_sql` when the input cannot be parsed."""
+
+
+def parse(sql: str, *, dialect: Dialect | None = None) -> list:
+    """Parse SQL into typed AST nodes."""
+    client = dialect._client if dialect else _get_default_client()
+    resp = client.call("parse", sql=sql)
+    return [_wrap(d) for d in resp["statements"]]
+
+
+def parse_raw(sql: str, *, dialect: Dialect | None = None) -> list:
+    """Parse SQL into plain JSON-shaped dicts (no typed wrapping)."""
+    client = dialect._client if dialect else _get_default_client()
+    return client.call("parse", sql=sql)["statements"]
+
+
+def format_sql(
+    sql: str,
+    *,
+    dialect: Dialect | None = None,
+    line_width: int = 80,
+    indent_width: int = 2,
+    keyword_case: str = "upper",
+    semicolons: bool = True,
+) -> str:
+    """Format SQL with configurable options.
+
+    Raises:
+        FormatError: if the input fails to parse.
+    """
+    client = dialect._client if dialect else _get_default_client()
+    try:
+        resp = client.call(
+            "format",
+            sql=sql,
             line_width=line_width,
             indent_width=indent_width,
             keyword_case=keyword_case,
             semicolons=semicolons,
-            dialect=capsule,
         )
+    except _ServeError as e:
+        raise FormatError(str(e)) from None
+    return resp["formatted"]
 
-    def tokenize(sql: str, *, dialect: "Dialect | None" = None) -> list[dict]:
-        """Tokenize SQL into a list of token dicts.
 
-        Each dict has: text (str), offset (int), length (int), type (int).
+def tokenize(sql: str, *, dialect: Dialect | None = None) -> list[dict]:
+    """Tokenize SQL into a list of token dicts.
 
-        Args:
-            sql: SQL to tokenize.
-            dialect: Loaded dialect (default: SQLite).
-        """
-        capsule = dialect._capsule if dialect else None
-        return _tokenize_raw(sql, dialect=capsule)
-
-except ImportError:
-    _HAS_C_EXT = False
-    _validate_raw = None
+    Each dict has: text (str), offset (int), length (int), type (int), category (str).
+    """
+    client = dialect._client if dialect else _get_default_client()
+    return client.call("tokenize", sql=sql)["tokens"]
 
 
 # ── Dialect ───────────────────────────────────────────────────────────────────
@@ -86,18 +203,34 @@ except ImportError:
 class Dialect:
     """A loaded dialect extension.
 
+    The dialect is loaded by spawning a fresh `syntaqlite serve` with the
+    appropriate ``--dialect`` / ``--dialect-name`` flags. The subprocess
+    lives for as long as the :class:`Dialect` object.
+
     Args:
         path: Path to a shared library (.so/.dylib/.dll) containing the dialect.
-        name: Dialect name. Resolves the ``syntaqlite_{name}_dialect`` symbol.
-              If None, resolves ``syntaqlite_dialect``.
+        name: Dialect name. Resolves the ``syntaqlite_{name}_grammar`` symbol.
+              If None, resolves ``syntaqlite_grammar``.
     """
 
-    __slots__ = ("_capsule",)
+    __slots__ = ("_client", "_path", "_name")
 
     def __init__(self, path: str, name: str | None = None):
-        if not _HAS_C_EXT:
-            raise RuntimeError("syntaqlite C extension not available")
-        self._capsule = _load_dialect(path, name)
+        self._path = path
+        self._name = name
+        extra = ["--dialect", path]
+        if name is not None:
+            extra += ["--dialect-name", name]
+        self._client = _ServeClient(get_binary_path(), extra_args=extra)
+
+    def close(self) -> None:
+        self._client.close()
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
 
 
 # ── Result types ─────────────────────────────────────────────────────────────
@@ -106,7 +239,7 @@ class Dialect:
 class DiagnosticCode(IntEnum):
     """Machine-readable kind for a :class:`Diagnostic`.
 
-    Mirrors ``SyntaqliteDiagnosticCode`` in the C header.
+    Mirrors the integer codes produced by ``syntaqlite serve``.
     """
 
     PARSE_ERROR = 0
@@ -134,102 +267,6 @@ class Diagnostic:
         return f"Diagnostic({self.severity}: {self.message!r})"
 
 
-class ColumnOrigin:
-    """The physical table and column a result column traces back to."""
-
-    __slots__ = ("table", "column")
-
-    def __init__(self, d: dict):
-        self.table: str = d["table"]
-        self.column: str = d["column"]
-
-    def __repr__(self):
-        return f"{self.table}.{self.column}"
-
-
-class ColumnLineage:
-    """Lineage information for a single result column."""
-
-    __slots__ = ("name", "index", "origin")
-
-    def __init__(self, d: dict):
-        self.name: str = d["name"]
-        self.index: int = d["index"]
-        o = d["origin"]
-        self.origin: ColumnOrigin | None = ColumnOrigin(o) if o else None
-
-    def __repr__(self):
-        if self.origin:
-            return f"ColumnLineage({self.name} <- {self.origin})"
-        return f"ColumnLineage({self.name})"
-
-
-class RelationAccess:
-    """A catalog relation (table or view) referenced in a FROM clause."""
-
-    __slots__ = ("name", "kind")
-
-    def __init__(self, d: dict):
-        self.name: str = d["name"]
-        self.kind: str = d["kind"]
-
-    def __repr__(self):
-        return f"RelationAccess({self.name}, {self.kind})"
-
-
-class Lineage:
-    """Column lineage for a SELECT statement."""
-
-    __slots__ = ("complete", "columns", "relations", "physical_tables", "unexpanded_views")
-
-    def __init__(self, d: dict):
-        self.complete: bool = d["complete"]
-        self.columns: list[ColumnLineage] = [ColumnLineage(c) for c in d["columns"]]
-        self.relations: list[RelationAccess] = [RelationAccess(r) for r in d["relations"]]
-        self.physical_tables: list[str] = d["physical_tables"]
-        self.unexpanded_views: list[str] = d.get("unexpanded_views", [])
-
-    def __repr__(self):
-        status = "complete" if self.complete else "partial"
-        return f"Lineage({status}, {len(self.columns)} columns)"
-
-
-class Table:
-    """A table definition for schema registration."""
-
-    __slots__ = ("name", "columns")
-
-    def __init__(self, name: str, columns: list[str] | None = None):
-        self.name = name
-        self.columns = columns
-
-    def _to_dict(self) -> dict:
-        return {"name": self.name, "columns": self.columns}
-
-    def __repr__(self):
-        if self.columns:
-            return f"Table({self.name!r}, {self.columns!r})"
-        return f"Table({self.name!r})"
-
-
-class View:
-    """A view definition for schema registration."""
-
-    __slots__ = ("name", "columns")
-
-    def __init__(self, name: str, columns: list[str] | None = None):
-        self.name = name
-        self.columns = columns
-
-    def _to_dict(self) -> dict:
-        return {"name": self.name, "columns": self.columns}
-
-    def __repr__(self):
-        if self.columns:
-            return f"View({self.name!r}, {self.columns!r})"
-        return f"View({self.name!r})"
-
-
 class DefinedRelation:
     """A relation defined by a DDL statement (CREATE TABLE / CREATE VIEW)."""
 
@@ -247,48 +284,65 @@ class DefinedRelation:
 class Statement:
     """Per-statement analysis result."""
 
-    __slots__ = ("diagnostics", "lineage", "defined_relations", "source", "relations")
+    __slots__ = ("diagnostics", "defined_relations", "source")
 
     def __init__(self, d: dict):
-        self.diagnostics: list[Diagnostic] = [Diagnostic(x) for x in d["diagnostics"]]
-        lin = d["lineage"]
-        self.lineage: Lineage | None = Lineage(lin) if lin else None
+        self.diagnostics: list[Diagnostic] = [Diagnostic(x) for x in d.get("diagnostics", [])]
         self.defined_relations: list[DefinedRelation] = [
             DefinedRelation(x) for x in d.get("defined_relations", [])
         ]
         self.source: str = d.get("source", "")
-        self.relations: list[RelationAccess] = [
-            RelationAccess(r) for r in d.get("relations", [])
-        ]
 
     def __repr__(self):
         parts = [f"{len(self.diagnostics)} diagnostics"]
-        if self.lineage:
-            parts.append(str(self.lineage))
         if self.defined_relations:
             parts.append(f"{len(self.defined_relations)} defined relations")
         return f"Statement({', '.join(parts)})"
 
 
 class ValidationResult:
-    """Result of validate() — diagnostics, optional lineage, and per-statement data."""
+    """Result of validate() — aggregated diagnostics plus per-statement data."""
 
-    __slots__ = ("diagnostics", "lineage", "statements")
+    __slots__ = ("diagnostics", "statements")
 
     def __init__(self, d: dict):
-        self.diagnostics: list[Diagnostic] = [Diagnostic(x) for x in d["diagnostics"]]
-        lin = d["lineage"]
-        self.lineage: Lineage | None = Lineage(lin) if lin else None
-        self.statements: list[Statement] = [
-            Statement(s) for s in d.get("statements", [])
-        ]
+        self.diagnostics: list[Diagnostic] = [Diagnostic(x) for x in d.get("diagnostics", [])]
+        self.statements: list[Statement] = [Statement(s) for s in d.get("statements", [])]
 
     def __repr__(self):
-        parts = [f"{len(self.diagnostics)} diagnostics"]
-        if self.lineage:
-            parts.append(str(self.lineage))
-        parts.append(f"{len(self.statements)} statements")
-        return f"ValidationResult({', '.join(parts)})"
+        return f"ValidationResult({len(self.diagnostics)} diagnostics, {len(self.statements)} statements)"
+
+
+class Table:
+    """A table definition for schema registration."""
+
+    __slots__ = ("name", "columns")
+
+    def __init__(self, name: str, columns: list[str] | None = None):
+        self.name = name
+        self.columns = columns
+
+    def _to_dict(self) -> dict:
+        return {"name": self.name, "columns": self.columns}
+
+    def __repr__(self):
+        return f"Table({self.name!r}, {self.columns!r})" if self.columns else f"Table({self.name!r})"
+
+
+class View:
+    """A view definition for schema registration."""
+
+    __slots__ = ("name", "columns")
+
+    def __init__(self, name: str, columns: list[str] | None = None):
+        self.name = name
+        self.columns = columns
+
+    def _to_dict(self) -> dict:
+        return {"name": self.name, "columns": self.columns}
+
+    def __repr__(self):
+        return f"View({self.name!r}, {self.columns!r})" if self.columns else f"View({self.name!r})"
 
 
 def validate(
@@ -297,10 +351,9 @@ def validate(
     tables: list[Table] | None = None,
     views: list[View] | None = None,
     schema_ddl: str | None = None,
-    module_resolver: "Callable[[str], str | None] | None" = None,
     render: bool = False,
     dialect: Dialect | None = None,
-):
+) -> ValidationResult | str:
     """Validate SQL against an optional schema.
 
     Args:
@@ -308,54 +361,30 @@ def validate(
         tables: Schema tables.
         views: Schema views.
         schema_ddl: DDL to parse as schema (CREATE TABLE/VIEW statements).
-        module_resolver: Callable that resolves module imports. Given a dotted
-            module path (e.g. ``"slices.flow"``), return the SQL source text
-            or None if not found.
         render: If True, return rendered diagnostics string instead.
         dialect: Loaded dialect (default: SQLite).
-
-    Returns:
-        ValidationResult (or str when render=True).
     """
-    raw_tables = [t._to_dict() for t in tables] if tables else None
-    raw_views = [v._to_dict() for v in views] if views else None
-    capsule = dialect._capsule if dialect else None
-    raw = _validate_raw(
-        sql,
-        tables=raw_tables,
-        views=raw_views,
-        schema_ddl=schema_ddl,
-        render=render,
-        dialect=capsule,
-        module_resolver=module_resolver,
-    )
+    params: dict[str, Any] = {"sql": sql, "render": render}
+    if tables is not None:
+        params["tables"] = [t._to_dict() for t in tables]
+    if views is not None:
+        params["views"] = [v._to_dict() for v in views]
+    if schema_ddl is not None:
+        params["schema_ddl"] = schema_ddl
+
+    client = dialect._client if dialect else _get_default_client()
+    resp = client.call("validate", **params)
     if render:
-        return raw
-    return ValidationResult(raw)
+        return resp["rendered"]
+    return ValidationResult(resp)
 
 
-def get_binary_path():
-    """Return the path to the bundled syntaqlite binary."""
-    binary = os.path.join(os.path.dirname(__file__), "bin", "syntaqlite")
-    if sys.platform == "win32":
-        binary += ".exe"
-
-    # Ensure binary is executable on Unix (wheel extraction strips permissions)
-    if sys.platform != "win32":
-        current_mode = os.stat(binary).st_mode
-        if not (current_mode & stat.S_IXUSR):
-            os.chmod(
-                binary,
-                current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH,
-            )
-
-    return binary
+# ── Bundled CLI dispatcher (used by console_scripts entry point) ─────────────
 
 
 def main():
-    """Execute the bundled binary."""
+    """Execute the bundled binary — the `syntaqlite` console script."""
     binary = get_binary_path()
-
     if sys.platform == "win32":
         sys.exit(subprocess.call([binary] + sys.argv[1:]))
     else:

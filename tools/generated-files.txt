@@ -45,4 +45,3 @@ syntaqlite-syntax/src/sqlite/cflags.rs
 # ── Python ────────────────────────────────────────────────────────────────
 python/syntaqlite/enums.py
 python/syntaqlite/nodes.py
-python/csrc/_py_ast_wrap.h

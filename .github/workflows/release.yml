@@ -212,45 +212,44 @@ jobs:
             --field content="$(base64 -w0 formula.rb)" \
             --field sha="$(gh api repos/LalitMaganti/homebrew-tap/contents/Formula/syntaqlite.rb --jq '.sha')"
 
-  # Build Python wheels using cibuildwheel. Builds Rust from source inside
-  # each platform's environment, then compiles the C extension per Python version.
+  # Build one Python wheel per (OS, arch). The Python package is pure Python
+  # but it bundles the platform-specific `syntaqlite` CLI binary, so the wheel
+  # is tagged `py3-none-<plat>` — one wheel per OS/arch covers every Py3.
   build-python-wheels:
-    name: python-wheels (${{ matrix.os }}, ${{ matrix.cibw_archs }})
+    name: python-wheels (${{ matrix.name }})
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {os: ubuntu-latest, cibw_archs: "x86_64"}
-          - {os: ubuntu-24.04-arm, cibw_archs: "aarch64"}
-          - {os: macos-latest, cibw_archs: "arm64"}
-          - {os: macos-26-intel, cibw_archs: "x86_64"}
-          - {os: windows-latest, cibw_archs: "AMD64 ARM64"}
-    runs-on: ${{ matrix.os }}
+          - {name: linux-x86_64, runner: ubuntu-latest}
+          - {name: linux-aarch64, runner: ubuntu-24.04-arm}
+          - {name: macos-arm64, runner: macos-latest, macos_deployment: "11.0"}
+          - {name: macos-x86_64, runner: macos-26-intel, macos_deployment: "10.12"}
+          - {name: windows-amd64, runner: windows-latest}
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          submodules: recursive
 
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v3.4
-        with:
-          package-dir: python/
-          output-dir: wheelhouse/
-        env:
-          CIBW_ARCHS: ${{ matrix.cibw_archs }}
-          CIBW_BEFORE_ALL_LINUX: bash {package}/dev/cibw_before_all.sh
-          CIBW_BEFORE_ALL_MACOS: bash {package}/dev/cibw_before_all.sh
-          CIBW_ENVIRONMENT_MACOS: MACOSX_DEPLOYMENT_TARGET=11.0
-          CIBW_BEFORE_ALL_WINDOWS: powershell -File {package}/dev/cibw_before_all_windows.ps1
+      - name: Build CLI
+        shell: bash
+        run: cargo build --release -p syntaqlite-cli
 
-      - name: Upload wheels
+      - name: Build wheel
+        shell: bash
+        env:
+          MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_deployment }}
+        run: |
+          python -m pip install --upgrade build
+          python -m build --wheel --outdir wheelhouse/ python/
+
+      - name: Upload wheel
         uses: actions/upload-artifact@v6
         with:
-          name: wheels-${{ matrix.os }}-${{ matrix.cibw_archs }}
+          name: wheels-${{ matrix.name }}
           path: wheelhouse/*.whl
 
   # Publish all wheels to PyPI in a single job.

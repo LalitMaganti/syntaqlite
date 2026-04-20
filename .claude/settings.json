@@ -26,9 +26,7 @@
       "Write(python/syntaqlite/enums.py)",
       "Edit(python/syntaqlite/enums.py)",
       "Write(python/syntaqlite/nodes.py)",
-      "Edit(python/syntaqlite/nodes.py)",
-      "Write(python/csrc/_py_ast_wrap.h)",
-      "Edit(python/csrc/_py_ast_wrap.h)"
+      "Edit(python/syntaqlite/nodes.py)"
     ]
   },
   "hooks": {
