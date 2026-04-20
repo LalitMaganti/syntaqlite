@@ -1,8 +1,8 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-import type {DialectBinding} from "./types";
-import type {Engine} from "./engine";
+import type {DialectBinding} from "./types.js";
+import type {Engine} from "./engine.js";
 
 export interface DialectPreset {
   id: string;

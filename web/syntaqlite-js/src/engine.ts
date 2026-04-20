@@ -15,7 +15,7 @@ import type {
   EmscriptenModuleConfig,
   FormatOptions,
   FormatResult,
-} from "./types";
+} from "./types.js";
 
 export interface CflagEntry {
   name: string;
