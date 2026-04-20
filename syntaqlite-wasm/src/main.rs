@@ -642,15 +642,15 @@ fn run_embedded_extract(lang: u32, ptr: u32, len: u32) -> i32 {
     let items: Vec<WasmFragment> = fragments
         .iter()
         .map(|f| WasmFragment {
-            start: f.sql_range().start,
-            end: f.sql_range().end,
+            start: f.sql_range().start.as_usize(),
+            end: f.sql_range().end.as_usize(),
             sql: f.sql_text().to_string(),
             holes: f
                 .holes()
                 .iter()
                 .map(|h| WasmHole {
-                    start: h.host_range().start,
-                    end: h.host_range().end,
+                    start: h.host_range().start.as_usize(),
+                    end: h.host_range().end.as_usize(),
                 })
                 .collect(),
         })

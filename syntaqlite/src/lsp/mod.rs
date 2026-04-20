@@ -119,14 +119,6 @@ impl CompletionKind {
 mod completion;
 mod host;
 mod server;
+mod source_map;
 
-/// Length of a UTF-8 character from its leading byte.
-/// Returns 1 for ASCII and for invalid/continuation bytes (defensive).
-fn utf8_char_len(lead: u8) -> usize {
-    match lead {
-        0xC0..=0xDF => 2,
-        0xE0..=0xEF => 3,
-        0xF0..=0xF7 => 4,
-        _ => 1, // ASCII (0x00..=0x7F) and invalid/continuation bytes
-    }
-}
+pub(crate) use source_map::{SourceMap, utf8_char_len};

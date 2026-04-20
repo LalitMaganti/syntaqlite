@@ -81,17 +81,24 @@ impl<'a> DiagnosticRenderer<'a> {
                 file: self.file,
                 severity,
                 message: &message,
-                start_offset: diag.range().start.as_usize(),
-                end_offset: diag.range().end.as_usize(),
+                range: diag.range(),
                 help: help.as_deref(),
             },
         )?;
 
         // Render macro expansion traceback (Perfetto-style).  Frame 0 is
         // the outermost call site (already shown above), so we render the
-        // inner frames as "in macro expansion" notes.
+        // inner frames as "in macro expansion" notes.  `frame.range` is a
+        // `LayerRange` into the expansion buffer; reinterpret it as a
+        // `DocRange` into `frame.buffer` — each buffer is its own tiny
+        // document for snippet rendering.
         let frames = diag.expansion_frames();
         for frame in frames.iter().skip(1) {
+            use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
+            let frame_range = DocRange::from_offset_len(
+                DocOffset::from_raw(frame.range.start.as_u32()),
+                DocLen::from(frame.range.len()),
+            );
             render_source_error(
                 out,
                 &crate::util::SourceError {
@@ -99,8 +106,7 @@ impl<'a> DiagnosticRenderer<'a> {
                     file: "<macro expansion>",
                     severity: "note",
                     message: "in macro expansion",
-                    start_offset: frame.range.start.as_usize(),
-                    end_offset: frame.range.end.as_usize(),
+                    range: frame_range,
                     help: None,
                 },
             )?;

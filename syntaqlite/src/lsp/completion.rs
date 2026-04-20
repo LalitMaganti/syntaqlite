@@ -25,11 +25,8 @@ pub(crate) fn completion_info(
     let source = DocText::new(model.source());
     let tokens = &model.tokens;
     let end_of_doc = source.byte_len();
-    let cursor = if offset.as_usize() > end_of_doc.as_usize() {
-        DocOffset::default() + end_of_doc
-    } else {
-        offset
-    };
+    let doc_end = DocOffset::default() + end_of_doc;
+    let cursor = if offset > doc_end { doc_end } else { offset };
     let (boundary, backtracked) = completion_boundary(source, tokens, cursor);
     let start = statement_token_start(tokens, boundary);
     let stmt_tokens = &tokens[start..boundary];
@@ -92,7 +89,7 @@ fn detect_qualifier(
     let ident_tok = &tokens[tokens.len() - 2];
 
     if dot_tok.length != DocLen::from_raw(1)
-        || source.as_str().as_bytes().get(dot_tok.offset.as_usize()) != Some(&b'.')
+        || &source[DocRange::from_offset_len(dot_tok.offset, dot_tok.length)] != "."
     {
         return None;
     }

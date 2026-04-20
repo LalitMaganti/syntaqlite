@@ -123,10 +123,10 @@ pub fn syntaqlite::embedded::EmbeddedAnalyzer::validate(&self, fragments: &[synt
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_catalog(self, catalog: syntaqlite::Catalog) -> Self
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_config(self, config: syntaqlite::semantic::ValidationConfig) -> Self
 pub fn syntaqlite::embedded::EmbeddedFragment::holes(&self) -> &[syntaqlite::embedded::Hole]
-pub fn syntaqlite::embedded::EmbeddedFragment::sql_range(&self) -> &core::ops::range::Range<usize>
+pub fn syntaqlite::embedded::EmbeddedFragment::sql_range(&self) -> syntaqlite_syntax::source::DocRange
 pub fn syntaqlite::embedded::EmbeddedFragment::sql_text(&self) -> &str
-pub fn syntaqlite::embedded::Hole::host_range(&self) -> &core::ops::range::Range<usize>
-pub fn syntaqlite::embedded::Hole::sql_offset(&self) -> usize
+pub fn syntaqlite::embedded::Hole::host_range(&self) -> syntaqlite_syntax::source::DocRange
+pub fn syntaqlite::embedded::Hole::sql_offset(&self) -> syntaqlite_syntax::source::DocOffset
 pub fn syntaqlite::embedded::extract_python(source: &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
 pub fn syntaqlite::embedded::extract_typescript(source: &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
 pub fn syntaqlite::fmt::FormatConfig::default() -> Self

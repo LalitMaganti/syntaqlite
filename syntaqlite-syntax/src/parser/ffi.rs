@@ -3,6 +3,8 @@
 
 use std::ffi::{c_char, c_void};
 
+use crate::source::{RewriteIdx, StmtOffset, TokenIdx};
+
 /// Opaque C parser type.
 pub(crate) enum CParser {}
 
@@ -287,7 +289,10 @@ impl CParser {
     ///
     /// # Safety
     /// The returned slice must not outlive the borrow underlying `self`.
-    pub(crate) unsafe fn node_text<'a>(&self, node_id: u32) -> Option<(&'a str, u32)> {
+    pub(crate) unsafe fn node_text<'a>(
+        &self,
+        node_id: u32,
+    ) -> Option<(&'a str, StmtOffset)> {
         let mut out_len: u32 = 0;
         let mut out_offset: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
@@ -307,7 +312,7 @@ impl CParser {
         let text = unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
         };
-        Some((text, out_offset))
+        Some((text, StmtOffset::from_raw(out_offset)))
     }
 
     /// Post-expansion text of AST node `node_id` — a slice of whichever
@@ -424,14 +429,17 @@ impl CParser {
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
-    pub(crate) unsafe fn token_leading_comments(&self, token_idx: u32) -> &[CComment] {
+    pub(crate) unsafe fn token_leading_comments(
+        &self,
+        token_idx: TokenIdx,
+    ) -> &[CComment] {
         let mut count: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer; result
         // accessors are valid after `next()` returns a non-DONE code.
         let ptr = unsafe {
             syntaqlite_token_leading_comments(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
-                token_idx,
+                token_idx.as_u32(),
                 &raw mut count,
             )
         };
@@ -443,14 +451,17 @@ impl CParser {
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
-    pub(crate) unsafe fn token_trailing_comments(&self, token_idx: u32) -> &[CComment] {
+    pub(crate) unsafe fn token_trailing_comments(
+        &self,
+        token_idx: TokenIdx,
+    ) -> &[CComment] {
         let mut count: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer; result
         // accessors are valid after `next()` returns a non-DONE code.
         let ptr = unsafe {
             syntaqlite_token_trailing_comments(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
-                token_idx,
+                token_idx.as_u32(),
                 &raw mut count,
             )
         };
@@ -535,20 +546,20 @@ impl CParser {
         }
     }
 
-    pub(crate) unsafe fn macro_rewrite_arg_segment_count(&self, rewrite_idx: u32) -> u32 {
+    pub(crate) unsafe fn macro_rewrite_arg_segment_count(&self, rewrite_idx: RewriteIdx) -> u32 {
         // SAFETY: self is a valid CParser pointer; the C side clamps
         // out-of-range indices to zero.
         unsafe {
             syntaqlite_macro_rewrite_arg_segment_count(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
-                rewrite_idx,
+                rewrite_idx.as_u32(),
             )
         }
     }
 
     pub(crate) unsafe fn macro_rewrite_arg_segment_at(
         &self,
-        rewrite_idx: u32,
+        rewrite_idx: RewriteIdx,
         segment_idx: u32,
     ) -> CMacroArgSegment {
         // SAFETY: self is a valid CParser pointer; the C side clamps
@@ -556,7 +567,7 @@ impl CParser {
         unsafe {
             syntaqlite_macro_rewrite_arg_segment_at(
                 std::ptr::from_ref::<Self>(self).cast_mut(),
-                rewrite_idx,
+                rewrite_idx.as_u32(),
                 segment_idx,
             )
         }
