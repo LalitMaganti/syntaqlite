@@ -8,8 +8,6 @@
 use std::collections::{HashMap, HashSet};
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
-#[cfg(feature = "lsp")]
-use syntaqlite_syntax::source::DocRange;
 
 use super::ddl::DdlReader;
 use crate::dialect::AnyDialect;
@@ -99,16 +97,6 @@ impl From<DialectFunctionCategory> for FunctionCategory {
     }
 }
 
-/// Where a catalog entry was originally defined (e.g. in an external schema file).
-#[cfg(feature = "lsp")]
-#[derive(Debug, Clone)]
-pub(crate) struct DefinitionSite {
-    /// File URI (e.g. `"file:///path/to/schema.sql"`).
-    pub file_uri: String,
-    /// Document-absolute byte range of the name in the source file.
-    pub range: DocRange,
-}
-
 #[derive(Debug, Clone)]
 struct RelationEntry {
     name: String,
@@ -119,12 +107,6 @@ struct RelationEntry {
     without_rowid: bool,
     /// `true` if this relation is a view (not a physical table).
     is_view: bool,
-    /// Where this relation was defined, if known.
-    #[cfg(feature = "lsp")]
-    definition_site: Option<DefinitionSite>,
-    /// Where each column was defined, keyed by lowercase column name.
-    #[cfg(feature = "lsp")]
-    column_definition_sites: HashMap<String, DefinitionSite>,
 }
 
 #[derive(Debug, Clone)]
@@ -238,10 +220,6 @@ impl CatalogLayerContents {
                 columns,
                 without_rowid,
                 is_view: false,
-                #[cfg(feature = "lsp")]
-                definition_site: None,
-                #[cfg(feature = "lsp")]
-                column_definition_sites: HashMap::new(),
             },
         );
     }
@@ -271,10 +249,6 @@ impl CatalogLayerContents {
                 columns,
                 without_rowid: true, // views have no rowid
                 is_view: true,
-                #[cfg(feature = "lsp")]
-                definition_site: None,
-                #[cfg(feature = "lsp")]
-                column_definition_sites: HashMap::new(),
             },
         );
     }
@@ -574,24 +548,20 @@ impl Catalog {
     /// Parse DDL statements from one or more sources and populate the database
     /// layer.
     ///
-    /// Each entry in `sources` is a `(sql_text, optional_file_uri)` pair.
-    /// All sources are accumulated into a single catalog so that tables
-    /// defined in earlier sources are visible to later ones.
+    /// All sources are accumulated into a single catalog so that tables defined
+    /// in earlier sources are visible to later ones.
     ///
     /// Returns `(catalog, errors)`. `errors` contains the human-readable
     /// message for each statement that failed to parse. Partial results from
     /// successfully parsed statements are always accumulated.
     #[cfg(feature = "sqlite")]
-    pub fn from_ddl(
-        dialect: impl Into<AnyDialect>,
-        sources: &[(&str, Option<&str>)],
-    ) -> (Self, Vec<String>) {
+    pub fn from_ddl(dialect: impl Into<AnyDialect>, sources: &[&str]) -> (Self, Vec<String>) {
         use syntaqlite_syntax::ParseOutcome;
         let dialect = dialect.into();
         let mut catalog = Catalog::new(dialect.clone());
         let mut errors: Vec<String> = Vec::new();
         let parser = syntaqlite_syntax::Parser::new();
-        for &(source, file_uri) in sources {
+        for &source in sources {
             let mut session = parser.parse(source);
             loop {
                 let stmt = match session.next() {
@@ -606,10 +576,6 @@ impl Catalog {
                 let root_id: AnyNodeId = root.node_id().into();
                 let erased = stmt.erase();
                 catalog.accumulate_ddl(CatalogLayer::Database, &erased, root_id, &dialect);
-                #[cfg(feature = "lsp")]
-                catalog.record_ddl_definition_site(&erased, root_id, &dialect, file_uri);
-                #[cfg(not(feature = "lsp"))]
-                let _ = file_uri;
             }
         }
         (catalog, errors)
@@ -865,75 +831,14 @@ impl Catalog {
         (None, false)
     }
 
-    /// Record definition sites for a DDL statement (table + columns), if `file_uri` is provided.
-    #[cfg(feature = "lsp")]
-    fn record_ddl_definition_site(
-        &mut self,
-        stmt: &AnyParsedStatement<'_>,
-        root: AnyNodeId,
-        dialect: &AnyDialect,
-        file_uri: Option<&str>,
-    ) {
-        let Some(uri) = file_uri else { return };
-        let reader = DdlReader::new(stmt, dialect.roles());
-        let Some((name, range)) = reader.name_span(root) else {
-            return;
-        };
-        let Some(entry) = self.layers[CatalogLayer::Database.index()]
-            .relations
-            .get_mut(&name)
-        else {
-            return;
-        };
-        entry.definition_site = Some(DefinitionSite {
-            file_uri: uri.to_string(),
-            range,
-        });
-        for (col_name, col_range) in reader.column_spans(root) {
-            entry.column_definition_sites.insert(
-                col_name,
-                DefinitionSite {
-                    file_uri: uri.to_string(),
-                    range: col_range,
-                },
-            );
-        }
-    }
-
-    /// Return the definition site for a column in a relation, if one was recorded.
-    #[cfg(feature = "lsp")]
-    pub(crate) fn column_definition_site(
-        &self,
-        table: &str,
-        column: &str,
-    ) -> Option<&DefinitionSite> {
-        let col_key = column.to_ascii_lowercase();
-        for layer in self.all_layers_ordered() {
-            if let Some(rel) = layer.relation(table) {
-                return rel.column_definition_sites.get(&col_key);
-            }
-        }
-        None
-    }
-
-    /// Return the definition site for a relation, if one was recorded.
-    #[cfg(feature = "lsp")]
-    pub(crate) fn relation_definition_site(&self, name: &str) -> Option<&DefinitionSite> {
-        for layer in self.all_layers_ordered() {
-            if let Some(rel) = layer.relation(name) {
-                return rel.definition_site.as_ref();
-            }
-        }
-        None
-    }
-
     // ── Enumeration (for fuzzy suggestions and completions) ───────────────────
 
     pub(crate) fn all_relation_names(&self) -> Vec<String> {
         self.unique_names_across_layers(|l| l.relations.values().map(|r| r.name.as_str()))
     }
 
-    #[cfg(feature = "lsp")]
+    /// Enumerate column names across all layers, optionally filtered to a
+    /// single relation.
     pub(crate) fn all_column_names(&self, table: Option<&str>) -> Vec<String> {
         let mut names = Vec::new();
         for layer in self.all_layers_ordered() {
@@ -951,7 +856,6 @@ impl Catalog {
     }
 
     /// Look up function metadata by name: returns (category, arities) if found.
-    #[cfg(feature = "lsp")]
     pub(crate) fn function_signature(
         &self,
         name: &str,
@@ -1081,22 +985,14 @@ mod tests {
     #[test]
     fn from_ddl_populates_tables() {
         let dialect = crate::sqlite::dialect::dialect();
-        let cat = Catalog::from_ddl(
-            dialect,
-            &[("CREATE TABLE users (id INTEGER, name TEXT);", None)],
-        )
-        .0;
+        let cat = Catalog::from_ddl(dialect, &["CREATE TABLE users (id INTEGER, name TEXT);"]).0;
         assert!(cat.resolve_relation("users"));
     }
 
     #[test]
     fn from_ddl_populates_virtual_tables() {
         let dialect = crate::sqlite::dialect::dialect();
-        let cat = Catalog::from_ddl(
-            dialect,
-            &[("CREATE VIRTUAL TABLE fts USING fts5(content);", None)],
-        )
-        .0;
+        let cat = Catalog::from_ddl(dialect, &["CREATE VIRTUAL TABLE fts USING fts5(content);"]).0;
         assert!(cat.resolve_relation("fts"));
     }
 

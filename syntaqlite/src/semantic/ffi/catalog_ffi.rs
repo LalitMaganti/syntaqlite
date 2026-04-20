@@ -151,7 +151,7 @@ pub unsafe extern "C" fn syntaqlite_validator_load_schema_ddl(
         std::str::from_utf8_unchecked(std::slice::from_raw_parts(source.cast(), len as usize))
     };
 
-    let (catalog, errors) = Catalog::from_ddl(state.dialect.clone(), &[(src, None)]);
+    let (catalog, errors) = Catalog::from_ddl(state.dialect.clone(), &[src]);
     state.user_catalog.copy_schema_layers_from(&catalog);
     errors.len() as u32
 }

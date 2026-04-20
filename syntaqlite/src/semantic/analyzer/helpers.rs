@@ -5,16 +5,10 @@
 //! span lookup, macro registration extraction, rowid aliasing.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParseError, AnyParsedStatement, FieldValue};
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-use syntaqlite_syntax::source::StatementBase;
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, StmtLen};
 
 use crate::dialect::{FIELD_ABSENT, MacroDef, SemanticRole};
-#[cfg(feature = "lsp")]
-use crate::semantic::catalog::AritySpec;
 use crate::semantic::model::DefinedRelation;
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-use crate::semantic::model::{StoredComment, StoredToken};
 
 /// Extract relations defined by a DDL statement (CREATE TABLE / CREATE VIEW).
 pub(super) fn extract_defined_relations(
@@ -43,52 +37,6 @@ pub(super) fn extract_defined_relations(
         }]
     } else {
         Vec::new()
-    }
-}
-
-#[cfg(feature = "lsp")]
-pub(super) fn format_arity(name: &str, arity: AritySpec) -> String {
-    match arity {
-        AritySpec::Exact(n) => {
-            let params: Vec<String> = (0..n).map(|i| format!("arg{}", i + 1)).collect();
-            format!("{}({})", name, params.join(", "))
-        }
-        AritySpec::AtLeast(n) => {
-            let mut params: Vec<String> = (0..n).map(|i| format!("arg{}", i + 1)).collect();
-            params.push("...".to_string());
-            format!("{}({})", name, params.join(", "))
-        }
-        AritySpec::Any => format!("{name}(...)"),
-    }
-}
-
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-pub(super) fn collect_tokens<'a>(
-    iter: impl Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>>,
-    stmt_base: StatementBase,
-    tokens: &mut Vec<StoredToken>,
-) {
-    for tok in iter {
-        tokens.push(StoredToken {
-            offset: tok.offset().to_doc(stmt_base),
-            length: tok.length().into(),
-            token_type: tok.token_type(),
-            flags: tok.flags(),
-        });
-    }
-}
-
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-pub(super) fn collect_comments<'a>(
-    iter: impl Iterator<Item = syntaqlite_syntax::Comment<'a>>,
-    stmt_base: StatementBase,
-    comments: &mut Vec<StoredComment>,
-) {
-    for c in iter {
-        comments.push(StoredComment {
-            offset: c.offset().to_doc(stmt_base),
-            length: c.length().into(),
-        });
     }
 }
 

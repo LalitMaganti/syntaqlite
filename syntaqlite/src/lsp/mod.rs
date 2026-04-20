@@ -47,8 +47,7 @@ pub use host::SchemaMap;
 #[doc(inline)]
 pub use server::{LspConfig, LspServer};
 
-// Re-export shared types from semantic layer.
-pub(crate) use crate::semantic::model::{CompletionContext, CompletionInfo};
+pub(crate) use analysis_data::{CompletionContext, CompletionInfo};
 
 // ── LSP-specific types ──────────────────────────────────────────────────
 
@@ -116,6 +115,7 @@ impl CompletionKind {
     }
 }
 
+mod analysis_data;
 mod completion;
 mod host;
 mod server;

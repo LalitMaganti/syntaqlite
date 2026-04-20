@@ -2,27 +2,19 @@
 // Licensed under the Apache License, Version 2.0.
 
 //! The statement-level validation pass: visits an AST once, emitting
-//! diagnostics and populating LSP resolutions as it goes.
-
-#[cfg(feature = "lsp")]
-use std::collections::HashMap;
+//! diagnostics and forwarding resolution events to the observer as it goes.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 use syntaqlite_syntax::source::{DocRange, LayerRange};
 
 use crate::dialect::{AnyDialect, FIELD_ABSENT, SemanticRole};
-#[cfg(feature = "lsp")]
-use crate::semantic::catalog::FunctionCategory;
 use crate::semantic::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
 use crate::semantic::ddl::DdlReader;
 use crate::semantic::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use crate::semantic::fuzzy::best_suggestion;
-#[cfg(feature = "lsp")]
-use crate::semantic::model::{DefinitionLocation, Resolution, ResolvedSymbol};
+use crate::semantic::observer::AnalysisObserver;
 use crate::semantic::{CheckConfig, CheckLevel, ValidationConfig};
 
-#[cfg(feature = "lsp")]
-use super::helpers::format_arity;
 use super::query_scope::{QueryScope, RowIdPolicy};
 
 mod cte;
@@ -32,13 +24,8 @@ pub(super) struct ValidationPass<'a> {
     catalog: &'a mut Catalog,
     config: &'a ValidationConfig,
     diagnostics: &'a mut Vec<Diagnostic>,
-    #[cfg(feature = "lsp")]
-    resolutions: &'a mut Vec<Resolution>,
+    observer: &'a mut dyn AnalysisObserver,
     scope: QueryScope,
-    /// Maps `lowercase(name)` → `(start_offset, end_offset)` for definition sites.
-    /// Populated from DDL (per-document) and CTE bindings (per-WITH scope).
-    #[cfg(feature = "lsp")]
-    definition_offsets: &'a mut HashMap<String, DocRange>,
 }
 
 impl CheckConfig {
@@ -108,7 +95,6 @@ impl<'a> ValidationPass<'a> {
         }
     }
 
-    #[cfg_attr(feature = "lsp", expect(clippy::too_many_arguments))]
     pub(super) fn run<'b>(
         stmt: &mut AnyParsedStatement<'b>,
         root: AnyNodeId,
@@ -116,8 +102,7 @@ impl<'a> ValidationPass<'a> {
         catalog: &'a mut Catalog,
         config: &'a ValidationConfig,
         diagnostics: &'a mut Vec<Diagnostic>,
-        #[cfg(feature = "lsp")] resolutions: &'a mut Vec<Resolution>,
-        #[cfg(feature = "lsp")] definition_offsets: &'a mut HashMap<String, DocRange>,
+        observer: &'a mut dyn AnalysisObserver,
     ) {
         let roles = dialect.roles();
         let mut pass = ValidationPass {
@@ -125,11 +110,8 @@ impl<'a> ValidationPass<'a> {
             catalog,
             config,
             diagnostics,
-            #[cfg(feature = "lsp")]
-            resolutions,
+            observer,
             scope: QueryScope::default(),
-            #[cfg(feature = "lsp")]
-            definition_offsets,
         };
         pass.visit(stmt, root);
     }
@@ -330,31 +312,9 @@ impl<'a> ValidationPass<'a> {
         let scope_name = if alias.is_empty() { name } else { alias };
         let (columns, without_rowid) = self.catalog.table_source_info(name);
 
-        #[cfg(feature = "lsp")]
-        if is_known {
-            let definition = self
-                .definition_offsets
-                .get(&name.to_ascii_lowercase())
-                .map(|&range| DefinitionLocation {
-                    range,
-                    file_uri: None,
-                })
-                .or_else(|| {
-                    self.catalog
-                        .relation_definition_site(name)
-                        .map(|site| DefinitionLocation {
-                            range: site.range,
-                            file_uri: Some(site.file_uri.clone()),
-                        })
-                });
-            self.resolutions.push(Resolution {
-                range,
-                symbol: ResolvedSymbol::Table {
-                    name: name.to_string(),
-                    columns: columns.clone(),
-                    definition,
-                },
-            });
+        if is_known && self.observer.wants_references() {
+            self.observer
+                .on_table_reference(range, name, columns.as_deref());
         }
 
         self.scope
@@ -380,22 +340,11 @@ impl<'a> ValidationPass<'a> {
                 .map_or(0, <[_]>::len);
             match self.catalog.check_function(name, arg_count) {
                 FunctionCheckResult::Ok => {
-                    #[cfg(feature = "lsp")]
-                    if let Some((cat, arities)) = self.catalog.function_signature(name) {
-                        let cat_str = match cat {
-                            FunctionCategory::Scalar => "scalar function",
-                            FunctionCategory::Aggregate => "aggregate function",
-                            FunctionCategory::Window => "window function",
-                        };
-                        let arity_strs: Vec<String> =
-                            arities.iter().map(|a| format_arity(name, *a)).collect();
-                        self.resolutions.push(Resolution {
-                            range,
-                            symbol: ResolvedSymbol::Function {
-                                category: cat_str.to_string(),
-                                arities: arity_strs,
-                            },
-                        });
+                    if self.observer.wants_references()
+                        && let Some((cat, arities)) = self.catalog.function_signature(name)
+                    {
+                        self.observer
+                            .on_function_reference(range, name, cat, &arities);
                     }
                 }
                 FunctionCheckResult::Unknown => {
@@ -463,10 +412,10 @@ impl<'a> ValidationPass<'a> {
                 table: resolved_table,
                 all_columns,
             } => {
-                #[cfg(feature = "lsp")]
-                self.record_column_resolution(range, column, resolved_table, all_columns);
-                #[cfg(not(feature = "lsp"))]
-                let _ = (resolved_table, all_columns);
+                if self.observer.wants_references() && !resolved_table.is_empty() {
+                    self.observer
+                        .on_column_reference(range, &resolved_table, column, &all_columns);
+                }
             }
             ColumnResolution::TableNotFound => {}
             ColumnResolution::TableFoundColumnMissing => {
@@ -509,50 +458,6 @@ impl<'a> ValidationPass<'a> {
                 );
             }
         }
-    }
-
-    /// Record a successful column-reference resolution for LSP features
-    /// (go-to-definition, find-references, hover).
-    #[cfg(feature = "lsp")]
-    fn record_column_resolution(
-        &mut self,
-        range: DocRange,
-        column: &str,
-        resolved_table: String,
-        all_columns: Vec<String>,
-    ) {
-        if resolved_table.is_empty() {
-            return;
-        }
-        let def_key = format!(
-            "{}.{}",
-            resolved_table.to_ascii_lowercase(),
-            column.to_ascii_lowercase()
-        );
-        let definition = self
-            .definition_offsets
-            .get(&def_key)
-            .map(|&range| DefinitionLocation {
-                range,
-                file_uri: None,
-            })
-            .or_else(|| {
-                self.catalog
-                    .column_definition_site(&resolved_table, column)
-                    .map(|site| DefinitionLocation {
-                        range: site.range,
-                        file_uri: Some(site.file_uri.clone()),
-                    })
-            });
-        self.resolutions.push(Resolution {
-            range,
-            symbol: ResolvedSymbol::Column {
-                column: column.to_string(),
-                table: resolved_table,
-                all_columns,
-                definition,
-            },
-        });
     }
 
     fn visit_scoped_source(

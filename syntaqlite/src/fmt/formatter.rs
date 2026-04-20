@@ -162,15 +162,17 @@ impl Formatter {
         // coincides with the statement-relative offset the formatter
         // compares against.  Nested rewrites measure into their parent's
         // expansion and belong to a different coordinate system.
-        self.macro_rewrites
-            .extend(erased.macro_rewrites().filter(|r| r.parent().is_none()).map(
-                |r| {
+        self.macro_rewrites.extend(
+            erased
+                .macro_rewrites()
+                .filter(|r| r.parent().is_none())
+                .map(|r| {
                     (
                         StmtOffset::from_raw(r.call_offset().as_u32()),
                         StmtLen::from(r.call_length()),
                     )
-                },
-            ));
+                }),
+        );
     }
 
     /// Format SQL source text. Handles multiple statements and preserves comments.
@@ -828,7 +830,13 @@ mod tests {
         );
         let mut arena = DocArena::new();
         let mut parts = Vec::new();
-        drain_gap_comments(&ctx, StmtOffset::from_raw(9), source, &mut arena, &mut parts);
+        drain_gap_comments(
+            &ctx,
+            StmtOffset::from_raw(9),
+            source,
+            &mut arena,
+            &mut parts,
+        );
         assert_eq!(render_parts(&mut arena, &parts), "--a\n/*b*/\n");
     }
 }
