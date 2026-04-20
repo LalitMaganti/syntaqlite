@@ -1,4 +1,6 @@
-# CI: run unit tests, integration tests, UI tests, and Playwright e2e tests on every PR and push to main.
+# CI: run pre-push checks (fmt/clippy/C checks/public API/unit tests/integration suites),
+# upstream SQLite validation, amalgamation build, Zed extension, UI tests, and Playwright e2e tests
+# on every PR and push to main.
 name: CI
 
 on:
@@ -22,8 +24,8 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  unit-tests:
-    name: Unit tests
+  pre-push:
+    name: Pre-push checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -46,11 +48,11 @@ jobs:
           key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: cargo-${{ runner.os }}-
 
-      - name: Run unit tests
-        run: tools/run-unit-tests
-
-      - name: Build CLI
-        run: tools/cargo build -p syntaqlite-cli
+      - name: Run pre-push checks
+        run: tools/pre-push --all -v
+        env:
+          CC: clang
+          CXX: clang++
 
       - name: Upload CLI binary
         uses: actions/upload-artifact@v6
@@ -59,33 +61,9 @@ jobs:
           path: target/debug/syntaqlite
           retention-days: 1
 
-  integration-tests:
-    name: Integration tests
-    needs: [unit-tests]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: recursive
-
-      - name: Download CLI binary
-        uses: actions/download-artifact@v7
-        with:
-          name: syntaqlite-cli
-          path: target/debug
-
-      - name: Make CLI binary executable
-        run: chmod +x target/debug/syntaqlite
-
-      - name: Run integration tests
-        run: tools/run-integration-tests
-        env:
-          CC: clang
-          CXX: clang++
-
   upstream-sqlite-validation:
     name: Upstream SQLite validation
-    needs: [unit-tests]
+    needs: [pre-push]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
