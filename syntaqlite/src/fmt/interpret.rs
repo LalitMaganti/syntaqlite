@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
+use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, AnyTokenizer, FieldValue};
 use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtText};
 
 use super::comment::{CommentCtx, DrainResult};
@@ -65,7 +65,6 @@ enum ReturnAction {
     Discard,
 }
 
-#[expect(clippy::too_many_lines)]
 impl Formatter {
     pub(super) fn interpret_node<'a>(
         &mut self,
@@ -76,10 +75,32 @@ impl Formatter {
         self.consumed_regions.clear();
         self.consumed_regions
             .resize(ctx.macro_rewrites.len(), false);
-        let consumed_regions = &mut self.consumed_regions;
-        let scratch = &mut self.interpret_scratch;
-        let macro_tokenizer = &self.macro_tokenizer;
+        interpret_core(
+            ctx,
+            root_id,
+            arena,
+            &mut self.interpret_scratch,
+            &mut self.consumed_regions,
+            &self.macro_tokenizer,
+        )
+    }
+}
 
+/// Bytecode-driven formatting traversal.  Pulled out of
+/// [`Formatter::interpret_node`] as a free function so subtree
+/// formatting (which doesn't have `&mut Formatter` available) can
+/// re-enter the interpreter with local `scratch` and `consumed`
+/// buffers.
+#[expect(clippy::too_many_lines)]
+pub(super) fn interpret_core<'a>(
+    ctx: &FmtCtx<'a>,
+    root_id: AnyNodeId,
+    arena: &mut DocArena<'a>,
+    scratch: &mut InterpretScratch,
+    consumed_regions: &mut [bool],
+    macro_tokenizer: &AnyTokenizer,
+) -> DocId {
+    {
         if root_id.is_null() {
             return NIL_DOC;
         }
