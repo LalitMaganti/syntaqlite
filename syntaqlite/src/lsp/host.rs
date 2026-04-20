@@ -15,7 +15,7 @@ use crate::semantic::analyzer::SemanticAnalyzer;
 use crate::semantic::completion::{self, SignatureHelpInfo};
 use crate::semantic::diagnostics::Diagnostic;
 
-use super::analysis_data::{DefinitionResult, ExternalDefinitions, LspCapturePass, SymbolIdentity};
+use super::analysis_data::{DefinitionResult, ExternalDefinitions, LspCapturePass};
 use super::document_store::{Document, DocumentStore};
 use super::semantic_tokens_codec::encode_semantic_tokens;
 use super::{CompletionEntry, CompletionInfo};
@@ -106,7 +106,7 @@ fn ensure_analysis(
 
 /// Resolve the correct catalog for `uri` via `schema_map`, then call
 /// [`ensure_analysis`]. Returns `false` if the document is not found.
-fn ensure_analysis_for(
+pub(super) fn ensure_analysis_for(
     uri: &str,
     documents: &mut DocumentStore,
     analyzer: &mut SemanticAnalyzer,
@@ -526,60 +526,17 @@ impl LspHost {
         offset: DocOffset,
         include_declaration: bool,
     ) -> Vec<(String, DocRange)> {
-        // Identify the symbol at the cursor.
-        let identity = self.symbol_identity_at(uri, offset);
-        let Some(identity) = identity else {
-            return Vec::new();
-        };
-
-        let mut results = Vec::new();
-
-        // Collect matching resolutions from all open documents.
-        let uris: Vec<String> = self.documents.uris();
-        for doc_uri in &uris {
-            ensure_analysis_for(
-                doc_uri,
-                &mut self.documents,
-                &mut self.analyzer,
-                self.schema_map.as_ref(),
-                &self.user_catalog,
-                &self.validation_config,
-                Some(&self.external_defs),
-            );
-            let doc = self
-                .documents
-                .get(doc_uri.as_str())
-                .expect("doc_uri came from keys()");
-            let data = doc
-                .analysis
-                .as_ref()
-                .expect("ensure_analysis sets analysis");
-            for range in data.references_matching(&identity) {
-                results.push((doc_uri.clone(), range));
-            }
-            if include_declaration {
-                let key = identity.definition_key();
-                if let Some(&range) = data.definition_offsets.get(&key) {
-                    // Avoid duplicates (definition might also be in resolutions).
-                    let already = results.iter().any(|(u, r)| u == doc_uri && *r == range);
-                    if !already {
-                        results.push((doc_uri.clone(), range));
-                    }
-                }
-            }
-        }
-
-        // Include external (schema) definition site if requested.
-        if include_declaration && let Some(def_site) = self.external_definition_site(&identity) {
-            let already = results
-                .iter()
-                .any(|(u, r)| *u == def_site.0 && *r == def_site.1);
-            if !already {
-                results.push(def_site);
-            }
-        }
-
-        results
+        super::refs_service::find_references(
+            &mut self.documents,
+            &mut self.analyzer,
+            self.schema_map.as_ref(),
+            &self.user_catalog,
+            &self.validation_config,
+            &self.external_defs,
+            uri,
+            offset,
+            include_declaration,
+        )
     }
 
     // ── Rename ──────────────────────────────────────────────────────────────
@@ -616,52 +573,17 @@ impl LspHost {
         offset: DocOffset,
         new_name: &str,
     ) -> HashMap<String, Vec<(DocRange, String)>> {
-        let refs = self.find_references(uri, offset, true);
-        let mut edits: HashMap<String, Vec<(DocRange, String)>> = HashMap::new();
-        for (ref_uri, range) in refs {
-            edits
-                .entry(ref_uri)
-                .or_default()
-                .push((range, new_name.to_string()));
-        }
-        edits
-    }
-
-    // ── Symbol identity helpers ─────────────────────────────────────────────
-
-    /// Determine the symbol identity at `offset` — either from a resolution or
-    /// from a definition site (CREATE TABLE / column-def).
-    fn symbol_identity_at(&mut self, uri: &str, offset: DocOffset) -> Option<SymbolIdentity> {
-        ensure_analysis_for(
-            uri,
+        super::refs_service::rename(
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
-            Some(&self.external_defs),
-        );
-        let doc = self.documents.get(uri)?;
-        let data = doc
-            .analysis
-            .as_ref()
-            .expect("ensure_analysis sets analysis");
-        super::hover_service::symbol_identity_at(data, offset)
-    }
-
-    /// Look up an external (schema-file) definition site for a symbol from the
-    /// registry populated by [`Self::set_session_context_from_ddl`].
-    fn external_definition_site(&self, identity: &SymbolIdentity) -> Option<(String, DocRange)> {
-        match identity {
-            SymbolIdentity::Table(name) => {
-                let site = self.external_defs.relation(name)?;
-                Some((site.file_uri.clone(), site.range))
-            }
-            SymbolIdentity::Column { table, column } => {
-                let site = self.external_defs.column(table, column)?;
-                Some((site.file_uri.clone(), site.range))
-            }
-        }
+            &self.external_defs,
+            uri,
+            offset,
+            new_name,
+        )
     }
 
     // ── Signature help ────────────────────────────────────────────────────────
