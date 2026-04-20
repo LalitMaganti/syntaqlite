@@ -10,10 +10,10 @@
 
 use std::collections::HashMap;
 
-use crate::semantic::analysis::SemanticToken;
+use crate::analysis::engine::tokens::SemanticToken;
 
 use super::analysis_data::DocumentAnalysisData;
-use crate::semantic::diagnostics::Diagnostic;
+use crate::analysis::diagnostics::Diagnostic;
 
 /// A single open document with lazily populated analysis caches.
 pub(crate) struct Document {

@@ -11,17 +11,17 @@
 
 #![cfg(all(feature = "sqlite", feature = "validation"))]
 
-use syntaqlite::semantic::DiagnosticMessage;
+use syntaqlite::analysis::DiagnosticMessage;
 use syntaqlite::util::{SqliteFlag, SqliteFlags};
-use syntaqlite::{AnalysisContext, Catalog, SemanticAnalyzer, ValidationConfig, sqlite_dialect};
+use syntaqlite::{AnalysisConfig, AnalysisContext, Analyzer, Catalog, sqlite_dialect};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn analyze_with_flags(sql: &str, flags: SqliteFlags) -> Vec<syntaqlite::Diagnostic> {
     let dialect = sqlite_dialect().with_cflags(flags);
-    let mut analyzer = SemanticAnalyzer::with_dialect(dialect.clone());
+    let mut analyzer = Analyzer::with_dialect(dialect.clone());
     let mut catalog = Catalog::new(dialect);
-    let mut ctx = AnalysisContext::new(&mut catalog).with_config(ValidationConfig::default());
+    let mut ctx = AnalysisContext::new(&mut catalog).with_config(AnalysisConfig::default());
     let model = analyzer.analyze(sql, &mut ctx);
     model.diagnostics().cloned().collect()
 }

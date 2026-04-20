@@ -151,7 +151,7 @@ Return codes from `syntaqlite_formatter_format()`:
 
 ```c
 // Opaque validator handle.
-typedef struct SyntaqliteValidator SyntaqliteValidator;
+typedef struct SyntaqliteAnalyzer SyntaqliteAnalyzer;
 
 // Diagnostic severity levels.
 typedef enum {
@@ -223,28 +223,28 @@ typedef struct {
 
 | Function | Description |
 |----------|-------------|
-| `syntaqlite_validator_create_sqlite()` | Create a validator with default mode (`DOCUMENT`) |
-| `syntaqlite_validator_set_mode(v, mode)` | Set `DOCUMENT` or `EXECUTE` mode |
-| `syntaqlite_validator_add_tables(v, tables, count)` | Register schema tables from `SyntaqliteRelationDef` array |
-| `syntaqlite_validator_add_views(v, views, count)` | Register schema views from `SyntaqliteRelationDef` array |
-| `syntaqlite_validator_load_schema_ddl(v, sql, len)` | Load schema from DDL statements (CREATE TABLE/VIEW). Returns parse error count |
-| `syntaqlite_validator_analyze(v, sql, len)` | Analyze SQL, returns diagnostic count |
-| `syntaqlite_validator_diagnostic_count(v)` | Number of diagnostics from last `analyze()` |
-| `syntaqlite_validator_diagnostics(v)` | Pointer to `SyntaqliteDiagnostic` array, or `NULL` if count is 0 |
-| `syntaqlite_validator_render_diagnostics(v, filename)` | Render diagnostics as human-readable text. `filename` may be `NULL` (defaults to `"<input>"`) |
-| `syntaqlite_validator_lineage_complete(v)` | Whether lineage is fully resolved (`1`) or partial (`0`). Returns `0` for non-queries |
-| `syntaqlite_validator_column_lineage_count(v)` | Number of result columns with lineage. `0` for non-queries |
-| `syntaqlite_validator_column_lineage(v)` | Pointer to `SyntaqliteColumnLineage` array, or `NULL` |
-| `syntaqlite_validator_relation_count(v)` | Number of relations in FROM clauses. `0` for non-queries |
-| `syntaqlite_validator_relations(v)` | Pointer to `SyntaqliteRelationAccess` array, or `NULL` |
-| `syntaqlite_validator_physical_table_count(v)` | Number of physical tables accessed. `0` for non-queries |
-| `syntaqlite_validator_physical_tables(v)` | Pointer to `SyntaqlitePhysicalTableAccess` array, or `NULL` |
-| `syntaqlite_validator_unexpanded_view_count(v)` | Number of views whose bodies weren't available for expansion (aggregated across statements) |
-| `syntaqlite_validator_unexpanded_views(v)` | Pointer to `SyntaqliteUnexpandedView` array, or `NULL` |
-| `syntaqlite_validator_statement_unexpanded_view_count(v, idx)` | Number of unexpanded views in statement `idx` |
-| `syntaqlite_validator_statement_unexpanded_views(v, idx)` | Pointer to `SyntaqliteUnexpandedView` array for statement `idx`, or `NULL` |
-| `syntaqlite_validator_reset_catalog(v)` | Clear registered schema (preserves dialect builtins) |
-| `syntaqlite_validator_destroy(v)` | Free the validator. No-op if `NULL` |
+| `syntaqlite_analyzer_create_sqlite()` | Create a validator with default mode (`DOCUMENT`) |
+| `syntaqlite_analyzer_set_mode(v, mode)` | Set `DOCUMENT` or `EXECUTE` mode |
+| `syntaqlite_analyzer_add_tables(v, tables, count)` | Register schema tables from `SyntaqliteRelationDef` array |
+| `syntaqlite_analyzer_add_views(v, views, count)` | Register schema views from `SyntaqliteRelationDef` array |
+| `syntaqlite_analyzer_load_schema_ddl(v, sql, len)` | Load schema from DDL statements (CREATE TABLE/VIEW). Returns parse error count |
+| `syntaqlite_analyzer_analyze(v, sql, len)` | Analyze SQL, returns diagnostic count |
+| `syntaqlite_analyzer_diagnostic_count(v)` | Number of diagnostics from last `analyze()` |
+| `syntaqlite_analyzer_diagnostics(v)` | Pointer to `SyntaqliteDiagnostic` array, or `NULL` if count is 0 |
+| `syntaqlite_analyzer_render_diagnostics(v, filename)` | Render diagnostics as human-readable text. `filename` may be `NULL` (defaults to `"<input>"`) |
+| `syntaqlite_analyzer_lineage_complete(v)` | Whether lineage is fully resolved (`1`) or partial (`0`). Returns `0` for non-queries |
+| `syntaqlite_analyzer_column_lineage_count(v)` | Number of result columns with lineage. `0` for non-queries |
+| `syntaqlite_analyzer_column_lineage(v)` | Pointer to `SyntaqliteColumnLineage` array, or `NULL` |
+| `syntaqlite_analyzer_relation_count(v)` | Number of relations in FROM clauses. `0` for non-queries |
+| `syntaqlite_analyzer_relations(v)` | Pointer to `SyntaqliteRelationAccess` array, or `NULL` |
+| `syntaqlite_analyzer_physical_table_count(v)` | Number of physical tables accessed. `0` for non-queries |
+| `syntaqlite_analyzer_physical_tables(v)` | Pointer to `SyntaqlitePhysicalTableAccess` array, or `NULL` |
+| `syntaqlite_analyzer_unexpanded_view_count(v)` | Number of views whose bodies weren't available for expansion (aggregated across statements) |
+| `syntaqlite_analyzer_unexpanded_views(v)` | Pointer to `SyntaqliteUnexpandedView` array, or `NULL` |
+| `syntaqlite_analyzer_statement_unexpanded_view_count(v, idx)` | Number of unexpanded views in statement `idx` |
+| `syntaqlite_analyzer_statement_unexpanded_views(v, idx)` | Pointer to `SyntaqliteUnexpandedView` array for statement `idx`, or `NULL` |
+| `syntaqlite_analyzer_reset_catalog(v)` | Clear registered schema (preserves dialect builtins) |
+| `syntaqlite_analyzer_destroy(v)` | Free the validator. No-op if `NULL` |
 
 ## Utility
 
@@ -264,11 +264,11 @@ typedef struct {
 - Parser, formatter, and validator handles are **reusable**: create once, call
   repeatedly.
 - Output strings from `syntaqlite_formatter_output()`,
-  `syntaqlite_validator_diagnostics()`, and lineage accessors
-  (`syntaqlite_validator_column_lineage()`, `syntaqlite_validator_relations()`,
-  `syntaqlite_validator_physical_tables()`) are **borrowed**, valid until the next
+  `syntaqlite_analyzer_diagnostics()`, and lineage accessors
+  (`syntaqlite_analyzer_column_lineage()`, `syntaqlite_analyzer_relations()`,
+  `syntaqlite_analyzer_physical_tables()`) are **borrowed**, valid until the next
   call to analyze or destroy.
-- Strings from `syntaqlite_validator_render_diagnostics()` are **borrowed**,
+- Strings from `syntaqlite_analyzer_render_diagnostics()` are **borrowed**,
   valid until the next `analyze()`, `render_diagnostics()`, or `destroy()` call.
 - Strings from `syntaqlite_dump_node()` are **owned**; caller must `free()`.
 - Passing `NULL` to any destroy function is a safe no-op.

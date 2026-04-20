@@ -13,7 +13,7 @@ use syntaqlite::fmt::KeywordCase;
 use syntaqlite::lsp::LspHost;
 use syntaqlite::source::{DocLen, DocOffset, DocRange};
 use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
-use syntaqlite::{FormatConfig, Formatter, ValidationConfig};
+use syntaqlite::{AnalysisConfig, FormatConfig, Formatter};
 
 thread_local! {
     static RESULT_BUF: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
@@ -377,7 +377,7 @@ fn run_diagnostics(ptr: u32, len: u32, version: u32) -> i32 {
     let source = try_wasm!(decode_input(ptr, len), -1);
     let mut lsp = try_wasm!(take_or_create_lsp_host(), -1);
     lsp.update_document(WASM_DOC_URI, version.cast_signed(), source);
-    let all_diags = lsp.all_diagnostics(WASM_DOC_URI, &ValidationConfig::default());
+    let all_diags = lsp.all_diagnostics(WASM_DOC_URI, &AnalysisConfig::default());
     let total_count = all_diags.len();
     set_result(&serde_json::to_string(&all_diags).expect("diagnostic serialization failed"));
     store_lsp_host(lsp);
@@ -662,7 +662,7 @@ fn run_embedded_extract(lang: u32, ptr: u32, len: u32) -> i32 {
 fn run_embedded_diagnostics(lang: u32, ptr: u32, len: u32) -> i32 {
     let source = try_wasm!(decode_input(ptr, len), -1);
     let fragments = try_wasm!(embedded_fragments(lang, &source), -1);
-    let diags = try_wasm!(make_embedded_analyzer(), -1).validate(&fragments);
+    let diags = try_wasm!(make_embedded_analyzer(), -1).analyze(&fragments);
     let count = i32::try_from(diags.len()).expect("diag count fits i32");
     set_result(&serde_json::to_string(&diags).expect("embedded diagnostic serialization failed"));
     count

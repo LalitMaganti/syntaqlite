@@ -12,7 +12,7 @@
 use syntaqlite_syntax::any::TokenCategory;
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 
-use crate::semantic::analysis::SemanticToken;
+use crate::analysis::engine::tokens::SemanticToken;
 
 use super::utf8_char_len;
 

@@ -9,7 +9,7 @@ use syntaqlite_syntax::source::DocRange;
 
 #[doc(inline)]
 #[cfg(feature = "validation")]
-pub use crate::semantic::render::{DiagnosticRenderer, SourceContext};
+pub use crate::analysis::diagnostics::render::{DiagnosticRenderer, SourceContext};
 #[doc(inline)]
 pub use crate::sqlite::cflags::SqliteFlag;
 #[doc(inline)]

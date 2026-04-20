@@ -43,12 +43,12 @@ Exit codes:
 - `0` — success (or all files already formatted with `--check`)
 - `1` — parse error (or files would be reformatted with `--check`)
 
-## syntaqlite validate
+## syntaqlite analyze
 
-Validate SQL against schema.
+Analyze SQL against schema.
 
 ```bash
-syntaqlite validate [OPTIONS] [FILES...]
+syntaqlite analyze [OPTIONS] [FILES...]
 ```
 
 | Option | Default | Description |

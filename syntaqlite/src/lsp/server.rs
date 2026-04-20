@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::path::PathBuf;
 
-use crate::ValidationConfig;
+use crate::AnalysisConfig;
 
 use lsp_server::{Connection, Message, Notification, Request, Response};
 use lsp_types::notification::{
@@ -35,12 +35,12 @@ use lsp_types::{
 };
 use syntaqlite_syntax::source::{DocOffset, DocRange, DocText, Utf16Col, Utf16Line};
 
+use crate::analysis::Catalog;
+use crate::analysis::diagnostics::Severity;
 use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
 use crate::lsp::host::SchemaMap;
 use crate::lsp::{CompletionKind, LspHost, SEMANTIC_TOKEN_LEGEND, SourceMap};
-use crate::semantic::Catalog;
-use crate::semantic::diagnostics::Severity;
 
 // ── LspConfig ─────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ pub struct LspConfig {
     /// Pre-loaded schema catalog from project config file.
     pub schema_catalog: Option<Catalog>,
     /// Validation config (check levels) from project config file.
-    pub validation_config: Option<ValidationConfig>,
+    pub analysis_config: Option<AnalysisConfig>,
     /// Per-file schema resolution from `[schemas]` globs.
     pub schema_map: Option<SchemaMap>,
 }
@@ -167,12 +167,12 @@ impl LspServer {
 
         // Apply project config if provided.
         let has_config_schema = config.schema_catalog.is_some() || config.schema_map.is_some();
-        let has_validation_config = config.validation_config.is_some();
+        let has_analysis_config = config.analysis_config.is_some();
         if let Some(fmt) = config.format_config {
             host.set_format_config(fmt);
         }
-        if let Some(validation) = config.validation_config {
-            host.set_validation_config(validation);
+        if let Some(validation) = config.analysis_config {
+            host.set_analysis_config(validation);
         }
         if let Some(map) = config.schema_map {
             host.set_schema_map(map);
@@ -181,8 +181,8 @@ impl LspServer {
             host.set_session_context(catalog);
             // If no explicit validation config was provided, default schema
             // checks to deny when a schema is present.
-            if !has_validation_config {
-                host.set_validation_config(ValidationConfig::default().with_strict_schema());
+            if !has_analysis_config {
+                host.set_analysis_config(AnalysisConfig::default().with_strict_schema());
             }
             eprintln!("syntaqlite-lsp: using project config schema");
         }
@@ -401,7 +401,7 @@ impl LspServer {
 
         match host.signature_help(uri_str, offset) {
             Some(info) => {
-                use crate::semantic::catalog::AritySpec;
+                use crate::analysis::catalog::AritySpec;
 
                 let signatures: Vec<SignatureInformation> = info
                     .arities
@@ -804,7 +804,7 @@ impl LspServer {
         match std::fs::read_to_string(&path) {
             Ok(contents) => match host.set_session_context_from_ddl(&contents, Some(&file_uri)) {
                 Ok(()) => {
-                    host.set_validation_config(ValidationConfig::default().with_strict_schema());
+                    host.set_analysis_config(AnalysisConfig::default().with_strict_schema());
                     eprintln!("syntaqlite-lsp: loaded schema from {}", path.display());
                 }
                 Err(errors) => {

@@ -1,7 +1,7 @@
 """syntaqlite — fast, accurate SQLite SQL tools for Python.
 
 The entry point is :class:`Syntaqlite`. Each instance lets you parse,
-format, validate, and tokenize SQL::
+format, analyze, and tokenize SQL::
 
     import syntaqlite
 
@@ -65,10 +65,10 @@ class DiagnosticCode(IntEnum):
     CTE_COLUMN_COUNT_MISMATCH = 6
 
 
-class ValidateOutput(StrEnum):
-    """Output format for :meth:`Syntaqlite.validate`.
+class AnalysisOutput(StrEnum):
+    """Output format for :meth:`Syntaqlite.analyze`.
 
-    - :attr:`STRUCTURED` — returns a :class:`ValidationResult` with typed
+    - :attr:`STRUCTURED` — returns a :class:`Analysis` with typed
       diagnostics, lineage, and per-statement data. The default.
     - :attr:`TEXT` — returns a rendered string with source locations and
       help suggestions, matching the CLI's output.
@@ -79,9 +79,9 @@ class ValidateOutput(StrEnum):
 
 
 class RenderOptions:
-    """Options controlling :attr:`ValidateOutput.TEXT` rendering.
+    """Options controlling :attr:`AnalysisOutput.TEXT` rendering.
 
-    Only consulted when ``output=ValidateOutput.TEXT``.
+    Only consulted when ``output=AnalysisOutput.TEXT``.
     """
 
     __slots__ = ("source_name",)
@@ -174,7 +174,7 @@ class RelationAccess:
 class Lineage:
     """Column lineage for a query-bearing statement.
 
-    Returned by :attr:`Statement.lineage` and :attr:`ValidationResult.lineage`.
+    Returned by :attr:`Statement.lineage` and :attr:`Analysis.lineage`.
     `None` for statements that don't contain a query body.
     """
 
@@ -215,8 +215,8 @@ class Statement:
         return f"Statement({', '.join(parts)})"
 
 
-class ValidationResult:
-    """Result of :meth:`Syntaqlite.validate`.
+class Analysis:
+    """Result of :meth:`Syntaqlite.analyze`.
 
     ``lineage`` is the :class:`Lineage` of the final query-bearing statement,
     or ``None`` when no statement had a query body.
@@ -235,7 +235,7 @@ class ValidationResult:
         if self.lineage:
             parts.append(str(self.lineage))
         parts.append(f"{len(self.statements)} statements")
-        return f"ValidationResult({', '.join(parts)})"
+        return f"Analysis({', '.join(parts)})"
 
 
 class Table:
@@ -271,7 +271,7 @@ class View:
 
 
 class Schema:
-    """A catalog schema for :meth:`Syntaqlite.validate`.
+    """A catalog schema for :meth:`Syntaqlite.analyze`.
 
     Everything that contributes to the validator's catalog lives here:
 
@@ -336,7 +336,7 @@ class SyntaqliteError(RuntimeError):
 
 
 class Syntaqlite:
-    """Parse, format, validate, and tokenize SQLite SQL.
+    """Parse, format, analyze, and tokenize SQLite SQL.
 
     A :class:`Syntaqlite` instance manages its own long-lived worker, so
     create one and reuse it across many calls. Not intended for concurrent
@@ -487,41 +487,38 @@ class Syntaqlite:
         """
         return self._call("tokenize", sql=sql)["tokens"]
 
-    def validate(
+    def analyze(
         self,
         sql: str,
         schema: Schema | None = None,
         *,
-        output: ValidateOutput = ValidateOutput.STRUCTURED,
+        output: AnalysisOutput | str = AnalysisOutput.STRUCTURED,
         render_options: RenderOptions | None = None,
-    ) -> ValidationResult | str:
-        """Validate SQL against an optional schema.
+    ) -> Analysis | str:
+        """Analyze SQL against an optional schema.
 
         Args:
-            sql: SQL to validate.
+            sql: SQL to analyze.
             schema: Catalog schema (tables, views, DDL, optional modules).
-            output: :class:`ValidateOutput` selecting the return shape.
-                :attr:`ValidateOutput.STRUCTURED` returns a
-                :class:`ValidationResult`; :attr:`ValidateOutput.TEXT`
+            output: :class:`AnalysisOutput` (or its string value) selecting
+                the return shape. :attr:`AnalysisOutput.STRUCTURED`
+                returns an :class:`Analysis`; :attr:`AnalysisOutput.TEXT`
                 returns a rendered diagnostics string.
             render_options: Fine-grained options for
-                :attr:`ValidateOutput.TEXT` (e.g. source label). Ignored
+                :attr:`AnalysisOutput.TEXT` (e.g. source label). Ignored
                 for other outputs.
         """
-        if not isinstance(output, ValidateOutput):
-            raise TypeError(
-                f"output must be a ValidateOutput, got {type(output).__name__}"
-            )
+        output = AnalysisOutput(output)
         params: dict[str, Any] = {"sql": sql, "output": output.value}
         if schema is not None:
             params.update(schema._to_request())
         if render_options is not None:
             params["render_options"] = render_options._to_request()
 
-        resp = self._call("validate", **params)
-        if output is ValidateOutput.TEXT:
+        resp = self._call("analyze", **params)
+        if output is AnalysisOutput.TEXT:
             return resp["rendered"]
-        return ValidationResult(resp)
+        return Analysis(resp)
 
 
 # ── Bundled CLI dispatcher (used by console_scripts entry point) ─────────────

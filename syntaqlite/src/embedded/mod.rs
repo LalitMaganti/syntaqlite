@@ -9,7 +9,7 @@
 //!
 //! Extracts SQL fragments from host language files, replaces interpolation holes
 //! with macro-call placeholders (`HOLE_PLACEHOLDER`), runs validation via
-//! [`SemanticAnalyzer`](crate::SemanticAnalyzer) with `macro_fallback` enabled,
+//! [`Analyzer`](crate::Analyzer) with `macro_fallback` enabled,
 //! and maps diagnostic offsets back to host-file positions. The parser records a
 //! [`MacroRewrite`](crate::parse::MacroRewrite) for each hole, which is used to filter
 //! diagnostics that would otherwise reference the placeholder.
@@ -31,13 +31,13 @@ use syntaqlite_syntax::ParserTokenFlags;
 use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 
+use crate::analysis::AnalysisConfig;
+use crate::analysis::AnalysisContext;
+use crate::analysis::catalog::Catalog;
+use crate::analysis::diagnostics::Diagnostic;
+use crate::analysis::engine::Analyzer;
+use crate::analysis::engine::walker::WalkPass;
 use crate::dialect::AnyDialect;
-use crate::semantic::AnalysisContext;
-use crate::semantic::ValidationConfig;
-use crate::semantic::analyzer::SemanticAnalyzer;
-use crate::semantic::analyzer::walker::WalkPass;
-use crate::semantic::catalog::Catalog;
-use crate::semantic::diagnostics::Diagnostic;
 
 use offset_map::OffsetMap;
 
@@ -54,7 +54,7 @@ use offset_map::OffsetMap;
 /// host file.
 ///
 /// Use this when you need to inspect extraction results before passing them
-/// to [`EmbeddedAnalyzer::validate`] or
+/// to [`EmbeddedAnalyzer::analyze`] or
 /// [`EmbeddedAnalyzer::semantic_tokens_encoded`].
 #[derive(Debug)]
 pub struct EmbeddedFragment {
@@ -211,7 +211,7 @@ fn skip_single_line_string(bytes: &[u8], pos: usize, end: usize) -> usize {
 /// 1. Extract fragments with [`extract_python`] or [`extract_typescript`].
 /// 2. Create an `EmbeddedAnalyzer`, optionally attaching a [`Catalog`] for
 ///    schema-aware validation.
-/// 3. Call [`validate`](Self::validate) to get diagnostics mapped to host-file
+/// 3. Call [`analyze`](Self::analyze) to get diagnostics mapped to host-file
 ///    positions, or [`semantic_tokens_encoded`](Self::semantic_tokens_encoded)
 ///    for syntax highlighting.
 ///
@@ -225,13 +225,13 @@ fn skip_single_line_string(bytes: &[u8], pos: usize, end: usize) -> usize {
 /// assert_eq!(fragments.len(), 1);
 ///
 /// let mut analyzer = EmbeddedAnalyzer::new(syntaqlite::sqlite_dialect());
-/// let diags = analyzer.validate(&fragments);
+/// let diags = analyzer.analyze(&fragments);
 /// // `diags` contains diagnostics with byte offsets into `python_source`.
 /// ```
 pub struct EmbeddedAnalyzer {
     dialect: AnyDialect,
     catalog: Catalog,
-    config: ValidationConfig,
+    config: AnalysisConfig,
 }
 
 impl EmbeddedAnalyzer {
@@ -242,7 +242,7 @@ impl EmbeddedAnalyzer {
         Self {
             dialect,
             catalog,
-            config: ValidationConfig::default(),
+            config: AnalysisConfig::default(),
         }
     }
 
@@ -255,7 +255,7 @@ impl EmbeddedAnalyzer {
 
     /// Override the default validation config.
     #[must_use]
-    pub fn with_config(mut self, config: ValidationConfig) -> Self {
+    pub fn with_config(mut self, config: AnalysisConfig) -> Self {
         self.config = config;
         self
     }
@@ -264,7 +264,7 @@ impl EmbeddedAnalyzer {
     ///
     /// Diagnostics whose spans fall inside a hole placeholder are automatically
     /// filtered out by the internal offset map returning `None`.
-    pub fn validate(&mut self, fragments: &[EmbeddedFragment]) -> Vec<Diagnostic> {
+    pub fn analyze(&mut self, fragments: &[EmbeddedFragment]) -> Vec<Diagnostic> {
         let mut all_diags = Vec::new();
 
         for fragment in fragments {
@@ -394,10 +394,10 @@ impl EmbeddedAnalyzer {
         result
     }
 
-    /// Create a [`SemanticAnalyzer`] with `macro_fallback` enabled so that
+    /// Create a [`Analyzer`] with `macro_fallback` enabled so that
     /// [`HOLE_PLACEHOLDER`] calls are treated as single identifier tokens.
-    fn make_analyzer(&self) -> SemanticAnalyzer {
-        SemanticAnalyzer::with_dialect(self.dialect.clone()).with_macro_fallback(true)
+    fn make_analyzer(&self) -> Analyzer {
+        Analyzer::with_dialect(self.dialect.clone()).with_macro_fallback(true)
     }
 
     /// Parse and validate a single fragment.
@@ -459,8 +459,8 @@ impl WalkPass for TokenCapturePass {
 #[cfg(feature = "sqlite")]
 mod tests {
     use super::*;
+    use crate::analysis::diagnostics::{DiagnosticMessage, Severity};
     use crate::embedded::{python::extract_python, typescript::extract_typescript};
-    use crate::semantic::diagnostics::{DiagnosticMessage, Severity};
     use syntaqlite_syntax::source::DocText;
 
     fn analyzer() -> EmbeddedAnalyzer {
@@ -473,7 +473,7 @@ mod tests {
     fn python_valid_sql_no_errors() {
         let source = r#"db.execute(f"SELECT id, name FROM users WHERE id = {uid}")"#;
         let diags = analyzer()
-            .validate(&extract_python(source))
+            .analyze(&extract_python(source))
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect::<Vec<_>>();
@@ -484,7 +484,7 @@ mod tests {
     fn python_syntax_error_missing_expr_list() {
         let source = r#"db.execute(f"SELECT FROM t")"#;
         let diags = analyzer()
-            .validate(&extract_python(source))
+            .analyze(&extract_python(source))
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect::<Vec<_>>();
@@ -496,7 +496,7 @@ mod tests {
     fn python_syntax_error_misspelled_from() {
         let source = r#"db.execute(f"SELECT * FORM t")"#;
         let diags = analyzer()
-            .validate(&extract_python(source))
+            .analyze(&extract_python(source))
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect::<Vec<_>>();
@@ -507,7 +507,7 @@ mod tests {
     fn python_syntax_error_double_where() {
         let source = r#"db.execute(f"SELECT id FROM t WHERE x = 1 WHERE y = 2")"#;
         let diags = analyzer()
-            .validate(&extract_python(source))
+            .analyze(&extract_python(source))
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect::<Vec<_>>();
@@ -520,7 +520,7 @@ mod tests {
         let fragments = extract_python(source);
         assert_eq!(fragments.len(), 1);
         let parse_diags: Vec<_> = analyzer()
-            .validate(&fragments)
+            .analyze(&fragments)
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect();
@@ -537,7 +537,7 @@ mod tests {
     fn python_multiple_fragments_only_second_errors() {
         let source = concat!("a = f\"SELECT id FROM t\"\n", "b = f\"SELECT FROM t\"\n",);
         let diags = analyzer()
-            .validate(&extract_python(source))
+            .analyze(&extract_python(source))
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect::<Vec<_>>();
@@ -556,7 +556,7 @@ mod tests {
     fn python_valid_with_hole_no_errors() {
         let source = r#"db.execute(f"INSERT INTO t (a, b) VALUES ({x}, {y})")"#;
         let diags = analyzer()
-            .validate(&extract_python(source))
+            .analyze(&extract_python(source))
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect::<Vec<_>>();
@@ -569,7 +569,7 @@ mod tests {
     fn typescript_valid_sql_no_errors() {
         let source = "db.prepare(`SELECT id, name FROM users WHERE id = ${uid}`).all();";
         let diags = analyzer()
-            .validate(&extract_typescript(source))
+            .analyze(&extract_typescript(source))
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect::<Vec<_>>();
@@ -580,7 +580,7 @@ mod tests {
     fn typescript_syntax_error_missing_expr_list() {
         let source = "db.prepare(`SELECT FROM users`).all();";
         let diags = analyzer()
-            .validate(&extract_typescript(source))
+            .analyze(&extract_typescript(source))
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect::<Vec<_>>();
@@ -592,7 +592,7 @@ mod tests {
     fn typescript_syntax_error_double_where() {
         let source = "db.prepare(`SELECT id FROM t WHERE x = 1 WHERE y = 2`).all();";
         let diags = analyzer()
-            .validate(&extract_typescript(source))
+            .analyze(&extract_typescript(source))
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect::<Vec<_>>();
@@ -604,7 +604,7 @@ mod tests {
     #[test]
     fn semantic_diagnostics_present_for_unknown_table() {
         let source = r#"db.execute(f"SELECT id FROM unknown_tbl")"#;
-        let all = analyzer().validate(&extract_python(source));
+        let all = analyzer().analyze(&extract_python(source));
         let parse: Vec<_> = all.iter().filter(|d| d.message.is_parse_error()).collect();
         let semantic: Vec<_> = all.iter().filter(|d| !d.message.is_parse_error()).collect();
         assert!(parse.is_empty(), "no parse errors expected");
@@ -620,7 +620,7 @@ mod tests {
         let fragments = extract_python(source);
         assert_eq!(fragments.len(), 1);
         let parse_diags: Vec<_> = analyzer()
-            .validate(&fragments)
+            .analyze(&fragments)
             .into_iter()
             .filter(|d| d.message.is_parse_error())
             .collect();
@@ -645,7 +645,7 @@ mod tests {
     fn python_builtin_function_not_flagged() {
         let source = r#"db.execute(f"INSERT INTO t (a) VALUES (datetime('now'))")"#;
         let unknown_fn: Vec<_> = analyzer()
-            .validate(&extract_python(source))
+            .analyze(&extract_python(source))
             .into_iter()
             .filter(|d| matches!(&d.message, DiagnosticMessage::UnknownFunction { .. }))
             .collect();
@@ -708,7 +708,7 @@ mod tests {
             "should extract exactly one SQL fragment"
         );
 
-        let all = analyzer().validate(&fragments);
+        let all = analyzer().analyze(&fragments);
 
         // UnknownTable for "users" is expected and correct.
         let table_diags: Vec<_> = all
@@ -737,7 +737,7 @@ mod tests {
     #[test]
     fn hole_diagnostics_filtered_out() {
         let source = r#"db.execute(f"SELECT {col} FROM {tbl}")"#;
-        let all = analyzer().validate(&extract_python(source));
+        let all = analyzer().analyze(&extract_python(source));
         for diag in &all {
             let msg = format!("{}", diag.message);
             assert!(

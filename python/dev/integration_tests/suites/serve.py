@@ -127,7 +127,7 @@ def _test_validate_flags_unknown_table(ctx: SuiteContext) -> bool:
     proc = _spawn(ctx)
     try:
         _read_ready(proc)
-        resp = _call(proc, {"op": "validate", "sql": "select * from does_not_exist"})
+        resp = _call(proc, {"op": "analyze", "sql": "select * from does_not_exist"})
         if not resp.get("ok"):
             _fail("validate_flags_unknown_table", f"err: {resp}")
             return False
@@ -148,7 +148,7 @@ def _test_validate_uses_provided_tables(ctx: SuiteContext) -> bool:
         resp = _call(
             proc,
             {
-                "op": "validate",
+                "op": "analyze",
                 "sql": "select id from users",
                 "tables": [{"name": "users", "columns": ["id", "name"]}],
             },

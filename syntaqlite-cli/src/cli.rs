@@ -42,7 +42,7 @@ pub(crate) enum LineageOutput {
 }
 
 #[derive(Clone, Copy, Default, ValueEnum)]
-pub(crate) enum ValidateOutput {
+pub(crate) enum AnalysisOutput {
     /// Rustc-style rendered diagnostics on stderr (default)
     #[default]
     Text,
@@ -117,7 +117,7 @@ pub(crate) enum Command {
     /// Format SQL
     Fmt(FmtArgs),
     /// Validate SQL and report diagnostics
-    Validate(ValidateArgs),
+    Analyze(AnalyzeArgs),
     /// Extract column and table lineage from SQL
     Lineage(LineageArgs),
     /// Start the language server (stdio)
@@ -190,7 +190,7 @@ pub(crate) struct FmtArgs {
 }
 
 #[derive(Args)]
-pub(crate) struct ValidateArgs {
+pub(crate) struct AnalyzeArgs {
     /// SQL files or glob patterns (reads stdin if omitted)
     pub(crate) files: Vec<String>,
     /// SQL expression to validate directly (instead of files or stdin)
@@ -212,8 +212,8 @@ pub(crate) struct ValidateArgs {
     #[arg(long = "experimental-lang")]
     pub(crate) lang: Option<HostLanguage>,
     /// Output format
-    #[arg(short, long, value_enum, default_value_t = ValidateOutput::Text)]
-    pub(crate) output: ValidateOutput,
+    #[arg(short, long, value_enum, default_value_t = AnalysisOutput::Text)]
+    pub(crate) output: AnalysisOutput,
 }
 
 #[derive(Args)]

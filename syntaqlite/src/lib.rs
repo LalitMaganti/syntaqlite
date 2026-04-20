@@ -11,7 +11,7 @@
 //! guide the library:
 //!
 //! - **Reliability** — uses `SQLite`'s own parser rules; formatting is round-trip safe and validation mirrors real engine behaviour.
-//! - **Speed** — all core types ([`Formatter`], [`SemanticAnalyzer`], [`Catalog`]) are designed for reuse across many inputs without re-allocation.
+//! - **Speed** — all core types ([`Formatter`], [`Analyzer`], [`Catalog`]) are designed for reuse across many inputs without re-allocation.
 //! - **Portability** — the core formatting and validation engine has no runtime dependencies beyond the standard library; optional features (`lsp`, `serde`) pull in additional crates.
 //! - **Flexibility** — supports multiple database dialects that extend `SQLite`'s syntax with their own tokens and rules.
 //!
@@ -44,15 +44,15 @@
 //!
 //! # Validation
 //!
-//! Use [`SemanticAnalyzer`] to check SQL against a known schema. The analyzer
-//! produces a [`SemanticModel`](semantic::SemanticModel) containing structured
+//! Use [`Analyzer`] to check SQL against a known schema. The analyzer
+//! produces a [`Analysis`](analysis::Analysis) containing structured
 //! [`Diagnostic`] values with byte-offset spans and "did you mean?" suggestions.
 //!
 //! ```rust
-//! use syntaqlite::semantic::CatalogLayer;
-//! use syntaqlite::{AnalysisContext, Catalog, SemanticAnalyzer, sqlite_dialect};
+//! use syntaqlite::analysis::CatalogLayer;
+//! use syntaqlite::{AnalysisContext, Catalog, Analyzer, sqlite_dialect};
 //!
-//! let mut analyzer = SemanticAnalyzer::new();
+//! let mut analyzer = Analyzer::new();
 //! let mut catalog = Catalog::new(sqlite_dialect());
 //!
 //! // Register a table so the analyzer can resolve column references.
@@ -98,7 +98,7 @@
 //!   and re-exports [`Parser`](crate::Parser), [`Tokenizer`](parse::Tokenizer), and typed AST [`nodes`].
 //! - `fmt` *(default)*: enables [`Formatter`], [`FormatConfig`], and
 //!   [`KeywordCase`](fmt::KeywordCase).
-//! - `validation` *(default)*: enables [`SemanticAnalyzer`], [`Catalog`],
+//! - `validation` *(default)*: enables [`Analyzer`], [`Catalog`],
 //!   [`Diagnostic`], and related types.
 //! - `lsp`: enables [`LspServer`](lsp::LspServer) and [`lsp::LspHost`] for editor integration.
 //! - `experimental-embedded`: enables [`embedded`] SQL extraction from Python
@@ -110,7 +110,7 @@
 //! # Choosing an API
 //!
 //! - Use [`Parser`](crate::Parser) and [`Tokenizer`](parse::Tokenizer) for parsing and tokenizing SQL.
-//! - Use [`SemanticAnalyzer`] + [`Catalog`] when you need to validate SQL
+//! - Use [`Analyzer`] + [`Catalog`] when you need to validate SQL
 //!   against a database schema (table/column/function resolution).
 //! - Use [`Formatter`] when you need to pretty-print or normalize SQL text.
 //! - Use [`LspServer`](lsp::LspServer) (requires the `lsp` feature) to embed a full
@@ -128,7 +128,7 @@ pub(crate) mod dialect;
 pub mod fmt;
 
 #[cfg(feature = "validation")]
-pub mod semantic;
+pub mod analysis;
 
 // `sqlite` module is always present; individual sub-modules are gated inside it.
 pub(crate) mod sqlite;
@@ -176,22 +176,22 @@ pub use fmt::formatter::Formatter;
 // Validation — the core types needed for a validation pass.
 #[doc(inline)]
 #[cfg(feature = "validation")]
-pub use semantic::AnalysisContext;
+pub use analysis::AnalysisConfig;
 #[doc(inline)]
 #[cfg(feature = "validation")]
-pub use semantic::Catalog;
+pub use analysis::AnalysisContext;
 #[doc(inline)]
 #[cfg(feature = "validation")]
-pub use semantic::Diagnostic;
+pub use analysis::Analyzer;
 #[doc(inline)]
 #[cfg(feature = "validation")]
-pub use semantic::SemanticAnalyzer;
+pub use analysis::Catalog;
 #[doc(inline)]
 #[cfg(feature = "validation")]
-pub use semantic::ValidationConfig;
+pub use analysis::Diagnostic;
 #[doc(inline)]
 #[cfg(feature = "validation")]
-pub use semantic::{CheckConfig, CheckLevel};
+pub use analysis::{CheckConfig, CheckLevel};
 
 // Dialect.
 #[doc(inline)]

@@ -39,7 +39,7 @@ _SUITE_MODULES = [
     "python.dev.integration_tests.suites.upstream_sqlite",
     "python.dev.integration_tests.suites.lsp",
     "python.dev.integration_tests.suites.lsp_diff",
-    "python.dev.integration_tests.suites.validate",
+    "python.dev.integration_tests.suites.analyze",
     "python.dev.integration_tests.suites.semantic",
     "python.dev.integration_tests.suites.lineage",
     "python.dev.integration_tests.suites.introspect",

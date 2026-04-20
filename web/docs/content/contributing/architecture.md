@@ -68,7 +68,7 @@ The top layer exports Rust back to C for external consumers:
 <div class="mermaid">
 graph LR
     Fmt["Formatter"] --> FmtFFI["syntaqlite_formatter_*"]
-    Sem["Semantic analyzer"] --> ValFFI["syntaqlite_validator_*"]
+    Sem["Semantic analyzer"] --> ValFFI["syntaqlite_analyzer_*"]
 </div>
 
 `.synq` grammar files generate code consumed by multiple layers:
@@ -116,7 +116,7 @@ pointers are handled. The rest of the Rust code sees safe `Parser`,
 
 **Outbound** (Rust → C): `syntaqlite/src/fmt/ffi.rs` and
 `syntaqlite/src/semantic/ffi.rs` export the formatter and validator as opaque
-C handles (`SyntaqliteFormatter*`, `SyntaqliteValidator*`) with lifecycle
+C handles (`SyntaqliteFormatter*`, `SyntaqliteAnalyzer*`) with lifecycle
 functions (create, use, destroy).
 
 ## Crates

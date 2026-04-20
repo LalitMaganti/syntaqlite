@@ -7,9 +7,9 @@ use std::fs;
 use std::io;
 
 use syntaqlite::Diagnostic;
+use syntaqlite::analysis::{DiagnosticMessage, Severity};
 use syntaqlite::any::AnyDialect;
 use syntaqlite::fmt::FormatError;
-use syntaqlite::semantic::{DiagnosticMessage, Severity};
 use syntaqlite::util::DiagnosticRenderer;
 use syntaqlite::{FormatConfig, Formatter};
 

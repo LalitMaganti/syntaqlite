@@ -6,7 +6,7 @@
 //! The types in this module describe analysis results in the shape LSP
 //! services want: resolved symbols with markdown-friendly fields, cross-file
 //! definition locations, per-document bundles. Generic token/comment data
-//! lives in [`crate::semantic::analysis`].
+//! lives in [`crate::analysis::analysis`].
 //!
 //! - [`LspCapturePass`] — a [`WalkPass`] impl that fills a
 //!   [`DocumentAnalysisData`] directly during analysis.
@@ -19,14 +19,14 @@ use syntaqlite_syntax::any::TokenCategory;
 use syntaqlite_syntax::any::{AnyParseError, AnyParsedStatement};
 use syntaqlite_syntax::source::{DocOffset, DocRange};
 
-use crate::dialect::AnyDialect;
-use crate::semantic::analysis::{SemanticToken, StoredComment, StoredToken};
-use crate::semantic::analyzer::walker::{
-    CallEvent, ColumnRefEvent, SourceRefEvent, WalkCtx, WalkPass,
-};
-use crate::semantic::catalog::{
+use crate::analysis::catalog::{
     AritySpec, ColumnResolution, FunctionCategory, FunctionCheckResult,
 };
+use crate::analysis::engine::tokens::{SemanticToken, StoredComment, StoredToken};
+use crate::analysis::engine::walker::{
+    CallEvent, ColumnRefEvent, SourceRefEvent, WalkCtx, WalkPass,
+};
+use crate::dialect::AnyDialect;
 
 // ── Resolved symbols ──────────────────────────────────────────────────────────
 

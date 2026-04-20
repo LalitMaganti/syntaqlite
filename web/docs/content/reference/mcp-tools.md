@@ -122,5 +122,5 @@ semantic analysis (unknown table/column detection). For schema-aware
 validation, use the CLI directly:
 
 ```bash
-syntaqlite validate schema.sql
+syntaqlite analyze schema.sql
 ```

@@ -68,9 +68,9 @@ The parser is incremental: it yields one statement at a time, so you can process
 Check SQL against a schema without touching a database. Catches unknown tables, columns, functions, CTE column mismatches, and more.
 
 ```rust
-use syntaqlite::{AnalysisContext, Catalog, CatalogLayer, SemanticAnalyzer, sqlite_dialect};
+use syntaqlite::{AnalysisContext, Catalog, CatalogLayer, Analyzer, sqlite_dialect};
 
-let mut analyzer = SemanticAnalyzer::new();
+let mut analyzer = Analyzer::new();
 let mut catalog = Catalog::new(sqlite_dialect());
 catalog.layer_mut(CatalogLayer::Database)
     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);

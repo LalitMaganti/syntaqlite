@@ -53,13 +53,13 @@ Setting a glob to `[]` disables schema validation for those files.
 When a schema is provided (via `syntaqlite.toml` or `--schema`), unresolved
 table and column references are reported as **errors** and cause a non-zero
 exit code. Without a schema, the same issues are reported as **warnings** and
-the exit code remains zero. This means `syntaqlite validate` in CI will only
+the exit code remains zero. This means `syntaqlite analyze` in CI will only
 fail the build when you've explicitly declared your schema.
 
 For one-off checks without a config file, use `--schema`:
 
 ```bash
-syntaqlite validate --schema schema.sql query.sql
+syntaqlite analyze --schema schema.sql query.sql
 ```
 
 ## SQLite version and compile flags
@@ -169,10 +169,10 @@ team-wide defaults while still allowing local overrides:
 
 ```bash
 # Uses config defaults
-syntaqlite validate "**/*.sql"
+syntaqlite analyze "**/*.sql"
 
 # Overrides just the version for this run
-syntaqlite validate --sqlite-version 3.46.0 "**/*.sql"
+syntaqlite analyze --sqlite-version 3.46.0 "**/*.sql"
 ```
 
 ## Next steps

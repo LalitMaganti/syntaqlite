@@ -5,11 +5,11 @@
 
 use serde::Serialize;
 use syntaqlite::Diagnostic;
-use syntaqlite::any::AnyDialect;
-use syntaqlite::semantic::{
-    DiagnosticMessage, RelationKind, SemanticAnalyzer, Severity, StatementModel,
+use syntaqlite::analysis::{
+    Analyzer, DiagnosticMessage, RelationKind, Severity, StatementAnalysis,
 };
-use syntaqlite::{Catalog, ValidationConfig};
+use syntaqlite::any::AnyDialect;
+use syntaqlite::{AnalysisConfig, Catalog};
 
 use crate::cli::{LineageArgs, LineageOutput, LineageScope};
 use crate::config::{self, ConfigMode};
@@ -32,7 +32,7 @@ pub(crate) fn run(
 struct LineageRun<'a> {
     dialect: &'a AnyDialect,
     schema_catalog: Catalog,
-    validation: ValidationConfig,
+    validation: AnalysisConfig,
     scope: Option<LineageScope>,
 }
 
@@ -52,7 +52,7 @@ impl<'a> LineageRun<'a> {
         Ok(Self {
             dialect,
             schema_catalog,
-            validation: ValidationConfig::default(),
+            validation: AnalysisConfig::default(),
             scope: args.scope,
         })
     }
@@ -73,7 +73,7 @@ impl<'a> LineageRun<'a> {
     // ── Computation ────────────────────────────────────────────────────────
 
     fn analyze(&self, src: &Source) -> Vec<Record> {
-        let mut analyzer = SemanticAnalyzer::with_dialect(self.dialect.clone());
+        let mut analyzer = Analyzer::with_dialect(self.dialect.clone());
         let mut catalog = self.schema_catalog.clone();
         let mut ctx = syntaqlite::AnalysisContext::new(&mut catalog).with_config(self.validation);
         let model = analyzer.analyze(&src.text, &mut ctx);
@@ -164,7 +164,7 @@ fn build_error_record(d: &Diagnostic, file: &str, index: u32) -> ErrorRecord {
 }
 
 fn build_lineage_record(
-    stmt: &StatementModel,
+    stmt: &StatementAnalysis,
     file: &str,
     index: u32,
     scope: Option<LineageScope>,
@@ -206,7 +206,7 @@ fn build_lineage_record(
     }
 }
 
-fn collect_columns(stmt: &StatementModel) -> Vec<JsonColumn> {
+fn collect_columns(stmt: &StatementAnalysis) -> Vec<JsonColumn> {
     stmt.lineage()
         .map(|l| {
             l.into_inner()
@@ -224,7 +224,7 @@ fn collect_columns(stmt: &StatementModel) -> Vec<JsonColumn> {
         .unwrap_or_default()
 }
 
-fn collect_relations(stmt: &StatementModel) -> Vec<JsonRelation> {
+fn collect_relations(stmt: &StatementAnalysis) -> Vec<JsonRelation> {
     stmt.relations_accessed()
         .map(|r| {
             r.into_inner()
@@ -241,7 +241,7 @@ fn collect_relations(stmt: &StatementModel) -> Vec<JsonRelation> {
         .unwrap_or_default()
 }
 
-fn collect_physical_tables(stmt: &StatementModel) -> Vec<JsonPhysicalTable> {
+fn collect_physical_tables(stmt: &StatementAnalysis) -> Vec<JsonPhysicalTable> {
     stmt.physical_tables_accessed()
         .map(|t| {
             t.into_inner()
@@ -257,7 +257,7 @@ fn collect_physical_tables(stmt: &StatementModel) -> Vec<JsonPhysicalTable> {
 fn print_error_text(record: &ErrorRecord) {
     let stage = match record.stage {
         ErrorStage::Parse => "parse",
-        ErrorStage::Validate => "validate",
+        ErrorStage::Validate => "analyze",
     };
     println!("Error");
     println!("  statement: {}", record.statement_index);

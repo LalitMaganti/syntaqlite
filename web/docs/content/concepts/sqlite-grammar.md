@@ -56,7 +56,7 @@ the latest grammar for parsing and validates against your target version
 *after* parsing:
 
 ```bash
-syntaqlite validate --sqlite-version 3.41.0 query.sql
+syntaqlite analyze --sqlite-version 3.41.0 query.sql
 ```
 
 This means syntaqlite will parse the SQL correctly even if it uses syntax from

@@ -17,7 +17,7 @@
 
 #include "sqlite3.h"
 #include "syntaqlite/parser.h"
-#include "syntaqlite/validation.h"
+#include "syntaqlite/analysis.h"
 
 // ---------------------------------------------------------------------------
 // Per-database handle state
@@ -27,7 +27,7 @@ typedef struct DbHandle {
   char* name;                    // TCL command name (e.g. "db")
   sqlite3* real_db;              // Real SQLite for prepare() ground truth
   SyntaqliteParser* parser;      // syntaqlite parser
-  SyntaqliteValidator* validator; // syntaqlite validator (may be NULL)
+  SyntaqliteAnalyzer* validator; // syntaqlite validator (may be NULL)
   Tcl_Interp* interp;           // TCL interpreter
   FILE* log_file;                // JSON lines output (shared, not owned)
 
@@ -173,7 +173,7 @@ static void eval_sql(DbHandle* db, const char* sql, int sql_len) {
   // --- Path 3: syntaqlite validator (if parse succeeded) ---
   uint32_t diag_count = 0;
   if (syntaqlite_parse_ok && db->validator) {
-    diag_count = syntaqlite_validator_analyze(db->validator, sql, (uint32_t)sql_len);
+    diag_count = syntaqlite_analyzer_analyze(db->validator, sql, (uint32_t)sql_len);
   }
   int syntaqlite_ok = syntaqlite_parse_ok && diag_count == 0;
 
@@ -205,7 +205,7 @@ static void eval_sql(DbHandle* db, const char* sql, int sql_len) {
     }
     if (diag_count > 0) {
       const SyntaqliteDiagnostic* diags =
-          syntaqlite_validator_diagnostics(db->validator);
+          syntaqlite_analyzer_diagnostics(db->validator);
       fprintf(db->log_file, ",\"diagnostics\":[");
       for (uint32_t i = 0; i < diag_count; i++) {
         if (i > 0) fputc(',', db->log_file);
@@ -236,7 +236,7 @@ static void db_handle_delete(ClientData data) {
   DbHandle* db = (DbHandle*)data;
   if (db->real_db) sqlite3_close(db->real_db);
   if (db->parser) syntaqlite_parser_destroy(db->parser);
-  if (db->validator) syntaqlite_validator_destroy(db->validator);
+  if (db->validator) syntaqlite_analyzer_destroy(db->validator);
   free(db->name);
   free(db);
 }
@@ -396,10 +396,10 @@ static int sqlite3_cmd(ClientData data, Tcl_Interp* interp, int objc,
 
   // Create syntaqlite validator (if enabled).
   if (g_enable_validation) {
-    db->validator = syntaqlite_validator_create_sqlite();
+    db->validator = syntaqlite_analyzer_create_sqlite();
     // Execute mode: DDL accumulates across analyze() calls, matching the
     // real SQLite database that also accumulates schema via sqlite3_step().
-    syntaqlite_validator_set_mode(db->validator, SYNTAQLITE_MODE_EXECUTE);
+    syntaqlite_analyzer_set_mode(db->validator, SYNTAQLITE_MODE_EXECUTE);
   }
 
   Tcl_CreateObjCommand(interp, dbname, db_handle_cmd, (ClientData)db,

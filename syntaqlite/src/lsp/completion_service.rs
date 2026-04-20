@@ -12,10 +12,10 @@ use std::collections::HashSet;
 
 use syntaqlite_syntax::util::is_suggestable_keyword;
 
+use crate::analysis::Catalog;
 use crate::dialect::AnyDialect;
-use crate::semantic::Catalog;
 
-use crate::semantic::completion::CompletionContext;
+use crate::analysis::completion::CompletionContext;
 
 use super::{CompletionEntry, CompletionInfo, CompletionKind};
 
