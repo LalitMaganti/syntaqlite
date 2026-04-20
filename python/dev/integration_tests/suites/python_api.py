@@ -662,6 +662,18 @@ def _test_validate_output_enum_values(stq) -> bool:
     return True
 
 
+def _test_validate_rejects_string_output(stq) -> bool:
+    """`validate` must refuse raw strings for `output`; only ValidateOutput members."""
+    with stq.Syntaqlite() as sq:
+        try:
+            sq.validate("SELECT 1", output="text")
+        except TypeError:
+            _pass("validate_rejects_string_output")
+            return True
+    _fail("validate_rejects_string_output", "expected TypeError for output='text'")
+    return False
+
+
 # ── Bundled binary dispatch ──────────────────────────────────────────────────
 
 
@@ -803,6 +815,7 @@ _TESTS = [
     _test_parse_returns_wrapped_node_type,
     _test_diagnostic_code_enum_members,
     _test_validate_output_enum_values,
+    _test_validate_rejects_string_output,
     # Bundled binary dispatch
     _test_get_binary_path_honours_env,
     _test_syntaqlite_binary_kwarg,

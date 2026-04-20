@@ -492,7 +492,7 @@ class Syntaqlite:
         sql: str,
         schema: Schema | None = None,
         *,
-        output: ValidateOutput | str = ValidateOutput.STRUCTURED,
+        output: ValidateOutput = ValidateOutput.STRUCTURED,
         render_options: RenderOptions | None = None,
     ) -> ValidationResult | str:
         """Validate SQL against an optional schema.
@@ -500,15 +500,18 @@ class Syntaqlite:
         Args:
             sql: SQL to validate.
             schema: Catalog schema (tables, views, DDL, optional modules).
-            output: :class:`ValidateOutput` (or its string value) selecting
-                the return shape. :attr:`ValidateOutput.STRUCTURED`
-                returns a :class:`ValidationResult`; :attr:`ValidateOutput.TEXT`
+            output: :class:`ValidateOutput` selecting the return shape.
+                :attr:`ValidateOutput.STRUCTURED` returns a
+                :class:`ValidationResult`; :attr:`ValidateOutput.TEXT`
                 returns a rendered diagnostics string.
             render_options: Fine-grained options for
                 :attr:`ValidateOutput.TEXT` (e.g. source label). Ignored
                 for other outputs.
         """
-        output = ValidateOutput(output)
+        if not isinstance(output, ValidateOutput):
+            raise TypeError(
+                f"output must be a ValidateOutput, got {type(output).__name__}"
+            )
         params: dict[str, Any] = {"sql": sql, "output": output.value}
         if schema is not None:
             params.update(schema._to_request())
