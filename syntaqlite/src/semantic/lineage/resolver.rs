@@ -100,7 +100,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                 }
                 None
             }
-            SemanticRole::Transparent | SemanticRole::DmlScope => {
+            SemanticRole::Transparent | SemanticRole::DmlScope { .. } => {
                 for child_id in self.stmt.child_node_ids(node_id) {
                     if let Some(result) = self.resolve_node(child_id) {
                         return Some(result);

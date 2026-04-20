@@ -242,7 +242,16 @@ pub mod roles {
         /// recurse into children (field-declaration order ensures the target
         /// table's `SourceRef` is visited first, registering it in scope
         /// before column refs are resolved).
-        DmlScope = 15,
+        ///
+        /// When the DML carries a `WITH` prefix, `with_ctes` points at the
+        /// CTE binding list and `with_recursive` at the RECURSIVE flag;
+        /// both are `FIELD_ABSENT` when the DML has no CTE prefix.
+        DmlScope {
+            /// Field index of the RECURSIVE flag (`FIELD_ABSENT` if absent).
+            with_recursive: FieldIdx,
+            /// Field index of the CTE binding list (`FIELD_ABSENT` if absent).
+            with_ctes: FieldIdx,
+        } = 15,
 
         /// No semantic role — recurse into children generically.
         Transparent = 16,

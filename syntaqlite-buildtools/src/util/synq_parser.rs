@@ -117,7 +117,10 @@ pub(crate) enum SemanticRole {
         when: String,
         body: String,
     },
-    DmlScope,
+    DmlScope {
+        with_recursive: Option<String>,
+        with_ctes: Option<String>,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -681,7 +684,10 @@ impl Parser {
                 when: require_param(&params, "when", node_name, "trigger_scope")?,
                 body: require_param(&params, "body", node_name, "trigger_scope")?,
             },
-            "dml_scope" => SemanticRole::DmlScope,
+            "dml_scope" => SemanticRole::DmlScope {
+                with_recursive: get_param(&params, "with_recursive").map(str::to_string),
+                with_ctes: get_param(&params, "with_ctes").map(str::to_string),
+            },
             _ => {
                 return Err(format!(
                     "unknown semantic role '{role_name}' in node '{node_name}'"

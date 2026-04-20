@@ -42,7 +42,7 @@ node DeleteStmt {
   limit_clause: index LimitClause
   returning: index ResultColumnList
 
-  semantic { dml_scope() }
+  semantic { dml_scope(with_recursive: with_recursive, with_ctes: with_ctes) }
 
   fmt {
     group {
@@ -92,7 +92,7 @@ node UpdateStmt {
   limit_clause: index LimitClause
   returning: index ResultColumnList
 
-  semantic { dml_scope() }
+  semantic { dml_scope(with_recursive: with_recursive, with_ctes: with_ctes) }
 
   fmt {
     group {
@@ -133,7 +133,7 @@ node InsertStmt {
   upsert: index UpsertClauseList
   returning: index ResultColumnList
 
-  semantic { dml_scope() }
+  semantic { dml_scope(with_recursive: with_recursive, with_ctes: with_ctes) }
 
   fmt {
     group {

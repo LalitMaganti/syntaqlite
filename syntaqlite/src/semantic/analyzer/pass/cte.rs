@@ -37,16 +37,83 @@ impl ValidationPass<'_> {
         bindings_idx: u8,
         body_idx: u8,
     ) {
-        let is_recursive = matches!(fields[recursive_idx as usize], FieldValue::Bool(true));
+        self.catalog.push_query_scope();
+        self.register_cte_bindings(stmt, fields, recursive_idx, bindings_idx);
+        self.visit_opt(stmt, Self::field_node_id(fields, body_idx));
+        self.catalog.pop_query_scope();
+    }
+
+    /// Visit a DML statement whose optional `WITH` prefix is stored inline on
+    /// the statement itself. Registers CTE bindings (when present) before
+    /// recursing into DML children, so subsequent `SourceRef`s resolve.
+    pub(super) fn visit_dml_scope(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        fields: &NodeFields,
+        recursive_idx: u8,
+        bindings_idx: u8,
+    ) {
+        let has_ctes = bindings_idx != FIELD_ABSENT;
+        if has_ctes {
+            self.catalog.push_query_scope();
+            self.register_cte_bindings(stmt, fields, recursive_idx, bindings_idx);
+        }
+        self.scope.push();
+        // `register_cte_bindings` already visited each CTE body, so skip the
+        // CTE list field when walking the remaining DML children to avoid
+        // double-visitation.
+        self.visit_dml_children_except_ctes(stmt, fields, bindings_idx);
+        self.scope.pop();
+        if has_ctes {
+            self.catalog.pop_query_scope();
+        }
+    }
+
+    fn visit_dml_children_except_ctes(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        fields: &NodeFields,
+        bindings_idx: u8,
+    ) {
+        let skip = bindings_idx as usize;
+        let mut child_ids: Vec<AnyNodeId> = Vec::new();
+        for idx in 0..fields.len() {
+            if idx == skip {
+                continue;
+            }
+            if let FieldValue::NodeId(child_id) = fields[idx]
+                && !child_id.is_null()
+            {
+                if let Some(children) = stmt.list_children(child_id) {
+                    child_ids.extend(children.iter().copied().filter(|id| !id.is_null()));
+                } else {
+                    child_ids.push(child_id);
+                }
+            }
+        }
+        for child in child_ids {
+            self.visit(stmt, child);
+        }
+    }
+
+    /// Walk a CTE binding list and register each binding in the current
+    /// catalog query scope. Caller is responsible for pushing/popping the
+    /// catalog query scope around this call.
+    fn register_cte_bindings(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        fields: &NodeFields,
+        recursive_idx: u8,
+        bindings_idx: u8,
+    ) {
+        if bindings_idx == FIELD_ABSENT {
+            return;
+        }
+        let is_recursive = recursive_idx != FIELD_ABSENT
+            && matches!(fields[recursive_idx as usize], FieldValue::Bool(true));
         let cte_ids = Self::field_node_id(fields, bindings_idx)
             .and_then(|id| stmt.list_children(id))
             .unwrap_or(&[]);
-
-        // Push a catalog scope so CTE names are resolvable as table names in
-        // FROM clauses.  This is purely for relation-name resolution — CTE
-        // columns only become active when a CTE is actually referenced in FROM
-        // (handled by visit_source_ref → scope.add_table).
-        self.catalog.push_query_scope();
 
         for &cte_id in cte_ids {
             let Some(binding) = self.extract_cte_binding(stmt, cte_id) else {
@@ -101,9 +168,6 @@ impl ValidationPass<'_> {
             };
             self.catalog.add_query_table(binding.name, cols);
         }
-
-        self.visit_opt(stmt, Self::field_node_id(fields, body_idx));
-        self.catalog.pop_query_scope();
     }
 
     /// Emit definition events for columns inferred from a SELECT body.
