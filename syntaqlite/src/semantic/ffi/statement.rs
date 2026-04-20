@@ -23,7 +23,6 @@ fn ensure_source<'a>(cache: &'a mut PerStatementCache, stmt: &StatementModel) ->
         .get_or_insert_with(|| CString::new(stmt.source()).unwrap_or_default())
 }
 
-#[expect(clippy::cast_possible_truncation)]
 fn ensure_diagnostics<'a>(
     cache: &'a mut PerStatementCache,
     stmt: &StatementModel,

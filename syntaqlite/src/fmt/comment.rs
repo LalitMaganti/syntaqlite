@@ -119,7 +119,6 @@ impl CommentCtx {
         self.drain_impl(end, source, arena, true)
     }
 
-    #[expect(clippy::too_many_lines)]
     fn drain_impl<'a>(
         &self,
         before: StmtOffset,
