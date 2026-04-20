@@ -7,8 +7,8 @@ weight = 6
 # Using syntaqlite from Python
 
 This tutorial walks you through using syntaqlite as a Python library. By the end
-you'll have a script that formats SQL, validates it against a schema, traces
-column lineage, and inspects the AST, all from Python.
+you'll have a script that formats SQL, validates it against a schema, and
+inspects the AST — all from Python.
 
 ## 1. Install
 
@@ -16,20 +16,35 @@ column lineage, and inspects the AST, all from Python.
 pip install syntaqlite
 ```
 
-The pip package includes both the `syntaqlite` CLI binary and a native C
-extension that exposes the library API directly to Python. Requires Python 3.10+.
+The pip package includes the `syntaqlite` CLI binary and a pure-Python
+client library. Requires Python 3.10+.
 
-> **Note:** On platforms where the C extension isn't available (e.g. Windows
-> arm64), pip still installs the CLI binary. Only the library functions below
-> won't be importable.
+## 2. Create a `Syntaqlite` instance
 
-## 2. Format a query
+All operations go through a [`Syntaqlite`](@/reference/python-api.md#syntaqlitesyntaqlite)
+instance. Create one and reuse it across many calls:
 
 ```python
 import syntaqlite
 
+sq = syntaqlite.Syntaqlite()
+# ... use sq ...
+sq.close()
+```
+
+Or use the context-manager form to close automatically:
+
+```python
+with syntaqlite.Syntaqlite() as sq:
+    # ... use sq ...
+    pass
+```
+
+## 3. Format a query
+
+```python
 sql = "select id,name,email from users where active=1 order by name"
-print(syntaqlite.format_sql(sql))
+print(sq.format_sql(sql))
 ```
 
 Output:
@@ -41,7 +56,7 @@ SELECT id, name, email FROM users WHERE active = 1 ORDER BY name;
 Customize formatting with keyword arguments:
 
 ```python
-print(syntaqlite.format_sql(sql, line_width=40, indent_width=4, keyword_case="lower"))
+print(sq.format_sql(sql, line_width=40, indent_width=4, keyword_case="lower"))
 ```
 
 ```sql
@@ -53,18 +68,18 @@ order by
   name;
 ```
 
-## 3. Validate against a schema
+## 4. Validate against a schema
 
-Pass table definitions to validate column and table references:
+Build a `Schema` with the tables you want to check against and pass it to
+`validate()`:
 
 ```python
-import syntaqlite
-from syntaqlite import Table
+from syntaqlite import Schema, Table
 
-schema = [Table("users", ["id", "name", "email", "active"])]
-result = syntaqlite.validate(
+schema = Schema(tables=[Table("users", ["id", "name", "email", "active"])])
+result = sq.validate(
     "SELECT nme FROM users WHERE active = 1",
-    tables=schema,
+    schema,
 )
 for d in result.diagnostics:
     print(f"{d.severity}: {d.message}")
@@ -74,22 +89,25 @@ for d in result.diagnostics:
 error: unknown column 'nme'
 ```
 
-You can also load schema directly from DDL:
+`Schema` also accepts raw DDL, so you can point at an existing schema
+file instead of listing columns by hand:
 
 ```python
-result = syntaqlite.validate(
-    "SELECT nme FROM users WHERE active = 1",
-    schema_ddl="CREATE TABLE users (id INT, name TEXT, email TEXT, active INT)",
-)
+schema = Schema(ddl="CREATE TABLE users (id INT, name TEXT, email TEXT, active INT)")
+result = sq.validate("SELECT nme FROM users WHERE active = 1", schema)
 ```
 
-For human-readable output with source locations, use `render=True`:
+For human-readable output with source locations, switch the output
+format:
 
 ```python
-print(syntaqlite.validate(
+from syntaqlite import RenderOptions, ValidateOutput
+
+print(sq.validate(
     "SELECT nme FROM users WHERE active = 1",
-    tables=schema,
-    render=True,
+    schema,
+    output=ValidateOutput.TEXT,
+    render_options=RenderOptions(source_name="query.sql"),
 ))
 ```
 
@@ -102,16 +120,14 @@ error: unknown column 'nme'
   = help: did you mean 'name'?
 ```
 
-## 3b. Column lineage
+### Column lineage
 
-When validating a SELECT, the result includes column lineage: which source
-table and column each output column traces back to:
+When validating a SELECT, the result includes column lineage — which
+source table and column each output column traces back to:
 
 ```python
-result = syntaqlite.validate(
-    "SELECT u.name, u.email FROM users u",
-    tables=[Table("users", ["id", "name", "email"])],
-)
+schema = Schema(tables=[Table("users", ["id", "name", "email"])])
+result = sq.validate("SELECT u.name, u.email FROM users u", schema)
 for col in result.lineage.columns:
     print(f"  {col.name} <- {col.origin}")
 ```
@@ -122,8 +138,7 @@ for col in result.lineage.columns:
 ```
 
 The `lineage` object also lists the catalog relations referenced in FROM
-(tables and views as written in the query) and the physical tables
-accessed after CTE/view expansion:
+and the physical tables accessed after CTE/view expansion:
 
 ```python
 for rel in result.lineage.relations:
@@ -137,16 +152,17 @@ for t in result.lineage.physical_tables:
   physical table: users
 ```
 
-## 4. Parse and inspect the AST
+`result.lineage` is `None` when the query had no resolvable body (for
+example, a `CREATE TABLE` statement).
 
-`syntaqlite.parse()` returns typed Python objects. Each statement is a class
-with named attributes — you get IDE autocomplete and `isinstance` checks instead
+## 5. Parse and inspect the AST
+
+`sq.parse()` returns typed Python objects. Each statement is a class with
+named attributes — you get IDE autocomplete and `isinstance` checks instead
 of string-keyed dict access:
 
 ```python
-import syntaqlite
-
-stmt = syntaqlite.parse("SELECT id, name FROM users WHERE active = 1")[0]
+stmt = sq.parse("SELECT id, name FROM users WHERE active = 1")[0]
 
 print(type(stmt).__name__)       # SelectStmt
 print(stmt.from_clause)          # TableRef(...)
@@ -170,7 +186,6 @@ Because nodes are typed, you can write recursive visitors with `isinstance`.
 Here's a function that counts arithmetic operators in a query:
 
 ```python
-import syntaqlite
 from syntaqlite.nodes import BinaryExpr
 from syntaqlite.enums import BinaryOp
 
@@ -178,14 +193,14 @@ def count_ops(node, target_ops):
     """Walk an AST node tree and count specific binary operators."""
     count = 0
     if isinstance(node, BinaryExpr):
-        if BinaryOp(node.op) in target_ops:
+        if node.op in target_ops:
             count += 1
         count += count_ops(node.left, target_ops)
         count += count_ops(node.right, target_ops)
     return count
 
 sql = "SELECT a + b - c, d - e + f + g FROM t WHERE x - 1 > y + 2"
-stmt = syntaqlite.parse(sql)[0]
+stmt = sq.parse(sql)[0]
 
 adds = 0
 subs = 0
@@ -205,13 +220,13 @@ additions: 4, subtractions: 3
 
 ### Error recovery
 
-The parser recovers from errors and continues parsing. Error nodes are returned
+The parser recovers from errors and continues. Error nodes are returned
 alongside valid statements:
 
 ```python
 from syntaqlite.nodes import Error
 
-stmts = syntaqlite.parse("SELECT FROM; SELECT 1")
+stmts = sq.parse("SELECT FROM; SELECT 1")
 for s in stmts:
     if isinstance(s, Error):
         print(f"error: {type(s).__name__}")
@@ -224,25 +239,23 @@ error: Error
 ok: SelectStmt
 ```
 
-## 5. Tokenize
+## 6. Tokenize
 
 ```python
-import syntaqlite
-
-for tok in syntaqlite.tokenize("SELECT 1"):
-    print(f"  {tok['text']!r:10s}  offset={tok['offset']}  len={tok['length']}")
+for tok in sq.tokenize("SELECT 1"):
+    print(f"  {tok['text']!r:10s}  offset={tok['offset']}  len={tok['length']}  {tok['category']}")
 ```
 
 ```text
-  'SELECT'    offset=0  len=6
-  ' '         offset=6  len=1
-  '1'         offset=7  len=1
+  'SELECT'    offset=0  len=6  keyword
+  ' '         offset=6  len=1  other
+  '1'         offset=7  len=1  number
 ```
 
 ## Next steps
 
-- [Python API reference](@/reference/python-api.md) — all functions, parameters,
-  and return types
+- [Python API reference](@/reference/python-api.md) — the full `Syntaqlite`
+  class, parameters, and return types
 - [CLI reference](@/reference/cli.md) — the `syntaqlite` command installed
   alongside the library
 - [Formatting options](@/reference/formatting-options.md) — line width, keyword

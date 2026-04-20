@@ -91,8 +91,6 @@ pub struct OutputLayout {
     // ── Python ────────────────────────────────────────────────────────────
     /// Python enum types (`enums.py`).
     pub enums_py: Option<String>,
-    /// C header for Python extension (`_py_ast_wrap.h`).
-    pub ast_wrap_h: Option<String>,
     /// Python typed AST node classes (`nodes.py`).
     pub nodes_py: Option<String>,
 }
@@ -215,7 +213,6 @@ impl OutputLayout {
             cargo_toml: None,
             // Python
             enums_py: Some("python/syntaqlite/enums.py".to_string()),
-            ast_wrap_h: Some("python/csrc/_py_ast_wrap.h".to_string()),
             nodes_py: Some("python/syntaqlite/nodes.py".to_string()),
         }
     }
@@ -303,7 +300,6 @@ impl OutputLayout {
             build_rs: Some("build.rs".to_string()),
             cargo_toml: Some("Cargo.toml".to_string()),
             enums_py: None,
-            ast_wrap_h: None,
             nodes_py: None,
         }
     }
@@ -393,7 +389,6 @@ impl OutputLayout {
             build_rs: None,
             cargo_toml: None,
             enums_py: None,
-            ast_wrap_h: None,
             nodes_py: None,
         }
     }
@@ -477,7 +472,6 @@ impl OutputLayout {
         // Python
         if let Some(python) = artifacts.python {
             write(&self.enums_py, &python.enums)?;
-            write(&self.ast_wrap_h, &python.ast_wrap_h)?;
             write(&self.nodes_py, &python.nodes)?;
         }
 

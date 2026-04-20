@@ -105,7 +105,6 @@ pub syntaqlite_buildtools::output_resolver::CHeader::write: core::option::Option
 pub syntaqlite_buildtools::output_resolver::OutputLayout::ast_builder_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::ast_nodes_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::ast_rs: core::option::Option<alloc::string::String>
-pub syntaqlite_buildtools::output_resolver::OutputLayout::ast_wrap_h: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::build_rs: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::cargo_toml: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::cflags_h: syntaqlite_buildtools::output_resolver::CHeader

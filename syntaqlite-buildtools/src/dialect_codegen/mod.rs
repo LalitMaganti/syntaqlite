@@ -9,7 +9,6 @@ pub(crate) mod c_dialect;
 pub(crate) mod c_meta_codegen;
 pub(crate) mod c_nodes_codegen;
 pub(crate) mod fmt_compiler;
-pub(crate) mod python_c_codegen;
 pub(crate) mod python_codegen;
 pub(crate) mod rust_ast;
 pub(crate) mod rust_dialect;

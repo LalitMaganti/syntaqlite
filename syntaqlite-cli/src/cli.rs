@@ -125,6 +125,11 @@ pub(crate) enum Command {
     /// Start the MCP server (stdio)
     #[cfg(feature = "mcp")]
     Mcp,
+    /// Start the long-lived RPC server over stdio
+    Serve {
+        #[command(subcommand)]
+        protocol: ServeProtocol,
+    },
     /// Tokenize SQL and print the token stream
     Tokenize(TokenizeArgs),
     /// Dialect codegen (generate C + Rust sources for custom dialects)
@@ -254,4 +259,10 @@ pub(crate) enum LineageScope {
 pub(crate) enum DialectSubcommand {
     /// Generate dialect C sources and Rust bindings for external dialects
     Generate(crate::commands::codegen::DialectArgs),
+}
+
+#[derive(Subcommand)]
+pub(crate) enum ServeProtocol {
+    /// Line-delimited JSON protocol (stable)
+    Json,
 }

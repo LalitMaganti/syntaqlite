@@ -15,30 +15,8 @@ Homepage = "https://github.com/LalitMaganti/syntaqlite"
 Documentation = "https://docs.syntaqlite.com"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["syntaqlite*"]
-
-# ---------------------------------------------------------------------------
-# cibuildwheel
-# ---------------------------------------------------------------------------
-[tool.cibuildwheel]
-build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
-skip = "*-win32 *-musllinux_* *s390x* *ppc64le* *i686*"
-test-command = """python -c "from syntaqlite import format_sql; assert 'SELECT' in format_sql('select 1')" """
-
-[tool.cibuildwheel.linux]
-archs = ["x86_64", "aarch64"]
-
-[tool.cibuildwheel.macos]
-archs = ["arm64", "x86_64"]
-environment = { MACOSX_DEPLOYMENT_TARGET = "10.12" }
-
-[tool.cibuildwheel.windows]
-archs = ["AMD64", "ARM64"]
-
-[[tool.cibuildwheel.overrides]]
-select = "*-win_arm64"
-test-skip = "*"

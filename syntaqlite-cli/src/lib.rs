@@ -255,6 +255,9 @@ fn run_command(
         Command::Lsp => commands::lsp::run(require_dialect(dialect)?, config),
         #[cfg(feature = "mcp")]
         Command::Mcp => commands::mcp::run(require_dialect(dialect)?),
+        Command::Serve { protocol } => match protocol {
+            cli::ServeProtocol::Json => commands::serve::run_json(&require_dialect(dialect)?),
+        },
         #[cfg(feature = "codegen")]
         Command::Dialect { command } => match command {
             cli::DialectSubcommand::Generate(args) => commands::codegen::generate(&args),
