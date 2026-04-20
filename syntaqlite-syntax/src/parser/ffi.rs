@@ -3,6 +3,8 @@
 
 use std::ffi::{c_char, c_void};
 
+use crate::source::{RewriteIdx, StmtOffset, TokenIdx};
+
 /// Opaque C parser type.
 pub(crate) enum CParser {}
 
@@ -290,7 +292,7 @@ impl CParser {
     pub(crate) unsafe fn node_text<'a>(
         &self,
         node_id: u32,
-    ) -> Option<(&'a str, crate::source::StmtOffset)> {
+    ) -> Option<(&'a str, StmtOffset)> {
         let mut out_len: u32 = 0;
         let mut out_offset: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
@@ -310,7 +312,7 @@ impl CParser {
         let text = unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
         };
-        Some((text, crate::source::StmtOffset::from_raw(out_offset)))
+        Some((text, StmtOffset::from_raw(out_offset)))
     }
 
     /// Post-expansion text of AST node `node_id` — a slice of whichever
@@ -429,7 +431,7 @@ impl CParser {
 
     pub(crate) unsafe fn token_leading_comments(
         &self,
-        token_idx: crate::source::TokenIdx,
+        token_idx: TokenIdx,
     ) -> &[CComment] {
         let mut count: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer; result
@@ -451,7 +453,7 @@ impl CParser {
 
     pub(crate) unsafe fn token_trailing_comments(
         &self,
-        token_idx: crate::source::TokenIdx,
+        token_idx: TokenIdx,
     ) -> &[CComment] {
         let mut count: u32 = 0;
         // SAFETY: self is a valid, non-null CParser pointer; result
@@ -544,10 +546,7 @@ impl CParser {
         }
     }
 
-    pub(crate) unsafe fn macro_rewrite_arg_segment_count(
-        &self,
-        rewrite_idx: crate::source::RewriteIdx,
-    ) -> u32 {
+    pub(crate) unsafe fn macro_rewrite_arg_segment_count(&self, rewrite_idx: RewriteIdx) -> u32 {
         // SAFETY: self is a valid CParser pointer; the C side clamps
         // out-of-range indices to zero.
         unsafe {
@@ -560,7 +559,7 @@ impl CParser {
 
     pub(crate) unsafe fn macro_rewrite_arg_segment_at(
         &self,
-        rewrite_idx: crate::source::RewriteIdx,
+        rewrite_idx: RewriteIdx,
         segment_idx: u32,
     ) -> CMacroArgSegment {
         // SAFETY: self is a valid CParser pointer; the C side clamps
