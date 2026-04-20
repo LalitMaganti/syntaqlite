@@ -3,151 +3,10 @@
 
 //! Result types for a single semantic analysis pass.
 
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-use syntaqlite_syntax::ParserTokenFlags;
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
-
-#[cfg(feature = "lsp")]
-use std::collections::HashMap;
-
 use super::diagnostics::Diagnostic;
 use super::lineage::{
     ColumnLineage, LineageResult, PhysicalTableAccess, QueryLineage, RelationAccess,
 };
-
-// ── Stored per-statement positions ───────────────────────────────────────────
-
-/// A token position recorded during parsing.
-///
-/// `token_type` is dialect-agnostic (`AnyTokenType`) so that the semantic
-/// analyzer works with any dialect, not just the built-in `SQLite` dialect.
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-#[derive(Debug, Clone)]
-pub(crate) struct StoredToken {
-    pub(crate) offset: DocOffset,
-    pub(crate) length: DocLen,
-    pub(crate) token_type: AnyTokenType,
-    pub(crate) flags: ParserTokenFlags,
-}
-
-/// A comment position recorded during parsing.
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-#[derive(Debug, Clone)]
-pub(crate) struct StoredComment {
-    pub(crate) offset: DocOffset,
-    pub(crate) length: DocLen,
-}
-
-// ── Output types ──────────────────────────────────────────────────────────────
-
-/// A semantic token for syntax highlighting.
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-#[derive(Debug, Clone)]
-pub(crate) struct SemanticToken {
-    /// Document-absolute byte offset in the source text.
-    pub offset: DocOffset,
-    /// Length in bytes.
-    pub length: DocLen,
-    /// Token category for highlighting.
-    pub category: TokenCategory,
-}
-
-/// Semantic completion context derived from parser stack state.
-#[cfg(feature = "lsp")]
-#[repr(u32)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum CompletionContext {
-    /// Could not determine context.
-    Unknown = 0,
-    /// Cursor is in an expression position (functions/values expected).
-    Expression = 1,
-    /// Cursor is in a table-reference position (table/view names expected).
-    TableRef = 2,
-}
-
-#[cfg(feature = "lsp")]
-impl CompletionContext {
-    pub(crate) fn from_parser(v: syntaqlite_syntax::CompletionContext) -> Self {
-        match v {
-            syntaqlite_syntax::CompletionContext::Expression => Self::Expression,
-            syntaqlite_syntax::CompletionContext::TableRef => Self::TableRef,
-            syntaqlite_syntax::CompletionContext::Unknown => Self::Unknown,
-        }
-    }
-}
-
-/// Expected tokens and semantic context at a cursor position.
-#[cfg(feature = "lsp")]
-#[derive(Debug)]
-pub(crate) struct CompletionInfo {
-    /// Terminal token types valid at the cursor (dialect-agnostic).
-    pub tokens: Vec<AnyTokenType>,
-    /// Semantic context (expression vs table-ref).
-    pub context: CompletionContext,
-    /// If the cursor follows `qualifier DOT`, this is the qualifier text.
-    pub qualifier: Option<String>,
-}
-
-// ── Resolved symbols ──────────────────────────────────────────────────────────
-
-/// A definition site that a reference points to.
-#[cfg(feature = "lsp")]
-#[derive(Debug, Clone)]
-pub(crate) struct DefinitionLocation {
-    pub range: DocRange,
-    /// If `Some`, the definition is in a different file (e.g. an external schema).
-    pub file_uri: Option<String>,
-}
-
-/// Result of a go-to-definition lookup: the origin span (reference token the
-/// user clicked on) plus the target definition location.
-#[cfg(feature = "lsp")]
-#[derive(Debug, Clone)]
-pub(crate) struct DefinitionResult {
-    /// Document-absolute byte range of the reference token.
-    pub origin: DocRange,
-    /// The definition site this reference resolves to.
-    pub target: DefinitionLocation,
-}
-
-/// A symbol resolution recorded during the validation pass.
-#[cfg(feature = "lsp")]
-#[derive(Debug, Clone)]
-pub(crate) enum ResolvedSymbol {
-    /// A table or view reference that resolved successfully.
-    Table {
-        name: String,
-        columns: Option<Vec<String>>,
-        /// Where this table/CTE was defined (byte offsets), if known.
-        definition: Option<DefinitionLocation>,
-    },
-    /// A column reference that resolved successfully.
-    Column {
-        column: String,
-        table: String,
-        all_columns: Vec<String>,
-        /// Where this column was defined (byte offsets), if known.
-        definition: Option<DefinitionLocation>,
-    },
-    /// A function call that resolved successfully.
-    Function {
-        category: String,
-        arities: Vec<String>,
-    },
-}
-
-/// A resolved symbol at a specific source location.
-#[cfg(feature = "lsp")]
-#[derive(Debug, Clone)]
-pub(crate) struct Resolution {
-    pub range: DocRange,
-    pub symbol: ResolvedSymbol,
-}
-
-// ── Per-statement model ──────────────────────────────────────────────────────
 
 /// A relation defined by a DDL statement (e.g. `CREATE TABLE`, `CREATE VIEW`).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -257,9 +116,14 @@ impl StatementModel {
 
 /// Result of a single analysis pass.
 ///
-/// Owns the source text, stored token/comment positions, and per-statement
-/// analysis results (diagnostics, lineage, defined relations). Produced by
+/// Owns the source text and per-statement analysis results (diagnostics,
+/// lineage, defined relations). Produced by
 /// [`SemanticAnalyzer::analyze`](super::analyzer::SemanticAnalyzer::analyze).
+///
+/// For incremental events (symbol resolutions, definition sites, tokens,
+/// comments) use
+/// [`SemanticAnalyzer::analyze_with_observer`](super::analyzer::SemanticAnalyzer::analyze_with_observer)
+/// and supply an [`AnalysisObserver`](super::observer::AnalysisObserver).
 ///
 /// # Example
 ///
@@ -289,18 +153,7 @@ impl StatementModel {
 /// ```
 pub struct SemanticModel {
     pub(crate) source: String,
-    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-    pub(crate) tokens: Vec<StoredToken>,
-    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-    pub(crate) comments: Vec<StoredComment>,
     pub(crate) statements: Vec<StatementModel>,
-    #[cfg(feature = "lsp")]
-    pub(crate) resolutions: Vec<Resolution>,
-    /// Same-file definition offsets keyed by lowercase name (table) or
-    /// `table.column` (column). Used by find-references and rename to
-    /// locate definition sites within the document.
-    #[cfg(feature = "lsp")]
-    pub(crate) definition_offsets: HashMap<String, DocRange>,
 }
 
 impl SemanticModel {
@@ -343,123 +196,6 @@ impl SemanticModel {
             .iter()
             .rev()
             .find_map(StatementModel::lineage)
-    }
-
-    /// Semantic tokens (for syntax highlighting) derived from the analyzed
-    /// tokens plus comments, classified by `dialect`.
-    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-    pub(crate) fn semantic_tokens(
-        &self,
-        dialect: &crate::dialect::AnyDialect,
-    ) -> Vec<SemanticToken> {
-        use syntaqlite_syntax::any::TokenCategory;
-        let mut out = Vec::new();
-        for t in &self.tokens {
-            let cat = dialect.classify_token(t.token_type, t.flags);
-            if cat != TokenCategory::Other {
-                out.push(SemanticToken {
-                    offset: t.offset,
-                    length: t.length,
-                    category: cat,
-                });
-            }
-        }
-        for c in &self.comments {
-            out.push(SemanticToken {
-                offset: c.offset,
-                length: c.length,
-                category: TokenCategory::Comment,
-            });
-        }
-        out.sort_by_key(|t| t.offset);
-        out
-    }
-}
-
-#[cfg(feature = "lsp")]
-impl SemanticModel {
-    /// Find the resolved symbol at a byte offset, if any.
-    pub(crate) fn resolution_at(&self, offset: DocOffset) -> Option<&ResolvedSymbol> {
-        self.resolutions
-            .iter()
-            .find(|r| offset >= r.range.start && offset < r.range.end)
-            .map(|r| &r.symbol)
-    }
-
-    /// Find the definition location for the symbol at a byte offset, if any.
-    pub(crate) fn definition_at(&self, offset: DocOffset) -> Option<DefinitionResult> {
-        self.resolutions
-            .iter()
-            .find(|r| offset >= r.range.start && offset < r.range.end)
-            .and_then(|r| match &r.symbol {
-                ResolvedSymbol::Table { definition, .. }
-                | ResolvedSymbol::Column { definition, .. } => {
-                    definition.as_ref().map(|d| DefinitionResult {
-                        origin: r.range,
-                        target: d.clone(),
-                    })
-                }
-                ResolvedSymbol::Function { .. } => None,
-            })
-    }
-
-    /// Find all resolutions in this model that match the given symbol identity.
-    pub(crate) fn references_matching(&self, kind: &SymbolIdentity) -> Vec<DocRange> {
-        self.resolutions
-            .iter()
-            .filter(|r| kind.matches(&r.symbol))
-            .map(|r| r.range)
-            .collect()
-    }
-}
-
-/// Identity of a symbol for matching across resolutions (find-references / rename).
-#[cfg(feature = "lsp")]
-#[derive(Debug)]
-pub(crate) enum SymbolIdentity {
-    Table(String),
-    Column { table: String, column: String },
-}
-
-#[cfg(feature = "lsp")]
-impl SymbolIdentity {
-    /// Derive the identity from a `ResolvedSymbol`.
-    pub(crate) fn from_resolved(sym: &ResolvedSymbol) -> Option<Self> {
-        match sym {
-            ResolvedSymbol::Table { name, .. } => {
-                Some(SymbolIdentity::Table(name.to_ascii_lowercase()))
-            }
-            ResolvedSymbol::Column { column, table, .. } => Some(SymbolIdentity::Column {
-                table: table.to_ascii_lowercase(),
-                column: column.to_ascii_lowercase(),
-            }),
-            ResolvedSymbol::Function { .. } => None,
-        }
-    }
-
-    fn matches(&self, sym: &ResolvedSymbol) -> bool {
-        match (self, sym) {
-            (SymbolIdentity::Table(name), ResolvedSymbol::Table { name: n, .. }) => {
-                n.eq_ignore_ascii_case(name)
-            }
-            (
-                SymbolIdentity::Column { table, column },
-                ResolvedSymbol::Column {
-                    table: t,
-                    column: c,
-                    ..
-                },
-            ) => t.eq_ignore_ascii_case(table) && c.eq_ignore_ascii_case(column),
-            _ => false,
-        }
-    }
-
-    /// Key into `definition_offsets` for this symbol.
-    pub(crate) fn definition_key(&self) -> String {
-        match self {
-            SymbolIdentity::Table(name) => name.clone(),
-            SymbolIdentity::Column { table, column } => format!("{table}.{column}"),
-        }
     }
 }
 

@@ -15,10 +15,11 @@ use crate::semantic::Catalog;
 use crate::semantic::ValidationConfig;
 use crate::semantic::analyzer::SemanticAnalyzer;
 use crate::semantic::diagnostics::Diagnostic;
-use crate::semantic::model::{
-    DefinitionResult, ResolvedSymbol, SemanticModel, SemanticToken, StoredToken, SymbolIdentity,
-};
 
+use super::analysis_data::{
+    DefinitionResult, DocumentAnalysisData, ExternalDefinitions, LspObserver, ResolvedSymbol,
+    SemanticToken, StoredToken, SymbolIdentity,
+};
 use super::{CompletionEntry, CompletionInfo, CompletionKind};
 
 // ── SchemaMap ─────────────────────────────────────────────────────────────────
@@ -83,43 +84,60 @@ impl SchemaMap {
 struct Document {
     version: i32,
     source: String,
-    /// Cached analysis result. `None` when dirty (source changed or catalog changed).
-    model: Option<SemanticModel>,
-    /// Parse errors from the last analysis (derived from `model`).
+    /// Cached parse-error diagnostics. `None` when dirty.
     cached_parse_diags: Option<Vec<Diagnostic>>,
-    /// Semantic tokens from the last analysis (derived from `model`).
+    /// All diagnostics produced by the last analysis pass (parse + semantic).
+    cached_all_diags: Option<Vec<Diagnostic>>,
+    /// Analysis events captured by [`LspObserver`]. `None` when dirty.
+    analysis: Option<DocumentAnalysisData>,
+    /// Semantic tokens derived from `analysis`. Populated on first request.
     cached_sem_tokens: Option<Vec<SemanticToken>>,
 }
 
-/// Run analysis for `doc` if no model is cached yet.
-fn ensure_model(
+impl Document {
+    fn invalidate(&mut self) {
+        self.cached_parse_diags = None;
+        self.cached_all_diags = None;
+        self.analysis = None;
+        self.cached_sem_tokens = None;
+    }
+}
+
+/// Run analysis for `doc` if nothing is cached yet.
+fn ensure_analysis(
     doc: &mut Document,
     analyzer: &mut SemanticAnalyzer,
     user_catalog: &Catalog,
     validation_config: &ValidationConfig,
+    external_defs: Option<&ExternalDefinitions>,
 ) {
-    if doc.model.is_some() {
+    if doc.analysis.is_some() {
         return;
     }
-    let model = analyzer.analyze(&doc.source, user_catalog, validation_config);
-    let parse_diags = model
-        .diagnostics()
+    let mut observer = LspObserver::new(external_defs);
+    let model =
+        analyzer.analyze_with_observer(&doc.source, user_catalog, validation_config, &mut observer);
+    let all_diags: Vec<Diagnostic> = model.diagnostics().cloned().collect();
+    let parse_diags: Vec<Diagnostic> = all_diags
+        .iter()
         .filter(|d| d.message().is_parse_error())
         .cloned()
         .collect();
     doc.cached_parse_diags = Some(parse_diags);
-    doc.model = Some(model);
+    doc.cached_all_diags = Some(all_diags);
+    doc.analysis = Some(observer.into_data());
 }
 
 /// Resolve the correct catalog for `uri` via `schema_map`, then call
-/// [`ensure_model`]. Returns `false` if the document is not found.
-fn ensure_model_for(
+/// [`ensure_analysis`]. Returns `false` if the document is not found.
+fn ensure_analysis_for(
     uri: &str,
     documents: &mut HashMap<String, Document>,
     analyzer: &mut SemanticAnalyzer,
     schema_map: Option<&SchemaMap>,
     user_catalog: &Catalog,
     base_validation_config: &ValidationConfig,
+    external_defs: Option<&ExternalDefinitions>,
 ) -> bool {
     let Some(doc) = documents.get_mut(uri) else {
         return false;
@@ -133,7 +151,7 @@ fn ensure_model_for(
     } else {
         (user_catalog, *base_validation_config)
     };
-    ensure_model(doc, analyzer, catalog, &config);
+    ensure_analysis(doc, analyzer, catalog, &config, external_defs);
     true
 }
 
@@ -183,6 +201,10 @@ pub struct LspHost {
     dialect: AnyDialect,
     /// User-provided schema (tables, views, functions).
     user_catalog: Catalog,
+    /// External definition sites (populated from schema DDL that carries a
+    /// `file://` URI). Consulted by [`LspObserver`] to build cross-file
+    /// go-to-definition targets.
+    external_defs: ExternalDefinitions,
     analyzer: SemanticAnalyzer,
     documents: HashMap<String, Document>,
     /// Format config from project config file. `None` means use defaults.
@@ -207,6 +229,7 @@ impl LspHost {
         let dialect = crate::sqlite::dialect::any_dialect();
         LspHost {
             user_catalog: Catalog::new(dialect.clone()),
+            external_defs: ExternalDefinitions::new(),
             analyzer: SemanticAnalyzer::new(),
             dialect,
             documents: HashMap::new(),
@@ -221,6 +244,7 @@ impl LspHost {
         let dialect = dialect.into();
         LspHost {
             user_catalog: Catalog::new(dialect.clone()),
+            external_defs: ExternalDefinitions::new(),
             analyzer: SemanticAnalyzer::with_dialect(dialect.clone()),
             dialect,
             documents: HashMap::new(),
@@ -246,9 +270,7 @@ impl LspHost {
     pub fn set_validation_config(&mut self, config: ValidationConfig) {
         self.validation_config = config;
         for doc in self.documents.values_mut() {
-            doc.model = None;
-            doc.cached_parse_diags = None;
-            doc.cached_sem_tokens = None;
+            doc.invalidate();
         }
     }
 
@@ -258,9 +280,7 @@ impl LspHost {
     pub fn set_schema_map(&mut self, map: SchemaMap) {
         self.schema_map = Some(map);
         for doc in self.documents.values_mut() {
-            doc.model = None;
-            doc.cached_parse_diags = None;
-            doc.cached_sem_tokens = None;
+            doc.invalidate();
         }
     }
 
@@ -269,9 +289,7 @@ impl LspHost {
     pub fn set_session_context(&mut self, ctx: Catalog) {
         self.user_catalog = ctx;
         for doc in self.documents.values_mut() {
-            doc.model = None;
-            doc.cached_parse_diags = None;
-            doc.cached_sem_tokens = None;
+            doc.invalidate();
         }
     }
 
@@ -284,8 +302,9 @@ impl LspHost {
             Document {
                 version,
                 source: text,
-                model: None,
                 cached_parse_diags: None,
+                cached_all_diags: None,
+                analysis: None,
                 cached_sem_tokens: None,
             },
         );
@@ -296,9 +315,7 @@ impl LspHost {
         if let Some(doc) = self.documents.get_mut(uri) {
             doc.version = version;
             doc.source = text;
-            doc.model = None;
-            doc.cached_parse_diags = None;
-            doc.cached_sem_tokens = None;
+            doc.invalidate();
         } else {
             self.open_document(uri, version, text);
         }
@@ -318,13 +335,14 @@ impl LspHost {
 
     /// Parse-error diagnostics for a document, lazily computed.
     pub(crate) fn diagnostics(&mut self, uri: &str) -> &[Diagnostic] {
-        if !ensure_model_for(
+        if !ensure_analysis_for(
             uri,
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
+            Some(&self.external_defs),
         ) {
             return &[];
         }
@@ -342,13 +360,14 @@ impl LspHost {
     /// Panics if the internal model or token cache is in an inconsistent state
     /// (this indicates a bug in `ensure_model`).
     pub fn semantic_tokens_encoded(&mut self, uri: &str, range: Option<DocRange>) -> Vec<u32> {
-        if !ensure_model_for(
+        if !ensure_analysis_for(
             uri,
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
+            Some(&self.external_defs),
         ) {
             return Vec::new();
         }
@@ -358,9 +377,9 @@ impl LspHost {
             .expect("ensure_model_for guarantees document exists");
         if doc.cached_sem_tokens.is_none() {
             let tokens = doc
-                .model
+                .analysis
                 .as_ref()
-                .expect("ensure_model sets model")
+                .expect("ensure_analysis sets analysis")
                 .semantic_tokens(&self.analyzer.dialect());
             doc.cached_sem_tokens = Some(tokens);
         }
@@ -377,13 +396,14 @@ impl LspHost {
         uri: &str,
         offset: DocOffset,
     ) -> CompletionInfo {
-        if !ensure_model_for(
+        if !ensure_analysis_for(
             uri,
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
+            Some(&self.external_defs),
         ) {
             return CompletionInfo {
                 tokens: Vec::new(),
@@ -397,7 +417,10 @@ impl LspHost {
             .expect("ensure_model_for guarantees document exists");
         super::completion::completion_info(
             &self.analyzer.dialect(),
-            doc.model.as_ref().expect("ensure_model sets model"),
+            &doc.source,
+            doc.analysis
+                .as_ref()
+                .expect("ensure_analysis sets analysis"),
             offset,
         )
     }
@@ -481,29 +504,28 @@ impl LspHost {
         &mut self,
         uri: &str,
     ) -> Option<(i32, String, Vec<Diagnostic>)> {
-        if !ensure_model_for(
+        if !ensure_analysis_for(
             uri,
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
+            Some(&self.external_defs),
         ) {
             return None;
         }
         let doc = self
             .documents
             .get(uri)
-            .expect("ensure_model_for guarantees document exists");
+            .expect("ensure_analysis_for guarantees document exists");
         let version = doc.version;
         let source = doc.source.clone();
         let diags = doc
-            .model
+            .cached_all_diags
             .as_ref()
-            .expect("ensure_model sets model")
-            .diagnostics()
-            .cloned()
-            .collect();
+            .expect("ensure_analysis sets cached_all_diags")
+            .clone();
         Some((version, source, diags))
     }
 
@@ -553,26 +575,24 @@ impl LspHost {
         uri: &str,
         offset: DocOffset,
     ) -> Option<(String, DocRange)> {
-        ensure_model_for(
+        ensure_analysis_for(
             uri,
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
+            Some(&self.external_defs),
         );
         let doc = self.documents.get(uri)?;
-        let model = doc.model.as_ref().expect("ensure_model sets model");
+        let data = doc
+            .analysis
+            .as_ref()
+            .expect("ensure_analysis sets analysis");
 
-        let resolution = model.resolution_at(offset)?;
-        let range = model
-            .resolutions
-            .iter()
-            .find(|r| offset >= r.range.start && offset < r.range.end)
-            .map(|r| r.range)?;
-
-        let hover = format_resolved_hover(resolution);
-        Some((hover, range))
+        let resolution = data.resolution_at(offset)?;
+        let hover = format_resolved_hover(&resolution.symbol);
+        Some((hover, resolution.range))
     }
 
     // ── Go-to-definition ───────────────────────────────────────────────────
@@ -583,17 +603,21 @@ impl LspHost {
         uri: &str,
         offset: DocOffset,
     ) -> Option<DefinitionResult> {
-        ensure_model_for(
+        ensure_analysis_for(
             uri,
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
+            Some(&self.external_defs),
         );
         let doc = self.documents.get(uri)?;
-        let model = doc.model.as_ref().expect("ensure_model sets model");
-        model.definition_at(offset)
+        let data = doc
+            .analysis
+            .as_ref()
+            .expect("ensure_analysis sets analysis");
+        data.definition_at(offset)
     }
 
     // ── Find references ──────────────────────────────────────────────────────
@@ -619,25 +643,29 @@ impl LspHost {
         // Collect matching resolutions from all open documents.
         let uris: Vec<String> = self.documents.keys().cloned().collect();
         for doc_uri in &uris {
-            ensure_model_for(
+            ensure_analysis_for(
                 doc_uri,
                 &mut self.documents,
                 &mut self.analyzer,
                 self.schema_map.as_ref(),
                 &self.user_catalog,
                 &self.validation_config,
+                Some(&self.external_defs),
             );
             let doc = self
                 .documents
                 .get(doc_uri.as_str())
                 .expect("doc_uri came from keys()");
-            let model = doc.model.as_ref().expect("ensure_model sets model");
-            for range in model.references_matching(&identity) {
+            let data = doc
+                .analysis
+                .as_ref()
+                .expect("ensure_analysis sets analysis");
+            for range in data.references_matching(&identity) {
                 results.push((doc_uri.clone(), range));
             }
             if include_declaration {
                 let key = identity.definition_key();
-                if let Some(&range) = model.definition_offsets.get(&key) {
+                if let Some(&range) = data.definition_offsets.get(&key) {
                     // Avoid duplicates (definition might also be in resolutions).
                     let already = results.iter().any(|(u, r)| u == doc_uri && *r == range);
                     if !already {
@@ -668,20 +696,21 @@ impl LspHost {
         uri: &str,
         offset: DocOffset,
     ) -> Option<(DocRange, String)> {
-        ensure_model_for(
+        ensure_analysis_for(
             uri,
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
+            Some(&self.external_defs),
         );
         let doc = self.documents.get(uri)?;
-        let model = doc.model.as_ref().expect("ensure_model sets model");
-        let res = model
-            .resolutions
-            .iter()
-            .find(|r| offset >= r.range.start && offset < r.range.end)?;
+        let data = doc
+            .analysis
+            .as_ref()
+            .expect("ensure_analysis sets analysis");
+        let res = data.resolution_at(offset)?;
         let name = match &res.symbol {
             ResolvedSymbol::Table { name, .. } => name.clone(),
             ResolvedSymbol::Column { column, .. } => column.clone(),
@@ -715,24 +744,28 @@ impl LspHost {
     /// Determine the symbol identity at `offset` — either from a resolution or
     /// from a definition site (CREATE TABLE / column-def).
     fn symbol_identity_at(&mut self, uri: &str, offset: DocOffset) -> Option<SymbolIdentity> {
-        ensure_model_for(
+        ensure_analysis_for(
             uri,
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
+            Some(&self.external_defs),
         );
         let doc = self.documents.get(uri)?;
-        let model = doc.model.as_ref().expect("ensure_model sets model");
+        let data = doc
+            .analysis
+            .as_ref()
+            .expect("ensure_analysis sets analysis");
 
         // First check resolutions (references in DML/queries).
-        if let Some(sym) = model.resolution_at(offset) {
-            return SymbolIdentity::from_resolved(sym);
+        if let Some(res) = data.resolution_at(offset) {
+            return SymbolIdentity::from_resolved(&res.symbol);
         }
 
         // Fall back to definition_offsets (cursor on a CREATE TABLE name, etc).
-        for (key, &range) in &model.definition_offsets {
+        for (key, &range) in &data.definition_offsets {
             if offset >= range.start && offset < range.end {
                 return if let Some((table, col)) = key.split_once('.') {
                     Some(SymbolIdentity::Column {
@@ -747,15 +780,16 @@ impl LspHost {
         None
     }
 
-    /// Look up an external (schema-file) definition site for a symbol from the catalog.
+    /// Look up an external (schema-file) definition site for a symbol from the
+    /// registry populated by [`Self::set_session_context_from_ddl`].
     fn external_definition_site(&self, identity: &SymbolIdentity) -> Option<(String, DocRange)> {
         match identity {
             SymbolIdentity::Table(name) => {
-                let site = self.user_catalog.relation_definition_site(name)?;
+                let site = self.external_defs.relation(name)?;
                 Some((site.file_uri.clone(), site.range))
             }
             SymbolIdentity::Column { table, column } => {
-                let site = self.user_catalog.column_definition_site(table, column)?;
+                let site = self.external_defs.column(table, column)?;
                 Some((site.file_uri.clone(), site.range))
             }
         }
@@ -770,22 +804,26 @@ impl LspHost {
         uri: &str,
         offset: DocOffset,
     ) -> Option<SignatureHelpInfo> {
-        ensure_model_for(
+        ensure_analysis_for(
             uri,
             &mut self.documents,
             &mut self.analyzer,
             self.schema_map.as_ref(),
             &self.user_catalog,
             &self.validation_config,
+            Some(&self.external_defs),
         );
         let doc = self.documents.get(uri)?;
-        let model = doc.model.as_ref().expect("ensure_model sets model");
-        let source = model.source();
+        let data = doc
+            .analysis
+            .as_ref()
+            .expect("ensure_analysis sets analysis");
+        let source = doc.source.as_str();
 
         // Walk backwards from offset to find enclosing `name(` and count commas.
         let cursor_byte = std::cmp::min(offset.as_usize(), source.len());
         let before = &source[..cursor_byte];
-        let (func_name, active_param) = find_enclosing_call(before, &model.tokens, &self.dialect)?;
+        let (func_name, active_param) = find_enclosing_call(before, &data.tokens, &self.dialect)?;
 
         let (_category, arities) = self.user_catalog.function_signature(&func_name)?;
 
@@ -836,12 +874,49 @@ impl LspHost {
         ddl: &str,
         file_uri: Option<&str>,
     ) -> Result<(), Vec<String>> {
-        let (catalog, errors) = Catalog::from_ddl(self.dialect.clone(), &[(ddl, file_uri)]);
+        let (catalog, errors) = Catalog::from_ddl(self.dialect.clone(), &[ddl]);
         self.set_session_context(catalog);
+        if let Some(uri) = file_uri {
+            record_external_definitions(&mut self.external_defs, &self.dialect, ddl, uri);
+        }
         if errors.is_empty() {
             Ok(())
         } else {
             Err(errors)
+        }
+    }
+}
+
+/// Parse `ddl` and record table/view/column definition spans into `defs`,
+/// tagged with `file_uri`.
+#[cfg(feature = "sqlite")]
+fn record_external_definitions(
+    defs: &mut ExternalDefinitions,
+    dialect: &AnyDialect,
+    ddl: &str,
+    file_uri: &str,
+) {
+    use syntaqlite_syntax::ParseOutcome;
+
+    use crate::semantic::ddl::DdlReader;
+
+    let parser = syntaqlite_syntax::Parser::new();
+    let mut session = parser.parse(ddl);
+    loop {
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => break,
+            ParseOutcome::Err(_) => continue,
+        };
+        let Some(root) = stmt.root() else { continue };
+        let root_id = root.node_id().into();
+        let erased = stmt.erase();
+        let reader = DdlReader::new(&erased, dialect.roles());
+        if let Some((name, range)) = reader.name_span(root_id) {
+            defs.insert_relation(&name, file_uri, range);
+            for (col_name, col_range) in reader.column_spans(root_id) {
+                defs.insert_column(&name, &col_name, file_uri, col_range);
+            }
         }
     }
 }
@@ -1896,7 +1971,7 @@ mod tests {
         let dialect = crate::sqlite::dialect::any_dialect();
         let (users_catalog, _) = Catalog::from_ddl(
             dialect.clone(),
-            &[("CREATE TABLE users (id INTEGER, name TEXT);", None)],
+            &["CREATE TABLE users (id INTEGER, name TEXT);"],
         );
 
         // Build a SchemaMap where "matched/*.sql" gets the users catalog,
@@ -2073,14 +2148,12 @@ mod tests {
 
     #[test]
     fn goto_definition_schema_table_jumps_to_external_file() {
-        use crate::semantic::catalog::Catalog;
         let schema = "CREATE TABLE users (id INTEGER, name TEXT);";
         let file_uri = "file:///path/to/schema.sql";
-        let dialect = crate::sqlite::dialect::dialect();
-        let cat = Catalog::from_ddl(dialect, &[(schema, Some(file_uri))]).0;
 
         let mut host = LspHost::new();
-        host.set_session_context(cat);
+        host.set_session_context_from_ddl(schema, Some(file_uri))
+            .expect("schema parses");
 
         let uri = "file:///test.sql";
         let src = "SELECT * FROM users";
@@ -2101,14 +2174,12 @@ mod tests {
 
     #[test]
     fn goto_definition_same_file_ddl_shadows_schema() {
-        use crate::semantic::catalog::Catalog;
         let schema = "CREATE TABLE t (x INTEGER);";
         let file_uri = "file:///schema.sql";
-        let dialect = crate::sqlite::dialect::dialect();
-        let cat = Catalog::from_ddl(dialect, &[(schema, Some(file_uri))]).0;
 
         let mut host = LspHost::new();
-        host.set_session_context(cat);
+        host.set_session_context_from_ddl(schema, Some(file_uri))
+            .expect("schema parses");
 
         let uri = "file:///test.sql";
         let src = "CREATE TABLE t (y INTEGER); SELECT * FROM t;";

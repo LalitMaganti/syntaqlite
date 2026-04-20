@@ -4,8 +4,9 @@
 //! LSP-specific analysis helpers: semantic tokens, completion boundaries,
 //! qualifier detection, and expected-token computation.
 //!
-//! These operate on an already-analyzed [`SemanticModel`] plus the dialect
-//! and are not part of semantic validation — they answer editor queries.
+//! These operate on [`DocumentAnalysisData`] captured by
+//! [`LspObserver`](super::analysis_data::LspObserver) plus the dialect and
+//! are not part of semantic validation — they answer editor queries.
 
 use std::collections::HashSet;
 
@@ -14,16 +15,18 @@ use syntaqlite_syntax::any::{AnyParser, AnyTokenType, TokenCategory};
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, DocText};
 
 use crate::dialect::AnyDialect;
-use crate::semantic::model::{CompletionContext, CompletionInfo, SemanticModel, StoredToken};
+
+use super::analysis_data::{CompletionContext, CompletionInfo, DocumentAnalysisData, StoredToken};
 
 /// Expected tokens and semantic context at `offset` (for completion).
 pub(crate) fn completion_info(
     dialect: &AnyDialect,
-    model: &SemanticModel,
+    source_text: &str,
+    data: &DocumentAnalysisData,
     offset: DocOffset,
 ) -> CompletionInfo {
-    let source = DocText::new(model.source());
-    let tokens = &model.tokens;
+    let source = DocText::new(source_text);
+    let tokens = &data.tokens;
     let end_of_doc = source.byte_len();
     let doc_end = DocOffset::default() + end_of_doc;
     let cursor = if offset > doc_end { doc_end } else { offset };

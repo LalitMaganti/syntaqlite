@@ -5,8 +5,8 @@
 //!
 //! Walking a CTE block has its own choreography — extract bindings, register
 //! the CTE in the catalog (recursive bindings register before the body),
-//! validate declared-vs-actual column counts, and record per-column LSP
-//! definition offsets — so it lives in its own file.
+//! validate declared-vs-actual column counts, and emit per-column definition
+//! events to the observer — so it lives in its own file.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 use syntaqlite_syntax::source::DocRange;
@@ -70,14 +70,11 @@ impl ValidationPass<'_> {
                 continue;
             }
 
-            // Record CTE definition offset for go-to-definition.
-            #[cfg(feature = "lsp")]
-            self.definition_offsets
-                .insert(binding.name.to_ascii_lowercase(), binding.name_range);
+            if self.observer.wants_definitions() {
+                self.observer
+                    .on_relation_definition(binding.name, binding.name_range);
+            }
 
-            // Determine the CTE's column list and register it in the catalog.
-            #[cfg(feature = "lsp")]
-            let cte_key = binding.name.to_ascii_lowercase();
             let cols = if let Some(ref declared) = binding.declared_cols {
                 let col_names: Vec<&str> = declared.iter().map(|(s, _)| *s).collect();
                 self.check_cte_column_count(
@@ -87,15 +84,17 @@ impl ValidationPass<'_> {
                     &col_names,
                     binding.body_id,
                 );
-                #[cfg(feature = "lsp")]
-                for &(col_name, col_range) in declared {
-                    let key = format!("{cte_key}.{}", col_name.to_ascii_lowercase());
-                    self.definition_offsets.insert(key, col_range);
+                if self.observer.wants_definitions() {
+                    for &(col_name, col_range) in declared {
+                        self.observer
+                            .on_column_definition(binding.name, col_name, col_range);
+                    }
                 }
                 Some(declared.iter().map(|(s, _)| s.to_string()).collect())
             } else {
-                #[cfg(feature = "lsp")]
-                self.record_select_column_offsets(stmt, binding.body_id, &cte_key);
+                if self.observer.wants_definitions() {
+                    self.emit_select_column_definitions(stmt, binding.body_id, binding.name);
+                }
                 binding
                     .body_id
                     .and_then(|id| DdlReader::new(stmt, self.roles).columns_from_select(id))
@@ -107,16 +106,15 @@ impl ValidationPass<'_> {
         self.catalog.pop_query_scope();
     }
 
-    /// Record definition offsets for columns inferred from a SELECT body.
+    /// Emit definition events for columns inferred from a SELECT body.
     ///
-    /// For `WITH foo AS (SELECT 1 AS a, 2 AS b)`, records offsets for the
-    /// alias names `a` and `b` so go-to-definition can jump to them.
-    #[cfg(feature = "lsp")]
-    fn record_select_column_offsets(
+    /// For `WITH foo AS (SELECT 1 AS a, 2 AS b)`, emits events for the alias
+    /// names `a` and `b` so observers can wire up go-to-definition.
+    fn emit_select_column_definitions(
         &mut self,
         stmt: &mut AnyParsedStatement<'_>,
         body_id: Option<AnyNodeId>,
-        table_key: &str,
+        table_name: &str,
     ) {
         let Some(body_id) = body_id else { return };
         let Some((tag, fields)) = stmt.extract_fields(body_id) else {
@@ -155,8 +153,8 @@ impl ValidationPass<'_> {
             let alias_node = Self::field_node_id(&child_fields, alias_idx);
             let (alias_text, alias_range) = Self::name_text(stmt, alias_node);
             if !alias_text.is_empty() {
-                let key = format!("{table_key}.{}", alias_text.to_ascii_lowercase());
-                self.definition_offsets.insert(key, alias_range);
+                self.observer
+                    .on_column_definition(table_name, alias_text, alias_range);
             }
         }
     }

@@ -9,9 +9,7 @@
 //! grouped on a single [`DdlReader`] handle.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
-#[cfg(feature = "lsp")]
-use syntaqlite_syntax::source::DocRange;
-use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtRange};
+use syntaqlite_syntax::source::{DocRange, StmtLen, StmtOffset, StmtRange};
 
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 use crate::semantic::catalog::AritySpec;
@@ -21,13 +19,13 @@ use crate::semantic::catalog::AritySpec;
 /// Cheap to construct (just two references); construct a fresh handle at each
 /// caller rather than threading one through.
 #[derive(Clone, Copy)]
-pub(super) struct DdlReader<'a, 'stmt> {
+pub(crate) struct DdlReader<'a, 'stmt> {
     stmt: &'a AnyParsedStatement<'stmt>,
     roles: &'a [SemanticRole],
 }
 
 impl<'a, 'stmt> DdlReader<'a, 'stmt> {
-    pub(super) fn new(stmt: &'a AnyParsedStatement<'stmt>, roles: &'a [SemanticRole]) -> Self {
+    pub(crate) fn new(stmt: &'a AnyParsedStatement<'stmt>, roles: &'a [SemanticRole]) -> Self {
         Self { stmt, roles }
     }
 
@@ -46,12 +44,11 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         }
     }
 
-    // ── DDL definition spans (LSP go-to-definition) ───────────────────────
+    // ── DDL definition spans (go-to-definition) ──────────────────────────
 
     /// `(lowercase_name, range)` for `CREATE TABLE` / `CREATE VIEW`.
     /// Returns `None` for non-DDL statements.
-    #[cfg(feature = "lsp")]
-    pub(super) fn name_span(&self, root: AnyNodeId) -> Option<(String, DocRange)> {
+    pub(crate) fn name_span(&self, root: AnyNodeId) -> Option<(String, DocRange)> {
         let (tag, fields) = self.stmt.extract_fields(root)?;
         let (SemanticRole::DefineTable { name: name_idx, .. }
         | SemanticRole::DefineView { name: name_idx, .. }) = self.role_for(tag)?
@@ -69,8 +66,7 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
     }
 
     /// Per-column `(lowercase_name, range)` pairs for a `CREATE TABLE`.
-    #[cfg(feature = "lsp")]
-    pub(super) fn column_spans(&self, root: AnyNodeId) -> Vec<(String, DocRange)> {
+    pub(crate) fn column_spans(&self, root: AnyNodeId) -> Vec<(String, DocRange)> {
         let mut out = Vec::new();
         let Some((tag, fields)) = self.stmt.extract_fields(root) else {
             return out;
@@ -101,7 +97,6 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         out
     }
 
-    #[cfg(feature = "lsp")]
     fn column_def_name_span(&self, node_id: AnyNodeId) -> Option<(&'stmt str, DocRange)> {
         let (tag, fields) = self.stmt.extract_fields(node_id)?;
         let SemanticRole::ColumnDef { name: name_idx, .. } = self.role_for(tag)? else {

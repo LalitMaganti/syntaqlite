@@ -16,20 +16,13 @@ use crate::dialect::AnyDialect;
 use crate::dialect::SemanticRole;
 
 use super::catalog::{Catalog, CatalogLayer};
+use super::ddl::DdlReader;
 use super::diagnostics::{Diagnostic, DiagnosticMessage};
-#[cfg(feature = "lsp")]
-use super::model::Resolution;
 use super::model::{SemanticModel, StatementModel};
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-use super::model::{StoredComment, StoredToken};
+use super::observer::{AnalysisObserver, NoopObserver};
 use super::{AnalysisMode, ValidationConfig};
 
-#[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-use helpers::{collect_comments, collect_tokens};
 use helpers::{extract_defined_relations, extract_macro_registration, parse_error_span};
-
-#[cfg(feature = "lsp")]
-use super::ddl::DdlReader;
 
 mod helpers;
 mod pass;
@@ -194,6 +187,22 @@ impl SemanticAnalyzer {
         user_catalog: &Catalog,
         config: &ValidationConfig,
     ) -> SemanticModel {
+        self.analyze_with_observer(source, user_catalog, config, &mut NoopObserver)
+    }
+
+    /// Run a complete single-pass analysis, forwarding resolution / token /
+    /// comment / definition events to `observer` as they occur.
+    ///
+    /// This is the hook that in-crate LSP and embedded-SQL consumers use to
+    /// capture the data they need (go-to-definition, find-references, semantic
+    /// tokens, completion) without the analyzer knowing anything about them.
+    pub(crate) fn analyze_with_observer(
+        &mut self,
+        source: &str,
+        user_catalog: &Catalog,
+        config: &ValidationConfig,
+        observer: &mut dyn AnalysisObserver,
+    ) -> SemanticModel {
         self.catalog.new_document();
         match self.mode {
             AnalysisMode::Document => {
@@ -204,7 +213,7 @@ impl SemanticAnalyzer {
                 self.catalog.copy_database_from(user_catalog);
             }
         }
-        let model = self.analyze_inner(source, config);
+        let model = self.analyze_inner(source, config, observer);
         if self.mode == AnalysisMode::Execute {
             self.catalog.promote_document_to_connection();
         }
@@ -212,7 +221,12 @@ impl SemanticAnalyzer {
     }
 
     #[expect(clippy::too_many_lines)]
-    fn analyze_inner(&mut self, source: &str, config: &ValidationConfig) -> SemanticModel {
+    fn analyze_inner(
+        &mut self,
+        source: &str,
+        config: &ValidationConfig,
+        observer: &mut dyn AnalysisObserver,
+    ) -> SemanticModel {
         type MacroRegistry = HashMap<String, (Vec<String>, String)>;
 
         struct SharedRegistryLookup(Rc<RefCell<MacroRegistry>>);
@@ -255,15 +269,9 @@ impl SemanticAnalyzer {
 
         let mut session = parser.parse(source);
 
-        #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-        let mut tokens: Vec<StoredToken> = Vec::new();
-        #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-        let mut comments: Vec<StoredComment> = Vec::new();
         let mut statements: Vec<StatementModel> = Vec::new();
-        #[cfg(feature = "lsp")]
-        let mut definition_offsets: HashMap<String, DocRange> = HashMap::new();
-        #[cfg(feature = "lsp")]
-        let mut resolutions: Vec<Resolution> = Vec::new();
+        let wants_tokens = observer.wants_tokens();
+        let wants_comments = observer.wants_comments();
 
         loop {
             let stmt = match session.next() {
@@ -287,21 +295,41 @@ impl SemanticAnalyzer {
                             Vec::new(),
                         ));
                     }
-                    #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-                    {
-                        let base = e.statement_base();
-                        collect_tokens(e.tokens(), base, &mut tokens);
-                        collect_comments(e.comments(), base, &mut comments);
+                    let base = e.statement_base();
+                    if wants_tokens {
+                        for tok in e.tokens() {
+                            observer.on_token(
+                                tok.offset().to_doc(base),
+                                tok.length().into(),
+                                tok.token_type(),
+                                tok.flags(),
+                            );
+                        }
+                    }
+                    if wants_comments {
+                        for c in e.comments() {
+                            observer.on_comment(c.offset().to_doc(base), c.length().into());
+                        }
                     }
                     continue;
                 }
             };
 
-            #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-            {
-                let base = stmt.statement_base();
-                collect_tokens(stmt.tokens(), base, &mut tokens);
-                collect_comments(stmt.comments(), base, &mut comments);
+            let base = stmt.statement_base();
+            if wants_tokens {
+                for tok in stmt.tokens() {
+                    observer.on_token(
+                        tok.offset().to_doc(base),
+                        tok.length().into(),
+                        tok.token_type(),
+                        tok.flags(),
+                    );
+                }
+            }
+            if wants_comments {
+                for c in stmt.comments() {
+                    observer.on_comment(c.offset().to_doc(base), c.length().into());
+                }
             }
 
             // Process the statement and extract macro registration info.
@@ -309,14 +337,7 @@ impl SemanticAnalyzer {
             // owned macro data before dropping it and calling register_macro.
             let (stmt_model, macro_reg) = {
                 let mut erased = stmt.erase();
-                let model = self.analyze_statement(
-                    &mut erased,
-                    config,
-                    #[cfg(feature = "lsp")]
-                    &mut resolutions,
-                    #[cfg(feature = "lsp")]
-                    &mut definition_offsets,
-                );
+                let model = self.analyze_statement(&mut erased, config, observer);
                 let reg = extract_macro_registration(
                     &erased,
                     erased.root_id(),
@@ -337,15 +358,7 @@ impl SemanticAnalyzer {
 
         SemanticModel {
             source: source.to_owned(),
-            #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-            tokens,
-            #[cfg(any(feature = "lsp", feature = "experimental-embedded"))]
-            comments,
             statements,
-            #[cfg(feature = "lsp")]
-            resolutions,
-            #[cfg(feature = "lsp")]
-            definition_offsets,
         }
     }
 
@@ -353,8 +366,7 @@ impl SemanticAnalyzer {
         &mut self,
         erased: &mut AnyParsedStatement<'_>,
         config: &ValidationConfig,
-        #[cfg(feature = "lsp")] resolutions: &mut Vec<Resolution>,
-        #[cfg(feature = "lsp")] definition_offsets: &mut HashMap<String, DocRange>,
+        observer: &mut dyn AnalysisObserver,
     ) -> StatementModel {
         let root_id = erased.root_id();
         let mut diagnostics: Vec<Diagnostic> = Vec::new();
@@ -365,16 +377,14 @@ impl SemanticAnalyzer {
         // Handle module imports: resolve and analyze imported source.
         self.handle_import(erased, root_id, config, &mut diagnostics);
 
-        // Record DDL definition offsets for go-to-definition (same-file).
-        #[cfg(feature = "lsp")]
-        {
+        // Emit DDL definition events (tables/views and their columns).
+        if observer.wants_definitions() {
             let reader = DdlReader::new(erased, self.dialect.roles());
             if let Some((table_name, table_range)) = reader.name_span(root_id) {
+                observer.on_relation_definition(&table_name, table_range);
                 for (col_name, col_range) in reader.column_spans(root_id) {
-                    let key = format!("{table_name}.{col_name}");
-                    definition_offsets.insert(key, col_range);
+                    observer.on_column_definition(&table_name, &col_name, col_range);
                 }
-                definition_offsets.insert(table_name, table_range);
             }
         }
 
@@ -385,10 +395,7 @@ impl SemanticAnalyzer {
             &mut self.catalog,
             config,
             &mut diagnostics,
-            #[cfg(feature = "lsp")]
-            resolutions,
-            #[cfg(feature = "lsp")]
-            definition_offsets,
+            observer,
         );
 
         let lineage =
@@ -451,7 +458,7 @@ impl SemanticAnalyzer {
 
         // DDL accumulates into the Document layer (visible to subsequent
         // statements in the importing file).
-        let _ = self.analyze_inner(&source, config);
+        let _ = self.analyze_inner(&source, config, &mut NoopObserver);
     }
 }
 
