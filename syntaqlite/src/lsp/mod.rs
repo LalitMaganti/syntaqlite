@@ -47,7 +47,7 @@ pub use host::SchemaMap;
 #[doc(inline)]
 pub use server::{LspConfig, LspServer};
 
-pub(crate) use analysis_data::{CompletionContext, CompletionInfo};
+pub(crate) use crate::semantic::completion::{CompletionContext, CompletionInfo};
 
 // ── LSP-specific types ──────────────────────────────────────────────────
 
@@ -116,7 +116,6 @@ impl CompletionKind {
 }
 
 mod analysis_data;
-mod completion;
 mod completion_service;
 mod document_store;
 mod host;

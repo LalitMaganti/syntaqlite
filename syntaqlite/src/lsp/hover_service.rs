@@ -10,7 +10,7 @@
 
 use syntaqlite_syntax::source::{DocOffset, DocRange};
 
-use crate::semantic::analysis::{
+use super::analysis_data::{
     DefinitionResult, DocumentAnalysisData, ResolvedSymbol, SymbolIdentity,
 };
 

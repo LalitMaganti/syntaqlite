@@ -10,7 +10,9 @@
 
 use std::collections::HashMap;
 
-use crate::semantic::analysis::{DocumentAnalysisData, SemanticToken};
+use crate::semantic::analysis::SemanticToken;
+
+use super::analysis_data::DocumentAnalysisData;
 use crate::semantic::diagnostics::Diagnostic;
 
 /// A single open document with lazily populated analysis caches.

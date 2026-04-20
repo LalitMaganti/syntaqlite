@@ -1,14 +1,12 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! LSP-specific analysis helpers: semantic tokens, completion boundaries,
-//! qualifier detection, and expected-token computation.
+//! Parse-level probes for interactive tooling: completion and signature help.
 //!
-//! These operate on
-//! [`DocumentAnalysisData`](crate::semantic::analysis::DocumentAnalysisData)
-//! captured by [`LspObserver`](super::analysis_data::LspObserver) plus the
-//! dialect and are not part of semantic validation — they answer editor
-//! queries.
+//! These are neutral queries over a captured token stream + a source string.
+//! They do not depend on any LSP protocol machinery — the LSP layer assembles
+//! [`CompletionEntry`](crate::lsp::CompletionEntry) values from
+//! [`CompletionInfo`] separately.
 
 use std::collections::HashSet;
 
@@ -17,20 +15,47 @@ use syntaqlite_syntax::any::{AnyParser, AnyTokenType, TokenCategory};
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, DocText};
 
 use crate::dialect::AnyDialect;
+use crate::semantic::analysis::StoredToken;
+use crate::semantic::catalog::AritySpec;
 
-use crate::semantic::analysis::{DocumentAnalysisData, StoredToken};
+// ── Completion ───────────────────────────────────────────────────────────────
 
-use super::analysis_data::{CompletionContext, CompletionInfo};
+/// Semantic completion context derived from parser stack state.
+#[repr(u32)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CompletionContext {
+    Unknown = 0,
+    Expression = 1,
+    TableRef = 2,
+}
 
-/// Expected tokens and semantic context at `offset` (for completion).
+impl CompletionContext {
+    pub(crate) fn from_parser(v: syntaqlite_syntax::CompletionContext) -> Self {
+        match v {
+            syntaqlite_syntax::CompletionContext::Expression => Self::Expression,
+            syntaqlite_syntax::CompletionContext::TableRef => Self::TableRef,
+            syntaqlite_syntax::CompletionContext::Unknown => Self::Unknown,
+        }
+    }
+}
+
+/// Expected tokens and semantic context at a cursor position.
+#[derive(Debug)]
+pub(crate) struct CompletionInfo {
+    pub(crate) tokens: Vec<AnyTokenType>,
+    pub(crate) context: CompletionContext,
+    pub(crate) qualifier: Option<String>,
+}
+
+/// Expected tokens and semantic context at `offset`, derived by feeding the
+/// statement's tokens through an incremental parser up to the cursor.
 pub(crate) fn completion_info(
     dialect: &AnyDialect,
     source_text: &str,
-    data: &DocumentAnalysisData,
+    tokens: &[StoredToken],
     offset: DocOffset,
 ) -> CompletionInfo {
     let source = DocText::new(source_text);
-    let tokens = &data.tokens;
     let end_of_doc = source.byte_len();
     let doc_end = DocOffset::default() + end_of_doc;
     let cursor = if offset > doc_end { doc_end } else { offset };
@@ -159,6 +184,69 @@ fn merge_expected_tokens(into: &mut Vec<AnyTokenType>, extra: Vec<AnyTokenType>)
             into.push(token);
         }
     }
+}
+
+// ── Signature help ───────────────────────────────────────────────────────────
+
+/// Signature-help probe result: the enclosing function name, its arity
+/// overloads, and the active parameter index.
+pub(crate) struct SignatureHelpInfo {
+    pub(crate) name: String,
+    pub(crate) arities: Vec<AritySpec>,
+    pub(crate) active_parameter: u32,
+}
+
+/// Walk backwards from `before.len()` to find the enclosing `func_name(` and
+/// count commas at the outermost depth to determine the active parameter
+/// index. Returns `(function_name, active_parameter)` when the cursor is
+/// inside a call whose callee was classified as a `Function` token.
+pub(crate) fn find_enclosing_call(
+    before: &str,
+    tokens: &[StoredToken],
+    dialect: &AnyDialect,
+) -> Option<(String, u32)> {
+    let before_doc = DocText::new(before);
+    let bytes = before.as_bytes();
+    let mut depth: i32 = 0;
+    let mut commas: u32 = 0;
+    let mut pos = bytes.len();
+
+    // Scan backwards to find the matching `(`.
+    while pos > 0 {
+        pos -= 1;
+        match bytes[pos] {
+            b')' => depth += 1,
+            b'(' => {
+                if depth == 0 {
+                    // Found the opening paren — look for the function name token before it.
+                    let paren_offset = DocOffset::from_raw(u32::try_from(pos).unwrap_or(u32::MAX));
+                    let func_token = tokens.iter().rev().find(|t| {
+                        t.offset + t.length <= paren_offset
+                            && dialect.classify_token(t.token_type, t.flags)
+                                == TokenCategory::Function
+                    })?;
+                    // Make sure the function token is immediately before the paren
+                    // (only whitespace between).
+                    let tok_end = func_token.offset + func_token.length;
+                    let between = &before_doc[DocRange {
+                        start: tok_end,
+                        end: paren_offset,
+                    }];
+                    if between.trim().is_empty() {
+                        let name = before_doc
+                            [DocRange::from_offset_len(func_token.offset, func_token.length)]
+                        .to_string();
+                        return Some((name, commas));
+                    }
+                    return None;
+                }
+                depth -= 1;
+            }
+            b',' if depth == 0 => commas += 1,
+            _ => {}
+        }
+    }
+    None
 }
 
 #[cfg(test)]

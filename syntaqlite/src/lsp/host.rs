@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use syntaqlite_syntax::any::TokenCategory;
-use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, DocText};
+use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 
 use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
@@ -15,9 +15,10 @@ use crate::semantic::ValidationConfig;
 use crate::semantic::analyzer::SemanticAnalyzer;
 use crate::semantic::diagnostics::Diagnostic;
 
-use crate::semantic::analysis::{DefinitionResult, SemanticToken, StoredToken, SymbolIdentity};
+use crate::semantic::analysis::SemanticToken;
+use crate::semantic::completion::{self, SignatureHelpInfo};
 
-use super::analysis_data::{ExternalDefinitions, LspCapturePass};
+use super::analysis_data::{DefinitionResult, ExternalDefinitions, LspCapturePass, SymbolIdentity};
 use super::document_store::{Document, DocumentStore};
 use super::{CompletionEntry, CompletionInfo};
 
@@ -370,12 +371,14 @@ impl LspHost {
             .documents
             .get(uri)
             .expect("ensure_model_for guarantees document exists");
-        super::completion::completion_info(
+        let analysis = doc
+            .analysis
+            .as_ref()
+            .expect("ensure_analysis sets analysis");
+        completion::completion_info(
             &self.analyzer.dialect(),
             &doc.source,
-            doc.analysis
-                .as_ref()
-                .expect("ensure_analysis sets analysis"),
+            &analysis.tokens,
             offset,
         )
     }
@@ -691,7 +694,8 @@ impl LspHost {
         // Walk backwards from offset to find enclosing `name(` and count commas.
         let cursor_byte = std::cmp::min(offset.as_usize(), source.len());
         let before = &source[..cursor_byte];
-        let (func_name, active_param) = find_enclosing_call(before, &data.tokens, &self.dialect)?;
+        let (func_name, active_param) =
+            completion::find_enclosing_call(before, &data.tokens, &self.dialect)?;
 
         let (_category, arities) = self.user_catalog.function_signature(&func_name)?;
 
@@ -879,68 +883,6 @@ fn utf16_len(bytes: &[u8]) -> u32 {
 }
 
 use super::utf8_char_len;
-
-// ── Hover/signature helpers ────────────────────────────────────────────────────
-
-use crate::semantic::catalog::AritySpec;
-
-/// Signature help result from the host.
-pub(crate) struct SignatureHelpInfo {
-    pub name: String,
-    pub arities: Vec<AritySpec>,
-    pub active_parameter: u32,
-}
-
-/// Walk backwards from cursor to find enclosing `func_name(` and count commas
-/// to determine active parameter index.
-fn find_enclosing_call(
-    before: &str,
-    tokens: &[StoredToken],
-    dialect: &AnyDialect,
-) -> Option<(String, u32)> {
-    let before_doc = DocText::new(before);
-    let bytes = before.as_bytes();
-    let mut depth: i32 = 0;
-    let mut commas: u32 = 0;
-    let mut pos = bytes.len();
-
-    // Scan backwards to find the matching `(`.
-    while pos > 0 {
-        pos -= 1;
-        match bytes[pos] {
-            b')' => depth += 1,
-            b'(' => {
-                if depth == 0 {
-                    // Found the opening paren — look for the function name token before it.
-                    let paren_offset = DocOffset::from_raw(u32::try_from(pos).unwrap_or(u32::MAX));
-                    let func_token = tokens.iter().rev().find(|t| {
-                        t.offset + t.length <= paren_offset
-                            && dialect.classify_token(t.token_type, t.flags)
-                                == TokenCategory::Function
-                    })?;
-                    // Make sure the function token is immediately before the paren
-                    // (only whitespace between).
-                    let tok_end = func_token.offset + func_token.length;
-                    let between = &before_doc[DocRange {
-                        start: tok_end,
-                        end: paren_offset,
-                    }];
-                    if between.trim().is_empty() {
-                        let name = before_doc
-                            [DocRange::from_offset_len(func_token.offset, func_token.length)]
-                        .to_string();
-                        return Some((name, commas));
-                    }
-                    return None;
-                }
-                depth -= 1;
-            }
-            b',' if depth == 0 => commas += 1,
-            _ => {}
-        }
-    }
-    None
-}
 
 // ── FormatError ───────────────────────────────────────────────────────────────
 
