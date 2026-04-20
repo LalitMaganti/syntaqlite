@@ -4,9 +4,11 @@
 //! LSP-specific analysis helpers: semantic tokens, completion boundaries,
 //! qualifier detection, and expected-token computation.
 //!
-//! These operate on [`DocumentAnalysisData`] captured by
-//! [`LspObserver`](super::analysis_data::LspObserver) plus the dialect and
-//! are not part of semantic validation — they answer editor queries.
+//! These operate on
+//! [`DocumentAnalysisData`](crate::semantic::analysis::DocumentAnalysisData)
+//! captured by [`LspObserver`](super::analysis_data::LspObserver) plus the
+//! dialect and are not part of semantic validation — they answer editor
+//! queries.
 
 use std::collections::HashSet;
 
@@ -16,7 +18,9 @@ use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, DocText};
 
 use crate::dialect::AnyDialect;
 
-use super::analysis_data::{CompletionContext, CompletionInfo, DocumentAnalysisData, StoredToken};
+use crate::semantic::analysis::{DocumentAnalysisData, StoredToken};
+
+use super::analysis_data::{CompletionContext, CompletionInfo};
 
 /// Expected tokens and semantic context at `offset` (for completion).
 pub(crate) fn completion_info(
