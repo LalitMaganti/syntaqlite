@@ -36,8 +36,13 @@ pub(crate) struct WalkCtx<'a> {
 }
 
 // ── Events ────────────────────────────────────────────────────────────────────
+//
+// Events hold borrowed data so they're `Copy` and can be forwarded to multiple
+// passes in a hand-written composition without cloning. The owning storage
+// lives on the walker's stack for the duration of each hook call.
 
 /// A table/view/table-function reference in a FROM / JOIN / DML target.
+#[derive(Copy, Clone)]
 pub(crate) struct SourceRefEvent<'a> {
     pub(crate) node_id: AnyNodeId,
     pub(crate) name_idx: u8,
@@ -45,32 +50,35 @@ pub(crate) struct SourceRefEvent<'a> {
     pub(crate) name: &'a str,
     pub(crate) resolved: bool,
     /// Columns of the relation if known to the catalog, else `None`.
-    pub(crate) columns: Option<Vec<String>>,
+    pub(crate) columns: Option<&'a [String]>,
 }
 
 /// A column reference (qualified or bare) inside an expression.
+#[derive(Copy, Clone)]
 pub(crate) struct ColumnRefEvent<'a> {
     pub(crate) node_id: AnyNodeId,
     pub(crate) column_idx: u8,
     pub(crate) range: DocRange,
     pub(crate) column: &'a str,
     pub(crate) table: Option<&'a str>,
-    pub(crate) resolution: ColumnResolution,
+    pub(crate) resolution: &'a ColumnResolution,
 }
 
 /// A function / table-function / aggregate call.
+#[derive(Copy, Clone)]
 pub(crate) struct CallEvent<'a> {
     pub(crate) node_id: AnyNodeId,
     pub(crate) name_idx: u8,
     pub(crate) range: DocRange,
     pub(crate) name: &'a str,
     pub(crate) arg_count: usize,
-    pub(crate) result: FunctionCheckResult,
+    pub(crate) result: &'a FunctionCheckResult,
     /// Populated only for `FunctionCheckResult::Ok`.
-    pub(crate) signature: Option<(FunctionCategory, Vec<AritySpec>)>,
+    pub(crate) signature: Option<&'a (FunctionCategory, Vec<AritySpec>)>,
 }
 
 /// A CTE body's actual result-column count differs from its declared count.
+#[derive(Copy, Clone)]
 pub(crate) struct CteColumnCountMismatchEvent<'a> {
     pub(crate) name: &'a str,
     pub(crate) name_range: DocRange,
@@ -156,13 +164,13 @@ fn walk_node<P: WalkPass>(
         return;
     }
     if let Some(children) = stmt.list_children(node_id) {
-        let ids: Vec<AnyNodeId> = children
-            .iter()
-            .copied()
-            .filter(|id| !id.is_null())
-            .collect();
-        for child in ids {
-            walk_node(stmt, cx, pass, child);
+        // `children` has lifetime 'a (tied to the statement buffer, not the
+        // &stmt borrow), so we can iterate it while re-borrowing stmt for
+        // the recursive walk.
+        for &child in children {
+            if !child.is_null() {
+                walk_node(stmt, cx, pass, child);
+            }
         }
         return;
     }
@@ -329,7 +337,7 @@ fn walk_source_ref<P: WalkPass>(
             range,
             name,
             resolved: is_known,
-            columns: columns.clone(),
+            columns: columns.as_deref(),
         };
         pass.on_source_ref(stmt, cx, ev);
     }
@@ -359,7 +367,7 @@ fn walk_call<P: WalkPass>(
             .and_then(|id| stmt.list_children(id))
             .map_or(0, <[_]>::len);
         let result = cx.catalog.check_function(name, arg_count);
-        let signature = match result {
+        let signature = match &result {
             FunctionCheckResult::Ok => cx.catalog.function_signature(name),
             _ => None,
         };
@@ -371,8 +379,8 @@ fn walk_call<P: WalkPass>(
                 range,
                 name,
                 arg_count,
-                result,
-                signature,
+                result: &result,
+                signature: signature.as_ref(),
             };
             pass.on_call(stmt, cx, ev);
         }
@@ -416,7 +424,7 @@ fn walk_column_ref<P: WalkPass>(
             range,
             column,
             table,
-            resolution,
+            resolution: &resolution,
         };
         pass.on_column_ref(stmt, cx, ev);
     }
@@ -491,8 +499,7 @@ fn collect_select_aliases(
     let Some(children) = stmt.list_children(list_id) else {
         return aliases;
     };
-    let child_ids: Vec<AnyNodeId> = children.to_vec();
-    for child_id in child_ids {
+    for &child_id in children {
         if child_id.is_null() {
             continue;
         }
@@ -580,23 +587,25 @@ fn walk_dml_children_except_ctes<P: WalkPass>(
     bindings_idx: u8,
 ) {
     let skip = bindings_idx as usize;
-    let mut child_ids: Vec<AnyNodeId> = Vec::new();
     for idx in 0..fields.len() {
         if idx == skip {
             continue;
         }
-        if let FieldValue::NodeId(child_id) = fields[idx]
-            && !child_id.is_null()
-        {
-            if let Some(children) = stmt.list_children(child_id) {
-                child_ids.extend(children.iter().copied().filter(|id| !id.is_null()));
-            } else {
-                child_ids.push(child_id);
-            }
+        let FieldValue::NodeId(child_id) = fields[idx] else {
+            continue;
+        };
+        if child_id.is_null() {
+            continue;
         }
-    }
-    for child in child_ids {
-        walk_node(stmt, cx, pass, child);
+        if let Some(children) = stmt.list_children(child_id) {
+            for &grandchild in children {
+                if !grandchild.is_null() {
+                    walk_node(stmt, cx, pass, grandchild);
+                }
+            }
+        } else {
+            walk_node(stmt, cx, pass, child_id);
+        }
     }
 }
 
@@ -620,12 +629,11 @@ fn register_cte_bindings<P: WalkPass>(
     }
     let is_recursive = recursive_idx != FIELD_ABSENT
         && matches!(fields[recursive_idx as usize], FieldValue::Bool(true));
-    let cte_ids: Vec<AnyNodeId> = field_node_id(fields, bindings_idx)
+    let cte_ids: &[AnyNodeId] = field_node_id(fields, bindings_idx)
         .and_then(|id| stmt.list_children(id))
-        .map(<[AnyNodeId]>::to_vec)
-        .unwrap_or_default();
+        .unwrap_or(&[]);
 
-    for cte_id in cte_ids {
+    for &cte_id in cte_ids {
         let Some(binding) = extract_cte_binding(stmt, cx.roles, cte_id) else {
             continue;
         };
@@ -636,7 +644,7 @@ fn register_cte_bindings<P: WalkPass>(
             let cols = binding
                 .declared_cols
                 .as_ref()
-                .map(|v| v.iter().map(|(s, _)| s.to_string()).collect());
+                .map(|v| v.iter().map(|(s, _)| (*s).to_string()).collect());
             cx.catalog.add_query_table(binding.name, cols);
         }
 
@@ -653,15 +661,14 @@ fn register_cte_bindings<P: WalkPass>(
         }
 
         let cols = if let Some(declared) = binding.declared_cols.as_ref() {
-            let col_names: Vec<&str> = declared.iter().map(|(s, _)| *s).collect();
             if P::WANTS_CTE_COLUMN_COUNT
                 && let Some(actual) = count_result_columns(stmt, cx.roles, binding.body_id)
-                && actual != col_names.len()
+                && actual != declared.len()
             {
                 let ev = CteColumnCountMismatchEvent {
                     name: binding.name,
                     name_range: binding.name_range,
-                    declared: col_names.len(),
+                    declared: declared.len(),
                     actual,
                 };
                 pass.on_cte_column_count_mismatch(stmt, ev);
@@ -671,7 +678,7 @@ fn register_cte_bindings<P: WalkPass>(
                     pass.on_column_definition(binding.name, col_name, col_range);
                 }
             }
-            Some(declared.iter().map(|(s, _)| s.to_string()).collect())
+            Some(declared.iter().map(|(s, _)| (*s).to_string()).collect())
         } else {
             if P::WANTS_COLUMN_DEFINITION {
                 emit_select_column_definitions(stmt, cx.roles, pass, binding.body_id, binding.name);
@@ -731,16 +738,16 @@ fn extract_declared_cols<'b>(
     }
     let list_id = field_node_id(fields, cols_idx)?;
     let children = stmt.list_children(list_id)?;
-    let ids: Vec<AnyNodeId> = children
-        .iter()
-        .copied()
-        .filter(|id| !id.is_null())
-        .collect();
-    let names: Vec<(&'b str, DocRange)> = ids
-        .into_iter()
-        .map(|id| name_text(stmt, Some(id)))
-        .filter(|(s, _)| !s.is_empty())
-        .collect();
+    let mut names: Vec<(&'b str, DocRange)> = Vec::with_capacity(children.len());
+    for &id in children {
+        if id.is_null() {
+            continue;
+        }
+        let (text, range) = name_text(stmt, Some(id));
+        if !text.is_empty() {
+            names.push((text, range));
+        }
+    }
     if names.is_empty() { None } else { Some(names) }
 }
 
@@ -763,10 +770,9 @@ fn count_result_columns(
 
     let list_id = field_node_id(&body_fields, cols_idx)?;
     let children = stmt.list_children(list_id)?;
-    let child_ids: Vec<AnyNodeId> = children.to_vec();
 
     let mut count = 0usize;
-    for child_id in child_ids {
+    for &child_id in children {
         if child_id.is_null() {
             continue;
         }
@@ -816,9 +822,7 @@ fn emit_select_column_definitions<P: WalkPass>(
     let Some(children) = stmt.list_children(list_id) else {
         return;
     };
-    let child_ids: Vec<AnyNodeId> = children.to_vec();
-
-    for child_id in child_ids {
+    for &child_id in children {
         if child_id.is_null() {
             continue;
         }
