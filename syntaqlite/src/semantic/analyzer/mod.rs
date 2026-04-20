@@ -27,6 +27,7 @@ use helpers::{extract_defined_relations, extract_macro_registration, parse_error
 mod helpers;
 mod pass;
 mod query_scope;
+mod walker;
 
 use pass::ValidationPass;
 
