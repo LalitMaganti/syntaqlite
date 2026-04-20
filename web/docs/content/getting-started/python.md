@@ -21,7 +21,7 @@ client library. Requires Python 3.10+.
 
 ## 2. Create a `Syntaqlite` instance
 
-All operations go through a [`Syntaqlite`](@/reference/python-api.md#syntaqlitesyntaqlite)
+All operations go through a [`Syntaqlite`](@/reference/python-api.md#syntaqlite-syntaqlite)
 instance. Create one and reuse it across many calls:
 
 ```python
