@@ -141,6 +141,11 @@ impl WalkPass for DiagnosticsPass<'_> {
         match ev.resolution {
             ColumnResolution::Found { .. } | ColumnResolution::TableNotFound => {}
             ColumnResolution::TableFoundColumnMissing => {
+                // DQS bug-compat: unresolved `"foo"` is re-interpreted as a
+                // string literal by SQLite. Don't FP here.
+                if ev.dqs_candidate {
+                    return;
+                }
                 let tbl = ev
                     .table
                     .expect("qualifier present when TableFoundColumnMissing");
@@ -163,6 +168,9 @@ impl WalkPass for DiagnosticsPass<'_> {
                 // SQLite resolves bare TRUE/FALSE identifiers to integer literals.
                 if ev.column.eq_ignore_ascii_case("true") || ev.column.eq_ignore_ascii_case("false")
                 {
+                    return;
+                }
+                if ev.dqs_candidate {
                     return;
                 }
                 let candidates = cx.scope.all_column_names(None);

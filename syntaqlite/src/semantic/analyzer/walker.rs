@@ -15,7 +15,7 @@
 //! grep-able.
 
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParseError, AnyParsedStatement, FieldValue, NodeFields,
+    AnyNodeId, AnyParseError, AnyParsedStatement, FieldValue, NodeFields, TextSpan,
 };
 use syntaqlite_syntax::source::DocRange;
 
@@ -64,6 +64,12 @@ pub(crate) struct ColumnRefEvent<'a> {
     pub(crate) column: &'a str,
     pub(crate) table: Option<&'a str>,
     pub(crate) resolution: &'a ColumnResolution,
+    /// `SQLite`'s double-quoted-string bug-compat: a `"foo"` identifier in
+    /// expression position that doesn't resolve to a column is re-interpreted
+    /// as a string literal.  True iff this column ref was written with
+    /// surrounding `"..."` (not `` `...` `` or `[...]`, which stay
+    /// identifier-only).
+    pub(crate) dqs_candidate: bool,
 }
 
 /// A function / table-function / aggregate call.
@@ -457,6 +463,7 @@ fn walk_column_ref<P: WalkPass>(
         _ => None,
     };
     let (_, range) = stmt.span_text_abs(col_sp);
+    let dqs_candidate = is_double_quoted_span(stmt, col_sp);
 
     let resolution = cx.scope.resolve_column(table, column);
 
@@ -468,9 +475,25 @@ fn walk_column_ref<P: WalkPass>(
             column,
             table,
             resolution: &resolution,
+            dqs_candidate,
         };
         pass.on_column_ref(stmt, cx, ev);
     }
+}
+
+/// True iff `sp` is a macro-free span whose opening quote in the authored
+/// statement text is `"` (not `` ` `` or `[`).  Callers use this to apply
+/// `SQLite`'s DQS fallback, which only applies to double-quoted identifiers.
+fn is_double_quoted_span(stmt: &AnyParsedStatement<'_>, sp: TextSpan) -> bool {
+    if !sp.is_quoted() || !sp.is_macro_free() {
+        return false;
+    }
+    let (_, off) = stmt.span_text(sp);
+    let off = off.as_usize();
+    if off == 0 {
+        return false;
+    }
+    stmt.text().as_str().as_bytes().get(off - 1) == Some(&b'"')
 }
 
 fn walk_scoped_source<P: WalkPass>(
