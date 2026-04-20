@@ -15,9 +15,9 @@ use crate::semantic::ValidationConfig;
 use crate::semantic::analyzer::SemanticAnalyzer;
 use crate::semantic::diagnostics::Diagnostic;
 
-use super::analysis_data::{
-    DefinitionResult, ExternalDefinitions, LspObserver, SemanticToken, StoredToken, SymbolIdentity,
-};
+use crate::semantic::analysis::{DefinitionResult, SemanticToken, StoredToken, SymbolIdentity};
+
+use super::analysis_data::{ExternalDefinitions, LspObserver};
 use super::document_store::{Document, DocumentStore};
 use super::{CompletionEntry, CompletionInfo};
 
@@ -384,7 +384,7 @@ impl LspHost {
     pub fn completion_items(&mut self, uri: &str, offset: DocOffset) -> Vec<CompletionEntry> {
         let info = self.completion_info_at_offset(uri, offset);
         super::completion_service::build_completion_items(
-            info,
+            &info,
             &self.dialect,
             self.analyzer.catalog(),
         )

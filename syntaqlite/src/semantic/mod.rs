@@ -42,6 +42,8 @@
 //! assert!(model.has_diagnostics());
 //! ```
 
+#[cfg(feature = "lsp")]
+pub(crate) mod analysis;
 #[cfg(feature = "validation")]
 pub(crate) mod analyzer;
 #[cfg(feature = "validation")]

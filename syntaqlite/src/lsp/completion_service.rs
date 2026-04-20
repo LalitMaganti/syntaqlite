@@ -21,7 +21,7 @@ use super::{CompletionEntry, CompletionInfo, CompletionKind};
 /// Assemble completion items from the given completion info, dialect, and
 /// catalog. The result is sorted by [`CompletionKind::sort_priority`].
 pub(crate) fn build_completion_items(
-    info: CompletionInfo,
+    info: &CompletionInfo,
     dialect: &AnyDialect,
     catalog: &Catalog,
 ) -> Vec<CompletionEntry> {
@@ -45,7 +45,7 @@ pub(crate) fn build_completion_items(
 
     // When the cursor follows `qualifier.`, only suggest columns from that
     // table — no keywords, functions, or other tables.
-    if let Some(ref qualifier) = info.qualifier {
+    if let Some(qualifier) = info.qualifier.as_ref() {
         items.clear();
         seen.clear();
         for name in catalog.all_column_names(Some(qualifier)) {
