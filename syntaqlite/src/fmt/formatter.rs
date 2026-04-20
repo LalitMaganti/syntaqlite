@@ -315,7 +315,6 @@ impl Formatter {
     /// # Errors
     ///
     /// Returns `FormatError` if the source cannot be parsed.
-    #[expect(clippy::too_many_lines)]
     pub fn dump_bytecode(&mut self, source: &str) -> Result<String, FormatError> {
         use std::fmt::Write;
         use syntaqlite_common::fmt::bytecode::opcodes;
