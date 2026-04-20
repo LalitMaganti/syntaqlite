@@ -103,7 +103,7 @@ message, and a machine-readable detail enum (`UnknownTable`, `UnknownColumn`,
 `UnknownFunction`, `FunctionArity`) for programmatic consumers.
 
 By default, unresolved names produce **warnings** because the schema might be
-incomplete. Strict mode (`ValidationConfig::with_strict_schema(true)`) promotes
+incomplete. Strict mode (`AnalysisConfig::with_strict_schema(true)`) promotes
 them to errors. This lets you start with a permissive baseline and tighten
 validation as your schema coverage improves.
 

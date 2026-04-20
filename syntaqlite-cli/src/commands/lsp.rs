@@ -3,7 +3,7 @@
 
 //! `lsp` subcommand (language server over stdio).
 
-use syntaqlite::ValidationConfig;
+use syntaqlite::AnalysisConfig;
 use syntaqlite::any::AnyDialect;
 
 use crate::config::{self, ConfigMode};
@@ -72,8 +72,7 @@ pub(crate) fn run(dialect: AnyDialect, config: &ConfigMode<'_>) -> Result<(), St
 
         match build_check_config(has_schema, Some(&project_config.checks), &[], &[], &[]) {
             Ok(checks) => {
-                lsp_config.validation_config =
-                    Some(ValidationConfig::default().with_checks(checks));
+                lsp_config.analysis_config = Some(AnalysisConfig::default().with_checks(checks));
             }
             Err(e) => eprintln!("syntaqlite-lsp: invalid [checks] config: {e}"),
         }

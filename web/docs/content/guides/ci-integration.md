@@ -28,12 +28,12 @@ syntaqlite fmt --check "**/*.sql"
 Run schema-aware validation to catch unknown tables, columns, and functions:
 
 ```bash
-syntaqlite validate "**/*.sql"
+syntaqlite analyze "**/*.sql"
 ```
 
 When a schema is configured in `syntaqlite.toml`, unresolved references are
 **errors** and cause a non-zero exit code. Without a schema, the same issues
-are **warnings** and the exit code remains zero, so `syntaqlite validate`
+are **warnings** and the exit code remains zero, so `syntaqlite analyze`
 won't fail the build until you've explicitly declared your schema.
 
 If you're not using `syntaqlite.toml` and passing files directly, file order
@@ -42,7 +42,7 @@ validated. Within each file, `CREATE TABLE` and `CREATE VIEW` statements are
 discovered and made available to subsequent statements.
 
 ```bash
-syntaqlite validate schema.sql "queries/**/*.sql"
+syntaqlite analyze schema.sql "queries/**/*.sql"
 ```
 
 ## GitHub Actions
@@ -64,7 +64,7 @@ jobs:
         run: syntaqlite fmt --check "**/*.sql"
 
       - name: Validate SQL
-        run: syntaqlite validate "**/*.sql"
+        run: syntaqlite analyze "**/*.sql"
 ```
 
 ## Pre-push hook

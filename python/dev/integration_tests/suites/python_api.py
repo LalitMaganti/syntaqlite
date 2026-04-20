@@ -281,7 +281,7 @@ def _test_tokenize_comment_and_operator(stq) -> bool:
 
 def _test_validate_no_schema_unknown_table(stq) -> bool:
     with stq.Syntaqlite() as sq:
-        result = sq.validate("SELECT * FROM does_not_exist")
+        result = sq.analyze("SELECT * FROM does_not_exist")
     matching = [d for d in result.diagnostics if d.code is stq.DiagnosticCode.UNKNOWN_TABLE]
     if not matching or "does_not_exist" not in matching[0].message:
         _fail("validate_no_schema_unknown_table", f"got {result.diagnostics!r}")
@@ -293,7 +293,7 @@ def _test_validate_no_schema_unknown_table(stq) -> bool:
 def _test_validate_unknown_column_code(stq) -> bool:
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("users", ["id"])])
-        result = sq.validate("SELECT bogus FROM users", schema)
+        result = sq.analyze("SELECT bogus FROM users", schema)
     matching = [d for d in result.diagnostics if d.code is stq.DiagnosticCode.UNKNOWN_COLUMN]
     if not matching or "bogus" not in matching[0].message:
         _fail("validate_unknown_column_code", f"got {result.diagnostics!r}")
@@ -305,7 +305,7 @@ def _test_validate_unknown_column_code(stq) -> bool:
 def _test_validate_unknown_function(stq) -> bool:
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("t", ["a"])])
-        result = sq.validate("SELECT nosuch(a) FROM t", schema)
+        result = sq.analyze("SELECT nosuch(a) FROM t", schema)
     matching = [d for d in result.diagnostics if d.code is stq.DiagnosticCode.UNKNOWN_FUNCTION]
     if not matching or "nosuch" not in matching[0].message:
         _fail("validate_unknown_function", f"got {result.diagnostics!r}")
@@ -316,7 +316,7 @@ def _test_validate_unknown_function(stq) -> bool:
 
 def _test_validate_function_arity(stq) -> bool:
     with stq.Syntaqlite() as sq:
-        result = sq.validate("SELECT length(1, 2)")
+        result = sq.analyze("SELECT length(1, 2)")
     matching = [d for d in result.diagnostics if d.code is stq.DiagnosticCode.FUNCTION_ARITY]
     if not matching:
         _fail("validate_function_arity", f"got {result.diagnostics!r}")
@@ -327,7 +327,7 @@ def _test_validate_function_arity(stq) -> bool:
 
 def _test_validate_cte_column_mismatch(stq) -> bool:
     with stq.Syntaqlite() as sq:
-        result = sq.validate("WITH c(a,b) AS (SELECT 1) SELECT * FROM c")
+        result = sq.analyze("WITH c(a,b) AS (SELECT 1) SELECT * FROM c")
     matching = [d for d in result.diagnostics if d.code is stq.DiagnosticCode.CTE_COLUMN_COUNT_MISMATCH]
     if not matching:
         _fail("validate_cte_column_mismatch", f"got {result.diagnostics!r}")
@@ -339,7 +339,7 @@ def _test_validate_cte_column_mismatch(stq) -> bool:
 def _test_validate_parse_error_diagnostic(stq) -> bool:
     """Malformed SQL surfaces via `validate` as a PARSE_ERROR diagnostic."""
     with stq.Syntaqlite() as sq:
-        result = sq.validate("SELECT FROM WHERE")
+        result = sq.analyze("SELECT FROM WHERE")
     matching = [d for d in result.diagnostics if d.code is stq.DiagnosticCode.PARSE_ERROR]
     if not matching:
         _fail("validate_parse_error_diagnostic", f"got {result.diagnostics!r}")
@@ -351,7 +351,7 @@ def _test_validate_parse_error_diagnostic(stq) -> bool:
 def _test_validate_views_resolve(stq) -> bool:
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(views=[stq.View("v", ["n"])])
-        result = sq.validate("SELECT n FROM v", schema)
+        result = sq.analyze("SELECT n FROM v", schema)
     if result.diagnostics:
         _fail("validate_views_resolve", f"unexpected diags: {result.diagnostics!r}")
         return False
@@ -363,7 +363,7 @@ def _test_validate_ddl_is_parsed(stq) -> bool:
     """Schema.ddl registers tables from raw CREATE statements."""
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(ddl="CREATE TABLE t (a INT, b TEXT);")
-        result = sq.validate("SELECT a, b FROM t", schema)
+        result = sq.analyze("SELECT a, b FROM t", schema)
     if result.diagnostics:
         _fail("validate_ddl_is_parsed", f"unexpected diags: {result.diagnostics!r}")
         return False
@@ -375,7 +375,7 @@ def _test_validate_diagnostic_fields_present(stq) -> bool:
     """Every diagnostic exposes severity/message/start_offset/end_offset/code."""
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("users", ["id"])])
-        result = sq.validate("SELECT bogus FROM users", schema)
+        result = sq.analyze("SELECT bogus FROM users", schema)
     if not result.diagnostics:
         _fail("validate_diagnostic_fields_present", "expected at least one diag")
         return False
@@ -403,7 +403,7 @@ def _test_validate_diagnostic_fields_present(stq) -> bool:
 def _test_validate_lineage_union_first_branch(stq) -> bool:
     """UNION lineage columns come from the first branch."""
     with stq.Syntaqlite() as sq:
-        result = sq.validate("SELECT 1 AS a UNION SELECT 2")
+        result = sq.analyze("SELECT 1 AS a UNION SELECT 2")
     if result.lineage is None or [c.name for c in result.lineage.columns] != ["a"]:
         _fail(
             "validate_lineage_union_first_branch",
@@ -418,7 +418,7 @@ def _test_validate_lineage_aggregate_drops_origin(stq) -> bool:
     """Computed columns (aggregates) have `origin is None`."""
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("t", ["x"])])
-        result = sq.validate("SELECT count(*) AS n FROM t", schema)
+        result = sq.analyze("SELECT count(*) AS n FROM t", schema)
     if result.lineage is None or not result.lineage.columns:
         _fail("validate_lineage_aggregate_drops_origin", f"no lineage: {result.lineage!r}")
         return False
@@ -436,7 +436,7 @@ def _test_validate_lineage_aggregate_drops_origin(stq) -> bool:
 def _test_validate_lineage_basic(stq) -> bool:
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("users", ["id", "name", "email"])])
-        result = sq.validate("SELECT id, name FROM users", schema)
+        result = sq.analyze("SELECT id, name FROM users", schema)
     if result.lineage is None or not result.lineage.complete:
         _fail("validate_lineage_basic", f"got {result.lineage!r}")
         return False
@@ -458,7 +458,7 @@ def _test_validate_lineage_basic(stq) -> bool:
 def _test_validate_relations(stq) -> bool:
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("users", ["id"])])
-        result = sq.validate("SELECT id FROM users", schema)
+        result = sq.analyze("SELECT id FROM users", schema)
     if result.lineage is None or not result.lineage.relations:
         _fail("validate_relations", f"no relations: {result.lineage!r}")
         return False
@@ -473,10 +473,10 @@ def _test_validate_relations(stq) -> bool:
 def _test_validate_text_output_with_source_name(stq) -> bool:
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("users", ["id", "name"])])
-        rendered = sq.validate(
+        rendered = sq.analyze(
             "SELECT nme FROM users",
             schema,
-            output=stq.ValidateOutput.TEXT,
+            output=stq.AnalysisOutput.TEXT,
             render_options=stq.RenderOptions(source_name="query.sql"),
         )
     if not isinstance(rendered, str):
@@ -496,7 +496,7 @@ def _test_validate_schema_modules_passthrough(stq) -> bool:
             tables=[stq.Table("t", ["x"])],
             modules={"stdlib.helpers": "CREATE TABLE helper(a INT)"},
         )
-        result = sq.validate("SELECT x FROM t", schema)
+        result = sq.analyze("SELECT x FROM t", schema)
     if result.diagnostics:
         _fail("validate_schema_modules_passthrough", f"unexpected diags: {result.diagnostics!r}")
         return False
@@ -510,7 +510,7 @@ def _test_validate_schema_modules_passthrough(stq) -> bool:
 def _test_validate_statements_breakdown(stq) -> bool:
     """Each top-level statement gets its own per-stmt row with its SQL source."""
     with stq.Syntaqlite() as sq:
-        result = sq.validate("CREATE TABLE users (id INT); SELECT id FROM users;")
+        result = sq.analyze("CREATE TABLE users (id INT); SELECT id FROM users;")
     if len(result.statements) != 2:
         _fail("validate_statements_breakdown", f"expected 2 statements, got {len(result.statements)}")
         return False
@@ -530,7 +530,7 @@ def _test_validate_statements_breakdown(stq) -> bool:
 
 def _test_defined_relations_table(stq) -> bool:
     with stq.Syntaqlite() as sq:
-        result = sq.validate("CREATE TABLE users (id INT)")
+        result = sq.analyze("CREATE TABLE users (id INT)")
     stmt = result.statements[0]
     if len(stmt.defined_relations) != 1:
         _fail("defined_relations_table", f"got {stmt.defined_relations!r}")
@@ -545,7 +545,7 @@ def _test_defined_relations_table(stq) -> bool:
 
 def _test_defined_relations_view(stq) -> bool:
     with stq.Syntaqlite() as sq:
-        result = sq.validate("CREATE VIEW v AS SELECT 1 AS x")
+        result = sq.analyze("CREATE VIEW v AS SELECT 1 AS x")
     stmt = result.statements[0]
     if not stmt.defined_relations:
         _fail("defined_relations_view", f"no relations: {stmt!r}")
@@ -561,7 +561,7 @@ def _test_defined_relations_view(stq) -> bool:
 def _test_column_lineage_index(stq) -> bool:
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(tables=[stq.Table("users", ["id", "name"])])
-        result = sq.validate("SELECT id, name FROM users", schema)
+        result = sq.analyze("SELECT id, name FROM users", schema)
     indices = [c.index for c in result.lineage.columns]
     if indices != [0, 1]:
         _fail("column_lineage_index", f"expected [0, 1], got {indices!r}")
@@ -574,7 +574,7 @@ def _test_lineage_unexpanded_views(stq) -> bool:
     """A view registered by name only (no SQL body) appears in `unexpanded_views`."""
     with stq.Syntaqlite() as sq:
         schema = stq.Schema(views=[stq.View("v", ["n"])])
-        result = sq.validate("SELECT n FROM v", schema)
+        result = sq.analyze("SELECT n FROM v", schema)
     if result.lineage is None:
         _fail("lineage_unexpanded_views", "no lineage")
         return False
@@ -651,26 +651,25 @@ def _test_diagnostic_code_enum_members(stq) -> bool:
 
 
 def _test_validate_output_enum_values(stq) -> bool:
-    """ValidateOutput must expose STRUCTURED and TEXT as string members."""
-    if stq.ValidateOutput.STRUCTURED.value != "structured":
-        _fail("validate_output_enum_values", f"STRUCTURED={stq.ValidateOutput.STRUCTURED.value!r}")
+    """AnalysisOutput must expose STRUCTURED and TEXT as string members."""
+    if stq.AnalysisOutput.STRUCTURED.value != "structured":
+        _fail("validate_output_enum_values", f"STRUCTURED={stq.AnalysisOutput.STRUCTURED.value!r}")
         return False
-    if stq.ValidateOutput.TEXT.value != "text":
-        _fail("validate_output_enum_values", f"TEXT={stq.ValidateOutput.TEXT.value!r}")
+    if stq.AnalysisOutput.TEXT.value != "text":
+        _fail("validate_output_enum_values", f"TEXT={stq.AnalysisOutput.TEXT.value!r}")
         return False
     _pass("validate_output_enum_values")
     return True
 
 
-def _test_validate_rejects_string_output(stq) -> bool:
-    """`validate` must refuse raw strings for `output`; only ValidateOutput members."""
+def _test_analyze_accepts_string_output(stq) -> bool:
+    """`analyze` accepts raw strings for `output` and coerces to AnalysisOutput."""
     with stq.Syntaqlite() as sq:
-        try:
-            sq.validate("SELECT 1", output="text")
-        except TypeError:
-            _pass("validate_rejects_string_output")
+        rendered = sq.analyze("SELECT 1", output="text")
+        if isinstance(rendered, str):
+            _pass("analyze_accepts_string_output")
             return True
-    _fail("validate_rejects_string_output", "expected TypeError for output='text'")
+    _fail("analyze_accepts_string_output", "expected str for output='text'")
     return False
 
 
@@ -743,7 +742,7 @@ def _test_dialect_parses_perfetto_syntax(stq, ctx: SuiteContext, work_dir: Path)
     """CREATE PERFETTO TABLE is a PARSE_ERROR in SQLite but parses with the dialect."""
     # Baseline: the SQL fails under SQLite.
     with stq.Syntaqlite() as sq:
-        r = sq.validate("CREATE PERFETTO TABLE t AS SELECT 1 AS x")
+        r = sq.analyze("CREATE PERFETTO TABLE t AS SELECT 1 AS x")
     if not any(d.code is stq.DiagnosticCode.PARSE_ERROR for d in r.diagnostics):
         _fail("dialect_parses_perfetto_syntax", f"SQLite baseline should PARSE_ERROR, got {r.diagnostics!r}")
         return False
@@ -815,7 +814,7 @@ _TESTS = [
     _test_parse_returns_wrapped_node_type,
     _test_diagnostic_code_enum_members,
     _test_validate_output_enum_values,
-    _test_validate_rejects_string_output,
+    _test_analyze_accepts_string_output,
     # Bundled binary dispatch
     _test_get_binary_path_honours_env,
     _test_syntaqlite_binary_kwarg,

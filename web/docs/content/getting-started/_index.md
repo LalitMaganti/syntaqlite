@@ -55,7 +55,7 @@ validates queries against it without needing a database. It finds **all** errors
 one pass, with source locations and did-you-mean suggestions:
 
 ```bash
-syntaqlite validate -e "CREATE TABLE users (id, name, email); SELECT nme FROM users;"
+syntaqlite analyze -e "CREATE TABLE users (id, name, email); SELECT nme FROM users;"
 ```
 ```text
 warning: unknown column 'nme'
@@ -69,7 +69,7 @@ warning: unknown column 'nme'
 For real projects, separate your schema from your queries:
 
 ```bash
-syntaqlite validate --schema schema.sql queries.sql
+syntaqlite analyze --schema schema.sql queries.sql
 ```
 
 ## Parse

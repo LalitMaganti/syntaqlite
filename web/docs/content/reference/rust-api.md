@@ -11,7 +11,7 @@ weight = 4
 | Feature | What it enables |
 |---------|----------------|
 | `fmt` | Formatter |
-| `validation` | Semantic analysis (unknown tables, columns, functions) |
+| `validation` | Analysis (unknown tables, columns, functions) |
 | `sqlite` | Built-in SQLite dialect (enabled by default) |
 | `lsp` | Language server protocol implementation |
 | `serde-json` | JSON serialization for AST and diagnostics |
@@ -59,13 +59,13 @@ Zero-copy: tokens reference byte offsets into the source string.
 
 | Type / Method | Description |
 |---------------|-------------|
-| `SemanticAnalyzer::new()` | Create an analyzer for the SQLite dialect |
+| `Analyzer::new()` | Create an analyzer for the SQLite dialect |
 | `AnalysisContext::new(&mut catalog)` | Bundle the catalog, config, and optional module resolver for a single analysis call |
-| `analyzer.analyze(sql, &mut ctx) -> SemanticModel` | Analyze SQL, returning diagnostics and lineage |
+| `analyzer.analyze(sql, &mut ctx) -> Analysis` | Analyze SQL, returning diagnostics and lineage |
 | `Catalog::new(dialect)` | Create an empty catalog |
 | `catalog.layer_mut(CatalogLayer::Database).insert_table(name, cols, false)` | Register a table |
-| `ValidationConfig::default()` | Default config (warnings for unknowns) |
-| `ValidationConfig::default().with_strict_schema()` | Strict mode (errors for unknowns) |
+| `AnalysisConfig::default()` | Default config (warnings for unknowns) |
+| `AnalysisConfig::default().with_strict_schema()` | Strict mode (errors for unknowns) |
 | `model.diagnostics()` | Parse and semantic diagnostics |
 
 The analyzer is reusable; call `analyze()` repeatedly. The catalog uses a
@@ -73,11 +73,11 @@ layered resolution order; populate the `Database` layer with your schema.
 
 ## Lineage
 
-After `analyze()`, the returned `SemanticModel` provides column-level lineage
+After `analyze()`, the returned `Analysis` provides column-level lineage
 for SELECT statements. Lineage traces each result column back to its source
 table and column.
 
-`model.statements()` yields one `StatementModel` per statement; lineage
+`model.statements()` yields one `StatementAnalysis` per statement; lineage
 methods are per-statement.
 
 | Type / Method | Description |

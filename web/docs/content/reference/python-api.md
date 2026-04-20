@@ -124,25 +124,25 @@ doesn't need attribute-style access.
 'SelectStmt'
 ```
 
-### `sq.validate`
+### `sq.analyze`
 
-Validate SQL against an optional [`Schema`](#syntaqlite-schema).
+Analyze SQL against an optional [`Schema`](#syntaqliteschema).
 
 ```python
-sq.validate(sql, schema=None, *, output=ValidateOutput.STRUCTURED, render_options=None)
+sq.analyze(sql, schema=None, *, output=AnalysisOutput.STRUCTURED, render_options=None)
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `sql` | `str` | — | SQL to validate |
-| `schema` | [`Schema`](#syntaqlite-schema) `\| None` | `None` | Catalog schema to validate against |
-| `output` | [`ValidateOutput`](#validateoutput) `\| str` | `STRUCTURED` | Return shape — typed result or rendered string |
+| `sql` | `str` | — | SQL to analyze |
+| `schema` | [`Schema`](#syntaqliteschema) `\| None` | `None` | Catalog schema to analyze against |
+| `output` | [`AnalysisOutput`](#analysisoutput) `\| str` | `STRUCTURED` | Return shape — typed result or rendered string |
 | `render_options` | [`RenderOptions`](#renderoptions) `\| None` | `None` | Fine-grained options for text rendering (source label, etc.). Ignored unless `output=TEXT`. |
 
 `Schema` can be built from explicit tables/views, from DDL text, or both:
 
 ```python
-sq.validate(
+sq.analyze(
     sql,
     syntaqlite.Schema(
         tables=[syntaqlite.Table("users", ["id", "name"])],
@@ -151,21 +151,21 @@ sq.validate(
 )
 ```
 
-**Returns** (when `output=ValidateOutput.STRUCTURED`): a [`ValidationResult`](#validationresult).
+**Returns** (when `output=AnalysisOutput.STRUCTURED`): a [`Analysis`](#validationresult).
 
-**Returns** (when `output=ValidateOutput.TEXT`): `str` with the diagnostics rendered
+**Returns** (when `output=AnalysisOutput.TEXT`): `str` with the diagnostics rendered
 with source context, matching the CLI output.
 
 ```python
 >>> schema = syntaqlite.Schema(tables=[syntaqlite.Table("users", ["id", "name"])])
->>> r = sq.validate("SELECT id FROM users", schema)
+>>> r = sq.analyze("SELECT id FROM users", schema)
 >>> r.diagnostics
 []
 
 >>> # Rendered text output with a custom file label
->>> text = sq.validate(
+>>> text = sq.analyze(
 ...     "SELECT nme FROM users", schema,
-...     output=syntaqlite.ValidateOutput.TEXT,
+...     output=syntaqlite.AnalysisOutput.TEXT,
 ...     render_options=syntaqlite.RenderOptions(source_name="query.sql"),
 ... )
 >>> print(text)
@@ -253,7 +253,7 @@ Same fields as [`Table`](#syntaqlite-table).
 
 ## Result types
 
-### `ValidationResult`
+### `Analysis`
 
 Returned by [`validate`](#sq-validate) when `render=False`.
 
@@ -265,7 +265,7 @@ Returned by [`validate`](#sq-validate) when `render=False`.
 
 ### `Statement`
 
-Per-statement analysis, available on `ValidationResult.statements`.
+Per-statement analysis, available on `Analysis.statements`.
 
 | Attribute | Type | Description |
 |-----------|------|-------------|
@@ -318,18 +318,18 @@ Column lineage for a query-bearing statement.
 | `end_offset` | `int` | Byte offset of the end of the span |
 | `code` | [`DiagnosticCode`](#diagnosticcode) | Machine-readable kind |
 
-### `ValidateOutput`
+### `AnalysisOutput`
 
 `StrEnum` selecting the return shape of [`validate`](#sq-validate):
 
 | Name | Value | Meaning |
 |------|-------|---------|
-| `STRUCTURED` | `"structured"` | Return a [`ValidationResult`](#validationresult) (default) |
+| `STRUCTURED` | `"structured"` | Return a [`Analysis`](#validationresult) (default) |
 | `TEXT` | `"text"` | Return a rendered diagnostics string |
 
 ### `RenderOptions`
 
-Options that shape [`ValidateOutput.TEXT`](#validateoutput) output.
+Options that shape [`AnalysisOutput.TEXT`](#validateoutput) output.
 
 ```python
 syntaqlite.RenderOptions(*, source_name="")

@@ -24,7 +24,7 @@ or edits SQL, the server feeds back syntax errors, unknown tables/columns, and
 function typos. Claude sees these diagnostics and fixes mistakes on its own,
 without you having to ask.
 
-**CLI skills** — Claude can run `syntaqlite fmt`, `syntaqlite validate`, and
+**CLI skills** — Claude can run `syntaqlite fmt`, `syntaqlite analyze`, and
 `syntaqlite parse` directly when you ask it to format a query, check a file, or
 inspect a parse tree.
 

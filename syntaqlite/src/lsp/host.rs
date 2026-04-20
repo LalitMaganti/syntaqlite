@@ -6,15 +6,15 @@ use std::path::{Path, PathBuf};
 
 use syntaqlite_syntax::source::{DocOffset, DocRange};
 
+use crate::analysis::AnalysisConfig;
+use crate::analysis::AnalysisContext;
+use crate::analysis::Catalog;
+use crate::analysis::completion::{self, SignatureHelpInfo};
+use crate::analysis::diagnostics::Diagnostic;
+use crate::analysis::engine::Analyzer;
 use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
 use crate::fmt::formatter::Formatter;
-use crate::semantic::AnalysisContext;
-use crate::semantic::Catalog;
-use crate::semantic::ValidationConfig;
-use crate::semantic::analyzer::SemanticAnalyzer;
-use crate::semantic::completion::{self, SignatureHelpInfo};
-use crate::semantic::diagnostics::Diagnostic;
 
 use super::analysis_data::{DefinitionResult, ExternalDefinitions, LspCapturePass};
 use super::document_store::{Document, DocumentStore};
@@ -102,16 +102,16 @@ impl SchemaMap {
 /// Run analysis for `doc` if nothing is cached yet.
 fn ensure_analysis(
     doc: &mut Document,
-    analyzer: &mut SemanticAnalyzer,
+    analyzer: &mut Analyzer,
     user_catalog: &mut Catalog,
-    validation_config: &ValidationConfig,
+    analysis_config: &AnalysisConfig,
     external_defs: Option<&ExternalDefinitions>,
 ) {
     if doc.analysis.is_some() {
         return;
     }
     let mut capture = LspCapturePass::new(external_defs);
-    let mut ctx = AnalysisContext::new(user_catalog).with_config(*validation_config);
+    let mut ctx = AnalysisContext::new(user_catalog).with_config(*analysis_config);
     let model = analyzer.analyze_with_pass(&doc.source, &mut ctx, &mut capture);
     let all_diags: Vec<Diagnostic> = model.diagnostics().cloned().collect();
     let parse_diags: Vec<Diagnostic> = all_diags
@@ -129,10 +129,10 @@ fn ensure_analysis(
 pub(super) fn ensure_analysis_for(
     uri: &str,
     documents: &mut DocumentStore,
-    analyzer: &mut SemanticAnalyzer,
+    analyzer: &mut Analyzer,
     schema_map: Option<&mut SchemaMap>,
     user_catalog: &mut Catalog,
-    base_validation_config: &ValidationConfig,
+    base_analysis_config: &AnalysisConfig,
     external_defs: Option<&ExternalDefinitions>,
 ) -> bool {
     let Some(doc) = documents.get_mut(uri) else {
@@ -140,12 +140,12 @@ pub(super) fn ensure_analysis_for(
     };
     let (catalog, config) = if let Some(map) = schema_map {
         if let Some((cat, _strict)) = map.resolve_mut(uri) {
-            (cat, base_validation_config.with_strict_schema())
+            (cat, base_analysis_config.with_strict_schema())
         } else {
-            (user_catalog, *base_validation_config)
+            (user_catalog, *base_analysis_config)
         }
     } else {
-        (user_catalog, *base_validation_config)
+        (user_catalog, *base_analysis_config)
     };
     ensure_analysis(doc, analyzer, catalog, &config, external_defs);
     true
@@ -165,16 +165,16 @@ pub(super) fn ensure_analysis_for(
 /// 3. **Optionally set schema context** via [`set_session_context`](Self::set_session_context),
 ///    [`set_session_context_from_ddl`](Self::set_session_context_from_ddl), or
 ///    [`set_session_context_from_json`](Self::set_session_context_from_json) to
-///    enable table/column/function validation.
+///    enable table/column/function analysis.
 ///
 /// Analysis is cached per-document and invalidated automatically when the
-/// source text or catalog context changes. Semantic validation delegates to
-/// [`SemanticAnalyzer`].
+/// source text or catalog context changes. Analysis delegates to
+/// [`Analyzer`].
 ///
 /// Use this when you are building an LSP server, a web-based editor plugin,
 /// or any tool that needs incremental SQL analysis tied to document identity.
 /// For one-shot analysis without document management, use
-/// [`SemanticAnalyzer`] directly.
+/// [`Analyzer`] directly.
 ///
 /// # Example
 ///
@@ -201,12 +201,12 @@ pub struct LspHost {
     /// `file://` URI). Consulted by [`LspObserver`] to build cross-file
     /// go-to-definition targets.
     external_defs: ExternalDefinitions,
-    analyzer: SemanticAnalyzer,
+    analyzer: Analyzer,
     documents: DocumentStore,
     /// Format config from project config file. `None` means use defaults.
     format_config: Option<FormatConfig>,
-    /// Validation config (`strict_schema` is set when a schema is provided).
-    validation_config: ValidationConfig,
+    /// Analysis config (`strict_schema` is set when a schema is provided).
+    analysis_config: AnalysisConfig,
     /// Per-file schema resolution from `[schemas]` globs.
     schema_map: Option<SchemaMap>,
 }
@@ -226,11 +226,11 @@ impl LspHost {
         LspHost {
             user_catalog: Catalog::new(dialect.clone()),
             external_defs: ExternalDefinitions::new(),
-            analyzer: SemanticAnalyzer::new(),
+            analyzer: Analyzer::new(),
             dialect,
             documents: DocumentStore::new(),
             format_config: None,
-            validation_config: ValidationConfig::default(),
+            analysis_config: AnalysisConfig::default(),
             schema_map: None,
         }
     }
@@ -241,11 +241,11 @@ impl LspHost {
         LspHost {
             user_catalog: Catalog::new(dialect.clone()),
             external_defs: ExternalDefinitions::new(),
-            analyzer: SemanticAnalyzer::with_dialect(dialect.clone()),
+            analyzer: Analyzer::with_dialect(dialect.clone()),
             dialect,
             documents: DocumentStore::new(),
             format_config: None,
-            validation_config: ValidationConfig::default(),
+            analysis_config: AnalysisConfig::default(),
             schema_map: None,
         }
     }
@@ -262,9 +262,9 @@ impl LspHost {
         self.format_config.clone().unwrap_or_default()
     }
 
-    /// Set the validation config.
-    pub fn set_validation_config(&mut self, config: ValidationConfig) {
-        self.validation_config = config;
+    /// Set the analysis config.
+    pub fn set_analysis_config(&mut self, config: AnalysisConfig) {
+        self.analysis_config = config;
         self.documents.invalidate_all();
     }
 
@@ -315,7 +315,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             Some(&self.external_defs),
         ) {
             return &[];
@@ -340,7 +340,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             Some(&self.external_defs),
         ) {
             return Vec::new();
@@ -376,7 +376,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             Some(&self.external_defs),
         ) {
             return CompletionInfo {
@@ -407,7 +407,7 @@ impl LspHost {
         super::completion_service::build_completion_items(&info, &self.dialect, &self.user_catalog)
     }
 
-    // ── Semantic validation ────────────────────────────────────────────────────
+    // ── Analysis ────────────────────────────────────────────────────
 
     /// Version, source text, and all diagnostics (parse + semantic) in one call.
     ///
@@ -423,7 +423,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             Some(&self.external_defs),
         ) {
             return None;
@@ -442,12 +442,12 @@ impl LspHost {
         Some((version, source, diags))
     }
 
-    /// Semantic validation diagnostics for a document (non-parse-error issues only).
+    /// Analysis diagnostics for a document (non-parse-error issues only).
     ///
     /// Always re-analyzes with `user_catalog` and `config`; use
     /// [`diagnostics`](Self::diagnostics) for the cheaper cached parse-error path.
-    #[cfg(feature = "validation")]
-    pub(crate) fn validate(&mut self, uri: &str, config: &ValidationConfig) -> Vec<Diagnostic> {
+    #[cfg(feature = "analysis")]
+    pub(crate) fn analyze(&mut self, uri: &str, config: &AnalysisConfig) -> Vec<Diagnostic> {
         let Some(source) = self.documents.get(uri).map(|d| d.source.as_str()) else {
             return Vec::new();
         };
@@ -461,10 +461,10 @@ impl LspHost {
     }
 
     /// Parse + semantic diagnostics combined.
-    #[cfg(feature = "validation")]
-    pub fn all_diagnostics(&mut self, uri: &str, config: &ValidationConfig) -> Vec<Diagnostic> {
+    #[cfg(feature = "analysis")]
+    pub fn all_diagnostics(&mut self, uri: &str, config: &AnalysisConfig) -> Vec<Diagnostic> {
         let mut result = self.diagnostics(uri).to_vec();
-        result.extend(self.validate(uri, config));
+        result.extend(self.analyze(uri, config));
         result
     }
 
@@ -495,7 +495,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             Some(&self.external_defs),
         );
         let doc = self.documents.get(uri)?;
@@ -520,7 +520,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             Some(&self.external_defs),
         );
         let doc = self.documents.get(uri)?;
@@ -548,7 +548,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             &self.external_defs,
             uri,
             offset,
@@ -570,7 +570,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             Some(&self.external_defs),
         );
         let doc = self.documents.get(uri)?;
@@ -595,7 +595,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             &self.external_defs,
             uri,
             offset,
@@ -618,7 +618,7 @@ impl LspHost {
             &mut self.analyzer,
             self.schema_map.as_mut(),
             &mut self.user_catalog,
-            &self.validation_config,
+            &self.analysis_config,
             Some(&self.external_defs),
         );
         let doc = self.documents.get(uri)?;
@@ -707,7 +707,7 @@ fn record_external_definitions(
 ) {
     use syntaqlite_syntax::ParseOutcome;
 
-    use crate::semantic::ddl::DdlReader;
+    use crate::analysis::ddl::DdlReader;
 
     let parser = syntaqlite_syntax::Parser::new();
     let mut session = parser.parse(ddl);
@@ -760,11 +760,11 @@ mod tests {
     use syntaqlite_syntax::source::DocOffset;
 
     use super::LspHost;
+    use crate::analysis::AnalysisConfig;
+    use crate::analysis::Catalog;
+    use crate::analysis::catalog::{AritySpec, CatalogLayer, FunctionCategory};
+    use crate::analysis::diagnostics::Severity;
     use crate::lsp::CompletionKind;
-    use crate::semantic::Catalog;
-    use crate::semantic::ValidationConfig;
-    use crate::semantic::catalog::{AritySpec, CatalogLayer, FunctionCategory};
-    use crate::semantic::diagnostics::Severity;
 
     #[test]
     fn available_functions_default_config_includes_baseline() {
@@ -814,11 +814,11 @@ mod tests {
     }
 
     #[test]
-    fn validate_does_not_duplicate_parse_error_diagnostics() {
+    fn analyze_does_not_duplicate_parse_error_diagnostics() {
         let mut host = LspHost::new();
         let uri = "file:///test.sql";
         host.open_document(uri, 1, "SELECT ;\nSELECT 1;".to_string());
-        let diags = host.validate(uri, &ValidationConfig::default());
+        let diags = host.analyze(uri, &AnalysisConfig::default());
         assert_eq!(diags.len(), 0, "got: {diags:?}");
     }
 
@@ -849,7 +849,7 @@ mod tests {
         let uri = "file:///test.sql";
         host.open_document(uri, 1, "SELECT ;\nSELECT * FROM no_such_table;".to_string());
         let parse_diags = host.diagnostics(uri).to_vec();
-        let val_diags = host.validate(uri, &ValidationConfig::default());
+        let val_diags = host.analyze(uri, &AnalysisConfig::default());
         let all: Vec<_> = parse_diags.iter().chain(val_diags.iter()).collect();
         let errors = all.iter().filter(|d| d.severity == Severity::Error).count();
         let warnings = all
@@ -1024,7 +1024,7 @@ mod tests {
         use std::path::PathBuf;
 
         use super::super::SchemaMap;
-        use crate::semantic::Catalog;
+        use crate::analysis::Catalog;
 
         fn empty_catalog() -> Catalog {
             Catalog::new(crate::sqlite::dialect::any_dialect())
@@ -1131,7 +1131,7 @@ mod tests {
 
     #[test]
     fn schema_map_selects_correct_catalog_per_document() {
-        use crate::semantic::diagnostics::Severity;
+        use crate::analysis::diagnostics::Severity;
         use std::path::PathBuf;
 
         let mut host = LspHost::new();

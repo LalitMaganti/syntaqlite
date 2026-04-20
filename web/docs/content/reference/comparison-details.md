@@ -350,7 +350,7 @@ LIMIT 12;
 
 ### syntaqlite
 
-Static semantic analysis — offline, no database needed. Finds **both** errors in one pass:
+Static analysis — offline, no database needed. Finds **both** errors in one pass:
 
 ```text
 error: table 'monthly_stats' has 2 values for 3 columns

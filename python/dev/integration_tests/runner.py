@@ -39,7 +39,7 @@ _SUITE_MODULES = [
     "python.dev.integration_tests.suites.upstream_sqlite",
     "python.dev.integration_tests.suites.lsp",
     "python.dev.integration_tests.suites.lsp_diff",
-    "python.dev.integration_tests.suites.validate",
+    "python.dev.integration_tests.suites.analyze",
     "python.dev.integration_tests.suites.semantic",
     "python.dev.integration_tests.suites.lineage",
     "python.dev.integration_tests.suites.introspect",
@@ -106,7 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--validate", action="store_true",
-        help="Enable semantic validation (upstream-sqlite suite).",
+        help="Enable analysis (upstream-sqlite suite).",
     )
     args = parser.parse_args(argv)
 

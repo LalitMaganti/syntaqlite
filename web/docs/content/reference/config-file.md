@@ -81,7 +81,7 @@ format as `sqlite3 mydb.db .schema` output.
 ## `sqlite-version`
 
 SQLite version to emulate. Controls which keywords and functions are recognized
-by the parser and semantic analyzer.
+by the parser and analyzer.
 
 - Type: string (e.g. `"3.47.0"`, `"latest"`)
 - Optional, defaults to latest
@@ -155,6 +155,6 @@ overrides `[schemas]` and `schema`.
 | Consumer | Behavior |
 |----------|----------|
 | `syntaqlite fmt` | Discovers config from input file directory or cwd. Format options are defaults; CLI flags override. |
-| `syntaqlite validate` | Discovers config from input file directory or cwd. Schema resolution from config when `--schema` is not given. |
+| `syntaqlite analyze` | Discovers config from input file directory or cwd. Schema resolution from config when `--schema` is not given. |
 | `syntaqlite lsp` | Discovers config from cwd at startup. Loads schema catalog and format config. |
 | VS Code, Claude Code, Neovim, Helix | The LSP reads `syntaqlite.toml` directly. No editor-specific configuration needed. |

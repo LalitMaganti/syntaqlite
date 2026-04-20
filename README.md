@@ -112,7 +112,7 @@ def get_user_stats(user_id: int):
     )
 ```
 ```bash
-syntaqlite validate --experimental-lang python app.py
+syntaqlite analyze --experimental-lang python app.py
 ```
 ```text
 warning: unknown function 'ROUDN'

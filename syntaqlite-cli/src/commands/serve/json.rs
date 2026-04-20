@@ -25,7 +25,7 @@
 //!   `{"formatted":"..."}`.
 //! - `{"op":"tokenize","sql":"..."}` →
 //!   `{"tokens":[{"text","offset","length","type","category"},...]}`.
-//! - `{"op":"validate","sql":"...","tables"?:[...],"views"?:[...],"schema_ddl"?:"...","render"?:bool}` →
+//! - `{"op":"analyze","sql":"...","tables"?:[...],"views"?:[...],"schema_ddl"?:"...","render"?:bool}` →
 //!   `{"diagnostics":[...],"statements":[...],"lineage":<lineage>|null}` (or `{"rendered":"..."}` when `render=true`).
 //! - `{"op":"quit"}` → server exits cleanly without a response.
 //!
@@ -39,16 +39,14 @@ use std::ops::Deref;
 use serde::{Deserialize, Serialize, ser::SerializeSeq};
 use serde_json::Value;
 use syntaqlite::Diagnostic;
+use syntaqlite::analysis::{
+    CatalogLayer, DiagnosticMessage, Help, ModuleResolver, RelationKind, Severity as SemSeverity,
+    StatementAnalysis,
+};
 use syntaqlite::any::{AnyDialect, AnyParser, AnyTokenizer, ParseOutcome};
 use syntaqlite::fmt::KeywordCase;
-use syntaqlite::semantic::{
-    CatalogLayer, DiagnosticMessage, Help, ModuleResolver, RelationKind, Severity as SemSeverity,
-    StatementModel,
-};
 use syntaqlite::util::DiagnosticRenderer;
-use syntaqlite::{
-    AnalysisContext, Catalog, FormatConfig, Formatter, SemanticAnalyzer, ValidationConfig,
-};
+use syntaqlite::{AnalysisConfig, AnalysisContext, Analyzer, Catalog, FormatConfig, Formatter};
 
 pub(crate) fn run(dialect: &AnyDialect) -> Result<(), String> {
     let stdin = io::stdin();
@@ -65,7 +63,7 @@ pub(crate) fn run(dialect: &AnyDialect) -> Result<(), String> {
     // render buffers survive across format calls with the same config.
     let parser = AnyParser::new(dialect.deref().clone());
     let tokenizer = AnyTokenizer::new(dialect.deref().clone());
-    let mut analyzer = SemanticAnalyzer::with_dialect(dialect.clone());
+    let mut analyzer = Analyzer::with_dialect(dialect.clone());
     let mut formatter_cache: Option<(FormatConfig, Formatter)> = None;
 
     let mut line = String::new();
@@ -105,7 +103,7 @@ pub(crate) fn run(dialect: &AnyDialect) -> Result<(), String> {
             "tokenize" => {
                 handle_tokenize(dialect, &tokenizer, &req).and_then(|r| write_ok(&mut writer, &r))
             }
-            "validate" => handle_validate(dialect, &mut analyzer, &req, &mut writer),
+            "analyze" => handle_analyze(dialect, &mut analyzer, &req, &mut writer),
             other => Err(format!("unknown op: {other}")),
         };
 
@@ -426,7 +424,7 @@ struct RenderedResp {
 }
 
 /// The full validate response. All child views borrow from the
-/// `SemanticModel`, so serialization is a single walk with zero
+/// `Analysis`, so serialization is a single walk with zero
 /// intermediate `Vec<Value>` allocations.
 #[derive(Serialize)]
 struct ValidateResp<'a> {
@@ -435,9 +433,9 @@ struct ValidateResp<'a> {
     lineage: Option<LineageView<'a>>,
 }
 
-fn handle_validate<W: Write>(
+fn handle_analyze<W: Write>(
     dialect: &AnyDialect,
-    analyzer: &mut SemanticAnalyzer,
+    analyzer: &mut Analyzer,
     req: &Value,
     writer: &mut W,
 ) -> Result<(), String> {
@@ -466,7 +464,7 @@ fn handle_validate<W: Write>(
         }
     }
 
-    let config = ValidationConfig::default();
+    let config = AnalysisConfig::default();
     let resolver = build_module_resolver(&req);
     let mut ctx = AnalysisContext::new(&mut catalog).with_config(config);
     if let Some(r) = resolver.as_deref() {
@@ -492,7 +490,7 @@ fn handle_validate<W: Write>(
         other => return Err(format!("unknown output format: {other:?}")),
     }
 
-    // `ValidationResult.lineage` exposes the lineage of the final
+    // `Analysis.lineage` exposes the lineage of the final
     // query-bearing statement (matches the pre-CLI-RPC Python API).
     let top_lineage = model.statements().iter().rev().find_map(lineage_view);
 
@@ -507,7 +505,7 @@ fn handle_validate<W: Write>(
 // ── validate: borrowed views ─────────────────────────────────────────────
 
 struct AllDiagnostics<'a> {
-    model: &'a syntaqlite::semantic::SemanticModel,
+    model: &'a syntaqlite::analysis::Analysis,
 }
 
 impl Serialize for AllDiagnostics<'_> {
@@ -521,7 +519,7 @@ impl Serialize for AllDiagnostics<'_> {
 }
 
 struct StatementsView<'a> {
-    model: &'a syntaqlite::semantic::SemanticModel,
+    model: &'a syntaqlite::analysis::Analysis,
 }
 
 impl Serialize for StatementsView<'_> {
@@ -536,7 +534,7 @@ impl Serialize for StatementsView<'_> {
 }
 
 struct StatementView<'a> {
-    inner: &'a StatementModel,
+    inner: &'a StatementAnalysis,
 }
 
 impl Serialize for StatementView<'_> {
@@ -555,7 +553,7 @@ impl Serialize for StatementView<'_> {
     }
 }
 
-struct DiagsOfStatement<'a>(&'a StatementModel);
+struct DiagsOfStatement<'a>(&'a StatementAnalysis);
 
 impl Serialize for DiagsOfStatement<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -568,7 +566,7 @@ impl Serialize for DiagsOfStatement<'_> {
     }
 }
 
-struct DefinedRelationsView<'a>(&'a StatementModel);
+struct DefinedRelationsView<'a>(&'a StatementAnalysis);
 
 impl Serialize for DefinedRelationsView<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -634,10 +632,10 @@ impl Serialize for DiagView<'_> {
 // ── validate: lineage view ───────────────────────────────────────────────
 
 struct LineageView<'a> {
-    stmt: &'a StatementModel,
+    stmt: &'a StatementAnalysis,
 }
 
-fn lineage_view(s: &StatementModel) -> Option<LineageView<'_>> {
+fn lineage_view(s: &StatementAnalysis) -> Option<LineageView<'_>> {
     // `lineage()` returns None for non-query statements; bail out so the
     // JSON says `null` rather than an empty lineage record.
     s.lineage()?;
@@ -669,7 +667,7 @@ impl Serialize for LineageView<'_> {
     }
 }
 
-struct ColumnsSeq<'a>(&'a [syntaqlite::semantic::ColumnLineage]);
+struct ColumnsSeq<'a>(&'a [syntaqlite::analysis::ColumnLineage]);
 
 impl Serialize for ColumnsSeq<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -702,7 +700,7 @@ struct OriginRec<'a> {
     column: &'a str,
 }
 
-struct RelationsSeq<'a>(&'a [syntaqlite::semantic::RelationAccess]);
+struct RelationsSeq<'a>(&'a [syntaqlite::analysis::RelationAccess]);
 
 impl Serialize for RelationsSeq<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -726,7 +724,7 @@ struct RelationRec<'a> {
     kind: &'static str,
 }
 
-struct PhysicalTablesSeq<'a>(&'a [syntaqlite::semantic::PhysicalTableAccess]);
+struct PhysicalTablesSeq<'a>(&'a [syntaqlite::analysis::PhysicalTableAccess]);
 
 impl Serialize for PhysicalTablesSeq<'_> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {

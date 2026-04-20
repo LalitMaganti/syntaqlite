@@ -44,7 +44,7 @@ syntaqlite fmt 'migrations/**/*.sql'
 Check SQL against a schema without touching a database:
 
 ```bash
-syntaqlite validate --schema schema.sql -e "SELECT nme FROM users"
+syntaqlite analyze --schema schema.sql -e "SELECT nme FROM users"
 ```
 ```text
 error: unknown column 'nme'

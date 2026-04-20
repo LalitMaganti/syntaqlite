@@ -95,7 +95,7 @@ SELECT keyword
 
 Each token is a dict with `text`, `offset`, `length`, `type`, and `category` fields.
 
-### Validation
+### Analysis
 
 Check SQL against a schema without touching a database. Catches unknown tables, columns, functions, CTE column mismatches, and more.
 
@@ -103,7 +103,7 @@ Check SQL against a schema without touching a database. Catches unknown tables, 
 schema = syntaqlite.Schema(
     tables=[syntaqlite.Table("users", columns=["id", "name", "email"])],
 )
-result = sq.validate("SELECT nme FROM users", schema)
+result = sq.analyze("SELECT nme FROM users", schema)
 for d in result.diagnostics:
     print(f"{d.severity}: {d.message}")
 ```
@@ -114,9 +114,9 @@ error: unknown column 'nme'
 Switch `output` to get formatted diagnostics with source locations and suggestions:
 
 ```python
-print(sq.validate(
+print(sq.analyze(
     "SELECT nme FROM users", schema,
-    output=syntaqlite.ValidateOutput.TEXT,
+    output=syntaqlite.AnalysisOutput.TEXT,
 ))
 ```
 ```
@@ -132,7 +132,7 @@ error: unknown column 'nme'
 
 ```python
 schema = syntaqlite.Schema(ddl="CREATE TABLE orders (id INTEGER, total REAL);")
-result = sq.validate("SELECT * FROM orders", schema)
+result = sq.analyze("SELECT * FROM orders", schema)
 ```
 
 #### Column lineage
@@ -143,7 +143,7 @@ For query-bearing statements, the result includes column lineage:
 schema = syntaqlite.Schema(
     tables=[syntaqlite.Table("users", columns=["id", "name", "email"])],
 )
-result = sq.validate("SELECT id, name FROM users", schema)
+result = sq.analyze("SELECT id, name FROM users", schema)
 for col in result.lineage.columns:
     print(f"{col.name} <- {col.origin}")
 ```
@@ -158,7 +158,7 @@ The pip package also bundles the `syntaqlite` binary:
 
 ```bash
 syntaqlite fmt -e "select 1, 2, 3"
-syntaqlite validate query.sql
+syntaqlite analyze query.sql
 syntaqlite parse -e "SELECT * FROM users"
 ```
 

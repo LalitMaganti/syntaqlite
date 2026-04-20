@@ -14,7 +14,7 @@ def run(ctx: SuiteContext) -> int:
 
     argv = [
         "--binary", str(ctx.binary),
-        "--subcommand", "validate",
+        "--subcommand", "analyze",
         "--test-dir", "tests/perfetto_validation_diff_tests",
     ]
     if ctx.filter_pattern:
@@ -26,7 +26,7 @@ def run(ctx: SuiteContext) -> int:
     if ctx.jobs is not None:
         argv += ["--jobs", str(ctx.jobs)]
     return run_perfetto_tests(
-        subcommand="validate",
+        subcommand="analyze",
         test_dir="tests/perfetto_validation_diff_tests",
         tempfile_prefix="syntaqlite_perfetto_val_",
         argv=argv,

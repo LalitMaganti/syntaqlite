@@ -63,14 +63,14 @@ loop {
 
 The parser is incremental: it yields one statement at a time, so you can process multi-statement inputs without buffering everything upfront.
 
-## Validation
+## Analysis
 
 Check SQL against a schema without touching a database. Catches unknown tables, columns, functions, CTE column mismatches, and more.
 
 ```rust
-use syntaqlite::{AnalysisContext, Catalog, CatalogLayer, SemanticAnalyzer, sqlite_dialect};
+use syntaqlite::{AnalysisContext, Catalog, CatalogLayer, Analyzer, sqlite_dialect};
 
-let mut analyzer = SemanticAnalyzer::new();
+let mut analyzer = Analyzer::new();
 let mut catalog = Catalog::new(sqlite_dialect());
 catalog.layer_mut(CatalogLayer::Database)
     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
@@ -179,7 +179,7 @@ SYNTAQLITE_SQLITE_VERSION=3035000 cargo build --features pin-version
 |---------|---------|-------------|
 | `sqlite` | Yes | SQLite dialect (grammar, tokens, built-in functions) |
 | `fmt` | Yes | SQL formatter |
-| `validation` | Yes | Semantic validation (schema checks, suggestions) |
+| `analysis` | Yes | Semantic validation (schema checks, suggestions) |
 | `serde` | No | `Serialize`/`Deserialize` for diagnostics and AST nodes |
 | `serde-json` | No | JSON convenience helpers |
 | `lsp` | No | Language server protocol implementation |

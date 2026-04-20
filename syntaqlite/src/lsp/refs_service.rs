@@ -4,16 +4,16 @@
 //! Cross-document reference tracking: find-references, rename, external
 //! definition-site lookup.
 //!
-//! Pure functions over [`DocumentStore`] + [`SemanticAnalyzer`] state. The
+//! Pure functions over [`DocumentStore`] + [`Analyzer`] state. The
 //! LSP facade assembles the call by threading its borrowed state in.
 
 use std::collections::HashMap;
 
 use syntaqlite_syntax::source::{DocOffset, DocRange};
 
-use crate::semantic::ValidationConfig;
-use crate::semantic::analyzer::SemanticAnalyzer;
-use crate::semantic::catalog::Catalog;
+use crate::analysis::AnalysisConfig;
+use crate::analysis::catalog::Catalog;
+use crate::analysis::engine::Analyzer;
 
 use super::analysis_data::{ExternalDefinitions, SymbolIdentity};
 use super::document_store::DocumentStore;
@@ -27,10 +27,10 @@ use super::host::{SchemaMap, ensure_analysis_for};
 #[expect(clippy::too_many_arguments)]
 pub(super) fn find_references(
     documents: &mut DocumentStore,
-    analyzer: &mut SemanticAnalyzer,
+    analyzer: &mut Analyzer,
     mut schema_map: Option<&mut SchemaMap>,
     user_catalog: &mut Catalog,
-    validation_config: &ValidationConfig,
+    analysis_config: &AnalysisConfig,
     external_defs: &ExternalDefinitions,
     uri: &str,
     offset: DocOffset,
@@ -43,7 +43,7 @@ pub(super) fn find_references(
         analyzer,
         schema_map.as_deref_mut(),
         user_catalog,
-        validation_config,
+        analysis_config,
         Some(external_defs),
     ) {
         return Vec::new();
@@ -67,7 +67,7 @@ pub(super) fn find_references(
             analyzer,
             schema_map.as_deref_mut(),
             user_catalog,
-            validation_config,
+            analysis_config,
             Some(external_defs),
         );
         let doc = documents
@@ -113,10 +113,10 @@ pub(super) fn find_references(
 #[expect(clippy::too_many_arguments)]
 pub(super) fn rename(
     documents: &mut DocumentStore,
-    analyzer: &mut SemanticAnalyzer,
+    analyzer: &mut Analyzer,
     schema_map: Option<&mut SchemaMap>,
     user_catalog: &mut Catalog,
-    validation_config: &ValidationConfig,
+    analysis_config: &AnalysisConfig,
     external_defs: &ExternalDefinitions,
     uri: &str,
     offset: DocOffset,
@@ -127,7 +127,7 @@ pub(super) fn rename(
         analyzer,
         schema_map,
         user_catalog,
-        validation_config,
+        analysis_config,
         external_defs,
         uri,
         offset,

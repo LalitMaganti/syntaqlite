@@ -11,8 +11,8 @@ TypeScript source files without needing to maintain separate `.sql` files for
 validation.
 
 ```bash
-syntaqlite validate --experimental-lang python app.py
-syntaqlite validate --experimental-lang typescript db.ts
+syntaqlite analyze --experimental-lang python app.py
+syntaqlite analyze --experimental-lang typescript db.ts
 ```
 
 syntaqlite finds SQL strings in the host language, then runs the full
@@ -63,7 +63,7 @@ configured, references are checked against it. You can also pass schema
 explicitly:
 
 ```bash
-syntaqlite validate --experimental-lang python --schema schema.sql app.py
+syntaqlite analyze --experimental-lang python --schema schema.sql app.py
 ```
 
 ## In CI
@@ -73,6 +73,6 @@ Add embedded SQL checks alongside your regular SQL validation:
 ```yaml
 - name: Check embedded SQL
   run: |
-    syntaqlite validate --experimental-lang python "src/**/*.py"
-    syntaqlite validate --experimental-lang typescript "src/**/*.ts"
+    syntaqlite analyze --experimental-lang python "src/**/*.py"
+    syntaqlite analyze --experimental-lang typescript "src/**/*.ts"
 ```

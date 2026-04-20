@@ -247,9 +247,7 @@ fn run_command(
     match command {
         Command::Parse(args) => commands::parse::run(&require_dialect(dialect)?, &args),
         Command::Fmt(args) => commands::fmt::run(&require_dialect(dialect)?, config, &args),
-        Command::Validate(args) => {
-            commands::validate::run(&require_dialect(dialect)?, config, &args)
-        }
+        Command::Analyze(args) => commands::analyze::run(&require_dialect(dialect)?, config, &args),
         Command::Lineage(args) => commands::lineage::run(&require_dialect(dialect)?, config, &args),
         Command::Tokenize(args) => commands::tokenize::run(&require_dialect(dialect)?, &args),
         Command::Lsp => commands::lsp::run(require_dialect(dialect)?, config),

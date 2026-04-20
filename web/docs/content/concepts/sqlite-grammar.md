@@ -39,7 +39,7 @@ from SQLite's grammar rules as part of
 [syntaqlite's build pipeline](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite-buildtools/src/parser_tools/parser_pipeline.rs),
 which concatenates `.y` action files and runs them through an embedded copy of
 Lemon. The Rust layer wraps the C parser in safe APIs and builds everything
-else (formatter, analyzer, LSP) on top.
+else (formatter, semantic analyzer, LSP) on top.
 
 The parser action files in
 [`syntaqlite-syntax/parser-actions/`](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-syntax/parser-actions)
@@ -56,7 +56,7 @@ the latest grammar for parsing and validates against your target version
 *after* parsing:
 
 ```bash
-syntaqlite validate --sqlite-version 3.41.0 query.sql
+syntaqlite analyze --sqlite-version 3.41.0 query.sql
 ```
 
 This means syntaqlite will parse the SQL correctly even if it uses syntax from

@@ -77,7 +77,7 @@ Build a `Schema` with the tables you want to check against and pass it to
 from syntaqlite import Schema, Table
 
 schema = Schema(tables=[Table("users", ["id", "name", "email", "active"])])
-result = sq.validate(
+result = sq.analyze(
     "SELECT nme FROM users WHERE active = 1",
     schema,
 )
@@ -94,19 +94,19 @@ file instead of listing columns by hand:
 
 ```python
 schema = Schema(ddl="CREATE TABLE users (id INT, name TEXT, email TEXT, active INT)")
-result = sq.validate("SELECT nme FROM users WHERE active = 1", schema)
+result = sq.analyze("SELECT nme FROM users WHERE active = 1", schema)
 ```
 
 For human-readable output with source locations, switch the output
 format:
 
 ```python
-from syntaqlite import RenderOptions, ValidateOutput
+from syntaqlite import RenderOptions, AnalysisOutput
 
-print(sq.validate(
+print(sq.analyze(
     "SELECT nme FROM users WHERE active = 1",
     schema,
-    output=ValidateOutput.TEXT,
+    output=AnalysisOutput.TEXT,
     render_options=RenderOptions(source_name="query.sql"),
 ))
 ```
@@ -127,7 +127,7 @@ source table and column each output column traces back to:
 
 ```python
 schema = Schema(tables=[Table("users", ["id", "name", "email"])])
-result = sq.validate("SELECT u.name, u.email FROM users u", schema)
+result = sq.analyze("SELECT u.name, u.email FROM users u", schema)
 for col in result.lineage.columns:
     print(f"  {col.name} <- {col.origin}")
 ```

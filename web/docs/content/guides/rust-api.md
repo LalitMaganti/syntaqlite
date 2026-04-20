@@ -127,16 +127,16 @@ Add the `validation` and `sqlite` features:
 
 ```toml
 [dependencies]
-syntaqlite = { version = "0.4.2", features = ["validation", "sqlite"] }
+syntaqlite = { version = "0.4.2", features = ["analysis", "sqlite"] }
 ```
 
 ```rust
-use syntaqlite::semantic::{
-    AnalysisContext, SemanticAnalyzer, Catalog, CatalogLayer,
+use syntaqlite::analysis::{
+    AnalysisContext, Analyzer, Catalog, CatalogLayer,
 };
 use syntaqlite::sqlite_dialect;
 
-let mut analyzer = SemanticAnalyzer::new();
+let mut analyzer = Analyzer::new();
 
 let mut catalog = Catalog::new(sqlite_dialect());
 catalog.layer_mut(CatalogLayer::Database)
@@ -165,21 +165,21 @@ If you know a table exists but don't know its columns, pass `None` to
 
 When a schema is provided (via `--schema` or `syntaqlite.toml`), the CLI and
 LSP automatically enable strict mode. When using the Rust API directly, set
-this explicitly with `AnalysisContext::new(&mut catalog).with_config(ValidationConfig::default().with_strict_schema())`.
+this explicitly with `AnalysisContext::new(&mut catalog).with_config(AnalysisConfig::default().with_strict_schema())`.
 
 ## Column lineage
 
-After validation, the `SemanticModel` also provides column-level lineage for
+After validation, the `Analysis` also provides column-level lineage for
 SELECT statements, tracing each result column back to its source table and
 column:
 
 ```rust
-use syntaqlite::semantic::{
-    AnalysisContext, SemanticAnalyzer, Catalog, CatalogLayer,
+use syntaqlite::analysis::{
+    AnalysisContext, Analyzer, Catalog, CatalogLayer,
 };
 use syntaqlite::sqlite_dialect;
 
-let mut analyzer = SemanticAnalyzer::new();
+let mut analyzer = Analyzer::new();
 
 let mut catalog = Catalog::new(sqlite_dialect());
 catalog.layer_mut(CatalogLayer::Database)

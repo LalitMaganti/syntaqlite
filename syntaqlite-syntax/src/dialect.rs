@@ -40,7 +40,7 @@ impl FieldKind {
 /// High-level semantic class of a token.
 ///
 /// Commonly used for syntax highlighting, token styling, and lightweight
-/// heuristics before full semantic analysis.
+/// heuristics before full analysis.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenCategory {
     /// SQL keyword (SELECT, FROM, WHERE, …)

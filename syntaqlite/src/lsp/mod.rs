@@ -9,7 +9,7 @@
 //! - [`LspHost`] — stateful document store with lazy per-document
 //!   analysis (diagnostics, semantic tokens, completions, formatting,
 //!   hover, signature help).
-//!   Delegates semantic validation to [`SemanticAnalyzer`](crate::semantic::SemanticAnalyzer).
+//!   Delegates analysis to [`Analyzer`](crate::analysis::Analyzer).
 //! - [`LspServer`] — stdio JSON-RPC server that drives an `LspHost`
 //!   in response to LSP messages from an editor.
 //!
@@ -47,7 +47,7 @@ pub use host::SchemaMap;
 #[doc(inline)]
 pub use server::{LspConfig, LspServer};
 
-pub(crate) use crate::semantic::completion::{CompletionContext, CompletionInfo};
+pub(crate) use crate::analysis::completion::{CompletionContext, CompletionInfo};
 
 // ── LSP-specific types ──────────────────────────────────────────────────
 

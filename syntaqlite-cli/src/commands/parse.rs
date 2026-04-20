@@ -7,8 +7,8 @@ use std::io;
 use std::ops::Deref;
 
 use syntaqlite::Diagnostic;
+use syntaqlite::analysis::{DiagnosticMessage, Severity};
 use syntaqlite::any::{AnyDialect, AnyParser, ParseOutcome};
-use syntaqlite::semantic::{DiagnosticMessage, Severity};
 use syntaqlite::source::StmtRange;
 use syntaqlite::util::DiagnosticRenderer;
 use syntaqlite_syntax::any::AnyDialect as SyntaxAnyDialect;

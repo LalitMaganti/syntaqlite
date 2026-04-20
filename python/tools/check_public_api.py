@@ -35,7 +35,7 @@ _GOLDEN_DIR: str = os.path.join(ROOT_DIR, "tests", "public-api")
 
 # (crate_name, features_or_None)
 _CRATES: list[tuple[str, str | None]] = [
-    ("syntaqlite",            "fmt,validation,sqlite,lsp,experimental-embedded,serde-json"),
+    ("syntaqlite",            "fmt,analysis,sqlite,lsp,experimental-embedded,serde-json"),
     ("syntaqlite-syntax",     None),
     ("syntaqlite-buildtools", None),
 ]

@@ -202,7 +202,7 @@ pub(crate) fn build_check_config(
     cli_warn: &[String],
     cli_deny: &[String],
 ) -> Result<CheckConfig, String> {
-    use syntaqlite::semantic::CheckLevel;
+    use syntaqlite::analysis::CheckLevel;
 
     let mut checks = CheckConfig::default();
 

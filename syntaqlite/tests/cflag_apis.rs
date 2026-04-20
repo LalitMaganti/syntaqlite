@@ -99,7 +99,7 @@ fn formatter_rejects_returning_with_omit_returning() {
 // ── Formatter: non-parser cflags do not affect parse ─────────────────────────
 //
 // EnableMathFunctions, OmitDatetimeFuncs, etc. are non-parser cflags: they
-// control function catalog availability in the semantic analyzer but do NOT
+// control function catalog availability in the analyzer but do NOT
 // affect whether SQL parses. The formatter should succeed regardless.
 
 #[test]
@@ -110,7 +110,7 @@ fn formatter_accepts_sin_regardless_of_math_functions_flag() {
     let result_with = format_with_flags("SELECT sin(1.0);", flags);
     assert!(
         result_without.is_ok(),
-        "sin() should format without EnableMathFunctions (no semantic validation)"
+        "sin() should format without EnableMathFunctions (no analysis)"
     );
     assert!(
         result_with.is_ok(),
@@ -177,14 +177,14 @@ fn typed_parser_rejects_returning_with_omit_returning_syntax_cflag() {
 // ── LspHost: cflags propagate to parser via diagnostics ──────────────────────
 //
 // Verifies the full path: LspHost::with_dialect (dialect carrying cflag) →
-// SemanticAnalyzer → AnyParser → C parser.
+// Analyzer → AnyParser → C parser.
 //
 // This tests the same mechanism used by `wasm_diagnostics` in syntaqlite-wasm.
 
 #[cfg(feature = "lsp")]
 #[test]
 fn lsp_diagnostics_parse_error_with_omit_windowfunc() {
-    use syntaqlite::ValidationConfig;
+    use syntaqlite::AnalysisConfig;
     use syntaqlite::lsp::LspHost;
 
     let flags = SqliteFlags::default().with(SqliteFlag::OmitWindowfunc);
@@ -193,7 +193,7 @@ fn lsp_diagnostics_parse_error_with_omit_windowfunc() {
     let mut host = LspHost::with_dialect(dialect);
     host.update_document("test://x", 1, "SELECT sum(x) OVER () FROM t;".to_string());
 
-    let diags = host.all_diagnostics("test://x", &ValidationConfig::default());
+    let diags = host.all_diagnostics("test://x", &AnalysisConfig::default());
     assert!(
         !diags.is_empty(),
         "expected parse error when SQLITE_OMIT_WINDOWFUNC is set, got no diagnostics"
@@ -203,17 +203,17 @@ fn lsp_diagnostics_parse_error_with_omit_windowfunc() {
 #[cfg(feature = "lsp")]
 #[test]
 fn lsp_diagnostics_no_parse_error_without_omit_windowfunc() {
-    use syntaqlite::ValidationConfig;
+    use syntaqlite::AnalysisConfig;
     use syntaqlite::lsp::LspHost;
 
     let mut host = LspHost::with_dialect(sqlite_dialect());
     host.update_document("test://x", 1, "SELECT sum(x) OVER () FROM t;".to_string());
 
-    let diags = host.all_diagnostics("test://x", &ValidationConfig::default());
+    let diags = host.all_diagnostics("test://x", &AnalysisConfig::default());
     let parse_errors: Vec<_> = diags
         .iter()
         .filter(|d| {
-            matches!(d.severity(), syntaqlite::semantic::Severity::Error)
+            matches!(d.severity(), syntaqlite::analysis::Severity::Error)
                 && d.message().to_string().contains("syntax")
         })
         .collect();

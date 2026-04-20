@@ -112,7 +112,7 @@ semantics, not just validity. Tools that crash or refuse to format score
 
 ---
 
-# Validation
+# Analysis
 
 **What we test:** Can the tool catch real SQL errors — unknown tables, bad
 column references, wrong function arity, CTE column mismatches — without

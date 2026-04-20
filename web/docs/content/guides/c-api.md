@@ -131,27 +131,27 @@ syntaqlite_formatter_destroy(f);
 #include <stdio.h>
 
 int main(void) {
-    SyntaqliteValidator* v = syntaqlite_validator_create_sqlite();
+    SyntaqliteAnalyzer* v = syntaqlite_analyzer_create_sqlite();
 
     // Register your schema
     SyntaqliteRelationDef tables[] = {
         {"users",  (const char*[]){"id", "name", "email"}, 3},
         {"posts",  (const char*[]){"id", "user_id", "body"}, 3},
     };
-    syntaqlite_validator_add_tables(v, tables, 2);
+    syntaqlite_analyzer_add_tables(v, tables, 2);
 
     // Analyze
     const char* sql = "SELECT nme FROM users";
-    syntaqlite_validator_analyze(v, sql, strlen(sql));
+    syntaqlite_analyzer_analyze(v, sql, strlen(sql));
 
     // Print human-readable diagnostics
     const char* rendered =
-        syntaqlite_validator_render_diagnostics(v, "query.sql");
+        syntaqlite_analyzer_render_diagnostics(v, "query.sql");
     if (rendered[0] != '\0') {
         printf("%s\n", rendered);
     }
 
-    syntaqlite_validator_destroy(v);
+    syntaqlite_analyzer_destroy(v);
     return 0;
 }
 ```
@@ -167,28 +167,28 @@ traces back to:
 #include <stdio.h>
 
 int main(void) {
-    SyntaqliteValidator* v = syntaqlite_validator_create_sqlite();
+    SyntaqliteAnalyzer* v = syntaqlite_analyzer_create_sqlite();
 
     // Register schema
     SyntaqliteRelationDef tables[] = {
         {"users", (const char*[]){"id", "name", "email"}, 3},
         {"posts", (const char*[]){"id", "user_id", "body"},  3},
     };
-    syntaqlite_validator_add_tables(v, tables, 2);
+    syntaqlite_analyzer_add_tables(v, tables, 2);
 
     // Analyze a query
     const char* sql =
         "SELECT u.name, p.body "
         "FROM users u JOIN posts p ON u.id = p.user_id";
-    syntaqlite_validator_analyze(v, sql, strlen(sql));
+    syntaqlite_analyzer_analyze(v, sql, strlen(sql));
 
     // Column lineage
     printf("Lineage complete: %s\n",
-        syntaqlite_validator_lineage_complete(v) ? "yes" : "no");
+        syntaqlite_analyzer_lineage_complete(v) ? "yes" : "no");
 
-    uint32_t col_count = syntaqlite_validator_column_lineage_count(v);
+    uint32_t col_count = syntaqlite_analyzer_column_lineage_count(v);
     const SyntaqliteColumnLineage* cols =
-        syntaqlite_validator_column_lineage(v);
+        syntaqlite_analyzer_column_lineage(v);
     for (uint32_t i = 0; i < col_count; i++) {
         printf("  column %u: %s", cols[i].index, cols[i].name);
         if (cols[i].origin.table) {
@@ -199,13 +199,13 @@ int main(void) {
     }
 
     // Physical tables accessed
-    uint32_t tbl_count = syntaqlite_validator_physical_table_count(v);
-    const SyntaqlitePhysicalTableAccess* tbls = syntaqlite_validator_physical_tables(v);
+    uint32_t tbl_count = syntaqlite_analyzer_physical_table_count(v);
+    const SyntaqlitePhysicalTableAccess* tbls = syntaqlite_analyzer_physical_tables(v);
     for (uint32_t i = 0; i < tbl_count; i++) {
         printf("  table: %s\n", tbls[i].name);
     }
 
-    syntaqlite_validator_destroy(v);
+    syntaqlite_analyzer_destroy(v);
     return 0;
 }
 ```
