@@ -12,7 +12,10 @@ handshake, subprocess spawn, and close path are covered on every case.
 from __future__ import annotations
 
 import os
+import subprocess
 import sys
+import tempfile
+from pathlib import Path
 
 from python.dev.integration_tests.suite import SuiteContext
 
@@ -501,6 +504,93 @@ def _test_validate_schema_modules_passthrough(stq) -> bool:
     return True
 
 
+# ── validate — per-statement breakdown ───────────────────────────────────────
+
+
+def _test_validate_statements_breakdown(stq) -> bool:
+    """Each top-level statement gets its own per-stmt row with its SQL source."""
+    with stq.Syntaqlite() as sq:
+        result = sq.validate("CREATE TABLE users (id INT); SELECT id FROM users;")
+    if len(result.statements) != 2:
+        _fail("validate_statements_breakdown", f"expected 2 statements, got {len(result.statements)}")
+        return False
+    ddl, sel = result.statements
+    if "CREATE TABLE" not in ddl.source or "SELECT" not in sel.source:
+        _fail("validate_statements_breakdown", f"sources wrong: {ddl.source!r}, {sel.source!r}")
+        return False
+    if ddl.lineage is not None:
+        _fail("validate_statements_breakdown", f"DDL should have no lineage, got {ddl.lineage!r}")
+        return False
+    if sel.lineage is None or [c.name for c in sel.lineage.columns] != ["id"]:
+        _fail("validate_statements_breakdown", f"SELECT lineage wrong: {sel.lineage!r}")
+        return False
+    _pass("validate_statements_breakdown")
+    return True
+
+
+def _test_defined_relations_table(stq) -> bool:
+    with stq.Syntaqlite() as sq:
+        result = sq.validate("CREATE TABLE users (id INT)")
+    stmt = result.statements[0]
+    if len(stmt.defined_relations) != 1:
+        _fail("defined_relations_table", f"got {stmt.defined_relations!r}")
+        return False
+    rel = stmt.defined_relations[0]
+    if rel.name != "users" or rel.is_view:
+        _fail("defined_relations_table", f"expected users/table, got {rel!r}")
+        return False
+    _pass("defined_relations_table")
+    return True
+
+
+def _test_defined_relations_view(stq) -> bool:
+    with stq.Syntaqlite() as sq:
+        result = sq.validate("CREATE VIEW v AS SELECT 1 AS x")
+    stmt = result.statements[0]
+    if not stmt.defined_relations:
+        _fail("defined_relations_view", f"no relations: {stmt!r}")
+        return False
+    rel = stmt.defined_relations[0]
+    if rel.name != "v" or not rel.is_view:
+        _fail("defined_relations_view", f"expected v/view, got {rel!r}")
+        return False
+    _pass("defined_relations_view")
+    return True
+
+
+def _test_column_lineage_index(stq) -> bool:
+    with stq.Syntaqlite() as sq:
+        schema = stq.Schema(tables=[stq.Table("users", ["id", "name"])])
+        result = sq.validate("SELECT id, name FROM users", schema)
+    indices = [c.index for c in result.lineage.columns]
+    if indices != [0, 1]:
+        _fail("column_lineage_index", f"expected [0, 1], got {indices!r}")
+        return False
+    _pass("column_lineage_index")
+    return True
+
+
+def _test_lineage_unexpanded_views(stq) -> bool:
+    """A view registered by name only (no SQL body) appears in `unexpanded_views`."""
+    with stq.Syntaqlite() as sq:
+        schema = stq.Schema(views=[stq.View("v", ["n"])])
+        result = sq.validate("SELECT n FROM v", schema)
+    if result.lineage is None:
+        _fail("lineage_unexpanded_views", "no lineage")
+        return False
+    if result.lineage.complete:
+        _fail("lineage_unexpanded_views", "expected partial lineage for unexpanded view")
+        return False
+    if result.lineage.unexpanded_views != ["v"]:
+        _fail(
+            "lineage_unexpanded_views",
+            f"expected ['v'], got {result.lineage.unexpanded_views!r}",
+        )
+        return False
+    _pass("lineage_unexpanded_views")
+    return True
+
+
 # ── Lifecycle / public contract ──────────────────────────────────────────────
 
 
@@ -572,9 +662,106 @@ def _test_validate_output_enum_values(stq) -> bool:
     return True
 
 
+def _test_validate_rejects_string_output(stq) -> bool:
+    """`validate` must refuse raw strings for `output`; only ValidateOutput members."""
+    with stq.Syntaqlite() as sq:
+        try:
+            sq.validate("SELECT 1", output="text")
+        except TypeError:
+            _pass("validate_rejects_string_output")
+            return True
+    _fail("validate_rejects_string_output", "expected TypeError for output='text'")
+    return False
+
+
+# ── Bundled binary dispatch ──────────────────────────────────────────────────
+
+
+def _test_get_binary_path_honours_env(stq) -> bool:
+    """`get_binary_path()` returns the SYNTAQLITE_BIN override when set."""
+    expected = os.environ["SYNTAQLITE_BIN"]
+    actual = stq.get_binary_path()
+    if actual != expected:
+        _fail("get_binary_path_honours_env", f"expected {expected!r}, got {actual!r}")
+        return False
+    _pass("get_binary_path_honours_env")
+    return True
+
+
+def _test_syntaqlite_binary_kwarg(stq) -> bool:
+    """Passing `binary=` to Syntaqlite bypasses `get_binary_path`."""
+    bin_path = os.environ["SYNTAQLITE_BIN"]
+    original = os.environ.pop("SYNTAQLITE_BIN")
+    try:
+        with stq.Syntaqlite(binary=bin_path) as sq:
+            out = sq.format_sql("select 1")
+    finally:
+        os.environ["SYNTAQLITE_BIN"] = original
+    if "SELECT" not in out:
+        _fail("syntaqlite_binary_kwarg", f"format_sql returned {out!r}")
+        return False
+    _pass("syntaqlite_binary_kwarg")
+    return True
+
+
+def _test_main_entrypoint_via_python_m(stq, ctx: SuiteContext) -> bool:
+    """`python -m syntaqlite` invokes `main()` which executes the bundled CLI."""
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(ctx.root_dir / "python")
+    env["SYNTAQLITE_BIN"] = str(ctx.binary)
+    r = subprocess.run(
+        [sys.executable, "-m", "syntaqlite", "--version"],
+        env=env, capture_output=True, text=True, timeout=10,
+    )
+    if r.returncode != 0 or "syntaqlite" not in r.stdout:
+        _fail(
+            "main_entrypoint_via_python_m",
+            f"rc={r.returncode} stdout={r.stdout!r} stderr={r.stderr!r}",
+        )
+        return False
+    _pass("main_entrypoint_via_python_m")
+    return True
+
+
+# ── Dialect ──────────────────────────────────────────────────────────────────
+
+
+_DIALECT_CACHE: dict[str, Path] = {}
+
+
+def _perfetto_dialect_lib(ctx: SuiteContext, work_dir: Path) -> Path:
+    """Compile the Perfetto dialect once per suite run; cache the path."""
+    if "perfetto" in _DIALECT_CACHE:
+        return _DIALECT_CACHE["perfetto"]
+    from python.dev.diff_tests.perfetto_common import _compile_perfetto_dialect
+    lib = _compile_perfetto_dialect(ctx.binary, work_dir)
+    _DIALECT_CACHE["perfetto"] = lib
+    return lib
+
+
+def _test_dialect_parses_perfetto_syntax(stq, ctx: SuiteContext, work_dir: Path) -> bool:
+    """CREATE PERFETTO TABLE is a PARSE_ERROR in SQLite but parses with the dialect."""
+    # Baseline: the SQL fails under SQLite.
+    with stq.Syntaqlite() as sq:
+        r = sq.validate("CREATE PERFETTO TABLE t AS SELECT 1 AS x")
+    if not any(d.code is stq.DiagnosticCode.PARSE_ERROR for d in r.diagnostics):
+        _fail("dialect_parses_perfetto_syntax", f"SQLite baseline should PARSE_ERROR, got {r.diagnostics!r}")
+        return False
+
+    lib = _perfetto_dialect_lib(ctx, work_dir)
+    with stq.Syntaqlite(dialect_path=str(lib), dialect_name="perfetto") as sq:
+        stmts = sq.parse("CREATE PERFETTO TABLE t AS SELECT 1 AS x")
+    if len(stmts) != 1:
+        _fail("dialect_parses_perfetto_syntax", f"expected 1 stmt, got {len(stmts)}")
+        return False
+    _pass("dialect_parses_perfetto_syntax")
+    return True
+
+
 # ── Entry point ──────────────────────────────────────────────────────────────
 
 
+# Tests that take (stq) — the vast majority.
 _TESTS = [
     # Parse
     _test_parse_simple_select,
@@ -616,12 +803,32 @@ _TESTS = [
     _test_validate_relations,
     _test_validate_text_output_with_source_name,
     _test_validate_schema_modules_passthrough,
+    # validate — per-statement
+    _test_validate_statements_breakdown,
+    _test_defined_relations_table,
+    _test_defined_relations_view,
+    _test_column_lineage_index,
+    _test_lineage_unexpanded_views,
     # Lifecycle / public contract
     _test_context_manager_raises_after_close,
     _test_explicit_close_is_idempotent,
     _test_parse_returns_wrapped_node_type,
     _test_diagnostic_code_enum_members,
     _test_validate_output_enum_values,
+    _test_validate_rejects_string_output,
+    # Bundled binary dispatch
+    _test_get_binary_path_honours_env,
+    _test_syntaqlite_binary_kwarg,
+]
+
+# Tests that need the SuiteContext (subprocess invocations).
+_CTX_TESTS = [
+    _test_main_entrypoint_via_python_m,
+]
+
+# Tests that need a shared work_dir (dialect compilation).
+_WORK_DIR_TESTS = [
+    _test_dialect_parses_perfetto_syntax,
 ]
 
 
@@ -631,9 +838,19 @@ def run(ctx: SuiteContext) -> int:
     import syntaqlite  # noqa: E402 — must follow sys.path + env setup
 
     passed = 0
+    total = len(_TESTS) + len(_CTX_TESTS) + len(_WORK_DIR_TESTS)
+
     for test in _TESTS:
         if test(syntaqlite):
             passed += 1
-    total = len(_TESTS)
+    for test in _CTX_TESTS:
+        if test(syntaqlite, ctx):
+            passed += 1
+    with tempfile.TemporaryDirectory(prefix="synq-python-api-") as work_dir:
+        wd = Path(work_dir)
+        for test in _WORK_DIR_TESTS:
+            if test(syntaqlite, ctx, wd):
+                passed += 1
+
     print(f"\n  {passed}/{total} python-api tests passed.")
     return 0 if passed == total else 1
