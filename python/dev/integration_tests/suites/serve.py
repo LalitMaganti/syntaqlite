@@ -1,25 +1,22 @@
 # Copyright 2025 The syntaqlite Authors. All rights reserved.
 # Licensed under the Apache License, Version 2.0.
 
-"""`syntaqlite serve json` RPC suite.
+"""`syntaqlite serve json` RPC protocol suite.
 
-Covers the raw JSON line protocol (framing, op dispatch, error frames) and
-the public Python API that wraps it (parse, format_sql, tokenize, validate,
-Dialect).
+Covers the raw JSON line protocol: READY handshake, framing, op dispatch,
+and error frames. Python client-side coverage lives in the `python-api`
+suite.
 """
 
 from __future__ import annotations
 
 import json
-import os
 import subprocess
-import sys
-from pathlib import Path
 
 from python.dev.integration_tests.suite import SuiteContext
 
 NAME = "serve"
-DESCRIPTION = "syntaqlite serve JSON RPC protocol + Python client tests"
+DESCRIPTION = "syntaqlite serve JSON RPC protocol tests"
 
 _GREEN = "\033[32m"
 _RED = "\033[31m"
@@ -195,207 +192,6 @@ def _test_multi_requests_one_process(ctx: SuiteContext) -> bool:
         proc.kill()
 
 
-# ── Public Python API ────────────────────────────────────────────────────────
-
-
-def _py_run(ctx: SuiteContext, script: str) -> subprocess.CompletedProcess[str]:
-    env = os.environ.copy()
-    env["PYTHONPATH"] = str(ctx.root_dir / "python") + os.pathsep + env.get("PYTHONPATH", "")
-    env["SYNTAQLITE_BIN"] = str(ctx.binary)
-    return subprocess.run(
-        [sys.executable, "-c", script],
-        env=env,
-        capture_output=True,
-        text=True,
-    )
-
-
-def _test_py_parse_wraps_nodes(ctx: SuiteContext) -> bool:
-    r = _py_run(
-        ctx,
-        (
-            "import syntaqlite;"
-            " sq = syntaqlite.Syntaqlite();"
-            " stmts = sq.parse('select 1 as x');"
-            " assert len(stmts) == 1, stmts;"
-            " assert type(stmts[0]).__name__ == 'SelectStmt', type(stmts[0]).__name__;"
-            " sq.close();"
-            " print('ok')"
-        ),
-    )
-    if r.returncode != 0 or "ok" not in r.stdout:
-        _fail("py_parse_wraps_nodes", f"{r.returncode} {r.stdout!r} {r.stderr!r}")
-        return False
-    _pass("py_parse_wraps_nodes")
-    return True
-
-
-def _test_py_format_sql(ctx: SuiteContext) -> bool:
-    r = _py_run(
-        ctx,
-        (
-            "import syntaqlite;"
-            " sq = syntaqlite.Syntaqlite();"
-            " out = sq.format_sql('select 1');"
-            " assert 'SELECT' in out, out;"
-            " sq.close();"
-            " print('ok')"
-        ),
-    )
-    if r.returncode != 0 or "ok" not in r.stdout:
-        _fail("py_format_sql", f"{r.returncode} {r.stdout!r} {r.stderr!r}")
-        return False
-    _pass("py_format_sql")
-    return True
-
-
-def _test_py_tokenize(ctx: SuiteContext) -> bool:
-    r = _py_run(
-        ctx,
-        (
-            "import syntaqlite;"
-            " sq = syntaqlite.Syntaqlite();"
-            " toks = sq.tokenize('SELECT');"
-            " assert toks and toks[0]['category'] == 'keyword', toks;"
-            " sq.close();"
-            " print('ok')"
-        ),
-    )
-    if r.returncode != 0 or "ok" not in r.stdout:
-        _fail("py_tokenize", f"{r.returncode} {r.stdout!r} {r.stderr!r}")
-        return False
-    _pass("py_tokenize")
-    return True
-
-
-def _test_py_validate(ctx: SuiteContext) -> bool:
-    r = _py_run(
-        ctx,
-        (
-            "import syntaqlite;"
-            " sq = syntaqlite.Syntaqlite();"
-            " schema = syntaqlite.Schema(tables=[syntaqlite.Table('users', ['id'])]);"
-            " result = sq.validate('select x from users', schema);"
-            " assert any('x' in d.message for d in result.diagnostics), result.diagnostics;"
-            " sq.close();"
-            " print('ok')"
-        ),
-    )
-    if r.returncode != 0 or "ok" not in r.stdout:
-        _fail("py_validate", f"{r.returncode} {r.stdout!r} {r.stderr!r}")
-        return False
-    _pass("py_validate")
-    return True
-
-
-_TEXT_OUTPUT_SCRIPT = """
-import syntaqlite
-
-with syntaqlite.Syntaqlite() as sq:
-    schema = syntaqlite.Schema(tables=[syntaqlite.Table("users", ["id", "name"])])
-    rendered = sq.validate(
-        "SELECT nme FROM users",
-        schema,
-        output=syntaqlite.ValidateOutput.TEXT,
-        render_options=syntaqlite.RenderOptions(source_name="query.sql"),
-    )
-    assert isinstance(rendered, str), type(rendered)
-    assert "nme" in rendered, rendered
-    assert "query.sql" in rendered, rendered
-    print("ok")
-"""
-
-
-def _test_py_validate_text_output(ctx: SuiteContext) -> bool:
-    r = _py_run(ctx, _TEXT_OUTPUT_SCRIPT)
-    if r.returncode != 0 or "ok" not in r.stdout:
-        _fail("py_validate_text_output", f"{r.returncode} {r.stdout!r} {r.stderr!r}")
-        return False
-    _pass("py_validate_text_output")
-    return True
-
-
-def _test_py_schema_modules_passthrough(ctx: SuiteContext) -> bool:
-    """Supplying `modules` on `Schema` shouldn't break validation for
-    dialects that don't implement imports — it's dialect-specific and
-    expected to be ignored by SQLite here."""
-    r = _py_run(
-        ctx,
-        (
-            "import syntaqlite;"
-            " sq = syntaqlite.Syntaqlite();"
-            " schema = syntaqlite.Schema("
-            "     tables=[syntaqlite.Table('t', ['x'])],"
-            "     modules={'stdlib.helpers': 'CREATE TABLE helper(a INT)'},"
-            " );"
-            " result = sq.validate('SELECT x FROM t', schema);"
-            " assert not result.diagnostics, result.diagnostics;"
-            " sq.close();"
-            " print('ok')"
-        ),
-    )
-    if r.returncode != 0 or "ok" not in r.stdout:
-        _fail(
-            "py_schema_modules_passthrough",
-            f"{r.returncode} {r.stdout!r} {r.stderr!r}",
-        )
-        return False
-    _pass("py_schema_modules_passthrough")
-    return True
-
-
-_LINEAGE_SCRIPT = """
-import syntaqlite
-
-with syntaqlite.Syntaqlite() as sq:
-    schema = syntaqlite.Schema(
-        tables=[syntaqlite.Table("users", ["id", "name", "email"])],
-    )
-    result = sq.validate("SELECT id, name FROM users", schema)
-    assert result.lineage is not None, "expected lineage on SELECT"
-    assert result.lineage.complete, result.lineage
-    cols = result.lineage.columns
-    assert [c.name for c in cols] == ["id", "name"], cols
-    assert cols[0].origin.table == "users"
-    assert cols[0].origin.column == "id"
-    assert result.lineage.physical_tables == ["users"]
-    print("ok")
-"""
-
-
-def _test_py_validate_lineage(ctx: SuiteContext) -> bool:
-    r = _py_run(ctx, _LINEAGE_SCRIPT)
-    if r.returncode != 0 or "ok" not in r.stdout:
-        _fail("py_validate_lineage", f"{r.returncode} {r.stdout!r} {r.stderr!r}")
-        return False
-    _pass("py_validate_lineage")
-    return True
-
-
-_CTX_MGR_SCRIPT = """
-import syntaqlite
-
-with syntaqlite.Syntaqlite() as sq:
-    assert "SELECT" in sq.format_sql("select 1")
-
-try:
-    sq.parse("select 1")
-except syntaqlite.SyntaqliteError:
-    print("ok")
-else:
-    raise AssertionError("expected SyntaqliteError after close")
-"""
-
-
-def _test_py_context_manager(ctx: SuiteContext) -> bool:
-    r = _py_run(ctx, _CTX_MGR_SCRIPT)
-    if r.returncode != 0 or "ok" not in r.stdout:
-        _fail("py_context_manager", f"{r.returncode} {r.stdout!r} {r.stderr!r}")
-        return False
-    _pass("py_context_manager")
-    return True
-
-
 # ── Entry point ──────────────────────────────────────────────────────────────
 
 
@@ -408,14 +204,6 @@ _TESTS = [
     _test_validate_uses_provided_tables,
     _test_bad_op_returns_err,
     _test_multi_requests_one_process,
-    _test_py_parse_wraps_nodes,
-    _test_py_format_sql,
-    _test_py_tokenize,
-    _test_py_validate,
-    _test_py_validate_lineage,
-    _test_py_validate_text_output,
-    _test_py_schema_modules_passthrough,
-    _test_py_context_manager,
 ]
 
 
