@@ -536,6 +536,13 @@ syntaqlite_py_wrap_node(SyntaqliteParser *p, uint32_t node_id) {
         if (!d) return NULL;
         PyDict_SetItemString(d, "type", PyUnicode_InternFromString("DeleteStmt"));
         {
+            PyObject *val = syntaqlite_py_wrap_node(p, n->with_ctes);
+            if (val) { PyDict_SetItemString(d, "with_ctes", val); Py_DECREF(val); }
+        }
+        {
+            PyDict_SetItemString(d, "with_recursive", n->with_recursive ? Py_True : Py_False);
+        }
+        {
             PyObject *val = syntaqlite_py_wrap_node(p, n->table);
             if (val) { PyDict_SetItemString(d, "table", val); Py_DECREF(val); }
         }
@@ -591,6 +598,13 @@ syntaqlite_py_wrap_node(SyntaqliteParser *p, uint32_t node_id) {
         if (!d) return NULL;
         PyDict_SetItemString(d, "type", PyUnicode_InternFromString("UpdateStmt"));
         {
+            PyObject *val = syntaqlite_py_wrap_node(p, n->with_ctes);
+            if (val) { PyDict_SetItemString(d, "with_ctes", val); Py_DECREF(val); }
+        }
+        {
+            PyDict_SetItemString(d, "with_recursive", n->with_recursive ? Py_True : Py_False);
+        }
+        {
             { PyObject *v = PyLong_FromLong((long)n->conflict_action); if (v) { PyDict_SetItemString(d, "conflict_action", v); Py_DECREF(v); } }
         }
         {
@@ -635,6 +649,13 @@ syntaqlite_py_wrap_node(SyntaqliteParser *p, uint32_t node_id) {
         PyObject *d = PyDict_New();
         if (!d) return NULL;
         PyDict_SetItemString(d, "type", PyUnicode_InternFromString("InsertStmt"));
+        {
+            PyObject *val = syntaqlite_py_wrap_node(p, n->with_ctes);
+            if (val) { PyDict_SetItemString(d, "with_ctes", val); Py_DECREF(val); }
+        }
+        {
+            PyDict_SetItemString(d, "with_recursive", n->with_recursive ? Py_True : Py_False);
+        }
         {
             { PyObject *v = PyLong_FromLong((long)n->conflict_action); if (v) { PyDict_SetItemString(d, "conflict_action", v); Py_DECREF(v); } }
         }

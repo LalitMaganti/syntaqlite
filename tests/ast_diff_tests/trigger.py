@@ -549,6 +549,8 @@ class CreateTriggerBody(TestSuite):
               body:
                 TriggerCmdList [1 items]
                   UpdateStmt
+                    with_ctes: (none)
+                    with_recursive: FALSE
                     conflict_action: DEFAULT
                     table:
                       TableRef
@@ -599,6 +601,8 @@ class CreateTriggerBody(TestSuite):
               body:
                 TriggerCmdList [1 items]
                   InsertStmt
+                    with_ctes: (none)
+                    with_recursive: FALSE
                     conflict_action: DEFAULT
                     table:
                       TableRef
@@ -644,6 +648,8 @@ class CreateTriggerBody(TestSuite):
               body:
                 TriggerCmdList [1 items]
                   DeleteStmt
+                    with_ctes: (none)
+                    with_recursive: FALSE
                     table:
                       TableRef
                         table_name: "t2"

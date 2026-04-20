@@ -285,8 +285,16 @@ fn role_to_bytes(
             bytes[2] = fi(when);
             bytes[3] = fi(body);
         }
-        SynqRole::DmlScope => {
-            bytes[0] = disc(SemanticRole::DmlScope);
+        SynqRole::DmlScope {
+            with_recursive,
+            with_ctes,
+        } => {
+            bytes[0] = disc(SemanticRole::DmlScope {
+                with_recursive: 0,
+                with_ctes: 0,
+            });
+            bytes[1] = opt(with_recursive);
+            bytes[2] = opt(with_ctes);
         }
     }
 

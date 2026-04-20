@@ -204,10 +204,11 @@ impl<'a> ValidationPass<'a> {
             } => {
                 self.visit_trigger_scope(stmt, &fields, when, body);
             }
-            SemanticRole::DmlScope => {
-                self.scope.push();
-                self.visit_children(stmt, node_id);
-                self.scope.pop();
+            SemanticRole::DmlScope {
+                with_recursive,
+                with_ctes,
+            } => {
+                self.visit_dml_scope(stmt, &fields, with_recursive, with_ctes);
             }
         }
     }

@@ -203,9 +203,9 @@ typedef uint8_t SyntaqliteCommentSide;
 #define SYNQ_COMMENT_TRAILING ((SyntaqliteCommentSide)1)
 
 typedef struct SyntaqliteComment {
-  SyntaqliteStmtOffset offset;  // Statement-relative byte offset.
-  SyntaqliteStmtLen length;     // Byte length.
-  SyntaqliteTokenIdx token_idx;     // Index of the owning token in p->tokens.
+  SyntaqliteStmtOffset offset;   // Statement-relative byte offset.
+  SyntaqliteStmtLen length;      // Byte length.
+  SyntaqliteTokenIdx token_idx;  // Index of the owning token in p->tokens.
   uint8_t kind;  // 0 = line comment (--), 1 = block comment (/* */).
   uint8_t side;  // SYNQ_COMMENT_LEADING or SYNQ_COMMENT_TRAILING.
 } SyntaqliteComment;

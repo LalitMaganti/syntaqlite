@@ -234,6 +234,8 @@ pub(crate) struct UpsertClause {
 #[repr(C)]
 pub(crate) struct DeleteStmt {
     pub(crate) tag: u32,
+    pub(crate) with_ctes: AnyNodeId,
+    pub(crate) with_recursive: Bool,
     pub(crate) table: AnyNodeId,
     pub(crate) index_hint: super::ast::IndexHint,
     pub(crate) index_name: TextSpan,
@@ -256,6 +258,8 @@ pub(crate) struct SetClause {
 #[repr(C)]
 pub(crate) struct UpdateStmt {
     pub(crate) tag: u32,
+    pub(crate) with_ctes: AnyNodeId,
+    pub(crate) with_recursive: Bool,
     pub(crate) conflict_action: super::ast::ConflictAction,
     pub(crate) table: AnyNodeId,
     pub(crate) index_hint: super::ast::IndexHint,
@@ -272,6 +276,8 @@ pub(crate) struct UpdateStmt {
 #[repr(C)]
 pub(crate) struct InsertStmt {
     pub(crate) tag: u32,
+    pub(crate) with_ctes: AnyNodeId,
+    pub(crate) with_recursive: Bool,
     pub(crate) conflict_action: super::ast::ConflictAction,
     pub(crate) table: AnyNodeId,
     pub(crate) columns: AnyNodeId,

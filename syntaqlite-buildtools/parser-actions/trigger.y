@@ -136,11 +136,14 @@ tridxby ::= NOT INDEXED. {
 
 // ============ Trigger commands ============
 
-// UPDATE within trigger
+// UPDATE within trigger. Trigger bodies can't carry a WITH clause, so the
+// CTE fields are always null.
 trigger_cmd(A) ::= UPDATE orconf(R) trnm(X) tridxby SET setlist(Y) from(F) where_opt(Z) scanpt. {
     uint32_t tbl = synq_parse_table_ref(pCtx,
         synq_span(pCtx, X), SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A = synq_parse_update_stmt(pCtx, (SyntaqliteConflictAction)R, tbl,
+    A = synq_parse_update_stmt(pCtx,
+        SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
+        (SyntaqliteConflictAction)R, tbl,
         SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN,
         Y, F, Z, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
 }
@@ -149,14 +152,19 @@ trigger_cmd(A) ::= UPDATE orconf(R) trnm(X) tridxby SET setlist(Y) from(F) where
 trigger_cmd(A) ::= scanpt insert_cmd(R) INTO trnm(X) idlist_opt(F) select(S) upsert scanpt. {
     uint32_t tbl = synq_parse_table_ref(pCtx,
         synq_span(pCtx, X), SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A = synq_parse_insert_stmt(pCtx, (SyntaqliteConflictAction)R, tbl, F, S, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+    A = synq_parse_insert_stmt(pCtx,
+        SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
+        (SyntaqliteConflictAction)R, tbl, F, S,
+        SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
 }
 
 // DELETE within trigger
 trigger_cmd(A) ::= DELETE FROM trnm(X) tridxby where_opt(Y) scanpt. {
     uint32_t tbl = synq_parse_table_ref(pCtx,
         synq_span(pCtx, X), SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A = synq_parse_delete_stmt(pCtx, tbl,
+    A = synq_parse_delete_stmt(pCtx,
+        SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
+        tbl,
         SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN,
         Y, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
 }
