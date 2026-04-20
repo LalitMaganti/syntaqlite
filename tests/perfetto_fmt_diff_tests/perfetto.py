@@ -76,6 +76,12 @@ class PerfettoMacroCallFormat(TestSuite):
             out="SELECT foo!(1 + 2), 3",
         )
 
+    def test_macro_arg_expression_canonicalized(self):
+        return DiffTestBlueprint(
+            sql="SELECT cast_int!(1+2)",
+            out="SELECT cast_int!(1 + 2)",
+        )
+
     def test_macro_call_in_from(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM my_macro!(t1)",

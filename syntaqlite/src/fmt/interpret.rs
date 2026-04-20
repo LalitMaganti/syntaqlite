@@ -69,6 +69,7 @@ impl Formatter {
     pub(super) fn interpret_node<'a>(
         &mut self,
         ctx: &FmtCtx<'a>,
+        macro_docs: &[Option<DocId>],
         root_id: AnyNodeId,
         arena: &mut DocArena<'a>,
     ) -> DocId {
@@ -77,6 +78,7 @@ impl Formatter {
             .resize(ctx.macro_rewrites.len(), false);
         interpret_core(
             ctx,
+            macro_docs,
             root_id,
             arena,
             &mut self.interpret_scratch,
@@ -94,6 +96,7 @@ impl Formatter {
 #[expect(clippy::too_many_lines)]
 pub(super) fn interpret_core<'a>(
     ctx: &FmtCtx<'a>,
+    macro_docs: &[Option<DocId>],
     root_id: AnyNodeId,
     arena: &mut DocArena<'a>,
     scratch: &mut InterpretScratch,
@@ -299,9 +302,10 @@ pub(super) fn interpret_core<'a>(
                         let macro_rewrites = &ctx.macro_rewrites;
                         if !macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
+                            && let Some(doc) = super::formatter::try_macro_call(
                                 ctx,
                                 macro_rewrites,
+                                macro_docs,
                                 arena,
                                 consumed_regions,
                                 macro_tokenizer,
@@ -415,9 +419,10 @@ pub(super) fn interpret_core<'a>(
                     let macro_doc = if !macro_rewrites.is_empty()
                         && ctx.reader.list_children(child_id).is_none()
                     {
-                        super::formatter::try_macro_verbatim(
+                        super::formatter::try_macro_call(
                             ctx,
                             macro_rewrites,
+                            macro_docs,
                             arena,
                             consumed_regions,
                             macro_tokenizer,
@@ -616,9 +621,10 @@ pub(super) fn interpret_core<'a>(
                         let macro_rewrites = &ctx.macro_rewrites;
                         if !macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
+                            && let Some(doc) = super::formatter::try_macro_call(
                                 ctx,
                                 macro_rewrites,
+                                macro_docs,
                                 arena,
                                 consumed_regions,
                                 macro_tokenizer,
@@ -671,9 +677,10 @@ pub(super) fn interpret_core<'a>(
                         let macro_rewrites = &ctx.macro_rewrites;
                         if !macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
+                            && let Some(doc) = super::formatter::try_macro_call(
                                 ctx,
                                 macro_rewrites,
+                                macro_docs,
                                 arena,
                                 consumed_regions,
                                 macro_tokenizer,
@@ -723,9 +730,10 @@ pub(super) fn interpret_core<'a>(
                         let macro_rewrites = &ctx.macro_rewrites;
                         if !macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
+                            && let Some(doc) = super::formatter::try_macro_call(
                                 ctx,
                                 macro_rewrites,
+                                macro_docs,
                                 arena,
                                 consumed_regions,
                                 macro_tokenizer,

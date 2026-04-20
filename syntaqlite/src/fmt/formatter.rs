@@ -3,7 +3,8 @@
 
 use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, AnyTokenizer, ParseOutcome,
+    AnyNodeId, AnyParseError, AnyParseSession, AnyParsedStatement, AnyParser, AnyTokenizer,
+    FieldValue, ParseOutcome,
 };
 use syntaqlite_syntax::source::{DocLen, DocRange, StmtLen, StmtOffset, StmtRange, StmtText};
 
@@ -11,7 +12,7 @@ use super::FormatConfig;
 use super::FormatError;
 use super::comment::{CommentCtx, CommentEntry, TokenEntry};
 use super::doc::{DocArena, DocId, NIL_DOC, RenderBuffers};
-use super::interpret::{FmtCtx, InterpretScratch};
+use super::interpret::{FmtCtx, InterpretScratch, interpret_core};
 use crate::dialect::AnyDialect;
 
 /// Convert a parse error (statement-relative offsets) to a
@@ -71,6 +72,12 @@ pub struct Formatter {
     /// verbatim; full `MacroRewrite` records would tie this buffer to
     /// the statement lifetime and prevent reuse across statements.
     pub(super) macro_rewrites: Vec<(StmtOffset, StmtLen)>,
+    /// Mini-parses backing the structured pre-compute, one entry per
+    /// entry in `macro_rewrites` whose call was successfully split into
+    /// parseable argument subtrees.  Kept alive through render so the
+    /// outer arena's borrows into their parser buffers remain valid,
+    /// then cleared before the next statement.
+    pub(super) mini_parses: Vec<MiniParse>,
     pub(super) comment_entries: Vec<CommentEntry>,
     pub(super) token_entries: Vec<TokenEntry>,
     pub(super) parts: Vec<DocId>,
@@ -133,6 +140,7 @@ impl Formatter {
             interpret_scratch: InterpretScratch::new(),
             render_bufs: RenderBuffers::new(),
             macro_rewrites: Vec::with_capacity(32),
+            mini_parses: Vec::new(),
             comment_entries: Vec::with_capacity(64),
             token_entries: Vec::with_capacity(256),
             parts: Vec::with_capacity(64),
@@ -253,6 +261,26 @@ impl Formatter {
                 drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
             }
 
+            // Stage 1.5: Pre-compute a structured `DocId` for each
+            // top-level macro call whose arguments we can parse in
+            // isolation; triggering is conservative (see
+            // `precompute_macro_docs`).  Calls with comments, string
+            // literals, internal newlines, or parse failures fall
+            // through to verbatim emission via the existing path.  The
+            // `mini_parses` Vec is taken off `self` so we can also
+            // borrow `&mut arena` during the pass.
+            let mut mini_parses = std::mem::take(&mut self.mini_parses);
+            mini_parses.clear();
+            let macro_docs = precompute_macro_docs(
+                &self.dialect,
+                &self.macro_tokenizer,
+                stmt_source,
+                &self.macro_rewrites,
+                &self.comment_entries,
+                &mut mini_parses,
+                &mut arena,
+            );
+
             // Stage 2: Interpret bytecode for this AST into Doc fragments.
             let ctx = FmtCtx {
                 dialect: self.dialect.clone(),
@@ -260,7 +288,7 @@ impl Formatter {
                 comment_ctx,
                 macro_rewrites: std::mem::take(&mut self.macro_rewrites),
             };
-            let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
+            let interpreted = self.interpret_node(&ctx, &macro_docs, root_id, &mut arena);
             self.parts.push(interpreted);
 
             // Emit this statement's terminator.  Trailing comments now
@@ -297,6 +325,9 @@ impl Formatter {
 
             // Recycle the arena, releasing all Doc borrows from this iteration.
             self.arena = DocArena::recycle(arena);
+            // Drop the mini-parses now that their span borrows are gone.
+            mini_parses.clear();
+            self.mini_parses = mini_parses;
 
             stmt_num += 1;
         }
@@ -488,13 +519,25 @@ impl Formatter {
                 drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
             }
 
+            let mut mini_parses = std::mem::take(&mut self.mini_parses);
+            mini_parses.clear();
+            let macro_docs = precompute_macro_docs(
+                &self.dialect,
+                &self.macro_tokenizer,
+                stmt_source,
+                &self.macro_rewrites,
+                &self.comment_entries,
+                &mut mini_parses,
+                &mut arena,
+            );
+
             let ctx = FmtCtx {
                 dialect: self.dialect.clone(),
                 reader: erased,
                 comment_ctx,
                 macro_rewrites: std::mem::take(&mut self.macro_rewrites),
             };
-            let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
+            let interpreted = self.interpret_node(&ctx, &macro_docs, root_id, &mut arena);
             self.parts.push(interpreted);
 
             if let Some(cctx) = ctx.comment_ctx.as_ref() {
@@ -514,6 +557,8 @@ impl Formatter {
             }
             self.macro_rewrites = ctx.macro_rewrites;
             self.arena = DocArena::recycle(arena);
+            mini_parses.clear();
+            self.mini_parses = mini_parses;
 
             stmt_num += 1;
         }
@@ -574,6 +619,439 @@ fn drain_gap_comments<'a>(
 }
 
 // ── Single-node formatting ──────────────────────────────────────────────
+
+// ── Structured macro-argument formatting ────────────────────────────────
+//
+// When the outer parser runs in macro-fallback mode, a call like
+// `foo!(a, b)` is opaque: it parses as a single `TK_ID` whose AST text
+// spans the entire call.  The formatter falls back to emitting that
+// source slice verbatim (see `try_macro_verbatim`).
+//
+// To reformat arguments, we run an independent "mini" parser on
+// `SELECT a, b` — a synthetic expression list built from the call's
+// comma-separated arg texts.  Each argument becomes an `Expr` subtree
+// that the normal bytecode interpreter can format into the outer arena.
+// We assemble `name + "!(" + arg_doc_0 + ", " + ... + ")"` as a
+// `DocId` tree and stash it in `macro_docs[i]`, indexed by the same
+// order as `macro_rewrites`.  `try_macro_structured` looks it up during
+// the outer walk.
+//
+// Triggering is conservative on purpose.  We skip structured
+// formatting when the call contains:
+//
+// - A comment (the mini-parser runs without a comment context, so any
+//   comment inside the call text would be silently dropped).
+// - A string literal (the envelope splitter doesn't respect quotes).
+// - An internal newline (users who hand-wrapped the call want that
+//   layout preserved; verbatim does the right thing).
+// - Any parse or lookup failure.
+//
+// Each of these falls through to the existing verbatim path, so the
+// feature is purely additive at this stage.
+
+/// Mini-parser holder backing the structured argument path.  Owns an
+/// `AnyParseSession` (which itself owns the copied source buffer and
+/// parser state), so `&self` borrows can safely hand out
+/// `AnyParsedStatement<'_>` views that outlive any individual
+/// formatting call.
+pub(super) struct MiniParse {
+    session: AnyParseSession,
+}
+
+impl MiniParse {
+    /// Parse `SELECT arg0, arg1, ...` as an expression list.  Returns
+    /// `None` if the synthetic SELECT fails to parse (which happens,
+    /// for instance, when an arg isn't expression-shaped).
+    fn parse_args(dialect: &AnyDialect, args: &[&str]) -> Option<Self> {
+        let mut source = String::from("SELECT ");
+        for (i, a) in args.iter().enumerate() {
+            if i > 0 {
+                source.push_str(", ");
+            }
+            source.push_str(a);
+        }
+        let parser = AnyParser::with_config(
+            (**dialect).clone(),
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true)
+                .with_macro_fallback(dialect.has_macro_style()),
+        );
+        let mut session = parser.parse(&source);
+        match session.next() {
+            ParseOutcome::Ok(_stmt) => Some(Self { session }),
+            _ => None,
+        }
+    }
+
+    fn statement(&self) -> AnyParsedStatement<'_> {
+        self.session.arena_result()
+    }
+}
+
+/// Byte offset at which the first argument sits inside a synthetic
+/// `SELECT ` envelope.
+const SELECT_PREFIX_LEN: u32 = 7;
+
+/// Pre-compute a structured `DocId` for each top-level macro call in
+/// `regions`, aligned by index.  Returns `None` at a given index when
+/// the trigger guards or a parse fail out.  Newly created mini-parses
+/// are appended to `mini_parses`, which the caller must keep alive
+/// until the outer arena is rendered.
+pub(super) fn precompute_macro_docs<'a>(
+    dialect: &AnyDialect,
+    tokenizer: &AnyTokenizer,
+    source: &'a StmtText,
+    regions: &[(StmtOffset, StmtLen)],
+    comments: &[CommentEntry],
+    mini_parses: &'a mut Vec<MiniParse>,
+    arena: &mut DocArena<'a>,
+) -> Vec<Option<DocId>> {
+    let mut plans: Vec<Option<CallPlan>> = Vec::with_capacity(regions.len());
+    for &(r_start, r_len) in regions {
+        plans.push(plan_structured_call(
+            dialect,
+            tokenizer,
+            source,
+            r_start,
+            r_len,
+            comments,
+            mini_parses,
+        ));
+    }
+
+    let mut results: Vec<Option<DocId>> = Vec::with_capacity(regions.len());
+    for plan in plans {
+        let Some(plan) = plan else {
+            results.push(None);
+            continue;
+        };
+        let mini = &mini_parses[plan.mini_idx];
+        let reader = mini.statement();
+        let root = reader.root_id();
+        if root.is_null() {
+            results.push(None);
+            continue;
+        }
+        let mut arg_docs: Vec<DocId> = Vec::with_capacity(plan.arg_ranges.len());
+        let mut failed = false;
+        for &(sub_off, sub_len) in &plan.arg_ranges {
+            let Some(sub) = find_descendant_by_extent(&reader, root, sub_off, sub_len) else {
+                failed = true;
+                break;
+            };
+            let sub_ctx = FmtCtx {
+                dialect: dialect.clone(),
+                reader: reader.clone(),
+                comment_ctx: None,
+                macro_rewrites: Vec::new(),
+            };
+            let mut sub_scratch = InterpretScratch::new();
+            let mut sub_consumed: Vec<bool> = Vec::new();
+            let empty_macro_docs: Vec<Option<DocId>> = Vec::new();
+            let doc = interpret_core(
+                &sub_ctx,
+                &empty_macro_docs,
+                sub,
+                arena,
+                &mut sub_scratch,
+                &mut sub_consumed,
+                tokenizer,
+            );
+            arg_docs.push(doc);
+        }
+        if failed {
+            results.push(None);
+            continue;
+        }
+        let name_doc = arena.text(plan.name);
+        let open = arena.text("!(");
+        let close = arena.text(")");
+        let sep = arena.text(", ");
+        let mut d = arena.cat(name_doc, open);
+        for (i, ad) in arg_docs.iter().enumerate() {
+            if i > 0 {
+                d = arena.cat(d, sep);
+            }
+            d = arena.cat(d, *ad);
+        }
+        d = arena.cat(d, close);
+        results.push(Some(d));
+    }
+    results
+}
+
+/// Per-call metadata produced by the planning phase and consumed by
+/// the DocId-assembly phase.  Splitting the two keeps the arena borrow
+/// disjoint from the `&mut mini_parses` push borrow.
+struct CallPlan<'src> {
+    /// Macro name as a slice of the outer source.  No allocation; no
+    /// leak.
+    name: &'src str,
+    /// `(offset, length)` of each argument's expected node inside the
+    /// mini-parse's synthetic `SELECT a0, a1, ...` source.
+    arg_ranges: Vec<(StmtOffset, StmtLen)>,
+    /// Index into `mini_parses` where this call's parse lives.
+    mini_idx: usize,
+}
+
+fn plan_structured_call<'src>(
+    dialect: &AnyDialect,
+    tokenizer: &AnyTokenizer,
+    source: &'src StmtText,
+    r_start: StmtOffset,
+    r_len: StmtLen,
+    comments: &[CommentEntry],
+    mini_parses: &mut Vec<MiniParse>,
+) -> Option<CallPlan<'src>> {
+    let call_text = &source[StmtRange {
+        start: r_start,
+        end: r_start + r_len,
+    }];
+    // Trigger guards.  See the module-level comment block for why each
+    // of these defers to verbatim.
+    if call_contains_comment(comments, r_start, r_len) {
+        return None;
+    }
+    let Envelope { name, inner } = split_envelope(tokenizer, call_text)?;
+    // Bail on any literal newline in the call text: the user wrote a
+    // hand-wrapped call and we preserve their layout by deferring to
+    // verbatim.  A string literal that genuinely contains `\n` is
+    // rare enough to treat the same way.
+    if call_text.contains('\n') {
+        return None;
+    }
+    let arg_texts = split_args(tokenizer, inner)?;
+    let mini = MiniParse::parse_args(dialect, &arg_texts)?;
+    let mini_idx = mini_parses.len();
+    mini_parses.push(mini);
+    // Compute each arg's `(offset, length)` inside the mini-parser's
+    // synthetic `SELECT a0, a1, ...` source.
+    let mut arg_ranges: Vec<(StmtOffset, StmtLen)> = Vec::with_capacity(arg_texts.len());
+    let mut cursor: u32 = SELECT_PREFIX_LEN;
+    for (i, a) in arg_texts.iter().enumerate() {
+        if i > 0 {
+            cursor += 2; // ", "
+        }
+        let len = u32::try_from(a.len()).ok()?;
+        arg_ranges.push((StmtOffset::from_raw(cursor), StmtLen::from_raw(len)));
+        cursor += len;
+    }
+    Some(CallPlan {
+        name,
+        arg_ranges,
+        mini_idx,
+    })
+}
+
+fn call_contains_comment(comments: &[CommentEntry], r_start: StmtOffset, r_len: StmtLen) -> bool {
+    let r_end = r_start + r_len;
+    comments
+        .iter()
+        .any(|c| c.offset >= r_start && c.offset < r_end)
+}
+
+/// `TK_*` token type ids used by the argument splitter.  These values
+/// are stable across every dialect built on the `SQLite` token table;
+/// the macro call syntax itself only needs the `!`, `(`, `)` and `,`
+/// tokens.
+const TK_LP_ID: u32 = 113;
+const TK_RP_ID: u32 = 115;
+const TK_COMMA_ID: u32 = 118;
+const TK_SPACE_ID: u32 = 183;
+const TK_BANG_ID: u32 = 188;
+
+struct Envelope<'src> {
+    name: &'src str,
+    inner: &'src str,
+}
+
+/// Decompose `call_text` (`name!(…)`) using the dialect tokenizer.
+/// Tokens are walked by text-length so we never have to search for
+/// punctuation in the raw bytes.
+fn split_envelope<'src>(tokenizer: &AnyTokenizer, call_text: &'src str) -> Option<Envelope<'src>> {
+    // Expected token sequence: ID(name), `!`, `(`, ... args ..., `)`.
+    // Anything else bails out.
+    let mut iter = tokens_with_spans(tokenizer, call_text);
+    let (name_tok, _) = iter.next()?;
+    if !name_tok
+        .text()
+        .chars()
+        .all(|c| c.is_alphanumeric() || c == '_')
+        || name_tok.text().is_empty()
+    {
+        return None;
+    }
+    let (bang_tok, _) = iter.next()?;
+    if u32::from(bang_tok.token_type()) != TK_BANG_ID || bang_tok.text() != "!" {
+        return None;
+    }
+    let (lp_tok, lp_start) = iter.next()?;
+    if u32::from(lp_tok.token_type()) != TK_LP_ID {
+        return None;
+    }
+    let inner_start = lp_start + lp_tok.text().len();
+    // Consume tokens until we find the RP that closes the envelope
+    // at depth 0, recording its start offset so `inner` excludes it.
+    let mut depth: i32 = 1;
+    let mut inner_end: Option<usize> = None;
+    for (tok, start) in iter {
+        let tt = u32::from(tok.token_type());
+        if tt == TK_LP_ID {
+            depth += 1;
+        } else if tt == TK_RP_ID {
+            depth -= 1;
+            if depth == 0 {
+                inner_end = Some(start);
+                break;
+            }
+        }
+    }
+    let inner_end = inner_end?;
+    Some(Envelope {
+        name: name_tok.text(),
+        inner: &call_text[inner_start..inner_end],
+    })
+}
+
+/// Iterator over non-whitespace tokens, paired with the start byte
+/// offset of each token inside `text`.
+fn tokens_with_spans<'a>(
+    tokenizer: &AnyTokenizer,
+    text: &'a str,
+) -> impl Iterator<Item = (syntaqlite_syntax::any::AnyToken<'a>, usize)> + use<'a> {
+    let base = text.as_ptr() as usize;
+    tokenizer
+        .tokenize(text)
+        .filter(|t| u32::from(t.token_type()) != TK_SPACE_ID)
+        .map(move |t| {
+            let start = t.text().as_ptr() as usize - base;
+            (t, start)
+        })
+}
+
+/// Split `inner` on top-level commas using the dialect tokenizer.
+/// Commas inside parens or string literals do not split.  Returns
+/// `None` on unbalanced parens; an empty `inner` yields an empty
+/// `Vec`, matching the `name!()` shape.
+fn split_args<'src>(tokenizer: &AnyTokenizer, inner: &'src str) -> Option<Vec<&'src str>> {
+    if inner.trim().is_empty() {
+        return Some(Vec::new());
+    }
+    let mut args: Vec<&'src str> = Vec::new();
+    let mut depth: i32 = 0;
+    let mut seg_start: usize = 0;
+    let base = inner.as_ptr() as usize;
+    for tok in tokenizer.tokenize(inner) {
+        let tt = u32::from(tok.token_type());
+        let tok_start = tok.text().as_ptr() as usize - base;
+        match tt {
+            TK_LP_ID => depth += 1,
+            TK_RP_ID => {
+                depth -= 1;
+                if depth < 0 {
+                    return None;
+                }
+            }
+            TK_COMMA_ID if depth == 0 => {
+                args.push(inner[seg_start..tok_start].trim());
+                seg_start = tok_start + tok.text().len();
+            }
+            _ => {}
+        }
+    }
+    if depth != 0 {
+        return None;
+    }
+    args.push(inner[seg_start..].trim());
+    Some(args)
+}
+
+/// Depth-first search for the first descendant of `root` whose source
+/// extent equals `(target_off, target_len)`.
+fn find_descendant_by_extent(
+    reader: &AnyParsedStatement<'_>,
+    root: AnyNodeId,
+    target_off: StmtOffset,
+    target_len: StmtLen,
+) -> Option<AnyNodeId> {
+    if let Some((text, off)) = reader.node_text(root) {
+        let len = StmtLen::from_raw(u32::try_from(text.len()).ok()?);
+        if off == target_off && len == target_len {
+            return Some(root);
+        }
+    }
+    if let Some((_, fields)) = reader.extract_fields(root) {
+        for i in 0..fields.len() {
+            if let FieldValue::NodeId(child) = fields[i]
+                && !child.is_null()
+                && let Some(found) =
+                    find_descendant_by_extent(reader, child, target_off, target_len)
+            {
+                return Some(found);
+            }
+        }
+    }
+    if let Some(children) = reader.list_children(root) {
+        for &c in children {
+            if let Some(found) = find_descendant_by_extent(reader, c, target_off, target_len) {
+                return Some(found);
+            }
+        }
+    }
+    None
+}
+
+/// Try structured emission via pre-computed `macro_docs` first; if no
+/// region matches or that slot is `None`, fall through to verbatim.
+pub(crate) fn try_macro_call<'a>(
+    ctx: &FmtCtx<'a>,
+    regions: &[(StmtOffset, StmtLen)],
+    macro_docs: &[Option<DocId>],
+    arena: &mut DocArena<'a>,
+    consumed: &mut [bool],
+    tokenizer: &AnyTokenizer,
+    child_id: AnyNodeId,
+) -> Option<DocId> {
+    if let Some(doc) = try_macro_structured(ctx, regions, macro_docs, consumed, child_id) {
+        return Some(doc);
+    }
+    try_macro_verbatim(ctx, regions, arena, consumed, tokenizer, child_id)
+}
+
+/// Look up a pre-computed structured `DocId` for a macro call
+/// positioned at `child_id`.  The alignment rule is the same as
+/// `try_macro_verbatim`'s: next unconsumed token starts at the
+/// region's `r_start` and the node's extent ends at `r_end`.
+/// Deliberately does NOT advance the cctx cursor — the child frame's
+/// `Span` op advances it when the fallback `TK_ID` emits, matching
+/// verbatim's timing so trailing-comment drains land in the outer
+/// frame rather than the inner group.
+fn try_macro_structured(
+    ctx: &FmtCtx<'_>,
+    regions: &[(StmtOffset, StmtLen)],
+    macro_docs: &[Option<DocId>],
+    consumed: &mut [bool],
+    child_id: AnyNodeId,
+) -> Option<DocId> {
+    let cctx = ctx.comment_ctx.as_ref()?;
+    let (tok_offset, _) = cctx.peek_next_token()?;
+    let (node_text, node_off) = ctx.reader.node_text(child_id)?;
+    let node_len = StmtLen::from_raw(u32::try_from(node_text.len()).ok()?);
+    let node_end = node_off + node_len;
+
+    for (i, &(r_start, r_len)) in regions.iter().enumerate() {
+        if tok_offset == r_start && node_end == r_start + r_len {
+            if consumed[i] {
+                return Some(NIL_DOC);
+            }
+            let doc = (*macro_docs.get(i)?)?;
+            consumed[i] = true;
+            return Some(doc);
+        }
+    }
+    None
+}
 
 /// Check if the next token falls within a macro region.
 ///
