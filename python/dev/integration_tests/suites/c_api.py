@@ -83,6 +83,7 @@ class Driver:
 _DRIVERS = [
     Driver(area="formatter", source="tests/c_api_tests/formatter_driver.c"),
     Driver(area="validator", source="tests/c_api_tests/validator_driver.c"),
+    Driver(area="parser",    source="tests/c_api_tests/parser_driver.c"),
 ]
 
 _STATIC_LIB_REL = "target/debug/libsyntaqlite.a"
