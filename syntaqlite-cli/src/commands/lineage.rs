@@ -74,7 +74,9 @@ impl<'a> LineageRun<'a> {
 
     fn analyze(&self, src: &Source) -> Vec<Record> {
         let mut analyzer = SemanticAnalyzer::with_dialect(self.dialect.clone());
-        let model = analyzer.analyze(&src.text, &self.schema_catalog, &self.validation);
+        let mut catalog = self.schema_catalog.clone();
+        let mut ctx = syntaqlite::AnalysisContext::new(&mut catalog).with_config(self.validation);
+        let model = analyzer.analyze(&src.text, &mut ctx);
         let mut records = Vec::new();
         for (idx, stmt) in model.statements().iter().enumerate() {
             let idx = u32::try_from(idx).unwrap_or(u32::MAX);

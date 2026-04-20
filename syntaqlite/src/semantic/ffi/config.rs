@@ -179,16 +179,10 @@ pub unsafe extern "C" fn syntaqlite_validator_set_module_resolver(
     // SAFETY: caller guarantees `v` is a valid pointer from `syntaqlite_validator_create_*`.
     let v = unsafe { &mut *v };
     let state = v.state_mut();
-    match resolve_fn {
-        Some(f) => {
-            let resolver = CCallbackResolver {
-                resolve_fn: f,
-                user_data,
-            };
-            state.analyzer.set_module_resolver(Some(Box::new(resolver)));
-        }
-        None => {
-            state.analyzer.set_module_resolver(None);
-        }
-    }
+    state.resolver = resolve_fn.map(|f| -> Box<dyn crate::semantic::ModuleResolver> {
+        Box::new(CCallbackResolver {
+            resolve_fn: f,
+            user_data,
+        })
+    });
 }

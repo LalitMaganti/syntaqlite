@@ -60,7 +60,8 @@ Zero-copy: tokens reference byte offsets into the source string.
 | Type / Method | Description |
 |---------------|-------------|
 | `SemanticAnalyzer::new()` | Create an analyzer for the SQLite dialect |
-| `analyzer.analyze(sql, &catalog, &config) -> SemanticModel` | Analyze SQL, returning diagnostics and lineage |
+| `AnalysisContext::new(&mut catalog)` | Bundle the catalog, config, and optional module resolver for a single analysis call |
+| `analyzer.analyze(sql, &mut ctx) -> SemanticModel` | Analyze SQL, returning diagnostics and lineage |
 | `Catalog::new(dialect)` | Create an empty catalog |
 | `catalog.layer_mut(CatalogLayer::Database).insert_table(name, cols, false)` | Register a table |
 | `ValidationConfig::default()` | Default config (warnings for unknowns) |

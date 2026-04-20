@@ -32,6 +32,7 @@ use syntaqlite_syntax::any::{AnyTokenType, TokenCategory};
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 
 use crate::dialect::AnyDialect;
+use crate::semantic::AnalysisContext;
 use crate::semantic::ValidationConfig;
 use crate::semantic::analyzer::SemanticAnalyzer;
 use crate::semantic::analyzer::walker::WalkPass;
@@ -223,7 +224,7 @@ fn skip_single_line_string(bytes: &[u8], pos: usize, end: usize) -> usize {
 /// let fragments = extract_python(python_source);
 /// assert_eq!(fragments.len(), 1);
 ///
-/// let analyzer = EmbeddedAnalyzer::new(syntaqlite::sqlite_dialect());
+/// let mut analyzer = EmbeddedAnalyzer::new(syntaqlite::sqlite_dialect());
 /// let diags = analyzer.validate(&fragments);
 /// // `diags` contains diagnostics with byte offsets into `python_source`.
 /// ```
@@ -263,7 +264,7 @@ impl EmbeddedAnalyzer {
     ///
     /// Diagnostics whose spans fall inside a hole placeholder are automatically
     /// filtered out by the internal offset map returning `None`.
-    pub fn validate(&self, fragments: &[EmbeddedFragment]) -> Vec<Diagnostic> {
+    pub fn validate(&mut self, fragments: &[EmbeddedFragment]) -> Vec<Diagnostic> {
         let mut all_diags = Vec::new();
 
         for fragment in fragments {
@@ -289,13 +290,13 @@ impl EmbeddedAnalyzer {
     /// `fragment.sql_text`. The caller is responsible for mapping these through
     /// an [`OffsetMap`] to host-file positions.
     pub(crate) fn fragment_semantic_tokens(
-        &self,
+        &mut self,
         fragment: &EmbeddedFragment,
     ) -> Vec<(DocOffset, DocLen, TokenCategory)> {
         let mut analyzer = self.make_analyzer();
         let mut pass = TokenCapturePass::default();
-        let _ =
-            analyzer.analyze_with_pass(fragment.sql_text(), &self.catalog, &self.config, &mut pass);
+        let mut ctx = AnalysisContext::new(&mut self.catalog).with_config(self.config);
+        let _ = analyzer.analyze_with_pass(fragment.sql_text(), &mut ctx, &mut pass);
         let dialect = analyzer.dialect();
         let mut out: Vec<(DocOffset, DocLen, TokenCategory)> = Vec::new();
         for (offset, length, tt, flags) in pass.tokens {
@@ -321,7 +322,7 @@ impl EmbeddedAnalyzer {
     /// # Panics
     /// Panics if a host token length does not fit in `u32` (practically impossible).
     pub fn semantic_tokens_encoded(
-        &self,
+        &mut self,
         fragments: &[EmbeddedFragment],
         source: &str,
     ) -> Vec<u32> {
@@ -402,9 +403,10 @@ impl EmbeddedAnalyzer {
     /// Parse and validate a single fragment.
     ///
     /// Returns diagnostics with SQL-text byte offsets (not yet mapped to host).
-    fn validate_fragment(&self, fragment: &EmbeddedFragment) -> Vec<Diagnostic> {
+    fn validate_fragment(&mut self, fragment: &EmbeddedFragment) -> Vec<Diagnostic> {
         let mut analyzer = self.make_analyzer();
-        let model = analyzer.analyze(fragment.sql_text(), &self.catalog, &self.config);
+        let mut ctx = AnalysisContext::new(&mut self.catalog).with_config(self.config);
+        let model = analyzer.analyze(fragment.sql_text(), &mut ctx);
         model.diagnostics().cloned().collect()
     }
 }

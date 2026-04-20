@@ -52,6 +52,7 @@ pub(super) struct ValidatorState {
     pub(super) user_catalog: Catalog,
     pub(super) dialect: AnyDialect,
     pub(super) validation_config: ValidationConfig,
+    pub(super) resolver: Option<Box<dyn super::ModuleResolver>>,
     pub(super) c_diagnostics: Vec<SyntaqliteDiagnostic>,
     pub(super) rendered_messages: Vec<CString>,
     pub(super) last_source: String,

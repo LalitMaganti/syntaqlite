@@ -152,7 +152,10 @@ pub unsafe extern "C" fn syntaqlite_validator_load_schema_ddl(
     };
 
     let (catalog, errors) = Catalog::from_ddl(state.dialect.clone(), &[src]);
-    state.user_catalog.copy_schema_layers_from(&catalog);
+    state
+        .user_catalog
+        .layer_mut(CatalogLayer::Database)
+        .merge_from(catalog.layer(CatalogLayer::Database));
     errors.len() as u32
 }
 

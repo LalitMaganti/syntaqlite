@@ -25,11 +25,11 @@ use crate::source::{DocOffset, DocRange, LayerRange};
 ///
 /// ```
 /// # use syntaqlite::semantic::Severity;
-/// # use syntaqlite::{SemanticAnalyzer, Catalog, ValidationConfig};
+/// # use syntaqlite::{AnalysisContext, SemanticAnalyzer, Catalog};
 /// # let mut analyzer = SemanticAnalyzer::new();
-/// # let catalog = Catalog::new(syntaqlite::sqlite_dialect());
-/// # let config = ValidationConfig::default();
-/// let model = analyzer.analyze("SELECT 1 FROM no_such_table", &catalog, &config);
+/// # let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
+/// # let mut ctx = AnalysisContext::new(&mut catalog);
+/// let model = analyzer.analyze("SELECT 1 FROM no_such_table", &mut ctx);
 ///
 /// for diag in model.diagnostics() {
 ///     println!(
@@ -129,12 +129,12 @@ impl Diagnostic {
 /// # Example
 ///
 /// ```
-/// # use syntaqlite::{SemanticAnalyzer, Catalog, ValidationConfig};
+/// # use syntaqlite::{AnalysisContext, SemanticAnalyzer, Catalog};
 /// # use syntaqlite::semantic::DiagnosticMessage;
 /// # let mut analyzer = SemanticAnalyzer::new();
-/// # let catalog = Catalog::new(syntaqlite::sqlite_dialect());
-/// # let config = ValidationConfig::default();
-/// let model = analyzer.analyze("SELECT no_such_func(1)", &catalog, &config);
+/// # let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
+/// # let mut ctx = AnalysisContext::new(&mut catalog);
+/// let model = analyzer.analyze("SELECT no_such_func(1)", &mut ctx);
 ///
 /// for diag in model.diagnostics() {
 ///     match diag.message() {

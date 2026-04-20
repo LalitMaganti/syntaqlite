@@ -9,6 +9,7 @@ use syntaqlite_syntax::source::{DocOffset, DocRange};
 use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
 use crate::fmt::formatter::Formatter;
+use crate::semantic::AnalysisContext;
 use crate::semantic::Catalog;
 use crate::semantic::ValidationConfig;
 use crate::semantic::analyzer::SemanticAnalyzer;
@@ -75,6 +76,25 @@ impl SchemaMap {
         }
         self.default.as_ref().map(|cat| (cat, true))
     }
+
+    /// Mutable variant of [`resolve`](Self::resolve). Used by the analysis
+    /// path, which needs `&mut Catalog` to accumulate per-document DDL.
+    pub(crate) fn resolve_mut(&mut self, file_uri: &str) -> Option<(&mut Catalog, bool)> {
+        let path = file_uri.strip_prefix("file://")?;
+        let path = Path::new(path);
+        let relative = path.strip_prefix(&self.config_dir).ok()?;
+        let relative_str = relative.to_string_lossy();
+        let match_opts = glob::MatchOptions {
+            require_literal_separator: true,
+            ..Default::default()
+        };
+        for (pattern, catalog) in &mut self.entries {
+            if pattern.matches_with(&relative_str, match_opts) {
+                return Some((catalog, true));
+            }
+        }
+        self.default.as_mut().map(|cat| (cat, true))
+    }
 }
 
 // ── Analysis dispatch ────────────────────────────────────────────────────────
@@ -83,7 +103,7 @@ impl SchemaMap {
 fn ensure_analysis(
     doc: &mut Document,
     analyzer: &mut SemanticAnalyzer,
-    user_catalog: &Catalog,
+    user_catalog: &mut Catalog,
     validation_config: &ValidationConfig,
     external_defs: Option<&ExternalDefinitions>,
 ) {
@@ -91,8 +111,8 @@ fn ensure_analysis(
         return;
     }
     let mut capture = LspCapturePass::new(external_defs);
-    let model =
-        analyzer.analyze_with_pass(&doc.source, user_catalog, validation_config, &mut capture);
+    let mut ctx = AnalysisContext::new(user_catalog).with_config(*validation_config);
+    let model = analyzer.analyze_with_pass(&doc.source, &mut ctx, &mut capture);
     let all_diags: Vec<Diagnostic> = model.diagnostics().cloned().collect();
     let parse_diags: Vec<Diagnostic> = all_diags
         .iter()
@@ -110,8 +130,8 @@ pub(super) fn ensure_analysis_for(
     uri: &str,
     documents: &mut DocumentStore,
     analyzer: &mut SemanticAnalyzer,
-    schema_map: Option<&SchemaMap>,
-    user_catalog: &Catalog,
+    schema_map: Option<&mut SchemaMap>,
+    user_catalog: &mut Catalog,
     base_validation_config: &ValidationConfig,
     external_defs: Option<&ExternalDefinitions>,
 ) -> bool {
@@ -119,7 +139,7 @@ pub(super) fn ensure_analysis_for(
         return false;
     };
     let (catalog, config) = if let Some(map) = schema_map {
-        if let Some((cat, _strict)) = map.resolve(uri) {
+        if let Some((cat, _strict)) = map.resolve_mut(uri) {
             (cat, base_validation_config.with_strict_schema())
         } else {
             (user_catalog, *base_validation_config)
@@ -293,8 +313,8 @@ impl LspHost {
             uri,
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             Some(&self.external_defs),
         ) {
@@ -318,8 +338,8 @@ impl LspHost {
             uri,
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             Some(&self.external_defs),
         ) {
@@ -354,8 +374,8 @@ impl LspHost {
             uri,
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             Some(&self.external_defs),
         ) {
@@ -384,11 +404,7 @@ impl LspHost {
     /// Completion items (keywords + functions) at a byte offset.
     pub fn completion_items(&mut self, uri: &str, offset: DocOffset) -> Vec<CompletionEntry> {
         let info = self.completion_info_at_offset(uri, offset);
-        super::completion_service::build_completion_items(
-            &info,
-            &self.dialect,
-            self.analyzer.catalog(),
-        )
+        super::completion_service::build_completion_items(&info, &self.dialect, &self.user_catalog)
     }
 
     // ── Semantic validation ────────────────────────────────────────────────────
@@ -405,8 +421,8 @@ impl LspHost {
             uri,
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             Some(&self.external_defs),
         ) {
@@ -435,7 +451,8 @@ impl LspHost {
         let Some(source) = self.documents.get(uri).map(|d| d.source.as_str()) else {
             return Vec::new();
         };
-        let model = self.analyzer.analyze(source, &self.user_catalog, config);
+        let mut ctx = AnalysisContext::new(&mut self.user_catalog).with_config(*config);
+        let model = self.analyzer.analyze(source, &mut ctx);
         model
             .diagnostics()
             .filter(|d| !d.message.is_parse_error())
@@ -476,8 +493,8 @@ impl LspHost {
             uri,
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             Some(&self.external_defs),
         );
@@ -501,8 +518,8 @@ impl LspHost {
             uri,
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             Some(&self.external_defs),
         );
@@ -529,8 +546,8 @@ impl LspHost {
         super::refs_service::find_references(
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             &self.external_defs,
             uri,
@@ -551,8 +568,8 @@ impl LspHost {
             uri,
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             Some(&self.external_defs),
         );
@@ -576,8 +593,8 @@ impl LspHost {
         super::refs_service::rename(
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             &self.external_defs,
             uri,
@@ -599,8 +616,8 @@ impl LspHost {
             uri,
             &mut self.documents,
             &mut self.analyzer,
-            self.schema_map.as_ref(),
-            &self.user_catalog,
+            self.schema_map.as_mut(),
+            &mut self.user_catalog,
             &self.validation_config,
             Some(&self.external_defs),
         );
