@@ -27,6 +27,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Cache third_party
+        uses: actions/cache@v5
+        with:
+          path: third_party
+          key: third-party-ui-rust-${{ runner.os }}-${{ hashFiles('python/tools/install_build_deps.py') }}
+
+      - name: Install build dependencies (Rust + Node.js + Emscripten)
+        run: python3 tools/install-build-deps --ui
+
+      - name: Build WASM runtime
+        run: python3 tools/build-web-playground --hermetic
+
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
@@ -39,6 +51,10 @@ jobs:
       - name: Build
         working-directory: web/syntaqlite-js
         run: npm run build
+
+      - name: Verify wasm files are in tarball
+        working-directory: web/syntaqlite-js
+        run: node scripts/verify-tarball.mjs
 
       - name: Publish
         working-directory: web/syntaqlite-js

@@ -244,6 +244,22 @@ jobs:
           export PATH="$PWD/../../third_party/bin/linux-amd64/nodejs/bin:$PATH"
           npm run test:e2e:ci
 
+      - name: Run npm package e2e smoke test
+        working-directory: web/syntaqlite-js
+        run: |
+          export PATH="$PWD/../../third_party/bin/linux-amd64/nodejs/bin:$PATH"
+          npm run test:package
+
+      - name: Upload npm package test report
+        uses: actions/upload-artifact@v6
+        if: failure()
+        with:
+          name: syntaqlite-js-package-test-report
+          path: |
+            web/syntaqlite-js/playwright-report/
+            web/syntaqlite-js/test-results/
+          retention-days: 14
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@v6
         if: always()
