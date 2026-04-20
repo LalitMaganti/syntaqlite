@@ -107,79 +107,18 @@ pub(crate) fn generate_functions_catalog(json_content: &str) -> Result<String, S
     let file: FunctionsFile =
         serde_json::from_str(json_content).map_err(|e| format!("parsing functions.json: {e}"))?;
 
-    let mut w = RustWriter::new();
-    w.file_header();
-    w.line("//! Static catalog of `SQLite` built-in functions with version/cflag availability.");
-    w.newline();
-    w.line("use crate::dialect::{AvailabilityRule, CflagPolarity, FunctionCategory, FunctionEntry, FunctionInfo, SqliteVersion};");
-    w.newline();
-
-    // Static data: arity arrays
+    // Scan categories + polarities used by the catalog so we only emit the
+    // aliases we actually reference — unused imports would trigger a warning.
+    let mut used_categories: std::collections::BTreeSet<&'static str> =
+        std::collections::BTreeSet::new();
+    let mut used_polarities: std::collections::BTreeSet<&'static str> =
+        std::collections::BTreeSet::new();
     for func in &file.functions {
-        let ident = arity_ident(&func.name);
-        let arities = func
-            .arities
-            .iter()
-            .map(ToString::to_string)
-            .collect::<Vec<_>>()
-            .join(", ");
-        let _ = writeln!(w, "static ARITIES_{ident}: &[i16] = &[{arities}];");
-    }
-    w.newline();
-
-    // Static data: availability arrays
-    for func in &file.functions {
-        let ident = arity_ident(&func.name);
-        let mut entries: Vec<String> = Vec::new();
-        for avail in &func.availability {
-            let since = encode_version(&avail.since)?;
-            let until = match &avail.until {
-                Some(v) => format!("Some({})", encode_version(v)?),
-                None => "None".to_string(),
-            };
-            let (cflag_idx_str, polarity) = match &avail.cflag {
-                Some(name) => {
-                    let idx = cflag_index(name).ok_or_else(|| {
-                        format!("unknown cflag '{}' in function '{}'", name, func.name)
-                    })?;
-                    let pol = match avail.polarity.as_deref() {
-                        Some("enable") => "CflagPolarity::Enable",
-                        Some("omit") => "CflagPolarity::Omit",
-                        other => {
-                            return Err(format!(
-                                "unknown polarity '{:?}' for cflag '{}' in function '{}'",
-                                other, name, func.name
-                            ));
-                        }
-                    };
-                    (format!("{idx}"), pol)
-                }
-                None => ("u32::MAX".to_string(), "CflagPolarity::Enable"),
-            };
-            entries.push(format!(
-                "AvailabilityRule {{ since: {since}, until: {until}, cflag_index: {cflag_idx_str}, cflag_polarity: {polarity} }}"
-            ));
-        }
-        let entries_str = entries.join(", ");
-        let _ = writeln!(
-            w,
-            "static AVAIL_{ident}: &[AvailabilityRule] = &[{entries_str}];"
-        );
-    }
-    w.newline();
-
-    // Main catalog array
-    let count = file.functions.len();
-    let _ = writeln!(w, "/// All {count} `SQLite` built-in functions.");
-    w.line("pub(crate) static SQLITE_FUNCTIONS: &[FunctionEntry<'static>] = &[");
-    w.indent();
-    for func in &file.functions {
-        let ident = arity_ident(&func.name);
         let cat = match func.category.as_str() {
-            "scalar" => "FunctionCategory::Scalar",
-            "aggregate" => "FunctionCategory::Aggregate",
-            "window" => "FunctionCategory::Window",
-            "table_valued" => "FunctionCategory::TableValued",
+            "scalar" => "Scalar as Sc",
+            "aggregate" => "Aggregate as Ag",
+            "window" => "Window as Wn",
+            "table_valued" => "TableValued as Tv",
             other => {
                 return Err(format!(
                     "unknown category '{other}' for function '{}'",
@@ -187,14 +126,53 @@ pub(crate) fn generate_functions_catalog(json_content: &str) -> Result<String, S
                 ));
             }
         };
-        let name_escaped = func.name.replace('\\', "\\\\").replace('"', "\\\"");
-        w.open_block("FunctionEntry {");
-        let _ = writeln!(
-            w,
-            "info: FunctionInfo {{ name: \"{name_escaped}\", arities: ARITIES_{ident}, category: {cat} }},"
-        );
-        let _ = writeln!(w, "availability: AVAIL_{ident},");
-        w.close_block("},");
+        used_categories.insert(cat);
+        for avail in &func.availability {
+            match avail.polarity.as_deref() {
+                Some("enable") | None => {
+                    used_polarities.insert("Enable as E");
+                }
+                Some("omit") => {
+                    used_polarities.insert("Omit as O");
+                }
+                other => {
+                    return Err(format!(
+                        "unknown polarity '{:?}' in function '{}'",
+                        other, func.name
+                    ));
+                }
+            }
+        }
+    }
+    let cat_aliases = used_categories.into_iter().collect::<Vec<_>>().join(", ");
+    let pol_aliases = used_polarities.into_iter().collect::<Vec<_>>().join(", ");
+
+    let mut w = RustWriter::new();
+    w.file_header();
+    w.line("//! Static catalog of `SQLite` built-in functions with version/cflag availability.");
+    w.newline();
+    w.line("use crate::dialect::{AvailabilityRule, CflagPolarity, FunctionCategory, FunctionEntry, FunctionInfo, SqliteVersion};");
+    w.newline();
+
+    // Aliases keep each FunctionEntry line short so the whole catalog fits on
+    // one line per function under `#[rustfmt::skip]`.
+    w.line("use AvailabilityRule as A;");
+    let _ = writeln!(w, "use CflagPolarity::{{{pol_aliases}}};");
+    let _ = writeln!(w, "use FunctionCategory::{{{cat_aliases}}};");
+    w.line("use FunctionEntry as F;");
+    w.line("use FunctionInfo as I;");
+    w.line("use SqliteVersion as V;");
+    w.newline();
+
+    // Main catalog array. `#[rustfmt::skip]` keeps each entry on one line so
+    // the generated file stays compact (one line per function).
+    let count = file.functions.len();
+    let _ = writeln!(w, "/// All {count} `SQLite` built-in functions.");
+    w.line("#[rustfmt::skip]");
+    w.line("pub(crate) static SQLITE_FUNCTIONS: &[FunctionEntry<'static>] = &[");
+    w.indent();
+    for func in &file.functions {
+        emit_function_entry(&mut w, func)?;
     }
     w.close_block("];");
     w.newline();
@@ -202,33 +180,75 @@ pub(crate) fn generate_functions_catalog(json_content: &str) -> Result<String, S
     Ok(w.finish())
 }
 
-/// Convert a function name to a valid Rust identifier for use in static names.
-fn arity_ident(name: &str) -> String {
-    let mut out = String::with_capacity(name.len());
-    for ch in name.chars() {
-        match ch {
-            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => out.push(ch.to_ascii_uppercase()),
-            '-' | '>' => out.push('_'),
-            _ => {
-                // Fallback: hex encode
-                let _ = write!(out, "X{:02X}", ch as u32);
-            }
+fn emit_function_entry(w: &mut RustWriter, func: &JsonFunction) -> Result<(), String> {
+    let cat = match func.category.as_str() {
+        "scalar" => "Sc",
+        "aggregate" => "Ag",
+        "window" => "Wn",
+        "table_valued" => "Tv",
+        other => {
+            return Err(format!(
+                "unknown category '{other}' for function '{}'",
+                func.name
+            ));
         }
+    };
+    let name_escaped = func.name.replace('\\', "\\\\").replace('"', "\\\"");
+    let arities = func
+        .arities
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>()
+        .join(", ");
+    let mut rules: Vec<String> = Vec::new();
+    for avail in &func.availability {
+        let since = short_version(&avail.since)?;
+        let until = match &avail.until {
+            Some(v) => format!("Some({})", short_version(v)?),
+            None => "None".to_string(),
+        };
+        let (cflag_idx_str, polarity) = match &avail.cflag {
+            Some(name) => {
+                let idx = cflag_index(name).ok_or_else(|| {
+                    format!("unknown cflag '{}' in function '{}'", name, func.name)
+                })?;
+                let pol = match avail.polarity.as_deref() {
+                    Some("enable") => "E",
+                    Some("omit") => "O",
+                    other => {
+                        return Err(format!(
+                            "unknown polarity '{:?}' for cflag '{}' in function '{}'",
+                            other, name, func.name
+                        ));
+                    }
+                };
+                (idx.to_string(), pol)
+            }
+            None => ("u32::MAX".to_string(), "E"),
+        };
+        rules.push(format!(
+            "A {{ since: {since}, until: {until}, cflag_index: {cflag_idx_str}, cflag_polarity: {polarity} }}"
+        ));
     }
-    out
+    let rules_str = rules.join(", ");
+    let _ = writeln!(
+        w,
+        "F {{ info: I {{ name: \"{name_escaped}\", arities: &[{arities}], category: {cat} }}, availability: &[{rules_str}] }},"
+    );
+    Ok(())
+}
+
+/// Like [`encode_version`] but returns the short `V::V3_NN` form for the
+/// re-aliased import in the catalog module.
+fn short_version(s: &str) -> Result<String, String> {
+    let full = encode_version(s)?;
+    // "SqliteVersion::V3_38" -> "V::V3_38"
+    Ok(full.replace("SqliteVersion::", "V::"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn arity_ident_basic() {
-        assert_eq!(arity_ident("abs"), "ABS");
-        assert_eq!(arity_ident("->"), "__");
-        assert_eq!(arity_ident("->>"), "___");
-        assert_eq!(arity_ident("json_array"), "JSON_ARRAY");
-    }
 
     #[test]
     fn generate_from_minimal_json() {
@@ -247,7 +267,9 @@ mod tests {
         let result = generate_functions_catalog(json).unwrap();
         assert!(result.contains("SQLITE_FUNCTIONS"));
         assert!(result.contains("\"abs\""));
-        assert!(result.contains("FunctionCategory::Scalar"));
+        // `Scalar` is aliased to `Sc` in the generated catalog.
+        assert!(result.contains("category: Sc"));
+        assert!(result.contains("arities: &[0, 1]"));
         assert!(result.contains("use crate::dialect::"));
     }
 
@@ -271,6 +293,7 @@ mod tests {
         }"#;
         let result = generate_functions_catalog(json).unwrap();
         assert!(result.contains("cflag_index: 36"));
-        assert!(result.contains("CflagPolarity::Enable"));
+        // `Enable` is aliased to `E` in the generated catalog.
+        assert!(result.contains("cflag_polarity: E"));
     }
 }
