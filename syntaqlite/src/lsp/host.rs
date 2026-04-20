@@ -17,7 +17,7 @@ use crate::semantic::diagnostics::Diagnostic;
 
 use crate::semantic::analysis::{DefinitionResult, SemanticToken, StoredToken, SymbolIdentity};
 
-use super::analysis_data::{ExternalDefinitions, LspObserver};
+use super::analysis_data::{ExternalDefinitions, LspCapturePass};
 use super::document_store::{Document, DocumentStore};
 use super::{CompletionEntry, CompletionInfo};
 
@@ -91,9 +91,9 @@ fn ensure_analysis(
     if doc.analysis.is_some() {
         return;
     }
-    let mut observer = LspObserver::new(external_defs);
+    let mut capture = LspCapturePass::new(external_defs);
     let model =
-        analyzer.analyze_with_observer(&doc.source, user_catalog, validation_config, &mut observer);
+        analyzer.analyze_with_pass(&doc.source, user_catalog, validation_config, &mut capture);
     let all_diags: Vec<Diagnostic> = model.diagnostics().cloned().collect();
     let parse_diags: Vec<Diagnostic> = all_diags
         .iter()
@@ -102,7 +102,7 @@ fn ensure_analysis(
         .collect();
     doc.cached_parse_diags = Some(parse_diags);
     doc.cached_all_diags = Some(all_diags);
-    doc.analysis = Some(observer.into_data());
+    doc.analysis = Some(capture.into_data());
 }
 
 /// Resolve the correct catalog for `uri` via `schema_map`, then call

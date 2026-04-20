@@ -14,13 +14,13 @@
 //! delegating to each pass at every hook — the composition is explicit and
 //! grep-able.
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
+use syntaqlite_syntax::any::{
+    AnyNodeId, AnyParseError, AnyParsedStatement, FieldValue, NodeFields,
+};
 use syntaqlite_syntax::source::DocRange;
 
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
-use crate::semantic::catalog::{
-    AritySpec, Catalog, ColumnResolution, FunctionCategory, FunctionCheckResult,
-};
+use crate::semantic::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
 use crate::semantic::ddl::DdlReader;
 
 use super::query_scope::{QueryScope, RowIdPolicy};
@@ -42,6 +42,10 @@ pub(crate) struct WalkCtx<'a> {
 // lives on the walker's stack for the duration of each hook call.
 
 /// A table/view/table-function reference in a FROM / JOIN / DML target.
+///
+/// Passes that need the relation's columns look them up via
+/// `cx.catalog.table_source_info(ev.name)`; the walker does not pre-compute
+/// that (it would be wasted work when no pass wants it).
 #[derive(Copy, Clone)]
 pub(crate) struct SourceRefEvent<'a> {
     pub(crate) node_id: AnyNodeId,
@@ -49,8 +53,6 @@ pub(crate) struct SourceRefEvent<'a> {
     pub(crate) range: DocRange,
     pub(crate) name: &'a str,
     pub(crate) resolved: bool,
-    /// Columns of the relation if known to the catalog, else `None`.
-    pub(crate) columns: Option<&'a [String]>,
 }
 
 /// A column reference (qualified or bare) inside an expression.
@@ -65,6 +67,9 @@ pub(crate) struct ColumnRefEvent<'a> {
 }
 
 /// A function / table-function / aggregate call.
+///
+/// Passes that need the resolved signature look it up via
+/// `cx.catalog.function_signature(ev.name)` themselves.
 #[derive(Copy, Clone)]
 pub(crate) struct CallEvent<'a> {
     pub(crate) node_id: AnyNodeId,
@@ -73,8 +78,6 @@ pub(crate) struct CallEvent<'a> {
     pub(crate) name: &'a str,
     pub(crate) arg_count: usize,
     pub(crate) result: &'a FunctionCheckResult,
-    /// Populated only for `FunctionCheckResult::Ok`.
-    pub(crate) signature: Option<&'a (FunctionCategory, Vec<AritySpec>)>,
 }
 
 /// A CTE body's actual result-column count differs from its declared count.
@@ -102,6 +105,11 @@ pub(crate) trait WalkPass {
     const WANTS_RELATION_DEFINITION: bool = false;
     const WANTS_COLUMN_DEFINITION: bool = false;
     const WANTS_CTE_COLUMN_COUNT: bool = false;
+    /// Return true to receive [`on_parsed_statement`](Self::on_parsed_statement)
+    /// and [`on_parse_error`](Self::on_parse_error) hooks. Passes that want
+    /// tokens or comments iterate them from the statement/error themselves —
+    /// the walker does not pre-materialize per-token data.
+    const WANTS_STATEMENT_CONTEXT: bool = false;
 
     fn on_source_ref(
         &mut self,
@@ -137,7 +145,22 @@ pub(crate) trait WalkPass {
         _ev: CteColumnCountMismatchEvent<'_>,
     ) {
     }
+
+    /// Called once before the AST walk for each successfully parsed statement.
+    /// Passes that want tokens or comments iterate `stmt.tokens()` /
+    /// `stmt.comments()` directly inside this hook — no per-element dispatch.
+    fn on_parsed_statement(&mut self, _stmt: &AnyParsedStatement<'_>) {}
+
+    /// Called once per failed parse. Passes can iterate `err.tokens()` /
+    /// `err.comments()` to capture partial token/comment data.
+    fn on_parse_error(&mut self, _err: &AnyParseError<'_>) {}
 }
+
+/// A [`WalkPass`] that ignores every event. Used as the default "extras"
+/// pass when a caller only cares about diagnostics.
+pub(crate) struct NoopWalkPass;
+
+impl WalkPass for NoopWalkPass {}
 
 // ── Entry point ───────────────────────────────────────────────────────────────
 
@@ -185,9 +208,15 @@ fn walk_node<P: WalkPass>(
         .unwrap_or(SemanticRole::Transparent);
 
     match role {
-        SemanticRole::DefineTable { select, .. }
-        | SemanticRole::DefineView { select, .. }
-        | SemanticRole::DefineFunction { select, .. } => {
+        SemanticRole::DefineTable { select, .. } | SemanticRole::DefineView { select, .. } => {
+            if P::WANTS_RELATION_DEFINITION || P::WANTS_COLUMN_DEFINITION {
+                emit_ddl_definitions(stmt, cx.roles, pass, node_id);
+            }
+            if select != FIELD_ABSENT {
+                walk_opt(stmt, cx, pass, field_node_id(&fields, select));
+            }
+        }
+        SemanticRole::DefineFunction { select, .. } => {
             if select != FIELD_ABSENT {
                 walk_opt(stmt, cx, pass, field_node_id(&fields, select));
             }
@@ -307,6 +336,26 @@ pub(crate) fn name_text<'b>(
     }
 }
 
+fn emit_ddl_definitions<P: WalkPass>(
+    stmt: &AnyParsedStatement<'_>,
+    roles: &'static [SemanticRole],
+    pass: &mut P,
+    node_id: AnyNodeId,
+) {
+    let reader = DdlReader::new(stmt, roles);
+    let Some((table_name, table_range)) = reader.name_span(node_id) else {
+        return;
+    };
+    if P::WANTS_RELATION_DEFINITION {
+        pass.on_relation_definition(&table_name, table_range);
+    }
+    if P::WANTS_COLUMN_DEFINITION {
+        for (col_name, col_range) in reader.column_spans(node_id) {
+            pass.on_column_definition(&table_name, &col_name, col_range);
+        }
+    }
+}
+
 // ── Role walkers ──────────────────────────────────────────────────────────────
 
 fn walk_source_ref<P: WalkPass>(
@@ -337,7 +386,6 @@ fn walk_source_ref<P: WalkPass>(
             range,
             name,
             resolved: is_known,
-            columns: columns.as_deref(),
         };
         pass.on_source_ref(stmt, cx, ev);
     }
@@ -367,10 +415,6 @@ fn walk_call<P: WalkPass>(
             .and_then(|id| stmt.list_children(id))
             .map_or(0, <[_]>::len);
         let result = cx.catalog.check_function(name, arg_count);
-        let signature = match &result {
-            FunctionCheckResult::Ok => cx.catalog.function_signature(name),
-            _ => None,
-        };
 
         if P::WANTS_CALL {
             let ev = CallEvent {
@@ -380,7 +424,6 @@ fn walk_call<P: WalkPass>(
                 name,
                 arg_count,
                 result: &result,
-                signature: signature.as_ref(),
             };
             pass.on_call(stmt, cx, ev);
         }

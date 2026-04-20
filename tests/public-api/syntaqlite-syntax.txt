@@ -1096,6 +1096,7 @@ pub fn syntaqlite_syntax::any::AnyNodeTag::from(t: syntaqlite_syntax::nodes::Nod
 pub fn syntaqlite_syntax::any::AnyNodeTag::from_raw(v: u32) -> Self
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyNodeId> + use<>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
@@ -1113,6 +1114,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, span
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::token_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::source::StmtRange> + use<'_>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&mut self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyTokenType::from(t: syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
 pub fn syntaqlite_syntax::any::AnyTokenType::from_raw(v: u32) -> Self

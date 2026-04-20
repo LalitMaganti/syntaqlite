@@ -1,30 +1,34 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! LSP-side glue for capturing semantic-analyzer events.
+//! LSP-side capture pass and per-file glue.
 //!
-//! The analysis output types themselves live in [`crate::semantic::analysis`].
-//! This module holds:
+//! The core analysis output types live in [`crate::semantic::analysis`]. This
+//! module owns:
 //!
-//! - [`LspObserver`] — an [`AnalysisObserver`] impl that fills a
-//!   [`DocumentAnalysisData`] during a pass.
+//! - [`LspCapturePass`] — a [`WalkPass`] impl that fills a
+//!   [`DocumentAnalysisData`] directly during analysis. Replaces the old
+//!   observer-based capture.
 //! - [`ExternalDefinitions`] — a cross-file definition-site registry consulted
-//!   by the observer to correlate resolutions with schema files.
+//!   by the capture pass to correlate resolutions with schema files.
 //! - [`CompletionInfo`] / [`CompletionContext`] — the completion-probe output
 //!   consumed by the LSP completion service.
 
 use std::collections::HashMap;
 
-use syntaqlite_syntax::ParserTokenFlags;
-use syntaqlite_syntax::any::AnyTokenType;
-use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
+use syntaqlite_syntax::any::{AnyParseError, AnyParsedStatement, AnyTokenType};
+use syntaqlite_syntax::source::DocRange;
 
 use crate::semantic::analysis::{
     DefinitionLocation, DocumentAnalysisData, Resolution, ResolvedSymbol, StoredComment,
     StoredToken,
 };
-use crate::semantic::catalog::{AritySpec, FunctionCategory};
-use crate::semantic::observer::AnalysisObserver;
+use crate::semantic::analyzer::walker::{
+    CallEvent, ColumnRefEvent, SourceRefEvent, WalkCtx, WalkPass,
+};
+use crate::semantic::catalog::{
+    AritySpec, ColumnResolution, FunctionCategory, FunctionCheckResult,
+};
 
 // ── Completion ───────────────────────────────────────────────────────────────
 
@@ -124,19 +128,19 @@ impl ExternalDefinitions {
     }
 }
 
-// ── LspObserver ──────────────────────────────────────────────────────────────
+// ── LspCapturePass ────────────────────────────────────────────────────────────
 
-/// Observer that fills a [`DocumentAnalysisData`] during a
-/// [`SemanticAnalyzer`](crate::semantic::SemanticAnalyzer) pass.
+/// Walk-time pass that fills a [`DocumentAnalysisData`] with everything LSP
+/// services need: resolved references, definition sites, tokens, comments.
 ///
-/// The observer holds a reference to an optional external-definition registry
-/// so it can correlate resolutions with cross-file definition sites.
-pub(crate) struct LspObserver<'a> {
+/// The pass holds a reference to an optional external-definition registry so it
+/// can correlate resolutions with cross-file definition sites.
+pub(crate) struct LspCapturePass<'a> {
     pub(crate) data: DocumentAnalysisData,
     external: Option<&'a ExternalDefinitions>,
 }
 
-impl<'a> LspObserver<'a> {
+impl<'a> LspCapturePass<'a> {
     pub(crate) fn new(external: Option<&'a ExternalDefinitions>) -> Self {
         Self {
             data: DocumentAnalysisData::default(),
@@ -185,37 +189,84 @@ impl<'a> LspObserver<'a> {
     }
 }
 
-impl AnalysisObserver for LspObserver<'_> {
-    fn wants_tokens(&self) -> bool {
-        true
-    }
-    fn wants_comments(&self) -> bool {
-        true
-    }
-    fn wants_definitions(&self) -> bool {
-        true
-    }
-    fn wants_references(&self) -> bool {
-        true
-    }
+impl WalkPass for LspCapturePass<'_> {
+    const WANTS_SOURCE_REF: bool = true;
+    const WANTS_COLUMN_REF: bool = true;
+    const WANTS_CALL: bool = true;
+    const WANTS_RELATION_DEFINITION: bool = true;
+    const WANTS_COLUMN_DEFINITION: bool = true;
+    const WANTS_STATEMENT_CONTEXT: bool = true;
 
-    fn on_token(
+    fn on_source_ref(
         &mut self,
-        offset: DocOffset,
-        length: DocLen,
-        token_type: AnyTokenType,
-        flags: ParserTokenFlags,
+        _stmt: &mut AnyParsedStatement<'_>,
+        cx: &mut WalkCtx<'_>,
+        ev: SourceRefEvent<'_>,
     ) {
-        self.data.tokens.push(StoredToken {
-            offset,
-            length,
-            token_type,
-            flags,
+        if !ev.resolved {
+            return;
+        }
+        let (columns, _without_rowid) = cx.catalog.table_source_info(ev.name);
+        let definition = self.lookup_table_definition(ev.name);
+        self.data.resolutions.push(Resolution {
+            range: ev.range,
+            symbol: ResolvedSymbol::Table {
+                name: ev.name.to_string(),
+                columns,
+                definition,
+            },
         });
     }
 
-    fn on_comment(&mut self, offset: DocOffset, length: DocLen) {
-        self.data.comments.push(StoredComment { offset, length });
+    fn on_column_ref(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _cx: &mut WalkCtx<'_>,
+        ev: ColumnRefEvent<'_>,
+    ) {
+        let ColumnResolution::Found { table, all_columns } = ev.resolution else {
+            return;
+        };
+        if table.is_empty() {
+            return;
+        }
+        let definition = self.lookup_column_definition(table, ev.column);
+        self.data.resolutions.push(Resolution {
+            range: ev.range,
+            symbol: ResolvedSymbol::Column {
+                column: ev.column.to_string(),
+                table: table.clone(),
+                all_columns: all_columns.clone(),
+                definition,
+            },
+        });
+    }
+
+    fn on_call(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        cx: &mut WalkCtx<'_>,
+        ev: CallEvent<'_>,
+    ) {
+        if !matches!(ev.result, FunctionCheckResult::Ok) {
+            return;
+        }
+        let Some((category, arities)) = cx.catalog.function_signature(ev.name) else {
+            return;
+        };
+        let cat_str = match category {
+            FunctionCategory::Scalar => "scalar function",
+            FunctionCategory::Aggregate => "aggregate function",
+            FunctionCategory::Window => "window function",
+        };
+        let arity_strs: Vec<String> = arities.iter().map(|a| format_arity(ev.name, *a)).collect();
+        self.data.resolutions.push(Resolution {
+            range: ev.range,
+            symbol: ResolvedSymbol::Function {
+                category: cat_str.to_string(),
+                arities: arity_strs,
+            },
+        });
     }
 
     fn on_relation_definition(&mut self, name: &str, range: DocRange) {
@@ -233,57 +284,40 @@ impl AnalysisObserver for LspObserver<'_> {
         self.data.definition_offsets.insert(key, range);
     }
 
-    fn on_table_reference(&mut self, range: DocRange, name: &str, columns: Option<&[String]>) {
-        let definition = self.lookup_table_definition(name);
-        self.data.resolutions.push(Resolution {
-            range,
-            symbol: ResolvedSymbol::Table {
-                name: name.to_string(),
-                columns: columns.map(<[String]>::to_vec),
-                definition,
-            },
-        });
+    fn on_parsed_statement(&mut self, stmt: &AnyParsedStatement<'_>) {
+        let base = stmt.statement_base();
+        for tok in stmt.tokens() {
+            self.data.tokens.push(StoredToken {
+                offset: tok.offset().to_doc(base),
+                length: tok.length().into(),
+                token_type: tok.token_type(),
+                flags: tok.flags(),
+            });
+        }
+        for c in stmt.comments() {
+            self.data.comments.push(StoredComment {
+                offset: c.offset().to_doc(base),
+                length: c.length().into(),
+            });
+        }
     }
 
-    fn on_column_reference(
-        &mut self,
-        range: DocRange,
-        table: &str,
-        column: &str,
-        all_columns: &[String],
-    ) {
-        let definition = self.lookup_column_definition(table, column);
-        self.data.resolutions.push(Resolution {
-            range,
-            symbol: ResolvedSymbol::Column {
-                column: column.to_string(),
-                table: table.to_string(),
-                all_columns: all_columns.to_vec(),
-                definition,
-            },
-        });
-    }
-
-    fn on_function_reference(
-        &mut self,
-        range: DocRange,
-        name: &str,
-        category: FunctionCategory,
-        arities: &[AritySpec],
-    ) {
-        let cat_str = match category {
-            FunctionCategory::Scalar => "scalar function",
-            FunctionCategory::Aggregate => "aggregate function",
-            FunctionCategory::Window => "window function",
-        };
-        let arity_strs: Vec<String> = arities.iter().map(|a| format_arity(name, *a)).collect();
-        self.data.resolutions.push(Resolution {
-            range,
-            symbol: ResolvedSymbol::Function {
-                category: cat_str.to_string(),
-                arities: arity_strs,
-            },
-        });
+    fn on_parse_error(&mut self, err: &AnyParseError<'_>) {
+        let base = err.statement_base();
+        for tok in err.tokens() {
+            self.data.tokens.push(StoredToken {
+                offset: tok.offset().to_doc(base),
+                length: tok.length().into(),
+                token_type: tok.token_type(),
+                flags: tok.flags(),
+            });
+        }
+        for c in err.comments() {
+            self.data.comments.push(StoredComment {
+                offset: c.offset().to_doc(base),
+                length: c.length().into(),
+            });
+        }
     }
 }
 

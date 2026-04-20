@@ -1,32 +1,25 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Statement-level semantic validation, assembled from two single-purpose
-//! [`WalkPass`] implementors plus a hand-written composition.
+//! Statement-level analysis passes plus the per-statement composition.
 //!
 //! - [`DiagnosticsPass`] consumes walker events and emits a `Vec<Diagnostic>`.
-//! - [`ObserverForwarderPass`] consumes the same events and forwards them to
-//!   an [`AnalysisObserver`] callback interface.
-//! - [`ValidationPass`] holds both and implements `WalkPass` by delegating
-//!   to each at every hook — the composition is explicit, not generated.
-//!
-//! Splitting the two lets us stack them independently (e.g. running just the
-//! observer forwarder from a non-validating tool) and keeps each pass's code
-//! path narrow.
+//! - [`StatementWalkPass`] is the analyzer's per-statement composition: it
+//!   holds `DiagnosticsPass` plus an external user-supplied pass (LSP's
+//!   capture pass, embedded-SQL extractor, etc.) and implements `WalkPass`
+//!   by delegating to each at every hook. The composition is written out by
+//!   hand, not generated.
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement};
+use syntaqlite_syntax::any::{AnyNodeId, AnyParseError, AnyParsedStatement};
 use syntaqlite_syntax::source::{DocRange, LayerRange};
 
-use crate::dialect::AnyDialect;
-use crate::semantic::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
+use crate::semantic::catalog::{ColumnResolution, FunctionCheckResult};
 use crate::semantic::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use crate::semantic::fuzzy::best_suggestion;
-use crate::semantic::observer::AnalysisObserver;
 use crate::semantic::{CheckConfig, CheckLevel, ValidationConfig};
 
-use super::query_scope::QueryScope;
 use super::walker::{
-    self, CallEvent, ColumnRefEvent, CteColumnCountMismatchEvent, SourceRefEvent, WalkCtx, WalkPass,
+    CallEvent, ColumnRefEvent, CteColumnCountMismatchEvent, SourceRefEvent, WalkCtx, WalkPass,
 };
 
 impl CheckConfig {
@@ -48,7 +41,7 @@ impl CheckConfig {
 // ── DiagnosticsPass ───────────────────────────────────────────────────────────
 
 /// Emits semantic diagnostics (`unknown-table`, `unknown-column`, etc.) into a
-/// `Vec<Diagnostic>`. Does not touch any observer.
+/// `Vec<Diagnostic>`.
 pub(super) struct DiagnosticsPass<'a> {
     config: &'a ValidationConfig,
     diagnostics: &'a mut Vec<Diagnostic>,
@@ -247,135 +240,28 @@ impl WalkPass for DiagnosticsPass<'_> {
     }
 }
 
-// ── ObserverForwarderPass ─────────────────────────────────────────────────────
+// ── StatementWalkPass: hand-written composition ───────────────────────────────
 
-/// Forwards resolved references and definition sites to an
-/// [`AnalysisObserver`]. Emits nothing of its own.
-pub(super) struct ObserverForwarderPass<'a> {
-    observer: &'a mut dyn AnalysisObserver,
+/// Analyzer's per-statement composition: [`DiagnosticsPass`] plus an external
+/// user-supplied pass. Implements [`WalkPass`] by writing out each hook by
+/// hand, calling both inner passes in sequence.
+pub(super) struct StatementWalkPass<'a, P: WalkPass> {
+    pub(super) diagnostics: DiagnosticsPass<'a>,
+    pub(super) extra: &'a mut P,
 }
 
-impl<'a> ObserverForwarderPass<'a> {
-    pub(super) fn new(observer: &'a mut dyn AnalysisObserver) -> Self {
-        Self { observer }
-    }
-}
-
-impl WalkPass for ObserverForwarderPass<'_> {
-    const WANTS_SOURCE_REF: bool = true;
-    const WANTS_COLUMN_REF: bool = true;
-    const WANTS_CALL: bool = true;
-    const WANTS_RELATION_DEFINITION: bool = true;
-    const WANTS_COLUMN_DEFINITION: bool = true;
-
-    fn on_source_ref(
-        &mut self,
-        _stmt: &mut AnyParsedStatement<'_>,
-        _cx: &mut WalkCtx<'_>,
-        ev: SourceRefEvent<'_>,
-    ) {
-        if !ev.resolved {
-            return;
-        }
-        if self.observer.wants_references() {
-            self.observer
-                .on_table_reference(ev.range, ev.name, ev.columns);
-        }
-    }
-
-    fn on_column_ref(
-        &mut self,
-        _stmt: &mut AnyParsedStatement<'_>,
-        _cx: &mut WalkCtx<'_>,
-        ev: ColumnRefEvent<'_>,
-    ) {
-        if let ColumnResolution::Found {
-            table: resolved_table,
-            all_columns,
-        } = ev.resolution
-            && self.observer.wants_references()
-            && !resolved_table.is_empty()
-        {
-            self.observer
-                .on_column_reference(ev.range, resolved_table, ev.column, all_columns);
-        }
-    }
-
-    fn on_call(
-        &mut self,
-        _stmt: &mut AnyParsedStatement<'_>,
-        _cx: &mut WalkCtx<'_>,
-        ev: CallEvent<'_>,
-    ) {
-        if !matches!(ev.result, FunctionCheckResult::Ok) {
-            return;
-        }
-        if self.observer.wants_references()
-            && let Some((cat, arities)) = ev.signature
-        {
-            self.observer
-                .on_function_reference(ev.range, ev.name, *cat, arities);
-        }
-    }
-
-    fn on_relation_definition(&mut self, name: &str, range: DocRange) {
-        if self.observer.wants_definitions() {
-            self.observer.on_relation_definition(name, range);
-        }
-    }
-
-    fn on_column_definition(&mut self, table: &str, column: &str, range: DocRange) {
-        if self.observer.wants_definitions() {
-            self.observer.on_column_definition(table, column, range);
-        }
-    }
-}
-
-// ── ValidationPass: explicit composition ──────────────────────────────────────
-
-/// Runs both [`DiagnosticsPass`] and [`ObserverForwarderPass`] together over a
-/// single walk. No framework: each hook on [`WalkPass`] is written out by
-/// hand, calling the two inner passes in sequence.
-pub(super) struct ValidationPass<'a> {
-    diagnostics: DiagnosticsPass<'a>,
-    observer: ObserverForwarderPass<'a>,
-}
-
-impl<'a> ValidationPass<'a> {
-    pub(super) fn run<'b>(
-        stmt: &mut AnyParsedStatement<'b>,
-        root: AnyNodeId,
-        dialect: &AnyDialect,
-        catalog: &'a mut Catalog,
-        config: &'a ValidationConfig,
-        diagnostics: &'a mut Vec<Diagnostic>,
-        observer: &'a mut dyn AnalysisObserver,
-    ) {
-        let mut pass = ValidationPass {
-            diagnostics: DiagnosticsPass::new(config, diagnostics),
-            observer: ObserverForwarderPass::new(observer),
-        };
-        let mut cx = WalkCtx {
-            roles: dialect.roles(),
-            catalog,
-            scope: QueryScope::default(),
-        };
-        walker::walk(stmt, &mut cx, &mut pass, root);
-    }
-}
-
-impl WalkPass for ValidationPass<'_> {
-    const WANTS_SOURCE_REF: bool =
-        DiagnosticsPass::WANTS_SOURCE_REF || ObserverForwarderPass::WANTS_SOURCE_REF;
-    const WANTS_COLUMN_REF: bool =
-        DiagnosticsPass::WANTS_COLUMN_REF || ObserverForwarderPass::WANTS_COLUMN_REF;
-    const WANTS_CALL: bool = DiagnosticsPass::WANTS_CALL || ObserverForwarderPass::WANTS_CALL;
-    const WANTS_RELATION_DEFINITION: bool = DiagnosticsPass::WANTS_RELATION_DEFINITION
-        || ObserverForwarderPass::WANTS_RELATION_DEFINITION;
+impl<P: WalkPass> WalkPass for StatementWalkPass<'_, P> {
+    const WANTS_SOURCE_REF: bool = DiagnosticsPass::WANTS_SOURCE_REF || P::WANTS_SOURCE_REF;
+    const WANTS_COLUMN_REF: bool = DiagnosticsPass::WANTS_COLUMN_REF || P::WANTS_COLUMN_REF;
+    const WANTS_CALL: bool = DiagnosticsPass::WANTS_CALL || P::WANTS_CALL;
+    const WANTS_RELATION_DEFINITION: bool =
+        DiagnosticsPass::WANTS_RELATION_DEFINITION || P::WANTS_RELATION_DEFINITION;
     const WANTS_COLUMN_DEFINITION: bool =
-        DiagnosticsPass::WANTS_COLUMN_DEFINITION || ObserverForwarderPass::WANTS_COLUMN_DEFINITION;
+        DiagnosticsPass::WANTS_COLUMN_DEFINITION || P::WANTS_COLUMN_DEFINITION;
     const WANTS_CTE_COLUMN_COUNT: bool =
-        DiagnosticsPass::WANTS_CTE_COLUMN_COUNT || ObserverForwarderPass::WANTS_CTE_COLUMN_COUNT;
+        DiagnosticsPass::WANTS_CTE_COLUMN_COUNT || P::WANTS_CTE_COLUMN_COUNT;
+    // DiagnosticsPass never wants statement context; only the extra pass can.
+    const WANTS_STATEMENT_CONTEXT: bool = P::WANTS_STATEMENT_CONTEXT;
 
     fn on_source_ref(
         &mut self,
@@ -384,7 +270,7 @@ impl WalkPass for ValidationPass<'_> {
         ev: SourceRefEvent<'_>,
     ) {
         self.diagnostics.on_source_ref(stmt, cx, ev);
-        self.observer.on_source_ref(stmt, cx, ev);
+        self.extra.on_source_ref(stmt, cx, ev);
     }
 
     fn on_column_ref(
@@ -394,7 +280,7 @@ impl WalkPass for ValidationPass<'_> {
         ev: ColumnRefEvent<'_>,
     ) {
         self.diagnostics.on_column_ref(stmt, cx, ev);
-        self.observer.on_column_ref(stmt, cx, ev);
+        self.extra.on_column_ref(stmt, cx, ev);
     }
 
     fn on_call(
@@ -404,17 +290,17 @@ impl WalkPass for ValidationPass<'_> {
         ev: CallEvent<'_>,
     ) {
         self.diagnostics.on_call(stmt, cx, ev);
-        self.observer.on_call(stmt, cx, ev);
+        self.extra.on_call(stmt, cx, ev);
     }
 
     fn on_relation_definition(&mut self, name: &str, range: DocRange) {
         self.diagnostics.on_relation_definition(name, range);
-        self.observer.on_relation_definition(name, range);
+        self.extra.on_relation_definition(name, range);
     }
 
     fn on_column_definition(&mut self, table: &str, column: &str, range: DocRange) {
         self.diagnostics.on_column_definition(table, column, range);
-        self.observer.on_column_definition(table, column, range);
+        self.extra.on_column_definition(table, column, range);
     }
 
     fn on_cte_column_count_mismatch(
@@ -423,6 +309,15 @@ impl WalkPass for ValidationPass<'_> {
         ev: CteColumnCountMismatchEvent<'_>,
     ) {
         self.diagnostics.on_cte_column_count_mismatch(stmt, ev);
-        self.observer.on_cte_column_count_mismatch(stmt, ev);
+        self.extra.on_cte_column_count_mismatch(stmt, ev);
+    }
+
+    fn on_parsed_statement(&mut self, stmt: &AnyParsedStatement<'_>) {
+        // DiagnosticsPass has nothing to do here; only forward to extra.
+        self.extra.on_parsed_statement(stmt);
+    }
+
+    fn on_parse_error(&mut self, err: &AnyParseError<'_>) {
+        self.extra.on_parse_error(err);
     }
 }

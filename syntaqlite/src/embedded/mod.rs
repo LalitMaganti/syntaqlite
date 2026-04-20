@@ -34,9 +34,9 @@ use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 use crate::dialect::AnyDialect;
 use crate::semantic::ValidationConfig;
 use crate::semantic::analyzer::SemanticAnalyzer;
+use crate::semantic::analyzer::walker::WalkPass;
 use crate::semantic::catalog::Catalog;
 use crate::semantic::diagnostics::Diagnostic;
-use crate::semantic::observer::AnalysisObserver;
 
 use offset_map::OffsetMap;
 
@@ -293,22 +293,18 @@ impl EmbeddedAnalyzer {
         fragment: &EmbeddedFragment,
     ) -> Vec<(DocOffset, DocLen, TokenCategory)> {
         let mut analyzer = self.make_analyzer();
-        let mut observer = TokenObserver::default();
-        let _ = analyzer.analyze_with_observer(
-            fragment.sql_text(),
-            &self.catalog,
-            &self.config,
-            &mut observer,
-        );
+        let mut pass = TokenCapturePass::default();
+        let _ =
+            analyzer.analyze_with_pass(fragment.sql_text(), &self.catalog, &self.config, &mut pass);
         let dialect = analyzer.dialect();
         let mut out: Vec<(DocOffset, DocLen, TokenCategory)> = Vec::new();
-        for (offset, length, tt, flags) in observer.tokens {
+        for (offset, length, tt, flags) in pass.tokens {
             let cat = dialect.classify_token(tt, flags);
             if cat != TokenCategory::Other {
                 out.push((offset, length, cat));
             }
         }
-        for (offset, length) in observer.comments {
+        for (offset, length) in pass.comments {
             out.push((offset, length, TokenCategory::Comment));
         }
         out.sort_by_key(|t| t.0);
@@ -413,32 +409,47 @@ impl EmbeddedAnalyzer {
     }
 }
 
-/// Observer that captures only tokens and comments, for
+/// Pass that captures only tokens and comments, for
 /// [`EmbeddedAnalyzer::fragment_semantic_tokens`].
 #[derive(Default)]
-struct TokenObserver {
+struct TokenCapturePass {
     tokens: Vec<(DocOffset, DocLen, AnyTokenType, ParserTokenFlags)>,
     comments: Vec<(DocOffset, DocLen)>,
 }
 
-impl AnalysisObserver for TokenObserver {
-    fn wants_tokens(&self) -> bool {
-        true
+impl WalkPass for TokenCapturePass {
+    const WANTS_STATEMENT_CONTEXT: bool = true;
+
+    fn on_parsed_statement(&mut self, stmt: &syntaqlite_syntax::any::AnyParsedStatement<'_>) {
+        let base = stmt.statement_base();
+        for tok in stmt.tokens() {
+            self.tokens.push((
+                tok.offset().to_doc(base),
+                tok.length().into(),
+                tok.token_type(),
+                tok.flags(),
+            ));
+        }
+        for c in stmt.comments() {
+            self.comments
+                .push((c.offset().to_doc(base), c.length().into()));
+        }
     }
-    fn wants_comments(&self) -> bool {
-        true
-    }
-    fn on_token(
-        &mut self,
-        offset: DocOffset,
-        length: DocLen,
-        token_type: AnyTokenType,
-        flags: ParserTokenFlags,
-    ) {
-        self.tokens.push((offset, length, token_type, flags));
-    }
-    fn on_comment(&mut self, offset: DocOffset, length: DocLen) {
-        self.comments.push((offset, length));
+
+    fn on_parse_error(&mut self, err: &syntaqlite_syntax::any::AnyParseError<'_>) {
+        let base = err.statement_base();
+        for tok in err.tokens() {
+            self.tokens.push((
+                tok.offset().to_doc(base),
+                tok.length().into(),
+                tok.token_type(),
+                tok.flags(),
+            ));
+        }
+        for c in err.comments() {
+            self.comments
+                .push((c.offset().to_doc(base), c.length().into()));
+        }
     }
 }
 

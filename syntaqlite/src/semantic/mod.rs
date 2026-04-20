@@ -61,8 +61,6 @@ mod lineage;
 #[cfg(feature = "validation")]
 pub(crate) mod model;
 #[cfg(feature = "validation")]
-pub(crate) mod observer;
-#[cfg(feature = "validation")]
 pub(crate) mod render;
 
 // ── Public re-exports ─────────────────────────────────────────────────────────
