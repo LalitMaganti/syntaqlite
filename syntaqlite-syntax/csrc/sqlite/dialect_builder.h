@@ -347,6 +347,8 @@ static inline uint32_t synq_parse_upsert_clause(SynqParseCtx* ctx,
 }
 
 static inline uint32_t synq_parse_delete_stmt(SynqParseCtx* ctx,
+                                              uint32_t with_ctes,
+                                              SyntaqliteBool with_recursive,
                                               uint32_t table,
                                               SyntaqliteIndexHint index_hint,
                                               SyntaqliteTextSpan index_name,
@@ -357,6 +359,8 @@ static inline uint32_t synq_parse_delete_stmt(SynqParseCtx* ctx,
   return synq_parse_build(
       ctx,
       &(SyntaqliteDeleteStmt){.tag = SYNTAQLITE_NODE_DELETE_STMT,
+                              .with_ctes = with_ctes,
+                              .with_recursive = with_recursive,
                               .table = table,
                               .index_hint = index_hint,
                               .index_name = index_name,
@@ -382,6 +386,8 @@ static inline uint32_t synq_parse_set_clause(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_update_stmt(
     SynqParseCtx* ctx,
+    uint32_t with_ctes,
+    SyntaqliteBool with_recursive,
     SyntaqliteConflictAction conflict_action,
     uint32_t table,
     SyntaqliteIndexHint index_hint,
@@ -395,6 +401,8 @@ static inline uint32_t synq_parse_update_stmt(
   return synq_parse_build(
       ctx,
       &(SyntaqliteUpdateStmt){.tag = SYNTAQLITE_NODE_UPDATE_STMT,
+                              .with_ctes = with_ctes,
+                              .with_recursive = with_recursive,
                               .conflict_action = conflict_action,
                               .table = table,
                               .index_hint = index_hint,
@@ -410,6 +418,8 @@ static inline uint32_t synq_parse_update_stmt(
 
 static inline uint32_t synq_parse_insert_stmt(
     SynqParseCtx* ctx,
+    uint32_t with_ctes,
+    SyntaqliteBool with_recursive,
     SyntaqliteConflictAction conflict_action,
     uint32_t table,
     uint32_t columns,
@@ -419,6 +429,8 @@ static inline uint32_t synq_parse_insert_stmt(
   return synq_parse_build(
       ctx,
       &(SyntaqliteInsertStmt){.tag = SYNTAQLITE_NODE_INSERT_STMT,
+                              .with_ctes = with_ctes,
+                              .with_recursive = with_recursive,
                               .conflict_action = conflict_action,
                               .table = table,
                               .columns = columns,

@@ -55,12 +55,10 @@ cmd(A) ::= with(W) DELETE FROM xfullname(X) indexed_opt(I) where_opt_ret(E) orde
     SyntaqliteIndexHint ih = (I.z != NULL) ? SYNTAQLITE_INDEX_HINT_INDEXED
                            : (I.n == 1)    ? SYNTAQLITE_INDEX_HINT_NOT_INDEXED
                            :                 SYNTAQLITE_INDEX_HINT_DEFAULT;
-    uint32_t del = synq_parse_delete_stmt(pCtx, X, ih, synq_span(pCtx, I), E.where_expr, O, L, E.returning);
-    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
-        A = synq_parse_with_clause(pCtx, W.is_recursive, W.cte_list, del);
-    } else {
-        A = del;
-    }
+    A = synq_parse_delete_stmt(pCtx,
+        W.cte_list,
+        W.is_recursive ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        X, ih, synq_span(pCtx, I), E.where_expr, O, L, E.returning);
 }
 
 // ============ UPDATE ============
@@ -76,32 +74,26 @@ cmd(A) ::= with(W) UPDATE orconf(R) xfullname(X) indexed_opt(I) SET setlist(Y) f
     SyntaqliteIndexHint ih = (I.z != NULL) ? SYNTAQLITE_INDEX_HINT_INDEXED
                            : (I.n == 1)    ? SYNTAQLITE_INDEX_HINT_NOT_INDEXED
                            :                 SYNTAQLITE_INDEX_HINT_DEFAULT;
-    uint32_t upd = synq_parse_update_stmt(pCtx, (SyntaqliteConflictAction)R, X, ih, synq_span(pCtx, I), Y, F, E.where_expr, O, L, E.returning);
-    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
-        A = synq_parse_with_clause(pCtx, W.is_recursive, W.cte_list, upd);
-    } else {
-        A = upd;
-    }
+    A = synq_parse_update_stmt(pCtx,
+        W.cte_list,
+        W.is_recursive ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        (SyntaqliteConflictAction)R, X, ih, synq_span(pCtx, I), Y, F, E.where_expr, O, L, E.returning);
 }
 
 // ============ INSERT ============
 
 cmd(A) ::= with(W) insert_cmd(R) INTO xfullname(X) idlist_opt(F) select(S) upsert(U). {
-    uint32_t ins = synq_parse_insert_stmt(pCtx, (SyntaqliteConflictAction)R, X, F, S, U.clauses, U.returning);
-    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
-        A = synq_parse_with_clause(pCtx, W.is_recursive, W.cte_list, ins);
-    } else {
-        A = ins;
-    }
+    A = synq_parse_insert_stmt(pCtx,
+        W.cte_list,
+        W.is_recursive ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        (SyntaqliteConflictAction)R, X, F, S, U.clauses, U.returning);
 }
 
 cmd(A) ::= with(W) insert_cmd(R) INTO xfullname(X) idlist_opt(F) DEFAULT VALUES returning(V). {
-    uint32_t ins = synq_parse_insert_stmt(pCtx, (SyntaqliteConflictAction)R, X, F, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, V);
-    if (W.cte_list != SYNTAQLITE_NULL_NODE) {
-        A = synq_parse_with_clause(pCtx, W.is_recursive, W.cte_list, ins);
-    } else {
-        A = ins;
-    }
+    A = synq_parse_insert_stmt(pCtx,
+        W.cte_list,
+        W.is_recursive ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        (SyntaqliteConflictAction)R, X, F, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, V);
 }
 
 // ============ INSERT command type ============

@@ -32,6 +32,8 @@ list UpsertClauseList {
 }
 
 node DeleteStmt {
+  with_ctes: index CteList
+  with_recursive: inline Bool
   table: index TableRef
   index_hint: inline IndexHint
   index_name: inline SyntaqliteTextSpan
@@ -44,6 +46,10 @@ node DeleteStmt {
 
   fmt {
     group {
+      if_set(with_ctes) {
+        if_flag(with_recursive) { "WITH RECURSIVE" } else { "WITH" }
+        group { nest { line child(with_ctes) } } hardline
+      }
       "DELETE FROM " child(table)
       switch(index_hint) {
         INDEXED { " INDEXED BY " span(index_name) }
@@ -73,6 +79,8 @@ node SetClause {
 list SetClauseList { SetClause }
 
 node UpdateStmt {
+  with_ctes: index CteList
+  with_recursive: inline Bool
   conflict_action: inline ConflictAction
   table: index TableRef
   index_hint: inline IndexHint
@@ -88,6 +96,10 @@ node UpdateStmt {
 
   fmt {
     group {
+      if_set(with_ctes) {
+        if_flag(with_recursive) { "WITH RECURSIVE" } else { "WITH" }
+        group { nest { line child(with_ctes) } } hardline
+      }
       "UPDATE"
       switch(conflict_action) {
         ROLLBACK { " OR ROLLBACK" }
@@ -112,6 +124,8 @@ node UpdateStmt {
 }
 
 node InsertStmt {
+  with_ctes: index CteList
+  with_recursive: inline Bool
   conflict_action: inline ConflictAction
   table: index TableRef
   columns: index ExprList
@@ -123,6 +137,10 @@ node InsertStmt {
 
   fmt {
     group {
+      if_set(with_ctes) {
+        if_flag(with_recursive) { "WITH RECURSIVE" } else { "WITH" }
+        group { nest { line child(with_ctes) } } hardline
+      }
       if_enum(conflict_action, REPLACE) { "REPLACE" } else {
         "INSERT"
         switch(conflict_action) {

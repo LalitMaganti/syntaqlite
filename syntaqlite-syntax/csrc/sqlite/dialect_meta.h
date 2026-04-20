@@ -484,6 +484,11 @@ static const SyntaqliteFieldMeta field_meta_upsert_clause[] = {
 };
 
 static const SyntaqliteFieldMeta field_meta_delete_stmt[] = {
+    {offsetof(SyntaqliteDeleteStmt, with_ctes), SYNTAQLITE_FIELD_NODE_ID,
+     "with_ctes", NULL, 0},
+    {offsetof(SyntaqliteDeleteStmt, with_recursive), SYNTAQLITE_FIELD_BOOL,
+     "with_recursive", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteDeleteStmt, table), SYNTAQLITE_FIELD_NODE_ID, "table",
      NULL, 0},
     {offsetof(SyntaqliteDeleteStmt, index_hint), SYNTAQLITE_FIELD_ENUM,
@@ -511,6 +516,11 @@ static const SyntaqliteFieldMeta field_meta_set_clause[] = {
 };
 
 static const SyntaqliteFieldMeta field_meta_update_stmt[] = {
+    {offsetof(SyntaqliteUpdateStmt, with_ctes), SYNTAQLITE_FIELD_NODE_ID,
+     "with_ctes", NULL, 0},
+    {offsetof(SyntaqliteUpdateStmt, with_recursive), SYNTAQLITE_FIELD_BOOL,
+     "with_recursive", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteUpdateStmt, conflict_action), SYNTAQLITE_FIELD_ENUM,
      "conflict_action", display_conflict_action,
      sizeof(display_conflict_action) / sizeof(display_conflict_action[0])},
@@ -536,6 +546,11 @@ static const SyntaqliteFieldMeta field_meta_update_stmt[] = {
 };
 
 static const SyntaqliteFieldMeta field_meta_insert_stmt[] = {
+    {offsetof(SyntaqliteInsertStmt, with_ctes), SYNTAQLITE_FIELD_NODE_ID,
+     "with_ctes", NULL, 0},
+    {offsetof(SyntaqliteInsertStmt, with_recursive), SYNTAQLITE_FIELD_BOOL,
+     "with_recursive", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteInsertStmt, conflict_action), SYNTAQLITE_FIELD_ENUM,
      "conflict_action", display_conflict_action,
      sizeof(display_conflict_action) / sizeof(display_conflict_action[0])},
@@ -1274,11 +1289,11 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* WithClause */
     5,  /* UpsertClause */
     0,  /* UpsertClauseList */
-    7,  /* DeleteStmt */
+    9,  /* DeleteStmt */
     3,  /* SetClause */
     0,  /* SetClauseList */
-    10, /* UpdateStmt */
-    6,  /* InsertStmt */
+    12, /* UpdateStmt */
+    8,  /* InsertStmt */
     3,  /* BinaryExpr */
     2,  /* UnaryExpr */
     2,  /* Literal */

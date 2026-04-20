@@ -331,9 +331,11 @@ class UpsertClause:
 class DeleteStmt:
     """AST node: DeleteStmt"""
 
-    __slots__ = ("table", "index_hint", "index_name", "where_clause", "orderby", "limit_clause", "returning")
+    __slots__ = ("with_ctes", "with_recursive", "table", "index_hint", "index_name", "where_clause", "orderby", "limit_clause", "returning")
 
     def __init__(self, d: dict):
+        self.with_ctes: list[CteDefinition] | None = _wrap(d.get("with_ctes"))
+        self.with_recursive: bool = d["with_recursive"]
         self.table: TableRef | None = _wrap(d.get("table"))
         self.index_hint: IndexHint = IndexHint(d["index_hint"])
         self.index_name: str | None = d.get("index_name")
@@ -363,9 +365,11 @@ class SetClause:
 class UpdateStmt:
     """AST node: UpdateStmt"""
 
-    __slots__ = ("conflict_action", "table", "index_hint", "index_name", "setlist", "from_clause", "where_clause", "orderby", "limit_clause", "returning")
+    __slots__ = ("with_ctes", "with_recursive", "conflict_action", "table", "index_hint", "index_name", "setlist", "from_clause", "where_clause", "orderby", "limit_clause", "returning")
 
     def __init__(self, d: dict):
+        self.with_ctes: list[CteDefinition] | None = _wrap(d.get("with_ctes"))
+        self.with_recursive: bool = d["with_recursive"]
         self.conflict_action: ConflictAction = ConflictAction(d["conflict_action"])
         self.table: TableRef | None = _wrap(d.get("table"))
         self.index_hint: IndexHint = IndexHint(d["index_hint"])
@@ -384,9 +388,11 @@ class UpdateStmt:
 class InsertStmt:
     """AST node: InsertStmt"""
 
-    __slots__ = ("conflict_action", "table", "columns", "source", "upsert", "returning")
+    __slots__ = ("with_ctes", "with_recursive", "conflict_action", "table", "columns", "source", "upsert", "returning")
 
     def __init__(self, d: dict):
+        self.with_ctes: list[CteDefinition] | None = _wrap(d.get("with_ctes"))
+        self.with_recursive: bool = d["with_recursive"]
         self.conflict_action: ConflictAction = ConflictAction(d["conflict_action"])
         self.table: TableRef | None = _wrap(d.get("table"))
         self.columns: list[Expr] | None = _wrap(d.get("columns"))

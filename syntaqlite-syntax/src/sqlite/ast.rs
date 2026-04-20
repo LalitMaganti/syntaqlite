@@ -3052,6 +3052,12 @@ impl<'a> DeleteStmt<'a> {
     pub fn node_id(&self) -> DeleteStmtId {
         DeleteStmtId(self.id)
     }
+    pub fn with_ctes(&self) -> Option<CteList<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.with_ctes)
+    }
+    pub fn with_recursive(&self) -> bool {
+        self.raw.with_recursive == super::ffi::Bool::True
+    }
     pub fn table(&self) -> Option<TableRef<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.table)
     }
@@ -3214,6 +3220,12 @@ impl<'a> UpdateStmt<'a> {
     pub fn node_id(&self) -> UpdateStmtId {
         UpdateStmtId(self.id)
     }
+    pub fn with_ctes(&self) -> Option<CteList<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.with_ctes)
+    }
+    pub fn with_recursive(&self) -> bool {
+        self.raw.with_recursive == super::ffi::Bool::True
+    }
     pub fn conflict_action(&self) -> ConflictAction {
         self.raw.conflict_action
     }
@@ -3309,6 +3321,12 @@ impl<'a> InsertStmt<'a> {
     /// The typed node ID of this node.
     pub fn node_id(&self) -> InsertStmtId {
         InsertStmtId(self.id)
+    }
+    pub fn with_ctes(&self) -> Option<CteList<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.with_ctes)
+    }
+    pub fn with_recursive(&self) -> bool {
+        self.raw.with_recursive == super::ffi::Bool::True
     }
     pub fn conflict_action(&self) -> ConflictAction {
         self.raw.conflict_action

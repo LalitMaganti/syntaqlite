@@ -295,6 +295,8 @@ class ExplainStmts(TestSuite):
               explain_mode: EXPLAIN
               stmt:
                 DeleteStmt
+                  with_ctes: (none)
+                  with_recursive: FALSE
                   table:
                     TableRef
                       table_name: "t"

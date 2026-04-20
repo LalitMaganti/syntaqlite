@@ -14,6 +14,8 @@ class DeleteBasic(TestSuite):
             sql="DELETE FROM t",
             out="""\
             DeleteStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               table:
                 TableRef
                   table_name: "t"
@@ -34,6 +36,8 @@ class DeleteBasic(TestSuite):
             sql="DELETE FROM t WHERE x = 1",
             out="""\
             DeleteStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               table:
                 TableRef
                   table_name: "t"
@@ -65,6 +69,8 @@ class DeleteBasic(TestSuite):
             sql="DELETE FROM main.t",
             out="""\
             DeleteStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               table:
                 TableRef
                   table_name: "t"
@@ -85,6 +91,8 @@ class DeleteBasic(TestSuite):
             sql="DELETE FROM t INDEXED BY idx_foo WHERE x = 1",
             out="""\
             DeleteStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               table:
                 TableRef
                   table_name: "t"
@@ -116,6 +124,8 @@ class DeleteBasic(TestSuite):
             sql="DELETE FROM t NOT INDEXED WHERE x = 1",
             out="""\
             DeleteStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               table:
                 TableRef
                   table_name: "t"
@@ -151,6 +161,8 @@ class UpdateIndexedBy(TestSuite):
             sql="UPDATE t INDEXED BY idx_foo SET x = 1",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -182,6 +194,8 @@ class UpdateIndexedBy(TestSuite):
             sql="UPDATE t NOT INDEXED SET x = 1",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -217,6 +231,8 @@ class InsertBasic(TestSuite):
             sql="INSERT INTO t VALUES (1, 2, 3)",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -249,6 +265,8 @@ class InsertBasic(TestSuite):
             sql="INSERT INTO t(a, b) VALUES (1, 2)",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -287,6 +305,8 @@ class InsertBasic(TestSuite):
             sql="INSERT INTO t SELECT * FROM s",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -326,6 +346,8 @@ class InsertBasic(TestSuite):
             sql="INSERT INTO t DEFAULT VALUES",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -349,6 +371,8 @@ class InsertConflict(TestSuite):
             sql="INSERT OR REPLACE INTO t VALUES (1)",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: REPLACE
               table:
                 TableRef
@@ -375,6 +399,8 @@ class InsertConflict(TestSuite):
             sql="REPLACE INTO t VALUES (1)",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: REPLACE
               table:
                 TableRef
@@ -401,6 +427,8 @@ class InsertConflict(TestSuite):
             sql="INSERT OR ROLLBACK INTO t VALUES (1)",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: ROLLBACK
               table:
                 TableRef
@@ -427,6 +455,8 @@ class InsertConflict(TestSuite):
             sql="INSERT OR ABORT INTO t VALUES (1)",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: ABORT
               table:
                 TableRef
@@ -453,6 +483,8 @@ class InsertConflict(TestSuite):
             sql="INSERT OR FAIL INTO t VALUES (1)",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: FAIL
               table:
                 TableRef
@@ -479,6 +511,8 @@ class InsertConflict(TestSuite):
             sql="INSERT OR IGNORE INTO t VALUES (1)",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: IGNORE
               table:
                 TableRef
@@ -509,6 +543,8 @@ class UpdateBasic(TestSuite):
             sql="UPDATE t SET x = 1",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -540,6 +576,8 @@ class UpdateBasic(TestSuite):
             sql="UPDATE t SET x = 1, y = 2 WHERE id = 3",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -589,6 +627,8 @@ class UpdateBasic(TestSuite):
             sql="UPDATE OR IGNORE t SET x = 1",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: IGNORE
               table:
                 TableRef
@@ -624,6 +664,8 @@ class UpdateFrom(TestSuite):
             sql="UPDATE t SET a = o.a FROM other o WHERE t.id = o.id",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -679,6 +721,8 @@ class UpdateConflict(TestSuite):
             sql="UPDATE OR ROLLBACK t SET a = 1",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: ROLLBACK
               table:
                 TableRef
@@ -710,6 +754,8 @@ class UpdateConflict(TestSuite):
             sql="UPDATE OR ABORT t SET a = 1",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: ABORT
               table:
                 TableRef
@@ -741,6 +787,8 @@ class UpdateConflict(TestSuite):
             sql="UPDATE OR FAIL t SET a = 1",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: FAIL
               table:
                 TableRef
@@ -772,6 +820,8 @@ class UpdateConflict(TestSuite):
             sql="UPDATE OR REPLACE t SET a = 1",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: REPLACE
               table:
                 TableRef
@@ -807,6 +857,8 @@ class UpdateSetClauseMultiColumn(TestSuite):
             sql="UPDATE t SET (a, b) = (1, 2)",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -855,6 +907,8 @@ class InsertMultipleRows(TestSuite):
             sql="INSERT INTO t VALUES (1, 2), (3, 4), (5, 6)",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -901,9 +955,8 @@ class DmlWithCte(TestSuite):
         return DiffTestBlueprint(
             sql="WITH cte AS (SELECT 1) INSERT INTO t SELECT * FROM cte",
             out="""\
-            WithClause
-              recursive: FALSE
-              ctes:
+            InsertStmt
+              with_ctes:
                 CteList [1 items]
                   CteDefinition
                     cte_name: "cte"
@@ -928,28 +981,110 @@ class DmlWithCte(TestSuite):
                         orderby: (none)
                         limit_clause: (none)
                         window_clause: (none)
-              select:
-                InsertStmt
-                  conflict_action: DEFAULT
-                  table:
+              with_recursive: FALSE
+              conflict_action: DEFAULT
+              table:
+                TableRef
+                  table_name: "t"
+                  schema: (none)
+                  alias: (none)
+                  args: (none)
+              columns: (none)
+              source:
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: STAR
+                        alias: (none)
+                        expr: (none)
+                  from_clause:
                     TableRef
-                      table_name: "t"
+                      table_name: "cte"
                       schema: (none)
                       alias: (none)
                       args: (none)
-                  columns: (none)
+                  where_clause: (none)
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause: (none)
+                  window_clause: (none)
+              upsert: (none)
+              returning: (none)
+""",
+        )
+
+    def test_delete_with_cte(self):
+        return DiffTestBlueprint(
+            sql="WITH stale AS (SELECT id FROM s) DELETE FROM s WHERE id IN (SELECT id FROM stale)",
+            out="""\
+            DeleteStmt
+              with_ctes:
+                CteList [1 items]
+                  CteDefinition
+                    cte_name: "stale"
+                    materialized: DEFAULT
+                    columns: (none)
+                    select:
+                      SelectStmt
+                        flags: (none)
+                        columns:
+                          ResultColumnList [1 items]
+                            ResultColumn
+                              flags: (none)
+                              alias: (none)
+                              expr:
+                                ColumnRef
+                                  column: "id"
+                                  table: (none)
+                                  schema: (none)
+                        from_clause:
+                          TableRef
+                            table_name: "s"
+                            schema: (none)
+                            alias: (none)
+                            args: (none)
+                        where_clause: (none)
+                        groupby: (none)
+                        having: (none)
+                        orderby: (none)
+                        limit_clause: (none)
+                        window_clause: (none)
+              with_recursive: FALSE
+              table:
+                TableRef
+                  table_name: "s"
+                  schema: (none)
+                  alias: (none)
+                  args: (none)
+              index_hint: DEFAULT
+              index_name: (none)
+              where_clause:
+                InExpr
+                  negated: FALSE
+                  operand:
+                    ColumnRef
+                      column: "id"
+                      table: (none)
+                      schema: (none)
                   source:
                     SelectStmt
                       flags: (none)
                       columns:
                         ResultColumnList [1 items]
                           ResultColumn
-                            flags: STAR
+                            flags: (none)
                             alias: (none)
-                            expr: (none)
+                            expr:
+                              ColumnRef
+                                column: "id"
+                                table: (none)
+                                schema: (none)
                       from_clause:
                         TableRef
-                          table_name: "cte"
+                          table_name: "stale"
                           schema: (none)
                           alias: (none)
                           args: (none)
@@ -959,8 +1094,145 @@ class DmlWithCte(TestSuite):
                       orderby: (none)
                       limit_clause: (none)
                       window_clause: (none)
-                  upsert: (none)
-                  returning: (none)
+              orderby: (none)
+              limit_clause: (none)
+              returning: (none)
+""",
+        )
+
+    def test_update_with_cte(self):
+        return DiffTestBlueprint(
+            sql="WITH x AS (SELECT 1) UPDATE t SET a = 1",
+            out="""\
+            UpdateStmt
+              with_ctes:
+                CteList [1 items]
+                  CteDefinition
+                    cte_name: "x"
+                    materialized: DEFAULT
+                    columns: (none)
+                    select:
+                      SelectStmt
+                        flags: (none)
+                        columns:
+                          ResultColumnList [1 items]
+                            ResultColumn
+                              flags: (none)
+                              alias: (none)
+                              expr:
+                                Literal
+                                  literal_type: INTEGER
+                                  source: "1"
+                        from_clause: (none)
+                        where_clause: (none)
+                        groupby: (none)
+                        having: (none)
+                        orderby: (none)
+                        limit_clause: (none)
+                        window_clause: (none)
+              with_recursive: FALSE
+              conflict_action: DEFAULT
+              table:
+                TableRef
+                  table_name: "t"
+                  schema: (none)
+                  alias: (none)
+                  args: (none)
+              index_hint: DEFAULT
+              index_name: (none)
+              setlist:
+                SetClauseList [1 items]
+                  SetClause
+                    column: "a"
+                    columns: (none)
+                    value:
+                      Literal
+                        literal_type: INTEGER
+                        source: "1"
+              from_clause: (none)
+              where_clause: (none)
+              orderby: (none)
+              limit_clause: (none)
+              returning: (none)
+""",
+        )
+
+    def test_insert_with_recursive(self):
+        return DiffTestBlueprint(
+            sql="WITH RECURSIVE c(n) AS (SELECT 1) INSERT INTO t(x) SELECT n FROM c",
+            out="""\
+            InsertStmt
+              with_ctes:
+                CteList [1 items]
+                  CteDefinition
+                    cte_name: "c"
+                    materialized: DEFAULT
+                    columns:
+                      ExprList [1 items]
+                        ColumnRef
+                          column: "n"
+                          table: (none)
+                          schema: (none)
+                    select:
+                      SelectStmt
+                        flags: (none)
+                        columns:
+                          ResultColumnList [1 items]
+                            ResultColumn
+                              flags: (none)
+                              alias: (none)
+                              expr:
+                                Literal
+                                  literal_type: INTEGER
+                                  source: "1"
+                        from_clause: (none)
+                        where_clause: (none)
+                        groupby: (none)
+                        having: (none)
+                        orderby: (none)
+                        limit_clause: (none)
+                        window_clause: (none)
+              with_recursive: TRUE
+              conflict_action: DEFAULT
+              table:
+                TableRef
+                  table_name: "t"
+                  schema: (none)
+                  alias: (none)
+                  args: (none)
+              columns:
+                ExprList [1 items]
+                  ColumnRef
+                    column: "x"
+                    table: (none)
+                    schema: (none)
+              source:
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: (none)
+                        alias: (none)
+                        expr:
+                          ColumnRef
+                            column: "n"
+                            table: (none)
+                            schema: (none)
+                  from_clause:
+                    TableRef
+                      table_name: "c"
+                      schema: (none)
+                      alias: (none)
+                      args: (none)
+                  where_clause: (none)
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause: (none)
+                  window_clause: (none)
+              upsert: (none)
+              returning: (none)
 """,
         )
 
@@ -973,6 +1245,8 @@ class ReturningClause(TestSuite):
             sql="DELETE FROM t WHERE id = 1 RETURNING *",
             out="""\
             DeleteStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               table:
                 TableRef
                   table_name: "t"
@@ -1009,6 +1283,8 @@ class ReturningClause(TestSuite):
             sql="DELETE FROM t RETURNING id, name",
             out="""\
             DeleteStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               table:
                 TableRef
                   table_name: "t"
@@ -1046,6 +1322,8 @@ class ReturningClause(TestSuite):
             sql="UPDATE t SET x = 1 RETURNING *",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1082,6 +1360,8 @@ class ReturningClause(TestSuite):
             sql="UPDATE t SET x = 1 WHERE id = 1 RETURNING id, x",
             out="""\
             UpdateStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1141,6 +1421,8 @@ class ReturningClause(TestSuite):
             sql="INSERT INTO t VALUES (1, 2) RETURNING id",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1179,6 +1461,8 @@ class ReturningClause(TestSuite):
             sql="INSERT INTO t DEFAULT VALUES RETURNING *",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1207,6 +1491,8 @@ class UpsertClause(TestSuite):
             sql="INSERT INTO t VALUES (1) ON CONFLICT DO NOTHING",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1240,6 +1526,8 @@ class UpsertClause(TestSuite):
             sql="INSERT INTO t VALUES (1) ON CONFLICT DO UPDATE SET x = 1",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1281,6 +1569,8 @@ class UpsertClause(TestSuite):
             sql="INSERT INTO t VALUES (1) ON CONFLICT(id) DO NOTHING",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1323,6 +1613,8 @@ class UpsertClause(TestSuite):
             sql="INSERT INTO t(id, x) VALUES (1, 2) ON CONFLICT(id) DO UPDATE SET x = excluded.x",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1386,6 +1678,8 @@ class UpsertClause(TestSuite):
             sql="INSERT INTO t VALUES (1) ON CONFLICT(id) WHERE id > 0 DO UPDATE SET x = 1 WHERE x != 1",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1458,6 +1752,8 @@ class UpsertClause(TestSuite):
             sql="INSERT INTO t VALUES (1) ON CONFLICT DO NOTHING RETURNING *",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1496,6 +1792,8 @@ class UpsertClause(TestSuite):
             sql="INSERT INTO t VALUES (1) ON CONFLICT(id) DO UPDATE SET x = 1 RETURNING id, x",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1564,6 +1862,8 @@ class UpsertClause(TestSuite):
             sql="INSERT INTO t VALUES (1) ON CONFLICT(a) DO UPDATE SET x = 1 ON CONFLICT(b) DO NOTHING",
             out="""\
             InsertStmt
+              with_ctes: (none)
+              with_recursive: FALSE
               conflict_action: DEFAULT
               table:
                 TableRef

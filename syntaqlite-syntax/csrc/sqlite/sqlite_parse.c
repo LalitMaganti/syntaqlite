@@ -8332,17 +8332,13 @@ static YYACTIONTYPE yy_reduce(
           (yymsp[-3].minor.yy0.z != NULL) ? SYNTAQLITE_INDEX_HINT_INDEXED
           : (yymsp[-3].minor.yy0.n == 1)  ? SYNTAQLITE_INDEX_HINT_NOT_INDEXED
                                           : SYNTAQLITE_INDEX_HINT_DEFAULT;
-      uint32_t del = synq_parse_delete_stmt(
-          pCtx, yymsp[-4].minor.yy277, ih, synq_span(pCtx, yymsp[-3].minor.yy0),
+      yylhsminor.yy277 = synq_parse_delete_stmt(
+          pCtx, yymsp[-7].minor.yy541.cte_list,
+          yymsp[-7].minor.yy541.is_recursive ? SYNTAQLITE_BOOL_TRUE
+                                             : SYNTAQLITE_BOOL_FALSE,
+          yymsp[-4].minor.yy277, ih, synq_span(pCtx, yymsp[-3].minor.yy0),
           yymsp[-2].minor.yy119.where_expr, yymsp[-1].minor.yy277,
           yymsp[0].minor.yy277, yymsp[-2].minor.yy119.returning);
-      if (yymsp[-7].minor.yy541.cte_list != SYNTAQLITE_NULL_NODE) {
-        yylhsminor.yy277 =
-            synq_parse_with_clause(pCtx, yymsp[-7].minor.yy541.is_recursive,
-                                   yymsp[-7].minor.yy541.cte_list, del);
-      } else {
-        yylhsminor.yy277 = del;
-      }
     }
       yymsp[-7].minor.yy277 = yylhsminor.yy277;
       break;
@@ -8361,53 +8357,41 @@ static YYACTIONTYPE yy_reduce(
           (yymsp[-6].minor.yy0.z != NULL) ? SYNTAQLITE_INDEX_HINT_INDEXED
           : (yymsp[-6].minor.yy0.n == 1)  ? SYNTAQLITE_INDEX_HINT_NOT_INDEXED
                                           : SYNTAQLITE_INDEX_HINT_DEFAULT;
-      uint32_t upd = synq_parse_update_stmt(
-          pCtx, (SyntaqliteConflictAction)yymsp[-8].minor.yy320,
+      yylhsminor.yy277 = synq_parse_update_stmt(
+          pCtx, yymsp[-10].minor.yy541.cte_list,
+          yymsp[-10].minor.yy541.is_recursive ? SYNTAQLITE_BOOL_TRUE
+                                              : SYNTAQLITE_BOOL_FALSE,
+          (SyntaqliteConflictAction)yymsp[-8].minor.yy320,
           yymsp[-7].minor.yy277, ih, synq_span(pCtx, yymsp[-6].minor.yy0),
           yymsp[-4].minor.yy277, yymsp[-3].minor.yy277,
           yymsp[-2].minor.yy119.where_expr, yymsp[-1].minor.yy277,
           yymsp[0].minor.yy277, yymsp[-2].minor.yy119.returning);
-      if (yymsp[-10].minor.yy541.cte_list != SYNTAQLITE_NULL_NODE) {
-        yylhsminor.yy277 =
-            synq_parse_with_clause(pCtx, yymsp[-10].minor.yy541.is_recursive,
-                                   yymsp[-10].minor.yy541.cte_list, upd);
-      } else {
-        yylhsminor.yy277 = upd;
-      }
     }
       yymsp[-10].minor.yy277 = yylhsminor.yy277;
       break;
     case 142: /* cmd ::= with insert_cmd INTO xfullname idlist_opt select upsert
                */
     {
-      uint32_t ins = synq_parse_insert_stmt(
-          pCtx, (SyntaqliteConflictAction)yymsp[-5].minor.yy320,
+      yylhsminor.yy277 = synq_parse_insert_stmt(
+          pCtx, yymsp[-6].minor.yy541.cte_list,
+          yymsp[-6].minor.yy541.is_recursive ? SYNTAQLITE_BOOL_TRUE
+                                             : SYNTAQLITE_BOOL_FALSE,
+          (SyntaqliteConflictAction)yymsp[-5].minor.yy320,
           yymsp[-3].minor.yy277, yymsp[-2].minor.yy277, yymsp[-1].minor.yy277,
           yymsp[0].minor.yy352.clauses, yymsp[0].minor.yy352.returning);
-      if (yymsp[-6].minor.yy541.cte_list != SYNTAQLITE_NULL_NODE) {
-        yylhsminor.yy277 =
-            synq_parse_with_clause(pCtx, yymsp[-6].minor.yy541.is_recursive,
-                                   yymsp[-6].minor.yy541.cte_list, ins);
-      } else {
-        yylhsminor.yy277 = ins;
-      }
     }
       yymsp[-6].minor.yy277 = yylhsminor.yy277;
       break;
     case 143: /* cmd ::= with insert_cmd INTO xfullname idlist_opt DEFAULT
                  VALUES returning */
     {
-      uint32_t ins = synq_parse_insert_stmt(
-          pCtx, (SyntaqliteConflictAction)yymsp[-6].minor.yy320,
+      yylhsminor.yy277 = synq_parse_insert_stmt(
+          pCtx, yymsp[-7].minor.yy541.cte_list,
+          yymsp[-7].minor.yy541.is_recursive ? SYNTAQLITE_BOOL_TRUE
+                                             : SYNTAQLITE_BOOL_FALSE,
+          (SyntaqliteConflictAction)yymsp[-6].minor.yy320,
           yymsp[-4].minor.yy277, yymsp[-3].minor.yy277, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277);
-      if (yymsp[-7].minor.yy541.cte_list != SYNTAQLITE_NULL_NODE) {
-        yylhsminor.yy277 =
-            synq_parse_with_clause(pCtx, yymsp[-7].minor.yy541.is_recursive,
-                                   yymsp[-7].minor.yy541.cte_list, ins);
-      } else {
-        yylhsminor.yy277 = ins;
-      }
     }
       yymsp[-7].minor.yy277 = yylhsminor.yy277;
       break;
@@ -9552,7 +9536,8 @@ static YYACTIONTYPE yy_reduce(
           pCtx, synq_span(pCtx, yymsp[-6].minor.yy0), SYNQ_NO_SPAN,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-8].minor.yy277 = synq_parse_update_stmt(
-          pCtx, (SyntaqliteConflictAction)yymsp[-7].minor.yy320, tbl,
+          pCtx, SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
+          (SyntaqliteConflictAction)yymsp[-7].minor.yy320, tbl,
           SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN, yymsp[-3].minor.yy277,
           yymsp[-2].minor.yy277, yymsp[-1].minor.yy277, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
@@ -9564,7 +9549,8 @@ static YYACTIONTYPE yy_reduce(
           pCtx, synq_span(pCtx, yymsp[-4].minor.yy0), SYNQ_NO_SPAN,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-7].minor.yy277 = synq_parse_insert_stmt(
-          pCtx, (SyntaqliteConflictAction)yymsp[-6].minor.yy320, tbl,
+          pCtx, SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
+          (SyntaqliteConflictAction)yymsp[-6].minor.yy320, tbl,
           yymsp[-3].minor.yy277, yymsp[-2].minor.yy277, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE);
     } break;
@@ -9574,9 +9560,9 @@ static YYACTIONTYPE yy_reduce(
           pCtx, synq_span(pCtx, yymsp[-3].minor.yy0), SYNQ_NO_SPAN,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-5].minor.yy277 = synq_parse_delete_stmt(
-          pCtx, tbl, SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN,
-          yymsp[-1].minor.yy277, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE);
+          pCtx, SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE, tbl,
+          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN, yymsp[-1].minor.yy277,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
     } break;
     case 325: /* cmd ::= PRAGMA nm dbnm */
     {
@@ -10056,7 +10042,7 @@ static void yy_syntax_error(
   SynqSqliteParseARG_FETCH SynqSqliteParseCTX_FETCH
 #define TOKEN yyminor
       /************ Begin %syntax_error code
-       ****************************************/
+         ****************************************/
 
       (void) yymajor;
   (void)TOKEN;

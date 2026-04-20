@@ -609,6 +609,8 @@ typedef struct SyntaqliteUpsertClauseList {
 
 typedef struct SyntaqliteDeleteStmt {
   SyntaqliteNodeTag tag;
+  uint32_t with_ctes;
+  SyntaqliteBool with_recursive;
   uint32_t table;
   SyntaqliteIndexHint index_hint;
   SyntaqliteTextSpan index_name;
@@ -634,6 +636,8 @@ typedef struct SyntaqliteSetClauseList {
 
 typedef struct SyntaqliteUpdateStmt {
   SyntaqliteNodeTag tag;
+  uint32_t with_ctes;
+  SyntaqliteBool with_recursive;
   SyntaqliteConflictAction conflict_action;
   uint32_t table;
   SyntaqliteIndexHint index_hint;
@@ -648,6 +652,8 @@ typedef struct SyntaqliteUpdateStmt {
 
 typedef struct SyntaqliteInsertStmt {
   SyntaqliteNodeTag tag;
+  uint32_t with_ctes;
+  SyntaqliteBool with_recursive;
   SyntaqliteConflictAction conflict_action;
   uint32_t table;
   uint32_t columns;

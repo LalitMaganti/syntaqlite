@@ -250,3 +250,58 @@ class IndexedByFormat(TestSuite):
             sql="delete from t not indexed where y = 2",
             out="DELETE FROM t NOT INDEXED WHERE y = 2;",
         )
+
+
+class DmlWithCte(TestSuite):
+    """WITH-prefixed DML statements (DELETE / UPDATE / INSERT)."""
+
+    def test_with_delete(self):
+        return DiffTestBlueprint(
+            sql="with stale as (select id from s) delete from s where id in (select id from stale)",
+            out="WITH stale AS (SELECT id FROM s)\nDELETE FROM s\nWHERE\n  id IN (SELECT id FROM stale);",
+        )
+
+    def test_with_update(self):
+        return DiffTestBlueprint(
+            sql="with x as (select 1) update t set a = 1",
+            out="WITH x AS (SELECT 1)\nUPDATE t\nSET\n  a = 1;",
+        )
+
+    def test_with_insert(self):
+        return DiffTestBlueprint(
+            sql="with cte as (select 1) insert into t select * from cte",
+            out="WITH cte AS (SELECT 1)\nINSERT INTO t\nSELECT * FROM cte;",
+        )
+
+    def test_with_recursive_insert(self):
+        return DiffTestBlueprint(
+            sql="with recursive c(n) as (select 1) insert into t(x) select n from c",
+            out="WITH RECURSIVE c(n) AS (SELECT 1)\nINSERT INTO t(x)\nSELECT n FROM c;",
+        )
+
+    def test_with_delete_returning(self):
+        return DiffTestBlueprint(
+            sql="with x as (select id from s) delete from s where id in (select id from x) returning id",
+            out="WITH x AS (SELECT id FROM s)\nDELETE FROM s\nWHERE\n  id IN (SELECT id FROM x)\nRETURNING id;",
+        )
+
+    def test_with_delete_long_cte_breaks(self):
+        """Long CTE body forces the WITH prefix onto its own block."""
+        return DiffTestBlueprint(
+            sql=(
+                "with stale as (select id from sessions "
+                "where last_active < DATETIME('now', '-30 days')) "
+                "delete from sessions where id in (select id from stale) "
+                "returning id, user_id"
+            ),
+            out=(
+                "WITH\n"
+                "  stale AS (\n"
+                "    SELECT id FROM sessions WHERE last_active < DATETIME('now', '-30 days')\n"
+                "  )\n"
+                "DELETE FROM sessions\n"
+                "WHERE\n"
+                "  id IN (SELECT id FROM stale)\n"
+                "RETURNING id, user_id;"
+            ),
+        )
