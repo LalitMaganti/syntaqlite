@@ -1,0 +1,62 @@
+# Mirror of ci.yml that emits success for the same job names on docs-only PRs.
+# Branch protection rulesets require these checks to pass; without this workflow,
+# docs-only PRs leave the required checks unreported and cannot merge.
+#
+# Paths here mirror the paths-ignore in ci.yml. On mixed PRs both workflows run:
+# the workflow name below is distinct so the UI groups are unambiguous, but the
+# job names match ci.yml so rulesets still see the required checks.
+name: CI (docs-only fallback)
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "web/docs/**"
+      - "*.md"
+      - "LICENSE"
+      - ".github/workflows/**"
+      - "!.github/workflows/ci.yml"
+      - "integrations/claude-code/**"
+
+jobs:
+  pre-push:
+    name: Pre-push checks
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "docs-only change; main CI skipped"
+
+  upstream-sqlite-validation:
+    name: Upstream SQLite validation
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "docs-only change; main CI skipped"
+
+  zed-extension:
+    name: Zed extension build
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "docs-only change; main CI skipped"
+
+  amalgamation:
+    name: Amalgamation build
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "docs-only change; main CI skipped"
+
+  ui-tests:
+    name: UI tests
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "docs-only change; main CI skipped"
+
+  playwright-tests:
+    name: Playwright e2e tests
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "docs-only change; main CI skipped"
+
+  deploy-playwright-report:
+    name: Deploy Playwright report
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "docs-only change; main CI skipped"
