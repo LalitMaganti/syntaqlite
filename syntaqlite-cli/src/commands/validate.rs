@@ -128,7 +128,9 @@ impl<'a> Validator<'a> {
 
     fn analyze_standalone(&self, src: &Source) -> Vec<Diagnostic> {
         let mut analyzer = SemanticAnalyzer::with_dialect(self.dialect.clone());
-        let model = analyzer.analyze(&src.text, &self.schema_catalog, &self.config);
+        let mut catalog = self.schema_catalog.clone();
+        let mut ctx = syntaqlite::AnalysisContext::new(&mut catalog).with_config(self.config);
+        let model = analyzer.analyze(&src.text, &mut ctx);
         model.diagnostics().cloned().collect()
     }
 
@@ -146,10 +148,10 @@ impl<'a> Validator<'a> {
                 return Analysis::CatalogError;
             }
         };
-        let diags = syntaqlite::embedded::EmbeddedAnalyzer::new(self.dialect.clone())
+        let mut analyzer = syntaqlite::embedded::EmbeddedAnalyzer::new(self.dialect.clone())
             .with_catalog(catalog)
-            .with_config(self.config)
-            .validate(&fragments);
+            .with_config(self.config);
+        let diags = analyzer.validate(&fragments);
         Analysis::Diagnostics(diags)
     }
 }

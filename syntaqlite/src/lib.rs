@@ -50,9 +50,7 @@
 //!
 //! ```rust
 //! use syntaqlite::semantic::CatalogLayer;
-//! use syntaqlite::{
-//!     SemanticAnalyzer, Catalog, ValidationConfig, sqlite_dialect,
-//! };
+//! use syntaqlite::{AnalysisContext, Catalog, SemanticAnalyzer, sqlite_dialect};
 //!
 //! let mut analyzer = SemanticAnalyzer::new();
 //! let mut catalog = Catalog::new(sqlite_dialect());
@@ -61,8 +59,8 @@
 //! catalog.layer_mut(CatalogLayer::Database)
 //!     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
 //!
-//! let config = ValidationConfig::default();
-//! let model = analyzer.analyze("SELECT id, name FROM users", &catalog, &config);
+//! let mut ctx = AnalysisContext::new(&mut catalog);
+//! let model = analyzer.analyze("SELECT id, name FROM users", &mut ctx);
 //!
 //! // All names resolve — no diagnostics.
 //! assert!(!model.has_diagnostics());
@@ -176,6 +174,9 @@ pub use fmt::FormatConfig;
 pub use fmt::formatter::Formatter;
 
 // Validation — the core types needed for a validation pass.
+#[doc(inline)]
+#[cfg(feature = "validation")]
+pub use semantic::AnalysisContext;
 #[doc(inline)]
 #[cfg(feature = "validation")]
 pub use semantic::Catalog;

@@ -27,9 +27,7 @@ use crate::util::render_source_error;
 /// # Example
 ///
 /// ```
-/// # use syntaqlite::{
-/// #     SemanticAnalyzer, Catalog, ValidationConfig,
-/// # };
+/// # use syntaqlite::{AnalysisContext, SemanticAnalyzer, Catalog};
 /// # use syntaqlite::semantic::CatalogLayer;
 /// # use syntaqlite::util::DiagnosticRenderer;
 /// let mut analyzer = SemanticAnalyzer::new();
@@ -39,7 +37,8 @@ use crate::util::render_source_error;
 ///     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
 ///
 /// let source = "SELECT id FROM usr;";
-/// let model = analyzer.analyze(source, &catalog, &ValidationConfig::default());
+/// let mut ctx = AnalysisContext::new(&mut catalog);
+/// let model = analyzer.analyze(source, &mut ctx);
 ///
 /// // Render each diagnostic to a String.
 /// let renderer = DiagnosticRenderer::new(model.source(), "query.sql");

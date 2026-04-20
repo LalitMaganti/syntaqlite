@@ -128,9 +128,7 @@ impl StatementModel {
 /// # Example
 ///
 /// ```
-/// # use syntaqlite::{
-/// #     SemanticAnalyzer, Catalog, ValidationConfig,
-/// # };
+/// # use syntaqlite::{AnalysisContext, SemanticAnalyzer, Catalog};
 /// # use syntaqlite::semantic::{CatalogLayer, Severity};
 /// let mut analyzer = SemanticAnalyzer::new();
 /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
@@ -138,11 +136,8 @@ impl StatementModel {
 ///     .layer_mut(CatalogLayer::Database)
 ///     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
 ///
-/// let model = analyzer.analyze(
-///     "SELECT emial FROM users;",
-///     &catalog,
-///     &ValidationConfig::default(),
-/// );
+/// let mut ctx = AnalysisContext::new(&mut catalog);
+/// let model = analyzer.analyze("SELECT emial FROM users;", &mut ctx);
 ///
 /// // Iterate diagnostics to find the warning about "emial".
 /// for diag in model.diagnostics() {
@@ -202,13 +197,9 @@ impl SemanticModel {
 #[cfg(test)]
 #[cfg(feature = "sqlite")]
 mod tests {
-    use super::super::ValidationConfig;
+    use super::super::AnalysisContext;
     use super::super::analyzer::SemanticAnalyzer;
     use super::super::catalog::{Catalog, CatalogLayer};
-
-    fn lenient() -> ValidationConfig {
-        ValidationConfig::default()
-    }
 
     fn sqlite_catalog() -> Catalog {
         Catalog::new(crate::sqlite::dialect::dialect())
@@ -217,8 +208,9 @@ mod tests {
     #[test]
     fn statements_returns_one_per_statement() {
         let mut analyzer = SemanticAnalyzer::new();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze("SELECT 1; SELECT 2; SELECT 3;", &catalog, &lenient());
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT 1; SELECT 2; SELECT 3;", &mut ctx);
         assert_eq!(model.statements().len(), 3);
     }
 
@@ -231,11 +223,8 @@ mod tests {
             Some(vec!["id".into()]),
             false,
         );
-        let model = analyzer.analyze(
-            "SELECT id FROM users; SELECT * FROM missing;",
-            &catalog,
-            &lenient(),
-        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT id FROM users; SELECT * FROM missing;", &mut ctx);
         assert_eq!(model.statements().len(), 2);
         assert!(model.statements()[0].diagnostics().is_empty());
         assert!(!model.statements()[1].diagnostics().is_empty());
@@ -252,7 +241,8 @@ mod tests {
         catalog
             .layer_mut(CatalogLayer::Database)
             .insert_table("b", Some(vec!["y".into()]), false);
-        let model = analyzer.analyze("SELECT x FROM a; SELECT y FROM b;", &catalog, &lenient());
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT x FROM a; SELECT y FROM b;", &mut ctx);
 
         let cols0 = model.statements()[0].lineage().unwrap().into_inner();
         assert_eq!(cols0[0].origin.as_ref().unwrap().table, "a");
@@ -267,12 +257,9 @@ mod tests {
     #[test]
     fn defined_relations_for_create_table() {
         let mut analyzer = SemanticAnalyzer::new();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze(
-            "CREATE TABLE users (id INTEGER, name TEXT);",
-            &catalog,
-            &lenient(),
-        );
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("CREATE TABLE users (id INTEGER, name TEXT);", &mut ctx);
         let defs = model.statements()[0].defined_relations();
         assert_eq!(defs.len(), 1);
         assert_eq!(defs[0].name, "users");
@@ -282,8 +269,9 @@ mod tests {
     #[test]
     fn defined_relations_for_create_view() {
         let mut analyzer = SemanticAnalyzer::new();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze("CREATE VIEW v AS SELECT 1;", &catalog, &lenient());
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("CREATE VIEW v AS SELECT 1;", &mut ctx);
         let defs = model.statements()[0].defined_relations();
         assert_eq!(defs.len(), 1);
         assert_eq!(defs[0].name, "v");
@@ -293,16 +281,18 @@ mod tests {
     #[test]
     fn defined_relations_empty_for_select() {
         let mut analyzer = SemanticAnalyzer::new();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze("SELECT 1;", &catalog, &lenient());
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT 1;", &mut ctx);
         assert!(model.statements()[0].defined_relations().is_empty());
     }
 
     #[test]
     fn parse_error_produces_statement_model_with_diagnostic() {
         let mut analyzer = SemanticAnalyzer::new();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze("SELECT;", &catalog, &lenient());
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT;", &mut ctx);
         assert!(model.has_diagnostics());
         assert!(
             model
@@ -315,8 +305,9 @@ mod tests {
     #[test]
     fn clean_source_has_no_diagnostics() {
         let mut analyzer = SemanticAnalyzer::new();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze("SELECT 1;", &catalog, &lenient());
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT 1;", &mut ctx);
         assert!(!model.has_diagnostics());
         assert_eq!(model.diagnostic_count(), 0);
     }
@@ -329,7 +320,8 @@ mod tests {
             .layer_mut(CatalogLayer::Database)
             .insert_view("active_users", Some(vec!["id".into(), "name".into()]));
 
-        let model = analyzer.analyze("SELECT id FROM active_users", &catalog, &lenient());
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT id FROM active_users", &mut ctx);
 
         let unresolved = model.statements().last().unwrap().unexpanded_views();
         assert_eq!(unresolved, ["active_users".to_string()].as_slice());
@@ -344,7 +336,8 @@ mod tests {
             Some(vec!["id".into()]),
             false,
         );
-        let model = analyzer.analyze("SELECT id FROM users", &catalog, &lenient());
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT id FROM users", &mut ctx);
         assert!(
             model
                 .statements()
@@ -358,8 +351,9 @@ mod tests {
     #[test]
     fn non_select_has_no_lineage() {
         let mut analyzer = SemanticAnalyzer::new();
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze("CREATE TABLE t(x)", &catalog, &lenient());
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("CREATE TABLE t(x)", &mut ctx);
         assert!(model.lineage().is_none());
     }
 
@@ -372,14 +366,14 @@ mod tests {
             Some(vec!["id".into(), "name".into()]),
             false,
         );
+        let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze(
             "WITH RECURSIVE cte(id) AS (
                 SELECT id FROM users
                 UNION ALL
                 SELECT id FROM cte
             ) SELECT id FROM cte",
-            &catalog,
-            &lenient(),
+            &mut ctx,
         );
         let lineage = model.lineage().expect("should be a query");
         let cols = lineage.into_inner();

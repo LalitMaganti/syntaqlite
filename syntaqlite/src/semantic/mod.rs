@@ -23,8 +23,7 @@
 //!
 //! ```
 //! use syntaqlite::semantic::{
-//!     SemanticAnalyzer, Catalog, CatalogLayer, ValidationConfig,
-//!     DiagnosticMessage,
+//!     AnalysisContext, SemanticAnalyzer, Catalog, CatalogLayer,
 //! };
 //!
 //! let mut analyzer = SemanticAnalyzer::new();
@@ -32,11 +31,8 @@
 //! catalog.layer_mut(CatalogLayer::Database)
 //!     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
 //!
-//! let model = analyzer.analyze(
-//!     "SELECT id, nme FROM users",
-//!     &catalog,
-//!     &ValidationConfig::default(),
-//! );
+//! let mut ctx = AnalysisContext::new(&mut catalog);
+//! let model = analyzer.analyze("SELECT id, nme FROM users", &mut ctx);
 //!
 //! // "nme" is close to "name" — expect a diagnostic with a suggestion.
 //! assert!(model.has_diagnostics());
@@ -455,6 +451,81 @@ impl ValidationConfig {
     pub fn with_strict_schema(mut self) -> Self {
         self.checks = self.checks.with_schema(CheckLevel::Deny);
         self
+    }
+}
+
+/// Per-call context passed to [`SemanticAnalyzer::analyze`]. Bundles the
+/// catalog (mutated in place as DDL accumulates and imports are recorded),
+/// the validation config, and an optional module resolver.
+///
+/// Construct via [`AnalysisContext::new`] with a `&mut Catalog`, then chain
+/// [`with_config`](Self::with_config) and
+/// [`with_resolver`](Self::with_resolver) as needed.
+///
+/// # Example
+///
+/// ```
+/// # use syntaqlite::{Catalog, SemanticAnalyzer, ValidationConfig};
+/// # use syntaqlite::semantic::AnalysisContext;
+/// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
+/// let mut analyzer = SemanticAnalyzer::new();
+///
+/// let mut ctx = AnalysisContext::new(&mut catalog);
+/// let model = analyzer.analyze("SELECT 1", &mut ctx);
+/// assert!(!model.has_diagnostics());
+/// ```
+#[cfg(feature = "validation")]
+pub struct AnalysisContext<'a> {
+    pub(crate) catalog: &'a mut Catalog,
+    pub(crate) config: ValidationConfig,
+    pub(crate) resolver: Option<&'a dyn ModuleResolver>,
+}
+
+#[cfg(feature = "validation")]
+impl<'a> AnalysisContext<'a> {
+    /// Create a context that mutates `catalog`, with default config and no
+    /// module resolver.
+    pub fn new(catalog: &'a mut Catalog) -> Self {
+        AnalysisContext {
+            catalog,
+            config: ValidationConfig::default(),
+            resolver: None,
+        }
+    }
+
+    /// Set the validation config.
+    #[must_use]
+    pub fn with_config(mut self, config: ValidationConfig) -> Self {
+        self.config = config;
+        self
+    }
+
+    /// Attach a module resolver. Invoked by the analyzer when it encounters an
+    /// `INCLUDE PERFETTO MODULE` (or equivalent) statement.
+    #[must_use]
+    pub fn with_resolver(mut self, resolver: &'a dyn ModuleResolver) -> Self {
+        self.resolver = Some(resolver);
+        self
+    }
+
+    /// The catalog being mutated by this analysis.
+    pub fn catalog(&self) -> &Catalog {
+        self.catalog
+    }
+
+    /// The catalog being mutated by this analysis (mutable).
+    pub fn catalog_mut(&mut self) -> &mut Catalog {
+        self.catalog
+    }
+
+    /// The validation config.
+    pub fn config(&self) -> &ValidationConfig {
+        &self.config
+    }
+
+    /// The module resolver, if any.
+    pub fn resolver(&self) -> Option<&dyn ModuleResolver> {
+        self.resolver
     }
 }
 

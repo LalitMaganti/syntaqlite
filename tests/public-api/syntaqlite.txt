@@ -51,6 +51,7 @@ impl syntaqlite::semantic::ValidationConfig
 impl syntaqlite::typed::TypedDialect for syntaqlite::Dialect
 impl syntaqlite::util::SqliteFlag
 impl syntaqlite::util::SqliteFlags
+impl<'a> syntaqlite::semantic::AnalysisContext<'a>
 impl<'a> syntaqlite::util::DiagnosticRenderer<'a>
 impl<T> syntaqlite::semantic::LineageResult<T>
 pub const syntaqlite::embedded::HOLE_PLACEHOLDER: &str
@@ -100,14 +101,12 @@ pub fn syntaqlite::Formatter::format(&mut self, source: &str) -> core::result::R
 pub fn syntaqlite::Formatter::new() -> syntaqlite::Formatter
 pub fn syntaqlite::Formatter::with_config(format_config: &syntaqlite::fmt::FormatConfig) -> syntaqlite::Formatter
 pub fn syntaqlite::Formatter::with_dialect_config(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>, format_config: &syntaqlite::fmt::FormatConfig) -> Self
-pub fn syntaqlite::SemanticAnalyzer::analyze(&mut self, source: &str, user_catalog: &syntaqlite::Catalog, config: &syntaqlite::semantic::ValidationConfig) -> syntaqlite::semantic::SemanticModel
+pub fn syntaqlite::SemanticAnalyzer::analyze(&mut self, source: &str, ctx: &mut syntaqlite::semantic::AnalysisContext<'_>) -> syntaqlite::semantic::SemanticModel
 pub fn syntaqlite::SemanticAnalyzer::default() -> Self
 pub fn syntaqlite::SemanticAnalyzer::new() -> Self
 pub fn syntaqlite::SemanticAnalyzer::set_mode(&mut self, mode: syntaqlite::semantic::AnalysisMode)
-pub fn syntaqlite::SemanticAnalyzer::set_module_resolver(&mut self, resolver: core::option::Option<alloc::boxed::Box<dyn syntaqlite::semantic::ModuleResolver>>)
 pub fn syntaqlite::SemanticAnalyzer::with_dialect(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
 pub fn syntaqlite::SemanticAnalyzer::with_mode(self, mode: syntaqlite::semantic::AnalysisMode) -> Self
-pub fn syntaqlite::SemanticAnalyzer::with_module_resolver(self, resolver: alloc::boxed::Box<dyn syntaqlite::semantic::ModuleResolver>) -> Self
 pub fn syntaqlite::any::AnyDialect::cflags(&self) -> syntaqlite::util::SqliteFlags
 pub fn syntaqlite::any::AnyDialect::deref(&self) -> &syntaqlite_syntax::dialect::AnyDialect
 pub fn syntaqlite::any::AnyDialect::deref_mut(&mut self) -> &mut syntaqlite_syntax::dialect::AnyDialect
@@ -118,8 +117,8 @@ pub fn syntaqlite::any::AnyDialect::version(&self) -> syntaqlite_syntax::util::S
 pub fn syntaqlite::any::AnyDialect::with_cflags(self, flags: syntaqlite::util::SqliteFlags) -> Self
 pub fn syntaqlite::any::AnyDialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::new(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
-pub fn syntaqlite::embedded::EmbeddedAnalyzer::semantic_tokens_encoded(&self, fragments: &[syntaqlite::embedded::EmbeddedFragment], source: &str) -> alloc::vec::Vec<u32>
-pub fn syntaqlite::embedded::EmbeddedAnalyzer::validate(&self, fragments: &[syntaqlite::embedded::EmbeddedFragment]) -> alloc::vec::Vec<syntaqlite::Diagnostic>
+pub fn syntaqlite::embedded::EmbeddedAnalyzer::semantic_tokens_encoded(&mut self, fragments: &[syntaqlite::embedded::EmbeddedFragment], source: &str) -> alloc::vec::Vec<u32>
+pub fn syntaqlite::embedded::EmbeddedAnalyzer::validate(&mut self, fragments: &[syntaqlite::embedded::EmbeddedFragment]) -> alloc::vec::Vec<syntaqlite::Diagnostic>
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_catalog(self, catalog: syntaqlite::Catalog) -> Self
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_config(self, config: syntaqlite::semantic::ValidationConfig) -> Self
 pub fn syntaqlite::embedded::EmbeddedFragment::holes(&self) -> &[syntaqlite::embedded::Hole]
@@ -163,6 +162,13 @@ pub fn syntaqlite::lsp::LspServer::run(dialect: impl core::convert::Into<syntaql
 pub fn syntaqlite::lsp::LspServer::run_with_config(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>, config: syntaqlite::lsp::LspConfig) -> core::result::Result<(), alloc::boxed::Box<(dyn core::error::Error + core::marker::Sync + core::marker::Send)>>
 pub fn syntaqlite::lsp::SchemaMap::new(config_dir: std::path::PathBuf, default: core::option::Option<syntaqlite::Catalog>, entries: alloc::vec::Vec<(glob::Pattern, syntaqlite::Catalog)>) -> Self
 pub fn syntaqlite::lsp::SchemaMap::resolve(&self, file_uri: &str) -> core::option::Option<(&syntaqlite::Catalog, bool)>
+pub fn syntaqlite::semantic::AnalysisContext<'a>::catalog(&self) -> &syntaqlite::Catalog
+pub fn syntaqlite::semantic::AnalysisContext<'a>::catalog_mut(&mut self) -> &mut syntaqlite::Catalog
+pub fn syntaqlite::semantic::AnalysisContext<'a>::config(&self) -> &syntaqlite::semantic::ValidationConfig
+pub fn syntaqlite::semantic::AnalysisContext<'a>::new(catalog: &'a mut syntaqlite::Catalog) -> Self
+pub fn syntaqlite::semantic::AnalysisContext<'a>::resolver(&self) -> core::option::Option<&dyn syntaqlite::semantic::ModuleResolver>
+pub fn syntaqlite::semantic::AnalysisContext<'a>::with_config(self, config: syntaqlite::semantic::ValidationConfig) -> Self
+pub fn syntaqlite::semantic::AnalysisContext<'a>::with_resolver(self, resolver: &'a dyn syntaqlite::semantic::ModuleResolver) -> Self
 pub fn syntaqlite::semantic::CatalogLayerContents::insert_function_overload(&mut self, name: impl core::convert::Into<alloc::string::String>, category: syntaqlite::semantic::FunctionCategory, arity: syntaqlite::semantic::AritySpec)
 pub fn syntaqlite::semantic::CatalogLayerContents::insert_table(&mut self, name: impl core::convert::Into<alloc::string::String>, columns: core::option::Option<alloc::vec::Vec<alloc::string::String>>, without_rowid: bool)
 pub fn syntaqlite::semantic::CatalogLayerContents::insert_table_function(&mut self, name: impl core::convert::Into<alloc::string::String>, arity: syntaqlite::semantic::AritySpec, output_columns: alloc::vec::Vec<alloc::string::String>)
@@ -244,6 +250,7 @@ pub mod syntaqlite::semantic
 pub mod syntaqlite::source
 pub mod syntaqlite::typed
 pub mod syntaqlite::util
+pub struct syntaqlite::AnalysisContext<'a>
 pub struct syntaqlite::Catalog
 pub struct syntaqlite::CheckConfig
 pub struct syntaqlite::Diagnostic
@@ -264,6 +271,7 @@ pub struct syntaqlite::lsp::LspConfig
 pub struct syntaqlite::lsp::LspHost
 pub struct syntaqlite::lsp::LspServer
 pub struct syntaqlite::lsp::SchemaMap
+pub struct syntaqlite::semantic::AnalysisContext<'a>
 pub struct syntaqlite::semantic::Catalog
 pub struct syntaqlite::semantic::CatalogLayerContents
 pub struct syntaqlite::semantic::CheckConfig

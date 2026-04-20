@@ -4,7 +4,7 @@
 //! Single-pass semantic analysis engine.
 
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::rc::Rc;
 
 use syntaqlite_syntax::ParserConfig;
@@ -15,10 +15,12 @@ use syntaqlite_syntax::{MacroArg, MacroLookup, MacroOutput};
 use crate::dialect::AnyDialect;
 use crate::dialect::SemanticRole;
 
-use super::catalog::{Catalog, CatalogLayer};
+#[cfg(test)]
+use super::catalog::Catalog;
+use super::catalog::CatalogLayer;
 use super::diagnostics::{Diagnostic, DiagnosticMessage};
 use super::model::{SemanticModel, StatementModel};
-use super::{AnalysisMode, ValidationConfig};
+use super::{AnalysisContext, AnalysisMode};
 
 use helpers::{extract_defined_relations, extract_macro_registration, parse_error_span};
 
@@ -31,11 +33,12 @@ use pass::{DiagnosticsPass, StatementWalkPass};
 use query_scope::QueryScope;
 use walker::{NoopWalkPass, WalkCtx, WalkPass, walk};
 
-/// Long-lived semantic analysis engine.
+/// Stateless semantic analysis engine.
 ///
-/// Create once for a dialect and reuse across inputs. The dialect layer is
-/// built at construction and never changes. The database and document layers
-/// are reset on each [`analyze`](Self::analyze) call.
+/// Holds only per-session policy (dialect, analysis mode, macro-fallback flag).
+/// All per-call state (catalog, validation config, module resolver) is
+/// bundled into an [`AnalysisContext`] the caller passes in by `&mut`. The
+/// analyzer mutates the catalog in place (accumulating DDL, recording imports).
 ///
 /// Set [`AnalysisMode::Execute`] via [`with_mode`](Self::with_mode) to make
 /// DDL accumulate across calls (interactive session semantics).
@@ -43,9 +46,7 @@ use walker::{NoopWalkPass, WalkCtx, WalkPass, walk};
 /// # Example
 ///
 /// ```
-/// # use syntaqlite::{
-/// #     SemanticAnalyzer, Catalog, ValidationConfig,
-/// # };
+/// # use syntaqlite::{Catalog, SemanticAnalyzer, AnalysisContext};
 /// # use syntaqlite::semantic::{CatalogLayer, Severity};
 /// // 1. Create analyzer (reusable across many inputs).
 /// let mut analyzer = SemanticAnalyzer::new();
@@ -56,22 +57,17 @@ use walker::{NoopWalkPass, WalkCtx, WalkPass, walk};
 ///     .layer_mut(CatalogLayer::Database)
 ///     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
 ///
-/// // 3. Analyze a query.
-/// let config = ValidationConfig::default();
-/// let model = analyzer.analyze("SELECT id, name FROM users;", &catalog, &config);
+/// // 3. Bundle the per-call state and analyze a query.
+/// let mut ctx = AnalysisContext::new(&mut catalog);
+/// let model = analyzer.analyze("SELECT id, name FROM users;", &mut ctx);
 ///
 /// // 4. No diagnostics — the query is valid against the schema.
 /// assert!(!model.has_diagnostics());
 /// ```
 pub struct SemanticAnalyzer {
     dialect: AnyDialect,
-    catalog: Catalog,
     mode: AnalysisMode,
     macro_fallback: bool,
-    resolver: Option<Box<dyn super::ModuleResolver>>,
-    /// Modules already imported (by dotted path) — prevents cycles and
-    /// duplicate imports.
-    imported: HashSet<String>,
 }
 
 impl SemanticAnalyzer {
@@ -92,21 +88,12 @@ impl SemanticAnalyzer {
         Self::with_dialect(crate::sqlite::dialect::dialect())
     }
 
-    /// The analyzer's internal catalog (includes DDL from last analysis).
-    pub(crate) fn catalog(&self) -> &Catalog {
-        &self.catalog
-    }
-
     /// Create an analyzer bound to a specific dialect.
     pub fn with_dialect(dialect: impl Into<AnyDialect>) -> Self {
-        let dialect = dialect.into();
         SemanticAnalyzer {
-            catalog: Catalog::new(dialect.clone()),
-            dialect,
+            dialect: dialect.into(),
             mode: AnalysisMode::default(),
             macro_fallback: false,
-            resolver: None,
-            imported: HashSet::new(),
         }
     }
 
@@ -120,23 +107,6 @@ impl SemanticAnalyzer {
     /// Set the analysis mode on an existing analyzer.
     pub fn set_mode(&mut self, mode: AnalysisMode) {
         self.mode = mode;
-    }
-
-    /// Attach a module resolver for handling import statements (e.g.
-    /// `INCLUDE PERFETTO MODULE`).
-    ///
-    /// When the analyzer encounters an import, it calls the resolver to
-    /// obtain the module's SQL source, analyzes it recursively, and
-    /// accumulates the resulting DDL into the catalog.
-    #[must_use]
-    pub fn with_module_resolver(mut self, resolver: Box<dyn super::ModuleResolver>) -> Self {
-        self.resolver = Some(resolver);
-        self
-    }
-
-    /// Set (or clear) the module resolver on an existing analyzer.
-    pub fn set_module_resolver(&mut self, resolver: Option<Box<dyn super::ModuleResolver>>) {
-        self.resolver = resolver;
     }
 
     /// Enable macro fallback: unregistered `name!(args)` calls parse as
@@ -154,20 +124,20 @@ impl SemanticAnalyzer {
 
     /// Run a complete single-pass analysis: parse, collect tokens, walk AST.
     ///
-    /// `user_catalog` supplies the database layer (user-provided schema). Its
-    /// database layer is merged into the analyzer's catalog for this pass only.
-    /// The document layer is cleared and rebuilt statement-by-statement so that
-    /// DDL seen earlier in the file is visible to queries that follow it.
+    /// The caller owns the [`Catalog`] via the [`AnalysisContext`]; the
+    /// analyzer mutates it in place — accumulating DDL into the Document layer,
+    /// recording imports on the Database layer's import cache. The Document
+    /// layer is cleared at the start of each call and rebuilt statement-by-
+    /// statement so that DDL seen earlier in the file is visible to queries
+    /// that follow it.
     ///
     /// In [`AnalysisMode::Execute`], DDL from this call is promoted to the
-    /// connection layer so it persists across subsequent calls.
+    /// Connection layer so it persists across subsequent calls.
     ///
     /// # Example
     ///
     /// ```
-    /// # use syntaqlite::{
-    /// #     SemanticAnalyzer, Catalog, ValidationConfig,
-    /// # };
+    /// # use syntaqlite::{AnalysisContext, Catalog, SemanticAnalyzer};
     /// # use syntaqlite::semantic::{CatalogLayer, Severity};
     /// let mut analyzer = SemanticAnalyzer::new();
     /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
@@ -175,20 +145,15 @@ impl SemanticAnalyzer {
     ///     .layer_mut(CatalogLayer::Database)
     ///     .insert_table("users", Some(vec!["id".into(), "name".into()]), false);
     ///
-    /// let config = ValidationConfig::default();
+    /// let mut ctx = AnalysisContext::new(&mut catalog);
     ///
     /// // Referencing a column that does not exist produces a diagnostic.
-    /// let model = analyzer.analyze("SELECT email FROM users;", &catalog, &config);
+    /// let model = analyzer.analyze("SELECT email FROM users;", &mut ctx);
     /// assert!(model.has_diagnostics());
     /// assert_eq!(model.diagnostics().next().unwrap().severity(), Severity::Warning);
     /// ```
-    pub fn analyze(
-        &mut self,
-        source: &str,
-        user_catalog: &Catalog,
-        config: &ValidationConfig,
-    ) -> SemanticModel {
-        self.analyze_with_pass(source, user_catalog, config, &mut NoopWalkPass)
+    pub fn analyze(&mut self, source: &str, ctx: &mut AnalysisContext<'_>) -> SemanticModel {
+        self.analyze_with_pass(source, ctx, &mut NoopWalkPass)
     }
 
     /// Run a complete single-pass analysis, forwarding walk events to
@@ -202,23 +167,13 @@ impl SemanticAnalyzer {
     pub(crate) fn analyze_with_pass<P: WalkPass>(
         &mut self,
         source: &str,
-        user_catalog: &Catalog,
-        config: &ValidationConfig,
+        ctx: &mut AnalysisContext<'_>,
         user_pass: &mut P,
     ) -> SemanticModel {
-        self.catalog.new_document();
-        match self.mode {
-            AnalysisMode::Document => {
-                self.catalog.copy_schema_layers_from(user_catalog);
-            }
-            AnalysisMode::Execute => {
-                // Only copy Database — Connection accumulates executed DDL.
-                self.catalog.copy_database_from(user_catalog);
-            }
-        }
-        let model = self.analyze_inner(source, config, user_pass);
+        ctx.catalog.new_document();
+        let model = self.analyze_inner(source, CatalogLayer::Document, ctx, user_pass);
         if self.mode == AnalysisMode::Execute {
-            self.catalog.promote_document_to_connection();
+            ctx.catalog.promote_document_to_connection();
         }
         model
     }
@@ -226,7 +181,8 @@ impl SemanticAnalyzer {
     fn analyze_inner<P: WalkPass>(
         &mut self,
         source: &str,
-        config: &ValidationConfig,
+        ddl_target: CatalogLayer,
+        ctx: &mut AnalysisContext<'_>,
         user_pass: &mut P,
     ) -> SemanticModel {
         type MacroRegistry = HashMap<String, (Vec<String>, String)>;
@@ -279,7 +235,8 @@ impl SemanticAnalyzer {
                 ParseOutcome::Ok(s) => s,
                 ParseOutcome::Err(e) => {
                     let message = DiagnosticMessage::ParseError(e.message().to_owned());
-                    if let Some(severity) = config.checks().level_for(&message).to_severity() {
+                    if let Some(severity) = ctx.config().checks().level_for(&message).to_severity()
+                    {
                         let range = parse_error_span(&e, source);
                         let diag = Diagnostic {
                             range,
@@ -310,7 +267,7 @@ impl SemanticAnalyzer {
                 if P::WANTS_STATEMENT_CONTEXT {
                     user_pass.on_parsed_statement(&erased);
                 }
-                let model = self.analyze_statement(&mut erased, config, user_pass);
+                let model = self.analyze_statement(&mut erased, ddl_target, ctx, user_pass);
                 let reg = extract_macro_registration(
                     &erased,
                     erased.root_id(),
@@ -338,36 +295,38 @@ impl SemanticAnalyzer {
     fn analyze_statement<P: WalkPass>(
         &mut self,
         erased: &mut AnyParsedStatement<'_>,
-        config: &ValidationConfig,
+        ddl_target: CatalogLayer,
+        ctx: &mut AnalysisContext<'_>,
         user_pass: &mut P,
     ) -> StatementModel {
         let root_id = erased.root_id();
         let mut diagnostics: Vec<Diagnostic> = Vec::new();
 
-        self.catalog
-            .accumulate_ddl(CatalogLayer::Document, erased, root_id, &self.dialect);
+        ctx.catalog
+            .accumulate_ddl(ddl_target, erased, root_id, &self.dialect);
 
         // Handle module imports: resolve and analyze imported source.
-        self.handle_import(erased, root_id, config, &mut diagnostics);
+        self.handle_import(erased, root_id, ctx, &mut diagnostics);
 
         // Compose DiagnosticsPass + the user's pass for this statement, then
         // run the walker. DDL definition events (CREATE TABLE / VIEW names
         // and columns) are emitted by the walker itself.
+        let roles = self.dialect.roles();
+        let config = ctx.config;
         let mut stmt_pass = StatementWalkPass {
-            diagnostics: DiagnosticsPass::new(config, &mut diagnostics),
+            diagnostics: DiagnosticsPass::new(&config, &mut diagnostics),
             extra: user_pass,
         };
         let mut cx = WalkCtx {
-            roles: self.dialect.roles(),
-            catalog: &mut self.catalog,
+            roles,
+            catalog: ctx.catalog,
             scope: QueryScope::default(),
         };
         walk(erased, &mut cx, &mut stmt_pass, root_id);
 
-        let lineage =
-            super::lineage::compute_lineage(erased, root_id, &self.catalog, self.dialect.roles());
+        let lineage = super::lineage::compute_lineage(erased, root_id, ctx.catalog, roles);
 
-        let defined_relations = extract_defined_relations(erased, root_id, self.dialect.roles());
+        let defined_relations = extract_defined_relations(erased, root_id, roles);
 
         StatementModel::new(
             erased.text().as_str().to_owned(),
@@ -382,12 +341,12 @@ impl SemanticAnalyzer {
         &mut self,
         erased: &AnyParsedStatement<'_>,
         root_id: AnyNodeId,
-        config: &ValidationConfig,
+        ctx: &mut AnalysisContext<'_>,
         diagnostics: &mut Vec<Diagnostic>,
     ) {
-        if self.resolver.is_none() {
+        let Some(resolver) = ctx.resolver else {
             return;
-        }
+        };
 
         let Some((tag, fields)) = erased.extract_fields(root_id) else {
             return;
@@ -405,26 +364,29 @@ impl SemanticAnalyzer {
             _ => return,
         };
 
-        // Dedup / cycle detection.
-        if !self.imported.insert(module_name.clone()) {
+        // Dedup against the catalog's import cache (Database layer).
+        // Once imported, the DDL is present in the catalog; re-importing would
+        // be redundant work and also guards against import cycles.
+        if ctx.catalog.is_imported(&module_name) {
             return;
         }
 
-        let Some(source) = self.resolver.as_ref().and_then(|r| r.resolve(&module_name)) else {
+        let Some(source) = resolver.resolve(&module_name) else {
             let range = match fields[module as usize] {
                 FieldValue::Span(sp) => erased.span_text_abs(sp).1,
                 _ => DocRange::default(),
             };
             let message = DiagnosticMessage::UnknownModule { name: module_name };
-            if let Some(severity) = config.checks().level_for(&message).to_severity() {
+            if let Some(severity) = ctx.config.checks().level_for(&message).to_severity() {
                 diagnostics.push(Diagnostic::new(range, message, severity, None));
             }
             return;
         };
 
-        // DDL accumulates into the Document layer (visible to subsequent
-        // statements in the importing file).
-        let _ = self.analyze_inner(&source, config, &mut NoopWalkPass);
+        // Mark before recursing so cycles terminate. Imported DDL lands in
+        // the Database layer so it shares a lifetime with the import cache.
+        ctx.catalog.mark_imported(module_name);
+        let _ = self.analyze_inner(&source, CatalogLayer::Database, ctx, &mut NoopWalkPass);
     }
 }
 
@@ -454,10 +416,6 @@ mod tests {
 
     fn sqlite_catalog() -> Catalog {
         Catalog::new(crate::sqlite::dialect::dialect())
-    }
-
-    fn lenient() -> ValidationConfig {
-        ValidationConfig::default()
     }
 
     #[test]
@@ -533,7 +491,7 @@ mod tests {
 
     struct MapResolver(HashMap<String, String>);
 
-    impl super::super::ModuleResolver for MapResolver {
+    impl crate::semantic::ModuleResolver for MapResolver {
         fn resolve(&self, module_path: &str) -> Option<String> {
             self.0.get(module_path).cloned()
         }
@@ -542,17 +500,18 @@ mod tests {
     #[test]
     fn module_resolver_with_analyzer_does_not_panic() {
         let resolver = MapResolver(HashMap::new());
-        let mut analyzer = sqlite_analyzer().with_module_resolver(Box::new(resolver));
-        let catalog = sqlite_catalog();
-        let model = analyzer.analyze("SELECT 1", &catalog, &lenient());
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog).with_resolver(&resolver);
+        let model = analyzer.analyze("SELECT 1", &mut ctx);
         assert!(!model.has_diagnostics());
     }
 
     #[test]
-    fn module_import_dedup_tracking() {
-        let resolver = MapResolver(HashMap::new());
-        let mut analyzer = sqlite_analyzer().with_module_resolver(Box::new(resolver));
-        assert!(analyzer.imported.insert("test.module".to_string()));
-        assert!(!analyzer.imported.insert("test.module".to_string()));
+    fn module_import_dedup_cached_on_catalog() {
+        let mut catalog = sqlite_catalog();
+        assert!(!catalog.is_imported("test.module"));
+        catalog.mark_imported("test.module");
+        assert!(catalog.is_imported("test.module"));
     }
 }

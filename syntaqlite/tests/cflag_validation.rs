@@ -13,16 +13,16 @@
 
 use syntaqlite::semantic::DiagnosticMessage;
 use syntaqlite::util::{SqliteFlag, SqliteFlags};
-use syntaqlite::{Catalog, SemanticAnalyzer, ValidationConfig, sqlite_dialect};
+use syntaqlite::{AnalysisContext, Catalog, SemanticAnalyzer, ValidationConfig, sqlite_dialect};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn analyze_with_flags(sql: &str, flags: SqliteFlags) -> Vec<syntaqlite::Diagnostic> {
     let dialect = sqlite_dialect().with_cflags(flags);
     let mut analyzer = SemanticAnalyzer::with_dialect(dialect.clone());
-    let catalog = Catalog::new(dialect);
-    let config = ValidationConfig::default();
-    let model = analyzer.analyze(sql, &catalog, &config);
+    let mut catalog = Catalog::new(dialect);
+    let mut ctx = AnalysisContext::new(&mut catalog).with_config(ValidationConfig::default());
+    let model = analyzer.analyze(sql, &mut ctx);
     model.diagnostics().cloned().collect()
 }
 

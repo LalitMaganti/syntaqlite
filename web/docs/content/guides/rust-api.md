@@ -132,7 +132,7 @@ syntaqlite = { version = "0.4.2", features = ["validation", "sqlite"] }
 
 ```rust
 use syntaqlite::semantic::{
-    SemanticAnalyzer, Catalog, CatalogLayer, ValidationConfig,
+    AnalysisContext, SemanticAnalyzer, Catalog, CatalogLayer,
 };
 use syntaqlite::sqlite_dialect;
 
@@ -144,8 +144,8 @@ catalog.layer_mut(CatalogLayer::Database)
 catalog.layer_mut(CatalogLayer::Database)
     .insert_table("posts", Some(vec!["id".into(), "user_id".into(), "title".into()]), false);
 
-let config = ValidationConfig::default();
-let model = analyzer.analyze("SELECT nme FROM users", &catalog, &config);
+let mut ctx = AnalysisContext::new(&mut catalog);
+let model = analyzer.analyze("SELECT nme FROM users", &mut ctx);
 
 for diag in model.diagnostics() {
     println!("[{}] {}", diag.severity(), diag.message());
@@ -165,7 +165,7 @@ If you know a table exists but don't know its columns, pass `None` to
 
 When a schema is provided (via `--schema` or `syntaqlite.toml`), the CLI and
 LSP automatically enable strict mode. When using the Rust API directly, set
-this explicitly with `ValidationConfig::default().with_strict_schema(true)`.
+this explicitly with `AnalysisContext::new(&mut catalog).with_config(ValidationConfig::default().with_strict_schema())`.
 
 ## Column lineage
 
@@ -175,7 +175,7 @@ column:
 
 ```rust
 use syntaqlite::semantic::{
-    SemanticAnalyzer, Catalog, CatalogLayer, ValidationConfig,
+    AnalysisContext, SemanticAnalyzer, Catalog, CatalogLayer,
 };
 use syntaqlite::sqlite_dialect;
 
@@ -187,11 +187,10 @@ catalog.layer_mut(CatalogLayer::Database)
 catalog.layer_mut(CatalogLayer::Database)
     .insert_table("posts", Some(vec!["id".into(), "user_id".into(), "body".into()]), false);
 
-let config = ValidationConfig::default();
+let mut ctx = AnalysisContext::new(&mut catalog);
 let model = analyzer.analyze(
     "SELECT u.name, p.body FROM users u JOIN posts p ON u.id = p.user_id",
-    &catalog,
-    &config,
+    &mut ctx,
 );
 
 for stmt in model.statements() {

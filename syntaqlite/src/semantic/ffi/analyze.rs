@@ -5,6 +5,7 @@
 
 use std::ffi::{CString, c_char};
 
+use crate::semantic::AnalysisContext;
 use crate::semantic::lineage::RelationKind;
 use crate::semantic::model::SemanticModel;
 
@@ -37,9 +38,12 @@ pub unsafe extern "C" fn syntaqlite_validator_analyze(
         std::str::from_utf8_unchecked(std::slice::from_raw_parts(source.cast(), len as usize))
     };
 
-    let model = state
-        .analyzer
-        .analyze(src, &state.user_catalog, &state.validation_config);
+    let mut ctx =
+        AnalysisContext::new(&mut state.user_catalog).with_config(state.validation_config);
+    if let Some(r) = state.resolver.as_deref() {
+        ctx = ctx.with_resolver(r);
+    }
+    let model = state.analyzer.analyze(src, &mut ctx);
 
     let all_diagnostics: Vec<_> = model.diagnostics().cloned().collect();
 

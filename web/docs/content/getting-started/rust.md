@@ -57,7 +57,7 @@ calls.
 Now let's add schema validation. Update `src/main.rs`:
 
 ```rust
-use syntaqlite::{Catalog, Formatter, SemanticAnalyzer, ValidationConfig};
+use syntaqlite::{AnalysisContext, Catalog, Formatter, SemanticAnalyzer, ValidationConfig};
 
 fn main() {
     // Format
@@ -72,7 +72,7 @@ fn main() {
 
     // Register schema from CREATE TABLE statements
     let schema = "CREATE TABLE users (id INTEGER, name TEXT, email TEXT, active INTEGER);";
-    let (catalog, errors) = Catalog::from_ddl(
+    let (mut catalog, errors) = Catalog::from_ddl(
         syntaqlite::sqlite_dialect(),
         &[(schema, None)],
     );
@@ -80,8 +80,9 @@ fn main() {
 
     // Validate a query against the schema
     let config = ValidationConfig::default().with_strict_schema();
+    let mut ctx = AnalysisContext::new(&mut catalog).with_config(config);
     let query = "SELECT id, nme FROM users WHERE active = 1";
-    let model = analyzer.analyze(query, &catalog, &config);
+    let model = analyzer.analyze(query, &mut ctx);
 
     if model.diagnostics().is_empty() {
         println!("No errors found.");

@@ -46,7 +46,9 @@ use syntaqlite::semantic::{
     StatementModel,
 };
 use syntaqlite::util::DiagnosticRenderer;
-use syntaqlite::{Catalog, FormatConfig, Formatter, SemanticAnalyzer, ValidationConfig};
+use syntaqlite::{
+    AnalysisContext, Catalog, FormatConfig, Formatter, SemanticAnalyzer, ValidationConfig,
+};
 
 pub(crate) fn run(dialect: &AnyDialect) -> Result<(), String> {
     let stdin = io::stdin();
@@ -465,11 +467,12 @@ fn handle_validate<W: Write>(
     }
 
     let config = ValidationConfig::default();
-    // Install (and afterwards clear) a per-request module resolver so later
-    // validate calls in the same session don't inherit stale state.
-    analyzer.set_module_resolver(build_module_resolver(&req));
-    let model = analyzer.analyze(&req.sql, &catalog, &config);
-    analyzer.set_module_resolver(None);
+    let resolver = build_module_resolver(&req);
+    let mut ctx = AnalysisContext::new(&mut catalog).with_config(config);
+    if let Some(r) = resolver.as_deref() {
+        ctx = ctx.with_resolver(r);
+    }
+    let model = analyzer.analyze(&req.sql, &mut ctx);
 
     match req.output.as_deref().unwrap_or("structured") {
         "structured" => {} // fall through to the structured path below.

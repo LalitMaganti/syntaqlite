@@ -21,6 +21,7 @@ pub(super) fn create_validator(dialect: AnyDialect) -> *mut SyntaqliteValidator 
         user_catalog,
         dialect,
         validation_config: ValidationConfig::default(),
+        resolver: None,
         c_diagnostics: Vec::new(),
         rendered_messages: Vec::new(),
         last_source: String::new(),

@@ -152,6 +152,9 @@ pub struct CatalogLayerContents {
     relations: HashMap<String, RelationEntry>,
     functions: HashMap<String, FunctionSet>,
     table_functions: HashMap<String, TableFunctionSet>,
+    /// Modules whose DDL has been merged into this layer. Used to dedupe
+    /// `INCLUDE PERFETTO MODULE` imports — once imported, re-imports no-op.
+    imports: HashSet<String>,
 }
 
 impl CatalogLayerContents {
@@ -160,6 +163,7 @@ impl CatalogLayerContents {
         self.relations = HashMap::default();
         self.functions = HashMap::default();
         self.table_functions = HashMap::default();
+        self.imports = HashSet::default();
     }
 
     /// Merge all entries from `other` into this layer (existing keys are
@@ -175,6 +179,17 @@ impl CatalogLayerContents {
                 .iter()
                 .map(|(k, v)| (k.clone(), v.clone())),
         );
+        self.imports.extend(other.imports.iter().cloned());
+    }
+
+    /// Record that a module's DDL has been merged into this layer.
+    pub(crate) fn mark_imported(&mut self, module: impl Into<String>) {
+        self.imports.insert(module.into());
+    }
+
+    /// Whether this layer already contains the given module's DDL.
+    pub(crate) fn contains_import(&self, module: &str) -> bool {
+        self.imports.contains(module)
     }
 
     /// Iterate over all relation (table/view) names in this layer.
@@ -264,7 +279,7 @@ impl CatalogLayerContents {
     ///
     /// ```
     /// # use syntaqlite::semantic::CatalogLayer;
-    /// # use syntaqlite::{Catalog, SemanticAnalyzer, ValidationConfig};
+    /// # use syntaqlite::{AnalysisContext, Catalog, SemanticAnalyzer};
     /// # use syntaqlite::semantic::{FunctionCategory, AritySpec};
     /// let mut catalog = Catalog::new(syntaqlite::sqlite_dialect());
     /// let db = catalog.layer_mut(CatalogLayer::Database);
@@ -274,12 +289,8 @@ impl CatalogLayerContents {
     ///
     /// // The analyzer now accepts calls to my_concat().
     /// let mut analyzer = SemanticAnalyzer::new();
-    /// let config = ValidationConfig::default();
-    /// let model = analyzer.analyze(
-    ///     "SELECT my_concat('hello', 'world');",
-    ///     &catalog,
-    ///     &config,
-    /// );
+    /// let mut ctx = AnalysisContext::new(&mut catalog);
+    /// let model = analyzer.analyze("SELECT my_concat('hello', 'world');", &mut ctx);
     /// assert!(!model.has_diagnostics());
     /// ```
     pub fn insert_function_overload(
@@ -466,6 +477,7 @@ const FIXED_LAYER_COUNT: usize = 4;
 ///     .layer_mut(CatalogLayer::Database)
 ///     .insert_table("logs", None, false);
 /// ```
+#[derive(Clone)]
 pub struct Catalog {
     layers: Vec<CatalogLayerContents>,
 }
@@ -509,6 +521,20 @@ impl Catalog {
     /// or table-valued functions into the chosen layer.
     pub fn layer_mut(&mut self, which: CatalogLayer) -> &mut CatalogLayerContents {
         &mut self.layers[which.index()]
+    }
+
+    /// Whether a module has already been imported (i.e. its DDL merged into
+    /// this catalog). Import resolution stores the flag on the Database layer
+    /// since imports are database-lifetime.
+    pub(crate) fn is_imported(&self, module: &str) -> bool {
+        self.layers[LAYER_DATABASE].contains_import(module)
+    }
+
+    /// Record that a module's DDL has been merged into this catalog. Stored on
+    /// the Database layer so the import remains cached for as long as the
+    /// database does.
+    pub(crate) fn mark_imported(&mut self, module: impl Into<String>) {
+        self.layers[LAYER_DATABASE].mark_imported(module);
     }
 
     // ── Lifecycle convenience methods ─────────────────────────────────────────
@@ -742,25 +768,6 @@ impl Catalog {
         if let Some(frame) = self.layers[FIXED_LAYER_COUNT..].last_mut() {
             frame.insert_table(name, columns, false);
         }
-    }
-
-    // ── Schema sync (used by SemanticAnalyzer) ────────────────────────────────
-
-    /// Copy the Database and Connection layers from `src` into this catalog.
-    ///
-    /// Called at the start of each Document-mode analysis pass.
-    pub(crate) fn copy_schema_layers_from(&mut self, src: &Catalog) {
-        self.layers[LAYER_DATABASE] = src.layers[LAYER_DATABASE].clone();
-        self.layers[LAYER_CONNECTION] = src.layers[LAYER_CONNECTION].clone();
-    }
-
-    /// Copy only the Database layer from `src`, preserving this catalog's
-    /// Connection layer.
-    ///
-    /// Called at the start of each Execute-mode analysis pass — the Connection
-    /// layer accumulates executed DDL and must not be overwritten.
-    pub(crate) fn copy_database_from(&mut self, src: &Catalog) {
-        self.layers[LAYER_DATABASE] = src.layers[LAYER_DATABASE].clone();
     }
 
     /// Merge DDL discovered in the Document layer into the Connection layer.
