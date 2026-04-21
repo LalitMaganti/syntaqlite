@@ -474,8 +474,11 @@ mod ffi {
         pub(crate) _layer_id: u32,
     }
 
-    /// Mirror of C `SYNTAQLITE_SPAN_FLAG_QUOTED` from `types.h`.
+    /// Mirrors of C `SYNTAQLITE_SPAN_FLAG_*` from `types.h`.
     const SPAN_FLAG_QUOTED: u32 = 1;
+    const SPAN_FLAG_QUOTE_DOUBLE: u32 = 2;
+    const SPAN_FLAG_QUOTE_BACKTICK: u32 = 4;
+    const SPAN_FLAG_QUOTE_BRACKET: u32 = 8;
 
     impl CTextSpan {
         /// Returns `true` if the span covers zero bytes.
@@ -486,9 +489,26 @@ mod ffi {
         /// Returns `true` if the span was quoted in source (`"..."`,
         /// `` `...` ``, or `[...]`).  The span points at the dequoted inner
         /// text; the formatter re-wraps quoted spans in standard double
-        /// quotes.
+        /// quotes.  Use [`Self::quote_char`] to recover which quote
+        /// character bracketed the identifier.
         pub fn is_quoted(self) -> bool {
             (self.flags & SPAN_FLAG_QUOTED) != 0
+        }
+
+        /// The quote character that bracketed this identifier in source —
+        /// `'"'`, `` '`' ``, or `'['` — or `None` if the span was unquoted.
+        /// The closing bracket for `'['` is always `']'`; only the opener
+        /// is reported.
+        pub fn quote_char(self) -> Option<char> {
+            if self.flags & SPAN_FLAG_QUOTE_DOUBLE != 0 {
+                Some('"')
+            } else if self.flags & SPAN_FLAG_QUOTE_BACKTICK != 0 {
+                Some('`')
+            } else if self.flags & SPAN_FLAG_QUOTE_BRACKET != 0 {
+                Some('[')
+            } else {
+                None
+            }
         }
 
         /// Returns `true` if the span was tokenized from the original

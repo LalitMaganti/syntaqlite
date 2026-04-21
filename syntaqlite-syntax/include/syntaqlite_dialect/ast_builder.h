@@ -384,12 +384,16 @@ static inline SyntaqliteTextSpan synq_span_dequote(SynqParseCtx* ctx,
     char close = tok.z[tok.n - 1];
     if ((open == '"' && close == '"') || (open == '`' && close == '`') ||
         (open == '[' && close == ']')) {
+      uint32_t kind_flag = (open == '"')   ? SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE
+                           : (open == '`') ? SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK
+                                           : SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET;
       SyntaqliteTextSpan sp = {
           .offset = tok.offset + 1,
           .length = tok.n - 2,
+          .flags = SYNTAQLITE_SPAN_FLAG_QUOTED | kind_flag,
           ._layer_id = tok.layer_id,
       };
-      return synq_span_set_quoted(sp);
+      return sp;
     }
   }
   return (SyntaqliteTextSpan){

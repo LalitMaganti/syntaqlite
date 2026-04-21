@@ -87,6 +87,15 @@ typedef struct SyntaqliteTextSpan {
 // `"..."`.
 #define SYNTAQLITE_SPAN_FLAG_QUOTED ((uint32_t)1u)
 
+// Which quote character bracketed the identifier in source.  Set in
+// addition to SYNTAQLITE_SPAN_FLAG_QUOTED.  Only one of these is set at a
+// time.  Consumers (e.g. SQLite's double-quoted-string bug-compat in the
+// analyzer) need to distinguish `"..."` from `` `...` `` and `[...]`,
+// which the analyzer can't recover from the dequoted span alone.
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE ((uint32_t)2u)
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK ((uint32_t)4u)
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET ((uint32_t)8u)
+
 static inline int synq_span_is_quoted(SyntaqliteTextSpan sp) {
   return (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTED) != 0;
 }

@@ -1100,7 +1100,6 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id:
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expr_source_text(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_text(&self, node_id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
@@ -1168,6 +1167,7 @@ pub fn syntaqlite_syntax::any::NodeFields::node_id_at(&self, idx: u8) -> core::o
 pub fn syntaqlite_syntax::any::TextSpan::is_empty(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_macro_free(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_quoted(self) -> bool
+pub fn syntaqlite_syntax::any::TextSpan::quote_char(self) -> core::option::Option<char>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::filter_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
