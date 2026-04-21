@@ -719,6 +719,7 @@ impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaql
 impl<'a> syntaqlite_syntax::Comment<'a>
 impl<'a> syntaqlite_syntax::ParserToken<'a>
 impl<'a> syntaqlite_syntax::any::AnyParsedStatement<'a>
+impl<'a> syntaqlite_syntax::any::MacroCallArg<'a>
 impl<'a> syntaqlite_syntax::any::MacroRewrite<'a>
 impl<'a> syntaqlite_syntax::nodes::AggregateFunctionCall<'a>
 impl<'a> syntaqlite_syntax::nodes::AlterTableStmt<'a>
@@ -1134,16 +1135,24 @@ pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin(&self) -> syntaqlite_
 pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_length(&self) -> syntaqlite_syntax::source::LayerLen
 pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_offset(&self) -> syntaqlite_syntax::source::LayerOffset
 pub fn syntaqlite_syntax::any::MacroArgSegment<'_>::origin_parent(&self) -> core::option::Option<syntaqlite_syntax::source::RewriteIdx>
+pub fn syntaqlite_syntax::any::MacroCallArg<'a>::buffer(&self) -> &'a syntaqlite_syntax::source::LayerText
+pub fn syntaqlite_syntax::any::MacroCallArg<'a>::length(&self) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::any::MacroCallArg<'a>::offset(&self) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::any::MacroCallArg<'a>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::arg_segments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroArgSegment<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::args(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroCallArg<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::body_call_length(&self) -> syntaqlite_syntax::source::LayerLen
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::body_call_offset(&self) -> syntaqlite_syntax::source::LayerOffset
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_length(&self) -> syntaqlite_syntax::source::LayerLen
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_offset(&self) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::call_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::def_col(&self) -> syntaqlite_syntax::source::ColumnNumber
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::def_line(&self) -> syntaqlite_syntax::source::LineNumber
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::expansion(&self) -> &'a syntaqlite_syntax::source::LayerText
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::is_fallback(&self) -> bool
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::name(&self) -> &'a str
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::parent(&self) -> core::option::Option<syntaqlite_syntax::source::RewriteIdx>
+pub fn syntaqlite_syntax::any::MacroRewrite<'a>::parent_buffer(&self) -> &'a syntaqlite_syntax::source::LayerText
 pub fn syntaqlite_syntax::any::NodeFields::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::any::NodeFields::index(&self, idx: usize) -> &syntaqlite_syntax::any::FieldValue
 pub fn syntaqlite_syntax::any::NodeFields::is_empty(&self) -> bool
@@ -1994,6 +2003,7 @@ pub struct syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub struct syntaqlite_syntax::any::FieldMeta<'a>(_)
 pub struct syntaqlite_syntax::any::KeywordEntry
 pub struct syntaqlite_syntax::any::MacroArgSegment<'a>
+pub struct syntaqlite_syntax::any::MacroCallArg<'a>
 pub struct syntaqlite_syntax::any::MacroRewrite<'a>
 pub struct syntaqlite_syntax::any::NodeFields
 pub struct syntaqlite_syntax::any::TracebackFrame<'a>

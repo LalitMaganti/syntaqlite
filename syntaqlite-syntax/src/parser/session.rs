@@ -494,7 +494,9 @@ mod tests {
     use std::panic::{self, AssertUnwindSafe};
     use std::rc::Rc;
 
-    use crate::source::{LayerLen, LayerOffset, RewriteIdx, StmtLen, StmtOffset, TokenIdx};
+    use crate::source::{
+        LayerLen, LayerOffset, LayerRange, RewriteIdx, StmtLen, StmtOffset, TokenIdx,
+    };
 
     use super::{ParseErrorKind, ParseOutcome, Parser, ParserConfig, ParserToken};
     use crate::parser::{MacroArg, MacroLookup, MacroOutput};
@@ -1174,8 +1176,7 @@ mod tests {
         let outer = &rewrites[0];
         assert_eq!(outer.parent(), None);
         assert_eq!(outer.name(), "mwrap");
-        let outer_range =
-            crate::source::LayerRange::from_offset_len(outer.call_offset(), outer.call_length());
+        let outer_range = LayerRange::from_offset_len(outer.call_offset(), outer.call_length());
         let outer_call = &source[outer_range.start.as_usize()..outer_range.end.as_usize()];
         assert_eq!(outer_call, "mwrap!(42)");
         assert_eq!(outer.expansion(), "mpass!(42)");
@@ -1187,8 +1188,7 @@ mod tests {
         assert_eq!(inner.parent(), Some(RewriteIdx::from_raw(0)));
         assert_eq!(inner.name(), "mpass");
         let outer_exp = outer.expansion();
-        let inner_range =
-            crate::source::LayerRange::from_offset_len(inner.call_offset(), inner.call_length());
+        let inner_range = LayerRange::from_offset_len(inner.call_offset(), inner.call_length());
         let inner_call = &outer_exp[inner_range];
         assert_eq!(inner_call, "mpass!(42)");
         assert_eq!(inner.expansion(), "42");
@@ -1409,10 +1409,8 @@ mod tests {
             ArgOrigin::Rewrite(RewriteIdx::from_raw(0))
         );
         let m_expansion = rewrites[0].expansion();
-        let n_arg_range = crate::source::LayerRange::from_offset_len(
-            n_segs[0].origin_offset(),
-            n_segs[0].origin_length(),
-        );
+        let n_arg_range =
+            LayerRange::from_offset_len(n_segs[0].origin_offset(), n_segs[0].origin_length());
         let n_arg_in_m_expansion = &m_expansion[n_arg_range];
         assert_eq!(n_arg_in_m_expansion, "nonexistent_col");
 
@@ -1793,7 +1791,7 @@ mod tests {
         );
         assert_eq!(frames[0].name, None, "root frame after drill");
         assert_eq!(frames[0].snippet, source);
-        let range = crate::source::LayerRange::from_offset_len(
+        let range = LayerRange::from_offset_len(
             frames[0].offset_in_snippet,
             LayerLen::from_raw(u32::try_from("authored".len()).unwrap()),
         );
@@ -2091,5 +2089,168 @@ mod tests {
             !erased.node_is_macro_free(erased.root_id()),
             "should return false when extent tracking is disabled"
         );
+    }
+
+    // ── Tests for the call-site arg / is_fallback / parent_buffer API ──
+
+    #[test]
+    fn fallback_call_is_fallback_with_args_and_call_text() {
+        // Unregistered macro goes down the fallback path; the parser
+        // keeps the whole `foo!(...)` as a TK_ID but still exposes the
+        // top-level arg spans so consumers can reformat without
+        // retokenizing.
+        let parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let source = "SELECT foo!(a, 1 + 2, 'x');";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 1);
+        let r = &rewrites[0];
+        assert!(r.is_fallback(), "unregistered call should be fallback");
+        assert_eq!(r.name(), "foo");
+        assert_eq!(r.call_text(), "foo!(a, 1 + 2, 'x')");
+        // No expansion buffer on a fallback.
+        assert_eq!(r.expansion().as_str(), "");
+
+        let arg_texts: Vec<&str> = r.args().map(|a| a.text()).collect();
+        assert_eq!(arg_texts, vec!["a", "1 + 2", "'x'"]);
+    }
+
+    #[test]
+    fn registered_call_args_come_from_call_site_not_expansion() {
+        // `args()` returns call-site arg text for registered macros
+        // too — so the same consumer code works uniformly and does
+        // not have to branch on is_fallback().  `is_fallback()` is
+        // false because an expansion was produced.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("id", &["x", "y"], "($x + $y)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT id!(3, 4);";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 1);
+        let r = &rewrites[0];
+        assert!(!r.is_fallback());
+        assert_eq!(r.call_text(), "id!(3, 4)");
+        assert_eq!(r.expansion().as_str(), "(3 + 4)");
+
+        let arg_texts: Vec<&str> = r.args().map(|a| a.text()).collect();
+        assert_eq!(arg_texts, vec!["3", "4"]);
+    }
+
+    #[test]
+    fn empty_call_has_no_args() {
+        let parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let source = "SELECT foo!();";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 1);
+        assert!(rewrites[0].is_fallback());
+        assert_eq!(rewrites[0].args().count(), 0);
+        assert_eq!(rewrites[0].call_text(), "foo!()");
+    }
+
+    #[test]
+    fn top_level_parent_buffer_matches_stmt_text() {
+        // For top-level rewrites the parent buffer *is* the current
+        // statement slice: same bytes, so any call or arg offset can
+        // be resolved by indexing into either one.
+        let parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let source = "SELECT foo!(a);";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let stmt_text = stmt.text();
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let r = &rewrites[0];
+        assert_eq!(r.parent_buffer().as_str(), stmt_text.as_str());
+    }
+
+    #[test]
+    fn arg_buffer_matches_enclosing_parent_buffer() {
+        // `MacroCallArg::buffer()` must equal the enclosing rewrite's
+        // `parent_buffer()`; the invariant is what lets callers treat
+        // `a.text()` as equivalent to slicing `r.parent_buffer()` at
+        // `a.offset()`/`a.length()`.
+        let parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let source = "SELECT foo!(x, y);";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let r = &rewrites[0];
+        let pb = r.parent_buffer();
+        for a in r.args() {
+            assert!(
+                std::ptr::eq(std::ptr::from_ref(a.buffer()), std::ptr::from_ref(pb)),
+                "arg buffer must be the same reference as the rewrite's parent_buffer",
+            );
+            let end = LayerOffset::from_raw(a.offset().as_u32() + a.length().as_u32());
+            let manual = &pb[LayerRange {
+                start: a.offset(),
+                end,
+            }];
+            assert_eq!(a.text(), manual);
+        }
+    }
+
+    #[test]
+    fn nested_call_parent_buffer_is_parent_expansion() {
+        // For a nested rewrite, `parent_buffer` is the *parent
+        // rewrite's* expansion buffer — exactly the thing nested
+        // `call_offset` / `args()` are measured into.  This lets a
+        // consumer resolve nested-call text without pulling the
+        // parent chain apart manually.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("mpass", &["x"], "$x");
+        reg.register("mwrap", &["x"], "mpass!($x)");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT mwrap!(42);";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 2, "mwrap + mpass");
+        let outer = &rewrites[0];
+        let inner = &rewrites[1];
+        assert_eq!(inner.parent(), Some(RewriteIdx::from_raw(0)));
+        assert_eq!(
+            inner.parent_buffer().as_str(),
+            outer.expansion().as_str(),
+            "nested rewrite's parent_buffer == parent's expansion"
+        );
+        assert_eq!(inner.call_text(), "mpass!(42)");
+        let inner_arg_texts: Vec<&str> = inner.args().map(|a| a.text()).collect();
+        assert_eq!(inner_arg_texts, vec!["42"]);
     }
 }

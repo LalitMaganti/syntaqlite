@@ -101,6 +101,22 @@ typedef struct SynqExpansionLayer {
   SynqArgSegment* arg_segments;
   uint32_t arg_segment_count;
 
+  // Top-level call-site argument spans, populated on every layer
+  // that went through `synq_parser_scan_macro_args` (both registered
+  // and fallback paths).  Offsets are in the same coordinate system
+  // as `call_offset`: statement-relative for top-level layers,
+  // otherwise relative to the parent layer's buffer.  Allocated via
+  // p->mem and freed in reset_stmt / destroy.  NULL when `name!()`
+  // has zero args or the scan overflowed the stack buffer.
+  SynqMacroArg* args;
+  uint32_t arg_count;
+
+  // 1 if this layer is a fallback layer (unregistered `name!(args)`
+  // kept verbatim as a TK_ID — no expansion buffer, no $param
+  // substitutions).  0 for registered macros that expanded into
+  // `expansion_data`.
+  uint32_t is_fallback;
+
   // Position of this nested call in the *parent's authored body*,
   // computed by inverting the length shifts from the parent's $param
   // substitutions.  Both fields equal SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL

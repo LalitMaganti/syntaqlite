@@ -184,6 +184,8 @@ void synq_layers_free_owned(SynqExpansionLayerVec* layers,
       mem.xFree((void*)lyr->expansion_data);
     if (lyr->arg_segments)
       mem.xFree(lyr->arg_segments);
+    if (lyr->args)
+      mem.xFree(lyr->args);
   }
 }
 
@@ -211,10 +213,15 @@ static void layer_free_data(SyntaqliteParser* p, SynqExpansionLayer* lyr) {
     p->mem.xFree((void*)lyr->expansion_data);
   if (lyr->arg_segments)
     p->mem.xFree(lyr->arg_segments);
+  if (lyr->args)
+    p->mem.xFree(lyr->args);
   lyr->expansion_data = NULL;
   lyr->expansion_len = 0;
   lyr->arg_segments = NULL;
   lyr->arg_segment_count = 0;
+  lyr->args = NULL;
+  lyr->arg_count = 0;
+  lyr->is_fallback = 0;
 }
 
 SYNTAQLITE_API void syntaqlite_macro_expansion_set_result(SyntaqliteParser* p,
@@ -423,6 +430,7 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
   begin_macro_expansion(p, id_offset, call_length, buf + id_offset, id_len);
 
   uint32_t new_layer_idx = syntaqlite_vec_len(&p->macro.layers) - 1;
+
   p->macro.pending_layer = new_layer_idx;
   p->macro.expansion_args = token_args;
   p->macro.expansion_arg_count = token_arg_count;
@@ -438,6 +446,8 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
       p->mem.xFree((void*)lyr->expansion_data);
     if (lyr->arg_segments)
       p->mem.xFree(lyr->arg_segments);
+    if (lyr->args)
+      p->mem.xFree(lyr->args);
     p->macro.layers.count--;
     p->macro.depth--;
     if (rc == -2)
@@ -445,8 +455,25 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
     return -1;
   }
 
-  // The callback wrote expansion_data/len/def_line/def_col onto the layer.
+  // The callback wrote expansion_data/len/def_line/def_col onto the
+  // layer.  Persist the call-site arg spans now (after the callback,
+  // since `set_result` calls `layer_free_data` which would wipe them
+  // otherwise) so downstream consumers — formatter, spans API,
+  // traceback — can read them without re-running scan_macro_args.
+  // Offsets in `args[]` are buf-relative; rebase top-level layers to
+  // statement-relative so they match how `begin_macro_expansion`
+  // stored `call_offset`.
   SynqExpansionLayer* lyr = &p->macro.layers.data[new_layer_idx];
+  if (token_arg_count > 0) {
+    SynqMacroArg* heap = p->mem.xMalloc(token_arg_count * sizeof(SynqMacroArg));
+    uint32_t shift = lyr->parent_layer_id == 0 ? p->stmt_start_offset : 0;
+    for (uint32_t i = 0; i < token_arg_count; i++) {
+      heap[i].offset = args[i].offset - shift;
+      heap[i].length = args[i].length;
+    }
+    lyr->args = heap;
+    lyr->arg_count = token_arg_count;
+  }
   const char* data = lyr->expansion_data;
   uint32_t data_len = lyr->expansion_len;
 
@@ -633,18 +660,47 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
   // No callback — fall through to TK_ID fallback.
   // (We already checked macro_style/macro_fallback at the top.)
 
-  // Scan balanced parens to find the end of name!(args).
+  // Scan balanced parens to find the end of name!(args) and capture
+  // the top-level arg spans so downstream consumers (notably the
+  // formatter's structured-arg pass) don't need to retokenize the
+  // call body.  64 is well above any realistic macro arity; calls
+  // exceeding that are handled correctly for `end_offset` but have
+  // their arg spans dropped (still scanned, just not recorded).
+  enum { SYNQ_FALLBACK_ARG_STACK_CAP = 64 };
   uint32_t end_offset = 0;
-  synq_parser_scan_macro_args(p, p->source, p->source_len, bang_offset, NULL, 0,
-                              &end_offset);
+  SynqMacroArg args_stack[SYNQ_FALLBACK_ARG_STACK_CAP];
+  uint32_t arg_count = synq_parser_scan_macro_args(
+      p, p->source, p->source_len, bang_offset, args_stack,
+      SYNQ_FALLBACK_ARG_STACK_CAP, &end_offset);
   if (end_offset == 0)
     return -1;  // Unbalanced parens — still an error.
 
   uint32_t call_length = end_offset - id_offset;
 
   // Record macro region so formatter emits verbatim (no expansion data).
-  begin_macro_expansion(p, id_offset, call_length, NULL, 0);
+  // Pass the macro name (a source slice) so downstream consumers can
+  // read it from the rewrite directly without reparsing the call text.
+  begin_macro_expansion(p, id_offset, call_length, (const char*)z + id_offset,
+                        id_len);
   p->ctx.layer_id = syntaqlite_vec_len(&p->macro.layers) - 1;
+
+  // Attach captured arg spans to the fresh layer and flag it as a
+  // fallback.  scan_macro_args returns source-absolute offsets;
+  // begin_macro_expansion rebases top-level call_offset to
+  // statement-relative, so apply the same shift to the arg spans.
+  SynqExpansionLayer* lyr = &p->macro.layers.data[p->ctx.layer_id];
+  lyr->is_fallback = 1;
+  if (arg_count > 0 && arg_count <= SYNQ_FALLBACK_ARG_STACK_CAP) {
+    SynqMacroArg* heap = p->mem.xMalloc(arg_count * sizeof(SynqMacroArg));
+    uint32_t shift = lyr->parent_layer_id == 0 ? p->stmt_start_offset : 0;
+    for (uint32_t i = 0; i < arg_count; i++) {
+      heap[i].offset = args_stack[i].offset - shift;
+      heap[i].length = args_stack[i].length;
+    }
+    lyr->args = heap;
+    lyr->arg_count = arg_count;
+  }
+
   synq_end_macro(p);
 
   // Feed the whole name!(args) span as a single TK_ID to Lemon.

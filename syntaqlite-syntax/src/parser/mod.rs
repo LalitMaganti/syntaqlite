@@ -35,8 +35,8 @@ pub use incremental::{AnyIncrementalParseSession, TypedIncrementalParseSession};
 pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken};
 pub use types::{
     AnyParserToken, ArgOrigin, Comment, CommentKind, CommentSide, CommentSpan, CompletionContext,
-    MACRO_BODY_CALL_ARG_INTERNAL, MacroArgSegment, MacroRewrite, ParseOutcome, ParserTokenFlags,
-    TracebackFrame, TypedParserToken,
+    MACRO_BODY_CALL_ARG_INTERNAL, MacroArgSegment, MacroCallArg, MacroRewrite, ParseOutcome,
+    ParserTokenFlags, TracebackFrame, TypedParserToken,
 };
 
 /// A single macro argument as presented to the lookup callback.
@@ -713,6 +713,21 @@ impl<'a> AnyParsedStatement<'a> {
             } else {
                 Some(RewriteIdx::from_raw(r.parent_idx))
             };
+            let parent_buffer: &'a LayerText = if r.parent_buffer.is_null() {
+                LayerText::new("")
+            } else {
+                // SAFETY: `parent_buffer` points to `parent_buffer_len`
+                // bytes owned by the parser (statement source or parent
+                // layer's expansion buffer), valid for 'a.  UTF-8 by
+                // construction — both sources are UTF-8.
+                let s = unsafe {
+                    std::str::from_utf8_unchecked(std::slice::from_raw_parts(
+                        r.parent_buffer,
+                        r.parent_buffer_len as usize,
+                    ))
+                };
+                LayerText::new(s)
+            };
             MacroRewrite {
                 parent,
                 rewrite_idx: RewriteIdx::from_raw(i),
@@ -724,6 +739,8 @@ impl<'a> AnyParsedStatement<'a> {
                 def_col: ColumnNumber::from_raw(r.def_col),
                 body_call_offset: LayerOffset::from_raw(r.body_call_offset),
                 body_call_length: LayerLen::from_raw(r.body_call_length),
+                parent_buffer,
+                is_fallback: r.is_fallback != 0,
                 parser: self.raw,
                 _lifetime: PhantomData,
             }
