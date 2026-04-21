@@ -52,7 +52,7 @@ class Expressions(TestSuite):
               status: complete
               target: (none)
               columns:
-                a as text <- (transformed)
+                cast(a as text) <- (transformed)
               relations:
                 t (table)
               physical_tables:
@@ -78,7 +78,7 @@ class Expressions(TestSuite):
               status: complete
               target: (none)
               columns:
-                sum(a <- (transformed)
+                sum(a) <- (transformed)
               relations:
                 t (table)
               physical_tables:

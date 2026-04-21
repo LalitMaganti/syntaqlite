@@ -1,6 +1,6 @@
-# CI: run pre-push checks (fmt/clippy/C checks/public API/unit tests/integration suites),
-# upstream SQLite validation, amalgamation build, Zed extension, UI tests, and Playwright e2e tests
-# on every PR and push to main.
+# CI: run pre-push checks (fmt/clippy/C checks/public API/unit tests/integration suites)
+# plus upstream SQLite validation, amalgamation build, Zed extension, UI tests, and
+# Playwright e2e tests on every PR and push to main.
 name: CI
 
 on:
@@ -38,6 +38,9 @@ jobs:
           path: third_party
           key: third-party-${{ runner.os }}-${{ hashFiles('python/tools/install_build_deps.py') }}
 
+      - name: Install system dependencies (tcl-dev for upstream SQLite suite)
+        run: sudo apt-get update && sudo apt-get install -y tcl-dev
+
       - name: Install build dependencies
         run: python3 tools/install-build-deps
 
@@ -72,45 +75,15 @@ jobs:
           CC: clang
           CXX: clang++
 
+      - name: Run upstream SQLite validation tests
+        run: tools/run-integration-tests --suite upstream-sqlite --validate
+
       - name: Upload CLI binary
         uses: actions/upload-artifact@v6
         with:
           name: syntaqlite-cli
           path: target/debug/syntaqlite
           retention-days: 1
-
-  upstream-sqlite-validation:
-    name: Upstream SQLite validation
-    needs: [pre-push]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: recursive
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y tcl-dev
-
-      - name: Cache third_party
-        uses: actions/cache@v5
-        with:
-          path: third_party
-          key: third-party-${{ runner.os }}-${{ hashFiles('python/tools/install_build_deps.py') }}
-
-      - name: Install build dependencies
-        run: python3 tools/install-build-deps
-
-      - name: Download CLI binary
-        uses: actions/download-artifact@v7
-        with:
-          name: syntaqlite-cli
-          path: target/debug
-
-      - name: Make CLI binary executable
-        run: chmod +x target/debug/syntaqlite
-
-      - name: Run upstream SQLite validation tests
-        run: tools/run-integration-tests --suite upstream-sqlite --validate
 
   zed-extension:
     name: Zed extension build
