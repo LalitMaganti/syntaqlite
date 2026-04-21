@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
 
 use crate::analysis::catalog::Catalog;
-use crate::analysis::ddl::DdlReader;
+use crate::analysis::ddl::{FromSource, SemanticPropertyExtractor};
 use crate::dialect::SemanticRole;
 
 use super::types::{
@@ -50,7 +50,7 @@ enum ColumnSpec {
 
 /// Walks the AST to compute column lineage.
 pub(super) struct LineageResolver<'a, 'b> {
-    reader: DdlReader<'a, 'b>,
+    sema: SemanticPropertyExtractor<'a, 'b>,
     catalog: &'a Catalog,
     /// CTE name -> body node ID (from WITH clause, before FROM is walked).
     cte_bodies: HashMap<String, AnyNodeId>,
@@ -67,7 +67,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         roles: &'a [SemanticRole],
     ) -> Self {
         Self {
-            reader: DdlReader::new(stmt, roles),
+            sema: SemanticPropertyExtractor::new(stmt, roles),
             catalog,
             cte_bodies: HashMap::new(),
             tracing: HashSet::new(),
@@ -76,7 +76,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
     }
 
     fn stmt(&self) -> &'a AnyParsedStatement<'b> {
-        self.reader.stmt()
+        self.sema.stmt()
     }
 
     /// Entry point: find the outermost SELECT and resolve its lineage.
@@ -85,20 +85,20 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
     }
 
     fn resolve_node(&mut self, node_id: AnyNodeId) -> Option<QueryLineage> {
-        let (role, fields) = self.reader.role_for_node(node_id)?;
+        let (role, fields) = self.sema.role_for_node(node_id)?;
         match role {
             SemanticRole::CteScope { bindings, body, .. } => {
-                if let Some(bindings_id) = DdlReader::node_field(&fields, bindings) {
+                if let Some(bindings_id) = fields.node_id_at(bindings) {
                     self.collect_cte_bindings(bindings_id);
                 }
-                DdlReader::node_field(&fields, body).and_then(|id| self.resolve_node(id))
+                fields.node_id_at(body).and_then(|id| self.resolve_node(id))
             }
             SemanticRole::Query { .. } => self.resolve_select(node_id),
             SemanticRole::DefineTable { select, .. }
             | SemanticRole::DefineView { select, .. }
-            | SemanticRole::DefineFunction { select, .. } => {
-                DdlReader::node_field(&fields, select).and_then(|id| self.resolve_node(id))
-            }
+            | SemanticRole::DefineFunction { select, .. } => fields
+                .node_id_at(select)
+                .and_then(|id| self.resolve_node(id)),
             SemanticRole::Transparent | SemanticRole::DmlScope { .. } => {
                 for child_id in self.stmt().child_node_ids(node_id) {
                     if let Some(result) = self.resolve_node(child_id) {
@@ -112,27 +112,19 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
     }
 
     fn collect_cte_bindings(&mut self, bindings_id: AnyNodeId) {
-        let Some(children) = self.stmt().list_children(bindings_id) else {
-            self.try_register_cte(bindings_id);
-            return;
-        };
-        for &child_id in children {
-            self.try_register_cte(child_id);
-        }
-    }
-
-    fn try_register_cte(&mut self, node_id: AnyNodeId) {
-        let Some((SemanticRole::CteBinding { name, body, .. }, fields)) =
-            self.reader.role_for_node(node_id)
-        else {
-            return;
-        };
-        let Some(cte_name) = self.reader.name_field_text(&fields, name) else {
-            return;
-        };
-        if let Some(body_id) = DdlReader::node_field(&fields, body) {
-            self.cte_bodies
-                .insert(cte_name.to_ascii_lowercase(), body_id);
+        // Collect into a temp Vec so the iterator borrow on self.sema doesn't
+        // conflict with the &mut self.cte_bodies write.
+        let mut entries: Vec<(String, AnyNodeId)> = Vec::new();
+        self.sema.for_each_cte_binding(bindings_id, |binding| {
+            if binding.name.is_empty() {
+                return;
+            }
+            if let Some(body_id) = binding.body_id {
+                entries.push((binding.name.to_ascii_lowercase(), body_id));
+            }
+        });
+        for (name, body_id) in entries {
+            self.cte_bodies.insert(name, body_id);
         }
     }
 
@@ -146,16 +138,16 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                 ..
             },
             fields,
-        ) = self.reader.role_for_node(select_id)?
+        ) = self.sema.role_for_node(select_id)?
         else {
             return None;
         };
 
         // 1. Walk FROM to build the source map.
-        let mut sources = HashMap::new();
-        if let Some(from_id) = DdlReader::node_field(&fields, from) {
-            self.collect_sources(from_id, &mut sources);
-        }
+        let sources = match fields.node_id_at(from) {
+            Some(from_id) => self.collect_sources(from_id),
+            None => HashMap::new(),
+        };
 
         // 2. Resolve result columns.
         let columns = self.resolve_result_columns(cols_idx, &fields, &sources)?;
@@ -236,65 +228,53 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
 
     // ── FROM source collection ───────────────────────────────────────────
 
-    /// Walk a FROM clause and populate `target` with source entries.
-    fn collect_sources(&self, from_id: AnyNodeId, target: &mut HashMap<String, SourceInfo>) {
-        let Some((role, fields)) = self.reader.role_for_node(from_id) else {
-            return;
-        };
-        match role {
-            SemanticRole::SourceRef { name, alias, .. } => {
-                let Some(sn) = self.reader.name_field_text(&fields, name) else {
-                    return;
-                };
-                let alias_name = self.reader.name_field_text(&fields, alias);
-                let display = alias_name.unwrap_or(sn).to_ascii_lowercase();
-                let canonical = sn.to_ascii_lowercase();
-
-                let (columns, kind) = if let Some(&body) = self.cte_bodies.get(&canonical) {
-                    (self.reader.columns_from_select(body), SourceKind::Cte(body))
-                } else {
-                    let (cols, _) = self.catalog.table_source_info(&canonical);
-                    let kind = if self.catalog.is_view(&canonical) {
-                        SourceKind::View
+    /// Walk a FROM clause and return a map of display-name → `SourceInfo`.
+    /// Uses [`SemanticPropertyExtractor::for_each_from_source`] so the
+    /// SourceRef/ScopedSource role-dispatch is shared with the analyzer.
+    fn collect_sources(&self, from_id: AnyNodeId) -> HashMap<String, SourceInfo> {
+        let mut target: HashMap<String, SourceInfo> = HashMap::new();
+        self.sema
+            .for_each_from_source(from_id, |source| match source {
+                FromSource::Relation { name, alias, .. } => {
+                    let display = alias.unwrap_or(name).to_ascii_lowercase();
+                    let canonical = name.to_ascii_lowercase();
+                    let (columns, kind) = if let Some(&body) = self.cte_bodies.get(&canonical) {
+                        (self.sema.columns_from_select(body), SourceKind::Cte(body))
                     } else {
-                        SourceKind::Table
+                        let (cols, _) = self.catalog.table_source_info(&canonical);
+                        let kind = if self.catalog.is_view(&canonical) {
+                            SourceKind::View
+                        } else {
+                            SourceKind::Table
+                        };
+                        (cols, kind)
                     };
-                    (cols, kind)
-                };
-
-                target.insert(
-                    display,
-                    SourceInfo {
-                        canonical,
-                        columns,
-                        kind,
-                    },
-                );
-            }
-            SemanticRole::ScopedSource { body, alias } => {
-                let Some(alias_text) = self.reader.name_field_text(&fields, alias) else {
-                    return;
-                };
-                let Some(body_id) = DdlReader::node_field(&fields, body) else {
-                    return;
-                };
-                let alias_lower = alias_text.to_ascii_lowercase();
-                let cols = self.reader.columns_from_select(body_id);
-                target.insert(
-                    alias_lower.clone(),
-                    SourceInfo {
-                        canonical: alias_lower,
-                        columns: cols,
-                        kind: SourceKind::Subquery(body_id),
-                    },
-                );
-            }
-            _ => {
-                for child_id in self.stmt().child_node_ids(from_id) {
-                    self.collect_sources(child_id, target);
+                    target.insert(
+                        display,
+                        SourceInfo {
+                            canonical,
+                            columns,
+                            kind,
+                        },
+                    );
                 }
-            }
-        }
+                FromSource::Subquery { alias, body_id, .. } => {
+                    let Some(alias_text) = alias else {
+                        return;
+                    };
+                    let alias_lower = alias_text.to_ascii_lowercase();
+                    let cols = self.sema.columns_from_select(body_id);
+                    target.insert(
+                        alias_lower.clone(),
+                        SourceInfo {
+                            canonical: alias_lower,
+                            columns: cols,
+                            kind: SourceKind::Subquery(body_id),
+                        },
+                    );
+                }
+            });
+        target
     }
 
     /// Recursively collect physical tables and catalog relations from a CTE/subquery body.
@@ -308,16 +288,15 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         let Some(select_id) = self.find_select_node(body_id) else {
             return;
         };
-        let Some((SemanticRole::Query { from, .. }, fields)) = self.reader.role_for_node(select_id)
+        let Some((SemanticRole::Query { from, .. }, fields)) = self.sema.role_for_node(select_id)
         else {
             return;
         };
-        let Some(from_id) = DdlReader::node_field(&fields, from) else {
+        let Some(from_id) = fields.node_id_at(from) else {
             return;
         };
 
-        let mut inner_sources = HashMap::new();
-        self.collect_sources(from_id, &mut inner_sources);
+        let inner_sources = self.collect_sources(from_id);
         let snapshot: Vec<SourceInfo> = inner_sources.into_values().collect();
         for info in &snapshot {
             self.flatten_source(info, relations, physical_tables, unexpanded_views);
@@ -332,7 +311,7 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         select_fields: &syntaqlite_syntax::any::NodeFields,
         sources: &HashMap<String, SourceInfo>,
     ) -> Option<Vec<ColumnLineage>> {
-        let list_id = DdlReader::node_field(select_fields, cols_idx)?;
+        let list_id = select_fields.node_id_at(cols_idx)?;
         let specs = self.collect_column_specs(list_id);
 
         let mut result = Vec::new();
@@ -373,12 +352,12 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
     }
 
     /// Snapshot result-column specs (Star vs. Named) so the borrow on
-    /// `self.reader` from iteration doesn't conflict with `&mut self` used by
+    /// `self.sema` from iteration doesn't conflict with `&mut self` used by
     /// the trace_* methods.
     fn collect_column_specs(&self, list_id: AnyNodeId) -> Vec<ColumnSpec> {
         let mut specs = Vec::new();
-        let reader = self.reader;
-        reader.for_each_result_column(list_id, |fields, flags_idx, alias_idx, expr_idx| {
+        let sema = self.sema;
+        sema.for_each_result_column(list_id, |fields, flags_idx, alias_idx, expr_idx| {
             let is_star = matches!(
                 fields[flags_idx as usize],
                 FieldValue::Flags(f) if f & 1 != 0
@@ -386,10 +365,10 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
             if is_star {
                 specs.push(ColumnSpec::Star);
             } else {
-                let name = reader
+                let name = sema
                     .infer_result_col_name(fields, alias_idx, expr_idx)
                     .unwrap_or_default();
-                let expr_id = DdlReader::node_field(fields, expr_idx);
+                let expr_id = fields.node_id_at(expr_idx);
                 specs.push(ColumnSpec::Named { name, expr_id });
             }
             true
@@ -449,30 +428,30 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                 ..
             },
             fields,
-        ) = self.reader.role_for_node(select_id)?
+        ) = self.sema.role_for_node(select_id)?
         else {
             return None;
         };
 
         // Build inner source map for this body.
-        let mut inner_sources = HashMap::new();
-        if let Some(from_id) = DdlReader::node_field(&fields, from) {
-            self.collect_sources(from_id, &mut inner_sources);
-        }
+        let inner_sources = match fields.node_id_at(from) {
+            Some(from_id) => self.collect_sources(from_id),
+            None => HashMap::new(),
+        };
 
-        let list_id = DdlReader::node_field(&fields, cols_idx)?;
+        let list_id = fields.node_id_at(cols_idx)?;
 
         // Find the matching result column's expression node.
         let mut found_expr_id: Option<AnyNodeId> = None;
         let target = col_name.to_ascii_lowercase();
-        let reader = self.reader;
-        reader.for_each_result_column(list_id, |child_fields, _flags, alias_idx, expr_idx| {
-            let name = reader.infer_result_col_name(child_fields, alias_idx, expr_idx);
+        let sema = self.sema;
+        sema.for_each_result_column(list_id, |child_fields, _flags, alias_idx, expr_idx| {
+            let name = sema.infer_result_col_name(child_fields, alias_idx, expr_idx);
             if name
                 .as_deref()
-                .is_some_and(|n| n.eq_ignore_ascii_case(&target))
+                .is_some_and(|n: &str| n.eq_ignore_ascii_case(&target))
             {
-                found_expr_id = DdlReader::node_field(child_fields, expr_idx);
+                found_expr_id = child_fields.node_id_at(expr_idx);
                 return false;
             }
             true
@@ -493,16 +472,16 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                 table: tbl_idx,
             },
             expr_fields,
-        ) = self.reader.role_for_node(expr_id)?
+        ) = self.sema.role_for_node(expr_id)?
         else {
             return None;
         };
 
-        let col_name = self
-            .reader
+        let stmt = self.stmt();
+        let col_name = stmt
             .span_field_text(&expr_fields, col_idx)?
             .to_ascii_lowercase();
-        let source_name = match self.reader.span_field_text(&expr_fields, tbl_idx) {
+        let source_name = match stmt.span_field_text(&expr_fields, tbl_idx) {
             Some(t) => t.to_ascii_lowercase(),
             None => find_source_for_column(sources, &col_name)?,
         };
@@ -513,12 +492,12 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
     // ── AST navigation helpers ───────────────────────────────────────────
 
     fn find_select_node(&self, node_id: AnyNodeId) -> Option<AnyNodeId> {
-        let (role, fields) = self.reader.role_for_node(node_id)?;
+        let (role, fields) = self.sema.role_for_node(node_id)?;
         match role {
             SemanticRole::Query { .. } => Some(node_id),
-            SemanticRole::CteScope { body, .. } => {
-                DdlReader::node_field(&fields, body).and_then(|id| self.find_select_node(id))
-            }
+            SemanticRole::CteScope { body, .. } => fields
+                .node_id_at(body)
+                .and_then(|id| self.find_select_node(id)),
             SemanticRole::Transparent => {
                 for child_id in self.stmt().child_node_ids(node_id) {
                     if let Some(result) = self.find_select_node(child_id) {

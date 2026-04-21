@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
 
-use super::ddl::DdlReader;
+use super::ddl::SemanticPropertyExtractor;
 use crate::dialect::AnyDialect;
 use crate::dialect::{
     FIELD_ABSENT, FunctionCategory as DialectFunctionCategory, SemanticRole, is_function_available,
@@ -689,7 +689,7 @@ impl Catalog {
         let Some(&role) = dialect.roles().get(u32::from(tag) as usize) else {
             return;
         };
-        let reader = DdlReader::new(stmt, dialect.roles());
+        let reader = SemanticPropertyExtractor::new(stmt, dialect.roles());
         let layer = &mut self.layers[target.index()];
 
         match role {
@@ -699,7 +699,7 @@ impl Catalog {
                 select,
                 without_rowid,
             } => {
-                let Some(name_val) = reader.span_field_text(&fields, name) else {
+                let Some(name_val) = stmt.span_field_text(&fields, name) else {
                     return;
                 };
                 let cols = reader.extract_columns(&fields, columns, select);
@@ -715,7 +715,7 @@ impl Catalog {
                 columns,
                 select,
             } => {
-                let Some(name_val) = reader.span_field_text(&fields, name) else {
+                let Some(name_val) = stmt.span_field_text(&fields, name) else {
                     return;
                 };
                 let cols = reader.extract_columns(&fields, columns, select);
@@ -727,7 +727,7 @@ impl Catalog {
                 return_type,
                 ..
             } => {
-                let Some(name_val) = reader.span_field_text(&fields, name) else {
+                let Some(name_val) = stmt.span_field_text(&fields, name) else {
                     return;
                 };
                 let arity = reader.function_arity(&fields, args);

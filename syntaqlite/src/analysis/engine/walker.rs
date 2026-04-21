@@ -20,7 +20,7 @@ use syntaqlite_syntax::any::{
 use syntaqlite_syntax::source::DocRange;
 
 use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
-use crate::analysis::ddl::DdlReader;
+use crate::analysis::ddl::SemanticPropertyExtractor;
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 
 use super::query_scope::{QueryScope, RowIdPolicy};
@@ -206,17 +206,17 @@ fn walk_node<P: WalkPass>(
     let Some((tag, fields)) = stmt.extract_fields(node_id) else {
         return;
     };
-    let role = DdlReader::new(stmt, cx.roles).role_for_tag(tag);
+    let role = SemanticPropertyExtractor::new(stmt, cx.roles).role_for_tag(tag);
 
     match role {
         SemanticRole::DefineTable { select, .. } | SemanticRole::DefineView { select, .. } => {
             if P::WANTS_RELATION_DEFINITION || P::WANTS_COLUMN_DEFINITION {
                 emit_ddl_definitions(stmt, cx.roles, pass, node_id);
             }
-            walk_opt(stmt, cx, pass, DdlReader::node_field(&fields, select));
+            walk_opt(stmt, cx, pass, fields.node_id_at(select));
         }
         SemanticRole::DefineFunction { select, .. } => {
-            walk_opt(stmt, cx, pass, DdlReader::node_field(&fields, select));
+            walk_opt(stmt, cx, pass, fields.node_id_at(select));
         }
         SemanticRole::ReturnSpec { .. } | SemanticRole::Import { .. } => {}
 
@@ -307,7 +307,7 @@ fn emit_ddl_definitions<P: WalkPass>(
     pass: &mut P,
     node_id: AnyNodeId,
 ) {
-    let reader = DdlReader::new(stmt, roles);
+    let reader = SemanticPropertyExtractor::new(stmt, roles);
     let Some((table_name, table_range)) = reader.name_span(node_id) else {
         return;
     };
@@ -332,8 +332,7 @@ fn walk_source_ref<P: WalkPass>(
     name_idx: u8,
     alias_idx: u8,
 ) {
-    let reader = DdlReader::new(stmt, cx.roles);
-    let Some((name, range)) = reader.span_field_range(fields, name_idx) else {
+    let Some((name, range)) = stmt.span_field_range(fields, name_idx) else {
         return;
     };
 
@@ -351,9 +350,7 @@ fn walk_source_ref<P: WalkPass>(
         pass.on_source_ref(stmt, cx, ev);
     }
 
-    let alias = DdlReader::new(stmt, cx.roles)
-        .name_text(DdlReader::node_field(fields, alias_idx))
-        .0;
+    let alias = stmt.name_text(fields.node_id_at(alias_idx)).0;
     let scope_name = if alias.is_empty() { name } else { alias };
     cx.scope
         .add_table(scope_name, columns, without_rowid.into());
@@ -368,9 +365,9 @@ fn walk_call<P: WalkPass>(
     name_idx: u8,
     args_idx: u8,
 ) {
-    let reader = DdlReader::new(stmt, cx.roles);
-    if let Some((name, range)) = reader.span_field_range(fields, name_idx) {
-        let arg_count = DdlReader::node_field(fields, args_idx)
+    if let Some((name, range)) = stmt.span_field_range(fields, name_idx) {
+        let arg_count = fields
+            .node_id_at(args_idx)
             .and_then(|id| stmt.list_children(id))
             .map_or(0, <[_]>::len);
         let result = cx.catalog.check_function(name, arg_count);
@@ -457,14 +454,14 @@ fn walk_scoped_source<P: WalkPass>(
     body_idx: u8,
     alias_idx: u8,
 ) {
-    let body_id = DdlReader::node_field(fields, body_idx);
+    let body_id = fields.node_id_at(body_idx);
     cx.scope.push();
     walk_opt(stmt, cx, pass, body_id);
     cx.scope.pop();
 
-    let reader = DdlReader::new(stmt, cx.roles);
-    let alias = reader.name_text(DdlReader::node_field(fields, alias_idx)).0;
-    let cols = body_id.and_then(|id| reader.columns_from_select(id));
+    let alias = stmt.name_text(fields.node_id_at(alias_idx)).0;
+    let cols = body_id
+        .and_then(|id| SemanticPropertyExtractor::new(stmt, cx.roles).columns_from_select(id));
     if alias.is_empty() {
         cx.scope.add_anonymous(cols);
     } else {
@@ -489,8 +486,8 @@ fn walk_query<P: WalkPass>(
     // Push a fresh scope so that tables registered by walk_source_ref are
     // visible when we visit SELECT columns, WHERE, ORDER BY, etc.
     cx.scope.push();
-    walk_opt(stmt, cx, pass, DdlReader::node_field(fields, from));
-    walk_opt(stmt, cx, pass, DdlReader::node_field(fields, columns));
+    walk_opt(stmt, cx, pass, fields.node_id_at(from));
+    walk_opt(stmt, cx, pass, fields.node_id_at(columns));
 
     // Collect SELECT aliases so they are visible in WHERE, GROUP BY, HAVING,
     // ORDER BY, and LIMIT — matching SQLite's resolution rules.
@@ -501,7 +498,7 @@ fn walk_query<P: WalkPass>(
     }
 
     for idx in [where_clause, groupby, having, orderby, limit_clause] {
-        walk_opt(stmt, cx, pass, DdlReader::node_field(fields, idx));
+        walk_opt(stmt, cx, pass, fields.node_id_at(idx));
     }
     cx.scope.pop();
 }
@@ -513,13 +510,13 @@ fn collect_select_aliases(
     columns_idx: u8,
 ) -> Vec<String> {
     let mut aliases = Vec::new();
-    let Some(list_id) = DdlReader::node_field(fields, columns_idx) else {
+    let Some(list_id) = fields.node_id_at(columns_idx) else {
         return aliases;
     };
-    let reader = DdlReader::new(stmt, roles);
+    let reader = SemanticPropertyExtractor::new(stmt, roles);
     reader.for_each_result_column(list_id, |child_fields, _flags, alias_idx, _expr| {
-        let alias_node = DdlReader::node_field(child_fields, alias_idx);
-        let (alias_text, _) = reader.name_text(alias_node);
+        let alias_node = child_fields.node_id_at(alias_idx);
+        let (alias_text, _) = reader.stmt().name_text(alias_node);
         if !alias_text.is_empty() {
             aliases.push(alias_text.to_string());
         }
@@ -539,8 +536,8 @@ fn walk_trigger_scope<P: WalkPass>(
     cx.scope.push();
     cx.scope.add_table("OLD", None, RowIdPolicy::WithRowId);
     cx.scope.add_table("NEW", None, RowIdPolicy::WithRowId);
-    walk_opt(stmt, cx, pass, DdlReader::node_field(fields, when_idx));
-    walk_opt(stmt, cx, pass, DdlReader::node_field(fields, body_idx));
+    walk_opt(stmt, cx, pass, fields.node_id_at(when_idx));
+    walk_opt(stmt, cx, pass, fields.node_id_at(body_idx));
     cx.scope.pop();
 }
 
@@ -557,7 +554,7 @@ fn walk_cte_scope<P: WalkPass>(
 ) {
     cx.catalog.push_query_scope();
     register_cte_bindings(stmt, cx, pass, fields, recursive_idx, bindings_idx);
-    walk_opt(stmt, cx, pass, DdlReader::node_field(fields, body_idx));
+    walk_opt(stmt, cx, pass, fields.node_id_at(body_idx));
     cx.catalog.pop_query_scope();
 }
 
@@ -632,7 +629,8 @@ fn register_cte_bindings<P: WalkPass>(
     }
     let is_recursive = recursive_idx != FIELD_ABSENT
         && matches!(fields[recursive_idx as usize], FieldValue::Bool(true));
-    let cte_ids: &[AnyNodeId] = DdlReader::node_field(fields, bindings_idx)
+    let cte_ids: &[AnyNodeId] = fields
+        .node_id_at(bindings_idx)
         .and_then(|id| stmt.list_children(id))
         .unwrap_or(&[]);
 
@@ -686,9 +684,9 @@ fn register_cte_bindings<P: WalkPass>(
             if P::WANTS_COLUMN_DEFINITION {
                 emit_select_column_definitions(stmt, cx.roles, pass, binding.body_id, binding.name);
             }
-            binding
-                .body_id
-                .and_then(|id| DdlReader::new(stmt, cx.roles).columns_from_select(id))
+            binding.body_id.and_then(|id| {
+                SemanticPropertyExtractor::new(stmt, cx.roles).columns_from_select(id)
+            })
         };
         cx.catalog.add_query_table(binding.name, cols);
     }
@@ -699,12 +697,12 @@ fn extract_cte_binding<'b>(
     roles: &'static [SemanticRole],
     cte_id: AnyNodeId,
 ) -> Option<CteBindingInfo<'b>> {
-    let reader = DdlReader::new(stmt, roles);
+    let reader = SemanticPropertyExtractor::new(stmt, roles);
     let (
         SemanticRole::CteBinding {
             name: name_idx,
-            columns: cols_idx,
             body: body_idx,
+            ..
         },
         fields,
     ) = reader.role_for_node(cte_id)?
@@ -713,31 +711,15 @@ fn extract_cte_binding<'b>(
     };
 
     let (name, name_range) = reader
+        .stmt()
         .span_field_range(&fields, name_idx)
         .unwrap_or_default();
     Some(CteBindingInfo {
         name,
         name_range,
-        body_id: DdlReader::node_field(&fields, body_idx),
-        declared_cols: extract_declared_cols(&reader, &fields, cols_idx),
+        body_id: fields.node_id_at(body_idx),
+        declared_cols: reader.cte_declared_cols(cte_id),
     })
-}
-
-fn extract_declared_cols<'b>(
-    reader: &DdlReader<'_, 'b>,
-    fields: &NodeFields,
-    cols_idx: u8,
-) -> Option<Vec<(&'b str, DocRange)>> {
-    let list_id = DdlReader::node_field(fields, cols_idx)?;
-    let children = reader.stmt().list_children(list_id)?;
-    let mut names: Vec<(&'b str, DocRange)> = Vec::with_capacity(children.len());
-    for &id in children {
-        let (text, range) = reader.name_text(Some(id));
-        if !text.is_empty() {
-            names.push((text, range));
-        }
-    }
-    if names.is_empty() { None } else { Some(names) }
 }
 
 fn count_result_columns(
@@ -746,7 +728,7 @@ fn count_result_columns(
     body_id: Option<AnyNodeId>,
 ) -> Option<usize> {
     let body_id = body_id?;
-    let reader = DdlReader::new(stmt, roles);
+    let reader = SemanticPropertyExtractor::new(stmt, roles);
     let (
         SemanticRole::Query {
             columns: cols_idx, ..
@@ -756,7 +738,7 @@ fn count_result_columns(
     else {
         return None;
     };
-    let list_id = DdlReader::node_field(&body_fields, cols_idx)?;
+    let list_id = body_fields.node_id_at(cols_idx)?;
 
     let mut count = 0usize;
     let mut saw_star = false;
@@ -781,7 +763,7 @@ fn emit_select_column_definitions<P: WalkPass>(
     table_name: &str,
 ) {
     let Some(body_id) = body_id else { return };
-    let reader = DdlReader::new(stmt, roles);
+    let reader = SemanticPropertyExtractor::new(stmt, roles);
     let Some((
         SemanticRole::Query {
             columns: cols_idx, ..
@@ -791,12 +773,12 @@ fn emit_select_column_definitions<P: WalkPass>(
     else {
         return;
     };
-    let Some(list_id) = DdlReader::node_field(&fields, cols_idx) else {
+    let Some(list_id) = fields.node_id_at(cols_idx) else {
         return;
     };
     reader.for_each_result_column(list_id, |child_fields, _flags, alias_idx, _expr| {
-        let alias_node = DdlReader::node_field(child_fields, alias_idx);
-        let (alias_text, alias_range) = reader.name_text(alias_node);
+        let alias_node = child_fields.node_id_at(alias_idx);
+        let (alias_text, alias_range) = reader.stmt().name_text(alias_node);
         if !alias_text.is_empty() {
             pass.on_column_definition(table_name, alias_text, alias_range);
         }

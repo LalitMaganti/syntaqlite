@@ -217,6 +217,15 @@ pub enum FieldValue {
     Enum(u32),
 }
 
+/// Sentinel for "absent field index" in role-table-driven schemas.
+///
+/// Field indices in `SemanticRole`-style enums use this value to mean
+/// "this field doesn't exist for this node shape." The convenience
+/// accessors on [`NodeFields`] and
+/// [`AnyParsedStatement`](crate::parser::AnyParsedStatement) treat
+/// `FIELD_ABSENT` as a None hit so callers don't have to special-case it.
+pub const FIELD_ABSENT: u8 = 0xFF;
+
 /// Compact reflected field collection for one AST node.
 ///
 /// Returned by [`AnyParsedStatement::extract_fields`](crate::parser::AnyParsedStatement::extract_fields)
@@ -253,6 +262,18 @@ impl NodeFields {
     /// Whether there are no fields.
     pub fn is_empty(&self) -> bool {
         self.len == 0
+    }
+
+    /// `NodeId` stored at field `idx`, or `None` if `idx` is [`FIELD_ABSENT`],
+    /// the field is null, or the field is not a `NodeId`.
+    pub fn node_id_at(&self, idx: u8) -> Option<AnyNodeId> {
+        if idx == FIELD_ABSENT {
+            return None;
+        }
+        match self[idx as usize] {
+            FieldValue::NodeId(id) if !id.is_null() => Some(id),
+            _ => None,
+        }
     }
 }
 

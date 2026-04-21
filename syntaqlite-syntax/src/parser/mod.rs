@@ -1020,6 +1020,158 @@ impl<'a> AnyParsedStatement<'a> {
         Some((tag, fields))
     }
 
+    // ── Field-shaped convenience accessors ──────────────────────────────
+    //
+    // These wrap the common patterns of "extract fields, then look at one
+    // field" so callers don't repeat the empty/null/wrong-kind boilerplate
+    // every time. They handle the [`crate::ast::FIELD_ABSENT`] sentinel as
+    // a None hit so callers can pass field indices read from role tables
+    // without pre-checking.
+
+    /// Expanded text of a span field, or `None` if the index is
+    /// [`crate::ast::FIELD_ABSENT`], the field is empty, or the field is
+    /// not a span.
+    pub fn span_field_text(&self, fields: &crate::ast::NodeFields, idx: u8) -> Option<&'a str> {
+        if idx == crate::ast::FIELD_ABSENT {
+            return None;
+        }
+        match fields[idx as usize] {
+            crate::ast::FieldValue::Span(sp) if !sp.is_empty() => Some(self.span_expanded_text(sp)),
+            _ => None,
+        }
+    }
+
+    /// `(text, range)` of a span field. `range` is the document-absolute
+    /// extent. `None` under the same conditions as
+    /// [`Self::span_field_text`].
+    pub fn span_field_range(
+        &self,
+        fields: &crate::ast::NodeFields,
+        idx: u8,
+    ) -> Option<(&'a str, DocRange)> {
+        if idx == crate::ast::FIELD_ABSENT {
+            return None;
+        }
+        match fields[idx as usize] {
+            crate::ast::FieldValue::Span(sp) if !sp.is_empty() => {
+                let text = self.span_expanded_text(sp);
+                let (_, range) = self.span_text_abs(sp);
+                Some((text, range))
+            }
+            _ => None,
+        }
+    }
+
+    /// `(text, range)` of a Name node's field-0 span — used by
+    /// `IdentName`-shaped and `Error`-shaped nodes where the identifier
+    /// always sits at field 0. Returns empty strings when the node is
+    /// `None`, null, or shaped differently.
+    pub fn name_text(&self, node_id: Option<AnyNodeId>) -> (&'a str, DocRange) {
+        let Some(node_id) = node_id else {
+            return ("", DocRange::default());
+        };
+        let Some((_, fields)) = self.extract_fields(node_id) else {
+            return ("", DocRange::default());
+        };
+        if fields.is_empty() {
+            return ("", DocRange::default());
+        }
+        match fields[0] {
+            crate::ast::FieldValue::Span(sp) => {
+                let text = self.span_expanded_text(sp);
+                let (_, range) = self.span_text_abs(sp);
+                (text, range)
+            }
+            _ => ("", DocRange::default()),
+        }
+    }
+
+    /// First non-empty span anywhere in `node_id`'s fields. Used as a
+    /// generic "give me whatever identifier this node carries" probe.
+    pub fn first_span_text(&self, node_id: AnyNodeId) -> Option<&'a str> {
+        if node_id.is_null() {
+            return None;
+        }
+        let (_, fields) = self.extract_fields(node_id)?;
+        for i in 0..fields.len() {
+            if let crate::ast::FieldValue::Span(sp) = fields[i]
+                && !sp.is_empty()
+            {
+                return Some(self.span_expanded_text(sp));
+            }
+        }
+        None
+    }
+
+    /// Text of a "name-shaped" field that may be either a direct `Span`
+    /// or a `NodeId` pointing at a Name node. Mirrors the dual
+    /// representation used by `SourceRef.alias`, CTE names, and similar
+    /// fields where the codegen sometimes emits a span and sometimes
+    /// emits a child node.
+    pub fn name_field_text(&self, fields: &crate::ast::NodeFields, idx: u8) -> Option<&'a str> {
+        if idx == crate::ast::FIELD_ABSENT {
+            return None;
+        }
+        match fields[idx as usize] {
+            crate::ast::FieldValue::Span(sp) if !sp.is_empty() => Some(self.span_expanded_text(sp)),
+            crate::ast::FieldValue::NodeId(id) if !id.is_null() => self.first_span_text(id),
+            _ => None,
+        }
+    }
+
+    /// Statement-source slice spanning every byte covered by `id`'s
+    /// subtree. Walks all spans reachable from `id`, finds the min/max
+    /// offset pair, and returns the source between them. `None` if no
+    /// spans are reachable.
+    pub fn expr_source_text(&self, id: AnyNodeId) -> Option<&'a str> {
+        let mut min = StmtOffset::from_raw(u32::MAX);
+        let mut max = StmtOffset::default();
+        self.collect_expr_spans(id, &mut min, &mut max);
+        if min < max {
+            Some(
+                &self.text()[StmtRange {
+                    start: min,
+                    end: max,
+                }],
+            )
+        } else {
+            None
+        }
+    }
+
+    fn collect_expr_spans(&self, id: AnyNodeId, min: &mut StmtOffset, max: &mut StmtOffset) {
+        if id.is_null() {
+            return;
+        }
+        if let Some((_, fields)) = self.extract_fields(id) {
+            for i in 0..fields.len() {
+                match fields[i] {
+                    crate::ast::FieldValue::Span(sp) if !sp.is_empty() => {
+                        let (text, off) = self.span_text(sp);
+                        let start = off;
+                        let end = start
+                            + StmtLen::from_raw(u32::try_from(text.len()).unwrap_or(u32::MAX));
+                        if start < *min {
+                            *min = start;
+                        }
+                        if end > *max {
+                            *max = end;
+                        }
+                    }
+                    crate::ast::FieldValue::NodeId(child) if !child.is_null() => {
+                        self.collect_expr_spans(child, min, max);
+                    }
+                    _ => {}
+                }
+            }
+        }
+        if let Some(children) = self.list_children(id) {
+            for &child in children {
+                self.collect_expr_spans(child, min, max);
+            }
+        }
+    }
+
     /// Return child node IDs if `id` is a list node.
     pub fn list_children(&self, id: AnyNodeId) -> Option<&'a [AnyNodeId]> {
         let (_, tag) = self.node_ptr(id)?;
