@@ -68,10 +68,10 @@ order by
   name;
 ```
 
-## 4. Validate against a schema
+## 4. Analyze against a schema
 
 Build a `Schema` with the tables you want to check against and pass it to
-`validate()`:
+`analyze()`:
 
 ```python
 from syntaqlite import Schema, Table

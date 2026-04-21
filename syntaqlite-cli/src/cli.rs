@@ -91,8 +91,8 @@ pub(crate) struct Cli {
     pub(crate) dialect_path: Option<String>,
 
     /// Dialect name for symbol lookup.
-    /// When omitted, the loader resolves `syntaqlite_grammar`.
-    /// With a name, it resolves `syntaqlite_<name>_grammar`.
+    /// When omitted, the loader resolves `syntaqlite_dialect_template`.
+    /// With a name, it resolves `syntaqlite_<name>_dialect_template`.
     #[cfg(feature = "dynload")]
     #[arg(long, requires = "dialect_path", global = true)]
     pub(crate) dialect_name: Option<String>,

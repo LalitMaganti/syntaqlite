@@ -144,7 +144,6 @@ fn main() {
 
 ## Next steps
 
-- [Using from Rust](@/guides/rust-api.md) — quick reference for formatting,
-  parsing, and config options
+- [Using from Rust](@/guides/rust-api.md) — formatting, parsing, validation,
+  and config options
 - [Rust API reference](@/reference/rust-api.md) — all types and methods
-- [Using from Rust](@/guides/rust-api.md) — validation via the Rust API

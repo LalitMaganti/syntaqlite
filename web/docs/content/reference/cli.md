@@ -194,6 +194,6 @@ These options are available on all subcommands:
 | Option | Description |
 |--------|-------------|
 | `--dialect <PATH>` | Load a custom dialect from a shared library |
-| `--dialect-name <NAME>` | Symbol name for the dialect (default: `syntaqlite_grammar`, with name: `syntaqlite_<NAME>_grammar`) |
+| `--dialect-name <NAME>` | Symbol name for the dialect (default: `syntaqlite_dialect_template`, with name: `syntaqlite_<NAME>_dialect_template`) |
 | `--sqlite-version <VER>` | Emulate a specific SQLite version |
 | `--sqlite-cflag <FLAG>` | Enable a SQLite compile-time flag (can be specified multiple times) |

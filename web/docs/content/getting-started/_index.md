@@ -48,7 +48,7 @@ SELECT id, name FROM users WHERE active = 1 AND role = 'admin';
 Format a file in place with `syntaqlite fmt -i query.sql`, or check formatting
 in CI with `syntaqlite fmt --check "**/*.sql"`.
 
-## Validate
+## Analyze
 
 syntaqlite reads your `CREATE TABLE` statements to build a schema, then
 validates queries against it without needing a database. It finds **all** errors in
