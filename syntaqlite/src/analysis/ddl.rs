@@ -32,21 +32,6 @@ pub(crate) struct SemanticPropertyExtractor<'a, 'stmt> {
     roles: &'a [SemanticRole],
 }
 
-/// A single FROM-clause source, after walking through transparent wrappers
-/// and joins. Aliases are extracted but not lowercased — callers do that.
-pub(crate) enum FromSource<'b> {
-    /// A relation reference: catalog table, view, CTE, or table-valued function.
-    Relation {
-        name: &'b str,
-        alias: Option<&'b str>,
-    },
-    /// A bracketed subquery in FROM, with its body and (optional) alias.
-    Subquery {
-        alias: Option<&'b str>,
-        body_id: AnyNodeId,
-    },
-}
-
 impl<'a, 'stmt> SemanticPropertyExtractor<'a, 'stmt> {
     pub(crate) fn new(stmt: &'a AnyParsedStatement<'stmt>, roles: &'a [SemanticRole]) -> Self {
         Self { stmt, roles }
@@ -136,53 +121,6 @@ impl<'a, 'stmt> SemanticPropertyExtractor<'a, 'stmt> {
             }
         }
         if names.is_empty() { None } else { Some(names) }
-    }
-
-    /// Visit each FROM-clause source under `from_id`, recursing through
-    /// transparent wrappers and join nodes. Both `SourceRef` (catalog
-    /// relations) and `ScopedSource` (subqueries) are reported.
-    pub(crate) fn for_each_from_source<F>(&self, from_id: AnyNodeId, mut f: F)
-    where
-        F: FnMut(FromSource<'stmt>),
-    {
-        self.walk_from(from_id, &mut f);
-    }
-
-    fn walk_from<F>(&self, from_id: AnyNodeId, f: &mut F)
-    where
-        F: FnMut(FromSource<'stmt>),
-    {
-        let Some((role, fields)) = self.role_for_node(from_id) else {
-            return;
-        };
-        match role {
-            SemanticRole::SourceRef {
-                name: name_idx,
-                alias: alias_idx,
-                ..
-            } => {
-                let Some(name) = self.stmt.span_field_text(&fields, name_idx) else {
-                    return;
-                };
-                let alias = self.stmt.name_field_text(&fields, alias_idx);
-                f(FromSource::Relation { name, alias });
-            }
-            SemanticRole::ScopedSource {
-                body: body_idx,
-                alias: alias_idx,
-            } => {
-                let Some(body_id) = fields.node_id_at(body_idx) else {
-                    return;
-                };
-                let alias = self.stmt.name_field_text(&fields, alias_idx);
-                f(FromSource::Subquery { alias, body_id });
-            }
-            _ => {
-                for child in self.stmt.child_node_ids(from_id) {
-                    self.walk_from(child, f);
-                }
-            }
-        }
     }
 
     // ── DDL definition extraction ───────────────────────────────────────

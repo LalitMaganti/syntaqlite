@@ -18,10 +18,11 @@ use crate::analysis::diagnostics::fuzzy::best_suggestion;
 use crate::analysis::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use crate::analysis::lineage::LineageCapture;
 use crate::analysis::{AnalysisConfig, CheckConfig, CheckLevel};
+use crate::dialect::SemanticRole;
 
 use super::walker::{
-    CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, SemanticVisitor,
-    SourceRefEvent, WalkCtx,
+    CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, ScopedSourceEvent,
+    SemanticVisitor, SourceRefEvent, WalkCtx,
 };
 
 impl CheckConfig {
@@ -56,12 +57,13 @@ impl<'a, V: SemanticVisitor> AnalysisVisitor<'a, V> {
     pub(super) fn new(
         config: &'a AnalysisConfig,
         diagnostics: &'a mut Vec<Diagnostic>,
+        roles: &'static [SemanticRole],
         extra: &'a mut V,
     ) -> Self {
         Self {
             config,
             diagnostics,
-            lineage: LineageCapture::default(),
+            lineage: LineageCapture::new(roles),
             extra,
         }
     }
@@ -124,8 +126,10 @@ impl<V: SemanticVisitor> SemanticVisitor for AnalysisVisitor<'_, V> {
     const WANTS_RELATION_DEFINITION: bool = V::WANTS_RELATION_DEFINITION;
     const WANTS_COLUMN_DEFINITION: bool = V::WANTS_COLUMN_DEFINITION;
     const WANTS_CTE_COLUMN_COUNT: bool = true;
-    // LineageCapture wants CTE bindings and query enter/exit.
+    // LineageCapture wants source refs, scoped sources, CTE bindings,
+    // and enter/exit — all forwarded below.
     const WANTS_CTE_BINDING: bool = true;
+    const WANTS_SCOPED_SOURCE: bool = true;
     const WANTS_QUERY: bool = true;
     const WANTS_STATEMENT_CONTEXT: bool = V::WANTS_STATEMENT_CONTEXT;
 
@@ -151,6 +155,7 @@ impl<V: SemanticVisitor> SemanticVisitor for AnalysisVisitor<'_, V> {
                 suggestion.map(Help::Suggestion),
             );
         }
+        self.lineage.on_source_ref(stmt, cx, ev);
         self.extra.on_source_ref(stmt, cx, ev);
     }
 
@@ -286,6 +291,15 @@ impl<V: SemanticVisitor> SemanticVisitor for AnalysisVisitor<'_, V> {
     fn on_cte_binding(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: CteBindingEvent<'_>) {
         self.lineage.on_cte_binding(stmt, ev);
         self.extra.on_cte_binding(stmt, ev);
+    }
+
+    fn on_scoped_source(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        ev: ScopedSourceEvent<'_>,
+    ) {
+        self.lineage.on_scoped_source(stmt, ev);
+        self.extra.on_scoped_source(stmt, ev);
     }
 
     fn enter_query(&mut self, stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {

@@ -52,6 +52,9 @@ pub(crate) struct SourceRefEvent<'a> {
     pub(crate) name_idx: u8,
     pub(crate) range: DocRange,
     pub(crate) name: &'a str,
+    /// The display alias for this source (`None` when no `AS` clause
+    /// was written — callers use `name` as the scope key in that case).
+    pub(crate) alias: Option<&'a str>,
     pub(crate) resolved: bool,
 }
 
@@ -95,11 +98,21 @@ pub(crate) struct CteColumnCountMismatchEvent<'a> {
     pub(crate) actual: usize,
 }
 
-/// A single CTE binding (`name AS (body)` or `name(cols) AS (body)`),
-/// fired after the binding's body has been walked.
+/// A single CTE binding, fired BEFORE its body is walked so visitors
+/// can register the `name -> body` mapping in time for body
+/// source-refs (including recursive self-references) to look it up.
 #[derive(Copy, Clone)]
 pub(crate) struct CteBindingEvent<'a> {
     pub(crate) name: &'a str,
+    pub(crate) body_id: Option<AnyNodeId>,
+}
+
+/// A subquery-in-FROM (`FROM (SELECT …) AS x`), fired after the body
+/// has been walked. Carries the alias and the body's Query node id so
+/// lineage can tie it into the enclosing Query's source map.
+#[derive(Copy, Clone)]
+pub(crate) struct ScopedSourceEvent<'a> {
+    pub(crate) alias: Option<&'a str>,
     pub(crate) body_id: Option<AnyNodeId>,
 }
 
@@ -121,6 +134,7 @@ pub(crate) trait SemanticVisitor {
     const WANTS_COLUMN_DEFINITION: bool = false;
     const WANTS_CTE_COLUMN_COUNT: bool = false;
     const WANTS_CTE_BINDING: bool = false;
+    const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
     /// [`exit_query`](Self::exit_query) hooks around each `Query` node.
     const WANTS_QUERY: bool = false;
@@ -165,13 +179,23 @@ pub(crate) trait SemanticVisitor {
     ) {
     }
 
-    /// Called once per CTE binding after its body has been walked.
-    /// `is_recursive` is true when the binding's own name was made
-    /// visible to the body before the body walk began.
+    /// Called once per CTE binding, BEFORE its body is walked. For
+    /// recursive CTEs the body will observe the binding's own name as a
+    /// resolved catalog source; listeners that build a `name -> body`
+    /// map should populate it here so body-side references resolve
+    /// correctly.
     fn on_cte_binding(
         &mut self,
         _stmt: &mut AnyParsedStatement<'_>,
         _ev: CteBindingEvent<'_>,
+    ) {
+    }
+
+    /// Called for a subquery-in-FROM after its body has been walked.
+    fn on_scoped_source(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: ScopedSourceEvent<'_>,
     ) {
     }
 
@@ -372,6 +396,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
         let (columns, without_rowid) = self.catalog.table_source_info(name);
+        let alias_text = self.stmt.name_text(fields.node_id_at(alias_idx)).0;
+        let alias = if alias_text.is_empty() {
+            None
+        } else {
+            Some(alias_text)
+        };
 
         if V::WANTS_SOURCE_REF {
             let ev = SourceRefEvent {
@@ -379,6 +409,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 name_idx,
                 range,
                 name,
+                alias,
                 resolved: is_known,
             };
             let mut cx = WalkCtx {
@@ -388,8 +419,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             visitor.on_source_ref(self.stmt, &mut cx, ev);
         }
 
-        let alias = self.stmt.name_text(fields.node_id_at(alias_idx)).0;
-        let scope_name = if alias.is_empty() { name } else { alias };
+        let scope_name = alias.unwrap_or(name);
         self.scope
             .add_table(scope_name, columns, without_rowid.into());
     }
@@ -490,14 +520,23 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.walk_opt(visitor, body_id);
         self.scope.pop();
 
-        let alias = self.stmt.name_text(fields.node_id_at(alias_idx)).0;
+        let alias_text = self.stmt.name_text(fields.node_id_at(alias_idx)).0;
+        let alias = if alias_text.is_empty() {
+            None
+        } else {
+            Some(alias_text)
+        };
+
+        if V::WANTS_SCOPED_SOURCE {
+            visitor.on_scoped_source(self.stmt, ScopedSourceEvent { alias, body_id });
+        }
+
         let cols = body_id.and_then(|id| {
             SemanticPropertyExtractor::new(self.stmt, self.roles).columns_from_select(id)
         });
-        if alias.is_empty() {
-            self.scope.add_anonymous(cols);
-        } else {
-            self.scope.add_table(alias, cols, RowIdPolicy::WithRowId);
+        match alias {
+            None => self.scope.add_anonymous(cols),
+            Some(name) => self.scope.add_table(name, cols, RowIdPolicy::WithRowId),
         }
     }
 
@@ -666,8 +705,20 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 continue;
             };
 
+            // Fire on_cte_binding BEFORE the body walk so visitors that
+            // build name -> body_id maps (e.g. LineageCapture) have the
+            // binding registered when the body walks — covers both the
+            // recursive self-reference case and outer-body uses.
+            if V::WANTS_CTE_BINDING && !binding.name.is_empty() {
+                let ev = CteBindingEvent {
+                    name: binding.name,
+                    body_id: binding.body_id,
+                };
+                visitor.on_cte_binding(self.stmt, ev);
+            }
+
             // For recursive CTEs, register the name before visiting the
-            // body so the body can reference it.
+            // body so catalog source lookups inside the body resolve.
             if is_recursive && !binding.name.is_empty() {
                 let cols = binding
                     .declared_cols
@@ -682,14 +733,6 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 
             if binding.name.is_empty() {
                 continue;
-            }
-
-            if V::WANTS_CTE_BINDING {
-                let ev = CteBindingEvent {
-                    name: binding.name,
-                    body_id: binding.body_id,
-                };
-                visitor.on_cte_binding(self.stmt, ev);
             }
 
             if V::WANTS_RELATION_DEFINITION {

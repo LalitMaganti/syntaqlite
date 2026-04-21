@@ -316,12 +316,9 @@ impl Analyzer {
         // columns) are emitted by the walker itself.
         let roles = self.dialect.roles();
         let config = ctx.config;
-        let mut visitor = AnalysisVisitor::new(&config, &mut diagnostics, extra);
+        let mut visitor = AnalysisVisitor::new(&config, &mut diagnostics, roles, extra);
         SemanticWalker::new(erased, ctx.catalog, roles).run(&mut visitor, root_id);
-        let lineage_capture = visitor.into_lineage();
-
-        let lineage =
-            super::lineage::build_lineage(&lineage_capture, erased, ctx.catalog, roles);
+        let lineage = super::lineage::build_lineage(&visitor.into_lineage());
 
         let defined_relations =
             SemanticPropertyExtractor::new(erased, roles).defined_relations(root_id);
@@ -629,10 +626,12 @@ mod tests {
 
     // ── Visitor hook ordering ─────────────────────────────────────────────────
     //
-    // `on_cte_binding` must fire AFTER the body walk completes, and for
-    // `WITH RECURSIVE` the body must have observed the binding's own name
-    // as a resolved source (proving the name was registered in the catalog
-    // before the body walk started).
+    // `on_cte_binding` fires BEFORE the body walk so visitors (e.g.
+    // LineageCapture) can register the name -> body_id mapping in time
+    // for body source-refs to resolve through it. The recursive-CTE
+    // guarantee is separate: the body must observe the binding's own
+    // name as a *catalog-resolved* source (the walker pre-registers
+    // recursive CTE names in the catalog before the body walk).
 
     #[derive(Default)]
     struct HookCapture {
@@ -680,7 +679,7 @@ mod tests {
     }
 
     #[test]
-    fn recursive_cte_binding_hook_fires_after_body_with_self_visible() {
+    fn cte_binding_fires_before_body_and_self_ref_resolves() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
         let mut ctx = AnalysisContext::new(&mut catalog);
@@ -691,28 +690,29 @@ mod tests {
             &mut cap,
         );
 
-        // Self-reference inside the body resolved as a table — proof that
-        // the name was registered before the body walk began.
+        // Self-reference inside the body resolved — the walker pre-
+        // registered foo in the catalog for WITH RECURSIVE.
         assert!(
             cap.events.iter().any(|e| e == "source:foo:resolved=true"),
             "expected recursive self-ref to resolve inside body; got {:?}",
             cap.events
         );
 
-        // on_cte_binding must fire after the body walk.
-        let first_body_ref = cap
-            .events
-            .iter()
-            .position(|e| e.starts_with("source:foo"))
-            .expect("body source ref");
+        // on_cte_binding fires BEFORE any body event — visitors that
+        // build name -> body_id maps need the registration up front.
         let cte_event = cap
             .events
             .iter()
             .position(|e| e.starts_with("cte:foo"))
             .expect("cte binding event");
+        let first_body_ref = cap
+            .events
+            .iter()
+            .position(|e| e.starts_with("source:foo"))
+            .expect("body source ref");
         assert!(
-            first_body_ref < cte_event,
-            "expected body source ref before cte binding; got {:?}",
+            cte_event < first_body_ref,
+            "expected cte binding before body source ref; got {:?}",
             cap.events
         );
     }
