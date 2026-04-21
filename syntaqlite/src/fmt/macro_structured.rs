@@ -115,10 +115,6 @@ fn compute_one<'a>(
     Some(arena.cat(d, close))
 }
 
-/// Byte offset of the first arg inside a synthetic `SELECT ` envelope.
-const SELECT_PREFIX_LEN: u32 = 7;
-const _: () = assert!(b"SELECT ".len() == SELECT_PREFIX_LEN as usize);
-
 /// Parse `arg_text` as an expression via a synthetic `SELECT arg;`
 /// mini-parse, format the expression subtree into a throwaway arena
 /// borrowing the mini-parse, then copy-own the result into `arena`.
@@ -142,13 +138,7 @@ fn format_arg(
         _ => return None,
     }
     let stmt = session.arena_result();
-
-    // Expression subtree has extent `(SELECT_PREFIX_LEN, arg_text.len())`
-    // inside the synthetic source; the first AST node with that
-    // extent is the outermost expression node we want to format.
-    let target_off = StmtOffset::from_raw(SELECT_PREFIX_LEN);
-    let target_len = StmtLen::from_raw(u32::try_from(arg_text.len()).ok()?);
-    let expr_id = find_descendant_by_extent(&stmt, stmt.root_id(), target_off, target_len)?;
+    let expr_id = select_wrapper_arg_node(&stmt)?;
 
     let mut sub_arena: DocArena<'_> = DocArena::new();
     let sub_ctx = FmtCtx {
@@ -171,38 +161,32 @@ fn format_arg(
     Some(arena.copy_owned_from(&sub_arena, sub_doc))
 }
 
-/// Depth-first search for the first descendant of `root` whose source
-/// extent matches `(target_off, target_len)`.  First-match order
-/// yields the outermost matching node, which is what we want for
-/// formatting (an expression wrapper, not its inner leaf).
-fn find_descendant_by_extent(
-    reader: &AnyParsedStatement<'_>,
-    root: AnyNodeId,
-    target_off: StmtOffset,
-    target_len: StmtLen,
-) -> Option<AnyNodeId> {
-    if let Some((text, off)) = reader.node_text(root) {
-        let len = StmtLen::from_raw(u32::try_from(text.len()).ok()?);
-        if off == target_off && len == target_len {
-            return Some(root);
-        }
-    }
-    if let Some((_, fields)) = reader.extract_fields(root) {
-        for i in 0..fields.len() {
-            if let FieldValue::NodeId(child) = fields[i]
-                && !child.is_null()
-                && let Some(found) =
-                    find_descendant_by_extent(reader, child, target_off, target_len)
-            {
-                return Some(found);
-            }
-        }
-    }
-    if let Some(children) = reader.list_children(root) {
-        for &c in children {
-            if let Some(found) = find_descendant_by_extent(reader, c, target_off, target_len) {
-                return Some(found);
-            }
+/// Navigate a `SELECT <arg>;` mini-parse to the `ResultColumn`
+/// wrapping `<arg>`.  We format at the `ResultColumn` level (not
+/// its `expr` child) so that row-value args like `(a, b)` get the
+/// paren-wrap emitted by `child_paren_list(expr)` in the
+/// `ResultColumn` bytecode.
+///
+/// Relies on the grammar shape defined in
+/// `syntaqlite-buildtools/parser-nodes/select.synq`: `SelectStmt`'s
+/// first `NodeId` field is `columns: ResultColumnList`, and the list
+/// has exactly one child since we emit exactly one expression inside
+/// the wrapper.
+fn select_wrapper_arg_node(reader: &AnyParsedStatement<'_>) -> Option<AnyNodeId> {
+    let columns_list = first_node_field(reader, reader.root_id())?;
+    reader.list_children(columns_list)?.first().copied()
+}
+
+/// Return the first non-null `NodeId` field of `node`.  Used to walk
+/// the fixed-shape SELECT wrapper without depending on specific field
+/// indices.
+fn first_node_field(reader: &AnyParsedStatement<'_>, node: AnyNodeId) -> Option<AnyNodeId> {
+    let (_, fields) = reader.extract_fields(node)?;
+    for i in 0..fields.len() {
+        if let FieldValue::NodeId(id) = fields[i]
+            && !id.is_null()
+        {
+            return Some(id);
         }
     }
     None
