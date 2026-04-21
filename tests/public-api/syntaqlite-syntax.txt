@@ -928,6 +928,7 @@ pub const fn syntaqlite_syntax::source::Utf16Line::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::Utf16Line::as_usize(self) -> usize
 pub const fn syntaqlite_syntax::source::Utf16Line::from_raw(v: u32) -> Self
 pub const syntaqlite_syntax::MACRO_BODY_CALL_ARG_INTERNAL: syntaqlite_syntax::source::LayerOffset
+pub const syntaqlite_syntax::any::FIELD_ABSENT: u8
 pub enum syntaqlite_syntax::CommentKind
 pub enum syntaqlite_syntax::CommentSide
 pub enum syntaqlite_syntax::ParseOutcome<T, E>
@@ -1100,16 +1101,21 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> i
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_text(&self, node_id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::is_macro_free(&self) -> bool
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_field_text(&self, fields: &syntaqlite_syntax::any::NodeFields, idx: u8) -> core::option::Option<&'a str>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_text(&self, node_id: core::option::Option<syntaqlite_syntax::any::AnyNodeId>) -> (&'a str, syntaqlite_syntax::source::DocRange)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_expanded_text(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_is_macro_free(&self, id: syntaqlite_syntax::any::AnyNodeId) -> bool
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_text(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(&'a str, syntaqlite_syntax::source::StmtOffset)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_node(&self) -> core::option::Option<syntaqlite_syntax::any::AnyNode<'_>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_expanded_text(&self, span: syntaqlite_syntax::any::TextSpan) -> &'a str
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_field_range(&self, fields: &syntaqlite_syntax::any::NodeFields, idx: u8) -> core::option::Option<(&'a str, syntaqlite_syntax::source::DocRange)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_field_text(&self, fields: &syntaqlite_syntax::any::NodeFields, idx: u8) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::StmtOffset)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::DocRange)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
@@ -1157,9 +1163,11 @@ pub fn syntaqlite_syntax::any::NodeFields::fmt(&self, f: &mut core::fmt::Formatt
 pub fn syntaqlite_syntax::any::NodeFields::index(&self, idx: usize) -> &syntaqlite_syntax::any::FieldValue
 pub fn syntaqlite_syntax::any::NodeFields::is_empty(&self) -> bool
 pub fn syntaqlite_syntax::any::NodeFields::len(&self) -> usize
+pub fn syntaqlite_syntax::any::NodeFields::node_id_at(&self, idx: u8) -> core::option::Option<syntaqlite_syntax::any::AnyNodeId>
 pub fn syntaqlite_syntax::any::TextSpan::is_empty(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_macro_free(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_quoted(self) -> bool
+pub fn syntaqlite_syntax::any::TextSpan::quote_char(self) -> core::option::Option<char>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::filter_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>

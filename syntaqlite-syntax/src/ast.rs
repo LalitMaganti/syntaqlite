@@ -217,6 +217,15 @@ pub enum FieldValue {
     Enum(u32),
 }
 
+/// Sentinel for "absent field index" in role-table-driven schemas.
+///
+/// Field indices in `SemanticRole`-style enums use this value to mean
+/// "this field doesn't exist for this node shape." The convenience
+/// accessors on [`NodeFields`] and
+/// [`AnyParsedStatement`](crate::parser::AnyParsedStatement) treat
+/// `FIELD_ABSENT` as a None hit so callers don't have to special-case it.
+pub const FIELD_ABSENT: u8 = 0xFF;
+
 /// Compact reflected field collection for one AST node.
 ///
 /// Returned by [`AnyParsedStatement::extract_fields`](crate::parser::AnyParsedStatement::extract_fields)
@@ -253,6 +262,18 @@ impl NodeFields {
     /// Whether there are no fields.
     pub fn is_empty(&self) -> bool {
         self.len == 0
+    }
+
+    /// `NodeId` stored at field `idx`, or `None` if `idx` is [`FIELD_ABSENT`],
+    /// the field is null, or the field is not a `NodeId`.
+    pub fn node_id_at(&self, idx: u8) -> Option<AnyNodeId> {
+        if idx == FIELD_ABSENT {
+            return None;
+        }
+        match self[idx as usize] {
+            FieldValue::NodeId(id) if !id.is_null() => Some(id),
+            _ => None,
+        }
     }
 }
 
@@ -453,8 +474,12 @@ mod ffi {
         pub(crate) _layer_id: u32,
     }
 
-    /// Mirror of C `SYNTAQLITE_SPAN_FLAG_QUOTED` from `types.h`.
-    const SPAN_FLAG_QUOTED: u32 = 1;
+    // Mirrors of C `SYNTAQLITE_SPAN_FLAG_*` from `types.h`.
+    const SPAN_FLAG_QUOTE_DOUBLE: u32 = 1;
+    const SPAN_FLAG_QUOTE_BACKTICK: u32 = 2;
+    const SPAN_FLAG_QUOTE_BRACKET: u32 = 4;
+    const SPAN_QUOTE_MASK: u32 =
+        SPAN_FLAG_QUOTE_DOUBLE | SPAN_FLAG_QUOTE_BACKTICK | SPAN_FLAG_QUOTE_BRACKET;
 
     impl CTextSpan {
         /// Returns `true` if the span covers zero bytes.
@@ -462,12 +487,31 @@ mod ffi {
             self.length == 0
         }
 
-        /// Returns `true` if the span was quoted in source (`"..."`,
-        /// `` `...` ``, or `[...]`).  The span points at the dequoted inner
-        /// text; the formatter re-wraps quoted spans in standard double
-        /// quotes.
+        /// Was this identifier quoted in source?  True for `"..."`,
+        /// `` `...` ``, and `[...]` forms; false otherwise.  Use
+        /// [`Self::quote_char`] to distinguish which quote character
+        /// bracketed it.
+        ///
+        /// Note that the span itself points at the *dequoted* inner text —
+        /// the surrounding quote bytes are not part of `offset`/`length`.
         pub fn is_quoted(self) -> bool {
-            (self.flags & SPAN_FLAG_QUOTED) != 0
+            (self.flags & SPAN_QUOTE_MASK) != 0
+        }
+
+        /// The character that opened this identifier's quotes in source:
+        /// `'"'`, `` '`' ``, or `'['`.  `None` if the span was unquoted.
+        /// For `[...]` only the opener is reported; the closer is always
+        /// `']'`.
+        pub fn quote_char(self) -> Option<char> {
+            if self.flags & SPAN_FLAG_QUOTE_DOUBLE != 0 {
+                Some('"')
+            } else if self.flags & SPAN_FLAG_QUOTE_BACKTICK != 0 {
+                Some('`')
+            } else if self.flags & SPAN_FLAG_QUOTE_BRACKET != 0 {
+                Some('[')
+            } else {
+                None
+            }
         }
 
         /// Returns `true` if the span was tokenized from the original

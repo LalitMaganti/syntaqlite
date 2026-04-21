@@ -707,7 +707,7 @@ fn record_external_definitions(
 ) {
     use syntaqlite_syntax::ParseOutcome;
 
-    use crate::analysis::ddl::DdlReader;
+    use crate::analysis::ddl::SemanticPropertyExtractor;
 
     let parser = syntaqlite_syntax::Parser::new();
     let mut session = parser.parse(ddl);
@@ -720,7 +720,7 @@ fn record_external_definitions(
         let Some(root) = stmt.root() else { continue };
         let root_id = root.node_id().into();
         let erased = stmt.erase();
-        let reader = DdlReader::new(&erased, dialect.roles());
+        let reader = SemanticPropertyExtractor::new(&erased, dialect.roles());
         if let Some((name, range)) = reader.name_span(root_id) {
             defs.insert_relation(&name, file_uri, range);
             for (col_name, col_range) in reader.column_spans(root_id) {

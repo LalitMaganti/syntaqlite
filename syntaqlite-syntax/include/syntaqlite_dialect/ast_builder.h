@@ -372,8 +372,8 @@ static inline SyntaqliteTextSpan synq_span(SynqParseCtx* ctx,
 // Like synq_span() but strips surrounding quote characters from quoted
 // identifiers, matching SQLite's tokenExpr() dequoting behavior.
 // Handles "...", `...`, and [...] forms.  For unquoted tokens, equivalent
-// to synq_span().  Sets SYNTAQLITE_SPAN_FLAG_QUOTED when quotes are stripped
-// so the formatter can re-wrap in standard double quotes.
+// to synq_span().  Records which quote character bracketed the identifier
+// in the span flags so consumers can recover the original quote style.
 static inline SyntaqliteTextSpan synq_span_dequote(SynqParseCtx* ctx,
                                                    SynqParseToken tok) {
   (void)ctx;
@@ -384,12 +384,16 @@ static inline SyntaqliteTextSpan synq_span_dequote(SynqParseCtx* ctx,
     char close = tok.z[tok.n - 1];
     if ((open == '"' && close == '"') || (open == '`' && close == '`') ||
         (open == '[' && close == ']')) {
+      uint32_t kind_flag = (open == '"')   ? SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE
+                           : (open == '`') ? SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK
+                                           : SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET;
       SyntaqliteTextSpan sp = {
           .offset = tok.offset + 1,
           .length = tok.n - 2,
+          .flags = kind_flag,
           ._layer_id = tok.layer_id,
       };
-      return synq_span_set_quoted(sp);
+      return sp;
     }
   }
   return (SyntaqliteTextSpan){

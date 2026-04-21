@@ -82,18 +82,39 @@ typedef struct SyntaqliteTextSpan {
 
 // ── Span flags ───────────────────────────────────────────────────────────────
 
-// Identifier was quoted in source (`"..."`, `` `...` ``, or `[...]`).
-// The span points to the dequoted inner text; the formatter re-wraps in
-// `"..."`.
-#define SYNTAQLITE_SPAN_FLAG_QUOTED ((uint32_t)1u)
+// Quote character flags on `SyntaqliteTextSpan.flags`.  At most one is
+// set; none means the identifier was unquoted.  Prefer the accessors
+// below over reading these bits directly.
+//
+// The span's offset/length point at the *dequoted* inner text — the
+// surrounding quote bytes are not part of the span.  These flags are
+// the only way to recover which character bracketed the identifier
+// after dequoting.
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE ((uint32_t)1u)    // "..."
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK ((uint32_t)2u)  // `...`
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET ((uint32_t)4u)   // [...]
 
-static inline int synq_span_is_quoted(SyntaqliteTextSpan sp) {
-  return (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTED) != 0;
+#define SYNTAQLITE_SPAN_QUOTE_MASK                                           \
+  (SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE | SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK | \
+   SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET)
+
+// Was this identifier quoted in source?  Returns nonzero if `sp` came
+// from any of `"..."`, `` `...` ``, or `[...]`.
+static inline int syntaqlite_span_is_quoted(SyntaqliteTextSpan sp) {
+  return (sp.flags & SYNTAQLITE_SPAN_QUOTE_MASK) != 0;
 }
 
-static inline SyntaqliteTextSpan synq_span_set_quoted(SyntaqliteTextSpan sp) {
-  sp.flags |= SYNTAQLITE_SPAN_FLAG_QUOTED;
-  return sp;
+// The character that opened this identifier's quotes in source: `"`,
+// `` ` ``, or `[`.  Returns 0 if the span was unquoted.  For `[...]`
+// only the opener is reported; the closer is always `]`.
+static inline char syntaqlite_span_quote_char(SyntaqliteTextSpan sp) {
+  if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE)
+    return '"';
+  if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK)
+    return '`';
+  if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET)
+    return '[';
+  return 0;
 }
 
 #ifdef __cplusplus

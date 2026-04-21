@@ -1,31 +1,65 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! DDL-shaped reads against a parsed statement.
+//! Role-table-driven property extraction from a parsed statement.
 //!
-//! The catalog, the analyzer, the lineage resolver, and the LSP all need to
-//! pull definition names, column lists, SELECT-result columns, and assorted
-//! span/role data out of a parsed statement. Every operation here takes only
-//! `(stmt, roles)`, so they're grouped on a single [`DdlReader`] handle.
+//! [`SemanticPropertyExtractor`] is the analysis crate's view of a parsed
+//! statement through the dialect's `SemanticRole` table. It bundles
+//! `(stmt, roles)` so call sites don't repeat both args, and exposes
+//! methods that answer questions like "what does this `CREATE TABLE`
+//! define?", "iterate this WITH clause's CTE bindings", "what columns
+//! does this SELECT body produce?".
+//!
+//! Field-shaped accessors that don't need the role table
+//! (`span_field_text`, `name_text`, `expr_source_text`, etc.) live on
+//! [`AnyParsedStatement`] in `syntaqlite-syntax` directly — they're raw
+//! parse-tree convenience, not analysis.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
-use syntaqlite_syntax::source::{DocRange, StmtLen, StmtOffset, StmtRange};
+use syntaqlite_syntax::source::DocRange;
 
 use crate::analysis::catalog::AritySpec;
 use crate::analysis::model::DefinedRelation;
-use crate::dialect::{FIELD_ABSENT, SemanticRole};
+use crate::dialect::SemanticRole;
 
-/// Read DDL- and AST-shaped data out of a parsed statement.
+/// Bundles `(stmt, roles)` and exposes role-table-driven extraction.
 ///
-/// Cheap to construct (just two references); construct a fresh handle at each
-/// caller rather than threading one through.
+/// Cheap to construct — just two references — so call sites build a
+/// fresh handle locally rather than thread one through.
 #[derive(Clone, Copy)]
-pub(crate) struct DdlReader<'a, 'stmt> {
+pub(crate) struct SemanticPropertyExtractor<'a, 'stmt> {
     stmt: &'a AnyParsedStatement<'stmt>,
     roles: &'a [SemanticRole],
 }
 
-impl<'a, 'stmt> DdlReader<'a, 'stmt> {
+/// A single binding inside a CTE list (`WITH name(cols) AS (body), ...`).
+/// Borrowed view; lives only for the duration of one
+/// [`SemanticPropertyExtractor::for_each_cte_binding`] callback.
+///
+/// Use [`SemanticPropertyExtractor::cte_declared_cols`] to materialize the
+/// declared column list when the consumer actually needs it — the iterator
+/// itself stays cheap.
+pub(crate) struct CteBindingView<'b> {
+    pub(crate) name: &'b str,
+    pub(crate) body_id: Option<AnyNodeId>,
+}
+
+/// A single FROM-clause source, after walking through transparent wrappers
+/// and joins. Aliases are extracted but not lowercased — callers do that.
+pub(crate) enum FromSource<'b> {
+    /// A relation reference: catalog table, view, CTE, or table-valued function.
+    Relation {
+        name: &'b str,
+        alias: Option<&'b str>,
+    },
+    /// A bracketed subquery in FROM, with its body and (optional) alias.
+    Subquery {
+        alias: Option<&'b str>,
+        body_id: AnyNodeId,
+    },
+}
+
+impl<'a, 'stmt> SemanticPropertyExtractor<'a, 'stmt> {
     pub(crate) fn new(stmt: &'a AnyParsedStatement<'stmt>, roles: &'a [SemanticRole]) -> Self {
         Self { stmt, roles }
     }
@@ -36,8 +70,8 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
 
     // ── Role lookup ──────────────────────────────────────────────────────
 
-    /// Role for `tag`; defaults to [`SemanticRole::Transparent`] for unknown
-    /// tags (matching the behavior expected by the walker).
+    /// Role for `tag`; defaults to [`SemanticRole::Transparent`] for
+    /// unknown tags (matching what the walker assumes).
     pub(crate) fn role_for_tag(&self, tag: impl Into<u32>) -> SemanticRole {
         self.roles
             .get(tag.into() as usize)
@@ -45,7 +79,8 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
             .unwrap_or(SemanticRole::Transparent)
     }
 
-    /// `(role, fields)` for `node_id`, or `None` if the node has no fields.
+    /// `(role, fields)` for `node_id`, or `None` when the node is null or
+    /// has no extractable fields.
     pub(crate) fn role_for_node(&self, node_id: AnyNodeId) -> Option<(SemanticRole, NodeFields)> {
         if node_id.is_null() {
             return None;
@@ -54,108 +89,11 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         Some((self.role_for_tag(tag), fields))
     }
 
-    // ── Field accessors ──────────────────────────────────────────────────
+    // ── Iteration ────────────────────────────────────────────────────────
 
-    /// `NodeId` stored at field `idx`, or `None` if absent / null / non-NodeId.
-    pub(crate) fn node_field(fields: &NodeFields, idx: u8) -> Option<AnyNodeId> {
-        if idx == FIELD_ABSENT {
-            return None;
-        }
-        match fields[idx as usize] {
-            FieldValue::NodeId(id) if !id.is_null() => Some(id),
-            _ => None,
-        }
-    }
-
-    /// Expanded text of a span field, or `None` if absent / empty / non-Span.
-    pub(crate) fn span_field_text(&self, fields: &NodeFields, idx: u8) -> Option<&'stmt str> {
-        if idx == FIELD_ABSENT {
-            return None;
-        }
-        match fields[idx as usize] {
-            FieldValue::Span(sp) if !sp.is_empty() => Some(self.stmt.span_expanded_text(sp)),
-            _ => None,
-        }
-    }
-
-    /// `(text, range)` of a span field; absolute document range.
-    pub(crate) fn span_field_range(
-        &self,
-        fields: &NodeFields,
-        idx: u8,
-    ) -> Option<(&'stmt str, DocRange)> {
-        if idx == FIELD_ABSENT {
-            return None;
-        }
-        match fields[idx as usize] {
-            FieldValue::Span(sp) if !sp.is_empty() => {
-                let text = self.stmt.span_expanded_text(sp);
-                let (_, range) = self.stmt.span_text_abs(sp);
-                Some((text, range))
-            }
-            _ => None,
-        }
-    }
-
-    /// `(text, range)` of a Name node's field-0 span (used by `IdentName` and
-    /// `Error` shapes where the identifier sits at field 0). Returns empty
-    /// strings when the node is null or shaped differently.
-    pub(crate) fn name_text(&self, node_id: Option<AnyNodeId>) -> (&'stmt str, DocRange) {
-        let Some(node_id) = node_id else {
-            return ("", DocRange::default());
-        };
-        let Some((_, fields)) = self.stmt.extract_fields(node_id) else {
-            return ("", DocRange::default());
-        };
-        if fields.is_empty() {
-            return ("", DocRange::default());
-        }
-        match fields[0] {
-            FieldValue::Span(sp) => {
-                let text = self.stmt.span_expanded_text(sp);
-                let (_, range) = self.stmt.span_text_abs(sp);
-                (text, range)
-            }
-            _ => ("", DocRange::default()),
-        }
-    }
-
-    /// First non-empty span anywhere in `node_id`'s fields. Used as a generic
-    /// "give me whatever identifier this node carries" probe.
-    pub(crate) fn first_span_text(&self, node_id: AnyNodeId) -> Option<&'stmt str> {
-        if node_id.is_null() {
-            return None;
-        }
-        let (_, fields) = self.stmt.extract_fields(node_id)?;
-        for i in 0..fields.len() {
-            if let FieldValue::Span(sp) = fields[i]
-                && !sp.is_empty()
-            {
-                return Some(self.stmt.span_expanded_text(sp));
-            }
-        }
-        None
-    }
-
-    /// Text of a "name-shaped" field that may be either a direct `Span` or a
-    /// `NodeId` pointing at a Name node. Mirrors the dual representation used
-    /// by `SourceRef.alias`, CTE names, and similar fields.
-    pub(crate) fn name_field_text(&self, fields: &NodeFields, idx: u8) -> Option<&'stmt str> {
-        if idx == FIELD_ABSENT {
-            return None;
-        }
-        match fields[idx as usize] {
-            FieldValue::Span(sp) if !sp.is_empty() => Some(self.stmt.span_expanded_text(sp)),
-            FieldValue::NodeId(id) if !id.is_null() => self.first_span_text(id),
-            _ => None,
-        }
-    }
-
-    // ── Result-column iteration ──────────────────────────────────────────
-
-    /// Visit each `ResultColumn` child of a column-list node, calling `f` with
-    /// the result column's fields and the indices of its `(flags, alias, expr)`
-    /// fields. `f` returns `false` to stop iteration early.
+    /// Visit each `ResultColumn` child of a column-list node, calling `f`
+    /// with the result column's fields and the indices of its `(flags,
+    /// alias, expr)` fields. `f` returns `false` to stop iteration early.
     ///
     /// Skips children that aren't `ResultColumn` (transparent wrappers,
     /// commas, etc.) so callers don't have to.
@@ -183,7 +121,121 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         }
     }
 
-    // ── DDL definition spans (go-to-definition, etc.) ────────────────────
+    /// Visit each `CteBinding` child under `bindings_id` (a CTE list
+    /// node). Skips non-binding children and malformed bindings.
+    ///
+    /// The view only carries `(name, body_id)` — the cheap part.
+    /// Consumers that need the declared column list call
+    /// [`Self::cte_declared_cols`] with the binding's node id. The
+    /// iterator stays cheap for callers (lineage) that don't need
+    /// declared columns at all.
+    pub(crate) fn for_each_cte_binding<F>(&self, bindings_id: AnyNodeId, mut f: F)
+    where
+        F: FnMut(CteBindingView<'stmt>),
+    {
+        let Some(children) = self.stmt.list_children(bindings_id) else {
+            return;
+        };
+        for &cte_id in children {
+            if cte_id.is_null() {
+                continue;
+            }
+            let Some((
+                SemanticRole::CteBinding {
+                    name: name_idx,
+                    body: body_idx,
+                    ..
+                },
+                fields,
+            )) = self.role_for_node(cte_id)
+            else {
+                continue;
+            };
+            let name = self.stmt.span_field_text(&fields, name_idx).unwrap_or("");
+            f(CteBindingView {
+                name,
+                body_id: fields.node_id_at(body_idx),
+            });
+        }
+    }
+
+    /// Declared column list for a `CteBinding` node, when the binding
+    /// wrote out the parenthesized `(col1, col2, ...)` part. Returns
+    /// `None` when no column list was declared (the body's columns are
+    /// inferred instead).
+    pub(crate) fn cte_declared_cols(
+        &self,
+        binding_node: AnyNodeId,
+    ) -> Option<Vec<(&'stmt str, DocRange)>> {
+        let (
+            SemanticRole::CteBinding {
+                columns: cols_idx, ..
+            },
+            fields,
+        ) = self.role_for_node(binding_node)?
+        else {
+            return None;
+        };
+        let list_id = fields.node_id_at(cols_idx)?;
+        let children = self.stmt.list_children(list_id)?;
+        let mut names: Vec<(&'stmt str, DocRange)> = Vec::with_capacity(children.len());
+        for &id in children {
+            let (text, range) = self.stmt.name_text(Some(id));
+            if !text.is_empty() {
+                names.push((text, range));
+            }
+        }
+        if names.is_empty() { None } else { Some(names) }
+    }
+
+    /// Visit each FROM-clause source under `from_id`, recursing through
+    /// transparent wrappers and join nodes. Both `SourceRef` (catalog
+    /// relations) and `ScopedSource` (subqueries) are reported.
+    pub(crate) fn for_each_from_source<F>(&self, from_id: AnyNodeId, mut f: F)
+    where
+        F: FnMut(FromSource<'stmt>),
+    {
+        self.walk_from(from_id, &mut f);
+    }
+
+    fn walk_from<F>(&self, from_id: AnyNodeId, f: &mut F)
+    where
+        F: FnMut(FromSource<'stmt>),
+    {
+        let Some((role, fields)) = self.role_for_node(from_id) else {
+            return;
+        };
+        match role {
+            SemanticRole::SourceRef {
+                name: name_idx,
+                alias: alias_idx,
+                ..
+            } => {
+                let Some(name) = self.stmt.span_field_text(&fields, name_idx) else {
+                    return;
+                };
+                let alias = self.stmt.name_field_text(&fields, alias_idx);
+                f(FromSource::Relation { name, alias });
+            }
+            SemanticRole::ScopedSource {
+                body: body_idx,
+                alias: alias_idx,
+            } => {
+                let Some(body_id) = fields.node_id_at(body_idx) else {
+                    return;
+                };
+                let alias = self.stmt.name_field_text(&fields, alias_idx);
+                f(FromSource::Subquery { alias, body_id });
+            }
+            _ => {
+                for child in self.stmt.child_node_ids(from_id) {
+                    self.walk_from(child, f);
+                }
+            }
+        }
+    }
+
+    // ── DDL definition extraction ───────────────────────────────────────
 
     /// `(lowercase_name, range)` for `CREATE TABLE` / `CREATE VIEW`.
     /// Returns `None` for non-DDL statements.
@@ -194,7 +246,7 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         else {
             return None;
         };
-        let (text, range) = self.span_field_range(&fields, name_idx)?;
+        let (text, range) = self.stmt.span_field_range(&fields, name_idx)?;
         Some((text.to_ascii_lowercase(), range))
     }
 
@@ -205,7 +257,7 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         else {
             return out;
         };
-        let Some(col_list_id) = Self::node_field(&fields, columns) else {
+        let Some(col_list_id) = fields.node_id_at(columns) else {
             return out;
         };
         let Some(children) = self.stmt.list_children(col_list_id) else {
@@ -228,7 +280,7 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         else {
             return None;
         };
-        let name_id = Self::node_field(&fields, name_idx)?;
+        let name_id = fields.node_id_at(name_idx)?;
         let (_, name_fields) = self.stmt.extract_fields(name_id)?;
         for j in 0..name_fields.len() {
             if let FieldValue::Span(sp) = name_fields[j]
@@ -252,7 +304,7 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
             SemanticRole::DefineView { name, .. } => (name, true),
             _ => return Vec::new(),
         };
-        match self.span_field_text(&fields, name_idx) {
+        match self.stmt.span_field_text(&fields, name_idx) {
             Some(name) => vec![DefinedRelation {
                 name: name.to_string(),
                 is_view,
@@ -261,27 +313,27 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         }
     }
 
-    // ── Catalog accumulation inputs ───────────────────────────────────────
-
     /// Columns for a table or view DDL contribution.
     ///
-    /// Tries the explicit column list first; falls back to inferring names
-    /// from the SELECT body. `None` means inference was impossible (e.g.
-    /// `SELECT *`) and the caller should accept any column reference.
+    /// Tries the explicit column list first; falls back to inferring
+    /// names from the SELECT body. `None` means inference was impossible
+    /// (e.g. `SELECT *`) and the caller should accept any column reference.
     pub(super) fn extract_columns(
         &self,
         fields: &NodeFields,
         columns_field: u8,
         select_field: u8,
     ) -> Option<Vec<String>> {
-        if let Some(col_list_id) = Self::node_field(fields, columns_field) {
+        if let Some(col_list_id) = fields.node_id_at(columns_field) {
             let mut columns = Vec::new();
             self.columns_from_column_list(col_list_id, &mut columns);
             if !columns.is_empty() {
                 return Some(columns);
             }
         }
-        Self::node_field(fields, select_field).and_then(|id| self.columns_from_select(id))
+        fields
+            .node_id_at(select_field)
+            .and_then(|id| self.columns_from_select(id))
     }
 
     fn columns_from_column_list(&self, list_id: AnyNodeId, out: &mut Vec<String>) {
@@ -298,19 +350,19 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
     /// Whether a DDL function returns a table (has a `ReturnSpec` with
     /// non-empty columns).
     pub(super) fn is_table_returning(&self, fields: &NodeFields, return_type_field: u8) -> bool {
-        let Some(rt_id) = Self::node_field(fields, return_type_field) else {
+        let Some(rt_id) = fields.node_id_at(return_type_field) else {
             return false;
         };
         let Some((SemanticRole::ReturnSpec { columns }, rt_fields)) = self.role_for_node(rt_id)
         else {
             return false;
         };
-        Self::node_field(&rt_fields, columns).is_some()
+        rt_fields.node_id_at(columns).is_some()
     }
 
     /// Argument count for a DDL function declaration.
     pub(super) fn function_arity(&self, fields: &NodeFields, args_field: u8) -> AritySpec {
-        let Some(args_id) = Self::node_field(fields, args_field) else {
+        let Some(args_id) = fields.node_id_at(args_field) else {
             return AritySpec::Any;
         };
         let Some(children) = self.stmt.list_children(args_id) else {
@@ -319,14 +371,14 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         AritySpec::Exact(children.len())
     }
 
-    // ── SELECT-shaped column inference (used by analyzer + lineage) ──────
+    // ── SELECT-shaped column inference (analyzer + lineage) ─────────────
 
     /// Names produced by a SELECT body.
     ///
-    /// Returns `Some(names)` when every result column has an inferable name
-    /// (alias, bare column ref, or expression source text). Returns `None`
-    /// when any column is `*` or otherwise unnameable, telling the caller to
-    /// register the table conservatively.
+    /// Returns `Some(names)` when every result column has an inferable
+    /// name (alias, bare column ref, or expression source text). Returns
+    /// `None` when any column is `*` or otherwise unnameable, telling
+    /// the caller to register the table conservatively.
     pub(crate) fn columns_from_select(&self, select_id: AnyNodeId) -> Option<Vec<String>> {
         let (
             SemanticRole::Query {
@@ -337,7 +389,7 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
         else {
             return None;
         };
-        let list_id = Self::node_field(&select_fields, cols_idx)?;
+        let list_id = select_fields.node_id_at(cols_idx)?;
         let mut out = Vec::new();
         let mut bailed = false;
         self.for_each_result_column(list_id, |fields, flags_idx, alias_idx, expr_idx| {
@@ -368,80 +420,36 @@ impl<'a, 'stmt> DdlReader<'a, 'stmt> {
     /// Mirrors `SQLite`'s `sqlite3ExprListSetName` / `sqlite3ExprListSetSpan`:
     /// 1. Explicit alias → use alias text.
     /// 2. Bare `ColumnRef` with no alias → use the column-name span.
-    /// 3. Any other expression → use the raw source text of the expression
-    ///    (`SQLite` calls this `ENAME_SPAN`).
+    /// 3. Any other expression → use the raw source text of the
+    ///    expression (`SQLite` calls this `ENAME_SPAN`).
     pub(crate) fn infer_result_col_name(
         &self,
         child_fields: &NodeFields,
         alias_idx: u8,
         expr_idx: u8,
     ) -> Option<String> {
-        if let Some(alias_id) = Self::node_field(child_fields, alias_idx)
-            && let Some(name) = self.first_span_text(alias_id)
+        if let Some(alias_id) = child_fields.node_id_at(alias_idx)
+            && let Some(name) = self.stmt.first_span_text(alias_id)
         {
             return Some(name.to_ascii_lowercase());
         }
-        let expr_id = Self::node_field(child_fields, expr_idx)?;
+        let expr_id = child_fields.node_id_at(expr_idx)?;
         if let Some((
             SemanticRole::ColumnRef {
                 column: col_idx, ..
             },
             expr_fields,
         )) = self.role_for_node(expr_id)
-            && let Some(name) = self.span_field_text(&expr_fields, col_idx)
+            && let Some(name) = self.stmt.span_field_text(&expr_fields, col_idx)
         {
             return Some(name.to_ascii_lowercase());
         }
-        self.expr_source_text(expr_id).map(str::to_ascii_lowercase)
-    }
-
-    /// Source slice spanning every byte covered by `id`'s subtree.
-    pub(crate) fn expr_source_text(&self, id: AnyNodeId) -> Option<&'stmt str> {
-        let mut min = StmtOffset::from_raw(u32::MAX);
-        let mut max = StmtOffset::default();
-        self.collect_spans(id, &mut min, &mut max);
-        if min < max {
-            Some(
-                &self.stmt.text()[StmtRange {
-                    start: min,
-                    end: max,
-                }],
-            )
-        } else {
-            None
-        }
-    }
-
-    fn collect_spans(&self, id: AnyNodeId, min: &mut StmtOffset, max: &mut StmtOffset) {
-        if id.is_null() {
-            return;
-        }
-        if let Some((_, fields)) = self.stmt.extract_fields(id) {
-            for i in 0..fields.len() {
-                match fields[i] {
-                    FieldValue::Span(sp) if !sp.is_empty() => {
-                        let (text, off) = self.stmt.span_text(sp);
-                        let start = off;
-                        let end = start
-                            + StmtLen::from_raw(u32::try_from(text.len()).unwrap_or(u32::MAX));
-                        if start < *min {
-                            *min = start;
-                        }
-                        if end > *max {
-                            *max = end;
-                        }
-                    }
-                    FieldValue::NodeId(child) if !child.is_null() => {
-                        self.collect_spans(child, min, max);
-                    }
-                    _ => {}
-                }
-            }
-        }
-        if let Some(children) = self.stmt.list_children(id) {
-            for &child in children {
-                self.collect_spans(child, min, max);
-            }
-        }
+        // Fall back to the parser's recorded extent for this node — its
+        // source-text slice covers the full expression including any
+        // operators/punctuation. Requires `with_collect_node_extents` on
+        // the parser config, which the analyzer enables.
+        self.stmt
+            .node_text(expr_id)
+            .map(|(text, _)| text.to_ascii_lowercase())
     }
 }

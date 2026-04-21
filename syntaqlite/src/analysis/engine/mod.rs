@@ -24,7 +24,7 @@ use super::{AnalysisContext, AnalysisMode};
 
 use helpers::{extract_macro_registration, parse_error_span};
 
-use super::ddl::DdlReader;
+use super::ddl::SemanticPropertyExtractor;
 
 mod helpers;
 mod pass;
@@ -211,6 +211,7 @@ impl Analyzer {
             syntax,
             &ParserConfig::default()
                 .with_collect_tokens(true)
+                .with_collect_node_extents(true)
                 .with_macro_fallback(self.macro_fallback),
         );
 
@@ -329,7 +330,8 @@ impl Analyzer {
 
         let lineage = super::lineage::compute_lineage(erased, root_id, ctx.catalog, roles);
 
-        let defined_relations = DdlReader::new(erased, roles).defined_relations(root_id);
+        let defined_relations =
+            SemanticPropertyExtractor::new(erased, roles).defined_relations(root_id);
 
         StatementAnalysis::new(
             erased.text().as_str().to_owned(),
