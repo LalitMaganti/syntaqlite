@@ -1,44 +1,13 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Pure helper functions used by the analyzer: source extraction, definition
-//! span lookup, macro registration extraction, rowid aliasing.
+//! Pure helper functions used by the analyzer: parse-error span lookup,
+//! macro registration extraction, rowid aliasing.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParseError, AnyParsedStatement, FieldValue};
 use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange, StmtLen};
 
-use crate::analysis::model::DefinedRelation;
-use crate::dialect::{FIELD_ABSENT, MacroDef, SemanticRole};
-
-/// Extract relations defined by a DDL statement (CREATE TABLE / CREATE VIEW).
-pub(super) fn extract_defined_relations(
-    stmt: &AnyParsedStatement<'_>,
-    root: AnyNodeId,
-    roles: &[SemanticRole],
-) -> Vec<DefinedRelation> {
-    let Some((tag, fields)) = stmt.extract_fields(root) else {
-        return Vec::new();
-    };
-    let idx = u32::from(tag) as usize;
-    let Some(&role) = roles.get(idx) else {
-        return Vec::new();
-    };
-    let (name_field, is_view) = match role {
-        SemanticRole::DefineTable { name, .. } => (name, false),
-        SemanticRole::DefineView { name, .. } => (name, true),
-        _ => return Vec::new(),
-    };
-    if let FieldValue::Span(sp) = fields[name_field as usize]
-        && !sp.is_empty()
-    {
-        vec![DefinedRelation {
-            name: stmt.span_expanded_text(sp).to_string(),
-            is_view,
-        }]
-    } else {
-        Vec::new()
-    }
-}
+use crate::dialect::{FIELD_ABSENT, MacroDef};
 
 pub(super) fn parse_error_span(err: &AnyParseError<'_>, source: &str) -> DocRange {
     let base = err.statement_base();

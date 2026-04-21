@@ -15,12 +15,6 @@ use crate::dialect::{
     FIELD_ABSENT, FunctionCategory as DialectFunctionCategory, SemanticRole, is_function_available,
 };
 
-/// Convert a `u8` field index with [`FIELD_ABSENT`] sentinel to `Option<u8>`.
-#[inline]
-pub(super) fn opt_field(v: u8) -> Option<u8> {
-    (v != FIELD_ABSENT).then_some(v)
-}
-
 // ── Core layer types ─────────────────────────────────────────────────────────
 
 /// The category of a catalog function.
@@ -708,13 +702,13 @@ impl Catalog {
                 let Some(name_val) = reader.span_field_text(&fields, name) else {
                     return;
                 };
-                let cols = reader.extract_columns(&fields, opt_field(columns), opt_field(select));
+                let cols = reader.extract_columns(&fields, columns, select);
                 let is_without_rowid = without_rowid.field != FIELD_ABSENT
                     && matches!(
                         fields[without_rowid.field as usize],
                         FieldValue::Flags(f) if without_rowid.is_set(f)
                     );
-                layer.insert_table(name_val, cols, is_without_rowid);
+                layer.insert_table(name_val.to_string(), cols, is_without_rowid);
             }
             SemanticRole::DefineView {
                 name,
@@ -724,8 +718,8 @@ impl Catalog {
                 let Some(name_val) = reader.span_field_text(&fields, name) else {
                     return;
                 };
-                let cols = reader.extract_columns(&fields, opt_field(columns), Some(select));
-                layer.insert_view(name_val, cols);
+                let cols = reader.extract_columns(&fields, columns, select);
+                layer.insert_view(name_val.to_string(), cols);
             }
             SemanticRole::DefineFunction {
                 name,
@@ -736,10 +730,14 @@ impl Catalog {
                 let Some(name_val) = reader.span_field_text(&fields, name) else {
                     return;
                 };
-                let arity = reader.function_arity(&fields, opt_field(args));
-                layer.insert_function_overload(name_val.clone(), FunctionCategory::Scalar, arity);
-                if reader.is_table_returning(&fields, opt_field(return_type)) {
-                    layer.insert_table_function(name_val, AritySpec::Any, Vec::new());
+                let arity = reader.function_arity(&fields, args);
+                layer.insert_function_overload(
+                    name_val.to_string(),
+                    FunctionCategory::Scalar,
+                    arity,
+                );
+                if reader.is_table_returning(&fields, return_type) {
+                    layer.insert_table_function(name_val.to_string(), AritySpec::Any, Vec::new());
                 }
             }
             // Non-DDL roles are irrelevant to catalog accumulation.
