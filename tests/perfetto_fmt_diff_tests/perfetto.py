@@ -68,6 +68,29 @@ class PerfettoMacroFormat(TestSuite):
             """,
         )
 
+    def test_create_perfetto_macro_body_with_leading_line_comment(self):
+        # The macro body is emitted verbatim, so line comments inside
+        # it round-trip as part of the body text (rather than going
+        # through the normal comment drain). Body indentation also
+        # round-trips byte-for-byte — the test uses flush-left body
+        # SQL to avoid Python indent bleed-in.
+        return DiffTestBlueprint(
+            sql=(
+                "CREATE PERFETTO MACRO m() RETURNS Expr AS (\n"
+                "  -- leading comment inside macro body\n"
+                "  SELECT 1\n"
+                ")\n"
+            ),
+            out=(
+                "CREATE PERFETTO MACRO m()\n"
+                "RETURNS Expr\n"
+                "AS (\n"
+                "  -- leading comment inside macro body\n"
+                "  SELECT 1\n"
+                ")\n"
+            ),
+        )
+
 
 class PerfettoMacroCallFormat(TestSuite):
     def test_macro_call_in_select(self):
@@ -129,7 +152,11 @@ class PerfettoMacroCallFormat(TestSuite):
             out="SELECT foo!(a, b), c",
         )
 
-    def test_macro_multiline_reindented(self):
+    def test_macro_multiline_reflowed(self):
+        # The formatter picks the canonical layout for macro calls
+        # regardless of how the source was wrapped — a hand-authored
+        # multi-line call whose args fit on one line collapses to a
+        # single line, the same shape a single-line source would get.
         return DiffTestBlueprint(
             sql="""\
                 SELECT *
@@ -143,17 +170,13 @@ class PerfettoMacroCallFormat(TestSuite):
             """,
             out="""\
                 SELECT *
-                FROM graph_next_sibling!(
-                  (
-                    SELECT id, parent_id, ts
-                    FROM slice
-                    WHERE dur = 0
-                  )
-                )
+                FROM graph_next_sibling!((SELECT id, parent_id, ts FROM slice WHERE dur = 0))
             """,
         )
 
     def test_macro_parens_in_strings_ignored(self):
+        # String literals containing `(` characters don't confuse the
+        # arg tokenizer — the mini-parse treats them as string content.
         return DiffTestBlueprint(
             sql="""\
                 SELECT *
@@ -164,18 +187,12 @@ class PerfettoMacroCallFormat(TestSuite):
                   )
                 )
             """,
-            out="""\
-                SELECT *
-                FROM my_macro!(
-                  (
-                    SELECT '(((' AS x
-                    FROM t
-                  )
-                )
-            """,
+            out="SELECT * FROM my_macro!((SELECT '(((' AS x FROM t))",
         )
 
     def test_macro_with_function_calls(self):
+        # A nested function-call inside the macro's subquery arg
+        # re-flows through the expression formatter.
         return DiffTestBlueprint(
             sql="""\
                 SELECT *
@@ -191,23 +208,12 @@ class PerfettoMacroCallFormat(TestSuite):
                   )
                 )
             """,
-            out="""\
-                SELECT *
-                FROM scan!(
-                  (
-                    SELECT
-                    IIF(
-                      x > 0,
-                      1,
-                      0
-                    ) AS flag
-                    FROM t
-                  )
-                )
-            """,
+            out="SELECT * FROM scan!((SELECT IIF(x > 0, 1, 0) AS flag FROM t))",
         )
 
     def test_macro_comma_separated_args(self):
+        # Each arg — bare identifiers, tuple-style expr list, subquery
+        # — parses independently and re-flows to the canonical layout.
         return DiffTestBlueprint(
             sql="""\
                 SELECT *
@@ -221,18 +227,7 @@ class PerfettoMacroCallFormat(TestSuite):
                     )
                   )
             """,
-            out="""\
-                SELECT *
-                FROM scan!(
-                  edges,
-                  inits,
-                  (a, b, c),
-                  (
-                    SELECT id
-                    FROM t
-                  )
-                )
-            """,
+            out="SELECT * FROM scan!(edges, inits, (a, b, c), (SELECT id FROM t))",
         )
 
     def test_macro_call_with_alias(self):
@@ -369,6 +364,148 @@ class PerfettoMacroCallFormat(TestSuite):
             out="SELECT cast_int!(value) /* inline */ AS x FROM t",
         )
 
+    # ── Comments inside a fallback macro call ──
+
+    def test_macro_call_with_line_comment_before_first_arg(self):
+        # A line comment ahead of the first arg — the structured path
+        # (mini-parse) can't carry comments, so the formatter must
+        # defer to the verbatim re-indent path and preserve source
+        # layout.
+        return DiffTestBlueprint(
+            sql=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  -- docs for first arg\n"
+                "  first_arg,\n"
+                "  second_arg\n"
+                ")\n"
+            ),
+            out=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  -- docs for first arg\n"
+                "  first_arg,\n"
+                "  second_arg\n"
+                ")\n"
+            ),
+        )
+
+    def test_macro_call_with_line_comment_between_args(self):
+        return DiffTestBlueprint(
+            sql=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  first_arg,\n"
+                "  -- docs for second arg\n"
+                "  second_arg\n"
+                ")\n"
+            ),
+            out=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  first_arg,\n"
+                "  -- docs for second arg\n"
+                "  second_arg\n"
+                ")\n"
+            ),
+        )
+
+    def test_macro_call_with_trailing_line_comment_in_arg(self):
+        # Trailing line-comment after the last arg's final token.
+        return DiffTestBlueprint(
+            sql=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  first_arg,\n"
+                "  second_arg  -- EOL comment\n"
+                ")\n"
+            ),
+            out=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  first_arg,\n"
+                "  second_arg  -- EOL comment\n"
+                ")\n"
+            ),
+        )
+
+    def test_macro_call_with_block_comment_inside(self):
+        # Block comments land on the same side-channel as line
+        # comments — the parser records them and the formatter bails
+        # to verbatim.
+        return DiffTestBlueprint(
+            sql=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  /* block comment */\n"
+                "  first_arg\n"
+                ")\n"
+            ),
+            out=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  /* block comment */\n"
+                "  first_arg\n"
+                ")\n"
+            ),
+        )
+
+    def test_macro_call_with_multiple_comments_sprinkled(self):
+        # Line comments at every interesting position (before each arg
+        # and trailing on a value line). Covers the perfetto stdlib
+        # `_mipmap_buckets_table!(...)` pattern.
+        return DiffTestBlueprint(
+            sql=(
+                "SELECT *\n"
+                "FROM _mipmap_buckets_table!(\n"
+                "  -- Source table for time range\n"
+                "  (SELECT ts, dur, id FROM t),\n"
+                "  -- Partitioning column\n"
+                "  bucket_id,\n"
+                "  -- Bucket duration in nanoseconds\n"
+                "  1e6  -- 1ms buckets\n"
+                ")\n"
+            ),
+            out=(
+                "SELECT *\n"
+                "FROM _mipmap_buckets_table!(\n"
+                "  -- Source table for time range\n"
+                "  (SELECT ts, dur, id FROM t),\n"
+                "  -- Partitioning column\n"
+                "  bucket_id,\n"
+                "  -- Bucket duration in nanoseconds\n"
+                "  1e6  -- 1ms buckets\n"
+                ")\n"
+            ),
+        )
+
+    def test_macro_call_interior_comment_idempotent(self):
+        # Catches the specific regression where comment tokens inside
+        # a fallback macro's TK_ID span weren't recorded on the outer
+        # statement's comment list. Without that record the structured
+        # path's interior-comments bail fires false negative and the
+        # mini-parse silently drops the comment. Same input as the
+        # "with_line_comment_before_first_arg" test above but also
+        # asserts that the output is single-pass idempotent.
+        return DiffTestBlueprint(
+            sql=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  -- leading comment\n"
+                "  arg1,\n"
+                "  arg2\n"
+                ")\n"
+            ),
+            out=(
+                "SELECT *\n"
+                "FROM my_macro!(\n"
+                "  -- leading comment\n"
+                "  arg1,\n"
+                "  arg2\n"
+                ")\n"
+            ),
+        )
+
     # ── Nested macros ──
 
     def test_nested_macro_calls(self):
@@ -390,6 +527,26 @@ class PerfettoMacroCallFormat(TestSuite):
             """,
         )
 
+
+    def test_macro_arg_binary_expr_wraps_with_one_nest_level(self):
+        # When a macro's sole arg is a binary expression too long to
+        # fit, the continuation indents by exactly one level relative
+        # to the `!(` opener. This matches the verbatim re-indent path
+        # so the second formatter pass is idempotent.
+        return DiffTestBlueprint(
+            sql=(
+                "SELECT\n"
+                "  cast_int!(SUM(ii.dur * freq / 1000) / "
+                "(SUM(CASE WHEN freq IS NOT NULL THEN ii.dur END) / 1000)) AS avg_freq\n"
+                "FROM t\n"
+            ),
+            out=(
+                "SELECT\n"
+                "  cast_int!(SUM(ii.dur * freq / 1000)\n"
+                "    / (SUM(CASE WHEN freq IS NOT NULL THEN ii.dur END) / 1000)) AS avg_freq\n"
+                "FROM t\n"
+            ),
+        )
 
     def test_macro_partition_by_multi_arg_nests(self):
         return DiffTestBlueprint(

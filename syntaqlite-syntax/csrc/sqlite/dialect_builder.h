@@ -113,11 +113,13 @@ static inline uint32_t synq_parse_exists_expr(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_in_expr(SynqParseCtx* ctx,
                                           SyntaqliteBool negated,
+                                          SyntaqliteBool bare_source,
                                           uint32_t operand,
                                           uint32_t source) {
   return synq_parse_build(ctx,
                           &(SyntaqliteInExpr){.tag = SYNTAQLITE_NODE_IN_EXPR,
                                               .negated = negated,
+                                              .bare_source = bare_source,
                                               .operand = operand,
                                               .source = source},
                           (uint32_t)sizeof(SyntaqliteInExpr));
@@ -667,6 +669,7 @@ static inline uint32_t synq_parse_limit_clause(SynqParseCtx* ctx,
 static inline uint32_t synq_parse_table_ref(SynqParseCtx* ctx,
                                             SyntaqliteTextSpan table_name,
                                             SyntaqliteTextSpan schema,
+                                            SyntaqliteBool has_parens,
                                             uint32_t alias,
                                             uint32_t args) {
   return synq_parse_build(
@@ -674,6 +677,7 @@ static inline uint32_t synq_parse_table_ref(SynqParseCtx* ctx,
       &(SyntaqliteTableRef){.tag = SYNTAQLITE_NODE_TABLE_REF,
                             .table_name = table_name,
                             .schema = schema,
+                            .has_parens = has_parens,
                             .alias = alias,
                             .args = args},
       (uint32_t)sizeof(SyntaqliteTableRef));

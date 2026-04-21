@@ -278,16 +278,18 @@ impl Formatter {
 
             // Stage 1.5: Pre-compute a structured `DocId` per top-level
             // fallback macro call whose args can be parsed as
-            // expressions.  Calls with interior comments, internal
-            // newlines, or unparseable args get `None` and fall
-            // through to the existing verbatim path in `try_macro`.
+            // expressions.  Calls with interior comments or unparseable
+            // args get `None` and fall through to the existing verbatim
+            // path in `try_macro`. The comment slice comes from
+            // `comment_ctx` — `self.comment_entries` was moved into it
+            // above, so reading it directly would see an empty vec and
+            // miss the interior-comment bail.
             let macro_docs = macro_structured::compute_macro_docs(
                 &self.mini_parser,
                 &self.dialect,
                 &erased,
-                stmt_source,
                 &self.macro_tokenizer,
-                &self.comment_entries,
+                comment_ctx.as_ref().map_or(&[][..], |c| c.comments()),
                 &mut arena,
             );
 
@@ -531,9 +533,8 @@ impl Formatter {
                 &self.mini_parser,
                 &self.dialect,
                 &erased,
-                stmt_source,
                 &self.macro_tokenizer,
-                &self.comment_entries,
+                comment_ctx.as_ref().map_or(&[][..], |c| c.comments()),
                 &mut arena,
             );
 
@@ -596,30 +597,29 @@ fn drain_gap_comments<'a>(
     arena: &mut DocArena<'a>,
     parts: &mut Vec<DocId>,
 ) {
-    let mut prev_was_comment = false;
-    let mut last_end = ctx.prev_token_end();
     let source_end = StmtOffset::default() + source.byte_len();
     while let Some(c) = ctx.peek_comment() {
         if c.offset >= before {
             break;
         }
-        // Preserve blank lines between separate comment blocks
-        // (but not between code tokens and the first comment).
-        if prev_was_comment {
-            let gap = StmtRange {
-                start: last_end.min(source_end),
-                end: c.offset.min(source_end),
-            };
-            if !gap.is_empty() && source[gap].contains("\n\n") {
-                parts.push(arena.hardline());
-            }
-        }
         let text = &source[StmtRange::from_offset_len(c.offset, c.length)];
+        let end = c.offset + c.length;
         parts.push(arena.text(text));
         parts.push(arena.hardline());
-        last_end = c.offset + c.length;
-        prev_was_comment = true;
         ctx.advance_comment();
+        // If the source had a blank line between this comment and
+        // whatever follows — the next comment or the drain target —
+        // preserve it with an extra hardline. One check covers both
+        // "between comment blocks" and "between last block and next
+        // statement".
+        let next = ctx.peek_comment().map_or(before, |n| n.offset);
+        let gap = StmtRange {
+            start: end.min(source_end),
+            end: next.min(source_end),
+        };
+        if !gap.is_empty() && source[gap].contains("\n\n") {
+            parts.push(arena.hardline());
+        }
     }
 }
 

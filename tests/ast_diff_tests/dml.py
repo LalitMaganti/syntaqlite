@@ -20,6 +20,7 @@ class DeleteBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -42,6 +43,7 @@ class DeleteBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -75,6 +77,7 @@ class DeleteBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: "main"
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -97,6 +100,7 @@ class DeleteBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: INDEXED
@@ -130,6 +134,7 @@ class DeleteBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: NOT_INDEXED
@@ -168,6 +173,7 @@ class UpdateIndexedBy(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: INDEXED
@@ -201,6 +207,7 @@ class UpdateIndexedBy(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: NOT_INDEXED
@@ -238,6 +245,7 @@ class InsertBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -272,6 +280,7 @@ class InsertBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns:
@@ -312,6 +321,7 @@ class InsertBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -328,6 +338,7 @@ class InsertBasic(TestSuite):
                     TableRef
                       table_name: "s"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -353,6 +364,7 @@ class InsertBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -378,6 +390,7 @@ class InsertConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -406,6 +419,7 @@ class InsertConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -434,6 +448,7 @@ class InsertConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -462,6 +477,7 @@ class InsertConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -490,6 +506,7 @@ class InsertConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -518,6 +535,7 @@ class InsertConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -550,6 +568,7 @@ class UpdateBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -583,6 +602,7 @@ class UpdateBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -634,6 +654,7 @@ class UpdateBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -671,6 +692,7 @@ class UpdateFrom(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -689,6 +711,7 @@ class UpdateFrom(TestSuite):
                 TableRef
                   table_name: "other"
                   schema: (none)
+                  has_parens: FALSE
                   alias:
                     IdentName
                       source: "o"
@@ -728,6 +751,7 @@ class UpdateConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -761,6 +785,7 @@ class UpdateConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -794,6 +819,7 @@ class UpdateConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -827,6 +853,7 @@ class UpdateConflict(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -864,6 +891,7 @@ class UpdateSetClauseMultiColumn(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -914,6 +942,7 @@ class InsertMultipleRows(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -987,6 +1016,7 @@ class DmlWithCte(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -1003,6 +1033,7 @@ class DmlWithCte(TestSuite):
                     TableRef
                       table_name: "cte"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -1044,6 +1075,7 @@ class DmlWithCte(TestSuite):
                           TableRef
                             table_name: "s"
                             schema: (none)
+                            has_parens: FALSE
                             alias: (none)
                             args: (none)
                         where_clause: (none)
@@ -1057,6 +1089,7 @@ class DmlWithCte(TestSuite):
                 TableRef
                   table_name: "s"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -1064,6 +1097,7 @@ class DmlWithCte(TestSuite):
               where_clause:
                 InExpr
                   negated: FALSE
+                  bare_source: FALSE
                   operand:
                     ColumnRef
                       column: "id"
@@ -1086,6 +1120,7 @@ class DmlWithCte(TestSuite):
                         TableRef
                           table_name: "stale"
                           schema: (none)
+                          has_parens: FALSE
                           alias: (none)
                           args: (none)
                       where_clause: (none)
@@ -1136,6 +1171,7 @@ class DmlWithCte(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -1198,6 +1234,7 @@ class DmlWithCte(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns:
@@ -1223,6 +1260,7 @@ class DmlWithCte(TestSuite):
                     TableRef
                       table_name: "c"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -1251,6 +1289,7 @@ class ReturningClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -1289,6 +1328,7 @@ class ReturningClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -1329,6 +1369,7 @@ class ReturningClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -1367,6 +1408,7 @@ class ReturningClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               index_hint: DEFAULT
@@ -1428,6 +1470,7 @@ class ReturningClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -1468,6 +1511,7 @@ class ReturningClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -1498,6 +1542,7 @@ class UpsertClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -1533,6 +1578,7 @@ class UpsertClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -1576,6 +1622,7 @@ class UpsertClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -1620,6 +1667,7 @@ class UpsertClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns:
@@ -1685,6 +1733,7 @@ class UpsertClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -1759,6 +1808,7 @@ class UpsertClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -1799,6 +1849,7 @@ class UpsertClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)
@@ -1869,6 +1920,7 @@ class UpsertClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               columns: (none)

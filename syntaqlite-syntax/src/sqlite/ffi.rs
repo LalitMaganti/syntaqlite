@@ -84,6 +84,7 @@ pub(crate) struct ExistsExpr {
 pub(crate) struct InExpr {
     pub(crate) tag: u32,
     pub(crate) negated: Bool,
+    pub(crate) bare_source: Bool,
     pub(crate) operand: AnyNodeId,
     pub(crate) source: AnyNodeId,
 }
@@ -449,6 +450,7 @@ pub(crate) struct TableRef {
     pub(crate) tag: u32,
     pub(crate) table_name: TextSpan,
     pub(crate) schema: TextSpan,
+    pub(crate) has_parens: Bool,
     pub(crate) alias: AnyNodeId,
     pub(crate) args: AnyNodeId,
 }

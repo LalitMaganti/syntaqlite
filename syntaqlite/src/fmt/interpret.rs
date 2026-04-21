@@ -270,7 +270,14 @@ pub(super) fn interpret_core<'a>(
                             };
                             let drain = cctx.drain_before(drain_offset, source, arena);
                             flush_drain(&drain, &mut pending, &mut running, arena);
-                            cctx.advance_past(drain_offset + token_len);
+                            let span_end = drain_offset + token_len;
+                            cctx.advance_past(span_end);
+                            // The span emits its source range verbatim,
+                            // so any comments inside it are already in
+                            // the output. Drop them from the queue —
+                            // otherwise a later `drain_remaining` slices
+                            // [prev_token_end, comment_offset) reversed.
+                            cctx.discard_comments_before(span_end);
                         }
                         if quoted {
                             let q = arena.text("\"");

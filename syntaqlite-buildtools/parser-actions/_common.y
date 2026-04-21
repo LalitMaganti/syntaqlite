@@ -84,6 +84,16 @@ typedef struct SynqUpsertValue {
   uint32_t clauses;
   uint32_t returning;
 } SynqUpsertValue;
+
+// paren_exprlist: optional `LP exprlist RP` tail. Tracks whether the
+// parens were present so callers can distinguish `foo` (has_parens=0)
+// from `foo()` (has_parens=1, args=NULL_NODE) — relevant for table /
+// table-valued function references where the two forms are distinct
+// productions in the SQLite grammar.
+typedef struct SynqParenExprlistValue {
+  uint32_t args;
+  SyntaqliteBool has_parens;
+} SynqParenExprlistValue;
 /* END GRAMMAR_TYPES */
 
 #define YYPARSEFREENEVERNULL 1

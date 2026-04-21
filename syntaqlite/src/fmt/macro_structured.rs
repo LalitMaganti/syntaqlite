@@ -18,10 +18,10 @@
 use syntaqlite_syntax::any::{
     AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, MacroRewrite, ParseOutcome,
 };
-use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtRange, StmtText};
+use syntaqlite_syntax::source::{StmtLen, StmtOffset};
 
 use super::comment::CommentEntry;
-use super::doc::{DocArena, DocId};
+use super::doc::{DocArena, DocId, NIL_DOC};
 use super::interpret::{FmtCtx, InterpretScratch, interpret_core};
 use crate::dialect::AnyDialect;
 
@@ -38,7 +38,6 @@ pub(super) fn compute_macro_docs<'a>(
     mini_parser: &AnyParser,
     dialect: &AnyDialect,
     erased: &AnyParsedStatement<'a>,
-    source: &'a StmtText,
     tokenizer: &AnyTokenizer,
     comments: &[CommentEntry],
     arena: &mut DocArena<'a>,
@@ -46,38 +45,32 @@ pub(super) fn compute_macro_docs<'a>(
     erased
         .macro_rewrites()
         .filter(|r| r.parent().is_none() && r.is_fallback())
-        .map(|r| compute_one(mini_parser, dialect, &r, source, tokenizer, comments, arena))
+        .map(|r| compute_one(mini_parser, dialect, &r, tokenizer, comments, arena))
         .collect()
 }
 
-fn compute_one<'a>(
+fn compute_one(
     mini_parser: &AnyParser,
     dialect: &AnyDialect,
     r: &MacroRewrite<'_>,
-    source: &'a StmtText,
     tokenizer: &AnyTokenizer,
     comments: &[CommentEntry],
-    arena: &mut DocArena<'a>,
+    arena: &mut DocArena<'_>,
 ) -> Option<DocId> {
     let call_off = StmtOffset::from_raw(r.call_offset().as_u32());
-    let call_len = StmtLen::from(r.call_length());
-    let call_end = call_off + call_len;
+    let call_end = call_off + StmtLen::from(r.call_length());
 
-    // Defer to verbatim when the call has interior comments (the mini
-    // parser has no comment context, so they'd silently disappear),
-    // was hand-wrapped across multiple lines (authored layout wins),
-    // or has no args (nothing to restructure).
+    // Defer to verbatim when the call has interior comments — the mini
+    // parser has no comment context, so comments inside an arg would
+    // silently disappear. The parser records comments encountered while
+    // scanning a fallback macro call into the same statement comment
+    // list (see `synq_parser_scan_macro_args` in parser_macros.c), so
+    // this single check covers both comments in the outer gaps and
+    // comments nested inside the macro's body.
     if comments
         .iter()
         .any(|c| c.offset >= call_off && c.offset < call_end)
     {
-        return None;
-    }
-    let call_text = &source[StmtRange {
-        start: call_off,
-        end: call_end,
-    }];
-    if call_text.contains('\n') {
         return None;
     }
 
@@ -101,18 +94,29 @@ fn compute_one<'a>(
     // is borrowed from the parent buffer (stable across render), but
     // we own-copy it anyway to keep `macro_structured` independent of
     // the caller's buffer-lifetime story.
+    //
+    // The arg run is wrapped in `nest(1)` so that a break inside an
+    // arg (e.g. a binary expression that won't fit flat) indents by
+    // one level relative to the `!(` opener. This matches the
+    // `reindent_macro` verbatim path — which sees depth-1 content
+    // after the opening `!(` and emits it at `nest(1)` — so a
+    // formatter-broken macro call round-trips idempotently whether
+    // the next pass runs the structured or verbatim path.
     let name_doc = arena.own_text(r.name());
     let open = arena.text("!(");
     let close = arena.text(")");
     let sep = arena.text(", ");
-    let mut d = arena.cat(name_doc, open);
+    let mut body = NIL_DOC;
     for (i, ad) in arg_docs.iter().enumerate() {
         if i > 0 {
-            d = arena.cat(d, sep);
+            body = arena.cat(body, sep);
         }
-        d = arena.cat(d, *ad);
+        body = arena.cat(body, *ad);
     }
-    Some(arena.cat(d, close))
+    let nested = arena.nest(1, body);
+    let prefix = arena.cat(name_doc, open);
+    let with_body = arena.cat(prefix, nested);
+    Some(arena.cat(with_body, close))
 }
 
 /// Parse `arg_text` as an expression via a synthetic `SELECT arg;`

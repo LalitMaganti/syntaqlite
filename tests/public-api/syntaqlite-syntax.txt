@@ -1492,6 +1492,7 @@ pub fn syntaqlite_syntax::nodes::IdentName<'a>::source(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::IdentNameId::from(n: syntaqlite_syntax::nodes::IdentName<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::IdentNameId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::InExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::InExpr<'a>::bare_source(&self) -> bool
 pub fn syntaqlite_syntax::nodes::InExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::InExpr<'a>::negated(&self) -> bool
 pub fn syntaqlite_syntax::nodes::InExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::InExprId
@@ -1725,6 +1726,7 @@ pub fn syntaqlite_syntax::nodes::TableRef<'_>::fmt(&self, f: &mut core::fmt::For
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::alias(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::TableRef<'a>::has_parens(&self) -> bool
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TableRefId
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::table_name(&self) -> &'a str
@@ -2507,6 +2509,7 @@ pub syntaqlite_syntax::nodes::InExprSource::CompoundSelect(syntaqlite_syntax::no
 pub syntaqlite_syntax::nodes::InExprSource::ExprList(syntaqlite_syntax::nodes::ExprList<'a>)
 pub syntaqlite_syntax::nodes::InExprSource::SelectStmt(syntaqlite_syntax::nodes::SelectStmt<'a>)
 pub syntaqlite_syntax::nodes::InExprSource::SubqueryExpr(syntaqlite_syntax::nodes::SubqueryExpr<'a>)
+pub syntaqlite_syntax::nodes::InExprSource::TableRef(syntaqlite_syntax::nodes::TableRef<'a>)
 pub syntaqlite_syntax::nodes::InExprSource::ValuesClause(syntaqlite_syntax::nodes::ValuesClause<'a>)
 pub syntaqlite_syntax::nodes::InExprSource::WithClause(syntaqlite_syntax::nodes::WithClause<'a>)
 pub syntaqlite_syntax::nodes::IndexHint::Default = 0

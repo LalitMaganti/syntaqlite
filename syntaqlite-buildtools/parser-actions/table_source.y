@@ -41,7 +41,9 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
         table_name = synq_span_dequote(pCtx, Y);
         schema = SYNQ_NO_SPAN;
     }
-    uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema, alias, SYNTAQLITE_NULL_NODE);
+    uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
+                                         SYNTAQLITE_BOOL_FALSE,
+                                         alias, SYNTAQLITE_NULL_NODE);
     if (A == SYNTAQLITE_NULL_NODE) {
         A = tref;
     } else {
@@ -66,7 +68,9 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
         table_name = synq_span_dequote(pCtx, Y);
         schema = SYNQ_NO_SPAN;
     }
-    uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema, alias, SYNTAQLITE_NULL_NODE);
+    uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
+                                         SYNTAQLITE_BOOL_FALSE,
+                                         alias, SYNTAQLITE_NULL_NODE);
     if (A == SYNTAQLITE_NULL_NODE) {
         A = tref;
     } else {
@@ -78,7 +82,9 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
     }
 }
 
-// Table-valued function: FROM t(args)
+// Table-valued function: FROM t(args) — `has_parens=TRUE` so an
+// empty-args call `FROM t()` round-trips as `FROM t()`, distinct
+// from the bare `FROM t` form.
 seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N). {
     uint32_t alias = Z;
     SyntaqliteTextSpan table_name;
@@ -90,7 +96,9 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N
         table_name = synq_span_dequote(pCtx, Y);
         schema = SYNQ_NO_SPAN;
     }
-    uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema, alias, E);
+    uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
+                                         SYNTAQLITE_BOOL_TRUE,
+                                         alias, E);
     if (A == SYNTAQLITE_NULL_NODE) {
         A = tref;
     } else {

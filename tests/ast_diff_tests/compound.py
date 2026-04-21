@@ -427,6 +427,7 @@ class SubqueryExpr(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause:
@@ -450,6 +451,7 @@ class SubqueryExpr(TestSuite):
                             TableRef
                               table_name: "u"
                               schema: (none)
+                              has_parens: FALSE
                               alias: (none)
                               args: (none)
                           where_clause: (none)
@@ -484,6 +486,7 @@ class InExpr(TestSuite):
                     expr:
                       InExpr
                         negated: FALSE
+                        bare_source: FALSE
                         operand:
                           Literal
                             literal_type: INTEGER
@@ -523,6 +526,7 @@ class InExpr(TestSuite):
                     expr:
                       InExpr
                         negated: TRUE
+                        bare_source: FALSE
                         operand:
                           Literal
                             literal_type: INTEGER
@@ -564,11 +568,13 @@ class InExpr(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause:
                 InExpr
                   negated: TRUE
+                  bare_source: FALSE
                   operand:
                     ColumnRef
                       column: "x"
@@ -591,6 +597,7 @@ class InExpr(TestSuite):
                         TableRef
                           table_name: "u"
                           schema: (none)
+                          has_parens: FALSE
                           alias: (none)
                           args: (none)
                       where_clause: (none)
@@ -621,6 +628,7 @@ class InExpr(TestSuite):
                     expr:
                       InExpr
                         negated: FALSE
+                        bare_source: FALSE
                         operand:
                           Literal
                             literal_type: INTEGER

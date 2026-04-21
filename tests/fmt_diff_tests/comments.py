@@ -886,6 +886,41 @@ class CommentBlockSpacing(TestSuite):
             """,
         )
 
+    def test_leading_comment_inside_parens_no_blank_line(self):
+        # A leading comment immediately inside an opening paren
+        # shouldn't render with a blank line between the enclosing
+        # keyword and the comment.
+        return DiffTestBlueprint(
+            sql="""\
+                SELECT (
+                -- c
+                1)
+            """,
+            out="""\
+                SELECT
+                  -- c
+                  1;
+            """,
+        )
+
+    def test_blank_line_between_file_header_and_first_statement(self):
+        # A file-level header comment block separated from the first
+        # statement by a blank line keeps that blank line on output.
+        return DiffTestBlueprint(
+            sql="""\
+                -- header a
+                -- header b
+
+                SELECT 1
+            """,
+            out="""\
+                -- header a
+                -- header b
+
+                SELECT 1;
+            """,
+        )
+
 
 class ListCommentSpacing(TestSuite):
     """Multi-line comments inside list nodes (e.g., column defs)

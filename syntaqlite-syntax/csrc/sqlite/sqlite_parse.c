@@ -85,6 +85,16 @@ typedef struct SynqUpsertValue {
   uint32_t clauses;
   uint32_t returning;
 } SynqUpsertValue;
+
+// paren_exprlist: optional `LP exprlist RP` tail. Tracks whether the
+// parens were present so callers can distinguish `foo` (has_parens=0)
+// from `foo()` (has_parens=1, args=NULL_NODE) — relevant for table /
+// table-valued function references where the two forms are distinct
+// productions in the SQLite grammar.
+typedef struct SynqParenExprlistValue {
+  uint32_t args;
+  SyntaqliteBool has_parens;
+} SynqParenExprlistValue;
 /* END GRAMMAR_TYPES */
 
 #define YYPARSEFREENEVERNULL 1
@@ -377,6 +387,7 @@ typedef union {
   SynqUpsertValue yy352;
   SynqConstraintListValue yy430;
   SynqWithValue yy541;
+  SynqParenExprlistValue yy618;
   SynqOnUsingValue yy632;
   SynqColumnNameValue yy640;
   int yy653;
@@ -7404,28 +7415,36 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 30: /* expr ::= expr in_op LP exprlist RP */
     {
-      yymsp[-4].minor.yy277 =
-          synq_parse_in_expr(pCtx, (SyntaqliteBool)yymsp[-3].minor.yy320,
-                             yymsp[-4].minor.yy277, yymsp[-1].minor.yy277);
+      yymsp[-4].minor.yy277 = synq_parse_in_expr(
+          pCtx, (SyntaqliteBool)yymsp[-3].minor.yy320, SYNTAQLITE_BOOL_FALSE,
+          yymsp[-4].minor.yy277, yymsp[-1].minor.yy277);
     } break;
     case 31: /* expr ::= expr in_op LP select RP */
     {
       pCtx->saw_subquery = 1;
       // Pass the raw select node directly — InExpr's fmt block already adds
       // the surrounding parens, so wrapping in SubqueryExpr would double them.
-      yymsp[-4].minor.yy277 =
-          synq_parse_in_expr(pCtx, (SyntaqliteBool)yymsp[-3].minor.yy320,
-                             yymsp[-4].minor.yy277, yymsp[-1].minor.yy277);
+      yymsp[-4].minor.yy277 = synq_parse_in_expr(
+          pCtx, (SyntaqliteBool)yymsp[-3].minor.yy320, SYNTAQLITE_BOOL_FALSE,
+          yymsp[-4].minor.yy277, yymsp[-1].minor.yy277);
     } break;
     case 32: /* expr ::= expr in_op nm dbnm paren_exprlist */
     {
-      // Table-valued function IN expression - stub for now
-      (void)yymsp[-2].minor.yy0;
-      (void)yymsp[-1].minor.yy0;
-      (void)yymsp[0].minor.yy277;
+      SyntaqliteTextSpan table_name;
+      SyntaqliteTextSpan schema;
+      if (yymsp[-1].minor.yy0.z != NULL) {
+        table_name = synq_span_dequote(pCtx, yymsp[-1].minor.yy0);
+        schema = synq_span_dequote(pCtx, yymsp[-2].minor.yy0);
+      } else {
+        table_name = synq_span_dequote(pCtx, yymsp[-2].minor.yy0);
+        schema = SYNQ_NO_SPAN;
+      }
+      uint32_t tref = synq_parse_table_ref(
+          pCtx, table_name, schema, yymsp[0].minor.yy618.has_parens,
+          SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy618.args);
       yymsp[-4].minor.yy277 =
           synq_parse_in_expr(pCtx, (SyntaqliteBool)yymsp[-3].minor.yy320,
-                             yymsp[-4].minor.yy277, SYNTAQLITE_NULL_NODE);
+                             SYNTAQLITE_BOOL_TRUE, yymsp[-4].minor.yy277, tref);
     } break;
     case 33: /* dbnm ::= */
     {
@@ -7438,11 +7457,13 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 35: /* paren_exprlist ::= */
     {
-      yymsp[1].minor.yy277 = SYNTAQLITE_NULL_NODE;
+      yymsp[1].minor.yy618.args = SYNTAQLITE_NULL_NODE;
+      yymsp[1].minor.yy618.has_parens = SYNTAQLITE_BOOL_FALSE;
     } break;
     case 36: /* paren_exprlist ::= LP exprlist RP */
     {
-      yymsp[-2].minor.yy277 = synq_pass(pCtx, yymsp[-1].minor.yy277);
+      yymsp[-2].minor.yy618.args = synq_pass(pCtx, yymsp[-1].minor.yy277);
+      yymsp[-2].minor.yy618.has_parens = SYNTAQLITE_BOOL_TRUE;
     } break;
     case 37: /* expr ::= expr ISNULL|NOTNULL */
     {
@@ -8419,7 +8440,7 @@ static YYACTIONTYPE yy_reduce(
     {
       yylhsminor.yy277 = synq_parse_table_ref(
           pCtx, synq_span_dequote(pCtx, yymsp[0].minor.yy0), SYNQ_NO_SPAN,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
     }
       yymsp[0].minor.yy277 = yylhsminor.yy277;
       break;
@@ -8427,8 +8448,8 @@ static YYACTIONTYPE yy_reduce(
     {
       yylhsminor.yy277 = synq_parse_table_ref(
           pCtx, synq_span_dequote(pCtx, yymsp[0].minor.yy0),
-          synq_span_dequote(pCtx, yymsp[-2].minor.yy0), SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE);
+          synq_span_dequote(pCtx, yymsp[-2].minor.yy0), SYNTAQLITE_BOOL_FALSE,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
     }
       yymsp[-2].minor.yy277 = yylhsminor.yy277;
       break;
@@ -8438,8 +8459,8 @@ static YYACTIONTYPE yy_reduce(
           pCtx, synq_span_dequote(pCtx, yymsp[0].minor.yy0));
       yylhsminor.yy277 = synq_parse_table_ref(
           pCtx, synq_span_dequote(pCtx, yymsp[-2].minor.yy0),
-          synq_span_dequote(pCtx, yymsp[-4].minor.yy0), alias,
-          SYNTAQLITE_NULL_NODE);
+          synq_span_dequote(pCtx, yymsp[-4].minor.yy0), SYNTAQLITE_BOOL_FALSE,
+          alias, SYNTAQLITE_NULL_NODE);
     }
       yymsp[-4].minor.yy277 = yylhsminor.yy277;
       break;
@@ -8449,7 +8470,7 @@ static YYACTIONTYPE yy_reduce(
           pCtx, synq_span_dequote(pCtx, yymsp[0].minor.yy0));
       yylhsminor.yy277 = synq_parse_table_ref(
           pCtx, synq_span_dequote(pCtx, yymsp[-2].minor.yy0), SYNQ_NO_SPAN,
-          alias, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, alias, SYNTAQLITE_NULL_NODE);
     }
       yymsp[-2].minor.yy277 = yylhsminor.yy277;
       break;
@@ -9156,8 +9177,9 @@ static YYACTIONTYPE yy_reduce(
         table_name = synq_span_dequote(pCtx, yymsp[-3].minor.yy0);
         schema = SYNQ_NO_SPAN;
       }
-      uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema, alias,
-                                           SYNTAQLITE_NULL_NODE);
+      uint32_t tref =
+          synq_parse_table_ref(pCtx, table_name, schema, SYNTAQLITE_BOOL_FALSE,
+                               alias, SYNTAQLITE_NULL_NODE);
       if (yymsp[-4].minor.yy277 == SYNTAQLITE_NULL_NODE) {
         yymsp[-4].minor.yy277 = tref;
       } else {
@@ -9180,8 +9202,9 @@ static YYACTIONTYPE yy_reduce(
         table_name = synq_span_dequote(pCtx, yymsp[-4].minor.yy0);
         schema = SYNQ_NO_SPAN;
       }
-      uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema, alias,
-                                           SYNTAQLITE_NULL_NODE);
+      uint32_t tref =
+          synq_parse_table_ref(pCtx, table_name, schema, SYNTAQLITE_BOOL_FALSE,
+                               alias, SYNTAQLITE_NULL_NODE);
       if (yymsp[-5].minor.yy277 == SYNTAQLITE_NULL_NODE) {
         yymsp[-5].minor.yy277 = tref;
       } else {
@@ -9203,8 +9226,9 @@ static YYACTIONTYPE yy_reduce(
         table_name = synq_span_dequote(pCtx, yymsp[-6].minor.yy0);
         schema = SYNQ_NO_SPAN;
       }
-      uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema, alias,
-                                           yymsp[-3].minor.yy277);
+      uint32_t tref =
+          synq_parse_table_ref(pCtx, table_name, schema, SYNTAQLITE_BOOL_TRUE,
+                               alias, yymsp[-3].minor.yy277);
       if (yymsp[-7].minor.yy277 == SYNTAQLITE_NULL_NODE) {
         yymsp[-7].minor.yy277 = tref;
       } else {
@@ -9534,7 +9558,7 @@ static YYACTIONTYPE yy_reduce(
     {
       uint32_t tbl = synq_parse_table_ref(
           pCtx, synq_span(pCtx, yymsp[-6].minor.yy0), SYNQ_NO_SPAN,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-8].minor.yy277 = synq_parse_update_stmt(
           pCtx, SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
           (SyntaqliteConflictAction)yymsp[-7].minor.yy320, tbl,
@@ -9547,7 +9571,7 @@ static YYACTIONTYPE yy_reduce(
     {
       uint32_t tbl = synq_parse_table_ref(
           pCtx, synq_span(pCtx, yymsp[-4].minor.yy0), SYNQ_NO_SPAN,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-7].minor.yy277 = synq_parse_insert_stmt(
           pCtx, SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
           (SyntaqliteConflictAction)yymsp[-6].minor.yy320, tbl,
@@ -9558,7 +9582,7 @@ static YYACTIONTYPE yy_reduce(
     {
       uint32_t tbl = synq_parse_table_ref(
           pCtx, synq_span(pCtx, yymsp[-3].minor.yy0), SYNQ_NO_SPAN,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-5].minor.yy277 = synq_parse_delete_stmt(
           pCtx, SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE, tbl,
           SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN, yymsp[-1].minor.yy277,

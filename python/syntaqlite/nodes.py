@@ -110,10 +110,11 @@ class ExistsExpr:
 class InExpr:
     """AST node: InExpr"""
 
-    __slots__ = ("negated", "operand", "source")
+    __slots__ = ("negated", "bare_source", "operand", "source")
 
     def __init__(self, d: dict):
         self.negated: bool = d["negated"]
+        self.bare_source: bool = d["bare_source"]
         self.operand: Expr | None = _wrap(d.get("operand"))
         self.source: InExprSource | None = _wrap(d.get("source"))
 
@@ -654,11 +655,12 @@ class LimitClause:
 class TableRef:
     """AST node: TableRef"""
 
-    __slots__ = ("table_name", "schema", "alias", "args")
+    __slots__ = ("table_name", "schema", "has_parens", "alias", "args")
 
     def __init__(self, d: dict):
         self.table_name: str | None = d.get("table_name")
         self.schema: str | None = d.get("schema")
+        self.has_parens: bool = d["has_parens"]
         self.alias: Name | None = _wrap(d.get("alias"))
         self.args: list[Expr] | None = _wrap(d.get("args"))
 
