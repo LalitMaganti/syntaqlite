@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.2
+
+**Formatter:**
+- Fixed a crash when a leading comment appeared inside parentheses that the parser preserves but no fmt opcode consumes (e.g. the redundant `(expr)` wrapping) ([#236](https://github.com/LalitMaganti/syntaqlite/pull/236)).
+- Fixed a spurious blank line being inserted between a leading comment and the following element (e.g. a `CASE WHEN`) ([#236](https://github.com/LalitMaganti/syntaqlite/pull/236)).
+
+**Analysis and validator:**
+- Fixed `lineage` reporting CTE-body lineage instead of the outer SELECT for `WITH` statements ([#235](https://github.com/LalitMaganti/syntaqlite/pull/235)).
+
 ## 0.5.1
 
 > **Note:** 0.5.0 was tagged but never released. Its release workflow failed to upload Python wheels and CLI binaries (stale `validate` subcommand reference in the smoke test, and the `linux_*` wheel platform tag is not accepted by PyPI). 0.5.1 bundles every change originally intended for 0.5.0 plus the pipeline fixes.
