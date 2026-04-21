@@ -3,7 +3,7 @@
 
 //! Role-table-driven property extraction from a parsed statement.
 //!
-//! [`SemanticPropertyExtractor`] is the analysis crate's view of a parsed
+//! [`StmtReader`] is the analysis crate's view of a parsed
 //! statement through the dialect's `SemanticRole` table. It bundles
 //! `(stmt, roles)` so call sites don't repeat both args, and exposes
 //! methods that answer questions like "what does this `CREATE TABLE`
@@ -27,12 +27,12 @@ use crate::dialect::SemanticRole;
 /// Cheap to construct — just two references — so call sites build a
 /// fresh handle locally rather than thread one through.
 #[derive(Clone, Copy)]
-pub(crate) struct SemanticPropertyExtractor<'a, 'stmt> {
+pub(crate) struct StmtReader<'a, 'stmt> {
     stmt: &'a AnyParsedStatement<'stmt>,
     roles: &'a [SemanticRole],
 }
 
-impl<'a, 'stmt> SemanticPropertyExtractor<'a, 'stmt> {
+impl<'a, 'stmt> StmtReader<'a, 'stmt> {
     pub(crate) fn new(stmt: &'a AnyParsedStatement<'stmt>, roles: &'a [SemanticRole]) -> Self {
         Self { stmt, roles }
     }

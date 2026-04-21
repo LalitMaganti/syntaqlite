@@ -17,7 +17,7 @@ use std::collections::HashMap;
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 
 use super::catalog::Catalog;
-use super::ddl::SemanticPropertyExtractor;
+use super::stmt_reader::StmtReader;
 use super::engine::walker::{
     CteBindingEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
 };
@@ -232,8 +232,8 @@ struct Finalizer<'a, 'b> {
 }
 
 impl<'a, 'b> Finalizer<'a, 'b> {
-    fn sema(&self) -> SemanticPropertyExtractor<'a, 'b> {
-        SemanticPropertyExtractor::new(self.stmt, self.roles)
+    fn sema(&self) -> StmtReader<'a, 'b> {
+        StmtReader::new(self.stmt, self.roles)
     }
 
     fn finalize(&self, query: AnyNodeId) -> QuerySummary {

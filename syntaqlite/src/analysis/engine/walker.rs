@@ -21,7 +21,7 @@ use syntaqlite_syntax::any::{
 use syntaqlite_syntax::source::DocRange;
 
 use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
-use crate::analysis::ddl::SemanticPropertyExtractor;
+use crate::analysis::stmt_reader::StmtReader;
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 
 use super::query_scope::{QueryScope, RowIdPolicy};
@@ -275,7 +275,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let Some((tag, fields)) = self.stmt.extract_fields(node_id) else {
             return;
         };
-        let role = SemanticPropertyExtractor::new(self.stmt, self.roles).role_for_tag(tag);
+        let role = StmtReader::new(self.stmt, self.roles).role_for_tag(tag);
 
         match role {
             SemanticRole::DefineTable { select, .. }
@@ -365,7 +365,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         visitor: &mut V,
         node_id: AnyNodeId,
     ) {
-        let reader = SemanticPropertyExtractor::new(self.stmt, self.roles);
+        let reader = StmtReader::new(self.stmt, self.roles);
         let Some((table_name, table_range)) = reader.name_span(node_id) else {
             return;
         };
@@ -532,7 +532,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         }
 
         let cols = body_id.and_then(|id| {
-            SemanticPropertyExtractor::new(self.stmt, self.roles).columns_from_select(id)
+            StmtReader::new(self.stmt, self.roles).columns_from_select(id)
         });
         match alias {
             None => self.scope.add_anonymous(cols),
@@ -587,7 +587,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let Some(list_id) = fields.node_id_at(columns_idx) else {
             return aliases;
         };
-        let reader = SemanticPropertyExtractor::new(self.stmt, self.roles);
+        let reader = StmtReader::new(self.stmt, self.roles);
         reader.for_each_result_column(list_id, |child_fields, _flags, alias_idx, _expr| {
             let alias_node = child_fields.node_id_at(alias_idx);
             let (alias_text, _) = reader.stmt().name_text(alias_node);
@@ -763,7 +763,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                     self.emit_select_column_definitions(visitor, binding.body_id, binding.name);
                 }
                 binding.body_id.and_then(|id| {
-                    SemanticPropertyExtractor::new(self.stmt, self.roles).columns_from_select(id)
+                    StmtReader::new(self.stmt, self.roles).columns_from_select(id)
                 })
             };
             self.catalog.add_query_table(binding.name, cols);
@@ -771,7 +771,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     }
 
     fn extract_cte_binding(&mut self, cte_id: AnyNodeId) -> Option<CteBindingInfo<'b>> {
-        let reader = SemanticPropertyExtractor::new(self.stmt, self.roles);
+        let reader = StmtReader::new(self.stmt, self.roles);
         let (
             SemanticRole::CteBinding {
                 name: name_idx,
@@ -798,7 +798,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 
     fn count_result_columns(&mut self, body_id: Option<AnyNodeId>) -> Option<usize> {
         let body_id = body_id?;
-        let reader = SemanticPropertyExtractor::new(self.stmt, self.roles);
+        let reader = StmtReader::new(self.stmt, self.roles);
         let (
             SemanticRole::Query {
                 columns: cols_idx, ..
@@ -832,7 +832,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         table_name: &str,
     ) {
         let Some(body_id) = body_id else { return };
-        let reader = SemanticPropertyExtractor::new(self.stmt, self.roles);
+        let reader = StmtReader::new(self.stmt, self.roles);
         let Some((
             SemanticRole::Query {
                 columns: cols_idx, ..

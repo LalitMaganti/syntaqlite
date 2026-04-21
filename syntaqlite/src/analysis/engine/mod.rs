@@ -24,15 +24,15 @@ use super::{AnalysisContext, AnalysisMode};
 
 use helpers::{extract_macro_registration, parse_error_span};
 
-use super::ddl::SemanticPropertyExtractor;
+use super::stmt_reader::StmtReader;
 
-mod analysis_visitor;
+mod statement_visitor;
 mod helpers;
 mod query_scope;
 pub(crate) mod tokens;
 pub(crate) mod walker;
 
-use analysis_visitor::AnalysisVisitor;
+use statement_visitor::StatementVisitor;
 use walker::{NoopVisitor, SemanticVisitor, SemanticWalker};
 
 /// Stateless analysis engine.
@@ -159,13 +159,12 @@ impl Analyzer {
     }
 
     /// Run a complete single-pass analysis, forwarding walk events to
-    /// `extra` alongside the built-in diagnostics pass.
+    /// `extra` alongside the analyzer's built-in diagnostic emission
+    /// and lineage capture.
     ///
-    /// This is the entry point in-crate LSP and embedded-SQL consumers use to
-    /// capture the data they need (go-to-definition, find-references, semantic
-    /// tokens, completion). The analyzer always runs its own
-    /// [`DiagnosticsPass`] in composition with `extra` via
-    /// [`StatementVisitor`].
+    /// This is the entry point in-crate LSP and embedded-SQL consumers
+    /// use to capture the data they need (go-to-definition,
+    /// find-references, semantic tokens, completion).
     pub(crate) fn analyze_with_visitor<V: SemanticVisitor>(
         &mut self,
         source: &str,
@@ -173,14 +172,14 @@ impl Analyzer {
         extra: &mut V,
     ) -> Analysis {
         ctx.catalog.new_document();
-        let model = self.analyze_inner(source, CatalogLayer::Document, ctx, extra);
+        let model = self.run_pass(source, CatalogLayer::Document, ctx, extra);
         if self.mode == AnalysisMode::Execute {
             ctx.catalog.promote_document_to_connection();
         }
         model
     }
 
-    fn analyze_inner<V: SemanticVisitor>(
+    fn run_pass<V: SemanticVisitor>(
         &mut self,
         source: &str,
         ddl_target: CatalogLayer,
@@ -309,19 +308,19 @@ impl Analyzer {
             .accumulate_ddl(ddl_target, erased, root_id, &self.dialect);
 
         // Handle module imports: resolve and analyze imported source.
-        self.handle_import(erased, root_id, ctx, &mut diagnostics);
+        self.analyze_imported_module(erased, root_id, ctx, &mut diagnostics);
 
         // Wrap the user's visitor with the analyzer's own diagnostic
         // emission. DDL definition events (CREATE TABLE / VIEW names and
         // columns) are emitted by the walker itself.
         let roles = self.dialect.roles();
         let config = ctx.config;
-        let mut visitor = AnalysisVisitor::new(&config, &mut diagnostics, roles, extra);
+        let mut visitor = StatementVisitor::new(&config, &mut diagnostics, roles, extra);
         SemanticWalker::new(erased, ctx.catalog, roles).run(&mut visitor, root_id);
         let lineage = super::lineage::build_lineage(&visitor.into_lineage());
 
         let defined_relations =
-            SemanticPropertyExtractor::new(erased, roles).defined_relations(root_id);
+            StmtReader::new(erased, roles).defined_relations(root_id);
 
         StatementAnalysis::new(
             erased.text().as_str().to_owned(),
@@ -332,7 +331,7 @@ impl Analyzer {
     }
 
     /// If this statement is an import, resolve and analyze the imported module.
-    fn handle_import(
+    fn analyze_imported_module(
         &mut self,
         erased: &AnyParsedStatement<'_>,
         root_id: AnyNodeId,
@@ -381,7 +380,7 @@ impl Analyzer {
         // Mark before recursing so cycles terminate. Imported DDL lands in
         // the Database layer so it shares a lifetime with the import cache.
         ctx.catalog.mark_imported(module_name);
-        let _ = self.analyze_inner(&source, CatalogLayer::Database, ctx, &mut NoopVisitor);
+        let _ = self.run_pass(&source, CatalogLayer::Database, ctx, &mut NoopVisitor);
     }
 }
 

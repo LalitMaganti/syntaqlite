@@ -47,7 +47,7 @@ pub(crate) mod config;
 #[cfg(feature = "analysis")]
 pub(crate) mod context;
 #[cfg(feature = "analysis")]
-pub(crate) mod ddl;
+pub(crate) mod stmt_reader;
 pub(crate) mod diagnostics;
 #[cfg(feature = "analysis")]
 pub(crate) mod engine;

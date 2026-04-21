@@ -3,7 +3,7 @@
 
 //! Per-statement [`SemanticVisitor`] used by the analyzer.
 //!
-//! [`AnalysisVisitor`] is a single [`SemanticVisitor`] that does two
+//! [`StatementVisitor`] is a single [`SemanticVisitor`] that does two
 //! things on every event: emits semantic diagnostics
 //! (`unknown-table`, `unknown-column`, etc.) into a `Vec<Diagnostic>`,
 //! and forwards the same event to a user-supplied visitor. The
@@ -41,19 +41,19 @@ impl CheckConfig {
     }
 }
 
-// ── AnalysisVisitor ───────────────────────────────────────────────────────────
+// ── StatementVisitor ───────────────────────────────────────────────────────────
 
 /// The analyzer's per-statement visitor. Emits diagnostics into
 /// `diagnostics`, feeds CTE / Query / scoped-source events into an
 /// internal [`LineageCapture`], and forwards every event to `extra`.
-pub(super) struct AnalysisVisitor<'a, V: SemanticVisitor> {
+pub(super) struct StatementVisitor<'a, V: SemanticVisitor> {
     config: &'a AnalysisConfig,
     diagnostics: &'a mut Vec<Diagnostic>,
     lineage: LineageCapture,
     extra: &'a mut V,
 }
 
-impl<'a, V: SemanticVisitor> AnalysisVisitor<'a, V> {
+impl<'a, V: SemanticVisitor> StatementVisitor<'a, V> {
     pub(super) fn new(
         config: &'a AnalysisConfig,
         diagnostics: &'a mut Vec<Diagnostic>,
@@ -119,7 +119,7 @@ impl<'a, V: SemanticVisitor> AnalysisVisitor<'a, V> {
     }
 }
 
-impl<V: SemanticVisitor> SemanticVisitor for AnalysisVisitor<'_, V> {
+impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
     const WANTS_SOURCE_REF: bool = true;
     const WANTS_COLUMN_REF: bool = true;
     const WANTS_CALL: bool = true;
