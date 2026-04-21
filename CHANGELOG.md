@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.3
+
+**Formatter:**
+- Fixed leading comments followed by a blank line collapsing into the next element (e.g. a header comment block above `INCLUDE PERFETTO MODULE` was losing its trailing blank line) ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
+- Fixed a formatter crash on statements where comments appeared inside a verbatim-emitted span such as a `CREATE PERFETTO MACRO` body ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
+- Fallback (unresolved) macro calls now always format through the structured path, so multi-line calls get a single canonical layout and interior comments are preserved at every argument position ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
+
+**Parser:**
+- Fixed `x IN tbl` / `x IN tvf(args)` dropping the table or table-valued-function reference from the AST ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
+- `TableRef` now distinguishes a bare table (`tbl`) from a zero-arg table-valued function call (`tvf()`) via a new `has_parens` field, so both forms round-trip through the formatter ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
+
 ## 0.5.2
 
 **Formatter:**
