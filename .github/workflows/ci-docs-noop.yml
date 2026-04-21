@@ -25,12 +25,6 @@ jobs:
     steps:
       - run: echo "docs-only change; main CI skipped"
 
-  upstream-sqlite-validation:
-    name: Upstream SQLite validation
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "docs-only change; main CI skipped"
-
   zed-extension:
     name: Zed extension build
     runs-on: ubuntu-latest

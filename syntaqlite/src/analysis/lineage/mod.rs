@@ -79,8 +79,9 @@ pub(crate) struct LineageCapture {
     per_query: HashMap<AnyNodeId, QuerySummary>,
     /// Stack of in-progress Queries; innermost on top.
     stack: Vec<InProgressQuery>,
-    /// The outermost Query in the statement — set from the first
-    /// `enter_query`. `None` when the statement isn't a query.
+    /// The outermost statement-level Query. Set from the first
+    /// `enter_query` at stack depth 0 that isn't a registered CTE body.
+    /// `None` when the statement isn't a query.
     outer_query: Option<AnyNodeId>,
 }
 
@@ -127,7 +128,12 @@ impl SemanticVisitor for LineageCapture {
     const WANTS_QUERY: bool = true;
 
     fn enter_query(&mut self, _stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
-        if self.outer_query.is_none() {
+        // Track the first statement-level Query. A WITH clause walks its
+        // CTE bodies (each a Query at stack depth 0) before the main
+        // body Query, so skip those — `on_cte_binding` has already
+        // registered their ids in `cte_bodies`.
+        let is_cte_body = self.cte_bodies.values().any(|id| *id == node_id);
+        if self.outer_query.is_none() && self.stack.is_empty() && !is_cte_body {
             self.outer_query = Some(node_id);
         }
         self.stack.push(InProgressQuery {
