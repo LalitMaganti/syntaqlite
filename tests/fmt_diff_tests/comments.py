@@ -753,6 +753,32 @@ class ExprComment(TestSuite):
             """,
         )
 
+    def test_leading_comment_before_case_when(self):
+        return DiffTestBlueprint(
+            sql="""\
+                SELECT
+                  CASE value
+                    -- Display.STATE_OFF
+                    WHEN 1 THEN 'off'
+                    -- Display.STATE_ON
+                    WHEN 2 THEN 'on'
+                    ELSE 'unknown'
+                  END AS name
+                FROM t
+            """,
+            out="""\
+                SELECT
+                  CASE value
+                    -- Display.STATE_OFF
+                    WHEN 1 THEN 'off'
+                    -- Display.STATE_ON
+                    WHEN 2 THEN 'on'
+                    ELSE 'unknown'
+                  END AS name
+                FROM t;
+            """,
+        )
+
 
 # ── CREATE TABLE comments ─────────────────────────────────────────────────────
 

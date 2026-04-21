@@ -144,18 +144,16 @@ pub(crate) fn resolve_schemas(
 
 /// Simple glob matching using the `glob` crate's `Pattern`.
 fn glob_match(pattern: &str, path: &str) -> bool {
-    glob::Pattern::new(pattern)
-        .map(|p| {
-            p.matches_with(
-                path,
-                glob::MatchOptions {
-                    case_sensitive: true,
-                    require_literal_separator: true,
-                    require_literal_leading_dot: false,
-                },
-            )
-        })
-        .unwrap_or(false)
+    glob::Pattern::new(pattern).is_ok_and(|p| {
+        p.matches_with(
+            path,
+            glob::MatchOptions {
+                case_sensitive: true,
+                require_literal_separator: true,
+                require_literal_leading_dot: false,
+            },
+        )
+    })
 }
 
 #[cfg(test)]

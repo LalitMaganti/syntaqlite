@@ -282,13 +282,9 @@ impl<'a, 'b> Parser<'a, 'b> {
                                 if end == "else" { /* include else branch */ }
                             }
                         }
-                        "ifndef" => {
-                            if parser.ifdef_is_defined() {
-                                let end = parser.skip_ifdef_block();
-                                if end == "else" { /* include else branch */ }
-                            } else {
-                                parser.skip_to_eol();
-                            }
+                        "ifndef" if parser.ifdef_is_defined() => {
+                            let end = parser.skip_ifdef_block();
+                            if end == "else" { /* include else branch */ }
                         }
                         "if" => {
                             if parser.if_should_include() {

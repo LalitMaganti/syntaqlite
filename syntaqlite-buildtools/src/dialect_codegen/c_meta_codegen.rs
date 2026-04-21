@@ -136,13 +136,12 @@ impl AstModel<'_> {
 
         // ── Dispatch table ────────────────────────────────────────────────────
         let mut dispatch_table: Vec<u32> = vec![0xFFFF_0000; compiled.tag_count];
-        let mut ordinal_map: std::collections::HashMap<&str, usize> =
-            std::collections::HashMap::new();
-        let mut next_ordinal = 1usize;
-        for item in self.node_like_items() {
-            ordinal_map.insert(item.name(), next_ordinal);
-            next_ordinal += 1;
-        }
+        let ordinal_map: std::collections::HashMap<&str, usize> = self
+            .node_like_items()
+            .iter()
+            .enumerate()
+            .map(|(i, item)| (item.name(), i + 1))
+            .collect();
         for &(name, offset, length) in &node_ranges {
             if let Some(&ordinal) = ordinal_map.get(name) {
                 dispatch_table[ordinal] = (u32::from(offset) << 16) | u32::from(length);
