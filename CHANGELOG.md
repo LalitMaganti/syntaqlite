@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.5.0
+## 0.5.1
+
+> **Note:** 0.5.0 was tagged but never released. Its release workflow failed to upload Python wheels and CLI binaries (stale `validate` subcommand reference in the smoke test, and the `linux_*` wheel platform tag is not accepted by PyPI). 0.5.1 bundles every change originally intended for 0.5.0 plus the pipeline fixes.
 
 **Breaking:**
 - Renamed the `semantic` module to `analysis` across the Rust, C, Python, and CLI surfaces. Rust `syntaqlite::semantic` → `syntaqlite::analysis`, C symbols drop their `syntaqlite_semantic_` prefix for `syntaqlite_analysis_`, and Python `syntaqlite.semantic` → `syntaqlite.analysis` ([#225](https://github.com/LalitMaganti/syntaqlite/pull/225)).
@@ -10,7 +12,7 @@
 **CLI:**
 - Added `syntaqlite lineage [tables|columns] [FILES]`. Emits NDJSON (`schema_version: 0`, pre-stable) or human-readable text for column and table lineage, and exits 1 when any statement fails to parse or validate ([#163](https://github.com/LalitMaganti/syntaqlite/pull/163)).
 - Added `syntaqlite tokenize` for dumping the token stream, and regrouped dialect-management commands under a dedicated `syntaqlite dialect ...` subcommand group ([#178](https://github.com/LalitMaganti/syntaqlite/pull/178)).
-- Added `syntaqlite validate --output json` for structured diagnostics ([#177](https://github.com/LalitMaganti/syntaqlite/pull/177)).
+- Added `syntaqlite analyze --output json` for structured diagnostics ([#177](https://github.com/LalitMaganti/syntaqlite/pull/177)).
 
 **Analysis and validator:**
 - Added `StatementModel::unexpanded_views()`, exposing canonical names of views whose bodies were not available for expansion. Surfaces through C FFI as `SyntaqliteUnexpandedView` with aggregate and per-statement accessors, and in Python via `Lineage.unexpanded_views`.
@@ -30,6 +32,13 @@
 
 **MCP server:**
 - Tightened `keyword_case` argument validation and fixed the MCP server reporting the wrong dialect symbol ([#229](https://github.com/LalitMaganti/syntaqlite/pull/229)).
+
+**Release pipeline:**
+- Fixed the 0.5.0 release failure: smoke test now calls `syntaqlite analyze` instead of the renamed `validate`, and Linux wheels are built inside the `manylinux_2_28` container and validated with `auditwheel` so they publish to PyPI with a correct platform tag ([#233](https://github.com/LalitMaganti/syntaqlite/pull/233)).
+
+## 0.5.0
+
+*Never released. See the 0.5.1 notes above; everything intended for 0.5.0 ships there.*
 
 ## 0.4.2
 
