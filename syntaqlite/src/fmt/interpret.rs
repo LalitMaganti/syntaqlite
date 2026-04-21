@@ -20,6 +20,10 @@ pub(crate) struct FmtCtx<'a> {
     /// Full `MacroRewrite` records are not needed here since the
     /// formatter only uses positions to decide verbatim emission.
     pub macro_rewrites: Vec<(StmtOffset, StmtLen)>,
+    /// Pre-computed structured `DocId` per entry in `macro_rewrites`,
+    /// or `None` to fall through to verbatim emission.  Index-aligned
+    /// with `macro_rewrites`.
+    pub macro_docs: Vec<Option<DocId>>,
 }
 
 impl<'a> FmtCtx<'a> {
@@ -296,12 +300,10 @@ pub(super) fn interpret_core<'a>(
                         );
 
                         let mut return_action = ReturnAction::CatOntoRunning;
-                        let macro_rewrites = &ctx.macro_rewrites;
-                        if !macro_rewrites.is_empty()
+                        if !ctx.macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
+                            && let Some(doc) = super::formatter::try_macro(
                                 ctx,
-                                macro_rewrites,
                                 arena,
                                 consumed_regions,
                                 macro_tokenizer,
@@ -411,13 +413,11 @@ pub(super) fn interpret_core<'a>(
                     let children = ctx.reader.list_children(state.list_id).unwrap_or(&[]);
                     let child_id = children[state.index];
 
-                    let macro_rewrites = &ctx.macro_rewrites;
-                    let macro_doc = if !macro_rewrites.is_empty()
+                    let macro_doc = if !ctx.macro_rewrites.is_empty()
                         && ctx.reader.list_children(child_id).is_none()
                     {
-                        super::formatter::try_macro_verbatim(
+                        super::formatter::try_macro(
                             ctx,
-                            macro_rewrites,
                             arena,
                             consumed_regions,
                             macro_tokenizer,
@@ -613,12 +613,10 @@ pub(super) fn interpret_core<'a>(
                         );
 
                         let mut return_action = ReturnAction::CatOntoRunning;
-                        let macro_rewrites = &ctx.macro_rewrites;
-                        if !macro_rewrites.is_empty()
+                        if !ctx.macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
+                            && let Some(doc) = super::formatter::try_macro(
                                 ctx,
-                                macro_rewrites,
                                 arena,
                                 consumed_regions,
                                 macro_tokenizer,
@@ -668,12 +666,10 @@ pub(super) fn interpret_core<'a>(
                         );
 
                         let mut return_action = ReturnAction::CatOntoRunning;
-                        let macro_rewrites = &ctx.macro_rewrites;
-                        if !macro_rewrites.is_empty()
+                        if !ctx.macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
+                            && let Some(doc) = super::formatter::try_macro(
                                 ctx,
-                                macro_rewrites,
                                 arena,
                                 consumed_regions,
                                 macro_tokenizer,
@@ -720,12 +716,10 @@ pub(super) fn interpret_core<'a>(
                         );
 
                         let mut return_action = ReturnAction::CatOntoRunning;
-                        let macro_rewrites = &ctx.macro_rewrites;
-                        if !macro_rewrites.is_empty()
+                        if !ctx.macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
-                            && let Some(doc) = super::formatter::try_macro_verbatim(
+                            && let Some(doc) = super::formatter::try_macro(
                                 ctx,
-                                macro_rewrites,
                                 arena,
                                 consumed_regions,
                                 macro_tokenizer,

@@ -12,6 +12,7 @@ use super::FormatError;
 use super::comment::{CommentCtx, CommentEntry, TokenEntry};
 use super::doc::{DocArena, DocId, NIL_DOC, RenderBuffers};
 use super::interpret::{FmtCtx, InterpretScratch};
+use super::macro_structured;
 use crate::dialect::AnyDialect;
 
 /// Convert a parse error (statement-relative offsets) to a
@@ -61,6 +62,12 @@ fn parse_error_to_format_error(e: &AnyParseError<'_>) -> FormatError {
 pub struct Formatter {
     pub(super) dialect: AnyDialect,
     pub(super) parser: AnyParser,
+    /// Dedicated parser for structured macro-arg mini-parses.  Kept
+    /// separate from `parser` because each parser instance holds a
+    /// single `ParserInner`: while the outer render is walking a
+    /// statement, `parser`'s inner is still owned by the outer
+    /// session and cannot serve a second `parse()` call.
+    pub(super) mini_parser: AnyParser,
     pub(super) config: FormatConfig,
     // Statement-scoped state cached on the formatter to avoid per-statement allocations.
     pub(super) arena: DocArena<'static>,
@@ -118,16 +125,28 @@ impl Formatter {
         let syntax = (*dialect).clone();
         let has_macros = syntax.has_macro_style();
         let parser = AnyParser::with_config(
-            syntax,
+            syntax.clone(),
             &ParserConfig::default()
                 .with_collect_tokens(true)
                 .with_macro_fallback(has_macros)
                 .with_collect_node_extents(has_macros),
         );
+        // The mini-parser always needs node extents (used by
+        // `find_descendant_by_extent` to locate each arg's expression
+        // subtree) and macro fallback (so nested `foo!(...)` inside
+        // an arg parses as a TK_ID rather than a syntax error).
+        let mini_parser = AnyParser::with_config(
+            syntax,
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true)
+                .with_macro_fallback(has_macros),
+        );
         let macro_tokenizer = AnyTokenizer::new((*dialect).clone());
         Formatter {
             dialect,
             parser,
+            mini_parser,
             config: format_config.clone(),
             arena: DocArena::with_capacity(256),
             interpret_scratch: InterpretScratch::new(),
@@ -158,14 +177,18 @@ impl Formatter {
                 offset: range.start,
                 length: range.len(),
             }));
-        // Only top-level rewrites are meaningful here: their `LayerOffset`
-        // coincides with the statement-relative offset the formatter
-        // compares against.  Nested rewrites measure into their parent's
-        // expansion and belong to a different coordinate system.
+        // Only top-level fallback rewrites are meaningful here:
+        // - `parent().is_none()` keeps offsets in the statement
+        //   coordinate system the formatter compares against.
+        // - `is_fallback()` keeps only calls kept verbatim as a
+        //   `TK_ID` — those are the ones the formatter sees as a
+        //   single token range and may restructure or emit verbatim.
+        //   Expanded macros don't appear at the call site's byte
+        //   range; their tokens come from the expansion buffer.
         self.macro_rewrites.extend(
             erased
                 .macro_rewrites()
-                .filter(|r| r.parent().is_none())
+                .filter(|r| r.parent().is_none() && r.is_fallback())
                 .map(|r| {
                     (
                         StmtOffset::from_raw(r.call_offset().as_u32()),
@@ -253,12 +276,28 @@ impl Formatter {
                 drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
             }
 
+            // Stage 1.5: Pre-compute a structured `DocId` per top-level
+            // fallback macro call whose args can be parsed as
+            // expressions.  Calls with interior comments, internal
+            // newlines, or unparseable args get `None` and fall
+            // through to the existing verbatim path in `try_macro`.
+            let macro_docs = macro_structured::compute_macro_docs(
+                &self.mini_parser,
+                &self.dialect,
+                &erased,
+                stmt_source,
+                &self.macro_tokenizer,
+                &self.comment_entries,
+                &mut arena,
+            );
+
             // Stage 2: Interpret bytecode for this AST into Doc fragments.
             let ctx = FmtCtx {
                 dialect: self.dialect.clone(),
                 reader: erased,
                 comment_ctx,
                 macro_rewrites: std::mem::take(&mut self.macro_rewrites),
+                macro_docs,
             };
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
             self.parts.push(interpreted);
@@ -488,11 +527,22 @@ impl Formatter {
                 drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
             }
 
+            let macro_docs = macro_structured::compute_macro_docs(
+                &self.mini_parser,
+                &self.dialect,
+                &erased,
+                stmt_source,
+                &self.macro_tokenizer,
+                &self.comment_entries,
+                &mut arena,
+            );
+
             let ctx = FmtCtx {
                 dialect: self.dialect.clone(),
                 reader: erased,
                 comment_ctx,
                 macro_rewrites: std::mem::take(&mut self.macro_rewrites),
+                macro_docs,
             };
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
             self.parts.push(interpreted);
@@ -573,32 +623,33 @@ fn drain_gap_comments<'a>(
     }
 }
 
-// ── Single-node formatting ──────────────────────────────────────────────
+// ── Macro-call emission ─────────────────────────────────────────────────
 
-/// Check if the next token falls within a macro region.
+/// Emit a macro call at `child_id`, preferring pre-computed structured
+/// formatting when available and falling back to verbatim reindent.
 ///
-/// Requires `comment_ctx` to be populated on `ctx`. `format_parsed` satisfies
-/// this precondition by building a `CommentCtx` from the statement's collected
-/// tokens (which requires `collect_tokens: true` at parse time).
+/// Requires `ctx.comment_ctx` populated (`format_parsed` satisfies
+/// this).  Emits only at a node whose bytecode-emitted content is
+/// exactly the macro call: any additional content the node would emit
+/// (keywords, aliases, siblings) would be silently dropped by
+/// `ReturnAction::Discard` in the caller.
 ///
-/// Emits verbatim only at a node whose bytecode-emitted content is exactly
-/// the macro: any additional content the node would emit (keywords,
-/// aliases, siblings) would be silently dropped by `ReturnAction::Discard`
-/// in the caller.
+/// The position check boils down to:
+/// - `tok_offset == r_start`: the next unconsumed token *is* the
+///   macro's first token.  Guards against *leading* content the node's
+///   bytecode would emit (such a token would sit before `r_start`).
+/// - `node_end == r_end`: the node's extent ends exactly where the
+///   macro ends.  Guards against *trailing* content (e.g. a
+///   `ResultColumn` alias).
+/// - Node extent start is deliberately *not* checked: extents include
+///   preceding keyword glue consumed by the parent (`FROM` before a
+///   `TableRef`, `AS` before an alias `IdentName`).
 ///
-/// The decision boils down to three position checks:
-/// - `tok_offset == r_start`: the next unconsumed token *is* the macro's
-///   first token.  Guards against *leading* content the node's bytecode
-///   would emit — such a token would sit before `r_start`.
-/// - `node_end == r_end`: the node's extent ends exactly where the macro
-///   ends.  Guards against *trailing* content (e.g. a `ResultColumn`
-///   alias).
-/// - Node extent start is intentionally *not* checked: extents include
-///   preceding keyword glue already consumed by the parent (e.g. `FROM`
-///   before a `TableRef`, `AS` before an alias `IdentName`).
-pub(crate) fn try_macro_verbatim<'a>(
+/// Deliberately does NOT advance the cctx cursor — the child frame's
+/// `Span` op advances it when the fallback `TK_ID` emits, so trailing
+/// comments drain against the outer frame rather than the inner group.
+pub(crate) fn try_macro<'a>(
     ctx: &FmtCtx<'a>,
-    regions: &[(StmtOffset, StmtLen)],
     arena: &mut DocArena<'a>,
     consumed: &mut [bool],
     tokenizer: &AnyTokenizer,
@@ -615,20 +666,23 @@ pub(crate) fn try_macro_verbatim<'a>(
     );
     let node_end = node_off + node_len;
 
-    for (i, &(r_start, r_len)) in regions.iter().enumerate() {
+    for (i, &(r_start, r_len)) in ctx.macro_rewrites.iter().enumerate() {
         let r_end = r_start + r_len;
-
-        if tok_offset == r_start && node_end == r_end {
-            if consumed[i] {
-                return Some(NIL_DOC);
-            }
-            consumed[i] = true;
-            let macro_text = &source[StmtRange {
-                start: r_start,
-                end: r_end,
-            }];
-            return Some(reindent_macro(macro_text, tokenizer, arena));
+        if tok_offset != r_start || node_end != r_end {
+            continue;
         }
+        if consumed[i] {
+            return Some(NIL_DOC);
+        }
+        consumed[i] = true;
+        if let Some(Some(doc)) = ctx.macro_docs.get(i) {
+            return Some(*doc);
+        }
+        let macro_text = &source[StmtRange {
+            start: r_start,
+            end: r_end,
+        }];
+        return Some(reindent_macro(macro_text, tokenizer, arena));
     }
     None
 }
