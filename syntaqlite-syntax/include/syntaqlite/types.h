@@ -91,18 +91,28 @@ typedef struct SyntaqliteTextSpan {
 // addition to SYNTAQLITE_SPAN_FLAG_QUOTED.  Only one of these is set at a
 // time.  Consumers (e.g. SQLite's double-quoted-string bug-compat in the
 // analyzer) need to distinguish `"..."` from `` `...` `` and `[...]`,
-// which the analyzer can't recover from the dequoted span alone.
+// which they can't recover from the dequoted span alone.
 #define SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE ((uint32_t)2u)
 #define SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK ((uint32_t)4u)
 #define SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET ((uint32_t)8u)
 
-static inline int synq_span_is_quoted(SyntaqliteTextSpan sp) {
+// True if the identifier was quoted in source.  See
+// syntaqlite_span_quote_char to recover which quote character.
+static inline int syntaqlite_span_is_quoted(SyntaqliteTextSpan sp) {
   return (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTED) != 0;
 }
 
-static inline SyntaqliteTextSpan synq_span_set_quoted(SyntaqliteTextSpan sp) {
-  sp.flags |= SYNTAQLITE_SPAN_FLAG_QUOTED;
-  return sp;
+// The quote character that bracketed this identifier in source —
+// '"', '`', or '['.  Returns 0 if the span was unquoted.  The closing
+// bracket for '[' is always ']'; only the opener is reported.
+static inline char syntaqlite_span_quote_char(SyntaqliteTextSpan sp) {
+  if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE)
+    return '"';
+  if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK)
+    return '`';
+  if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET)
+    return '[';
+  return 0;
 }
 
 #ifdef __cplusplus
