@@ -444,8 +444,12 @@ impl<'a, 'stmt> SemanticPropertyExtractor<'a, 'stmt> {
         {
             return Some(name.to_ascii_lowercase());
         }
+        // Fall back to the parser's recorded extent for this node — its
+        // source-text slice covers the full expression including any
+        // operators/punctuation. Requires `with_collect_node_extents` on
+        // the parser config, which the analyzer enables.
         self.stmt
-            .expr_source_text(expr_id)
-            .map(str::to_ascii_lowercase)
+            .node_text(expr_id)
+            .map(|(text, _)| text.to_ascii_lowercase())
     }
 }

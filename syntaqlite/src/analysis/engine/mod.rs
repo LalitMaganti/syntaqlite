@@ -211,6 +211,7 @@ impl Analyzer {
             syntax,
             &ParserConfig::default()
                 .with_collect_tokens(true)
+                .with_collect_node_extents(true)
                 .with_macro_fallback(self.macro_fallback),
         );
 

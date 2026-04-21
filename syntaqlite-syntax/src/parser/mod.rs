@@ -1119,59 +1119,6 @@ impl<'a> AnyParsedStatement<'a> {
         }
     }
 
-    /// Statement-source slice spanning every byte covered by `id`'s
-    /// subtree. Walks all spans reachable from `id`, finds the min/max
-    /// offset pair, and returns the source between them. `None` if no
-    /// spans are reachable.
-    pub fn expr_source_text(&self, id: AnyNodeId) -> Option<&'a str> {
-        let mut min = StmtOffset::from_raw(u32::MAX);
-        let mut max = StmtOffset::default();
-        self.collect_expr_spans(id, &mut min, &mut max);
-        if min < max {
-            Some(
-                &self.text()[StmtRange {
-                    start: min,
-                    end: max,
-                }],
-            )
-        } else {
-            None
-        }
-    }
-
-    fn collect_expr_spans(&self, id: AnyNodeId, min: &mut StmtOffset, max: &mut StmtOffset) {
-        if id.is_null() {
-            return;
-        }
-        if let Some((_, fields)) = self.extract_fields(id) {
-            for i in 0..fields.len() {
-                match fields[i] {
-                    crate::ast::FieldValue::Span(sp) if !sp.is_empty() => {
-                        let (text, off) = self.span_text(sp);
-                        let start = off;
-                        let end = start
-                            + StmtLen::from_raw(u32::try_from(text.len()).unwrap_or(u32::MAX));
-                        if start < *min {
-                            *min = start;
-                        }
-                        if end > *max {
-                            *max = end;
-                        }
-                    }
-                    crate::ast::FieldValue::NodeId(child) if !child.is_null() => {
-                        self.collect_expr_spans(child, min, max);
-                    }
-                    _ => {}
-                }
-            }
-        }
-        if let Some(children) = self.list_children(id) {
-            for &child in children {
-                self.collect_expr_spans(child, min, max);
-            }
-        }
-    }
-
     /// Return child node IDs if `id` is a list node.
     pub fn list_children(&self, id: AnyNodeId) -> Option<&'a [AnyNodeId]> {
         let (_, tag) = self.node_ptr(id)?;
