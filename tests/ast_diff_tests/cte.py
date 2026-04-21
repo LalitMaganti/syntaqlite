@@ -53,6 +53,7 @@ class WithClause(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -124,6 +125,7 @@ class WithClause(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -198,6 +200,7 @@ class WithClause(TestSuite):
                               TableRef
                                 table_name: "cnt"
                                 schema: (none)
+                                has_parens: FALSE
                                 alias: (none)
                                 args: (none)
                             where_clause: (none)
@@ -223,6 +226,7 @@ class WithClause(TestSuite):
                     TableRef
                       table_name: "cnt"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -301,6 +305,7 @@ class WithClause(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -356,6 +361,7 @@ class WithClause(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -411,6 +417,7 @@ class WithClause(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -458,6 +465,7 @@ class WithClause(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -518,6 +526,7 @@ class WithClause(TestSuite):
                         TableRef
                           table_name: "t"
                           schema: (none)
+                          has_parens: FALSE
                           alias: (none)
                           args: (none)
                       where_clause: (none)
@@ -611,6 +620,7 @@ class WithClause(TestSuite):
                               TableRef
                                 table_name: "cnt"
                                 schema: (none)
+                                has_parens: FALSE
                                 alias: (none)
                                 args: (none)
                             where_clause:
@@ -647,6 +657,7 @@ class WithClause(TestSuite):
                     TableRef
                       table_name: "cnt"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)

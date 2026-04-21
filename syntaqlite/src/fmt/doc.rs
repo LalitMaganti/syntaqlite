@@ -28,14 +28,19 @@ enum Doc<'a> {
     SoftLine,
     /// Always newline + indent.
     HardLine,
-    /// Like `HardLine`, but rendered as a no-op if the next emitted doc is
-    /// also a break (`Line` in break mode, `SoftLine` in break mode,
-    /// another `HardLine`, or another `CommentBreak`). Used by the
-    /// comment drain as the trailing break of a leading-comment chunk:
-    /// the next break op in the fmt stream would otherwise stack on top
-    /// and render a blank line. Intentional double-hardlines (e.g. blank
-    /// lines preserved between comment blocks) use `HardLine` directly
-    /// and are not affected.
+    /// Like `HardLine`, but rendered as a no-op if the adjacent emitted
+    /// doc is also a break (`Line`/`SoftLine` in break mode, another
+    /// `HardLine`, or another `CommentBreak`) — on EITHER side. Used as
+    /// both the prefix and the trailing break of a leading-comment
+    /// chunk so that a break already emitted by a surrounding fmt
+    /// opcode (e.g. `SELECT`'s `line child(columns)`) doesn't stack
+    /// with the drain's own break into a blank line, and symmetrically
+    /// so the next break op in the stream doesn't stack onto ours.
+    /// Intentional double-hardlines (e.g. blank lines preserved
+    /// between comment blocks) use `HardLine` directly; when the
+    /// `HardLine` elides because the prior emission was a
+    /// `CommentBreak`, both flags are cleared so a subsequent
+    /// `CommentBreak` will emit the blank line as intended.
     CommentBreak,
     /// Concatenation of two documents.
     Cat { left: DocId, right: DocId },
@@ -240,6 +245,7 @@ impl<'a> DocArena<'a> {
     ///
     /// This avoids re-allocating the render stack, fits stack, and output
     /// string on every format call.
+    #[expect(clippy::too_many_lines)]
     pub(crate) fn render_into(&self, root: DocId, config: &FormatConfig, bufs: &mut RenderBuffers) {
         let RenderBuffers {
             out,
@@ -259,11 +265,24 @@ impl<'a> DocArena<'a> {
         let line_width_i32 = usize_to_i32(config.line_width());
         stack.push((0, Mode::Break, root));
 
-        // Set by a `CommentBreak` emission. Consumed by the immediately
-        // following break (any break variant) to avoid stacking a second
-        // newline on top of a leading-comment chunk. Cleared by any
-        // non-break, non-structural emission.
+        // `just_emitted_comment_break`: set by a `CommentBreak` emission.
+        // Consumed by the immediately following break (any break variant)
+        // so the drain's trailing `CommentBreak` doesn't stack with the
+        // next fmt-stream break.
+        //
+        // `last_emitted_break`: set by ANY break emission (HardLine,
+        // CommentBreak, Line/SoftLine in break mode). Consumed by a
+        // following `CommentBreak` so a drain's leading `CommentBreak`
+        // doesn't stack on top of a break already emitted by a
+        // surrounding fmt op.
+        //
+        // When a `HardLine` elides because the prior emission was a
+        // `CommentBreak`, BOTH flags are cleared — otherwise the
+        // `HardLine+CommentBreak` blank-line-preservation pattern
+        // between comment blocks would see `last_emitted_break` still
+        // set and collapse to a single newline.
         let mut just_emitted_comment_break = false;
+        let mut last_emitted_break = false;
 
         while let Some((indent, mode, doc_id)) = stack.pop() {
             if doc_id == NIL_DOC {
@@ -273,12 +292,14 @@ impl<'a> DocArena<'a> {
             match self.get(doc_id) {
                 Doc::Text(s) => {
                     just_emitted_comment_break = false;
+                    last_emitted_break = false;
                     out.push_str(s);
                     pos += s.len();
                 }
 
                 Doc::Keyword(s) => {
                     just_emitted_comment_break = false;
+                    last_emitted_break = false;
                     push_keyword(s, keyword_case, out);
                     pos += s.len();
                 }
@@ -286,13 +307,16 @@ impl<'a> DocArena<'a> {
                 Doc::Line => {
                     if matches!(mode, Mode::Flat) {
                         just_emitted_comment_break = false;
+                        last_emitted_break = false;
                         out.push(' ');
                         pos += 1;
                     } else if !just_emitted_comment_break {
                         flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
                         emit_newline(indent, out, &mut pos);
+                        last_emitted_break = true;
                     } else {
                         just_emitted_comment_break = false;
+                        last_emitted_break = false;
                     }
                 }
 
@@ -300,9 +324,11 @@ impl<'a> DocArena<'a> {
                     if matches!(mode, Mode::Break) {
                         if just_emitted_comment_break {
                             just_emitted_comment_break = false;
+                            last_emitted_break = false;
                         } else {
                             flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
                             emit_newline(indent, out, &mut pos);
+                            last_emitted_break = true;
                         }
                     }
                 }
@@ -310,17 +336,22 @@ impl<'a> DocArena<'a> {
                 Doc::HardLine => {
                     if just_emitted_comment_break {
                         just_emitted_comment_break = false;
+                        last_emitted_break = false;
                     } else {
                         flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
                         emit_newline(indent, out, &mut pos);
+                        last_emitted_break = true;
                     }
                 }
 
                 Doc::CommentBreak => {
-                    if !just_emitted_comment_break {
+                    if just_emitted_comment_break || last_emitted_break {
+                        // Elide to avoid stacking with an adjacent break.
+                    } else {
                         flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
                         emit_newline(indent, out, &mut pos);
                         just_emitted_comment_break = true;
+                        last_emitted_break = true;
                     }
                 }
 

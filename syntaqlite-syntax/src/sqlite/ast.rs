@@ -984,6 +984,7 @@ pub enum InExprSource<'a> {
     CompoundSelect(CompoundSelect<'a>),
     WithClause(WithClause<'a>),
     ValuesClause(ValuesClause<'a>),
+    TableRef(TableRef<'a>),
 }
 
 impl<'a> InExprSource<'a> {
@@ -996,6 +997,7 @@ impl<'a> InExprSource<'a> {
             InExprSource::CompoundSelect(n) => InExprSourceId(n.node_id().into()),
             InExprSource::WithClause(n) => InExprSourceId(n.node_id().into()),
             InExprSource::ValuesClause(n) => InExprSourceId(n.node_id().into()),
+            InExprSource::TableRef(n) => InExprSourceId(n.node_id().into()),
         }
     }
 }
@@ -1010,6 +1012,7 @@ impl<'a> GrammarNodeType<'a> for InExprSource<'a> {
             Node::CompoundSelect(n) => Some(InExprSource::CompoundSelect(n)),
             Node::WithClause(n) => Some(InExprSource::WithClause(n)),
             Node::ValuesClause(n) => Some(InExprSource::ValuesClause(n)),
+            Node::TableRef(n) => Some(InExprSource::TableRef(n)),
             _ => None,
         }
     }
@@ -1927,6 +1930,9 @@ impl<'a> InExpr<'a> {
     }
     pub fn negated(&self) -> bool {
         self.raw.negated == super::ffi::Bool::True
+    }
+    pub fn bare_source(&self) -> bool {
+        self.raw.bare_source == super::ffi::Bool::True
     }
     pub fn operand(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.operand)
@@ -4752,6 +4758,9 @@ impl<'a> TableRef<'a> {
     }
     pub fn schema(&self) -> &'a str {
         self.stmt_result.span_expanded_text(self.raw.schema)
+    }
+    pub fn has_parens(&self) -> bool {
+        self.raw.has_parens == super::ffi::Bool::True
     }
     pub fn alias(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.alias)

@@ -32,11 +32,12 @@ node ExistsExpr {
 }
 
 abstract InExprSource {
-  ExprList SubqueryExpr SelectStmt CompoundSelect WithClause ValuesClause
+  ExprList SubqueryExpr SelectStmt CompoundSelect WithClause ValuesClause TableRef
 }
 
 node InExpr {
   negated: inline Bool
+  bare_source: inline Bool
   operand: index Expr
   source: index InExprSource
 
@@ -46,6 +47,10 @@ node InExpr {
   fmt {
     child_prec_fixed(operand)
     if_flag(negated) { " NOT IN " } else { " IN " }
-    group { "(" nest { softline child(source) } softline ")" }
+    if_flag(bare_source) {
+      child(source)
+    } else {
+      group { "(" nest { softline child(source) } softline ")" }
+    }
   }
 }

@@ -45,6 +45,7 @@ class WindowFunctionBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -88,6 +89,7 @@ class WindowFunctionBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -131,6 +133,7 @@ class WindowFunctionBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -193,6 +196,7 @@ class WindowFunctionBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -250,6 +254,7 @@ class WindowFunctionBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -311,6 +316,7 @@ class WindowFunctionBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -363,6 +369,7 @@ class WindowFunctionBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -416,6 +423,7 @@ class FilterClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -479,6 +487,7 @@ class FilterClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -552,6 +561,7 @@ class FrameSpecification(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -615,6 +625,7 @@ class FrameSpecification(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -678,6 +689,7 @@ class FrameSpecification(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -732,6 +744,7 @@ class FrameSpecification(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -786,6 +799,7 @@ class FrameSpecification(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -840,6 +854,7 @@ class FrameSpecification(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -906,6 +921,7 @@ class FrameSpecification(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -937,6 +953,7 @@ class WindowClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -1018,6 +1035,7 @@ class WindowClause(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -1134,6 +1152,7 @@ class AggregateWithWindowFunction(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)

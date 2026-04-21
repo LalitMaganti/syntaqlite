@@ -115,6 +115,16 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
 
     int is_skip = synq_token_is_skip(ttype);
 
+    // The fallback-macro path stores the whole call as a single
+    // TK_ID, so the main token loop in parser.c never sees tokens
+    // inside the call and never calls `synq_parser_record_comment`
+    // for them. Record them here instead so consumers that ask
+    // "are there any comments in byte range [call_off, call_end)?"
+    // (notably the formatter's structured-args bail) see the truth.
+    if (ttype == SYNTAQLITE_TK_COMMENT && p->collect_tokens) {
+      synq_parser_record_comment(p, pos, (uint32_t)tlen);
+    }
+
     if (ttype == SYNTAQLITE_TK_LP) {
       depth++;
     } else if (ttype == SYNTAQLITE_TK_RP) {

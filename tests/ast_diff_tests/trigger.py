@@ -556,6 +556,7 @@ class CreateTriggerBody(TestSuite):
                       TableRef
                         table_name: "t2"
                         schema: (none)
+                        has_parens: FALSE
                         alias: (none)
                         args: (none)
                     index_hint: DEFAULT
@@ -608,6 +609,7 @@ class CreateTriggerBody(TestSuite):
                       TableRef
                         table_name: "t2"
                         schema: (none)
+                        has_parens: FALSE
                         alias: (none)
                         args: (none)
                     columns: (none)
@@ -654,6 +656,7 @@ class CreateTriggerBody(TestSuite):
                       TableRef
                         table_name: "t2"
                         schema: (none)
+                        has_parens: FALSE
                         alias: (none)
                         args: (none)
                     index_hint: DEFAULT

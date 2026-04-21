@@ -287,6 +287,9 @@ static const SyntaqliteFieldMeta field_meta_exists_expr[] = {
 static const SyntaqliteFieldMeta field_meta_in_expr[] = {
     {offsetof(SyntaqliteInExpr, negated), SYNTAQLITE_FIELD_BOOL, "negated",
      display_bool, sizeof(display_bool) / sizeof(display_bool[0])},
+    {offsetof(SyntaqliteInExpr, bare_source), SYNTAQLITE_FIELD_BOOL,
+     "bare_source", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteInExpr, operand), SYNTAQLITE_FIELD_NODE_ID, "operand",
      NULL, 0},
     {offsetof(SyntaqliteInExpr, source), SYNTAQLITE_FIELD_NODE_ID, "source",
@@ -737,6 +740,9 @@ static const SyntaqliteFieldMeta field_meta_table_ref[] = {
      "table_name", NULL, 0},
     {offsetof(SyntaqliteTableRef, schema), SYNTAQLITE_FIELD_SPAN, "schema",
      NULL, 0},
+    {offsetof(SyntaqliteTableRef, has_parens), SYNTAQLITE_FIELD_BOOL,
+     "has_parens", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteTableRef, alias), SYNTAQLITE_FIELD_NODE_ID, "alias",
      NULL, 0},
     {offsetof(SyntaqliteTableRef, args), SYNTAQLITE_FIELD_NODE_ID, "args", NULL,
@@ -1269,7 +1275,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* CompoundSelect */
     1,  /* SubqueryExpr */
     1,  /* ExistsExpr */
-    3,  /* InExpr */
+    4,  /* InExpr */
     3,  /* IsExpr */
     4,  /* BetweenExpr */
     5,  /* LikeExpr */
@@ -1315,7 +1321,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* OrderingTerm */
     0,  /* OrderByList */
     2,  /* LimitClause */
-    4,  /* TableRef */
+    5,  /* TableRef */
     2,  /* SubqueryTableSource */
     5,  /* JoinClause */
     2,  /* JoinPrefix */

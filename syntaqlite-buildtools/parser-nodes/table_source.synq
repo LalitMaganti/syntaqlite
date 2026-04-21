@@ -6,6 +6,7 @@ enum JoinType {
 node TableRef {
   table_name: inline SyntaqliteTextSpan
   schema: inline SyntaqliteTextSpan
+  has_parens: inline Bool
   alias: index Name
   args: index ExprList
 
@@ -14,7 +15,11 @@ node TableRef {
   fmt {
     if_span(schema) { span(schema) "." }
     span(table_name)
-    if_set(args) { group { "(" nest { softline child(args) } softline ")" } }
+    if_set(args) {
+      group { "(" nest { softline child(args) } softline ")" }
+    } else {
+      if_flag(has_parens) { "()" }
+    }
     if_set(alias) { " AS " child(alias) }
   }
 }

@@ -301,6 +301,7 @@ class ExplainStmts(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   index_hint: DEFAULT
@@ -331,6 +332,7 @@ class ExplainStmts(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -567,6 +569,7 @@ class CreateViewStmts(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -601,6 +604,7 @@ class CreateViewStmts(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -635,6 +639,7 @@ class CreateViewStmts(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
@@ -690,6 +695,7 @@ class CreateViewStmts(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)

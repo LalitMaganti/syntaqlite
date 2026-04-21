@@ -445,6 +445,7 @@ typedef struct SyntaqliteExistsExpr {
 typedef struct SyntaqliteInExpr {
   SyntaqliteNodeTag tag;
   SyntaqliteBool negated;
+  SyntaqliteBool bare_source;
   uint32_t operand;
   uint32_t source;
 } SyntaqliteInExpr;
@@ -808,6 +809,7 @@ typedef struct SyntaqliteTableRef {
   SyntaqliteNodeTag tag;
   SyntaqliteTextSpan table_name;
   SyntaqliteTextSpan schema;
+  SyntaqliteBool has_parens;
   uint32_t alias;
   uint32_t args;
 } SyntaqliteTableRef;
@@ -1130,6 +1132,7 @@ typedef union SyntaqliteInExprSource {
   SyntaqliteCompoundSelect compound_select;
   SyntaqliteWithClause with_clause;
   SyntaqliteValuesClause values_clause;
+  SyntaqliteTableRef table_ref;
 } SyntaqliteInExprSource;
 
 static inline int syntaqlite_is_in_expr_source(SyntaqliteNodeTag tag) {
@@ -1145,6 +1148,8 @@ static inline int syntaqlite_is_in_expr_source(SyntaqliteNodeTag tag) {
     case SYNTAQLITE_NODE_WITH_CLAUSE:
       return 1;
     case SYNTAQLITE_NODE_VALUES_CLAUSE:
+      return 1;
+    case SYNTAQLITE_NODE_TABLE_REF:
       return 1;
     default:
       return 0;
@@ -1183,6 +1188,11 @@ static inline const SyntaqliteValuesClause*
 syntaqlite_in_expr_source_as_values_clause(const SyntaqliteInExprSource* node) {
   return node->tag == SYNTAQLITE_NODE_VALUES_CLAUSE ? &node->values_clause
                                                     : NULL;
+}
+
+static inline const SyntaqliteTableRef* syntaqlite_in_expr_source_as_table_ref(
+    const SyntaqliteInExprSource* node) {
+  return node->tag == SYNTAQLITE_NODE_TABLE_REF ? &node->table_ref : NULL;
 }
 
 // ============ Abstract Type: Name ============

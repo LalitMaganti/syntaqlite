@@ -582,6 +582,124 @@ class InExprPrecedence(TestSuite):
             out="SELECT a NOT IN (1, 2, 3);",
         )
 
+    def test_in_bare_table_name(self):
+        # `x IN table` tests membership in the (single-column) table.
+        # Wrapping as `x IN (table)` would change the meaning to a
+        # one-element value list with `table` resolved as a column or
+        # variable — so the formatter must keep the bare form on both
+        # the input and the output.
+        return DiffTestBlueprint(
+            sql="SELECT x IN my_table FROM t",
+            out="SELECT x IN my_table FROM t;",
+        )
+
+    def test_not_in_bare_table_name(self):
+        return DiffTestBlueprint(
+            sql="SELECT x NOT IN my_table FROM t",
+            out="SELECT x NOT IN my_table FROM t;",
+        )
+
+    def test_in_schema_qualified_table(self):
+        return DiffTestBlueprint(
+            sql="SELECT x IN my_schema.my_table FROM t",
+            out="SELECT x IN my_schema.my_table FROM t;",
+        )
+
+    def test_not_in_schema_qualified_table(self):
+        return DiffTestBlueprint(
+            sql="SELECT x NOT IN my_schema.my_table FROM t",
+            out="SELECT x NOT IN my_schema.my_table FROM t;",
+        )
+
+    def test_in_table_valued_function_single_arg(self):
+        # `x IN tvf(a)` — table-valued function, bare form too.
+        return DiffTestBlueprint(
+            sql="SELECT x IN my_tvf(1) FROM t",
+            out="SELECT x IN my_tvf(1) FROM t;",
+        )
+
+    def test_in_table_valued_function_multi_arg(self):
+        return DiffTestBlueprint(
+            sql="SELECT x IN my_tvf(1, 2, 3) FROM t",
+            out="SELECT x IN my_tvf(1, 2, 3) FROM t;",
+        )
+
+    def test_in_table_valued_function_no_args_preserves_parens(self):
+        # `tvf()` (empty parens) and `tvf` (bare name) are distinct
+        # productions in the SQLite grammar: the first is a zero-arg
+        # table-valued function call, the second is a bare table
+        # reference. Both forms resolve to the same thing for a TVF
+        # that takes zero args, but the formatter must round-trip the
+        # authored syntax.
+        return DiffTestBlueprint(
+            sql="SELECT x IN my_tvf() FROM t",
+            out="SELECT x IN my_tvf() FROM t;",
+        )
+
+    def test_from_table_valued_function_no_args_preserves_parens(self):
+        # Same distinction in `FROM` position.
+        return DiffTestBlueprint(
+            sql="SELECT * FROM my_tvf()",
+            out="SELECT * FROM my_tvf();",
+        )
+
+    def test_from_bare_table_no_parens(self):
+        # And the bare form keeps its bare form.
+        return DiffTestBlueprint(
+            sql="SELECT * FROM my_tbl",
+            out="SELECT * FROM my_tbl;",
+        )
+
+    def test_in_schema_qualified_tvf(self):
+        return DiffTestBlueprint(
+            sql="SELECT x IN my_schema.my_tvf(1) FROM t",
+            out="SELECT x IN my_schema.my_tvf(1) FROM t;",
+        )
+
+    def test_not_in_tvf(self):
+        return DiffTestBlueprint(
+            sql="SELECT x NOT IN my_tvf(1) FROM t",
+            out="SELECT x NOT IN my_tvf(1) FROM t;",
+        )
+
+    def test_in_bare_table_chained_with_and(self):
+        # Two IN-bare-table expressions joined by AND — each must keep
+        # its bare form independently.
+        return DiffTestBlueprint(
+            sql="SELECT x IN tbl_a AND y IN tbl_b FROM t",
+            out="SELECT x IN tbl_a AND y IN tbl_b FROM t;",
+        )
+
+    def test_in_bare_table_in_where(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM t WHERE id IN valid_ids",
+            out="SELECT * FROM t WHERE id IN valid_ids;",
+        )
+
+    def test_in_bare_table_inside_case(self):
+        return DiffTestBlueprint(
+            sql="SELECT CASE WHEN x IN tbl THEN 1 ELSE 0 END FROM t",
+            out="SELECT CASE WHEN x IN tbl THEN 1 ELSE 0 END FROM t;",
+        )
+
+    def test_in_bare_table_vs_list_distinct(self):
+        # The value-list form `IN (a)` MUST stay parenthesised — it's
+        # grammatically and semantically distinct from `IN a`. Keeping
+        # the existing single-element-list test as a sibling assertion
+        # that the formatter hasn't merged the two forms.
+        return DiffTestBlueprint(
+            sql="SELECT x IN (1) FROM t",
+            out="SELECT x IN (1) FROM t;",
+        )
+
+    def test_in_bare_table_iif_perfetto_pattern(self):
+        # The exact shape that triggered the original stdlib bug:
+        # `iif(constant IN _table, ...)`. Locks in the canonical form.
+        return DiffTestBlueprint(
+            sql="SELECT iif(0 IN _device_policies, 1, 0) AS flag FROM t",
+            out="SELECT iif(0 IN _device_policies, 1, 0) AS flag FROM t;",
+        )
+
 
 class CollateExprPrecedence(TestSuite):
     """COLLATE (prec 9, group 0) in the global precedence system."""

@@ -25,6 +25,7 @@ class TableRefBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -52,6 +53,7 @@ class TableRefBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias:
                     IdentName
                       source: "x"
@@ -81,6 +83,7 @@ class TableRefBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: (none)
+                  has_parens: FALSE
                   alias:
                     IdentName
                       source: "x"
@@ -110,6 +113,7 @@ class TableRefBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: "main"
+                  has_parens: FALSE
                   alias: (none)
                   args: (none)
               where_clause: (none)
@@ -137,6 +141,7 @@ class TableRefBasic(TestSuite):
                 TableRef
                   table_name: "t"
                   schema: "main"
+                  has_parens: FALSE
                   alias:
                     IdentName
                       source: "x"
@@ -173,12 +178,14 @@ class JoinBasic(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr: (none)
@@ -214,12 +221,14 @@ class JoinBasic(TestSuite):
                         TableRef
                           table_name: "a"
                           schema: (none)
+                          has_parens: FALSE
                           alias: (none)
                           args: (none)
                       right:
                         TableRef
                           table_name: "b"
                           schema: (none)
+                          has_parens: FALSE
                           alias: (none)
                           args: (none)
                       on_expr: (none)
@@ -228,6 +237,7 @@ class JoinBasic(TestSuite):
                     TableRef
                       table_name: "c"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr: (none)
@@ -260,12 +270,14 @@ class JoinBasic(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr:
@@ -310,12 +322,14 @@ class JoinBasic(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr:
@@ -360,12 +374,14 @@ class JoinBasic(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr:
@@ -410,12 +426,14 @@ class JoinBasic(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr: (none)
@@ -448,12 +466,14 @@ class JoinBasic(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr:
@@ -498,12 +518,14 @@ class JoinBasic(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr:
@@ -552,12 +574,14 @@ class JoinNatural(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr: (none)
@@ -590,12 +614,14 @@ class JoinNatural(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr: (none)
@@ -628,12 +654,14 @@ class JoinNatural(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr: (none)
@@ -666,12 +694,14 @@ class JoinNatural(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr: (none)
@@ -708,12 +738,14 @@ class JoinUsing(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr: (none)
@@ -751,12 +783,14 @@ class JoinUsing(TestSuite):
                     TableRef
                       table_name: "a"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "b"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr: (none)
@@ -805,12 +839,14 @@ class JoinMultiple(TestSuite):
                         TableRef
                           table_name: "a"
                           schema: (none)
+                          has_parens: FALSE
                           alias: (none)
                           args: (none)
                       right:
                         TableRef
                           table_name: "b"
                           schema: (none)
+                          has_parens: FALSE
                           alias: (none)
                           args: (none)
                       on_expr:
@@ -831,6 +867,7 @@ class JoinMultiple(TestSuite):
                     TableRef
                       table_name: "c"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   on_expr:
@@ -925,6 +962,7 @@ class TableValuedFunction(TestSuite):
                 TableRef
                   table_name: "generate_series"
                   schema: (none)
+                  has_parens: TRUE
                   alias: (none)
                   args:
                     ExprList [2 items]
@@ -959,6 +997,7 @@ class TableValuedFunction(TestSuite):
                 TableRef
                   table_name: "json_each"
                   schema: (none)
+                  has_parens: TRUE
                   alias:
                     IdentName
                       source: "j"
@@ -992,6 +1031,7 @@ class TableValuedFunction(TestSuite):
                 TableRef
                   table_name: "generate_series"
                   schema: (none)
+                  has_parens: TRUE
                   alias: (none)
                   args:
                     ExprList [3 items]
@@ -1032,12 +1072,14 @@ class TableValuedFunction(TestSuite):
                     TableRef
                       table_name: "t"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   right:
                     TableRef
                       table_name: "json_each"
                       schema: (none)
+                      has_parens: TRUE
                       alias:
                         IdentName
                           source: "j"

@@ -80,6 +80,14 @@ impl CommentCtx {
         (self.comments, self.tokens)
     }
 
+    /// Borrow the comment entries. The slice stays valid for the life
+    /// of `self`; callers that need to pass the comments to a helper
+    /// (e.g. `compute_macro_docs`) while still owning the `CommentCtx`
+    /// use this instead of re-moving the vec out.
+    pub(crate) fn comments(&self) -> &[CommentEntry] {
+        &self.comments
+    }
+
     /// End offset of the token just before the current token cursor position.
     /// Returns 0 if the cursor is at the start.
     pub(crate) fn prev_token_end(&self) -> StmtOffset {
@@ -158,49 +166,60 @@ impl CommentCtx {
             match t.kind {
                 CommentKind::Line => {
                     if is_leading {
-                        // Preserve blank lines between separate comment blocks.
-                        let has_blank_line = !gap.is_empty() && source[gap].contains("\n\n");
-                        let hl1 = arena.hardline();
-                        let prefix = if has_blank_line && leading != NIL_DOC {
-                            let extra = arena.hardline();
-                            arena.cat(extra, hl1)
-                        } else {
-                            hl1
+                        // Source gaps on both sides of this comment —
+                        // used to detect blank lines that must survive.
+                        let next_offset = self
+                            .comments
+                            .get(cursor + 1)
+                            .filter(|n| n.offset < before)
+                            .map_or(before, |n| n.offset);
+                        let tail_gap = StmtRange {
+                            start: t.end().min(source_end),
+                            end: next_offset.min(source_end),
                         };
+                        let has_blank_before = !gap.is_empty() && source[gap].contains("\n\n");
+                        let has_blank_after =
+                            !tail_gap.is_empty() && source[tail_gap].contains("\n\n");
+                        let next_is_contiguous_comment = !has_blank_after
+                            && next_offset != before
+                            && !tail_gap.is_empty()
+                            && source[tail_gap].contains('\n');
+
+                        // Prefix: `CommentBreak` so it elides when a
+                        // surrounding fmt op already emitted a break.
+                        // Chunks after the first prepend a `HardLine` to
+                        // preserve a blank line between comment blocks —
+                        // the `HardLine` elides against the prior chunk's
+                        // trailing `CommentBreak`, clearing both render
+                        // flags so the `CommentBreak` here still fires.
+                        let cb_prefix = arena.comment_break();
+                        let prefix = if has_blank_before && leading != NIL_DOC {
+                            let hl = arena.hardline();
+                            arena.cat(hl, cb_prefix)
+                        } else {
+                            cb_prefix
+                        };
+
+                        // Trailing: depends on what follows in source.
+                        //   contiguous next comment → no trailing (its
+                        //     own prefix provides the separator)
+                        //   blank line before the next event → `HardLine`
+                        //     always emits the blank line, `CommentBreak`
+                        //     still silences any break from the next op
+                        //   otherwise → plain `CommentBreak`
+                        let trailing = if next_is_contiguous_comment {
+                            NIL_DOC
+                        } else if has_blank_after {
+                            let hl = arena.hardline();
+                            let cb = arena.comment_break();
+                            arena.cat(hl, cb)
+                        } else {
+                            arena.comment_break()
+                        };
+
                         let comment_doc = arena.text(text);
-                        // Only emit a trailing hardline if the next comment
-                        // does NOT immediately follow on the next line — that
-                        // comment's leading hardline will provide the break.
-                        let next_is_contiguous_comment = cursor + 1 < self.comments.len()
-                            && self.comments[cursor + 1].offset < before
-                            && {
-                                let next_gap = StmtRange {
-                                    start: t.end().min(source_end),
-                                    end: self.comments[cursor + 1].offset.min(source_end),
-                                };
-                                if next_gap.is_empty() {
-                                    false
-                                } else {
-                                    let text = &source[next_gap];
-                                    text.contains('\n') && !text.contains("\n\n")
-                                }
-                            };
-                        let chunk = if next_is_contiguous_comment {
-                            arena.cat(prefix, comment_doc)
-                        } else {
-                            // `comment_break` (not `hardline`) so that a
-                            // break op the fmt bytecode emits right after
-                            // this drain (e.g. a list element's leading
-                            // `line`) doesn't stack a second newline.
-                            let hl2 = arena.comment_break();
-                            let inner = arena.cat(comment_doc, hl2);
-                            arena.cat(prefix, inner)
-                        };
-                        leading = if leading == NIL_DOC {
-                            chunk
-                        } else {
-                            arena.cat(leading, chunk)
-                        };
+                        let chunk = arena.cats(&[prefix, comment_doc, trailing]);
+                        leading = arena.cat(leading, chunk);
                     } else {
                         let space = arena.text(" ");
                         let comment = arena.text(text);
@@ -312,6 +331,19 @@ impl CommentCtx {
             idx += 1;
         }
         self.token_cursor.set(idx);
+    }
+
+    /// Mark comments with offset `< end_offset` as consumed. Use after
+    /// emitting a verbatim source range (e.g. the body of a `span()` op)
+    /// that already contains the comment text — otherwise the comments
+    /// stay in the queue and a later `drain_remaining` will slice a
+    /// reversed `[prev_token_end, comment_offset)` range and panic.
+    pub(crate) fn discard_comments_before(&self, end_offset: StmtOffset) {
+        let mut idx = self.cursor.get();
+        while idx < self.comments.len() && self.comments[idx].offset < end_offset {
+            idx += 1;
+        }
+        self.cursor.set(idx);
     }
 
     /// Peek at the next undrained comment without advancing the cursor.

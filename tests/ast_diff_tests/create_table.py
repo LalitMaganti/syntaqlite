@@ -332,6 +332,7 @@ class CreateTableAsSelect(TestSuite):
                     TableRef
                       table_name: "t1"
                       schema: (none)
+                      has_parens: FALSE
                       alias: (none)
                       args: (none)
                   where_clause: (none)
