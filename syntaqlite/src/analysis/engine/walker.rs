@@ -184,19 +184,10 @@ pub(crate) trait SemanticVisitor {
     /// resolved catalog source; listeners that build a `name -> body`
     /// map should populate it here so body-side references resolve
     /// correctly.
-    fn on_cte_binding(
-        &mut self,
-        _stmt: &mut AnyParsedStatement<'_>,
-        _ev: CteBindingEvent<'_>,
-    ) {
-    }
+    fn on_cte_binding(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: CteBindingEvent<'_>) {}
 
     /// Called for a subquery-in-FROM after its body has been walked.
-    fn on_scoped_source(
-        &mut self,
-        _stmt: &mut AnyParsedStatement<'_>,
-        _ev: ScopedSourceEvent<'_>,
-    ) {
+    fn on_scoped_source(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: ScopedSourceEvent<'_>) {
     }
 
     /// Called before a `Query` node's fields are walked. Paired with
@@ -278,8 +269,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let role = StmtReader::new(self.stmt, self.roles).role_for_tag(tag);
 
         match role {
-            SemanticRole::DefineTable { select, .. }
-            | SemanticRole::DefineView { select, .. } => {
+            SemanticRole::DefineTable { select, .. } | SemanticRole::DefineView { select, .. } => {
                 if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
                     self.emit_ddl_definitions(visitor, node_id);
                 }
@@ -360,11 +350,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    fn emit_ddl_definitions<V: SemanticVisitor>(
-        &mut self,
-        visitor: &mut V,
-        node_id: AnyNodeId,
-    ) {
+    fn emit_ddl_definitions<V: SemanticVisitor>(&mut self, visitor: &mut V, node_id: AnyNodeId) {
         let reader = StmtReader::new(self.stmt, self.roles);
         let Some((table_name, table_range)) = reader.name_span(node_id) else {
             return;
@@ -531,9 +517,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             visitor.on_scoped_source(self.stmt, ScopedSourceEvent { alias, body_id });
         }
 
-        let cols = body_id.and_then(|id| {
-            StmtReader::new(self.stmt, self.roles).columns_from_select(id)
-        });
+        let cols =
+            body_id.and_then(|id| StmtReader::new(self.stmt, self.roles).columns_from_select(id));
         match alias {
             None => self.scope.add_anonymous(cols),
             Some(name) => self.scope.add_table(name, cols, RowIdPolicy::WithRowId),
@@ -762,9 +747,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 if V::WANTS_COLUMN_DEFINITION {
                     self.emit_select_column_definitions(visitor, binding.body_id, binding.name);
                 }
-                binding.body_id.and_then(|id| {
-                    StmtReader::new(self.stmt, self.roles).columns_from_select(id)
-                })
+                binding
+                    .body_id
+                    .and_then(|id| StmtReader::new(self.stmt, self.roles).columns_from_select(id))
             };
             self.catalog.add_query_table(binding.name, cols);
         }

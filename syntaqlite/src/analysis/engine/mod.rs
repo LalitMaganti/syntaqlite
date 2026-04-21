@@ -26,9 +26,9 @@ use helpers::{extract_macro_registration, parse_error_span};
 
 use super::stmt_reader::StmtReader;
 
-mod statement_visitor;
 mod helpers;
 mod query_scope;
+mod statement_visitor;
 pub(crate) mod tokens;
 pub(crate) mod walker;
 
@@ -319,8 +319,7 @@ impl Analyzer {
         SemanticWalker::new(erased, ctx.catalog, roles).run(&mut visitor, root_id);
         let lineage = super::lineage::build_lineage(&visitor.into_lineage());
 
-        let defined_relations =
-            StmtReader::new(erased, roles).defined_relations(root_id);
+        let defined_relations = StmtReader::new(erased, roles).defined_relations(root_id);
 
         StatementAnalysis::new(
             erased.text().as_str().to_owned(),
@@ -659,11 +658,8 @@ mod tests {
             _stmt: &mut AnyParsedStatement<'_>,
             ev: walker::CteBindingEvent<'_>,
         ) {
-            self.events.push(format!(
-                "cte:{}:body={}",
-                ev.name,
-                ev.body_id.is_some()
-            ));
+            self.events
+                .push(format!("cte:{}:body={}", ev.name, ev.body_id.is_some()));
         }
 
         fn enter_query(&mut self, _stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
@@ -720,11 +716,9 @@ mod tests {
     fn query_hooks_bracket_nested_subquery() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
-        catalog.layer_mut(CatalogLayer::Database).insert_table(
-            "t",
-            Some(vec!["a".into()]),
-            false,
-        );
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t", Some(vec!["a".into()]), false);
         let mut ctx = AnalysisContext::new(&mut catalog);
         let mut cap = HookCapture::default();
         let _ = analyzer.analyze_with_visitor(

@@ -24,7 +24,7 @@ use crate::analysis::catalog::{
 };
 use crate::analysis::engine::tokens::{SemanticToken, StoredComment, StoredToken};
 use crate::analysis::engine::walker::{
-    CallEvent, ColumnRefEvent, SourceRefEvent, WalkCtx, SemanticVisitor,
+    CallEvent, ColumnRefEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
 };
 use crate::dialect::AnyDialect;
 

@@ -17,10 +17,10 @@ use std::collections::HashMap;
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 
 use super::catalog::Catalog;
-use super::stmt_reader::StmtReader;
 use super::engine::walker::{
     CteBindingEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
 };
+use super::stmt_reader::StmtReader;
 use crate::dialect::SemanticRole;
 
 mod types;
@@ -188,11 +188,7 @@ impl SemanticVisitor for LineageCapture {
         }
     }
 
-    fn on_scoped_source(
-        &mut self,
-        _stmt: &mut AnyParsedStatement<'_>,
-        ev: ScopedSourceEvent<'_>,
-    ) {
+    fn on_scoped_source(&mut self, _stmt: &mut AnyParsedStatement<'_>, ev: ScopedSourceEvent<'_>) {
         let Some(body_id) = ev.body_id else {
             return;
         };
@@ -201,10 +197,7 @@ impl SemanticVisitor for LineageCapture {
         let Some(alias) = ev.alias else {
             return;
         };
-        let columns = self
-            .per_query
-            .get(&body_id)
-            .map(|s| s.column_names.clone());
+        let columns = self.per_query.get(&body_id).map(|s| s.column_names.clone());
         if let Some(top) = self.stack.last_mut() {
             let alias_lower = alias.to_ascii_lowercase();
             top.sources.insert(
@@ -366,7 +359,9 @@ impl<'a, 'b> Finalizer<'a, 'b> {
                 column: col.to_ascii_lowercase(),
             }),
             SourceKind::View => None,
-            SourceKind::Cte(body) | SourceKind::Subquery(body) => self.origin_from_nested(body, col),
+            SourceKind::Cte(body) | SourceKind::Subquery(body) => {
+                self.origin_from_nested(body, col)
+            }
         }
     }
 

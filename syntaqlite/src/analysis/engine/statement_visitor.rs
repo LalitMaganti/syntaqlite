@@ -175,11 +175,8 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
                         .table
                         .expect("qualifier present when TableFoundColumnMissing");
                     let candidates = cx.scope.all_column_names(Some(tbl));
-                    let suggestion = best_suggestion(
-                        ev.column,
-                        &candidates,
-                        self.config.suggestion_threshold(),
-                    );
+                    let suggestion =
+                        best_suggestion(ev.column, &candidates, self.config.suggestion_threshold());
                     self.emit(
                         stmt,
                         ev.node_id,
@@ -200,11 +197,8 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
                     || ev.column.eq_ignore_ascii_case("false");
                 if !is_bool_literal && !ev.dqs_candidate {
                     let candidates = cx.scope.all_column_names(None);
-                    let suggestion = best_suggestion(
-                        ev.column,
-                        &candidates,
-                        self.config.suggestion_threshold(),
-                    );
+                    let suggestion =
+                        best_suggestion(ev.column, &candidates, self.config.suggestion_threshold());
                     self.emit(
                         stmt,
                         ev.node_id,
@@ -293,11 +287,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
         self.extra.on_cte_binding(stmt, ev);
     }
 
-    fn on_scoped_source(
-        &mut self,
-        stmt: &mut AnyParsedStatement<'_>,
-        ev: ScopedSourceEvent<'_>,
-    ) {
+    fn on_scoped_source(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: ScopedSourceEvent<'_>) {
         self.lineage.on_scoped_source(stmt, ev);
         self.extra.on_scoped_source(stmt, ev);
     }
