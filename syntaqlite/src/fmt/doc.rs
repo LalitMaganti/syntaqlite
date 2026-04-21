@@ -28,6 +28,15 @@ enum Doc<'a> {
     SoftLine,
     /// Always newline + indent.
     HardLine,
+    /// Like `HardLine`, but rendered as a no-op if the next emitted doc is
+    /// also a break (`Line` in break mode, `SoftLine` in break mode,
+    /// another `HardLine`, or another `CommentBreak`). Used by the
+    /// comment drain as the trailing break of a leading-comment chunk:
+    /// the next break op in the fmt stream would otherwise stack on top
+    /// and render a blank line. Intentional double-hardlines (e.g. blank
+    /// lines preserved between comment blocks) use `HardLine` directly
+    /// and are not affected.
+    CommentBreak,
     /// Concatenation of two documents.
     Cat { left: DocId, right: DocId },
     /// Increase indent by `indent` for `child`.
@@ -125,6 +134,7 @@ impl<'a> DocArena<'a> {
             Doc::Line => self.line(),
             Doc::SoftLine => self.softline(),
             Doc::HardLine => self.hardline(),
+            Doc::CommentBreak => self.comment_break(),
             Doc::BreakParent => self.break_parent(),
             Doc::Cat { left, right } => {
                 let l = self.copy_owned_from(src, *left);
@@ -156,6 +166,12 @@ impl<'a> DocArena<'a> {
 
     pub(crate) fn hardline(&mut self) -> DocId {
         self.push(Doc::HardLine)
+    }
+
+    /// A hardline that elides itself if followed immediately by another
+    /// break at render time. See `Doc::CommentBreak` for rationale.
+    pub(crate) fn comment_break(&mut self) -> DocId {
+        self.push(Doc::CommentBreak)
     }
 
     /// Concatenate two documents. If either operand is `NIL_DOC`, returns the other.
@@ -243,6 +259,12 @@ impl<'a> DocArena<'a> {
         let line_width_i32 = usize_to_i32(config.line_width());
         stack.push((0, Mode::Break, root));
 
+        // Set by a `CommentBreak` emission. Consumed by the immediately
+        // following break (any break variant) to avoid stacking a second
+        // newline on top of a leading-comment chunk. Cleared by any
+        // non-break, non-structural emission.
+        let mut just_emitted_comment_break = false;
+
         while let Some((indent, mode, doc_id)) = stack.pop() {
             if doc_id == NIL_DOC {
                 continue;
@@ -250,37 +272,56 @@ impl<'a> DocArena<'a> {
 
             match self.get(doc_id) {
                 Doc::Text(s) => {
+                    just_emitted_comment_break = false;
                     out.push_str(s);
                     pos += s.len();
                 }
 
                 Doc::Keyword(s) => {
+                    just_emitted_comment_break = false;
                     push_keyword(s, keyword_case, out);
                     pos += s.len();
                 }
 
-                Doc::Line => match mode {
-                    Mode::Flat => {
+                Doc::Line => {
+                    if matches!(mode, Mode::Flat) {
+                        just_emitted_comment_break = false;
                         out.push(' ');
                         pos += 1;
-                    }
-                    Mode::Break => {
+                    } else if !just_emitted_comment_break {
                         flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
                         emit_newline(indent, out, &mut pos);
+                    } else {
+                        just_emitted_comment_break = false;
                     }
-                },
+                }
 
-                Doc::SoftLine => match mode {
-                    Mode::Flat => {}
-                    Mode::Break => {
-                        flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
-                        emit_newline(indent, out, &mut pos);
+                Doc::SoftLine => {
+                    if matches!(mode, Mode::Break) {
+                        if just_emitted_comment_break {
+                            just_emitted_comment_break = false;
+                        } else {
+                            flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
+                            emit_newline(indent, out, &mut pos);
+                        }
                     }
-                },
+                }
 
                 Doc::HardLine => {
-                    flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
-                    emit_newline(indent, out, &mut pos);
+                    if just_emitted_comment_break {
+                        just_emitted_comment_break = false;
+                    } else {
+                        flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
+                        emit_newline(indent, out, &mut pos);
+                    }
+                }
+
+                Doc::CommentBreak => {
+                    if !just_emitted_comment_break {
+                        flush_line_suffixes(self, line_suffix_buf, config, out, &mut pos);
+                        emit_newline(indent, out, &mut pos);
+                        just_emitted_comment_break = true;
+                    }
                 }
 
                 Doc::Cat { left, right } => {
@@ -352,7 +393,7 @@ impl<'a> DocArena<'a> {
                     remaining -= 1;
                 }
                 Doc::SoftLine | Doc::LineSuffix { .. } => {}
-                Doc::HardLine | Doc::BreakParent => {
+                Doc::HardLine | Doc::CommentBreak | Doc::BreakParent => {
                     return false;
                 }
                 Doc::Cat { left, right } => {
@@ -398,6 +439,9 @@ impl<'a> DocArena<'a> {
                 }
                 Doc::HardLine => {
                     let _ = writeln!(out, "{indent_str}HardLine");
+                }
+                Doc::CommentBreak => {
+                    let _ = writeln!(out, "{indent_str}CommentBreak");
                 }
                 Doc::BreakParent => {
                     let _ = writeln!(out, "{indent_str}BreakParent");

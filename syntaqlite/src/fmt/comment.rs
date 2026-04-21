@@ -137,7 +137,7 @@ impl CommentCtx {
             if !skip_text_check {
                 let scan_end = before.min(source_end);
                 if t.end() < scan_end
-                    && has_non_comment_text(source, t.end(), scan_end, &self.comments, cursor + 1)
+                    && has_intervening_emitted_token(source, t.end(), scan_end, &self.tokens)
                 {
                     break;
                 }
@@ -188,7 +188,11 @@ impl CommentCtx {
                         let chunk = if next_is_contiguous_comment {
                             arena.cat(prefix, comment_doc)
                         } else {
-                            let hl2 = arena.hardline();
+                            // `comment_break` (not `hardline`) so that a
+                            // break op the fmt bytecode emits right after
+                            // this drain (e.g. a list element's leading
+                            // `line`) doesn't stack a second newline.
+                            let hl2 = arena.comment_break();
                             let inner = arena.cat(comment_doc, hl2);
                             arena.cat(prefix, inner)
                         };
@@ -345,37 +349,34 @@ impl CommentCtx {
     }
 }
 
-fn has_non_comment_text(
+/// Returns true if the token stream contains a token in `[start, end)` that
+/// the formatter will emit — i.e. any token other than a vestigial `(` / `)`.
+///
+/// The parser rule `expr ::= LP expr RP` is erased via `synq_pass`
+/// (parser-actions/expressions.y:30), so the inner `(` and `)` tokens remain
+/// in the token stream without any corresponding fmt opcode consuming them.
+/// They're not obstacles between a comment and its drain target; the drain
+/// must be allowed to step over them. All other token kinds (keywords,
+/// identifiers, operators, and paren tokens in tracked positions like
+/// function calls / IN / CAST) either sit at the drain target or will be
+/// emitted by some fmt opcode, so they *do* block a cross-drain.
+fn has_intervening_emitted_token(
     source: &StmtText,
     start: StmtOffset,
     end: StmtOffset,
-    comments: &[CommentEntry],
-    comment_start_idx: usize,
+    tokens: &[TokenEntry],
 ) -> bool {
-    let src = source.as_str().as_bytes();
-    let mut pos = start;
-    let mut ci = comment_start_idx;
-
-    while pos < end {
-        while ci < comments.len() {
-            let c_start = comments[ci].offset;
-            let c_end = comments[ci].end();
-            if pos >= c_start && pos < c_end {
-                pos = c_end;
-                ci += 1;
-                break;
-            } else if c_start > pos {
-                break;
-            }
-            ci += 1;
-        }
-        if pos >= end {
+    // Tokens are sorted by offset; binary-search for the first one that could
+    // overlap [start, end) to keep this O(log n + k) per call.
+    let first = tokens.partition_point(|t| t.end() <= start);
+    for tok in &tokens[first..] {
+        if tok.offset >= end {
             break;
         }
-        if !src[pos.as_usize()].is_ascii_whitespace() {
+        let text = &source[tok.range()];
+        if text != "(" && text != ")" {
             return true;
         }
-        pos += StmtLen::from_raw(1);
     }
     false
 }

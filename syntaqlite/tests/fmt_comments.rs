@@ -152,3 +152,38 @@ fn comment_between_join_and_where_in_subquery() {
     let second_pass = fmt(&out);
     assert_eq!(out, second_pass, "formatting is not idempotent");
 }
+
+/// Regression: perfetto stdlib crash on a leading comment inside an untracked
+/// parenthesized expression. Reduced shape:
+///   WHERE a AND (
+///     -- leading comment inside untracked parens
+///     (b OR c)
+///   )
+/// The outer parens of `(b OR c)` have no `ParenExpr` AST node, so tokens like
+/// `(` are skipped by `peek_keyword_tokens`. When the drain of the statement's
+/// remaining comments fires, `prev_token_end()` has advanced past the comment's
+/// offset, producing a reversed `StmtRange` and a slice panic.
+#[test]
+fn leading_comment_inside_untracked_parens() {
+    let input = concat!(
+        "SELECT 1\n",
+        "WHERE\n",
+        "  a\n",
+        "  AND (\n",
+        "    -- leading comment inside untracked parens\n",
+        "    (\n",
+        "      b AND c\n",
+        "    )\n",
+        "    -- another\n",
+        "    OR (\n",
+        "      d AND e\n",
+        "    )\n",
+        "  );\n",
+    );
+    let out = fmt(input);
+    eprintln!("=== actual ===\n{out}=== end ===");
+    assert!(out.contains("-- leading comment inside untracked parens"));
+    assert!(out.contains("-- another"));
+    let second_pass = fmt(&out);
+    assert_eq!(out, second_pass, "formatting is not idempotent");
+}
