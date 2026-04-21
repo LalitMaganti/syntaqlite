@@ -36,7 +36,7 @@ use crate::analysis::AnalysisContext;
 use crate::analysis::catalog::Catalog;
 use crate::analysis::diagnostics::Diagnostic;
 use crate::analysis::engine::Analyzer;
-use crate::analysis::engine::walker::WalkPass;
+use crate::analysis::engine::walker::SemanticVisitor;
 use crate::dialect::AnyDialect;
 
 use offset_map::OffsetMap;
@@ -294,18 +294,18 @@ impl EmbeddedAnalyzer {
         fragment: &EmbeddedFragment,
     ) -> Vec<(DocOffset, DocLen, TokenCategory)> {
         let mut analyzer = self.make_analyzer();
-        let mut pass = TokenCapturePass::default();
+        let mut capture = TokenCapture::default();
         let mut ctx = AnalysisContext::new(&mut self.catalog).with_config(self.config);
-        let _ = analyzer.analyze_with_pass(fragment.sql_text(), &mut ctx, &mut pass);
+        let _ = analyzer.analyze_with_visitor(fragment.sql_text(), &mut ctx, &mut capture);
         let dialect = analyzer.dialect();
         let mut out: Vec<(DocOffset, DocLen, TokenCategory)> = Vec::new();
-        for (offset, length, tt, flags) in pass.tokens {
+        for (offset, length, tt, flags) in capture.tokens {
             let cat = dialect.classify_token(tt, flags);
             if cat != TokenCategory::Other {
                 out.push((offset, length, cat));
             }
         }
-        for (offset, length) in pass.comments {
+        for (offset, length) in capture.comments {
             out.push((offset, length, TokenCategory::Comment));
         }
         out.sort_by_key(|t| t.0);
@@ -414,12 +414,12 @@ impl EmbeddedAnalyzer {
 /// Pass that captures only tokens and comments, for
 /// [`EmbeddedAnalyzer::fragment_semantic_tokens`].
 #[derive(Default)]
-struct TokenCapturePass {
+struct TokenCapture {
     tokens: Vec<(DocOffset, DocLen, AnyTokenType, ParserTokenFlags)>,
     comments: Vec<(DocOffset, DocLen)>,
 }
 
-impl WalkPass for TokenCapturePass {
+impl SemanticVisitor for TokenCapture {
     const WANTS_STATEMENT_CONTEXT: bool = true;
 
     fn on_parsed_statement(&mut self, stmt: &syntaqlite_syntax::any::AnyParsedStatement<'_>) {

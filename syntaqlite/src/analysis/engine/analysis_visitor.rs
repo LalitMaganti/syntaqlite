@@ -1,14 +1,14 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Statement-level analysis passes plus the per-statement composition.
+//! Per-statement [`SemanticVisitor`] used by the analyzer.
 //!
-//! - [`DiagnosticsPass`] consumes walker events and emits a `Vec<Diagnostic>`.
-//! - [`StatementWalkPass`] is the analyzer's per-statement composition: it
-//!   holds `DiagnosticsPass` plus an external user-supplied pass (LSP's
-//!   capture pass, embedded-SQL extractor, etc.) and implements `WalkPass`
-//!   by delegating to each at every hook. The composition is written out by
-//!   hand, not generated.
+//! [`AnalysisVisitor`] is a single [`SemanticVisitor`] that does two
+//! things on every event: emits semantic diagnostics
+//! (`unknown-table`, `unknown-column`, etc.) into a `Vec<Diagnostic>`,
+//! and forwards the same event to a user-supplied visitor. The
+//! forwarding is written out by hand, not generated — explicit and
+//! grep-able.
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParseError, AnyParsedStatement};
 use syntaqlite_syntax::source::{DocRange, LayerRange};
@@ -19,7 +19,8 @@ use crate::analysis::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use crate::analysis::{AnalysisConfig, CheckConfig, CheckLevel};
 
 use super::walker::{
-    CallEvent, ColumnRefEvent, CteColumnCountMismatchEvent, SourceRefEvent, WalkCtx, WalkPass,
+    CallEvent, ColumnRefEvent, CteColumnCountMismatchEvent, SemanticVisitor, SourceRefEvent,
+    WalkCtx,
 };
 
 impl CheckConfig {
@@ -38,20 +39,26 @@ impl CheckConfig {
     }
 }
 
-// ── DiagnosticsPass ───────────────────────────────────────────────────────────
+// ── AnalysisVisitor ───────────────────────────────────────────────────────────
 
-/// Emits semantic diagnostics (`unknown-table`, `unknown-column`, etc.) into a
-/// `Vec<Diagnostic>`.
-pub(super) struct DiagnosticsPass<'a> {
+/// The analyzer's per-statement visitor. Emits diagnostics into
+/// `diagnostics` and forwards every event to `extra`.
+pub(super) struct AnalysisVisitor<'a, V: SemanticVisitor> {
     config: &'a AnalysisConfig,
     diagnostics: &'a mut Vec<Diagnostic>,
+    extra: &'a mut V,
 }
 
-impl<'a> DiagnosticsPass<'a> {
-    pub(super) fn new(config: &'a AnalysisConfig, diagnostics: &'a mut Vec<Diagnostic>) -> Self {
+impl<'a, V: SemanticVisitor> AnalysisVisitor<'a, V> {
+    pub(super) fn new(
+        config: &'a AnalysisConfig,
+        diagnostics: &'a mut Vec<Diagnostic>,
+        extra: &'a mut V,
+    ) -> Self {
         Self {
             config,
             diagnostics,
+            extra,
         }
     }
 
@@ -102,11 +109,14 @@ impl<'a> DiagnosticsPass<'a> {
     }
 }
 
-impl WalkPass for DiagnosticsPass<'_> {
+impl<V: SemanticVisitor> SemanticVisitor for AnalysisVisitor<'_, V> {
     const WANTS_SOURCE_REF: bool = true;
     const WANTS_COLUMN_REF: bool = true;
     const WANTS_CALL: bool = true;
+    const WANTS_RELATION_DEFINITION: bool = V::WANTS_RELATION_DEFINITION;
+    const WANTS_COLUMN_DEFINITION: bool = V::WANTS_COLUMN_DEFINITION;
     const WANTS_CTE_COLUMN_COUNT: bool = true;
+    const WANTS_STATEMENT_CONTEXT: bool = V::WANTS_STATEMENT_CONTEXT;
 
     fn on_source_ref(
         &mut self,
@@ -114,22 +124,23 @@ impl WalkPass for DiagnosticsPass<'_> {
         cx: &mut WalkCtx<'_>,
         ev: SourceRefEvent<'_>,
     ) {
-        if ev.resolved {
-            return;
+        if !ev.resolved {
+            let mut candidates = cx.catalog.all_relation_names();
+            candidates.extend(cx.catalog.all_table_function_names());
+            let suggestion =
+                best_suggestion(ev.name, &candidates, self.config.suggestion_threshold());
+            self.emit(
+                stmt,
+                ev.node_id,
+                ev.name_idx,
+                ev.range,
+                DiagnosticMessage::UnknownTable {
+                    name: ev.name.to_string(),
+                },
+                suggestion.map(Help::Suggestion),
+            );
         }
-        let mut candidates = cx.catalog.all_relation_names();
-        candidates.extend(cx.catalog.all_table_function_names());
-        let suggestion = best_suggestion(ev.name, &candidates, self.config.suggestion_threshold());
-        self.emit(
-            stmt,
-            ev.node_id,
-            ev.name_idx,
-            ev.range,
-            DiagnosticMessage::UnknownTable {
-                name: ev.name.to_string(),
-            },
-            suggestion.map(Help::Suggestion),
-        );
+        self.extra.on_source_ref(stmt, cx, ev);
     }
 
     fn on_column_ref(
@@ -143,52 +154,56 @@ impl WalkPass for DiagnosticsPass<'_> {
             ColumnResolution::TableFoundColumnMissing => {
                 // DQS bug-compat: unresolved `"foo"` is re-interpreted as a
                 // string literal by SQLite. Don't FP here.
-                if ev.dqs_candidate {
-                    return;
+                if !ev.dqs_candidate {
+                    let tbl = ev
+                        .table
+                        .expect("qualifier present when TableFoundColumnMissing");
+                    let candidates = cx.scope.all_column_names(Some(tbl));
+                    let suggestion = best_suggestion(
+                        ev.column,
+                        &candidates,
+                        self.config.suggestion_threshold(),
+                    );
+                    self.emit(
+                        stmt,
+                        ev.node_id,
+                        ev.column_idx,
+                        ev.range,
+                        DiagnosticMessage::UnknownColumn {
+                            column: ev.column.to_string(),
+                            table: Some(tbl.to_string()),
+                        },
+                        suggestion.map(Help::Suggestion),
+                    );
                 }
-                let tbl = ev
-                    .table
-                    .expect("qualifier present when TableFoundColumnMissing");
-                let candidates = cx.scope.all_column_names(Some(tbl));
-                let suggestion =
-                    best_suggestion(ev.column, &candidates, self.config.suggestion_threshold());
-                self.emit(
-                    stmt,
-                    ev.node_id,
-                    ev.column_idx,
-                    ev.range,
-                    DiagnosticMessage::UnknownColumn {
-                        column: ev.column.to_string(),
-                        table: Some(tbl.to_string()),
-                    },
-                    suggestion.map(Help::Suggestion),
-                );
             }
             ColumnResolution::NotFound => {
-                // SQLite resolves bare TRUE/FALSE identifiers to integer literals.
-                if ev.column.eq_ignore_ascii_case("true") || ev.column.eq_ignore_ascii_case("false")
-                {
-                    return;
+                // SQLite resolves bare TRUE/FALSE identifiers to integer
+                // literals.
+                let is_bool_literal = ev.column.eq_ignore_ascii_case("true")
+                    || ev.column.eq_ignore_ascii_case("false");
+                if !is_bool_literal && !ev.dqs_candidate {
+                    let candidates = cx.scope.all_column_names(None);
+                    let suggestion = best_suggestion(
+                        ev.column,
+                        &candidates,
+                        self.config.suggestion_threshold(),
+                    );
+                    self.emit(
+                        stmt,
+                        ev.node_id,
+                        ev.column_idx,
+                        ev.range,
+                        DiagnosticMessage::UnknownColumn {
+                            column: ev.column.to_string(),
+                            table: None,
+                        },
+                        suggestion.map(Help::Suggestion),
+                    );
                 }
-                if ev.dqs_candidate {
-                    return;
-                }
-                let candidates = cx.scope.all_column_names(None);
-                let suggestion =
-                    best_suggestion(ev.column, &candidates, self.config.suggestion_threshold());
-                self.emit(
-                    stmt,
-                    ev.node_id,
-                    ev.column_idx,
-                    ev.range,
-                    DiagnosticMessage::UnknownColumn {
-                        column: ev.column.to_string(),
-                        table: None,
-                    },
-                    suggestion.map(Help::Suggestion),
-                );
             }
         }
+        self.extra.on_column_ref(stmt, cx, ev);
     }
 
     fn on_call(
@@ -229,11 +244,20 @@ impl WalkPass for DiagnosticsPass<'_> {
                 );
             }
         }
+        self.extra.on_call(stmt, cx, ev);
+    }
+
+    fn on_relation_definition(&mut self, name: &str, range: DocRange) {
+        self.extra.on_relation_definition(name, range);
+    }
+
+    fn on_column_definition(&mut self, table: &str, column: &str, range: DocRange) {
+        self.extra.on_column_definition(table, column, range);
     }
 
     fn on_cte_column_count_mismatch(
         &mut self,
-        _stmt: &mut AnyParsedStatement<'_>,
+        stmt: &mut AnyParsedStatement<'_>,
         ev: CteColumnCountMismatchEvent<'_>,
     ) {
         self.emit_at(
@@ -245,83 +269,10 @@ impl WalkPass for DiagnosticsPass<'_> {
             },
             None,
         );
-    }
-}
-
-// ── StatementWalkPass: hand-written composition ───────────────────────────────
-
-/// Analyzer's per-statement composition: [`DiagnosticsPass`] plus an external
-/// user-supplied pass. Implements [`WalkPass`] by writing out each hook by
-/// hand, calling both inner passes in sequence.
-pub(super) struct StatementWalkPass<'a, P: WalkPass> {
-    pub(super) diagnostics: DiagnosticsPass<'a>,
-    pub(super) extra: &'a mut P,
-}
-
-impl<P: WalkPass> WalkPass for StatementWalkPass<'_, P> {
-    const WANTS_SOURCE_REF: bool = DiagnosticsPass::WANTS_SOURCE_REF || P::WANTS_SOURCE_REF;
-    const WANTS_COLUMN_REF: bool = DiagnosticsPass::WANTS_COLUMN_REF || P::WANTS_COLUMN_REF;
-    const WANTS_CALL: bool = DiagnosticsPass::WANTS_CALL || P::WANTS_CALL;
-    const WANTS_RELATION_DEFINITION: bool =
-        DiagnosticsPass::WANTS_RELATION_DEFINITION || P::WANTS_RELATION_DEFINITION;
-    const WANTS_COLUMN_DEFINITION: bool =
-        DiagnosticsPass::WANTS_COLUMN_DEFINITION || P::WANTS_COLUMN_DEFINITION;
-    const WANTS_CTE_COLUMN_COUNT: bool =
-        DiagnosticsPass::WANTS_CTE_COLUMN_COUNT || P::WANTS_CTE_COLUMN_COUNT;
-    // DiagnosticsPass never wants statement context; only the extra pass can.
-    const WANTS_STATEMENT_CONTEXT: bool = P::WANTS_STATEMENT_CONTEXT;
-
-    fn on_source_ref(
-        &mut self,
-        stmt: &mut AnyParsedStatement<'_>,
-        cx: &mut WalkCtx<'_>,
-        ev: SourceRefEvent<'_>,
-    ) {
-        self.diagnostics.on_source_ref(stmt, cx, ev);
-        self.extra.on_source_ref(stmt, cx, ev);
-    }
-
-    fn on_column_ref(
-        &mut self,
-        stmt: &mut AnyParsedStatement<'_>,
-        cx: &mut WalkCtx<'_>,
-        ev: ColumnRefEvent<'_>,
-    ) {
-        self.diagnostics.on_column_ref(stmt, cx, ev);
-        self.extra.on_column_ref(stmt, cx, ev);
-    }
-
-    fn on_call(
-        &mut self,
-        stmt: &mut AnyParsedStatement<'_>,
-        cx: &mut WalkCtx<'_>,
-        ev: CallEvent<'_>,
-    ) {
-        self.diagnostics.on_call(stmt, cx, ev);
-        self.extra.on_call(stmt, cx, ev);
-    }
-
-    fn on_relation_definition(&mut self, name: &str, range: DocRange) {
-        self.diagnostics.on_relation_definition(name, range);
-        self.extra.on_relation_definition(name, range);
-    }
-
-    fn on_column_definition(&mut self, table: &str, column: &str, range: DocRange) {
-        self.diagnostics.on_column_definition(table, column, range);
-        self.extra.on_column_definition(table, column, range);
-    }
-
-    fn on_cte_column_count_mismatch(
-        &mut self,
-        stmt: &mut AnyParsedStatement<'_>,
-        ev: CteColumnCountMismatchEvent<'_>,
-    ) {
-        self.diagnostics.on_cte_column_count_mismatch(stmt, ev);
         self.extra.on_cte_column_count_mismatch(stmt, ev);
     }
 
     fn on_parsed_statement(&mut self, stmt: &AnyParsedStatement<'_>) {
-        // DiagnosticsPass has nothing to do here; only forward to extra.
         self.extra.on_parsed_statement(stmt);
     }
 

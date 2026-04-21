@@ -16,7 +16,7 @@ use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
 use crate::fmt::formatter::Formatter;
 
-use super::analysis_data::{DefinitionResult, ExternalDefinitions, LspCapturePass};
+use super::analysis_data::{DefinitionResult, ExternalDefinitions, LspCapture};
 use super::document_store::{Document, DocumentStore};
 use super::semantic_tokens_codec::encode_semantic_tokens;
 use super::{CompletionEntry, CompletionInfo};
@@ -110,9 +110,9 @@ fn ensure_analysis(
     if doc.analysis.is_some() {
         return;
     }
-    let mut capture = LspCapturePass::new(external_defs);
+    let mut capture = LspCapture::new(external_defs);
     let mut ctx = AnalysisContext::new(user_catalog).with_config(*analysis_config);
-    let model = analyzer.analyze_with_pass(&doc.source, &mut ctx, &mut capture);
+    let model = analyzer.analyze_with_visitor(&doc.source, &mut ctx, &mut capture);
     let all_diags: Vec<Diagnostic> = model.diagnostics().cloned().collect();
     let parse_diags: Vec<Diagnostic> = all_diags
         .iter()
