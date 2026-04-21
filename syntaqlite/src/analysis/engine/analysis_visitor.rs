@@ -16,11 +16,12 @@ use syntaqlite_syntax::source::{DocRange, LayerRange};
 use crate::analysis::catalog::{ColumnResolution, FunctionCheckResult};
 use crate::analysis::diagnostics::fuzzy::best_suggestion;
 use crate::analysis::diagnostics::{Diagnostic, DiagnosticMessage, Help};
+use crate::analysis::lineage::LineageCapture;
 use crate::analysis::{AnalysisConfig, CheckConfig, CheckLevel};
 
 use super::walker::{
-    CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, ScopedSourceEvent,
-    SemanticVisitor, SourceRefEvent, WalkCtx,
+    CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, SemanticVisitor,
+    SourceRefEvent, WalkCtx,
 };
 
 impl CheckConfig {
@@ -42,10 +43,12 @@ impl CheckConfig {
 // ── AnalysisVisitor ───────────────────────────────────────────────────────────
 
 /// The analyzer's per-statement visitor. Emits diagnostics into
-/// `diagnostics` and forwards every event to `extra`.
+/// `diagnostics`, feeds CTE / Query / scoped-source events into an
+/// internal [`LineageCapture`], and forwards every event to `extra`.
 pub(super) struct AnalysisVisitor<'a, V: SemanticVisitor> {
     config: &'a AnalysisConfig,
     diagnostics: &'a mut Vec<Diagnostic>,
+    lineage: LineageCapture,
     extra: &'a mut V,
 }
 
@@ -58,8 +61,13 @@ impl<'a, V: SemanticVisitor> AnalysisVisitor<'a, V> {
         Self {
             config,
             diagnostics,
+            lineage: LineageCapture::default(),
             extra,
         }
+    }
+
+    pub(super) fn into_lineage(self) -> LineageCapture {
+        self.lineage
     }
 
     /// Push a diagnostic anchored to a span field of a node, including a
@@ -116,9 +124,9 @@ impl<V: SemanticVisitor> SemanticVisitor for AnalysisVisitor<'_, V> {
     const WANTS_RELATION_DEFINITION: bool = V::WANTS_RELATION_DEFINITION;
     const WANTS_COLUMN_DEFINITION: bool = V::WANTS_COLUMN_DEFINITION;
     const WANTS_CTE_COLUMN_COUNT: bool = true;
-    const WANTS_CTE_BINDING: bool = V::WANTS_CTE_BINDING;
-    const WANTS_SCOPED_SOURCE: bool = V::WANTS_SCOPED_SOURCE;
-    const WANTS_QUERY: bool = V::WANTS_QUERY;
+    // LineageCapture wants CTE bindings and query enter/exit.
+    const WANTS_CTE_BINDING: bool = true;
+    const WANTS_QUERY: bool = true;
     const WANTS_STATEMENT_CONTEXT: bool = V::WANTS_STATEMENT_CONTEXT;
 
     fn on_source_ref(
@@ -276,22 +284,17 @@ impl<V: SemanticVisitor> SemanticVisitor for AnalysisVisitor<'_, V> {
     }
 
     fn on_cte_binding(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: CteBindingEvent<'_>) {
+        self.lineage.on_cte_binding(stmt, ev);
         self.extra.on_cte_binding(stmt, ev);
     }
 
-    fn on_scoped_source(
-        &mut self,
-        stmt: &mut AnyParsedStatement<'_>,
-        ev: ScopedSourceEvent<'_>,
-    ) {
-        self.extra.on_scoped_source(stmt, ev);
-    }
-
     fn enter_query(&mut self, stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
+        self.lineage.enter_query(stmt, node_id);
         self.extra.enter_query(stmt, node_id);
     }
 
     fn exit_query(&mut self, stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
+        self.lineage.exit_query(stmt, node_id);
         self.extra.exit_query(stmt, node_id);
     }
 

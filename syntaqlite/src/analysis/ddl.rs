@@ -32,18 +32,6 @@ pub(crate) struct SemanticPropertyExtractor<'a, 'stmt> {
     roles: &'a [SemanticRole],
 }
 
-/// A single binding inside a CTE list (`WITH name(cols) AS (body), ...`).
-/// Borrowed view; lives only for the duration of one
-/// [`SemanticPropertyExtractor::for_each_cte_binding`] callback.
-///
-/// Use [`SemanticPropertyExtractor::cte_declared_cols`] to materialize the
-/// declared column list when the consumer actually needs it — the iterator
-/// itself stays cheap.
-pub(crate) struct CteBindingView<'b> {
-    pub(crate) name: &'b str,
-    pub(crate) body_id: Option<AnyNodeId>,
-}
-
 /// A single FROM-clause source, after walking through transparent wrappers
 /// and joins. Aliases are extracted but not lowercased — callers do that.
 pub(crate) enum FromSource<'b> {
@@ -118,44 +106,6 @@ impl<'a, 'stmt> SemanticPropertyExtractor<'a, 'stmt> {
             if !f(&child_fields, flags, alias, expr) {
                 return;
             }
-        }
-    }
-
-    /// Visit each `CteBinding` child under `bindings_id` (a CTE list
-    /// node). Skips non-binding children and malformed bindings.
-    ///
-    /// The view only carries `(name, body_id)` — the cheap part.
-    /// Consumers that need the declared column list call
-    /// [`Self::cte_declared_cols`] with the binding's node id. The
-    /// iterator stays cheap for callers (lineage) that don't need
-    /// declared columns at all.
-    pub(crate) fn for_each_cte_binding<F>(&self, bindings_id: AnyNodeId, mut f: F)
-    where
-        F: FnMut(CteBindingView<'stmt>),
-    {
-        let Some(children) = self.stmt.list_children(bindings_id) else {
-            return;
-        };
-        for &cte_id in children {
-            if cte_id.is_null() {
-                continue;
-            }
-            let Some((
-                SemanticRole::CteBinding {
-                    name: name_idx,
-                    body: body_idx,
-                    ..
-                },
-                fields,
-            )) = self.role_for_node(cte_id)
-            else {
-                continue;
-            };
-            let name = self.stmt.span_field_text(&fields, name_idx).unwrap_or("");
-            f(CteBindingView {
-                name,
-                body_id: fields.node_id_at(body_idx),
-            });
         }
     }
 

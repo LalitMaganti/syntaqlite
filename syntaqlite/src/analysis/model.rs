@@ -120,11 +120,6 @@ impl StatementAnalysis {
 /// lineage, defined relations). Produced by
 /// [`Analyzer::analyze`](super::engine::Analyzer::analyze).
 ///
-/// For incremental events (symbol resolutions, definition sites, tokens,
-/// comments) use
-/// [`Analyzer::analyze_with_observer`](super::engine::Analyzer::analyze_with_observer)
-/// and supply an [`AnalysisObserver`](super::observer::AnalysisObserver).
-///
 /// # Example
 ///
 /// ```

@@ -1,19 +1,24 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Recursive AST-walking lineage resolver.
+//! Post-walk lineage trace over a captured [`LineageCapture`].
+//!
+//! The builder reads the capture's CTE map and re-walks the AST through
+//! [`SemanticPropertyExtractor`] for FROM-source iteration and result
+//! column inspection. The trace-through-CTE recursion stays here (it's
+//! a pull operation by nature).
 
 use std::collections::{HashMap, HashSet};
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
 
-use crate::analysis::catalog::Catalog;
-use crate::analysis::ddl::{FromSource, SemanticPropertyExtractor};
-use crate::dialect::SemanticRole;
-
+use super::LineageCapture;
 use super::types::{
     ColumnLineage, ColumnOrigin, PhysicalTableAccess, QueryLineage, RelationAccess, RelationKind,
 };
+use crate::analysis::catalog::Catalog;
+use crate::analysis::ddl::{FromSource, SemanticPropertyExtractor};
+use crate::dialect::SemanticRole;
 
 /// What kind of FROM source this is.
 #[derive(Debug, Clone)]
@@ -48,28 +53,28 @@ enum ColumnSpec {
     },
 }
 
-/// Walks the AST to compute column lineage.
-pub(super) struct LineageResolver<'a, 'b> {
+/// Walks captured state + AST to compute column lineage.
+pub(super) struct LineageBuilder<'a, 'b> {
+    capture: &'a LineageCapture,
     sema: SemanticPropertyExtractor<'a, 'b>,
     catalog: &'a Catalog,
-    /// CTE name -> body node ID (from WITH clause, before FROM is walked).
-    cte_bodies: HashMap<String, AnyNodeId>,
     /// Body nodes currently being traced (cycle detection for recursive CTEs).
     tracing: HashSet<AnyNodeId>,
     /// Whether all sources were fully resolved.
     complete: bool,
 }
 
-impl<'a, 'b> LineageResolver<'a, 'b> {
+impl<'a, 'b> LineageBuilder<'a, 'b> {
     pub(super) fn new(
+        capture: &'a LineageCapture,
         stmt: &'a AnyParsedStatement<'b>,
         catalog: &'a Catalog,
         roles: &'a [SemanticRole],
     ) -> Self {
         Self {
+            capture,
             sema: SemanticPropertyExtractor::new(stmt, roles),
             catalog,
-            cte_bodies: HashMap::new(),
             tracing: HashSet::new(),
             complete: true,
         }
@@ -79,53 +84,9 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
         self.sema.stmt()
     }
 
-    /// Entry point: find the outermost SELECT and resolve its lineage.
-    pub(super) fn resolve(&mut self, root: AnyNodeId) -> Option<QueryLineage> {
-        self.resolve_node(root)
-    }
-
-    fn resolve_node(&mut self, node_id: AnyNodeId) -> Option<QueryLineage> {
-        let (role, fields) = self.sema.role_for_node(node_id)?;
-        match role {
-            SemanticRole::CteScope { bindings, body, .. } => {
-                if let Some(bindings_id) = fields.node_id_at(bindings) {
-                    self.collect_cte_bindings(bindings_id);
-                }
-                fields.node_id_at(body).and_then(|id| self.resolve_node(id))
-            }
-            SemanticRole::Query { .. } => self.resolve_select(node_id),
-            SemanticRole::DefineTable { select, .. }
-            | SemanticRole::DefineView { select, .. }
-            | SemanticRole::DefineFunction { select, .. } => fields
-                .node_id_at(select)
-                .and_then(|id| self.resolve_node(id)),
-            SemanticRole::Transparent | SemanticRole::DmlScope { .. } => {
-                for child_id in self.stmt().child_node_ids(node_id) {
-                    if let Some(result) = self.resolve_node(child_id) {
-                        return Some(result);
-                    }
-                }
-                None
-            }
-            _ => None,
-        }
-    }
-
-    fn collect_cte_bindings(&mut self, bindings_id: AnyNodeId) {
-        // Collect into a temp Vec so the iterator borrow on self.sema doesn't
-        // conflict with the &mut self.cte_bodies write.
-        let mut entries: Vec<(String, AnyNodeId)> = Vec::new();
-        self.sema.for_each_cte_binding(bindings_id, |binding| {
-            if binding.name.is_empty() {
-                return;
-            }
-            if let Some(body_id) = binding.body_id {
-                entries.push((binding.name.to_ascii_lowercase(), body_id));
-            }
-        });
-        for (name, body_id) in entries {
-            self.cte_bodies.insert(name, body_id);
-        }
+    /// Entry point: resolve the outer Query's lineage.
+    pub(super) fn build(mut self, outer_query: AnyNodeId) -> Option<QueryLineage> {
+        self.resolve_select(outer_query)
     }
 
     // ── SELECT resolution ────────────────────────────────────────────────
@@ -229,8 +190,8 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
     // ── FROM source collection ───────────────────────────────────────────
 
     /// Walk a FROM clause and return a map of display-name → `SourceInfo`.
-    /// Uses [`SemanticPropertyExtractor::for_each_from_source`] so the
-    /// SourceRef/ScopedSource role-dispatch is shared with the analyzer.
+    /// CTE bindings come from the capture; everything else is disambiguated
+    /// against the catalog.
     fn collect_sources(&self, from_id: AnyNodeId) -> HashMap<String, SourceInfo> {
         let mut target: HashMap<String, SourceInfo> = HashMap::new();
         self.sema
@@ -238,17 +199,18 @@ impl<'a, 'b> LineageResolver<'a, 'b> {
                 FromSource::Relation { name, alias, .. } => {
                     let display = alias.unwrap_or(name).to_ascii_lowercase();
                     let canonical = name.to_ascii_lowercase();
-                    let (columns, kind) = if let Some(&body) = self.cte_bodies.get(&canonical) {
-                        (self.sema.columns_from_select(body), SourceKind::Cte(body))
-                    } else {
-                        let (cols, _) = self.catalog.table_source_info(&canonical);
-                        let kind = if self.catalog.is_view(&canonical) {
-                            SourceKind::View
+                    let (columns, kind) =
+                        if let Some(&body) = self.capture.cte_bodies.get(&canonical) {
+                            (self.sema.columns_from_select(body), SourceKind::Cte(body))
                         } else {
-                            SourceKind::Table
+                            let (cols, _) = self.catalog.table_source_info(&canonical);
+                            let kind = if self.catalog.is_view(&canonical) {
+                                SourceKind::View
+                            } else {
+                                SourceKind::Table
+                            };
+                            (cols, kind)
                         };
-                        (cols, kind)
-                    };
                     target.insert(
                         display,
                         SourceInfo {

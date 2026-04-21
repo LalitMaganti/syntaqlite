@@ -98,29 +98,8 @@ pub(crate) struct CteColumnCountMismatchEvent<'a> {
 /// A single CTE binding (`name AS (body)` or `name(cols) AS (body)`),
 /// fired after the binding's body has been walked.
 #[derive(Copy, Clone)]
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "fields consumed by LineageCapture in phase 3")
-)]
 pub(crate) struct CteBindingEvent<'a> {
     pub(crate) name: &'a str,
-    pub(crate) name_range: DocRange,
-    pub(crate) body_id: Option<AnyNodeId>,
-    /// True when the enclosing `WITH RECURSIVE` allowed the body to
-    /// reference the binding's own name.
-    pub(crate) is_recursive: bool,
-}
-
-/// A subquery-in-FROM (`ScopedSource`), fired after the body has been
-/// walked.
-#[derive(Copy, Clone)]
-#[cfg_attr(
-    not(test),
-    expect(dead_code, reason = "fields consumed by LineageCapture in phase 3")
-)]
-pub(crate) struct ScopedSourceEvent<'a> {
-    pub(crate) node_id: AnyNodeId,
-    pub(crate) alias: Option<&'a str>,
     pub(crate) body_id: Option<AnyNodeId>,
 }
 
@@ -142,7 +121,6 @@ pub(crate) trait SemanticVisitor {
     const WANTS_COLUMN_DEFINITION: bool = false;
     const WANTS_CTE_COLUMN_COUNT: bool = false;
     const WANTS_CTE_BINDING: bool = false;
-    const WANTS_SCOPED_SOURCE: bool = false;
     /// Return true to receive [`enter_query`](Self::enter_query) /
     /// [`exit_query`](Self::exit_query) hooks around each `Query` node.
     const WANTS_QUERY: bool = false;
@@ -194,15 +172,6 @@ pub(crate) trait SemanticVisitor {
         &mut self,
         _stmt: &mut AnyParsedStatement<'_>,
         _ev: CteBindingEvent<'_>,
-    ) {
-    }
-
-    /// Called for each subquery-in-FROM (e.g. `FROM (SELECT …) AS x`)
-    /// after its body has been walked.
-    fn on_scoped_source(
-        &mut self,
-        _stmt: &mut AnyParsedStatement<'_>,
-        _ev: ScopedSourceEvent<'_>,
     ) {
     }
 
@@ -312,7 +281,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 self.walk_source_ref(visitor, node_id, &fields, name, alias);
             }
             SemanticRole::ScopedSource { body, alias } => {
-                self.walk_scoped_source(visitor, node_id, &fields, body, alias);
+                self.walk_scoped_source(visitor, &fields, body, alias);
             }
             SemanticRole::Query {
                 from,
@@ -512,7 +481,6 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     fn walk_scoped_source<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
-        node_id: AnyNodeId,
         fields: &NodeFields,
         body_idx: u8,
         alias_idx: u8,
@@ -523,16 +491,6 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.scope.pop();
 
         let alias = self.stmt.name_text(fields.node_id_at(alias_idx)).0;
-
-        if V::WANTS_SCOPED_SOURCE {
-            let ev = ScopedSourceEvent {
-                node_id,
-                alias: if alias.is_empty() { None } else { Some(alias) },
-                body_id,
-            };
-            visitor.on_scoped_source(self.stmt, ev);
-        }
-
         let cols = body_id.and_then(|id| {
             SemanticPropertyExtractor::new(self.stmt, self.roles).columns_from_select(id)
         });
@@ -729,9 +687,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             if V::WANTS_CTE_BINDING {
                 let ev = CteBindingEvent {
                     name: binding.name,
-                    name_range: binding.name_range,
                     body_id: binding.body_id,
-                    is_recursive,
                 };
                 visitor.on_cte_binding(self.stmt, ev);
             }
