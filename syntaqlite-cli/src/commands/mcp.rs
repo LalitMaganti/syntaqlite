@@ -65,10 +65,7 @@ impl McpServer {
     /// Format a SQL string.
     #[tool(description = "Format a SQL string")]
     fn format_sql(&self, #[tool(aggr)] params: FormatParams) -> Result<String, String> {
-        let case = match params.keyword_case.as_str() {
-            "lower" => KeywordCase::Lower,
-            _ => KeywordCase::Upper,
-        };
+        let case = parse_keyword_case(&params.keyword_case)?;
         let config = FormatConfig::default()
             .with_line_width(params.line_width)
             .with_keyword_case(case)
@@ -158,6 +155,16 @@ impl ServerHandler for McpServer {
     }
 }
 
+fn parse_keyword_case(s: &str) -> Result<KeywordCase, String> {
+    match s {
+        "upper" => Ok(KeywordCase::Upper),
+        "lower" => Ok(KeywordCase::Lower),
+        other => Err(format!(
+            "invalid keyword_case {other:?}: expected \"upper\" or \"lower\""
+        )),
+    }
+}
+
 pub(crate) fn run(dialect: AnyDialect) -> Result<(), String> {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -176,4 +183,23 @@ pub(crate) fn run(dialect: AnyDialect) -> Result<(), String> {
                 .map_err(|e| format!("MCP server error: {e}"))?;
             Ok(())
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_keyword_case_accepts_upper_and_lower() {
+        assert_eq!(parse_keyword_case("upper"), Ok(KeywordCase::Upper));
+        assert_eq!(parse_keyword_case("lower"), Ok(KeywordCase::Lower));
+    }
+
+    #[test]
+    fn parse_keyword_case_rejects_unknown() {
+        let err = parse_keyword_case("preserve").expect_err("preserve is not valid");
+        assert!(err.contains("preserve"));
+        assert!(err.contains("upper"));
+        assert!(err.contains("lower"));
+    }
 }

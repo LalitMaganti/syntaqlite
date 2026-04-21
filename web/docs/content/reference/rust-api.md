@@ -11,10 +11,10 @@ weight = 4
 | Feature | What it enables |
 |---------|----------------|
 | `fmt` | Formatter |
-| `validation` | Analysis (unknown tables, columns, functions) |
+| `analysis` | Analysis (unknown tables, columns, functions, lineage) |
 | `sqlite` | Built-in SQLite dialect (enabled by default) |
 | `lsp` | Language server protocol implementation |
-| `serde-json` | JSON serialization for AST and diagnostics |
+| `serde` | `serde::Serialize`/`Deserialize` for AST nodes and diagnostics |
 | `dynload` | Load custom dialects from shared libraries at runtime |
 
 ## Formatter
@@ -55,7 +55,7 @@ It recovers from errors and continues parsing subsequent statements.
 
 Zero-copy: tokens reference byte offsets into the source string.
 
-## Validator
+## Analyzer
 
 | Type / Method | Description |
 |---------------|-------------|

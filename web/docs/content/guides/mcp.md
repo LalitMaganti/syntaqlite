@@ -1,34 +1,22 @@
 +++
 title = "MCP server setup"
-description = "Set up the syntaqlite MCP server for Claude Desktop, Cursor, and Windsurf."
+description = "Wire the syntaqlite MCP server into Claude Desktop, Cursor, Windsurf, or any MCP client."
 weight = 9
 +++
 
 # MCP server
 
-syntaqlite includes an MCP server for Claude Desktop, Cursor, Windsurf, and
-other MCP-compatible clients.
+The `syntaqlite` binary ships a stdio-based MCP server. Any MCP-compatible
+agent can spawn it and call its tools to format, analyze, and parse SQL.
+This guide wires it up.
 
-## Install syntaqlite
+Prerequisite: `syntaqlite` on your `$PATH`. See the
+[CLI tutorial](@/getting-started/cli.md) for install options.
 
-The MCP server is built into the `syntaqlite` binary. If you haven't installed
-it yet:
+## Add the server to your client's config
 
-```bash
-curl -sSf https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/tools/syntaqlite | python3 - install
-```
-
-See the [CLI tutorial](@/getting-started/cli.md) for other install methods.
-
-## Claude Desktop
-
-Open your config file:
-
-- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Linux: `~/.config/Claude/claude_desktop_config.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-
-Add the syntaqlite server:
+Every MCP client points at the same command. Drop this block into your
+client's MCP config file:
 
 ```json
 {
@@ -41,55 +29,41 @@ Add the syntaqlite server:
 }
 ```
 
-Restart Claude Desktop. You can now ask Claude to format or validate SQL, and
-it will use syntaqlite's tools.
+If the config file already has an `mcpServers` object, merge the `syntaqlite`
+entry into it.
 
-## Cursor
+## Config file location
 
-Add to `.cursor/mcp.json` in your project:
+| Client | Path |
+|--------|------|
+| Claude Desktop (macOS) | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Claude Desktop (Linux) | `~/.config/Claude/claude_desktop_config.json` |
+| Claude Desktop (Windows) | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Cursor | `.cursor/mcp.json` in your project |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` |
 
-```json
-{
-  "mcpServers": {
-    "syntaqlite": {
-      "command": "syntaqlite",
-      "args": ["mcp"]
-    }
-  }
-}
-```
+Other MCP-compatible clients follow the same schema; consult their docs for
+the config path.
 
-Restart Cursor. Try asking it to format a SQL query. It will use syntaqlite's
-`format_sql` tool.
+## Restart and verify
 
-## Windsurf
-
-Add to `~/.codeium/windsurf/mcp_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "syntaqlite": {
-      "command": "syntaqlite",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-Restart Windsurf.
-
-## Try it out
-
-Ask your AI assistant something like:
+Restart the client so it picks up the new server. Then ask it to format some
+SQL, for example:
 
 > Format this SQL: `select id,name from users where active=1`
 
-It should call syntaqlite's `format_sql` tool and return:
+The client should invoke syntaqlite's `format_sql` tool and return:
 
 ```sql
 SELECT id, name FROM users WHERE active = 1;
 ```
 
-See the [MCP tools reference](@/reference/mcp-tools.md) for all available
-tools and their parameters.
+If nothing happens, check the client's MCP/server log for spawn errors; the
+usual cause is `syntaqlite` not being on the `$PATH` seen by the GUI app (GUI
+apps often don't inherit your shell's environment — specify an absolute path
+to `syntaqlite` in the `command` field if needed).
+
+## Next steps
+
+- [MCP tools reference](@/reference/mcp-tools.md) — every tool the server
+  exposes and its parameters

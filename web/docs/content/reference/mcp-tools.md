@@ -20,7 +20,7 @@ Format a SQL string.
 |-----------|------|---------|-------------|
 | `sql` | string | *(required)* | The SQL to format |
 | `line_width` | integer | `80` | Maximum line width |
-| `keyword_case` | string | `"upper"` | `"upper"`, `"lower"`, or `"preserve"` |
+| `keyword_case` | string | `"upper"` | `"upper"` or `"lower"` |
 | `semicolons` | boolean | `true` | Append trailing semicolons |
 
 **Returns:** The formatted SQL as a string. On parse error, returns

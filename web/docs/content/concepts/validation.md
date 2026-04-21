@@ -51,7 +51,7 @@ discovers DDL in the file automatically via the Document layer, and the Dialect
 layer knows which functions are available for the target SQLite version.
 
 The source is in
-[`catalog.rs`](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite/src/semantic/catalog.rs).
+[`catalog.rs`](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite/src/analysis/catalog.rs).
 
 ### Known vs. unknown columns
 
@@ -64,9 +64,8 @@ an ORM definition but not have the full DDL.
 ## Scope resolution
 
 Each SELECT statement gets its own scope frame that tracks which tables are
-visible. The
-[`ValidationPass`](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite/src/semantic/analyzer.rs)
-manages these frames automatically:
+visible. These frames are pushed and popped by the analyzer as it walks
+([`query_scope.rs`](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite/src/analysis/engine/query_scope.rs)):
 
 1. Entering a SELECT pushes a new frame
 2. FROM/JOIN clauses register tables (with aliases) into that frame
@@ -90,7 +89,7 @@ columns. Recursive CTEs work: the CTE name is visible within its own body.
 When a name doesn't resolve, the analyzer computes case-insensitive
 [Levenshtein distance](https://en.wikipedia.org/wiki/Levenshtein_distance)
 against all candidates in scope
-([`fuzzy.rs`](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite/src/semantic/fuzzy.rs)).
+([`fuzzy.rs`](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite/src/analysis/diagnostics/fuzzy.rs)).
 If a candidate is within the threshold (default: 2 edits), a "did you mean?"
 suggestion is attached to the diagnostic.
 

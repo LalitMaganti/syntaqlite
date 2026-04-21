@@ -218,7 +218,7 @@ After `close()`, any method call raises
 
 ### `syntaqlite.Schema`
 
-A catalog schema. Everything that contributes to the validator's catalog
+A catalog schema. Everything that contributes to the analyzer's catalog
 lives here — pick whichever combination fits your use case.
 
 ```python

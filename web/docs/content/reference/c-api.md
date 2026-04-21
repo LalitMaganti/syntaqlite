@@ -56,7 +56,7 @@ typedef struct {
 | Function | Description |
 |----------|-------------|
 | `syntaqlite_parser_create(mem)` | Create a parser for the built-in SQLite dialect. `mem` may be `NULL` |
-| `syntaqlite_parser_create_with_grammar(mem, grammar)` | Create with a custom grammar |
+| `syntaqlite_parser_create_with_dialect(mem, dialect)` | Create with a custom dialect |
 | `syntaqlite_parser_reset(p, source, len)` | Set source text for parsing |
 | `syntaqlite_parser_next(p)` | Parse the next statement. Returns `0` on success, `1` on error, `-1` when done |
 | `syntaqlite_parser_destroy(p)` | Free the parser. No-op if `NULL` |
@@ -98,7 +98,7 @@ typedef struct {
 | Function | Description |
 |----------|-------------|
 | `syntaqlite_tokenizer_create(mem)` | Create a tokenizer for the built-in SQLite dialect. `mem` may be `NULL` |
-| `syntaqlite_tokenizer_create_with_grammar(mem, grammar)` | Create with a custom grammar |
+| `syntaqlite_tokenizer_create_with_dialect(mem, dialect)` | Create with a custom dialect |
 | `syntaqlite_tokenizer_reset(tok, source, len)` | Set source text for tokenizing |
 | `syntaqlite_tokenizer_next(tok, &out)` | Read the next token into `out`. Returns the token type, `0` for EOF |
 | `syntaqlite_tokenizer_destroy(tok)` | Free the tokenizer. No-op if `NULL` |
@@ -145,12 +145,12 @@ Return codes from `syntaqlite_formatter_format()`:
 | `syntaqlite_formatter_error_msg(f)` | NUL-terminated error message, or `NULL` after success |
 | `syntaqlite_formatter_destroy(f)` | Free the formatter. No-op if `NULL` |
 
-## Validator
+## Analyzer
 
 ### Types
 
 ```c
-// Opaque validator handle.
+// Opaque analyzer handle.
 typedef struct SyntaqliteAnalyzer SyntaqliteAnalyzer;
 
 // Diagnostic severity levels.
@@ -223,7 +223,7 @@ typedef struct {
 
 | Function | Description |
 |----------|-------------|
-| `syntaqlite_analyzer_create_sqlite()` | Create a validator with default mode (`DOCUMENT`) |
+| `syntaqlite_analyzer_create_sqlite()` | Create an analyzer with default mode (`DOCUMENT`) |
 | `syntaqlite_analyzer_set_mode(v, mode)` | Set `DOCUMENT` or `EXECUTE` mode |
 | `syntaqlite_analyzer_add_tables(v, tables, count)` | Register schema tables from `SyntaqliteRelationDef` array |
 | `syntaqlite_analyzer_add_views(v, views, count)` | Register schema views from `SyntaqliteRelationDef` array |
@@ -244,7 +244,7 @@ typedef struct {
 | `syntaqlite_analyzer_statement_unexpanded_view_count(v, idx)` | Number of unexpanded views in statement `idx` |
 | `syntaqlite_analyzer_statement_unexpanded_views(v, idx)` | Pointer to `SyntaqliteUnexpandedView` array for statement `idx`, or `NULL` |
 | `syntaqlite_analyzer_reset_catalog(v)` | Clear registered schema (preserves dialect builtins) |
-| `syntaqlite_analyzer_destroy(v)` | Free the validator. No-op if `NULL` |
+| `syntaqlite_analyzer_destroy(v)` | Free the analyzer. No-op if `NULL` |
 
 ## Utility
 
@@ -261,7 +261,7 @@ typedef struct {
 
 ## Memory model
 
-- Parser, formatter, and validator handles are **reusable**: create once, call
+- Parser, formatter, and analyzer handles are **reusable**: create once, call
   repeatedly.
 - Output strings from `syntaqlite_formatter_output()`,
   `syntaqlite_analyzer_diagnostics()`, and lineage accessors

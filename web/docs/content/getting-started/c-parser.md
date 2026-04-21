@@ -1,14 +1,20 @@
 +++
-title = "C parser"
+title = "C library"
 description = "Parse SQL from C using the source amalgamation."
 weight = 5
 +++
 
-# Parse SQL from C
+# Using syntaqlite from C
 
-This tutorial walks you through parsing a SQL query from C using the
-syntaqlite source amalgamation. By the end you'll have a small program that
-parses a query and prints its AST with no dependencies beyond a C compiler.
+This tutorial walks you through parsing SQL from C. By the end you'll have a
+small program that parses queries, prints their AST, recovers from errors, and
+lists tokens — with nothing to install beyond a C compiler.
+
+syntaqlite ships two C distributions. This tutorial uses the **source
+amalgamation**, which provides the parser and tokenizer as two C files you
+compile directly into your project. The prebuilt shared library also adds
+formatting and validation; see the [C integration guide](@/guides/c-api.md)
+once you're done here.
 
 ## 1. Download the amalgamation
 
@@ -153,7 +159,7 @@ for (uint32_t i = 0; i < count; i++) {
 
 ## Next steps
 
-- The source amalgamation gives you the **parser and tokenizer**. For the
-  **formatter and validator**, use the [prebuilt shared library](@/guides/c-api.md#option-2-prebuilt-shared-library-full-api).
-- See the [C API reference](@/reference/c-api.md) for the full list of
-  parser, tokenizer, formatter, and validator functions.
+- [C integration guide](@/guides/c-api.md) — switch to the prebuilt shared
+  library to format and validate SQL from C
+- [C API reference](@/reference/c-api.md) — all parser, tokenizer, formatter,
+  and analyzer functions

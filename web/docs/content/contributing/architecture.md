@@ -98,7 +98,7 @@ of truth for AST node structure. `syntaqlite-buildtools` generates from them:
 - **C headers** — struct layouts for AST nodes, parser action code, node
   metadata (field names, field counts, list ranges), semantic role byte
   tables, and formatter dispatch tables
-- **Rust code** — typed AST node wrappers and the `semantic_roles.rs` table
+- **Rust code** — typed AST node wrappers
 
 ### The arena
 
@@ -115,7 +115,7 @@ pointers are handled. The rest of the Rust code sees safe `Parser`,
 `Tokenizer`, and `ParseSession` types.
 
 **Outbound** (Rust → C): `syntaqlite/src/fmt/ffi.rs` and
-`syntaqlite/src/semantic/ffi.rs` export the formatter and validator as opaque
+`syntaqlite/src/analysis/ffi/` export the formatter and analyzer as opaque
 C handles (`SyntaqliteFormatter*`, `SyntaqliteAnalyzer*`) with lifecycle
 functions (create, use, destroy).
 

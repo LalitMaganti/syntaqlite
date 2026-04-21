@@ -123,7 +123,7 @@ fn walk(stmt: &AnyParsedStatement, node_id: u32, depth: usize) {
 
 ## Validate SQL
 
-Add the `validation` and `sqlite` features:
+Add the `analysis` and `sqlite` features:
 
 ```toml
 [dependencies]
