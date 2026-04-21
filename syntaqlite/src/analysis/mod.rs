@@ -46,8 +46,6 @@ pub(crate) mod completion;
 pub(crate) mod config;
 #[cfg(feature = "analysis")]
 pub(crate) mod context;
-#[cfg(feature = "analysis")]
-pub(crate) mod ddl;
 pub(crate) mod diagnostics;
 #[cfg(feature = "analysis")]
 pub(crate) mod engine;
@@ -60,6 +58,8 @@ mod lineage;
 pub(crate) mod model;
 #[cfg(feature = "analysis")]
 pub(crate) mod resolver;
+#[cfg(feature = "analysis")]
+pub(crate) mod stmt_reader;
 
 // ── Public re-exports ─────────────────────────────────────────────────────────
 

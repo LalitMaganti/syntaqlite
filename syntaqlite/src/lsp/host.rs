@@ -16,7 +16,7 @@ use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
 use crate::fmt::formatter::Formatter;
 
-use super::analysis_data::{DefinitionResult, ExternalDefinitions, LspCapturePass};
+use super::analysis_data::{DefinitionResult, ExternalDefinitions, LspCapture};
 use super::document_store::{Document, DocumentStore};
 use super::semantic_tokens_codec::encode_semantic_tokens;
 use super::{CompletionEntry, CompletionInfo};
@@ -110,9 +110,9 @@ fn ensure_analysis(
     if doc.analysis.is_some() {
         return;
     }
-    let mut capture = LspCapturePass::new(external_defs);
+    let mut capture = LspCapture::new(external_defs);
     let mut ctx = AnalysisContext::new(user_catalog).with_config(*analysis_config);
-    let model = analyzer.analyze_with_pass(&doc.source, &mut ctx, &mut capture);
+    let model = analyzer.analyze_with_visitor(&doc.source, &mut ctx, &mut capture);
     let all_diags: Vec<Diagnostic> = model.diagnostics().cloned().collect();
     let parse_diags: Vec<Diagnostic> = all_diags
         .iter()
@@ -707,7 +707,7 @@ fn record_external_definitions(
 ) {
     use syntaqlite_syntax::ParseOutcome;
 
-    use crate::analysis::ddl::SemanticPropertyExtractor;
+    use crate::analysis::stmt_reader::StmtReader;
 
     let parser = syntaqlite_syntax::Parser::new();
     let mut session = parser.parse(ddl);
@@ -720,7 +720,7 @@ fn record_external_definitions(
         let Some(root) = stmt.root() else { continue };
         let root_id = root.node_id().into();
         let erased = stmt.erase();
-        let reader = SemanticPropertyExtractor::new(&erased, dialect.roles());
+        let reader = StmtReader::new(&erased, dialect.roles());
         if let Some((name, range)) = reader.name_span(root_id) {
             defs.insert_relation(&name, file_uri, range);
             for (col_name, col_range) in reader.column_spans(root_id) {

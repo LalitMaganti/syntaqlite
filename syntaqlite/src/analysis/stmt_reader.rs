@@ -3,7 +3,7 @@
 
 //! Role-table-driven property extraction from a parsed statement.
 //!
-//! [`SemanticPropertyExtractor`] is the analysis crate's view of a parsed
+//! [`StmtReader`] is the analysis crate's view of a parsed
 //! statement through the dialect's `SemanticRole` table. It bundles
 //! `(stmt, roles)` so call sites don't repeat both args, and exposes
 //! methods that answer questions like "what does this `CREATE TABLE`
@@ -27,39 +27,12 @@ use crate::dialect::SemanticRole;
 /// Cheap to construct — just two references — so call sites build a
 /// fresh handle locally rather than thread one through.
 #[derive(Clone, Copy)]
-pub(crate) struct SemanticPropertyExtractor<'a, 'stmt> {
+pub(crate) struct StmtReader<'a, 'stmt> {
     stmt: &'a AnyParsedStatement<'stmt>,
     roles: &'a [SemanticRole],
 }
 
-/// A single binding inside a CTE list (`WITH name(cols) AS (body), ...`).
-/// Borrowed view; lives only for the duration of one
-/// [`SemanticPropertyExtractor::for_each_cte_binding`] callback.
-///
-/// Use [`SemanticPropertyExtractor::cte_declared_cols`] to materialize the
-/// declared column list when the consumer actually needs it — the iterator
-/// itself stays cheap.
-pub(crate) struct CteBindingView<'b> {
-    pub(crate) name: &'b str,
-    pub(crate) body_id: Option<AnyNodeId>,
-}
-
-/// A single FROM-clause source, after walking through transparent wrappers
-/// and joins. Aliases are extracted but not lowercased — callers do that.
-pub(crate) enum FromSource<'b> {
-    /// A relation reference: catalog table, view, CTE, or table-valued function.
-    Relation {
-        name: &'b str,
-        alias: Option<&'b str>,
-    },
-    /// A bracketed subquery in FROM, with its body and (optional) alias.
-    Subquery {
-        alias: Option<&'b str>,
-        body_id: AnyNodeId,
-    },
-}
-
-impl<'a, 'stmt> SemanticPropertyExtractor<'a, 'stmt> {
+impl<'a, 'stmt> StmtReader<'a, 'stmt> {
     pub(crate) fn new(stmt: &'a AnyParsedStatement<'stmt>, roles: &'a [SemanticRole]) -> Self {
         Self { stmt, roles }
     }
@@ -121,44 +94,6 @@ impl<'a, 'stmt> SemanticPropertyExtractor<'a, 'stmt> {
         }
     }
 
-    /// Visit each `CteBinding` child under `bindings_id` (a CTE list
-    /// node). Skips non-binding children and malformed bindings.
-    ///
-    /// The view only carries `(name, body_id)` — the cheap part.
-    /// Consumers that need the declared column list call
-    /// [`Self::cte_declared_cols`] with the binding's node id. The
-    /// iterator stays cheap for callers (lineage) that don't need
-    /// declared columns at all.
-    pub(crate) fn for_each_cte_binding<F>(&self, bindings_id: AnyNodeId, mut f: F)
-    where
-        F: FnMut(CteBindingView<'stmt>),
-    {
-        let Some(children) = self.stmt.list_children(bindings_id) else {
-            return;
-        };
-        for &cte_id in children {
-            if cte_id.is_null() {
-                continue;
-            }
-            let Some((
-                SemanticRole::CteBinding {
-                    name: name_idx,
-                    body: body_idx,
-                    ..
-                },
-                fields,
-            )) = self.role_for_node(cte_id)
-            else {
-                continue;
-            };
-            let name = self.stmt.span_field_text(&fields, name_idx).unwrap_or("");
-            f(CteBindingView {
-                name,
-                body_id: fields.node_id_at(body_idx),
-            });
-        }
-    }
-
     /// Declared column list for a `CteBinding` node, when the binding
     /// wrote out the parenthesized `(col1, col2, ...)` part. Returns
     /// `None` when no column list was declared (the body's columns are
@@ -186,53 +121,6 @@ impl<'a, 'stmt> SemanticPropertyExtractor<'a, 'stmt> {
             }
         }
         if names.is_empty() { None } else { Some(names) }
-    }
-
-    /// Visit each FROM-clause source under `from_id`, recursing through
-    /// transparent wrappers and join nodes. Both `SourceRef` (catalog
-    /// relations) and `ScopedSource` (subqueries) are reported.
-    pub(crate) fn for_each_from_source<F>(&self, from_id: AnyNodeId, mut f: F)
-    where
-        F: FnMut(FromSource<'stmt>),
-    {
-        self.walk_from(from_id, &mut f);
-    }
-
-    fn walk_from<F>(&self, from_id: AnyNodeId, f: &mut F)
-    where
-        F: FnMut(FromSource<'stmt>),
-    {
-        let Some((role, fields)) = self.role_for_node(from_id) else {
-            return;
-        };
-        match role {
-            SemanticRole::SourceRef {
-                name: name_idx,
-                alias: alias_idx,
-                ..
-            } => {
-                let Some(name) = self.stmt.span_field_text(&fields, name_idx) else {
-                    return;
-                };
-                let alias = self.stmt.name_field_text(&fields, alias_idx);
-                f(FromSource::Relation { name, alias });
-            }
-            SemanticRole::ScopedSource {
-                body: body_idx,
-                alias: alias_idx,
-            } => {
-                let Some(body_id) = fields.node_id_at(body_idx) else {
-                    return;
-                };
-                let alias = self.stmt.name_field_text(&fields, alias_idx);
-                f(FromSource::Subquery { alias, body_id });
-            }
-            _ => {
-                for child in self.stmt.child_node_ids(from_id) {
-                    self.walk_from(child, f);
-                }
-            }
-        }
     }
 
     // ── DDL definition extraction ───────────────────────────────────────

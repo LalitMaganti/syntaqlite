@@ -8,7 +8,7 @@
 //! definition locations, per-document bundles. Generic token/comment data
 //! lives in [`crate::analysis::analysis`].
 //!
-//! - [`LspCapturePass`] — a [`WalkPass`] impl that fills a
+//! - [`LspCapture`] — a [`SemanticVisitor`] impl that fills a
 //!   [`DocumentAnalysisData`] directly during analysis.
 //! - [`ExternalDefinitions`] — a cross-file definition-site registry consulted
 //!   by the capture pass to correlate resolutions with schema files.
@@ -24,7 +24,7 @@ use crate::analysis::catalog::{
 };
 use crate::analysis::engine::tokens::{SemanticToken, StoredComment, StoredToken};
 use crate::analysis::engine::walker::{
-    CallEvent, ColumnRefEvent, SourceRefEvent, WalkCtx, WalkPass,
+    CallEvent, ColumnRefEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
 };
 use crate::dialect::AnyDialect;
 
@@ -122,7 +122,7 @@ impl SymbolIdentity {
 
 /// Per-document bundle of everything LSP services query after analysis:
 /// tokens, comments, resolved references, definition sites. Populated by
-/// [`LspCapturePass`] during a semantic-analyzer pass.
+/// [`LspCapture`] during a semantic-analyzer pass.
 #[derive(Debug, Default)]
 pub(crate) struct DocumentAnalysisData {
     pub(crate) tokens: Vec<StoredToken>,
@@ -257,16 +257,16 @@ impl ExternalDefinitions {
     }
 }
 
-// ── LspCapturePass ────────────────────────────────────────────────────────────
+// ── LspCapture ────────────────────────────────────────────────────────────
 
 /// Walk-time pass that fills a [`DocumentAnalysisData`] with everything LSP
 /// services need: resolved references, definition sites, tokens, comments.
-pub(crate) struct LspCapturePass<'a> {
+pub(crate) struct LspCapture<'a> {
     pub(crate) data: DocumentAnalysisData,
     external: Option<&'a ExternalDefinitions>,
 }
 
-impl<'a> LspCapturePass<'a> {
+impl<'a> LspCapture<'a> {
     pub(crate) fn new(external: Option<&'a ExternalDefinitions>) -> Self {
         Self {
             data: DocumentAnalysisData::default(),
@@ -315,7 +315,7 @@ impl<'a> LspCapturePass<'a> {
     }
 }
 
-impl WalkPass for LspCapturePass<'_> {
+impl SemanticVisitor for LspCapture<'_> {
     const WANTS_SOURCE_REF: bool = true;
     const WANTS_COLUMN_REF: bool = true;
     const WANTS_CALL: bool = true;

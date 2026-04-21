@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
 
-use super::ddl::SemanticPropertyExtractor;
+use super::stmt_reader::StmtReader;
 use crate::dialect::AnyDialect;
 use crate::dialect::{
     FIELD_ABSENT, FunctionCategory as DialectFunctionCategory, SemanticRole, is_function_available,
@@ -689,7 +689,7 @@ impl Catalog {
         let Some(&role) = dialect.roles().get(u32::from(tag) as usize) else {
             return;
         };
-        let reader = SemanticPropertyExtractor::new(stmt, dialect.roles());
+        let reader = StmtReader::new(stmt, dialect.roles());
         let layer = &mut self.layers[target.index()];
 
         match role {
