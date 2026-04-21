@@ -624,4 +624,147 @@ mod tests {
         catalog.mark_imported("test.module");
         assert!(catalog.is_imported("test.module"));
     }
+
+    // ── Visitor hook ordering ─────────────────────────────────────────────────
+    //
+    // `on_cte_binding` must fire AFTER the body walk completes, and for
+    // `WITH RECURSIVE` the body must have observed the binding's own name
+    // as a resolved source (proving the name was registered in the catalog
+    // before the body walk started).
+
+    #[derive(Default)]
+    #[expect(
+        clippy::struct_excessive_bools,
+        reason = "test-only capture struct; each bool checks one hook invariant"
+    )]
+    struct HookCapture {
+        events: Vec<String>,
+        self_ref_resolved_in_body: bool,
+        last_cte_body_present: bool,
+        last_cte_name_range_nonempty: bool,
+        last_scoped_body_present: bool,
+        last_scoped_alias: Option<String>,
+        query_enters: Vec<AnyNodeId>,
+        query_exits: Vec<AnyNodeId>,
+    }
+
+    impl SemanticVisitor for HookCapture {
+        const WANTS_SOURCE_REF: bool = true;
+        const WANTS_CTE_BINDING: bool = true;
+        const WANTS_SCOPED_SOURCE: bool = true;
+        const WANTS_QUERY: bool = true;
+
+        fn on_source_ref(
+            &mut self,
+            _stmt: &mut AnyParsedStatement<'_>,
+            _cx: &mut walker::WalkCtx<'_>,
+            ev: walker::SourceRefEvent<'_>,
+        ) {
+            self.events.push(format!("source:{}:{}", ev.name, ev.resolved));
+            if ev.name == "foo" && ev.resolved {
+                self.self_ref_resolved_in_body = true;
+            }
+        }
+
+        fn on_cte_binding(
+            &mut self,
+            _stmt: &mut AnyParsedStatement<'_>,
+            ev: walker::CteBindingEvent<'_>,
+        ) {
+            self.events
+                .push(format!("cte:{}:recursive={}", ev.name, ev.is_recursive));
+            self.last_cte_body_present = ev.body_id.is_some();
+            self.last_cte_name_range_nonempty = ev.name_range.start < ev.name_range.end;
+        }
+
+        fn on_scoped_source(
+            &mut self,
+            _stmt: &mut AnyParsedStatement<'_>,
+            ev: walker::ScopedSourceEvent<'_>,
+        ) {
+            self.events.push(format!(
+                "scoped:{}:{}",
+                ev.alias.unwrap_or("<anon>"),
+                ev.node_id.is_null()
+            ));
+            self.last_scoped_body_present = ev.body_id.is_some();
+            self.last_scoped_alias = ev.alias.map(str::to_string);
+        }
+
+        fn enter_query(&mut self, _stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
+            self.query_enters.push(node_id);
+            self.events.push("enter_query".to_string());
+        }
+
+        fn exit_query(&mut self, _stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
+            self.query_exits.push(node_id);
+            self.events.push("exit_query".to_string());
+        }
+    }
+
+    #[test]
+    fn recursive_cte_binding_hook_fires_after_body_with_self_visible() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let mut cap = HookCapture::default();
+        let _ = analyzer.analyze_with_visitor(
+            "WITH RECURSIVE foo(n) AS (SELECT 1 UNION ALL SELECT n+1 FROM foo) SELECT * FROM foo",
+            &mut ctx,
+            &mut cap,
+        );
+
+        assert!(
+            cap.self_ref_resolved_in_body,
+            "recursive CTE body should see its own name as resolved; events={:?}",
+            cap.events
+        );
+        assert!(
+            cap.events
+                .iter()
+                .any(|e| e == "cte:foo:recursive=true"),
+            "expected on_cte_binding(recursive=true) event; got {:?}",
+            cap.events
+        );
+        assert!(cap.last_cte_body_present, "cte body_id should be Some");
+        assert!(
+            cap.last_cte_name_range_nonempty,
+            "cte name_range should span the name"
+        );
+
+        let first_body_ref = cap.events.iter().position(|e| e.starts_with("source:foo"));
+        let cte_event = cap.events.iter().position(|e| e.starts_with("cte:foo"));
+        assert!(
+            matches!((first_body_ref, cte_event), (Some(a), Some(b)) if a < b),
+            "expected body source ref before cte binding hook; got {:?}",
+            cap.events
+        );
+    }
+
+    #[test]
+    fn scoped_source_and_query_hooks_fire_around_subquery() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "t",
+            Some(vec!["a".into()]),
+            false,
+        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let mut cap = HookCapture::default();
+        let _ = analyzer.analyze_with_visitor("SELECT a FROM (SELECT a FROM t) AS x", &mut ctx, &mut cap);
+
+        assert_eq!(cap.last_scoped_alias.as_deref(), Some("x"));
+        assert!(cap.last_scoped_body_present);
+
+        assert_eq!(
+            cap.query_enters.len(),
+            2,
+            "expected 2 enter_query (outer + subquery); got {:?}",
+            cap.events
+        );
+        assert_eq!(cap.query_enters.len(), cap.query_exits.len());
+        // Outer query enters first and exits last.
+        assert_eq!(cap.query_enters[0], cap.query_exits[1]);
+    }
 }

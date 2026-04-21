@@ -19,8 +19,8 @@ use crate::analysis::diagnostics::{Diagnostic, DiagnosticMessage, Help};
 use crate::analysis::{AnalysisConfig, CheckConfig, CheckLevel};
 
 use super::walker::{
-    CallEvent, ColumnRefEvent, CteColumnCountMismatchEvent, SemanticVisitor, SourceRefEvent,
-    WalkCtx,
+    CallEvent, ColumnRefEvent, CteBindingEvent, CteColumnCountMismatchEvent, ScopedSourceEvent,
+    SemanticVisitor, SourceRefEvent, WalkCtx,
 };
 
 impl CheckConfig {
@@ -116,6 +116,9 @@ impl<V: SemanticVisitor> SemanticVisitor for AnalysisVisitor<'_, V> {
     const WANTS_RELATION_DEFINITION: bool = V::WANTS_RELATION_DEFINITION;
     const WANTS_COLUMN_DEFINITION: bool = V::WANTS_COLUMN_DEFINITION;
     const WANTS_CTE_COLUMN_COUNT: bool = true;
+    const WANTS_CTE_BINDING: bool = V::WANTS_CTE_BINDING;
+    const WANTS_SCOPED_SOURCE: bool = V::WANTS_SCOPED_SOURCE;
+    const WANTS_QUERY: bool = V::WANTS_QUERY;
     const WANTS_STATEMENT_CONTEXT: bool = V::WANTS_STATEMENT_CONTEXT;
 
     fn on_source_ref(
@@ -270,6 +273,26 @@ impl<V: SemanticVisitor> SemanticVisitor for AnalysisVisitor<'_, V> {
             None,
         );
         self.extra.on_cte_column_count_mismatch(stmt, ev);
+    }
+
+    fn on_cte_binding(&mut self, stmt: &mut AnyParsedStatement<'_>, ev: CteBindingEvent<'_>) {
+        self.extra.on_cte_binding(stmt, ev);
+    }
+
+    fn on_scoped_source(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        ev: ScopedSourceEvent<'_>,
+    ) {
+        self.extra.on_scoped_source(stmt, ev);
+    }
+
+    fn enter_query(&mut self, stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
+        self.extra.enter_query(stmt, node_id);
+    }
+
+    fn exit_query(&mut self, stmt: &mut AnyParsedStatement<'_>, node_id: AnyNodeId) {
+        self.extra.exit_query(stmt, node_id);
     }
 
     fn on_parsed_statement(&mut self, stmt: &AnyParsedStatement<'_>) {

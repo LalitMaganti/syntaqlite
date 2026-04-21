@@ -95,6 +95,35 @@ pub(crate) struct CteColumnCountMismatchEvent<'a> {
     pub(crate) actual: usize,
 }
 
+/// A single CTE binding (`name AS (body)` or `name(cols) AS (body)`),
+/// fired after the binding's body has been walked.
+#[derive(Copy, Clone)]
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "fields consumed by LineageCapture in phase 3")
+)]
+pub(crate) struct CteBindingEvent<'a> {
+    pub(crate) name: &'a str,
+    pub(crate) name_range: DocRange,
+    pub(crate) body_id: Option<AnyNodeId>,
+    /// True when the enclosing `WITH RECURSIVE` allowed the body to
+    /// reference the binding's own name.
+    pub(crate) is_recursive: bool,
+}
+
+/// A subquery-in-FROM (`ScopedSource`), fired after the body has been
+/// walked.
+#[derive(Copy, Clone)]
+#[cfg_attr(
+    not(test),
+    expect(dead_code, reason = "fields consumed by LineageCapture in phase 3")
+)]
+pub(crate) struct ScopedSourceEvent<'a> {
+    pub(crate) node_id: AnyNodeId,
+    pub(crate) alias: Option<&'a str>,
+    pub(crate) body_id: Option<AnyNodeId>,
+}
+
 // ── SemanticVisitor trait ────────────────────────────────────────────────────
 
 /// A walk-time visitor: receives pre-resolved events from the walker and
@@ -112,6 +141,11 @@ pub(crate) trait SemanticVisitor {
     const WANTS_RELATION_DEFINITION: bool = false;
     const WANTS_COLUMN_DEFINITION: bool = false;
     const WANTS_CTE_COLUMN_COUNT: bool = false;
+    const WANTS_CTE_BINDING: bool = false;
+    const WANTS_SCOPED_SOURCE: bool = false;
+    /// Return true to receive [`enter_query`](Self::enter_query) /
+    /// [`exit_query`](Self::exit_query) hooks around each `Query` node.
+    const WANTS_QUERY: bool = false;
     /// Return true to receive [`on_parsed_statement`](Self::on_parsed_statement)
     /// and [`on_parse_error`](Self::on_parse_error) hooks. Visitors that
     /// want tokens or comments iterate them from the statement/error
@@ -152,6 +186,33 @@ pub(crate) trait SemanticVisitor {
         _ev: CteColumnCountMismatchEvent<'_>,
     ) {
     }
+
+    /// Called once per CTE binding after its body has been walked.
+    /// `is_recursive` is true when the binding's own name was made
+    /// visible to the body before the body walk began.
+    fn on_cte_binding(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: CteBindingEvent<'_>,
+    ) {
+    }
+
+    /// Called for each subquery-in-FROM (e.g. `FROM (SELECT …) AS x`)
+    /// after its body has been walked.
+    fn on_scoped_source(
+        &mut self,
+        _stmt: &mut AnyParsedStatement<'_>,
+        _ev: ScopedSourceEvent<'_>,
+    ) {
+    }
+
+    /// Called before a `Query` node's fields are walked. Paired with
+    /// [`exit_query`](Self::exit_query). The first `enter_query` call
+    /// for a statement corresponds to the outermost query.
+    fn enter_query(&mut self, _stmt: &mut AnyParsedStatement<'_>, _node_id: AnyNodeId) {}
+
+    /// Called after a `Query` node's fields have been walked.
+    fn exit_query(&mut self, _stmt: &mut AnyParsedStatement<'_>, _node_id: AnyNodeId) {}
 
     /// Called once before the AST walk for each successfully parsed
     /// statement. Visitors that want tokens or comments iterate
@@ -251,7 +312,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 self.walk_source_ref(visitor, node_id, &fields, name, alias);
             }
             SemanticRole::ScopedSource { body, alias } => {
-                self.walk_scoped_source(visitor, &fields, body, alias);
+                self.walk_scoped_source(visitor, node_id, &fields, body, alias);
             }
             SemanticRole::Query {
                 from,
@@ -263,6 +324,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 limit_clause,
             } => self.walk_query(
                 visitor,
+                node_id,
                 &fields,
                 from,
                 columns,
@@ -450,6 +512,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     fn walk_scoped_source<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
+        node_id: AnyNodeId,
         fields: &NodeFields,
         body_idx: u8,
         alias_idx: u8,
@@ -460,6 +523,16 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.scope.pop();
 
         let alias = self.stmt.name_text(fields.node_id_at(alias_idx)).0;
+
+        if V::WANTS_SCOPED_SOURCE {
+            let ev = ScopedSourceEvent {
+                node_id,
+                alias: if alias.is_empty() { None } else { Some(alias) },
+                body_id,
+            };
+            visitor.on_scoped_source(self.stmt, ev);
+        }
+
         let cols = body_id.and_then(|id| {
             SemanticPropertyExtractor::new(self.stmt, self.roles).columns_from_select(id)
         });
@@ -474,6 +547,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     fn walk_query<V: SemanticVisitor>(
         &mut self,
         visitor: &mut V,
+        node_id: AnyNodeId,
         fields: &NodeFields,
         from: u8,
         columns: u8,
@@ -483,6 +557,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         orderby: u8,
         limit_clause: u8,
     ) {
+        if V::WANTS_QUERY {
+            visitor.enter_query(self.stmt, node_id);
+        }
+
         // Push a fresh scope so that tables registered by walk_source_ref
         // are visible when we visit SELECT columns, WHERE, ORDER BY, etc.
         self.scope.push();
@@ -501,6 +579,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             self.walk_opt(visitor, fields.node_id_at(idx));
         }
         self.scope.pop();
+
+        if V::WANTS_QUERY {
+            visitor.exit_query(self.stmt, node_id);
+        }
     }
 
     fn collect_select_aliases(&self, fields: &NodeFields, columns_idx: u8) -> Vec<String> {
@@ -642,6 +724,16 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 
             if binding.name.is_empty() {
                 continue;
+            }
+
+            if V::WANTS_CTE_BINDING {
+                let ev = CteBindingEvent {
+                    name: binding.name,
+                    name_range: binding.name_range,
+                    body_id: binding.body_id,
+                    is_recursive,
+                };
+                visitor.on_cte_binding(self.stmt, ev);
             }
 
             if V::WANTS_RELATION_DEFINITION {
