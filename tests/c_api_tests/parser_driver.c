@@ -27,6 +27,8 @@
 //   token_comments <idx>  Leading + trailing comments for token idx.
 //   node_text <id>        Authored text slice for node (needs extents).
 //   error_info            error_msg/off/len/recovery_root dump.
+//   macro_fallback 0|1    Configure (must be before first reset).
+//   dump_macros           All macro rewrites with parent_buffer + args.
 
 // Needed for strtok_r under glibc when compiling with -std=c11.
 #define _POSIX_C_SOURCE 200809L
@@ -220,6 +222,48 @@ int main(void) {
         if (len == 0 || t[len - 1] != '\n') fputc('\n', stdout);
         printf(".\n");
       }
+    } else if (strcmp(verb, "macro_fallback") == 0) {
+      if (argc < 2) { printf("macro_fallback err bad_arg\n"); continue; }
+      int32_t rc = syntaqlite_parser_set_macro_fallback(
+          p, (uint32_t)strtoul(argv[1], NULL, 10));
+      printf("macro_fallback %s\n", cfg_rc_str(rc));
+    } else if (strcmp(verb, "dump_macros") == 0) {
+      uint32_t count = syntaqlite_result_macro_count(p);
+      printf("macros count=%u\n", count);
+      for (uint32_t i = 0; i < count; i++) {
+        SyntaqliteMacroRewrite r = syntaqlite_result_macro_rewrite_at(p, i);
+        const char* parent_str =
+            r.parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE ? "source" : "idx";
+        if (r.parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE) {
+          printf(
+              "mac[%u] parent=%s call_off=%u call_len=%u is_fallback=%u "
+              "name=\"%.*s\"\n",
+              i, parent_str, r.call_offset, r.call_length, r.is_fallback,
+              (int)r.name_len, r.name ? r.name : "");
+        } else {
+          printf(
+              "mac[%u] parent=%s(%u) call_off=%u call_len=%u is_fallback=%u "
+              "name=\"%.*s\"\n",
+              i, parent_str, r.parent_idx, r.call_offset, r.call_length,
+              r.is_fallback, (int)r.name_len, r.name ? r.name : "");
+        }
+        // Slice call text via parent_buffer to exercise the
+        // self-resolving API: a C consumer can get call text without
+        // walking the parent chain.
+        if (r.parent_buffer && r.call_offset + r.call_length <= r.parent_buffer_len) {
+          printf("  call_text=\"%.*s\"\n",
+                 (int)r.call_length, r.parent_buffer + r.call_offset);
+        }
+        uint32_t acount = syntaqlite_macro_rewrite_arg_count(p, i);
+        printf("  args count=%u\n", acount);
+        for (uint32_t j = 0; j < acount; j++) {
+          SyntaqliteMacroCallArg a = syntaqlite_macro_rewrite_arg_at(p, i, j);
+          printf("    arg[%u] off=%u len=%u text=\"%.*s\"\n",
+                 j, a.offset, a.length, (int)a.length,
+                 r.parent_buffer + a.offset);
+        }
+      }
+      printf(".\n");
     } else if (strcmp(verb, "error_info") == 0) {
       const char* msg = syntaqlite_result_error_msg(p);
       SyntaqliteStmtOffset off = syntaqlite_result_error_offset(p);

@@ -295,6 +295,11 @@ pub struct MacroRewrite<'a> {
     pub(crate) def_col: ColumnNumber,
     pub(crate) body_call_offset: LayerOffset,
     pub(crate) body_call_length: LayerLen,
+    /// Buffer that [`call_offset`](Self::call_offset) and every
+    /// [`MacroCallArg::offset`] indexes into — statement source for
+    /// top-level rewrites, parent rewrite's expansion otherwise.
+    pub(crate) parent_buffer: &'a LayerText,
+    pub(crate) is_fallback: bool,
     pub(crate) parser: std::ptr::NonNull<crate::parser::ffi::CParser>,
     pub(crate) _lifetime: std::marker::PhantomData<&'a ()>,
 }
@@ -361,6 +366,72 @@ impl<'a> MacroRewrite<'a> {
     pub fn body_call_length(&self) -> LayerLen {
         self.body_call_length
     }
+    /// 1 if this rewrite is a fallback call — an unregistered
+    /// `name!(args)` the parser kept verbatim as a `TK_ID` — and 0
+    /// if it was expanded by a registered macro.  Distinct from
+    /// "`expansion()` is empty", since a registered macro *could*
+    /// theoretically expand to the empty string.
+    pub fn is_fallback(&self) -> bool {
+        self.is_fallback
+    }
+
+    /// The buffer that [`call_offset`](Self::call_offset) and every
+    /// argument offset from [`args`](Self::args) indexes into.  For
+    /// top-level rewrites this is the current statement's source
+    /// slice; for nested rewrites it is the parent rewrite's
+    /// [`expansion`](Self::expansion) buffer.  Returned so consumers
+    /// can slice arbitrary sub-ranges without walking
+    /// [`parent`](Self::parent) themselves.
+    pub fn parent_buffer(&self) -> &'a LayerText {
+        self.parent_buffer
+    }
+
+    /// The text of the full `name!(...)` call, sliced from
+    /// [`parent_buffer`](Self::parent_buffer).  Equivalent to
+    /// `&parent_buffer()[call_offset..call_offset + call_length]`.
+    pub fn call_text(&self) -> &'a str {
+        let end = LayerOffset::from_raw(self.call_offset.as_u32() + self.call_length.as_u32());
+        &self.parent_buffer[crate::source::LayerRange {
+            start: self.call_offset,
+            end,
+        }]
+    }
+
+    /// Iterator over the top-level argument spans of this macro call
+    /// at the call site.  Populated for both registered and fallback
+    /// calls — the parser scans `name!(a, b, c)` the same way in
+    /// either path.  Each arg's offset indexes into the same
+    /// [`parent_buffer`](Self::parent_buffer) as
+    /// [`call_offset`](Self::call_offset); call
+    /// [`text()`](MacroCallArg::text) on the arg to slice directly.
+    /// Leading and trailing whitespace / comments are trimmed.
+    ///
+    /// Yields an empty iterator for `name!()` calls with zero args
+    /// and for calls whose arity exceeded the parser's scan buffer
+    /// (rare; >64 args, falls through gracefully).
+    pub fn args(&self) -> impl Iterator<Item = MacroCallArg<'a>> + use<'_, 'a> {
+        // SAFETY: the parser pointer is live for 'a (the parsed
+        // statement's lifetime); the C accessors clamp out-of-range
+        // indices so count is authoritative.
+        let count = unsafe {
+            self.parser
+                .as_ref()
+                .macro_rewrite_arg_count(self.rewrite_idx)
+        };
+        let rewrite_idx = self.rewrite_idx;
+        let parser = self.parser;
+        let buffer = self.parent_buffer;
+        (0..count).map(move |i| {
+            // SAFETY: i < count; the C side returns a valid arg.
+            let a = unsafe { parser.as_ref().macro_rewrite_arg_at(rewrite_idx, i) };
+            MacroCallArg {
+                buffer,
+                offset: LayerOffset::from_raw(a.offset),
+                length: LayerLen::from_raw(a.length),
+            }
+        })
+    }
+
     /// Iterator over the `$param` substitutions recorded on this rewrite.
     pub fn arg_segments(&self) -> impl Iterator<Item = MacroArgSegment<'a>> + use<'_, 'a> {
         // SAFETY: the parser pointer is live for 'a (the parsed
@@ -392,6 +463,51 @@ impl<'a> MacroRewrite<'a> {
                 _lifetime: std::marker::PhantomData,
             }
         })
+    }
+}
+
+/// One top-level argument of a macro call, at the call site.
+///
+/// Produced by [`MacroRewrite::args`] for both registered (expanded)
+/// and fallback calls — the parser scans `name!(a, b, c)` the same
+/// way regardless of whether `name` resolved to a registered macro.
+/// Leading and trailing whitespace and comments are trimmed from the
+/// range.
+///
+/// The arg carries the buffer it indexes into ([`buffer`](Self::buffer),
+/// always equal to the enclosing rewrite's
+/// [`parent_buffer`](MacroRewrite::parent_buffer)), so callers can
+/// slice the text directly via [`text`](Self::text) without having
+/// to walk the rewrite's parent chain.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MacroCallArg<'a> {
+    pub(crate) buffer: &'a LayerText,
+    pub(crate) offset: LayerOffset,
+    pub(crate) length: LayerLen,
+}
+
+impl<'a> MacroCallArg<'a> {
+    /// Byte offset of the arg text, measured into
+    /// [`buffer`](Self::buffer).
+    pub fn offset(&self) -> LayerOffset {
+        self.offset
+    }
+    /// Byte length of the arg text.
+    pub fn length(&self) -> LayerLen {
+        self.length
+    }
+    /// The buffer the arg's offset indexes into — the enclosing
+    /// rewrite's [`parent_buffer`](MacroRewrite::parent_buffer).
+    pub fn buffer(&self) -> &'a LayerText {
+        self.buffer
+    }
+    /// The arg's source text, sliced from [`buffer`](Self::buffer).
+    pub fn text(&self) -> &'a str {
+        let end = LayerOffset::from_raw(self.offset.as_u32() + self.length.as_u32());
+        &self.buffer[crate::source::LayerRange {
+            start: self.offset,
+            end,
+        }]
     }
 }
 

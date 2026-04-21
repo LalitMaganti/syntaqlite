@@ -386,3 +386,63 @@ SelectStmt
 .
 """,
         )
+
+
+class MacroRewrites(CApiTestSuite):
+    """Macro rewrite API — call-site args and self-resolving buffers.
+
+    These verify the shape C consumers actually see: `args()` populated
+    for top-level fallback calls, `is_fallback` flag set, and
+    `parent_buffer + offset` giving back the authored text.
+    """
+
+    def test_fallback_call_exposes_args(self):
+        return CApiScenario(
+            input="""\
+create
+macro_fallback 1
+reset
+SELECT foo!(a, 1 + 2, 'x');
+.
+parse_one
+dump_macros
+""",
+            expected="""\
+create ok
+macro_fallback ok
+reset ok len=27
+parse_one ok root=3 recovery=0
+macros count=1
+mac[0] parent=source call_off=7 call_len=19 is_fallback=1 name="foo"
+  call_text="foo!(a, 1 + 2, 'x')"
+  args count=3
+    arg[0] off=12 len=1 text="a"
+    arg[1] off=15 len=5 text="1 + 2"
+    arg[2] off=22 len=3 text="'x'"
+.
+""",
+        )
+
+    def test_empty_fallback_call_has_no_args(self):
+        return CApiScenario(
+            input="""\
+create
+macro_fallback 1
+reset
+SELECT foo!();
+.
+parse_one
+dump_macros
+""",
+            expected="""\
+create ok
+macro_fallback ok
+reset ok len=14
+parse_one ok root=3 recovery=0
+macros count=1
+mac[0] parent=source call_off=7 call_len=6 is_fallback=1 name="foo"
+  call_text="foo!()"
+  args count=0
+.
+""",
+        )

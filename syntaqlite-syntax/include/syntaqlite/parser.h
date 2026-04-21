@@ -331,6 +331,24 @@ typedef struct SyntaqliteMacroRewrite {
   // call_length.
   SyntaqliteLayerOffset body_call_offset;
   SyntaqliteLayerLen body_call_length;
+  // The buffer the `call_offset` — and every arg offset returned by
+  // syntaqlite_macro_rewrite_arg_at — indexes into.  For top-level
+  // rewrites (parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE) this is
+  // the current statement source slice; for nested rewrites it is
+  // the parent entry's `expansion` buffer.  Consumers can slice the
+  // call text as `parent_buffer + call_offset` and the arg texts
+  // likewise, without resolving parent_idx themselves.
+  //
+  // Not NUL-terminated; use `parent_buffer_len`.  Owned by the
+  // parser and valid until the next reset / next / destroy call.
+  const char* parent_buffer;
+  SyntaqliteLayerLen parent_buffer_len;
+  // 1 if this call went down the fallback path (unregistered name!
+  // kept verbatim as a TK_ID, no expansion, no $param substitutions);
+  // 0 if it was expanded by a registered macro.  `expansion_len` is
+  // also a useful tell (0 for fallback), but this flag is the
+  // authoritative signal.
+  uint32_t is_fallback;
 } SyntaqliteMacroRewrite;
 
 // Number of macro rewrites recorded for the current statement.
@@ -379,6 +397,36 @@ SYNTAQLITE_API SyntaqliteMacroArgSegment
 syntaqlite_macro_rewrite_arg_segment_at(SyntaqliteParser* p,
                                         uint32_t rewrite_idx,
                                         uint32_t segment_idx);
+
+// One top-level argument of a macro call, as written at the call
+// site.  Populated for both registered (expanded) and fallback calls:
+// the parser scans `name!(a, b, c)` the same way regardless of
+// whether `name` resolved to a registered macro.
+//
+// `offset` is in the same coordinate system as the enclosing
+// rewrite's `call_offset`, and indexes into the enclosing rewrite's
+// `parent_buffer`.  Slice the arg text as
+// `rewrite.parent_buffer + offset` for `length` bytes.  Leading and
+// trailing whitespace / comments are trimmed from the range.
+typedef struct SyntaqliteMacroCallArg {
+  SyntaqliteLayerOffset offset;
+  SyntaqliteLayerLen length;
+} SyntaqliteMacroCallArg;
+
+// Number of top-level call-site arg spans recorded on the rewrite at
+// `rewrite_idx`.  Returns 0 for `name!()` with no args, calls whose
+// arity exceeded the scan buffer (rare; >64 args), or out-of-range
+// indices.
+SYNTAQLITE_API uint32_t
+syntaqlite_macro_rewrite_arg_count(SyntaqliteParser* p, uint32_t rewrite_idx);
+
+// Returns the call-site arg at `arg_idx` on the rewrite at
+// `rewrite_idx`.  Returns a zero-initialized struct if either index
+// is out of range.
+SYNTAQLITE_API SyntaqliteMacroCallArg
+syntaqlite_macro_rewrite_arg_at(SyntaqliteParser* p,
+                                uint32_t rewrite_idx,
+                                uint32_t arg_idx);
 
 // ---------------------------------------------------------------------------
 // Arena accessors

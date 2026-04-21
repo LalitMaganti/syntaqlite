@@ -726,6 +726,21 @@ syntaqlite_macro_rewrite_arg_segment_at(SyntaqliteParser* p,
   (void)segment_idx;
   return (SyntaqliteMacroArgSegment){0};
 }
+SYNTAQLITE_API uint32_t
+syntaqlite_macro_rewrite_arg_count(SyntaqliteParser* p, uint32_t rewrite_idx) {
+  (void)p;
+  (void)rewrite_idx;
+  return 0;
+}
+SYNTAQLITE_API SyntaqliteMacroCallArg
+syntaqlite_macro_rewrite_arg_at(SyntaqliteParser* p,
+                                uint32_t rewrite_idx,
+                                uint32_t arg_idx) {
+  (void)p;
+  (void)rewrite_idx;
+  (void)arg_idx;
+  return (SyntaqliteMacroCallArg){0};
+}
 #else
 SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p) {
   uint32_t total = syntaqlite_vec_len(&p->macro.layers);
@@ -748,6 +763,22 @@ syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx) {
   uint32_t parent_idx = lyr->parent_layer_id == 0
                             ? SYNTAQLITE_MACRO_PARENT_SOURCE
                             : lyr->parent_layer_id - 1;
+  // Resolve the buffer that `call_offset` and every arg offset
+  // measure into, so consumers can slice directly without walking
+  // the parent chain.  Top-level layers measure into the current
+  // statement slice; nested layers measure into the parent layer's
+  // expansion buffer.
+  const char* parent_buffer;
+  uint32_t parent_buffer_len;
+  if (lyr->parent_layer_id == 0) {
+    parent_buffer = p->stmt_source;
+    parent_buffer_len = p->stmt_end_offset - p->stmt_start_offset;
+  } else {
+    const SynqExpansionLayer* parent =
+        &p->macro.layers.data[lyr->parent_layer_id];
+    parent_buffer = parent->expansion_data;
+    parent_buffer_len = parent->expansion_len;
+  }
   return (SyntaqliteMacroRewrite){
       .parent_idx = parent_idx,
       .call_offset = lyr->call_offset,
@@ -760,6 +791,9 @@ syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx) {
       .def_col = lyr->def_col,
       .body_call_offset = lyr->body_call_offset,
       .body_call_length = lyr->body_call_length,
+      .parent_buffer = parent_buffer,
+      .parent_buffer_len = parent_buffer_len,
+      .is_fallback = lyr->is_fallback,
   };
 }
 
@@ -796,6 +830,31 @@ syntaqlite_macro_rewrite_arg_segment_at(SyntaqliteParser* p,
       .origin_parent_idx = origin_parent_idx,
       .origin_offset = seg->origin_offset,
       .origin_length = seg->origin_length,
+  };
+}
+
+SYNTAQLITE_API uint32_t
+syntaqlite_macro_rewrite_arg_count(SyntaqliteParser* p, uint32_t rewrite_idx) {
+  uint32_t layer_idx = rewrite_idx + 1;
+  if (layer_idx >= syntaqlite_vec_len(&p->macro.layers))
+    return 0;
+  return p->macro.layers.data[layer_idx].arg_count;
+}
+
+SYNTAQLITE_API SyntaqliteMacroCallArg
+syntaqlite_macro_rewrite_arg_at(SyntaqliteParser* p,
+                                uint32_t rewrite_idx,
+                                uint32_t arg_idx) {
+  uint32_t layer_idx = rewrite_idx + 1;
+  if (layer_idx >= syntaqlite_vec_len(&p->macro.layers))
+    return (SyntaqliteMacroCallArg){0};
+  const SynqExpansionLayer* lyr = &p->macro.layers.data[layer_idx];
+  if (arg_idx >= lyr->arg_count)
+    return (SyntaqliteMacroCallArg){0};
+  const SynqMacroArg* arg = &lyr->args[arg_idx];
+  return (SyntaqliteMacroCallArg){
+      .offset = arg->offset,
+      .length = arg->length,
   };
 }
 #endif
