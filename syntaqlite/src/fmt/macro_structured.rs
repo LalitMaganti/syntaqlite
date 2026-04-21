@@ -15,7 +15,6 @@
 //! copy-own the result into the caller's arena, then drop the
 //! mini-parse.  No per-statement mini-parse state leaks out.
 
-use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
     AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, MacroRewrite, ParseOutcome,
 };
@@ -30,7 +29,13 @@ use crate::dialect::AnyDialect;
 /// in `erased`.  The returned vector is index-aligned with the same
 /// `parent().is_none() && is_fallback()` filter applied by
 /// `Formatter::collect_side_channels`.
+///
+/// `mini_parser` is the caller's cached parser used for per-arg
+/// `SELECT arg;` mini-parses.  It must be distinct from the parser
+/// driving the outer render (each parser instance holds a single
+/// `ParserInner`, and the outer session still owns it at this point).
 pub(super) fn compute_macro_docs<'a>(
+    mini_parser: &AnyParser,
     dialect: &AnyDialect,
     erased: &AnyParsedStatement<'a>,
     source: &'a StmtText,
@@ -41,11 +46,12 @@ pub(super) fn compute_macro_docs<'a>(
     erased
         .macro_rewrites()
         .filter(|r| r.parent().is_none() && r.is_fallback())
-        .map(|r| compute_one(dialect, &r, source, tokenizer, comments, arena))
+        .map(|r| compute_one(mini_parser, dialect, &r, source, tokenizer, comments, arena))
         .collect()
 }
 
 fn compute_one<'a>(
+    mini_parser: &AnyParser,
     dialect: &AnyDialect,
     r: &MacroRewrite<'_>,
     source: &'a StmtText,
@@ -82,7 +88,13 @@ fn compute_one<'a>(
 
     let mut arg_docs: Vec<DocId> = Vec::with_capacity(arg_texts.len());
     for arg_text in &arg_texts {
-        arg_docs.push(format_arg(dialect, arg_text, tokenizer, arena)?);
+        arg_docs.push(format_arg(
+            mini_parser,
+            dialect,
+            arg_text,
+            tokenizer,
+            arena,
+        )?);
     }
 
     // Assemble `name!(arg0, arg1, ...)` in the outer arena.  `name`
@@ -113,23 +125,18 @@ const _: () = assert!(b"SELECT ".len() == SELECT_PREFIX_LEN as usize);
 /// Returns `None` if the mini-parse fails or the expression subtree
 /// cannot be located.
 ///
-/// On return, the mini-parse and its scratch arena have been dropped;
-/// the returned `DocId` is self-contained in `arena`.
+/// On return, the mini-parse's session has been dropped (returning
+/// its `ParserInner` to `mini_parser`), so the next call can reuse
+/// the same parser without re-allocating its C-side state.
 fn format_arg(
+    mini_parser: &AnyParser,
     dialect: &AnyDialect,
     arg_text: &str,
     tokenizer: &AnyTokenizer,
     arena: &mut DocArena<'_>,
 ) -> Option<DocId> {
     let mini_source = format!("SELECT {arg_text};");
-    let parser = AnyParser::with_config(
-        (**dialect).clone(),
-        &ParserConfig::default()
-            .with_collect_tokens(true)
-            .with_collect_node_extents(true)
-            .with_macro_fallback(dialect.has_macro_style()),
-    );
-    let mut session = parser.parse(&mini_source);
+    let mut session = mini_parser.parse(&mini_source);
     match session.next() {
         ParseOutcome::Ok(_) => {}
         _ => return None,

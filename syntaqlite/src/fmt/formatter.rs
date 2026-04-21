@@ -62,6 +62,12 @@ fn parse_error_to_format_error(e: &AnyParseError<'_>) -> FormatError {
 pub struct Formatter {
     pub(super) dialect: AnyDialect,
     pub(super) parser: AnyParser,
+    /// Dedicated parser for structured macro-arg mini-parses.  Kept
+    /// separate from `parser` because each parser instance holds a
+    /// single `ParserInner`: while the outer render is walking a
+    /// statement, `parser`'s inner is still owned by the outer
+    /// session and cannot serve a second `parse()` call.
+    pub(super) mini_parser: AnyParser,
     pub(super) config: FormatConfig,
     // Statement-scoped state cached on the formatter to avoid per-statement allocations.
     pub(super) arena: DocArena<'static>,
@@ -119,16 +125,28 @@ impl Formatter {
         let syntax = (*dialect).clone();
         let has_macros = syntax.has_macro_style();
         let parser = AnyParser::with_config(
-            syntax,
+            syntax.clone(),
             &ParserConfig::default()
                 .with_collect_tokens(true)
                 .with_macro_fallback(has_macros)
                 .with_collect_node_extents(has_macros),
         );
+        // The mini-parser always needs node extents (used by
+        // `find_descendant_by_extent` to locate each arg's expression
+        // subtree) and macro fallback (so nested `foo!(...)` inside
+        // an arg parses as a TK_ID rather than a syntax error).
+        let mini_parser = AnyParser::with_config(
+            syntax,
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true)
+                .with_macro_fallback(has_macros),
+        );
         let macro_tokenizer = AnyTokenizer::new((*dialect).clone());
         Formatter {
             dialect,
             parser,
+            mini_parser,
             config: format_config.clone(),
             arena: DocArena::with_capacity(256),
             interpret_scratch: InterpretScratch::new(),
@@ -264,6 +282,7 @@ impl Formatter {
             // newlines, or unparseable args get `None` and fall
             // through to the existing verbatim path in `try_macro`.
             let macro_docs = macro_structured::compute_macro_docs(
+                &self.mini_parser,
                 &self.dialect,
                 &erased,
                 stmt_source,
@@ -509,6 +528,7 @@ impl Formatter {
             }
 
             let macro_docs = macro_structured::compute_macro_docs(
+                &self.mini_parser,
                 &self.dialect,
                 &erased,
                 stmt_source,
