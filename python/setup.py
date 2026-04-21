@@ -14,7 +14,7 @@ import shutil
 import sys
 from pathlib import Path
 
-from setuptools import setup
+from setuptools import Distribution, setup
 from setuptools.command.bdist_wheel import bdist_wheel as _bdist_wheel
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -41,11 +41,14 @@ if _bin_dir.exists() and any(_bin_dir.iterdir()):
     package_data["syntaqlite"] = ["bin/*"]
 
 
-class bdist_wheel(_bdist_wheel):
-    def finalize_options(self):
-        super().finalize_options()
-        self.root_is_pure = False
+class BinaryDistribution(Distribution):
+    # Forces a platlib wheel (Root-Is-Purelib: false) so auditwheel is willing
+    # to inspect the bundled CLI binary under syntaqlite/bin/.
+    def has_ext_modules(self):
+        return True
 
+
+class bdist_wheel(_bdist_wheel):
     def get_tag(self):
         _, _, plat = super().get_tag()
         return "py3", "none", plat
@@ -53,6 +56,7 @@ class bdist_wheel(_bdist_wheel):
 
 setup(
     name="syntaqlite",
+    distclass=BinaryDistribution,
     cmdclass={"bdist_wheel": bdist_wheel},
     package_data=package_data,
 )
