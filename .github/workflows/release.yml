@@ -80,7 +80,7 @@ jobs:
         run: |
           target/release/${{ matrix.binary }} --version
           echo "select 1" | target/release/${{ matrix.binary }} fmt
-          echo "select 1" | target/release/${{ matrix.binary }} validate
+          echo "select 1" | target/release/${{ matrix.binary }} analyze
 
       # -- Package CLI archive --
       - name: Package CLI (tar.gz)
@@ -243,8 +243,17 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macos_deployment }}
         run: |
-          python -m pip install --upgrade build
+          python -m pip install --upgrade build wheel
           python -m build --wheel --outdir wheelhouse/ python/
+
+      # PyPI rejects plain linux_* wheels; retag the bundled-binary wheel to
+      # manylinux2014_* so upload goes through.
+      - name: Retag Linux wheel as manylinux
+        if: startsWith(matrix.name, 'linux-')
+        shell: bash
+        run: |
+          arch=$(echo "${{ matrix.name }}" | sed 's/^linux-//')
+          python -m wheel tags --remove --platform-tag "manylinux2014_${arch}" wheelhouse/*.whl
 
       - name: Upload wheel
         uses: actions/upload-artifact@v6

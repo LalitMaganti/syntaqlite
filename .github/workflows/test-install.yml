@@ -40,7 +40,7 @@ jobs:
         run: |
           syntaqlite --version
           echo "SELECT 1" | syntaqlite fmt
-          echo "SELECT 1" | syntaqlite validate
+          echo "SELECT 1" | syntaqlite analyze
 
   test-brew:
     name: Homebrew
@@ -53,7 +53,7 @@ jobs:
         run: |
           syntaqlite --version
           echo "SELECT 1" | syntaqlite fmt
-          echo "SELECT 1" | syntaqlite validate
+          echo "SELECT 1" | syntaqlite analyze
 
   test-npm:
     name: npm (browser e2e against registry)
@@ -131,4 +131,4 @@ jobs:
         run: |
           syntaqlite --version
           echo "SELECT 1" | syntaqlite fmt
-          echo "SELECT 1" | syntaqlite validate
+          echo "SELECT 1" | syntaqlite analyze
