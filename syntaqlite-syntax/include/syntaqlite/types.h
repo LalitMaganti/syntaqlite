@@ -82,29 +82,31 @@ typedef struct SyntaqliteTextSpan {
 
 // ── Span flags ───────────────────────────────────────────────────────────────
 
-// Identifier was quoted in source (`"..."`, `` `...` ``, or `[...]`).
-// The span points to the dequoted inner text; the formatter re-wraps in
-// `"..."`.
-#define SYNTAQLITE_SPAN_FLAG_QUOTED ((uint32_t)1u)
+// Quote character flags on `SyntaqliteTextSpan.flags`.  At most one is
+// set; none means the identifier was unquoted.  Prefer the accessors
+// below over reading these bits directly.
+//
+// The span's offset/length point at the *dequoted* inner text — the
+// surrounding quote bytes are not part of the span.  These flags are
+// the only way to recover which character bracketed the identifier
+// after dequoting.
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE ((uint32_t)1u)    // "..."
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK ((uint32_t)2u)  // `...`
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET ((uint32_t)4u)   // [...]
 
-// Which quote character bracketed the identifier in source.  Set in
-// addition to SYNTAQLITE_SPAN_FLAG_QUOTED.  Only one of these is set at a
-// time.  Consumers (e.g. SQLite's double-quoted-string bug-compat in the
-// analyzer) need to distinguish `"..."` from `` `...` `` and `[...]`,
-// which they can't recover from the dequoted span alone.
-#define SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE ((uint32_t)2u)
-#define SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK ((uint32_t)4u)
-#define SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET ((uint32_t)8u)
+#define SYNTAQLITE_SPAN_QUOTE_MASK                                           \
+  (SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE | SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK | \
+   SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET)
 
-// True if the identifier was quoted in source.  See
-// syntaqlite_span_quote_char to recover which quote character.
+// Was this identifier quoted in source?  Returns nonzero if `sp` came
+// from any of `"..."`, `` `...` ``, or `[...]`.
 static inline int syntaqlite_span_is_quoted(SyntaqliteTextSpan sp) {
-  return (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTED) != 0;
+  return (sp.flags & SYNTAQLITE_SPAN_QUOTE_MASK) != 0;
 }
 
-// The quote character that bracketed this identifier in source —
-// '"', '`', or '['.  Returns 0 if the span was unquoted.  The closing
-// bracket for '[' is always ']'; only the opener is reported.
+// The character that opened this identifier's quotes in source: `"`,
+// `` ` ``, or `[`.  Returns 0 if the span was unquoted.  For `[...]`
+// only the opener is reported; the closer is always `]`.
 static inline char syntaqlite_span_quote_char(SyntaqliteTextSpan sp) {
   if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE)
     return '"';

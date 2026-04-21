@@ -474,11 +474,12 @@ mod ffi {
         pub(crate) _layer_id: u32,
     }
 
-    /// Mirrors of C `SYNTAQLITE_SPAN_FLAG_*` from `types.h`.
-    const SPAN_FLAG_QUOTED: u32 = 1;
-    const SPAN_FLAG_QUOTE_DOUBLE: u32 = 2;
-    const SPAN_FLAG_QUOTE_BACKTICK: u32 = 4;
-    const SPAN_FLAG_QUOTE_BRACKET: u32 = 8;
+    // Mirrors of C `SYNTAQLITE_SPAN_FLAG_*` from `types.h`.
+    const SPAN_FLAG_QUOTE_DOUBLE: u32 = 1;
+    const SPAN_FLAG_QUOTE_BACKTICK: u32 = 2;
+    const SPAN_FLAG_QUOTE_BRACKET: u32 = 4;
+    const SPAN_QUOTE_MASK: u32 =
+        SPAN_FLAG_QUOTE_DOUBLE | SPAN_FLAG_QUOTE_BACKTICK | SPAN_FLAG_QUOTE_BRACKET;
 
     impl CTextSpan {
         /// Returns `true` if the span covers zero bytes.
@@ -486,19 +487,21 @@ mod ffi {
             self.length == 0
         }
 
-        /// Returns `true` if the span was quoted in source (`"..."`,
-        /// `` `...` ``, or `[...]`).  The span points at the dequoted inner
-        /// text; the formatter re-wraps quoted spans in standard double
-        /// quotes.  Use [`Self::quote_char`] to recover which quote
-        /// character bracketed the identifier.
+        /// Was this identifier quoted in source?  True for `"..."`,
+        /// `` `...` ``, and `[...]` forms; false otherwise.  Use
+        /// [`Self::quote_char`] to distinguish which quote character
+        /// bracketed it.
+        ///
+        /// Note that the span itself points at the *dequoted* inner text —
+        /// the surrounding quote bytes are not part of `offset`/`length`.
         pub fn is_quoted(self) -> bool {
-            (self.flags & SPAN_FLAG_QUOTED) != 0
+            (self.flags & SPAN_QUOTE_MASK) != 0
         }
 
-        /// The quote character that bracketed this identifier in source —
-        /// `'"'`, `` '`' ``, or `'['` — or `None` if the span was unquoted.
-        /// The closing bracket for `'['` is always `']'`; only the opener
-        /// is reported.
+        /// The character that opened this identifier's quotes in source:
+        /// `'"'`, `` '`' ``, or `'['`.  `None` if the span was unquoted.
+        /// For `[...]` only the opener is reported; the closer is always
+        /// `']'`.
         pub fn quote_char(self) -> Option<char> {
             if self.flags & SPAN_FLAG_QUOTE_DOUBLE != 0 {
                 Some('"')
