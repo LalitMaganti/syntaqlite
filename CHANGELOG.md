@@ -5,7 +5,7 @@
 **Breaking:**
 - Renamed the `semantic` module to `analysis` across the Rust, C, Python, and CLI surfaces. Rust `syntaqlite::semantic` → `syntaqlite::analysis`, C symbols drop their `syntaqlite_semantic_` prefix for `syntaqlite_analysis_`, and Python `syntaqlite.semantic` → `syntaqlite.analysis` ([#225](https://github.com/LalitMaganti/syntaqlite/pull/225)).
 - Renamed `TableAccess` to `PhysicalTableAccess` and `StatementModel::tables_accessed()` to `physical_tables_accessed()`. The corresponding C symbols (`SyntaqliteTableAccess`, `syntaqlite_validator_table_count`, `syntaqlite_validator_tables`, and the per-statement variants) gain a `physical_` infix, and the Python `Lineage` attribute renames `tables` to `physical_tables`.
-- Python bindings no longer link against `libsyntaqlite` directly. They now shell out to the `syntaqlite` CLI binary over msgpack RPC, so `pip install syntaqlite` pulls the CLI in as part of the package ([#196](https://github.com/LalitMaganti/syntaqlite/pull/196)).
+- Python bindings no longer link against `libsyntaqlite` directly. They now shell out to the `syntaqlite` CLI binary over JSON-RPC, so `pip install syntaqlite` pulls the CLI in as part of the package ([#196](https://github.com/LalitMaganti/syntaqlite/pull/196)).
 
 **CLI:**
 - Added `syntaqlite lineage [tables|columns] [FILES]`. Emits NDJSON (`schema_version: 0`, pre-stable) or human-readable text for column and table lineage, and exits 1 when any statement fails to parse or validate ([#163](https://github.com/LalitMaganti/syntaqlite/pull/163)).
