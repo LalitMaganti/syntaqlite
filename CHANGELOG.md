@@ -1,14 +1,35 @@
 # Changelog
 
-## Unreleased
+## 0.5.0
 
 **Breaking:**
-- Renamed `TableAccess` → `PhysicalTableAccess` and `StatementModel::tables_accessed()` → `physical_tables_accessed()` in the Rust API. The corresponding C symbols `SyntaqliteTableAccess`, `syntaqlite_validator_table_count`, `syntaqlite_validator_tables`, `syntaqlite_validator_statement_table_count`, and `syntaqlite_validator_statement_tables` are renamed with a `physical_` infix. The Python `Lineage` attribute is renamed `tables` → `physical_tables`.
+- Renamed the `semantic` module to `analysis` across the Rust, C, Python, and CLI surfaces. Rust `syntaqlite::semantic` → `syntaqlite::analysis`, C symbols drop their `syntaqlite_semantic_` prefix for `syntaqlite_analysis_`, and Python `syntaqlite.semantic` → `syntaqlite.analysis` ([#225](https://github.com/LalitMaganti/syntaqlite/pull/225)).
+- Renamed `TableAccess` to `PhysicalTableAccess` and `StatementModel::tables_accessed()` to `physical_tables_accessed()`. The corresponding C symbols (`SyntaqliteTableAccess`, `syntaqlite_validator_table_count`, `syntaqlite_validator_tables`, and the per-statement variants) gain a `physical_` infix, and the Python `Lineage` attribute renames `tables` to `physical_tables`.
+- Python bindings no longer link against `libsyntaqlite` directly. They now shell out to the `syntaqlite` CLI binary over msgpack RPC, so `pip install syntaqlite` pulls the CLI in as part of the package ([#196](https://github.com/LalitMaganti/syntaqlite/pull/196)).
 
-**Added:**
-- New `syntaqlite lineage [tables|columns] [FILES]` CLI subcommand. Emits NDJSON (`schema_version: 0`, pre-stable) or human-readable text for column and table lineage. Exit 1 when any statement fails to parse or validate.
-- New `StatementModel::unexpanded_views()` accessor — canonical names of views whose bodies weren't available for expansion (surfaces as a structured partial-reason in the CLI output).
-- Matching C FFI: `SyntaqliteUnexpandedView` struct plus aggregate (`syntaqlite_validator_unexpanded_view_count` / `syntaqlite_validator_unexpanded_views`) and per-statement (`syntaqlite_validator_statement_unexpanded_view_count` / `syntaqlite_validator_statement_unexpanded_views`) accessors. Python `Lineage` objects expose the same data via `unexpanded_views: list[str]`.
+**CLI:**
+- Added `syntaqlite lineage [tables|columns] [FILES]`. Emits NDJSON (`schema_version: 0`, pre-stable) or human-readable text for column and table lineage, and exits 1 when any statement fails to parse or validate ([#163](https://github.com/LalitMaganti/syntaqlite/pull/163)).
+- Added `syntaqlite tokenize` for dumping the token stream, and regrouped dialect-management commands under a dedicated `syntaqlite dialect ...` subcommand group ([#178](https://github.com/LalitMaganti/syntaqlite/pull/178)).
+- Added `syntaqlite validate --output json` for structured diagnostics ([#177](https://github.com/LalitMaganti/syntaqlite/pull/177)).
+
+**Analysis and validator:**
+- Added `StatementModel::unexpanded_views()`, exposing canonical names of views whose bodies were not available for expansion. Surfaces through C FFI as `SyntaqliteUnexpandedView` with aggregate and per-statement accessors, and in Python via `Lineage.unexpanded_views`.
+- Added C FFI setters for per-check toggles, `strict-schema`, and the fuzzy suggestion threshold on the validator ([#180](https://github.com/LalitMaganti/syntaqlite/pull/180)). Those knobs are now sticky across schema reloads ([#181](https://github.com/LalitMaganti/syntaqlite/pull/181)).
+- Added C FFI for registering custom scalar and table-valued functions against a dialect ([#185](https://github.com/LalitMaganti/syntaqlite/pull/185)).
+- Diagnostics now carry a stable code (e.g. `unknown-table`) exposed via the C FFI and the Python `Diagnostic.code` attribute ([#184](https://github.com/LalitMaganti/syntaqlite/pull/184)).
+- SQLite's double-quoted string (DQS) fallback is now applied when a double-quoted column reference cannot be resolved, matching real SQLite behavior ([#224](https://github.com/LalitMaganti/syntaqlite/pull/224)).
+
+**C API:**
+- Added the `SYNTAQLITE_OMIT_RUNTIME` build flag for compiling cdylib dialect plugins that reuse the host process's runtime symbols instead of bundling their own copy ([#174](https://github.com/LalitMaganti/syntaqlite/pull/174)).
+
+**Macros and formatter:**
+- Fixed the formatter dropping text that appeared after a macro invocation ([#172](https://github.com/LalitMaganti/syntaqlite/pull/172)).
+- Fixed macro expansion when the replacement text is shorter than the original call site ([#173](https://github.com/LalitMaganti/syntaqlite/pull/173)).
+- Fallback (unresolved) macro-call arguments are now formatted with structure rather than as an opaque blob ([#221](https://github.com/LalitMaganti/syntaqlite/pull/221)).
+- `MacroRewrite` now exposes the call-site arguments for each expansion, not just the expanded body ([#227](https://github.com/LalitMaganti/syntaqlite/pull/227)).
+
+**MCP server:**
+- Tightened `keyword_case` argument validation and fixed the MCP server reporting the wrong dialect symbol ([#229](https://github.com/LalitMaganti/syntaqlite/pull/229)).
 
 ## 0.4.2
 
