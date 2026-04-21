@@ -76,6 +76,29 @@ class PerfettoMacroCallFormat(TestSuite):
             out="SELECT foo!(1 + 2), 3",
         )
 
+    def test_macro_arg_expression_canonicalized(self):
+        return DiffTestBlueprint(
+            sql="SELECT cast_int!(1+2)",
+            out="SELECT cast_int!(1 + 2)",
+        )
+
+    def test_macro_arg_single_row_value_canonicalized(self):
+        # One arg, a parenthesized expr list — interpreted as a
+        # row-value expression.  Inner expressions should be
+        # normalised (spaces around `+`, etc.) just like any other
+        # expression.
+        return DiffTestBlueprint(
+            sql="SELECT foo!((a+1,b*2,c))",
+            out="SELECT foo!((a + 1, b * 2, c))",
+        )
+
+    def test_macro_args_two_row_values_canonicalized(self):
+        # Two top-level args, each a parenthesized expr list.
+        return DiffTestBlueprint(
+            sql="SELECT foo!((a,b),(c,d))",
+            out="SELECT foo!((a, b), (c, d))",
+        )
+
     def test_macro_call_in_from(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM my_macro!(t1)",

@@ -33,6 +33,7 @@ mod doc;
 pub(crate) mod ffi;
 pub(crate) mod formatter;
 mod interpret;
+mod macro_structured;
 
 #[doc(inline)]
 pub use formatter::Formatter;

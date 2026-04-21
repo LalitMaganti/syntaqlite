@@ -1,6 +1,8 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
+use std::borrow::Cow;
+
 use super::{FormatConfig, KeywordCase};
 
 /// A handle into the `DocArena`. `NIL_DOC` represents an empty/absent document.
@@ -10,13 +12,16 @@ pub(super) type DocId = u32;
 /// as identity elements (e.g. `cat(NIL_DOC, x) == x`).
 pub(super) const NIL_DOC: DocId = u32::MAX;
 
-/// A node in the Wadler-style document algebra. Lifetime `'a` covers borrowed text slices.
+/// A node in the Wadler-style document algebra. Lifetime `'a` covers borrowed text
+/// slices; text/keyword nodes may also own their strings via `Cow::Owned` — used
+/// when the source text lives in a transient buffer (e.g. a mini-parse built for
+/// structured macro-arg formatting) that does not outlive render.
 #[derive(Debug, Clone)]
 enum Doc<'a> {
     /// Source text (identifiers, literals). Never case-transformed.
-    Text(&'a str),
+    Text(Cow<'a, str>),
     /// SQL keyword. Subject to `KeywordCase` at render time.
-    Keyword(&'a str),
+    Keyword(Cow<'a, str>),
     /// Flat mode: space. Break mode: newline + indent.
     Line,
     /// Flat mode: empty. Break mode: newline + indent.
@@ -83,11 +88,62 @@ impl<'a> DocArena<'a> {
     // -- Builder methods --
 
     pub(crate) fn text(&mut self, s: &'a str) -> DocId {
-        self.push(Doc::Text(s))
+        self.push(Doc::Text(Cow::Borrowed(s)))
     }
 
     pub(crate) fn keyword(&mut self, s: &'a str) -> DocId {
-        self.push(Doc::Keyword(s))
+        self.push(Doc::Keyword(Cow::Borrowed(s)))
+    }
+
+    /// Push a `Text` node whose string is owned by the arena.  Accepts
+    /// any `&str` regardless of lifetime — the contents are copied.
+    /// Use when emitting text sourced from a buffer shorter-lived than
+    /// the arena's `'a` (e.g. the AST of a transient mini-parse built
+    /// for structured macro-arg formatting).
+    pub(crate) fn own_text(&mut self, s: &str) -> DocId {
+        self.push(Doc::Text(Cow::Owned(s.to_owned())))
+    }
+
+    /// Like [`own_text`], but emits a `Keyword` node.
+    pub(crate) fn own_keyword(&mut self, s: &str) -> DocId {
+        self.push(Doc::Keyword(Cow::Owned(s.to_owned())))
+    }
+
+    /// Copy a doc tree from another arena into this one, owning all
+    /// text/keyword strings.  Used when the source arena holds borrows
+    /// into a buffer (e.g. a mini-parse's AST text) that will be
+    /// dropped before this arena is rendered.
+    ///
+    /// Non-text node shapes are reproduced verbatim.
+    pub(crate) fn copy_owned_from(&mut self, src: &DocArena<'_>, src_id: DocId) -> DocId {
+        if src_id == NIL_DOC {
+            return NIL_DOC;
+        }
+        match src.get(src_id) {
+            Doc::Text(s) => self.own_text(s),
+            Doc::Keyword(s) => self.own_keyword(s),
+            Doc::Line => self.line(),
+            Doc::SoftLine => self.softline(),
+            Doc::HardLine => self.hardline(),
+            Doc::BreakParent => self.break_parent(),
+            Doc::Cat { left, right } => {
+                let l = self.copy_owned_from(src, *left);
+                let r = self.copy_owned_from(src, *right);
+                self.cat(l, r)
+            }
+            Doc::Nest { indent, child } => {
+                let c = self.copy_owned_from(src, *child);
+                self.nest(*indent, c)
+            }
+            Doc::Group { child } => {
+                let c = self.copy_owned_from(src, *child);
+                self.group(c)
+            }
+            Doc::LineSuffix { child } => {
+                let c = self.copy_owned_from(src, *child);
+                self.line_suffix(c)
+            }
+        }
     }
 
     pub(crate) fn line(&mut self) -> DocId {
@@ -534,7 +590,7 @@ mod tests {
         let id = arena.text("hello");
         assert_eq!(id, 0);
         match arena.get(id) {
-            Doc::Text(s) => assert_eq!(*s, "hello"),
+            Doc::Text(s) => assert_eq!(s.as_ref(), "hello"),
             _ => panic!("expected Text"),
         }
     }
