@@ -61,6 +61,13 @@ const SUPPRESSED_WARNINGS: &[&str] = &[
 const SUPPRESSED_WARNINGS_C_ONLY: &[&str] =
     &["-Wdeclaration-after-statement", "-Wmissing-prototypes"];
 
+/// Warnings valid only in C++; guarded by `#ifdef __cplusplus`.
+///
+/// `-Wzero-as-null-pointer-constant` fires on `0` used where a pointer is
+/// expected — Lemon-generated code uses this idiom, and it surfaces when
+/// the amalgamation is compiled as C++ (notably on Windows toolchains).
+const SUPPRESSED_WARNINGS_CXX_ONLY: &[&str] = &["-Wzero-as-null-pointer-constant"];
+
 /// Warnings that only Clang understands; emitted inside `#ifdef __clang__`.
 ///
 /// `-Wimplicit-void-ptr-cast` and `-Wimplicit-int-enum-cast` are clang 19+
@@ -93,6 +100,10 @@ fn emit_diagnostic_push(out: &mut String) {
     }
     out.push_str("#ifndef __cplusplus\n");
     for w in SUPPRESSED_WARNINGS_C_ONLY {
+        let _ = writeln!(out, "#pragma GCC diagnostic ignored \"{w}\"");
+    }
+    out.push_str("#else\n");
+    for w in SUPPRESSED_WARNINGS_CXX_ONLY {
         let _ = writeln!(out, "#pragma GCC diagnostic ignored \"{w}\"");
     }
     out.push_str("#endif\n");
