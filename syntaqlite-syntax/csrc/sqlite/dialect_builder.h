@@ -475,6 +475,13 @@ static inline uint32_t synq_parse_literal(SynqParseCtx* ctx,
                           (uint32_t)sizeof(SyntaqliteLiteral));
 }
 
+static inline uint32_t synq_parse_paren_expr(SynqParseCtx* ctx, uint32_t expr) {
+  return synq_parse_build(
+      ctx,
+      &(SyntaqliteParenExpr){.tag = SYNTAQLITE_NODE_PAREN_EXPR, .expr = expr},
+      (uint32_t)sizeof(SyntaqliteParenExpr));
+}
+
 static inline uint32_t synq_parse_ident_name(SynqParseCtx* ctx,
                                              SyntaqliteTextSpan source) {
   return synq_parse_build(

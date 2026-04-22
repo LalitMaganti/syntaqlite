@@ -62,11 +62,22 @@ const SUPPRESSED_WARNINGS_C_ONLY: &[&str] =
     &["-Wdeclaration-after-statement", "-Wmissing-prototypes"];
 
 /// Warnings that only Clang understands; emitted inside `#ifdef __clang__`.
+///
+/// `-Wimplicit-void-ptr-cast` and `-Wimplicit-int-enum-cast` are clang 19+
+/// additions that fire under `-Weverything` when the amalgamation is
+/// reached via a C++ translation unit (the strict-warnings test includes
+/// the header from a `.cpp` driver).  The generator emits C-idiomatic
+/// implicit conversions that are safe in context but would require
+/// pervasive casts to quiet strict C++; suppress them consistent with the
+/// rest of this list.  Older clangs don't know these flag names — the
+/// consumer's own `-Wno-unknown-warning-option` handles that.
 const SUPPRESSED_WARNINGS_CLANG_ONLY: &[&str] = &[
     "-Wextra-semi-stmt",
     "-Wold-style-cast",
     "-Wmissing-variable-declarations",
     "-Wimplicit-int-conversion",
+    "-Wimplicit-int-enum-cast",
+    "-Wimplicit-void-ptr-cast",
     "-Wshorten-64-to-32",
 ];
 

@@ -594,6 +594,11 @@ static const SyntaqliteFieldMeta field_meta_literal[] = {
      0},
 };
 
+static const SyntaqliteFieldMeta field_meta_paren_expr[] = {
+    {offsetof(SyntaqliteParenExpr, expr), SYNTAQLITE_FIELD_NODE_ID, "expr",
+     NULL, 0},
+};
+
 static const SyntaqliteFieldMeta field_meta_ident_name[] = {
     {offsetof(SyntaqliteIdentName, source), SYNTAQLITE_FIELD_SPAN, "source",
      NULL, 0},
@@ -1137,6 +1142,7 @@ static const char* const ast_meta_node_names[] = {
     "BinaryExpr",
     "UnaryExpr",
     "Literal",
+    "ParenExpr",
     "IdentName",
     "Error",
     "ExprList",
@@ -1221,6 +1227,7 @@ static const SyntaqliteFieldMeta* const ast_meta_field_meta[] = {
     field_meta_binary_expr,               /* BinaryExpr */
     field_meta_unary_expr,                /* UnaryExpr */
     field_meta_literal,                   /* Literal */
+    field_meta_paren_expr,                /* ParenExpr */
     field_meta_ident_name,                /* IdentName */
     field_meta_error,                     /* Error */
     NULL,                                 /* ExprList */
@@ -1303,6 +1310,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* BinaryExpr */
     2,  /* UnaryExpr */
     2,  /* Literal */
+    1,  /* ParenExpr */
     1,  /* IdentName */
     1,  /* Error */
     0,  /* ExprList */
@@ -1387,6 +1395,7 @@ static const uint8_t ast_meta_list_tags[] = {
     0, /* BinaryExpr */
     0, /* UnaryExpr */
     0, /* Literal */
+    0, /* ParenExpr */
     0, /* IdentName */
     0, /* Error */
     1, /* ExprList */
@@ -1471,6 +1480,7 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                 /* BinaryExpr */
     {NULL, 0},                                 /* UnaryExpr */
     {range_meta_literal, 1},                   /* Literal */
+    {NULL, 0},                                 /* ParenExpr */
     {range_meta_ident_name, 1},                /* IdentName */
     {range_meta_error, 1},                     /* Error */
     {NULL, 0},                                 /* ExprList */

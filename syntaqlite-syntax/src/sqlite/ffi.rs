@@ -314,6 +314,13 @@ pub(crate) struct Literal {
 
 #[derive(Debug, Clone)]
 #[repr(C)]
+pub(crate) struct ParenExpr {
+    pub(crate) tag: u32,
+    pub(crate) expr: AnyNodeId,
+}
+
+#[derive(Debug, Clone)]
+#[repr(C)]
 pub(crate) struct IdentName {
     pub(crate) tag: u32,
     pub(crate) source: TextSpan,
@@ -785,181 +792,186 @@ unsafe impl ArenaNode for Literal {
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for IdentName {
+unsafe impl ArenaNode for ParenExpr {
     const TAG: u32 = 36;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for Error {
+unsafe impl ArenaNode for IdentName {
     const TAG: u32 = 37;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for FunctionCall {
-    const TAG: u32 = 39;
+unsafe impl ArenaNode for Error {
+    const TAG: u32 = 38;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for Variable {
+unsafe impl ArenaNode for FunctionCall {
     const TAG: u32 = 40;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for CollateExpr {
+unsafe impl ArenaNode for Variable {
     const TAG: u32 = 41;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for RaiseExpr {
+unsafe impl ArenaNode for CollateExpr {
     const TAG: u32 = 42;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for QualifiedName {
+unsafe impl ArenaNode for RaiseExpr {
     const TAG: u32 = 43;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for DropStmt {
+unsafe impl ArenaNode for QualifiedName {
     const TAG: u32 = 44;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for AlterTableStmt {
+unsafe impl ArenaNode for DropStmt {
     const TAG: u32 = 45;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for TransactionStmt {
+unsafe impl ArenaNode for AlterTableStmt {
     const TAG: u32 = 46;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for SavepointStmt {
+unsafe impl ArenaNode for TransactionStmt {
     const TAG: u32 = 47;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for ResultColumn {
+unsafe impl ArenaNode for SavepointStmt {
     const TAG: u32 = 48;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for SelectStmt {
-    const TAG: u32 = 50;
+unsafe impl ArenaNode for ResultColumn {
+    const TAG: u32 = 49;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for OrderingTerm {
+unsafe impl ArenaNode for SelectStmt {
     const TAG: u32 = 51;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for LimitClause {
-    const TAG: u32 = 53;
+unsafe impl ArenaNode for OrderingTerm {
+    const TAG: u32 = 52;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for TableRef {
+unsafe impl ArenaNode for LimitClause {
     const TAG: u32 = 54;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for SubqueryTableSource {
+unsafe impl ArenaNode for TableRef {
     const TAG: u32 = 55;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for JoinClause {
+unsafe impl ArenaNode for SubqueryTableSource {
     const TAG: u32 = 56;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for JoinPrefix {
+unsafe impl ArenaNode for JoinClause {
     const TAG: u32 = 57;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for TriggerEvent {
+unsafe impl ArenaNode for JoinPrefix {
     const TAG: u32 = 58;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for CreateTriggerStmt {
-    const TAG: u32 = 60;
+unsafe impl ArenaNode for TriggerEvent {
+    const TAG: u32 = 59;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for CreateVirtualTableStmt {
+unsafe impl ArenaNode for CreateTriggerStmt {
     const TAG: u32 = 61;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for PragmaStmt {
+unsafe impl ArenaNode for CreateVirtualTableStmt {
     const TAG: u32 = 62;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for AnalyzeOrReindexStmt {
+unsafe impl ArenaNode for PragmaStmt {
     const TAG: u32 = 63;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for AttachStmt {
+unsafe impl ArenaNode for AnalyzeOrReindexStmt {
     const TAG: u32 = 64;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for DetachStmt {
+unsafe impl ArenaNode for AttachStmt {
     const TAG: u32 = 65;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for VacuumStmt {
+unsafe impl ArenaNode for DetachStmt {
     const TAG: u32 = 66;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for ExplainStmt {
+unsafe impl ArenaNode for VacuumStmt {
     const TAG: u32 = 67;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for CreateIndexStmt {
+unsafe impl ArenaNode for ExplainStmt {
     const TAG: u32 = 68;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for CreateViewStmt {
+unsafe impl ArenaNode for CreateIndexStmt {
     const TAG: u32 = 69;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for ValuesClause {
-    const TAG: u32 = 71;
+unsafe impl ArenaNode for CreateViewStmt {
+    const TAG: u32 = 70;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for FrameBound {
+unsafe impl ArenaNode for ValuesClause {
     const TAG: u32 = 72;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for FrameSpec {
+unsafe impl ArenaNode for FrameBound {
     const TAG: u32 = 73;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
-unsafe impl ArenaNode for WindowDef {
+unsafe impl ArenaNode for FrameSpec {
     const TAG: u32 = 74;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
+unsafe impl ArenaNode for WindowDef {
+    const TAG: u32 = 75;
+}
+
+// SAFETY: TAG matches the value the C parser writes into the `tag` field.
 unsafe impl ArenaNode for NamedWindowDef {
-    const TAG: u32 = 76;
+    const TAG: u32 = 77;
 }
 
 // SAFETY: TAG matches the value the C parser writes into the `tag` field.
 unsafe impl ArenaNode for FilterOver {
-    const TAG: u32 = 78;
+    const TAG: u32 = 79;
 }

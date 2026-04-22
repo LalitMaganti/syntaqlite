@@ -751,6 +751,7 @@ class ExprComment(TestSuite):
                   -- c
                   NOT (x = 1);
             """,
+            idempotent=False,
         )
 
     def test_leading_comment_before_case_when(self):
@@ -889,7 +890,8 @@ class CommentBlockSpacing(TestSuite):
     def test_leading_comment_inside_parens_no_blank_line(self):
         # A leading comment immediately inside an opening paren
         # shouldn't render with a blank line between the enclosing
-        # keyword and the comment.
+        # keyword and the comment.  The paren itself is preserved via
+        # `ParenExpr`, so the comment lands inside the paren body.
         return DiffTestBlueprint(
             sql="""\
                 SELECT (
@@ -898,8 +900,9 @@ class CommentBlockSpacing(TestSuite):
             """,
             out="""\
                 SELECT
+                  (
                   -- c
-                  1;
+                  1);
             """,
         )
 

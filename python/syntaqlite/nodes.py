@@ -445,6 +445,18 @@ class Literal:
         return "Literal(...)"
 
 
+class ParenExpr:
+    """AST node: ParenExpr"""
+
+    __slots__ = ("expr")
+
+    def __init__(self, d: dict):
+        self.expr: Expr | None = _wrap(d.get("expr"))
+
+    def __repr__(self):
+        return "ParenExpr(...)"
+
+
 class IdentName:
     """AST node: IdentName"""
 
@@ -986,6 +998,7 @@ _NODE_MAP: dict[str, type] = {
     "BinaryExpr": BinaryExpr,
     "UnaryExpr": UnaryExpr,
     "Literal": Literal,
+    "ParenExpr": ParenExpr,
     "IdentName": IdentName,
     "Error": Error,
     "FunctionCall": FunctionCall,

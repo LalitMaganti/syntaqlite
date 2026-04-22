@@ -148,6 +148,15 @@ def _run_idempotency_check(args: tuple) -> IdempotencyResult:
     version = blueprint.version
     cflags = blueprint.cflags
 
+    # Blueprints can opt out of the idempotency check when the
+    # formatter intentionally reshapes the AST (e.g. adding
+    # precedence-clarifying parens that weren't in the source).
+    if not blueprint.idempotent:
+        return IdempotencyResult(
+            name=name, passed=True, elapsed_ms=0, sql=sql,
+            error="skip: blueprint opted out via idempotent=False",
+        )
+
     t0 = time.monotonic()
     try:
         # Step 1: get AST of original SQL.

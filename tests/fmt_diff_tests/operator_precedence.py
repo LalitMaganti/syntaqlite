@@ -32,6 +32,7 @@ class OrAndPrecedence(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT a AND b OR c AND d",
             out="SELECT (a AND b) OR (c AND d);",
+            idempotent=False,
         )
 
     def test_or_in_and_left(self):
@@ -69,6 +70,7 @@ class OrAndPrecedence(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT a AND b AND c OR d",
             out="SELECT (a AND b AND c) OR d;",
+            idempotent=False,
         )
 
 
@@ -256,6 +258,7 @@ class BitwiseVsStandardPrecedence(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT a + b & c + d",
             out="SELECT (a + b) & (c + d);",
+            idempotent=False,
         )
 
     def test_bitand_in_add(self):
@@ -268,6 +271,7 @@ class BitwiseVsStandardPrecedence(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT a * b | c * d",
             out="SELECT (a * b) | (c * d);",
+            idempotent=False,
         )
 
     def test_lshift_in_mul(self):
@@ -280,12 +284,14 @@ class BitwiseVsStandardPrecedence(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT a || b & c || d",
             out="SELECT (a || b) & (c || d);",
+            idempotent=False,
         )
 
     def test_bitand_in_gt_gets_parens(self):
         return DiffTestBlueprint(
             sql="SELECT a & b < c & d",
             out="SELECT (a & b) < (c & d);",
+            idempotent=False,
         )
 
     def test_lt_in_bitor(self):
@@ -745,30 +751,34 @@ class DeepNesting(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT a * b + c = d AND e OR f",
             out="SELECT (a * b + c = d AND e) OR f;",
+            idempotent=False,
         )
 
     def test_complex_parens_preserved(self):
         return DiffTestBlueprint(
             sql="SELECT (a OR b) AND (c + d) > (e * f)",
-            out="SELECT (a OR b) AND c + d > e * f;",
+            out="SELECT (a OR b) AND (c + d) > (e * f);",
         )
 
     def test_bitwise_in_comparison_in_and(self):
         return DiffTestBlueprint(
             sql="SELECT a & b > 0 AND c | d < 10",
             out="SELECT (a & b) > 0 AND (c | d) < 10;",
+            idempotent=False,
         )
 
     def test_all_levels(self):
         return DiffTestBlueprint(
             sql="SELECT a || b * c + d & e > f = g AND h OR i",
             out="SELECT (((a || b * c + d) & e) > f = g AND h) OR i;",
+            idempotent=False,
         )
 
     def test_like_and_between_in_or(self):
         return DiffTestBlueprint(
             sql="SELECT a LIKE 'foo' AND b BETWEEN 1 AND 10 OR c IN (1, 2)",
             out="SELECT (a LIKE 'foo' AND b BETWEEN 1 AND 10) OR c IN (1, 2);",
+            idempotent=False,
         )
 
 

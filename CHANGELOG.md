@@ -5,11 +5,17 @@
 **Formatter:**
 - Fixed leading comments followed by a blank line collapsing into the next element (e.g. a header comment block above `INCLUDE PERFETTO MODULE` was losing its trailing blank line) ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
 - Fixed a formatter crash on statements where comments appeared inside a verbatim-emitted span such as a `CREATE PERFETTO MACRO` body ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
+- Fixed a formatter panic on empty quoted tokens like `""` when preceded by a comment: `span_text` was collapsing any zero-length span to offset 0, so the comment-drain walk-back underflowed when computing the position of the opening quote ([#240](https://github.com/LalitMaganti/syntaqlite/pull/240)).
 - Fallback (unresolved) macro calls now always format through the structured path, so multi-line calls get a single canonical layout and interior comments are preserved at every argument position ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
+- Fallback macro-arg re-parses no longer silently strip parens around single-element `ColumnNameList`-shaped args (e.g. `_interval_intersect!(..., (utid))` preserves the paren so the one-element list expands correctly) ([#240](https://github.com/LalitMaganti/syntaqlite/pull/240)).
 
 **Parser:**
 - Fixed `x IN tbl` / `x IN tvf(args)` dropping the table or table-valued-function reference from the AST ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
 - `TableRef` now distinguishes a bare table (`tbl`) from a zero-arg table-valued function call (`tvf()`) via a new `has_parens` field, so both forms round-trip through the formatter ([#238](https://github.com/LalitMaganti/syntaqlite/pull/238)).
+- Added a `ParenExpr { expr: Expr }` AST node so that source parens around an expression survive as a real tree node. Previously the parser dropped them and the formatter re-derived parens from operator precedence, which worked for most expressions but couldn't recover author-written parens in macro-arg positions or around redundant scalar wraps like `(x)` ([#240](https://github.com/LalitMaganti/syntaqlite/pull/240)).
+
+**Build:**
+- Amalgamated headers now suppress `-Wimplicit-void-ptr-cast` and `-Wimplicit-int-enum-cast` under `__clang__`. These are clang-19 additions that fire under `-Weverything -Werror` when the header is pulled into a C++ translation unit; older clangs without these flags are covered by `-Wno-unknown-warning-option` as before ([#240](https://github.com/LalitMaganti/syntaqlite/pull/240)).
 
 ## 0.5.2
 

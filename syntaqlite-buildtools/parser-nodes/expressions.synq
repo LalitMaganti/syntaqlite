@@ -42,6 +42,32 @@ node Literal {
   fmt { span(source) }
 }
 
+// A parenthesized expression: `(inner)`.  Preserved as a real node so
+// the formatter can round-trip author-written parens and so macro-arg
+// re-parses don't silently strip list-vs-expr distinguishing parens
+// (e.g. `_interval_intersect!(..., (utid))` where the second arg is a
+// one-element ColumnNameList, syntactically indistinguishable from a
+// bare identifier without the parens).
+//
+// Max precedence (255) makes the ParenExpr itself "tighter than any
+// operator," so a parent emitting `child_prec_fixed(paren_expr)` will
+// never add another paren layer around it.  Inside, we emit the inner
+// expression without a precedence check — the explicit `(` `)` we
+// print here already satisfy any wrapping the child might need.
+node ParenExpr {
+  expr: index Expr
+
+  fmt_precedence(255)
+
+  // Wrap in a `group` so line-break decisions inside the inner
+  // expression are isolated: if the whole `(expr)` fits on one line we
+  // keep it flat, otherwise the inner expression breaks at its own
+  // `line` points without affecting the outer context.  This also
+  // makes formatting idempotent — one pass can't linebreak a paren
+  // body that the previous pass decided to keep flat.
+  fmt { group { "(" child(expr) ")" } }
+}
+
 node IdentName {
   source: inline SyntaqliteTextSpan
 
@@ -67,7 +93,7 @@ abstract Name {
 }
 
 abstract Expr {
-  BinaryExpr UnaryExpr Literal ColumnRef Variable Error
+  BinaryExpr UnaryExpr ParenExpr Literal ColumnRef Variable Error
   FunctionCall AggregateFunctionCall OrderedSetFunctionCall
   CastExpr CollateExpr CaseExpr
   IsExpr BetweenExpr LikeExpr InExpr

@@ -646,16 +646,18 @@ class SelectBasic(TestSuite):
                       BinaryExpr
                         op: STAR
                         left:
-                          BinaryExpr
-                            op: PLUS
-                            left:
-                              Literal
-                                literal_type: INTEGER
-                                source: "1"
-                            right:
-                              Literal
-                                literal_type: INTEGER
-                                source: "2"
+                          ParenExpr
+                            expr:
+                              BinaryExpr
+                                op: PLUS
+                                left:
+                                  Literal
+                                    literal_type: INTEGER
+                                    source: "1"
+                                right:
+                                  Literal
+                                    literal_type: INTEGER
+                                    source: "2"
                         right:
                           Literal
                             literal_type: INTEGER
