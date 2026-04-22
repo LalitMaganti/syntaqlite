@@ -149,7 +149,7 @@ export class Engine {
   }
 
   private heapU8(): Uint8Array {
-    const heap = this.module!.HEAPU8 || window.HEAPU8;
+    const heap = this.module!.HEAPU8;
     if (!heap) throw new Error("runtime HEAPU8 is not available");
     return heap;
   }
@@ -426,32 +426,62 @@ export class Engine {
   }
 }
 
-function loadRuntimeModule(config: EngineConfig): Promise<EmscriptenModule> {
-  return new Promise<EmscriptenModule>((resolve, reject) => {
-    const jsPath = config.runtimeJsPath ?? DEFAULT_RUNTIME_JS;
-    const wasmPath = config.runtimeWasmPath ?? (config.runtimeJsPath ? config.runtimeJsPath.replace(/\.js$/, ".wasm") : DEFAULT_RUNTIME_WASM);
-    const moduleConfig: EmscriptenModuleConfig = {
-      noInitialRun: true,
-      locateFile(path: string) {
-        if (path === "syntaqlite_wasm.wasm" || path === "syntaqlite-wasm.wasm") {
-          return wasmPath;
+type RuntimeFactory = (config: EmscriptenModuleConfig) => Promise<EmscriptenModule>;
+
+// Global name the Emscripten MODULARIZE build assigns the factory to when
+// loaded as a classic <script> in the browser. Must match EXPORT_NAME in
+// tools/build-web-playground.
+const FACTORY_NAME = "createSyntaqliteRuntime";
+
+async function loadRuntimeModule(config: EngineConfig): Promise<EmscriptenModule> {
+  const jsPath = config.runtimeJsPath ?? DEFAULT_RUNTIME_JS;
+  const wasmPath = config.runtimeWasmPath
+    ?? (config.runtimeJsPath ? config.runtimeJsPath.replace(/\.js$/, ".wasm") : DEFAULT_RUNTIME_WASM);
+  const moduleConfig: EmscriptenModuleConfig = {
+    noInitialRun: true,
+    locateFile(path: string) {
+      if (path === "syntaqlite_wasm.wasm" || path === "syntaqlite-wasm.wasm") {
+        return wasmPath;
+      }
+      return path;
+    },
+  };
+  const factory = await loadFactory(jsPath);
+  return factory(moduleConfig);
+}
+
+function loadFactory(jsPath: string): Promise<RuntimeFactory> {
+  if (typeof document !== "undefined") {
+    // Browser: inject <script>; Emscripten assigns the factory to a global.
+    return new Promise((resolve, reject) => {
+      const existing = (globalThis as Record<string, unknown>)[FACTORY_NAME];
+      if (typeof existing === "function") {
+        resolve(existing as RuntimeFactory);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = jsPath;
+      script.async = true;
+      script.onload = () => {
+        const fn = (globalThis as Record<string, unknown>)[FACTORY_NAME];
+        if (typeof fn !== "function") {
+          reject(new Error(`${jsPath} did not define ${FACTORY_NAME}`));
+          return;
         }
-        return path;
-      },
-      onRuntimeInitialized() {
-        resolve(moduleConfig as unknown as EmscriptenModule);
-      },
-      onAbort(reason: string) {
-        reject(new Error(`runtime aborted: ${reason}`));
-      },
-    };
-
-    window.Module = moduleConfig;
-
-    const script = document.createElement("script");
-    script.src = jsPath;
-    script.async = true;
-    script.onerror = () => reject(new Error(`failed to load ${jsPath}`));
-    document.head.appendChild(script);
+        resolve(fn as RuntimeFactory);
+      };
+      script.onerror = () => reject(new Error(`failed to load ${jsPath}`));
+      document.head.appendChild(script);
+    });
+  }
+  // Node / Bun: dynamic import. The runtime ships with a wasm/package.json
+  // hint ({"type": "commonjs"}) so Node's CJS loader handles the Emscripten
+  // output; the factory comes back as the ESM default export.
+  return import(/* @vite-ignore */ /* webpackIgnore: true */ jsPath).then((mod) => {
+    const factory = (mod as {default?: unknown}).default ?? mod;
+    if (typeof factory !== "function") {
+      throw new Error(`${jsPath} did not export a factory function`);
+    }
+    return factory as RuntimeFactory;
   });
 }

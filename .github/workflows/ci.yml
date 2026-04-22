@@ -213,6 +213,12 @@ jobs:
           export PATH="$PWD/../../third_party/bin/linux-amd64/nodejs/bin:$PATH"
           npm run test:e2e:ci
 
+      - name: Run Node smoke test for syntaqlite-js
+        working-directory: web/syntaqlite-js
+        run: |
+          export PATH="$PWD/../../third_party/bin/linux-amd64/nodejs/bin:$PATH"
+          npm run test:node
+
       - name: Install Playwright browser for syntaqlite-js
         working-directory: web/syntaqlite-js
         run: |

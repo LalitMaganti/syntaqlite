@@ -56,6 +56,10 @@ jobs:
         working-directory: web/syntaqlite-js
         run: node scripts/verify-tarball.mjs
 
+      - name: Node smoke test
+        working-directory: web/syntaqlite-js
+        run: npm run test:node
+
       - name: Publish
         working-directory: web/syntaqlite-js
         run: npm publish --access public
