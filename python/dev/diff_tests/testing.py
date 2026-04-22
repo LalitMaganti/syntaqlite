@@ -17,6 +17,14 @@ class DiffTestBlueprint:
         cflags: Optional list of compile-time flags to enable (e.g.
                 ["SQLITE_ENABLE_ORDERED_SET_AGGREGATES"]).
         version: Optional SQLite version to emulate (e.g. "3.47.0").
+        idempotent: Whether this blueprint round-trips through the
+                formatter without AST-shape changes. Defaults to True.
+                Set to False for tests that intentionally exercise
+                formatter behaviour that changes shape on re-parse —
+                e.g. the formatter deliberately adds precedence-
+                clarifying parens around a sub-expression that had
+                none in the source, so `parse(fmt(sql)) != parse(sql)`
+                on purpose. The `sql-idempotency` suite skips these.
     """
     sql: str
     out: str
@@ -25,6 +33,7 @@ class DiffTestBlueprint:
     line_width: Optional[int] = None
     indent_width: Optional[int] = None
     strict_schema: bool = False
+    idempotent: bool = True
 
 
 @dataclass
