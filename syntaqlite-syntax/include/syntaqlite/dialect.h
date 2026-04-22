@@ -33,6 +33,7 @@
 
 #include "syntaqlite/cflags.h"
 #include "syntaqlite/config.h"
+#include "syntaqlite/types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -72,16 +73,18 @@ typedef enum {
 typedef struct SynqParseCtx SynqParseCtx;
 
 typedef struct SynqParseToken {
-  const char* z;       // pointer to start of token in its buffer
-  uint32_t n;          // byte length of token
-  uint32_t type;       // token type ID (SYNTAQLITE_TK_*)
-  uint32_t token_idx;  // index into parser's token vec (0xFFFFFFFF if not
-                       // collecting)
-  uint32_t offset;     // byte offset within the token's buffer; set at
-                       // shift time so reductions don't depend on
-                       // ctx->source which may have been swapped back
-                       // after a macro expansion
-  uint32_t layer_id;   // 0 = original source, 1+ = expansion layer index
+  const char* z;                 // pointer to start of token in its buffer
+  SyntaqliteLength n;          // byte length of token
+  uint32_t type;                 // token type ID (SYNTAQLITE_TK_*)
+  SyntaqliteTokenIdx token_idx;  // index into parser's token vec
+                                 // (0xFFFFFFFF if not collecting)
+  SyntaqliteLayerOffset offset;  // byte offset within the token's buffer;
+                                 // set at shift time so reductions don't
+                                 // depend on ctx->source which may have
+                                 // been swapped back after a macro
+                                 // expansion
+  uint32_t layer_id;             // 0 = original source,
+                                 // 1+ = expansion layer index
 } SynqParseToken;
 
 typedef struct SyntaqliteFieldRangeMeta SyntaqliteFieldRangeMeta;

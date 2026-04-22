@@ -69,7 +69,7 @@ extern "C" {
 SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
                                                     uint32_t token_type,
                                                     const char* text,
-                                                    uint32_t len);
+                                                    SyntaqliteLength len);
 
 // Signal end-of-input. Synthesizes a SEMI if needed and sends EOF to the
 // parser. Returns a SYNTAQLITE_PARSE_* code.
@@ -109,7 +109,7 @@ syntaqlite_parser_completion_context(SyntaqliteParser* p);
 typedef int (*SyntaqliteMacroLookupFn)(void* user_data,
                                        SyntaqliteParser* parser,
                                        const char* name,
-                                       uint32_t name_len,
+                                       SyntaqliteLength name_len,
                                        const SyntaqliteToken* args,
                                        uint32_t arg_count);
 
@@ -127,18 +127,20 @@ syntaqlite_parser_set_macro_lookup(SyntaqliteParser* p,
 // Set the expanded body for the current macro invocation.
 // `def_line` / `def_col` are 1-based definition position for tracebacks
 // (pass 0/0 if unknown).
-SYNTAQLITE_API void syntaqlite_macro_expansion_set_result(SyntaqliteParser* p,
-                                                          const char* body,
-                                                          uint32_t body_len,
-                                                          uint32_t def_line,
-                                                          uint32_t def_col);
+SYNTAQLITE_API void syntaqlite_macro_expansion_set_result(
+    SyntaqliteParser* p,
+    const char* body,
+    SyntaqliteLength body_len,
+    SyntaqliteLineNumber def_line,
+    SyntaqliteColumnNumber def_col);
 
 // Describes where one macro argument was pasted into the expansion body.
 // Used by set_result_with_arg_map to enable span drilling through
 // $param substitutions.
 typedef struct SyntaqliteArgMapping {
-  uint32_t body_offset;  // Byte offset in `body` where arg text starts.
-  uint32_t arg_index;    // Index into the args array passed to the callback.
+  SyntaqliteLayerOffset body_offset;  // Byte offset in `body` where arg
+                                      // text starts.
+  uint32_t arg_index;  // Index into the args array passed to the callback.
 } SyntaqliteArgMapping;
 
 // Like set_result, but with arg-mapping metadata for span drilling.
@@ -148,9 +150,9 @@ typedef struct SyntaqliteArgMapping {
 SYNTAQLITE_API void syntaqlite_macro_expansion_set_result_with_arg_map(
     SyntaqliteParser* p,
     const char* body,
-    uint32_t body_len,
-    uint32_t def_line,
-    uint32_t def_col,
+    SyntaqliteLength body_len,
+    SyntaqliteLineNumber def_line,
+    SyntaqliteColumnNumber def_col,
     const SyntaqliteArgMapping* mappings,
     uint32_t mapping_count);
 
@@ -169,9 +171,9 @@ SYNTAQLITE_API void syntaqlite_macro_expansion_set_result_with_arg_map(
 SYNTAQLITE_API int syntaqlite_macro_expansion_expand_and_set_result(
     SyntaqliteParser* p,
     const char* body,
-    uint32_t body_len,
+    SyntaqliteLength body_len,
     const char* const* param_names,
-    const uint32_t* param_name_lens,
+    const SyntaqliteLength* param_name_lens,
     uint32_t param_count,
     uint32_t flags);
 

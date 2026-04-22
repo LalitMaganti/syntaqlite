@@ -108,7 +108,7 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create(
 // new input without reallocating — all previous nodes are invalidated.
 SYNTAQLITE_API void syntaqlite_parser_reset(SyntaqliteParser* p,
                                             const char* source,
-                                            SyntaqliteDocLen len);
+                                            SyntaqliteLength len);
 
 // Parse the next SQL statement. Call in a loop until SYNTAQLITE_PARSE_DONE.
 // Bare semicolons between statements are skipped automatically.
@@ -180,7 +180,7 @@ SYNTAQLITE_API SyntaqliteStmtOffset
 syntaqlite_result_error_offset(SyntaqliteParser* p);
 
 // Byte length of error token (0 = unknown).
-SYNTAQLITE_API SyntaqliteStmtLen
+SYNTAQLITE_API SyntaqliteLength
 syntaqlite_result_error_length(SyntaqliteParser* p);
 
 // A comment captured during parsing.
@@ -203,8 +203,8 @@ typedef uint8_t SyntaqliteCommentSide;
 #define SYNQ_COMMENT_TRAILING ((SyntaqliteCommentSide)1)
 
 typedef struct SyntaqliteComment {
-  SyntaqliteStmtOffset offset;   // Statement-relative byte offset.
-  SyntaqliteStmtLen length;      // Byte length.
+  SyntaqliteStmtOffset offset;
+  SyntaqliteLength length;
   SyntaqliteTokenIdx token_idx;  // Index of the owning token in p->tokens.
   uint8_t kind;  // 0 = line comment (--), 1 = block comment (/* */).
   uint8_t side;  // SYNQ_COMMENT_LEADING or SYNQ_COMMENT_TRAILING.
@@ -229,8 +229,8 @@ typedef uint32_t SyntaqliteParserTokenFlags;
 // positions should resolve the token's span via the parser's span
 // accessors rather than using `offset` directly.
 typedef struct SyntaqliteParserToken {
-  SyntaqliteLayerOffset offset;  // Byte offset in the token's layer buffer.
-  SyntaqliteLayerLen length;     // Byte length.
+  SyntaqliteLayerOffset offset;
+  SyntaqliteLength length;
   uint32_t type;  // Original token type from tokenizer (pre-fallback).
   SyntaqliteParserTokenFlags flags;  // Bitmask of SYNQ_TOKEN_FLAG_* values.
   uint32_t _layer_id;  // Internal: 0 = original source, >0 = expansion layer.
@@ -312,11 +312,11 @@ typedef struct SyntaqliteMacroRewrite {
   // Statement-relative when parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE,
   // otherwise relative to the parent entry's `expansion` buffer.
   SyntaqliteLayerOffset call_offset;
-  SyntaqliteLayerLen call_length;
+  SyntaqliteLength call_length;
   const char* expansion;
-  SyntaqliteLayerLen expansion_len;
+  SyntaqliteLength expansion_len;
   const char* name;
-  uint32_t name_len;
+  SyntaqliteLength name_len;
   SyntaqliteLineNumber def_line;
   SyntaqliteColumnNumber def_col;
   // Position of this call in the *parent's authored body*, computed by
@@ -330,7 +330,7 @@ typedef struct SyntaqliteMacroRewrite {
   // the parent is the authored source, so these equal call_offset /
   // call_length.
   SyntaqliteLayerOffset body_call_offset;
-  SyntaqliteLayerLen body_call_length;
+  SyntaqliteLength body_call_length;
   // The buffer the `call_offset` — and every arg offset returned by
   // syntaqlite_macro_rewrite_arg_at — indexes into.  For top-level
   // rewrites (parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE) this is
@@ -342,7 +342,7 @@ typedef struct SyntaqliteMacroRewrite {
   // Not NUL-terminated; use `parent_buffer_len`.  Owned by the
   // parser and valid until the next reset / next / destroy call.
   const char* parent_buffer;
-  SyntaqliteLayerLen parent_buffer_len;
+  SyntaqliteLength parent_buffer_len;
   // 1 if this call went down the fallback path (unregistered name!
   // kept verbatim as a TK_ID, no expansion, no $param substitutions);
   // 0 if it was expanded by a registered macro.  `expansion_len` is
@@ -376,12 +376,12 @@ syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx);
 // arg segments.
 typedef struct SyntaqliteMacroArgSegment {
   SyntaqliteLayerOffset body_offset;
-  SyntaqliteLayerLen body_length;
+  SyntaqliteLength body_length;
   SyntaqliteLayerOffset expansion_offset;
-  SyntaqliteLayerLen expansion_length;
+  SyntaqliteLength expansion_length;
   uint32_t origin_parent_idx;
   SyntaqliteLayerOffset origin_offset;
-  SyntaqliteLayerLen origin_length;
+  SyntaqliteLength origin_length;
 } SyntaqliteMacroArgSegment;
 
 // Number of arg segments recorded on the rewrite at `rewrite_idx`.
@@ -410,7 +410,7 @@ syntaqlite_macro_rewrite_arg_segment_at(SyntaqliteParser* p,
 // trailing whitespace / comments are trimmed from the range.
 typedef struct SyntaqliteMacroCallArg {
   SyntaqliteLayerOffset offset;
-  SyntaqliteLayerLen length;
+  SyntaqliteLength length;
 } SyntaqliteMacroCallArg;
 
 // Number of top-level call-site arg spans recorded on the rewrite at
@@ -449,21 +449,25 @@ SYNTAQLITE_API const void* syntaqlite_parser_node(SyntaqliteParser* p,
 SYNTAQLITE_API const char* syntaqlite_parser_text(
     SyntaqliteParser* p,
     SyntaqliteDocOffset* out_offset,
-    SyntaqliteStmtLen* out_len);
+    SyntaqliteLength* out_len);
 
 // Full SQL source bound by the last reset() call.  For multi-statement
 // input, this is the whole input.
 SYNTAQLITE_API const char* syntaqlite_parser_full_text(
     SyntaqliteParser* p,
-    SyntaqliteDocLen* out_len);
+    SyntaqliteLength* out_len);
 
 // Post-expansion text for the current statement — materializes the
 // statement's source with every currently-active macro call replaced
 // by its expansion into a parser-owned scratch buffer.  The returned
 // pointer is valid until the next `*_expanded_text` call on the same
 // parser or until the parser advances to the next statement.
-SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(SyntaqliteParser* p,
-                                                           uint32_t* out_len);
+//
+// `*out_len` receives the byte length of the materialized buffer,
+// which may differ from the authored statement length.
+SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(
+    SyntaqliteParser* p,
+    SyntaqliteLength* out_len);
 
 // Return the number of nodes currently in the arena.
 SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
@@ -487,13 +491,13 @@ SYNTAQLITE_API uint32_t syntaqlite_parser_node_count(SyntaqliteParser* p);
 // within `snippet`.
 typedef struct SyntaqliteTracebackFrame {
   const char* name;
-  uint32_t name_len;
+  SyntaqliteLength name_len;
   SyntaqliteLineNumber line;
   SyntaqliteColumnNumber col;
   const char* snippet;
-  SyntaqliteLayerLen snippet_len;
+  SyntaqliteLength snippet_len;
   SyntaqliteLayerOffset offset_in_snippet;
-  SyntaqliteLayerLen length_in_snippet;
+  SyntaqliteLength length_in_snippet;
 } SyntaqliteTracebackFrame;
 
 // Build a traceback for a span and return a pointer to a parser-owned
@@ -523,15 +527,17 @@ SYNTAQLITE_API const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(
 // Post-expansion text for `span` — the bytes the tokenizer actually saw.
 // For macro-free spans, a slice of the input source.  For spans inside a
 // macro expansion, a slice of the expansion layer's buffer.  Writes the
-// byte length to `*out_len`.  Always a direct slice — no allocation.
+// slice's byte length to `*out_len`.  Always a direct slice — no
+// allocation.
 //
 // Returns NULL (and writes 0 to `*out_len`) for empty or invalid spans.
 SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
     SyntaqliteParser* p,
     const SyntaqliteTextSpan* span,
-    uint32_t* out_len);
+    SyntaqliteLength* out_len);
 
-// Authored text for `span` — always a slice of the input source.
+// Authored text for `span` — always a slice of the current statement's
+// source (the same buffer `syntaqlite_parser_text` returns).
 //
 // For macro-free spans, identical to `span_expanded_text`.  For spans
 // inside a macro expansion, walks the expansion-layer chain:
@@ -539,35 +545,37 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_expanded_text(
 //     to the arg's origin text in the caller's layer (recursively).
 //   - Otherwise, collapses to the outermost `name!(...)` call site.
 //
-// Always a direct slice of the source — no allocation.  Returns NULL
-// (and writes 0 to `*out_len`) for empty or invalid spans.
+// Always a direct slice of the statement source — no allocation.
+// Returns NULL (and writes 0 to `*out_len`) for empty or invalid spans.
 //
-// `out_offset` is optional; when non-NULL it receives the byte offset
-// in the input source where the returned slice begins (so callers can
-// compute source-relative positions without pointer arithmetic).
+// `out_offset` is optional; when non-NULL it receives the
+// statement-relative byte offset where the returned slice begins.
+// To convert to a document-absolute offset, add the offset
+// `syntaqlite_parser_text` writes to its own `out_offset`.
 // Written 0 for empty or invalid spans.
 SYNTAQLITE_API const char* syntaqlite_parser_span_text(
     SyntaqliteParser* p,
     const SyntaqliteTextSpan* span,
-    uint32_t* out_len,
-    uint32_t* out_offset);
+    SyntaqliteLength* out_len,
+    SyntaqliteStmtOffset* out_offset);
 
 // Authored source text for AST node `node_id` — the analogue of
 // `syntaqlite_parser_span_text` for whole nodes rather than spans.
+// Offsets are statement-relative, same as `syntaqlite_parser_span_text`.
 //
 // Requires per-node extent tracking to be enabled via
 // `syntaqlite_parser_set_collect_node_extents` before the first
-// `reset()`.  On success writes the slice length to `*out_len` and
-// its byte offset in the source to `*out_offset` (both optional) and
-// returns a direct slice of the input source — no allocation.
+// `reset()`.  Returns a direct slice of the current statement's
+// source — no allocation.
 //
 // Returns NULL (and writes 0 to `*out_len` / `*out_offset`) when
 // extent tracking is disabled, the node id is unknown, or no extent
 // was recorded for it.
-SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
-                                                       uint32_t node_id,
-                                                       uint32_t* out_len,
-                                                       uint32_t* out_offset);
+SYNTAQLITE_API const char* syntaqlite_parser_node_text(
+    SyntaqliteParser* p,
+    uint32_t node_id,
+    SyntaqliteLength* out_len,
+    SyntaqliteStmtOffset* out_offset);
 
 // Post-expansion text for AST node `node_id` — the analogue of
 // `syntaqlite_parser_span_expanded_text` for whole nodes.
@@ -591,7 +599,7 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
 SYNTAQLITE_API const char* syntaqlite_parser_node_expanded_text(
     SyntaqliteParser* p,
     uint32_t node_id,
-    uint32_t* out_len);
+    SyntaqliteLength* out_len);
 
 // ---------------------------------------------------------------------------
 // Macro-expansion queries

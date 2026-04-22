@@ -27,6 +27,7 @@
 
 #include "syntaqlite/config.h"
 #include "syntaqlite/dialect.h"
+#include "syntaqlite/types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,9 +44,9 @@ typedef struct SyntaqliteTokenizer SyntaqliteTokenizer;
 // the source buffer bound by the last reset() call, so it is only valid
 // while that buffer is alive. The text is NOT null-terminated.
 typedef struct SyntaqliteToken {
-  const char* text;  // Pointer into source text.
-  uint32_t length;   // Token length in bytes.
-  uint32_t type;     // Token type ordinal.
+  const char* text;         // Pointer into source text.
+  SyntaqliteLength length;  // Token length in bytes.
+  uint32_t type;            // Token type ordinal.
 } SyntaqliteToken;
 
 // ---------------------------------------------------------------------------
@@ -65,7 +66,7 @@ SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_with_dialect(
 // again to tokenize a new input without reallocating.
 SYNTAQLITE_API void syntaqlite_tokenizer_reset(SyntaqliteTokenizer* tok,
                                                const char* source,
-                                               uint32_t len);
+                                               SyntaqliteLength len);
 
 // Advance to the next token. Returns 1 if a token was written to *out,
 // 0 at end-of-input. Every token is returned, including whitespace and
