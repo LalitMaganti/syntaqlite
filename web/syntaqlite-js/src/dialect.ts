@@ -11,9 +11,13 @@ export interface DialectPreset {
   symbol: string;
 }
 
+// Resolve relative to the bundled wasm/ directory so the default works in
+// both browsers (fetch) and Node (loadDynamicLibrary -> fs.readFile).
+const DEFAULT_SQLITE_WASM = new URL("../wasm/syntaqlite-sqlite.wasm", import.meta.url).href;
+
 export const BUILTIN_PRESETS: DialectPreset[] = [
   // SQLite is a side module; the runtime loads it via loadDynamicLibrary.
-  {id: "sqlite", label: "SQLite", wasmUrl: "syntaqlite-sqlite.wasm", symbol: "syntaqlite_sqlite_dialect_template"},
+  {id: "sqlite", label: "SQLite", wasmUrl: DEFAULT_SQLITE_WASM, symbol: "syntaqlite_sqlite_dialect_template"},
 ];
 
 export interface DialectManagerConfig {

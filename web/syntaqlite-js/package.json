@@ -23,6 +23,7 @@
     "build": "tsc",
     "check": "tsc --noEmit",
     "prepublishOnly": "node scripts/verify-tarball.mjs",
+    "test:node": "node tests/node-smoke.mjs",
     "test:package": "node tests/setup-fixture.mjs local && playwright test",
     "test:package:registry": "node tests/setup-fixture.mjs registry && playwright test"
   },

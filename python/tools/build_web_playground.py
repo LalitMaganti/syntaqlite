@@ -126,8 +126,14 @@ def main() -> int:
     target_rustflags += " -C link-arg=-sALLOW_TABLE_GROWTH"
     target_rustflags += " -C link-arg=-sALLOW_MEMORY_GROWTH"
     target_rustflags += (
-        " -C link-arg=-sEXPORTED_RUNTIME_METHODS=[\"loadDynamicLibrary\",\"ccall\",\"cwrap\"]"
+        " -C link-arg=-sEXPORTED_RUNTIME_METHODS="
+        "[\"loadDynamicLibrary\",\"ccall\",\"cwrap\",\"HEAPU8\"]"
     )
+    # Emit a factory function instead of relying on a global Module. This lets
+    # the same runtime load cleanly in browsers, Node, and Bun without the
+    # `var Module = ...` hoisting quirk that non-MODULARIZE outputs rely on.
+    target_rustflags += " -C link-arg=-sMODULARIZE=1"
+    target_rustflags += " -C link-arg=-sEXPORT_NAME=createSyntaqliteRuntime"
     # Emit DWARF debug info into a separate file so Chrome DevTools can
     # symbolize stack traces without bloating the served .wasm.
     target_rustflags += " -C link-arg=-g"
@@ -236,6 +242,15 @@ def main() -> int:
         dst = os.path.join(js_pkg_wasm_dir, name)
         shutil.copy2(src, dst)
         print("wrote %s" % dst)
+
+    # Mark wasm/ as CommonJS so Node's CJS loader handles syntaqlite-runtime.js.
+    # The parent syntaqlite-js package.json is "type": "module", so without
+    # this hint Node would try to parse the Emscripten output (which uses
+    # `require('fs')` and `module.exports`) as ESM and error out.
+    wasm_pkg_json = os.path.join(js_pkg_wasm_dir, "package.json")
+    with open(wasm_pkg_json, "w", encoding="utf-8") as f:
+        f.write('{"type": "commonjs"}\n')
+    print("wrote %s" % wasm_pkg_json)
 
     # Build Perfetto dialect wasm side module.
     perfetto_work_dir = os.path.join(ROOT_DIR, ".cache", "perfetto-wasm")

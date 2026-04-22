@@ -14,25 +14,16 @@ export interface EmscriptenModule {
   [key: `_${string}`]: ((...args: number[]) => number) | undefined;
 }
 
-/** Module config passed to Emscripten before initialization. */
+/** Module config passed to the Emscripten MODULARIZE factory. */
 export interface EmscriptenModuleConfig {
   noInitialRun: boolean;
   locateFile: (path: string) => string;
-  onRuntimeInitialized: () => void;
-  onAbort: (reason: string) => void;
-  // Emscripten populates these after init:
+  // Emscripten populates these after init (the factory returns the same object):
   HEAPU8?: Uint8Array;
   loadDynamicLibrary?: EmscriptenModule["loadDynamicLibrary"];
   ccall?: EmscriptenModule["ccall"];
   cwrap?: EmscriptenModule["cwrap"];
   [key: string]: unknown;
-}
-
-declare global {
-  interface Window {
-    Module: EmscriptenModuleConfig;
-    HEAPU8?: Uint8Array;
-  }
 }
 
 // ── AST JSON types ──

@@ -21,7 +21,7 @@ npm install syntaqlite
 import { Engine } from "syntaqlite";
 
 const engine = new Engine();
-await engine.init();
+await engine.load();
 
 // Format SQL
 const result = engine.format("select id,name from users where id=1");
