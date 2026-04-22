@@ -74,7 +74,7 @@ typedef struct SynqParseCtx SynqParseCtx;
 
 typedef struct SynqParseToken {
   const char* z;                 // pointer to start of token in its buffer
-  SyntaqliteLength n;          // byte length of token
+  SyntaqliteLength n;            // byte length of token
   uint32_t type;                 // token type ID (SYNTAQLITE_TK_*)
   SyntaqliteTokenIdx token_idx;  // index into parser's token vec
                                  // (0xFFFFFFFF if not collecting)
