@@ -22,29 +22,32 @@ extern "C" {
 // imposing any compile-time enforcement.  Mixing them at the call site is
 // not a type error in C.
 //
-// The kinds (all byte-based; UTF-16 positions are LSP-only and live on the
-// Rust side):
-//   - Stmt*       — byte offset/length measured from the start of the
-//                   current statement's source slice
-//                   (`syntaqlite_parser_text`).
-//   - Doc*        — byte offset/length measured from the start of the full
-//                   bound source (`syntaqlite_parser_full_text`).
-//   - Layer*      — byte offset/length measured from the start of an
-//                   expansion layer's internal buffer (e.g.
-//                   `SyntaqliteTextSpan`, `SyntaqliteMacroArgSegment`).
-//                   Resolve via the parser's span accessors; never use
-//                   directly as a source offset.
-//   - TokenIdx    — 0-based index into a statement's token stream.
+// Offsets describe a *position within a specific buffer*, so they are
+// split by the buffer they index into.  All are byte-based:
+//   - StmtOffset   — byte offset from the start of the current
+//                    statement's source slice (`syntaqlite_parser_text`).
+//   - DocOffset    — byte offset from the start of the full bound
+//                    source (`syntaqlite_parser_full_text`).
+//   - LayerOffset  — byte offset into an expansion layer's internal
+//                    buffer (e.g. `SyntaqliteTextSpan`,
+//                    `SyntaqliteMacroArgSegment`).  Resolve via the
+//                    parser's span accessors; never use directly as a
+//                    source offset.
+//
+// Lengths are unitless byte counts — a length of 5 means "5 bytes",
+// regardless of which buffer those bytes come from.  A single typedef
+// (`SyntaqliteLength`) flags a value as "byte count" rather than an
+// opaque id / flag / ordinal.
+//
+// Indices and numeric positions:
+//   - TokenIdx     — 0-based index into a statement's token stream.
 //   - LineNumber / ColumnNumber — 1-based, with `0` meaning "unknown".
 
 typedef uint32_t SyntaqliteStmtOffset;
-typedef uint32_t SyntaqliteStmtLen;
-
 typedef uint32_t SyntaqliteDocOffset;
-typedef uint32_t SyntaqliteDocLen;
-
 typedef uint32_t SyntaqliteLayerOffset;
-typedef uint32_t SyntaqliteLayerLen;
+
+typedef uint32_t SyntaqliteLength;
 
 typedef uint32_t SyntaqliteTokenIdx;
 
@@ -75,7 +78,7 @@ typedef uint32_t SyntaqliteCompletionContext;
 //     drill-through fidelity for spans inside substituted macro args.
 typedef struct SyntaqliteTextSpan {
   SyntaqliteLayerOffset offset;
-  SyntaqliteLayerLen length;
+  SyntaqliteLength length;
   uint32_t flags;
   uint32_t _layer_id;  // Internal: 0 = source, >0 = macro expansion layer.
 } SyntaqliteTextSpan;

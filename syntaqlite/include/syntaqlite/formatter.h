@@ -7,7 +7,7 @@
 //   SyntaqliteFormatter* f = syntaqlite_formatter_create_sqlite();
 //   if (syntaqlite_formatter_format(f, sql, len) == 0) {
 //     const char* out = syntaqlite_formatter_output(f);
-//     uint32_t out_len = syntaqlite_formatter_output_len(f);
+//     SyntaqliteLength out_len = syntaqlite_formatter_output_len(f);
 //     // use out[0..out_len]
 //   } else {
 //     const char* err = syntaqlite_formatter_error_msg(f);
@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include "syntaqlite/config.h"
 #include "syntaqlite/dialect.h"
+#include "syntaqlite/types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -68,7 +69,7 @@ SYNTAQLITE_API void syntaqlite_formatter_destroy(SyntaqliteFormatter* f);
 // The source buffer must remain valid only for the duration of this call.
 SYNTAQLITE_API int32_t syntaqlite_formatter_format(SyntaqliteFormatter* f,
                                                     const char* source,
-                                                    uint32_t len);
+                                                    SyntaqliteLength len);
 
 // ---------------------------------------------------------------------------
 // Result access (valid until next format() or destroy())
@@ -79,9 +80,9 @@ SYNTAQLITE_API int32_t syntaqlite_formatter_format(SyntaqliteFormatter* f,
 SYNTAQLITE_API const char* syntaqlite_formatter_output(
     const SyntaqliteFormatter* f);
 
-// Length in bytes of the formatted output (excluding NUL terminator).
+// Byte length of the formatted output (excluding NUL terminator).
 // Returns 0 if format() has not been called or failed.
-SYNTAQLITE_API uint32_t syntaqlite_formatter_output_len(
+SYNTAQLITE_API SyntaqliteLength syntaqlite_formatter_output_len(
     const SyntaqliteFormatter* f);
 
 // NUL-terminated error message from the last failed format() call.

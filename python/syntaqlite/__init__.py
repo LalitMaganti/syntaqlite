@@ -99,7 +99,12 @@ class RenderOptions:
 
 
 class Diagnostic:
-    """A single diagnostic from validation."""
+    """A single diagnostic from validation.
+
+    ``start_offset`` and ``end_offset`` are document-absolute byte
+    offsets into the SQL passed to :meth:`Syntaqlite.analyze` — measured
+    from byte 0 of the input, not relative to a statement.
+    """
 
     __slots__ = ("severity", "message", "start_offset", "end_offset", "code")
 
@@ -484,6 +489,9 @@ class Syntaqlite:
         """Tokenize SQL into a list of token dicts.
 
         Each dict has: text (str), offset (int), length (int), type (int), category (str).
+
+        ``offset`` is a document-absolute byte offset into ``sql`` (byte 0 =
+        first byte of input). ``length`` is the token's byte length.
         """
         return self._call("tokenize", sql=sql)["tokens"]
 

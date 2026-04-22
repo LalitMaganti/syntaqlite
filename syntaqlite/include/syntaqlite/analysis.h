@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include "syntaqlite/config.h"
 #include "syntaqlite/dialect.h"
+#include "syntaqlite/types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -67,11 +68,16 @@ typedef enum {
 
 // A single diagnostic from validation. Pointers are valid until the next
 // analyze() or destroy() call.
+//
+// `start_offset` / `end_offset` are document-absolute byte offsets into
+// the source buffer passed to the most recent `analyze()` /
+// `load_schema_ddl()` call — they are NOT statement-relative, even when
+// read via `syntaqlite_analyzer_statement_diagnostics`.
 typedef struct {
   SyntaqliteSeverity severity;
   const char* message;
-  uint32_t start_offset;
-  uint32_t end_offset;
+  SyntaqliteDocOffset start_offset;
+  SyntaqliteDocOffset end_offset;
   uint32_t kind_code;  // SyntaqliteDiagnosticCode value
 } SyntaqliteDiagnostic;
 
@@ -223,11 +229,12 @@ SYNTAQLITE_API void syntaqlite_analyzer_set_module_resolver(
 // separated by semicolons. DDL statements (CREATE TABLE, etc.) accumulate
 // in the internal catalog so that later statements can reference them.
 //
-// Returns the number of diagnostics produced.
+// Returns the number of diagnostics produced. Diagnostic offsets are
+// document-absolute (measured from `source[0]`).
 // The source buffer must remain valid only for the duration of this call.
 SYNTAQLITE_API uint32_t syntaqlite_analyzer_analyze(SyntaqliteAnalyzer* v,
                                                       const char* source,
-                                                      uint32_t len);
+                                                      SyntaqliteLength len);
 
 // Clear accumulated DDL from the catalog (document + connection layers).
 // The dialect layer (built-in functions, etc.) is preserved.
@@ -253,7 +260,7 @@ SYNTAQLITE_API void syntaqlite_analyzer_add_views(
 SYNTAQLITE_API uint32_t syntaqlite_analyzer_load_schema_ddl(
     SyntaqliteAnalyzer* v,
     const char* source,
-    uint32_t len);
+    SyntaqliteLength len);
 
 // Register a scalar / aggregate / window function overload in the database
 // layer. Repeat calls with the same `name` build up an overload set — any

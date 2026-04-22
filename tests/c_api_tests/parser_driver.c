@@ -126,7 +126,7 @@ int main(void) {
       int n = read_block(g_body, sizeof(g_body));
       if (n < 0) { printf("reset err no_terminator\n"); break; }
       if (!p) { printf("reset err no_handle\n"); continue; }
-      syntaqlite_parser_reset(p, g_body, (SyntaqliteDocLen)n);
+      syntaqlite_parser_reset(p, g_body, (SyntaqliteLength)n);
       printf("reset ok len=%d\n", n);
     } else if (!p) {
       printf("%s err no_handle\n", verb);
@@ -152,7 +152,7 @@ int main(void) {
       printf("node_count %u\n", syntaqlite_parser_node_count(p));
     } else if (strcmp(verb, "parser_text") == 0) {
       SyntaqliteDocOffset off = 0;
-      SyntaqliteStmtLen len = 0;
+      SyntaqliteLength len = 0;
       const char* t = syntaqlite_parser_text(p, &off, &len);
       if (!t) {
         printf("parser_text none\n");
@@ -163,7 +163,7 @@ int main(void) {
         printf(".\n");
       }
     } else if (strcmp(verb, "full_text") == 0) {
-      SyntaqliteDocLen len = 0;
+      SyntaqliteLength len = 0;
       const char* t = syntaqlite_parser_full_text(p, &len);
       if (!t) {
         printf("full_text none\n");
@@ -267,7 +267,7 @@ int main(void) {
     } else if (strcmp(verb, "error_info") == 0) {
       const char* msg = syntaqlite_result_error_msg(p);
       SyntaqliteStmtOffset off = syntaqlite_result_error_offset(p);
-      SyntaqliteStmtLen len = syntaqlite_result_error_length(p);
+      SyntaqliteLength len = syntaqlite_result_error_length(p);
       uint32_t recovery = syntaqlite_result_recovery_root(p);
       printf("error_info msg=\"%s\" off=%u len=%u recovery=%u\n",
              msg ? msg : "",
