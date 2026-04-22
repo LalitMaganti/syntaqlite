@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.4
+
+**JavaScript package:**
+- Fixed the `syntaqlite` npm package crashing with `window is not defined` under Node and Bun. The WASM runtime is now built as an Emscripten `MODULARIZE` factory and consumed via dynamic `import()` in Node/Bun (and an injected `<script>` in the browser), so `new Engine().load()` works on all three runtimes. The default SQLite preset also switched to an absolute `import.meta.url` URL so `loadDynamicLibrary` resolves in Node ([#242](https://github.com/LalitMaganti/syntaqlite/pull/242)).
+- Added a Node smoke test (`npm run test:node`) that exercises the full `load → loadDefault → runFmt → runDiagnostics` path, wired into CI and the npm publish workflow ([#242](https://github.com/LalitMaganti/syntaqlite/pull/242)).
+
 ## 0.5.3
 
 **Formatter:**
