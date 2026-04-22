@@ -108,10 +108,17 @@ SYNTAQLITE_API const char* syntaqlite_parser_span_text(
     uint32_t* out_offset) {
   if (out_offset)
     *out_offset = 0;
-  if (!span || span->length == 0) {
+  if (!span) {
     *out_len = 0;
     return NULL;
   }
+  // A span's offset is positional metadata that is always meaningful for
+  // an in-range span, independent of length.  A zero-length span can be
+  // either an absent field (zero-initialized `{0,0,0,0}` — offset 0 is
+  // the sentinel) or a genuine empty-but-quoted token like `""`
+  // (non-zero offset + quote flag set).  Callers distinguish the two via
+  // `TextSpan::is_quoted`; our job here is to surface the real offset in
+  // both cases rather than collapsing to 0.
   uint32_t stmt_len = p->stmt_end_offset > p->stmt_start_offset
                           ? p->stmt_end_offset - p->stmt_start_offset
                           : 0;

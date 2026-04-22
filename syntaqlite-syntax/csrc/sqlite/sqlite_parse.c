@@ -8294,8 +8294,6 @@ static YYACTIONTYPE yy_reduce(
     case 132: /* eidlist_opt ::= LP eidlist RP */
     case 166: /* idlist_opt ::= LP idlist RP */
       yytestcase(yyruleno == 166);
-    case 177: /* expr ::= LP expr RP */
-      yytestcase(yyruleno == 177);
     case 324: /* trigger_cmd ::= scanpt select scanpt */
       yytestcase(yyruleno == 324);
       {
@@ -8615,6 +8613,11 @@ static YYACTIONTYPE yy_reduce(
         yymsp[0].minor.yy277 = synq_parse_error(pCtx, synq_error_span(pCtx));
       }
       break;
+    case 177: /* expr ::= LP expr RP */
+    {
+      yymsp[-2].minor.yy277 =
+          synq_parse_paren_expr(pCtx, yymsp[-1].minor.yy277);
+    } break;
     case 178: /* expr ::= expr PLUS|MINUS expr */
     {
       SyntaqliteBinaryOp op = (yymsp[-1].minor.yy0.type == SYNTAQLITE_TK_PLUS)

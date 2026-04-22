@@ -139,6 +139,7 @@ impl core::convert::From<syntaqlite_syntax::nodes::NodeTag> for syntaqlite_synta
 impl core::convert::From<syntaqlite_syntax::nodes::OrderByListId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::OrderedSetFunctionCallId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::OrderingTermId> for syntaqlite_syntax::any::AnyNodeId
+impl core::convert::From<syntaqlite_syntax::nodes::ParenExprId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::PragmaStmtId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::QualifiedNameId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::RaiseExprId> for syntaqlite_syntax::any::AnyNodeId
@@ -225,6 +226,7 @@ impl core::fmt::Debug for syntaqlite_syntax::nodes::Literal<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::NamedWindowDef<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::OrderedSetFunctionCall<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::OrderingTerm<'_>
+impl core::fmt::Debug for syntaqlite_syntax::nodes::ParenExpr<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::PragmaStmt<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::QualifiedName<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::RaiseExpr<'_>
@@ -305,6 +307,7 @@ impl core::fmt::Display for syntaqlite_syntax::nodes::Literal<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::NamedWindowDef<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::OrderedSetFunctionCall<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::OrderingTerm<'_>
+impl core::fmt::Display for syntaqlite_syntax::nodes::ParenExpr<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::PragmaStmt<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::QualifiedName<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::RaiseExpr<'_>
@@ -469,6 +472,7 @@ impl syntaqlite_syntax::nodes::NullsOrder
 impl syntaqlite_syntax::nodes::OrderByListId
 impl syntaqlite_syntax::nodes::OrderedSetFunctionCallId
 impl syntaqlite_syntax::nodes::OrderingTermId
+impl syntaqlite_syntax::nodes::ParenExprId
 impl syntaqlite_syntax::nodes::PragmaForm
 impl syntaqlite_syntax::nodes::PragmaStmtId
 impl syntaqlite_syntax::nodes::QualifiedNameId
@@ -591,6 +595,7 @@ impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::NodeId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::OrderByListId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::OrderedSetFunctionCallId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::OrderingTermId
+impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::ParenExprId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::PragmaStmtId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::QualifiedNameId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::RaiseExprId
@@ -678,6 +683,7 @@ impl<'a> core::convert::From<syntaqlite_syntax::nodes::NamedWindowDef<'a>> for s
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::Node<'a>> for syntaqlite_syntax::nodes::NodeId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>> for syntaqlite_syntax::nodes::OrderedSetFunctionCallId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::OrderingTerm<'a>> for syntaqlite_syntax::nodes::OrderingTermId
+impl<'a> core::convert::From<syntaqlite_syntax::nodes::ParenExpr<'a>> for syntaqlite_syntax::nodes::ParenExprId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::PragmaStmt<'a>> for syntaqlite_syntax::nodes::PragmaStmtId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::QualifiedName<'a>> for syntaqlite_syntax::nodes::QualifiedNameId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::RaiseExpr<'a>> for syntaqlite_syntax::nodes::RaiseExprId
@@ -768,6 +774,7 @@ impl<'a> syntaqlite_syntax::nodes::NamedWindowDef<'a>
 impl<'a> syntaqlite_syntax::nodes::Node<'a>
 impl<'a> syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>
 impl<'a> syntaqlite_syntax::nodes::OrderingTerm<'a>
+impl<'a> syntaqlite_syntax::nodes::ParenExpr<'a>
 impl<'a> syntaqlite_syntax::nodes::PragmaStmt<'a>
 impl<'a> syntaqlite_syntax::nodes::QualifiedName<'a>
 impl<'a> syntaqlite_syntax::nodes::RaiseExpr<'a>
@@ -840,6 +847,7 @@ impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::no
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::Node<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::OrderingTerm<'a>
+impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::ParenExpr<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::PragmaStmt<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::QualifiedName<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::RaiseExpr<'a>
@@ -1062,6 +1070,7 @@ pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::Nod
 pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::OrderByListId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::OrderedSetFunctionCallId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::OrderingTermId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ParenExprId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::PragmaStmtId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::QualifiedNameId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::RaiseExprId) -> syntaqlite_syntax::any::AnyNodeId
@@ -1613,6 +1622,12 @@ pub fn syntaqlite_syntax::nodes::OrderingTerm<'a>::nulls_order(&self) -> syntaql
 pub fn syntaqlite_syntax::nodes::OrderingTerm<'a>::sort_order(&self) -> syntaqlite_syntax::nodes::SortOrder
 pub fn syntaqlite_syntax::nodes::OrderingTermId::from(n: syntaqlite_syntax::nodes::OrderingTerm<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::OrderingTermId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::nodes::ParenExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ParenExpr<'a>::expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
+pub fn syntaqlite_syntax::nodes::ParenExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ParenExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ParenExprId
+pub fn syntaqlite_syntax::nodes::ParenExprId::from(n: syntaqlite_syntax::nodes::ParenExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ParenExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::PragmaForm::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::PragmaStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::PragmaStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
@@ -2114,6 +2129,8 @@ pub struct syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>
 pub struct syntaqlite_syntax::nodes::OrderedSetFunctionCallId(_)
 pub struct syntaqlite_syntax::nodes::OrderingTerm<'a>
 pub struct syntaqlite_syntax::nodes::OrderingTermId(_)
+pub struct syntaqlite_syntax::nodes::ParenExpr<'a>
+pub struct syntaqlite_syntax::nodes::ParenExprId(_)
 pub struct syntaqlite_syntax::nodes::PragmaStmt<'a>
 pub struct syntaqlite_syntax::nodes::PragmaStmtId(_)
 pub struct syntaqlite_syntax::nodes::QualifiedName<'a>
@@ -2480,6 +2497,7 @@ pub syntaqlite_syntax::nodes::Expr::IsExpr(syntaqlite_syntax::nodes::IsExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::LikeExpr(syntaqlite_syntax::nodes::LikeExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::Literal(syntaqlite_syntax::nodes::Literal<'a>)
 pub syntaqlite_syntax::nodes::Expr::OrderedSetFunctionCall(syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>)
+pub syntaqlite_syntax::nodes::Expr::ParenExpr(syntaqlite_syntax::nodes::ParenExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::RaiseExpr(syntaqlite_syntax::nodes::RaiseExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::SubqueryExpr(syntaqlite_syntax::nodes::SubqueryExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::UnaryExpr(syntaqlite_syntax::nodes::UnaryExpr<'a>)
@@ -2600,6 +2618,7 @@ pub syntaqlite_syntax::nodes::Node::OrderingTerm(syntaqlite_syntax::nodes::Order
 pub syntaqlite_syntax::nodes::Node::Other
 pub syntaqlite_syntax::nodes::Node::Other::id: syntaqlite_syntax::any::AnyNodeId
 pub syntaqlite_syntax::nodes::Node::Other::tag: syntaqlite_syntax::any::AnyNodeTag
+pub syntaqlite_syntax::nodes::Node::ParenExpr(syntaqlite_syntax::nodes::ParenExpr<'a>)
 pub syntaqlite_syntax::nodes::Node::PragmaStmt(syntaqlite_syntax::nodes::PragmaStmt<'a>)
 pub syntaqlite_syntax::nodes::Node::QualifiedName(syntaqlite_syntax::nodes::QualifiedName<'a>)
 pub syntaqlite_syntax::nodes::Node::RaiseExpr(syntaqlite_syntax::nodes::RaiseExpr<'a>)
@@ -2629,83 +2648,84 @@ pub syntaqlite_syntax::nodes::Node::WindowDef(syntaqlite_syntax::nodes::WindowDe
 pub syntaqlite_syntax::nodes::Node::WindowDefList(syntaqlite_syntax::nodes::WindowDefList<'a>)
 pub syntaqlite_syntax::nodes::Node::WithClause(syntaqlite_syntax::nodes::WithClause<'a>)
 pub syntaqlite_syntax::nodes::NodeTag::AggregateFunctionCall = 1
-pub syntaqlite_syntax::nodes::NodeTag::AlterTableStmt = 45
-pub syntaqlite_syntax::nodes::NodeTag::AnalyzeOrReindexStmt = 63
-pub syntaqlite_syntax::nodes::NodeTag::AttachStmt = 64
+pub syntaqlite_syntax::nodes::NodeTag::AlterTableStmt = 46
+pub syntaqlite_syntax::nodes::NodeTag::AnalyzeOrReindexStmt = 64
+pub syntaqlite_syntax::nodes::NodeTag::AttachStmt = 65
 pub syntaqlite_syntax::nodes::NodeTag::BetweenExpr = 10
 pub syntaqlite_syntax::nodes::NodeTag::BinaryExpr = 33
 pub syntaqlite_syntax::nodes::NodeTag::CaseExpr = 12
 pub syntaqlite_syntax::nodes::NodeTag::CaseWhen = 13
 pub syntaqlite_syntax::nodes::NodeTag::CaseWhenList = 14
 pub syntaqlite_syntax::nodes::NodeTag::CastExpr = 3
-pub syntaqlite_syntax::nodes::NodeTag::CollateExpr = 41
+pub syntaqlite_syntax::nodes::NodeTag::CollateExpr = 42
 pub syntaqlite_syntax::nodes::NodeTag::ColumnConstraint = 16
 pub syntaqlite_syntax::nodes::NodeTag::ColumnConstraintList = 17
 pub syntaqlite_syntax::nodes::NodeTag::ColumnDef = 18
 pub syntaqlite_syntax::nodes::NodeTag::ColumnDefList = 19
 pub syntaqlite_syntax::nodes::NodeTag::ColumnRef = 4
 pub syntaqlite_syntax::nodes::NodeTag::CompoundSelect = 5
-pub syntaqlite_syntax::nodes::NodeTag::CreateIndexStmt = 68
+pub syntaqlite_syntax::nodes::NodeTag::CreateIndexStmt = 69
 pub syntaqlite_syntax::nodes::NodeTag::CreateTableStmt = 22
-pub syntaqlite_syntax::nodes::NodeTag::CreateTriggerStmt = 60
-pub syntaqlite_syntax::nodes::NodeTag::CreateViewStmt = 69
-pub syntaqlite_syntax::nodes::NodeTag::CreateVirtualTableStmt = 61
+pub syntaqlite_syntax::nodes::NodeTag::CreateTriggerStmt = 61
+pub syntaqlite_syntax::nodes::NodeTag::CreateViewStmt = 70
+pub syntaqlite_syntax::nodes::NodeTag::CreateVirtualTableStmt = 62
 pub syntaqlite_syntax::nodes::NodeTag::CteDefinition = 23
 pub syntaqlite_syntax::nodes::NodeTag::CteList = 24
 pub syntaqlite_syntax::nodes::NodeTag::DeleteStmt = 28
-pub syntaqlite_syntax::nodes::NodeTag::DetachStmt = 65
-pub syntaqlite_syntax::nodes::NodeTag::DropStmt = 44
-pub syntaqlite_syntax::nodes::NodeTag::Error = 37
+pub syntaqlite_syntax::nodes::NodeTag::DetachStmt = 66
+pub syntaqlite_syntax::nodes::NodeTag::DropStmt = 45
+pub syntaqlite_syntax::nodes::NodeTag::Error = 38
 pub syntaqlite_syntax::nodes::NodeTag::ExistsExpr = 7
-pub syntaqlite_syntax::nodes::NodeTag::ExplainStmt = 67
-pub syntaqlite_syntax::nodes::NodeTag::ExprList = 38
-pub syntaqlite_syntax::nodes::NodeTag::FilterOver = 78
+pub syntaqlite_syntax::nodes::NodeTag::ExplainStmt = 68
+pub syntaqlite_syntax::nodes::NodeTag::ExprList = 39
+pub syntaqlite_syntax::nodes::NodeTag::FilterOver = 79
 pub syntaqlite_syntax::nodes::NodeTag::ForeignKeyClause = 15
-pub syntaqlite_syntax::nodes::NodeTag::FrameBound = 72
-pub syntaqlite_syntax::nodes::NodeTag::FrameSpec = 73
-pub syntaqlite_syntax::nodes::NodeTag::FunctionCall = 39
-pub syntaqlite_syntax::nodes::NodeTag::IdentName = 36
+pub syntaqlite_syntax::nodes::NodeTag::FrameBound = 73
+pub syntaqlite_syntax::nodes::NodeTag::FrameSpec = 74
+pub syntaqlite_syntax::nodes::NodeTag::FunctionCall = 40
+pub syntaqlite_syntax::nodes::NodeTag::IdentName = 37
 pub syntaqlite_syntax::nodes::NodeTag::InExpr = 8
 pub syntaqlite_syntax::nodes::NodeTag::InsertStmt = 32
 pub syntaqlite_syntax::nodes::NodeTag::IsExpr = 9
-pub syntaqlite_syntax::nodes::NodeTag::JoinClause = 56
-pub syntaqlite_syntax::nodes::NodeTag::JoinPrefix = 57
+pub syntaqlite_syntax::nodes::NodeTag::JoinClause = 57
+pub syntaqlite_syntax::nodes::NodeTag::JoinPrefix = 58
 pub syntaqlite_syntax::nodes::NodeTag::LikeExpr = 11
-pub syntaqlite_syntax::nodes::NodeTag::LimitClause = 53
+pub syntaqlite_syntax::nodes::NodeTag::LimitClause = 54
 pub syntaqlite_syntax::nodes::NodeTag::Literal = 35
-pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDef = 76
-pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDefList = 77
+pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDef = 77
+pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDefList = 78
 pub syntaqlite_syntax::nodes::NodeTag::Null = 0
-pub syntaqlite_syntax::nodes::NodeTag::OrderByList = 52
+pub syntaqlite_syntax::nodes::NodeTag::OrderByList = 53
 pub syntaqlite_syntax::nodes::NodeTag::OrderedSetFunctionCall = 2
-pub syntaqlite_syntax::nodes::NodeTag::OrderingTerm = 51
-pub syntaqlite_syntax::nodes::NodeTag::PragmaStmt = 62
-pub syntaqlite_syntax::nodes::NodeTag::QualifiedName = 43
-pub syntaqlite_syntax::nodes::NodeTag::RaiseExpr = 42
-pub syntaqlite_syntax::nodes::NodeTag::ResultColumn = 48
-pub syntaqlite_syntax::nodes::NodeTag::ResultColumnList = 49
-pub syntaqlite_syntax::nodes::NodeTag::SavepointStmt = 47
-pub syntaqlite_syntax::nodes::NodeTag::SelectStmt = 50
+pub syntaqlite_syntax::nodes::NodeTag::OrderingTerm = 52
+pub syntaqlite_syntax::nodes::NodeTag::ParenExpr = 36
+pub syntaqlite_syntax::nodes::NodeTag::PragmaStmt = 63
+pub syntaqlite_syntax::nodes::NodeTag::QualifiedName = 44
+pub syntaqlite_syntax::nodes::NodeTag::RaiseExpr = 43
+pub syntaqlite_syntax::nodes::NodeTag::ResultColumn = 49
+pub syntaqlite_syntax::nodes::NodeTag::ResultColumnList = 50
+pub syntaqlite_syntax::nodes::NodeTag::SavepointStmt = 48
+pub syntaqlite_syntax::nodes::NodeTag::SelectStmt = 51
 pub syntaqlite_syntax::nodes::NodeTag::SetClause = 29
 pub syntaqlite_syntax::nodes::NodeTag::SetClauseList = 30
 pub syntaqlite_syntax::nodes::NodeTag::SubqueryExpr = 6
-pub syntaqlite_syntax::nodes::NodeTag::SubqueryTableSource = 55
+pub syntaqlite_syntax::nodes::NodeTag::SubqueryTableSource = 56
 pub syntaqlite_syntax::nodes::NodeTag::TableConstraint = 20
 pub syntaqlite_syntax::nodes::NodeTag::TableConstraintList = 21
-pub syntaqlite_syntax::nodes::NodeTag::TableRef = 54
-pub syntaqlite_syntax::nodes::NodeTag::TransactionStmt = 46
-pub syntaqlite_syntax::nodes::NodeTag::TriggerCmdList = 59
-pub syntaqlite_syntax::nodes::NodeTag::TriggerEvent = 58
+pub syntaqlite_syntax::nodes::NodeTag::TableRef = 55
+pub syntaqlite_syntax::nodes::NodeTag::TransactionStmt = 47
+pub syntaqlite_syntax::nodes::NodeTag::TriggerCmdList = 60
+pub syntaqlite_syntax::nodes::NodeTag::TriggerEvent = 59
 pub syntaqlite_syntax::nodes::NodeTag::UnaryExpr = 34
 pub syntaqlite_syntax::nodes::NodeTag::UpdateStmt = 31
 pub syntaqlite_syntax::nodes::NodeTag::UpsertClause = 26
 pub syntaqlite_syntax::nodes::NodeTag::UpsertClauseList = 27
-pub syntaqlite_syntax::nodes::NodeTag::VacuumStmt = 66
-pub syntaqlite_syntax::nodes::NodeTag::ValuesClause = 71
-pub syntaqlite_syntax::nodes::NodeTag::ValuesRowList = 70
-pub syntaqlite_syntax::nodes::NodeTag::Variable = 40
-pub syntaqlite_syntax::nodes::NodeTag::WindowDef = 74
-pub syntaqlite_syntax::nodes::NodeTag::WindowDefList = 75
+pub syntaqlite_syntax::nodes::NodeTag::VacuumStmt = 67
+pub syntaqlite_syntax::nodes::NodeTag::ValuesClause = 72
+pub syntaqlite_syntax::nodes::NodeTag::ValuesRowList = 71
+pub syntaqlite_syntax::nodes::NodeTag::Variable = 41
+pub syntaqlite_syntax::nodes::NodeTag::WindowDef = 75
+pub syntaqlite_syntax::nodes::NodeTag::WindowDefList = 76
 pub syntaqlite_syntax::nodes::NodeTag::WithClause = 25
 pub syntaqlite_syntax::nodes::NullsOrder::First = 1
 pub syntaqlite_syntax::nodes::NullsOrder::Last = 2
@@ -2923,6 +2943,7 @@ pub type syntaqlite_syntax::nodes::OrderByList<'a> = syntaqlite_syntax::typed::T
 pub type syntaqlite_syntax::nodes::OrderByListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::OrderingTerm<'a>>
 pub type syntaqlite_syntax::nodes::OrderedSetFunctionCallId::Node<'a> = syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>
 pub type syntaqlite_syntax::nodes::OrderingTermId::Node<'a> = syntaqlite_syntax::nodes::OrderingTerm<'a>
+pub type syntaqlite_syntax::nodes::ParenExprId::Node<'a> = syntaqlite_syntax::nodes::ParenExpr<'a>
 pub type syntaqlite_syntax::nodes::PragmaStmtId::Node<'a> = syntaqlite_syntax::nodes::PragmaStmt<'a>
 pub type syntaqlite_syntax::nodes::QualifiedNameId::Node<'a> = syntaqlite_syntax::nodes::QualifiedName<'a>
 pub type syntaqlite_syntax::nodes::RaiseExprId::Node<'a> = syntaqlite_syntax::nodes::RaiseExpr<'a>

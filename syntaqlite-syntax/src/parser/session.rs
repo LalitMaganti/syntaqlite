@@ -1643,6 +1643,79 @@ mod tests {
         assert_eq!(erased.span_expanded_text(span), "inner");
     }
 
+    // Walk the tree looking for ANY Span field, including empty ones.
+    // Used to locate the span that represents an empty-but-quoted token
+    // like `""` (length 0 but with a quote flag set).
+    fn first_quoted_span_in_tree<'a>(
+        stmt: &'a AnyParsedStatement<'a>,
+    ) -> Option<crate::ast::TextSpan> {
+        use crate::ast::FieldValue;
+        fn walk<'a>(
+            stmt: &'a AnyParsedStatement<'a>,
+            id: crate::ast::AnyNodeId,
+        ) -> Option<crate::ast::TextSpan> {
+            if let Some((_, fields)) = stmt.extract_fields(id) {
+                for i in 0..fields.len() {
+                    if matches!(fields[i], FieldValue::Span { .. })
+                        && let Ok(field_idx) = u8::try_from(i)
+                        && let Some(sp) = stmt.field_span(id, field_idx)
+                        && sp.is_quoted()
+                    {
+                        return Some(sp);
+                    }
+                }
+            }
+            for child in stmt.child_node_ids(id) {
+                if let Some(found) = walk(stmt, child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+        let root = stmt.root_id();
+        if root.is_null() {
+            return None;
+        }
+        walk(stmt, root)
+    }
+
+    #[test]
+    fn span_text_preserves_offset_for_empty_quoted_token() {
+        // Regression: an empty-but-quoted token like `""` has length 0 but a
+        // real source position. `span_text` used to collapse any zero-length
+        // span to `("", 0)`, destroying the offset and crashing the
+        // formatter's comment-drain path (which computes `span_start - 1`
+        // to reach the opening quote). Offset for a valid span must be
+        // meaningful independent of length.
+        let parser = Parser::new();
+        let source = "SELECT \"\" FROM t";
+        //            0      7 = opening quote
+        //                    8 = content offset (between the two quotes,
+        //                        both length-0 "position of empty slice")
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        let span =
+            first_quoted_span_in_tree(&erased).expect("expected a quoted Span field for \"\"");
+        assert!(span.is_empty(), "empty quoted token should have length 0");
+        assert!(span.is_quoted(), "token should carry quote flag");
+
+        let (text, offset) = erased.span_text(span);
+        assert_eq!(text, "", "empty content slice");
+        // The offset must be the position of the empty content (right after
+        // the opening quote), not 0.
+        assert_eq!(
+            offset.as_u32(),
+            8,
+            "offset of empty content between the quotes should be preserved \
+             (one byte past the opening quote)"
+        );
+    }
+
     #[test]
     fn span_text_inside_substituted_arg_drills_to_origin() {
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));

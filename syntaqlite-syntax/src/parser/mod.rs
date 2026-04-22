@@ -844,7 +844,14 @@ impl<'a> AnyParsedStatement<'a> {
     /// substituted `$param`, it drills back to the arg's origin text in
     /// the caller's source; otherwise it collapses to the outermost
     /// `name!(...)` call site.  Always a direct slice — no allocation.
-    /// Returns `("", 0)` for empty or invalid spans.
+    ///
+    /// Returns `("", 0)` for invalid spans (null, out-of-range).  For a
+    /// *valid* in-range span of zero length — either an absent field
+    /// (zero-initialized) or a genuine empty-but-quoted token like
+    /// `""` — returns `("", real_offset)`; the offset is always
+    /// meaningful independent of length.  Callers that need to
+    /// distinguish absent from empty-token inspect the span's quote
+    /// flag (see [`TextSpan::is_quoted`](crate::ast::TextSpan)).
     pub fn span_text(&self, span: crate::ast::TextSpan) -> (&'a str, StmtOffset) {
         let mut out_len: u32 = 0;
         let mut out_offset: u32 = 0;
@@ -854,11 +861,14 @@ impl<'a> AnyParsedStatement<'a> {
                 .as_ref()
                 .span_text(span, &raw mut out_len, &raw mut out_offset)
         };
-        if ptr.is_null() || out_len == 0 {
+        if ptr.is_null() {
             return ("", StmtOffset::default());
         }
         // SAFETY: C guarantees ptr points to out_len bytes of valid UTF-8
-        // in a parser-owned buffer valid for 'a.
+        // in a parser-owned buffer valid for 'a.  `out_len` may be zero
+        // (empty quoted token, or absent field) — `from_raw_parts` is
+        // sound for len=0 as long as ptr is non-null, which we've
+        // checked.
         let text = unsafe {
             std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize))
         };
