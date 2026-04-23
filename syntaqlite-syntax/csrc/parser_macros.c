@@ -39,9 +39,13 @@ static void synq_end_macro(SyntaqliteParser* p);
 // Forward-scan an expansion buffer past whitespace and comments and return
 // the next significant token. `*out_pos` is updated to that token's offset;
 // `*out_type` and the return value give its type and length. Returns 0
-// (with *out_type == 0) at end-of-buffer or tokenizer failure. Comments
-// inside expansion buffers are intentionally not recorded — only source
-// comments are kept on p->comments.
+// (with *out_type == 0) at end-of-buffer or tokenizer failure.
+//
+// Comments inside expansion buffers are recorded to `p->comments` with
+// `layer_id = p->ctx.layer_id` (> 0) so consumers that want every
+// comment anywhere in the tree — e.g. authored-source + expansion-body
+// — can find them via `syntaqlite_token_leading_comments`.  Callers
+// filtering to user-authored comments check `Comment.layer_id == 0`.
 static int64_t synq_macro_skip(SyntaqliteParser* p,
                                const unsigned char* z,
                                uint32_t buf_len,
@@ -58,6 +62,9 @@ static int64_t synq_macro_skip(SyntaqliteParser* p,
       *out_pos = pos;
       *out_type = ttype;
       return tlen;
+    }
+    if (ttype == SYNTAQLITE_TK_COMMENT && p->collect_tokens) {
+      synq_parser_record_comment(p, pos, (uint32_t)tlen);
     }
     pos += (uint32_t)tlen;
   }

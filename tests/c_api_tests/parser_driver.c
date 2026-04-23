@@ -27,6 +27,8 @@
 //   token_comments <idx>  Leading + trailing comments for token idx.
 //   node_token_range <id> Inclusive token-index range covering node id
 //                         (needs extents).
+//   node_comments <id>    Leading + trailing comments for node boundaries
+//                         (needs extents).
 //   node_text <id>        Authored text slice for node (needs extents).
 //   error_info            error_msg/off/len/recovery_root dump.
 //   macro_fallback 0|1    Configure (must be before first reset).
@@ -222,6 +224,16 @@ int main(void) {
       } else {
         printf("node_token_range id=%u first=%u last=%u\n", id, first, last);
       }
+    } else if (strcmp(verb, "node_comments") == 0) {
+      if (argc < 2) { printf("node_comments err bad_arg\n"); continue; }
+      uint32_t id = (uint32_t)strtoul(argv[1], NULL, 10);
+      uint32_t lead = 0, trail = 0;
+      const SyntaqliteComment* lc = syntaqlite_node_leading_comments(p, id, &lead);
+      const SyntaqliteComment* tc = syntaqlite_node_trailing_comments(p, id, &trail);
+      printf("node_comments id=%u leading=%u trailing=%u\n", id, lead, trail);
+      for (uint32_t i = 0; i < lead; i++) print_comment(&lc[i], "lead", i);
+      for (uint32_t i = 0; i < trail; i++) print_comment(&tc[i], "trail", i);
+      printf(".\n");
     } else if (strcmp(verb, "node_text") == 0) {
       if (argc < 2) { printf("node_text err bad_arg\n"); continue; }
       uint32_t id = (uint32_t)strtoul(argv[1], NULL, 10);

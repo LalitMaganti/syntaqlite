@@ -531,6 +531,40 @@ impl CParser {
         Some((TokenIdx::from_raw(first), TokenIdx::from_raw(last)))
     }
 
+    pub(crate) unsafe fn node_leading_comments(&self, node_id: u32) -> &[CComment] {
+        let mut count: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer.
+        let ptr = unsafe {
+            syntaqlite_node_leading_comments(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                node_id,
+                &raw mut count,
+            )
+        };
+        if count == 0 || ptr.is_null() {
+            return &[];
+        }
+        // SAFETY: ptr+count describe a contiguous slice of CComment values.
+        unsafe { std::slice::from_raw_parts(ptr, count as usize) }
+    }
+
+    pub(crate) unsafe fn node_trailing_comments(&self, node_id: u32) -> &[CComment] {
+        let mut count: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer.
+        let ptr = unsafe {
+            syntaqlite_node_trailing_comments(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                node_id,
+                &raw mut count,
+            )
+        };
+        if count == 0 || ptr.is_null() {
+            return &[];
+        }
+        // SAFETY: ptr+count describe a contiguous slice of CComment values.
+        unsafe { std::slice::from_raw_parts(ptr, count as usize) }
+    }
+
     pub(crate) unsafe fn span_expanded_text(
         &self,
         span: crate::ast::TextSpan,
@@ -770,6 +804,16 @@ unsafe extern "C" {
         first_tok: *mut u32,
         last_tok: *mut u32,
     ) -> i32;
+    fn syntaqlite_node_leading_comments(
+        p: *mut CParser,
+        node_id: u32,
+        count: *mut u32,
+    ) -> *const CComment;
+    fn syntaqlite_node_trailing_comments(
+        p: *mut CParser,
+        node_id: u32,
+        count: *mut u32,
+    ) -> *const CComment;
     fn syntaqlite_result_macro_count(p: *mut CParser) -> u32;
     fn syntaqlite_result_macro_rewrite_at(p: *mut CParser, idx: u32) -> CMacroRewrite;
     fn syntaqlite_macro_rewrite_arg_segment_count(p: *mut CParser, rewrite_idx: u32) -> u32;

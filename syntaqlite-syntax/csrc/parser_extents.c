@@ -15,11 +15,15 @@
 //
 // When enabled, two parallel shadow stacks mirror Lemon's symbol stack:
 //
-//   * `extent_stack` tracks the merged *authored* range in root-source
-//     coordinates — used by `syntaqlite_parser_node_text`.  Macro
-//     tokens push the outermost call-site range stashed in
-//     `begin_macro_expansion`.  Epsilon pushes the sentinel
-//     `(UINT32_MAX, 0)`, which is neutral under min/max merging.
+//   * `extent_stack` carries both the merged *authored* byte range in
+//     root-source coordinates (used by `syntaqlite_parser_node_text`)
+//     and the inclusive token-index range into `p->tokens` (used by
+//     `syntaqlite_node_token_range`).  Macro tokens push the outermost
+//     call-site byte range stashed in `begin_macro_expansion` with
+//     their real `token_idx` (since the token-stream unification,
+//     every shifted terminal has an index regardless of layer).
+//     Epsilon pushes a sentinel that is neutral under min/max merging
+//     for both ranges.
 //
 //   * `expanded_stack` tracks the merged *expanded* range in the
 //     tokens' own layer — used by
@@ -58,6 +62,17 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
     r.root_start = pCtx->macro_root_start;
     r.root_end = pCtx->macro_root_end;
   }
+  // Token-index range: valid when the shifted token has a real index
+  // in `p->tokens` (all shifted terminals since the token-stream
+  // unification, regardless of layer).  UINT32_MAX means "no token
+  // recorded" (collect_tokens off, or layer-N shift with no index).
+  if (token->token_idx == 0xFFFFFFFFu) {
+    r.first_tok = UINT32_MAX;
+    r.last_tok = UINT32_MAX;
+  } else {
+    r.first_tok = token->token_idx;
+    r.last_tok = token->token_idx;
+  }
   syntaqlite_vec_push(&pCtx->extent_stack, r, pCtx->mem);
 
   SynqNodeExpandedExtent e = {
@@ -66,21 +81,6 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
       .layer_id = token->layer_id,
   };
   syntaqlite_vec_push(&pCtx->expanded_stack, e, pCtx->mem);
-
-  // Token-index shadow: push the shifted token's index (or epsilon
-  // sentinel when collect_tokens is off and token_idx is UINT32_MAX).
-  // With the unified token-stream, this indexes into `p->tokens` for
-  // every shifted token regardless of layer, so node_token_range
-  // reports ranges that span macro expansions.
-  SynqTokenRange tr;
-  if (token->token_idx == 0xFFFFFFFFu) {
-    tr.first_tok = UINT32_MAX;
-    tr.last_tok = UINT32_MAX;
-  } else {
-    tr.first_tok = token->token_idx;
-    tr.last_tok = token->token_idx;
-  }
-  syntaqlite_vec_push(&pCtx->token_range_stack, tr, pCtx->mem);
 }
 
 void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
@@ -114,7 +114,13 @@ void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
   }
   uint32_t len = syntaqlite_vec_len(&pCtx->extent_stack);
 
-  SynqExtentRange merged = {UINT32_MAX, 0};
+  // Merge both the authored byte range and the token-index range in a
+  // single pass.  Each is tracked with its own sentinel
+  // (byte: root_start==UINT32_MAX && root_end==0; token: first_tok==UINT32_MAX)
+  // so a node that reduced over macro-expansion-only tokens keeps its
+  // byte range (from the call site) even when token indices are absent,
+  // and vice versa.
+  SynqExtentRange merged = {UINT32_MAX, 0, UINT32_MAX, UINT32_MAX};
   for (uint32_t i = len - nrhs; i < len; i++) {
     SynqExtentRange e = syntaqlite_vec_at(&pCtx->extent_stack, i);
     if (e.root_start < merged.root_start) {
@@ -122,6 +128,14 @@ void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
     }
     if (e.root_end > merged.root_end) {
       merged.root_end = e.root_end;
+    }
+    if (e.first_tok != UINT32_MAX) {
+      if (merged.first_tok == UINT32_MAX || e.first_tok < merged.first_tok) {
+        merged.first_tok = e.first_tok;
+      }
+      if (merged.last_tok == UINT32_MAX || e.last_tok > merged.last_tok) {
+        merged.last_tok = e.last_tok;
+      }
     }
   }
   syntaqlite_vec_truncate(&pCtx->extent_stack, len - nrhs);
@@ -158,22 +172,4 @@ void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
   }
   syntaqlite_vec_truncate(&pCtx->expanded_stack, len - nrhs);
   syntaqlite_vec_push(&pCtx->expanded_stack, exp_merged, pCtx->mem);
-
-  // Merge token-index ranges: min/max over non-sentinel entries.
-  SynqTokenRange tr_merged = {UINT32_MAX, UINT32_MAX};
-  for (uint32_t i = len - nrhs; i < len; i++) {
-    SynqTokenRange t = syntaqlite_vec_at(&pCtx->token_range_stack, i);
-    if (t.first_tok == UINT32_MAX) {
-      continue;  // epsilon
-    }
-    if (tr_merged.first_tok == UINT32_MAX ||
-        t.first_tok < tr_merged.first_tok) {
-      tr_merged.first_tok = t.first_tok;
-    }
-    if (tr_merged.last_tok == UINT32_MAX || t.last_tok > tr_merged.last_tok) {
-      tr_merged.last_tok = t.last_tok;
-    }
-  }
-  syntaqlite_vec_truncate(&pCtx->token_range_stack, len - nrhs);
-  syntaqlite_vec_push(&pCtx->token_range_stack, tr_merged, pCtx->mem);
 }

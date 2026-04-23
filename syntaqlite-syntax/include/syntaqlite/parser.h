@@ -272,45 +272,48 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_trailing_comments(
     SyntaqliteTokenIdx token_idx,
     uint32_t* count);
 
-// Get the inclusive range of `p->tokens` indices covered by AST node
-// `node_id`.  The indices always refer to authored-source (layer-0)
-// tokens, the only kind of token that is pushed to `p->tokens`.
-//
-// Performance: O(1).  The range is recorded in a side table during
-// reduction, parallel to `node_extents`.
-//
-// Macro handling:
-//   - For a *registered* macro call: the call's layer-0 tokens (the
-//     name, `!`, `(`, args, `)`) are consumed as a unit by the macro
-//     machinery and are NOT pushed to `p->tokens`.  The expansion's
-//     body tokens are fed to Lemon with `token_idx == UINT32_MAX` and
-//     likewise do not appear.  A node produced entirely by registered
-//     expansion therefore has no layer-0 tokens in its reduce and this
-//     function returns 0.  Mixed nodes report only the surrounding
-//     layer-0 tokens.
-//   - For a *fallback* macro call (macro_fallback enabled, no lookup
-//     matched): the entire `name!(args)` is consumed as a single
-//     layer-0 TK_ID token, which is in `p->tokens` and shows up in
-//     ranges normally.
-//
-// Comments authored before / after a macro call are attached to
-// whichever layer-0 token the parser was about to push next (via
-// `owner_idx = len(p->tokens)` prediction), so they remain reachable
-// through `syntaqlite_token_{leading,trailing}_comments` on the
-// surrounding layer-0 tokens.
+// Get the inclusive range of `p->tokens` indices the parser shifted
+// while reducing AST node `node_id`.  Since the token-stream
+// unification, every shifted terminal — authored source and macro-
+// expansion alike — carries a real `token_idx`, so the returned range
+// spans all layers the node reduced over.  O(1): the range is
+// maintained alongside the byte extent on one shadow stack.
 //
 // Returns 1 and writes `*first_tok` / `*last_tok` on success.
-// Returns 0 when:
-//   - `syntaqlite_parser_set_collect_node_extents(p, 1)` was not enabled
-//     before the first reset(),
-//   - `node_id` is out of range or the null sentinel, or
-//   - the node reduced over zero authored-source tokens (pure epsilon
-//     or all content came from a registered macro expansion).
+// Returns 0 when collect_node_extents was not enabled, `node_id` is
+// out of range or the null sentinel, or the node reduced over zero
+// tokens (pure epsilon).
+//
+// Typical use is composed with the `syntaqlite_token_{leading,trailing}
+// _comments` primitives, or with the `syntaqlite_node_{leading,trailing}
+// _comments` helpers below for the boundary-comment case.  Walk the
+// full `[first_tok, last_tok]` range when interior comments (on
+// keywords, between children) are needed.
 SYNTAQLITE_API int32_t
 syntaqlite_node_token_range(SyntaqliteParser* p,
                             uint32_t node_id,
                             SyntaqliteTokenIdx* first_tok,
                             SyntaqliteTokenIdx* last_tok);
+
+// Get the comments attached to the boundary tokens of AST node
+// `node_id`.  Thin wrappers over
+// `syntaqlite_token_leading_comments(first_tok)` and
+// `syntaqlite_token_trailing_comments(last_tok)` respectively, where
+// (first_tok, last_tok) come from `syntaqlite_node_token_range`.
+// Returns NULL with `*count == 0` when the node has no token range
+// or no comments on the boundary.  Interior comments (attached to a
+// keyword or an intermediate token inside the node) are NOT surfaced
+// here — iterate `syntaqlite_token_*_comments` across
+// `node_token_range` for those.
+SYNTAQLITE_API const SyntaqliteComment* syntaqlite_node_leading_comments(
+    SyntaqliteParser* p,
+    uint32_t node_id,
+    uint32_t* count);
+
+SYNTAQLITE_API const SyntaqliteComment* syntaqlite_node_trailing_comments(
+    SyntaqliteParser* p,
+    uint32_t node_id,
+    uint32_t* count);
 
 // Sentinel value for `SyntaqliteMacroRewrite::parent_idx` meaning "this
 // rewrite applies directly to the authored source" (i.e. the rewrite is

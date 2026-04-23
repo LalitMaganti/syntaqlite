@@ -2565,6 +2565,167 @@ mod tests {
     }
 
     #[test]
+    fn comment_inside_macro_body_is_recorded_with_expansion_layer_id() {
+        // A registered macro whose body contains a comment: when the
+        // macro is expanded the tokenizer records the body comment to
+        // `p->comments` with `layer_id > 0`, not dropped on the floor.
+        // This lets tree-walkers surface every comment at every layer
+        // (authored source + expansion bodies) while letting consumers
+        // that only want authored text filter on `layer_id == 0`.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_macro_fallback(true),
+        );
+        let mut reg = TestMacroRegistry::new();
+        reg.register("annotate", &["x"], "/* inner */ $x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT annotate!(42);";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+
+        let comments: Vec<_> = stmt.comments().collect();
+        let expansion_comments: Vec<_> = comments.iter().filter(|c| c.layer_id() > 0).collect();
+        assert_eq!(
+            expansion_comments.len(),
+            1,
+            "macro body comment should be recorded (got comments: {:?})",
+            comments
+                .iter()
+                .map(|c| (c.text(), c.layer_id()))
+                .collect::<Vec<_>>(),
+        );
+        assert!(
+            expansion_comments[0].text().contains("inner"),
+            "got {:?}",
+            expansion_comments[0].text(),
+        );
+    }
+
+    #[test]
+    fn expansion_layer_comment_trails_previous_token_when_same_line() {
+        // Within an expansion body, the same same-line-trailing rule
+        // that layer 0 uses also applies: `42 /* after */` inside a
+        // macro body means `/* after */` trails the `42` token — it's
+        // not demoted to "always leading" just because it's in a
+        // layer > 0.  The comment still carries `layer_id > 0` so
+        // consumers can filter out expansion content when they want
+        // only authored source.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_macro_fallback(true),
+        );
+        let mut reg = TestMacroRegistry::new();
+        reg.register("tag", &["v"], "$v /* after */");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT tag!(42);";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+
+        let comments: Vec<_> = stmt.comments().collect();
+        let after = comments
+            .iter()
+            .find(|c| c.text().contains("after"))
+            .expect("expansion body comment");
+        assert!(after.layer_id() > 0, "expansion layer");
+        assert_eq!(
+            after.side(),
+            crate::CommentSide::Trailing,
+            "same line as the preceding expansion token → trailing",
+        );
+    }
+
+    #[test]
+    fn expansion_layer_comment_leads_next_token_when_newline_before() {
+        // Complement to the same-line test: a newline between the
+        // previous expansion token and the comment demotes to
+        // LEADING, matching the layer-0 rule.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_macro_fallback(true),
+        );
+        let mut reg = TestMacroRegistry::new();
+        reg.register("lf", &["v"], "$v\n/* after */ +1");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT lf!(42);";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+
+        let comments: Vec<_> = stmt.comments().collect();
+        let after = comments
+            .iter()
+            .find(|c| c.text().contains("after"))
+            .expect("expansion body comment");
+        assert!(after.layer_id() > 0);
+        assert_eq!(after.side(), crate::CommentSide::Leading);
+    }
+
+    #[test]
+    fn node_leading_comments_surfaces_boundary_comments_only() {
+        // `node_leading_comments(id)` = comments on the first token of
+        // the node's token range.  Comments authored before the node
+        // are surfaced; comments interior to the node (e.g. attached
+        // to a keyword between children) are NOT — the user must walk
+        // `node_token_range` for those.
+        let parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true),
+        );
+        let source = "-- header\nSELECT /* after keyword */ 1 FROM t;";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+
+        let root_id = stmt.erase().root_id();
+        let leading: Vec<_> = stmt.erase().node_leading_comments(root_id).collect();
+        assert_eq!(leading.len(), 1);
+        assert!(leading[0].text().contains("header"));
+
+        // The `/* after keyword */` comment trails the SELECT token
+        // and is therefore interior to the root node — not surfaced by
+        // node_leading / node_trailing.
+        let trailing: Vec<_> = stmt.erase().node_trailing_comments(root_id).collect();
+        assert_eq!(
+            trailing.len(),
+            0,
+            "no comments trail the last token (`t`) of the reduce",
+        );
+    }
+
+    #[test]
+    fn node_trailing_comments_surfaces_end_of_node_comments() {
+        let parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true),
+        );
+        let source = "SELECT 1 FROM t -- after node\n;";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+
+        let root_id = stmt.erase().root_id();
+        let trailing: Vec<_> = stmt.erase().node_trailing_comments(root_id).collect();
+        assert_eq!(trailing.len(), 1);
+        assert!(trailing[0].text().contains("after node"));
+    }
+
+    #[test]
+    fn node_leading_comments_empty_without_collect_extents() {
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+        let source = "-- header\nSELECT 1;";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+        let root_id = stmt.erase().root_id();
+        assert_eq!(stmt.erase().node_leading_comments(root_id).count(), 0);
+        assert_eq!(stmt.erase().node_trailing_comments(root_id).count(), 0);
+    }
+
+    #[test]
     fn node_token_range_with_fallback_macro_spans_the_call_as_one_token() {
         // With `macro_fallback` and no registered expansion, an
         // unknown `name!(args)` is consumed as a single layer-0 TK_ID

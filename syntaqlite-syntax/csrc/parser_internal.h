@@ -24,6 +24,19 @@ extern "C" {
 
 #define SYNQ_MAX_MACRO_DEPTH 16
 
+// Per-token comment index entry.  Each entry records where the owning
+// token's leading / trailing comments live in `p->comments`.  Used by
+// `syntaqlite_token_{leading,trailing}_comments` for O(1) lookup.
+typedef struct SynqTokenComments {
+  uint32_t leading_first;  // Index into p->comments; UINT32_MAX if count==0.
+  uint32_t leading_count;
+  uint32_t trailing_first;  // Index into p->comments; UINT32_MAX if count==0.
+  uint32_t trailing_count;
+} SynqTokenComments;
+
+#define SYNQ_TOKEN_COMMENTS_EMPTY \
+  ((SynqTokenComments){UINT32_MAX, 0, UINT32_MAX, 0})
+
 #if defined(__GNUC__) || defined(__clang__)
 #define SYNQ_NOINLINE __attribute__((noinline))
 #define SYNQ_PRINTF(fmt_idx, va_idx) \
@@ -207,12 +220,15 @@ struct SyntaqliteParser {
   uint32_t last_token_type;  // Last non-whitespace token fed to Lemon.
   uint32_t finished;         // 1 after EOF has been sent to Lemon.
   uint32_t had_comment;      // 1 if any comment token was seen this stmt.
-  // End offset (in p->source) of the most recent layer-0 significant
-  // token recorded into p->tokens this statement, or UINT32_MAX if none.
-  // Used to classify a recorded comment as TRAILING (same source line as
-  // the preceding token) vs LEADING (its own line / before any token).
-  uint32_t last_layer0_token_end;
-  int32_t last_status;  // Last SYNTAQLITE_PARSE_* status returned.
+  // End offset (in `p->ctx.source` coordinates) of the most recent
+  // token recorded into `p->tokens` this statement, or `UINT32_MAX`
+  // if none.  Used by `synq_parser_record_comment` to classify a
+  // comment as TRAILING (same line as the preceding token, in the
+  // same layer buffer) vs LEADING (its own line, before any token, or
+  // in a different layer from the last push).
+  uint32_t last_pushed_token_ctx_end;
+  uint32_t last_pushed_token_layer;  // Layer of that token; UINT32_MAX if none.
+  int32_t last_status;               // Last SYNTAQLITE_PARSE_* status returned.
   uint32_t trace;
   uint32_t collect_tokens;
   uint32_t sealed;
@@ -221,17 +237,23 @@ struct SyntaqliteParser {
   SYNQ_VEC(SyntaqliteComment) comments;
   SYNQ_VEC(SyntaqliteParserToken) tokens;
 
-  // Per-token comment index, built lazily on first call to
-  // `syntaqlite_token_{leading,trailing}_comments`.  Indexed by
-  // [0, ntokens] — slot `ntokens` is the orphan "statement-trailing
-  // with no owner" bucket (comments recorded as `side == LEADING`
-  // with `token_idx == ntokens`).  `UINT32_MAX` start means "no
-  // comments for this token/side".  Invalidated in `reset_stmt`.
-  SYNQ_VEC(uint32_t) comment_idx_leading_start;
-  SYNQ_VEC(uint32_t) comment_idx_leading_count;
-  SYNQ_VEC(uint32_t) comment_idx_trailing_start;
-  SYNQ_VEC(uint32_t) comment_idx_trailing_count;
-  uint32_t comment_index_built;
+  // Per-token comment index, parallel to `tokens` (one entry per
+  // shifted terminal).  Populated incrementally by
+  // `synq_parser_record_comment` and seeded at token-push in
+  // `synq_parser_shift_token` from `pending_orphan_leading`.  Lets
+  // `syntaqlite_token_{leading,trailing}_comments` answer in O(1)
+  // without a separate build step.  `leading_first` / `trailing_first`
+  // are `UINT32_MAX` when the corresponding count is zero.
+  SYNQ_VEC(SynqTokenComments) token_comments;
+
+  // Orphan bucket for leading comments whose predicted owner token
+  // has not been pushed yet.  On the next token push this gets copied
+  // into the new `token_comments` entry and reset to empty.  If the
+  // statement ends with this still populated, it's the "statement-
+  // trailing with no owner" case and is surfaced via
+  // `token_leading_comments(ntokens)`.  Only `leading_*` is ever
+  // non-empty: trailing comments always have a previous token.
+  SynqTokenComments pending_orphan_leading;
 
   // ── Macro expansion state (compiled out with SYNTAQLITE_OMIT_MACROS) ───
 #ifndef SYNTAQLITE_OMIT_MACROS

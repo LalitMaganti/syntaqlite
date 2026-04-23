@@ -82,11 +82,8 @@ static void reset_stmt(SyntaqliteParser* p) {
   synq_parse_ctx_clear(&p->ctx);
   syntaqlite_vec_clear(&p->comments);
   syntaqlite_vec_clear(&p->tokens);
-  syntaqlite_vec_clear(&p->comment_idx_leading_start);
-  syntaqlite_vec_clear(&p->comment_idx_leading_count);
-  syntaqlite_vec_clear(&p->comment_idx_trailing_start);
-  syntaqlite_vec_clear(&p->comment_idx_trailing_count);
-  p->comment_index_built = 0;
+  syntaqlite_vec_clear(&p->token_comments);
+  p->pending_orphan_leading = SYNQ_TOKEN_COMMENTS_EMPTY;
 #ifndef SYNTAQLITE_OMIT_MACROS
   syntaqlite_vec_clear(&p->macro.traceback_buf);
   syntaqlite_vec_clear(&p->macro.node_expanded_buf);
@@ -107,7 +104,8 @@ static void reset_stmt(SyntaqliteParser* p) {
   p->ctx.saw_subquery = 0;
   p->ctx.saw_update_delete_limit = 0;
   p->had_comment = 0;
-  p->last_layer0_token_end = UINT32_MAX;
+  p->last_pushed_token_ctx_end = UINT32_MAX;
+  p->last_pushed_token_layer = UINT32_MAX;
   p->had_error = 0;
   p->error_msg[0] = '\0';
   p->ctx.error_offset = 0xFFFFFFFF;
@@ -158,11 +156,8 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   synq_parse_ctx_init(&p->ctx, m);
   syntaqlite_vec_init(&p->comments);
   syntaqlite_vec_init(&p->tokens);
-  syntaqlite_vec_init(&p->comment_idx_leading_start);
-  syntaqlite_vec_init(&p->comment_idx_leading_count);
-  syntaqlite_vec_init(&p->comment_idx_trailing_start);
-  syntaqlite_vec_init(&p->comment_idx_trailing_count);
-  p->comment_index_built = 0;
+  syntaqlite_vec_init(&p->token_comments);
+  p->pending_orphan_leading = SYNQ_TOKEN_COMMENTS_EMPTY;
 #ifndef SYNTAQLITE_OMIT_MACROS
   synq_macro_state_init(&p->macro);
 #endif
@@ -210,10 +205,7 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
     SYNQ_PARSER_FREE(p->dialect.tmpl, p->lemon, p->mem.xFree);
     synq_parse_ctx_free(&p->ctx);
     syntaqlite_vec_free(&p->comments, p->mem);
-    syntaqlite_vec_free(&p->comment_idx_leading_start, p->mem);
-    syntaqlite_vec_free(&p->comment_idx_leading_count, p->mem);
-    syntaqlite_vec_free(&p->comment_idx_trailing_start, p->mem);
-    syntaqlite_vec_free(&p->comment_idx_trailing_count, p->mem);
+    syntaqlite_vec_free(&p->token_comments, p->mem);
     syntaqlite_vec_free(&p->tokens, p->mem);
 #ifndef SYNTAQLITE_OMIT_MACROS
     synq_macro_state_free(&p->macro, p->mem);
@@ -261,13 +253,23 @@ int synq_parser_shift_token(SyntaqliteParser* p,
     SyntaqliteParserToken tp = {layer_offset, len, token_type, 0, layer_id};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
-    // Drives same-line trailing-comment attachment.  Only advanced for
-    // layer-0 tokens so comments emitted from the main tokenizer loop
-    // attach relative to the last user-authored token, not relative to
-    // some layer-N expansion token.
-    if (layer_id == 0) {
-      p->last_layer0_token_end = p->stmt_start_offset + layer_offset + len;
-    }
+    // Pair the new token with its comment-index entry.  Seed from
+    // `pending_orphan_leading` so comments whose predicted owner was
+    // this about-to-be-pushed token land at the right slot, then
+    // reset the orphan bucket.
+    syntaqlite_vec_push(&p->token_comments, p->pending_orphan_leading, p->mem);
+    p->pending_orphan_leading = SYNQ_TOKEN_COMMENTS_EMPTY;
+    // Remember this token's end in `p->ctx.source` coordinates so
+    // `synq_parser_record_comment` can decide same-line trailing
+    // attachment within whichever buffer it is tokenizing.  For
+    // layer 0, `ctx.source == p->source` so the end is source-
+    // absolute; for layer N, `ctx.source` is the expansion buffer so
+    // the end is layer-local.  `layer_id` alongside lets record_comment
+    // reject prev-ends from a different layer than the current one.
+    p->last_pushed_token_ctx_end =
+        layer_id == 0 ? p->stmt_start_offset + layer_offset + len
+                      : layer_offset + len;
+    p->last_pushed_token_layer = layer_id;
   }
 
   // BEFORE-style empty-rule markers (ast_builder.h:117) are documented
@@ -399,37 +401,68 @@ static int finish_input(SyntaqliteParser* p) {
 
 // Record a comment token (outlined from the hot loop).
 //
-// Computes attachment from the parser's current state: a comment is
-// TRAILING the previous layer-0 token when there is no '\n' in the source
-// gap between that token's end and the comment's start; otherwise LEADING
-// the next token to be pushed. The predicted owner index for LEADING
-// comments equals `vec_len(p->tokens)` — the index the next push will
-// land on.
+// `offset` is interpreted in `p->ctx.source` coordinates:
+//   - layer 0: source-absolute (ctx.source == p->source).
+//   - layer N: layer-local (ctx.source is the expansion buffer).
+//
+// Attachment: TRAILING the previous pushed token when that token was
+// in the same layer as this comment and the gap in `p->ctx.source`
+// contains no '\n'.  Otherwise LEADING the next token to be pushed
+// (predicted owner index = `vec_len(p->tokens)`).  The layer-match
+// guard prevents a comment emitted from main tokenization at layer 0
+// after an expansion ends from incorrectly trailing the expansion's
+// last token, and vice versa.
 SYNQ_NOINLINE
 void synq_parser_record_comment(SyntaqliteParser* p,
                                 uint32_t offset,
                                 uint32_t len) {
-  const unsigned char* z = (const unsigned char*)p->source;
+  uint32_t layer = p->ctx.layer_id;
+  const unsigned char* z = (const unsigned char*)p->ctx.source;
+  const char kind_char = (const char)z[offset];
 
   uint8_t side = SYNQ_COMMENT_LEADING;
   uint32_t owner_idx = syntaqlite_vec_len(&p->tokens);
-  uint32_t prev_end = p->last_layer0_token_end;
-  if (prev_end != UINT32_MAX && prev_end <= offset &&
-      memchr(z + prev_end, '\n', offset - prev_end) == NULL) {
-    side = SYNQ_COMMENT_TRAILING;
-    owner_idx = syntaqlite_vec_len(&p->tokens) - 1;
+  if (p->last_pushed_token_layer == layer) {
+    uint32_t prev_end = p->last_pushed_token_ctx_end;
+    if (prev_end <= offset &&
+        memchr(z + prev_end, '\n', offset - prev_end) == NULL) {
+      side = SYNQ_COMMENT_TRAILING;
+      owner_idx = syntaqlite_vec_len(&p->tokens) - 1;
+    }
   }
 
-  uint32_t layer = p->ctx.layer_id;
+  // Store in layer-local coordinates (matches `SyntaqliteParserToken.offset`).
+  uint32_t stored_offset = layer == 0 ? offset - p->stmt_start_offset : offset;
   SyntaqliteComment t = {
-      .offset = offset - p->stmt_start_offset,
+      .offset = stored_offset,
       .length = len,
       .token_idx = owner_idx,
-      .kind = z[offset] == '-' ? (uint8_t)0 : (uint8_t)1,
+      .kind = kind_char == '-' ? (uint8_t)0 : (uint8_t)1,
       .side = side,
       .layer_id = (uint8_t)(layer > 0xFF ? 0xFF : layer),
       ._pad = 0,
   };
+  // Maintain the per-token comment index in step with the push.  The
+  // owner either already exists in `p->tokens` (trailing attachment,
+  // or a previously-predicted leading whose owner has since been
+  // pushed) or it's the predicted "next token" whose entry lives in
+  // `pending_orphan_leading` until the shift happens.
+  uint32_t comment_idx = syntaqlite_vec_len(&p->comments);
+  SynqTokenComments* tc;
+  if (owner_idx < syntaqlite_vec_len(&p->tokens)) {
+    tc = &syntaqlite_vec_at(&p->token_comments, owner_idx);
+  } else {
+    tc = &p->pending_orphan_leading;
+  }
+  if (side == SYNQ_COMMENT_LEADING) {
+    if (tc->leading_count == 0)
+      tc->leading_first = comment_idx;
+    tc->leading_count++;
+  } else {
+    if (tc->trailing_count == 0)
+      tc->trailing_first = comment_idx;
+    tc->trailing_count++;
+  }
   syntaqlite_vec_push(&p->comments, t, p->mem);
 }
 
@@ -699,77 +732,29 @@ SYNTAQLITE_API const SyntaqliteParserToken* syntaqlite_result_tokens(
   return p->tokens.data;
 }
 
-// Build the per-token comment index on first access.  One O(n_comments)
-// pass over `p->comments` fills parallel per-token vectors; every
-// subsequent `syntaqlite_token_*_comments` / `syntaqlite_node_*_*`
-// call is then O(1).  Invalidated by `reset_stmt` between statements.
-//
-// Slot count is `ntokens + 1` so the orphan "statement-trailing with
-// no owner" bucket (`token_idx == ntokens`, `side == LEADING`) is
-// indexable alongside regular tokens.
-static void build_comment_index(SyntaqliteParser* p) {
-  if (p->comment_index_built) {
-    return;
-  }
-  uint32_t ntokens = syntaqlite_vec_len(&p->tokens);
-  uint32_t slots = ntokens + 1;
-  syntaqlite_vec_clear(&p->comment_idx_leading_start);
-  syntaqlite_vec_clear(&p->comment_idx_leading_count);
-  syntaqlite_vec_clear(&p->comment_idx_trailing_start);
-  syntaqlite_vec_clear(&p->comment_idx_trailing_count);
-  for (uint32_t i = 0; i < slots; i++) {
-    syntaqlite_vec_push(&p->comment_idx_leading_start, UINT32_MAX, p->mem);
-    syntaqlite_vec_push(&p->comment_idx_leading_count, 0, p->mem);
-    syntaqlite_vec_push(&p->comment_idx_trailing_start, UINT32_MAX, p->mem);
-    syntaqlite_vec_push(&p->comment_idx_trailing_count, 0, p->mem);
-  }
-  uint32_t total = syntaqlite_vec_len(&p->comments);
-  for (uint32_t i = 0; i < total; i++) {
-    const SyntaqliteComment* c = &p->comments.data[i];
-    if (c->token_idx >= slots) {
-      continue;  // defensive: malformed token_idx
-    }
-    if (c->side == SYNQ_COMMENT_LEADING) {
-      uint32_t* start =
-          &syntaqlite_vec_at(&p->comment_idx_leading_start, c->token_idx);
-      if (*start == UINT32_MAX) {
-        *start = i;
-      }
-      syntaqlite_vec_at(&p->comment_idx_leading_count, c->token_idx)++;
-    } else {
-      uint32_t* start =
-          &syntaqlite_vec_at(&p->comment_idx_trailing_start, c->token_idx);
-      if (*start == UINT32_MAX) {
-        *start = i;
-      }
-      syntaqlite_vec_at(&p->comment_idx_trailing_count, c->token_idx)++;
-    }
-  }
-  p->comment_index_built = 1;
-}
-
-// O(1) lookup after the first call of the statement (which builds the
-// index in one linear pass).
+// O(1) lookup, backed by the per-token comment index that
+// `synq_parser_record_comment` maintains incrementally.  `token_idx ==
+// ntokens` targets the orphan bucket in `pending_orphan_leading` —
+// the "statement-trailing comment with no owner" case.
 static const SyntaqliteComment* token_side_comments(SyntaqliteParser* p,
                                                     uint32_t token_idx,
                                                     uint8_t side,
                                                     uint32_t* count) {
-  build_comment_index(p);
-  uint32_t slots = syntaqlite_vec_len(&p->comment_idx_leading_start);
-  if (token_idx >= slots) {
+  uint32_t ntokens = syntaqlite_vec_len(&p->tokens);
+  SynqTokenComments tc;
+  if (token_idx < ntokens) {
+    tc = syntaqlite_vec_at(&p->token_comments, token_idx);
+  } else if (token_idx == ntokens) {
+    tc = p->pending_orphan_leading;
+  } else {
     *count = 0;
     return NULL;
   }
-  uint32_t start;
-  uint32_t cnt;
-  if (side == SYNQ_COMMENT_LEADING) {
-    start = syntaqlite_vec_at(&p->comment_idx_leading_start, token_idx);
-    cnt = syntaqlite_vec_at(&p->comment_idx_leading_count, token_idx);
-  } else {
-    start = syntaqlite_vec_at(&p->comment_idx_trailing_start, token_idx);
-    cnt = syntaqlite_vec_at(&p->comment_idx_trailing_count, token_idx);
-  }
-  if (start == UINT32_MAX || cnt == 0) {
+  uint32_t start =
+      side == SYNQ_COMMENT_LEADING ? tc.leading_first : tc.trailing_first;
+  uint32_t cnt =
+      side == SYNQ_COMMENT_LEADING ? tc.leading_count : tc.trailing_count;
+  if (cnt == 0) {
     *count = 0;
     return NULL;
   }
@@ -793,13 +778,12 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_trailing_comments(
 
 // Resolve `node_id` to the inclusive token range `[*first_tok, *last_tok]`
 // of entries in `p->tokens` that the parser fed to Lemon while reducing
-// this node.  O(1), via the side table populated by the extent hooks.
+// this node.  O(1): the range is carried alongside the byte extent on
+// a single shadow stack and committed per node on reduction.
 //
-// Works across macro boundaries: with the unified token stream, every
-// shifted token (including macro-expansion tokens) is in `p->tokens`,
-// and the extent hooks push its index here regardless of layer.  The
-// returned range therefore covers the full set of tokens that produced
-// the node.
+// Works across macro boundaries: since the token-stream unification,
+// every shifted terminal (including macro-expansion tokens) has a real
+// `token_idx` into `p->tokens` regardless of layer.
 SYNTAQLITE_API int32_t
 syntaqlite_node_token_range(SyntaqliteParser* p,
                             uint32_t node_id,
@@ -811,16 +795,42 @@ syntaqlite_node_token_range(SyntaqliteParser* p,
   if (node_id == SYNTAQLITE_NULL_NODE) {
     return 0;
   }
-  if (node_id >= syntaqlite_vec_len(&p->ctx.node_token_ranges)) {
+  if (node_id >= syntaqlite_vec_len(&p->ctx.node_extents)) {
     return 0;
   }
-  SynqTokenRange r = syntaqlite_vec_at(&p->ctx.node_token_ranges, node_id);
+  SynqExtentRange r = syntaqlite_vec_at(&p->ctx.node_extents, node_id);
   if (r.first_tok == UINT32_MAX) {
     return 0;
   }
   *first_tok = r.first_tok;
   *last_tok = r.last_tok;
   return 1;
+}
+
+SYNTAQLITE_API const SyntaqliteComment* syntaqlite_node_leading_comments(
+    SyntaqliteParser* p,
+    uint32_t node_id,
+    uint32_t* count) {
+  SyntaqliteTokenIdx first = 0;
+  SyntaqliteTokenIdx last = 0;
+  if (!syntaqlite_node_token_range(p, node_id, &first, &last)) {
+    *count = 0;
+    return NULL;
+  }
+  return token_side_comments(p, first, SYNQ_COMMENT_LEADING, count);
+}
+
+SYNTAQLITE_API const SyntaqliteComment* syntaqlite_node_trailing_comments(
+    SyntaqliteParser* p,
+    uint32_t node_id,
+    uint32_t* count) {
+  SyntaqliteTokenIdx first = 0;
+  SyntaqliteTokenIdx last = 0;
+  if (!syntaqlite_node_token_range(p, node_id, &first, &last)) {
+    *count = 0;
+    return NULL;
+  }
+  return token_side_comments(p, last, SYNQ_COMMENT_TRAILING, count);
 }
 
 #ifdef SYNTAQLITE_OMIT_MACROS

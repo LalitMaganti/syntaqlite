@@ -429,6 +429,36 @@ trail[0] side=trailing kind=line off=29 len=7 token_idx=4 layer=0
 """,
         )
 
+    def test_node_comments_surface_node_boundary_comments(self):
+        # `node_comments` composes node_token_range with
+        # token_{leading,trailing}_comments.  Comments at the first
+        # token of the node are leading; at the last token, trailing.
+        # Comments attached to interior tokens (e.g. the SELECT
+        # keyword trail) are NOT surfaced here.
+        return CApiScenario(
+            input="""\
+create
+collect_tokens 1
+collect_extents 1
+reset
+-- preamble
+SELECT /* after keyword */ 1 FROM t; -- tail
+.
+parse_one
+node_comments 4
+""",
+            expected="""\
+create ok
+collect_tokens ok
+collect_extents ok
+reset ok len=56
+parse_one ok root=4 recovery=0
+node_comments id=4 leading=1 trailing=0
+lead[0] side=leading kind=line off=0 len=11 token_idx=0 layer=0
+.
+""",
+        )
+
     def test_macro_fallback_call_is_single_layer0_token(self):
         # With macro_fallback enabled, an unregistered `name!(args)` is
         # consumed as a single TK_ID token (still layer 0).  The
