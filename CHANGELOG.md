@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.5
+
+**C API:**
+- Public-API offsets and lengths are now typed with named aliases: `SyntaqliteDocOffset` / `SyntaqliteStmtOffset` / `SyntaqliteLayerOffset` make the coordinate system explicit, and `SyntaqliteLength` replaces the parallel `*Len` aliases. `SyntaqliteDiagnostic` offsets are now documented as document-absolute even when read via `statement_diagnostics` ([#244](https://github.com/LalitMaganti/syntaqlite/pull/244)).
+
+**Build:**
+- Amalgamated headers now also suppress `-Wzero-as-null-pointer-constant` under C++ to keep Lemon-generated parser code compiling cleanly when the amalgamation is consumed from C++ (notably on Windows toolchains) ([#245](https://github.com/LalitMaganti/syntaqlite/pull/245)).
+
 ## 0.5.4
 
 **JavaScript package:**

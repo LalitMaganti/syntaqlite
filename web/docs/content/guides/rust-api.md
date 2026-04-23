@@ -10,7 +10,7 @@ weight = 1
 
 ```toml
 [dependencies]
-syntaqlite = { version = "0.5.4", features = ["fmt"] }
+syntaqlite = { version = "0.5.5", features = ["fmt"] }
 ```
 
 ## Format a query
@@ -127,7 +127,7 @@ Add the `analysis` and `sqlite` features:
 
 ```toml
 [dependencies]
-syntaqlite = { version = "0.5.4", features = ["analysis", "sqlite"] }
+syntaqlite = { version = "0.5.5", features = ["analysis", "sqlite"] }
 ```
 
 ```rust
