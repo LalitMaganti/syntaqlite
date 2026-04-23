@@ -425,9 +425,10 @@ impl SemanticVisitor for TokenCapture {
     fn on_parsed_statement(&mut self, stmt: &syntaqlite_syntax::any::AnyParsedStatement<'_>) {
         let base = stmt.statement_base();
         for tok in stmt.tokens() {
+            let range = tok.stmt_range();
             self.tokens.push((
-                tok.offset().to_doc(base),
-                tok.length().into(),
+                range.start.to_doc(base),
+                range.len().into(),
                 tok.token_type(),
                 tok.flags(),
             ));
@@ -441,9 +442,10 @@ impl SemanticVisitor for TokenCapture {
     fn on_parse_error(&mut self, err: &syntaqlite_syntax::any::AnyParseError<'_>) {
         let base = err.statement_base();
         for tok in err.tokens() {
+            let range = tok.stmt_range();
             self.tokens.push((
-                tok.offset().to_doc(base),
-                tok.length().into(),
+                range.start.to_doc(base),
+                range.len().into(),
                 tok.token_type(),
                 tok.flags(),
             ));

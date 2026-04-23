@@ -109,7 +109,7 @@ typedef struct SynqParseCtx {
 
   // Byte offset of the token Lemon is currently processing (in
   // root-source coordinates).  Set at the start of
-  // `synq_parser_record_and_feed` *before* `feed_one_token` runs, so
+  // `synq_parser_shift_token` *before* `SYNQ_PARSER_FEED` runs, so
   // empty-rule reductions firing inside the feed observe the offset of
   // the token they're about to be shifted alongside.  BEFORE-style
   // markers use this to capture the start position of a non-terminal
@@ -119,7 +119,7 @@ typedef struct SynqParseCtx {
 
   // Byte offset just past the end of the most recently shifted terminal
   // (in root-source coordinates).  Updated in
-  // `synq_parser_record_and_feed` *after* `feed_one_token` returns, so
+  // `synq_parser_shift_token` *after* `SYNQ_PARSER_FEED` returns, so
   // that empty-rule reductions firing inside the feed see the end of
   // the *previous* shifted terminal, not the current one.  AFTER-style
   // markers use this to capture the end position of a non-terminal.

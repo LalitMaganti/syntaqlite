@@ -457,6 +457,28 @@ SYNTAQLITE_API const char* syntaqlite_parser_full_text(
     SyntaqliteParser* p,
     SyntaqliteLength* out_len);
 
+// Return the tokenization buffer for `layer_id`.
+//
+// Layer 0 is the authored-source slice for the current statement
+// (identical to `syntaqlite_parser_text`).  Layers > 0 are macro
+// expansion buffers — the text that the expansion-layer tokenizer
+// consumed for that layer.
+//
+// Token entries in `syntaqlite_result_tokens` carry `_layer_id` and a
+// layer-local `offset`: to recover a token's byte text, call
+// `syntaqlite_parser_layer_text(p, tok._layer_id, &buf_len)` and slice
+// `[tok.offset, tok.offset + tok.length)` from the returned pointer.
+//
+// The returned pointer is valid until the next parser_next, reset, or
+// destroy on the same parser.  Returns NULL with `*out_len == 0` when
+// `layer_id` is out of range for the current statement, when no
+// statement has been bound (layer 0), or when macros are compiled out
+// (layer > 0).
+SYNTAQLITE_API const char* syntaqlite_parser_layer_text(
+    SyntaqliteParser* p,
+    uint32_t layer_id,
+    SyntaqliteLength* out_len);
+
 // Post-expansion text for the current statement — materializes the
 // statement's source with every currently-active macro call replaced
 // by its expansion into a parser-owned scratch buffer.  The returned

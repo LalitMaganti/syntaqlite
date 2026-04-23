@@ -1129,7 +1129,6 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, span: sy
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::DocRange)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::token_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::source::StmtRange> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&mut self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyTokenType::from(t: syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
@@ -1985,8 +1984,10 @@ pub fn syntaqlite_syntax::typed::TypedParser<G>::parse(&self, source: &str) -> s
 pub fn syntaqlite_syntax::typed::TypedParser<G>::set_macro_lookup(&mut self, handler: core::option::Option<alloc::boxed::Box<dyn syntaqlite_syntax::MacroLookup>>)
 pub fn syntaqlite_syntax::typed::TypedParser<G>::with_config(dialect: G, config: &syntaqlite_syntax::ParserConfig) -> Self
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::flags(&self) -> syntaqlite_syntax::ParserTokenFlags
-pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::length(&self) -> syntaqlite_syntax::source::StmtLen
-pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::offset(&self) -> syntaqlite_syntax::source::StmtOffset
+pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::layer_id(&self) -> u8
+pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::length(&self) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::offset(&self) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::stmt_range(&self) -> syntaqlite_syntax::source::StmtRange
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::token_type(&self) -> <G as syntaqlite_syntax::typed::TypedDialect>::Token
 pub fn syntaqlite_syntax::typed::TypedToken<'a, G>::text(&self) -> &'a str

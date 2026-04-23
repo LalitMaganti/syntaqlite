@@ -3,7 +3,7 @@
 
 use crate::source::{
     ColumnNumber, LayerLen, LayerOffset, LayerText, LineNumber, RewriteIdx, StmtLen, StmtOffset,
-    TokenIdx,
+    StmtRange, TokenIdx,
 };
 
 use crate::dialect::TypedDialect;
@@ -211,13 +211,32 @@ pub use crate::dialect::ParserTokenFlags;
 ///
 /// Returned by [`super::TypedParsedStatement::tokens`]. Requires
 /// `collect_tokens: true` in [`super::ParserConfig`].
+///
+/// A token records both its *layer-local* position (where the parser
+/// actually consumed it — in the authored source for layer 0, or in a
+/// macro expansion buffer for layer > 0) and its *statement-relative*
+/// range (the authored-source range the user would point at when
+/// asking "where is this in my SQL?"):
+///
+/// - [`text`](Self::text) returns the exact byte slice for this token,
+///   from the authored source for layer-0 tokens or from the
+///   expansion-layer buffer for layer-N tokens.
+/// - [`layer_id`](Self::layer_id), [`offset`](Self::offset), and
+///   [`length`](Self::length) describe the token's position inside its
+///   owning layer — in [`LayerOffset`] / [`LayerLen`] coordinates.
+/// - [`stmt_range`](Self::stmt_range) collapses layer-N tokens up to
+///   their authored call-site range (the same drill-up rule used by
+///   the span-text APIs), so every token has a meaningful statement
+///   range regardless of layer.
 #[derive(Debug, Clone, Copy)]
 pub struct TypedParserToken<'a, G: TypedDialect> {
     text: &'a str,
     token_type: G::Token,
     flags: ParserTokenFlags,
-    offset: StmtOffset,
-    length: StmtLen,
+    offset: LayerOffset,
+    length: LayerLen,
+    layer_id: u8,
+    stmt_range: StmtRange,
 }
 
 impl<'a, G: TypedDialect> TypedParserToken<'a, G> {
@@ -225,8 +244,10 @@ impl<'a, G: TypedDialect> TypedParserToken<'a, G> {
         text: &'a str,
         token_type: G::Token,
         flags: ParserTokenFlags,
-        offset: StmtOffset,
-        length: StmtLen,
+        offset: LayerOffset,
+        length: LayerLen,
+        layer_id: u8,
+        stmt_range: StmtRange,
     ) -> Self {
         TypedParserToken {
             text,
@@ -234,10 +255,13 @@ impl<'a, G: TypedDialect> TypedParserToken<'a, G> {
             flags,
             offset,
             length,
+            layer_id,
+            stmt_range,
         }
     }
 
-    /// The source text slice covered by this token.
+    /// The byte text of this token — a slice of the authored source
+    /// (layer 0) or of the owning expansion layer's buffer (layer > 0).
     pub fn text(&self) -> &'a str {
         self.text
     }
@@ -252,14 +276,42 @@ impl<'a, G: TypedDialect> TypedParserToken<'a, G> {
         self.flags
     }
 
-    /// Statement-relative byte offset of the token start.
-    pub fn offset(&self) -> StmtOffset {
+    /// Byte offset of the token within its owning layer's buffer.
+    ///
+    /// For layer-0 tokens this equals the statement-relative offset.
+    /// For layer-N tokens it is a position in the expansion layer's
+    /// buffer; use [`stmt_range`](Self::stmt_range) for authored-source
+    /// coordinates.
+    pub fn offset(&self) -> LayerOffset {
         self.offset
     }
 
-    /// Byte length of the token text.
-    pub fn length(&self) -> StmtLen {
+    /// Byte length of the token text in its owning layer.
+    pub fn length(&self) -> LayerLen {
         self.length
+    }
+
+    /// The layer the token lives in.  `0` = authored source;
+    /// `>0` = an expansion layer.  Most consumers do not need this;
+    /// prefer [`stmt_range`](Self::stmt_range) for authored-source
+    /// positions.
+    pub fn layer_id(&self) -> u8 {
+        self.layer_id
+    }
+
+    /// Authored-source byte range for this token.
+    ///
+    /// For layer-0 tokens this is the token's own source position.
+    /// For tokens produced by macro expansion, this collapses up the
+    /// expansion chain to the enclosing macro call site (or, for
+    /// tokens substituted from a `$param`, to the caller's authored
+    /// argument text).  This mirrors the drill-up rule used by
+    /// `AnyParsedStatement::span_text`, so every token reports the
+    /// statement range the user would see in their source — multiple
+    /// expansion tokens from the same call may share the call site's
+    /// range.
+    pub fn stmt_range(&self) -> StmtRange {
+        self.stmt_range
     }
 }
 

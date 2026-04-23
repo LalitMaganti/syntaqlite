@@ -413,9 +413,10 @@ impl SemanticVisitor for LspCapture<'_> {
     fn on_parsed_statement(&mut self, stmt: &AnyParsedStatement<'_>) {
         let base = stmt.statement_base();
         for tok in stmt.tokens() {
+            let range = tok.stmt_range();
             self.data.tokens.push(StoredToken {
-                offset: tok.offset().to_doc(base),
-                length: tok.length().into(),
+                offset: range.start.to_doc(base),
+                length: range.len().into(),
                 token_type: tok.token_type(),
                 flags: tok.flags(),
             });
@@ -431,9 +432,10 @@ impl SemanticVisitor for LspCapture<'_> {
     fn on_parse_error(&mut self, err: &AnyParseError<'_>) {
         let base = err.statement_base();
         for tok in err.tokens() {
+            let range = tok.stmt_range();
             self.data.tokens.push(StoredToken {
-                offset: tok.offset().to_doc(base),
-                length: tok.length().into(),
+                offset: range.start.to_doc(base),
+                length: range.len().into(),
                 token_type: tok.token_type(),
                 flags: tok.flags(),
             });

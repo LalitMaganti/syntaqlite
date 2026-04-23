@@ -354,17 +354,15 @@ static int expand_and_feed(SyntaqliteParser* p,
       }
     }
 
-    // Feed token to Lemon.  `pos` is the offset within the expansion
-    // layer; `p->ctx.layer_id` was set to the current expansion's index
-    // before expand_and_feed was called.
-    SynqParseToken minor = {.z = buf + pos,
-                            .n = (uint32_t)tlen,
-                            .type = ttype,
-                            .token_idx = 0xFFFFFFFF,
-                            .offset = pos,
-                            .layer_id = p->ctx.layer_id};
-    SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, (int)ttype, minor);
-    p->last_token_type = ttype;
+    // Feed the token through the unified shift path: it pushes to
+    // `p->tokens` with a real `token_idx` (tagged with the current
+    // expansion layer) and then feeds Lemon.  `pos` is the token's
+    // offset within the expansion buffer; `p->ctx.layer_id` was set
+    // to the current expansion's index before expand_and_feed was
+    // called.  For layer-N the shift function leaves `p->ctx.error`
+    // intact so we can attach a macro-specific error message here.
+    int frc = synq_parser_shift_token(p, ttype, buf + pos, (uint32_t)tlen,
+                                      (uint32_t)pos);
 
     if (p->ctx.error) {
       p->had_error = 1;
@@ -376,7 +374,7 @@ static int expand_and_feed(SyntaqliteParser* p,
       p->ctx.error = 0;
     }
 
-    if (p->ctx.stmt_completed) {
+    if (frc == 1 || p->ctx.stmt_completed) {
       p->ctx.stmt_completed = 0;
       p->ctx.source = saved_source;
       return 1;
@@ -713,11 +711,15 @@ int synq_parser_try_macro_call(SyntaqliteParser* p,
 
   synq_end_macro(p);
 
-  // Feed the whole name!(args) span as a single TK_ID to Lemon.
-  int rc =
-      synq_parser_record_and_feed(p, SYNTAQLITE_TK_ID, id_offset, call_length);
+  // Feed the whole name!(args) span as a single TK_ID to Lemon.  A
+  // TK_ID shift mid-statement cannot complete a statement, so the
+  // shift's return value is always 0 and we don't need the main-loop's
+  // boundary filter here.
+  uint32_t layer_offset = id_offset - p->stmt_start_offset;
+  synq_parser_shift_token(p, SYNTAQLITE_TK_ID, p->source + id_offset,
+                          call_length, layer_offset);
   p->offset = end_offset;
-  return rc;
+  return 0;
 }
 
 // ---------------------------------------------------------------------------

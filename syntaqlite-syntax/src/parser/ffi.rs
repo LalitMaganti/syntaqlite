@@ -278,6 +278,31 @@ impl CParser {
         unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
     }
 
+    /// Tokenization buffer for `layer_id` — the authored-source slice
+    /// for the current statement (layer 0) or an expansion layer's
+    /// body (layer > 0).  Empty if `layer_id` is out of range or
+    /// macros are compiled out.
+    ///
+    /// # Safety
+    /// The returned slice must not outlive the borrow underlying `self`.
+    pub(crate) unsafe fn layer_text<'a>(&self, layer_id: u32) -> &'a str {
+        let mut out_len: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
+        let ptr = unsafe {
+            syntaqlite_parser_layer_text(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                layer_id,
+                &raw mut out_len,
+            )
+        };
+        if ptr.is_null() || out_len == 0 {
+            return "";
+        }
+        // SAFETY: C guarantees `ptr` points to `out_len` bytes of valid
+        // UTF-8 within the parser's layer buffer.
+        unsafe { std::str::from_utf8_unchecked(std::slice::from_raw_parts(ptr, out_len as usize)) }
+    }
+
     /// Post-expansion source text — the bound source with every
     /// currently-active macro call replaced by its expansion.
     /// Materialized into the parser's scratch buffer; the returned
@@ -764,6 +789,8 @@ unsafe extern "C" {
         out_len: *mut u32,
     ) -> *const u8;
     fn syntaqlite_parser_full_text(p: *mut CParser, out_len: *mut u32) -> *const u8;
+    fn syntaqlite_parser_layer_text(p: *mut CParser, layer_id: u32, out_len: *mut u32)
+    -> *const u8;
     fn syntaqlite_parser_expanded_text(p: *mut CParser, out_len: *mut u32) -> *const u8;
     fn syntaqlite_parser_node_text(
         p: *mut CParser,
