@@ -127,6 +127,7 @@ impl CommentCtx {
         self.drain_impl(end, source, arena, true)
     }
 
+    #[expect(clippy::too_many_lines)]
     fn drain_impl<'a>(
         &self,
         before: StmtOffset,
@@ -238,7 +239,8 @@ impl CommentCtx {
                     if is_leading {
                         let hl = arena.hardline();
                         let comment_doc = arena.text(text);
-                        let chunk = arena.cat(hl, comment_doc);
+                        let sp = arena.text(" ");
+                        let chunk = arena.cats(&[hl, comment_doc, sp]);
                         leading = if leading == NIL_DOC {
                             chunk
                         } else {

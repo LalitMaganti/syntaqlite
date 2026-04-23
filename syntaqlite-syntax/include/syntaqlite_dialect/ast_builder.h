@@ -38,11 +38,27 @@ typedef struct SynqListDesc {
   uint32_t tag;
 } SynqListDesc;
 
-// Half-open byte range in the authored source, used by per-node extent
-// tracking.  Sentinel `(UINT32_MAX, 0)` marks an unrecorded/empty range.
+// Per-node extent: half-open byte range in the authored source plus an
+// inclusive token-index range into `p->tokens`.  Both ranges are
+// maintained by the extent hooks on one shadow stack and merged
+// together on reduce.
+//
+// Sentinels:
+//   `root_start == UINT32_MAX && root_end == 0` — no byte range recorded
+//       (pure epsilon reduction, neutral under min/max merging).
+//   `first_tok == UINT32_MAX` — no tokens recorded (layer-N shift with
+//       UINT32_MAX token_idx, or pure epsilon).  `last_tok` is then
+//       also UINT32_MAX.
+//
+// The two sentinels are independent: a macro-expansion-only node can
+// have a valid byte range (the call site's root coordinates) but no
+// layer-0 tokens — or have tokens in `p->tokens` after the token-stream
+// unification.  Consumers check the specific sentinel they care about.
 typedef struct SynqExtentRange {
   uint32_t root_start;
   uint32_t root_end;
+  uint32_t first_tok;
+  uint32_t last_tok;
 } SynqExtentRange;
 
 // Layer-local byte range used by per-node *expanded*-text tracking —

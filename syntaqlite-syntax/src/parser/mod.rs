@@ -970,9 +970,10 @@ impl<'a> AnyParsedStatement<'a> {
     /// Requires `collect_tokens: true`.
     pub fn comments(&self) -> impl Iterator<Item = Comment<'a>> + use<'_, 'a> {
         let source = self.text();
+        let parser = self.raw;
         // SAFETY: self.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CComment] = unsafe { self.raw.as_ref().result_comments() };
-        raw.iter().map(move |c| ffi_comment(source, c))
+        raw.iter().map(move |c| ffi_comment(parser, source, c))
     }
 
     /// Lightweight comment descriptors without source text borrows.
@@ -996,8 +997,72 @@ impl<'a> AnyParsedStatement<'a> {
                 kind,
                 TokenIdx::from_raw(c.token_idx),
                 side,
+                c.layer_id,
             )
         })
+    }
+
+    /// The inclusive `[first, last]` token indices the parser fed to
+    /// Lemon while reducing AST node `id`.  Returns `None` when
+    /// [`ParserConfig::with_collect_node_extents`] was not enabled,
+    /// `id` is null / out-of-range, or the node reduced over zero
+    /// tokens (pure epsilon).
+    ///
+    /// O(1): the range is recorded in a side table during reduction.
+    ///
+    /// For macro-expanded nodes, the indices may point at layer-N
+    /// tokens.  Use [`Comment::layer_id`] to filter expansion-body
+    /// comments from authored-source comments when composing with
+    /// [`Self::leading_comments`] / [`Self::trailing_comments`].
+    pub fn node_token_range(&self, id: AnyNodeId) -> Option<(TokenIdx, TokenIdx)> {
+        if id.is_null() {
+            return None;
+        }
+        // SAFETY: self.raw is valid for 'a.
+        unsafe { self.raw.as_ref().node_token_range(id.0) }
+    }
+
+    /// Comments attached to the first token of AST node `id`.  Thin
+    /// wrapper over [`Self::node_token_range`] +
+    /// [`Self::leading_comments`].  Returns an empty iterator when
+    /// the node has no token range or no leading comments.
+    ///
+    /// Interior comments (on keywords or between children inside the
+    /// node) are NOT surfaced here — walk
+    /// [`Self::node_token_range`] and call
+    /// [`Self::leading_comments`] / [`Self::trailing_comments`] on
+    /// interior token indices for those.
+    pub fn node_leading_comments(
+        &self,
+        id: AnyNodeId,
+    ) -> impl Iterator<Item = Comment<'a>> + use<'_, 'a> {
+        let source = self.text();
+        let parser = self.raw;
+        let raw: &'a [ffi::CComment] = if id.is_null() {
+            &[]
+        } else {
+            // SAFETY: self.raw is valid for 'a; the returned slice lives for 'a.
+            unsafe { self.raw.as_ref().node_leading_comments(id.0) }
+        };
+        raw.iter().map(move |c| ffi_comment(parser, source, c))
+    }
+
+    /// Comments trailing the last token of AST node `id`.  See
+    /// [`Self::node_leading_comments`] for the symmetric case and the
+    /// caveat about interior comments.
+    pub fn node_trailing_comments(
+        &self,
+        id: AnyNodeId,
+    ) -> impl Iterator<Item = Comment<'a>> + use<'_, 'a> {
+        let source = self.text();
+        let parser = self.raw;
+        let raw: &'a [ffi::CComment] = if id.is_null() {
+            &[]
+        } else {
+            // SAFETY: self.raw is valid for 'a; the returned slice lives for 'a.
+            unsafe { self.raw.as_ref().node_trailing_comments(id.0) }
+        };
+        raw.iter().map(move |c| ffi_comment(parser, source, c))
     }
 
     /// Extract reflective node data (`tag` + field values) for `id`.
@@ -1333,9 +1398,10 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     /// Requires `collect_tokens: true` in [`ParserConfig`].
     pub fn comments(&self) -> impl Iterator<Item = Comment<'a>> {
         let source = self.any.text();
+        let parser = self.any.raw;
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CComment] = unsafe { self.any.raw.as_ref().result_comments() };
-        raw.iter().map(move |c| ffi_comment(source, c))
+        raw.iter().map(move |c| ffi_comment(parser, source, c))
     }
 
     /// Comments that appear immediately before token `token_idx`, in source
@@ -1344,10 +1410,11 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     /// Requires `collect_tokens: true` in [`ParserConfig`].
     pub fn leading_comments(&self, token_idx: TokenIdx) -> impl Iterator<Item = Comment<'a>> {
         let source = self.any.text();
+        let parser = self.any.raw;
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CComment] =
             unsafe { self.any.raw.as_ref().token_leading_comments(token_idx) };
-        raw.iter().map(move |c| ffi_comment(source, c))
+        raw.iter().map(move |c| ffi_comment(parser, source, c))
     }
 
     /// Comments that appear on the same source line as token `token_idx`,
@@ -1356,10 +1423,35 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
     /// Requires `collect_tokens: true` in [`ParserConfig`].
     pub fn trailing_comments(&self, token_idx: TokenIdx) -> impl Iterator<Item = Comment<'a>> {
         let source = self.any.text();
+        let parser = self.any.raw;
         // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
         let raw: &'a [ffi::CComment] =
             unsafe { self.any.raw.as_ref().token_trailing_comments(token_idx) };
-        raw.iter().map(move |c| ffi_comment(source, c))
+        raw.iter().map(move |c| ffi_comment(parser, source, c))
+    }
+
+    /// Inclusive `[first, last]` token indices covering AST node `id`.
+    /// See [`AnyParsedStatement::node_token_range`].
+    pub fn node_token_range(&self, id: AnyNodeId) -> Option<(TokenIdx, TokenIdx)> {
+        self.any.node_token_range(id)
+    }
+
+    /// Comments attached to the first token of AST node `id`.
+    /// See [`AnyParsedStatement::node_leading_comments`].
+    pub fn node_leading_comments(
+        &self,
+        id: AnyNodeId,
+    ) -> impl Iterator<Item = Comment<'a>> + use<'_, 'a, G> {
+        self.any.node_leading_comments(id)
+    }
+
+    /// Comments trailing the last token of AST node `id`.
+    /// See [`AnyParsedStatement::node_trailing_comments`].
+    pub fn node_trailing_comments(
+        &self,
+        id: AnyNodeId,
+    ) -> impl Iterator<Item = Comment<'a>> + use<'_, 'a, G> {
+        self.any.node_trailing_comments(id)
     }
 
     // ── Result accessors (mirror syntaqlite_result_*) ──────────────────────
@@ -1422,11 +1514,25 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
 }
 
 /// Build a public [`Comment`] from an FFI [`ffi::CComment`] borrowing into
-/// the statement's source text.
-fn ffi_comment<'a>(source: &'a StmtText, c: &ffi::CComment) -> Comment<'a> {
+/// the layer buffer the comment was tokenized from.
+///
+/// `c.offset` is interpreted layer-locally (matches `CParserToken.offset`):
+/// the authored source for `layer_id == 0`, the expansion buffer for
+/// `layer_id > 0`.  The returned `Comment::text` is a slice into the
+/// owning layer's buffer.
+fn ffi_comment<'a>(raw: NonNull<CParser>, source: &'a StmtText, c: &ffi::CComment) -> Comment<'a> {
     let offset = StmtOffset::from_raw(c.offset);
     let length = StmtLen::from_raw(c.length);
-    let text = &source[StmtRange::from_offset_len(offset, length)];
+    let text: &'a str = if c.layer_id == 0 {
+        &source[StmtRange::from_offset_len(offset, length)]
+    } else {
+        // SAFETY: raw is valid for 'a; layer_text returns a slice into
+        // a parser-owned expansion buffer that lives for 'a.
+        let buf: &'a str = unsafe { raw.as_ref().layer_text(u32::from(c.layer_id)) };
+        let start = c.offset as usize;
+        let end = start.saturating_add(c.length as usize);
+        buf.get(start..end).unwrap_or("")
+    };
     let kind = match c.kind {
         ffi::CCommentKind::LineComment => CommentKind::Line,
         ffi::CCommentKind::BlockComment => CommentKind::Block,
@@ -1442,6 +1548,7 @@ fn ffi_comment<'a>(source: &'a StmtText, c: &ffi::CComment) -> Comment<'a> {
         length,
         TokenIdx::from_raw(c.token_idx),
         side,
+        c.layer_id,
     )
 }
 

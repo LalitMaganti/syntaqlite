@@ -25,9 +25,16 @@
 //   dump_tokens           All tokens for current statement.
 //   dump_comments         All comments for current statement.
 //   token_comments <idx>  Leading + trailing comments for token idx.
+//   node_token_range <id> Inclusive token-index range covering node id
+//                         (needs extents).
+//   node_comments <id>    Leading + trailing comments for node boundaries
+//                         (needs extents).
 //   node_text <id>        Authored text slice for node (needs extents).
 //   error_info            error_msg/off/len/recovery_root dump.
 //   macro_fallback 0|1    Configure (must be before first reset).
+//   macro_register NAME   Register a lookup-template body (until `.`).
+//                         Subsequent `NAME!(args)` in source expands to body.
+//   macro_clear_registry  Drop all registered templates.
 //   dump_macros           All macro rewrites with parent_buffer + args.
 
 // Needed for strtok_r under glibc when compiling with -std=c11.
@@ -38,11 +45,45 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "syntaqlite/incremental.h"
 #include "syntaqlite/parser.h"
 #include "syntaqlite/types.h"
 
 static char g_line[64 * 1024];
 static char g_body[256 * 1024];
+
+// Minimal in-process macro registry for `macro_register NAME` → body.
+// Bodies are owned: a follow-up scenario can register the same NAME
+// with a fresh body.  8 slots is plenty for tests.
+#define SYNQ_DRIVER_MAX_MACROS 8
+typedef struct {
+  char name[64];
+  uint32_t name_len;
+  char body[4096];
+  uint32_t body_len;
+  int in_use;
+} DriverMacro;
+static DriverMacro g_macros[SYNQ_DRIVER_MAX_MACROS];
+
+static int driver_macro_lookup(void* user_data,
+                               SyntaqliteParser* parser,
+                               const char* name,
+                               SyntaqliteLength name_len,
+                               const SyntaqliteToken* args,
+                               uint32_t arg_count) {
+  (void)user_data;
+  (void)args;
+  (void)arg_count;
+  for (uint32_t i = 0; i < SYNQ_DRIVER_MAX_MACROS; i++) {
+    if (!g_macros[i].in_use) continue;
+    if (g_macros[i].name_len != name_len) continue;
+    if (memcmp(g_macros[i].name, name, name_len) != 0) continue;
+    syntaqlite_macro_expansion_set_result(parser, g_macros[i].body,
+                                          g_macros[i].body_len, 0, 0);
+    return SYNTAQLITE_MACRO_LOOKUP_OK;
+  }
+  return SYNTAQLITE_MACRO_LOOKUP_NOT_FOUND;
+}
 
 static void chomp(char* s) {
   size_t n = strlen(s);
@@ -97,8 +138,9 @@ static const char* parse_rc_str(int32_t rc) {
 static void print_comment(const SyntaqliteComment* c, const char* prefix, uint32_t i) {
   const char* side = c->side == SYNQ_COMMENT_LEADING ? "leading" : "trailing";
   const char* kind = c->kind == 0 ? "line" : "block";
-  printf("%s[%u] side=%s kind=%s off=%u len=%u token_idx=%u\n",
-         prefix, i, side, kind, c->offset, c->length, c->token_idx);
+  printf("%s[%u] side=%s kind=%s off=%u len=%u token_idx=%u layer=%u\n",
+         prefix, i, side, kind, c->offset, c->length, c->token_idx,
+         c->layer_id);
 }
 
 int main(void) {
@@ -117,6 +159,12 @@ int main(void) {
     if (strcmp(verb, "create") == 0) {
       if (p) syntaqlite_parser_destroy(p);
       p = syntaqlite_parser_create(NULL);
+      // Scenarios that need registered expansions call
+      // `macro_register` before `reset`, which is what installs the
+      // lookup.  We deliberately don't register it here: the parser
+      // treats "lookup_fn set + lookup returns NOT_FOUND" as a hard
+      // error (unknown macro), which would break fallback-only
+      // scenarios if the lookup were always installed.
       printf("create %s\n", p ? "ok" : "err null");
     } else if (strcmp(verb, "destroy") == 0) {
       syntaqlite_parser_destroy(p);
@@ -209,6 +257,26 @@ int main(void) {
       for (uint32_t i = 0; i < lead; i++) print_comment(&lc[i], "lead", i);
       for (uint32_t i = 0; i < trail; i++) print_comment(&tc[i], "trail", i);
       printf(".\n");
+    } else if (strcmp(verb, "node_token_range") == 0) {
+      if (argc < 2) { printf("node_token_range err bad_arg\n"); continue; }
+      uint32_t id = (uint32_t)strtoul(argv[1], NULL, 10);
+      SyntaqliteTokenIdx first = 0, last = 0;
+      int32_t ok = syntaqlite_node_token_range(p, id, &first, &last);
+      if (!ok) {
+        printf("node_token_range id=%u none\n", id);
+      } else {
+        printf("node_token_range id=%u first=%u last=%u\n", id, first, last);
+      }
+    } else if (strcmp(verb, "node_comments") == 0) {
+      if (argc < 2) { printf("node_comments err bad_arg\n"); continue; }
+      uint32_t id = (uint32_t)strtoul(argv[1], NULL, 10);
+      uint32_t lead = 0, trail = 0;
+      const SyntaqliteComment* lc = syntaqlite_node_leading_comments(p, id, &lead);
+      const SyntaqliteComment* tc = syntaqlite_node_trailing_comments(p, id, &trail);
+      printf("node_comments id=%u leading=%u trailing=%u\n", id, lead, trail);
+      for (uint32_t i = 0; i < lead; i++) print_comment(&lc[i], "lead", i);
+      for (uint32_t i = 0; i < trail; i++) print_comment(&tc[i], "trail", i);
+      printf(".\n");
     } else if (strcmp(verb, "node_text") == 0) {
       if (argc < 2) { printf("node_text err bad_arg\n"); continue; }
       uint32_t id = (uint32_t)strtoul(argv[1], NULL, 10);
@@ -227,6 +295,52 @@ int main(void) {
       int32_t rc = syntaqlite_parser_set_macro_fallback(
           p, (uint32_t)strtoul(argv[1], NULL, 10));
       printf("macro_fallback %s\n", cfg_rc_str(rc));
+    } else if (strcmp(verb, "macro_register") == 0) {
+      if (argc < 2) { printf("macro_register err bad_arg\n"); continue; }
+      // Copy name off `g_line` before `read_block` overwrites it.
+      char name_buf[64];
+      size_t name_in_len = strlen(argv[1]);
+      if (name_in_len >= sizeof(name_buf)) {
+        printf("macro_register err name_too_long\n"); continue;
+      }
+      memcpy(name_buf, argv[1], name_in_len + 1);
+      const char* name = name_buf;
+      int n = read_block(g_body, sizeof(g_body));
+      if (n < 0) { printf("macro_register err no_terminator\n"); break; }
+      uint32_t slot = SYNQ_DRIVER_MAX_MACROS;
+      for (uint32_t i = 0; i < SYNQ_DRIVER_MAX_MACROS; i++) {
+        if (g_macros[i].in_use &&
+            g_macros[i].name_len == strlen(name) &&
+            memcmp(g_macros[i].name, name, g_macros[i].name_len) == 0) {
+          slot = i;  // replace existing entry with same name
+          break;
+        }
+      }
+      if (slot == SYNQ_DRIVER_MAX_MACROS) {
+        for (uint32_t i = 0; i < SYNQ_DRIVER_MAX_MACROS; i++) {
+          if (!g_macros[i].in_use) { slot = i; break; }
+        }
+      }
+      if (slot == SYNQ_DRIVER_MAX_MACROS) {
+        printf("macro_register err registry_full\n"); continue;
+      }
+      size_t nlen = strlen(name);
+      if (nlen >= sizeof(g_macros[slot].name) ||
+          (size_t)n >= sizeof(g_macros[slot].body)) {
+        printf("macro_register err too_large\n"); continue;
+      }
+      memcpy(g_macros[slot].name, name, nlen);
+      g_macros[slot].name_len = (uint32_t)nlen;
+      memcpy(g_macros[slot].body, g_body, (size_t)n);
+      g_macros[slot].body_len = (uint32_t)n;
+      g_macros[slot].in_use = 1;
+      // Install the lookup callback on first registration.
+      syntaqlite_parser_set_macro_lookup(p, driver_macro_lookup, NULL);
+      printf("macro_register ok name=%s len=%d\n", name, n);
+    } else if (strcmp(verb, "macro_clear_registry") == 0) {
+      for (uint32_t i = 0; i < SYNQ_DRIVER_MAX_MACROS; i++) g_macros[i].in_use = 0;
+      syntaqlite_parser_set_macro_lookup(p, NULL, NULL);
+      printf("macro_clear_registry ok\n");
     } else if (strcmp(verb, "dump_macros") == 0) {
       uint32_t count = syntaqlite_result_macro_count(p);
       printf("macros count=%u\n", count);

@@ -559,16 +559,32 @@ fn emit_newline(indent: i32, out: &mut String, pos: &mut usize) {
 }
 
 /// Push a keyword string with the appropriate casing to the output.
+///
+/// Collapse a duplicated leading space: several grammar literals (`" AS "`,
+/// `" OVER "`, ...) carry a baked-in leading space that doubles up when the
+/// preceding emission already ended with whitespace (e.g. the trailing
+/// space of a block comment's leading chunk, or a line-rendered softline).
+/// The collapse is conservative — only the first byte, only when both sides
+/// are a literal `' '` — so it doesn't swallow indentation.
+///
+/// This hack lives here because spacing currently comes from a mix of
+/// `line` ops and leading spaces baked into grammar literals.  The real
+/// fix is to strip leading spaces from keyword literals and always rely
+/// on explicit `line`/`space` ops in the grammar; see
+/// <https://github.com/LalitMaganti/syntaqlite/issues/5>.
 #[inline]
 fn push_keyword(s: &str, case: KeywordCase, out: &mut String) {
+    let bytes = s.as_bytes();
+    let skip = usize::from(bytes.first() == Some(&b' ') && out.as_bytes().last() == Some(&b' '));
+    let slice = &bytes[skip..];
     match case {
         KeywordCase::Upper => {
-            for &b in s.as_bytes() {
+            for &b in slice {
                 out.push(b.to_ascii_uppercase() as char);
             }
         }
         KeywordCase::Lower => {
-            for &b in s.as_bytes() {
+            for &b in slice {
                 out.push(b.to_ascii_lowercase() as char);
             }
         }

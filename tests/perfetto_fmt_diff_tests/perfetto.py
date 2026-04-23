@@ -361,7 +361,12 @@ class PerfettoMacroCallFormat(TestSuite):
     def test_macro_call_with_block_comment_before_alias(self):
         return DiffTestBlueprint(
             sql="SELECT cast_int!(value) /* inline */ AS x FROM t",
-            out="SELECT cast_int!(value) /* inline */ AS x FROM t",
+            out="""\
+                SELECT
+                  cast_int!(value)
+                  /* inline */ AS x
+                FROM t
+            """,
         )
 
     # ── Comments inside a fallback macro call ──
