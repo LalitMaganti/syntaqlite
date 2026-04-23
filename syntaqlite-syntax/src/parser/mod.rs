@@ -944,42 +944,25 @@ impl<'a> AnyParsedStatement<'a> {
         (text, DocRange { start, end })
     }
 
-    /// Statement-relative byte ranges for all collected tokens.
+    /// Token stream for the current statement.
     ///
-    /// Returns an empty iterator if `collect_tokens` was not enabled.
-    /// Always non-empty when the result comes from [`TypedParser::incremental_parse`],
-    /// which unconditionally enables token collection.
-    pub fn token_spans(&self) -> impl Iterator<Item = StmtRange> + use<'_> {
-        // SAFETY: self.raw is valid for 'a; the returned slice lives for 'a.
-        let raw: &[ffi::CParserToken] = unsafe { self.raw.as_ref().result_tokens() };
-        raw.iter().map(|t| {
-            StmtRange::from_offset_len(StmtOffset::from_raw(t.offset), StmtLen::from_raw(t.length))
-        })
-    }
-
-    /// Statement-local token stream with full per-token data
-    /// (text, type, flags, offset, length).
+    /// Yields every token the parser fed to Lemon while reducing the
+    /// statement — including tokens produced by macro expansion.
+    /// Each token's [`stmt_range`](AnyParserToken::stmt_range) gives
+    /// its authored-source range (layer-N tokens drill up to the
+    /// enclosing macro call site, just like `span_text` does for AST
+    /// spans), so most consumers can ignore layer identity entirely.
+    /// Layer-local info is still available via
+    /// [`layer_id`](AnyParserToken::layer_id) /
+    /// [`offset`](AnyParserToken::offset) /
+    /// [`length`](AnyParserToken::length) for advanced uses.
     ///
-    /// Like [`token_spans`](Self::token_spans) but returns full
-    /// [`AnyParserToken`] values including token type and flags. Used by
-    /// analysis passes that need to classify tokens (semantic highlighting,
-    /// completion, etc.). Requires `collect_tokens: true`.
+    /// Requires `collect_tokens: true` in [`ParserConfig`].
     pub fn tokens(&self) -> impl Iterator<Item = AnyParserToken<'a>> + use<'_, 'a> {
-        let source = self.text();
-        // SAFETY: self.raw is valid for 'a; the returned slice lives for 'a.
+        // SAFETY: self.raw is valid for 'a; the returned slices live for 'a.
         let raw: &'a [ffi::CParserToken] = unsafe { self.raw.as_ref().result_tokens() };
-        raw.iter().map(move |t| {
-            let offset = StmtOffset::from_raw(t.offset);
-            let length = StmtLen::from_raw(t.length);
-            let text = &source[StmtRange::from_offset_len(offset, length)];
-            AnyParserToken::new(
-                text,
-                AnyTokenType(t.type_),
-                ParserTokenFlags::from_raw(t.flags),
-                offset,
-                length,
-            )
-        })
+        raw.iter()
+            .map(move |t| build_parser_token(self.raw, t, AnyTokenType(t.type_)))
     }
 
     /// Comments attached to this statement with full per-comment data.
@@ -1331,25 +1314,17 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         self.any.macro_rewrites()
     }
 
-    /// Statement-local token stream for this parse result.
+    /// Token stream for this parse result.  Yields every token fed
+    /// to Lemon across all expansion layers; see
+    /// [`AnyParsedStatement::tokens`] for the layer semantics.
     ///
     /// Requires `collect_tokens: true` and skips unknown token ordinals for `G`.
     pub fn tokens(&self) -> impl Iterator<Item = TypedParserToken<'a, G>> {
-        let source = self.any.text();
-        // SAFETY: self.any.raw is valid for 'a; the returned slice lives for 'a.
+        // SAFETY: self.any.raw is valid for 'a; the returned slices live for 'a.
         let raw: &'a [ffi::CParserToken] = unsafe { self.any.raw.as_ref().result_tokens() };
         raw.iter().filter_map(move |t| {
             let token_type = G::Token::from_token_type(AnyTokenType(t.type_))?;
-            let offset = StmtOffset::from_raw(t.offset);
-            let length = StmtLen::from_raw(t.length);
-            let text = &source[StmtRange::from_offset_len(offset, length)];
-            Some(TypedParserToken::new(
-                text,
-                token_type,
-                ParserTokenFlags::from_raw(t.flags),
-                offset,
-                length,
-            ))
+            Some(build_parser_token(self.any.raw, t, token_type))
         })
     }
 
@@ -1467,6 +1442,60 @@ fn ffi_comment<'a>(source: &'a StmtText, c: &ffi::CComment) -> Comment<'a> {
         length,
         TokenIdx::from_raw(c.token_idx),
         side,
+    )
+}
+
+/// Build a [`TypedParserToken`] from a raw FFI token entry, resolving
+/// its byte text against the owning layer's buffer and drilling up to
+/// the authored-source range via `span_text`.  Shared between the
+/// [`AnyParsedStatement`] and [`TypedParsedStatement`] token iterators.
+// `CParserToken._layer_id` and `TextSpan._layer_id` mirror the C ABI
+// (where the underscore signals "internal — use span APIs to resolve"),
+// so Rust reads of the field need the allow.
+#[expect(clippy::used_underscore_binding)]
+fn build_parser_token<'a, G: TypedDialect>(
+    raw: NonNull<CParser>,
+    t: &ffi::CParserToken,
+    token_type: G::Token,
+) -> TypedParserToken<'a, G> {
+    // SAFETY: raw is valid for 'a.  layer_text and span_text each
+    // borrow from parser-owned buffers that remain valid for 'a.
+    let buffer: &'a str = unsafe { raw.as_ref().layer_text(t._layer_id) };
+    let start = t.offset as usize;
+    let end = start.saturating_add(t.length as usize);
+    let text = buffer.get(start..end).unwrap_or("");
+    let layer_id = u8::try_from(t._layer_id).unwrap_or(u8::MAX);
+
+    let stmt_range = if t._layer_id == 0 {
+        StmtRange::from_offset_len(StmtOffset::from_raw(t.offset), StmtLen::from_raw(t.length))
+    } else {
+        // Drill up through the expansion-layer chain to the authored
+        // source range (same rule `span_text` uses for AST spans).
+        let span = crate::ast::TextSpan {
+            offset: t.offset,
+            length: t.length,
+            flags: 0,
+            _layer_id: t._layer_id,
+        };
+        let mut out_len: u32 = 0;
+        let mut out_offset: u32 = 0;
+        // SAFETY: raw is valid; span mirrors the token's layer
+        // position; the out pointers are live stack slots.
+        unsafe {
+            raw.as_ref()
+                .span_text(span, &raw mut out_len, &raw mut out_offset);
+        }
+        StmtRange::from_offset_len(StmtOffset::from_raw(out_offset), StmtLen::from_raw(out_len))
+    };
+
+    TypedParserToken::new(
+        text,
+        token_type,
+        ParserTokenFlags::from_raw(t.flags),
+        LayerOffset::from_raw(t.offset),
+        LayerLen::from_raw(t.length),
+        layer_id,
+        stmt_range,
     )
 }
 

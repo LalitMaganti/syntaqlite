@@ -172,11 +172,17 @@ impl Formatter {
                 side: c.side(),
             }));
         self.token_entries.clear();
-        self.token_entries
-            .extend(erased.token_spans().map(|range| TokenEntry {
+        // `stmt_range` drills expansion-layer tokens up to their
+        // authored call-site range, so every token contributes an
+        // entry in statement coordinates — the same coordinate system
+        // the formatter emits in.
+        self.token_entries.extend(erased.tokens().map(|t| {
+            let range = t.stmt_range();
+            TokenEntry {
                 offset: range.start,
                 length: range.len(),
-            }));
+            }
+        }));
         // Only top-level fallback rewrites are meaningful here:
         // - `parent().is_none()` keeps offsets in the statement
         //   coordinate system the formatter compares against.

@@ -113,7 +113,7 @@ static void reset_stmt(SyntaqliteParser* p) {
   p->stmt_source = p->source;
 }
 
-// Handle a statement boundary after feed_one_token returns 1.
+// Handle a statement boundary after shift_token returns 1.
 // Reinitializes Lemon and classifies the completed statement:
 //   SYNTAQLITE_PARSE_OK    — successful statement (root is set)
 //   SYNTAQLITE_PARSE_ERROR — statement with syntax error(s)
@@ -213,39 +213,91 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p) {
 // Returns: 0 = keep going, 1 = statement completed, -1 = unrecoverable error.
 // ---------------------------------------------------------------------------
 
-int synq_parser_feed_one_token(SyntaqliteParser* p,
-                               uint32_t token_type,
-                               const char* text,
-                               uint32_t len,
-                               uint32_t token_idx) {
-  // Only called from layer-0 paths — macro expansion bypasses this —
-  // so the offset Lemon stores into TextSpans is statement-relative.
-  uint32_t tok_offset = text ? (uint32_t)(text - p->stmt_source) : 0;
+// Unified token shift: push the token to `p->tokens` (when
+// `collect_tokens` is on and `text` is non-null), build the
+// `SynqParseToken` with a real `token_idx`, feed Lemon, and maintain
+// per-layer parser bookkeeping.  The sole path that terminals take
+// into Lemon — called by the main tokenizer loop, by the macro
+// expansion loop, by the fallback-macro consolidator, and by the
+// low-level incremental feed API.
+//
+// `text` points to the token bytes in their owning buffer (the source
+// for layer 0, an expansion layer's buffer for layer N).  May be NULL
+// for synthesized tokens (SEMI/EOF at end-of-input); in that case no
+// vec entry is pushed and the shift markers do not advance.
+//
+// `layer_offset` is the token's offset within its owning buffer:
+//   - for layer 0: statement-relative (identical to `text - stmt_source`)
+//   - for layer N: position within the expansion buffer
+// `p->ctx.layer_id` must already reflect the token's layer.
+//
+// Returns 1 if Lemon flagged the statement as completed, 0 otherwise.
+// Layer-N callers (macro expansion) handle their own error messages
+// and clear `p->ctx.error` themselves; for them, this function sets
+// `p->had_error` but leaves the error flag intact.
+int synq_parser_shift_token(SyntaqliteParser* p,
+                            uint32_t token_type,
+                            const char* text,
+                            uint32_t len,
+                            uint32_t layer_offset) {
+  uint32_t layer_id = p->ctx.layer_id;
+  uint32_t tidx = 0xFFFFFFFF;
+
+  if (p->collect_tokens && text) {
+    SyntaqliteParserToken tp = {layer_offset, len, token_type, 0, layer_id};
+    syntaqlite_vec_push(&p->tokens, tp, p->mem);
+    tidx = syntaqlite_vec_len(&p->tokens) - 1;
+    // Drives same-line trailing-comment attachment.  Only advanced for
+    // layer-0 tokens so comments emitted from the main tokenizer loop
+    // attach relative to the last user-authored token, not relative to
+    // some layer-N expansion token.
+    if (layer_id == 0) {
+      p->last_layer0_token_end = p->stmt_start_offset + layer_offset + len;
+    }
+  }
+
+  // BEFORE-style empty-rule markers (ast_builder.h:117) are documented
+  // as valid for layer-0 shifts only.  Publish cur_shift_start before
+  // SYNQ_PARSER_FEED so reductions firing inside the feed observe it.
+  if (layer_id == 0) {
+    p->ctx.cur_shift_start = layer_offset;
+  }
+
   SynqParseToken minor = {
       .z = text,
       .n = len,
       .type = token_type,
-      .token_idx = token_idx,
-      .offset = tok_offset,
-      .layer_id = p->ctx.layer_id,
+      .token_idx = tidx,
+      .offset = layer_offset,
+      .layer_id = layer_id,
   };
   SYNQ_PARSER_FEED(p->dialect.tmpl, p->lemon, (int)token_type, minor);
   p->last_token_type = token_type;
 
+  // AFTER-style markers: also layer-0.  Advance after feed so reductions
+  // inside feed saw the previous terminal's end.
+  if (layer_id == 0) {
+    p->ctx.last_shifted_end = layer_offset + len;
+  }
+
   if (p->ctx.error) {
     p->had_error = 1;
-    if (p->error_msg[0] == '\0') {
-      if (text) {
-        p->ctx.error_offset = (uint32_t)(text - p->stmt_source);
-        p->ctx.error_length = (uint32_t)len;
-        snprintf(p->error_msg, sizeof(p->error_msg), "syntax error near '%.*s'",
-                 len, text);
-      } else {
-        snprintf(p->error_msg, sizeof(p->error_msg),
-                 "incomplete SQL statement");
+    if (layer_id == 0) {
+      if (p->error_msg[0] == '\0') {
+        if (text) {
+          p->ctx.error_offset = layer_offset;
+          p->ctx.error_length = len;
+          snprintf(p->error_msg, sizeof(p->error_msg),
+                   "syntax error near '%.*s'", len, text);
+        } else {
+          snprintf(p->error_msg, sizeof(p->error_msg),
+                   "incomplete SQL statement");
+        }
       }
+      p->ctx.error = 0;  // Lemon is now driving recovery.
     }
-    p->ctx.error = 0;  // Lemon is now driving recovery.
+    // Layer-N: leave p->ctx.error set; expand_and_feed builds a
+    // macro-specific message and clears the flag.
     return 0;
   }
 
@@ -258,7 +310,7 @@ int synq_parser_feed_one_token(SyntaqliteParser* p,
 }
 
 // Local shorthand for the cross-file helper.
-#define feed_one_token synq_parser_feed_one_token
+#define shift_token synq_parser_shift_token
 
 // ---------------------------------------------------------------------------
 // Internal: synthesize SEMI + EOF to finish parsing.
@@ -280,7 +332,7 @@ static int finish_input(SyntaqliteParser* p) {
 
   // Synthesize SEMI if the last token wasn't one.
   if (p->last_token_type != SYNTAQLITE_TK_SEMI) {
-    int rc = feed_one_token(p, SYNTAQLITE_TK_SEMI, NULL, 0, 0xFFFFFFFF);
+    int rc = shift_token(p, SYNTAQLITE_TK_SEMI, NULL, 0, 0);
     if (rc == 1) {
       int32_t status = stmt_boundary(p);
       if (status != SYNTAQLITE_PARSE_DONE) {
@@ -330,42 +382,6 @@ static int finish_input(SyntaqliteParser* p) {
 // ---------------------------------------------------------------------------
 // Internal: token recording and feeding
 // ---------------------------------------------------------------------------
-
-// Record a token and feed it to Lemon.  Returns 1 if a real statement
-// boundary was reached (caller should return stmt_boundary()), 0 otherwise.
-// Always called at layer 0; stores offsets relative to stmt_source.
-int synq_parser_record_and_feed(SyntaqliteParser* p,
-                                uint32_t cur_type,
-                                uint32_t cur_offset,
-                                uint32_t cur_len) {
-  uint32_t tidx = 0xFFFFFFFF;
-  uint32_t cur_offset_rel = cur_offset - p->stmt_start_offset;
-  if (p->collect_tokens) {
-    SyntaqliteParserToken tp = {cur_offset_rel, cur_len, cur_type, 0,
-                                p->ctx.layer_id};
-    syntaqlite_vec_push(&p->tokens, tp, p->mem);
-    tidx = syntaqlite_vec_len(&p->tokens) - 1;
-    p->last_layer0_token_end = cur_offset + cur_len;
-  }
-  // Publish the upcoming token's start *before* Lemon processes it so
-  // that BEFORE-style empty-marker reductions firing inside feed_one_token
-  // see the start of the token about to be shifted (whitespace between
-  // the previous terminal and this one is excluded).
-  p->ctx.cur_shift_start = cur_offset_rel;
-  int rc = feed_one_token(p, cur_type, p->source + cur_offset, cur_len, tidx);
-  // Advance the "last shifted terminal end" cursor *after* Lemon finishes
-  // processing `cur`, so that any empty-rule reductions that fired inside
-  // feed_one_token observed the previous shifted token's end.  AFTER-style
-  // markers use this to capture the end position of a non-terminal.
-  p->ctx.last_shifted_end = cur_offset_rel + cur_len;
-  // After parse_failure, Lemon stops reducing — force a boundary on SEMI
-  // so errors don't bleed into subsequent statements.
-  if (p->had_error && rc == 0 && cur_type == SYNTAQLITE_TK_SEMI)
-    rc = 1;
-  if (rc == 1 && (p->ctx.root != SYNTAQLITE_NULL_NODE || p->had_error))
-    return 1;
-  return 0;
-}
 
 // Record a comment token (outlined from the hot loop).
 //
@@ -572,9 +588,17 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     }
 #endif
 
-    // Normal token (or macro fallthrough): record + feed to Lemon.
-    if (synq_parser_record_and_feed(p, cur_type, cur_offset,
-                                    (uint32_t)cur_len)) {
+    // Normal token (or macro fallthrough): shift into Lemon.
+    // After parse_failure Lemon stops reducing — force a boundary on
+    // SEMI so errors don't bleed into the next statement.  And filter
+    // bare-semicolon rc==1 (no root, no error) so the main loop keeps
+    // tokenizing instead of closing an empty statement.
+    uint32_t main_layer_offset = cur_offset - p->stmt_start_offset;
+    int main_rc = shift_token(p, cur_type, p->source + cur_offset,
+                              (uint32_t)cur_len, main_layer_offset);
+    if (p->had_error && main_rc == 0 && cur_type == SYNTAQLITE_TK_SEMI)
+      main_rc = 1;
+    if (main_rc == 1 && (p->ctx.root != SYNTAQLITE_NULL_NODE || p->had_error)) {
       // Eagerly consume same-line trailing comments after the statement
       // terminator so they attach to this statement's last token instead
       // of the next statement's first.  Stop at the first newline or
@@ -908,6 +932,41 @@ SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
   return p->stmt_source;
 }
 
+SYNTAQLITE_API const char* syntaqlite_parser_layer_text(
+    SyntaqliteParser* p,
+    uint32_t layer_id,
+    SyntaqliteLength* out_len) {
+  if (out_len) {
+    *out_len = 0;
+  }
+  if (layer_id == 0) {
+    // Authored source for the current statement.  Identical to
+    // `syntaqlite_parser_text` but typed for the layer-indexed API.
+    if (p->stmt_start_offset == UINT32_MAX ||
+        p->stmt_end_offset <= p->stmt_start_offset ||
+        p->stmt_end_offset > p->source_len) {
+      return NULL;
+    }
+    if (out_len) {
+      *out_len = p->stmt_end_offset - p->stmt_start_offset;
+    }
+    return p->stmt_source;
+  }
+#ifdef SYNTAQLITE_OMIT_MACROS
+  (void)layer_id;
+  return NULL;
+#else
+  if (layer_id >= syntaqlite_vec_len(&p->macro.layers)) {
+    return NULL;
+  }
+  const SynqExpansionLayer* lyr = &p->macro.layers.data[layer_id];
+  if (out_len) {
+    *out_len = lyr->expansion_len;
+  }
+  return lyr->expansion_data;
+#endif
+}
+
 SYNTAQLITE_API const char* syntaqlite_parser_expanded_text(SyntaqliteParser* p,
                                                            uint32_t* out_len) {
 #ifdef SYNTAQLITE_OMIT_MACROS
@@ -973,17 +1032,8 @@ SYNTAQLITE_API int32_t syntaqlite_parser_feed_token(SyntaqliteParser* p,
     return set_result_status(p, SYNTAQLITE_PARSE_DONE);
   }
 
-  // Capture non-whitespace, non-comment token positions.
-  uint32_t tidx = 0xFFFFFFFF;
-  if (p->collect_tokens && text) {
-    SyntaqliteParserToken tp = {(uint32_t)(text - p->stmt_source), len,
-                                token_type, 0, p->ctx.layer_id};
-    syntaqlite_vec_push(&p->tokens, tp, p->mem);
-    tidx = syntaqlite_vec_len(&p->tokens) - 1;
-    p->last_layer0_token_end = (uint32_t)(text - p->source) + len;
-  }
-
-  int rc = feed_one_token(p, token_type, text, len, tidx);
+  uint32_t layer_offset = text ? (uint32_t)(text - p->stmt_source) : 0;
+  int rc = shift_token(p, token_type, text, len, layer_offset);
   if (rc < 0)
     return set_result_status(p, SYNTAQLITE_PARSE_ERROR);
 

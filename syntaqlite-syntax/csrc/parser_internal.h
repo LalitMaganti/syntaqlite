@@ -251,18 +251,25 @@ void synq_parser_record_comment(SyntaqliteParser* p,
 // parser_macros.c as a convenient exit helper).
 int32_t synq_parser_set_result_status(SyntaqliteParser* p, int32_t rc);
 
-// Feed one token to Lemon. Returns 0/1/-1 (see parser.c for semantics).
-int synq_parser_feed_one_token(SyntaqliteParser* p,
-                               uint32_t token_type,
-                               const char* text,
-                               uint32_t len,
-                               uint32_t token_idx);
-
-// Record a token into p->tokens (if enabled) and feed it to Lemon.
-int synq_parser_record_and_feed(SyntaqliteParser* p,
-                                uint32_t cur_type,
-                                uint32_t cur_offset,
-                                uint32_t cur_len);
+// Unified token shift — the sole path that terminals take into Lemon.
+// Pushes to p->tokens (if collect_tokens is on and text is non-null),
+// builds the SynqParseToken with a real token_idx, feeds Lemon, and
+// updates per-layer parser bookkeeping.
+//
+// `layer_offset` is interpreted layer-locally:
+//   - layer 0: statement-relative
+//   - layer N: buffer-local (offset into the expansion layer)
+// `p->ctx.layer_id` must already reflect the token's layer.
+//
+// Returns 1 if Lemon flagged `stmt_completed`, 0 otherwise.  Layer-N
+// callers (macro expansion) handle their own error messages and clear
+// `p->ctx.error` themselves — this function sets `p->had_error` but
+// leaves `p->ctx.error` intact when layer_id != 0.
+int synq_parser_shift_token(SyntaqliteParser* p,
+                            uint32_t token_type,
+                            const char* text,
+                            uint32_t len,
+                            uint32_t layer_offset);
 
 #ifndef SYNTAQLITE_OMIT_MACROS
 

@@ -246,12 +246,15 @@ impl<'a> ParserToken<'a> {
 
     /// Statement-relative byte offset of the token start.
     pub fn offset(&self) -> StmtOffset {
-        self.0.offset()
+        // SQLite has no macros; every token visible at this API level
+        // lives in the authored source (layer 0), so the token's
+        // layer-local offset IS its statement-relative offset.
+        StmtOffset::from_raw(self.0.offset().as_u32())
     }
 
     /// Byte length of the token text.
     pub fn length(&self) -> StmtLen {
-        self.0.length()
+        StmtLen::from_raw(self.0.length().as_u32())
     }
 }
 
@@ -320,7 +323,14 @@ impl<'a> ParsedStatement<'a> {
     ///
     /// Requires `collect_tokens: true` in [`ParserConfig`].
     pub fn tokens(&self) -> impl Iterator<Item = ParserToken<'a>> {
-        self.0.tokens().map(ParserToken)
+        // SQLite has no macros; this API only surfaces authored-source
+        // tokens.  Layer-N tokens can only arise if the caller plugs in
+        // a custom macro lookup via the dialect-agnostic API — they are
+        // elided here so statement-relative offsets stay meaningful.
+        self.0
+            .tokens()
+            .filter(|t| t.layer_id() == 0)
+            .map(ParserToken)
     }
 
     /// Comments that belong to this statement.
@@ -461,7 +471,14 @@ impl<'a> ParseError<'a> {
 
     /// Tokens collected during the (partial) parse, if `collect_tokens` was enabled.
     pub fn tokens(&self) -> impl Iterator<Item = ParserToken<'a>> {
-        self.0.tokens().map(ParserToken)
+        // SQLite has no macros; this API only surfaces authored-source
+        // tokens.  Layer-N tokens can only arise if the caller plugs in
+        // a custom macro lookup via the dialect-agnostic API — they are
+        // elided here so statement-relative offsets stay meaningful.
+        self.0
+            .tokens()
+            .filter(|t| t.layer_id() == 0)
+            .map(ParserToken)
     }
 
     /// Comments collected during the (partial) parse, if `collect_tokens` was enabled.
@@ -2325,5 +2342,57 @@ mod tests {
         assert_eq!(inner.call_text(), "mpass!(42)");
         let inner_arg_texts: Vec<&str> = inner.args().map(|a| a.text()).collect();
         assert_eq!(inner_arg_texts, vec!["42"]);
+    }
+
+    #[test]
+    fn tokens_include_expansion_layers_with_drilled_up_stmt_range() {
+        // The `tokens()` iterator yields every token fed to Lemon —
+        // including tokens produced by macro expansion.  For
+        // expansion-layer tokens, `stmt_range()` drills up to the
+        // authored call site, so consumers always get a meaningful
+        // statement-relative range.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_macro_fallback(true),
+        );
+        let mut reg = TestMacroRegistry::new();
+        reg.register("id", &[], "42");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT id!() FROM t;";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+
+        // Collect raw token info via the dialect-agnostic iterator.
+        // Going through erase() ensures we see all layers.
+        let erased = stmt.erase();
+        let infos: Vec<(u8, &str, (u32, u32))> = erased
+            .tokens()
+            .map(|t| {
+                let range = t.stmt_range();
+                (
+                    t.layer_id(),
+                    t.text(),
+                    (range.start.as_u32(), range.len().as_u32()),
+                )
+            })
+            .collect();
+
+        // `SELECT` is layer 0; `42` is layer 1 (from the expansion);
+        // `FROM`, `t`, `;` are back at layer 0.
+        assert_eq!(
+            infos,
+            vec![
+                (0, "SELECT", (0, 6)),
+                // Expansion token: its `text()` is the expansion body,
+                // but its `stmt_range()` drills up to the call site
+                // `id!()` in the authored source.
+                (1, "42", (7, 5)),
+                (0, "FROM", (13, 4)),
+                (0, "t", (18, 1)),
+                (0, ";", (19, 1)),
+            ]
+        );
     }
 }
