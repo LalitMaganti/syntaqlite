@@ -405,63 +405,122 @@ static int finish_input(SyntaqliteParser* p) {
 //   - layer 0: source-absolute (ctx.source == p->source).
 //   - layer N: layer-local (ctx.source is the expansion buffer).
 //
-// Attachment: TRAILING the previous pushed token when that token was
-// in the same layer as this comment and the gap in `p->ctx.source`
-// contains no '\n'.  Otherwise LEADING the next token to be pushed
-// (predicted owner index = `vec_len(p->tokens)`).  The layer-match
-// guard prevents a comment emitted from main tokenization at layer 0
-// after an expansion ends from incorrectly trailing the expansion's
-// last token, and vice versa.
+// Classification:
+//   - Same-line with prev token + something else on the line after this
+//     comment → LEADING on the next token (block "between two tokens").
+//   - Same-line with prev + rest of line empty (whitespace/comments only)
+//     → TRAILING on prev token.  Line comments (`-- ...`) always hit this
+//     branch because they consume the rest of their line.
+//   - Not same-line with prev → LEADING on the next token.
+//
+// Same-line-with-prev is computed in the prev token's buffer (same-layer
+// case) or, for a source comment after a macro expansion, against the
+// call's end position in source (cross-layer case).  Same-line-with-
+// follower is a forward scan in the comment's own buffer; it sees past
+// whitespace and adjacent comments.
+
+// Offset of the next real (non-whitespace, non-comment) token in `buf`
+// starting at `pos`, or `buf_len` if the rest of the buffer is
+// whitespace and comments only.
+static uint32_t synq_next_token_offset(SyntaqliteParser* p,
+                                       const char* buf,
+                                       uint32_t pos,
+                                       uint32_t buf_len) {
+  while (pos < buf_len && buf[pos] != '\0') {
+    uint32_t tt = 0;
+    int64_t tl = SynqSqliteGetTokenVersionWrapped(
+        &p->dialect, 0, (const unsigned char*)buf + pos, &tt);
+    if (tl <= 0)
+      return buf_len;
+    if (!synq_token_is_skip(tt))
+      return pos;
+    pos += (uint32_t)tl;
+  }
+  return buf_len;
+}
+
 SYNQ_NOINLINE
 void synq_parser_record_comment(SyntaqliteParser* p,
                                 uint32_t offset,
                                 uint32_t len) {
   uint32_t layer = p->ctx.layer_id;
   const unsigned char* z = (const unsigned char*)p->ctx.source;
-  const char kind_char = (const char)z[offset];
+  int is_block = (z[offset] != '-');
 
-  uint8_t side = SYNQ_COMMENT_LEADING;
-  uint32_t owner_idx = syntaqlite_vec_len(&p->tokens);
-  if (p->last_pushed_token_layer == layer) {
-    uint32_t prev_end = p->last_pushed_token_ctx_end;
-    if (prev_end <= offset &&
-        memchr(z + prev_end, '\n', offset - prev_end) == NULL) {
-      side = SYNQ_COMMENT_TRAILING;
-      owner_idx = syntaqlite_vec_len(&p->tokens) - 1;
+  // ── Same-line with previous token? ───────────────────────────────────────
+  int same_line_with_prev = 0;
+  if (p->last_pushed_token_layer == layer &&
+      p->last_pushed_token_ctx_end != UINT32_MAX &&
+      p->last_pushed_token_ctx_end <= offset) {
+    same_line_with_prev = memchr(z + p->last_pushed_token_ctx_end, '\n',
+                                 offset - p->last_pushed_token_ctx_end) == NULL;
+  }
+#ifndef SYNTAQLITE_OMIT_MACROS
+  else if (layer == 0 && p->last_pushed_token_layer != UINT32_MAX &&
+           p->last_pushed_token_layer > 0 &&
+           p->last_pushed_token_layer < syntaqlite_vec_len(&p->macro.layers)) {
+    // Prev token was inside an expansion; comment is in source.  Compare
+    // against the end of the topmost ancestor macro call in source.
+    uint32_t L = p->last_pushed_token_layer;
+    while (L > 0 && p->macro.layers.data[L].parent_layer_id != 0)
+      L = p->macro.layers.data[L].parent_layer_id;
+    if (L > 0) {
+      const SynqExpansionLayer* lyr = &p->macro.layers.data[L];
+      uint32_t call_end =
+          p->stmt_start_offset + lyr->call_offset + lyr->call_length;
+      if (call_end <= offset)
+        same_line_with_prev = memchr((const unsigned char*)p->source + call_end,
+                                     '\n', offset - call_end) == NULL;
+    }
+  }
+#endif
+
+  // ── Trailing on prev iff same-line-with-prev AND next token (if any)
+  //    is on a different line.  Line comments always satisfy the latter
+  //    (they consume the rest of their line).
+  int is_trailing = 0;
+  if (same_line_with_prev) {
+    if (!is_block) {
+      is_trailing = 1;
+    } else {
+      uint32_t buf_len = layer == 0 ? p->source_len
+#ifndef SYNTAQLITE_OMIT_MACROS
+                                    : p->macro.layers.data[layer].expansion_len
+#else
+                                    : 0
+#endif
+          ;
+      uint32_t next =
+          synq_next_token_offset(p, (const char*)z, offset + len, buf_len);
+      is_trailing = (next >= buf_len) || memchr(z + offset + len, '\n',
+                                                next - (offset + len)) != NULL;
     }
   }
 
-  // Store in layer-local coordinates (matches `SyntaqliteParserToken.offset`).
-  uint32_t stored_offset = layer == 0 ? offset - p->stmt_start_offset : offset;
+  // ── Record the comment ───────────────────────────────────────────────────
   SyntaqliteComment t = {
-      .offset = stored_offset,
+      .offset = layer == 0 ? offset - p->stmt_start_offset : offset,
       .length = len,
-      .token_idx = owner_idx,
-      .kind = kind_char == '-' ? (uint8_t)0 : (uint8_t)1,
-      .side = side,
+      .token_idx = 0,  // filled below
+      .kind = is_block ? (uint8_t)1 : (uint8_t)0,
+      .side = is_trailing ? SYNQ_COMMENT_TRAILING : SYNQ_COMMENT_LEADING,
       .layer_id = (uint8_t)(layer > 0xFF ? 0xFF : layer),
       ._pad = 0,
   };
-  // Maintain the per-token comment index in step with the push.  The
-  // owner either already exists in `p->tokens` (trailing attachment,
-  // or a previously-predicted leading whose owner has since been
-  // pushed) or it's the predicted "next token" whose entry lives in
-  // `pending_orphan_leading` until the shift happens.
   uint32_t comment_idx = syntaqlite_vec_len(&p->comments);
-  SynqTokenComments* tc;
-  if (owner_idx < syntaqlite_vec_len(&p->tokens)) {
-    tc = &syntaqlite_vec_at(&p->token_comments, owner_idx);
-  } else {
-    tc = &p->pending_orphan_leading;
-  }
-  if (side == SYNQ_COMMENT_LEADING) {
-    if (tc->leading_count == 0)
-      tc->leading_first = comment_idx;
-    tc->leading_count++;
-  } else {
+  if (is_trailing) {
+    uint32_t tok_idx = syntaqlite_vec_len(&p->tokens) - 1;
+    t.token_idx = tok_idx;
+    SynqTokenComments* tc = &syntaqlite_vec_at(&p->token_comments, tok_idx);
     if (tc->trailing_count == 0)
       tc->trailing_first = comment_idx;
     tc->trailing_count++;
+  } else {
+    t.token_idx = syntaqlite_vec_len(&p->tokens);  // predicted next token
+    SynqTokenComments* tc = &p->pending_orphan_leading;
+    if (tc->leading_count == 0)
+      tc->leading_first = comment_idx;
+    tc->leading_count++;
   }
   syntaqlite_vec_push(&p->comments, t, p->mem);
 }

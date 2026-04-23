@@ -116,19 +116,32 @@ class BlockComment(TestSuite):
     def test_trailing_block(self):
         return DiffTestBlueprint(
             sql="SELECT a /* col */ FROM t",
-            out="SELECT a /* col */ FROM t;",
+            out="""\
+                SELECT a
+                /* col */ FROM t;
+            """,
         )
 
     def test_trailing_block_after_from(self):
         return DiffTestBlueprint(
             sql="SELECT 1 FROM t /* block */ WHERE x = 1",
-            out="SELECT 1 FROM t /* block */ WHERE x = 1;",
+            out="""\
+                SELECT 1
+                FROM t
+                /* block */ WHERE
+                  x = 1;
+            """,
         )
 
     def test_inline_block_comments(self):
         return DiffTestBlueprint(
             sql="SELECT /* c1 */ a, /* c2 */ b /* c3 */ FROM t",
-            out="SELECT /* c1 */ a, /* c2 */ b /* c3 */ FROM t;",
+            out="""\
+                SELECT
+                  /* c1 */ a,
+                  /* c2 */ b
+                /* c3 */ FROM t;
+            """,
         )
 
 
@@ -448,8 +461,8 @@ class JoinComment(TestSuite):
             sql="SELECT 1 FROM t1 a LEFT /* mid */ JOIN t2 b ON a.id = b.id",
             out="""\
                 SELECT 1
-                FROM t1 AS a /* mid */
-                LEFT JOIN t2 AS b
+                FROM t1 AS a
+                /* mid */ LEFT JOIN t2 AS b
                   ON a.id = b.id;
             """,
         )
