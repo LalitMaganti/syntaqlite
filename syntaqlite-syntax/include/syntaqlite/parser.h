@@ -206,8 +206,16 @@ typedef struct SyntaqliteComment {
   SyntaqliteStmtOffset offset;
   SyntaqliteLength length;
   SyntaqliteTokenIdx token_idx;  // Index of the owning token in p->tokens.
-  uint8_t kind;  // 0 = line comment (--), 1 = block comment (/* */).
-  uint8_t side;  // SYNQ_COMMENT_LEADING or SYNQ_COMMENT_TRAILING.
+  uint8_t kind;      // 0 = line comment (--), 1 = block comment (/* */).
+  uint8_t side;      // SYNQ_COMMENT_LEADING or SYNQ_COMMENT_TRAILING.
+  uint8_t layer_id;  // Layer the comment was tokenized from.
+                     // Currently always 0 (authored source): the main
+                     // tokenizer only records comments from layer 0.
+                     // The field is ABI-stable so future versions can
+                     // expose expansion-layer comments without a
+                     // breaking change; callers that only want authored
+                     // source comments should filter on `layer_id == 0`.
+  uint8_t _pad;      // reserved for future use; zero-initialized.
 } SyntaqliteComment;
 
 // Token-usage flags: set by the parser during disambiguation to record how
@@ -263,6 +271,46 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_token_trailing_comments(
     SyntaqliteParser* p,
     SyntaqliteTokenIdx token_idx,
     uint32_t* count);
+
+// Get the inclusive range of `p->tokens` indices covered by AST node
+// `node_id`.  The indices always refer to authored-source (layer-0)
+// tokens, the only kind of token that is pushed to `p->tokens`.
+//
+// Performance: O(1).  The range is recorded in a side table during
+// reduction, parallel to `node_extents`.
+//
+// Macro handling:
+//   - For a *registered* macro call: the call's layer-0 tokens (the
+//     name, `!`, `(`, args, `)`) are consumed as a unit by the macro
+//     machinery and are NOT pushed to `p->tokens`.  The expansion's
+//     body tokens are fed to Lemon with `token_idx == UINT32_MAX` and
+//     likewise do not appear.  A node produced entirely by registered
+//     expansion therefore has no layer-0 tokens in its reduce and this
+//     function returns 0.  Mixed nodes report only the surrounding
+//     layer-0 tokens.
+//   - For a *fallback* macro call (macro_fallback enabled, no lookup
+//     matched): the entire `name!(args)` is consumed as a single
+//     layer-0 TK_ID token, which is in `p->tokens` and shows up in
+//     ranges normally.
+//
+// Comments authored before / after a macro call are attached to
+// whichever layer-0 token the parser was about to push next (via
+// `owner_idx = len(p->tokens)` prediction), so they remain reachable
+// through `syntaqlite_token_{leading,trailing}_comments` on the
+// surrounding layer-0 tokens.
+//
+// Returns 1 and writes `*first_tok` / `*last_tok` on success.
+// Returns 0 when:
+//   - `syntaqlite_parser_set_collect_node_extents(p, 1)` was not enabled
+//     before the first reset(),
+//   - `node_id` is out of range or the null sentinel, or
+//   - the node reduced over zero authored-source tokens (pure epsilon
+//     or all content came from a registered macro expansion).
+SYNTAQLITE_API int32_t
+syntaqlite_node_token_range(SyntaqliteParser* p,
+                            uint32_t node_id,
+                            SyntaqliteTokenIdx* first_tok,
+                            SyntaqliteTokenIdx* last_tok);
 
 // Sentinel value for `SyntaqliteMacroRewrite::parent_idx` meaning "this
 // rewrite applies directly to the authored source" (i.e. the rewrite is
@@ -455,28 +503,6 @@ SYNTAQLITE_API const char* syntaqlite_parser_text(
 // input, this is the whole input.
 SYNTAQLITE_API const char* syntaqlite_parser_full_text(
     SyntaqliteParser* p,
-    SyntaqliteLength* out_len);
-
-// Return the tokenization buffer for `layer_id`.
-//
-// Layer 0 is the authored-source slice for the current statement
-// (identical to `syntaqlite_parser_text`).  Layers > 0 are macro
-// expansion buffers — the text that the expansion-layer tokenizer
-// consumed for that layer.
-//
-// Token entries in `syntaqlite_result_tokens` carry `_layer_id` and a
-// layer-local `offset`: to recover a token's byte text, call
-// `syntaqlite_parser_layer_text(p, tok._layer_id, &buf_len)` and slice
-// `[tok.offset, tok.offset + tok.length)` from the returned pointer.
-//
-// The returned pointer is valid until the next parser_next, reset, or
-// destroy on the same parser.  Returns NULL with `*out_len == 0` when
-// `layer_id` is out of range for the current statement, when no
-// statement has been bound (layer 0), or when macros are compiled out
-// (layer > 0).
-SYNTAQLITE_API const char* syntaqlite_parser_layer_text(
-    SyntaqliteParser* p,
-    uint32_t layer_id,
     SyntaqliteLength* out_len);
 
 // Post-expansion text for the current statement — materializes the

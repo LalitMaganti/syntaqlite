@@ -61,6 +61,9 @@ pub(crate) struct CComment {
     pub token_idx: u32,
     pub kind: CCommentKind,
     pub side: CCommentSide,
+    /// 0 = authored source; >0 = macro expansion layer id.
+    pub layer_id: u8,
+    pub _pad: u8,
 }
 
 #[expect(dead_code)] // C FFI mirrors — not yet consumed on the Rust side
@@ -509,6 +512,25 @@ impl CParser {
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
+    pub(crate) unsafe fn node_token_range(&self, node_id: u32) -> Option<(TokenIdx, TokenIdx)> {
+        let mut first: u32 = 0;
+        let mut last: u32 = 0;
+        // SAFETY: self is a valid, non-null CParser pointer; result
+        // accessors are valid after `next()` returns a non-DONE code.
+        let ok = unsafe {
+            syntaqlite_node_token_range(
+                std::ptr::from_ref::<Self>(self).cast_mut(),
+                node_id,
+                &raw mut first,
+                &raw mut last,
+            )
+        };
+        if ok == 0 {
+            return None;
+        }
+        Some((TokenIdx::from_raw(first), TokenIdx::from_raw(last)))
+    }
+
     pub(crate) unsafe fn span_expanded_text(
         &self,
         span: crate::ast::TextSpan,
@@ -742,6 +764,12 @@ unsafe extern "C" {
         token_idx: u32,
         count: *mut u32,
     ) -> *const CComment;
+    fn syntaqlite_node_token_range(
+        p: *mut CParser,
+        node_id: u32,
+        first_tok: *mut u32,
+        last_tok: *mut u32,
+    ) -> i32;
     fn syntaqlite_result_macro_count(p: *mut CParser) -> u32;
     fn syntaqlite_result_macro_rewrite_at(p: *mut CParser, idx: u32) -> CMacroRewrite;
     fn syntaqlite_macro_rewrite_arg_segment_count(p: *mut CParser, rewrite_idx: u32) -> u32;

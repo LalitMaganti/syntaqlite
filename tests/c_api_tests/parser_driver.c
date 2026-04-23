@@ -25,6 +25,8 @@
 //   dump_tokens           All tokens for current statement.
 //   dump_comments         All comments for current statement.
 //   token_comments <idx>  Leading + trailing comments for token idx.
+//   node_token_range <id> Inclusive token-index range covering node id
+//                         (needs extents).
 //   node_text <id>        Authored text slice for node (needs extents).
 //   error_info            error_msg/off/len/recovery_root dump.
 //   macro_fallback 0|1    Configure (must be before first reset).
@@ -97,8 +99,9 @@ static const char* parse_rc_str(int32_t rc) {
 static void print_comment(const SyntaqliteComment* c, const char* prefix, uint32_t i) {
   const char* side = c->side == SYNQ_COMMENT_LEADING ? "leading" : "trailing";
   const char* kind = c->kind == 0 ? "line" : "block";
-  printf("%s[%u] side=%s kind=%s off=%u len=%u token_idx=%u\n",
-         prefix, i, side, kind, c->offset, c->length, c->token_idx);
+  printf("%s[%u] side=%s kind=%s off=%u len=%u token_idx=%u layer=%u\n",
+         prefix, i, side, kind, c->offset, c->length, c->token_idx,
+         c->layer_id);
 }
 
 int main(void) {
@@ -209,6 +212,16 @@ int main(void) {
       for (uint32_t i = 0; i < lead; i++) print_comment(&lc[i], "lead", i);
       for (uint32_t i = 0; i < trail; i++) print_comment(&tc[i], "trail", i);
       printf(".\n");
+    } else if (strcmp(verb, "node_token_range") == 0) {
+      if (argc < 2) { printf("node_token_range err bad_arg\n"); continue; }
+      uint32_t id = (uint32_t)strtoul(argv[1], NULL, 10);
+      SyntaqliteTokenIdx first = 0, last = 0;
+      int32_t ok = syntaqlite_node_token_range(p, id, &first, &last);
+      if (!ok) {
+        printf("node_token_range id=%u none\n", id);
+      } else {
+        printf("node_token_range id=%u first=%u last=%u\n", id, first, last);
+      }
     } else if (strcmp(verb, "node_text") == 0) {
       if (argc < 2) { printf("node_text err bad_arg\n"); continue; }
       uint32_t id = (uint32_t)strtoul(argv[1], NULL, 10);

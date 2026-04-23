@@ -221,6 +221,18 @@ struct SyntaqliteParser {
   SYNQ_VEC(SyntaqliteComment) comments;
   SYNQ_VEC(SyntaqliteParserToken) tokens;
 
+  // Per-token comment index, built lazily on first call to
+  // `syntaqlite_token_{leading,trailing}_comments`.  Indexed by
+  // [0, ntokens] — slot `ntokens` is the orphan "statement-trailing
+  // with no owner" bucket (comments recorded as `side == LEADING`
+  // with `token_idx == ntokens`).  `UINT32_MAX` start means "no
+  // comments for this token/side".  Invalidated in `reset_stmt`.
+  SYNQ_VEC(uint32_t) comment_idx_leading_start;
+  SYNQ_VEC(uint32_t) comment_idx_leading_count;
+  SYNQ_VEC(uint32_t) comment_idx_trailing_start;
+  SYNQ_VEC(uint32_t) comment_idx_trailing_count;
+  uint32_t comment_index_built;
+
   // ── Macro expansion state (compiled out with SYNTAQLITE_OMIT_MACROS) ───
 #ifndef SYNTAQLITE_OMIT_MACROS
   SynqMacroState macro;

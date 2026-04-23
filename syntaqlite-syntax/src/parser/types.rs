@@ -94,6 +94,7 @@ pub struct Comment<'a> {
     length: StmtLen,
     token_idx: TokenIdx,
     side: CommentSide,
+    layer_id: u8,
 }
 
 impl<'a> Comment<'a> {
@@ -104,6 +105,7 @@ impl<'a> Comment<'a> {
         length: StmtLen,
         token_idx: TokenIdx,
         side: CommentSide,
+        layer_id: u8,
     ) -> Self {
         Comment {
             text,
@@ -112,6 +114,7 @@ impl<'a> Comment<'a> {
             length,
             token_idx,
             side,
+            layer_id,
         }
     }
 
@@ -146,6 +149,18 @@ impl<'a> Comment<'a> {
     pub fn side(&self) -> CommentSide {
         self.side
     }
+
+    /// Layer id of the buffer this comment was lexed from.
+    ///
+    /// `0` = the authored source (what the user wrote in the file).
+    /// `>0` = a macro expansion layer — the comment was tokenized from
+    /// the expanded body of a macro call, not from the user's source.
+    ///
+    /// Consumers rendering user source (formatters, linters operating
+    /// on authored text) typically want to filter to `layer_id == 0`.
+    pub fn layer_id(&self) -> u8 {
+        self.layer_id
+    }
 }
 
 /// Lightweight comment descriptor without a source text borrow.
@@ -159,6 +174,7 @@ pub struct CommentSpan {
     kind: CommentKind,
     token_idx: TokenIdx,
     side: CommentSide,
+    layer_id: u8,
 }
 
 impl CommentSpan {
@@ -188,12 +204,21 @@ impl CommentSpan {
         self.side
     }
 
+    /// Layer id of the buffer this comment was lexed from.
+    ///
+    /// `0` = the authored source; `>0` = a macro expansion layer.
+    /// See [`Comment::layer_id`] for filtering guidance.
+    pub fn layer_id(&self) -> u8 {
+        self.layer_id
+    }
+
     pub(super) fn new(
         offset: StmtOffset,
         length: StmtLen,
         kind: CommentKind,
         token_idx: TokenIdx,
         side: CommentSide,
+        layer_id: u8,
     ) -> Self {
         CommentSpan {
             offset,
@@ -201,6 +226,7 @@ impl CommentSpan {
             kind,
             token_idx,
             side,
+            layer_id,
         }
     }
 }

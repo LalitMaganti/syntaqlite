@@ -2395,4 +2395,196 @@ mod tests {
             ]
         );
     }
+
+    // ─── node_token_range + comment layer_id ────────────────────────────────
+    //
+    // `node_token_range` maps an AST node to the inclusive `[first,
+    // last]` indices of the entries in `p->tokens` that the parser
+    // shifted while reducing it.  Combined with
+    // `token_{leading,trailing}_comments`, this is enough for callers
+    // to ask "what comments sit at the boundaries of this node?".
+    // The `layer_id` field on `Comment` distinguishes authored-source
+    // comments from expansion-body ones when a caller needs it.
+
+    #[test]
+    fn node_token_range_root_covers_all_significant_tokens() {
+        // `SELECT 1 FROM t;` — root node's reduce covers SELECT..t
+        // (4 tokens); the terminating `;` is not part of the outermost
+        // reduction (see the existing `node_text` test that shows the
+        // extent stops at `t`).
+        let parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true),
+        );
+        let mut session = parser.parse("SELECT 1 FROM t;");
+        let stmt = ok_stmt!(session);
+
+        let root_id = stmt.erase().root_id();
+        let (first, last) = stmt
+            .erase()
+            .node_token_range(root_id)
+            .expect("root should have a token range");
+        assert_eq!(first.as_u32(), 0, "first token = SELECT");
+        assert_eq!(last.as_u32(), 3, "last token = t (not `;`)");
+    }
+
+    #[test]
+    fn node_token_range_returns_none_without_extents() {
+        // Extents disabled → the side table isn't populated → None.
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+        let mut session = parser.parse("SELECT 1;");
+        let stmt = ok_stmt!(session);
+        let root_id = stmt.erase().root_id();
+        assert!(stmt.erase().node_token_range(root_id).is_none());
+    }
+
+    // `AnyNodeId` has no public constructor for the null sentinel, so
+    // the null-node case is covered by the C-API tests
+    // (`parser.NodeTokenRangeParser.returns_none_for_null_or_out_of_range`)
+    // rather than here.
+
+    #[test]
+    fn node_token_range_compose_with_token_leading_comments() {
+        // Canonical composition: node_token_range gives you a token idx,
+        // leading_comments on that idx gives you the authored header.
+        let parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true),
+        );
+        let mut session = parser.parse("-- header\nSELECT 1 FROM t;");
+        let stmt = ok_stmt!(session);
+
+        let root_id = stmt.erase().root_id();
+        let (first, _last) = stmt.erase().node_token_range(root_id).expect("root range");
+
+        let leading: Vec<_> = stmt.leading_comments(first).collect();
+        assert_eq!(leading.len(), 1);
+        assert!(leading[0].text().contains("header"));
+        assert_eq!(leading[0].layer_id(), 0, "authored source → layer 0");
+    }
+
+    #[test]
+    fn comment_layer_id_is_zero_for_authored_source() {
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
+        let mut session = parser.parse("-- h\nSELECT 1 /* mid */ FROM t; -- tail");
+        let stmt = ok_stmt!(session);
+
+        let comments: Vec<_> = stmt.comments().collect();
+        assert!(!comments.is_empty());
+        for c in &comments {
+            assert_eq!(
+                c.layer_id(),
+                0,
+                "no macros involved → every comment is authored source",
+            );
+        }
+    }
+
+    #[test]
+    fn node_token_range_with_registered_macro_spans_expansion() {
+        // With a registered macro, the expansion's tokens DO land in
+        // `p->tokens` (see the token-stream unification PR).  The
+        // root's token range therefore covers the SELECT keyword plus
+        // the expansion's tokens — not just the authored-source
+        // layer-0 tokens around the call.
+        //
+        // Leading comments authored before the call attach to
+        // whichever token was the next push at record time — here,
+        // the expansion's first token at index 0 is SELECT (layer 0)
+        // because `SELECT` is shifted before the macro call is
+        // consumed.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true)
+                .with_macro_fallback(true),
+        );
+        let mut reg = TestMacroRegistry::new();
+        reg.register("id", &["x"], "$x");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "-- before\nSELECT id!(42);";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+
+        let root_id = stmt.erase().root_id();
+        let (first, last) = stmt
+            .erase()
+            .node_token_range(root_id)
+            .expect("root range even with macros");
+
+        // SELECT at 0; the expansion-layer `42` at 1.
+        assert_eq!(first.as_u32(), 0, "SELECT at index 0");
+        assert_eq!(
+            last.as_u32(),
+            1,
+            "expansion token `42` at index 1 is part of the reduce",
+        );
+
+        // `-- before` is authored source, attached by owner-index
+        // prediction to the first token (SELECT at idx 0).
+        let leading: Vec<_> = stmt.leading_comments(first).collect();
+        assert_eq!(leading.len(), 1);
+        assert!(leading[0].text().contains("before"));
+        assert_eq!(leading[0].layer_id(), 0);
+    }
+
+    #[test]
+    fn node_token_range_with_nested_macro_covers_both_layers() {
+        // Nested macros: mwrap!(mpass!(42)).  SELECT is at layer 0,
+        // the expansion `(42)` from mwrap produces layer-1 tokens,
+        // and the inner mpass expansion pushes `42` at layer 2.  All
+        // of them end up in `p->tokens`, so the root's range spans
+        // multiple entries.
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true)
+                .with_macro_fallback(true),
+        );
+        let mut reg = TestMacroRegistry::new();
+        reg.register("mwrap", &["body"], "($body)");
+        reg.register("mpass", &["v"], "$v");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let source = "SELECT mwrap!(mpass!(42));";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+
+        let root_id = stmt.erase().root_id();
+        let (first, last) = stmt.erase().node_token_range(root_id).expect("root range");
+        assert_eq!(first.as_u32(), 0, "SELECT at index 0");
+        assert!(
+            last.as_u32() > 0,
+            "root reduce must include expansion tokens (first={}, last={})",
+            first.as_u32(),
+            last.as_u32(),
+        );
+    }
+
+    #[test]
+    fn node_token_range_with_fallback_macro_spans_the_call_as_one_token() {
+        // With `macro_fallback` and no registered expansion, an
+        // unknown `name!(args)` is consumed as a single layer-0 TK_ID
+        // token.  That token appears in `p->tokens`, so nodes that
+        // include the call report a range covering it.
+        let parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true)
+                .with_macro_fallback(true),
+        );
+        let source = "SELECT foo!(a) FROM t;";
+        let mut session = parser.parse(source);
+        let stmt = ok_stmt!(session);
+
+        let root_id = stmt.erase().root_id();
+        let (first, last) = stmt.erase().node_token_range(root_id).expect("root range");
+        // Tokens: SELECT (0), foo!(a) (1, TK_ID via fallback),
+        // FROM (2), t (3), ; (4).  Root range = [0, 3] (up to `t`).
+        assert_eq!(first.as_u32(), 0);
+        assert_eq!(last.as_u32(), 3);
+    }
 }

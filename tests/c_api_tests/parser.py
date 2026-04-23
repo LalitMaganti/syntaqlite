@@ -226,14 +226,14 @@ collect_tokens ok
 reset ok len=37
 parse_one ok root=3 recovery=0
 comments count=2
-com[0] side=leading kind=line off=0 len=11 token_idx=0
-com[1] side=trailing kind=line off=22 len=15 token_idx=2
+com[0] side=leading kind=line off=0 len=11 token_idx=0 layer=0
+com[1] side=trailing kind=line off=22 len=15 token_idx=2 layer=0
 .
 token_comments idx=0 leading=1 trailing=0
-lead[0] side=leading kind=line off=0 len=11 token_idx=0
+lead[0] side=leading kind=line off=0 len=11 token_idx=0 layer=0
 .
 token_comments idx=2 leading=0 trailing=1
-trail[0] side=trailing kind=line off=22 len=15 token_idx=2
+trail[0] side=trailing kind=line off=22 len=15 token_idx=2 layer=0
 .
 """,
         )
@@ -255,7 +255,7 @@ collect_tokens ok
 reset ok len=21
 parse_one ok root=3 recovery=0
 comments count=1
-com[0] side=leading kind=block off=0 len=11 token_idx=0
+com[0] side=leading kind=block off=0 len=11 token_idx=0 layer=0
 .
 """,
         )
@@ -299,6 +299,169 @@ parse_one ok root=4 recovery=0
 node_text id=4 off=0 len=15
 SELECT 1 FROM t
 .
+""",
+        )
+
+
+class NodeTokenRangeParser(CApiTestSuite):
+    """Tests for `syntaqlite_node_token_range` — the primitive that maps an
+    AST node to the inclusive `[first, last]` token indices the parser fed
+    to Lemon while reducing it.
+
+    The primitive is intentionally low-level.  Callers compose it with
+    `token_leading_comments` / `token_trailing_comments` to answer "what
+    comments are attached to this node's boundaries?" and use the
+    `layer_id` field on each comment to filter authored-source comments
+    from expansion-body ones.
+    """
+
+    def test_returns_none_without_extents(self):
+        return CApiScenario(
+            input="""\
+create
+collect_tokens 1
+reset
+SELECT 1 FROM t;
+.
+parse_one
+node_token_range 4
+""",
+            expected="""\
+create ok
+collect_tokens ok
+reset ok len=16
+parse_one ok root=4 recovery=0
+node_token_range id=4 none
+""",
+        )
+
+    def test_returns_none_for_null_or_out_of_range(self):
+        return CApiScenario(
+            input="""\
+create
+collect_tokens 1
+collect_extents 1
+reset
+SELECT 1 FROM t;
+.
+parse_one
+node_token_range 4294967295
+node_token_range 99
+""",
+            expected="""\
+create ok
+collect_tokens ok
+collect_extents ok
+reset ok len=16
+parse_one ok root=4 recovery=0
+node_token_range id=4294967295 none
+node_token_range id=99 none
+""",
+        )
+
+    def test_root_covers_all_significant_tokens(self):
+        # Extent of the outermost SELECT reduction ends at `t`; the
+        # terminating `;` is not part of the reduction, so the range is
+        # [0, 3] (SELECT..t), not [0, 4] (SELECT..;).  This is what the
+        # existing `node_text` test at id=4 shows: the extent string is
+        # "SELECT 1 FROM t" without the `;`.
+        return CApiScenario(
+            input="""\
+create
+collect_tokens 1
+collect_extents 1
+reset
+SELECT 1 FROM t;
+.
+parse_one
+dump_tokens
+node_token_range 4
+""",
+            expected="""\
+create ok
+collect_tokens ok
+collect_extents ok
+reset ok len=16
+parse_one ok root=4 recovery=0
+tokens count=5
+tok[0] type=161 off=0 len=6 flags=0 layer=0
+tok[1] type=110 off=7 len=1 flags=0 layer=0
+tok[2] type=127 off=9 len=4 flags=0 layer=0
+tok[3] type=40 off=14 len=1 flags=1 layer=0
+tok[4] type=112 off=15 len=1 flags=0 layer=0
+.
+node_token_range id=4 first=0 last=3
+""",
+        )
+
+    def test_compose_with_token_comments(self):
+        # Demonstrate the canonical composition: node_token_range gives
+        # you a token index, and token_leading_comments / token_trailing_comments
+        # attach the per-token comments.  The returned comments carry
+        # layer=0 because they were authored in the source.
+        return CApiScenario(
+            input="""\
+create
+collect_tokens 1
+collect_extents 1
+reset
+-- preamble
+SELECT 1 FROM t; -- tail
+.
+parse_one
+node_token_range 4
+token_comments 0
+token_comments 4
+""",
+            expected="""\
+create ok
+collect_tokens ok
+collect_extents ok
+reset ok len=36
+parse_one ok root=4 recovery=0
+node_token_range id=4 first=0 last=3
+token_comments idx=0 leading=1 trailing=0
+lead[0] side=leading kind=line off=0 len=11 token_idx=0 layer=0
+.
+token_comments idx=4 leading=0 trailing=1
+trail[0] side=trailing kind=line off=29 len=7 token_idx=4 layer=0
+.
+""",
+        )
+
+    def test_macro_fallback_call_is_single_layer0_token(self):
+        # With macro_fallback enabled, an unregistered `name!(args)` is
+        # consumed as a single TK_ID token (still layer 0).  The
+        # enclosing SELECT's node_token_range simply spans those
+        # layer-0 tokens — no expansion layer involved here.
+        return CApiScenario(
+            input="""\
+create
+collect_tokens 1
+collect_extents 1
+macro_fallback 1
+reset
+SELECT foo!(a) FROM t;
+.
+parse_one
+dump_tokens
+node_token_range 4
+""",
+            expected="""\
+create ok
+collect_tokens ok
+collect_extents ok
+macro_fallback ok
+reset ok len=22
+parse_one ok root=4 recovery=0
+tokens count=5
+tok[0] type=161 off=0 len=6 flags=0 layer=0
+tok[1] type=40 off=7 len=7 flags=1 layer=0
+tok[2] type=127 off=15 len=4 flags=0 layer=0
+tok[3] type=40 off=20 len=1 flags=1 layer=0
+tok[4] type=112 off=21 len=1 flags=0 layer=0
+.
+node_token_range id=4 first=0 last=3
 """,
         )
 

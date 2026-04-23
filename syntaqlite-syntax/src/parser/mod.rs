@@ -996,8 +996,29 @@ impl<'a> AnyParsedStatement<'a> {
                 kind,
                 TokenIdx::from_raw(c.token_idx),
                 side,
+                c.layer_id,
             )
         })
+    }
+
+    /// The inclusive `[first, last]` token indices the parser fed to
+    /// Lemon while reducing AST node `id`.  Returns `None` when
+    /// [`ParserConfig::with_collect_node_extents`] was not enabled,
+    /// `id` is null / out-of-range, or the node reduced over zero
+    /// tokens (pure epsilon).
+    ///
+    /// O(1): the range is recorded in a side table during reduction.
+    ///
+    /// For macro-expanded nodes, the indices may point at layer-N
+    /// tokens.  Use [`Comment::layer_id`] to filter expansion-body
+    /// comments from authored-source comments when composing with
+    /// [`Self::leading_comments`] / [`Self::trailing_comments`].
+    pub fn node_token_range(&self, id: AnyNodeId) -> Option<(TokenIdx, TokenIdx)> {
+        if id.is_null() {
+            return None;
+        }
+        // SAFETY: self.raw is valid for 'a.
+        unsafe { self.raw.as_ref().node_token_range(id.0) }
     }
 
     /// Extract reflective node data (`tag` + field values) for `id`.
@@ -1362,6 +1383,12 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         raw.iter().map(move |c| ffi_comment(source, c))
     }
 
+    /// Inclusive `[first, last]` token indices covering AST node `id`.
+    /// See [`AnyParsedStatement::node_token_range`].
+    pub fn node_token_range(&self, id: AnyNodeId) -> Option<(TokenIdx, TokenIdx)> {
+        self.any.node_token_range(id)
+    }
+
     // ── Result accessors (mirror syntaqlite_result_*) ──────────────────────
 
     /// Human-readable error message, or `None`.
@@ -1442,6 +1469,7 @@ fn ffi_comment<'a>(source: &'a StmtText, c: &ffi::CComment) -> Comment<'a> {
         length,
         TokenIdx::from_raw(c.token_idx),
         side,
+        c.layer_id,
     )
 }
 

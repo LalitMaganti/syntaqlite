@@ -45,6 +45,17 @@ typedef struct SynqExtentRange {
   uint32_t root_end;
 } SynqExtentRange;
 
+// Inclusive token-index range covered by a node, parallel to
+// SynqExtentRange.  Drives O(1) node→token-range lookup in
+// `syntaqlite_node_token_range`.  Indices refer to entries in
+// `p->tokens`, which with the unified token-stream contains both
+// authored-source and macro-expansion tokens.  Sentinel
+// `(UINT32_MAX, UINT32_MAX)` marks a node with no recorded tokens.
+typedef struct SynqTokenRange {
+  uint32_t first_tok;
+  uint32_t last_tok;
+} SynqTokenRange;
+
 // Layer-local byte range used by per-node *expanded*-text tracking —
 // the bytes the tokenizer saw for a node, in whichever layer buffer
 // they live.
@@ -141,6 +152,12 @@ typedef struct SynqParseCtx {
   SYNQ_VEC(SynqExtentRange) node_extents;
   SYNQ_VEC(SynqNodeExpandedExtent) expanded_stack;
   SYNQ_VEC(SynqNodeExpandedExtent) node_expanded_extents;
+  // Token-index shadow stack, parallel to extent_stack.  Pushed on
+  // shift with the shifted token's `token_idx` (UINT32_MAX when
+  // collect_tokens is off); merged on reduce with min/max semantics;
+  // committed at the top per node in `synq_extent_record`.
+  SYNQ_VEC(SynqTokenRange) token_range_stack;
+  SYNQ_VEC(SynqTokenRange) node_token_ranges;
   uint32_t collect_node_extents;
   uint32_t macro_root_start;
   uint32_t macro_root_end;
@@ -200,6 +217,8 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   syntaqlite_vec_init(&ctx->node_extents);
   syntaqlite_vec_init(&ctx->expanded_stack);
   syntaqlite_vec_init(&ctx->node_expanded_extents);
+  syntaqlite_vec_init(&ctx->token_range_stack);
+  syntaqlite_vec_init(&ctx->node_token_ranges);
   ctx->collect_node_extents = 0;
   ctx->macro_root_start = 0;
   ctx->macro_root_end = 0;
@@ -216,6 +235,8 @@ static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
   syntaqlite_vec_free(&ctx->node_extents, ctx->mem);
   syntaqlite_vec_free(&ctx->expanded_stack, ctx->mem);
   syntaqlite_vec_free(&ctx->node_expanded_extents, ctx->mem);
+  syntaqlite_vec_free(&ctx->token_range_stack, ctx->mem);
+  syntaqlite_vec_free(&ctx->node_token_ranges, ctx->mem);
   syntaqlite_vec_free(&ctx->straddle_stack, ctx->mem);
   synq_arena_free(&ctx->ast, ctx->mem);
 }
@@ -228,6 +249,8 @@ static inline void synq_parse_ctx_clear(SynqParseCtx* ctx) {
   syntaqlite_vec_clear(&ctx->node_extents);
   syntaqlite_vec_clear(&ctx->expanded_stack);
   syntaqlite_vec_clear(&ctx->node_expanded_extents);
+  syntaqlite_vec_clear(&ctx->token_range_stack);
+  syntaqlite_vec_clear(&ctx->node_token_ranges);
   synq_arena_clear(&ctx->ast);
   ctx->macro_root_start = 0;
   ctx->macro_root_end = 0;
@@ -255,12 +278,16 @@ static inline void synq_extent_record(SynqParseCtx* ctx, uint32_t node_id) {
   SynqExtentRange top = syntaqlite_vec_at(&ctx->extent_stack, stack_len - 1);
   SynqNodeExpandedExtent exp_top =
       syntaqlite_vec_at(&ctx->expanded_stack, stack_len - 1);
+  SynqTokenRange tr_top =
+      syntaqlite_vec_at(&ctx->token_range_stack, stack_len - 1);
   if (node_id < ctx->node_extents.count) {
     syntaqlite_vec_at(&ctx->node_extents, node_id) = top;
     syntaqlite_vec_at(&ctx->node_expanded_extents, node_id) = exp_top;
+    syntaqlite_vec_at(&ctx->node_token_ranges, node_id) = tr_top;
   } else {
     syntaqlite_vec_push(&ctx->node_extents, top, ctx->mem);
     syntaqlite_vec_push(&ctx->node_expanded_extents, exp_top, ctx->mem);
+    syntaqlite_vec_push(&ctx->node_token_ranges, tr_top, ctx->mem);
   }
 }
 
