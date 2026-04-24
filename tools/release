@@ -1,0 +1,11 @@
+#!/bin/bash
+# Copyright 2026 The syntaqlite Authors. All rights reserved.
+# Licensed under the Apache License, Version 2.0.
+
+# Cut a release: bump version on a branch + PR, then (after merge) tag and
+# draft a GitHub release. See python/tools/release.py for details.
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(dirname "$SCRIPT_DIR")"
+
+exec python3 "$ROOT_DIR/python/tools/release.py" "$@"
