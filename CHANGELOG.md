@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.6
+
+**Rust API:**
+- Added `AnyParsedStatement::node_token_range(node_id)` returning the inclusive token range for any AST node. Ranges include expansion-layer tokens, so macro-produced nodes report meaningful ranges instead of collapsing to empty ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
+- Added `AnyParsedStatement::node_leading_comments` / `node_trailing_comments` as composition sugar over `node_token_range` + `token_{leading,trailing}_comments` for the common boundary-comment case ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
+- Token API is now layer-aware: offsets/lengths are typed as `LayerOffset` / `LayerLen`, `text()` resolves per-layer, and `stmt_range()` drills expansion tokens up to the authored call site in source coordinates. `layer_id()` is exposed on tokens ([#247](https://github.com/LalitMaganti/syntaqlite/pull/247)).
+- `Comment::layer_id` distinguishes authored-source comments (layer 0) from comments inside macro expansion bodies (layer > 0); `Comment::text()` resolves against the owning layer's buffer ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
+- Removed `AnyParsedStatement::token_spans()` — use `tokens().map(|t| t.stmt_range())` instead ([#247](https://github.com/LalitMaganti/syntaqlite/pull/247)).
+
+**C API:**
+- Added `syntaqlite_node_token_range(p, node_id, &first, &last)` for O(1) inclusive token ranges per AST node, and `syntaqlite_node_{leading,trailing}_comments` for boundary comments at the node level ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
+- `SyntaqliteComment.layer_id` now distinguishes authored-source comments from comments inside macro expansion bodies ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
+
+**Formatter:**
+- New block-comment classification rule: a block comment is trailing on the preceding token only if it is same-line with that token AND nothing else follows on the rest of the line; otherwise it is leading on the next token. Previously, any block comment same-line with the preceding token was treated as trailing, conflating "annotates the prev token" with "sits between two tokens". Line comments are unchanged ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
+- Fixed `/* c */ KEYWORD` losing its separator between the comment and the following keyword after the leading-comment drain cleared `pending` ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
+
 ## 0.5.5
 
 **C API:**
