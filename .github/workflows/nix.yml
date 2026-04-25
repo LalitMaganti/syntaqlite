@@ -19,6 +19,7 @@ on:
       - "integrations/claude-code/**"
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: nix-${{ github.ref }}
