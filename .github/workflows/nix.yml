@@ -1,0 +1,46 @@
+# Build the Nix flake on PRs and pushes to main.
+#
+# Advisory by design: continue-on-error makes the workflow-run status succeed
+# even when `nix flake check` fails, so failures surface in the PR check list
+# without gating merges. To promote this to a required check, drop
+# continue-on-error, add "nix flake check" to branch protection, and mirror the
+# job name in ci-docs-noop.yml.
+name: Nix
+
+on:
+  pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "web/docs/**"
+      - "*.md"
+      - "LICENSE"
+      - ".github/workflows/**"
+      - "!.github/workflows/nix.yml"
+      - "integrations/claude-code/**"
+  push:
+    branches: [main]
+
+concurrency:
+  group: nix-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flake-check:
+    name: nix flake check
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Cache /nix/store
+        uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock', 'Cargo.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 5G
+
+      - name: nix flake check
+        run: nix flake check --print-build-logs
