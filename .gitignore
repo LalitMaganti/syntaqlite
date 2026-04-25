@@ -62,3 +62,7 @@ sqlite-amalgamations/.build-cache
 /tests/comparison/results/
 
 .zed
+
+# Nix
+result
+result-*
