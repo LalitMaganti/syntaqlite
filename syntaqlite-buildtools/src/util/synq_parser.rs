@@ -207,6 +207,7 @@ pub(crate) enum Fmt {
     Line,
     SoftLine,
     HardLine,
+    Space,
     Group(Vec<Self>),
     Nest(Vec<Self>),
     IfSet {
@@ -232,7 +233,7 @@ pub(crate) enum Fmt {
         els: Option<Vec<Self>>,
     },
     Clause {
-        keyword: String,
+        keywords: Vec<String>,
         field: String,
     },
     Switch {
@@ -357,6 +358,8 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                 tokens.push(Token::Eq);
             }
             b'"' => {
+                let str_line = line;
+                let str_col = col;
                 advance(&mut i, &mut line, &mut col);
                 let mut s = String::new();
                 loop {
@@ -371,6 +374,13 @@ fn tokenize(input: &str) -> Result<Vec<Token>, String> {
                         Some(ch) => s.push(ch as char),
                         None => return Err(format!("{line}:{col}: unterminated string")),
                     }
+                }
+                if s.chars().any(char::is_whitespace) {
+                    return Err(format!(
+                        "{str_line}:{str_col}: keyword literal {s:?} contains whitespace; \
+                         split into separate single-word literals (use the `space` keyword \
+                         for explicit inter-token spaces). See issue #5."
+                    ));
                 }
                 tokens.push(Token::Str(s));
             }
@@ -931,6 +941,10 @@ impl Parser {
                     self.advance();
                     Ok(Fmt::HardLine)
                 }
+                "space" => {
+                    self.advance();
+                    Ok(Fmt::Space)
+                }
                 "group" => {
                     self.advance();
                     Ok(Fmt::Group(self.braced()?))
@@ -996,11 +1010,15 @@ impl Parser {
                 "clause" => {
                     self.advance();
                     self.expect(&Token::LParen)?;
-                    let kw = self.string()?;
+                    let mut keywords = vec![self.string()?];
                     self.expect(&Token::Comma)?;
+                    while let Token::Str(_) = self.peek() {
+                        keywords.push(self.string()?);
+                        self.expect(&Token::Comma)?;
+                    }
                     let field = self.ident()?;
                     self.expect(&Token::RParen)?;
-                    Ok(Fmt::Clause { keyword: kw, field })
+                    Ok(Fmt::Clause { keywords, field })
                 }
                 "switch" => {
                     self.advance();
@@ -1140,6 +1158,31 @@ mod tests {
             Item::Node { semantic, .. } => semantic,
             _ => panic!("expected Node"),
         }
+    }
+
+    #[test]
+    fn keyword_literal_with_whitespace_is_rejected() {
+        let err = parse_synq_file(r#"node Foo { field: inline X fmt { "ORDER BY" } }"#)
+            .expect_err("expected error");
+        assert!(
+            err.message.contains("contains whitespace"),
+            "unexpected error: {}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn keyword_literal_with_trailing_space_is_rejected() {
+        let err = parse_synq_file(r#"node Foo { field: inline X fmt { "FROM " } }"#)
+            .expect_err("expected error");
+        assert!(err.message.contains("contains whitespace"));
+    }
+
+    #[test]
+    fn keyword_literal_in_clause_with_whitespace_is_rejected() {
+        let err = parse_synq_file(r#"node Foo { x: index Y fmt { clause("ORDER BY", x) } }"#)
+            .expect_err("expected error");
+        assert!(err.message.contains("contains whitespace"));
     }
 
     #[test]

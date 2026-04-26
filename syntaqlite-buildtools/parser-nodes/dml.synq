@@ -12,15 +12,15 @@ node UpsertClause {
   update_where: index Expr
 
   fmt {
-    "ON CONFLICT"
-    if_set(columns) { group { " (" nest { softline child(columns) } softline ")" } }
-    if_set(target_where) { " WHERE " child(target_where) }
+    "ON" "CONFLICT"
+    if_set(columns) { group { space "(" nest { softline child(columns) } softline ")" } }
+    if_set(target_where) { space "WHERE" space child(target_where) }
     if_enum(action, UPDATE) {
-      " DO UPDATE"
+      space "DO" "UPDATE"
       clause("SET", setlist)
       clause("WHERE", update_where)
     } else {
-      " DO NOTHING"
+      space "DO" "NOTHING"
     }
   }
 }
@@ -47,17 +47,17 @@ node DeleteStmt {
   fmt {
     group {
       if_set(with_ctes) {
-        if_flag(with_recursive) { "WITH RECURSIVE" } else { "WITH" }
+        if_flag(with_recursive) { "WITH" "RECURSIVE" } else { "WITH" }
         group { nest { line child(with_ctes) } } hardline
       }
-      "DELETE FROM " child(table)
+      "DELETE" "FROM" space child(table)
       switch(index_hint) {
-        INDEXED { " INDEXED BY " span(index_name) }
-        NOT_INDEXED { " NOT INDEXED" }
+        INDEXED { space "INDEXED" "BY" space span(index_name) }
+        NOT_INDEXED { space "NOT" "INDEXED" }
       }
       clause("WHERE", where_clause)
-      clause("ORDER BY", orderby)
-      if_set(limit_clause) { line "LIMIT " child(limit_clause) }
+      clause("ORDER", "BY", orderby)
+      if_set(limit_clause) { line "LIMIT" space child(limit_clause) }
       if_set(returning) { line "RETURNING" group { nest { line child(returning) } } }
     }
   }
@@ -72,7 +72,7 @@ node SetClause {
     if_span(column) { span(column) } else {
       if_set(columns) { group { "(" nest { softline child(columns) } softline ")" } }
     }
-    " = " child_paren_list(value)
+    space "=" space child_paren_list(value)
   }
 }
 
@@ -97,27 +97,27 @@ node UpdateStmt {
   fmt {
     group {
       if_set(with_ctes) {
-        if_flag(with_recursive) { "WITH RECURSIVE" } else { "WITH" }
+        if_flag(with_recursive) { "WITH" "RECURSIVE" } else { "WITH" }
         group { nest { line child(with_ctes) } } hardline
       }
       "UPDATE"
       switch(conflict_action) {
-        ROLLBACK { " OR ROLLBACK" }
-        ABORT    { " OR ABORT" }
-        FAIL     { " OR FAIL" }
-        IGNORE   { " OR IGNORE" }
-        REPLACE  { " OR REPLACE" }
+        ROLLBACK { space "OR" "ROLLBACK" }
+        ABORT    { space "OR" "ABORT" }
+        FAIL     { space "OR" "FAIL" }
+        IGNORE   { space "OR" "IGNORE" }
+        REPLACE  { space "OR" "REPLACE" }
       }
-      " " child(table)
+      space child(table)
       switch(index_hint) {
-        INDEXED { " INDEXED BY " span(index_name) }
-        NOT_INDEXED { " NOT INDEXED" }
+        INDEXED { space "INDEXED" "BY" space span(index_name) }
+        NOT_INDEXED { space "NOT" "INDEXED" }
       }
       clause("SET", setlist)
-      if_set(from_clause) { line "FROM " child(from_clause) }
+      if_set(from_clause) { line "FROM" space child(from_clause) }
       clause("WHERE", where_clause)
-      clause("ORDER BY", orderby)
-      if_set(limit_clause) { line "LIMIT " child(limit_clause) }
+      clause("ORDER", "BY", orderby)
+      if_set(limit_clause) { line "LIMIT" space child(limit_clause) }
       if_set(returning) { line "RETURNING" group { nest { line child(returning) } } }
     }
   }
@@ -138,21 +138,21 @@ node InsertStmt {
   fmt {
     group {
       if_set(with_ctes) {
-        if_flag(with_recursive) { "WITH RECURSIVE" } else { "WITH" }
+        if_flag(with_recursive) { "WITH" "RECURSIVE" } else { "WITH" }
         group { nest { line child(with_ctes) } } hardline
       }
       if_enum(conflict_action, REPLACE) { "REPLACE" } else {
         "INSERT"
         switch(conflict_action) {
-          ROLLBACK { " OR ROLLBACK" }
-          ABORT    { " OR ABORT" }
-          FAIL     { " OR FAIL" }
-          IGNORE   { " OR IGNORE" }
+          ROLLBACK { space "OR" "ROLLBACK" }
+          ABORT    { space "OR" "ABORT" }
+          FAIL     { space "OR" "FAIL" }
+          IGNORE   { space "OR" "IGNORE" }
         }
       }
-      " INTO " child(table)
+      space "INTO" space child(table)
       if_set(columns) { group { "(" nest { softline child(columns) } softline ")" } }
-      if_set(source) { line child(source) } else { " DEFAULT VALUES" }
+      if_set(source) { line child(source) } else { space "DEFAULT" "VALUES" }
       if_set(upsert) { line child(upsert) }
       if_set(returning) { line "RETURNING" group { nest { line child(returning) } } }
     }

@@ -9,11 +9,11 @@ node PragmaStmt {
   pragma_form: inline PragmaForm
 
   fmt {
-    "PRAGMA "
+    "PRAGMA" space
     if_span(schema) { span(schema) "." }
     span(pragma_name)
     switch(pragma_form) {
-      EQ   { " = " span(value) }
+      EQ   { space "=" space span(value) }
       CALL { "(" span(value) ")" }
     }
   }
@@ -27,9 +27,9 @@ node AnalyzeOrReindexStmt {
   fmt {
     if_enum(kind, REINDEX) { "REINDEX" } else { "ANALYZE" }
     if_span(schema) {
-      " " span(schema) "." span(target_name)
+      space span(schema) "." span(target_name)
     } else {
-      if_span(target_name) { " " span(target_name) }
+      if_span(target_name) { space span(target_name) }
     }
   }
 }
@@ -40,15 +40,15 @@ node AttachStmt {
   key: index Expr
 
   fmt {
-    "ATTACH " child(filename) " AS " child(db_name)
-    if_set(key) { " KEY " child(key) }
+    "ATTACH" space child(filename) space "AS" space child(db_name)
+    if_set(key) { space "KEY" space child(key) }
   }
 }
 
 node DetachStmt {
   db_name: index Expr
 
-  fmt { "DETACH " child(db_name) }
+  fmt { "DETACH" space child(db_name) }
 }
 
 node VacuumStmt {
@@ -57,8 +57,8 @@ node VacuumStmt {
 
   fmt {
     "VACUUM"
-    if_span(schema) { " " span(schema) }
-    if_set(filename) { " INTO " child(filename) }
+    if_span(schema) { space span(schema) }
+    if_set(filename) { space "INTO" space child(filename) }
   }
 }
 
@@ -67,7 +67,7 @@ node ExplainStmt {
   stmt: index Stmt
 
   fmt {
-    if_enum(explain_mode, QUERY_PLAN) { "EXPLAIN QUERY PLAN" } else { "EXPLAIN" }
+    if_enum(explain_mode, QUERY_PLAN) { "EXPLAIN" "QUERY" "PLAN" } else { "EXPLAIN" }
     hardline child(stmt)
   }
 }
@@ -84,14 +84,14 @@ node CreateIndexStmt {
   fmt {
     group {
       "CREATE"
-      if_flag(is_unique) { " UNIQUE" }
-      " INDEX"
-      if_flag(if_not_exists) { " IF NOT EXISTS" }
-      " "
+      if_flag(is_unique) { space "UNIQUE" }
+      space "INDEX"
+      if_flag(if_not_exists) { space "IF" "NOT" "EXISTS" }
+      space
       if_span(schema) { span(schema) "." }
       span(index_name)
-      " ON " span(table_name)
-      group { " (" nest { softline child(columns) } softline ")" }
+      space "ON" space span(table_name)
+      group { space "(" nest { softline child(columns) } softline ")" }
       clause("WHERE", where_clause)
     }
   }
@@ -110,10 +110,10 @@ node CreateViewStmt {
   fmt {
     group {
       "CREATE"
-      if_flag(is_temp) { " TEMP" }
-      " VIEW"
-      if_flag(if_not_exists) { " IF NOT EXISTS" }
-      " "
+      if_flag(is_temp) { space "TEMP" }
+      space "VIEW"
+      if_flag(if_not_exists) { space "IF" "NOT" "EXISTS" }
+      space
       if_span(schema) { span(schema) "." }
       span(view_name)
       if_set(column_names) {

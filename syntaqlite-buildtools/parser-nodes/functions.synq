@@ -13,13 +13,13 @@ node FunctionCall {
     span(func_name)
     group {
       "("
-      if_flag(flags.distinct) { "DISTINCT " }
+      if_flag(flags.distinct) { "DISTINCT" space }
       if_flag(flags.star) { "*" } else {
         if_set(args) { nest { softline child(args) } }
       }
       softline ")"
     }
-    if_set(filter_clause) { group { " FILTER (" nest { softline "WHERE " child(filter_clause) } softline ")" } }
-    if_set(over_clause) { " OVER " child(over_clause) }
+    if_set(filter_clause) { group { space "FILTER" space "(" nest { softline "WHERE" space child(filter_clause) } softline ")" } }
+    if_set(over_clause) { space "OVER" space child(over_clause) }
   }
 }

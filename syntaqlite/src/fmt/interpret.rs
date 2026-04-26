@@ -217,20 +217,7 @@ pub(super) fn interpret_core<'a>(
                             cctx.peek_keyword_tokens(kw_text, source)
                         {
                             let drain = cctx.drain_before(tok_offset, source, arena);
-                            if word_count > 1 {
-                                // For multi-word keywords, only flush drain_before
-                                // if it found comments; otherwise defer pending to
-                                // drain_keyword_interior to avoid a double hardline
-                                // before interior comments.
-                                if drain.trailing != NIL_DOC || drain.leading != NIL_DOC {
-                                    flush_drain(&drain, &mut pending, &mut running, arena);
-                                }
-                                let interior =
-                                    cctx.drain_keyword_interior(word_count, source, arena);
-                                flush_drain(&interior, &mut pending, &mut running, arena);
-                            } else {
-                                flush_drain(&drain, &mut pending, &mut running, arena);
-                            }
+                            flush_drain(&drain, &mut pending, &mut running, arena);
                             cctx.advance_token_cursor(word_count);
                         } else {
                             running = arena.cat(running, pending);
@@ -560,16 +547,7 @@ pub(super) fn interpret_core<'a>(
                             cctx.peek_keyword_tokens(kw_text, source)
                         {
                             let drain = cctx.drain_before(tok_offset, source, arena);
-                            if word_count > 1 {
-                                if drain.trailing != NIL_DOC || drain.leading != NIL_DOC {
-                                    flush_drain(&drain, &mut pending, &mut running, arena);
-                                }
-                                let interior =
-                                    cctx.drain_keyword_interior(word_count, source, arena);
-                                flush_drain(&interior, &mut pending, &mut running, arena);
-                            } else {
-                                flush_drain(&drain, &mut pending, &mut running, arena);
-                            }
+                            flush_drain(&drain, &mut pending, &mut running, arena);
                             cctx.advance_token_cursor(word_count);
                         } else {
                             running = arena.cat(running, pending);

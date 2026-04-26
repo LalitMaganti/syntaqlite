@@ -13,21 +13,21 @@ node ForeignKeyClause {
   is_deferred: inline Bool
 
   fmt {
-    if_span(ref_table) { "REFERENCES " span(ref_table) }
+    if_span(ref_table) { "REFERENCES" space span(ref_table) }
     if_set(ref_columns) { group { "(" nest { softline child(ref_columns) } softline ")" } }
     switch(on_delete) {
-      SET_NULL    { " ON DELETE SET NULL" }
-      SET_DEFAULT { " ON DELETE SET DEFAULT" }
-      CASCADE     { " ON DELETE CASCADE" }
-      RESTRICT    { " ON DELETE RESTRICT" }
+      SET_NULL    { space "ON" "DELETE" "SET" "NULL" }
+      SET_DEFAULT { space "ON" "DELETE" "SET" "DEFAULT" }
+      CASCADE     { space "ON" "DELETE" "CASCADE" }
+      RESTRICT    { space "ON" "DELETE" "RESTRICT" }
     }
     switch(on_update) {
-      SET_NULL    { " ON UPDATE SET NULL" }
-      SET_DEFAULT { " ON UPDATE SET DEFAULT" }
-      CASCADE     { " ON UPDATE CASCADE" }
-      RESTRICT    { " ON UPDATE RESTRICT" }
+      SET_NULL    { space "ON" "UPDATE" "SET" "NULL" }
+      SET_DEFAULT { space "ON" "UPDATE" "SET" "DEFAULT" }
+      CASCADE     { space "ON" "UPDATE" "CASCADE" }
+      RESTRICT    { space "ON" "UPDATE" "RESTRICT" }
     }
-    if_flag(is_deferred) { if_span(ref_table) { " " } "DEFERRABLE INITIALLY DEFERRED" }
+    if_flag(is_deferred) { if_span(ref_table) { space } "DEFERRABLE" "INITIALLY" "DEFERRED" }
   }
 }
 
@@ -45,47 +45,47 @@ node ColumnConstraint {
   fk_clause: index ForeignKeyClause
 
   fmt {
-    if_span(constraint_name) { "CONSTRAINT " span(constraint_name) " " }
+    if_span(constraint_name) { "CONSTRAINT" space span(constraint_name) space }
     switch(kind) {
       PRIMARY_KEY {
-        "PRIMARY KEY"
-        if_enum(sort_order, DESC) { " DESC" }
-        if_flag(is_autoincrement) { " AUTOINCREMENT" }
+        "PRIMARY" "KEY"
+        if_enum(sort_order, DESC) { space "DESC" }
+        if_flag(is_autoincrement) { space "AUTOINCREMENT" }
         switch(onconf) {
-          ROLLBACK { " ON CONFLICT ROLLBACK" }
-          ABORT    { " ON CONFLICT ABORT" }
-          FAIL     { " ON CONFLICT FAIL" }
-          IGNORE   { " ON CONFLICT IGNORE" }
-          REPLACE  { " ON CONFLICT REPLACE" }
+          ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
+          ABORT    { space "ON" "CONFLICT" "ABORT" }
+          FAIL     { space "ON" "CONFLICT" "FAIL" }
+          IGNORE   { space "ON" "CONFLICT" "IGNORE" }
+          REPLACE  { space "ON" "CONFLICT" "REPLACE" }
         }
       }
       NOT_NULL {
-        "NOT NULL"
+        "NOT" "NULL"
         switch(onconf) {
-          ROLLBACK { " ON CONFLICT ROLLBACK" }
-          ABORT    { " ON CONFLICT ABORT" }
-          FAIL     { " ON CONFLICT FAIL" }
-          IGNORE   { " ON CONFLICT IGNORE" }
-          REPLACE  { " ON CONFLICT REPLACE" }
+          ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
+          ABORT    { space "ON" "CONFLICT" "ABORT" }
+          FAIL     { space "ON" "CONFLICT" "FAIL" }
+          IGNORE   { space "ON" "CONFLICT" "IGNORE" }
+          REPLACE  { space "ON" "CONFLICT" "REPLACE" }
         }
       }
       UNIQUE {
         "UNIQUE"
         switch(onconf) {
-          ROLLBACK { " ON CONFLICT ROLLBACK" }
-          ABORT    { " ON CONFLICT ABORT" }
-          FAIL     { " ON CONFLICT FAIL" }
-          IGNORE   { " ON CONFLICT IGNORE" }
-          REPLACE  { " ON CONFLICT REPLACE" }
+          ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
+          ABORT    { space "ON" "CONFLICT" "ABORT" }
+          FAIL     { space "ON" "CONFLICT" "FAIL" }
+          IGNORE   { space "ON" "CONFLICT" "IGNORE" }
+          REPLACE  { space "ON" "CONFLICT" "REPLACE" }
         }
       }
       CHECK     { group { "CHECK(" nest { softline child(check_expr) } softline ")" } }
-      DEFAULT   { group { "DEFAULT (" nest { softline child(default_expr) } softline ")" } }
-      COLLATE   { "COLLATE " span(collation_name) }
+      DEFAULT   { group { "DEFAULT" space "(" nest { softline child(default_expr) } softline ")" } }
+      COLLATE   { "COLLATE" space span(collation_name) }
       REFERENCES { child(fk_clause) }
       GENERATED {
-        group { "AS (" nest { softline child(generated_expr) } softline ")" }
-        if_enum(generated_storage, STORED) { " STORED" }
+        group { "AS" space "(" nest { softline child(generated_expr) } softline ")" }
+        if_enum(generated_storage, STORED) { space "STORED" }
       }
       NULL { "NULL" }
     }
@@ -107,7 +107,7 @@ node ColumnDef {
   fmt {
     group {
       child(column_name)
-      if_span(type_name) { " " span(type_name) }
+      if_span(type_name) { space span(type_name) }
       if_set(constraints) { nest { line child(constraints) } }
     }
   }
@@ -129,30 +129,30 @@ node TableConstraint {
   fk_clause: index ForeignKeyClause
 
   fmt {
-    if_span(constraint_name) { "CONSTRAINT " span(constraint_name) " " }
+    if_span(constraint_name) { "CONSTRAINT" space span(constraint_name) space }
     switch(kind) {
       PRIMARY_KEY {
-        group { "PRIMARY KEY(" nest { softline child(pk_columns) } softline ")" }
+        group { "PRIMARY" "KEY(" nest { softline child(pk_columns) } softline ")" }
         switch(onconf) {
-          ROLLBACK { " ON CONFLICT ROLLBACK" }
-          ABORT    { " ON CONFLICT ABORT" }
-          FAIL     { " ON CONFLICT FAIL" }
-          IGNORE   { " ON CONFLICT IGNORE" }
-          REPLACE  { " ON CONFLICT REPLACE" }
+          ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
+          ABORT    { space "ON" "CONFLICT" "ABORT" }
+          FAIL     { space "ON" "CONFLICT" "FAIL" }
+          IGNORE   { space "ON" "CONFLICT" "IGNORE" }
+          REPLACE  { space "ON" "CONFLICT" "REPLACE" }
         }
       }
       UNIQUE {
         group { "UNIQUE(" nest { softline child(pk_columns) } softline ")" }
         switch(onconf) {
-          ROLLBACK { " ON CONFLICT ROLLBACK" }
-          ABORT    { " ON CONFLICT ABORT" }
-          FAIL     { " ON CONFLICT FAIL" }
-          IGNORE   { " ON CONFLICT IGNORE" }
-          REPLACE  { " ON CONFLICT REPLACE" }
+          ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
+          ABORT    { space "ON" "CONFLICT" "ABORT" }
+          FAIL     { space "ON" "CONFLICT" "FAIL" }
+          IGNORE   { space "ON" "CONFLICT" "IGNORE" }
+          REPLACE  { space "ON" "CONFLICT" "REPLACE" }
         }
       }
       CHECK       { group { "CHECK(" nest { softline child(check_expr) } softline ")" } }
-      FOREIGN_KEY { group { "FOREIGN KEY(" nest { softline child(fk_columns) } softline ")" } " " child(fk_clause) }
+      FOREIGN_KEY { group { "FOREIGN" "KEY(" nest { softline child(fk_columns) } softline ")" } space child(fk_clause) }
     }
   }
 }
@@ -177,10 +177,10 @@ node CreateTableStmt {
   fmt {
     group {
       "CREATE"
-      if_flag(is_temp) { " TEMP" }
-      " TABLE"
-      if_flag(if_not_exists) { " IF NOT EXISTS" }
-      " "
+      if_flag(is_temp) { space "TEMP" }
+      space "TABLE"
+      if_flag(if_not_exists) { space "IF" "NOT" "EXISTS" }
+      space
       if_span(schema) { span(schema) "." }
       span(table_name)
       if_set(columns) {
@@ -194,10 +194,10 @@ node CreateTableStmt {
       }
       if_set(as_select) { line "AS" }
       if_flag(flags.without_rowid) {
-        " WITHOUT ROWID"
+        space "WITHOUT" "ROWID"
         if_flag(flags.strict) { "," }
       }
-      if_flag(flags.strict) { " STRICT" }
+      if_flag(flags.strict) { space "STRICT" }
     }
     if_set(as_select) { hardline child(as_select) }
   }

@@ -11,9 +11,9 @@ node CteDefinition {
   fmt {
     span(cte_name)
     if_set(columns) { group { "(" nest { softline child(columns) } softline ")" } }
-    " AS "
-    if_enum(materialized, MATERIALIZED) { "MATERIALIZED " }
-    if_enum(materialized, NOT_MATERIALIZED) { "NOT MATERIALIZED " }
+    space "AS" space
+    if_enum(materialized, MATERIALIZED) { "MATERIALIZED" space }
+    if_enum(materialized, NOT_MATERIALIZED) { "NOT" "MATERIALIZED" space }
     group { "(" nest { softline child(select) } softline ")" }
   }
 }
@@ -28,7 +28,7 @@ node WithClause {
   semantic { cte_scope(recursive: recursive, bindings: ctes, body: select) }
 
   fmt {
-    if_flag(recursive) { "WITH RECURSIVE" } else { "WITH" }
+    if_flag(recursive) { "WITH" "RECURSIVE" } else { "WITH" }
     if_set(ctes) { group { nest { line child(ctes) } } }
     hardline child(select)
   }
