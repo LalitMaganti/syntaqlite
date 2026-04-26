@@ -76,9 +76,11 @@ const SUPPRESSED_WARNINGS_CXX_ONLY: &[&str] = &["-Wzero-as-null-pointer-constant
 /// the header from a `.cpp` driver).  The generator emits C-idiomatic
 /// implicit conversions that are safe in context but would require
 /// pervasive casts to quiet strict C++; suppress them consistent with the
-/// rest of this list.  Older clangs don't know these flag names — the
-/// consumer's own `-Wno-unknown-warning-option` handles that.
+/// rest of this list. We ignore `-Wunknown-warning-option` first inside
+/// the clang block so older clangs that don't know these flag names
+/// silently skip them instead of erroring under `-Werror`.
 const SUPPRESSED_WARNINGS_CLANG_ONLY: &[&str] = &[
+    "-Wunknown-warning-option",
     "-Wextra-semi-stmt",
     "-Wold-style-cast",
     "-Wmissing-variable-declarations",

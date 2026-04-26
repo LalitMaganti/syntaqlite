@@ -384,6 +384,10 @@ fn compile_one(
         Fmt::Line => ops.push(op0(opcodes::LINE)),
         Fmt::SoftLine => ops.push(op0(opcodes::SOFTLINE)),
         Fmt::HardLine => ops.push(op0(opcodes::HARDLINE)),
+        Fmt::Space => {
+            let sid = ctx.strings.intern(" ");
+            ops.push(opab(opcodes::KEYWORD, 0, sid));
+        }
         Fmt::Group(body) => {
             ops.push(op0(opcodes::GROUP_START));
             compile_seq(body, ctx, ops)?;
@@ -449,15 +453,17 @@ fn compile_one(
         Fmt::IfSpan { field, then, els } => {
             compile_field_conditional(opcodes::IF_SPAN, field, 0, then, els.as_deref(), ctx, ops)?;
         }
-        Fmt::Clause { keyword, field } => {
+        Fmt::Clause { keywords, field } => {
             let field_idx = idx_u8(ctx.field(field)?.idx)?;
+            let mut body: Vec<Fmt> = Vec::with_capacity(keywords.len() + 2);
+            body.push(Fmt::Line);
+            for kw in keywords {
+                body.push(Fmt::Text(kw.clone()));
+            }
+            body.push(Fmt::Nest(vec![Fmt::Line, Fmt::Child(field.clone())]));
             compile_conditional(
                 opabc(opcodes::IF_SET, field_idx, 0, 0),
-                &[
-                    Fmt::Line,
-                    Fmt::Text(keyword.clone()),
-                    Fmt::Nest(vec![Fmt::Line, Fmt::Child(field.clone())]),
-                ],
+                &body,
                 None,
                 ctx,
                 ops,
@@ -1154,7 +1160,7 @@ mod tests {
                 type_name: "Expr".into(),
             }],
             fmt: Some(vec![Fmt::Clause {
-                keyword: "FROM".into(),
+                keywords: vec!["FROM".into()],
                 field: "target".into(),
             }]),
             semantic: None,

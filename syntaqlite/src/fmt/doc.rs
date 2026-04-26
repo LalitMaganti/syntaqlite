@@ -293,6 +293,9 @@ impl<'a> DocArena<'a> {
                 Doc::Text(s) => {
                     just_emitted_comment_break = false;
                     last_emitted_break = false;
+                    if maybe_emit_auto_space(s.as_bytes().first().copied(), out) {
+                        pos += 1;
+                    }
                     out.push_str(s);
                     pos += s.len();
                 }
@@ -300,6 +303,9 @@ impl<'a> DocArena<'a> {
                 Doc::Keyword(s) => {
                     just_emitted_comment_break = false;
                     last_emitted_break = false;
+                    if maybe_emit_auto_space(s.as_bytes().first().copied(), out) {
+                        pos += 1;
+                    }
                     push_keyword(s, keyword_case, out);
                     pos += s.len();
                 }
@@ -407,6 +413,10 @@ impl<'a> DocArena<'a> {
         let mut remaining = remaining;
         scratch.clear();
         scratch.push((indent, doc_id));
+        // Tracks the trailing byte of the most recent atomic emission so
+        // we can mirror the renderer's auto-spacer when budgeting width
+        // (renderer inserts 1 byte between two adjacent word-class atoms).
+        let mut last_byte: Option<u8> = None;
 
         while let Some((indent, doc_id)) = scratch.pop() {
             if remaining < 0 {
@@ -418,10 +428,21 @@ impl<'a> DocArena<'a> {
 
             match self.get(doc_id) {
                 Doc::Text(s) | Doc::Keyword(s) => {
+                    let bytes = s.as_bytes();
+                    if let (Some(&first), Some(prev)) = (bytes.first(), last_byte)
+                        && is_word_byte(prev)
+                        && is_word_byte(first)
+                    {
+                        remaining -= 1;
+                    }
                     remaining -= usize_to_i32(s.len());
+                    if let Some(&last) = bytes.last() {
+                        last_byte = Some(last);
+                    }
                 }
                 Doc::Line => {
                     remaining -= 1;
+                    last_byte = Some(b' ');
                 }
                 Doc::SoftLine | Doc::LineSuffix { .. } => {}
                 Doc::HardLine | Doc::CommentBreak | Doc::BreakParent => {
@@ -547,6 +568,9 @@ impl Default for RenderBuffers {
 const SPACES: &str = "                                                                                                                                ";
 
 fn emit_newline(indent: i32, out: &mut String, pos: &mut usize) {
+    while out.ends_with(' ') {
+        out.pop();
+    }
     out.push('\n');
     let spaces = non_negative_i32_to_usize(indent.max(0));
     let mut remaining = spaces;
@@ -556,6 +580,40 @@ fn emit_newline(indent: i32, out: &mut String, pos: &mut usize) {
         remaining -= chunk;
     }
     *pos = spaces;
+}
+
+/// Insert a single space when two adjacent word-class atoms (keyword/text)
+/// would otherwise butt up against each other in the output. Returns
+/// `true` if a space was emitted so the caller can advance `pos`.
+///
+/// "Word-class" here is ASCII alphanumeric + `_`, matching SQL identifier
+/// rules. Punctuation transitions (e.g. `FILTER` followed by `(`) are
+/// untouched: those need an explicit `line` in the .synq fmt block.
+///
+/// While keyword literals still carry baked-in whitespace this is a
+/// no-op (the previous emission ends in ' '). Once those spaces are
+/// stripped (issue #5) the auto-spacer takes over inter-token spacing.
+#[inline]
+fn maybe_emit_auto_space(next_first: Option<u8>, out: &mut String) -> bool {
+    let Some(first) = next_first else {
+        return false;
+    };
+    if !is_word_byte(first) {
+        return false;
+    }
+    let Some(&last) = out.as_bytes().last() else {
+        return false;
+    };
+    if !is_word_byte(last) {
+        return false;
+    }
+    out.push(' ');
+    true
+}
+
+#[inline]
+fn is_word_byte(b: u8) -> bool {
+    b.is_ascii_alphanumeric() || b == b'_'
 }
 
 /// Push a keyword string with the appropriate casing to the output.
@@ -628,10 +686,16 @@ fn render_inline(
         }
         match arena.get(doc_id) {
             Doc::Text(s) => {
+                if maybe_emit_auto_space(s.as_bytes().first().copied(), out) {
+                    *pos += 1;
+                }
                 out.push_str(s);
                 *pos += s.len();
             }
             Doc::Keyword(s) => {
+                if maybe_emit_auto_space(s.as_bytes().first().copied(), out) {
+                    *pos += 1;
+                }
                 push_keyword(s, keyword_case, out);
                 *pos += s.len();
             }
@@ -787,6 +851,54 @@ mod tests {
     fn nil_doc_renders_empty() {
         let arena = DocArena::new();
         assert_eq!(arena.render(NIL_DOC, &cfg()), "");
+    }
+
+    #[test]
+    fn auto_space_between_adjacent_words() {
+        let mut arena = DocArena::new();
+        let a = arena.keyword("ORDER");
+        let b = arena.keyword("BY");
+        let doc = arena.cat(a, b);
+        assert_eq!(arena.render(doc, &cfg()), "ORDER BY");
+    }
+
+    #[test]
+    fn auto_space_skipped_when_separator_present() {
+        let mut arena = DocArena::new();
+        let a = arena.keyword("ORDER");
+        let sp = arena.line();
+        let b = arena.keyword("BY");
+        let inner = arena.cats(&[a, sp, b]);
+        let doc = arena.group(inner);
+        assert_eq!(arena.render(doc, &cfg()), "ORDER BY");
+    }
+
+    #[test]
+    fn auto_space_skipped_around_punctuation() {
+        let mut arena = DocArena::new();
+        let kw = arena.keyword("FILTER");
+        let lp = arena.text("(");
+        let doc = arena.cat(kw, lp);
+        assert_eq!(arena.render(doc, &cfg()), "FILTER(");
+    }
+
+    #[test]
+    fn auto_space_handles_text_and_keyword() {
+        let mut arena = DocArena::new();
+        let t = arena.text("foo");
+        let k = arena.keyword("AS");
+        let doc = arena.cat(t, k);
+        assert_eq!(arena.render(doc, &cfg()), "foo AS");
+    }
+
+    #[test]
+    fn auto_space_no_space_after_newline() {
+        let mut arena = DocArena::new();
+        let a = arena.text("aaaa");
+        let nl = arena.hardline();
+        let b = arena.keyword("BY");
+        let doc = arena.cats(&[a, nl, b]);
+        assert_eq!(arena.render(doc, &cfg()), "aaaa\nBY");
     }
 
     #[test]

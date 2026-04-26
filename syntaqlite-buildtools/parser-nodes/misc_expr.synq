@@ -11,5 +11,5 @@ node CollateExpr {
   fmt_precedence(9)
   fmt_group(0)
 
-  fmt { child_prec_fixed(expr) " COLLATE " span(collation) }
+  fmt { child_prec_fixed(expr) space "COLLATE" space span(collation) }
 }

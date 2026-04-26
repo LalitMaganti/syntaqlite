@@ -112,21 +112,6 @@ impl CommentCtx {
         self.drain_impl(before, source, arena, false)
     }
 
-    /// Drain comments between the tokens of a multi-word keyword (e.g.,
-    /// between LEFT and JOIN in "LEFT JOIN"). Unlike `drain_before`, this
-    /// skips the `has_non_comment_text` guard because the intervening tokens
-    /// belong to the same keyword being output.
-    pub(crate) fn drain_keyword_interior<'a>(
-        &self,
-        word_count: usize,
-        source: &'a StmtText,
-        arena: &mut DocArena<'a>,
-    ) -> DrainResult {
-        let first_idx = self.token_cursor.get();
-        let end = self.tokens[first_idx + word_count - 1].end();
-        self.drain_impl(end, source, arena, true)
-    }
-
     #[expect(clippy::too_many_lines)]
     fn drain_impl<'a>(
         &self,

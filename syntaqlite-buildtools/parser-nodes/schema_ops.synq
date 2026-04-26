@@ -20,12 +20,12 @@ node DropStmt {
   target: index QualifiedName
 
   fmt {
-    "DROP "
+    "DROP" space
     enum_display(object_type, {
       TABLE="TABLE" INDEX="INDEX" VIEW="VIEW" TRIGGER="TRIGGER"
     })
-    if_flag(if_exists) { " IF EXISTS" }
-    " " child(target)
+    if_flag(if_exists) { space "IF" "EXISTS" }
+    space child(target)
   }
 }
 
@@ -36,13 +36,13 @@ node AlterTableStmt {
   old_name: index Name
 
   fmt {
-    "ALTER TABLE "
-    if_set(target) { child(target) " " }
+    "ALTER" "TABLE" space
+    if_set(target) { child(target) space }
     switch(op) {
-      RENAME_TABLE  { "RENAME TO " child(new_name) }
-      RENAME_COLUMN { "RENAME COLUMN " child(old_name) " TO " child(new_name) }
-      DROP_COLUMN   { "DROP COLUMN " child(old_name) }
-      ADD_COLUMN    { "ADD COLUMN " child(old_name) }
+      RENAME_TABLE  { "RENAME" "TO" space child(new_name) }
+      RENAME_COLUMN { "RENAME" "COLUMN" space child(old_name) space "TO" space child(new_name) }
+      DROP_COLUMN   { "DROP" "COLUMN" space child(old_name) }
+      ADD_COLUMN    { "ADD" "COLUMN" space child(old_name) }
     }
   }
 }
@@ -55,9 +55,8 @@ node TransactionStmt {
     switch(op) {
       BEGIN {
         "BEGIN"
-        enum_display(trans_type, {
-          IMMEDIATE=" IMMEDIATE" EXCLUSIVE=" EXCLUSIVE"
-        })
+        if_enum(trans_type, IMMEDIATE) { space "IMMEDIATE" }
+        if_enum(trans_type, EXCLUSIVE) { space "EXCLUSIVE" }
       }
       COMMIT   { "COMMIT" }
       ROLLBACK { "ROLLBACK" }
@@ -71,9 +70,9 @@ node SavepointStmt {
 
   fmt {
     switch(op) {
-      SAVEPOINT   { "SAVEPOINT " child(savepoint_name) }
-      RELEASE     { "RELEASE SAVEPOINT " child(savepoint_name) }
-      ROLLBACK_TO { "ROLLBACK TO SAVEPOINT " child(savepoint_name) }
+      SAVEPOINT   { "SAVEPOINT" space child(savepoint_name) }
+      RELEASE     { "RELEASE" "SAVEPOINT" space child(savepoint_name) }
+      ROLLBACK_TO { "ROLLBACK" "TO" "SAVEPOINT" space child(savepoint_name) }
     }
   }
 }

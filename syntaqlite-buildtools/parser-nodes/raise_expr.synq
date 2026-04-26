@@ -12,7 +12,7 @@ node RaiseExpr {
       ABORT    { "ABORT" }
       FAIL     { "FAIL" }
     }
-    if_set(error_message) { ", " child(error_message) }
+    if_set(error_message) { "," space child(error_message) }
     ")"
   }
 }

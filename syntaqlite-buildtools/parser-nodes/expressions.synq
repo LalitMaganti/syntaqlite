@@ -5,8 +5,8 @@ node BinaryExpr {
 
   fmt {
     switch(op) {
-      AND { child_prec(left, op) line "AND " child_prec(right, op, right) }
-      OR  { child_prec(left, op) line "OR "  child_prec(right, op, right) }
+      AND { child_prec(left, op) line "AND" space child_prec(right, op, right) }
+      OR  { child_prec(left, op) line "OR" space  child_prec(right, op, right) }
       default {
         group {
           child_prec(left, op) line
@@ -16,7 +16,7 @@ node BinaryExpr {
             AND="AND" OR="OR" BIT_AND="&" BIT_OR="|"
             LSHIFT="<<" RSHIFT=">>" CONCAT="||" PTR="->" PTR2="->>"
           })
-          " " child_prec(right, op, right)
+          space child_prec(right, op, right)
         }
       }
     }
@@ -28,10 +28,12 @@ node UnaryExpr {
   operand: index Expr
 
   fmt {
-    enum_display(op, {
-      MINUS="-" PLUS="+" BIT_NOT="~" NOT="NOT "
-    })
-    child_prec(operand, op)
+    switch(op) {
+      NOT     { "NOT" space child_prec(operand, op) }
+      MINUS   { "-" child_prec(operand, op) }
+      PLUS    { "+" child_prec(operand, op) }
+      BIT_NOT { "~" child_prec(operand, op) }
+    }
   }
 }
 

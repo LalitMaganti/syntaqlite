@@ -20,7 +20,7 @@ node CastExpr {
   expr: index Expr
   type_name: inline SyntaqliteTextSpan
 
-  fmt { "CAST(" child(expr) " AS " span(type_name) ")" }
+  fmt { "CAST" "(" child(expr) "AS" span(type_name) ")" }
 }
 ```
 
@@ -41,13 +41,19 @@ storage class, and a type:
 **The fmt block** is a recipe for the formatter. Items emit left to
 right:
 
-- `"CAST("` — a bare string emits literal keyword text
+- `"CAST"` — a bare string emits a single SQL keyword
+- `"("` — punctuation, sits flush against the previous keyword
 - `child(expr)` — recursively formats a child node
-- `" AS "` — more keyword text
+- `"AS"` — another keyword; the formatter inserts spaces between
+  adjacent word-class atoms automatically
 - `span(type_name)` — prints the original source text of a span field
 - `")"` — closing paren
 
-Multiple items next to each other form a sequence automatically.
+Each keyword is a single SQL word — no embedded whitespace. The
+formatter places one space between two adjacent word-class tokens at
+render time; punctuation transitions need an explicit `line` if a
+space is wanted there. Multiple items next to each other form a
+sequence automatically.
 
 ## Enums
 
@@ -124,16 +130,16 @@ if_set(columns) { "(" child(columns) ")" }
 
 ```synq
 # Bool field
-if_flag(is_temp) { " TEMP" }
+if_flag(is_temp) { "TEMP" }
 
 # Flag bit — use dot notation
-if_flag(flags.distinct) { "SELECT DISTINCT" } else { "SELECT" }
+if_flag(flags.distinct) { "SELECT" "DISTINCT" } else { "SELECT" }
 ```
 
 **if_enum** — does an enum equal a specific variant?
 
 ```synq
-if_enum(sort_order, DESC) { " DESC" }
+if_enum(sort_order, DESC) { "DESC" }
 if_enum(kind, REINDEX) { "REINDEX" } else { "ANALYZE" }
 ```
 
@@ -142,6 +148,9 @@ if_enum(kind, REINDEX) { "REINDEX" } else { "ANALYZE" }
 ```synq
 if_span(schema) { span(schema) "." }
 ```
+
+(No space appears between `span(schema)` and `"."` because `.` is
+not a word-class character.)
 
 Conditionals nest freely:
 
@@ -167,7 +176,7 @@ Three kinds, controlling how the formatter breaks lines:
 doesn't fit, all `line`/`softline` breaks inside become newlines:
 
 ```synq
-group { child(left) line "AND " child(right) }
+group { child(left) line "AND" line child(right) }
 ```
 
 `nest` increases the indent level:
@@ -193,7 +202,16 @@ This expands to:
 if_set(where) { hardline "WHERE" nest { line child(where) } }
 ```
 
-It makes SELECT-style statements very clean:
+Multi-word clauses pass each keyword as its own argument:
+
+```synq
+clause("GROUP", "BY", groupby)
+clause("ORDER", "BY", orderby)
+```
+
+Each keyword is a single SQL word — no embedded whitespace. The
+formatter inserts the inter-word space at render time. This makes
+SELECT-style statements very clean:
 
 ```synq
 node SelectStmt {
@@ -209,13 +227,13 @@ node SelectStmt {
 
   fmt {
     group {
-      if_flag(flags.distinct) { "SELECT DISTINCT" } else { "SELECT" }
+      if_flag(flags.distinct) { "SELECT" "DISTINCT" } else { "SELECT" }
       if_set(columns) { group { nest { line child(columns) } } }
       clause("FROM", from_clause)
       clause("WHERE", where)
-      clause("GROUP BY", groupby)
+      clause("GROUP", "BY", groupby)
       clause("HAVING", having)
-      clause("ORDER BY", orderby)
+      clause("ORDER", "BY", orderby)
       clause("LIMIT", limit_clause)
       clause("WINDOW", window_clause)
     }
@@ -241,9 +259,9 @@ Cases can have multi-item bodies:
 
 ```synq
 switch(op) {
-  ISNULL  { child(left) " ISNULL" }
-  IS      { child(left) " IS " child(right) }
-  IS_NOT  { child(left) " IS NOT " child(right) }
+  ISNULL  { child(left) "ISNULL" }
+  IS      { child(left) "IS" child(right) }
+  IS_NOT  { child(left) "IS" "NOT" child(right) }
 }
 ```
 
@@ -251,13 +269,13 @@ Add `default` for a fallthrough:
 
 ```synq
 switch(op) {
-  AND { child(left) line "AND " child(right) }
-  OR  { child(left) line "OR "  child(right) }
+  AND { child(left) line "AND" line child(right) }
+  OR  { child(left) line "OR"  line child(right) }
   default {
     group {
       child(left) line
       enum_display(op, { PLUS="+" MINUS="-" STAR="*" })
-      " " child(right)
+      line child(right)
     }
   }
 }
@@ -299,10 +317,29 @@ The template can wrap each child:
 for_each(sep: "," line) { "(" child(_item) ")" }
 ```
 
+## Keyword spacing
+
+Keyword literals are single SQL words — no leading, trailing, or
+embedded whitespace. The renderer inserts a space between two
+adjacent word-class atoms automatically:
+
+```synq
+"ORDER" "BY"            # → "ORDER BY"
+"PRIMARY" "KEY"         # → "PRIMARY KEY"
+```
+
+Punctuation transitions do not auto-space:
+
+```synq
+"FOREIGN" "KEY" "("     # → "FOREIGN KEY("
+"FILTER" "(" ...        # → "FILTER(..."  (use line if a space is wanted)
+"FILTER" line "("       # → "FILTER ("    in flat mode
+```
+
 ## Quick reference
 
 ```
-"text"                                  keyword text
+"text"                                  single SQL keyword (no whitespace)
 span(field)                             source span
 child(field)                            child node (or _item in for_each)
 line  softline  hardline                line breaks
@@ -312,7 +349,7 @@ if_set(f) { ... } [else { ... }]        test index field non-null
 if_flag(f) { ... } [else { ... }]       test bool or flags.bit
 if_enum(f, VAL) { ... } [else { ... }]  test enum == value
 if_span(f) { ... } [else { ... }]       test span non-empty
-clause("KW", field)                     SQL clause shorthand
+clause("KW" [,"KW"]*, field)            SQL clause shorthand
 switch(f) { CASE { ... } ... }          branch on enum value
 enum_display(f, { K="v" ... })          map enum to string
 for_each [(sep: items...)] { ... }      iterate list children

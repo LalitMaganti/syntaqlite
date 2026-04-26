@@ -8,11 +8,11 @@ node FrameBound {
 
   fmt {
     switch(bound_type) {
-      UNBOUNDED_PRECEDING { "UNBOUNDED PRECEDING" }
-      EXPR_PRECEDING      { child_paren_list(expr) " PRECEDING" }
-      CURRENT_ROW         { "CURRENT ROW" }
-      EXPR_FOLLOWING      { child_paren_list(expr) " FOLLOWING" }
-      UNBOUNDED_FOLLOWING { "UNBOUNDED FOLLOWING" }
+      UNBOUNDED_PRECEDING { "UNBOUNDED" "PRECEDING" }
+      EXPR_PRECEDING      { child_paren_list(expr) space "PRECEDING" }
+      CURRENT_ROW         { "CURRENT" "ROW" }
+      EXPR_FOLLOWING      { child_paren_list(expr) space "FOLLOWING" }
+      UNBOUNDED_FOLLOWING { "UNBOUNDED" "FOLLOWING" }
     }
   }
 }
@@ -29,12 +29,12 @@ node FrameSpec {
       ROWS   { "ROWS" }
       GROUPS { "GROUPS" }
     }
-    " BETWEEN " child(start_bound) " AND " child(end_bound)
+    space "BETWEEN" space child(start_bound) space "AND" space child(end_bound)
     switch(exclude) {
-      NO_OTHERS   { " EXCLUDE NO OTHERS" }
-      CURRENT_ROW { " EXCLUDE CURRENT ROW" }
-      GROUP       { " EXCLUDE GROUP" }
-      TIES        { " EXCLUDE TIES" }
+      NO_OTHERS   { space "EXCLUDE" "NO" "OTHERS" }
+      CURRENT_ROW { space "EXCLUDE" "CURRENT" "ROW" }
+      GROUP       { space "EXCLUDE" "GROUP" }
+      TIES        { space "EXCLUDE" "TIES" }
     }
   }
 }
@@ -51,10 +51,10 @@ node WindowDef {
         "("
         nest {
           softline
-          if_set(partition_by) { "PARTITION BY" nest { line child(partition_by) } }
+          if_set(partition_by) { "PARTITION" "BY" nest { line child(partition_by) } }
           if_set(orderby) {
             if_set(partition_by) { line }
-            "ORDER BY" group { nest { line child(orderby) } }
+            "ORDER" "BY" group { nest { line child(orderby) } }
           }
           if_set(frame) {
             if_set(partition_by) { line } else {
@@ -75,7 +75,7 @@ node NamedWindowDef {
   window_name: inline SyntaqliteTextSpan
   window_def: index WindowDef
 
-  fmt { span(window_name) " AS " child(window_def) }
+  fmt { span(window_name) space "AS" space child(window_def) }
 }
 
 list NamedWindowDefList { NamedWindowDef }
@@ -86,8 +86,8 @@ node FilterOver {
   over_name: inline SyntaqliteTextSpan
 
   fmt {
-    if_set(filter_expr) { group { "FILTER (" nest { softline "WHERE " child(filter_expr) } softline ")" } }
-    if_set(over_def) { " OVER " child(over_def) }
-    if_span(over_name) { " OVER " span(over_name) }
+    if_set(filter_expr) { group { "FILTER" space "(" nest { softline "WHERE" space child(filter_expr) } softline ")" } }
+    if_set(over_def) { space "OVER" space child(over_def) }
+    if_span(over_name) { space "OVER" space span(over_name) }
   }
 }

@@ -11,10 +11,12 @@ node CompoundSelect {
 
   fmt {
     child(left) hardline
-    enum_display(op, {
-      UNION="UNION" UNION_ALL="UNION ALL"
-      INTERSECT="INTERSECT" EXCEPT="EXCEPT"
-    })
+    switch(op) {
+      UNION       { "UNION" }
+      UNION_ALL   { "UNION" "ALL" }
+      INTERSECT   { "INTERSECT" }
+      EXCEPT      { "EXCEPT" }
+    }
     hardline child(right)
   }
 }
@@ -28,7 +30,7 @@ node SubqueryExpr {
 node ExistsExpr {
   select: index Select
 
-  fmt { "EXISTS " group { "(" nest { softline child(select) } softline ")" } }
+  fmt { "EXISTS" space group { "(" nest { softline child(select) } softline ")" } }
 }
 
 abstract InExprSource {
@@ -46,7 +48,7 @@ node InExpr {
 
   fmt {
     child_prec_fixed(operand)
-    if_flag(negated) { " NOT IN " } else { " IN " }
+    if_flag(negated) { space "NOT" "IN" space } else { space "IN" space }
     if_flag(bare_source) {
       child(source)
     } else {

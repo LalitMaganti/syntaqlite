@@ -20,7 +20,7 @@ node TableRef {
     } else {
       if_flag(has_parens) { "()" }
     }
-    if_set(alias) { " AS " child(alias) }
+    if_set(alias) { space "AS" space child(alias) }
   }
 }
 
@@ -32,7 +32,7 @@ node SubqueryTableSource {
 
   fmt {
     group { "(" nest { softline child(select) } softline ")" }
-    if_set(alias) { " AS " child(alias) }
+    if_set(alias) { space "AS" space child(alias) }
   }
 }
 
@@ -46,23 +46,28 @@ node JoinClause {
   fmt {
     switch(join_type) {
       COMMA {
-        child(left) ", " child(right)
-        if_set(on_expr) { hardline "ON " child(on_expr) }
-        if_set(using_columns) { group { " USING (" nest { softline child(using_columns) } softline ")" } }
+        child(left) "," space child(right)
+        if_set(on_expr) { hardline "ON" space child(on_expr) }
+        if_set(using_columns) { group { space "USING" space "(" nest { softline child(using_columns) } softline ")" } }
       }
       default {
         child(left) hardline
         group {
-          enum_display(join_type, {
-            INNER="JOIN" LEFT="LEFT JOIN" RIGHT="RIGHT JOIN"
-            FULL="FULL JOIN" CROSS="CROSS JOIN"
-            NATURAL_INNER="NATURAL JOIN" NATURAL_LEFT="NATURAL LEFT JOIN"
-            NATURAL_RIGHT="NATURAL RIGHT JOIN" NATURAL_FULL="NATURAL FULL JOIN"
-            COMMA=","
-          })
-          " " child(right)
-          if_set(on_expr) { nest { line "ON " child(on_expr) } }
-          if_set(using_columns) { group { " USING (" nest { softline child(using_columns) } softline ")" } }
+          switch(join_type) {
+            INNER         { "JOIN" }
+            LEFT          { "LEFT" "JOIN" }
+            RIGHT         { "RIGHT" "JOIN" }
+            FULL          { "FULL" "JOIN" }
+            CROSS         { "CROSS" "JOIN" }
+            NATURAL_INNER { "NATURAL" "JOIN" }
+            NATURAL_LEFT  { "NATURAL" "LEFT" "JOIN" }
+            NATURAL_RIGHT { "NATURAL" "RIGHT" "JOIN" }
+            NATURAL_FULL  { "NATURAL" "FULL" "JOIN" }
+            COMMA         { "," }
+          }
+          space child(right)
+          if_set(on_expr) { nest { line "ON" space child(on_expr) } }
+          if_set(using_columns) { group { space "USING" space "(" nest { softline child(using_columns) } softline ")" } }
         }
       }
     }

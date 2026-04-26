@@ -11,7 +11,7 @@ node TriggerEvent {
       INSERT { "INSERT" }
       UPDATE {
         "UPDATE"
-        if_set(columns) { group { " OF " child(columns) } }
+        if_set(columns) { group { space "OF" space child(columns) } }
       }
     }
   }
@@ -39,19 +39,19 @@ node CreateTriggerStmt {
 
   fmt {
     "CREATE"
-    if_flag(is_temp) { " TEMP" }
-    " TRIGGER"
-    if_flag(if_not_exists) { " IF NOT EXISTS" }
-    " "
+    if_flag(is_temp) { space "TEMP" }
+    space "TRIGGER"
+    if_flag(if_not_exists) { space "IF" "NOT" "EXISTS" }
+    space
     if_span(schema) { span(schema) "." }
-    span(trigger_name) " "
+    span(trigger_name) space
     switch(timing) {
       BEFORE     { "BEFORE" }
       AFTER      { "AFTER" }
-      INSTEAD_OF { "INSTEAD OF" }
+      INSTEAD_OF { "INSTEAD" "OF" }
     }
-    " " child(event) " ON " child(table)
-    if_set(when_expr) { hardline "WHEN " child(when_expr) }
+    space child(event) space "ON" space child(table)
+    if_set(when_expr) { hardline "WHEN" space child(when_expr) }
     hardline "BEGIN"
     if_set(body) { nest { hardline child(body) } }
     hardline "END"
@@ -66,12 +66,12 @@ node CreateVirtualTableStmt {
   module_args: inline SyntaqliteTextSpan
 
   fmt {
-    "CREATE VIRTUAL TABLE"
-    if_flag(if_not_exists) { " IF NOT EXISTS" }
-    " "
+    "CREATE" "VIRTUAL" "TABLE"
+    if_flag(if_not_exists) { space "IF" "NOT" "EXISTS" }
+    space
     if_span(schema) { span(schema) "." }
     span(table_name)
-    " USING " span(module_name)
+    space "USING" space span(module_name)
     if_span(module_args) { "(" span(module_args) ")" }
   }
 

@@ -10,12 +10,12 @@ node IsExpr {
 
   fmt {
     switch(op) {
-      IS_NULL         { child_prec_fixed(left) " ISNULL" }
-      NOT_NULL        { child_prec_fixed(left) " NOTNULL" }
-      IS              { child_prec_fixed(left) " IS " child_prec_fixed(right, right) }
-      IS_NOT          { child_prec_fixed(left) " IS NOT " child_prec_fixed(right, right) }
-      IS_NOT_DISTINCT { child_prec_fixed(left) " IS NOT DISTINCT FROM " child_prec_fixed(right, right) }
-      IS_DISTINCT     { child_prec_fixed(left) " IS DISTINCT FROM " child_prec_fixed(right, right) }
+      IS_NULL         { child_prec_fixed(left) space "ISNULL" }
+      NOT_NULL        { child_prec_fixed(left) space "NOTNULL" }
+      IS              { child_prec_fixed(left) space "IS" space child_prec_fixed(right, right) }
+      IS_NOT          { child_prec_fixed(left) space "IS" "NOT" space child_prec_fixed(right, right) }
+      IS_NOT_DISTINCT { child_prec_fixed(left) space "IS" "NOT" "DISTINCT" "FROM" space child_prec_fixed(right, right) }
+      IS_DISTINCT     { child_prec_fixed(left) space "IS" "DISTINCT" "FROM" space child_prec_fixed(right, right) }
     }
   }
 }
@@ -31,8 +31,8 @@ node BetweenExpr {
 
   fmt {
     child_prec_fixed(operand)
-    if_flag(negated) { " NOT BETWEEN " } else { " BETWEEN " }
-    child(low) " AND " child(high)
+    if_flag(negated) { space "NOT" "BETWEEN" space } else { space "BETWEEN" space }
+    child(low) space "AND" space child(high)
   }
 }
 
@@ -50,15 +50,15 @@ node LikeExpr {
 
   fmt {
     child_prec_fixed(operand)
-    if_flag(negated) { " NOT " } else { " " }
+    if_flag(negated) { space "NOT" space } else { space }
     switch(keyword) {
       LIKE   { "LIKE" }
       GLOB   { "GLOB" }
       MATCH  { "MATCH" }
       REGEXP { "REGEXP" }
     }
-    " " child(pattern)
-    if_set(escape) { " ESCAPE " child(escape) }
+    space child(pattern)
+    if_set(escape) { space "ESCAPE" space child(escape) }
   }
 }
 
@@ -70,10 +70,10 @@ node CaseExpr {
   fmt {
     group {
       "CASE"
-      if_set(operand) { " " child_paren_list(operand) }
+      if_set(operand) { space child_paren_list(operand) }
       nest {
         if_set(whens) { child(whens) }
-        if_set(else_expr) { line "ELSE " child(else_expr) }
+        if_set(else_expr) { line "ELSE" space child(else_expr) }
       }
       line "END"
     }
@@ -84,7 +84,7 @@ node CaseWhen {
   when_expr: index Expr
   then_expr: index Expr
 
-  fmt { line "WHEN " child(when_expr) " THEN " child(then_expr) }
+  fmt { line "WHEN" space child(when_expr) space "THEN" space child(then_expr) }
 }
 
 list CaseWhenList {

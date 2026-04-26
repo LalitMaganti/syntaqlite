@@ -17,7 +17,7 @@ node ResultColumn {
     } else {
       child_paren_list(expr)
     }
-    if_set(alias) { " AS " child(alias) }
+    if_set(alias) { space "AS" space child(alias) }
   }
 }
 
@@ -38,14 +38,14 @@ node SelectStmt {
 
   fmt {
     group {
-      if_flag(flags.distinct) { "SELECT DISTINCT" } else { "SELECT" }
+      if_flag(flags.distinct) { "SELECT" "DISTINCT" } else { "SELECT" }
       if_set(columns) { group { nest { line child(columns) } } }
-      if_set(from_clause) { line "FROM " child(from_clause) }
+      if_set(from_clause) { line "FROM" space child(from_clause) }
       clause("WHERE", where_clause)
-      clause("GROUP BY", groupby)
+      clause("GROUP", "BY", groupby)
       clause("HAVING", having)
-      clause("ORDER BY", orderby)
-      if_set(limit_clause) { line "LIMIT " child(limit_clause) }
+      clause("ORDER", "BY", orderby)
+      if_set(limit_clause) { line "LIMIT" space child(limit_clause) }
       clause("WINDOW", window_clause)
     }
   }
@@ -58,9 +58,9 @@ node OrderingTerm {
 
   fmt {
     child_paren_list(expr)
-    if_enum(sort_order, DESC) { " DESC" }
-    if_enum(nulls_order, FIRST) { " NULLS FIRST" }
-    if_enum(nulls_order, LAST) { " NULLS LAST" }
+    if_enum(sort_order, DESC) { space "DESC" }
+    if_enum(nulls_order, FIRST) { space "NULLS" "FIRST" }
+    if_enum(nulls_order, LAST) { space "NULLS" "LAST" }
   }
 }
 
@@ -72,6 +72,6 @@ node LimitClause {
 
   fmt {
     child(limit)
-    if_set(offset) { " OFFSET " child(offset) }
+    if_set(offset) { space "OFFSET" space child(offset) }
   }
 }
