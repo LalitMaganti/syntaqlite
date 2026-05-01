@@ -36,15 +36,25 @@ jobs:
         include:
           - {name: macos-arm64, runner: macos-latest, target: aarch64-apple-darwin, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.dylib, archive: tar.gz}
           - {name: macos-x64, runner: macos-26-intel, target: x86_64-apple-darwin, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.dylib, archive: tar.gz}
-          - {name: linux-x64, runner: ubuntu-latest, target: x86_64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz}
-          - {name: linux-arm64, runner: ubuntu-24.04-arm, target: aarch64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz}
+          - {name: linux-x64, runner: ubuntu-latest, container: "quay.io/pypa/manylinux_2_28_x86_64", target: x86_64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz}
+          - {name: linux-arm64, runner: ubuntu-24.04-arm, container: "quay.io/pypa/manylinux_2_28_aarch64", target: aarch64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz}
           - {name: windows-x64, runner: windows-latest, target: x86_64-pc-windows-msvc, binary: syntaqlite.exe, staticlib: syntaqlite.lib, cdylib: syntaqlite.dll, archive: zip}
           - {name: windows-arm64, runner: windows-latest, target: aarch64-pc-windows-msvc, binary: syntaqlite.exe, cdylib: syntaqlite.dll, archive: zip}
     runs-on: ${{ matrix.runner }}
+    container: ${{ matrix.container }}
     env:
       SYNTAQLITE_BUILDING: "1"
     steps:
       - uses: actions/checkout@v6
+
+      # manylinux_2_28 ships gcc but no Rust; this pins the binary to glibc 2.28.
+      - name: Install Rust (Linux container)
+        if: ${{ matrix.container }}
+        shell: bash
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+            | sh -s -- -y --default-toolchain stable --profile minimal
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
 
       - name: Install cross-compilation target
         if: matrix.name == 'windows-arm64'
