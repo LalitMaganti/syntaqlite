@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.7
+
+**Build:**
+- Linux CLI binaries (`syntaqlite-linux-x64.tar.gz`, `syntaqlite-linux-arm64.tar.gz`) are now built inside `manylinux_2_28` containers, pinning them to glibc 2.28 (RHEL 8 / Ubuntu 20.04+ / Debian 10+) instead of inheriting `ubuntu-latest`'s glibc 2.39. Fixes `GLIBC_2.39 not found` when running the prebuilt CLI on older Linux hosts ([#258](https://github.com/LalitMaganti/syntaqlite/pull/258)).
+- Added a Nix flake for building and running the CLI: `nix build`, `nix run`, and consumption via `overlays.default` are all supported ([#253](https://github.com/LalitMaganti/syntaqlite/pull/253)).
+
 ## 0.5.6
 
 **Rust API:**
