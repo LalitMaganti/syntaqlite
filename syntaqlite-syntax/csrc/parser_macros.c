@@ -63,7 +63,15 @@ static int64_t synq_macro_skip(SyntaqliteParser* p,
       *out_type = ttype;
       return tlen;
     }
-    if (ttype == SYNTAQLITE_TK_COMMENT && p->collect_tokens) {
+    // In pre-expansion (scratch) mode, ctx.layer_id and `pos` don't
+    // describe a buffer record_comment can correctly attribute to: the
+    // macro layer hasn't been pushed yet and `pos` is local to the
+    // arg-text being scanned, not to ctx.source.  Skip recording here
+    // — the comment bytes are preserved into arg_scratch and will be
+    // re-tokenized at the right layer when the substituted body is
+    // fed through Lemon mode.
+    if (ttype == SYNTAQLITE_TK_COMMENT && p->collect_tokens &&
+        !p->macro.in_pre_expand) {
       synq_parser_record_comment(p, pos, (uint32_t)tlen);
     }
     pos += (uint32_t)tlen;
@@ -128,7 +136,9 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
     // for them. Record them here instead so consumers that ask
     // "are there any comments in byte range [call_off, call_end)?"
     // (notably the formatter's structured-args bail) see the truth.
-    if (ttype == SYNTAQLITE_TK_COMMENT && p->collect_tokens) {
+    // Same suppression as synq_macro_skip in pre-expansion mode.
+    if (ttype == SYNTAQLITE_TK_COMMENT && p->collect_tokens &&
+        !p->macro.in_pre_expand) {
       synq_parser_record_comment(p, pos, (uint32_t)tlen);
     }
 
@@ -179,6 +189,7 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
 void synq_macro_state_init(SynqMacroState* m) {
   syntaqlite_vec_init(&m->expand_buf);
   syntaqlite_vec_init(&m->body_buf);
+  syntaqlite_vec_init(&m->arg_scratch);
   syntaqlite_vec_init(&m->layers);
   syntaqlite_vec_init(&m->traceback_buf);
   syntaqlite_vec_init(&m->node_expanded_buf);
@@ -187,6 +198,7 @@ void synq_macro_state_init(SynqMacroState* m) {
 void synq_macro_state_free(SynqMacroState* m, SyntaqliteMemMethods mem) {
   syntaqlite_vec_free(&m->expand_buf, mem);
   syntaqlite_vec_free(&m->body_buf, mem);
+  syntaqlite_vec_free(&m->arg_scratch, mem);
   synq_layers_free_owned(&m->layers, mem);
   syntaqlite_vec_free(&m->layers, mem);
   syntaqlite_vec_free(&m->traceback_buf, mem);
@@ -308,9 +320,20 @@ SYNTAQLITE_API void syntaqlite_macro_expansion_set_result_with_arg_map(
 // Forward declaration — mutual recursion with expand_and_feed.
 // (canonical declaration in parser_internal.h)
 
-// Tokenize `buf` and feed each token to Lemon.
+// Tokenize `buf` and dispatch each token according to
+// `p->macro.in_pre_expand`:
+//   * 0 → feed the token to Lemon (normal expansion).
+//   * 1 → append `buf` bytes — including inter-token whitespace and
+//     comments, with nested calls' expansion content spliced in — to
+//     `p->macro.arg_scratch` (eager arg pre-expansion sink).
+//
 // `depth` is the current expansion nesting (for recursion limit).
-// Returns: 0 = ok, 1 = statement boundary, -1 = error.
+// Returns: 0 = ok, 1 = statement boundary (Lemon mode only), -1 = error.
+//
+// Trailing whitespace / comments after the last significant token in
+// `buf` are NOT appended in scratch mode — only bytes up to the end of
+// each token are flushed.  That's fine for arg pre-expansion: trailing
+// whitespace doesn't affect re-tokenization.
 static int expand_and_feed(SyntaqliteParser* p,
                            const char* buf,
                            uint32_t buf_len,
@@ -322,13 +345,18 @@ static int expand_and_feed(SyntaqliteParser* p,
     return -1;
   }
 
-  // Temporarily swap ctx.source so Lemon action offset computations are
-  // relative to the expansion buffer.
+  // Swap ctx.source so any read against `p->ctx.source` during
+  // tokenization (Lemon action offsets, fallback paths) lines up with
+  // the buf we're processing.
   const char* saved_source = p->ctx.source;
   p->ctx.source = buf;
 
+  const int to_scratch = p->macro.in_pre_expand;
   const unsigned char* z = (const unsigned char*)buf;
   uint32_t pos = 0;
+  // Scratch-mode cursor: bytes in [last_emit_end, current emission
+  // start) are inter-token whitespace/comments we still owe the sink.
+  uint32_t last_emit_end = 0;
 
   while (pos < buf_len) {
     uint32_t ttype = 0;
@@ -347,11 +375,20 @@ static int expand_and_feed(SyntaqliteParser* p,
     if (ttype == SYNTAQLITE_TK_ID && la_type == SYNTAQLITE_TK_BANG &&
         p->ctx.in_macro_def_body == 0) {
       uint32_t nested_end = 0;
+      // In scratch mode, flush pending inter-token bytes before
+      // recursing — the recursive call writes inner's expansion
+      // *content* into the scratch, not the inner's call source.
+      if (to_scratch && pos > last_emit_end) {
+        syntaqlite_vec_push_n(&p->macro.arg_scratch,
+                              (const uint8_t*)(buf + last_emit_end),
+                              pos - last_emit_end, p->mem);
+      }
       int erc = synq_parser_expand_and_feed_macro(p, buf, buf_len, pos,
                                                   (uint32_t)tlen, bang_pos,
                                                   depth + 1, &nested_end);
       if (erc == 0) {
         pos = nested_end;
+        last_emit_end = nested_end;
         continue;
       }
       // erc == -1: not a macro or error — feed ID normally below.
@@ -359,6 +396,16 @@ static int expand_and_feed(SyntaqliteParser* p,
         p->ctx.source = saved_source;
         return -1;
       }
+    }
+
+    if (to_scratch) {
+      uint32_t token_end = pos + (uint32_t)tlen;
+      syntaqlite_vec_push_n(&p->macro.arg_scratch,
+                            (const uint8_t*)(buf + last_emit_end),
+                            token_end - last_emit_end, p->mem);
+      last_emit_end = token_end;
+      pos = token_end;
+      continue;
     }
 
     // Feed the token through the unified shift path: it pushes to
@@ -394,7 +441,78 @@ static int expand_and_feed(SyntaqliteParser* p,
   return 0;
 }
 
+// Pre-expand each arg that contains a nested macro call into the
+// shared `arg_scratch` arena; args without '!' are passed through.
+// Runs before the callee's blue-paint frame is pushed so nested calls
+// in args are checked against the *caller's* stack (diamond pattern).
+//
+// Pointers into `arg_scratch.data` are deferred until all pushes are
+// done because intermediate pushes can realloc and invalidate any
+// pointer captured mid-loop.  The arena is truncated back to its
+// caller's mark in `synq_parser_expand_and_feed_macro` before the
+// caller feeds its own expansion.
+// Inner worker: assumes `p->macro.in_pre_expand` is already 1.  Kept
+// separate from `pre_expand_args` so that wrapper owns the flag's
+// save/restore around a single call site.
+static int pre_expand_args_inner(SyntaqliteParser* p,
+                                 const char* buf,
+                                 uint32_t arg_count,
+                                 const SynqMacroArg* args,
+                                 SyntaqliteToken* token_args,
+                                 uint32_t depth) {
+  uint32_t arg_starts[SYNQ_MAX_MACRO_ARGS];
+  uint32_t arg_lens[SYNQ_MAX_MACRO_ARGS];
+  uint8_t expanded[SYNQ_MAX_MACRO_ARGS] = {0};
+
+  for (uint32_t i = 0; i < arg_count; i++) {
+    const char* arg_text = buf + args[i].offset;
+    uint32_t arg_len = args[i].length;
+    if (!memchr(arg_text, '!', arg_len))
+      continue;
+
+    arg_starts[i] = p->macro.arg_scratch.count;
+    if (expand_and_feed(p, arg_text, arg_len, depth) < 0)
+      return -1;
+    arg_lens[i] = p->macro.arg_scratch.count - arg_starts[i];
+    expanded[i] = 1;
+  }
+
+  // Resolve pointers now that all pushes (including any from recursive
+  // calls) are done; arg_scratch.data is stable from this point until
+  // the caller's truncate/feed.
+  for (uint32_t i = 0; i < arg_count; i++) {
+    if (!expanded[i])
+      continue;
+    token_args[i].text = (const char*)p->macro.arg_scratch.data + arg_starts[i];
+    token_args[i].length = arg_lens[i];
+  }
+  return 0;
+}
+
+static int pre_expand_args(SyntaqliteParser* p,
+                           const char* buf,
+                           uint32_t arg_count,
+                           const SynqMacroArg* args,
+                           SyntaqliteToken* token_args,
+                           uint32_t depth) {
+  // `in_pre_expand` is the dynamic-scope flag that tells everyone
+  // downstream — expand_and_feed (which writes to scratch instead of
+  // Lemon), synq_macro_skip / scan_macro_args (which suppress comment
+  // recording) — that we're inside arg pre-expansion.  Save and
+  // restore so nesting through recursive macro calls is well-behaved:
+  // an inner pre_expand_args inherits the 1 and restores to 1.
+  int saved = p->macro.in_pre_expand;
+  p->macro.in_pre_expand = 1;
+  int rc = pre_expand_args_inner(p, buf, arg_count, args, token_args, depth);
+  p->macro.in_pre_expand = saved;
+  return rc;
+}
+
 // Expand a macro call and feed the expanded tokens into the parser.
+// The sink (Lemon vs. arg_scratch) is read from
+// `p->macro.in_pre_expand`, which is owned by `pre_expand_args` and
+// set whenever we're inside an outer call's arg pre-expansion.  No
+// per-call propagation needed.
 //
 // Combines lookup-callback invocation, layer creation, and token feeding
 // into a single operation.  The layer is pushed *before* the callback so
@@ -427,18 +545,32 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
   }
 
   // Scan args.
-  SynqMacroArg args[64];
+  SynqMacroArg args[SYNQ_MAX_MACRO_ARGS];
   uint32_t end_offset = 0;
-  uint32_t arg_count = synq_parser_scan_macro_args(p, buf, buf_len, bang_offset,
-                                                   args, 64, &end_offset);
+  uint32_t arg_count = synq_parser_scan_macro_args(
+      p, buf, buf_len, bang_offset, args, SYNQ_MAX_MACRO_ARGS, &end_offset);
 
-  SyntaqliteToken token_args[64];
-  uint32_t token_arg_count = arg_count < 64 ? arg_count : 64;
+  SyntaqliteToken token_args[SYNQ_MAX_MACRO_ARGS];
+  uint32_t token_arg_count =
+      arg_count < SYNQ_MAX_MACRO_ARGS ? arg_count : SYNQ_MAX_MACRO_ARGS;
   for (uint32_t i = 0; i < token_arg_count; i++) {
     token_args[i].text = buf + args[i].offset;
     token_args[i].length = args[i].length;
     token_args[i].type = 0;
   }
+
+  // Capture arg_scratch high-water mark.  pre_expand_args pushes
+  // temporaries above it; we restore to this mark before feeding our
+  // own expansion so that (a) when our caller is itself in scratch
+  // mode, our expansion bytes append at the caller's position keeping
+  // its slot contiguous, and (b) we don't leak temporaries on errors.
+  uint32_t scratch_mark = p->macro.arg_scratch.count;
+
+  if (pre_expand_args(p, buf, token_arg_count, args, token_args, depth) < 0) {
+    p->macro.arg_scratch.count = scratch_mark;
+    return -1;
+  }
+
   // Push the expansion layer *before* the callback so set_result /
   // expand_and_set_result can write directly into it.
   uint32_t call_length = end_offset - id_offset;
@@ -467,6 +599,7 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
     p->macro.depth--;
     if (rc == -2)
       p->had_error = 1;
+    p->macro.arg_scratch.count = scratch_mark;
     return -1;
   }
 
@@ -498,6 +631,12 @@ int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
   p->macro.expansion_names[p->macro.expansion_depth] = buf + id_offset;
   p->macro.expansion_name_lens[p->macro.expansion_depth] = id_len;
   p->macro.expansion_depth++;
+
+  // Truncate scratch back to the caller's mark before feeding our
+  // expansion.  In scratch mode, this exposes the caller's
+  // accumulating position so our expansion bytes append contiguously
+  // onto it.  In Lemon mode, it just frees our pre-expansion temps.
+  p->macro.arg_scratch.count = scratch_mark;
 
   // Feed expanded tokens (may trigger nested macro expansions).
   int frc = expand_and_feed(p, data, data_len, depth);
