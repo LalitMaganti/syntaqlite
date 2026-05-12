@@ -22,7 +22,7 @@ from typing import Any
 
 from .nodes import _wrap
 
-__version__ = "0.5.7"
+__version__ = "0.5.8"
 
 
 # ── Binary discovery ──────────────────────────────────────────────────────────

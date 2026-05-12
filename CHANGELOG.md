@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.8
+
+**Parser:**
+- Macro arguments are now eagerly expanded at the call site before the body is instantiated. This fixes the "diamond" macro problem where an inner macro appeared to recurse through a parent even though no real cycle existed, and also speeds up macros that reference the same argument multiple times (the argument is expanded once instead of N times) ([#260](https://github.com/LalitMaganti/syntaqlite/pull/260)).
+
 ## 0.5.7
 
 **Build:**
