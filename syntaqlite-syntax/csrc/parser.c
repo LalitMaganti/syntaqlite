@@ -92,7 +92,6 @@ static void reset_stmt(SyntaqliteParser* p) {
   if (p->source)
     synq_layers_push_sentinel(&p->macro.layers, p->source, p->source_len,
                               p->mem);
-  p->macro.expansion_depth = 0;
 #endif
   p->ctx.layer_id = 0;
   p->ctx.cur_shift_start = 0;

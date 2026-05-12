@@ -1252,19 +1252,17 @@ mod tests {
     }
 
     #[test]
-    fn macro_rewrite_nested_args_are_expanded_eagerly_at_top_level() {
-        // Eager arg expansion (the fix for the diamond-recursion false
-        // positive): a nested call inside an arg is expanded *before*
-        // the outer macro's blue-paint is pushed. As a consequence the
-        // inner call's parent in the rewrite tree is the call-site
-        // layer (source for top-level), not the outer macro — and it
-        // shows up *before* the outer macro in rewrite order.
+    fn macro_rewrite_nested_body_call_offsets_via_substituted_arg() {
+        // Repro of the traceback example from issue #145:
+        //   CREATE PERFETTO MACRO n(x Expr) RETURNS Expr AS ($x);
+        //   CREATE PERFETTO MACRO m(x Expr) RETURNS Expr AS ($x);
+        //   SELECT m!(n!(nonexistent_col));
         //
-        // Previously (lazy expansion) the inner call was tokenized from
-        // the outer macro's substituted body and got the
-        // MACRO_BODY_CALL_ARG_INTERNAL sentinel for body_call_offset.
-        // With eager expansion the inner call has clean offsets in the
-        // authored source.
+        // The inner n!(...) call is tokenized from the substituted text
+        // of m's $x, not from m's authored body — downstream Rewriter
+        // consumers need the arg-internal sentinel (u32::MAX on both
+        // body_call_offset and body_call_length) to signal "descend via
+        // arg segments" instead of "rewrite in the parent's body".
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let mut reg = TestMacroRegistry::new();
         reg.register("n", &["x"], "($x)");
@@ -1280,19 +1278,28 @@ mod tests {
         };
 
         let rewrites: Vec<_> = stmt.macro_rewrites().collect();
-        assert_eq!(rewrites.len(), 2, "n (expanded first, eagerly) + m");
+        assert_eq!(rewrites.len(), 2, "m + n");
 
-        // Eager order: n is expanded during m's arg pre-expansion, so it
-        // lands in the rewrites list first.
-        let inner = &rewrites[0];
-        assert_eq!(inner.name(), "n");
-        assert_eq!(inner.parent(), None, "inner call is lexically at source");
-
-        let outer = &rewrites[1];
+        let outer = &rewrites[0];
         assert_eq!(outer.name(), "m");
         assert_eq!(outer.parent(), None);
+        // For top-level calls the parent is the authored source, so
+        // body_call_offset/length fall through to call_offset/length.
         assert_eq!(outer.body_call_offset(), outer.call_offset());
         assert_eq!(outer.body_call_length(), outer.call_length());
+
+        let inner = &rewrites[1];
+        assert_eq!(inner.name(), "n");
+        assert_eq!(inner.parent(), Some(RewriteIdx::from_raw(0)));
+        // The nested n!(42) call lives entirely inside m's substituted
+        // $x arg — call_offset/length are in the post-substitution
+        // expansion buffer, but there's no clean position in m's
+        // authored body "($x)".  The arg-internal sentinel signals this.
+        assert_eq!(
+            inner.body_call_offset(),
+            crate::MACRO_BODY_CALL_ARG_INTERNAL
+        );
+        assert_eq!(inner.body_call_length(), LayerLen::from_raw(u32::MAX));
     }
 
     #[test]
@@ -1362,17 +1369,20 @@ mod tests {
     }
 
     #[test]
-    fn macro_rewrite_arg_segment_resolves_to_source_after_eager_expansion() {
-        // Eager arg expansion: for `m!(n!(nonexistent_col))`, n is
-        // expanded first (during m's arg pre-expansion) and lands at
-        // rewrites[0]. Its single arg "nonexistent_col" is verbatim
-        // source text — n's arg_segments drill straight to source.
+    fn macro_rewrite_arg_segment_chain_resolves_to_source() {
+        // Reproduces the chain from issue #145: for `m!(n!(nonexistent_col))`,
+        // downstream consumers walk each rewrite's arg_segments to anchor
+        // the innermost token back to its authored position in the source.
         //
-        // The previous behaviour was a two-link chain: m's arg segment
-        // pointed at the literal "n!(nonexistent_col)" in source, and
-        // n's arg segment pointed into m's expansion buffer. Eager
-        // expansion collapses that chain because the nested call is
-        // resolved before m's substitution runs at all.
+        // The chain for `nonexistent_col`:
+        //   * n's $x segment: origin = rewrite(0) i.e. m's expansion buffer
+        //     at the position of "nonexistent_col" within "(n!(nonexistent_col))"
+        //     (n's arg text was tokenized from m's expansion, not the source).
+        //   * m's $x segment at that position: origin = source, pointing at
+        //     "n!(nonexistent_col)" in the authored SQL.
+        //
+        // Recursing one more step via n's arg text inside m's arg text gets
+        // back to the "nonexistent_col" position in the source.
         use crate::parser::ArgOrigin;
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let mut reg = TestMacroRegistry::new();
@@ -1391,18 +1401,53 @@ mod tests {
         let rewrites: Vec<_> = stmt.macro_rewrites().collect();
         assert_eq!(rewrites.len(), 2);
 
-        // rewrites[0] is `n` — expanded eagerly while preparing m's args.
-        // n's $x segment resolves directly to "nonexistent_col" in source.
+        // m's arg segment points into the authored source; origin_offset
+        // is statement-relative when origin is Source.
         let stmt_text = stmt.text();
-        let n_segs: Vec<_> = rewrites[0].arg_segments().collect();
-        assert_eq!(n_segs.len(), 1);
-        assert_eq!(n_segs[0].origin(), ArgOrigin::Source);
-        let n_arg_range = crate::source::StmtRange::from_offset_len(
-            StmtOffset::from_raw(n_segs[0].origin_offset().as_u32()),
-            StmtLen::from_raw(n_segs[0].origin_length().as_u32()),
+        let m_segs: Vec<_> = rewrites[0].arg_segments().collect();
+        assert_eq!(m_segs.len(), 1);
+        assert_eq!(m_segs[0].origin(), ArgOrigin::Source);
+        // Arg-segment origin_offset is a LayerOffset; at Source origin
+        // the "layer" is the statement, so reinterpret as StmtRange.
+        let m_arg_range = crate::source::StmtRange::from_offset_len(
+            StmtOffset::from_raw(m_segs[0].origin_offset().as_u32()),
+            StmtLen::from_raw(m_segs[0].origin_length().as_u32()),
         );
-        let n_arg_text = &stmt_text[n_arg_range];
-        assert_eq!(n_arg_text, "nonexistent_col");
+        let m_arg_text = &stmt_text[m_arg_range];
+        assert_eq!(m_arg_text, "n!(nonexistent_col)");
+
+        // n's arg segment origin is m's expansion buffer — one link in
+        // the chain.  The consumer resolves by finding the m segment
+        // whose expansion range contains n's arg, then recursing.
+        let n_segs: Vec<_> = rewrites[1].arg_segments().collect();
+        assert_eq!(n_segs.len(), 1);
+        assert_eq!(
+            n_segs[0].origin(),
+            ArgOrigin::Rewrite(RewriteIdx::from_raw(0))
+        );
+        let m_expansion = rewrites[0].expansion();
+        let n_arg_range =
+            LayerRange::from_offset_len(n_segs[0].origin_offset(), n_segs[0].origin_length());
+        let n_arg_in_m_expansion = &m_expansion[n_arg_range];
+        assert_eq!(n_arg_in_m_expansion, "nonexistent_col");
+
+        // Walk the chain: n's arg inside m's expansion, intersected with
+        // m's segment, lands on the position of "nonexistent_col" in
+        // the source.
+        let n_arg_off_in_m = n_segs[0].origin_offset();
+        let m_seg = &m_segs[0];
+        assert!(
+            n_arg_off_in_m >= m_seg.expansion_offset()
+                && n_arg_off_in_m + n_segs[0].origin_length()
+                    <= m_seg.expansion_offset() + m_seg.expansion_length()
+        );
+        let delta = n_arg_off_in_m - m_seg.expansion_offset();
+        let source_off = m_seg.origin_offset() + delta;
+        let source_len = n_segs[0].origin_length();
+        let off = source_off.as_usize();
+        let len = source_len.as_usize();
+        let authored = &source[off..off + len];
+        assert_eq!(authored, "nonexistent_col");
     }
 
     #[test]
@@ -2704,27 +2749,27 @@ mod tests {
         assert_eq!(last.as_u32(), 3);
     }
 
-    // ── Eager arg expansion: diamond, recursion, depth limit ──────────────
+    // ── Recursion-check scoping across `$param`-substituted call sites ────
     //
-    // The blue-paint recursion check used to be name-only and would
-    // false-fire on a "diamond" — `outer!(inner!())` where `inner`'s body
-    // legitimately re-invokes `outer`'s callee, but only because the arg
-    // had been pasted into `outer`'s body before nested expansion ran.
-    // Args are now eagerly expanded with the caller's blue-paint stack
-    // (the current macro is not yet pushed), so the diamond resolves
-    // without the outer macro appearing on the stack during arg eval.
+    // When a nested macro call's position in the current layer's expansion
+    // falls inside one of the layer's `arg_segments`, the call was authored
+    // by the layer's caller, not inside the layer's own body.  The
+    // recursion check excludes such layers from the chain of lexical
+    // wrappers it walks — see the comment block in `parser_macros.c` over
+    // `synq_parser_expand_and_feed_macro` for the precise rules.
 
     #[test]
-    fn eager_diamond_two_macros_passes() {
-        // Minimal diamond. Two macros, one statement.
-        //   pass(x)  AS ($x)         -- emits its argument
-        //   caller() AS (pass!(0))   -- body calls pass
-        //   SELECT pass!(caller!()); -- arg to pass is a call to caller,
-        //                              whose body calls pass.
-        // Name-only blue-paint would error on the second `pass`; eager
-        // expansion places `caller!()` outside `pass`'s blue-paint scope,
-        // and the inner `pass!(0)` then runs at stack=[caller] with no
-        // false match.
+    fn recursion_check_allows_diamond_through_arg() {
+        // pass(x)  AS $x       — emits its argument
+        // caller() AS pass!(0) — body calls pass
+        // SELECT pass!(caller!());
+        //
+        // Although `pass` appears on the expansion chain twice, the
+        // inner `pass!(0)` sits inside `caller`'s body, and `caller`
+        // itself was tokenized from `pass`'s `$x` substitution.  Walking
+        // the lexical-wrapper chain from the inner `pass!(0)` stops at
+        // `caller` (its `body_call_offset` is ARG_INTERNAL), so the
+        // outer `pass` is never reached.
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let mut reg = TestMacroRegistry::new();
         reg.register("pass", &["x"], "$x");
@@ -2742,11 +2787,52 @@ mod tests {
     }
 
     #[test]
-    fn eager_diamond_three_macros_perfetto_shape() {
-        // The Perfetto stdlib pattern that surfaced the bug. `_iub` (the
-        // common pass-through) appears on the call chain twice through
-        // the diamond, but separated by `nbisu`'s body and with a smaller
-        // argument the second time.
+    fn recursion_check_detects_direct_self_call_in_body() {
+        // A macro whose authored body literally calls itself is a real
+        // cycle: the recursive call is at a body-internal position (not
+        // inside any arg segment), so the lexical-wrapper walk finds
+        // the macro itself on the chain.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("loops", &[], "loops!()");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let mut session = parser.parse("SELECT loops!();");
+        match session.next() {
+            ParseOutcome::Err(_) => {}
+            ParseOutcome::Ok(_) => panic!("expected recursion error, got Ok"),
+            ParseOutcome::Done => panic!("expected recursion error, got Done"),
+        }
+    }
+
+    #[test]
+    fn recursion_check_detects_mutual_cycle_through_bodies() {
+        // a's body literally contains a call to b; b's body literally
+        // contains a call to a.  All links are body-internal, so the
+        // walk traverses the full chain and finds a match.
+        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
+        let mut reg = TestMacroRegistry::new();
+        reg.register("a", &[], "b!()");
+        reg.register("b", &[], "a!()");
+        parser.set_macro_lookup(Some(Box::new(reg)));
+
+        let mut session = parser.parse("SELECT a!();");
+        match session.next() {
+            ParseOutcome::Err(_) => {}
+            ParseOutcome::Ok(_) => panic!("expected recursion error, got Ok"),
+            ParseOutcome::Done => panic!("expected recursion error, got Done"),
+        }
+    }
+
+    #[test]
+    fn recursion_check_allows_diamond_perfetto_shape() {
+        // `_iub` is invoked on two separate paths through the call
+        // graph — once directly from `conv`'s body, and once from
+        // `nbisu`'s body (where `nbisu` was itself tokenized from
+        // `conv`'s `$b` substitution).  The two `_iub` calls are
+        // independent: the chain of lexical wrappers from the inner
+        // `_iub` call site stops at `nbisu` (ARG_INTERNAL), so the
+        // outer `_iub` is not on it.
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let mut reg = TestMacroRegistry::new();
         reg.register("_iub", &["b"], "(SELECT start_ts FROM $b) IS NULL");
@@ -2774,300 +2860,56 @@ mod tests {
     }
 
     #[test]
-    fn eager_arg_with_no_nested_calls_still_works() {
-        // Sanity: arg without nested macros still works (no regression
-        // on the common case).
+    fn nested_macro_inside_arg_records_arg_internal_sentinel() {
+        // A macro call that appears only as a nested call inside an
+        // outer macro's arg (no occurrence in the outer body) records
+        // its layer as a child of the outer macro with
+        // body_call_offset = body_call_length = ARG_INTERNAL.  The
+        // outer macro's expansion buffer holds the authored arg text
+        // verbatim, with the nested call site preserved literally so
+        // downstream consumers can locate it via the outer macro's
+        // `arg_segments`.
         let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
         let mut reg = TestMacroRegistry::new();
-        reg.register("pass", &["x"], "$x");
+        reg.register("foo", &["a"], "$a");
+        reg.register("bar", &["a"], "(SELECT $a)");
         parser.set_macro_lookup(Some(Box::new(reg)));
 
-        let mut session = parser.parse("SELECT pass!(42);");
-        match session.next() {
-            ParseOutcome::Ok(_) => {}
-            ParseOutcome::Done => panic!("expected a statement"),
-            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
-        }
-    }
-
-    #[test]
-    fn eager_direct_recursion_still_errors() {
-        // True direct recursion: M(x) AS (M!($x)); M!(0).
-        // The recursion check must still fire when the call chain
-        // genuinely re-enters the same macro.
-        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        let mut reg = TestMacroRegistry::new();
-        reg.register("recur", &["x"], "recur!($x)");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT recur!(0);");
-        match session.next() {
-            ParseOutcome::Err(e) => {
-                let msg = e.message();
-                assert!(
-                    msg.contains("recursive macro expansion") || msg.contains("depth limit"),
-                    "expected recursion or depth error, got: {msg}"
-                );
-            }
-            other => panic!("expected error for direct recursion, got: {other:?}"),
-        }
-    }
-
-    #[test]
-    fn eager_mutual_recursion_still_errors() {
-        // Mutual recursion: A() AS (B!()), B() AS (A!()).
-        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        let mut reg = TestMacroRegistry::new();
-        reg.register("a_m", &[], "b_m!()");
-        reg.register("b_m", &[], "a_m!()");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT a_m!();");
-        match session.next() {
-            ParseOutcome::Err(e) => {
-                let msg = e.message();
-                assert!(
-                    msg.contains("recursive macro expansion") || msg.contains("depth limit"),
-                    "expected recursion or depth error, got: {msg}"
-                );
-            }
-            other => panic!("expected error for mutual recursion, got: {other:?}"),
-        }
-    }
-
-    #[test]
-    fn eager_recursion_through_arg_still_errors() {
-        // M(x) AS (M!($x)); M!(M!(0))
-        // The outer M's arg is M!(0). Eager expansion of the arg:
-        //   - enter M (for M!(0)) at stack=[]
-        //   - body becomes M!(0)
-        //   - encounter M!(0) -> stack=[M] -> recursion error.
-        // The error fires during arg expansion, before the outer M
-        // is even started. Same diagnostic, just earlier.
-        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        let mut reg = TestMacroRegistry::new();
-        reg.register("recur", &["x"], "recur!($x)");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT recur!(recur!(0));");
-        match session.next() {
-            ParseOutcome::Err(e) => {
-                let msg = e.message();
-                assert!(
-                    msg.contains("recursive macro expansion") || msg.contains("depth limit"),
-                    "expected recursion or depth error, got: {msg}"
-                );
-            }
-            other => panic!("expected error, got: {other:?}"),
-        }
-    }
-
-    #[test]
-    fn eager_sibling_calls_at_top_level_work() {
-        // Calling the same macro twice in sequence at top level is not
-        // recursion; each call starts at stack=[].
-        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        let mut reg = TestMacroRegistry::new();
-        reg.register("pass", &["x"], "$x");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT pass!(1) + pass!(2);");
-        match session.next() {
-            ParseOutcome::Ok(_) => {}
-            ParseOutcome::Done => panic!("expected a statement"),
-            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
-        }
-    }
-
-    #[test]
-    fn eager_arg_expansion_no_extents_still_parses_ok() {
-        // Sanity: with eager expansion `pass!(inner_v!())` should parse
-        // cleanly when extent tracking is disabled. (The
-        // collect_node_extents path stresses straddle/extent bookkeeping
-        // for pre-expanded arg layers; that's covered by the suite below.)
-        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        let mut reg = TestMacroRegistry::new();
-        reg.register("pass", &["x"], "($x)");
-        reg.register("inner_v", &[], "99");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT pass!(inner_v!());");
-        match session.next() {
-            ParseOutcome::Ok(_) => {}
-            ParseOutcome::Done => panic!("expected a statement"),
-            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
-        }
-    }
-
-    #[test]
-    fn eager_arg_expansion_with_extents_tracking() {
-        // collect_node_extents path: nested-call args go through
-        // pre_expand_args (expand_and_feed in buffer mode), which calls
-        // begin_macro_expansion at ctx.layer_id=0 before the outer
-        // macro is started.  Verifies the straddle / macro_root
-        // bookkeeping doesn't blow up on the pre-expanded inner layer.
-        let mut parser = Parser::with_config(
-            &ParserConfig::default()
-                .with_collect_tokens(true)
-                .with_collect_node_extents(true)
-                .with_macro_fallback(true),
-        );
-        let mut reg = TestMacroRegistry::new();
-        reg.register("pass", &["x"], "($x)");
-        reg.register("inner_v", &[], "99");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT pass!(inner_v!());");
-        match session.next() {
-            ParseOutcome::Ok(_) => {}
-            ParseOutcome::Done => panic!("expected a statement"),
-            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
-        }
-    }
-
-    #[test]
-    fn eager_arg_with_two_calls_both_expand() {
-        // Arg that contains two sibling nested calls.
-        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        let mut reg = TestMacroRegistry::new();
-        reg.register("pair", &["a", "b"], "($a + $b)");
-        reg.register("two", &[], "2");
-        reg.register("three", &[], "3");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT pair!(two!(), three!());");
-        match session.next() {
-            ParseOutcome::Ok(_) => {}
-            ParseOutcome::Done => panic!("expected a statement"),
-            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
-        }
-    }
-
-    #[test]
-    fn eager_three_level_nesting_in_arg() {
-        // outer!(mid!(inner!())) — three levels of nesting in the arg.
-        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        let mut reg = TestMacroRegistry::new();
-        reg.register("outer_m", &["x"], "$x");
-        reg.register("mid_m", &["x"], "$x");
-        reg.register("inner_m", &[], "7");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT outer_m!(mid_m!(inner_m!()));");
-        match session.next() {
-            ParseOutcome::Ok(_) => {}
-            ParseOutcome::Done => panic!("expected a statement"),
-            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
-        }
-    }
-
-    #[test]
-    fn eager_arg_pre_expansion_preserves_inter_token_bytes() {
-        // Regression: expand_and_feed's buffer mode used to drop inter-token
-        // whitespace, so a multi-token nested expansion collapsed into
-        // adjacent text (e.g. "1 + 2" → "1+2", which still parses but
-        // means something different).
-        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        let mut reg = TestMacroRegistry::new();
-        reg.register("pass", &["x"], "$x");
-        reg.register("structured", &[], "1 + 2, NULL, (3 * 4)");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT pass!(structured!());");
-        let ParseOutcome::Ok(stmt) = session.next() else {
-            panic!("expected statement")
-        };
-        let pass = stmt
-            .macro_rewrites()
-            .find(|r| r.name() == "pass")
-            .expect("pass rewrite");
-        assert_eq!(pass.expansion(), "1 + 2, NULL, (3 * 4)");
-    }
-
-    #[test]
-    fn eager_arg_with_body_internal_call_after_substitution() {
-        // `wrap`'s authored body has BOTH a $param substitution AND a
-        // body-internal `leaf!(7)`.  After eager pre-expansion the
-        // $param text sits beside the call; leaf's body_call_offset
-        // must still point at leaf!(7)'s position in the authored body
-        // (independent of the arg's actual post-expansion length).
-        let mut parser = Parser::with_config(&ParserConfig::default().with_macro_fallback(true));
-        let mut reg = TestMacroRegistry::new();
-        reg.register("leaf", &["v"], "$v");
-        reg.register("inner_v", &[], "9 + 8");
-        reg.register("wrap", &["a"], "$a + leaf!(7)");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let mut session = parser.parse("SELECT wrap!(inner_v!());");
-        let ParseOutcome::Ok(stmt) = session.next() else {
-            panic!("expected statement")
-        };
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
-        let wrap = rewrites.iter().find(|r| r.name() == "wrap").unwrap();
-        assert_eq!(wrap.expansion(), "9 + 8 + leaf!(7)");
-        let leaf = rewrites.iter().find(|r| r.name() == "leaf").unwrap();
-        assert_eq!(leaf.parent(), Some(RewriteIdx::from_raw(1)));
-        // Authored "$a + leaf!(7)": leaf!(7) at offset 5, length 8.
-        assert_eq!(leaf.body_call_offset(), LayerOffset::from_raw(5));
-        assert_eq!(leaf.body_call_length(), LayerLen::from_raw(8));
-    }
-
-    #[test]
-    fn eager_arg_with_comment_does_not_corrupt_recorded_comments() {
-        // Comments inside a pre-expanded arg used to be recorded by
-        // synq_macro_skip with arg-local offsets interpreted as
-        // source-relative, producing OOB reads or garbage text on
-        // Comment::text() lookups.  After the fix, recording is
-        // suppressed in pre-expansion mode; the comment bytes still
-        // flow through into the substituted body where Lemon-mode
-        // tokenization records them at the expansion layer.
-        //
-        // The comment legitimately appears twice in the recorded
-        // stream: once at layer 0 (scan_macro_args sees it while
-        // splitting top-level args, before pre-expansion begins), and
-        // once at the expansion layer (body re-tokenization).  Both
-        // must dereference to the right text — that's the regression
-        // signal we care about.
-        let mut parser = Parser::with_config(
-            &ParserConfig::default()
-                .with_collect_tokens(true)
-                .with_macro_fallback(true),
-        );
-        let mut reg = TestMacroRegistry::new();
-        reg.register("pass", &["x"], "($x)");
-        reg.register("inner_v", &[], "99");
-        parser.set_macro_lookup(Some(Box::new(reg)));
-
-        let source = "SELECT pass!(/* note */ inner_v!());";
+        let source = "SELECT bar!(foo!(123));";
         let mut session = parser.parse(source);
-        let ParseOutcome::Ok(stmt) = session.next() else {
-            panic!("expected statement")
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let notes: Vec<_> = stmt
-            .comments()
-            .filter(|c| c.text().contains("note"))
-            .collect();
-        assert!(
-            !notes.is_empty(),
-            "expected /* note */ to be recorded at least once",
-        );
-        for c in &notes {
-            assert_eq!(
-                c.text(),
-                "/* note */",
-                "recorded comment text doesn't match — likely bogus offset",
-            );
-        }
+        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        assert_eq!(rewrites.len(), 2, "bar + foo");
 
-        // Sanity: every recorded comment in the statement (not just
-        // the /* note */ ones) must dereference to a real comment.
-        for c in stmt.comments() {
-            let t = c.text();
-            assert!(
-                t.starts_with("--") || t.starts_with("/*"),
-                "recorded comment text not a comment: {t:?}",
-            );
-        }
+        // Rewrites are recorded in push order, root-down.
+        let bar = &rewrites[0];
+        assert_eq!(bar.name(), "bar");
+        assert_eq!(bar.parent(), None);
+        // bar's expansion contains the authored arg text verbatim.
+        assert_eq!(bar.expansion(), "(SELECT foo!(123))");
+
+        let foo = &rewrites[1];
+        assert_eq!(foo.name(), "foo");
+        assert_eq!(foo.parent(), Some(RewriteIdx::from_raw(0)));
+        // ARG_INTERNAL marks a call that came in through a $param
+        // substitution: it has no position in the parent's authored
+        // body, so consumers must descend through the parent's
+        // matching arg segment to locate it.
+        assert_eq!(foo.body_call_offset(), LayerOffset::from_raw(u32::MAX));
+        assert_eq!(foo.body_call_length(), LayerLen::from_raw(u32::MAX));
+        assert_eq!(foo.expansion(), "123");
+
+        // foo's $a substitution segment locates the `$a` token in
+        // foo's authored body ("$a" — at body[0, 2)).
+        let foo_segs: Vec<_> = foo.arg_segments().collect();
+        assert_eq!(foo_segs.len(), 1);
+        let seg = &foo_segs[0];
+        assert_eq!(seg.body_offset(), LayerOffset::from_raw(0));
+        assert_eq!(seg.body_length(), LayerLen::from_raw(2));
     }
 }

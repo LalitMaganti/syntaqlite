@@ -23,7 +23,6 @@ extern "C" {
 // ── Tunables ────────────────────────────────────────────────────────────────
 
 #define SYNQ_MAX_MACRO_DEPTH 16
-#define SYNQ_MAX_MACRO_ARGS 64
 
 // Per-token comment index entry.  Each entry records where the owning
 // token's leading / trailing comments live in `p->comments`.  Used by
@@ -145,7 +144,6 @@ typedef struct SynqExpansionLayer {
 } SynqExpansionLayer;
 
 typedef SYNQ_VEC(SynqExpansionLayer) SynqExpansionLayerVec;
-typedef SYNQ_VEC(uint8_t) SynqByteVec;
 
 // All macro-related parser state, including layer tree and scratch buffers.
 // Factored into a single sub-struct so the parser struct has one guarded
@@ -168,26 +166,6 @@ typedef struct SynqMacroState {
   // ── Scratch buffers (reused across invocations, freed in destroy) ──────
   SYNQ_VEC(uint8_t) expand_buf;  // Template expansion output.
   SYNQ_VEC(uint8_t) body_buf;    // NUL-terminated body staging.
-  // Flat scratch arena for eager arg pre-expansion.  Usage is
-  // stack-disciplined: each `synq_parser_expand_and_feed_macro` records
-  // `count` on entry and truncates back to that mark before feeding its
-  // own expansion, so an inner call's pre-expansion temporaries don't
-  // fragment the outer caller's accumulating bytes (when the outer is
-  // itself in pre-expansion).  Pointers into this vec are taken only
-  // after `pre_expand_args` is done pushing, since pushes can realloc.
-  SynqByteVec arg_scratch;
-
-  // 1 while expand_and_feed is running in scratch (pre-expansion)
-  // mode.  When set, helper tokenizers skip side effects that would
-  // store mis-attributed metadata (comments) — the bytes are preserved
-  // verbatim into arg_scratch and get re-tokenized at the correct
-  // layer when the substituted body runs through Lemon-mode feed.
-  int in_pre_expand;
-
-  // ── Blue-paint recursion detection ─────────────────────────────────────
-  const char* expansion_names[SYNQ_MAX_MACRO_DEPTH];
-  uint32_t expansion_name_lens[SYNQ_MAX_MACRO_DEPTH];
-  uint32_t expansion_depth;
 
   // ── Nesting depth (0 = not in macro) ───────────────────────────────────
   uint32_t depth;
@@ -333,12 +311,9 @@ uint32_t synq_parser_scan_macro_args(SyntaqliteParser* p,
                                      uint32_t max_args,
                                      uint32_t* out_end_offset);
 
-// Expand a macro call via the lookup callback, push the expansion
-// layer, feed its tokens, and clean up.  The sink (Lemon vs.
-// arg_scratch) is determined by `p->macro.in_pre_expand` — set by
-// `pre_expand_args` when an outer call is pre-expanding its own
-// args, cleared otherwise.  Returns 0 on success, -1 if not a macro
-// or on error.  Updates *out_end_offset to the position past ')'.
+// Expand a macro call via the lookup callback, push the expansion layer,
+// feed its tokens, and clean up.  Returns 0 on success, -1 if not a
+// macro or on error.  Updates *out_end_offset to the position past ')'.
 int synq_parser_expand_and_feed_macro(SyntaqliteParser* p,
                                       const char* buf,
                                       uint32_t buf_len,
