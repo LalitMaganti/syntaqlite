@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.9
+
+**Parser:**
+- Reverted the eager macro argument expansion introduced in 0.5.8, which broke the rewrite tree shape expected by downstream consumers. The diamond-recursion case it fixed is now detected structurally by walking the expansion layer's parent chain through `body_call_offset == ARG_INTERNAL` links, with no pre-expansion needed ([#262](https://github.com/LalitMaganti/syntaqlite/pull/262)).
+
 ## 0.5.8
 
 **Parser:**

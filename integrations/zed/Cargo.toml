@@ -3,7 +3,7 @@
 
 [package]
 name = "syntaqlite-zed"
-version = "0.5.8"
+version = "0.5.9"
 edition = "2024"
 
 [lib]

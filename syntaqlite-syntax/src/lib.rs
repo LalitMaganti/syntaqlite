@@ -13,7 +13,7 @@
 //!
 //! ```toml
 //! [dependencies]
-//! syntaqlite = { version = "0.5.8", default-features = false, features = ["sqlite"] }
+//! syntaqlite = { version = "0.5.9", default-features = false, features = ["sqlite"] }
 //! ```
 
 // ==== Public API ====
