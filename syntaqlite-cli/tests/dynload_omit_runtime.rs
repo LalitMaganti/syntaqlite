@@ -28,7 +28,9 @@ fn bin() -> &'static str {
 }
 
 fn run(cmd: &mut Command, ctx: &str) {
-    let out = cmd.output().unwrap_or_else(|e| panic!("{ctx}: spawn failed: {e}"));
+    let out = cmd
+        .output()
+        .unwrap_or_else(|e| panic!("{ctx}: spawn failed: {e}"));
     assert!(
         out.status.success(),
         "{ctx} failed (exit={:?})\nstdout:\n{}\nstderr:\n{}",
@@ -48,7 +50,10 @@ fn shared_lib_path(dir: &Path, stem: &str) -> PathBuf {
 }
 
 #[test]
-#[cfg_attr(target_os = "windows", ignore = "dlopen export model differs on Windows")]
+#[cfg_attr(
+    target_os = "windows",
+    ignore = "dlopen export model differs on Windows"
+)]
 fn omit_runtime_dialect_plugin_resolves_against_host() {
     let tmp = tempfile::TempDir::new().expect("tempdir");
     let amalg_dir = tmp.path();
@@ -56,14 +61,25 @@ fn omit_runtime_dialect_plugin_resolves_against_host() {
     // 1. Generate the full sqlite amalgamation (syntaqlite_sqlite.{h,c}).
     run(
         Command::new(bin())
-            .args(["dialect", "generate", "--name", "sqlite", "--output-type", "full"])
+            .args([
+                "dialect",
+                "generate",
+                "--name",
+                "sqlite",
+                "--output-type",
+                "full",
+            ])
             .arg("--output-dir")
             .arg(amalg_dir),
         "syntaqlite dialect generate",
     );
 
     let src = amalg_dir.join("syntaqlite_sqlite.c");
-    assert!(src.exists(), "amalgamation source not written: {}", src.display());
+    assert!(
+        src.exists(),
+        "amalgamation source not written: {}",
+        src.display()
+    );
 
     // 2. Compile as a shared library with OMIT_RUNTIME defined. This strips
     //    `synq_extent_on_*` from the .so, requiring the host binary to
