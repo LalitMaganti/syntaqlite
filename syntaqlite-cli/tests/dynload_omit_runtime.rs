@@ -17,7 +17,7 @@
 //!     symbol lookup error: ...: undefined symbol: synq_extent_on_shift
 //!
 //! macOS executables export symbols by default, so the test passes there
-//! regardless of the build.rs flag — but it still exercises the OMIT_RUNTIME
+//! regardless of the build.rs flag — but it still exercises the `OMIT_RUNTIME`
 //! .dylib loading path.
 
 use std::path::{Path, PathBuf};
