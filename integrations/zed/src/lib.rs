@@ -5,7 +5,7 @@ use std::fs;
 
 use zed_extension_api::{self as zed, settings::LspSettings, LanguageServerId, Result};
 
-const SERVER_NAME: &str = "syntaqlite";
+const SERVER_NAME: &str = "syntaqlite-lsp";
 
 /// GitHub release asset names by platform.
 fn github_asset_name(platform: zed::Os, arch: zed::Architecture) -> Result<&'static str> {
