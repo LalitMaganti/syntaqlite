@@ -122,6 +122,12 @@ impl<'a> Validator<'a> {
     fn analyze(&self, src: &Source) -> Analysis {
         match self.lang {
             Some(lang) => self.analyze_embedded(src, lang),
+            // No explicit host language: auto-detect sqlite3 shell scripts
+            // (`.read` dot-commands, column-0 `#` comments) so they validate
+            // cleanly without a flag; everything else is standalone SQL.
+            None if syntaqlite::embedded::is_shell_script(&src.text) => {
+                self.analyze_embedded(src, HostLanguage::Shell)
+            }
             None => Analysis::Diagnostics(self.analyze_standalone(src)),
         }
     }
@@ -239,6 +245,7 @@ fn extract_fragments(
     match lang {
         HostLanguage::Python => syntaqlite::embedded::extract_python(source),
         HostLanguage::Typescript => syntaqlite::embedded::extract_typescript(source),
+        HostLanguage::Shell => syntaqlite::embedded::extract_shell(source),
     }
 }
 

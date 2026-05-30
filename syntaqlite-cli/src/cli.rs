@@ -69,6 +69,8 @@ pub(crate) enum KeywordCasing {
 pub(crate) enum HostLanguage {
     Python,
     Typescript,
+    /// sqlite3 CLI shell language (dot-commands, `GO`/`/` terminators).
+    Shell,
 }
 
 // ── Top-level CLI + Command enum ──────────────────────────────────────────
@@ -208,7 +210,8 @@ pub(crate) struct AnalyzeArgs {
     /// Deny (error) a check category (repeatable)
     #[arg(short = 'D', long = "deny")]
     pub(crate) deny: Vec<String>,
-    /// [experimental] Host language for embedded SQL extraction (python, typescript)
+    /// [experimental] Host language for embedded SQL extraction (python, typescript, shell).
+    /// When omitted, sqlite3 shell scripts (`.read` dot-commands) are auto-detected.
     #[arg(long = "experimental-lang")]
     pub(crate) lang: Option<HostLanguage>,
     /// Output format

@@ -110,6 +110,17 @@ fn ensure_analysis(
     if doc.analysis.is_some() {
         return;
     }
+
+    // sqlite3 shell scripts (`.read foo.sql`, column-0 `#` comments, `GO`/`/`
+    // terminators) are a separate language layered above pure SQL. Auto-detect
+    // them and route the SQL fragments through the embedded analyzer so the
+    // shell-only lines are not flagged as SQL syntax errors (issue #88).
+    #[cfg(feature = "experimental-embedded")]
+    if crate::embedded::is_shell_script(&doc.source) {
+        analyze_shell_doc(doc, analyzer, user_catalog, analysis_config, external_defs);
+        return;
+    }
+
     let mut capture = LspCapture::new(external_defs);
     let mut ctx = AnalysisContext::new(user_catalog).with_config(*analysis_config);
     let model = analyzer.analyze_with_visitor(&doc.source, &mut ctx, &mut capture);
@@ -122,6 +133,44 @@ fn ensure_analysis(
     doc.cached_parse_diags = Some(parse_diags);
     doc.cached_all_diags = Some(all_diags);
     doc.analysis = Some(capture.into_data());
+}
+
+/// Analyze a document detected as a sqlite3 shell script.
+///
+/// Extracts the SQL fragments that sit between shell lines (dot-commands,
+/// column-0 `#` comments, `GO`/`/` terminators) and runs them through the
+/// embedded analyzer, mapping diagnostics back to host-file offsets. The
+/// shell-only lines therefore never reach the SQL parser and are not flagged as
+/// syntax errors.
+///
+/// Semantic tokens, hover, and go-to-definition for shell files are out of scope
+/// for now: an empty [`LspCapture`] keeps the cache invariants satisfied while
+/// those queries return nothing.
+// TODO: wire shell fragments into semantic tokens / hover so `.read` scripts get
+// SQL highlighting and navigation in-editor.
+#[cfg(feature = "experimental-embedded")]
+fn analyze_shell_doc(
+    doc: &mut Document,
+    analyzer: &Analyzer,
+    user_catalog: &Catalog,
+    analysis_config: &AnalysisConfig,
+    external_defs: Option<&ExternalDefinitions>,
+) {
+    use crate::embedded::{EmbeddedAnalyzer, extract_shell};
+
+    let fragments = extract_shell(&doc.source);
+    let mut emb = EmbeddedAnalyzer::new(analyzer.dialect())
+        .with_catalog(user_catalog.clone())
+        .with_config(*analysis_config);
+    let all_diags = emb.analyze(&fragments);
+    let parse_diags: Vec<Diagnostic> = all_diags
+        .iter()
+        .filter(|d| d.message().is_parse_error())
+        .cloned()
+        .collect();
+    doc.cached_parse_diags = Some(parse_diags);
+    doc.cached_all_diags = Some(all_diags);
+    doc.analysis = Some(LspCapture::new(external_defs).into_data());
 }
 
 /// Resolve the correct catalog for `uri` via `schema_map`, then call
@@ -1206,6 +1255,58 @@ mod tests {
         assert_eq!(
             def.target.range.end.as_usize(),
             schema_offset + "users".len()
+        );
+    }
+
+    // ── Shell script (sqlite3 CLI dot-commands) — issue #88 ──────────────
+
+    /// Issue #88: a file consisting of sqlite3 shell `.read` dot-commands plus
+    /// SQL must NOT be flagged "syntax error near '.'". The LSP host should
+    /// auto-detect shell mode and route the SQL fragments through the embedded
+    /// analyzer, so the dot-command lines are treated as shell content (not SQL)
+    /// and produce zero parse-error diagnostics.
+    #[test]
+    fn shell_dot_commands_produce_no_parse_errors() {
+        let mut host = LspHost::new();
+        let uri = "file:///init.sql";
+        let src = ".read adapters/sqlite/scripts/includes/01-pragma.sql\n\
+                   .read adapters/sqlite/scripts/includes/02-drops.sql\n\
+                   SELECT 1;";
+        host.open_document(uri, 1, src.to_string());
+
+        let (_, _, diags) = host.document_all_diagnostics(uri).expect("document exists");
+        let parse_errors: Vec<_> = diags
+            .iter()
+            .filter(|d| d.message().is_parse_error())
+            .collect();
+        assert!(
+            parse_errors.is_empty(),
+            "shell .read lines must not be flagged as SQL syntax errors, got: {parse_errors:?}"
+        );
+    }
+
+    /// Companion to [`shell_dot_commands_produce_no_parse_errors`]: a *pure* SQL
+    /// document containing a stray `GO` on its own line must STILL report a
+    /// parse error. `GO` is only a terminator in shell mode; we must not have
+    /// globally swallowed it.
+    #[test]
+    fn stray_go_in_pure_sql_still_errors() {
+        let mut host = LspHost::new();
+        let uri = "file:///plain.sql";
+        // A terminated statement followed by a bare `GO` line: in shell mode
+        // `GO` is a terminator, but a pure-SQL file (no shell markers) must
+        // still treat the trailing `GO` as a syntax error.
+        let src = "SELECT 1;\nGO GO GO";
+        host.open_document(uri, 1, src.to_string());
+
+        let (_, _, diags) = host.document_all_diagnostics(uri).expect("document exists");
+        let parse_errors: Vec<_> = diags
+            .iter()
+            .filter(|d| d.message().is_parse_error())
+            .collect();
+        assert!(
+            !parse_errors.is_empty(),
+            "a stray GO in a pure-SQL file must remain a parse error"
         );
     }
 

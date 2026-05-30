@@ -17,13 +17,17 @@
 //! Language-specific extractors live in submodules:
 //! - [`extract_python`](crate::embedded::extract_python) — Python f-string extraction
 //! - [`extract_typescript`](crate::embedded::extract_typescript) — TypeScript/JavaScript template literal extraction
+//! - [`extract_shell`](crate::embedded::extract_shell) — sqlite3 shell-language (dot-commands) extraction
 
 pub(crate) mod offset_map;
 mod python;
+mod shell;
 mod typescript;
 
 #[doc(inline)]
 pub use python::extract_python;
+#[doc(inline)]
+pub use shell::{extract_shell, is_shell_script};
 #[doc(inline)]
 pub use typescript::extract_typescript;
 
@@ -747,5 +751,92 @@ mod tests {
                 "hole placeholder leaked into diagnostics: {msg}",
             );
         }
+    }
+
+    // ── Shell language (sqlite3 CLI dot-commands) — issue #88 ─────────────
+
+    use crate::embedded::{extract_shell, is_shell_script};
+
+    /// A `.read` dot-command at the start of a line marks the file as shell mode.
+    #[test]
+    fn shell_detected_for_dot_command() {
+        assert!(is_shell_script(".read a.sql\nSELECT 1;"));
+    }
+
+    /// Dot-commands tolerate leading whitespace (per sqlite docs).
+    #[test]
+    fn shell_detected_for_indented_dot_command() {
+        assert!(is_shell_script("  .read x.sql\nSELECT 1;"));
+    }
+
+    /// A `#` comment at column 0 is a shell marker.
+    #[test]
+    fn shell_detected_for_col0_hash_comment() {
+        assert!(is_shell_script("# a shell comment\nSELECT 1;"));
+    }
+
+    /// A pure-SQL file with a stray `GO` must NOT be detected as shell mode —
+    /// `GO` is only a terminator once we are already in shell mode.
+    #[test]
+    fn shell_not_detected_for_pure_sql_with_stray_go() {
+        assert!(!is_shell_script("SELECT 1;\nGO"));
+    }
+
+    /// Plain SQL is never shell mode.
+    #[test]
+    fn shell_not_detected_for_plain_sql() {
+        assert!(!is_shell_script("SELECT 1;\nSELECT 2;"));
+    }
+
+    /// `extract_shell` drops dot-command lines and emits one fragment per
+    /// contiguous SQL run, with NO holes and a verbatim slice of the source.
+    #[test]
+    fn shell_extracts_sql_between_dot_commands() {
+        let source = ".read a.sql\nSELECT 1;\n.read b.sql\nSELECT 2;";
+        let fragments = extract_shell(source);
+        assert_eq!(fragments.len(), 2, "expected one fragment per SQL run");
+
+        for f in &fragments {
+            assert!(f.holes().is_empty(), "shell fragments have no holes");
+        }
+
+        assert!(fragments[0].sql_text().contains("SELECT 1;"));
+        assert!(fragments[1].sql_text().contains("SELECT 2;"));
+
+        // Base-offset correctness: the fragment range starts at the SELECT.
+        let first_select = source.find("SELECT 1").unwrap();
+        assert_eq!(fragments[0].sql_range().start.as_usize(), first_select);
+    }
+
+    /// End-to-end #88 repro at the analyzer level: a `.read` + `SELECT 1;` file
+    /// run through the shell extractor produces ZERO parse-error diagnostics,
+    /// whereas the same text fed directly to a plain `Analyzer` DOES (the bug).
+    #[test]
+    fn shell_read_file_has_no_parse_errors() {
+        let source = ".read foo.sql\nSELECT 1;";
+
+        let parse_errors: Vec<_> = analyzer()
+            .analyze(&extract_shell(source))
+            .into_iter()
+            .filter(|d| d.message.is_parse_error())
+            .collect();
+        assert!(
+            parse_errors.is_empty(),
+            "shell .read line must not surface as a SQL parse error, got: {parse_errors:?}"
+        );
+
+        // Negative control: the same source as plain SQL is a parse error.
+        let mut plain = Analyzer::with_dialect(crate::sqlite::dialect::dialect());
+        let mut catalog = Catalog::new(crate::sqlite::dialect::dialect());
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = plain.analyze(source, &mut ctx);
+        let plain_parse_errors = model
+            .diagnostics()
+            .filter(|d| d.message.is_parse_error())
+            .count();
+        assert!(
+            plain_parse_errors > 0,
+            "control: plain SQL analysis of a .read file should error",
+        );
     }
 }
