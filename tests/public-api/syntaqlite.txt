@@ -73,26 +73,26 @@ pub enum syntaqlite::lsp::CompletionKind
 pub fn syntaqlite::AnalysisConfig::checks(&self) -> syntaqlite::CheckConfig
 pub fn syntaqlite::AnalysisConfig::default() -> Self
 pub fn syntaqlite::AnalysisConfig::suggestion_threshold(&self) -> usize
-pub fn syntaqlite::AnalysisConfig::with_checks(self, checks: syntaqlite::CheckConfig) -> Self
+pub fn syntaqlite::AnalysisConfig::with_checks(self, syntaqlite::CheckConfig) -> Self
 pub fn syntaqlite::AnalysisConfig::with_strict_schema(self) -> Self
-pub fn syntaqlite::AnalysisConfig::with_suggestion_threshold(self, threshold: usize) -> Self
+pub fn syntaqlite::AnalysisConfig::with_suggestion_threshold(self, usize) -> Self
 pub fn syntaqlite::AnalysisContext<'a>::catalog(&self) -> &syntaqlite::Catalog
 pub fn syntaqlite::AnalysisContext<'a>::catalog_mut(&mut self) -> &mut syntaqlite::Catalog
 pub fn syntaqlite::AnalysisContext<'a>::config(&self) -> &syntaqlite::AnalysisConfig
-pub fn syntaqlite::AnalysisContext<'a>::new(catalog: &'a mut syntaqlite::Catalog) -> Self
+pub fn syntaqlite::AnalysisContext<'a>::new(&'a mut syntaqlite::Catalog) -> Self
 pub fn syntaqlite::AnalysisContext<'a>::resolver(&self) -> core::option::Option<&dyn syntaqlite::analysis::ModuleResolver>
-pub fn syntaqlite::AnalysisContext<'a>::with_config(self, config: syntaqlite::AnalysisConfig) -> Self
-pub fn syntaqlite::AnalysisContext<'a>::with_resolver(self, resolver: &'a dyn syntaqlite::analysis::ModuleResolver) -> Self
-pub fn syntaqlite::Analyzer::analyze(&mut self, source: &str, ctx: &mut syntaqlite::AnalysisContext<'_>) -> syntaqlite::analysis::Analysis
+pub fn syntaqlite::AnalysisContext<'a>::with_config(self, syntaqlite::AnalysisConfig) -> Self
+pub fn syntaqlite::AnalysisContext<'a>::with_resolver(self, &'a dyn syntaqlite::analysis::ModuleResolver) -> Self
+pub fn syntaqlite::Analyzer::analyze(&mut self, &str, &mut syntaqlite::AnalysisContext<'_>) -> syntaqlite::analysis::Analysis
 pub fn syntaqlite::Analyzer::default() -> Self
 pub fn syntaqlite::Analyzer::new() -> Self
-pub fn syntaqlite::Analyzer::set_mode(&mut self, mode: syntaqlite::analysis::AnalysisMode)
-pub fn syntaqlite::Analyzer::with_dialect(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
-pub fn syntaqlite::Analyzer::with_mode(self, mode: syntaqlite::analysis::AnalysisMode) -> Self
-pub fn syntaqlite::Catalog::from_ddl(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>, sources: &[&str]) -> (Self, alloc::vec::Vec<alloc::string::String>)
-pub fn syntaqlite::Catalog::layer(&self, which: syntaqlite::analysis::CatalogLayer) -> &syntaqlite::analysis::CatalogLayerContents
-pub fn syntaqlite::Catalog::layer_mut(&mut self, which: syntaqlite::analysis::CatalogLayer) -> &mut syntaqlite::analysis::CatalogLayerContents
-pub fn syntaqlite::Catalog::new(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
+pub fn syntaqlite::Analyzer::set_mode(&mut self, syntaqlite::analysis::AnalysisMode)
+pub fn syntaqlite::Analyzer::with_dialect(impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
+pub fn syntaqlite::Analyzer::with_mode(self, syntaqlite::analysis::AnalysisMode) -> Self
+pub fn syntaqlite::Catalog::from_ddl(impl core::convert::Into<syntaqlite::any::AnyDialect>, &[&str]) -> (Self, alloc::vec::Vec<alloc::string::String>)
+pub fn syntaqlite::Catalog::layer(&self, syntaqlite::analysis::CatalogLayer) -> &syntaqlite::analysis::CatalogLayerContents
+pub fn syntaqlite::Catalog::layer_mut(&mut self, syntaqlite::analysis::CatalogLayer) -> &mut syntaqlite::analysis::CatalogLayerContents
+pub fn syntaqlite::Catalog::new(impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
 pub fn syntaqlite::Catalog::new_connection(&mut self)
 pub fn syntaqlite::Catalog::new_database(&mut self)
 pub fn syntaqlite::Catalog::new_document(&mut self)
@@ -100,27 +100,27 @@ pub fn syntaqlite::CheckConfig::cte_columns(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::default() -> Self
 pub fn syntaqlite::CheckConfig::function_arity(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::parse_errors(&self) -> syntaqlite::CheckLevel
-pub fn syntaqlite::CheckConfig::set_by_name(self, name: &str, level: syntaqlite::CheckLevel) -> core::result::Result<Self, alloc::string::String>
+pub fn syntaqlite::CheckConfig::set_by_name(self, &str, syntaqlite::CheckLevel) -> core::result::Result<Self, alloc::string::String>
 pub fn syntaqlite::CheckConfig::unknown_column(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::unknown_function(&self) -> syntaqlite::CheckLevel
 pub fn syntaqlite::CheckConfig::unknown_table(&self) -> syntaqlite::CheckLevel
-pub fn syntaqlite::CheckConfig::with_all(self, level: syntaqlite::CheckLevel) -> Self
-pub fn syntaqlite::CheckConfig::with_cte_columns(self, level: syntaqlite::CheckLevel) -> Self
-pub fn syntaqlite::CheckConfig::with_function_arity(self, level: syntaqlite::CheckLevel) -> Self
-pub fn syntaqlite::CheckConfig::with_parse_errors(self, level: syntaqlite::CheckLevel) -> Self
-pub fn syntaqlite::CheckConfig::with_schema(self, level: syntaqlite::CheckLevel) -> Self
-pub fn syntaqlite::CheckConfig::with_unknown_column(self, level: syntaqlite::CheckLevel) -> Self
-pub fn syntaqlite::CheckConfig::with_unknown_function(self, level: syntaqlite::CheckLevel) -> Self
-pub fn syntaqlite::CheckConfig::with_unknown_table(self, level: syntaqlite::CheckLevel) -> Self
-pub fn syntaqlite::CheckLevel::parse(s: &str) -> core::result::Result<Self, alloc::string::String>
+pub fn syntaqlite::CheckConfig::with_all(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_cte_columns(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_function_arity(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_parse_errors(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_schema(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_unknown_column(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_unknown_function(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckConfig::with_unknown_table(self, syntaqlite::CheckLevel) -> Self
+pub fn syntaqlite::CheckLevel::parse(&str) -> core::result::Result<Self, alloc::string::String>
 pub fn syntaqlite::CheckLevel::to_severity(self) -> core::option::Option<syntaqlite::analysis::Severity>
 pub fn syntaqlite::Diagnostic::end(&self) -> syntaqlite_syntax::source::DocOffset
 pub fn syntaqlite::Diagnostic::expansion_frames(&self) -> &[syntaqlite::analysis::diagnostics::DiagnosticFrame]
 pub fn syntaqlite::Diagnostic::help(&self) -> core::option::Option<&syntaqlite::analysis::Help>
 pub fn syntaqlite::Diagnostic::message(&self) -> &syntaqlite::analysis::DiagnosticMessage
-pub fn syntaqlite::Diagnostic::new(range: syntaqlite_syntax::source::DocRange, message: syntaqlite::analysis::DiagnosticMessage, severity: syntaqlite::analysis::Severity, help: core::option::Option<syntaqlite::analysis::Help>) -> Self
+pub fn syntaqlite::Diagnostic::new(syntaqlite_syntax::source::DocRange, syntaqlite::analysis::DiagnosticMessage, syntaqlite::analysis::Severity, core::option::Option<syntaqlite::analysis::Help>) -> Self
 pub fn syntaqlite::Diagnostic::range(&self) -> syntaqlite_syntax::source::DocRange
-pub fn syntaqlite::Diagnostic::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+pub fn syntaqlite::Diagnostic::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub fn syntaqlite::Diagnostic::severity(&self) -> syntaqlite::analysis::Severity
 pub fn syntaqlite::Diagnostic::start(&self) -> syntaqlite_syntax::source::DocOffset
 pub fn syntaqlite::Dialect::default() -> Self
@@ -129,39 +129,39 @@ pub fn syntaqlite::Dialect::deref_mut(&mut self) -> &mut syntaqlite::any::AnyDia
 pub fn syntaqlite::Dialect::erase(self) -> syntaqlite::any::AnyDialect
 pub fn syntaqlite::Dialect::new() -> Self
 pub fn syntaqlite::Dialect::syntax_dialect(&self) -> syntaqlite_syntax::sqlite::dialect::Dialect
-pub fn syntaqlite::Dialect::with_cflags(self, flags: syntaqlite::util::SqliteFlags) -> Self
-pub fn syntaqlite::Dialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
+pub fn syntaqlite::Dialect::with_cflags(self, syntaqlite::util::SqliteFlags) -> Self
+pub fn syntaqlite::Dialect::with_version(self, syntaqlite_syntax::util::SqliteVersion) -> Self
 pub fn syntaqlite::Formatter::default() -> Self
-pub fn syntaqlite::Formatter::dump_bytecode(&mut self, source: &str) -> core::result::Result<alloc::string::String, syntaqlite::fmt::FormatError>
-pub fn syntaqlite::Formatter::dump_doc_tree(&mut self, source: &str) -> core::result::Result<alloc::string::String, syntaqlite::fmt::FormatError>
-pub fn syntaqlite::Formatter::format(&mut self, source: &str) -> core::result::Result<alloc::string::String, syntaqlite::fmt::FormatError>
+pub fn syntaqlite::Formatter::dump_bytecode(&mut self, &str) -> core::result::Result<alloc::string::String, syntaqlite::fmt::FormatError>
+pub fn syntaqlite::Formatter::dump_doc_tree(&mut self, &str) -> core::result::Result<alloc::string::String, syntaqlite::fmt::FormatError>
+pub fn syntaqlite::Formatter::format(&mut self, &str) -> core::result::Result<alloc::string::String, syntaqlite::fmt::FormatError>
 pub fn syntaqlite::Formatter::new() -> syntaqlite::Formatter
-pub fn syntaqlite::Formatter::with_config(format_config: &syntaqlite::fmt::FormatConfig) -> syntaqlite::Formatter
-pub fn syntaqlite::Formatter::with_dialect_config(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>, format_config: &syntaqlite::fmt::FormatConfig) -> Self
+pub fn syntaqlite::Formatter::with_config(&syntaqlite::fmt::FormatConfig) -> syntaqlite::Formatter
+pub fn syntaqlite::Formatter::with_dialect_config(impl core::convert::Into<syntaqlite::any::AnyDialect>, &syntaqlite::fmt::FormatConfig) -> Self
 pub fn syntaqlite::analysis::Analysis::diagnostic_count(&self) -> usize
 pub fn syntaqlite::analysis::Analysis::diagnostics(&self) -> impl core::iter::traits::iterator::Iterator<Item = &syntaqlite::Diagnostic>
 pub fn syntaqlite::analysis::Analysis::has_diagnostics(&self) -> bool
 pub fn syntaqlite::analysis::Analysis::lineage(&self) -> core::option::Option<syntaqlite::analysis::LineageResult<&[syntaqlite::analysis::ColumnLineage]>>
 pub fn syntaqlite::analysis::Analysis::source(&self) -> &str
 pub fn syntaqlite::analysis::Analysis::statements(&self) -> &[syntaqlite::analysis::StatementAnalysis]
-pub fn syntaqlite::analysis::CatalogLayerContents::insert_function_overload(&mut self, name: impl core::convert::Into<alloc::string::String>, category: syntaqlite::analysis::FunctionCategory, arity: syntaqlite::analysis::AritySpec)
-pub fn syntaqlite::analysis::CatalogLayerContents::insert_table(&mut self, name: impl core::convert::Into<alloc::string::String>, columns: core::option::Option<alloc::vec::Vec<alloc::string::String>>, without_rowid: bool)
-pub fn syntaqlite::analysis::CatalogLayerContents::insert_table_function(&mut self, name: impl core::convert::Into<alloc::string::String>, arity: syntaqlite::analysis::AritySpec, output_columns: alloc::vec::Vec<alloc::string::String>)
-pub fn syntaqlite::analysis::CatalogLayerContents::insert_view(&mut self, name: impl core::convert::Into<alloc::string::String>, columns: core::option::Option<alloc::vec::Vec<alloc::string::String>>)
+pub fn syntaqlite::analysis::CatalogLayerContents::insert_function_overload(&mut self, impl core::convert::Into<alloc::string::String>, syntaqlite::analysis::FunctionCategory, syntaqlite::analysis::AritySpec)
+pub fn syntaqlite::analysis::CatalogLayerContents::insert_table(&mut self, impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::vec::Vec<alloc::string::String>>, bool)
+pub fn syntaqlite::analysis::CatalogLayerContents::insert_table_function(&mut self, impl core::convert::Into<alloc::string::String>, syntaqlite::analysis::AritySpec, alloc::vec::Vec<alloc::string::String>)
+pub fn syntaqlite::analysis::CatalogLayerContents::insert_view(&mut self, impl core::convert::Into<alloc::string::String>, core::option::Option<alloc::vec::Vec<alloc::string::String>>)
 pub fn syntaqlite::analysis::CatalogLayerContents::relation_names(&self) -> impl core::iter::traits::iterator::Iterator<Item = &str>
-pub fn syntaqlite::analysis::DiagnosticMessage::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite::analysis::DiagnosticMessage::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite::analysis::DiagnosticMessage::is_parse_error(&self) -> bool
-pub fn syntaqlite::analysis::DiagnosticMessage::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
-pub fn syntaqlite::analysis::DirectoryModuleResolver::new(root: std::path::PathBuf) -> Self
-pub fn syntaqlite::analysis::DirectoryModuleResolver::resolve(&self, module_path: &str) -> core::option::Option<alloc::string::String>
-pub fn syntaqlite::analysis::Help::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite::analysis::Help::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+pub fn syntaqlite::analysis::DiagnosticMessage::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+pub fn syntaqlite::analysis::DirectoryModuleResolver::new(std::path::PathBuf) -> Self
+pub fn syntaqlite::analysis::DirectoryModuleResolver::resolve(&self, &str) -> core::option::Option<alloc::string::String>
+pub fn syntaqlite::analysis::Help::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite::analysis::Help::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub fn syntaqlite::analysis::LineageResult<T>::as_ref(&self) -> syntaqlite::analysis::LineageResult<&T>
 pub fn syntaqlite::analysis::LineageResult<T>::into_inner(self) -> T
 pub fn syntaqlite::analysis::LineageResult<T>::is_complete(&self) -> bool
-pub fn syntaqlite::analysis::LineageResult<T>::map<U, F: core::ops::function::FnOnce(T) -> U>(self, f: F) -> syntaqlite::analysis::LineageResult<U>
-pub fn syntaqlite::analysis::ModuleResolver::resolve(&self, module_path: &str) -> core::option::Option<alloc::string::String>
-pub fn syntaqlite::analysis::Severity::serialize<S: serde_core::ser::Serializer>(&self, serializer: S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
+pub fn syntaqlite::analysis::LineageResult<T>::map<U, F: core::ops::function::FnOnce(T) -> U>(self, F) -> syntaqlite::analysis::LineageResult<U>
+pub fn syntaqlite::analysis::ModuleResolver::resolve(&self, &str) -> core::option::Option<alloc::string::String>
+pub fn syntaqlite::analysis::Severity::serialize<S: serde_core::ser::Serializer>(&self, S) -> core::result::Result<<S as serde_core::ser::Serializer>::Ok, <S as serde_core::ser::Serializer>::Error>
 pub fn syntaqlite::analysis::StatementAnalysis::defined_relations(&self) -> &[syntaqlite::analysis::DefinedRelation]
 pub fn syntaqlite::analysis::StatementAnalysis::diagnostics(&self) -> &[syntaqlite::Diagnostic]
 pub fn syntaqlite::analysis::StatementAnalysis::lineage(&self) -> core::option::Option<syntaqlite::analysis::LineageResult<&[syntaqlite::analysis::ColumnLineage]>>
@@ -172,72 +172,72 @@ pub fn syntaqlite::analysis::StatementAnalysis::unexpanded_views(&self) -> &[all
 pub fn syntaqlite::any::AnyDialect::cflags(&self) -> syntaqlite::util::SqliteFlags
 pub fn syntaqlite::any::AnyDialect::deref(&self) -> &syntaqlite_syntax::dialect::AnyDialect
 pub fn syntaqlite::any::AnyDialect::deref_mut(&mut self) -> &mut syntaqlite_syntax::dialect::AnyDialect
-pub fn syntaqlite::any::AnyDialect::from(d: syntaqlite::Dialect) -> syntaqlite::any::AnyDialect
+pub fn syntaqlite::any::AnyDialect::from(syntaqlite::Dialect) -> syntaqlite::any::AnyDialect
 pub fn syntaqlite::any::AnyDialect::syntax_cflags(&self) -> syntaqlite_syntax::util::SqliteSyntaxFlags
 pub fn syntaqlite::any::AnyDialect::syntax_dialect(&self) -> &syntaqlite_syntax::dialect::AnyDialect
 pub fn syntaqlite::any::AnyDialect::version(&self) -> syntaqlite_syntax::util::SqliteVersion
-pub fn syntaqlite::any::AnyDialect::with_cflags(self, flags: syntaqlite::util::SqliteFlags) -> Self
-pub fn syntaqlite::any::AnyDialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
-pub fn syntaqlite::embedded::EmbeddedAnalyzer::analyze(&mut self, fragments: &[syntaqlite::embedded::EmbeddedFragment]) -> alloc::vec::Vec<syntaqlite::Diagnostic>
-pub fn syntaqlite::embedded::EmbeddedAnalyzer::new(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
-pub fn syntaqlite::embedded::EmbeddedAnalyzer::semantic_tokens_encoded(&mut self, fragments: &[syntaqlite::embedded::EmbeddedFragment], source: &str) -> alloc::vec::Vec<u32>
-pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_catalog(self, catalog: syntaqlite::Catalog) -> Self
-pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_config(self, config: syntaqlite::AnalysisConfig) -> Self
+pub fn syntaqlite::any::AnyDialect::with_cflags(self, syntaqlite::util::SqliteFlags) -> Self
+pub fn syntaqlite::any::AnyDialect::with_version(self, syntaqlite_syntax::util::SqliteVersion) -> Self
+pub fn syntaqlite::embedded::EmbeddedAnalyzer::analyze(&mut self, &[syntaqlite::embedded::EmbeddedFragment]) -> alloc::vec::Vec<syntaqlite::Diagnostic>
+pub fn syntaqlite::embedded::EmbeddedAnalyzer::new(impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
+pub fn syntaqlite::embedded::EmbeddedAnalyzer::semantic_tokens_encoded(&mut self, &[syntaqlite::embedded::EmbeddedFragment], &str) -> alloc::vec::Vec<u32>
+pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_catalog(self, syntaqlite::Catalog) -> Self
+pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_config(self, syntaqlite::AnalysisConfig) -> Self
 pub fn syntaqlite::embedded::EmbeddedFragment::holes(&self) -> &[syntaqlite::embedded::Hole]
 pub fn syntaqlite::embedded::EmbeddedFragment::sql_range(&self) -> syntaqlite_syntax::source::DocRange
 pub fn syntaqlite::embedded::EmbeddedFragment::sql_text(&self) -> &str
 pub fn syntaqlite::embedded::Hole::host_range(&self) -> syntaqlite_syntax::source::DocRange
 pub fn syntaqlite::embedded::Hole::sql_offset(&self) -> syntaqlite_syntax::source::DocOffset
-pub fn syntaqlite::embedded::extract_python(source: &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
-pub fn syntaqlite::embedded::extract_typescript(source: &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
+pub fn syntaqlite::embedded::extract_python(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
+pub fn syntaqlite::embedded::extract_typescript(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
 pub fn syntaqlite::fmt::FormatConfig::default() -> Self
 pub fn syntaqlite::fmt::FormatConfig::indent_width(&self) -> usize
 pub fn syntaqlite::fmt::FormatConfig::keyword_case(&self) -> syntaqlite::fmt::KeywordCase
 pub fn syntaqlite::fmt::FormatConfig::line_width(&self) -> usize
 pub fn syntaqlite::fmt::FormatConfig::semicolons(&self) -> bool
-pub fn syntaqlite::fmt::FormatConfig::with_indent_width(self, width: usize) -> Self
-pub fn syntaqlite::fmt::FormatConfig::with_keyword_case(self, case: syntaqlite::fmt::KeywordCase) -> Self
-pub fn syntaqlite::fmt::FormatConfig::with_line_width(self, width: usize) -> Self
-pub fn syntaqlite::fmt::FormatConfig::with_semicolons(self, semicolons: bool) -> Self
-pub fn syntaqlite::fmt::FormatError::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite::fmt::FormatConfig::with_indent_width(self, usize) -> Self
+pub fn syntaqlite::fmt::FormatConfig::with_keyword_case(self, syntaqlite::fmt::KeywordCase) -> Self
+pub fn syntaqlite::fmt::FormatConfig::with_line_width(self, usize) -> Self
+pub fn syntaqlite::fmt::FormatConfig::with_semicolons(self, bool) -> Self
+pub fn syntaqlite::fmt::FormatError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite::fmt::FormatError::message(&self) -> &str
 pub fn syntaqlite::fmt::FormatError::range(&self) -> core::option::Option<syntaqlite_syntax::source::DocRange>
 pub fn syntaqlite::lsp::CompletionEntry::kind(&self) -> syntaqlite::lsp::CompletionKind
 pub fn syntaqlite::lsp::CompletionEntry::label(&self) -> &str
 pub fn syntaqlite::lsp::CompletionKind::as_str(self) -> &'static str
 pub fn syntaqlite::lsp::CompletionKind::sort_priority(self) -> u8
-pub fn syntaqlite::lsp::LspHost::all_diagnostics(&mut self, uri: &str, config: &syntaqlite::AnalysisConfig) -> alloc::vec::Vec<syntaqlite::Diagnostic>
+pub fn syntaqlite::lsp::LspHost::all_diagnostics(&mut self, &str, &syntaqlite::AnalysisConfig) -> alloc::vec::Vec<syntaqlite::Diagnostic>
 pub fn syntaqlite::lsp::LspHost::available_function_names(&self) -> alloc::vec::Vec<alloc::string::String>
-pub fn syntaqlite::lsp::LspHost::completion_items(&mut self, uri: &str, offset: syntaqlite_syntax::source::DocOffset) -> alloc::vec::Vec<syntaqlite::lsp::CompletionEntry>
+pub fn syntaqlite::lsp::LspHost::completion_items(&mut self, &str, syntaqlite_syntax::source::DocOffset) -> alloc::vec::Vec<syntaqlite::lsp::CompletionEntry>
 pub fn syntaqlite::lsp::LspHost::default() -> Self
 pub fn syntaqlite::lsp::LspHost::new() -> Self
-pub fn syntaqlite::lsp::LspHost::semantic_tokens_encoded(&mut self, uri: &str, range: core::option::Option<syntaqlite_syntax::source::DocRange>) -> alloc::vec::Vec<u32>
-pub fn syntaqlite::lsp::LspHost::set_analysis_config(&mut self, config: syntaqlite::AnalysisConfig)
-pub fn syntaqlite::lsp::LspHost::set_format_config(&mut self, config: syntaqlite::fmt::FormatConfig)
-pub fn syntaqlite::lsp::LspHost::set_schema_map(&mut self, map: syntaqlite::lsp::SchemaMap)
-pub fn syntaqlite::lsp::LspHost::set_session_context(&mut self, ctx: syntaqlite::Catalog)
-pub fn syntaqlite::lsp::LspHost::set_session_context_from_ddl(&mut self, ddl: &str, file_uri: core::option::Option<&str>) -> core::result::Result<(), alloc::vec::Vec<alloc::string::String>>
-pub fn syntaqlite::lsp::LspHost::set_session_context_from_json(&mut self, json: &str) -> core::result::Result<(), alloc::string::String>
-pub fn syntaqlite::lsp::LspHost::update_document(&mut self, uri: &str, version: i32, text: alloc::string::String)
-pub fn syntaqlite::lsp::LspHost::with_dialect(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
-pub fn syntaqlite::lsp::LspServer::run(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>) -> core::result::Result<(), alloc::boxed::Box<(dyn core::error::Error + core::marker::Sync + core::marker::Send)>>
-pub fn syntaqlite::lsp::LspServer::run_with_config(dialect: impl core::convert::Into<syntaqlite::any::AnyDialect>, config: syntaqlite::lsp::LspConfig) -> core::result::Result<(), alloc::boxed::Box<(dyn core::error::Error + core::marker::Sync + core::marker::Send)>>
-pub fn syntaqlite::lsp::SchemaMap::new(config_dir: std::path::PathBuf, default: core::option::Option<syntaqlite::Catalog>, entries: alloc::vec::Vec<(glob::Pattern, syntaqlite::Catalog)>) -> Self
-pub fn syntaqlite::lsp::SchemaMap::resolve(&self, file_uri: &str) -> core::option::Option<(&syntaqlite::Catalog, bool)>
+pub fn syntaqlite::lsp::LspHost::semantic_tokens_encoded(&mut self, &str, core::option::Option<syntaqlite_syntax::source::DocRange>) -> alloc::vec::Vec<u32>
+pub fn syntaqlite::lsp::LspHost::set_analysis_config(&mut self, syntaqlite::AnalysisConfig)
+pub fn syntaqlite::lsp::LspHost::set_format_config(&mut self, syntaqlite::fmt::FormatConfig)
+pub fn syntaqlite::lsp::LspHost::set_schema_map(&mut self, syntaqlite::lsp::SchemaMap)
+pub fn syntaqlite::lsp::LspHost::set_session_context(&mut self, syntaqlite::Catalog)
+pub fn syntaqlite::lsp::LspHost::set_session_context_from_ddl(&mut self, &str, core::option::Option<&str>) -> core::result::Result<(), alloc::vec::Vec<alloc::string::String>>
+pub fn syntaqlite::lsp::LspHost::set_session_context_from_json(&mut self, &str) -> core::result::Result<(), alloc::string::String>
+pub fn syntaqlite::lsp::LspHost::update_document(&mut self, &str, i32, alloc::string::String)
+pub fn syntaqlite::lsp::LspHost::with_dialect(impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
+pub fn syntaqlite::lsp::LspServer::run(impl core::convert::Into<syntaqlite::any::AnyDialect>) -> core::result::Result<(), alloc::boxed::Box<(dyn core::error::Error + core::marker::Sync + core::marker::Send)>>
+pub fn syntaqlite::lsp::LspServer::run_with_config(impl core::convert::Into<syntaqlite::any::AnyDialect>, syntaqlite::lsp::LspConfig) -> core::result::Result<(), alloc::boxed::Box<(dyn core::error::Error + core::marker::Sync + core::marker::Send)>>
+pub fn syntaqlite::lsp::SchemaMap::new(std::path::PathBuf, core::option::Option<syntaqlite::Catalog>, alloc::vec::Vec<(glob::Pattern, syntaqlite::Catalog)>) -> Self
+pub fn syntaqlite::lsp::SchemaMap::resolve(&self, &str) -> core::option::Option<(&syntaqlite::Catalog, bool)>
 pub fn syntaqlite::sqlite_dialect() -> syntaqlite::Dialect
-pub fn syntaqlite::util::DiagnosticRenderer<'a>::new(source: &'a str, file: &'a str) -> Self
-pub fn syntaqlite::util::DiagnosticRenderer<'a>::render_diagnostic(&self, diag: &syntaqlite::Diagnostic, out: &mut impl std::io::Write) -> std::io::error::Result<()>
-pub fn syntaqlite::util::DiagnosticRenderer<'a>::render_diagnostics(&self, diags: &[syntaqlite::Diagnostic], out: &mut impl std::io::Write) -> std::io::error::Result<bool>
+pub fn syntaqlite::util::DiagnosticRenderer<'a>::new(&'a str, &'a str) -> Self
+pub fn syntaqlite::util::DiagnosticRenderer<'a>::render_diagnostic(&self, &syntaqlite::Diagnostic, &mut impl std::io::Write) -> std::io::error::Result<()>
+pub fn syntaqlite::util::DiagnosticRenderer<'a>::render_diagnostics(&self, &[syntaqlite::Diagnostic], &mut impl std::io::Write) -> std::io::error::Result<bool>
 pub fn syntaqlite::util::SqliteFlag::all() -> &'static [Self]
 pub fn syntaqlite::util::SqliteFlag::categories(self) -> &'static [&'static str]
-pub fn syntaqlite::util::SqliteFlag::from_name(s: &str) -> core::option::Option<Self>
+pub fn syntaqlite::util::SqliteFlag::from_name(&str) -> core::option::Option<Self>
 pub fn syntaqlite::util::SqliteFlag::min_version(self) -> syntaqlite_syntax::util::SqliteVersion
 pub fn syntaqlite::util::SqliteFlag::name(self) -> &'static str
-pub fn syntaqlite::util::SqliteFlags::from(s: syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
-pub fn syntaqlite::util::SqliteFlags::has(&self, flag: syntaqlite::util::SqliteFlag) -> bool
-pub fn syntaqlite::util::SqliteFlags::with(self, flag: syntaqlite::util::SqliteFlag) -> Self
-pub fn syntaqlite::util::SqliteFlags::without(self, flag: syntaqlite::util::SqliteFlag) -> Self
-pub fn syntaqlite_syntax::util::SqliteSyntaxFlags::from(flags: syntaqlite::util::SqliteFlags) -> Self
+pub fn syntaqlite::util::SqliteFlags::from(syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
+pub fn syntaqlite::util::SqliteFlags::has(&self, syntaqlite::util::SqliteFlag) -> bool
+pub fn syntaqlite::util::SqliteFlags::with(self, syntaqlite::util::SqliteFlag) -> Self
+pub fn syntaqlite::util::SqliteFlags::without(self, syntaqlite::util::SqliteFlag) -> Self
+pub fn syntaqlite_syntax::util::SqliteSyntaxFlags::from(syntaqlite::util::SqliteFlags) -> Self
 pub mod syntaqlite
 pub mod syntaqlite::analysis
 pub mod syntaqlite::any
@@ -400,7 +400,7 @@ pub trait syntaqlite::typed::TypedDialect: core::convert::Into<syntaqlite::any::
 pub type syntaqlite::Dialect::Target = syntaqlite::any::AnyDialect
 pub type syntaqlite::any::AnyDialect::Target = syntaqlite_syntax::dialect::AnyDialect
 pub type syntaqlite::util::SourceContext<'a> = syntaqlite::util::DiagnosticRenderer<'a>
-pub unsafe fn syntaqlite::any::AnyDialect::from_c_dialect_ptr(ptr: *const syntaqlite_syntax::dialect::ffi::CDialectTemplate) -> Self
+pub unsafe fn syntaqlite::any::AnyDialect::from_c_dialect_ptr(*const syntaqlite_syntax::dialect::ffi::CDialectTemplate) -> Self
 pub use syntaqlite::ParseOutcome
 pub use syntaqlite::any::<<syntaqlite_syntax::any::*>>
 pub use syntaqlite::any::ffi::CDialectTemplate

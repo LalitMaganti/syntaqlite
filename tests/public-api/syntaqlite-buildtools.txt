@@ -11,50 +11,50 @@ impl syntaqlite_buildtools::output_resolver::OutputLayout
 impl<'a> syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>
 pub const fn syntaqlite_buildtools::base_files::base_synq_files() -> &'static [(&'static str, &'static str)]
 pub const fn syntaqlite_buildtools::base_files::base_y_files() -> &'static [(&'static str, &'static str)]
-pub const fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_base_synq(self, files: &'a [(&'a str, &'a str)]) -> Self
-pub const fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_macro_style(self, style: syntaqlite_buildtools::codegen_api::MacroStyle) -> Self
+pub const fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_base_synq(self, &'a [(&'a str, &'a str)]) -> Self
+pub const fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_macro_style(self, syntaqlite_buildtools::codegen_api::MacroStyle) -> Self
 pub const fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_python(self) -> Self
 pub enum syntaqlite_buildtools::codegen_api::MacroStyle
-pub fn alloc::string::String::from(v: syntaqlite_buildtools::version_analysis::SqliteVersion) -> Self
-pub fn syntaqlite_buildtools::amalgamate::amalgamate_dialect(dialect: &str, dialect_dir: &std::path::Path, runtime_header: core::option::Option<&str>, ext_header: core::option::Option<&str>) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
-pub fn syntaqlite_buildtools::amalgamate::amalgamate_full(dialect: &str, runtime_dir: &std::path::Path, dialect_dir: &std::path::Path, omit_macros: bool) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
-pub fn syntaqlite_buildtools::amalgamate::amalgamate_header(syntax_dir: &std::path::Path, lib_dir: &std::path::Path) -> core::result::Result<alloc::string::String, alloc::string::String>
-pub fn syntaqlite_buildtools::amalgamate::amalgamate_runtime(runtime_dir: &std::path::Path) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
-pub fn syntaqlite_buildtools::base_files::merge_file_sets(base: &[(&str, &str)], extensions: &[(alloc::string::String, alloc::string::String)]) -> alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
-pub fn syntaqlite_buildtools::base_files::write_runtime_headers_to_dir(dir: &std::path::Path) -> core::result::Result<(), alloc::string::String>
-pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::new(dialect: &'a syntaqlite_buildtools::codegen_api::DialectNaming, y_files: &'a [(alloc::string::String, alloc::string::String)], synq_files: &'a [(alloc::string::String, alloc::string::String)]) -> Self
+pub fn alloc::string::String::from(syntaqlite_buildtools::version_analysis::SqliteVersion) -> Self
+pub fn syntaqlite_buildtools::amalgamate::amalgamate_dialect(&str, &std::path::Path, core::option::Option<&str>, core::option::Option<&str>) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
+pub fn syntaqlite_buildtools::amalgamate::amalgamate_full(&str, &std::path::Path, &std::path::Path, bool) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
+pub fn syntaqlite_buildtools::amalgamate::amalgamate_header(&std::path::Path, &std::path::Path) -> core::result::Result<alloc::string::String, alloc::string::String>
+pub fn syntaqlite_buildtools::amalgamate::amalgamate_runtime(&std::path::Path) -> core::result::Result<syntaqlite_buildtools::amalgamate::AmalgamateOutput, alloc::string::String>
+pub fn syntaqlite_buildtools::base_files::merge_file_sets(&[(&str, &str)], &[(alloc::string::String, alloc::string::String)]) -> alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
+pub fn syntaqlite_buildtools::base_files::write_runtime_headers_to_dir(&std::path::Path) -> core::result::Result<(), alloc::string::String>
+pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::new(&'a syntaqlite_buildtools::codegen_api::DialectNaming, &'a [(alloc::string::String, alloc::string::String)], &'a [(alloc::string::String, alloc::string::String)]) -> Self
 pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::open_for_extension(self) -> Self
-pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_rust(self, crate_name: &str) -> Self
-pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::write_to(&self, layout: &syntaqlite_buildtools::output_resolver::OutputLayout, ensure_dir: &impl core::ops::function::Fn(&std::path::Path) -> core::result::Result<(), alloc::string::String>, write_file: &impl core::ops::function::Fn(&std::path::Path, &str) -> core::result::Result<(), alloc::string::String>) -> core::result::Result<(), alloc::string::String>
+pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_rust(self, &str) -> Self
+pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::write_to(&self, &syntaqlite_buildtools::output_resolver::OutputLayout, &impl core::ops::function::Fn(&std::path::Path) -> core::result::Result<(), alloc::string::String>, &impl core::ops::function::Fn(&std::path::Path, &str) -> core::result::Result<(), alloc::string::String>) -> core::result::Result<(), alloc::string::String>
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_dispatch_header_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_header_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_struct_type(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_symbol_fn_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::grammar_fn_name(&self) -> alloc::string::String
-pub fn syntaqlite_buildtools::codegen_api::DialectNaming::guarded_tokens_header(&self, parse_h: &str) -> alloc::string::String
+pub fn syntaqlite_buildtools::codegen_api::DialectNaming::guarded_tokens_header(&self, &str) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::include_dir_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::name(&self) -> &str
-pub fn syntaqlite_buildtools::codegen_api::DialectNaming::new(name: impl core::convert::Into<alloc::string::String>) -> Self
+pub fn syntaqlite_buildtools::codegen_api::DialectNaming::new(impl core::convert::Into<alloc::string::String>) -> Self
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::node_header_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::parser_symbol_prefix(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::token_type_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::tokens_header_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::MacroStyle::c_name(self) -> &'static str
-pub fn syntaqlite_buildtools::codegen_api::read_named_files_from_dir(dir: &str, ext: &str) -> core::result::Result<alloc::vec::Vec<(alloc::string::String, alloc::string::String)>, alloc::string::String>
+pub fn syntaqlite_buildtools::codegen_api::read_named_files_from_dir(&str, &str) -> core::result::Result<alloc::vec::Vec<(alloc::string::String, alloc::string::String)>, alloc::string::String>
 pub fn syntaqlite_buildtools::commands::AnalyzeVersions::run(&self) -> core::result::Result<(), alloc::string::String>
 pub fn syntaqlite_buildtools::commands::SqliteCodegen::run(&self) -> core::result::Result<(), alloc::string::String>
 pub fn syntaqlite_buildtools::commands::SqliteExtract::run(&self) -> core::result::Result<(), alloc::string::String>
 pub fn syntaqlite_buildtools::commands::SqliteParserCodegen::run(&self) -> core::result::Result<(), alloc::string::String>
 pub fn syntaqlite_buildtools::commands::UpdateData::run(&self) -> core::result::Result<(), alloc::string::String>
 pub fn syntaqlite_buildtools::output_resolver::OutputLayout::c_includes(&self) -> syntaqlite_buildtools::dialect_codegen::c_dialect::DialectCIncludes<'_>
-pub fn syntaqlite_buildtools::output_resolver::OutputLayout::for_amalg_temp(root: &std::path::Path, dialect_name: &str, include_dir_name: &str) -> Self
-pub fn syntaqlite_buildtools::output_resolver::OutputLayout::for_external(root: &std::path::Path, dialect_name: &str, include_dir_name: &str) -> Self
-pub fn syntaqlite_buildtools::output_resolver::OutputLayout::for_sqlite(root: &std::path::Path, dialect_crate: &str, shared_crate: &str, dialect_name: &str, include_dir_name: &str) -> Self
-pub fn syntaqlite_buildtools::run_lemon(args: &[alloc::string::String]) -> never
-pub fn syntaqlite_buildtools::run_mkkeyword(args: &[alloc::string::String]) -> never
-pub fn syntaqlite_buildtools::version_analysis::SqliteVersion::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_buildtools::version_analysis::analyze_versions(sqlite_source_dir: &std::path::Path, output_dir: &std::path::Path) -> core::result::Result<syntaqlite_buildtools::version_analysis::VersionAnalysis, alloc::string::String>
-pub fn syntaqlite_buildtools::version_analysis::grammar::format_grammar_report(analysis: &syntaqlite_buildtools::version_analysis::grammar::GrammarAnalysis) -> alloc::string::String
+pub fn syntaqlite_buildtools::output_resolver::OutputLayout::for_amalg_temp(&std::path::Path, &str, &str) -> Self
+pub fn syntaqlite_buildtools::output_resolver::OutputLayout::for_external(&std::path::Path, &str, &str) -> Self
+pub fn syntaqlite_buildtools::output_resolver::OutputLayout::for_sqlite(&std::path::Path, &str, &str, &str, &str) -> Self
+pub fn syntaqlite_buildtools::run_lemon(&[alloc::string::String]) -> never
+pub fn syntaqlite_buildtools::run_mkkeyword(&[alloc::string::String]) -> never
+pub fn syntaqlite_buildtools::version_analysis::SqliteVersion::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_buildtools::version_analysis::analyze_versions(&std::path::Path, &std::path::Path) -> core::result::Result<syntaqlite_buildtools::version_analysis::VersionAnalysis, alloc::string::String>
+pub fn syntaqlite_buildtools::version_analysis::grammar::format_grammar_report(&syntaqlite_buildtools::version_analysis::grammar::GrammarAnalysis) -> alloc::string::String
 pub mod syntaqlite_buildtools
 pub mod syntaqlite_buildtools::amalgamate
 pub mod syntaqlite_buildtools::base_files
