@@ -887,54 +887,54 @@ impl<G: syntaqlite_syntax::typed::TypedDialect> syntaqlite_syntax::typed::TypedT
 impl<T, E> syntaqlite_syntax::ParseOutcome<T, E>
 pub const fn syntaqlite_syntax::source::ColumnNumber::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::ColumnNumber::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::ColumnNumber::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::ColumnNumber::from_raw(u32) -> Self
 pub const fn syntaqlite_syntax::source::DocLen::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::DocLen::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::DocLen::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::DocLen::from_raw(u32) -> Self
 pub const fn syntaqlite_syntax::source::DocOffset::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::DocOffset::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::DocOffset::from_raw(v: u32) -> Self
-pub const fn syntaqlite_syntax::source::DocOffset::to_stmt(self, base: syntaqlite_syntax::source::StatementBase) -> core::option::Option<syntaqlite_syntax::source::StmtOffset>
-pub const fn syntaqlite_syntax::source::DocRange::from_offset_len(start: syntaqlite_syntax::source::DocOffset, len: syntaqlite_syntax::source::DocLen) -> Self
+pub const fn syntaqlite_syntax::source::DocOffset::from_raw(u32) -> Self
+pub const fn syntaqlite_syntax::source::DocOffset::to_stmt(self, syntaqlite_syntax::source::StatementBase) -> core::option::Option<syntaqlite_syntax::source::StmtOffset>
+pub const fn syntaqlite_syntax::source::DocRange::from_offset_len(syntaqlite_syntax::source::DocOffset, syntaqlite_syntax::source::DocLen) -> Self
 pub const fn syntaqlite_syntax::source::DocRange::is_empty(self) -> bool
 pub const fn syntaqlite_syntax::source::DocRange::len(self) -> syntaqlite_syntax::source::DocLen
 pub const fn syntaqlite_syntax::source::LayerLen::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::LayerLen::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::LayerLen::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::LayerLen::from_raw(u32) -> Self
 pub const fn syntaqlite_syntax::source::LayerOffset::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::LayerOffset::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::LayerOffset::from_raw(v: u32) -> Self
-pub const fn syntaqlite_syntax::source::LayerRange::from_offset_len(start: syntaqlite_syntax::source::LayerOffset, len: syntaqlite_syntax::source::LayerLen) -> Self
+pub const fn syntaqlite_syntax::source::LayerOffset::from_raw(u32) -> Self
+pub const fn syntaqlite_syntax::source::LayerRange::from_offset_len(syntaqlite_syntax::source::LayerOffset, syntaqlite_syntax::source::LayerLen) -> Self
 pub const fn syntaqlite_syntax::source::LayerRange::is_empty(self) -> bool
 pub const fn syntaqlite_syntax::source::LayerRange::len(self) -> syntaqlite_syntax::source::LayerLen
 pub const fn syntaqlite_syntax::source::LineNumber::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::LineNumber::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::LineNumber::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::LineNumber::from_raw(u32) -> Self
 pub const fn syntaqlite_syntax::source::RewriteIdx::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::RewriteIdx::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::RewriteIdx::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::RewriteIdx::from_raw(u32) -> Self
 pub const fn syntaqlite_syntax::source::StatementBase::as_doc_offset(self) -> syntaqlite_syntax::source::DocOffset
-pub const fn syntaqlite_syntax::source::StatementBase::new(base: syntaqlite_syntax::source::DocOffset) -> Self
+pub const fn syntaqlite_syntax::source::StatementBase::new(syntaqlite_syntax::source::DocOffset) -> Self
 pub const fn syntaqlite_syntax::source::StmtLen::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::StmtLen::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::StmtLen::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::StmtLen::from_raw(u32) -> Self
 pub const fn syntaqlite_syntax::source::StmtOffset::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::StmtOffset::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::StmtOffset::from_raw(v: u32) -> Self
-pub const fn syntaqlite_syntax::source::StmtOffset::to_doc(self, base: syntaqlite_syntax::source::StatementBase) -> syntaqlite_syntax::source::DocOffset
-pub const fn syntaqlite_syntax::source::StmtRange::from_offset_len(start: syntaqlite_syntax::source::StmtOffset, len: syntaqlite_syntax::source::StmtLen) -> Self
+pub const fn syntaqlite_syntax::source::StmtOffset::from_raw(u32) -> Self
+pub const fn syntaqlite_syntax::source::StmtOffset::to_doc(self, syntaqlite_syntax::source::StatementBase) -> syntaqlite_syntax::source::DocOffset
+pub const fn syntaqlite_syntax::source::StmtRange::from_offset_len(syntaqlite_syntax::source::StmtOffset, syntaqlite_syntax::source::StmtLen) -> Self
 pub const fn syntaqlite_syntax::source::StmtRange::is_empty(self) -> bool
 pub const fn syntaqlite_syntax::source::StmtRange::len(self) -> syntaqlite_syntax::source::StmtLen
-pub const fn syntaqlite_syntax::source::StmtRange::to_doc(self, base: syntaqlite_syntax::source::StatementBase) -> syntaqlite_syntax::source::DocRange
+pub const fn syntaqlite_syntax::source::StmtRange::to_doc(self, syntaqlite_syntax::source::StatementBase) -> syntaqlite_syntax::source::DocRange
 pub const fn syntaqlite_syntax::source::TokenIdx::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::TokenIdx::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::TokenIdx::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::TokenIdx::from_raw(u32) -> Self
 pub const fn syntaqlite_syntax::source::Utf16Col::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::Utf16Col::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::Utf16Col::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::Utf16Col::from_raw(u32) -> Self
 pub const fn syntaqlite_syntax::source::Utf16Line::as_u32(self) -> u32
 pub const fn syntaqlite_syntax::source::Utf16Line::as_usize(self) -> usize
-pub const fn syntaqlite_syntax::source::Utf16Line::from_raw(v: u32) -> Self
+pub const fn syntaqlite_syntax::source::Utf16Line::from_raw(u32) -> Self
 pub const syntaqlite_syntax::MACRO_BODY_CALL_ARG_INTERNAL: syntaqlite_syntax::source::LayerOffset
 pub const syntaqlite_syntax::any::FIELD_ABSENT: u8
 pub enum syntaqlite_syntax::CommentKind
@@ -952,9 +952,9 @@ pub enum syntaqlite_syntax::nodes::Select<'a>
 pub enum syntaqlite_syntax::nodes::Stmt<'a>
 pub enum syntaqlite_syntax::nodes::TableSource<'a>
 pub enum syntaqlite_syntax::typed::ParseOutcome<T, E>
-pub fn str::eq(&self, other: &syntaqlite_syntax::source::DocText) -> bool
-pub fn str::eq(&self, other: &syntaqlite_syntax::source::LayerText) -> bool
-pub fn str::eq(&self, other: &syntaqlite_syntax::source::StmtText) -> bool
+pub fn str::eq(&self, &syntaqlite_syntax::source::DocText) -> bool
+pub fn str::eq(&self, &syntaqlite_syntax::source::LayerText) -> bool
+pub fn str::eq(&self, &syntaqlite_syntax::source::StmtText) -> bool
 pub fn syntaqlite_syntax::Comment<'a>::kind(&self) -> syntaqlite_syntax::CommentKind
 pub fn syntaqlite_syntax::Comment<'a>::layer_id(&self) -> u8
 pub fn syntaqlite_syntax::Comment<'a>::length(&self) -> syntaqlite_syntax::source::StmtLen
@@ -968,31 +968,31 @@ pub fn syntaqlite_syntax::CommentSpan::length(&self) -> syntaqlite_syntax::sourc
 pub fn syntaqlite_syntax::CommentSpan::offset(&self) -> syntaqlite_syntax::source::StmtOffset
 pub fn syntaqlite_syntax::CommentSpan::side(&self) -> syntaqlite_syntax::CommentSide
 pub fn syntaqlite_syntax::CommentSpan::token_idx(&self) -> syntaqlite_syntax::source::TokenIdx
-pub fn syntaqlite_syntax::CompletionContext::from_raw(v: u32) -> Self
+pub fn syntaqlite_syntax::CompletionContext::from_raw(u32) -> Self
 pub fn syntaqlite_syntax::CompletionContext::raw(self) -> u32
 pub fn syntaqlite_syntax::IncrementalParseSession::completion_context(&self) -> syntaqlite_syntax::CompletionContext
 pub fn syntaqlite_syntax::IncrementalParseSession::expected_tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::TokenType>
-pub fn syntaqlite_syntax::IncrementalParseSession::feed_token(&mut self, token_type: syntaqlite_syntax::TokenType, span: core::ops::range::Range<syntaqlite_syntax::source::DocOffset>) -> core::option::Option<core::result::Result<ParsedStatement<'_>, ParseError<'_>>>
+pub fn syntaqlite_syntax::IncrementalParseSession::feed_token(&mut self, syntaqlite_syntax::TokenType, core::ops::range::Range<syntaqlite_syntax::source::DocOffset>) -> core::option::Option<core::result::Result<ParsedStatement<'_>, ParseError<'_>>>
 pub fn syntaqlite_syntax::IncrementalParseSession::finish(&mut self) -> core::option::Option<core::result::Result<ParsedStatement<'_>, ParseError<'_>>>
-pub fn syntaqlite_syntax::IncrementalParseSession::from(inner: syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::typed::Dialect>) -> Self
+pub fn syntaqlite_syntax::IncrementalParseSession::from(syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::typed::Dialect>) -> Self
 pub fn syntaqlite_syntax::IncrementalParseSession::node_count(&self) -> u32
-pub fn syntaqlite_syntax::MacroLookup::lookup(&mut self, name: &str, args: &[syntaqlite_syntax::MacroArg<'_>], out: &mut syntaqlite_syntax::MacroOutput) -> bool
-pub fn syntaqlite_syntax::MacroOutput::expand_template(&mut self, body: &str, params: &[alloc::string::String]) -> bool
-pub fn syntaqlite_syntax::MacroOutput::expand_template_permissive(&mut self, body: &str, params: &[alloc::string::String]) -> bool
-pub fn syntaqlite_syntax::MacroOutput::set_definition(&mut self, line: syntaqlite_syntax::source::LineNumber, col: syntaqlite_syntax::source::ColumnNumber)
-pub fn syntaqlite_syntax::MacroOutput::write(&mut self, body: &str)
-pub fn syntaqlite_syntax::ParseOutcome<T, E>::map<U>(self, f: impl core::ops::function::FnOnce(T) -> U) -> syntaqlite_syntax::ParseOutcome<U, E>
-pub fn syntaqlite_syntax::ParseOutcome<T, E>::map_err<F>(self, f: impl core::ops::function::FnOnce(E) -> F) -> syntaqlite_syntax::ParseOutcome<T, F>
+pub fn syntaqlite_syntax::MacroLookup::lookup(&mut self, &str, &[syntaqlite_syntax::MacroArg<'_>], &mut syntaqlite_syntax::MacroOutput) -> bool
+pub fn syntaqlite_syntax::MacroOutput::expand_template(&mut self, &str, &[alloc::string::String]) -> bool
+pub fn syntaqlite_syntax::MacroOutput::expand_template_permissive(&mut self, &str, &[alloc::string::String]) -> bool
+pub fn syntaqlite_syntax::MacroOutput::set_definition(&mut self, syntaqlite_syntax::source::LineNumber, syntaqlite_syntax::source::ColumnNumber)
+pub fn syntaqlite_syntax::MacroOutput::write(&mut self, &str)
+pub fn syntaqlite_syntax::ParseOutcome<T, E>::map<U>(self, impl core::ops::function::FnOnce(T) -> U) -> syntaqlite_syntax::ParseOutcome<U, E>
+pub fn syntaqlite_syntax::ParseOutcome<T, E>::map_err<F>(self, impl core::ops::function::FnOnce(E) -> F) -> syntaqlite_syntax::ParseOutcome<T, F>
 pub fn syntaqlite_syntax::ParseOutcome<T, E>::transpose(self) -> core::result::Result<core::option::Option<T>, E>
 pub fn syntaqlite_syntax::ParserConfig::collect_node_extents(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::collect_tokens(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::macro_fallback(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::trace(&self) -> bool
-pub fn syntaqlite_syntax::ParserConfig::with_collect_node_extents(self, collect_node_extents: bool) -> Self
-pub fn syntaqlite_syntax::ParserConfig::with_collect_tokens(self, collect_tokens: bool) -> Self
-pub fn syntaqlite_syntax::ParserConfig::with_macro_fallback(self, macro_fallback: bool) -> Self
-pub fn syntaqlite_syntax::ParserConfig::with_trace(self, trace: bool) -> Self
-pub fn syntaqlite_syntax::ParserToken<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::ParserConfig::with_collect_node_extents(self, bool) -> Self
+pub fn syntaqlite_syntax::ParserConfig::with_collect_tokens(self, bool) -> Self
+pub fn syntaqlite_syntax::ParserConfig::with_macro_fallback(self, bool) -> Self
+pub fn syntaqlite_syntax::ParserConfig::with_trace(self, bool) -> Self
+pub fn syntaqlite_syntax::ParserToken<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::ParserToken<'a>::flags(&self) -> syntaqlite_syntax::ParserTokenFlags
 pub fn syntaqlite_syntax::ParserToken<'a>::length(&self) -> syntaqlite_syntax::source::StmtLen
 pub fn syntaqlite_syntax::ParserToken<'a>::offset(&self) -> syntaqlite_syntax::source::StmtOffset
@@ -1002,145 +1002,145 @@ pub fn syntaqlite_syntax::ParserTokenFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::ParserTokenFlags::used_as_function(self) -> bool
 pub fn syntaqlite_syntax::ParserTokenFlags::used_as_identifier(self) -> bool
 pub fn syntaqlite_syntax::ParserTokenFlags::used_as_type(self) -> bool
-pub fn syntaqlite_syntax::TokenType::from_token_type(raw: syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::TokenType::from_token_type(syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::any::AnyDialect::cflags(&self) -> syntaqlite_syntax::util::SqliteSyntaxFlags
-pub fn syntaqlite_syntax::any::AnyDialect::classify_token(&self, token_type: syntaqlite_syntax::any::AnyTokenType, flags: syntaqlite_syntax::ParserTokenFlags) -> syntaqlite_syntax::any::TokenCategory
-pub fn syntaqlite_syntax::any::AnyDialect::field_meta(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::FieldMeta<'static>>
-pub fn syntaqlite_syntax::any::AnyDialect::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::any::AnyDialect::from(g: syntaqlite_syntax::typed::Dialect) -> syntaqlite_syntax::any::AnyDialect
+pub fn syntaqlite_syntax::any::AnyDialect::classify_token(&self, syntaqlite_syntax::any::AnyTokenType, syntaqlite_syntax::ParserTokenFlags) -> syntaqlite_syntax::any::TokenCategory
+pub fn syntaqlite_syntax::any::AnyDialect::field_meta(&self, syntaqlite_syntax::any::AnyNodeTag) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::FieldMeta<'static>>
+pub fn syntaqlite_syntax::any::AnyDialect::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::any::AnyDialect::from(syntaqlite_syntax::typed::Dialect) -> syntaqlite_syntax::any::AnyDialect
 pub fn syntaqlite_syntax::any::AnyDialect::has_macro_style(&self) -> bool
-pub fn syntaqlite_syntax::any::AnyDialect::is_list(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> bool
+pub fn syntaqlite_syntax::any::AnyDialect::is_list(&self, syntaqlite_syntax::any::AnyNodeTag) -> bool
 pub fn syntaqlite_syntax::any::AnyDialect::keywords(&self) -> impl core::iter::traits::exact_size::ExactSizeIterator<Item = syntaqlite_syntax::any::KeywordEntry> + '_
-pub fn syntaqlite_syntax::any::AnyDialect::node_name(&self, tag: syntaqlite_syntax::any::AnyNodeTag) -> &'static str
-pub fn syntaqlite_syntax::any::AnyDialect::token_category(&self, token_type: syntaqlite_syntax::any::AnyTokenType) -> syntaqlite_syntax::any::TokenCategory
+pub fn syntaqlite_syntax::any::AnyDialect::node_name(&self, syntaqlite_syntax::any::AnyNodeTag) -> &'static str
+pub fn syntaqlite_syntax::any::AnyDialect::token_category(&self, syntaqlite_syntax::any::AnyTokenType) -> syntaqlite_syntax::any::TokenCategory
 pub fn syntaqlite_syntax::any::AnyDialect::version(&self) -> syntaqlite_syntax::util::SqliteVersion
-pub fn syntaqlite_syntax::any::AnyDialect::with_cflags(self, flags: syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
-pub fn syntaqlite_syntax::any::AnyDialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
-pub fn syntaqlite_syntax::any::AnyNode<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::any::AnyNode<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::AggregateFunctionCallId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::AlterTableStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::AttachStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::BetweenExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::BinaryExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CaseExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CaseWhenId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CaseWhenListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CastExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CollateExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ColumnConstraintId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ColumnConstraintListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ColumnDefId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ColumnDefListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ColumnRefId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CompoundSelectId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CreateIndexStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CreateTableStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CreateTriggerStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CreateViewStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CreateVirtualTableStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CteDefinitionId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::CteListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::DeleteStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::DetachStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::DropStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ErrorId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ExistsExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ExplainStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ExprListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::FilterOverId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ForeignKeyClauseId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::FrameBoundId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::FrameSpecId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::FunctionCallId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::IdentNameId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::InExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::InExprSourceId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::InsertStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::IsExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::JoinClauseId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::JoinPrefixId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::LikeExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::LimitClauseId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::LiteralId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::NameId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::NamedWindowDefId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::NamedWindowDefListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::NodeId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::OrderByListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::OrderedSetFunctionCallId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::OrderingTermId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ParenExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::PragmaStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::QualifiedNameId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::RaiseExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ResultColumnId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ResultColumnListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::SavepointStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::SelectId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::SelectStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::SetClauseId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::SetClauseListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::StmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::SubqueryExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::SubqueryTableSourceId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::TableConstraintId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::TableConstraintListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::TableRefId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::TableSourceId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::TransactionStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::TriggerCmdListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::TriggerEventId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::UnaryExprId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::UpdateStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::UpsertClauseId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::UpsertClauseListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::VacuumStmtId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ValuesClauseId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::ValuesRowListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::VariableId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::WindowDefId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::WindowDefListId) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::any::AnyNodeId::from(id: syntaqlite_syntax::nodes::WithClauseId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyDialect::with_cflags(self, syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
+pub fn syntaqlite_syntax::any::AnyDialect::with_version(self, syntaqlite_syntax::util::SqliteVersion) -> Self
+pub fn syntaqlite_syntax::any::AnyNode<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::any::AnyNode<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::AggregateFunctionCallId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::AlterTableStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::AttachStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::BetweenExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::BinaryExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CaseExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CaseWhenId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CaseWhenListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CastExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CollateExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ColumnConstraintId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ColumnConstraintListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ColumnDefId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ColumnDefListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ColumnRefId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CompoundSelectId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CreateIndexStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CreateTableStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CreateTriggerStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CreateViewStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CreateVirtualTableStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CteDefinitionId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::CteListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::DeleteStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::DetachStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::DropStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ErrorId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ExistsExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ExplainStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ExprListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::FilterOverId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ForeignKeyClauseId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::FrameBoundId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::FrameSpecId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::FunctionCallId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::IdentNameId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::InExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::InExprSourceId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::InsertStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::IsExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::JoinClauseId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::JoinPrefixId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::LikeExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::LimitClauseId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::LiteralId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::NameId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::NamedWindowDefId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::NamedWindowDefListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::NodeId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::OrderByListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::OrderedSetFunctionCallId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::OrderingTermId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ParenExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::PragmaStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::QualifiedNameId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::RaiseExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ResultColumnId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ResultColumnListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SavepointStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SelectId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SelectStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SetClauseId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SetClauseListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::StmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SubqueryExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SubqueryTableSourceId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableConstraintId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableConstraintListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableRefId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableSourceId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TransactionStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TriggerCmdListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TriggerEventId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::UnaryExprId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::UpdateStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::UpsertClauseId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::UpsertClauseListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::VacuumStmtId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ValuesClauseId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ValuesRowListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::VariableId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::WindowDefId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::WindowDefListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::WithClauseId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::is_null(&self) -> bool
-pub fn syntaqlite_syntax::any::AnyNodeTag::from(t: syntaqlite_syntax::nodes::NodeTag) -> syntaqlite_syntax::any::AnyNodeTag
-pub fn syntaqlite_syntax::any::AnyNodeTag::from_raw(v: u32) -> Self
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyNodeId> + use<>
+pub fn syntaqlite_syntax::any::AnyNodeTag::from(syntaqlite_syntax::nodes::NodeTag) -> syntaqlite_syntax::any::AnyNodeTag
+pub fn syntaqlite_syntax::any::AnyNodeTag::from_raw(u32) -> Self
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::child_node_ids(&self, syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyNodeId> + use<>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::CommentSpan> + use<'_>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_text(&self, node_id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::is_macro_free(&self) -> bool
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_field_text(&self, fields: &syntaqlite_syntax::any::NodeFields, idx: u8) -> core::option::Option<&'a str>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_text(&self, node_id: core::option::Option<syntaqlite_syntax::any::AnyNodeId>) -> (&'a str, syntaqlite_syntax::source::DocRange)
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_expanded_text(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_is_macro_free(&self, id: syntaqlite_syntax::any::AnyNodeId) -> bool
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_leading_comments(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_text(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(&'a str, syntaqlite_syntax::source::StmtOffset)>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_token_range(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::source::TokenIdx, syntaqlite_syntax::source::TokenIdx)>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_trailing_comments(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_field_text(&self, &syntaqlite_syntax::any::NodeFields, u8) -> core::option::Option<&'a str>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_text(&self, core::option::Option<syntaqlite_syntax::any::AnyNodeId>) -> (&'a str, syntaqlite_syntax::source::DocRange)
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_expanded_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_is_macro_free(&self, syntaqlite_syntax::any::AnyNodeId) -> bool
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_leading_comments(&self, syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(&'a str, syntaqlite_syntax::source::StmtOffset)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_token_range(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::source::TokenIdx, syntaqlite_syntax::source::TokenIdx)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_trailing_comments(&self, syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_node(&self) -> core::option::Option<syntaqlite_syntax::any::AnyNode<'_>>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_expanded_text(&self, span: syntaqlite_syntax::any::TextSpan) -> &'a str
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_field_range(&self, fields: &syntaqlite_syntax::any::NodeFields, idx: u8) -> core::option::Option<(&'a str, syntaqlite_syntax::source::DocRange)>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_field_text(&self, fields: &syntaqlite_syntax::any::NodeFields, idx: u8) -> core::option::Option<&'a str>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::StmtOffset)
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, span: syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::DocRange)
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_expanded_text(&self, syntaqlite_syntax::any::TextSpan) -> &'a str
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_field_range(&self, &syntaqlite_syntax::any::NodeFields, u8) -> core::option::Option<(&'a str, syntaqlite_syntax::source::DocRange)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_field_text(&self, &syntaqlite_syntax::any::NodeFields, u8) -> core::option::Option<&'a str>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::StmtOffset)
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::DocRange)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>> + use<'_, 'a>
-pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&mut self, node_id: syntaqlite_syntax::any::AnyNodeId, field_idx: u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'_, 'a>
-pub fn syntaqlite_syntax::any::AnyTokenType::from(t: syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
-pub fn syntaqlite_syntax::any::AnyTokenType::from_raw(v: u32) -> Self
-pub fn syntaqlite_syntax::any::AnyTokenType::from_token_type(raw: syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&mut self, syntaqlite_syntax::any::AnyNodeId, u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::AnyTokenType::from(syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
+pub fn syntaqlite_syntax::any::AnyTokenType::from_raw(u32) -> Self
+pub fn syntaqlite_syntax::any::AnyTokenType::from_token_type(syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::any::FieldMeta<'_>::display_count(&self) -> usize
-pub fn syntaqlite_syntax::any::FieldMeta<'_>::display_name(&self, idx: usize) -> core::option::Option<&'static str>
+pub fn syntaqlite_syntax::any::FieldMeta<'_>::display_name(&self, usize) -> core::option::Option<&'static str>
 pub fn syntaqlite_syntax::any::FieldMeta<'_>::kind(&self) -> syntaqlite_syntax::any::FieldKind
 pub fn syntaqlite_syntax::any::FieldMeta<'_>::name(&self) -> &'static str
 pub fn syntaqlite_syntax::any::FieldMeta<'_>::offset(&self) -> u16
@@ -1172,111 +1172,111 @@ pub fn syntaqlite_syntax::any::MacroRewrite<'a>::is_fallback(&self) -> bool
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::name(&self) -> &'a str
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::parent(&self) -> core::option::Option<syntaqlite_syntax::source::RewriteIdx>
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::parent_buffer(&self) -> &'a syntaqlite_syntax::source::LayerText
-pub fn syntaqlite_syntax::any::NodeFields::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::any::NodeFields::index(&self, idx: usize) -> &syntaqlite_syntax::any::FieldValue
+pub fn syntaqlite_syntax::any::NodeFields::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::any::NodeFields::index(&self, usize) -> &syntaqlite_syntax::any::FieldValue
 pub fn syntaqlite_syntax::any::NodeFields::is_empty(&self) -> bool
 pub fn syntaqlite_syntax::any::NodeFields::len(&self) -> usize
-pub fn syntaqlite_syntax::any::NodeFields::node_id_at(&self, idx: u8) -> core::option::Option<syntaqlite_syntax::any::AnyNodeId>
+pub fn syntaqlite_syntax::any::NodeFields::node_id_at(&self, u8) -> core::option::Option<syntaqlite_syntax::any::AnyNodeId>
 pub fn syntaqlite_syntax::any::TextSpan::is_empty(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_macro_free(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_quoted(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::quote_char(self) -> core::option::Option<char>
-pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::filter_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::flags(&self) -> syntaqlite_syntax::nodes::AggregateFunctionCallFlags
-pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::func_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::node_id(&self) -> syntaqlite_syntax::nodes::AggregateFunctionCallId
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::orderby(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::over_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::WindowDef<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCallFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCallFlags::distinct(&self) -> bool
-pub fn syntaqlite_syntax::nodes::AggregateFunctionCallId::from(n: syntaqlite_syntax::nodes::AggregateFunctionCall<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::AggregateFunctionCallId::from(syntaqlite_syntax::nodes::AggregateFunctionCall<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCallId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::AlterOp::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::AlterTableStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::AlterTableStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::new_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::AlterTableStmtId
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::old_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::op(&self) -> syntaqlite_syntax::nodes::AlterOp
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::target(&self) -> core::option::Option<syntaqlite_syntax::nodes::QualifiedName<'a>>
-pub fn syntaqlite_syntax::nodes::AlterTableStmtId::from(n: syntaqlite_syntax::nodes::AlterTableStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::AlterTableStmtId::from(syntaqlite_syntax::nodes::AlterTableStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::AlterTableStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexOp::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>::kind(&self) -> syntaqlite_syntax::nodes::AnalyzeOrReindexOp
 pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId
 pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>::target_name(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId::from(n: syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId::from(syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::AnalyzeOrReindexStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::AttachStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::AttachStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::db_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::filename(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::key(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::AttachStmtId
-pub fn syntaqlite_syntax::nodes::AttachStmtId::from(n: syntaqlite_syntax::nodes::AttachStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::AttachStmtId::from(syntaqlite_syntax::nodes::AttachStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::AttachStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::BetweenExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::BetweenExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::BetweenExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::BetweenExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::BetweenExpr<'a>::high(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::BetweenExpr<'a>::low(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::BetweenExpr<'a>::negated(&self) -> bool
 pub fn syntaqlite_syntax::nodes::BetweenExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::BetweenExprId
 pub fn syntaqlite_syntax::nodes::BetweenExpr<'a>::operand(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::BetweenExprId::from(n: syntaqlite_syntax::nodes::BetweenExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::BetweenExprId::from(syntaqlite_syntax::nodes::BetweenExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::BetweenExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::BinaryExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::BinaryExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::BinaryExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::BinaryExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::BinaryExpr<'a>::left(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::BinaryExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::BinaryExprId
 pub fn syntaqlite_syntax::nodes::BinaryExpr<'a>::op(&self) -> syntaqlite_syntax::nodes::BinaryOp
 pub fn syntaqlite_syntax::nodes::BinaryExpr<'a>::right(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::BinaryExprId::from(n: syntaqlite_syntax::nodes::BinaryExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::BinaryExprId::from(syntaqlite_syntax::nodes::BinaryExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::BinaryExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::BinaryOp::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::CaseExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CaseExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CaseExpr<'a>::else_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::CaseExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CaseExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CaseExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CaseExprId
 pub fn syntaqlite_syntax::nodes::CaseExpr<'a>::operand(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::CaseExpr<'a>::whens(&self) -> core::option::Option<syntaqlite_syntax::nodes::CaseWhenList<'a>>
-pub fn syntaqlite_syntax::nodes::CaseExprId::from(n: syntaqlite_syntax::nodes::CaseExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CaseExprId::from(syntaqlite_syntax::nodes::CaseExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CaseExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CaseWhen<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::CaseWhen<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CaseWhen<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CaseWhen<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CaseWhen<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CaseWhenId
 pub fn syntaqlite_syntax::nodes::CaseWhen<'a>::then_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::CaseWhen<'a>::when_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::CaseWhenId::from(n: syntaqlite_syntax::nodes::CaseWhen<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CaseWhenId::from(syntaqlite_syntax::nodes::CaseWhen<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CaseWhenId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CaseWhenListId::from(n: syntaqlite_syntax::nodes::CaseWhenList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CaseWhenListId::from(syntaqlite_syntax::nodes::CaseWhenList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CaseWhenListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CastExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CastExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CastExpr<'a>::expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::CastExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CastExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CastExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CastExprId
 pub fn syntaqlite_syntax::nodes::CastExpr<'a>::type_name(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::CastExprId::from(n: syntaqlite_syntax::nodes::CastExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CastExprId::from(syntaqlite_syntax::nodes::CastExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CastExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CollateExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CollateExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CollateExpr<'a>::collation(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CollateExpr<'a>::expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::CollateExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CollateExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CollateExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CollateExprId
-pub fn syntaqlite_syntax::nodes::CollateExprId::from(n: syntaqlite_syntax::nodes::CollateExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CollateExprId::from(syntaqlite_syntax::nodes::CollateExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CollateExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ColumnConstraint<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ColumnConstraint<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::check_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::collation_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::constraint_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::default_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::fk_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::ForeignKeyClause<'a>>
-pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::generated_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::generated_storage(&self) -> syntaqlite_syntax::nodes::GeneratedColumnStorage
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::is_autoincrement(&self) -> bool
@@ -1284,42 +1284,42 @@ pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::kind(&self) -> syntaqlite
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ColumnConstraintId
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::onconf(&self) -> syntaqlite_syntax::nodes::ConflictAction
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::sort_order(&self) -> syntaqlite_syntax::nodes::SortOrder
-pub fn syntaqlite_syntax::nodes::ColumnConstraintId::from(n: syntaqlite_syntax::nodes::ColumnConstraint<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ColumnConstraintId::from(syntaqlite_syntax::nodes::ColumnConstraint<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ColumnConstraintId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ColumnConstraintListId::from(n: syntaqlite_syntax::nodes::ColumnConstraintList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ColumnConstraintListId::from(syntaqlite_syntax::nodes::ColumnConstraintList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ColumnConstraintListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::ColumnConstraintType::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::ColumnDef<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ColumnDef<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::ColumnDef<'a>::column_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
 pub fn syntaqlite_syntax::nodes::ColumnDef<'a>::constraints(&self) -> core::option::Option<syntaqlite_syntax::nodes::ColumnConstraintList<'a>>
-pub fn syntaqlite_syntax::nodes::ColumnDef<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ColumnDef<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ColumnDef<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ColumnDefId
 pub fn syntaqlite_syntax::nodes::ColumnDef<'a>::type_name(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::ColumnDefId::from(n: syntaqlite_syntax::nodes::ColumnDef<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ColumnDefId::from(syntaqlite_syntax::nodes::ColumnDef<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ColumnDefId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ColumnDefListId::from(n: syntaqlite_syntax::nodes::ColumnDefList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ColumnDefListId::from(syntaqlite_syntax::nodes::ColumnDefList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ColumnDefListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ColumnRef<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ColumnRef<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::ColumnRef<'a>::column(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::ColumnRef<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ColumnRef<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ColumnRef<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ColumnRefId
 pub fn syntaqlite_syntax::nodes::ColumnRef<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::ColumnRef<'a>::table(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::ColumnRefId::from(n: syntaqlite_syntax::nodes::ColumnRef<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ColumnRefId::from(syntaqlite_syntax::nodes::ColumnRef<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ColumnRefId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::CompoundOp::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::CompoundSelect<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CompoundSelect<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::left(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CompoundSelectId
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::op(&self) -> syntaqlite_syntax::nodes::CompoundOp
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::right(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
-pub fn syntaqlite_syntax::nodes::CompoundSelectId::from(n: syntaqlite_syntax::nodes::CompoundSelect<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CompoundSelectId::from(syntaqlite_syntax::nodes::CompoundSelect<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CompoundSelectId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::ConflictAction::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
-pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::if_not_exists(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::index_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::is_unique(&self) -> bool
@@ -1327,13 +1327,13 @@ pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::node_id(&self) -> syntaqli
 pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::table_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateIndexStmt<'a>::where_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::CreateIndexStmtId::from(n: syntaqlite_syntax::nodes::CreateIndexStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CreateIndexStmtId::from(syntaqlite_syntax::nodes::CreateIndexStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CreateIndexStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CreateTableStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CreateTableStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::as_select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ColumnDefList<'a>>
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::flags(&self) -> syntaqlite_syntax::nodes::CreateTableStmtFlags
-pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::if_not_exists(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::is_temp(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CreateTableStmtId
@@ -1343,12 +1343,12 @@ pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::table_name(&self) -> &'a s
 pub fn syntaqlite_syntax::nodes::CreateTableStmtFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::nodes::CreateTableStmtFlags::strict(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTableStmtFlags::without_rowid(&self) -> bool
-pub fn syntaqlite_syntax::nodes::CreateTableStmtId::from(n: syntaqlite_syntax::nodes::CreateTableStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CreateTableStmtId::from(syntaqlite_syntax::nodes::CreateTableStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CreateTableStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::body(&self) -> core::option::Option<syntaqlite_syntax::nodes::TriggerCmdList<'a>>
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::event(&self) -> core::option::Option<syntaqlite_syntax::nodes::TriggerEvent<'a>>
-pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::if_not_exists(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::is_temp(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CreateTriggerStmtId
@@ -1357,42 +1357,42 @@ pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::table(&self) -> core::op
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::timing(&self) -> syntaqlite_syntax::nodes::TriggerTiming
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::trigger_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::when_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::CreateTriggerStmtId::from(n: syntaqlite_syntax::nodes::CreateTriggerStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CreateTriggerStmtId::from(syntaqlite_syntax::nodes::CreateTriggerStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CreateViewStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CreateViewStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::column_names(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
-pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::if_not_exists(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::is_temp(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CreateViewStmtId
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::view_name(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::CreateViewStmtId::from(n: syntaqlite_syntax::nodes::CreateViewStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CreateViewStmtId::from(syntaqlite_syntax::nodes::CreateViewStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CreateViewStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::if_not_exists(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::module_args(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::module_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CreateVirtualTableStmtId
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::table_name(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmtId::from(n: syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmtId::from(syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CteDefinition<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::CteDefinition<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CteDefinition<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::CteDefinition<'a>::cte_name(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::CteDefinition<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CteDefinition<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CteDefinition<'a>::materialized(&self) -> syntaqlite_syntax::nodes::Materialized
 pub fn syntaqlite_syntax::nodes::CteDefinition<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CteDefinitionId
 pub fn syntaqlite_syntax::nodes::CteDefinition<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
-pub fn syntaqlite_syntax::nodes::CteDefinitionId::from(n: syntaqlite_syntax::nodes::CteDefinition<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CteDefinitionId::from(syntaqlite_syntax::nodes::CteDefinition<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CteDefinitionId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::CteListId::from(n: syntaqlite_syntax::nodes::CteList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::CteListId::from(syntaqlite_syntax::nodes::CteList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CteListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::DeleteStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::DeleteStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::index_hint(&self) -> syntaqlite_syntax::nodes::IndexHint
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::index_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::limit_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::LimitClause<'a>>
@@ -1403,125 +1403,125 @@ pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::table(&self) -> core::option::O
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::where_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::with_ctes(&self) -> core::option::Option<syntaqlite_syntax::nodes::CteList<'a>>
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::with_recursive(&self) -> bool
-pub fn syntaqlite_syntax::nodes::DeleteStmtId::from(n: syntaqlite_syntax::nodes::DeleteStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::DeleteStmtId::from(syntaqlite_syntax::nodes::DeleteStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::DeleteStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::DetachStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::DetachStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::DetachStmt<'a>::db_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::DetachStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::DetachStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::DetachStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::DetachStmtId
-pub fn syntaqlite_syntax::nodes::DetachStmtId::from(n: syntaqlite_syntax::nodes::DetachStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::DetachStmtId::from(syntaqlite_syntax::nodes::DetachStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::DetachStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::DropObjectType::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::DropStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::DropStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::DropStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::DropStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::DropStmt<'a>::if_exists(&self) -> bool
 pub fn syntaqlite_syntax::nodes::DropStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::DropStmtId
 pub fn syntaqlite_syntax::nodes::DropStmt<'a>::object_type(&self) -> syntaqlite_syntax::nodes::DropObjectType
 pub fn syntaqlite_syntax::nodes::DropStmt<'a>::target(&self) -> core::option::Option<syntaqlite_syntax::nodes::QualifiedName<'a>>
-pub fn syntaqlite_syntax::nodes::DropStmtId::from(n: syntaqlite_syntax::nodes::DropStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::DropStmtId::from(syntaqlite_syntax::nodes::DropStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::DropStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::Error<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::Error<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::Error<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::Error<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::Error<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ErrorId
 pub fn syntaqlite_syntax::nodes::Error<'a>::source(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::ErrorId::from(n: syntaqlite_syntax::nodes::Error<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ErrorId::from(syntaqlite_syntax::nodes::Error<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ErrorId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ExistsExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::ExistsExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ExistsExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ExistsExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ExistsExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ExistsExprId
 pub fn syntaqlite_syntax::nodes::ExistsExpr<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
-pub fn syntaqlite_syntax::nodes::ExistsExprId::from(n: syntaqlite_syntax::nodes::ExistsExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ExistsExprId::from(syntaqlite_syntax::nodes::ExistsExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ExistsExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::ExplainMode::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::ExplainStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ExplainStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::ExplainStmt<'a>::explain_mode(&self) -> syntaqlite_syntax::nodes::ExplainMode
-pub fn syntaqlite_syntax::nodes::ExplainStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ExplainStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ExplainStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ExplainStmtId
 pub fn syntaqlite_syntax::nodes::ExplainStmt<'a>::stmt(&self) -> core::option::Option<syntaqlite_syntax::nodes::Stmt<'a>>
-pub fn syntaqlite_syntax::nodes::ExplainStmtId::from(n: syntaqlite_syntax::nodes::ExplainStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ExplainStmtId::from(syntaqlite_syntax::nodes::ExplainStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ExplainStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::Expr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::Expr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::Expr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ExprId
-pub fn syntaqlite_syntax::nodes::ExprId::from(n: syntaqlite_syntax::nodes::Expr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ExprId::from(syntaqlite_syntax::nodes::Expr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ExprListId::from(n: syntaqlite_syntax::nodes::ExprList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ExprListId::from(syntaqlite_syntax::nodes::ExprList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ExprListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::FilterOver<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::FilterOver<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::FilterOver<'a>::filter_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::FilterOver<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::FilterOver<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::FilterOver<'a>::node_id(&self) -> syntaqlite_syntax::nodes::FilterOverId
 pub fn syntaqlite_syntax::nodes::FilterOver<'a>::over_def(&self) -> core::option::Option<syntaqlite_syntax::nodes::WindowDef<'a>>
 pub fn syntaqlite_syntax::nodes::FilterOver<'a>::over_name(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::FilterOverId::from(n: syntaqlite_syntax::nodes::FilterOver<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::FilterOverId::from(syntaqlite_syntax::nodes::FilterOver<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::FilterOverId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::ForeignKeyAction::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::is_deferred(&self) -> bool
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ForeignKeyClauseId
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::on_delete(&self) -> syntaqlite_syntax::nodes::ForeignKeyAction
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::on_update(&self) -> syntaqlite_syntax::nodes::ForeignKeyAction
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::ref_columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::ref_table(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::ForeignKeyClauseId::from(n: syntaqlite_syntax::nodes::ForeignKeyClause<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ForeignKeyClauseId::from(syntaqlite_syntax::nodes::ForeignKeyClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ForeignKeyClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::FrameBound<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::FrameBound<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::FrameBound<'a>::bound_type(&self) -> syntaqlite_syntax::nodes::FrameBoundType
 pub fn syntaqlite_syntax::nodes::FrameBound<'a>::expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::FrameBound<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::FrameBound<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::FrameBound<'a>::node_id(&self) -> syntaqlite_syntax::nodes::FrameBoundId
-pub fn syntaqlite_syntax::nodes::FrameBoundId::from(n: syntaqlite_syntax::nodes::FrameBound<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::FrameBoundId::from(syntaqlite_syntax::nodes::FrameBound<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::FrameBoundId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::FrameBoundType::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::FrameExclude::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::FrameSpec<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::FrameSpec<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::FrameSpec<'a>::end_bound(&self) -> core::option::Option<syntaqlite_syntax::nodes::FrameBound<'a>>
 pub fn syntaqlite_syntax::nodes::FrameSpec<'a>::exclude(&self) -> syntaqlite_syntax::nodes::FrameExclude
 pub fn syntaqlite_syntax::nodes::FrameSpec<'a>::frame_type(&self) -> syntaqlite_syntax::nodes::FrameType
-pub fn syntaqlite_syntax::nodes::FrameSpec<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::FrameSpec<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::FrameSpec<'a>::node_id(&self) -> syntaqlite_syntax::nodes::FrameSpecId
 pub fn syntaqlite_syntax::nodes::FrameSpec<'a>::start_bound(&self) -> core::option::Option<syntaqlite_syntax::nodes::FrameBound<'a>>
-pub fn syntaqlite_syntax::nodes::FrameSpecId::from(n: syntaqlite_syntax::nodes::FrameSpec<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::FrameSpecId::from(syntaqlite_syntax::nodes::FrameSpec<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::FrameSpecId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::FrameType::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::FunctionCall<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::FunctionCall<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::filter_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::flags(&self) -> syntaqlite_syntax::nodes::FunctionCallFlags
-pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::func_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::node_id(&self) -> syntaqlite_syntax::nodes::FunctionCallId
 pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::over_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::WindowDef<'a>>
 pub fn syntaqlite_syntax::nodes::FunctionCallFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::nodes::FunctionCallFlags::distinct(&self) -> bool
 pub fn syntaqlite_syntax::nodes::FunctionCallFlags::star(&self) -> bool
-pub fn syntaqlite_syntax::nodes::FunctionCallId::from(n: syntaqlite_syntax::nodes::FunctionCall<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::FunctionCallId::from(syntaqlite_syntax::nodes::FunctionCall<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::FunctionCallId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::GeneratedColumnStorage::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::IdentName<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::IdentName<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::IdentName<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::IdentName<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::IdentName<'a>::node_id(&self) -> syntaqlite_syntax::nodes::IdentNameId
 pub fn syntaqlite_syntax::nodes::IdentName<'a>::source(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::IdentNameId::from(n: syntaqlite_syntax::nodes::IdentName<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::IdentNameId::from(syntaqlite_syntax::nodes::IdentName<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::IdentNameId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::InExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::InExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::InExpr<'a>::bare_source(&self) -> bool
-pub fn syntaqlite_syntax::nodes::InExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::InExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::InExpr<'a>::negated(&self) -> bool
 pub fn syntaqlite_syntax::nodes::InExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::InExprId
 pub fn syntaqlite_syntax::nodes::InExpr<'a>::operand(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::InExpr<'a>::source(&self) -> core::option::Option<syntaqlite_syntax::nodes::InExprSource<'a>>
-pub fn syntaqlite_syntax::nodes::InExprId::from(n: syntaqlite_syntax::nodes::InExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::InExprId::from(syntaqlite_syntax::nodes::InExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::InExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::InExprSource<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::InExprSource<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::InExprSource<'a>::node_id(&self) -> syntaqlite_syntax::nodes::InExprSourceId
-pub fn syntaqlite_syntax::nodes::InExprSourceId::from(n: syntaqlite_syntax::nodes::InExprSource<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::InExprSourceId::from(syntaqlite_syntax::nodes::InExprSource<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::InExprSourceId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::IndexHint::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::InsertStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::InsertStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::conflict_action(&self) -> syntaqlite_syntax::nodes::ConflictAction
-pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::InsertStmtId
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::returning(&self) -> core::option::Option<syntaqlite_syntax::nodes::ResultColumnList<'a>>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::source(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
@@ -1529,163 +1529,163 @@ pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::table(&self) -> core::option::O
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::upsert(&self) -> core::option::Option<syntaqlite_syntax::nodes::UpsertClauseList<'a>>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::with_ctes(&self) -> core::option::Option<syntaqlite_syntax::nodes::CteList<'a>>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::with_recursive(&self) -> bool
-pub fn syntaqlite_syntax::nodes::InsertStmtId::from(n: syntaqlite_syntax::nodes::InsertStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::InsertStmtId::from(syntaqlite_syntax::nodes::InsertStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::InsertStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::IsExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::IsExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::IsExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::IsExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::IsExpr<'a>::left(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::IsExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::IsExprId
 pub fn syntaqlite_syntax::nodes::IsExpr<'a>::op(&self) -> syntaqlite_syntax::nodes::IsOp
 pub fn syntaqlite_syntax::nodes::IsExpr<'a>::right(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::IsExprId::from(n: syntaqlite_syntax::nodes::IsExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::IsExprId::from(syntaqlite_syntax::nodes::IsExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::IsExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::IsOp::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::JoinClause<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::JoinClause<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::JoinClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::JoinClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::join_type(&self) -> syntaqlite_syntax::nodes::JoinType
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::left(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableSource<'a>>
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::JoinClauseId
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::on_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::right(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableSource<'a>>
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::using_columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
-pub fn syntaqlite_syntax::nodes::JoinClauseId::from(n: syntaqlite_syntax::nodes::JoinClause<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::JoinClauseId::from(syntaqlite_syntax::nodes::JoinClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::JoinClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::JoinPrefix<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::JoinPrefix<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::join_type(&self) -> syntaqlite_syntax::nodes::JoinType
 pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::node_id(&self) -> syntaqlite_syntax::nodes::JoinPrefixId
 pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::source(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableSource<'a>>
-pub fn syntaqlite_syntax::nodes::JoinPrefixId::from(n: syntaqlite_syntax::nodes::JoinPrefix<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::JoinPrefixId::from(syntaqlite_syntax::nodes::JoinPrefix<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::JoinPrefixId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::JoinType::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::LikeExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::LikeExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::LikeExpr<'a>::escape(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::LikeExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::LikeExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::LikeExpr<'a>::keyword(&self) -> syntaqlite_syntax::nodes::LikeKeyword
 pub fn syntaqlite_syntax::nodes::LikeExpr<'a>::negated(&self) -> bool
 pub fn syntaqlite_syntax::nodes::LikeExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::LikeExprId
 pub fn syntaqlite_syntax::nodes::LikeExpr<'a>::operand(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::LikeExpr<'a>::pattern(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::LikeExprId::from(n: syntaqlite_syntax::nodes::LikeExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::LikeExprId::from(syntaqlite_syntax::nodes::LikeExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::LikeExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::LikeKeyword::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::LimitClause<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::LimitClause<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::LimitClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::LimitClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::LimitClause<'a>::limit(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::LimitClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::LimitClauseId
 pub fn syntaqlite_syntax::nodes::LimitClause<'a>::offset(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::LimitClauseId::from(n: syntaqlite_syntax::nodes::LimitClause<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::LimitClauseId::from(syntaqlite_syntax::nodes::LimitClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::LimitClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::Literal<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::Literal<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::Literal<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::Literal<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::Literal<'a>::literal_type(&self) -> syntaqlite_syntax::nodes::LiteralType
 pub fn syntaqlite_syntax::nodes::Literal<'a>::node_id(&self) -> syntaqlite_syntax::nodes::LiteralId
 pub fn syntaqlite_syntax::nodes::Literal<'a>::source(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::LiteralId::from(n: syntaqlite_syntax::nodes::Literal<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::LiteralId::from(syntaqlite_syntax::nodes::Literal<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::LiteralId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::LiteralType::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::Materialized::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::Name<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::Name<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::Name<'a>::node_id(&self) -> syntaqlite_syntax::nodes::NameId
-pub fn syntaqlite_syntax::nodes::NameId::from(n: syntaqlite_syntax::nodes::Name<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::NameId::from(syntaqlite_syntax::nodes::Name<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::NameId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::NamedWindowDef<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::NamedWindowDef<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::NamedWindowDef<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::NamedWindowDef<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::NamedWindowDef<'a>::node_id(&self) -> syntaqlite_syntax::nodes::NamedWindowDefId
 pub fn syntaqlite_syntax::nodes::NamedWindowDef<'a>::window_def(&self) -> core::option::Option<syntaqlite_syntax::nodes::WindowDef<'a>>
 pub fn syntaqlite_syntax::nodes::NamedWindowDef<'a>::window_name(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::NamedWindowDefId::from(n: syntaqlite_syntax::nodes::NamedWindowDef<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::NamedWindowDefId::from(syntaqlite_syntax::nodes::NamedWindowDef<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::NamedWindowDefId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::NamedWindowDefListId::from(n: syntaqlite_syntax::nodes::NamedWindowDefList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::NamedWindowDefListId::from(syntaqlite_syntax::nodes::NamedWindowDefList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::NamedWindowDefListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::Node<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::Node<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::Node<'a>::node_id(&self) -> syntaqlite_syntax::nodes::NodeId
 pub fn syntaqlite_syntax::nodes::Node<'a>::tag(&self) -> syntaqlite_syntax::nodes::NodeTag
-pub fn syntaqlite_syntax::nodes::NodeId::from(id: syntaqlite_syntax::any::AnyNodeId) -> Self
-pub fn syntaqlite_syntax::nodes::NodeId::from(n: syntaqlite_syntax::nodes::Node<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::NodeId::from(syntaqlite_syntax::any::AnyNodeId) -> Self
+pub fn syntaqlite_syntax::nodes::NodeId::from(syntaqlite_syntax::nodes::Node<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::NodeId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::NullsOrder::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::OrderByListId::from(n: syntaqlite_syntax::nodes::OrderByList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::OrderByListId::from(syntaqlite_syntax::nodes::OrderByList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::OrderByListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>::filter_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>::flags(&self) -> syntaqlite_syntax::nodes::AggregateFunctionCallFlags
-pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>::func_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>::node_id(&self) -> syntaqlite_syntax::nodes::OrderedSetFunctionCallId
 pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>::orderby_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>::over_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::WindowDef<'a>>
-pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCallId::from(n: syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCallId::from(syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::OrderedSetFunctionCallId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::OrderingTerm<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::OrderingTerm<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::OrderingTerm<'a>::expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::OrderingTerm<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::OrderingTerm<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::OrderingTerm<'a>::node_id(&self) -> syntaqlite_syntax::nodes::OrderingTermId
 pub fn syntaqlite_syntax::nodes::OrderingTerm<'a>::nulls_order(&self) -> syntaqlite_syntax::nodes::NullsOrder
 pub fn syntaqlite_syntax::nodes::OrderingTerm<'a>::sort_order(&self) -> syntaqlite_syntax::nodes::SortOrder
-pub fn syntaqlite_syntax::nodes::OrderingTermId::from(n: syntaqlite_syntax::nodes::OrderingTerm<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::OrderingTermId::from(syntaqlite_syntax::nodes::OrderingTerm<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::OrderingTermId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ParenExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ParenExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::ParenExpr<'a>::expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::ParenExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ParenExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ParenExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ParenExprId
-pub fn syntaqlite_syntax::nodes::ParenExprId::from(n: syntaqlite_syntax::nodes::ParenExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ParenExprId::from(syntaqlite_syntax::nodes::ParenExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ParenExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::PragmaForm::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::PragmaStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::PragmaStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::PragmaStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::PragmaStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::PragmaStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::PragmaStmtId
 pub fn syntaqlite_syntax::nodes::PragmaStmt<'a>::pragma_form(&self) -> syntaqlite_syntax::nodes::PragmaForm
 pub fn syntaqlite_syntax::nodes::PragmaStmt<'a>::pragma_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::PragmaStmt<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::PragmaStmt<'a>::value(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::PragmaStmtId::from(n: syntaqlite_syntax::nodes::PragmaStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::PragmaStmtId::from(syntaqlite_syntax::nodes::PragmaStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::PragmaStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::QualifiedName<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::QualifiedName<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::QualifiedName<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::QualifiedName<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::QualifiedName<'a>::node_id(&self) -> syntaqlite_syntax::nodes::QualifiedNameId
 pub fn syntaqlite_syntax::nodes::QualifiedName<'a>::object_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
 pub fn syntaqlite_syntax::nodes::QualifiedName<'a>::schema(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
-pub fn syntaqlite_syntax::nodes::QualifiedNameId::from(n: syntaqlite_syntax::nodes::QualifiedName<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::QualifiedNameId::from(syntaqlite_syntax::nodes::QualifiedName<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::QualifiedNameId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::RaiseExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::RaiseExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::RaiseExpr<'a>::error_message(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::RaiseExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::RaiseExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::RaiseExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::RaiseExprId
 pub fn syntaqlite_syntax::nodes::RaiseExpr<'a>::raise_type(&self) -> syntaqlite_syntax::nodes::RaiseType
-pub fn syntaqlite_syntax::nodes::RaiseExprId::from(n: syntaqlite_syntax::nodes::RaiseExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::RaiseExprId::from(syntaqlite_syntax::nodes::RaiseExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::RaiseExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::RaiseType::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::ResultColumn<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ResultColumn<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::alias(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
 pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::flags(&self) -> syntaqlite_syntax::nodes::ResultColumnFlags
-pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ResultColumnId
 pub fn syntaqlite_syntax::nodes::ResultColumnFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::nodes::ResultColumnFlags::star(&self) -> bool
-pub fn syntaqlite_syntax::nodes::ResultColumnId::from(n: syntaqlite_syntax::nodes::ResultColumn<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ResultColumnId::from(syntaqlite_syntax::nodes::ResultColumn<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ResultColumnId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ResultColumnListId::from(n: syntaqlite_syntax::nodes::ResultColumnList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ResultColumnListId::from(syntaqlite_syntax::nodes::ResultColumnList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ResultColumnListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::SavepointOp::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::SavepointStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::SavepointStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::SavepointStmtId
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::op(&self) -> syntaqlite_syntax::nodes::SavepointOp
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::savepoint_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
-pub fn syntaqlite_syntax::nodes::SavepointStmtId::from(n: syntaqlite_syntax::nodes::SavepointStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::SavepointStmtId::from(syntaqlite_syntax::nodes::SavepointStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::SavepointStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::Select<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::Select<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::Select<'a>::node_id(&self) -> syntaqlite_syntax::nodes::SelectId
-pub fn syntaqlite_syntax::nodes::SelectId::from(n: syntaqlite_syntax::nodes::Select<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::SelectId::from(syntaqlite_syntax::nodes::Select<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::SelectId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::SelectStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::SelectStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ResultColumnList<'a>>
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::flags(&self) -> syntaqlite_syntax::nodes::SelectStmtFlags
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::from_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableSource<'a>>
-pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::groupby(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::having(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::limit_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::LimitClause<'a>>
@@ -1695,98 +1695,98 @@ pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::where_clause(&self) -> core::op
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::window_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::NamedWindowDefList<'a>>
 pub fn syntaqlite_syntax::nodes::SelectStmtFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::nodes::SelectStmtFlags::distinct(&self) -> bool
-pub fn syntaqlite_syntax::nodes::SelectStmtId::from(n: syntaqlite_syntax::nodes::SelectStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::SelectStmtId::from(syntaqlite_syntax::nodes::SelectStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::SelectStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::SetClause<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::SetClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::SetClause<'a>::column(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::SetClause<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
-pub fn syntaqlite_syntax::nodes::SetClause<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::SetClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::SetClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::SetClauseId
 pub fn syntaqlite_syntax::nodes::SetClause<'a>::value(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::SetClauseId::from(n: syntaqlite_syntax::nodes::SetClause<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::SetClauseId::from(syntaqlite_syntax::nodes::SetClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::SetClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::SetClauseListId::from(n: syntaqlite_syntax::nodes::SetClauseList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::SetClauseListId::from(syntaqlite_syntax::nodes::SetClauseList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::SetClauseListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::SortOrder::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::Stmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::Stmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::Stmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::StmtId
-pub fn syntaqlite_syntax::nodes::StmtId::from(n: syntaqlite_syntax::nodes::Stmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::StmtId::from(syntaqlite_syntax::nodes::Stmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::StmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::SubqueryExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::SubqueryExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::SubqueryExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::SubqueryExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::SubqueryExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::SubqueryExprId
 pub fn syntaqlite_syntax::nodes::SubqueryExpr<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
-pub fn syntaqlite_syntax::nodes::SubqueryExprId::from(n: syntaqlite_syntax::nodes::SubqueryExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::SubqueryExprId::from(syntaqlite_syntax::nodes::SubqueryExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::SubqueryExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::alias(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
-pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::node_id(&self) -> syntaqlite_syntax::nodes::SubqueryTableSourceId
 pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
-pub fn syntaqlite_syntax::nodes::SubqueryTableSourceId::from(n: syntaqlite_syntax::nodes::SubqueryTableSource<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::SubqueryTableSourceId::from(syntaqlite_syntax::nodes::SubqueryTableSource<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::SubqueryTableSourceId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::TableConstraint<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::TableConstraint<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::check_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::constraint_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::fk_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::ForeignKeyClause<'a>>
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::fk_columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
-pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::is_autoincrement(&self) -> bool
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::kind(&self) -> syntaqlite_syntax::nodes::TableConstraintType
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TableConstraintId
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::onconf(&self) -> syntaqlite_syntax::nodes::ConflictAction
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::pk_columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
-pub fn syntaqlite_syntax::nodes::TableConstraintId::from(n: syntaqlite_syntax::nodes::TableConstraint<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::TableConstraintId::from(syntaqlite_syntax::nodes::TableConstraint<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TableConstraintId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::TableConstraintListId::from(n: syntaqlite_syntax::nodes::TableConstraintList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::TableConstraintListId::from(syntaqlite_syntax::nodes::TableConstraintList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TableConstraintListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::TableConstraintType::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::TableRef<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::TableRef<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::alias(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
-pub fn syntaqlite_syntax::nodes::TableRef<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::TableRef<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::has_parens(&self) -> bool
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TableRefId
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::table_name(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::TableRefId::from(n: syntaqlite_syntax::nodes::TableRef<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::TableRefId::from(syntaqlite_syntax::nodes::TableRef<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TableRefId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::TableSource<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::TableSource<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::TableSource<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TableSourceId
-pub fn syntaqlite_syntax::nodes::TableSourceId::from(n: syntaqlite_syntax::nodes::TableSource<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::TableSourceId::from(syntaqlite_syntax::nodes::TableSource<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TableSourceId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::TransactionOp::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::TransactionStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::TransactionStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TransactionStmtId
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::op(&self) -> syntaqlite_syntax::nodes::TransactionOp
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::trans_type(&self) -> syntaqlite_syntax::nodes::TransactionType
-pub fn syntaqlite_syntax::nodes::TransactionStmtId::from(n: syntaqlite_syntax::nodes::TransactionStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::TransactionStmtId::from(syntaqlite_syntax::nodes::TransactionStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TransactionStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::TransactionType::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::TriggerCmdListId::from(n: syntaqlite_syntax::nodes::TriggerCmdList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::TriggerCmdListId::from(syntaqlite_syntax::nodes::TriggerCmdList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TriggerCmdListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::TriggerEvent<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::TriggerEvent<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::TriggerEvent<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::TriggerEvent<'a>::event_type(&self) -> syntaqlite_syntax::nodes::TriggerEventType
-pub fn syntaqlite_syntax::nodes::TriggerEvent<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::TriggerEvent<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::TriggerEvent<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TriggerEventId
-pub fn syntaqlite_syntax::nodes::TriggerEventId::from(n: syntaqlite_syntax::nodes::TriggerEvent<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::TriggerEventId::from(syntaqlite_syntax::nodes::TriggerEvent<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TriggerEventId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::TriggerEventType::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::TriggerTiming::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::UnaryExpr<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::UnaryExpr<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::UnaryExpr<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::UnaryExpr<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::UnaryExpr<'a>::node_id(&self) -> syntaqlite_syntax::nodes::UnaryExprId
 pub fn syntaqlite_syntax::nodes::UnaryExpr<'a>::op(&self) -> syntaqlite_syntax::nodes::UnaryOp
 pub fn syntaqlite_syntax::nodes::UnaryExpr<'a>::operand(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::UnaryExprId::from(n: syntaqlite_syntax::nodes::UnaryExpr<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::UnaryExprId::from(syntaqlite_syntax::nodes::UnaryExpr<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::UnaryExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::UnaryOp::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::UpdateStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::UpdateStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::conflict_action(&self) -> syntaqlite_syntax::nodes::ConflictAction
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::from_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableSource<'a>>
-pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::index_hint(&self) -> syntaqlite_syntax::nodes::IndexHint
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::index_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::limit_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::LimitClause<'a>>
@@ -1798,162 +1798,162 @@ pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::table(&self) -> core::option::O
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::where_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::with_ctes(&self) -> core::option::Option<syntaqlite_syntax::nodes::CteList<'a>>
 pub fn syntaqlite_syntax::nodes::UpdateStmt<'a>::with_recursive(&self) -> bool
-pub fn syntaqlite_syntax::nodes::UpdateStmtId::from(n: syntaqlite_syntax::nodes::UpdateStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::UpdateStmtId::from(syntaqlite_syntax::nodes::UpdateStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::UpdateStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::UpsertAction::as_str(&self) -> &'static str
-pub fn syntaqlite_syntax::nodes::UpsertClause<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::UpsertClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::UpsertClause<'a>::action(&self) -> syntaqlite_syntax::nodes::UpsertAction
 pub fn syntaqlite_syntax::nodes::UpsertClause<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
-pub fn syntaqlite_syntax::nodes::UpsertClause<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::UpsertClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::UpsertClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::UpsertClauseId
 pub fn syntaqlite_syntax::nodes::UpsertClause<'a>::setlist(&self) -> core::option::Option<syntaqlite_syntax::nodes::SetClauseList<'a>>
 pub fn syntaqlite_syntax::nodes::UpsertClause<'a>::target_where(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::UpsertClause<'a>::update_where(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::UpsertClauseId::from(n: syntaqlite_syntax::nodes::UpsertClause<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::UpsertClauseId::from(syntaqlite_syntax::nodes::UpsertClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::UpsertClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::UpsertClauseListId::from(n: syntaqlite_syntax::nodes::UpsertClauseList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::UpsertClauseListId::from(syntaqlite_syntax::nodes::UpsertClauseList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::UpsertClauseListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::VacuumStmt<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::VacuumStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::VacuumStmt<'a>::filename(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::VacuumStmt<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::VacuumStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::VacuumStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::VacuumStmtId
 pub fn syntaqlite_syntax::nodes::VacuumStmt<'a>::schema(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::VacuumStmtId::from(n: syntaqlite_syntax::nodes::VacuumStmt<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::VacuumStmtId::from(syntaqlite_syntax::nodes::VacuumStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::VacuumStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ValuesClause<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::ValuesClause<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::ValuesClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ValuesClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ValuesClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ValuesClauseId
 pub fn syntaqlite_syntax::nodes::ValuesClause<'a>::rows(&self) -> core::option::Option<syntaqlite_syntax::nodes::ValuesRowList<'a>>
-pub fn syntaqlite_syntax::nodes::ValuesClauseId::from(n: syntaqlite_syntax::nodes::ValuesClause<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ValuesClauseId::from(syntaqlite_syntax::nodes::ValuesClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ValuesClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::ValuesRowListId::from(n: syntaqlite_syntax::nodes::ValuesRowList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::ValuesRowListId::from(syntaqlite_syntax::nodes::ValuesRowList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ValuesRowListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::Variable<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::nodes::Variable<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::Variable<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::Variable<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::Variable<'a>::node_id(&self) -> syntaqlite_syntax::nodes::VariableId
 pub fn syntaqlite_syntax::nodes::Variable<'a>::source(&self) -> &'a str
-pub fn syntaqlite_syntax::nodes::VariableId::from(n: syntaqlite_syntax::nodes::Variable<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::VariableId::from(syntaqlite_syntax::nodes::Variable<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::VariableId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::WindowDef<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::WindowDef<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::WindowDef<'a>::base_window_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::WindowDef<'a>::frame(&self) -> core::option::Option<syntaqlite_syntax::nodes::FrameSpec<'a>>
-pub fn syntaqlite_syntax::nodes::WindowDef<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::WindowDef<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::WindowDef<'a>::node_id(&self) -> syntaqlite_syntax::nodes::WindowDefId
 pub fn syntaqlite_syntax::nodes::WindowDef<'a>::orderby(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
 pub fn syntaqlite_syntax::nodes::WindowDef<'a>::partition_by(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
-pub fn syntaqlite_syntax::nodes::WindowDefId::from(n: syntaqlite_syntax::nodes::WindowDef<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::WindowDefId::from(syntaqlite_syntax::nodes::WindowDef<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::WindowDefId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::WindowDefListId::from(n: syntaqlite_syntax::nodes::WindowDefList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::WindowDefListId::from(syntaqlite_syntax::nodes::WindowDefList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::WindowDefListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::nodes::WithClause<'_>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::WithClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::WithClause<'a>::ctes(&self) -> core::option::Option<syntaqlite_syntax::nodes::CteList<'a>>
-pub fn syntaqlite_syntax::nodes::WithClause<'a>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::WithClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::WithClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::WithClauseId
 pub fn syntaqlite_syntax::nodes::WithClause<'a>::recursive(&self) -> bool
 pub fn syntaqlite_syntax::nodes::WithClause<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
-pub fn syntaqlite_syntax::nodes::WithClauseId::from(n: syntaqlite_syntax::nodes::WithClause<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::WithClauseId::from(syntaqlite_syntax::nodes::WithClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::WithClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
-pub fn syntaqlite_syntax::source::ColumnNumber::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::DocLen::add(self, rhs: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocLen
-pub fn syntaqlite_syntax::source::DocLen::add_assign(&mut self, rhs: syntaqlite_syntax::source::DocLen)
-pub fn syntaqlite_syntax::source::DocLen::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::DocLen::from(v: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::DocLen
-pub fn syntaqlite_syntax::source::DocLen::from(v: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::DocLen
-pub fn syntaqlite_syntax::source::DocLen::sub(self, rhs: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocLen
-pub fn syntaqlite_syntax::source::DocLen::sub_assign(&mut self, rhs: syntaqlite_syntax::source::DocLen)
-pub fn syntaqlite_syntax::source::DocOffset::add(self, rhs: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocOffset
-pub fn syntaqlite_syntax::source::DocOffset::add_assign(&mut self, rhs: syntaqlite_syntax::source::DocLen)
-pub fn syntaqlite_syntax::source::DocOffset::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::DocOffset::sub(self, rhs: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocOffset
-pub fn syntaqlite_syntax::source::DocOffset::sub(self, rhs: syntaqlite_syntax::source::DocOffset) -> syntaqlite_syntax::source::DocLen
-pub fn syntaqlite_syntax::source::DocOffset::sub_assign(&mut self, rhs: syntaqlite_syntax::source::DocLen)
+pub fn syntaqlite_syntax::source::ColumnNumber::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::DocLen::add(self, syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocLen
+pub fn syntaqlite_syntax::source::DocLen::add_assign(&mut self, syntaqlite_syntax::source::DocLen)
+pub fn syntaqlite_syntax::source::DocLen::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::DocLen::from(syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::DocLen
+pub fn syntaqlite_syntax::source::DocLen::from(syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::DocLen
+pub fn syntaqlite_syntax::source::DocLen::sub(self, syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocLen
+pub fn syntaqlite_syntax::source::DocLen::sub_assign(&mut self, syntaqlite_syntax::source::DocLen)
+pub fn syntaqlite_syntax::source::DocOffset::add(self, syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocOffset
+pub fn syntaqlite_syntax::source::DocOffset::add_assign(&mut self, syntaqlite_syntax::source::DocLen)
+pub fn syntaqlite_syntax::source::DocOffset::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::DocOffset::sub(self, syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::DocOffset
+pub fn syntaqlite_syntax::source::DocOffset::sub(self, syntaqlite_syntax::source::DocOffset) -> syntaqlite_syntax::source::DocLen
+pub fn syntaqlite_syntax::source::DocOffset::sub_assign(&mut self, syntaqlite_syntax::source::DocLen)
 pub fn syntaqlite_syntax::source::DocText::as_range(&self) -> syntaqlite_syntax::source::DocRange
 pub fn syntaqlite_syntax::source::DocText::as_ref(&self) -> &str
 pub fn syntaqlite_syntax::source::DocText::as_str(&self) -> &str
 pub fn syntaqlite_syntax::source::DocText::byte_len(&self) -> syntaqlite_syntax::source::DocLen
-pub fn syntaqlite_syntax::source::DocText::eq(&self, other: &&str) -> bool
-pub fn syntaqlite_syntax::source::DocText::eq(&self, other: &Self) -> bool
-pub fn syntaqlite_syntax::source::DocText::eq(&self, other: &str) -> bool
-pub fn syntaqlite_syntax::source::DocText::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::DocText::hash<H: core::hash::Hasher>(&self, state: &mut H)
-pub fn syntaqlite_syntax::source::DocText::index(&self, r: syntaqlite_syntax::source::DocRange) -> &str
+pub fn syntaqlite_syntax::source::DocText::eq(&self, &&str) -> bool
+pub fn syntaqlite_syntax::source::DocText::eq(&self, &Self) -> bool
+pub fn syntaqlite_syntax::source::DocText::eq(&self, &str) -> bool
+pub fn syntaqlite_syntax::source::DocText::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::DocText::hash<H: core::hash::Hasher>(&self, &mut H)
+pub fn syntaqlite_syntax::source::DocText::index(&self, syntaqlite_syntax::source::DocRange) -> &str
 pub fn syntaqlite_syntax::source::DocText::is_empty(&self) -> bool
-pub fn syntaqlite_syntax::source::DocText::new(s: &str) -> &syntaqlite_syntax::source::DocText
-pub fn syntaqlite_syntax::source::LayerLen::add(self, rhs: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerLen
-pub fn syntaqlite_syntax::source::LayerLen::add_assign(&mut self, rhs: syntaqlite_syntax::source::LayerLen)
-pub fn syntaqlite_syntax::source::LayerLen::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::LayerLen::from(v: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::LayerLen
-pub fn syntaqlite_syntax::source::LayerLen::from(v: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::LayerLen
-pub fn syntaqlite_syntax::source::LayerLen::sub(self, rhs: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerLen
-pub fn syntaqlite_syntax::source::LayerLen::sub_assign(&mut self, rhs: syntaqlite_syntax::source::LayerLen)
-pub fn syntaqlite_syntax::source::LayerOffset::add(self, rhs: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerOffset
-pub fn syntaqlite_syntax::source::LayerOffset::add_assign(&mut self, rhs: syntaqlite_syntax::source::LayerLen)
-pub fn syntaqlite_syntax::source::LayerOffset::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::LayerOffset::sub(self, rhs: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerOffset
-pub fn syntaqlite_syntax::source::LayerOffset::sub(self, rhs: syntaqlite_syntax::source::LayerOffset) -> syntaqlite_syntax::source::LayerLen
-pub fn syntaqlite_syntax::source::LayerOffset::sub_assign(&mut self, rhs: syntaqlite_syntax::source::LayerLen)
+pub fn syntaqlite_syntax::source::DocText::new(&str) -> &syntaqlite_syntax::source::DocText
+pub fn syntaqlite_syntax::source::LayerLen::add(self, syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::source::LayerLen::add_assign(&mut self, syntaqlite_syntax::source::LayerLen)
+pub fn syntaqlite_syntax::source::LayerLen::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::LayerLen::from(syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::source::LayerLen::from(syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::source::LayerLen::sub(self, syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::source::LayerLen::sub_assign(&mut self, syntaqlite_syntax::source::LayerLen)
+pub fn syntaqlite_syntax::source::LayerOffset::add(self, syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::source::LayerOffset::add_assign(&mut self, syntaqlite_syntax::source::LayerLen)
+pub fn syntaqlite_syntax::source::LayerOffset::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::LayerOffset::sub(self, syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::LayerOffset
+pub fn syntaqlite_syntax::source::LayerOffset::sub(self, syntaqlite_syntax::source::LayerOffset) -> syntaqlite_syntax::source::LayerLen
+pub fn syntaqlite_syntax::source::LayerOffset::sub_assign(&mut self, syntaqlite_syntax::source::LayerLen)
 pub fn syntaqlite_syntax::source::LayerText::as_range(&self) -> syntaqlite_syntax::source::LayerRange
 pub fn syntaqlite_syntax::source::LayerText::as_ref(&self) -> &str
 pub fn syntaqlite_syntax::source::LayerText::as_str(&self) -> &str
 pub fn syntaqlite_syntax::source::LayerText::byte_len(&self) -> syntaqlite_syntax::source::LayerLen
-pub fn syntaqlite_syntax::source::LayerText::eq(&self, other: &&str) -> bool
-pub fn syntaqlite_syntax::source::LayerText::eq(&self, other: &Self) -> bool
-pub fn syntaqlite_syntax::source::LayerText::eq(&self, other: &str) -> bool
-pub fn syntaqlite_syntax::source::LayerText::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::LayerText::hash<H: core::hash::Hasher>(&self, state: &mut H)
-pub fn syntaqlite_syntax::source::LayerText::index(&self, r: syntaqlite_syntax::source::LayerRange) -> &str
+pub fn syntaqlite_syntax::source::LayerText::eq(&self, &&str) -> bool
+pub fn syntaqlite_syntax::source::LayerText::eq(&self, &Self) -> bool
+pub fn syntaqlite_syntax::source::LayerText::eq(&self, &str) -> bool
+pub fn syntaqlite_syntax::source::LayerText::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::LayerText::hash<H: core::hash::Hasher>(&self, &mut H)
+pub fn syntaqlite_syntax::source::LayerText::index(&self, syntaqlite_syntax::source::LayerRange) -> &str
 pub fn syntaqlite_syntax::source::LayerText::is_empty(&self) -> bool
-pub fn syntaqlite_syntax::source::LayerText::new(s: &str) -> &syntaqlite_syntax::source::LayerText
-pub fn syntaqlite_syntax::source::LineNumber::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::RewriteIdx::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::StmtLen::add(self, rhs: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtLen
-pub fn syntaqlite_syntax::source::StmtLen::add_assign(&mut self, rhs: syntaqlite_syntax::source::StmtLen)
-pub fn syntaqlite_syntax::source::StmtLen::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::StmtLen::from(v: syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::StmtLen
-pub fn syntaqlite_syntax::source::StmtLen::from(v: syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::StmtLen
-pub fn syntaqlite_syntax::source::StmtLen::sub(self, rhs: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtLen
-pub fn syntaqlite_syntax::source::StmtLen::sub_assign(&mut self, rhs: syntaqlite_syntax::source::StmtLen)
-pub fn syntaqlite_syntax::source::StmtOffset::add(self, rhs: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtOffset
-pub fn syntaqlite_syntax::source::StmtOffset::add_assign(&mut self, rhs: syntaqlite_syntax::source::StmtLen)
-pub fn syntaqlite_syntax::source::StmtOffset::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::StmtOffset::sub(self, rhs: syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtOffset
-pub fn syntaqlite_syntax::source::StmtOffset::sub(self, rhs: syntaqlite_syntax::source::StmtOffset) -> syntaqlite_syntax::source::StmtLen
-pub fn syntaqlite_syntax::source::StmtOffset::sub_assign(&mut self, rhs: syntaqlite_syntax::source::StmtLen)
+pub fn syntaqlite_syntax::source::LayerText::new(&str) -> &syntaqlite_syntax::source::LayerText
+pub fn syntaqlite_syntax::source::LineNumber::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::RewriteIdx::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::StmtLen::add(self, syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::source::StmtLen::add_assign(&mut self, syntaqlite_syntax::source::StmtLen)
+pub fn syntaqlite_syntax::source::StmtLen::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::StmtLen::from(syntaqlite_syntax::source::DocLen) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::source::StmtLen::from(syntaqlite_syntax::source::LayerLen) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::source::StmtLen::sub(self, syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::source::StmtLen::sub_assign(&mut self, syntaqlite_syntax::source::StmtLen)
+pub fn syntaqlite_syntax::source::StmtOffset::add(self, syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtOffset
+pub fn syntaqlite_syntax::source::StmtOffset::add_assign(&mut self, syntaqlite_syntax::source::StmtLen)
+pub fn syntaqlite_syntax::source::StmtOffset::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::StmtOffset::sub(self, syntaqlite_syntax::source::StmtLen) -> syntaqlite_syntax::source::StmtOffset
+pub fn syntaqlite_syntax::source::StmtOffset::sub(self, syntaqlite_syntax::source::StmtOffset) -> syntaqlite_syntax::source::StmtLen
+pub fn syntaqlite_syntax::source::StmtOffset::sub_assign(&mut self, syntaqlite_syntax::source::StmtLen)
 pub fn syntaqlite_syntax::source::StmtText::as_range(&self) -> syntaqlite_syntax::source::StmtRange
 pub fn syntaqlite_syntax::source::StmtText::as_ref(&self) -> &str
 pub fn syntaqlite_syntax::source::StmtText::as_str(&self) -> &str
 pub fn syntaqlite_syntax::source::StmtText::byte_len(&self) -> syntaqlite_syntax::source::StmtLen
-pub fn syntaqlite_syntax::source::StmtText::eq(&self, other: &&str) -> bool
-pub fn syntaqlite_syntax::source::StmtText::eq(&self, other: &Self) -> bool
-pub fn syntaqlite_syntax::source::StmtText::eq(&self, other: &str) -> bool
-pub fn syntaqlite_syntax::source::StmtText::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::StmtText::hash<H: core::hash::Hasher>(&self, state: &mut H)
-pub fn syntaqlite_syntax::source::StmtText::index(&self, r: syntaqlite_syntax::source::StmtRange) -> &str
+pub fn syntaqlite_syntax::source::StmtText::eq(&self, &&str) -> bool
+pub fn syntaqlite_syntax::source::StmtText::eq(&self, &Self) -> bool
+pub fn syntaqlite_syntax::source::StmtText::eq(&self, &str) -> bool
+pub fn syntaqlite_syntax::source::StmtText::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::StmtText::hash<H: core::hash::Hasher>(&self, &mut H)
+pub fn syntaqlite_syntax::source::StmtText::index(&self, syntaqlite_syntax::source::StmtRange) -> &str
 pub fn syntaqlite_syntax::source::StmtText::is_empty(&self) -> bool
-pub fn syntaqlite_syntax::source::StmtText::new(s: &str) -> &syntaqlite_syntax::source::StmtText
-pub fn syntaqlite_syntax::source::TokenIdx::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::Utf16Col::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::source::Utf16Line::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-pub fn syntaqlite_syntax::typed::Dialect::from_raw(raw: syntaqlite_syntax::any::AnyDialect) -> Self
+pub fn syntaqlite_syntax::source::StmtText::new(&str) -> &syntaqlite_syntax::source::StmtText
+pub fn syntaqlite_syntax::source::TokenIdx::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::Utf16Col::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::source::Utf16Line::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::typed::Dialect::from_raw(syntaqlite_syntax::any::AnyDialect) -> Self
 pub fn syntaqlite_syntax::typed::Dialect::into_raw(self) -> syntaqlite_syntax::any::AnyDialect
-pub fn syntaqlite_syntax::typed::Dialect::with_cflags(self, cflags: syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
-pub fn syntaqlite_syntax::typed::Dialect::with_version(self, version: syntaqlite_syntax::util::SqliteVersion) -> Self
-pub fn syntaqlite_syntax::typed::GrammarNodeType::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
-pub fn syntaqlite_syntax::typed::GrammarTokenType::from_token_type(raw: syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::typed::Dialect::with_cflags(self, syntaqlite_syntax::util::SqliteSyntaxFlags) -> Self
+pub fn syntaqlite_syntax::typed::Dialect::with_version(self, syntaqlite_syntax::util::SqliteVersion) -> Self
+pub fn syntaqlite_syntax::typed::GrammarNodeType::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::typed::GrammarTokenType::from_token_type(syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::completion_context(&self) -> syntaqlite_syntax::CompletionContext
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::drop(&mut self)
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::expected_tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = <G as syntaqlite_syntax::typed::TypedDialect>::Token>
-pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::feed_token(&mut self, token_type: <G as syntaqlite_syntax::typed::TypedDialect>::Token, span: core::ops::range::Range<syntaqlite_syntax::source::DocOffset>) -> core::option::Option<core::result::Result<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>>
+pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::feed_token(&mut self, <G as syntaqlite_syntax::typed::TypedDialect>::Token, core::ops::range::Range<syntaqlite_syntax::source::DocOffset>) -> core::option::Option<core::result::Result<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>>
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::finish(&mut self) -> core::option::Option<core::result::Result<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>>
 pub fn syntaqlite_syntax::typed::TypedIncrementalParseSession<G>::node_count(&self) -> u32
-pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::is_empty(&self) -> bool
 pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::len(&self) -> usize
 pub fn syntaqlite_syntax::typed::TypedNodeList<'_, G, T>::node_id(&self) -> <G as syntaqlite_syntax::typed::TypedDialect>::NodeId
-pub fn syntaqlite_syntax::typed::TypedNodeList<'a, G, T>::from_result(stmt_result: &'a syntaqlite_syntax::any::AnyParsedStatement<'a>, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
-pub fn syntaqlite_syntax::typed::TypedNodeList<'a, G, T>::get(&self, index: usize) -> core::option::Option<T>
+pub fn syntaqlite_syntax::typed::TypedNodeList<'a, G, T>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::typed::TypedNodeList<'a, G, T>::get(&self, usize) -> core::option::Option<T>
 pub fn syntaqlite_syntax::typed::TypedNodeList<'a, G, T>::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = T> + 'a
-pub fn syntaqlite_syntax::typed::TypedParseError<'_, G>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::typed::TypedParseError<'_, G>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::is_fatal(&self) -> bool
 pub fn syntaqlite_syntax::typed::TypedParseError<'a, G>::is_recovered(&self) -> bool
@@ -1970,27 +1970,27 @@ pub fn syntaqlite_syntax::typed::TypedParseSession<G>::drop(&mut self)
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::expanded_text(&self) -> &str
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::full_text(&self) -> &str
 pub fn syntaqlite_syntax::typed::TypedParseSession<G>::next(&mut self) -> syntaqlite_syntax::ParseOutcome<syntaqlite_syntax::typed::TypedParsedStatement<'_, G>, syntaqlite_syntax::typed::TypedParseError<'_, G>>
-pub fn syntaqlite_syntax::typed::TypedParseSession<G>::set_macro_lookup(&mut self, handler: core::option::Option<alloc::boxed::Box<dyn syntaqlite_syntax::MacroLookup>>)
+pub fn syntaqlite_syntax::typed::TypedParseSession<G>::set_macro_lookup(&mut self, core::option::Option<alloc::boxed::Box<dyn syntaqlite_syntax::MacroLookup>>)
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::dump(&self, out: &mut alloc::string::String, indent: usize)
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::dump(&self, &mut alloc::string::String, usize)
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::erase(self) -> syntaqlite_syntax::any::AnyParsedStatement<'a>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::expanded_text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::leading_comments(&self, token_idx: syntaqlite_syntax::source::TokenIdx) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::leading_comments(&self, syntaqlite_syntax::source::TokenIdx) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a, G>
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::node_leading_comments(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a, G>
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::node_token_range(&self, id: syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::source::TokenIdx, syntaqlite_syntax::source::TokenIdx)>
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::node_trailing_comments(&self, id: syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a, G>
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::node_leading_comments(&self, syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a, G>
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::node_token_range(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::source::TokenIdx, syntaqlite_syntax::source::TokenIdx)>
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::node_trailing_comments(&self, syntaqlite_syntax::any::AnyNodeId) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a, G>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::root(&'a self) -> core::option::Option<<G as syntaqlite_syntax::typed::TypedDialect>::Node>
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
 pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedParserToken<'a, G>>
-pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::trailing_comments(&self, token_idx: syntaqlite_syntax::source::TokenIdx) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
-pub fn syntaqlite_syntax::typed::TypedParser<G>::incremental_parse(&self, source: &str) -> syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
-pub fn syntaqlite_syntax::typed::TypedParser<G>::new(dialect: G) -> Self
-pub fn syntaqlite_syntax::typed::TypedParser<G>::parse(&self, source: &str) -> syntaqlite_syntax::typed::TypedParseSession<G>
-pub fn syntaqlite_syntax::typed::TypedParser<G>::set_macro_lookup(&mut self, handler: core::option::Option<alloc::boxed::Box<dyn syntaqlite_syntax::MacroLookup>>)
-pub fn syntaqlite_syntax::typed::TypedParser<G>::with_config(dialect: G, config: &syntaqlite_syntax::ParserConfig) -> Self
+pub fn syntaqlite_syntax::typed::TypedParsedStatement<'a, G>::trailing_comments(&self, syntaqlite_syntax::source::TokenIdx) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
+pub fn syntaqlite_syntax::typed::TypedParser<G>::incremental_parse(&self, &str) -> syntaqlite_syntax::typed::TypedIncrementalParseSession<G>
+pub fn syntaqlite_syntax::typed::TypedParser<G>::new(G) -> Self
+pub fn syntaqlite_syntax::typed::TypedParser<G>::parse(&self, &str) -> syntaqlite_syntax::typed::TypedParseSession<G>
+pub fn syntaqlite_syntax::typed::TypedParser<G>::set_macro_lookup(&mut self, core::option::Option<alloc::boxed::Box<dyn syntaqlite_syntax::MacroLookup>>)
+pub fn syntaqlite_syntax::typed::TypedParser<G>::with_config(G, &syntaqlite_syntax::ParserConfig) -> Self
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::flags(&self) -> syntaqlite_syntax::ParserTokenFlags
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::layer_id(&self) -> u8
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::length(&self) -> syntaqlite_syntax::source::LayerLen
@@ -2000,23 +2000,23 @@ pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedParserToken<'a, G>::token_type(&self) -> <G as syntaqlite_syntax::typed::TypedDialect>::Token
 pub fn syntaqlite_syntax::typed::TypedToken<'a, G>::text(&self) -> &'a str
 pub fn syntaqlite_syntax::typed::TypedToken<'a, G>::token_type(&self) -> <G as syntaqlite_syntax::typed::TypedDialect>::Token
-pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::new(dialect: G) -> Self
-pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::tokenize<'a>(&self, source: &'a str) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedToken<'a, G>> + use<'a, G>
-pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::tokenize_cstr<'a>(&self, source: &'a core::ffi::c_str::CStr) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedToken<'a, G>> + use<'a, G>
+pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::new(G) -> Self
+pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::tokenize<'a>(&self, &'a str) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedToken<'a, G>> + use<'a, G>
+pub fn syntaqlite_syntax::typed::TypedTokenizer<G>::tokenize_cstr<'a>(&self, &'a core::ffi::c_str::CStr) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::typed::TypedToken<'a, G>> + use<'a, G>
 pub fn syntaqlite_syntax::typed::dialect() -> syntaqlite_syntax::typed::Dialect
-pub fn syntaqlite_syntax::util::SqliteSyntaxFlag::from_name(s: &str) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::util::SqliteSyntaxFlag::from_name(&str) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::util::SqliteSyntaxFlag::name(self) -> &'static str
-pub fn syntaqlite_syntax::util::SqliteSyntaxFlags::has(&self, flag: syntaqlite_syntax::util::SqliteSyntaxFlag) -> bool
-pub fn syntaqlite_syntax::util::SqliteSyntaxFlags::with(self, flag: syntaqlite_syntax::util::SqliteSyntaxFlag) -> Self
+pub fn syntaqlite_syntax::util::SqliteSyntaxFlags::has(&self, syntaqlite_syntax::util::SqliteSyntaxFlag) -> bool
+pub fn syntaqlite_syntax::util::SqliteSyntaxFlags::with(self, syntaqlite_syntax::util::SqliteSyntaxFlag) -> Self
 pub fn syntaqlite_syntax::util::SqliteVersion::as_int(self) -> i32
-pub fn syntaqlite_syntax::util::SqliteVersion::from_int(v: i32) -> Self
-pub fn syntaqlite_syntax::util::SqliteVersion::parse(s: &str) -> core::option::Option<Self>
-pub fn syntaqlite_syntax::util::SqliteVersion::parse_with_latest(s: &str) -> core::result::Result<Self, alloc::string::String>
-pub fn syntaqlite_syntax::util::is_suggestable_keyword(name: &str) -> bool
-pub fn u32::from(t: syntaqlite_syntax::TokenType) -> u32
-pub fn u32::from(t: syntaqlite_syntax::any::AnyNodeTag) -> u32
-pub fn u32::from(t: syntaqlite_syntax::any::AnyTokenType) -> u32
-pub fn u32::from(v: syntaqlite_syntax::CompletionContext) -> u32
+pub fn syntaqlite_syntax::util::SqliteVersion::from_int(i32) -> Self
+pub fn syntaqlite_syntax::util::SqliteVersion::parse(&str) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::util::SqliteVersion::parse_with_latest(&str) -> core::result::Result<Self, alloc::string::String>
+pub fn syntaqlite_syntax::util::is_suggestable_keyword(&str) -> bool
+pub fn u32::from(syntaqlite_syntax::CompletionContext) -> u32
+pub fn u32::from(syntaqlite_syntax::TokenType) -> u32
+pub fn u32::from(syntaqlite_syntax::any::AnyNodeTag) -> u32
+pub fn u32::from(syntaqlite_syntax::any::AnyTokenType) -> u32
 pub mod syntaqlite_syntax
 pub mod syntaqlite_syntax::any
 pub mod syntaqlite_syntax::nodes
@@ -3010,5 +3010,5 @@ pub type syntaqlite_syntax::typed::TypedDialect::Node<'a>: syntaqlite_syntax::ty
 pub type syntaqlite_syntax::typed::TypedDialect::NodeId: core::marker::Copy + core::convert::From<syntaqlite_syntax::any::AnyNodeId> + core::convert::Into<syntaqlite_syntax::any::AnyNodeId>
 pub type syntaqlite_syntax::typed::TypedDialect::Token: syntaqlite_syntax::typed::GrammarTokenType
 pub type syntaqlite_syntax::typed::TypedNodeId::Node<'a>: syntaqlite_syntax::typed::GrammarNodeType<'a>
-pub unsafe fn syntaqlite_syntax::any::AnyDialect::from_dialect_template(template: *const syntaqlite_syntax::dialect::ffi::CDialectTemplate) -> Self
-pub unsafe fn syntaqlite_syntax::any::AnyDialect::new(inner: syntaqlite_syntax::dialect::ffi::CDialect) -> Self
+pub unsafe fn syntaqlite_syntax::any::AnyDialect::from_dialect_template(*const syntaqlite_syntax::dialect::ffi::CDialectTemplate) -> Self
+pub unsafe fn syntaqlite_syntax::any::AnyDialect::new(syntaqlite_syntax::dialect::ffi::CDialect) -> Self
