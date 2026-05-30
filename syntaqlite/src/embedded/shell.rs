@@ -4,8 +4,8 @@
 //! sqlite3 shell-language SQL extraction.
 //!
 //! The sqlite3 CLI accepts a "shell" language that is a superset of pure SQL:
-//! dot-commands such as `.read foo.sql`, column-0 `#` comments, and `GO` / `/`
-//! statement terminators. These constructs are NOT valid in the SQL library
+//! column-0 dot-commands such as `.read foo.sql`, column-0 `#` comments, and
+//! `GO` / `/` statement terminators. These constructs are NOT valid in the SQL library
 //! language, so the SQL parser correctly rejects them — but scripts written for
 //! the sqlite3 CLI are ubiquitous, so we must handle them.
 //!
@@ -20,8 +20,9 @@ use super::{EmbeddedFragment, doc_range_from_usize};
 /// Classification of a single line of a sqlite3 shell script.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LineKind {
-    /// A dot-command (e.g. `.read foo.sql`), recognized at line start after
-    /// optional leading whitespace, only when not inside a pending statement.
+    /// A dot-command (e.g. `.read foo.sql`), recognized only at column 0 (no
+    /// leading whitespace, per the sqlite CLI docs) and only when not inside a
+    /// pending statement.
     DotCommand,
     /// A `#` whole-line comment at column 0 (sqlite docs require column 0).
     HashComment,
@@ -36,7 +37,7 @@ enum LineKind {
 /// Classify a single raw line (without its trailing newline).
 ///
 /// `pending_sql` indicates whether we are currently inside an unterminated SQL
-/// statement; a leading-dot line mid-statement is SQL, not a dot-command.
+/// statement; a column-0 dot line mid-statement is SQL, not a dot-command.
 fn classify_line(raw: &str, pending_sql: bool) -> LineKind {
     if raw.trim().is_empty() {
         return LineKind::Blank;
@@ -49,9 +50,10 @@ fn classify_line(raw: &str, pending_sql: bool) -> LineKind {
     if trimmed == "/" || trimmed.eq_ignore_ascii_case("GO") {
         return LineKind::Terminator;
     }
-    // Dot-commands tolerate leading whitespace, but are only recognized when
-    // we are not in the middle of a pending SQL statement.
-    if !pending_sql && raw.trim_start().starts_with('.') {
+    // Dot-commands require column 0 (no leading whitespace), per the sqlite CLI
+    // docs, and are only recognized when we are not in the middle of a pending
+    // SQL statement.
+    if !pending_sql && raw.as_bytes().first() == Some(&b'.') {
         return LineKind::DotCommand;
     }
     LineKind::Sql
@@ -72,8 +74,8 @@ fn sql_line_leaves_pending(raw: &str) -> bool {
 ///
 /// **Experimental:** this function is part of the experimental embedded SQL API.
 ///
-/// Scans lines in order. The first unambiguous shell marker — a dot-command at
-/// line start (outside a pending SQL statement) or a column-0 `#` comment —
+/// Scans lines in order. The first unambiguous shell marker — a column-0
+/// dot-command (outside a pending SQL statement) or a column-0 `#` comment —
 /// switches the whole file into shell mode. `GO` / `/` terminators are NOT
 /// markers on their own (a stray `GO` in a pure-SQL file must stay a parse
 /// error), so they never trigger detection.
@@ -104,7 +106,7 @@ pub fn is_shell_script(source: &str) -> bool {
 /// **Experimental:** this function is part of the experimental embedded SQL API.
 ///
 /// Walks the source line by line, accumulating contiguous runs of SQL (and
-/// blank) lines into fragments. Dot-command lines, column-0 `#` comments, and
+/// blank) lines into fragments. Column-0 dot-command lines, column-0 `#` comments, and
 /// `GO` / `/` terminators sit *between* fragments as shell content and flush the
 /// pending SQL run. Each emitted fragment is a verbatim slice of the source with
 /// NO interpolation holes, so its offsets map back to host-file positions via a
@@ -209,7 +211,13 @@ mod tests {
     #[test]
     fn classify_dot_command() {
         assert_eq!(classify_line(".read x.sql", false), LineKind::DotCommand);
-        assert_eq!(classify_line("  .read x.sql", false), LineKind::DotCommand);
+    }
+
+    #[test]
+    fn classify_indented_dot_is_sql() {
+        // Dot-commands require column 0; an indented `.read` is SQL, not a
+        // dot-command (sqlite CLI docs require the `.` at the left margin).
+        assert_eq!(classify_line("  .read x.sql", false), LineKind::Sql);
     }
 
     #[test]
@@ -245,8 +253,10 @@ mod tests {
     }
 
     #[test]
-    fn detect_indented_dot_command() {
-        assert!(is_shell_script("  .read x.sql\nSELECT 1;"));
+    fn no_detect_indented_dot_command() {
+        // An indented `.read` is not a column-0 dot-command, so it does not
+        // switch the file into shell mode — it stays pure SQL (and errors).
+        assert!(!is_shell_script("  .read x.sql\nSELECT 1;"));
     }
 
     #[test]

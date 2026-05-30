@@ -763,10 +763,11 @@ mod tests {
         assert!(is_shell_script(".read a.sql\nSELECT 1;"));
     }
 
-    /// Dot-commands tolerate leading whitespace (per sqlite docs).
+    /// Dot-commands require column 0 (per sqlite docs); an indented `.read` is
+    /// NOT a shell marker, so the file stays pure SQL.
     #[test]
-    fn shell_detected_for_indented_dot_command() {
-        assert!(is_shell_script("  .read x.sql\nSELECT 1;"));
+    fn shell_not_detected_for_indented_dot_command() {
+        assert!(!is_shell_script("  .read x.sql\nSELECT 1;"));
     }
 
     /// A `#` comment at column 0 is a shell marker.
