@@ -743,12 +743,16 @@ SYNTAQLITE_API char* syntaqlite_dump_node(SyntaqliteParser* p,
 // Advanced: custom dialects
 // ---------------------------------------------------------------------------
 
-// Allocate a parser bound to a specific dialect environment.  Use this
-// for custom dialects; for the built-in SQLite dialect prefer
-// `syntaqlite_parser_create`.
+// Allocate a parser bound to a specific dialect environment. Hidden
+// when calling it with a non-matching dialect would silently mis-parse —
+// see `SYNTAQLITE_HAS_WITH_DIALECT_API` in `dialect.h`. Use the pinned
+// `syntaqlite_parser_create_<dialect>()` (declared by the dialect's own
+// header) when this one is unavailable.
+#ifdef SYNTAQLITE_HAS_WITH_DIALECT_API
 SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
     const SyntaqliteMemMethods* mem,
     SyntaqliteDialect env);
+#endif
 
 #ifndef SYNTAQLITE_OMIT_SQLITE_API
 // Return the built-in SQLite dialect handle.

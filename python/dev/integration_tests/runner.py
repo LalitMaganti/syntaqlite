@@ -34,6 +34,7 @@ _SUITE_MODULES = [
     "python.dev.integration_tests.suites.perfetto_fmt",
     "python.dev.integration_tests.suites.perfetto_val",
     "python.dev.integration_tests.suites.amalg",
+    "python.dev.integration_tests.suites.amalg_api_surface",
     "python.dev.integration_tests.suites.grammar",
     "python.dev.integration_tests.suites.sql_idempotency",
     "python.dev.integration_tests.suites.upstream_sqlite",

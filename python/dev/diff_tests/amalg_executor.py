@@ -114,6 +114,7 @@ def _compile_full_binary(
         f"-I{amalg_dir}",
         f"-DGRAMMAR_HEADER={grammar_header}",
         f"-DGRAMMAR_FN={grammar_fn}",
+        f"-DDIALECT_NAME={dialect_name}",
         "-Werror",
         *extra_cflags,
     ]
@@ -151,6 +152,7 @@ def _compile_full_omit_runtime_binary(
         f"-I{runtime_dir}",
         f"-DGRAMMAR_HEADER={grammar_header}",
         f"-DGRAMMAR_FN={grammar_fn}",
+        f"-DDIALECT_NAME={dialect_name}",
         "-DSYNTAQLITE_OMIT_RUNTIME",
         "-Werror",
     ]
@@ -180,6 +182,7 @@ def _compile_dialect_only_binary(
         f"-I{runtime_dir}",
         f"-DGRAMMAR_HEADER={grammar_header}",
         f"-DGRAMMAR_FN={grammar_fn}",
+        f"-DDIALECT_NAME={dialect_name}",
         "-Werror",
     ]
     # runtime.c is a separate TU from dialect.c, so the #define in the
@@ -239,6 +242,7 @@ def compile_strict_warning_check(
     define_flags = [
         f"-DGRAMMAR_HEADER={grammar_header}",
         f"-DGRAMMAR_FN={grammar_fn}",
+        f"-DDIALECT_NAME={dialect_name}",
     ]
 
     obj_dir = output_binary.parent

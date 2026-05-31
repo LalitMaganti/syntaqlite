@@ -115,6 +115,8 @@ pub(crate) fn generate_dialect_c(
     let mut w = CWriter::new();
     w.file_header();
     w.include_local("syntaqlite/dialect.h");
+    w.include_local("syntaqlite/parser.h");
+    w.include_local("syntaqlite/tokenizer.h");
     w.include_local(includes.tokens_header);
     w.include_local(includes.dialect_meta_h);
     if tokens.is_some() {
@@ -261,6 +263,38 @@ pub(crate) fn generate_dialect_c(
     ));
     w.line(&format!("    return &{upper}_DIALECT;"));
     w.line("}");
+    w.newline();
+
+    // Dialect-pinned create wrappers. The public parser.h may hide the
+    // `_with_dialect` declaration when inline dispatch is active in this
+    // TU (see SYNTAQLITE_HAS_WITH_DIALECT_API), so re-declare it locally
+    // here — the runtime always defines the symbol, either in this TU or
+    // in a separately-linked runtime TU when -DSYNTAQLITE_OMIT_RUNTIME is set.
+    w.line("// Local forward decls of the with_dialect entry points (the public");
+    w.line("// parser.h / tokenizer.h may have stripped these in inline-dispatch builds).");
+    w.line("SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(");
+    w.line("    const SyntaqliteMemMethods* mem, SyntaqliteDialect env);");
+    w.line("SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_with_dialect(");
+    w.line("    const SyntaqliteMemMethods* mem, SyntaqliteDialect env);");
+    w.newline();
+
+    w.line(&format!(
+        "SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_{dialect}("
+    ));
+    w.line("    const SyntaqliteMemMethods* mem) {");
+    w.line(&format!(
+        "    return syntaqlite_parser_create_with_dialect(mem, syntaqlite_{dialect}_dialect());"
+    ));
+    w.line("}");
+    w.newline();
+    w.line(&format!(
+        "SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_{dialect}("
+    ));
+    w.line("    const SyntaqliteMemMethods* mem) {");
+    w.line(&format!(
+        "    return syntaqlite_tokenizer_create_with_dialect(mem, syntaqlite_{dialect}_dialect());"
+    ));
+    w.line("}");
 
     w.finish()
 }
@@ -269,10 +303,12 @@ pub(crate) fn generate_dialect_c(
 ///
 /// `dialect` is a short name like `"sqlite"` or `"perfetto"`.
 ///
-/// Generates the dialect public header declaring `syntaqlite_<dialect>_dialect()`.
-///
-/// Callers create a parser via the runtime's `syntaqlite_parser_create_with_dialect()`
-/// using the dialect handle returned by the accessor.
+/// Declares:
+/// - The dialect accessor (`syntaqlite_<dialect>_dialect()`).
+/// - Dialect-pinned create wrappers — `syntaqlite_parser_create_<dialect>()`
+///   and `syntaqlite_tokenizer_create_<dialect>()`. The name fixes the
+///   dialect at the call site, so they remain correct even when dispatch
+///   is inlined into the runtime.
 pub(crate) fn generate_dialect_h(dialect: &str) -> String {
     let upper = dialect.to_uppercase();
     let guard = format!("SYNTAQLITE_{upper}_GRAMMAR_H");
@@ -281,6 +317,8 @@ pub(crate) fn generate_dialect_h(dialect: &str) -> String {
     w.header_guard_start(&guard);
     w.newline();
     w.include_local("syntaqlite/dialect.h");
+    w.include_local("syntaqlite/parser.h");
+    w.include_local("syntaqlite/tokenizer.h");
     w.newline();
     w.line("#ifdef __cplusplus");
     w.line("extern \"C\" {");
@@ -293,50 +331,19 @@ pub(crate) fn generate_dialect_h(dialect: &str) -> String {
         "SYNTAQLITE_API const SyntaqliteDialectTemplate* syntaqlite_{dialect}_dialect_template(void);"
     ));
     w.newline();
+    w.line(&format!(
+        "SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_{dialect}(\n    const SyntaqliteMemMethods* mem);"
+    ));
+    w.line(&format!(
+        "SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_{dialect}(\n    const SyntaqliteMemMethods* mem);"
+    ));
+    w.newline();
     w.line("#ifdef __cplusplus");
     w.line("}");
     w.line("#endif");
     w.newline();
     w.header_guard_end(&guard);
 
-    w.finish()
-}
-
-/// Generate the dialect dispatch header for amalgamation builds.
-///
-/// Produces a header like `sqlite_dialect_dispatch.h` that defines the
-/// `SYNQ_PARSER_ALLOC`, etc. macros to call the dialect's parser/tokenizer
-/// functions directly (bypassing function pointer indirection).
-pub(crate) fn generate_dialect_dispatch_h(dialect: &str) -> String {
-    let upper = dialect.to_uppercase();
-    let guard = format!("SYNTAQLITE_{upper}_DIALECT_DISPATCH_H");
-    let mut w = CWriter::new();
-    w.file_header();
-    w.header_guard_start(&guard);
-    let pascal = pascal_case(dialect);
-    w.line(&format!(
-        "#define SYNQ_PARSER_ALLOC(d, m, c)       Synq{pascal}ParseAlloc(m, c)"
-    ));
-    w.line(&format!(
-        "#define SYNQ_PARSER_INIT(d, p, c)        Synq{pascal}ParseInit(p, c)"
-    ));
-    w.line(&format!(
-        "#define SYNQ_PARSER_FINALIZE(d, p)       Synq{pascal}ParseFinalize(p)"
-    ));
-    w.line(&format!(
-        "#define SYNQ_PARSER_FREE(d, p, f)        Synq{pascal}ParseFree(p, f)"
-    ));
-    w.line(&format!(
-        "#define SYNQ_PARSER_FEED(d, p, t, m)     Synq{pascal}Parse(p, t, m)"
-    ));
-    w.line(&format!(
-        "#define SYNQ_PARSER_TRACE(d, f, s)       Synq{pascal}ParseTrace(f, s)"
-    ));
-    w.line(&format!(
-        "#define SYNQ_GET_TOKEN(env, z, t)        Synq{pascal}GetToken(env, z, t)"
-    ));
-    w.newline();
-    w.header_guard_end(&guard);
     w.finish()
 }
 
@@ -461,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    fn header_exposes_dialect_function() {
+    fn header_exposes_dialect_function_and_pinned_creates() {
         let h = generate_dialect_h("sqlite");
         assert!(h.contains("SyntaqliteDialect syntaqlite_sqlite_dialect(void);"));
         assert!(h.contains("syntaqlite/dialect.h"));
@@ -470,11 +477,9 @@ mod tests {
         assert!(!h.contains("syntaqlite_sqlite_grammar_with("));
         // No forward declaration of SyntaqliteDialectTemplate (now in dialect.h)
         assert!(!h.contains("typedef struct SyntaqliteDialectTemplate"));
-        // No convenience wrappers — those belong in the runtime headers
-        assert!(
-            !h.contains("syntaqlite_parser_create"),
-            "codegen should not emit convenience wrappers"
-        );
+        // Dialect-pinned create wrappers are part of the dialect's public API.
+        assert!(h.contains("syntaqlite_parser_create_sqlite("));
+        assert!(h.contains("syntaqlite_tokenizer_create_sqlite("));
         assert!(
             !h.contains("SYNTAQLITE_OMIT_SQLITE_API"),
             "codegen should not emit opt-out guards"

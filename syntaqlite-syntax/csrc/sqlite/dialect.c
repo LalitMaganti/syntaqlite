@@ -10,6 +10,8 @@
 #include "csrc/sqlite/dialect_tokens.h"
 #include "csrc/sqlite/sqlite_parse.h"
 #include "csrc/sqlite/sqlite_tokenize.h"
+#include "syntaqlite/parser.h"
+#include "syntaqlite/tokenizer.h"
 #include "syntaqlite_sqlite/sqlite_tokens.h"
 
 extern const char synq_sqlite_zKWText[];
@@ -85,4 +87,25 @@ SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void) {
 SYNTAQLITE_API const SyntaqliteDialectTemplate*
 syntaqlite_sqlite_dialect_template(void) {
   return &SQLITE_DIALECT;
+}
+
+// Local forward decls of the with_dialect entry points (the public
+// parser.h / tokenizer.h may have stripped these in inline-dispatch builds).
+SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
+    const SyntaqliteMemMethods* mem,
+    SyntaqliteDialect env);
+SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_with_dialect(
+    const SyntaqliteMemMethods* mem,
+    SyntaqliteDialect env);
+
+SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_sqlite(
+    const SyntaqliteMemMethods* mem) {
+  return syntaqlite_parser_create_with_dialect(mem,
+                                               syntaqlite_sqlite_dialect());
+}
+
+SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_sqlite(
+    const SyntaqliteMemMethods* mem) {
+  return syntaqlite_tokenizer_create_with_dialect(mem,
+                                                  syntaqlite_sqlite_dialect());
 }

@@ -609,6 +609,59 @@ fn is_runtime_path(path: &str) -> bool {
         || path.starts_with("csrc/")
 }
 
+/// Locate an internal header in the file map by suffix. Used to find the
+/// dialect's `<dn>_parse.h` / `<dn>_tokenize.h` without depending on the
+/// layout (which determines whether they live flat under `csrc/` or
+/// nested under `csrc/<dn>/`).
+fn find_internal_header<'a>(files: &'a FileMap, suffix: &str) -> Option<&'a str> {
+    files
+        .keys()
+        .find(|k| k.ends_with(suffix) && k.starts_with("csrc/"))
+        .map(String::as_str)
+}
+
+/// Emit the inline-dispatch macros for `dialect`, gated on the user's
+/// opt-out / override flags. The macros expand to direct calls of the
+/// dialect's Lemon-generated parser/tokenizer functions, whose decls
+/// come from the parse/tokenize headers inlined immediately above.
+fn emit_dispatch_macros(out: &mut String, dialect: &str) {
+    let pascal = crate::util::pascal_case(dialect);
+    let _ = writeln!(out, "// Inline-dispatch macros for the {dialect} dialect.");
+    out.push_str(
+        "#if !defined(SYNTAQLITE_NO_INLINE_DIALECT_DISPATCH) && \
+         !defined(SYNTAQLITE_INLINE_DIALECT_DISPATCH)\n",
+    );
+    let _ = writeln!(
+        out,
+        "#define SYNQ_PARSER_ALLOC(d, m, c)   Synq{pascal}ParseAlloc(m, c)"
+    );
+    let _ = writeln!(
+        out,
+        "#define SYNQ_PARSER_INIT(d, p, c)    Synq{pascal}ParseInit(p, c)"
+    );
+    let _ = writeln!(
+        out,
+        "#define SYNQ_PARSER_FINALIZE(d, p)   Synq{pascal}ParseFinalize(p)"
+    );
+    let _ = writeln!(
+        out,
+        "#define SYNQ_PARSER_FREE(d, p, f)    Synq{pascal}ParseFree(p, f)"
+    );
+    let _ = writeln!(
+        out,
+        "#define SYNQ_PARSER_FEED(d, p, t, m) Synq{pascal}Parse(p, t, m)"
+    );
+    let _ = writeln!(
+        out,
+        "#define SYNQ_PARSER_TRACE(d, f, s)   Synq{pascal}ParseTrace(f, s)"
+    );
+    let _ = writeln!(
+        out,
+        "#define SYNQ_GET_TOKEN(env, z, t)    Synq{pascal}GetToken(env, z, t)"
+    );
+    out.push_str("#endif\n\n");
+}
+
 // ---------------------------------------------------------------------------
 // Include guard detection
 // ---------------------------------------------------------------------------
@@ -688,6 +741,24 @@ fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput 
         ),
     };
 
+    // Auto-inline dispatch kicks in for Full mode iff the dialect provides
+    // a parser/tokenizer API header (`sqlite_parse.h`/`sqlite_tokenize.h`
+    // — same file name for every dialect; the per-dialect symbol names
+    // come from the contents). The amalgamator's contribution is (a) the
+    // `SYNQ_AMALG_DIALECT` tag in the .h and (b) inlining the parse/tokenize
+    // decls + a dispatch-macros block in the .c.
+    let auto_inline = match &mode {
+        EmitMode::Full { dialect, .. } => {
+            let parse_key = find_internal_header(files, "/sqlite_parse.h");
+            let tok_key = find_internal_header(files, "/sqlite_tokenize.h");
+            match (parse_key, tok_key) {
+                (Some(p), Some(t)) => Some((*dialect, p, t)),
+                _ => None,
+            }
+        }
+        _ => None,
+    };
+
     // ── Build .h ──
     let mut header = String::new();
     header.push_str("/*\n");
@@ -728,8 +799,18 @@ fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput 
         _ => {}
     }
 
+    // Full amalgamation with auto-inline: tag this TU as a single-dialect
+    // amalgamation so `syntaqlite/dialect.h` can compute the
+    // `SYNTAQLITE_HAS_WITH_DIALECT_API` gate. Everything else
+    // (`with_dialect` stripping, the pinned `create_<dialect>` wrappers)
+    // lives in the C/H files and the dialect codegen output.
+    if let Some((dialect, _, _)) = auto_inline {
+        let _ = writeln!(header, "#define SYNQ_AMALG_DIALECT {dialect}\n");
+    }
+
     let mut h_emitter = Emitter::new(files);
     h_emitter.emit_kind(FileKind::PublicHeader, &mut header, Section::Header);
+
     emit_diagnostic_pop(&mut header);
     let _ = write!(header, "\n#endif  /* {guard} */\n");
 
@@ -808,6 +889,24 @@ fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput 
         EmitMode::Full { runtime_keys, .. } => Emitter::with_runtime_keys(files, runtime_keys),
         _ => Emitter::new(files),
     };
+
+    // Full amalgamation: inline the dialect's parse/tokenize API headers
+    // (so their function decls are visible before any runtime source
+    // references them), then emit the dispatch macros. Using the same
+    // Emitter as the source pass means the seen set suppresses
+    // re-emission when dialect sources include the same headers later.
+    //
+    // The macros are gated on the user's opt-out flags so a function-pointer
+    // fallback can still be selected via `-DSYNTAQLITE_NO_INLINE_DIALECT_DISPATCH`
+    // or `-DSYNTAQLITE_INLINE_DIALECT_DISPATCH=<custom-header>`. The
+    // parse/tokenize decls remain unconditional — `dialect.c`'s struct
+    // initializer always needs them.
+    if let Some((dialect, parse_key, tok_key)) = &auto_inline {
+        s_emitter.emit_file(parse_key, &mut source, Section::Source);
+        s_emitter.emit_file(tok_key, &mut source, Section::Source);
+        emit_dispatch_macros(&mut source, dialect);
+    }
+
     s_emitter.emit_kind(FileKind::Source, &mut source, Section::Source);
 
     emit_diagnostic_pop(&mut source);
@@ -1140,5 +1239,185 @@ mod tests {
             &both,
             &both
         ));
+    }
+
+    /// Helper: file map containing the dialect's parse/tokenize API
+    /// headers (always named `sqlite_parse.h` / `sqlite_tokenize.h`, with
+    /// dialect-specific symbols inside) that the amalgamator looks up to
+    /// trigger auto-inline. `extra` adds further entries on top.
+    fn flat_dialect_files(extra: &[(&str, &str)]) -> FileMap {
+        let mut files = FileMap::new();
+        files.insert(
+            "csrc/sqlite_parse.h".to_string(),
+            "void SynqSqliteParseAlloc(void);\n".to_string(),
+        );
+        files.insert(
+            "csrc/sqlite_tokenize.h".to_string(),
+            "void SynqSqliteGetToken(void);\n".to_string(),
+        );
+        for (k, v) in extra {
+            files.insert((*k).to_string(), (*v).to_string());
+        }
+        files
+    }
+
+    fn nested_dialect_files(dialect: &str, extra: &[(&str, &str)]) -> FileMap {
+        let mut files = FileMap::new();
+        files.insert(
+            format!("csrc/{dialect}/sqlite_parse.h"),
+            "void SynqSqliteParseAlloc(void);\n".to_string(),
+        );
+        files.insert(
+            format!("csrc/{dialect}/sqlite_tokenize.h"),
+            "void SynqSqliteGetToken(void);\n".to_string(),
+        );
+        for (k, v) in extra {
+            files.insert((*k).to_string(), (*v).to_string());
+        }
+        files
+    }
+
+    #[test]
+    fn full_mode_emits_dispatch_macros_for_known_dialect() {
+        // Trigger: both parse_h and tokenize_h are in the file map.
+        let files = flat_dialect_files(&[("csrc/parser.c", "void runtime_api(void) {}\n")]);
+        let runtime_keys = runtime_set(&["csrc/parser.c"]);
+        let out = emit(
+            &files,
+            EmitMode::Full {
+                dialect: "sqlite",
+                runtime_keys: &runtime_keys,
+            },
+            false,
+        );
+        let src = &out.source;
+        assert!(
+            src.contains("#define SYNQ_PARSER_ALLOC(d, m, c)   SynqSqliteParseAlloc(m, c)"),
+            "dispatch macros must be emitted with the Pascal-cased dialect name; got:\n{src}"
+        );
+        // Decls + macros must precede the runtime parser source.
+        let parse_idx = src
+            .find("begin: csrc/sqlite_parse.h")
+            .expect("parse_h block missing");
+        let macros_idx = src
+            .find("Inline-dispatch macros")
+            .expect("dispatch macros header missing");
+        let parser_idx = src
+            .find("begin: csrc/parser.c")
+            .expect("parser.c block missing");
+        assert!(
+            parse_idx < macros_idx && macros_idx < parser_idx,
+            "decls -> macros -> runtime sources, got indices {parse_idx} < {macros_idx} < {parser_idx}"
+        );
+    }
+
+    #[test]
+    fn full_mode_emits_dispatch_for_nested_layout() {
+        // In-tree sqlite layout nests parse/tokenize under csrc/<dialect>/.
+        let files = nested_dialect_files("sqlite", &[("csrc/parser.c", "")]);
+        let runtime_keys = runtime_set(&["csrc/parser.c"]);
+        let out = emit(
+            &files,
+            EmitMode::Full {
+                dialect: "sqlite",
+                runtime_keys: &runtime_keys,
+            },
+            false,
+        );
+        assert!(out.source.contains("SynqSqliteParseAlloc"));
+    }
+
+    #[test]
+    fn full_mode_skips_auto_inline_when_dialect_headers_absent() {
+        // No parse_h / tokenize_h in the map — amalgamator can't compose
+        // a dispatch block, so it emits nothing.
+        let mut files = FileMap::new();
+        files.insert(
+            "csrc/parser.c".to_string(),
+            "void runtime_api(void) {}\n".to_string(),
+        );
+        let runtime_keys = runtime_set(&["csrc/parser.c"]);
+        let out = emit(
+            &files,
+            EmitMode::Full {
+                dialect: "perfetto",
+                runtime_keys: &runtime_keys,
+            },
+            false,
+        );
+        assert!(
+            !out.source.contains("SYNQ_PARSER_ALLOC"),
+            "no dispatch macros without the dialect's parse/tokenize headers in the map"
+        );
+    }
+
+    #[test]
+    fn full_mode_tags_tu_with_amalg_dialect() {
+        // The amalgamator's only contribution to the public API gate is a
+        // single `#define SYNQ_AMALG_DIALECT <name>` in the header. All
+        // downstream logic (hiding `_with_dialect`, exposing the pinned
+        // wrappers) lives in the C headers / dialect codegen.
+        let files = flat_dialect_files(&[]);
+        let runtime_keys = HashSet::new();
+        let out = emit(
+            &files,
+            EmitMode::Full {
+                dialect: "sqlite",
+                runtime_keys: &runtime_keys,
+            },
+            false,
+        );
+        assert!(
+            out.header.contains("#define SYNQ_AMALG_DIALECT sqlite"),
+            "Full-mode header must tag the TU with SYNQ_AMALG_DIALECT; got:\n{}",
+            out.header
+        );
+    }
+
+    #[test]
+    fn dialect_only_mode_does_not_tag_amalg_dialect() {
+        // DialectOnly doesn't auto-inline dispatch in its own TU, so the
+        // `_with_dialect` API stays safe — no need to tag the TU.
+        let mut files = flat_dialect_files(&[]);
+        files.insert(
+            "csrc/sqlite/dialect.c".to_string(),
+            "void sqlite_dialect_fn(void) {}\n".to_string(),
+        );
+        let out = emit(
+            &files,
+            EmitMode::DialectOnly {
+                dialect: "sqlite",
+                runtime_header: "syntaqlite_runtime.h",
+                ext_header: "syntaqlite_dialect.h",
+            },
+            false,
+        );
+        assert!(
+            !out.header.contains("SYNQ_AMALG_DIALECT"),
+            "DialectOnly header must not tag the TU"
+        );
+    }
+
+    #[test]
+    fn dialect_only_mode_does_not_auto_inline_dispatch() {
+        let mut files = flat_dialect_files(&[]);
+        files.insert(
+            "csrc/sqlite/dialect.c".to_string(),
+            "void sqlite_dialect_fn(void) {}\n".to_string(),
+        );
+        let out = emit(
+            &files,
+            EmitMode::DialectOnly {
+                dialect: "sqlite",
+                runtime_header: "syntaqlite_runtime.h",
+                ext_header: "syntaqlite_dialect.h",
+            },
+            false,
+        );
+        assert!(
+            !out.source.contains("SYNQ_PARSER_ALLOC"),
+            "dialect-only mode is consumed by an external runtime TU and must \
+             not auto-inline dispatch in its own .c"
+        );
     }
 }

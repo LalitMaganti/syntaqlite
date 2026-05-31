@@ -26,7 +26,6 @@ pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::new(&'a syntaq
 pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::open_for_extension(self) -> Self
 pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_rust(self, &str) -> Self
 pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::write_to(&self, &syntaqlite_buildtools::output_resolver::OutputLayout, &impl core::ops::function::Fn(&std::path::Path) -> core::result::Result<(), alloc::string::String>, &impl core::ops::function::Fn(&std::path::Path, &str) -> core::result::Result<(), alloc::string::String>) -> core::result::Result<(), alloc::string::String>
-pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_dispatch_header_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_header_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_struct_type(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_symbol_fn_name(&self) -> alloc::string::String
@@ -109,7 +108,6 @@ pub syntaqlite_buildtools::output_resolver::OutputLayout::build_rs: core::option
 pub syntaqlite_buildtools::output_resolver::OutputLayout::cargo_toml: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::output_resolver::OutputLayout::cflags_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::dialect_c: core::option::Option<alloc::string::String>
-pub syntaqlite_buildtools::output_resolver::OutputLayout::dialect_dispatch_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::dialect_fmt_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::dialect_h: syntaqlite_buildtools::output_resolver::CHeader
 pub syntaqlite_buildtools::output_resolver::OutputLayout::dialect_meta_h: syntaqlite_buildtools::output_resolver::CHeader

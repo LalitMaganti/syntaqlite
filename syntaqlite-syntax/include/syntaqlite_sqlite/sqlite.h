@@ -7,6 +7,8 @@
 #define SYNTAQLITE_SQLITE_GRAMMAR_H
 
 #include "syntaqlite/dialect.h"
+#include "syntaqlite/parser.h"
+#include "syntaqlite/tokenizer.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +17,11 @@ extern "C" {
 SYNTAQLITE_API SyntaqliteDialect syntaqlite_sqlite_dialect(void);
 SYNTAQLITE_API const SyntaqliteDialectTemplate*
 syntaqlite_sqlite_dialect_template(void);
+
+SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_sqlite(
+    const SyntaqliteMemMethods* mem);
+SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_sqlite(
+    const SyntaqliteMemMethods* mem);
 
 #ifdef __cplusplus
 }

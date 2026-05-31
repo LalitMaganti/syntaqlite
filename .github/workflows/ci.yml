@@ -38,8 +38,8 @@ jobs:
           path: third_party
           key: third-party-${{ runner.os }}-${{ hashFiles('python/tools/install_build_deps.py') }}
 
-      - name: Install system dependencies (tcl-dev for upstream SQLite suite)
-        run: sudo apt-get update && sudo apt-get install -y tcl-dev
+      - name: Install system dependencies (tcl/tcl-dev for upstream SQLite suite)
+        run: sudo apt-get update && sudo apt-get install -y tcl tcl-dev
 
       - name: Install build dependencies
         run: python3 tools/install-build-deps

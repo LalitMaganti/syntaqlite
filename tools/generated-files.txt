@@ -14,7 +14,6 @@ syntaqlite-syntax/csrc/sqlite/dialect_fmt.h
 syntaqlite-syntax/csrc/sqlite/dialect_meta.h
 syntaqlite-syntax/csrc/sqlite/dialect_roles.h
 syntaqlite-syntax/csrc/sqlite/dialect_tokens.h
-syntaqlite-syntax/csrc/sqlite/sqlite_dialect_dispatch.h
 syntaqlite-syntax/csrc/sqlite/sqlite_keyword.h
 syntaqlite-syntax/csrc/sqlite/sqlite_parse.h
 syntaqlite-syntax/csrc/sqlite/sqlite_tokenize.h

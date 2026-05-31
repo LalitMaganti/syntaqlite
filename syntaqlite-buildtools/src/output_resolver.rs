@@ -33,8 +33,6 @@ pub struct OutputLayout {
     pub dialect_fmt_h: CHeader,
     /// Dialect token categories header (`dialect_tokens.h`).
     pub dialect_tokens_h: CHeader,
-    /// Dialect dispatch header (`*_dialect_dispatch.h`).
-    pub dialect_dispatch_h: CHeader,
     /// Parser API header (`sqlite_parse.h`).
     pub parse_api_h: CHeader,
     /// Tokenizer header (`sqlite_tokenize.h`).
@@ -154,10 +152,6 @@ impl OutputLayout {
                 write: Some(format!("{csrc}/dialect_tokens.h")),
                 include: format!("{ip}dialect_tokens.h"),
             },
-            dialect_dispatch_h: CHeader {
-                write: Some(format!("{csrc}/{dn}_dialect_dispatch.h")),
-                include: format!("{ip}{dn}_dialect_dispatch.h"),
-            },
             parse_api_h: CHeader {
                 write: Some(format!("{csrc}/sqlite_parse.h")),
                 include: format!("{ip}sqlite_parse.h"),
@@ -246,10 +240,6 @@ impl OutputLayout {
                 write: Some("csrc/dialect_tokens.h".to_string()),
                 include: "dialect_tokens.h".to_string(),
             },
-            dialect_dispatch_h: CHeader {
-                write: Some(format!("csrc/{dn}_dialect_dispatch.h")),
-                include: format!("{dn}_dialect_dispatch.h"),
-            },
             parse_api_h: CHeader {
                 write: Some("csrc/sqlite_parse.h".to_string()),
                 include: "sqlite_parse.h".to_string(),
@@ -334,10 +324,6 @@ impl OutputLayout {
             dialect_tokens_h: CHeader {
                 write: Some("csrc/dialect_tokens.h".to_string()),
                 include: format!("{ip}dialect_tokens.h"),
-            },
-            dialect_dispatch_h: CHeader {
-                write: Some(format!("csrc/{dn}_dialect_dispatch.h")),
-                include: format!("{ip}{dn}_dialect_dispatch.h"),
             },
             parse_api_h: CHeader {
                 write: Some("csrc/sqlite_parse.h".to_string()),
@@ -425,10 +411,6 @@ impl OutputLayout {
         write(&self.dialect_meta_h.write, &artifacts.dialect_meta_h)?;
         write(&self.dialect_fmt_h.write, &artifacts.dialect_fmt_h)?;
         write(&self.dialect_tokens_h.write, &artifacts.dialect_tokens_h)?;
-        write(
-            &self.dialect_dispatch_h.write,
-            &artifacts.dialect_dispatch_h,
-        )?;
         write(&self.parse_api_h.write, &artifacts.parse_api_h)?;
         write(&self.tokenize_h.write, &artifacts.tokenize_h)?;
         write(&self.keyword_h.write, &artifacts.keyword_h)?;
