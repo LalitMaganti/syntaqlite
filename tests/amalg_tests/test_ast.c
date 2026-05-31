@@ -14,13 +14,18 @@
 
 #include GRAMMAR_HEADER
 
+/* DIALECT_NAME is the bare token (e.g. `sqlite`, `perfetto`) so we can paste
+   it to form the dialect-named create wrappers emitted by the amalgamation. */
+#define SYNQ_PASTE_(a, b) a##b
+#define SYNQ_PASTE(a, b) SYNQ_PASTE_(a, b)
+#define SYNQ_PARSER_CREATE SYNQ_PASTE(syntaqlite_parser_create_, DIALECT_NAME)
+
 int main(void) {
   static char buf[256 * 1024];
   size_t n = fread(buf, 1, sizeof(buf) - 1, stdin);
   buf[n] = '\0';
 
-  SyntaqliteDialect env = GRAMMAR_FN();
-  SyntaqliteParser* p = syntaqlite_parser_create_with_dialect(NULL, env);
+  SyntaqliteParser* p = SYNQ_PARSER_CREATE(NULL);
   syntaqlite_parser_reset(p, buf, (uint32_t)n);
 
   int32_t rc;

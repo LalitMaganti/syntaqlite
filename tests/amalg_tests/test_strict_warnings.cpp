@@ -10,9 +10,15 @@
 
 #include GRAMMAR_HEADER
 
+#define SYNQ_PASTE_(a, b) a##b
+#define SYNQ_PASTE(a, b) SYNQ_PASTE_(a, b)
+#define SYNQ_PARSER_CREATE SYNQ_PASTE(syntaqlite_parser_create_, DIALECT_NAME)
+
 int main() {
-  SyntaqliteDialect env = GRAMMAR_FN();
-  SyntaqliteParser* p = syntaqlite_parser_create_with_dialect(nullptr, env);
+  // Use the dialect-named create wrapper, which the amalgamation emits
+  // unconditionally for any named dialect (the generic *_with_dialect entry
+  // point is hidden in Full mode now that dispatch is inlined by default).
+  SyntaqliteParser* p = SYNQ_PARSER_CREATE(nullptr);
   const char* sql = "SELECT 1";
   syntaqlite_parser_reset(p, sql, 8);
   syntaqlite_parser_next(p);

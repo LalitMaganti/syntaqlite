@@ -57,9 +57,15 @@ typedef struct SyntaqliteToken {
 // the caller's struct does not need to outlive the tokenizer, but the dialect
 // pointer inside must remain valid for the tokenizer's lifetime.
 // The mem methods are copied — pass NULL for all defaults (malloc/free).
+//
+// Hidden when calling it with a non-matching dialect would silently
+// mis-tokenize — see `SYNTAQLITE_HAS_WITH_DIALECT_API` in `dialect.h`.
+// Use the pinned `syntaqlite_tokenizer_create_<dialect>()` when unavailable.
+#ifdef SYNTAQLITE_HAS_WITH_DIALECT_API
 SYNTAQLITE_API SyntaqliteTokenizer* syntaqlite_tokenizer_create_with_dialect(
     const SyntaqliteMemMethods* mem,
     SyntaqliteDialect env);
+#endif
 
 // Bind a source buffer and start tokenizing from the beginning. The source
 // must remain valid until the next reset() or destroy(). Can be called

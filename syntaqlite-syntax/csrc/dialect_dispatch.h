@@ -5,8 +5,17 @@
 //
 // In amalgamation builds all C code compiles as one unit, so we can call
 // dialect functions directly instead of going through function pointers.
-// Define SYNTAQLITE_INLINE_DIALECT_DISPATCH to a header path that provides
-// the SYNQ_PARSER_ALLOC, etc. macros for your dialect.
+//
+// Resolution order:
+//   1. The Full amalgamation pre-defines SYNQ_PARSER_ALLOC, etc. inline at
+//      the top of the .c so this header's branches are skipped entirely.
+//      Define SYNTAQLITE_NO_INLINE_DIALECT_DISPATCH to disable that and
+//      fall through to the function-pointer fallback below.
+//   2. Otherwise, define SYNTAQLITE_INLINE_DIALECT_DISPATCH to a header
+//      path that provides the SYNQ_PARSER_ALLOC, etc. macros for your
+//      dialect (used by hand-built consumers without the Full amalgamation).
+//   3. Otherwise, fall back to function-pointer dispatch through the
+//      dialect template struct.
 
 #ifndef SYNTAQLITE_INTERNAL_DIALECT_DISPATCH_H
 #define SYNTAQLITE_INTERNAL_DIALECT_DISPATCH_H

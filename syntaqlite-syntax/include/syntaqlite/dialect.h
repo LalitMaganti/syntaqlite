@@ -39,6 +39,33 @@
 extern "C" {
 #endif
 
+// ── _with_dialect API gate ────────────────────────────────────────────────
+//
+// `SYNTAQLITE_HAS_WITH_DIALECT_API` is defined when the public
+// `syntaqlite_{parser,tokenizer}_create_with_dialect` entry points are
+// available in this translation unit.
+//
+// They're hidden only when calling them would silently mis-parse: when
+// the runtime body in *this* TU has its dispatch macros hardcoded to one
+// dialect (a Full amalgamation that auto-inlined dispatch). The
+// amalgamator marks that case by defining `SYNQ_AMALG_DIALECT`. The user
+// can step back out of inline dispatch with
+// `-DSYNTAQLITE_NO_INLINE_DIALECT_DISPATCH` (force function pointers) or
+// `-DSYNTAQLITE_INLINE_DIALECT_DISPATCH=<path>` (custom dispatch header);
+// `-DSYNTAQLITE_OMIT_RUNTIME` moves the runtime to a separate TU that
+// uses function-pointer dispatch, so the dialect argument once again
+// controls dispatch.
+//
+// When the API is hidden, use the dialect-pinned wrappers instead:
+// `syntaqlite_parser_create_<dialect>()` and
+// `syntaqlite_tokenizer_create_<dialect>()`.
+#if !defined(SYNQ_AMALG_DIALECT) ||                   \
+    defined(SYNTAQLITE_NO_INLINE_DIALECT_DISPATCH) || \
+    defined(SYNTAQLITE_INLINE_DIALECT_DISPATCH) ||    \
+    defined(SYNTAQLITE_OMIT_RUNTIME)
+#define SYNTAQLITE_HAS_WITH_DIALECT_API 1
+#endif
+
 // ── Token category ────────────────────────────────────────────────────────
 
 // Semantic category of a SQL token, used for syntax highlighting.
