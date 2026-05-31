@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.10
+
+**Zed extension:**
+- Renamed the extension and its language server id to `syntaqlite-lsp` and bundled a license, retooling it to meet the Zed extension registry's requirements ([#267](https://github.com/LalitMaganti/syntaqlite/pull/267)).
+
 ## 0.5.9
 
 **Parser:**
