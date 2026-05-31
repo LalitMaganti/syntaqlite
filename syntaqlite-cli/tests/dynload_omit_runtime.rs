@@ -11,8 +11,8 @@
 //!   3. Load it through `syntaqlite --dialect <path> --dialect-name sqlite`
 //!      and parse a query.
 //!
-//! Without `build.rs` linking the host binary with `-Wl,--export-dynamic`,
-//! Linux loaders fail step 3 with:
+//! Without `build.rs` exporting the runtime hooks into the host binary's
+//! `.dynsym` (via `-Wl,--dynamic-list`), Linux loaders fail step 3 with:
 //!
 //!     symbol lookup error: ...: undefined symbol: synq_extent_on_shift
 //!
@@ -102,9 +102,9 @@ fn omit_runtime_dialect_plugin_resolves_against_host() {
     run(&mut cc, "cc -shared with -DSYNTAQLITE_OMIT_RUNTIME");
 
     // 3. Load the plugin through the CLI and parse a query. On Linux,
-    //    without `-Wl,--export-dynamic` on the host binary, this fails
-    //    inside `dlopen` (lazy-bind) or on first parse call with
-    //    `undefined symbol: synq_extent_on_shift`.
+    //    without the host binary exporting the runtime hooks into `.dynsym`
+    //    (`-Wl,--dynamic-list`), this fails inside `dlopen` (lazy-bind) or on
+    //    first parse call with `undefined symbol: synq_extent_on_shift`.
     let out = Command::new(bin())
         .arg("--dialect")
         .arg(&lib)
@@ -117,7 +117,7 @@ fn omit_runtime_dialect_plugin_resolves_against_host() {
     assert!(
         out.status.success(),
         "loading OMIT_RUNTIME dialect plugin failed — host likely lacks \
-         --export-dynamic (see syntaqlite-cli/build.rs)\n\
+         exported runtime hooks in .dynsym (see syntaqlite-cli/build.rs)\n\
          stdout:\n{stdout}\nstderr:\n{stderr}",
     );
     assert!(
