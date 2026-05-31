@@ -63,11 +63,91 @@ fn classify_line(raw: &str, pending_sql: bool) -> LineKind {
 /// a line classified as [`LineKind::Sql`].
 ///
 /// This is a deliberately conservative, line-level heuristic (not a real SQL
-/// statement tracker): a SQL line ends a statement when its last non-whitespace
-/// character is `;`. Erring toward `pending_sql == true` only ever demotes a
-/// would-be dot-command to SQL, never the reverse, so detection stays safe.
+/// statement tracker): a SQL line ends a statement when its last significant
+/// character outside strings and comments is `;`. Erring toward
+/// `pending_sql == true` only ever demotes a would-be dot-command to SQL, never
+/// the reverse, so detection stays safe.
 fn sql_line_leaves_pending(raw: &str) -> bool {
-    !raw.trim_end().ends_with(';')
+    last_significant_sql_byte(raw) != Some(b';')
+}
+
+/// Return the last non-whitespace byte outside line/block comments and quoted
+/// SQL strings/identifiers.
+fn last_significant_sql_byte(raw: &str) -> Option<u8> {
+    let bytes = raw.as_bytes();
+    let mut i = 0usize;
+    let mut last = None;
+    let mut quote: Option<u8> = None;
+    let mut in_bracket_ident = false;
+    let mut in_block_comment = false;
+
+    while i < bytes.len() {
+        let b = bytes[i];
+
+        if in_block_comment {
+            if b == b'*' && bytes.get(i + 1) == Some(&b'/') {
+                in_block_comment = false;
+                i += 2;
+            } else {
+                i += 1;
+            }
+            continue;
+        }
+
+        if in_bracket_ident {
+            if b == b']' {
+                in_bracket_ident = false;
+            }
+            if !b.is_ascii_whitespace() {
+                last = Some(b);
+            }
+            i += 1;
+            continue;
+        }
+
+        if let Some(q) = quote {
+            if b == q {
+                if bytes.get(i + 1) == Some(&q) {
+                    last = Some(bytes[i + 1]);
+                    i += 2;
+                    continue;
+                }
+                quote = None;
+            }
+            if !b.is_ascii_whitespace() {
+                last = Some(b);
+            }
+            i += 1;
+            continue;
+        }
+
+        if b == b'-' && bytes.get(i + 1) == Some(&b'-') {
+            break;
+        }
+        if b == b'/' && bytes.get(i + 1) == Some(&b'*') {
+            in_block_comment = true;
+            i += 2;
+            continue;
+        }
+        if b == b'\'' || b == b'"' || b == b'`' {
+            quote = Some(b);
+            last = Some(b);
+            i += 1;
+            continue;
+        }
+        if b == b'[' {
+            in_bracket_ident = true;
+            last = Some(b);
+            i += 1;
+            continue;
+        }
+        if !b.is_ascii_whitespace() {
+            last = Some(b);
+        }
+        i += 1;
+    }
+
+    last
 }
 
 /// Detect whether `source` is a sqlite3 shell script rather than pure SQL.
@@ -248,6 +328,14 @@ mod tests {
     }
 
     #[test]
+    fn sql_line_ignores_trailing_inline_comments_for_pending_state() {
+        assert!(!sql_line_leaves_pending("SELECT 1; -- done"));
+        assert!(!sql_line_leaves_pending("SELECT 1; /* done */"));
+        assert!(sql_line_leaves_pending("SELECT 1 -- not done"));
+        assert!(sql_line_leaves_pending("SELECT '; -- not done'"));
+    }
+
+    #[test]
     fn detect_dot_command() {
         assert!(is_shell_script(".read a.sql\nSELECT 1;"));
     }
@@ -293,6 +381,15 @@ mod tests {
 
         let first_select = source.find("SELECT 1").unwrap();
         assert_eq!(fragments[0].sql_range().start.as_usize(), first_select);
+    }
+
+    #[test]
+    fn semicolon_before_inline_comment_allows_following_dot_command() {
+        let source = ".read a.sql\nSELECT 1; -- done\n.read b.sql\nSELECT 2;";
+        let fragments = extract_shell(source);
+        assert_eq!(fragments.len(), 2);
+        assert_eq!(fragments[0].sql_text(), "SELECT 1; -- done");
+        assert_eq!(fragments[1].sql_text(), "SELECT 2;");
     }
 
     #[test]

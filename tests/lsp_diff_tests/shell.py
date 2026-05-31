@@ -49,6 +49,17 @@ class Shell(TestSuite):
 """,
         )
 
+    # A SQL statement ending with `; -- comment` is complete; the following
+    # column-0 dot-command must still be recognized as shell syntax.
+    def test_semicolon_before_inline_comment_allows_next_dot_command(self):
+        return LspDiffTestBlueprint(
+            sql=".read a.sql\nSELECT 1; -- done\n.read b.sql\nSELECT 2;",
+            op="diagnostics",
+            out="""\
+            (no diagnostics)
+""",
+        )
+
     # R2.1: in shell mode a lone `/` is a statement terminator equivalent to GO.
     def test_slash_terminator_splits_statements_in_shell_mode(self):
         return LspDiffTestBlueprint(
