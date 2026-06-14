@@ -265,6 +265,10 @@ jobs:
         shell: bash
         run: cargo build --release -p syntaqlite-cli
 
+      - name: Build cdylib (in-process transport)
+        shell: bash
+        run: cargo build --release -p syntaqlite --features rpc,dynload
+
       - name: Build wheel
         shell: bash
         env:

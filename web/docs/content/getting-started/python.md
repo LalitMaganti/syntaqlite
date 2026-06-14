@@ -16,8 +16,8 @@ inspects the AST — all from Python.
 pip install syntaqlite
 ```
 
-The pip package includes the `syntaqlite` CLI binary and a pure-Python
-client library. Requires Python 3.10+.
+The pip package calls the syntaqlite core in-process via a bundled native
+library and also includes the `syntaqlite` CLI binary. Requires Python 3.10+.
 
 ## 2. Create a `Syntaqlite` instance
 

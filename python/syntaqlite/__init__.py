@@ -12,6 +12,7 @@ format, analyze, and tokenize SQL::
 
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import stat
@@ -48,6 +49,31 @@ def get_binary_path() -> str:
         if not (current_mode & stat.S_IXUSR):
             os.chmod(binary, current_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     return binary
+
+
+def _ffi_lib_filename() -> str:
+    """Return the platform-specific filename for the syntaqlite cdylib."""
+    if sys.platform == "win32":
+        return "syntaqlite.dll"
+    if sys.platform == "darwin":
+        return "libsyntaqlite.dylib"
+    if sys.platform == "emscripten":
+        return "libsyntaqlite.so"
+    return "libsyntaqlite.so"
+
+
+def _ffi_lib_path() -> str:
+    """Return the path to the syntaqlite cdylib.
+
+    Resolution order:
+    1. ``SYNTAQLITE_FFI_LIB`` environment variable (absolute path, used by
+       dev/CI and the in-process verify step).
+    2. The cdylib bundled inside the wheel under ``syntaqlite/lib/``.
+    """
+    override = os.environ.get("SYNTAQLITE_FFI_LIB")
+    if override:
+        return override
+    return os.path.join(os.path.dirname(__file__), "lib", _ffi_lib_filename())
 
 
 # ── Result types ─────────────────────────────────────────────────────────────
@@ -337,15 +363,120 @@ class SyntaqliteError(RuntimeError):
     """Base class for runtime errors raised by :class:`Syntaqlite`."""
 
 
+# ── In-process transport ──────────────────────────────────────────────────────
+#
+# The transport carries a single UTF-8 JSON request to the syntaqlite core and
+# returns a single UTF-8 JSON response envelope ({"ok": ...}). Envelope decoding
+# lives in ``Syntaqlite._call``; the transport deals only in raw I/O.
+
+
+class _InProcessTransport:
+    """Transport that calls the syntaqlite cdylib in-process via ctypes.
+
+    This is the sole transport: every call runs in the host process with no
+    subprocess. ctypes releases the GIL for the duration of each foreign call,
+    so instances on separate threads run in parallel without extra work.
+    """
+
+    __slots__ = ("_lib", "_handle")
+
+    def __init__(
+        self,
+        *,
+        dialect_path: str | None,
+        dialect_name: str | None,
+    ):
+        lib_path = _ffi_lib_path()
+        try:
+            lib = ctypes.CDLL(lib_path)
+        except OSError as e:
+            raise SyntaqliteError(
+                f"failed to load syntaqlite cdylib at {lib_path!r}: {e}"
+            ) from e
+
+        # syntaqlite_rpc_create_sqlite() -> *mut SyntaqliteRpc
+        lib.syntaqlite_rpc_create_sqlite.argtypes = []
+        lib.syntaqlite_rpc_create_sqlite.restype = ctypes.c_void_p
+        # syntaqlite_rpc_call(handle, request, request_len, *out_len) -> *mut u8
+        lib.syntaqlite_rpc_call.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_uint64,
+            ctypes.POINTER(ctypes.c_uint64),
+        ]
+        lib.syntaqlite_rpc_call.restype = ctypes.c_void_p
+        # syntaqlite_rpc_free(ptr, len)
+        lib.syntaqlite_rpc_free.argtypes = [ctypes.c_void_p, ctypes.c_uint64]
+        lib.syntaqlite_rpc_free.restype = None
+        # syntaqlite_rpc_destroy(handle)
+        lib.syntaqlite_rpc_destroy.argtypes = [ctypes.c_void_p]
+        lib.syntaqlite_rpc_destroy.restype = None
+
+        self._lib = lib
+
+        if dialect_path is not None:
+            create_dialect = getattr(lib, "syntaqlite_rpc_create_dialect", None)
+            if create_dialect is None:
+                raise SyntaqliteError(
+                    "in-process transport: dialect loading requires the "
+                    "syntaqlite cdylib built with the 'dynload' feature"
+                )
+            # create_dialect(path, path_len, name, name_len) -> *mut SyntaqliteRpc
+            create_dialect.argtypes = [
+                ctypes.c_char_p,
+                ctypes.c_uint64,
+                ctypes.c_char_p,
+                ctypes.c_uint64,
+            ]
+            create_dialect.restype = ctypes.c_void_p
+            path_bytes = dialect_path.encode("utf-8")
+            if dialect_name is not None:
+                name_bytes = dialect_name.encode("utf-8")
+                handle = create_dialect(
+                    path_bytes, len(path_bytes), name_bytes, len(name_bytes)
+                )
+            else:
+                handle = create_dialect(path_bytes, len(path_bytes), None, 0)
+            if not handle:
+                raise SyntaqliteError(
+                    f"failed to load dialect {dialect_path!r} in-process"
+                )
+        else:
+            handle = lib.syntaqlite_rpc_create_sqlite()
+            if not handle:
+                raise SyntaqliteError("failed to create in-process SQLite session")
+
+        self._handle = handle
+
+    def request(self, req_json: str) -> bytes:
+        req_bytes = req_json.encode("utf-8")
+        out_len = ctypes.c_uint64(0)
+        ptr = self._lib.syntaqlite_rpc_call(
+            self._handle, req_bytes, len(req_bytes), ctypes.byref(out_len)
+        )
+        if not ptr:
+            raise SyntaqliteError("syntaqlite_rpc_call returned null")
+        try:
+            return ctypes.string_at(ptr, out_len.value)
+        finally:
+            self._lib.syntaqlite_rpc_free(ptr, out_len.value)
+
+    def close(self) -> None:
+        handle = self._handle
+        if handle:
+            self._handle = None
+            self._lib.syntaqlite_rpc_destroy(handle)
+
+
 # ── Syntaqlite client ────────────────────────────────────────────────────────
 
 
 class Syntaqlite:
     """Parse, format, analyze, and tokenize SQLite SQL.
 
-    A :class:`Syntaqlite` instance manages its own long-lived worker, so
-    create one and reuse it across many calls. Not intended for concurrent
-    use: if you want parallelism, create one instance per thread.
+    A :class:`Syntaqlite` instance loads the syntaqlite core in-process and
+    reuses it across many calls, so create one and reuse it. Not intended for
+    concurrent use on one instance: for parallelism, create one per thread.
 
     Use as a context manager or call :meth:`close` when done. By default
     operates on SQLite syntax; pass ``dialect_path`` to load a compiled
@@ -356,58 +487,29 @@ class Syntaqlite:
             (``.so``/``.dylib``/``.dll``).
         dialect_name: Optional dialect name for symbol lookup. Required
             only when ``dialect_path`` exports more than one dialect.
-        binary: Override the path to the ``syntaqlite`` CLI. Defaults to
-            the binary shipped with the wheel.
     """
 
-    __slots__ = ("_proc", "_stdin", "_stdout", "_closed")
+    __slots__ = ("_transport", "_closed")
 
     def __init__(
         self,
         *,
         dialect_path: str | None = None,
         dialect_name: str | None = None,
-        binary: str | None = None,
     ):
-        bin_path = binary if binary is not None else get_binary_path()
-        argv: list[str] = [bin_path, "--no-config"]
-        if dialect_path is not None:
-            argv += ["--dialect", dialect_path]
-        if dialect_name is not None:
-            argv += ["--dialect-name", dialect_name]
-        argv += ["serve", "json"]
-
-        self._proc = subprocess.Popen(
-            argv,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            bufsize=0,
+        self._transport = _InProcessTransport(
+            dialect_path=dialect_path,
+            dialect_name=dialect_name,
         )
-        self._stdin = self._proc.stdin
-        self._stdout = self._proc.stdout
         self._closed = False
-        self._wait_ready()
 
-    # ── subprocess lifecycle ────────────────────────────────────────────────
-
-    def _wait_ready(self) -> None:
-        line = self._stdout.readline()
-        if line.strip() != b"READY":
-            stderr = self._proc.stderr.read().decode("utf-8", errors="replace")
-            raise RuntimeError(
-                f"syntaqlite serve failed to start: expected 'READY', got {line!r}.\n{stderr}"
-            )
+    # ── lifecycle ───────────────────────────────────────────────────────────
 
     def _call(self, op: str, **params: Any) -> Any:
         if self._closed:
             raise SyntaqliteError("Syntaqlite instance is closed")
-        req = {"op": op, **params}
-        self._stdin.write((json.dumps(req) + "\n").encode("utf-8"))
-        self._stdin.flush()
-        resp_bytes = self._stdout.readline()
-        if not resp_bytes:
-            raise SyntaqliteError("syntaqlite worker exited unexpectedly")
+        req = json.dumps({"op": op, **params})
+        resp_bytes = self._transport.request(req)
         resp = json.loads(resp_bytes)
         if not resp.get("ok"):
             raise SyntaqliteError(resp.get("error", "unknown error"))
@@ -417,23 +519,7 @@ class Syntaqlite:
         if self._closed:
             return
         self._closed = True
-        try:
-            self._stdin.write(b'{"op":"quit"}\n')
-            self._stdin.flush()
-        except (BrokenPipeError, OSError):
-            pass
-        try:
-            self._stdin.close()
-        except OSError:
-            pass
-        try:
-            self._stdout.close()
-        except OSError:
-            pass
-        try:
-            self._proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            self._proc.kill()
+        self._transport.close()
 
     def __enter__(self) -> Syntaqlite:
         return self

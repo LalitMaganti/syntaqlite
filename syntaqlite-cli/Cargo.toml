@@ -42,7 +42,7 @@ rmcp = { version = "0.1", features = ["server", "transport-io"], optional = true
 schemars = { version = "0.8", optional = true }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-syntaqlite = { version = "0.5.10", path = "../syntaqlite", default-features = false, features = ["fmt", "lsp", "analysis", "experimental-embedded", "serde-json"] }
+syntaqlite = { version = "0.5.10", path = "../syntaqlite", default-features = false, features = ["fmt", "lsp", "analysis", "experimental-embedded", "serde-json", "rpc"] }
 syntaqlite-syntax = { version = "0.5.10", path = "../syntaqlite-syntax" }
 syntaqlite-buildtools = { version = "0.5.10", path = "../syntaqlite-buildtools", optional = true }
 tempfile = "3.8"

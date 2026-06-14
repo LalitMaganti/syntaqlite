@@ -136,6 +136,13 @@ pub(crate) mod sqlite;
 #[cfg(feature = "lsp")]
 pub mod lsp;
 
+/// Transport-agnostic JSON-RPC dispatch ([`rpc::RpcSession`] + [`rpc::call_json`]).
+///
+/// Backs both the CLI's `serve json` stdio loop and the in-process C API
+/// (`include/syntaqlite/rpc.h`). Enable with the `rpc` feature.
+#[cfg(feature = "rpc")]
+pub mod rpc;
+
 /// Embedded SQL extraction from host language sources.
 ///
 /// # Experimental

@@ -6,9 +6,11 @@ weight = 6
 
 # Python API reference
 
-The Python package is pure Python and ships with a bundled `syntaqlite`
-CLI binary. Requires Python 3.10+. Wheels are published for macOS
-(arm64, x86_64), Linux (x86_64, aarch64), and Windows (x86_64).
+The Python package calls the syntaqlite core in-process through a bundled
+native library (loaded with `ctypes`), and also ships the `syntaqlite` CLI
+binary for the command-line entry point. Requires Python 3.10+. Wheels are
+published for macOS (arm64, x86_64), Linux (x86_64, aarch64), and Windows
+(x86_64).
 
 ```python
 import syntaqlite
@@ -21,18 +23,17 @@ with syntaqlite.Syntaqlite() as sq:
 ## `syntaqlite.Syntaqlite`
 
 The entry point for all SQL operations. Create one instance and reuse it
-across many calls — each instance spins up a worker on construction and
-keeps it alive until `close()` is called.
+across many calls — each instance loads the syntaqlite core in-process on
+construction and keeps it ready until `close()` is called.
 
 ```python
-syntaqlite.Syntaqlite(*, dialect_path=None, dialect_name=None, binary=None)
+syntaqlite.Syntaqlite(*, dialect_path=None, dialect_name=None)
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `dialect_path` | `str \| None` | `None` | Path to a dialect shared library (`.so`/`.dylib`/`.dll`). Defaults to SQLite. |
 | `dialect_name` | `str \| None` | `None` | Dialect name. Required only when `dialect_path` exports more than one dialect. |
-| `binary` | `str \| None` | `None` | Override the path to the `syntaqlite` CLI. Defaults to the binary shipped with the wheel (or `SYNTAQLITE_BIN`). |
 
 Supports the context-manager protocol, so `with syntaqlite.Syntaqlite() as sq:`
 cleans up automatically. Not intended for concurrent use — if you want
