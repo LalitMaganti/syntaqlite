@@ -10,7 +10,7 @@ A parser, formatter, validator, and language server for SQLite SQL, built on SQL
 
 Most SQLite tools build a generic SQL parser and bolt SQLite on as a "flavor" with hand-written grammars, regex-based tokenizers, or subsets that approximate the language. That falls apart because SQLite has a deep surface area of syntax that generic parsers don't handle.
 
-syntaqlite uses SQLite's own [Lemon-generated grammar](https://www.sqlite.org/lemon.html) and tokenizer, compiled from C. The parser doesn't approximate SQLite; it _is_ SQLite's grammar compiled into a reusable library.
+syntaqlite uses SQLite's own [Lemon-generated grammar](https://www.sqlite.org/lemon.html) and tokenizer, compiled from C. Its parser is that grammar compiled into a reusable library, not an approximation of it.
 
 SQLite SQL is also not one fixed language. It has [22 compile-time flags](https://www.sqlite.org/compile.html) that change what syntax the parser accepts, another 12 that gate built-in functions, and the language evolves across versions. Because SQLite is embedded, you can't assume everyone is on the latest version (Android 15 ships SQLite 3.44.3, seven major versions behind latest). syntaqlite tracks all of this:
 
@@ -121,6 +121,20 @@ warning: unknown function 'ROUDN'
 3 |         f"SELECT nme, ROUDN(score, 2) FROM users WHERE id = {user_id}"
   |                       ^~~~~
   = help: did you mean 'round'?
+```
+
+### sqlite3 shell scripts
+
+Scripts for the `sqlite3` CLI mix SQL with dot-commands like `.read` and `.print`. syntaqlite recognizes the dot-commands and skips over them rather than reporting a syntax error, so the surrounding SQL still formats and validates. The editor integration handles them the same way.
+
+```bash
+syntaqlite fmt schema.sql
+```
+```text
+.read tables.sql
+.read views.sql
+
+CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
 ```
 
 ### Project configuration

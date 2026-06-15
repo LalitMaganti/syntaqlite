@@ -29,6 +29,7 @@ file values.
 | `-i, --in-place` | | Write formatted output back to files |
 | `--check` | | Check if files are formatted (exit 1 if not, conflicts with `-i`) |
 | `-o, --output <FORMAT>` | `formatted` | Output mode: `formatted`, `bytecode`, or `doc-tree` |
+| `--experimental-lang <LANG>` | | Host language for embedded SQL: `python`, `typescript`, or `shell`. sqlite3 shell scripts are auto-detected when omitted — dot-commands are preserved and only the SQL is reformatted |
 | `--dialect <PATH>` | | Path to custom dialect shared library |
 | `--dialect-name <NAME>` | | Symbol name in dialect library |
 | `--sqlite-version <VER>` | `latest` | Target SQLite version (e.g., `3.47.0`) |
@@ -58,7 +59,7 @@ syntaqlite analyze [OPTIONS] [FILES...]
 | `-A, --allow <CHECK>` | | Suppress a check category (repeatable) |
 | `-W, --warn <CHECK>` | | Warn on a check category (repeatable) |
 | `-D, --deny <CHECK>` | | Error on a check category (repeatable) |
-| `--experimental-lang <LANG>` | | Extract SQL from `python` or `typescript` source |
+| `--experimental-lang <LANG>` | | Host language for embedded SQL: `python`, `typescript`, or `shell`. sqlite3 shell scripts (`.read` dot-commands) are auto-detected when omitted — see [Embedded SQL](@/guides/embedded-sql.md) |
 | `--dialect <PATH>` | | Path to custom dialect shared library |
 | `--dialect-name <NAME>` | | Symbol name in dialect library |
 | `--sqlite-version <VER>` | `latest` | Target SQLite version |
@@ -186,6 +187,10 @@ Supports:
 - `textDocument/formatting`
 - `textDocument/completion`
 - `textDocument/semanticTokens/full`
+
+sqlite3 shell scripts are auto-detected: `.read` and other dot-commands are not
+reported as syntax errors, and every feature above operates on the SQL between
+them. See [Embedded SQL](@/guides/embedded-sql.md).
 
 ## Global options
 
