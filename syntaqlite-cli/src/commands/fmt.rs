@@ -33,6 +33,7 @@ struct FmtRun<'a> {
     output: FmtOutput,
     in_place: bool,
     check: bool,
+    lang: Option<crate::cli::HostLanguage>,
 }
 
 impl<'a> FmtRun<'a> {
@@ -51,6 +52,7 @@ impl<'a> FmtRun<'a> {
             output: args.output,
             in_place: args.in_place,
             check: args.check,
+            lang: args.lang,
         }
     }
 
@@ -73,7 +75,7 @@ impl<'a> FmtRun<'a> {
                 return Err(format!("--{flag} requires file arguments"));
             }
 
-            match self.format_text(&src.text) {
+            match self.format_text(src) {
                 Ok(out) => self.write_output(src, &out, multi, &mut unformatted)?,
                 Err(e) => {
                     render_format_error(&e, &src.text, &src.label);
@@ -149,8 +151,14 @@ impl<'a> FmtRun<'a> {
         Ok(())
     }
 
-    fn format_text(&self, source: &str) -> Result<String, FormatError> {
-        Formatter::with_dialect_config(self.dialect.clone(), &self.config).format(source)
+    fn format_text(&self, src: &Source) -> Result<String, FormatError> {
+        // Standalone SQL is one whole-document fragment, so the same splice path
+        // covers both it and embedded host files — the formatter is composed in
+        // via the closure.
+        let lang = util::resolve_language(self.lang, src, self.dialect);
+        let fragments = syntaqlite::embedded::fragments(self.dialect.clone(), &src.text, lang);
+        let mut formatter = Formatter::with_dialect_config(self.dialect.clone(), &self.config);
+        syntaqlite::embedded::splice(&src.text, &fragments, |sql| formatter.format(sql))
     }
 }
 

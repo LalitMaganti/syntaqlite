@@ -12,7 +12,7 @@ use syntaqlite::any::AnyDialect;
 use syntaqlite::fmt::KeywordCase;
 use syntaqlite::{Catalog, CheckConfig, FormatConfig};
 
-use crate::cli::KeywordCasing;
+use crate::cli::{HostLanguage, KeywordCasing};
 use crate::config::{self, CheckOptions, FormatOptions, ProjectConfig};
 
 // ── Input sources ──────────────────────────────────────────────────────────
@@ -31,6 +31,25 @@ impl Source {
     pub(crate) fn is_file(&self) -> bool {
         self.path.is_some()
     }
+}
+
+/// Resolve the host language for a source. The explicit `--experimental-lang`
+/// flag wins; otherwise the content is auto-detected (today: sqlite3 shell
+/// scripts). `None` means standalone SQL — the command's plain path.
+pub(crate) fn resolve_language(
+    explicit: Option<HostLanguage>,
+    src: &Source,
+    dialect: &AnyDialect,
+) -> Option<syntaqlite::embedded::HostLanguage> {
+    if let Some(lang) = explicit {
+        return Some(lang.into());
+    }
+    let hint = src
+        .path
+        .as_deref()
+        .and_then(|p| p.extension())
+        .and_then(|e| e.to_str());
+    syntaqlite::embedded::detect(dialect.clone(), &src.text, hint)
 }
 
 /// Resolve the SQL input: `-e` expression, files, or stdin (in that priority order).

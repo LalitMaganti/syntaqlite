@@ -25,6 +25,15 @@ use super::walker::{
     SemanticVisitor, SourceRefEvent, WalkCtx,
 };
 
+/// Whether `name` is an embedded-SQL interpolation placeholder: an identifier of
+/// only underscores. Embedded host languages (Python f-strings, etc.) mask each
+/// `{expr}` hole with same-length underscores so the SQL keeps its byte offsets;
+/// such names stand in for arbitrary host expressions, so they always resolve —
+/// a real schema never names a table/column/function with only underscores.
+fn is_hole_placeholder(name: &str) -> bool {
+    !name.is_empty() && name.bytes().all(|b| b == b'_')
+}
+
 impl CheckConfig {
     /// Get the check level for a diagnostic message's category.
     pub(crate) fn level_for(self, message: &DiagnosticMessage) -> CheckLevel {
@@ -139,7 +148,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
         cx: &mut WalkCtx<'_>,
         ev: SourceRefEvent<'_>,
     ) {
-        if !ev.resolved {
+        if !ev.resolved && !is_hole_placeholder(ev.name) {
             let mut candidates = cx.catalog.all_relation_names();
             candidates.extend(cx.catalog.all_table_function_names());
             let suggestion =
@@ -170,7 +179,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
             ColumnResolution::TableFoundColumnMissing => {
                 // DQS bug-compat: unresolved `"foo"` is re-interpreted as a
                 // string literal by SQLite. Don't FP here.
-                if !ev.dqs_candidate {
+                if !ev.dqs_candidate && !is_hole_placeholder(ev.column) {
                     let tbl = ev
                         .table
                         .expect("qualifier present when TableFoundColumnMissing");
@@ -195,7 +204,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
                 // literals.
                 let is_bool_literal = ev.column.eq_ignore_ascii_case("true")
                     || ev.column.eq_ignore_ascii_case("false");
-                if !is_bool_literal && !ev.dqs_candidate {
+                if !is_bool_literal && !ev.dqs_candidate && !is_hole_placeholder(ev.column) {
                     let candidates = cx.scope.all_column_names(None);
                     let suggestion =
                         best_suggestion(ev.column, &candidates, self.config.suggestion_threshold());
@@ -223,8 +232,7 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
         ev: CallEvent<'_>,
     ) {
         match ev.result {
-            FunctionCheckResult::Ok => {}
-            FunctionCheckResult::Unknown => {
+            FunctionCheckResult::Unknown if !is_hole_placeholder(ev.name) => {
                 let candidates = cx.catalog.all_function_names();
                 let suggestion =
                     best_suggestion(ev.name, &candidates, self.config.suggestion_threshold());
@@ -239,6 +247,8 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
                     suggestion.map(Help::Suggestion),
                 );
             }
+            // `Ok`, and `Unknown` for an underscore interpolation placeholder.
+            FunctionCheckResult::Ok | FunctionCheckResult::Unknown => {}
             FunctionCheckResult::WrongArity { expected } => {
                 self.emit(
                     stmt,

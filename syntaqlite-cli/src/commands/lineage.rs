@@ -11,7 +11,7 @@ use syntaqlite::analysis::{
 use syntaqlite::any::AnyDialect;
 use syntaqlite::{AnalysisConfig, Catalog};
 
-use crate::cli::{LineageArgs, LineageOutput, LineageScope};
+use crate::cli::{HostLanguage, LineageArgs, LineageOutput, LineageScope};
 use crate::config::{self, ConfigMode};
 use crate::util::{self, Source};
 
@@ -34,6 +34,7 @@ struct LineageRun<'a> {
     schema_catalog: Catalog,
     validation: AnalysisConfig,
     scope: Option<LineageScope>,
+    lang: Option<HostLanguage>,
 }
 
 impl<'a> LineageRun<'a> {
@@ -54,6 +55,7 @@ impl<'a> LineageRun<'a> {
             schema_catalog,
             validation: AnalysisConfig::default(),
             scope: args.scope,
+            lang: args.lang,
         })
     }
 
@@ -73,13 +75,36 @@ impl<'a> LineageRun<'a> {
     // ── Computation ────────────────────────────────────────────────────────
 
     fn analyze(&self, src: &Source) -> Vec<Record> {
+        match util::resolve_language(self.lang, src, self.dialect) {
+            Some(lang) => {
+                let mut records = Vec::new();
+                let mut base = 0;
+                for fragment in syntaqlite::embedded::extract(self.dialect.clone(), lang, &src.text)
+                {
+                    let (mut frag, count) =
+                        self.analyze_text(fragment.sql_text(), &src.label, base);
+                    records.append(&mut frag);
+                    base = base.saturating_add(count);
+                }
+                records
+            }
+            None => self.analyze_text(&src.text, &src.label, 0).0,
+        }
+    }
+
+    /// Analyze `text` as standalone SQL, returning its lineage records and the
+    /// number of statements (so callers can keep `statement_index` running
+    /// across the fragments of an embedded source). `base_index` offsets the
+    /// per-statement index reported in records.
+    fn analyze_text(&self, text: &str, label: &str, base_index: u32) -> (Vec<Record>, u32) {
         let mut analyzer = Analyzer::with_dialect(self.dialect.clone());
         let mut catalog = self.schema_catalog.clone();
         let mut ctx = syntaqlite::AnalysisContext::new(&mut catalog).with_config(self.validation);
-        let model = analyzer.analyze(&src.text, &mut ctx);
+        let model = analyzer.analyze(text, &mut ctx);
+        let statements = model.statements();
         let mut records = Vec::new();
-        for (idx, stmt) in model.statements().iter().enumerate() {
-            let idx = u32::try_from(idx).unwrap_or(u32::MAX);
+        for (idx, stmt) in statements.iter().enumerate() {
+            let idx = base_index.saturating_add(u32::try_from(idx).unwrap_or(u32::MAX));
             let errors: Vec<_> = stmt
                 .diagnostics()
                 .iter()
@@ -87,15 +112,15 @@ impl<'a> LineageRun<'a> {
                 .collect();
             if errors.is_empty() {
                 records.push(Record::Lineage(build_lineage_record(
-                    stmt, &src.label, idx, self.scope,
+                    stmt, label, idx, self.scope,
                 )));
             } else {
                 for d in &errors {
-                    records.push(Record::Error(build_error_record(d, &src.label, idx)));
+                    records.push(Record::Error(build_error_record(d, label, idx)));
                 }
             }
         }
-        records
+        (records, u32::try_from(statements.len()).unwrap_or(u32::MAX))
     }
 }
 

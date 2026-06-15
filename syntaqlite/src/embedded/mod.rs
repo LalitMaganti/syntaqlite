@@ -17,13 +17,17 @@
 //! Language-specific extractors live in submodules:
 //! - [`extract_python`](crate::embedded::extract_python) — Python f-string extraction
 //! - [`extract_typescript`](crate::embedded::extract_typescript) — TypeScript/JavaScript template literal extraction
+//! - [`extract_shell`](crate::embedded::extract_shell) — sqlite3 shell-language (dot-commands) extraction
 
 pub(crate) mod offset_map;
 mod python;
+mod shell;
 mod typescript;
 
 #[doc(inline)]
 pub use python::extract_python;
+#[doc(inline)]
+pub use shell::{extract_shell, is_shell_script};
 #[doc(inline)]
 pub use typescript::extract_typescript;
 
@@ -40,6 +44,202 @@ use crate::analysis::engine::walker::SemanticVisitor;
 use crate::dialect::AnyDialect;
 
 use offset_map::OffsetMap;
+
+// ── Host language seam ──────────────────────────────────────────────────
+
+/// A host language whose source files embed SQL.
+///
+/// **Experimental:** part of the experimental embedded SQL API.
+///
+/// Used by [`extract`] and [`detect`] to pick a language-specific extractor.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HostLanguage {
+    /// sqlite3 CLI shell scripts (dot-commands, `GO` / `/` terminators).
+    Shell,
+    /// Python f-strings.
+    Python,
+    /// TypeScript / JavaScript template literals.
+    Typescript,
+}
+
+/// Extract the embedded SQL fragments from `source` for a known host language.
+///
+/// **Experimental:** part of the experimental embedded SQL API.
+///
+/// Dispatches to the language-specific extractor ([`extract_shell`],
+/// [`extract_python`], [`extract_typescript`]).
+pub fn extract(
+    dialect: impl Into<AnyDialect>,
+    lang: HostLanguage,
+    source: &str,
+) -> Vec<EmbeddedFragment> {
+    match lang {
+        HostLanguage::Shell => extract_shell(dialect, source),
+        HostLanguage::Python => extract_python(source),
+        HostLanguage::Typescript => extract_typescript(source),
+    }
+}
+
+/// Auto-detect the host language of `source` from its content.
+///
+/// **Experimental:** part of the experimental embedded SQL API.
+///
+/// `hint` is an optional out-of-band signal — a file extension or LSP
+/// `languageId`. Today only sqlite3 shell scripts are content-detected (see
+/// [`is_shell_script`]); the `hint`-based Python/TypeScript arms are a future
+/// extension point, so those languages currently require an explicit
+/// [`HostLanguage`].
+pub fn detect(
+    dialect: impl Into<AnyDialect>,
+    source: &str,
+    hint: Option<&str>,
+) -> Option<HostLanguage> {
+    let _ = hint;
+    if is_shell_script(dialect, source) {
+        return Some(HostLanguage::Shell);
+    }
+    None
+}
+
+/// Fragment `source` for an optional host language, returning a uniform list so
+/// callers process standalone and embedded SQL through one path.
+///
+/// **Experimental:** part of the experimental embedded SQL API.
+///
+/// With `Some(lang)` this is [`extract`]. With `None` the whole source is
+/// returned as a single hole-free fragment, i.e. standalone SQL is just the
+/// degenerate one-fragment case.
+pub fn fragments(
+    dialect: impl Into<AnyDialect>,
+    source: &str,
+    lang: Option<HostLanguage>,
+) -> Vec<EmbeddedFragment> {
+    match lang {
+        Some(lang) => extract(dialect, lang, source),
+        None => vec![EmbeddedFragment {
+            sql_range: doc_range_from_usize(0, source.len()),
+            sql_text: source.to_string(),
+            holes: Vec::new(),
+        }],
+    }
+}
+
+/// Rebuild `source` with each fragment's SQL replaced by `format_sql`, leaving
+/// the non-SQL host text between fragments untouched.
+///
+/// **Experimental:** part of the experimental embedded SQL API.
+///
+/// This composes any in-place SQL rewrite (e.g. the formatter) over embedded
+/// fragments without the `embedded` module depending on it. Fragments that
+/// contain interpolation holes are left verbatim, since reconstructing them
+/// around rewritten SQL is not yet supported.
+///
+/// # Errors
+///
+/// Propagates the first error returned by `format_sql`.
+pub fn splice<E>(
+    source: &str,
+    fragments: &[EmbeddedFragment],
+    mut format_sql: impl FnMut(&str) -> Result<String, E>,
+) -> Result<String, E> {
+    let mut out = String::with_capacity(source.len());
+    let mut cursor = 0;
+    for fragment in fragments {
+        let start = fragment.sql_range().start.as_usize();
+        let end = fragment.sql_range().end.as_usize();
+        out.push_str(&source[cursor..start]);
+        if fragment.holes().is_empty() {
+            let formatted = format_sql(fragment.sql_text())?;
+            // A whole-statement formatter appends a trailing newline; drop it
+            // only when the host text already supplies the break after this
+            // fragment (an interior fragment), so a trailing-newline-at-EOF
+            // result is preserved for standalone SQL.
+            if source[end..].starts_with('\n') {
+                out.push_str(formatted.strip_suffix('\n').unwrap_or(&formatted));
+            } else {
+                out.push_str(&formatted);
+            }
+        } else {
+            out.push_str(&source[start..end]);
+        }
+        cursor = end;
+    }
+    out.push_str(&source[cursor..]);
+    Ok(out)
+}
+
+/// Mask `source` into a length-preserving, SQL-equivalent document: each
+/// fragment's SQL is kept verbatim at its original offset, interpolation holes
+/// become same-length underscores, and everything else is blanked to spaces
+/// (newlines preserved so trailing line comments still terminate). A `;` is
+/// inserted before any fragment that doesn't follow a terminated statement, so
+/// the fragments parse as separate statements.
+///
+/// **Experimental:** part of the experimental embedded SQL API.
+///
+/// Every byte keeps its position, so the result analyzes as one SQL document
+/// whose offsets map 1:1 back to the host file — no per-fragment offset
+/// bookkeeping, and cross-fragment navigation falls out for free. The underscore
+/// hole placeholders are resolved unconditionally by the analyzer (a real schema
+/// never names anything with only underscores), so interpolations never produce
+/// spurious diagnostics.
+pub fn mask(source: &str, fragments: &[EmbeddedFragment]) -> String {
+    let bytes = source.as_bytes();
+    // Blank everything to spaces but keep newlines, so line comments inside the
+    // SQL still end where they did in the host file.
+    let mut out: Vec<u8> = bytes
+        .iter()
+        .map(|&b| if b == b'\n' || b == b'\r' { b } else { b' ' })
+        .collect();
+
+    for fragment in fragments {
+        let start = fragment.sql_range().start.as_usize();
+        let end = fragment.sql_range().end.as_usize();
+        out[start..end].copy_from_slice(&bytes[start..end]);
+        for hole in fragment.holes() {
+            let h = hole.host_range();
+            out[h.start.as_usize()..h.end.as_usize()].fill(b'_');
+        }
+    }
+
+    // Separate consecutive fragments that aren't already statement-terminated
+    // (a `GO`-terminated shell run, or an f-string without a trailing `;`). The
+    // `;` goes at the gap byte just before the next fragment — after any
+    // preserved newline — so it can't land inside a trailing line comment.
+    for pair in fragments.windows(2) {
+        let prev = &pair[0];
+        let next_start = pair[1].sql_range().start.as_usize();
+        let prev_end = prev.sql_range().end.as_usize();
+        let terminated = source[prev.sql_range().start.as_usize()..prev_end]
+            .trim_end()
+            .ends_with(';');
+        if next_start > prev_end && !terminated {
+            out[next_start - 1] = b';';
+        }
+    }
+
+    // Only ASCII (space, `;`) is written over non-SQL bytes and SQL spans are
+    // copied verbatim from valid UTF-8, so this is always valid UTF-8.
+    String::from_utf8(out).unwrap_or_else(|_| source.to_string())
+}
+
+/// Produce a length-preserving SQL-equivalent document for analyzing `source`
+/// as a single unit, or `None` when `source` is not an embedded host file.
+///
+/// **Experimental:** part of the experimental embedded SQL API.
+///
+/// Detects the host language (see [`detect`]), extracts its fragments, and
+/// [`mask`]s them. The returned document's offsets match the host file exactly,
+/// so the whole file can be analyzed in one pass with host-native offsets.
+pub fn mask_for_analysis(
+    dialect: impl Into<AnyDialect>,
+    source: &str,
+    hint: Option<&str>,
+) -> Option<String> {
+    let dialect = dialect.into();
+    let lang = detect(dialect.clone(), source, hint)?;
+    Some(mask(source, &extract(dialect, lang, source)))
+}
 
 // ── Shared types ────────────────────────────────────────────────────────
 
@@ -78,6 +278,15 @@ impl EmbeddedFragment {
     /// Information about each interpolation hole.
     pub fn holes(&self) -> &[Hole] {
         &self.holes
+    }
+
+    /// Whether parsing this fragment needs macro-fallback mode: its
+    /// interpolation holes are [`HOLE_PLACEHOLDER`] macro-call tokens, so a
+    /// fragment with holes must be parsed with fallback, while a hole-free one
+    /// (shell, standalone SQL) must not be. Lets callers derive the parser
+    /// configuration from the fragment instead of branching on host language.
+    pub fn needs_macro_fallback(&self) -> bool {
+        !self.holes.is_empty()
     }
 }
 
@@ -293,7 +502,7 @@ impl EmbeddedAnalyzer {
         &mut self,
         fragment: &EmbeddedFragment,
     ) -> Vec<(DocOffset, DocLen, TokenCategory)> {
-        let mut analyzer = self.make_analyzer();
+        let mut analyzer = self.make_analyzer(fragment);
         let mut capture = TokenCapture::default();
         let mut ctx = AnalysisContext::new(&mut self.catalog).with_config(self.config);
         let _ = analyzer.analyze_with_visitor(fragment.sql_text(), &mut ctx, &mut capture);
@@ -394,17 +603,20 @@ impl EmbeddedAnalyzer {
         result
     }
 
-    /// Create a [`Analyzer`] with `macro_fallback` enabled so that
-    /// [`HOLE_PLACEHOLDER`] calls are treated as single identifier tokens.
-    fn make_analyzer(&self) -> Analyzer {
-        Analyzer::with_dialect(self.dialect.clone()).with_macro_fallback(true)
+    /// Create an [`Analyzer`] for `fragment`, enabling `macro_fallback` only
+    /// when the fragment has interpolation holes so that [`HOLE_PLACEHOLDER`]
+    /// calls are treated as single identifier tokens. Hole-free fragments
+    /// (shell, standalone SQL) parse exactly as plain SQL.
+    fn make_analyzer(&self, fragment: &EmbeddedFragment) -> Analyzer {
+        Analyzer::with_dialect(self.dialect.clone())
+            .with_macro_fallback(fragment.needs_macro_fallback())
     }
 
     /// Parse and validate a single fragment.
     ///
     /// Returns diagnostics with SQL-text byte offsets (not yet mapped to host).
     fn analyze_fragment(&mut self, fragment: &EmbeddedFragment) -> Vec<Diagnostic> {
-        let mut analyzer = self.make_analyzer();
+        let mut analyzer = self.make_analyzer(fragment);
         let mut ctx = AnalysisContext::new(&mut self.catalog).with_config(self.config);
         let model = analyzer.analyze(fragment.sql_text(), &mut ctx);
         model.diagnostics().cloned().collect()
@@ -747,5 +959,148 @@ mod tests {
                 "hole placeholder leaked into diagnostics: {msg}",
             );
         }
+    }
+
+    // ── Shell language (sqlite3 CLI dot-commands) ────────────────────────
+    //
+    // Extraction and detection are unit-tested in `shell.rs`; this covers the
+    // end-to-end path through the analyzer.
+
+    /// A `.read` + `SELECT 1;` file run through the shell extractor produces no
+    /// parse errors, while the same text analyzed as plain SQL does.
+    #[test]
+    fn shell_read_file_has_no_parse_errors() {
+        let source = ".read foo.sql\nSELECT 1;";
+        let dialect = crate::sqlite::dialect::dialect();
+
+        let parse_errors: Vec<_> = analyzer()
+            .analyze(&extract_shell(dialect.clone(), source))
+            .into_iter()
+            .filter(|d| d.message.is_parse_error())
+            .collect();
+        assert!(
+            parse_errors.is_empty(),
+            "shell .read line must not surface as a SQL parse error, got: {parse_errors:?}"
+        );
+
+        // The same source analyzed as plain SQL is a parse error.
+        let mut plain = Analyzer::with_dialect(dialect.clone());
+        let mut catalog = Catalog::new(dialect);
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = plain.analyze(source, &mut ctx);
+        assert!(
+            model.diagnostics().any(|d| d.message.is_parse_error()),
+            "plain SQL analysis of a .read file should error",
+        );
+    }
+
+    // ── Unified fragmentation + splicing ─────────────────────────────────
+
+    #[test]
+    fn fragments_none_is_whole_document() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let src = "SELECT 1;\nSELECT 2;";
+        let frags = fragments(dialect, src, None);
+        assert_eq!(frags.len(), 1);
+        assert_eq!(frags[0].sql_text(), src);
+        assert_eq!(frags[0].sql_range().start.as_usize(), 0);
+        assert!(frags[0].holes().is_empty());
+        assert!(!frags[0].needs_macro_fallback());
+    }
+
+    #[test]
+    fn fragments_shell_matches_extract() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let src = ".read a.sql\nSELECT 1;";
+        let via_fragments = fragments(dialect.clone(), src, Some(HostLanguage::Shell));
+        let via_extract = extract(dialect, HostLanguage::Shell, src);
+        assert_eq!(via_fragments.len(), via_extract.len());
+        assert_eq!(via_fragments[0].sql_text(), via_extract[0].sql_text());
+    }
+
+    /// Splicing rewrites only the SQL, preserves the non-SQL host lines, and
+    /// drops the rewriter's trailing newline at an interior fragment so the host
+    /// line break is not duplicated.
+    #[test]
+    fn splice_rewrites_sql_and_preserves_shell_lines() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let src = ".read a.sql\nselect 1\n";
+        let frags = fragments(dialect, src, Some(HostLanguage::Shell));
+        // Mimic a whole-statement formatter that appends a trailing newline.
+        let out = splice(src, &frags, |sql| {
+            Ok::<_, ()>(format!("{}\n", sql.to_uppercase()))
+        })
+        .unwrap();
+        assert_eq!(out, ".read a.sql\nSELECT 1\n");
+    }
+
+    /// For standalone SQL (one whole-document fragment) the rewriter's trailing
+    /// newline is kept, since no host text follows.
+    #[test]
+    fn splice_whole_document_keeps_trailing_newline() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let src = "select 1\n";
+        let frags = fragments(dialect, src, None);
+        let out = splice(src, &frags, |sql| {
+            Ok::<_, ()>(format!("{}\n", sql.trim().to_uppercase()))
+        })
+        .unwrap();
+        assert_eq!(out, "SELECT 1\n");
+    }
+
+    // ── Masking + underscore placeholders ────────────────────────────────
+
+    /// Masking a shell script blanks its non-SQL lines, turns `GO` into a `;`
+    /// separator, keeps the SQL verbatim at the same offsets, and yields a doc
+    /// that parses cleanly as one unit.
+    #[test]
+    fn mask_shell_blanks_non_sql_and_separates_runs() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let src = ".read a.sql\nSELECT 1\nGO\nSELECT 2;";
+        let frags = extract(dialect.clone(), HostLanguage::Shell, src);
+        let masked = mask(src, &frags);
+
+        assert_eq!(masked.len(), src.len(), "masking must preserve offsets");
+        assert!(!masked.contains(".read"), "dot-command blanked");
+        assert!(masked.contains("SELECT 1"));
+        assert!(masked.contains("SELECT 2;"));
+
+        let mut analyzer = Analyzer::with_dialect(dialect.clone());
+        let mut catalog = Catalog::new(dialect);
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze(&masked, &mut ctx);
+        assert!(
+            !model.diagnostics().any(|d| d.message.is_parse_error()),
+            "masked shell script must parse cleanly",
+        );
+    }
+
+    /// Masking a Python f-string keeps the SQL and replaces each `{hole}` with
+    /// same-length underscores, so byte offsets are preserved.
+    #[test]
+    fn mask_python_holes_become_underscores() {
+        let src = r#"db.execute(f"SELECT {col} FROM users WHERE id = {uid}")"#;
+        let masked = mask(src, &extract_python(src));
+        assert_eq!(masked.len(), src.len());
+        assert!(!masked.contains("db.execute"), "host code blanked");
+        assert!(masked.contains("SELECT _____ FROM users WHERE id = _____"));
+    }
+
+    /// The underscore hole placeholders resolve unconditionally: a masked
+    /// document referencing only placeholders produces no diagnostics (no
+    /// spurious unknown table/column/function).
+    #[test]
+    fn underscore_placeholders_resolve_without_diagnostics() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let sql = "SELECT ____(_____) FROM _____ WHERE ___ = 1;";
+        let mut analyzer = Analyzer::with_dialect(dialect.clone());
+        let mut catalog = Catalog::new(dialect);
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze(sql, &mut ctx);
+        let diags: Vec<_> = model.diagnostics().collect();
+        assert!(
+            diags.is_empty(),
+            "underscore placeholders must not be flagged, got: {diags:?}",
+        );
     }
 }
