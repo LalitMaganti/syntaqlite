@@ -68,6 +68,7 @@ pub enum syntaqlite::analysis::Help
 pub enum syntaqlite::analysis::LineageResult<T>
 pub enum syntaqlite::analysis::RelationKind
 pub enum syntaqlite::analysis::Severity
+pub enum syntaqlite::embedded::HostLanguage
 pub enum syntaqlite::fmt::KeywordCase
 pub enum syntaqlite::lsp::CompletionKind
 pub fn syntaqlite::AnalysisConfig::checks(&self) -> syntaqlite::CheckConfig
@@ -184,12 +185,21 @@ pub fn syntaqlite::embedded::EmbeddedAnalyzer::semantic_tokens_encoded(&mut self
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_catalog(self, syntaqlite::Catalog) -> Self
 pub fn syntaqlite::embedded::EmbeddedAnalyzer::with_config(self, syntaqlite::AnalysisConfig) -> Self
 pub fn syntaqlite::embedded::EmbeddedFragment::holes(&self) -> &[syntaqlite::embedded::Hole]
+pub fn syntaqlite::embedded::EmbeddedFragment::needs_macro_fallback(&self) -> bool
 pub fn syntaqlite::embedded::EmbeddedFragment::sql_range(&self) -> syntaqlite_syntax::source::DocRange
 pub fn syntaqlite::embedded::EmbeddedFragment::sql_text(&self) -> &str
 pub fn syntaqlite::embedded::Hole::host_range(&self) -> syntaqlite_syntax::source::DocRange
 pub fn syntaqlite::embedded::Hole::sql_offset(&self) -> syntaqlite_syntax::source::DocOffset
+pub fn syntaqlite::embedded::detect(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str, core::option::Option<&str>) -> core::option::Option<syntaqlite::embedded::HostLanguage>
+pub fn syntaqlite::embedded::extract(impl core::convert::Into<syntaqlite::any::AnyDialect>, syntaqlite::embedded::HostLanguage, &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
 pub fn syntaqlite::embedded::extract_python(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
+pub fn syntaqlite::embedded::extract_shell(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
 pub fn syntaqlite::embedded::extract_typescript(&str) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
+pub fn syntaqlite::embedded::fragments(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str, core::option::Option<syntaqlite::embedded::HostLanguage>) -> alloc::vec::Vec<syntaqlite::embedded::EmbeddedFragment>
+pub fn syntaqlite::embedded::is_shell_script(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str) -> bool
+pub fn syntaqlite::embedded::mask(&str, &[syntaqlite::embedded::EmbeddedFragment]) -> alloc::string::String
+pub fn syntaqlite::embedded::mask_for_analysis(impl core::convert::Into<syntaqlite::any::AnyDialect>, &str, core::option::Option<&str>) -> core::option::Option<alloc::string::String>
+pub fn syntaqlite::embedded::splice<E>(&str, &[syntaqlite::embedded::EmbeddedFragment], impl core::ops::function::FnMut(&str) -> core::result::Result<alloc::string::String, E>) -> core::result::Result<alloc::string::String, E>
 pub fn syntaqlite::fmt::FormatConfig::default() -> Self
 pub fn syntaqlite::fmt::FormatConfig::indent_width(&self) -> usize
 pub fn syntaqlite::fmt::FormatConfig::keyword_case(&self) -> syntaqlite::fmt::KeywordCase
@@ -343,6 +353,9 @@ pub syntaqlite::analysis::Severity::Error
 pub syntaqlite::analysis::Severity::Hint
 pub syntaqlite::analysis::Severity::Info
 pub syntaqlite::analysis::Severity::Warning
+pub syntaqlite::embedded::HostLanguage::Python
+pub syntaqlite::embedded::HostLanguage::Shell
+pub syntaqlite::embedded::HostLanguage::Typescript
 pub syntaqlite::fmt::KeywordCase::Lower
 pub syntaqlite::fmt::KeywordCase::Upper
 pub syntaqlite::lsp::CompletionKind::Column
