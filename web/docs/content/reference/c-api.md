@@ -13,7 +13,7 @@ syntaqlite's C API is available in two forms:
 | Package | Contents | Header |
 |---------|----------|--------|
 | `syntaqlite-syntax-amalgamation` | Parser and tokenizer as compilable C source (`.c` + `.h`) | `syntaqlite_syntax.h` |
-| `syntaqlite-clib` | Prebuilt shared library (parser + formatter + validator) for all platforms | `syntaqlite.h` |
+| `syntaqlite-clib` | Prebuilt shared library (parser, formatter, validator, JSON-RPC) for all platforms | `syntaqlite.h` |
 
 Both are attached to each
 [GitHub release](https://github.com/LalitMaganti/syntaqlite/releases).
@@ -246,6 +246,33 @@ typedef struct {
 | `syntaqlite_analyzer_reset_catalog(v)` | Clear registered schema (preserves dialect builtins) |
 | `syntaqlite_analyzer_destroy(v)` | Free the analyzer. No-op if `NULL` |
 
+## RPC (JSON dispatch)
+
+A coarse JSON-in / JSON-out entry point to parse / format / tokenize / analyze —
+the same protocol as the CLI's `serve json`, for in-process embedding. Header:
+`syntaqlite/rpc.h`. Lengths are `uint64_t`.
+
+### Types
+
+```c
+// Opaque session handle.
+typedef struct SyntaqliteRpc SyntaqliteRpc;
+```
+
+### Functions
+
+| Function | Description |
+|----------|-------------|
+| `syntaqlite_rpc_create_sqlite()` | Session for the built-in SQLite dialect. `NULL` on failure |
+| `syntaqlite_rpc_create_dialect(path, path_len, name, name_len)` | Session for a dynamically-loaded dialect (`name` may be `NULL`). `NULL` on load error |
+| `syntaqlite_rpc_call(s, request, request_len, &out_len)` | Run one UTF-8 JSON request; returns an owned, NUL-terminated JSON envelope and sets `out_len` (excl. NUL) |
+| `syntaqlite_rpc_free(ptr, len)` | Free a `syntaqlite_rpc_call()` buffer. No-op if `NULL` |
+| `syntaqlite_rpc_destroy(s)` | Free the session. No-op if `NULL` |
+
+Requests are `{"op":"parse"|"format"|"tokenize"|"analyze", ...}`; responses are
+`{"ok":true,"result":...}` or `{"ok":false,"error":...}`. A panic inside a call
+surfaces as an error envelope, never a crash. Sessions are single-threaded.
+
 ## Utility
 
 | Function | Description |
@@ -271,4 +298,5 @@ typedef struct {
 - Strings from `syntaqlite_analyzer_render_diagnostics()` are **borrowed**,
   valid until the next `analyze()`, `render_diagnostics()`, or `destroy()` call.
 - Strings from `syntaqlite_dump_node()` are **owned**; caller must `free()`.
+- Buffers from `syntaqlite_rpc_call()` are **owned**; free with `syntaqlite_rpc_free()`.
 - Passing `NULL` to any destroy function is a safe no-op.

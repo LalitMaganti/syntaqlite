@@ -122,6 +122,16 @@ def _find_tcl_lib_flags() -> list[str]:
                         if list(lib_dir.glob(f"lib{name}*")):
                             return [f"-L{lib_dir}", f"-l{name}"]
         return ["-ltcl8.6"]
+    # Linux: distros ship different tcl versions (8.6 on Ubuntu, 9.0 on
+    # Fedora). Probe common lib dirs for an available libtcl* rather than
+    # hardcoding a version.
+    for lib_dir in ["/usr/lib64", "/usr/lib/x86_64-linux-gnu", "/usr/lib"]:
+        p = Path(lib_dir)
+        if not p.is_dir():
+            continue
+        for name in ["tcl9.0", "tcl8.6", "tcl"]:
+            if (p / f"lib{name}.so").exists():
+                return [f"-L{lib_dir}", f"-l{name}"]
     return ["-ltcl8.6"]
 
 
@@ -176,8 +186,12 @@ def _build_extension(ctx: SuiteContext, verbose: bool) -> Path | None:
         f"-I{syntax_include}",
         f"-I{lib_include}",
         f"-I{sqlite_amalg}",
-        f"-L{static_lib.parent}",
-        "-lsyntaqlite",
+        # Link the static archive by its explicit path: syntaqlite is now
+        # built as a cdylib too, so a libsyntaqlite.so sits beside the .a and
+        # `-lsyntaqlite` would prefer it — but the cdylib doesn't re-export the
+        # parser FFI symbols (they live in syntaqlite-syntax), leaving the
+        # extension silently broken at runtime.
+        str(static_lib),
         *tcl_lib_flags,
         "-lpthread", "-ldl", "-lm",
         "-O2",

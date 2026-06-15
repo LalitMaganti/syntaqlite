@@ -25,20 +25,41 @@ PKG_DIR = Path(__file__).resolve().parent / "syntaqlite"
 _binary_name = "syntaqlite.exe" if sys.platform == "win32" else "syntaqlite"
 _cargo_target = os.environ.get("CARGO_BUILD_TARGET")
 if _cargo_target:
-    _binary_src = ROOT / "target" / _cargo_target / "release" / _binary_name
+    _release_dir = ROOT / "target" / _cargo_target / "release"
 else:
-    _binary_src = ROOT / "target" / "release" / _binary_name
+    _release_dir = ROOT / "target" / "release"
+_binary_src = _release_dir / _binary_name
 if _binary_src.exists():
     _bin_dest = PKG_DIR / "bin"
     _bin_dest.mkdir(exist_ok=True)
     shutil.copy2(_binary_src, _bin_dest / _binary_name)
 
+# ── cdylib bundling (in-process transport) ──────────────────────────────────
+
+if sys.platform == "win32":
+    _ffi_name = "syntaqlite.dll"
+elif sys.platform == "darwin":
+    _ffi_name = "libsyntaqlite.dylib"
+else:
+    _ffi_name = "libsyntaqlite.so"
+_ffi_src = _release_dir / _ffi_name
+if _ffi_src.exists():
+    _lib_dest = PKG_DIR / "lib"
+    _lib_dest.mkdir(exist_ok=True)
+    shutil.copy2(_ffi_src, _lib_dest / _ffi_name)
+
 # ── package_data ────────────────────────────────────────────────────────────
 
 package_data = {}
+_data_globs = []
 _bin_dir = PKG_DIR / "bin"
 if _bin_dir.exists() and any(_bin_dir.iterdir()):
-    package_data["syntaqlite"] = ["bin/*"]
+    _data_globs.append("bin/*")
+_lib_dir = PKG_DIR / "lib"
+if _lib_dir.exists() and any(_lib_dir.iterdir()):
+    _data_globs.append("lib/*")
+if _data_globs:
+    package_data["syntaqlite"] = _data_globs
 
 
 class BinaryDistribution(Distribution):

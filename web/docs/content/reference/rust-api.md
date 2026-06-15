@@ -14,6 +14,7 @@ weight = 4
 | `analysis` | Analysis (unknown tables, columns, functions, lineage) |
 | `sqlite` | Built-in SQLite dialect (enabled by default) |
 | `lsp` | Language server protocol implementation |
+| `rpc` | JSON-RPC dispatch (`parse`/`format`/`tokenize`/`analyze` over JSON) |
 | `serde` | `serde::Serialize`/`Deserialize` for AST nodes and diagnostics |
 | `dynload` | Load custom dialects from shared libraries at runtime |
 
@@ -30,6 +31,17 @@ weight = 4
 The formatter is reusable; call `format()` repeatedly. Internal allocations
 are reused across calls. Defaults: 80-char lines, 2-space indent, uppercase
 keywords, semicolons on.
+
+## RPC
+
+`syntaqlite::rpc` (feature `rpc`) — one JSON request in, one JSON envelope out.
+Backs the CLI's `serve json` loop and the [C API](@/reference/c-api.md#rpc-json-dispatch).
+
+| Type / Method | Description |
+|---------------|-------------|
+| `RpcSession::new(&dialect)` | Reusable session bundling parser, tokenizer, analyzer, and formatter cache |
+| `rpc::call_json(&mut session, json) -> String` | Run one request, returning the `{"ok":...}` envelope string |
+| `rpc::handle_request(&mut session, &Value) -> Result<Value, String>` | Lower-level dispatch returning the raw `result` value |
 
 ## Parser
 

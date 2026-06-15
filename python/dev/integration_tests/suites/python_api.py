@@ -5,8 +5,8 @@
 
 Exercises the public :mod:`syntaqlite` package in-process: parse /
 parse_raw / format_sql / tokenize / validate / lifecycle. Each test
-constructs its own :class:`syntaqlite.Syntaqlite` so the READY
-handshake, subprocess spawn, and close path are covered on every case.
+constructs its own :class:`syntaqlite.Syntaqlite` so the cdylib load and
+close path are covered on every case.
 """
 
 from __future__ import annotations
@@ -687,22 +687,6 @@ def _test_get_binary_path_honours_env(stq) -> bool:
     return True
 
 
-def _test_syntaqlite_binary_kwarg(stq) -> bool:
-    """Passing `binary=` to Syntaqlite bypasses `get_binary_path`."""
-    bin_path = os.environ["SYNTAQLITE_BIN"]
-    original = os.environ.pop("SYNTAQLITE_BIN")
-    try:
-        with stq.Syntaqlite(binary=bin_path) as sq:
-            out = sq.format_sql("select 1")
-    finally:
-        os.environ["SYNTAQLITE_BIN"] = original
-    if "SELECT" not in out:
-        _fail("syntaqlite_binary_kwarg", f"format_sql returned {out!r}")
-        return False
-    _pass("syntaqlite_binary_kwarg")
-    return True
-
-
 def _test_main_entrypoint_via_python_m(stq, ctx: SuiteContext) -> bool:
     """`python -m syntaqlite` invokes `main()` which executes the bundled CLI."""
     env = os.environ.copy()
@@ -817,7 +801,6 @@ _TESTS = [
     _test_analyze_accepts_string_output,
     # Bundled binary dispatch
     _test_get_binary_path_honours_env,
-    _test_syntaqlite_binary_kwarg,
 ]
 
 # Tests that need the SuiteContext (subprocess invocations).
@@ -831,9 +814,38 @@ _WORK_DIR_TESTS = [
 ]
 
 
+def _ffi_lib_filename() -> str:
+    """Platform-specific filename for the syntaqlite cdylib."""
+    if sys.platform == "win32":
+        return "syntaqlite.dll"
+    if sys.platform == "darwin":
+        return "libsyntaqlite.dylib"
+    return "libsyntaqlite.so"
+
+
+def _locate_ffi_lib(root_dir: Path) -> Path | None:
+    """Find the built syntaqlite cdylib under target/{release,debug}/."""
+    name = _ffi_lib_filename()
+    for profile in ("release", "debug"):
+        candidate = root_dir / "target" / profile / name
+        if candidate.exists():
+            return candidate
+    return None
+
+
 def run(ctx: SuiteContext) -> int:
     sys.path.insert(0, str(ctx.root_dir / "python"))
     os.environ["SYNTAQLITE_BIN"] = str(ctx.binary)
+    if "SYNTAQLITE_FFI_LIB" not in os.environ:
+        lib = _locate_ffi_lib(ctx.root_dir)
+        if lib is None:
+            print(
+                "Error: syntaqlite cdylib not found. Build it with:\n"
+                "  cargo build -p syntaqlite --release --features rpc,dynload",
+                file=sys.stderr,
+            )
+            return 1
+        os.environ["SYNTAQLITE_FFI_LIB"] = str(lib)
     import syntaqlite  # noqa: E402 — must follow sys.path + env setup
 
     passed = 0
