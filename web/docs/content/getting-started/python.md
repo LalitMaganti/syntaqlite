@@ -19,6 +19,10 @@ pip install syntaqlite
 The pip package calls the syntaqlite core in-process via a bundled native
 library and also includes the `syntaqlite` CLI binary. Requires Python 3.10+.
 
+> **Pyodide / browser:** syntaqlite also ships an Emscripten wheel, so it runs
+> in [Pyodide](https://pyodide.org/) with no subprocess. `pip install syntaqlite`
+> inside Pyodide and use the same `Syntaqlite` API shown below.
+
 ## 2. Create a `Syntaqlite` instance
 
 All operations go through a [`Syntaqlite`](@/reference/python-api.md#syntaqlite-syntaqlite)

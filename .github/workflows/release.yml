@@ -301,10 +301,67 @@ jobs:
           name: wheels-${{ matrix.name }}
           path: wheelhouse/*.whl
 
+  # Build the Pyodide (Emscripten/WASM) wheel. Unlike the native wheels, the
+  # cdylib is cross-built as an Emscripten side module and loaded via ctypes
+  # inside Pyodide. The build needs Pyodide's *patched* emscripten (stock
+  # emscripten rejects Rust std's `$`-mangled side-module exports), so we use
+  # the emsdk that pyodide-build manages. Rust stays hermetic (third_party).
+  build-pyodide-wheel:
+    name: python-wheels (pyodide)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      # Cache the cross-build environment + patched emsdk (a large download).
+      - name: Cache Pyodide xbuildenv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pyodide-build
+          key: pyodide-xbuildenv-314.0.0
+
+      - name: Install pyodide-build + emsdk
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build pyodide-build
+          pyodide xbuildenv install 314.0.0
+          pyodide xbuildenv install-emscripten
+
+      # Hermetic rust toolchain + pinned wasm32 std (NOT rustup — the std is
+      # version-locked to the third_party rustc).
+      - name: Install hermetic build deps
+        run: tools/install-build-deps --ui
+
+      - name: Build Pyodide wheel
+        run: python tools/build-pyodide-wheel --outdir wheelhouse/
+
+      # A wheel can build cleanly and still fail to load — run it for real
+      # inside a Pyodide runtime.
+      - name: Smoke test in Pyodide
+        run: |
+          pyodide venv .venv-rt
+          .venv-rt/bin/pip install wheelhouse/*.whl
+          .venv-rt/bin/python - <<'PY'
+          import syntaqlite
+          with syntaqlite.Syntaqlite() as sq:
+              assert sq.format_sql("select 1") == "SELECT 1;\n"
+              assert sq.parse("select * from t")
+          print("pyodide smoke test ok")
+          PY
+
+      - name: Upload wheel
+        uses: actions/upload-artifact@v6
+        with:
+          name: wheels-pyodide
+          path: wheelhouse/*.whl
+
   # Publish all wheels to PyPI in a single job.
   publish-pypi:
     name: Publish to PyPI
-    needs: [build-python-wheels]
+    needs: [build-python-wheels, build-pyodide-wheel]
     if: ${{ !github.event.pull_request }}
     runs-on: ubuntu-latest
     environment: pypi
