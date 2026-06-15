@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.11
+
+**Embedded SQL:**
+- syntaqlite can now extract and analyze SQL embedded inside host files. SQLite shell scripts (`.sql` dot-command files) are supported out of the box, with the embedded SQL masked out so the surrounding shell syntax is ignored ([#275](https://github.com/LalitMaganti/syntaqlite/pull/275)).
+- Embedded SQL handling is wired through all CLI commands (`ast`, `fmt`, `validate`) so formatting and validation operate on the SQL regions of shell files ([#276](https://github.com/LalitMaganti/syntaqlite/pull/276)).
+- The LSP analyzes embedded SQL via the same masking approach, surfacing diagnostics on the SQL regions of shell files in your editor ([#276](https://github.com/LalitMaganti/syntaqlite/pull/276)).
+
+**Parser:**
+- All-underscore identifiers (e.g. `_`, `__`) now resolve as SQL placeholders ([#274](https://github.com/LalitMaganti/syntaqlite/pull/274)).
+
+**Python bindings:**
+- Added an in-process FFI transport, removing the subprocess hop for faster Python bindings ([#271](https://github.com/LalitMaganti/syntaqlite/pull/271)).
+- Added support for building a Pyodide wheel so syntaqlite can run in the browser / Pyodide ([#272](https://github.com/LalitMaganti/syntaqlite/pull/272)).
+
+**Amalgamation:**
+- Dialect virtual functions are now automatically inlined in amalgamations ([#266](https://github.com/LalitMaganti/syntaqlite/pull/266)).
+
+**CLI:**
+- Fixed symbol export so dynamically loaded dialects work with the CLI ([#264](https://github.com/LalitMaganti/syntaqlite/pull/264)).
+
 ## 0.5.10
 
 **Zed extension:**
