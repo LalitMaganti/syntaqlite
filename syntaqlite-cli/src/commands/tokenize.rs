@@ -19,21 +19,43 @@ pub(crate) fn run(dialect: &AnyDialect, args: &TokenizeArgs) -> Result<(), Strin
 
     for src in &sources {
         sink.on_source_start(src, multi);
-        emit_source(dialect, &tokenizer, src, sink.as_mut());
+        // Standalone SQL is one whole-document fragment, so the same loop covers
+        // both it and embedded host files.
+        let lang = util::resolve_language(args.lang, src, dialect);
+        for fragment in syntaqlite::embedded::fragments(dialect.clone(), &src.text, lang) {
+            let base = fragment.sql_range().start.as_usize();
+            emit_text(
+                dialect,
+                &tokenizer,
+                src,
+                fragment.sql_text(),
+                base,
+                sink.as_mut(),
+            );
+        }
     }
     Ok(())
 }
 
-fn emit_source(dialect: &AnyDialect, tokenizer: &AnyTokenizer, src: &Source, sink: &mut dyn Sink) {
-    let base = src.text.as_ptr() as usize;
-    for tok in tokenizer.tokenize(&src.text) {
-        let text = tok.text();
-        let offset = (text.as_ptr() as usize).saturating_sub(base);
-        let length = text.len();
+/// Tokenize `text` and emit each token, shifting offsets by `base` (the text's
+/// byte offset in the host file; `0` for standalone SQL).
+fn emit_text(
+    dialect: &AnyDialect,
+    tokenizer: &AnyTokenizer,
+    src: &Source,
+    text: &str,
+    base: usize,
+    sink: &mut dyn Sink,
+) {
+    let ptr_base = text.as_ptr() as usize;
+    for tok in tokenizer.tokenize(text) {
+        let tok_text = tok.text();
+        let offset = (tok_text.as_ptr() as usize).saturating_sub(ptr_base) + base;
+        let length = tok_text.len();
         let tt = tok.token_type();
         sink.on_token(TokenView {
             src,
-            text,
+            text: tok_text,
             offset,
             length,
             token_type: tt.into(),
