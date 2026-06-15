@@ -28,6 +28,10 @@ examples/syntaqlite_sqlite.c
 # profiling / scratch data
 profile.json.gz
 tok.json.gz
+*.profraw
+
+# Pyodide wheel build output (tools/build-pyodide-wheel)
+/wheelhouse-pyodide/
 
 # integrations/vscode
 integrations/vscode/out/

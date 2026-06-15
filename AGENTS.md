@@ -124,6 +124,7 @@ The `.synq` DSL defines the AST node types, enums, flags, and formatter instruct
 | `tools/pre-push` | Run pre-push checks, skipping anything not affected by changed files. Use `--fix` to auto-fix formatting and clippy warnings. Use `--all` to run all checks unconditionally. |
 | `tools/install-build-deps` | Install platform-specific build deps (clang-format, SQLite sources) |
 | `tools/build-web-playground` | Build WASM web playground |
+| `tools/build-pyodide-wheel` | Build the Pyodide (Emscripten/WASM) pip wheel — needs `pyodide-build` + `tools/install-build-deps --ui` |
 
 ## Code Intelligence
 

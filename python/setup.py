@@ -1,12 +1,16 @@
 """Package the `syntaqlite` Python distribution.
 
-The Python package is a pure-Python client that speaks a JSON RPC protocol
-to the bundled `syntaqlite` CLI binary (see `syntaqlite serve`).
+The Python package drives the syntaqlite core in-process over a C ABI via
+ctypes, talking to the bundled cdylib under `python/syntaqlite/lib/`. The
+`syntaqlite` CLI binary is also bundled (under `bin/`) for the console script.
 
-Release CI runs `cargo build --release -p syntaqlite-cli` per platform, drops
-the binary under `python/syntaqlite/bin/`, then invokes `python -m build`.
-The wheel is tagged `py3-none-<plat>` so one wheel per OS/arch covers every
-supported Py3 (see the `bdist_wheel` subclass below).
+Release CI builds the cdylib (and CLI) per platform, then invokes
+`python -m build`. The wheel is tagged `py3-none-<plat>` so one wheel per
+OS/arch covers every supported Py3 (see the `bdist_wheel` subclass below).
+
+For Pyodide, the cdylib is cross-built for `wasm32-unknown-emscripten` as an
+Emscripten side module and the wheel is tagged `py3-none-pyemscripten_*` —
+see `tools/build-pyodide-wheel`.
 """
 
 import os
@@ -36,17 +40,22 @@ if _binary_src.exists():
 
 # ── cdylib bundling (in-process transport) ──────────────────────────────────
 
-if sys.platform == "win32":
-    _ffi_name = "syntaqlite.dll"
+# When cross-building for Emscripten (Pyodide), the cdylib is emitted as
+# `syntaqlite.wasm` but must ship as `libsyntaqlite.so` — the name ctypes
+# loads when `sys.platform == "emscripten"`.
+if _cargo_target and "emscripten" in _cargo_target:
+    _ffi_src_name, _ffi_dest_name = "syntaqlite.wasm", "libsyntaqlite.so"
+elif sys.platform == "win32":
+    _ffi_src_name = _ffi_dest_name = "syntaqlite.dll"
 elif sys.platform == "darwin":
-    _ffi_name = "libsyntaqlite.dylib"
+    _ffi_src_name = _ffi_dest_name = "libsyntaqlite.dylib"
 else:
-    _ffi_name = "libsyntaqlite.so"
-_ffi_src = _release_dir / _ffi_name
+    _ffi_src_name = _ffi_dest_name = "libsyntaqlite.so"
+_ffi_src = _release_dir / _ffi_src_name
 if _ffi_src.exists():
     _lib_dest = PKG_DIR / "lib"
     _lib_dest.mkdir(exist_ok=True)
-    shutil.copy2(_ffi_src, _lib_dest / _ffi_name)
+    shutil.copy2(_ffi_src, _lib_dest / _ffi_dest_name)
 
 # ── package_data ────────────────────────────────────────────────────────────
 
