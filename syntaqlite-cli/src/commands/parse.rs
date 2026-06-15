@@ -9,7 +9,7 @@ use std::ops::Deref;
 use syntaqlite::Diagnostic;
 use syntaqlite::analysis::{DiagnosticMessage, Severity};
 use syntaqlite::any::{AnyDialect, AnyParser, ParseOutcome};
-use syntaqlite::source::StmtRange;
+use syntaqlite::source::{DocOffset, DocRange, StmtRange};
 use syntaqlite::util::DiagnosticRenderer;
 use syntaqlite_syntax::any::AnyDialect as SyntaxAnyDialect;
 use syntaqlite_syntax::typed::TypedParsedStatement;
@@ -25,7 +25,7 @@ pub(crate) fn run(dialect: &AnyDialect, args: &ParseArgs) -> Result<(), String> 
 
     for src in &sources {
         sink.on_source_start(src, multi);
-        let errors = parse_source(dialect, src, sink.as_mut());
+        let errors = parse_source(dialect, src, args.lang, sink.as_mut());
         total_errors += errors.len() as u64;
         sink.on_source_end(errors.len() as u64);
         if !errors.is_empty() {
@@ -43,32 +43,57 @@ pub(crate) fn run(dialect: &AnyDialect, args: &ParseArgs) -> Result<(), String> 
     }
 }
 
-/// Drive the parser to exhaustion, handing each successful statement to the
-/// sink and collecting error diagnostics to render after the loop. The
-/// parser borrows from its own session buffer, so sinks receive statements
-/// inside the loop rather than via a collected Vec.
-fn parse_source(dialect: &AnyDialect, src: &Source, sink: &mut dyn Sink) -> Vec<Diagnostic> {
-    let parser = AnyParser::new(dialect.deref().clone());
-    let mut session = parser.parse(&src.text);
+/// Drive the parser to exhaustion over a source, handing each successful
+/// statement to the sink and collecting error diagnostics to render after the
+/// loop. The source is split into embedded fragments (standalone SQL is one
+/// whole-document fragment), and each fragment's error ranges are shifted into
+/// host-file coordinates. The parser borrows from its own session buffer, so
+/// sinks receive statements inside the loop rather than via a collected Vec.
+fn parse_source(
+    dialect: &AnyDialect,
+    src: &Source,
+    lang: Option<crate::cli::HostLanguage>,
+    sink: &mut dyn Sink,
+) -> Vec<Diagnostic> {
+    let lang = util::resolve_language(lang, src, dialect);
     let mut errors = Vec::new();
-    loop {
-        match session.next() {
-            ParseOutcome::Ok(stmt) => sink.on_stmt(StmtView { inner: stmt }),
-            ParseOutcome::Err(err) => {
-                let start = err.offset().unwrap_or_default();
-                let length = err.length().unwrap_or_default();
-                let range = StmtRange::from_offset_len(start, length).to_doc(err.statement_base());
-                errors.push(Diagnostic::new(
-                    range,
-                    DiagnosticMessage::ParseError(err.message().to_string()),
-                    Severity::Error,
-                    None,
-                ));
+    for fragment in syntaqlite::embedded::fragments(dialect.clone(), &src.text, lang) {
+        let base = fragment.sql_range().start.as_usize();
+        let parser = AnyParser::new(dialect.deref().clone());
+        let mut session = parser.parse(fragment.sql_text());
+        loop {
+            match session.next() {
+                ParseOutcome::Ok(stmt) => sink.on_stmt(StmtView { inner: stmt }),
+                ParseOutcome::Err(err) => {
+                    let start = err.offset().unwrap_or_default();
+                    let length = err.length().unwrap_or_default();
+                    let range =
+                        StmtRange::from_offset_len(start, length).to_doc(err.statement_base());
+                    errors.push(Diagnostic::new(
+                        shift_range(range, base),
+                        DiagnosticMessage::ParseError(err.message().to_string()),
+                        Severity::Error,
+                        None,
+                    ));
+                }
+                ParseOutcome::Done => break,
             }
-            ParseOutcome::Done => break,
         }
     }
     errors
+}
+
+/// Shift a fragment-relative range into host-file coordinates.
+fn shift_range(range: DocRange, base: usize) -> DocRange {
+    if base == 0 {
+        return range;
+    }
+    let shift =
+        |o: DocOffset| DocOffset::from_raw(u32::try_from(o.as_usize() + base).unwrap_or(u32::MAX));
+    DocRange {
+        start: shift(range.start),
+        end: shift(range.end),
+    }
 }
 
 // ── StmtView ───────────────────────────────────────────────────────────────

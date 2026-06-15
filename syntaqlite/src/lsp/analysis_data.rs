@@ -186,6 +186,7 @@ impl DocumentAnalysisData {
             ResolvedSymbol::Function { .. } => None,
         })
     }
+
 }
 
 // ── External definition registry ──────────────────────────────────────────────

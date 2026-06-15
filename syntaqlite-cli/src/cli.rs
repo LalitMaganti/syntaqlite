@@ -69,6 +69,18 @@ pub(crate) enum KeywordCasing {
 pub(crate) enum HostLanguage {
     Python,
     Typescript,
+    /// sqlite3 CLI shell language (dot-commands, `GO`/`/` terminators).
+    Shell,
+}
+
+impl From<HostLanguage> for syntaqlite::embedded::HostLanguage {
+    fn from(lang: HostLanguage) -> Self {
+        match lang {
+            HostLanguage::Python => syntaqlite::embedded::HostLanguage::Python,
+            HostLanguage::Typescript => syntaqlite::embedded::HostLanguage::Typescript,
+            HostLanguage::Shell => syntaqlite::embedded::HostLanguage::Shell,
+        }
+    }
 }
 
 // ── Top-level CLI + Command enum ──────────────────────────────────────────
@@ -157,6 +169,10 @@ pub(crate) struct ParseArgs {
     /// Output format
     #[arg(short, long, value_enum, default_value_t = ParseOutput::Text)]
     pub(crate) output: ParseOutput,
+    /// [experimental] Host language for embedded SQL extraction (python, typescript, shell).
+    /// When omitted, sqlite3 shell scripts (`.read` dot-commands) are auto-detected.
+    #[arg(long = "experimental-lang")]
+    pub(crate) lang: Option<HostLanguage>,
 }
 
 #[derive(Args)]
@@ -187,6 +203,10 @@ pub(crate) struct FmtArgs {
     /// Output mode (formatted, bytecode, doc-tree)
     #[arg(short, long, value_enum, default_value_t = FmtOutput::Formatted)]
     pub(crate) output: FmtOutput,
+    /// [experimental] Host language for embedded SQL extraction (python, typescript, shell).
+    /// When omitted, sqlite3 shell scripts (`.read` dot-commands) are auto-detected.
+    #[arg(long = "experimental-lang")]
+    pub(crate) lang: Option<HostLanguage>,
 }
 
 #[derive(Args)]
@@ -208,7 +228,8 @@ pub(crate) struct AnalyzeArgs {
     /// Deny (error) a check category (repeatable)
     #[arg(short = 'D', long = "deny")]
     pub(crate) deny: Vec<String>,
-    /// [experimental] Host language for embedded SQL extraction (python, typescript)
+    /// [experimental] Host language for embedded SQL extraction (python, typescript, shell).
+    /// When omitted, sqlite3 shell scripts (`.read` dot-commands) are auto-detected.
     #[arg(long = "experimental-lang")]
     pub(crate) lang: Option<HostLanguage>,
     /// Output format
@@ -229,6 +250,10 @@ pub(crate) struct LineageArgs {
     /// Output format
     #[arg(short, long, value_enum, default_value_t = LineageOutput::Json)]
     pub(crate) output: LineageOutput,
+    /// [experimental] Host language for embedded SQL extraction (python, typescript, shell).
+    /// When omitted, sqlite3 shell scripts (`.read` dot-commands) are auto-detected.
+    #[arg(long = "experimental-lang")]
+    pub(crate) lang: Option<HostLanguage>,
     /// Restrict output to a subset (combined output is the default)
     #[command(subcommand)]
     pub(crate) scope: Option<LineageScope>,
@@ -244,6 +269,10 @@ pub(crate) struct TokenizeArgs {
     /// Output format
     #[arg(short, long, value_enum, default_value_t = IntrospectOutput::Text)]
     pub(crate) output: IntrospectOutput,
+    /// [experimental] Host language for embedded SQL extraction (python, typescript, shell).
+    /// When omitted, sqlite3 shell scripts (`.read` dot-commands) are auto-detected.
+    #[arg(long = "experimental-lang")]
+    pub(crate) lang: Option<HostLanguage>,
 }
 
 #[derive(Clone, Copy, Subcommand)]

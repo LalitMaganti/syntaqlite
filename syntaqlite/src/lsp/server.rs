@@ -736,6 +736,7 @@ impl LspServer {
                     uri.as_str(),
                     params.text_document.version,
                     params.text_document.text,
+                    Some(params.text_document.language_id),
                 );
                 DiagnosticPublisher::publish(connection, host, uri)?;
             }
