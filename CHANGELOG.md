@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.0
+
+**Shell file support:**
+- syntaqlite now understands SQLite shell scripts — files that mix `.dot` commands with SQL. The embedded SQL is extracted and the surrounding shell syntax is ignored, so `ast`, `fmt`, and `validate` all operate on just the SQL regions ([#275](https://github.com/LalitMaganti/syntaqlite/pull/275), [#276](https://github.com/LalitMaganti/syntaqlite/pull/276)).
+- The LSP analyzes embedded SQL the same way, surfacing diagnostics on the SQL inside shell files directly in your editor ([#276](https://github.com/LalitMaganti/syntaqlite/pull/276)).
+
+**Python / Pyodide:**
+- syntaqlite can now run in the browser and other Pyodide environments via a Pyodide wheel ([#272](https://github.com/LalitMaganti/syntaqlite/pull/272)).
+- The Python bindings now run the parser in-process instead of shelling out to a subprocess ([#271](https://github.com/LalitMaganti/syntaqlite/pull/271)).
+
+**Performance:**
+- Amalgamated builds are faster — dialect virtual functions are now inlined automatically ([#266](https://github.com/LalitMaganti/syntaqlite/pull/266)).
+
 ## 0.5.10
 
 **Zed extension:**
