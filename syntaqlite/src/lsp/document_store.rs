@@ -19,6 +19,9 @@ use crate::analysis::diagnostics::Diagnostic;
 pub(crate) struct Document {
     pub(crate) version: i32,
     pub(crate) source: String,
+    /// The client's `languageId` (e.g. `"sql"`, `"python"`), if known. Used as a
+    /// hint for embedded-SQL host-language detection.
+    pub(crate) language_id: Option<String>,
     /// Cached parse-error diagnostics. `None` when dirty.
     pub(crate) cached_parse_diags: Option<Vec<Diagnostic>>,
     /// All diagnostics produced by the last analysis pass (parse + semantic).
@@ -51,12 +54,19 @@ impl DocumentStore {
     }
 
     /// Register a newly opened document.
-    pub(crate) fn open(&mut self, uri: &str, version: i32, text: String) {
+    pub(crate) fn open(
+        &mut self,
+        uri: &str,
+        version: i32,
+        text: String,
+        language_id: Option<String>,
+    ) {
         self.documents.insert(
             uri.to_string(),
             Document {
                 version,
                 source: text,
+                language_id,
                 cached_parse_diags: None,
                 cached_all_diags: None,
                 analysis: None,
@@ -73,7 +83,7 @@ impl DocumentStore {
             doc.source = text;
             doc.invalidate();
         } else {
-            self.open(uri, version, text);
+            self.open(uri, version, text, None);
         }
     }
 

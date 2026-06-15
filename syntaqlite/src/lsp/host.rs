@@ -110,9 +110,25 @@ fn ensure_analysis(
     if doc.analysis.is_some() {
         return;
     }
+
+    // Embedded host files (sqlite3 shell scripts now; hole-free Python/TS later)
+    // are masked into a length-preserving SQL-equivalent document, so the whole
+    // file is analyzed in one pass with host-native offsets: non-SQL lines never
+    // reach the SQL engine (issue #88), and every feature — including
+    // cross-fragment navigation — works without per-fragment offset bookkeeping.
+    #[cfg(feature = "experimental-embedded")]
+    let masked = crate::embedded::mask_for_analysis(
+        analyzer.dialect(),
+        &doc.source,
+        doc.language_id.as_deref(),
+    );
+    #[cfg(not(feature = "experimental-embedded"))]
+    let masked: Option<String> = None;
+    let analyzed_source = masked.as_deref().unwrap_or(&doc.source);
+
     let mut capture = LspCapture::new(external_defs);
     let mut ctx = AnalysisContext::new(user_catalog).with_config(*analysis_config);
-    let model = analyzer.analyze_with_visitor(&doc.source, &mut ctx, &mut capture);
+    let model = analyzer.analyze_with_visitor(analyzed_source, &mut ctx, &mut capture);
     let all_diags: Vec<Diagnostic> = model.diagnostics().cloned().collect();
     let parse_diags: Vec<Diagnostic> = all_diags
         .iter()
@@ -285,9 +301,16 @@ impl LspHost {
 
     // ── Document lifecycle ─────────────────────────────────────────────────────
 
-    /// Register a newly opened document.
-    pub(crate) fn open_document(&mut self, uri: &str, version: i32, text: String) {
-        self.documents.open(uri, version, text);
+    /// Register a newly opened document. `language_id` is the client's
+    /// `languageId` (used as a hint for embedded-SQL host-language detection).
+    pub(crate) fn open_document(
+        &mut self,
+        uri: &str,
+        version: i32,
+        text: String,
+        language_id: Option<String>,
+    ) {
+        self.documents.open(uri, version, text, language_id);
     }
 
     /// Update a document's content, invalidating cached analysis.
@@ -478,7 +501,24 @@ impl LspHost {
             .get(uri)
             .ok_or(FormatError::UnknownDocument)?;
         let mut formatter = Formatter::with_dialect_config(self.dialect.clone(), config);
-        formatter.format(&doc.source).map_err(FormatError::Format)
+        // Standalone SQL is one whole-document fragment; embedded host files
+        // reformat only their SQL fragments, splicing them back between the
+        // untouched non-SQL lines. The formatter is composed in via the closure.
+        #[cfg(feature = "experimental-embedded")]
+        {
+            let lang = crate::embedded::detect(
+                self.dialect.clone(),
+                &doc.source,
+                doc.language_id.as_deref(),
+            );
+            let fragments = crate::embedded::fragments(self.dialect.clone(), &doc.source, lang);
+            crate::embedded::splice(&doc.source, &fragments, |sql| formatter.format(sql))
+                .map_err(FormatError::Format)
+        }
+        #[cfg(not(feature = "experimental-embedded"))]
+        {
+            formatter.format(&doc.source).map_err(FormatError::Format)
+        }
     }
 
     // ── Hover ──────────────────────────────────────────────────────────────────
@@ -796,7 +836,7 @@ mod tests {
         let mut host = LspHost::new();
         let uri = "file:///test.sql";
         let sql = "SELECT ";
-        host.open_document(uri, 1, sql.to_string());
+        host.open_document(uri, 1, sql.to_string(), None);
         let info = host
             .completion_info_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert_ne!(info.context, super::super::CompletionContext::TableRef);
@@ -807,7 +847,7 @@ mod tests {
         let mut host = LspHost::new();
         let uri = "file:///test.sql";
         let sql = "SELECT * FROM t WHERE ";
-        host.open_document(uri, 1, sql.to_string());
+        host.open_document(uri, 1, sql.to_string(), None);
         let info = host
             .completion_info_at_offset(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
         assert_eq!(info.context, super::super::CompletionContext::Expression);
@@ -817,7 +857,7 @@ mod tests {
     fn analyze_does_not_duplicate_parse_error_diagnostics() {
         let mut host = LspHost::new();
         let uri = "file:///test.sql";
-        host.open_document(uri, 1, "SELECT ;\nSELECT 1;".to_string());
+        host.open_document(uri, 1, "SELECT ;\nSELECT 1;".to_string(), None);
         let diags = host.analyze(uri, &AnalysisConfig::default());
         assert_eq!(diags.len(), 0, "got: {diags:?}");
     }
@@ -827,7 +867,7 @@ mod tests {
         let mut host = LspHost::new();
         let uri = "file:///test.sql";
         let sql = "select 1 from slice where foo = where x = y;";
-        host.open_document(uri, 1, sql.to_string());
+        host.open_document(uri, 1, sql.to_string(), None);
         let diags = host.diagnostics(uri);
         assert!(!diags.is_empty());
         let diag = &diags[0];
@@ -847,7 +887,12 @@ mod tests {
     fn parse_and_validate_combined_no_duplicates() {
         let mut host = LspHost::new();
         let uri = "file:///test.sql";
-        host.open_document(uri, 1, "SELECT ;\nSELECT * FROM no_such_table;".to_string());
+        host.open_document(
+            uri,
+            1,
+            "SELECT ;\nSELECT * FROM no_such_table;".to_string(),
+            None,
+        );
         let parse_diags = host.diagnostics(uri).to_vec();
         let val_diags = host.analyze(uri, &AnalysisConfig::default());
         let all: Vec<_> = parse_diags.iter().chain(val_diags.iter()).collect();
@@ -890,7 +935,7 @@ mod tests {
             .unwrap();
 
         let uri = "file:///query.sql";
-        host.open_document(uri, 1, "SELECT * FROM orders".to_string());
+        host.open_document(uri, 1, "SELECT * FROM orders".to_string(), None);
 
         let ref_offset = "SELECT * FROM ".len();
         let result =
@@ -915,7 +960,7 @@ mod tests {
             .unwrap();
 
         let uri = "file:///query.sql";
-        host.open_document(uri, 1, "SELECT total FROM orders".to_string());
+        host.open_document(uri, 1, "SELECT total FROM orders".to_string(), None);
 
         let ref_offset = "SELECT ".len(); // points to "total"
         let result =
@@ -943,8 +988,8 @@ mod tests {
 
         let uri1 = "file:///a.sql";
         let uri2 = "file:///b.sql";
-        host.open_document(uri1, 1, "SELECT * FROM orders;".to_string());
-        host.open_document(uri2, 1, "DELETE FROM orders;".to_string());
+        host.open_document(uri1, 1, "SELECT * FROM orders;".to_string(), None);
+        host.open_document(uri2, 1, "DELETE FROM orders;".to_string(), None);
 
         // Click on "orders" in a.sql.
         let offset = "SELECT * FROM ".len();
@@ -971,8 +1016,8 @@ mod tests {
 
         let uri1 = "file:///a.sql";
         let uri2 = "file:///b.sql";
-        host.open_document(uri1, 1, "SELECT * FROM orders;".to_string());
-        host.open_document(uri2, 1, "DELETE FROM orders;".to_string());
+        host.open_document(uri1, 1, "SELECT * FROM orders;".to_string(), None);
+        host.open_document(uri2, 1, "DELETE FROM orders;".to_string(), None);
 
         let offset = "SELECT * FROM ".len();
         let edits = host.rename(
@@ -992,7 +1037,7 @@ mod tests {
         let sql = "CREATE TABLE slice (id INT, name TEXT);\n\
                    CREATE TABLE thread (tid INT, parent INT);\n\
                    SELECT slice.id, thread.tid\nFROM slice\nJOIN thread ON ";
-        host.open_document(uri, 1, sql.to_string());
+        host.open_document(uri, 1, sql.to_string(), None);
         let items =
             host.completion_items(uri, DocOffset::from_raw(u32::try_from(sql.len()).unwrap()));
 
@@ -1155,7 +1200,7 @@ mod tests {
 
         // Open a matched file referencing `users` — should get no "unknown table" error.
         let matched_uri = "file:///workspace/matched/query.sql";
-        host.open_document(matched_uri, 1, "SELECT id FROM users;".to_string());
+        host.open_document(matched_uri, 1, "SELECT id FROM users;".to_string(), None);
         let diags = host.document_all_diagnostics(matched_uri);
         let (_, _, diags) = diags.unwrap();
         let schema_errors: Vec<_> = diags
@@ -1170,7 +1215,7 @@ mod tests {
         // Open an unmatched file referencing `users` — should get a warning
         // (not an error, because no catalog = lenient mode).
         let unmatched_uri = "file:///workspace/other/query.sql";
-        host.open_document(unmatched_uri, 1, "SELECT id FROM users;".to_string());
+        host.open_document(unmatched_uri, 1, "SELECT id FROM users;".to_string(), None);
         let diags = host.document_all_diagnostics(unmatched_uri);
         let (_, _, diags) = diags.unwrap();
         let errors: Vec<_> = diags
@@ -1194,7 +1239,7 @@ mod tests {
 
         let uri = "file:///test.sql";
         let src = "SELECT * FROM users";
-        host.open_document(uri, 1, src.to_string());
+        host.open_document(uri, 1, src.to_string(), None);
 
         let ref_offset = src.find("users").unwrap();
         let def = host
@@ -1209,6 +1254,100 @@ mod tests {
         );
     }
 
+    // ── Shell script (sqlite3 CLI dot-commands) ──────────────────────────
+
+    /// A file of `.read` dot-commands plus SQL must not be flagged "syntax error
+    /// near '.'"; the host auto-detects shell mode and analyzes only the SQL
+    /// fragments.
+    #[test]
+    fn shell_dot_commands_produce_no_parse_errors() {
+        let mut host = LspHost::new();
+        let uri = "file:///init.sql";
+        let src = ".read adapters/sqlite/scripts/includes/01-pragma.sql\n\
+                   .read adapters/sqlite/scripts/includes/02-drops.sql\n\
+                   SELECT 1;";
+        host.open_document(uri, 1, src.to_string(), None);
+
+        let (_, _, diags) = host.document_all_diagnostics(uri).expect("document exists");
+        let parse_errors: Vec<_> = diags
+            .iter()
+            .filter(|d| d.message().is_parse_error())
+            .collect();
+        assert!(
+            parse_errors.is_empty(),
+            "shell .read lines must not be flagged as SQL syntax errors, got: {parse_errors:?}"
+        );
+    }
+
+    /// A pure-SQL file (no shell markers) with a stray `GO` must still report a
+    /// parse error — `GO` is a terminator only in shell mode.
+    #[test]
+    fn stray_go_in_pure_sql_still_errors() {
+        let mut host = LspHost::new();
+        let uri = "file:///plain.sql";
+        let src = "SELECT 1;\nGO GO GO";
+        host.open_document(uri, 1, src.to_string(), None);
+
+        let (_, _, diags) = host.document_all_diagnostics(uri).expect("document exists");
+        let parse_errors: Vec<_> = diags
+            .iter()
+            .filter(|d| d.message().is_parse_error())
+            .collect();
+        assert!(
+            !parse_errors.is_empty(),
+            "a stray GO in a pure-SQL file must remain a parse error"
+        );
+    }
+
+    /// Beyond diagnostics, the SQL fragments of a shell file drive the full LSP
+    /// surface: semantic tokens are emitted (highlighting, previously empty for
+    /// shell files), and go-to-definition resolves a reference to its DDL with
+    /// the target mapped back to host-file coordinates.
+    #[test]
+    fn shell_semantic_tokens_and_goto_definition() {
+        let mut host = LspHost::new();
+        let uri = "file:///init.sql";
+        let src = ".read x.sql\nCREATE TABLE widgets (id INTEGER);\nSELECT id FROM widgets;";
+        host.open_document(uri, 1, src.to_string(), None);
+
+        let tokens = host.semantic_tokens_encoded(uri, None);
+        assert!(!tokens.is_empty(), "expected semantic tokens for shell SQL");
+
+        let ref_off = src.rfind("widgets").unwrap();
+        let def = host
+            .definition_info(uri, DocOffset::from_raw(u32::try_from(ref_off).unwrap()))
+            .expect("go-to-definition within a shell fragment");
+        assert!(def.target.file_uri.is_none(), "same-file definition");
+        assert_eq!(
+            def.target.range.start.as_usize(),
+            src.find("widgets").unwrap()
+        );
+    }
+
+    /// Cross-fragment go-to-definition: a table defined in one SQL run resolves
+    /// from a reference in a later run, even though a dot-command separates them.
+    /// Masking analyzes the whole script as one document, so this works with no
+    /// per-fragment definition linking.
+    #[test]
+    fn shell_cross_fragment_goto_definition() {
+        let mut host = LspHost::new();
+        let uri = "file:///init.sql";
+        let src = "CREATE TABLE widgets (id INTEGER);\n\
+                   .read more.sql\n\
+                   SELECT id FROM widgets;";
+        host.open_document(uri, 1, src.to_string(), None);
+
+        let ref_off = src.rfind("widgets").unwrap();
+        let def = host
+            .definition_info(uri, DocOffset::from_raw(u32::try_from(ref_off).unwrap()))
+            .expect("cross-fragment go-to-definition");
+        assert!(def.target.file_uri.is_none(), "same-file definition");
+        assert_eq!(
+            def.target.range.start.as_usize(),
+            src.find("widgets").unwrap()
+        );
+    }
+
     #[test]
     fn goto_definition_same_file_ddl_shadows_schema() {
         let schema = "CREATE TABLE t (x INTEGER);";
@@ -1220,7 +1359,7 @@ mod tests {
 
         let uri = "file:///test.sql";
         let src = "CREATE TABLE t (y INTEGER); SELECT * FROM t;";
-        host.open_document(uri, 1, src.to_string());
+        host.open_document(uri, 1, src.to_string(), None);
 
         let ref_offset = src.rfind(" t").unwrap() + 1;
         let def = host
