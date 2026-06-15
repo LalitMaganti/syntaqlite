@@ -1,25 +1,59 @@
 +++
 title = "Embedded SQL"
-description = "Validate SQL strings embedded in Python or TypeScript source files."
+description = "Validate sqlite3 shell scripts and SQL strings embedded in Python or TypeScript."
 weight = 6
 +++
 
 # Embedded SQL
 
-syntaqlite can extract and validate SQL string literals from Python and
-TypeScript source files without needing to maintain separate `.sql` files for
-validation.
+syntaqlite can analyze SQL that doesn't live in a plain `.sql` file: sqlite3
+command-line shell scripts (with `.read` and friends) and SQL string literals
+inside Python and TypeScript source files. In each case it isolates the SQL,
+then runs the full pipeline on it — syntax checking, schema validation, and
+function/arity checks all work exactly as they do on standalone SQL.
+
+## sqlite3 shell scripts
+
+Scripts written for the `sqlite3` command-line shell interleave SQL with shell
+*dot-commands* (`.read`, `.print`, `.import`, …), `#` comments, and `GO` / `/`
+statement terminators. Those lines are not valid SQL, so a plain SQL parser
+fails with a syntax error on the first `.` command.
+
+syntaqlite detects such scripts automatically — no `--experimental-lang` flag
+required. When a file looks like a sqlite3 script, the non-SQL lines are set
+aside and only the SQL between them is parsed, validated, and formatted:
+
+```bash
+syntaqlite fmt schema.sql
+```
+```text
+.read tables.sql
+.read views.sql
+
+CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
+```
+
+Detection is content-based: a file is treated as a shell script only when it
+contains a dot-command (or other shell marker) at the start of a line. A `.`
+inside a string literal or mid-statement stays ordinary SQL. This works across
+the CLI (`fmt`, `analyze`, `parse`, `lineage`) and in the language server, so
+the same files behave identically on the command line and in your editor.
+
+## SQL in Python and TypeScript
+
+syntaqlite also extracts SQL string literals from Python and TypeScript source
+files, without needing to maintain separate `.sql` files for validation.
 
 ```bash
 syntaqlite analyze --experimental-lang python app.py
 syntaqlite analyze --experimental-lang typescript db.ts
 ```
 
-syntaqlite finds SQL strings in the host language, then runs the full
-validation pipeline on each fragment: syntax checking, schema validation, and
-function/arity checks all work as they do on standalone `.sql` files.
+syntaqlite finds SQL strings in the host language, then runs the same
+validation pipeline on each fragment, handling interpolation holes
+(`{var}`, `${expr}`, `?`).
 
-## How extraction works
+## How string extraction works
 
 The extractor looks for string literals that contain SQL keywords (`SELECT`,
 `INSERT`, `CREATE TABLE`, etc.) and parses them as SQL. Multi-line strings,
