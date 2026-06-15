@@ -793,6 +793,205 @@ def _test_json_multiple_statements_multiple_records(ctx: SuiteContext) -> bool:
     return True
 
 
+# ── Shell language ────────────────────────────────────────────────────────
+#
+# sqlite3 CLI shell scripts mix dot-commands and `GO`/`/` terminators with SQL.
+# `analyze` auto-detects a shell script when it sees an unambiguous column-0
+# marker (a column-0 `.` dot-command or a column-0 `#` comment). The shell
+# fragments are skipped and only the SQL is analyzed, with diagnostics mapped
+# back to host-file coordinates. See https://sqlite.org/cli.html.
+
+
+def _write(tmp: str, name: str, content: str) -> Path:
+    """Write a file verbatim (bytes) so CRLF endings survive."""
+    p = Path(tmp) / name
+    p.write_bytes(content.encode("utf-8"))
+    return p
+
+
+def _run_file(ctx: SuiteContext, content: str, *extra: str) -> subprocess.CompletedProcess[str]:
+    """Write `content` to a temp .sql file and run `analyze` on it."""
+    with tempfile.TemporaryDirectory() as tmp:
+        f = _write(tmp, "script.sql", content)
+        return _run(ctx.binary, *extra, str(f))
+
+
+def _expect_clean(ctx: SuiteContext, name: str, content: str, *extra: str) -> bool:
+    """Assert the script analyzes cleanly: exit 0, no `error:` in stderr."""
+    result = _run_file(ctx, content, *extra)
+    if result.returncode != 0:
+        _fail(name, f"expected exit 0, got {result.returncode}: {result.stderr}")
+        return False
+    if "error:" in result.stderr:
+        _fail(name, f"unexpected 'error:' in stderr: {result.stderr}")
+        return False
+    _pass(name)
+    return True
+
+
+def _expect_syntax_error(
+    ctx: SuiteContext, name: str, content: str, near: str, loc: str
+) -> bool:
+    """Assert a syntax error near `near` mapped to `loc` (file:LINE:COL), exit 1."""
+    result = _run_file(ctx, content)
+    if result.returncode == 0:
+        _fail(name, f"expected non-zero exit, got 0: {result.stderr}")
+        return False
+    msg = f"syntax error near '{near}'"
+    if msg not in result.stderr:
+        _fail(name, f"expected {msg!r} in stderr, got: {result.stderr}")
+        return False
+    if loc not in result.stderr:
+        _fail(name, f"expected location {loc!r} in stderr, got: {result.stderr}")
+        return False
+    _pass(name)
+    return True
+
+
+def _test_shell_col0_dot_command_is_clean(ctx: SuiteContext) -> bool:
+    """A column-0 `.read` + SQL auto-detects as shell; the dot line is skipped."""
+    return _expect_clean(
+        ctx, "shell_col0_dot_command_is_clean", ".read a.sql\nSELECT 1;",
+    )
+
+
+def _test_shell_indented_dot_read_errors(ctx: SuiteContext) -> bool:
+    """Dot-commands require column 0; an indented `.read` is plain SQL and errors."""
+    return _expect_syntax_error(
+        ctx, "shell_indented_dot_read_errors",
+        "  .read foo.sql\nSELECT 1;", ".", "script.sql:1:3",
+    )
+
+
+def _test_shell_many_dot_commands_skipped(ctx: SuiteContext) -> bool:
+    """A broad set of column-0 dot-commands are all recognized and skipped."""
+    return _expect_clean(
+        ctx, "shell_many_dot_commands_skipped",
+        ".mode column\n.tables\n.schema\n\nSELECT 1;\n\n"
+        ".print hi\n.once out.txt\n.output\nSELECT 2;\n.dump\n.import data.csv t\n",
+    )
+
+
+def _test_shell_dot_mid_statement_is_sql(ctx: SuiteContext) -> bool:
+    """A leading-dot line while a statement is pending stays SQL, and errors."""
+    return _expect_syntax_error(
+        ctx, "shell_dot_mid_statement_is_sql",
+        ".read a.sql\nSELECT\n.foo", ".", "script.sql:3:1",
+    )
+
+
+def _test_shell_dot_command_trailing_semicolon(ctx: SuiteContext) -> bool:
+    """A trailing bare `;` on a dot-command (sqlite >= 3.52) is still skipped."""
+    return _expect_clean(
+        ctx, "shell_dot_command_trailing_semicolon",
+        ".read foo.sql;\nSELECT 1;",
+    )
+
+
+def _test_shell_go_terminator_splits_statements(ctx: SuiteContext) -> bool:
+    """In shell mode a lone `GO` terminates the pending statement."""
+    return _expect_clean(
+        ctx, "shell_go_terminator_splits_statements",
+        ".read a.sql\nSELECT 1\nGO\nSELECT 2;",
+    )
+
+
+def _test_shell_stray_go_in_pure_sql_errors(ctx: SuiteContext) -> bool:
+    """`GO` is a terminator only in shell mode; in plain SQL it is a parse error."""
+    return _expect_syntax_error(
+        ctx, "shell_stray_go_in_pure_sql_errors",
+        "SELECT 1;\nGO", "GO", "script.sql:2:1",
+    )
+
+
+def _test_shell_col0_hash_comment_skipped(ctx: SuiteContext) -> bool:
+    """A column-0 `#` whole-line comment is a shell marker and is skipped."""
+    return _expect_clean(
+        ctx, "shell_col0_hash_comment_skipped", "# a shell comment\nSELECT 1;",
+    )
+
+
+def _test_shell_indented_hash_errors(ctx: SuiteContext) -> bool:
+    """An indented `#` is not a comment; it reaches the SQL core and errors."""
+    return _expect_syntax_error(
+        ctx, "shell_indented_hash_errors",
+        ".read a.sql\n  # not a marker", "#", "script.sql:2:3",
+    )
+
+
+def _test_shell_issue88(ctx: SuiteContext) -> bool:
+    """Issue #88: multiple `.read` dot-commands followed by SQL must not error."""
+    return _expect_clean(
+        ctx, "shell_issue88",
+        ".read adapters/sqlite/scripts/includes/01-pragma.sql\n"
+        ".read adapters/sqlite/scripts/includes/02-drops.sql\nSELECT 1;",
+    )
+
+
+def _test_shell_sql_error_maps_to_correct_line(ctx: SuiteContext) -> bool:
+    """A genuine SQL error maps to the correct line; skipped dot lines don't shift coords."""
+    return _expect_syntax_error(
+        ctx, "shell_sql_error_maps_to_correct_line",
+        ".read a.sql\nSELECT 1;\nNOT VALID;", "NOT", "script.sql:3:1",
+    )
+
+
+def _test_shell_crlf_error_line_mapping(ctx: SuiteContext) -> bool:
+    """CRLF line endings must not desync line/offset mapping."""
+    return _expect_syntax_error(
+        ctx, "shell_crlf_error_line_mapping",
+        ".read a.sql\r\nNOT VALID;\r\nSELECT 1;", "NOT", "script.sql:2:1",
+    )
+
+
+def _test_shell_unknown_table_is_warning(ctx: SuiteContext) -> bool:
+    """Semantic diagnostics still flow in shell mode: an unknown table is a warning (exit 0)."""
+    result = _run_file(ctx, ".read a.sql\nSELECT * FROM nonexistent;")
+    if result.returncode != 0:
+        _fail("shell_unknown_table_is_warning",
+              f"expected exit 0 (warnings only), got {result.returncode}: {result.stderr}")
+        return False
+    if "warning:" not in result.stderr or "nonexistent" not in result.stderr:
+        _fail("shell_unknown_table_is_warning",
+              f"expected a 'warning:' about 'nonexistent', got: {result.stderr}")
+        return False
+    if "error:" in result.stderr:
+        _fail("shell_unknown_table_is_warning",
+              f"unexpected 'error:' in stderr: {result.stderr}")
+        return False
+    _pass("shell_unknown_table_is_warning")
+    return True
+
+
+def _test_shell_dot_commands_only_no_fragments(ctx: SuiteContext) -> bool:
+    """A file of only dot-commands yields zero SQL fragments and reports cleanly (exit 0)."""
+    result = _run_file(ctx, ".read a.sql\n.read b.sql\n")
+    if result.returncode != 0:
+        _fail("shell_dot_commands_only_no_fragments",
+              f"expected exit 0, got {result.returncode}: {result.stderr}")
+        return False
+    if "error:" in result.stderr:
+        _fail("shell_dot_commands_only_no_fragments",
+              f"unexpected 'error:' in stderr: {result.stderr}")
+        return False
+    if "no SQL fragments found" not in result.stderr:
+        _fail("shell_dot_commands_only_no_fragments",
+              f"expected 'no SQL fragments found' in stderr, got: {result.stderr}")
+        return False
+    _pass("shell_dot_commands_only_no_fragments")
+    return True
+
+
+def _test_shell_explicit_lang_forces_shell_mode(ctx: SuiteContext) -> bool:
+    """`--experimental-lang shell` forces shell mode without a column-0 marker."""
+    # No marker, so GO would collapse the two SELECTs as plain SQL; the flag
+    # makes GO a terminator and the script analyzes cleanly.
+    return _expect_clean(
+        ctx, "shell_explicit_lang_forces_shell_mode",
+        "SELECT 1\nGO\nSELECT 2;", "--experimental-lang", "shell",
+    )
+
+
 # ── Suite entry point ─────────────────────────────────────────────────────
 
 def run(ctx: SuiteContext) -> int:
@@ -840,6 +1039,22 @@ def run(ctx: SuiteContext) -> int:
         _test_json_unknown_table_includes_help,
         _test_json_allow_suppresses_records,
         _test_json_multiple_statements_multiple_records,
+        # Shell language
+        _test_shell_col0_dot_command_is_clean,
+        _test_shell_indented_dot_read_errors,
+        _test_shell_many_dot_commands_skipped,
+        _test_shell_dot_mid_statement_is_sql,
+        _test_shell_dot_command_trailing_semicolon,
+        _test_shell_go_terminator_splits_statements,
+        _test_shell_stray_go_in_pure_sql_errors,
+        _test_shell_col0_hash_comment_skipped,
+        _test_shell_indented_hash_errors,
+        _test_shell_issue88,
+        _test_shell_sql_error_maps_to_correct_line,
+        _test_shell_crlf_error_line_mapping,
+        _test_shell_unknown_table_is_warning,
+        _test_shell_dot_commands_only_no_fragments,
+        _test_shell_explicit_lang_forces_shell_mode,
     ]
     results = [t(ctx) for t in tests]
     passed = sum(results)

@@ -10,7 +10,7 @@ use syntaqlite::Diagnostic;
 use syntaqlite::analysis::{Help, Severity};
 use syntaqlite::any::AnyDialect;
 use syntaqlite::util::DiagnosticRenderer;
-use syntaqlite::{AnalysisConfig, Analyzer, Catalog};
+use syntaqlite::{AnalysisConfig, Catalog};
 
 use crate::cli::{AnalysisOutput, AnalyzeArgs, HostLanguage};
 use crate::config::{self, ConfigMode};
@@ -35,7 +35,6 @@ struct Validator<'a> {
     config: AnalysisConfig,
     lang: Option<HostLanguage>,
     schema_catalog: Catalog,
-    schema_files: Vec<String>,
     has_schema: bool,
 }
 
@@ -66,7 +65,6 @@ impl<'a> Validator<'a> {
             config: AnalysisConfig::default().with_checks(checks),
             lang: args.lang,
             schema_catalog,
-            schema_files,
             has_schema,
         })
     }
@@ -113,59 +111,34 @@ impl<'a> Validator<'a> {
                 renderer.on_no_fragments(src);
                 (false, false)
             }
-            Analysis::CatalogError => (true, true),
         }
     }
 
     // ── Computation ────────────────────────────────────────────────────────
 
     fn analyze(&self, src: &Source) -> Analysis {
-        match self.lang {
-            Some(lang) => self.analyze_embedded(src, lang),
-            None => Analysis::Diagnostics(self.analyze_standalone(src)),
-        }
-    }
-
-    fn analyze_standalone(&self, src: &Source) -> Vec<Diagnostic> {
-        let mut analyzer = Analyzer::with_dialect(self.dialect.clone());
-        let mut catalog = self.schema_catalog.clone();
-        let mut ctx = syntaqlite::AnalysisContext::new(&mut catalog).with_config(self.config);
-        let model = analyzer.analyze(&src.text, &mut ctx);
-        model.diagnostics().cloned().collect()
-    }
-
-    fn analyze_embedded(&self, src: &Source, lang: HostLanguage) -> Analysis {
-        let fragments = extract_fragments(&src.text, lang);
-        if fragments.is_empty() {
+        // Standalone SQL is one whole-document fragment, so both it and embedded
+        // host files run through the same analyzer; macro-fallback is derived
+        // per fragment (holes ⇒ on). An explicit/detected host language that
+        // yields no SQL is reported distinctly.
+        let lang = util::resolve_language(self.lang, src, self.dialect);
+        let fragments = syntaqlite::embedded::fragments(self.dialect.clone(), &src.text, lang);
+        if lang.is_some() && fragments.is_empty() {
             return Analysis::NoEmbeddedFragments;
         }
-        // The embedded analyzer consumes the catalog by value, so each
-        // embedded source has to build its own.
-        let catalog = match util::build_schema_catalog(self.dialect, &self.schema_files) {
-            Ok(c) => c,
-            Err(e) => {
-                eprintln!("error: {e}");
-                return Analysis::CatalogError;
-            }
-        };
         let mut analyzer = syntaqlite::embedded::EmbeddedAnalyzer::new(self.dialect.clone())
-            .with_catalog(catalog)
+            .with_catalog(self.schema_catalog.clone())
             .with_config(self.config);
-        let diags = analyzer.analyze(&fragments);
-        Analysis::Diagnostics(diags)
+        Analysis::Diagnostics(analyzer.analyze(&fragments))
     }
 }
 
-/// Output of a single source analysis — common shape across standalone and
-/// embedded analyzers. Rendering is the caller's problem.
+/// Output of a single source analysis. Rendering is the caller's problem.
 enum Analysis {
     /// The analyzer ran and produced zero or more diagnostics.
     Diagnostics(Vec<Diagnostic>),
-    /// Embedded-mode scan found no SQL fragments in the host source.
+    /// A host language was selected/detected but its source held no SQL.
     NoEmbeddedFragments,
-    /// Embedded-mode schema catalog failed to load. The error was already
-    /// printed to stderr; the caller should treat this as an errored source.
-    CatalogError,
 }
 
 // ── Renderer strategy ──────────────────────────────────────────────────────
@@ -229,16 +202,6 @@ impl Renderer for JsonRenderer {
             emit_diagnostic_json(&src.label, diag);
         }
         has_errors
-    }
-}
-
-fn extract_fragments(
-    source: &str,
-    lang: HostLanguage,
-) -> Vec<syntaqlite::embedded::EmbeddedFragment> {
-    match lang {
-        HostLanguage::Python => syntaqlite::embedded::extract_python(source),
-        HostLanguage::Typescript => syntaqlite::embedded::extract_typescript(source),
     }
 }
 
