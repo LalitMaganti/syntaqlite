@@ -7227,6 +7227,33 @@ static YYACTIONTYPE yy_reduce(
             pCtx, (SyntaqliteExplainMode)(pCtx->pending_explain_mode - 1),
             yymsp[0].minor.yy277);
         pCtx->pending_explain_mode = 0;
+        // Extend the wrapper node's extent leftwards to cover the EXPLAIN /
+        // EXPLAIN QUERY PLAN keyword, otherwise node_text() of an explained
+        // statement drops it (returning e.g. "SELECT 1" for "EXPLAIN SELECT
+        // 1").
+        //
+        // Why this isn't automatic: the keyword lives in the `explain`
+        // nonterminal, which is a sibling of `cmdx` in the parent rule
+        // `ecmd ::= explain cmdx SEMI`. SQLite marks that rule {NEVER-REDUCE}
+        // (and we mirror it: the statement is finished here, in cmdx), so the
+        // reduction that would normally merge `explain`'s span into the node
+        // never runs. The wrapper node is therefore built — and its extent
+        // recorded — spanning only `cmd`.
+        //
+        // Why n - 2: extent tracking shadows Lemon's symbol stack one entry per
+        // symbol. on_reduce runs before this action and has already collapsed
+        // `cmd` into the top entry (n - 1, == the new cmdx node). The `explain`
+        // nonterminal was reduced earlier and sits in the entry directly below
+        // it (n - 2). Its root_start is the byte offset of the keyword; folding
+        // it in (start only — the end is unchanged) makes the extent span the
+        // keyword through the wrapped statement.
+        if (pCtx->collect_node_extents) {
+          uint32_t n = syntaqlite_vec_len(&pCtx->extent_stack);
+          uint32_t kw =
+              syntaqlite_vec_at(&pCtx->extent_stack, n - 2).root_start;
+          syntaqlite_vec_at(&pCtx->node_extents, yylhsminor.yy277).root_start =
+              kw;
+        }
       } else {
         yylhsminor.yy277 = yymsp[0].minor.yy277;
       }
