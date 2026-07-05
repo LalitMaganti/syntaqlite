@@ -307,24 +307,16 @@ def _read_log_file(log_file: Path) -> list[dict]:
 
 
 @dataclass
-class Mismatch:
-    """One statement where syntaqlite and SQLite disagree.
-
-    `detail` is the first syntaqlite diagnostic or parse error (false
-    positives) or the SQLite error (gaps). `category` is the normalized
-    bucket used for baselines and triage.
-    """
+class FalsePositive:
     file: str
     sql: str
-    detail: str
-    category: str
+    parse_error: str
 
 
-def _aggregate(results: list[FileResult]) -> tuple[Summary, list[Mismatch], list[Mismatch]]:
-    """Compute summary statistics and collect false positives and gaps."""
+def _aggregate(results: list[FileResult]) -> tuple[Summary, list[FalsePositive]]:
+    """Compute summary statistics and collect false positives."""
     s = Summary()
-    fps: list[Mismatch] = []
-    gaps: list[Mismatch] = []
+    fps: list[FalsePositive] = []
     for fr in results:
         for entry in fr.entries:
             s.total += 1
@@ -345,22 +337,15 @@ def _aggregate(results: list[FileResult]) -> tuple[Summary, list[Mismatch], list
                 s.both_reject += 1
             elif sqlite_ok and not syntaqlite_ok:
                 s.false_positive += 1
-                # Categorize by the *first* diagnostic — later ones are often
-                # cascading (e.g. unknown column after unknown table).
-                if not parse_ok:
-                    detail = entry.get("parse_error", "")
-                    category = "PARSE ERROR: " + _normalize_sqlite_error(detail)
-                else:
-                    detail = diagnostics[0]["message"]
-                    category = _normalize_diagnostic(detail)
-                fps.append(Mismatch(fr.file, entry.get("sql", ""), detail, category))
+                fps.append(FalsePositive(
+                    file=fr.file,
+                    sql=entry.get("sql", ""),
+                    parse_error=entry.get("parse_error", ""),
+                ))
             else:
                 s.gap += 1
-                detail = entry.get("sqlite_error", "")
-                category = _normalize_sqlite_error(detail) or "(no error message)"
-                gaps.append(Mismatch(fr.file, entry.get("sql", ""), detail, category))
 
-    return s, fps, gaps
+    return s, fps
 
 
 def _print_summary(
@@ -368,7 +353,7 @@ def _print_summary(
     error_files: list[tuple[str, str]],
     skipped: list[str],
     verbose: bool,
-    false_positives: list[Mismatch],
+    false_positives: list[FalsePositive],
 ) -> None:
     """Print the standard summary block."""
     print()
@@ -397,7 +382,7 @@ def _print_summary(
             sql_display = fp.sql[:200]
             if len(fp.sql) > 200:
                 sql_display += "..."
-            print(f"    {fp.file}: {fp.detail}")
+            print(f"    {fp.file}: {fp.parse_error}")
             print(f"      SQL: {sql_display}")
             print()
         if len(false_positives) > 50:
@@ -461,18 +446,13 @@ def _normalize_sqlite_error(msg: str) -> str:
     return msg[:60] if len(msg) > 60 else msg
 
 
-def _analyze_detailed(
-    results: list[FileResult],
-    fps: list[Mismatch],
-    gaps: list[Mismatch],
-    verbose: bool,
-) -> None:
+def _analyze_detailed(results: list[FileResult], verbose: bool) -> None:
     """Print a detailed breakdown of false positives and gaps."""
 
-    fp_diagnostics = Counter(fp.category for fp in fps)
-    fp_by_file = Counter(fp.file for fp in fps)
-    gap_errors = Counter(g.category for g in gaps)
-    gap_by_file = Counter(g.file for g in gaps)
+    fp_diagnostics: Counter[str] = Counter()
+    fp_by_file: Counter[str] = Counter()
+    gap_errors: Counter[str] = Counter()
+    gap_by_file: Counter[str] = Counter()
     parse_error_categories: Counter[str] = Counter()
 
     for fr in results:
@@ -482,8 +462,24 @@ def _analyze_detailed(
             diagnostics = entry.get("diagnostics") or []
             syntaqlite_ok = parse_ok and len(diagnostics) == 0
 
-            # Parse errors on statements SQLite also rejects (agreement).
-            if not parse_ok and not sqlite_ok and not syntaqlite_ok:
+            if sqlite_ok and not syntaqlite_ok:
+                # False positive.  Only count the *first* diagnostic —
+                # later ones are often cascading (e.g. unknown column
+                # after unknown table) and hide the real root cause.
+                fp_by_file[fr.file] += 1
+                if not parse_ok:
+                    pe = entry.get("parse_error", "")
+                    fp_diagnostics["PARSE ERROR: " + _normalize_sqlite_error(pe)] += 1
+                elif diagnostics:
+                    fp_diagnostics[_normalize_diagnostic(diagnostics[0]["message"])] += 1
+
+            elif not sqlite_ok and syntaqlite_ok:
+                # Gap.
+                gap_by_file[fr.file] += 1
+                se = entry.get("sqlite_error", "")
+                gap_errors[_normalize_sqlite_error(se)] += 1
+
+            elif not parse_ok:
                 pe = entry.get("parse_error", "")
                 parse_error_categories[_normalize_sqlite_error(pe)] += 1
 
@@ -534,54 +530,6 @@ def _analyze_detailed(
 
 
 # ---------------------------------------------------------------------------
-# Triage report
-# ---------------------------------------------------------------------------
-
-_TRIAGE_EXAMPLES_PER_CATEGORY = 5
-
-
-def _write_triage_report(path: Path, fps: list[Mismatch], gaps: list[Mismatch]) -> None:
-    """Write a markdown worklist of every disagreement, grouped by category.
-
-    Regenerated on every run (including --analyze-only) so the current
-    gap/false-positive backlog is always one command away. Categories are
-    sorted by count — the top entries are the highest-leverage fixes.
-    """
-    out: list[str] = [
-        "# Upstream SQLite triage worklist",
-        "",
-        "Generated by the `upstream-sqlite` suite. Regenerate with:",
-        "`tools/run-integration-tests --suite upstream-sqlite --analyze-only`",
-        "",
-    ]
-
-    def section(title: str, items: list[Mismatch]) -> None:
-        by_cat: dict[str, list[Mismatch]] = {}
-        for m in items:
-            by_cat.setdefault(m.category, []).append(m)
-        out.append(f"## {title} — {len(items)} across {len(by_cat)} categories")
-        out.append("")
-        for cat, ms in sorted(by_cat.items(), key=lambda kv: (-len(kv[1]), kv[0])):
-            out.append(f"### {cat} ({len(ms)})")
-            out.append("")
-            for m in ms[:_TRIAGE_EXAMPLES_PER_CATEGORY]:
-                sql = " ".join(m.sql.split())
-                if len(sql) > 200:
-                    sql = sql[:200] + "..."
-                out.append(f"- `{m.file}`: {m.detail}")
-                out.append(f"  - `{sql}`")
-            if len(ms) > _TRIAGE_EXAMPLES_PER_CATEGORY:
-                out.append(f"- ... and {len(ms) - _TRIAGE_EXAMPLES_PER_CATEGORY} more")
-            out.append("")
-
-    section("Gaps (syntaqlite accepts, SQLite rejects)", gaps)
-    section("False positives (syntaqlite rejects valid SQL)", fps)
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("\n".join(out) + "\n")
-
-
-# ---------------------------------------------------------------------------
 # Baseline comparison
 # ---------------------------------------------------------------------------
 
@@ -599,48 +547,10 @@ def _platform_baseline_path(base_path: Path) -> Path:
     return base_path
 
 
-def _ratchet_mismatches(
-    old: dict, scalar_key: str, label: str,
-    new_total: int, new_categories: dict[str, int],
-) -> int:
-    """One-way ratchet on a mismatch count. Returns the regression delta.
-
-    Prefers per-category comparison (a shift between categories is a
-    regression even when the total is flat); falls back to the scalar total
-    for baselines that predate category tracking.
-    """
-    old_categories = old.get(scalar_key + "_categories")
-    if old_categories is None:
-        old_total = old.get(scalar_key)
-        if old_total is None or new_total <= old_total:
-            return 0
-        print(f"  Regression: {scalar_key} increased from {old_total} to {new_total}")
-        return new_total - old_total
-
-    regressions = 0
-    for cat, count in new_categories.items():
-        old_count = old_categories.get(cat, 0)
-        if count > old_count:
-            print(
-                f"  Regression: {label} category {cat!r} "
-                f"increased from {old_count} to {count}",
-            )
-            regressions += count - old_count
-    return regressions
-
-
 def _check_baseline(
-    baseline_path: Path, summary: Summary,
-    fps: list[Mismatch], gaps: list[Mismatch],
-    rebaseline: bool,
+    baseline_path: Path, summary: Summary, rebaseline: bool,
 ) -> int:
-    """Compare against baseline. Returns number of regressions (0 = pass).
-
-    Note: editing the _normalize_* categorizers reshuffles category keys and
-    requires a --rebaseline.
-    """
-    fp_categories = dict(sorted(Counter(fp.category for fp in fps).items()))
-    gap_categories = dict(sorted(Counter(g.category for g in gaps).items()))
+    """Compare against baseline. Returns number of regressions (0 = pass)."""
     data = {
         "total": summary.total,
         "parse_ok": summary.parse_ok,
@@ -649,8 +559,6 @@ def _check_baseline(
         "both_reject": summary.both_reject,
         "false_positive": summary.false_positive,
         "gap": summary.gap,
-        "false_positive_categories": fp_categories,
-        "gap_categories": gap_categories,
     }
 
     # Use platform-specific baseline when available.
@@ -675,12 +583,12 @@ def _check_baseline(
     old = json.loads(effective_path.read_text())
     regressions = 0
 
-    regressions += _ratchet_mismatches(
-        old, "false_positive", "false positive", summary.false_positive, fp_categories,
-    )
-    regressions += _ratchet_mismatches(
-        old, "gap", "gap", summary.gap, gap_categories,
-    )
+    if summary.false_positive > old.get("false_positive", 0):
+        print(
+            f"  Regression: false_positive increased from "
+            f"{old['false_positive']} to {summary.false_positive}",
+        )
+        regressions += summary.false_positive - old["false_positive"]
 
     if summary.parse_ok < old.get("parse_ok", 0):
         print(
@@ -691,16 +599,6 @@ def _check_baseline(
 
     if regressions == 0:
         print("\n  No regressions from baseline.")
-        improvements = sum(
-            old[key] - data[key]
-            for key in ("false_positive", "gap")
-            if key in old and data[key] < old[key]
-        )
-        if improvements:
-            print(
-                f"  {improvements} fewer mismatch(es) than baseline — "
-                "run with --rebaseline to lock this in.",
-            )
 
     return regressions
 
@@ -751,18 +649,12 @@ def run(ctx: SuiteContext) -> int:
             return 1
 
         print(f"  Loaded {len(file_results)} log files from {logs_dir}")
-        summary, false_positives, gaps = _aggregate(file_results)
+        summary, false_positives = _aggregate(file_results)
         _print_summary(summary, len(file_results), [], [], verbose, false_positives)
-        _analyze_detailed(file_results, false_positives, gaps, verbose)
-
-        triage_path = root / "tests" / "upstream_baselines" / "triage.md"
-        _write_triage_report(triage_path, false_positives, gaps)
-        print(f"\n  Triage worklist written to {triage_path}")
+        _analyze_detailed(file_results, verbose)
 
         baseline_path = root / "tests" / "upstream_baselines" / "parse_acceptance.json"
-        regressions = _check_baseline(
-            baseline_path, summary, false_positives, gaps, ctx.rebaseline,
-        )
+        regressions = _check_baseline(baseline_path, summary, ctx.rebaseline)
         if regressions > 0:
             print(f"\n  {regressions} regression(s) detected!")
             return 1
@@ -840,21 +732,15 @@ def run(ctx: SuiteContext) -> int:
         print()  # Clear progress line.
 
     # Aggregate and print summary.
-    summary, false_positives, gaps = _aggregate(file_results)
+    summary, false_positives = _aggregate(file_results)
     error_files = [(r.file, r.error) for r in file_results if r.error]
 
     _print_summary(summary, len(file_results), error_files, skipped, verbose, false_positives)
-    _analyze_detailed(file_results, false_positives, gaps, verbose)
-
-    triage_path = root / "tests" / "upstream_baselines" / "triage.md"
-    _write_triage_report(triage_path, false_positives, gaps)
-    print(f"\n  Triage worklist written to {triage_path}")
+    _analyze_detailed(file_results, verbose)
 
     # Baseline comparison.
     baseline_path = root / "tests" / "upstream_baselines" / "parse_acceptance.json"
-    regressions = _check_baseline(
-        baseline_path, summary, false_positives, gaps, ctx.rebaseline,
-    )
+    regressions = _check_baseline(baseline_path, summary, ctx.rebaseline)
     if regressions > 0:
         print(f"\n  {regressions} regression(s) detected!")
         return 1
