@@ -286,7 +286,17 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             return;
         };
         let role = StmtReader::new(self.stmt, self.roles).role_for_tag(tag);
+        self.dispatch_role(visitor, node_id, role, &fields);
+    }
 
+    /// Route a node to its role-specific walker.
+    fn dispatch_role<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        role: SemanticRole,
+        fields: &NodeFields,
+    ) {
         match role {
             SemanticRole::DefineTable { select, .. } => {
                 if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
@@ -314,16 +324,16 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             | SemanticRole::CteBinding { .. } => self.walk_children(visitor, node_id),
 
             SemanticRole::Call { name, args } => {
-                self.walk_call(visitor, node_id, &fields, name, args);
+                self.walk_call(visitor, node_id, fields, name, args);
             }
             SemanticRole::ColumnRef { column, table } => {
-                self.walk_column_ref(visitor, node_id, &fields, column, table);
+                self.walk_column_ref(visitor, node_id, fields, column, table);
             }
             SemanticRole::SourceRef { name, alias, .. } => {
-                self.walk_source_ref(visitor, node_id, &fields, name, alias);
+                self.walk_source_ref(visitor, node_id, fields, name, alias);
             }
             SemanticRole::ScopedSource { body, alias } => {
-                self.walk_scoped_source(visitor, &fields, body, alias);
+                self.walk_scoped_source(visitor, fields, body, alias);
             }
             SemanticRole::Query {
                 from,
@@ -336,7 +346,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             } => self.walk_query(
                 visitor,
                 node_id,
-                &fields,
+                fields,
                 from,
                 columns,
                 where_clause,
@@ -349,16 +359,16 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 recursive,
                 bindings,
                 body,
-            } => self.walk_cte_scope(visitor, &fields, recursive, bindings, body),
+            } => self.walk_cte_scope(visitor, fields, recursive, bindings, body),
             SemanticRole::TriggerScope {
                 target: _,
                 when,
                 body,
-            } => self.walk_trigger_scope(visitor, &fields, when, body),
+            } => self.walk_trigger_scope(visitor, fields, when, body),
             SemanticRole::DmlScope {
                 with_recursive,
                 with_ctes,
-            } => self.walk_dml_scope(visitor, &fields, with_recursive, with_ctes),
+            } => self.walk_dml_scope(visitor, fields, with_recursive, with_ctes),
             SemanticRole::UpsertScope {
                 columns,
                 target_where,
@@ -367,7 +377,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             } => {
                 self.walk_upsert_scope(
                     visitor,
-                    &fields,
+                    fields,
                     columns,
                     target_where,
                     setlist,
@@ -380,7 +390,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 orderby,
                 limit_clause,
             } => {
-                self.walk_compound_scope(visitor, &fields, left, right, orderby, limit_clause);
+                self.walk_compound_scope(visitor, fields, left, right, orderby, limit_clause);
             }
         }
     }
