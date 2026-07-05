@@ -552,6 +552,18 @@ mod tests {
         );
     }
 
+    #[test]
+    fn string_literal_alias_is_addressable() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t1", Some(vec!["a".into()]), false);
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT b.a FROM t1 AS 'b'", &mut ctx);
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+    }
+
     // SQLite double-quoted-string (DQS) bug-compat: a `"foo"` in expression
     // position that doesn't resolve to a column is re-interpreted as a string
     // literal rather than rejected.  See https://www.sqlite.org/quirks.html.
