@@ -553,6 +553,100 @@ mod tests {
     }
 
     #[test]
+    fn unknown_qualifier_flagged_with_scope_suggestion() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "foo",
+            Some(vec!["id".into(), "name".into()]),
+            false,
+        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        // Issue #281: `b` is never defined; the only alias in scope is `a`.
+        let model = analyzer.analyze("SELECT b.id FROM foo AS a", &mut ctx);
+        assert_eq!(diag_messages(&model), vec!["unknown table: b".to_string()]);
+        let help = model
+            .diagnostics()
+            .next()
+            .and_then(|d| d.help())
+            .map(ToString::to_string);
+        assert_eq!(help.as_deref(), Some("did you mean 'a'?"));
+    }
+
+    #[test]
+    fn aliased_table_hides_base_name() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "foo",
+            Some(vec!["id".into()]),
+            false,
+        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        // SQLite: once aliased, the base name is not addressable.
+        let model = analyzer.analyze("SELECT foo.id FROM foo AS a", &mut ctx);
+        assert_eq!(
+            diag_messages(&model),
+            vec!["unknown table: foo".to_string()],
+        );
+    }
+
+    #[test]
+    fn excluded_resolves_in_upsert_do_update() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "foo",
+            Some(vec!["id".into(), "name".into()]),
+            false,
+        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze(
+            "INSERT INTO foo(id) VALUES (1) ON CONFLICT(id) \
+             DO UPDATE SET name = excluded.name WHERE excluded.id > foo.id",
+            &mut ctx,
+        );
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+    }
+
+    #[test]
+    fn excluded_carries_target_columns() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "foo",
+            Some(vec!["id".into(), "name".into()]),
+            false,
+        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze(
+            "INSERT INTO foo(id) VALUES (1) ON CONFLICT(id) DO UPDATE SET name = excluded.nosuch",
+            &mut ctx,
+        );
+        assert_eq!(
+            diag_messages(&model),
+            vec!["unknown column: excluded.nosuch".to_string()],
+        );
+    }
+
+    #[test]
+    fn excluded_not_visible_outside_do_update() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "foo",
+            Some(vec!["id".into()]),
+            false,
+        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("SELECT excluded.id FROM foo", &mut ctx);
+        assert_eq!(
+            diag_messages(&model),
+            vec!["unknown table: excluded".to_string()],
+        );
+    }
+
+    #[test]
     fn sources_bind_before_expressions_resolve() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
@@ -624,6 +718,37 @@ mod tests {
             .insert_table("t1", Some(vec!["a".into()]), false);
         let mut ctx = AnalysisContext::new(&mut catalog);
         let model = analyzer.analyze("SELECT b.a FROM t1 AS 'b'", &mut ctx);
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+    }
+
+    #[test]
+    fn view_body_name_resolution_is_deferred() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "t1",
+            Some(vec!["aa".into()]),
+            false,
+        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        // SQLite stores view bodies unresolved; errors surface at first use.
+        let model = analyzer.analyze(
+            "CREATE VIEW v AS SELECT 1 FROM t1 AS bb WHERE bb.aa <= sts.aa",
+            &mut ctx,
+        );
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+    }
+
+    #[test]
+    fn hole_placeholder_qualifier_accepted() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t1", Some(vec!["a".into()]), false);
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        // Embedded-SQL hole placeholders stand in for host expressions.
+        let model = analyzer.analyze("SELECT ___.a FROM t1", &mut ctx);
         assert_eq!(diag_messages(&model), Vec::<String>::new());
     }
 

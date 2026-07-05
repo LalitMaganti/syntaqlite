@@ -34,6 +34,67 @@ fn is_hole_placeholder(name: &str) -> bool {
     !name.is_empty() && name.bytes().all(|b| b == b'_')
 }
 
+/// Why an unresolved column reference is intentionally accepted without a
+/// diagnostic.
+///
+/// Naming a variant here is the only sanctioned way to skip a diagnostic on
+/// a resolution failure — never a bare `=> {}` arm (issue #281: exactly
+/// that silently hid every unknown qualifier to protect one unmodeled
+/// construct). Variants either model real `SQLite` behavior (permanent) or
+/// name an unmodeled construct (tracked debt: cite the construct, delete
+/// the variant once the walker registers it in scope).
+enum AcceptedRef {
+    /// `SQLite` DQS bug-compat: an unresolved `"foo"` written with double
+    /// quotes in the original source re-reads as a string literal.
+    DqsStringLiteral,
+    /// `SQLite` resolves bare TRUE/FALSE identifiers to integer literals.
+    BooleanLiteral,
+    /// Embedded-SQL hole placeholder — stands in for a host expression.
+    HolePlaceholder,
+    /// `SQLite` defers view-body name resolution until the view is first
+    /// used; a CREATE VIEW referencing unknown qualifiers still prepares.
+    ViewBodyDeferredResolution,
+}
+
+/// Decide whether an unresolved column ref is intentionally accepted.
+/// `None` means the failure deserves a diagnostic.
+fn accepted_ref(ev: &ColumnRefEvent<'_>) -> Option<AcceptedRef> {
+    match ev.resolution {
+        ColumnResolution::Found { .. } => None,
+        ColumnResolution::TableNotFound => {
+            // Only the qualifier's own text matters here — the column being
+            // a hole doesn't make an unknown qualifier valid.
+            if ev.table.is_some_and(is_hole_placeholder) {
+                Some(AcceptedRef::HolePlaceholder)
+            } else if ev.in_view_body {
+                Some(AcceptedRef::ViewBodyDeferredResolution)
+            } else {
+                None
+            }
+        }
+        ColumnResolution::TableFoundColumnMissing => {
+            if ev.dqs_candidate {
+                Some(AcceptedRef::DqsStringLiteral)
+            } else if is_hole_placeholder(ev.column) {
+                Some(AcceptedRef::HolePlaceholder)
+            } else {
+                None
+            }
+        }
+        ColumnResolution::NotFound => {
+            if ev.column.eq_ignore_ascii_case("true") || ev.column.eq_ignore_ascii_case("false") {
+                Some(AcceptedRef::BooleanLiteral)
+            } else if ev.dqs_candidate {
+                Some(AcceptedRef::DqsStringLiteral)
+            } else if is_hole_placeholder(ev.column) {
+                Some(AcceptedRef::HolePlaceholder)
+            } else {
+                None
+            }
+        }
+    }
+}
+
 impl CheckConfig {
     /// Get the check level for a diagnostic message's category.
     pub(crate) fn level_for(self, message: &DiagnosticMessage) -> CheckLevel {
@@ -126,6 +187,72 @@ impl<'a, V: SemanticVisitor> StatementVisitor<'a, V> {
             });
         }
     }
+
+    /// Diagnose a column ref whose resolution failed and was not accepted
+    /// by [`accepted_ref`].
+    fn emit_unresolved_column_ref(
+        &mut self,
+        stmt: &mut AnyParsedStatement<'_>,
+        cx: &mut WalkCtx<'_>,
+        ev: &ColumnRefEvent<'_>,
+    ) {
+        match ev.resolution {
+            // Gated out by the caller / accepted_ref.
+            // Gated out by the caller / accepted_ref.
+            ColumnResolution::Found { .. } => {}
+            ColumnResolution::TableNotFound => {
+                let tbl = ev.table.expect("qualifier present when TableNotFound");
+                let candidates = cx.scope.all_source_names();
+                let suggestion =
+                    best_suggestion(tbl, &candidates, self.config.suggestion_threshold());
+                self.emit(
+                    stmt,
+                    ev.node_id,
+                    ev.table_idx,
+                    ev.table_range.unwrap_or(ev.range),
+                    DiagnosticMessage::UnknownTable {
+                        name: tbl.to_string(),
+                    },
+                    suggestion.map(Help::Suggestion),
+                );
+            }
+            ColumnResolution::TableFoundColumnMissing => {
+                let tbl = ev
+                    .table
+                    .expect("qualifier present when TableFoundColumnMissing");
+                let candidates = cx.scope.all_column_names(Some(tbl));
+                let suggestion =
+                    best_suggestion(ev.column, &candidates, self.config.suggestion_threshold());
+                self.emit(
+                    stmt,
+                    ev.node_id,
+                    ev.column_idx,
+                    ev.range,
+                    DiagnosticMessage::UnknownColumn {
+                        column: ev.column.to_string(),
+                        table: Some(tbl.to_string()),
+                    },
+                    suggestion.map(Help::Suggestion),
+                );
+            }
+            ColumnResolution::NotFound => {
+                let candidates = cx.scope.all_column_names(None);
+                let suggestion =
+                    best_suggestion(ev.column, &candidates, self.config.suggestion_threshold());
+                self.emit(
+                    stmt,
+                    ev.node_id,
+                    ev.column_idx,
+                    ev.range,
+                    DiagnosticMessage::UnknownColumn {
+                        column: ev.column.to_string(),
+                        table: None,
+                    },
+                    suggestion.map(Help::Suggestion),
+                );
+            }
+        }
+    }
 }
 
 impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
@@ -174,53 +301,8 @@ impl<V: SemanticVisitor> SemanticVisitor for StatementVisitor<'_, V> {
         cx: &mut WalkCtx<'_>,
         ev: ColumnRefEvent<'_>,
     ) {
-        match ev.resolution {
-            ColumnResolution::Found { .. } | ColumnResolution::TableNotFound => {}
-            ColumnResolution::TableFoundColumnMissing => {
-                // DQS bug-compat: unresolved `"foo"` is re-interpreted as a
-                // string literal by SQLite. Don't FP here.
-                if !ev.dqs_candidate && !is_hole_placeholder(ev.column) {
-                    let tbl = ev
-                        .table
-                        .expect("qualifier present when TableFoundColumnMissing");
-                    let candidates = cx.scope.all_column_names(Some(tbl));
-                    let suggestion =
-                        best_suggestion(ev.column, &candidates, self.config.suggestion_threshold());
-                    self.emit(
-                        stmt,
-                        ev.node_id,
-                        ev.column_idx,
-                        ev.range,
-                        DiagnosticMessage::UnknownColumn {
-                            column: ev.column.to_string(),
-                            table: Some(tbl.to_string()),
-                        },
-                        suggestion.map(Help::Suggestion),
-                    );
-                }
-            }
-            ColumnResolution::NotFound => {
-                // SQLite resolves bare TRUE/FALSE identifiers to integer
-                // literals.
-                let is_bool_literal = ev.column.eq_ignore_ascii_case("true")
-                    || ev.column.eq_ignore_ascii_case("false");
-                if !is_bool_literal && !ev.dqs_candidate && !is_hole_placeholder(ev.column) {
-                    let candidates = cx.scope.all_column_names(None);
-                    let suggestion =
-                        best_suggestion(ev.column, &candidates, self.config.suggestion_threshold());
-                    self.emit(
-                        stmt,
-                        ev.node_id,
-                        ev.column_idx,
-                        ev.range,
-                        DiagnosticMessage::UnknownColumn {
-                            column: ev.column.to_string(),
-                            table: None,
-                        },
-                        suggestion.map(Help::Suggestion),
-                    );
-                }
-            }
+        if !matches!(ev.resolution, ColumnResolution::Found { .. }) && accepted_ref(&ev).is_none() {
+            self.emit_unresolved_column_ref(stmt, cx, &ev);
         }
         self.extra.on_column_ref(stmt, cx, ev);
     }

@@ -76,6 +76,12 @@ pub(crate) struct ColumnRefEvent<'a> {
     pub(crate) range: DocRange,
     pub(crate) column: &'a str,
     pub(crate) table: Option<&'a str>,
+    pub(crate) table_idx: u8,
+    /// Document-absolute range of the qualifier, when present.
+    pub(crate) table_range: Option<DocRange>,
+    /// The ref is inside a CREATE VIEW body, where `SQLite` defers name
+    /// resolution until the view is first used.
+    pub(crate) in_view_body: bool,
     pub(crate) resolution: &'a ColumnResolution,
     /// `SQLite`'s double-quoted-string bug-compat: a `"foo"` identifier in
     /// expression position that doesn't resolve to a column is re-interpreted
@@ -234,6 +240,8 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     catalog: &'a mut Catalog,
     scope: QueryScope,
     roles: &'static [SemanticRole],
+    /// Depth of nested CREATE VIEW bodies currently being walked.
+    view_body_depth: u32,
 }
 
 impl<'a, 'b> SemanticWalker<'a, 'b> {
@@ -247,6 +255,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             catalog,
             scope: QueryScope::default(),
             roles,
+            view_body_depth: 0,
         }
     }
 
@@ -279,11 +288,20 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let role = StmtReader::new(self.stmt, self.roles).role_for_tag(tag);
 
         match role {
-            SemanticRole::DefineTable { select, .. } | SemanticRole::DefineView { select, .. } => {
+            SemanticRole::DefineTable { select, .. } => {
                 if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
                     self.emit_ddl_definitions(visitor, node_id);
                 }
                 self.walk_opt(visitor, fields.node_id_at(select));
+            }
+            SemanticRole::DefineView { select, .. } => {
+                if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
+                    self.emit_ddl_definitions(visitor, node_id);
+                }
+                // SQLite defers view-body name resolution to first use.
+                self.view_body_depth += 1;
+                self.walk_opt(visitor, fields.node_id_at(select));
+                self.view_body_depth -= 1;
             }
             SemanticRole::DefineFunction { select, .. } => {
                 self.walk_opt(visitor, fields.node_id_at(select));
@@ -575,9 +593,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             return;
         }
         let column = self.stmt.span_expanded_text(col_sp);
-        let table = match fields[table_idx as usize] {
-            FieldValue::Span(sp) if !sp.is_empty() => Some(self.stmt.span_expanded_text(sp)),
-            _ => None,
+        let (table, table_range) = match fields[table_idx as usize] {
+            FieldValue::Span(sp) if !sp.is_empty() => {
+                let (_, r) = self.stmt.span_text_abs(sp);
+                (Some(self.stmt.span_expanded_text(sp)), Some(r))
+            }
+            _ => (None, None),
         };
         let (_, range) = self.stmt.span_text_abs(col_sp);
         // SQLite's DQS bug-compat applies only to identifiers that were
@@ -594,8 +615,11 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 range,
                 column,
                 table,
+                table_idx,
+                table_range,
                 resolution: &resolution,
                 dqs_candidate,
+                in_view_body: self.view_body_depth > 0,
             };
             let mut cx = WalkCtx {
                 catalog: self.catalog,
