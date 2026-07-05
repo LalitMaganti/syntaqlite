@@ -132,5 +132,7 @@ class ValuesClause(TestSuite):
                         Literal
                           literal_type: INTEGER
                           source: "2"
+              orderby: (none)
+              limit_clause: (none)
 """,
         )

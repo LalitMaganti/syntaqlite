@@ -313,6 +313,23 @@ fn role_to_bytes(
             bytes[3] = opt(setlist);
             bytes[4] = opt(update_where);
         }
+        SynqRole::CompoundScope {
+            left,
+            right,
+            orderby,
+            limit_clause,
+        } => {
+            bytes[0] = disc(SemanticRole::CompoundScope {
+                left: 0,
+                right: 0,
+                orderby: 0,
+                limit_clause: 0,
+            });
+            bytes[1] = fi(left);
+            bytes[2] = fi(right);
+            bytes[3] = opt(orderby);
+            bytes[4] = opt(limit_clause);
+        }
     }
 
     bytes

@@ -127,6 +127,12 @@ pub(crate) enum SemanticRole {
         setlist: Option<String>,
         update_where: Option<String>,
     },
+    CompoundScope {
+        left: String,
+        right: String,
+        orderby: Option<String>,
+        limit_clause: Option<String>,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -709,6 +715,12 @@ impl Parser {
                 target_where: get_param(&params, "target_where").map(str::to_string),
                 setlist: get_param(&params, "setlist").map(str::to_string),
                 update_where: get_param(&params, "update_where").map(str::to_string),
+            },
+            "compound_scope" => SemanticRole::CompoundScope {
+                left: require_param(&params, "left", node_name, "compound_scope")?,
+                right: require_param(&params, "right", node_name, "compound_scope")?,
+                orderby: get_param(&params, "orderby").map(str::to_string),
+                limit_clause: get_param(&params, "limit_clause").map(str::to_string),
             },
             _ => {
                 return Err(format!(
