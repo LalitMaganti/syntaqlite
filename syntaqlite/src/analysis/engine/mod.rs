@@ -582,6 +582,40 @@ mod tests {
     }
 
     #[test]
+    fn compound_order_by_resolves_against_all_arms() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t1", Some(vec!["a".into()]), false);
+        catalog
+            .layer_mut(CatalogLayer::Database)
+            .insert_table("t2", Some(vec!["x".into()]), false);
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        // Terms may reference any arm's sources...
+        let model = analyzer.analyze(
+            "SELECT a FROM t1 UNION ALL SELECT x FROM t2 ORDER BY t1.a, t2.x",
+            &mut ctx,
+        );
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+        // ...or any arm's select aliases.
+        let model = analyzer.analyze(
+            "SELECT a AS q FROM t1 UNION ALL SELECT x FROM t2 ORDER BY q",
+            &mut ctx,
+        );
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+        // ...and are column-checked, not blindly accepted.
+        let model = analyzer.analyze(
+            "SELECT a FROM t1 UNION ALL SELECT x FROM t2 ORDER BY t1.nosuch",
+            &mut ctx,
+        );
+        assert_eq!(
+            diag_messages(&model),
+            vec!["unknown column: t1.nosuch".to_string()],
+        );
+    }
+
+    #[test]
     fn string_literal_alias_is_addressable() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();

@@ -1729,6 +1729,12 @@ impl<'a> CompoundSelect<'a> {
     pub fn right(&self) -> Option<Select<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.right)
     }
+    pub fn orderby(&self) -> Option<OrderByList<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.orderby)
+    }
+    pub fn limit_clause(&self) -> Option<LimitClause<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.limit_clause)
+    }
 }
 
 impl<'a> GrammarNodeType<'a> for CompoundSelect<'a> {
