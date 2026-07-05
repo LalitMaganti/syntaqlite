@@ -851,6 +851,40 @@ mod tests {
     }
 
     #[test]
+    fn parser_collect_node_extents_explain_spans_keyword() {
+        // EXPLAIN / EXPLAIN QUERY PLAN: the wrapper node is built in
+        // `cmdx ::= cmd`, while the keyword lives in the sibling `explain`
+        // nonterminal.  SQLite marks the parent `ecmd ::= explain cmdx SEMI`
+        // rule {NEVER-REDUCE}, so the wrapper's extent must be folded over the
+        // keyword at build time, else node_text drops it.  Regression test for
+        // EXPLAIN node_text losing the leading keyword.
+        let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
+
+        for (source, expected) in [
+            ("EXPLAIN SELECT 1;", "EXPLAIN SELECT 1"),
+            (
+                "EXPLAIN QUERY PLAN SELECT * FROM t;",
+                "EXPLAIN QUERY PLAN SELECT * FROM t",
+            ),
+            // Whitespace between keyword and statement is preserved verbatim.
+            ("EXPLAIN   SELECT 1;", "EXPLAIN   SELECT 1"),
+        ] {
+            let mut session = parser.parse(source);
+            let ParseOutcome::Ok(statement) = session.next() else {
+                panic!("expected Ok for {source:?}");
+            };
+            let root_id = statement.erase().root_id();
+            let (text, offset) = statement
+                .node_text(root_id)
+                .expect("root node should have recorded text");
+            assert_eq!(text, expected, "node_text for {source:?}");
+            // Extent starts at the keyword (byte 0 of the statement).
+            assert_eq!(offset, StmtOffset::default(), "offset for {source:?}");
+            drop(session);
+        }
+    }
+
+    #[test]
     fn parser_collect_node_extents_attributes_macro_tokens_to_call_site() {
         // The SELECT node crosses layers: `SELECT` comes from the root
         // source, `42` from `id`'s expansion buffer.  `node_text`
