@@ -457,7 +457,15 @@ def _normalize_sqlite_error(msg: str) -> str:
         return "misuse of aggregate"
     if "no tables specified" in msg:
         return "no tables specified"
-    # Keep first 60 chars for anything else.
+    # Fallback: these keys feed the per-category baseline ratchet, so mask
+    # instance-specific data (quoted tokens, ordinals, numbers/identifiers
+    # with digits, ": <object>" tails) to group by error class — otherwise
+    # each instance becomes its own ratchet category and any shift reads as
+    # a regression. triage.md still shows the raw message via `detail`.
+    msg = re.sub(r'"[^"]*"?', '"?"', msg)
+    msg = re.sub(r"\b\d+(?:st|nd|rd|th)\b", "Nth", msg)
+    msg = re.sub(r"\b\w*\d\w*\b", "N", msg)
+    msg = re.sub(r"(: ).*$", r"\1?", msg)
     return msg[:60] if len(msg) > 60 else msg
 
 
