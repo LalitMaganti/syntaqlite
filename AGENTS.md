@@ -281,3 +281,13 @@ changes.
 Logs are persisted per test file at `tests/upstream_baselines/logs/<testname>.jsonl`
 (gitignored). Pass `--validate` to enable the semantic validator; without it only the parser
 is tested.
+
+The baseline (`tests/upstream_baselines/parse_acceptance.<platform>.json`)
+ratchets false positives **and** gaps (syntaqlite accepts, SQLite rejects)
+per error category — any category increasing past its baseline count fails
+the suite. Fixing mismatches requires a `--rebaseline` to lock in the lower
+counts, as does editing the `_normalize_*` categorizers.
+
+Every run also writes `tests/upstream_baselines/triage.md` (gitignored): all
+gaps and false positives grouped by category with example SQL, sorted by
+count. This is the validator-improvement worklist — start at the top.
