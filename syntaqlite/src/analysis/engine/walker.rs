@@ -390,6 +390,87 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         }
     }
 
+    /// Bind every source in `node_id`'s subtree into the current frame,
+    /// before any expression in that scope resolves — mirroring `SQLite`,
+    /// which builds a SELECT's full source list first and resolves names
+    /// against it afterwards. This is what makes within-scope forward
+    /// references work: `JOIN b ON a.x = b.y` inside a longer join chain,
+    /// or UPDATE ... FROM aliases used in the SET list.
+    ///
+    /// Fires no visitor events (the main walk does that) and does not
+    /// cross into nested scopes — their sources belong to their own
+    /// frames. Re-registration by the main walk is idempotent.
+    fn register_sources(&mut self, node_id: AnyNodeId) {
+        if node_id.is_null() {
+            return;
+        }
+        if let Some(children) = self.stmt.list_children(node_id) {
+            for &child in children {
+                if !child.is_null() {
+                    self.register_sources(child);
+                }
+            }
+            return;
+        }
+        let Some((tag, fields)) = self.stmt.extract_fields(node_id) else {
+            return;
+        };
+        match StmtReader::new(self.stmt, self.roles).role_for_tag(tag) {
+            SemanticRole::SourceRef { name, alias, .. } => {
+                self.bind_source_ref(&fields, name, alias);
+            }
+            SemanticRole::ScopedSource { body, alias } => {
+                // Bind the alias only; the body is its own scope.
+                let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias)).0);
+                if !alias_text.is_empty() {
+                    let cols = fields.node_id_at(body).and_then(|id| {
+                        StmtReader::new(self.stmt, self.roles).columns_from_select(id)
+                    });
+                    self.scope
+                        .add_table(alias_text, cols, RowIdPolicy::WithRowId);
+                }
+            }
+            // Nested scopes own their sources.
+            SemanticRole::Query { .. }
+            | SemanticRole::CteScope { .. }
+            | SemanticRole::DmlScope { .. }
+            | SemanticRole::TriggerScope { .. }
+            | SemanticRole::UpsertScope { .. }
+            | SemanticRole::DefineTable { .. }
+            | SemanticRole::DefineView { .. }
+            | SemanticRole::DefineFunction { .. } => {}
+            _ => {
+                for idx in 0..fields.len() {
+                    #[expect(
+                        clippy::cast_possible_truncation,
+                        reason = "NodeFields holds at most 16"
+                    )]
+                    if let Some(child) = fields.node_id_at(idx as u8) {
+                        self.register_sources(child);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Bind a source ref's addressable name (alias if present, else base
+    /// name) into the current frame. Idempotent.
+    fn bind_source_ref(&mut self, fields: &NodeFields, name_idx: u8, alias_idx: u8) {
+        let Some((name, _)) = self.stmt.span_field_range(fields, name_idx) else {
+            return;
+        };
+        let (columns, without_rowid) = self.catalog.table_source_info(name);
+        let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
+        let scope_name = if alias_text.is_empty() {
+            name
+        } else {
+            alias_text
+        };
+        self.scope
+            .add_table(scope_name, columns, without_rowid.into());
+    }
+
+
     // ── Role walkers ──────────────────────────────────────────────────────────
 
     fn walk_source_ref<V: SemanticVisitor>(
@@ -406,7 +487,6 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
-        let (columns, without_rowid) = self.catalog.table_source_info(name);
         let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
         let alias = if alias_text.is_empty() {
             None
@@ -430,9 +510,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             visitor.on_source_ref(self.stmt, &mut cx, ev);
         }
 
-        let scope_name = alias.unwrap_or(name);
-        self.scope
-            .add_table(scope_name, columns, without_rowid.into());
+        self.bind_source_ref(fields, name_idx, alias_idx);
     }
 
     fn walk_call<V: SemanticVisitor>(
@@ -568,9 +646,13 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             visitor.enter_query(self.stmt, node_id);
         }
 
-        // Push a fresh scope so that tables registered by walk_source_ref
-        // are visible when we visit SELECT columns, WHERE, ORDER BY, etc.
+        // Bind all FROM sources first, then walk — so every expression in
+        // this scope (including join ON clauses that precede later
+        // sources) resolves against the complete source list.
         self.scope.push();
+        if let Some(from_id) = fields.node_id_at(from) {
+            self.register_sources(from_id);
+        }
         self.walk_opt(visitor, fields.node_id_at(from));
         self.walk_opt(visitor, fields.node_id_at(columns));
 
@@ -677,6 +759,15 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             self.register_cte_bindings(visitor, fields, recursive_idx, bindings_idx);
         }
         self.scope.push();
+        // Bind the DML target and any UPDATE ... FROM sources before the
+        // SET/WHERE expressions resolve, regardless of field order.
+        for idx in 0..fields.len() {
+            if idx != bindings_idx as usize
+                && let FieldValue::NodeId(child_id) = fields[idx]
+            {
+                self.register_sources(child_id);
+            }
+        }
         self.walk_dml_children_except_ctes(visitor, fields, bindings_idx);
         self.scope.pop();
         if has_ctes {

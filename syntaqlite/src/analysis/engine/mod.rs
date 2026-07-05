@@ -553,6 +553,35 @@ mod tests {
     }
 
     #[test]
+    fn sources_bind_before_expressions_resolve() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        for (name, cols) in [("t1", vec!["a", "b"]), ("t2", vec!["x", "y"])] {
+            catalog.layer_mut(CatalogLayer::Database).insert_table(
+                name,
+                Some(cols.into_iter().map(String::from).collect()),
+                false,
+            );
+        }
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        // UPDATE ... FROM: the SET expression references the FROM alias.
+        let model = analyzer.analyze("UPDATE t1 SET a = o.x FROM t2 AS o", &mut ctx);
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+        // Forward inner-join ON ref: `z` is bound two joins later.
+        let model = analyzer.analyze(
+            "SELECT 1 FROM t1 JOIN t2 ON (z.a = 1) JOIN t1 AS z ON 1=1",
+            &mut ctx,
+        );
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+        // ...and bound sources are column-checked, not blindly accepted.
+        let model = analyzer.analyze("UPDATE t1 SET a = o.nosuch FROM t2 AS o", &mut ctx);
+        assert_eq!(
+            diag_messages(&model),
+            vec!["unknown column: o.nosuch".to_string()],
+        );
+    }
+
+    #[test]
     fn string_literal_alias_is_addressable() {
         let mut analyzer = sqlite_analyzer();
         let mut catalog = sqlite_catalog();
