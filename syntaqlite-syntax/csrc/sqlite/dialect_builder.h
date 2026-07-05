@@ -83,13 +83,17 @@ static inline uint32_t synq_parse_column_ref(SynqParseCtx* ctx,
 static inline uint32_t synq_parse_compound_select(SynqParseCtx* ctx,
                                                   SyntaqliteCompoundOp op,
                                                   uint32_t left,
-                                                  uint32_t right) {
+                                                  uint32_t right,
+                                                  uint32_t orderby,
+                                                  uint32_t limit_clause) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteCompoundSelect){.tag = SYNTAQLITE_NODE_COMPOUND_SELECT,
                                   .op = op,
                                   .left = left,
-                                  .right = right},
+                                  .right = right,
+                                  .orderby = orderby,
+                                  .limit_clause = limit_clause},
       (uint32_t)sizeof(SyntaqliteCompoundSelect));
 }
 

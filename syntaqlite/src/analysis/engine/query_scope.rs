@@ -182,6 +182,20 @@ impl QueryScope {
         frame.named.values().next()?.columns.clone()
     }
 
+    /// Collect all source names in the active frames, for fuzzy
+    /// suggestions on an unresolved qualifier.
+    pub(crate) fn all_source_names(&self) -> Vec<String> {
+        let mut names: Vec<String> = self
+            .frames
+            .iter()
+            .flat_map(|f| f.named.keys())
+            .cloned()
+            .collect();
+        names.sort_unstable();
+        names.dedup();
+        names
+    }
+
     /// Collect all known column names (for fuzzy suggestions).
     pub(crate) fn all_column_names(&self, table: Option<&str>) -> Vec<String> {
         let mut names: Vec<String> = Vec::new();

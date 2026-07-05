@@ -72,12 +72,14 @@ class ColumnRef:
 class CompoundSelect:
     """AST node: CompoundSelect"""
 
-    __slots__ = ("op", "left", "right")
+    __slots__ = ("op", "left", "right", "orderby", "limit_clause")
 
     def __init__(self, d: dict):
         self.op: CompoundOp = CompoundOp[d["op"]]
         self.left: Select | None = _wrap(d.get("left"))
         self.right: Select | None = _wrap(d.get("right"))
+        self.orderby: list[OrderingTerm] | None = _wrap(d.get("orderby"))
+        self.limit_clause: LimitClause | None = _wrap(d.get("limit_clause"))
 
     def __repr__(self):
         return "CompoundSelect(...)"

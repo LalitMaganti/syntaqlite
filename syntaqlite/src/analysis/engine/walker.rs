@@ -76,6 +76,12 @@ pub(crate) struct ColumnRefEvent<'a> {
     pub(crate) range: DocRange,
     pub(crate) column: &'a str,
     pub(crate) table: Option<&'a str>,
+    pub(crate) table_idx: u8,
+    /// Document-absolute range of the qualifier, when present.
+    pub(crate) table_range: Option<DocRange>,
+    /// The ref is inside a CREATE VIEW body, where `SQLite` defers name
+    /// resolution until the view is first used.
+    pub(crate) in_view_body: bool,
     pub(crate) resolution: &'a ColumnResolution,
     /// `SQLite`'s double-quoted-string bug-compat: a `"foo"` identifier in
     /// expression position that doesn't resolve to a column is re-interpreted
@@ -234,6 +240,8 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     catalog: &'a mut Catalog,
     scope: QueryScope,
     roles: &'static [SemanticRole],
+    /// Depth of nested CREATE VIEW bodies currently being walked.
+    view_body_depth: u32,
 }
 
 impl<'a, 'b> SemanticWalker<'a, 'b> {
@@ -247,6 +255,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             catalog,
             scope: QueryScope::default(),
             roles,
+            view_body_depth: 0,
         }
     }
 
@@ -258,6 +267,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 
     // ── Node dispatch ─────────────────────────────────────────────────────────
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "flat dispatch table over all SemanticRole variants; not worth splitting"
+    )]
     fn walk_node<V: SemanticVisitor>(&mut self, visitor: &mut V, node_id: AnyNodeId) {
         if node_id.is_null() {
             return;
@@ -279,11 +292,20 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let role = StmtReader::new(self.stmt, self.roles).role_for_tag(tag);
 
         match role {
-            SemanticRole::DefineTable { select, .. } | SemanticRole::DefineView { select, .. } => {
+            SemanticRole::DefineTable { select, .. } => {
                 if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
                     self.emit_ddl_definitions(visitor, node_id);
                 }
                 self.walk_opt(visitor, fields.node_id_at(select));
+            }
+            SemanticRole::DefineView { select, .. } => {
+                if V::WANTS_RELATION_DEFINITION || V::WANTS_COLUMN_DEFINITION {
+                    self.emit_ddl_definitions(visitor, node_id);
+                }
+                // SQLite defers view-body name resolution to first use.
+                self.view_body_depth += 1;
+                self.walk_opt(visitor, fields.node_id_at(select));
+                self.view_body_depth -= 1;
             }
             SemanticRole::DefineFunction { select, .. } => {
                 self.walk_opt(visitor, fields.node_id_at(select));
@@ -355,6 +377,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                     setlist,
                     update_where,
                 );
+            }
+            SemanticRole::CompoundScope {
+                left,
+                right,
+                orderby,
+                limit_clause,
+            } => {
+                self.walk_compound_scope(visitor, &fields, left, right, orderby, limit_clause);
             }
         }
     }
@@ -432,6 +462,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             }
             // Nested scopes own their sources.
             SemanticRole::Query { .. }
+            | SemanticRole::CompoundScope { .. }
             | SemanticRole::CteScope { .. }
             | SemanticRole::DmlScope { .. }
             | SemanticRole::TriggerScope { .. }
@@ -566,9 +597,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             return;
         }
         let column = self.stmt.span_expanded_text(col_sp);
-        let table = match fields[table_idx as usize] {
-            FieldValue::Span(sp) if !sp.is_empty() => Some(self.stmt.span_expanded_text(sp)),
-            _ => None,
+        let (table, table_range) = match fields[table_idx as usize] {
+            FieldValue::Span(sp) if !sp.is_empty() => {
+                let (_, r) = self.stmt.span_text_abs(sp);
+                (Some(self.stmt.span_expanded_text(sp)), Some(r))
+            }
+            _ => (None, None),
         };
         let (_, range) = self.stmt.span_text_abs(col_sp);
         // SQLite's DQS bug-compat applies only to identifiers that were
@@ -585,8 +619,11 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 range,
                 column,
                 table,
+                table_idx,
+                table_range,
                 resolution: &resolution,
                 dqs_candidate,
+                in_view_body: self.view_body_depth > 0,
             };
             let mut cx = WalkCtx {
                 catalog: self.catalog,
@@ -727,6 +764,65 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.walk_opt(visitor, fields.node_id_at(setlist_idx));
         self.walk_opt(visitor, fields.node_id_at(update_where_idx));
         self.scope.pop();
+    }
+
+    fn walk_compound_scope<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        fields: &NodeFields,
+        left_idx: u8,
+        right_idx: u8,
+        orderby_idx: u8,
+        limit_idx: u8,
+    ) {
+        self.walk_opt(visitor, fields.node_id_at(left_idx));
+        self.walk_opt(visitor, fields.node_id_at(right_idx));
+
+        let orderby = fields.node_id_at(orderby_idx);
+        let limit = fields.node_id_at(limit_idx);
+        if orderby.is_none() && limit.is_none() {
+            return;
+        }
+        // SQLite matches compound ORDER BY terms against the arms' result
+        // columns; approximate by resolving in a frame holding every arm's
+        // sources and select aliases. Column-checked — but a valid arm
+        // column that is not a result column is accepted (a known gap).
+        self.scope.push();
+        let mut aliases = Vec::new();
+        self.register_arm_sources(fields.node_id_at(left_idx), &mut aliases);
+        self.register_arm_sources(fields.node_id_at(right_idx), &mut aliases);
+        if !aliases.is_empty() {
+            self.scope
+                .add_table("", Some(aliases), RowIdPolicy::WithRowId);
+        }
+        self.walk_opt(visitor, orderby);
+        self.walk_opt(visitor, limit);
+        self.scope.pop();
+    }
+
+    /// Bind a compound arm's FROM sources and collect its select aliases,
+    /// recursing through nested compounds. VALUES / WITH arms contribute
+    /// no addressable sources.
+    fn register_arm_sources(&mut self, arm: Option<AnyNodeId>, aliases: &mut Vec<String>) {
+        let Some(id) = arm else {
+            return;
+        };
+        let Some((tag, fields)) = self.stmt.extract_fields(id) else {
+            return;
+        };
+        match StmtReader::new(self.stmt, self.roles).role_for_tag(tag) {
+            SemanticRole::Query { from, columns, .. } => {
+                if let Some(from_id) = fields.node_id_at(from) {
+                    self.register_sources(from_id);
+                }
+                aliases.extend(self.collect_select_aliases(&fields, columns));
+            }
+            SemanticRole::CompoundScope { left, right, .. } => {
+                self.register_arm_sources(fields.node_id_at(left), aliases);
+                self.register_arm_sources(fields.node_id_at(right), aliases);
+            }
+            _ => {}
+        }
     }
 
     // ── CTE / DML handling ────────────────────────────────────────────────────

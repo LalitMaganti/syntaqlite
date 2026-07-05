@@ -48,6 +48,7 @@ This allows projects like libSQL, rqlite, or custom embedded databases to use sy
 - `DialectEnv<'d>` parameterized on lifetime — no `'static` requirement, enables stack-allocated test dialects
 - Unsafe minimized: `DialectEnv` safe accessors wrap all raw pointer access; `Interpreter` has zero unsafe
 - AST dump is in C (`syntaqlite_dump_node`), not Rust — single source of truth for metadata
+- **Named diagnostic suppression**: the analyzer never silently ignores a resolution failure (no bare `=> {}` arms). Every intentional accept names an `AcceptedRef` variant (`syntaqlite/src/analysis/engine/statement_visitor.rs`) — either modeled SQLite behavior (permanent) or an unmodeled construct (tracked debt: cite the construct, delete the variant once the walker models it in scope)
 
 ## Git Workflow
 
