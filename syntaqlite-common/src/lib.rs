@@ -255,6 +255,20 @@ pub mod roles {
 
         /// No semantic role — recurse into children generically.
         Transparent = 16,
+
+        /// INSERT upsert clause (`ON CONFLICT ... DO UPDATE`): the conflict
+        /// target is walked in the enclosing DML scope, then `excluded` is
+        /// injected for the DO UPDATE set list and WHERE.
+        UpsertScope {
+            /// Field index of the conflict-target column list (`FIELD_ABSENT` if absent).
+            columns: FieldIdx,
+            /// Field index of the conflict-target WHERE (`FIELD_ABSENT` if absent).
+            target_where: FieldIdx,
+            /// Field index of the DO UPDATE set list (`FIELD_ABSENT` if absent).
+            setlist: FieldIdx,
+            /// Field index of the DO UPDATE WHERE (`FIELD_ABSENT` if absent).
+            update_where: FieldIdx,
+        } = 17,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -333,6 +347,15 @@ pub mod roles {
                 0,
             );
             check(SemanticRole::Transparent, 16);
+            check(
+                SemanticRole::UpsertScope {
+                    columns: 0,
+                    target_where: 0,
+                    setlist: 0,
+                    update_where: 0,
+                },
+                17,
+            );
         }
 
         #[test]

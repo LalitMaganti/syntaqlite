@@ -171,6 +171,17 @@ impl QueryScope {
         ColumnResolution::NotFound
     }
 
+    /// Columns of the sole named table in the innermost frame, if there is
+    /// exactly one (the DML target when called from an INSERT's upsert
+    /// clause). `None` = unknown columns (accept any ref).
+    pub(crate) fn sole_named_table_columns(&self) -> Option<Vec<String>> {
+        let frame = self.frames.last()?;
+        if frame.named.len() != 1 || !frame.anonymous.is_empty() {
+            return None;
+        }
+        frame.named.values().next()?.columns.clone()
+    }
+
     /// Collect all known column names (for fuzzy suggestions).
     pub(crate) fn all_column_names(&self, table: Option<&str>) -> Vec<String> {
         let mut names: Vec<String> = Vec::new();
