@@ -30,6 +30,13 @@ SYNTAQLITE_DIALECT_API void synq_extent_on_shift(SynqParseCtx* pCtx,
 SYNTAQLITE_DIALECT_API void synq_extent_on_reduce(SynqParseCtx* pCtx,
                                                   unsigned int nrhs);
 
+// Called from grammar actions of rules whose parent rule is
+// {NEVER-REDUCE}: merges the shadow-stack entry directly below the top
+// into the top (both authored and expanded ranges), standing in for the
+// parent reduction that will never run.  Follow with
+// `synq_extent_record` to re-record the widened extent on the node.
+SYNTAQLITE_DIALECT_API void synq_extent_fold_below_into_top(SynqParseCtx* pCtx);
+
 // Lemon stores `yyRuleInfoNRhs[r]` as the negative of the rule's RHS
 // symbol count, so the reduce macro negates it to recover `nrhs`.
 #define synq_on_shift(yypParser, yyMajor, yyMinor_ptr)             \

@@ -855,10 +855,16 @@ mod tests {
         // EXPLAIN / EXPLAIN QUERY PLAN: the wrapper node is built in
         // `cmdx ::= cmd`, while the keyword lives in the sibling `explain`
         // nonterminal.  SQLite marks the parent `ecmd ::= explain cmdx SEMI`
-        // rule {NEVER-REDUCE}, so the wrapper's extent must be folded over the
-        // keyword at build time, else node_text drops it.  Regression test for
-        // EXPLAIN node_text losing the leading keyword.
-        let parser = Parser::with_config(&ParserConfig::default().with_collect_node_extents(true));
+        // rule {NEVER-REDUCE}, so the wrapper's extents must be folded over
+        // the keyword at build time, else every extent-derived view drops it.
+        // Regression test for the EXPLAIN root losing the leading keyword in
+        // node_text, node_expanded_text, and node_token_range (and thereby
+        // node_leading_comments).
+        let parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_node_extents(true),
+        );
 
         for (source, expected) in [
             ("EXPLAIN SELECT 1;", "EXPLAIN SELECT 1"),
@@ -880,8 +886,29 @@ mod tests {
             assert_eq!(text, expected, "node_text for {source:?}");
             // Extent starts at the keyword (byte 0 of the statement).
             assert_eq!(offset, StmtOffset::default(), "offset for {source:?}");
-            drop(session);
+            // The expanded view and the token range must agree with
+            // node_text: both start at the keyword.
+            assert_eq!(
+                statement.node_expanded_text(root_id),
+                Some(expected),
+                "node_expanded_text for {source:?}",
+            );
+            let (first, _) = statement
+                .erase()
+                .node_token_range(root_id)
+                .expect("root node should have a token range");
+            assert_eq!(first, TokenIdx::default(), "token range start for {source:?}");
         }
+
+        // A comment before EXPLAIN leads the root's first token.
+        let mut session = parser.parse("/* why */ EXPLAIN SELECT 1;");
+        let ParseOutcome::Ok(statement) = session.next() else {
+            panic!("expected Ok");
+        };
+        let root_id = statement.erase().root_id();
+        let leading: Vec<_> = statement.erase().node_leading_comments(root_id).collect();
+        assert_eq!(leading.len(), 1);
+        assert!(leading[0].text().contains("why"));
     }
 
     #[test]
