@@ -63,6 +63,8 @@ pub(crate) struct CompoundSelect {
     pub(crate) op: super::ast::CompoundOp,
     pub(crate) left: AnyNodeId,
     pub(crate) right: AnyNodeId,
+    pub(crate) orderby: AnyNodeId,
+    pub(crate) limit_clause: AnyNodeId,
 }
 
 #[derive(Debug, Clone)]
