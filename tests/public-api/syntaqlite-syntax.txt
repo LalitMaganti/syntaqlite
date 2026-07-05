@@ -1311,8 +1311,10 @@ pub fn syntaqlite_syntax::nodes::CompoundOp::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::left(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
+pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::limit_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::LimitClause<'a>>
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CompoundSelectId
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::op(&self) -> syntaqlite_syntax::nodes::CompoundOp
+pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::orderby(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
 pub fn syntaqlite_syntax::nodes::CompoundSelect<'a>::right(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
 pub fn syntaqlite_syntax::nodes::CompoundSelectId::from(syntaqlite_syntax::nodes::CompoundSelect<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CompoundSelectId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId

@@ -431,6 +431,8 @@ typedef struct SyntaqliteCompoundSelect {
   SyntaqliteCompoundOp op;
   uint32_t left;
   uint32_t right;
+  uint32_t orderby;
+  uint32_t limit_clause;
 } SyntaqliteCompoundSelect;
 
 typedef struct SyntaqliteSubqueryExpr {

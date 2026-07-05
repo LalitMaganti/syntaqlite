@@ -269,6 +269,20 @@ pub mod roles {
             /// Field index of the DO UPDATE WHERE (`FIELD_ABSENT` if absent).
             update_where: FieldIdx,
         } = 17,
+
+        /// Compound SELECT (UNION/INTERSECT/EXCEPT): arms are walked in
+        /// their own scopes, then the compound-level ORDER BY / LIMIT
+        /// resolve against every arm's sources and select aliases.
+        CompoundScope {
+            /// Field index of the left arm.
+            left: FieldIdx,
+            /// Field index of the right arm.
+            right: FieldIdx,
+            /// Field index of the hoisted ORDER BY (`FIELD_ABSENT` if absent).
+            orderby: FieldIdx,
+            /// Field index of the hoisted LIMIT (`FIELD_ABSENT` if absent).
+            limit_clause: FieldIdx,
+        } = 18,
     }
 
     /// Metadata for a node type that defines a template macro.
@@ -355,6 +369,15 @@ pub mod roles {
                     update_where: 0,
                 },
                 17,
+            );
+            check(
+                SemanticRole::CompoundScope {
+                    left: 0,
+                    right: 0,
+                    orderby: 0,
+                    limit_clause: 0,
+                },
+                18,
             );
         }
 
