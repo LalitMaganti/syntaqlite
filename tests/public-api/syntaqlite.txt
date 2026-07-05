@@ -236,8 +236,8 @@ pub fn syntaqlite::lsp::SchemaMap::new(std::path::PathBuf, core::option::Option<
 pub fn syntaqlite::lsp::SchemaMap::resolve(&self, &str) -> core::option::Option<(&syntaqlite::Catalog, bool)>
 pub fn syntaqlite::sqlite_dialect() -> syntaqlite::Dialect
 pub fn syntaqlite::util::DiagnosticRenderer<'a>::new(&'a str, &'a str) -> Self
-pub fn syntaqlite::util::DiagnosticRenderer<'a>::render_diagnostic(&self, &syntaqlite::Diagnostic, &mut impl std::io::Write) -> std::io::error::Result<()>
-pub fn syntaqlite::util::DiagnosticRenderer<'a>::render_diagnostics(&self, &[syntaqlite::Diagnostic], &mut impl std::io::Write) -> std::io::error::Result<bool>
+pub fn syntaqlite::util::DiagnosticRenderer<'a>::render_diagnostic(&self, &syntaqlite::Diagnostic, &mut impl std::io::Write) -> core::io::error::Result<()>
+pub fn syntaqlite::util::DiagnosticRenderer<'a>::render_diagnostics(&self, &[syntaqlite::Diagnostic], &mut impl std::io::Write) -> core::io::error::Result<bool>
 pub fn syntaqlite::util::SqliteFlag::all() -> &'static [Self]
 pub fn syntaqlite::util::SqliteFlag::categories(self) -> &'static [&'static str]
 pub fn syntaqlite::util::SqliteFlag::from_name(&str) -> core::option::Option<Self>
