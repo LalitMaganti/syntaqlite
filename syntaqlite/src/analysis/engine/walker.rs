@@ -470,7 +470,6 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             .add_table(scope_name, columns, without_rowid.into());
     }
 
-
     // ── Role walkers ──────────────────────────────────────────────────────────
 
     fn walk_source_ref<V: SemanticVisitor>(
