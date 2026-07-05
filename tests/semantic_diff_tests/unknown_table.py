@@ -75,3 +75,49 @@ class UnknownTable(TestSuite):
               |                                        ^~~~~~
 """,
         )
+
+
+class UnknownQualifier(TestSuite):
+    """A qualified column ref whose qualifier names no source in scope.
+
+    Regression tests for https://github.com/LalitMaganti/syntaqlite/issues/281:
+    `SELECT b.id FROM foo AS a` used to be silently accepted.
+    """
+
+    def test_undefined_alias_is_flagged(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE foo (id INT, name TEXT); SELECT b.id FROM foo AS a",
+            strict_schema=True,
+            out="""\
+            error: unknown table 'b'
+             --> <stdin>:1:46
+              |
+            1 | CREATE TABLE foo (id INT, name TEXT); SELECT b.id FROM foo AS a
+              |                                              ^
+              = help: did you mean 'a'?
+""",
+        )
+
+    def test_alias_hides_base_table_name(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE foo (id INT); SELECT foo.id FROM foo AS a",
+            strict_schema=True,
+            out="""\
+            error: unknown table 'foo'
+             --> <stdin>:1:35
+              |
+            1 | CREATE TABLE foo (id INT); SELECT foo.id FROM foo AS a
+              |                                   ^~~
+""",
+        )
+
+    def test_excluded_in_upsert_not_flagged(self):
+        return DiffTestBlueprint(
+            sql=(
+                "CREATE TABLE foo (id INT PRIMARY KEY, name TEXT); "
+                "INSERT INTO foo(id) VALUES (1) "
+                "ON CONFLICT(id) DO UPDATE SET name = excluded.name"
+            ),
+            strict_schema=True,
+            out="",
+        )

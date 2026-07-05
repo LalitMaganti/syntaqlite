@@ -122,7 +122,7 @@ pub(crate) enum ColumnResolution {
     },
     /// Table is in scope but this column is not in its known list.
     TableFoundColumnMissing,
-    /// The qualifier table is not in scope — table check already reported this.
+    /// The qualifier names no source anywhere in the statement so far.
     TableNotFound,
     /// Unqualified column not found in any table in scope.
     NotFound,
