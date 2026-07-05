@@ -637,6 +637,17 @@ def _ratchet_mismatches(
     return regressions
 
 
+def _categorize_unique(items: list[Mismatch]) -> dict[str, int]:
+    """Per-category counts over *unique* (file, category, sql) mismatches.
+
+    Raw occurrence counts jitter run-to-run — some TCL tests execute the
+    same statement a variable number of times — so the ratchet compares
+    deduplicated counts, which are stable for a fixed corpus.
+    """
+    unique = {(m.file, m.category, m.sql) for m in items}
+    return dict(sorted(Counter(cat for (_, cat, _) in unique).items()))
+
+
 def _check_baseline(
     baseline_path: Path, summary: Summary,
     fps: list[Mismatch], gaps: list[Mismatch],
@@ -647,8 +658,8 @@ def _check_baseline(
     Note: editing the _normalize_* categorizers reshuffles category keys and
     requires a --rebaseline.
     """
-    fp_categories = dict(sorted(Counter(fp.category for fp in fps).items()))
-    gap_categories = dict(sorted(Counter(g.category for g in gaps).items()))
+    fp_categories = _categorize_unique(fps)
+    gap_categories = _categorize_unique(gaps)
     data = {
         "total": summary.total,
         "parse_ok": summary.parse_ok,
