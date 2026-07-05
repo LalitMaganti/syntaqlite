@@ -11,6 +11,8 @@ node UpsertClause {
   setlist: index SetClauseList
   update_where: index Expr
 
+  semantic { upsert_scope(columns: columns, target_where: target_where, setlist: setlist, update_where: update_where) }
+
   fmt {
     "ON" "CONFLICT"
     if_set(columns) { group { space "(" nest { softline child(columns) } softline ")" } }

@@ -26,6 +26,16 @@ use crate::dialect::{FIELD_ABSENT, SemanticRole};
 
 use super::query_scope::{QueryScope, RowIdPolicy};
 
+/// `SQLite` accepts a string literal as an alias (`FROM t AS 'a'`) and treats
+/// it as the identifier `a`. Identifier quotes (`"a"`, `[a]`, `` `a` ``)
+/// are already stripped by the parser; only string quotes survive.
+fn unquote_alias(alias: &str) -> &str {
+    alias
+        .strip_prefix('\'')
+        .and_then(|s| s.strip_suffix('\''))
+        .unwrap_or(alias)
+}
+
 // ── WalkCtx ───────────────────────────────────────────────────────────────────
 
 /// Visitor-facing view into the walker's mutable state. Exposes the
@@ -331,6 +341,21 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 with_recursive,
                 with_ctes,
             } => self.walk_dml_scope(visitor, &fields, with_recursive, with_ctes),
+            SemanticRole::UpsertScope {
+                columns,
+                target_where,
+                setlist,
+                update_where,
+            } => {
+                self.walk_upsert_scope(
+                    visitor,
+                    &fields,
+                    columns,
+                    target_where,
+                    setlist,
+                    update_where,
+                );
+            }
         }
     }
 
@@ -382,7 +407,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let is_known =
             self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
         let (columns, without_rowid) = self.catalog.table_source_info(name);
-        let alias_text = self.stmt.name_text(fields.node_id_at(alias_idx)).0;
+        let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
         let alias = if alias_text.is_empty() {
             None
         } else {
@@ -506,7 +531,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.walk_opt(visitor, body_id);
         self.scope.pop();
 
-        let alias_text = self.stmt.name_text(fields.node_id_at(alias_idx)).0;
+        let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
         let alias = if alias_text.is_empty() {
             None
         } else {
@@ -596,6 +621,30 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.scope.add_table("NEW", None, RowIdPolicy::WithRowId);
         self.walk_opt(visitor, fields.node_id_at(when_idx));
         self.walk_opt(visitor, fields.node_id_at(body_idx));
+        self.scope.pop();
+    }
+
+    fn walk_upsert_scope<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        fields: &NodeFields,
+        columns_idx: u8,
+        target_where_idx: u8,
+        setlist_idx: u8,
+        update_where_idx: u8,
+    ) {
+        // The conflict target cannot see `excluded`.
+        self.walk_opt(visitor, fields.node_id_at(columns_idx));
+        self.walk_opt(visitor, fields.node_id_at(target_where_idx));
+        // In DO UPDATE, `excluded.<col>` is the row that would have been
+        // inserted — same column set as the insert target, which is the only
+        // named source in the enclosing DML frame.
+        let cols = self.scope.sole_named_table_columns();
+        self.scope.push();
+        self.scope
+            .add_table("excluded", cols, RowIdPolicy::WithRowId);
+        self.walk_opt(visitor, fields.node_id_at(setlist_idx));
+        self.walk_opt(visitor, fields.node_id_at(update_where_idx));
         self.scope.pop();
     }
 

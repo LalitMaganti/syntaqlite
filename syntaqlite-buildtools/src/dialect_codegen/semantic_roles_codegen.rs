@@ -296,6 +296,23 @@ fn role_to_bytes(
             bytes[1] = opt(with_recursive);
             bytes[2] = opt(with_ctes);
         }
+        SynqRole::UpsertScope {
+            columns,
+            target_where,
+            setlist,
+            update_where,
+        } => {
+            bytes[0] = disc(SemanticRole::UpsertScope {
+                columns: 0,
+                target_where: 0,
+                setlist: 0,
+                update_where: 0,
+            });
+            bytes[1] = opt(columns);
+            bytes[2] = opt(target_where);
+            bytes[3] = opt(setlist);
+            bytes[4] = opt(update_where);
+        }
     }
 
     bytes
