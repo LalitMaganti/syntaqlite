@@ -897,7 +897,11 @@ mod tests {
                 .erase()
                 .node_token_range(root_id)
                 .expect("root node should have a token range");
-            assert_eq!(first, TokenIdx::default(), "token range start for {source:?}");
+            assert_eq!(
+                first,
+                TokenIdx::default(),
+                "token range start for {source:?}"
+            );
         }
 
         // A comment before EXPLAIN leads the root's first token.
