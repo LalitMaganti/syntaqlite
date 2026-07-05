@@ -121,6 +121,12 @@ pub(crate) enum SemanticRole {
         with_recursive: Option<String>,
         with_ctes: Option<String>,
     },
+    UpsertScope {
+        columns: Option<String>,
+        target_where: Option<String>,
+        setlist: Option<String>,
+        update_where: Option<String>,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -697,6 +703,12 @@ impl Parser {
             "dml_scope" => SemanticRole::DmlScope {
                 with_recursive: get_param(&params, "with_recursive").map(str::to_string),
                 with_ctes: get_param(&params, "with_ctes").map(str::to_string),
+            },
+            "upsert_scope" => SemanticRole::UpsertScope {
+                columns: get_param(&params, "columns").map(str::to_string),
+                target_where: get_param(&params, "target_where").map(str::to_string),
+                setlist: get_param(&params, "setlist").map(str::to_string),
+                update_where: get_param(&params, "update_where").map(str::to_string),
             },
             _ => {
                 return Err(format!(
