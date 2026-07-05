@@ -9,8 +9,9 @@ fn main() {
     // Two groups of runtime symbols therefore have to live in the host's
     // `.dynsym`:
     //
-    //   * the extent hooks (`synq_extent_on_shift` / `synq_extent_on_reduce`),
-    //     referenced by the dialect's parse tables; and
+    //   * the extent hooks (`synq_extent_on_shift` / `synq_extent_on_reduce` /
+    //     `synq_extent_fold_below_into_top`), referenced by the dialect's
+    //     parse tables; and
     //   * the generic `syntaqlite_{parser,tokenizer}_create_with_dialect`
     //     entry points, which the dialect-pinned
     //     `syntaqlite_{parser,tokenizer}_create_<dialect>()` wrappers (emitted
@@ -41,6 +42,7 @@ fn main() {
             "{\n  \
              synq_extent_on_shift;\n  \
              synq_extent_on_reduce;\n  \
+             synq_extent_fold_below_into_top;\n  \
              syntaqlite_parser_create_with_dialect;\n  \
              syntaqlite_tokenizer_create_with_dialect;\n\
              };\n",

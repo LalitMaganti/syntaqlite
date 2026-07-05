@@ -38,6 +38,58 @@
 // macros the only cost is one integer increment/decrement per
 // shift/reduce.
 
+// Merge `e` into `acc`: min/max over the authored byte range, min/max
+// over the token-index range with UINT32_MAX as the "no tokens"
+// sentinel on either side.
+static void synq_extent_merge(SynqExtentRange* acc, SynqExtentRange e) {
+  if (e.root_start < acc->root_start) {
+    acc->root_start = e.root_start;
+  }
+  if (e.root_end > acc->root_end) {
+    acc->root_end = e.root_end;
+  }
+  if (e.first_tok != UINT32_MAX) {
+    if (acc->first_tok == UINT32_MAX || e.first_tok < acc->first_tok) {
+      acc->first_tok = e.first_tok;
+    }
+    if (acc->last_tok == UINT32_MAX || e.last_tok > acc->last_tok) {
+      acc->last_tok = e.last_tok;
+    }
+  }
+}
+
+// Merge `e` into `acc` in expanded-layer coordinates: same-layer merges
+// union the ranges, epsilon ({0,0,0}) is neutral, and cross-layer
+// combinations poison `acc` (SYNQ_CROSS_LAYER), which then absorbs all
+// further merges.
+static void synq_expanded_merge(SynqNodeExpandedExtent* acc,
+                                SynqNodeExpandedExtent e) {
+  if (acc->layer_id == SYNQ_CROSS_LAYER) {
+    return;  // already poisoned
+  }
+  if (e.layer_id == SYNQ_CROSS_LAYER) {
+    *acc = e;  // propagate poison
+    return;
+  }
+  if (e.length == 0) {
+    return;  // epsilon
+  }
+  if (acc->length == 0) {
+    *acc = e;
+    return;
+  }
+  if (acc->layer_id != e.layer_id) {
+    *acc = (SynqNodeExpandedExtent){0, 0, SYNQ_CROSS_LAYER};
+    return;
+  }
+  uint32_t start = acc->offset < e.offset ? acc->offset : e.offset;
+  uint32_t end_a = acc->offset + acc->length;
+  uint32_t end_b = e.offset + e.length;
+  uint32_t end = end_a > end_b ? end_a : end_b;
+  acc->offset = start;
+  acc->length = end - start;
+}
+
 void synq_extent_on_shift(SynqParseCtx* pCtx,
                           unsigned int major,
                           const SynqParseToken* token) {
@@ -122,54 +174,30 @@ void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
   // and vice versa.
   SynqExtentRange merged = {UINT32_MAX, 0, UINT32_MAX, UINT32_MAX};
   for (uint32_t i = len - nrhs; i < len; i++) {
-    SynqExtentRange e = syntaqlite_vec_at(&pCtx->extent_stack, i);
-    if (e.root_start < merged.root_start) {
-      merged.root_start = e.root_start;
-    }
-    if (e.root_end > merged.root_end) {
-      merged.root_end = e.root_end;
-    }
-    if (e.first_tok != UINT32_MAX) {
-      if (merged.first_tok == UINT32_MAX || e.first_tok < merged.first_tok) {
-        merged.first_tok = e.first_tok;
-      }
-      if (merged.last_tok == UINT32_MAX || e.last_tok > merged.last_tok) {
-        merged.last_tok = e.last_tok;
-      }
-    }
+    synq_extent_merge(&merged, syntaqlite_vec_at(&pCtx->extent_stack, i));
   }
   syntaqlite_vec_truncate(&pCtx->extent_stack, len - nrhs);
   syntaqlite_vec_push(&pCtx->extent_stack, merged, pCtx->mem);
 
-  // Merge expanded-layer spans: all same layer → merge in that layer;
-  // epsilon entries ({0,0,0}) are neutral; cross-layer poison
-  // (layer_id == SYNQ_CROSS_LAYER) propagates upward unconditionally.
   SynqNodeExpandedExtent exp_merged = {0, 0, 0};
   for (uint32_t i = len - nrhs; i < len; i++) {
-    SynqNodeExpandedExtent e = syntaqlite_vec_at(&pCtx->expanded_stack, i);
-    if (e.layer_id == SYNQ_CROSS_LAYER) {
-      exp_merged = e;  // propagate poison
-      break;
-    }
-    if (e.length == 0) {
-      continue;  // skip epsilon
-    }
-    if (exp_merged.length == 0) {
-      exp_merged = e;
-      continue;
-    }
-    if (exp_merged.layer_id != e.layer_id) {
-      exp_merged = (SynqNodeExpandedExtent){0, 0, SYNQ_CROSS_LAYER};
-      break;
-    }
-    uint32_t start =
-        exp_merged.offset < e.offset ? exp_merged.offset : e.offset;
-    uint32_t end_a = exp_merged.offset + exp_merged.length;
-    uint32_t end_b = e.offset + e.length;
-    uint32_t end = end_a > end_b ? end_a : end_b;
-    exp_merged.offset = start;
-    exp_merged.length = end - start;
+    synq_expanded_merge(&exp_merged,
+                        syntaqlite_vec_at(&pCtx->expanded_stack, i));
   }
   syntaqlite_vec_truncate(&pCtx->expanded_stack, len - nrhs);
   syntaqlite_vec_push(&pCtx->expanded_stack, exp_merged, pCtx->mem);
+}
+
+void synq_extent_fold_below_into_top(SynqParseCtx* pCtx) {
+  if (!pCtx->collect_node_extents) {
+    return;
+  }
+  uint32_t len = syntaqlite_vec_len(&pCtx->extent_stack);
+  if (len < 2) {
+    return;
+  }
+  synq_extent_merge(&syntaqlite_vec_at(&pCtx->extent_stack, len - 1),
+                    syntaqlite_vec_at(&pCtx->extent_stack, len - 2));
+  synq_expanded_merge(&syntaqlite_vec_at(&pCtx->expanded_stack, len - 1),
+                      syntaqlite_vec_at(&pCtx->expanded_stack, len - 2));
 }
