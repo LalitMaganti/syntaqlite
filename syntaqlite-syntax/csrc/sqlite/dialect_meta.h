@@ -272,6 +272,10 @@ static const SyntaqliteFieldMeta field_meta_compound_select[] = {
      NULL, 0},
     {offsetof(SyntaqliteCompoundSelect, right), SYNTAQLITE_FIELD_NODE_ID,
      "right", NULL, 0},
+    {offsetof(SyntaqliteCompoundSelect, orderby), SYNTAQLITE_FIELD_NODE_ID,
+     "orderby", NULL, 0},
+    {offsetof(SyntaqliteCompoundSelect, limit_clause), SYNTAQLITE_FIELD_NODE_ID,
+     "limit_clause", NULL, 0},
 };
 
 static const SyntaqliteFieldMeta field_meta_subquery_expr[] = {
@@ -1279,7 +1283,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     6,  /* OrderedSetFunctionCall */
     2,  /* CastExpr */
     3,  /* ColumnRef */
-    3,  /* CompoundSelect */
+    5,  /* CompoundSelect */
     1,  /* SubqueryExpr */
     1,  /* ExistsExpr */
     4,  /* InExpr */

@@ -8,6 +8,12 @@ node CompoundSelect {
   op: inline CompoundOp
   left: index Select
   right: index Select
+  // ORDER BY / LIMIT parse inside the last arm (upstream grammar shape)
+  // but apply to the whole compound — the fold hoists them here.
+  orderby: index OrderByList
+  limit_clause: index LimitClause
+
+  semantic { compound_scope(left: left, right: right, orderby: orderby, limit_clause: limit_clause) }
 
   fmt {
     child(left) hardline
@@ -18,6 +24,10 @@ node CompoundSelect {
       EXCEPT      { "EXCEPT" }
     }
     hardline child(right)
+    group {
+      clause("ORDER", "BY", orderby)
+      if_set(limit_clause) { line "LIMIT" space child(limit_clause) }
+    }
   }
 }
 

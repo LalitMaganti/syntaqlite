@@ -53,6 +53,8 @@ class CompoundSelect(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              orderby: (none)
+              limit_clause: (none)
 """,
         )
 
@@ -100,6 +102,8 @@ class CompoundSelect(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              orderby: (none)
+              limit_clause: (none)
 """,
         )
 
@@ -147,6 +151,8 @@ class CompoundSelect(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              orderby: (none)
+              limit_clause: (none)
 """,
         )
 
@@ -194,6 +200,8 @@ class CompoundSelect(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              orderby: (none)
+              limit_clause: (none)
 """,
         )
 
@@ -245,6 +253,8 @@ class CompoundSelect(TestSuite):
                       orderby: (none)
                       limit_clause: (none)
                       window_clause: (none)
+                  orderby: (none)
+                  limit_clause: (none)
               right:
                 SelectStmt
                   flags: (none)
@@ -264,6 +274,8 @@ class CompoundSelect(TestSuite):
                   orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              orderby: (none)
+              limit_clause: (none)
 """,
         )
 
@@ -308,17 +320,19 @@ class CompoundSelect(TestSuite):
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
-                  orderby:
-                    OrderByList [1 items]
-                      OrderingTerm
-                        expr:
-                          Literal
-                            literal_type: INTEGER
-                            source: "1"
-                        sort_order: ASC
-                        nulls_order: NONE
+                  orderby: (none)
                   limit_clause: (none)
                   window_clause: (none)
+              orderby:
+                OrderByList [1 items]
+                  OrderingTerm
+                    expr:
+                      Literal
+                        literal_type: INTEGER
+                        source: "1"
+                    sort_order: ASC
+                    nulls_order: NONE
+              limit_clause: (none)
 """,
         )
 

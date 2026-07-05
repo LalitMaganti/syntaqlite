@@ -209,6 +209,8 @@ class WithClause(TestSuite):
                             orderby: (none)
                             limit_clause: (none)
                             window_clause: (none)
+                        orderby: (none)
+                        limit_clause: (none)
               select:
                 SelectStmt
                   flags: (none)
@@ -554,6 +556,8 @@ class WithClause(TestSuite):
                       orderby: (none)
                       limit_clause: (none)
                       window_clause: (none)
+                  orderby: (none)
+                  limit_clause: (none)
 """,
         )
 
@@ -640,6 +644,8 @@ class WithClause(TestSuite):
                             orderby: (none)
                             limit_clause: (none)
                             window_clause: (none)
+                        orderby: (none)
+                        limit_clause: (none)
               select:
                 SelectStmt
                   flags: (none)

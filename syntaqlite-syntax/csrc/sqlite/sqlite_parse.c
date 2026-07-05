@@ -7387,9 +7387,21 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 22: /* selectnowith ::= selectnowith multiselect_op oneselect */
     {
+      // ORDER BY / LIMIT parse inside the last arm (grammar shape) but apply
+      // to the whole compound — hoist them onto the CompoundSelect node.
+      // An ORDER BY on a non-last arm stays put (SQLite rejects it later).
+      uint32_t orderby = SYNTAQLITE_NULL_NODE;
+      uint32_t limit = SYNTAQLITE_NULL_NODE;
+      SyntaqliteNode* arm = AST_NODE(&pCtx->ast, yymsp[0].minor.yy277);
+      if (arm->tag == SYNTAQLITE_NODE_SELECT_STMT) {
+        orderby = arm->select_stmt.orderby;
+        limit = arm->select_stmt.limit_clause;
+        arm->select_stmt.orderby = SYNTAQLITE_NULL_NODE;
+        arm->select_stmt.limit_clause = SYNTAQLITE_NULL_NODE;
+      }
       yymsp[-2].minor.yy277 = synq_parse_compound_select(
           pCtx, (SyntaqliteCompoundOp)yymsp[-1].minor.yy320,
-          yymsp[-2].minor.yy277, yymsp[0].minor.yy277);
+          yymsp[-2].minor.yy277, yymsp[0].minor.yy277, orderby, limit);
     } break;
     case 23: /* multiselect_op ::= UNION */
     {

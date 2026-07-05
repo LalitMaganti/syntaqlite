@@ -21,7 +21,19 @@
 // ============ Compound SELECT ============
 
 selectnowith(A) ::= selectnowith(A) multiselect_op(Y) oneselect(Z). {
-    A = synq_parse_compound_select(pCtx, (SyntaqliteCompoundOp)Y, A, Z);
+    // ORDER BY / LIMIT parse inside the last arm (grammar shape) but apply
+    // to the whole compound — hoist them onto the CompoundSelect node.
+    // An ORDER BY on a non-last arm stays put (SQLite rejects it later).
+    uint32_t orderby = SYNTAQLITE_NULL_NODE;
+    uint32_t limit = SYNTAQLITE_NULL_NODE;
+    SyntaqliteNode *arm = AST_NODE(&pCtx->ast, Z);
+    if (arm->tag == SYNTAQLITE_NODE_SELECT_STMT) {
+        orderby = arm->select_stmt.orderby;
+        limit = arm->select_stmt.limit_clause;
+        arm->select_stmt.orderby = SYNTAQLITE_NULL_NODE;
+        arm->select_stmt.limit_clause = SYNTAQLITE_NULL_NODE;
+    }
+    A = synq_parse_compound_select(pCtx, (SyntaqliteCompoundOp)Y, A, Z, orderby, limit);
 }
 
 multiselect_op(A) ::= UNION(OP). { A = 0; (void)OP; }

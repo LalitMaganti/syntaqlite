@@ -258,6 +258,10 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 
     // ── Node dispatch ─────────────────────────────────────────────────────────
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "flat dispatch table over all SemanticRole variants; not worth splitting"
+    )]
     fn walk_node<V: SemanticVisitor>(&mut self, visitor: &mut V, node_id: AnyNodeId) {
         if node_id.is_null() {
             return;
@@ -356,6 +360,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                     update_where,
                 );
             }
+            SemanticRole::CompoundScope {
+                left,
+                right,
+                orderby,
+                limit_clause,
+            } => {
+                self.walk_compound_scope(visitor, &fields, left, right, orderby, limit_clause);
+            }
         }
     }
 
@@ -432,6 +444,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             }
             // Nested scopes own their sources.
             SemanticRole::Query { .. }
+            | SemanticRole::CompoundScope { .. }
             | SemanticRole::CteScope { .. }
             | SemanticRole::DmlScope { .. }
             | SemanticRole::TriggerScope { .. }
@@ -727,6 +740,65 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.walk_opt(visitor, fields.node_id_at(setlist_idx));
         self.walk_opt(visitor, fields.node_id_at(update_where_idx));
         self.scope.pop();
+    }
+
+    fn walk_compound_scope<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        fields: &NodeFields,
+        left_idx: u8,
+        right_idx: u8,
+        orderby_idx: u8,
+        limit_idx: u8,
+    ) {
+        self.walk_opt(visitor, fields.node_id_at(left_idx));
+        self.walk_opt(visitor, fields.node_id_at(right_idx));
+
+        let orderby = fields.node_id_at(orderby_idx);
+        let limit = fields.node_id_at(limit_idx);
+        if orderby.is_none() && limit.is_none() {
+            return;
+        }
+        // SQLite matches compound ORDER BY terms against the arms' result
+        // columns; approximate by resolving in a frame holding every arm's
+        // sources and select aliases. Column-checked — but a valid arm
+        // column that is not a result column is accepted (a known gap).
+        self.scope.push();
+        let mut aliases = Vec::new();
+        self.register_arm_sources(fields.node_id_at(left_idx), &mut aliases);
+        self.register_arm_sources(fields.node_id_at(right_idx), &mut aliases);
+        if !aliases.is_empty() {
+            self.scope
+                .add_table("", Some(aliases), RowIdPolicy::WithRowId);
+        }
+        self.walk_opt(visitor, orderby);
+        self.walk_opt(visitor, limit);
+        self.scope.pop();
+    }
+
+    /// Bind a compound arm's FROM sources and collect its select aliases,
+    /// recursing through nested compounds. VALUES / WITH arms contribute
+    /// no addressable sources.
+    fn register_arm_sources(&mut self, arm: Option<AnyNodeId>, aliases: &mut Vec<String>) {
+        let Some(id) = arm else {
+            return;
+        };
+        let Some((tag, fields)) = self.stmt.extract_fields(id) else {
+            return;
+        };
+        match StmtReader::new(self.stmt, self.roles).role_for_tag(tag) {
+            SemanticRole::Query { from, columns, .. } => {
+                if let Some(from_id) = fields.node_id_at(from) {
+                    self.register_sources(from_id);
+                }
+                aliases.extend(self.collect_select_aliases(&fields, columns));
+            }
+            SemanticRole::CompoundScope { left, right, .. } => {
+                self.register_arm_sources(fields.node_id_at(left), aliases);
+                self.register_arm_sources(fields.node_id_at(right), aliases);
+            }
+            _ => {}
+        }
     }
 
     // ── CTE / DML handling ────────────────────────────────────────────────────
