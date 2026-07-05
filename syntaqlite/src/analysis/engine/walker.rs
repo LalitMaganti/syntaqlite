@@ -258,10 +258,6 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 
     // ── Node dispatch ─────────────────────────────────────────────────────────
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "flat dispatch table over all SemanticRole variants; not worth splitting"
-    )]
     fn walk_node<V: SemanticVisitor>(&mut self, visitor: &mut V, node_id: AnyNodeId) {
         if node_id.is_null() {
             return;
