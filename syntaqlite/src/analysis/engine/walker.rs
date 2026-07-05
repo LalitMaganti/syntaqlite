@@ -801,7 +801,6 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         }
     }
 
-
     // ── CTE / DML handling ────────────────────────────────────────────────────
 
     fn walk_cte_scope<V: SemanticVisitor>(
