@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
 
+use super::name_key::NameKey;
 use super::stmt_reader::StmtReader;
 use crate::dialect::AnyDialect;
 use crate::dialect::{
@@ -143,9 +144,9 @@ pub(crate) enum FunctionCheckResult {
 /// `insert_*` methods to populate it.
 #[derive(Debug, Default, Clone)]
 pub struct CatalogLayerContents {
-    relations: HashMap<String, RelationEntry>,
-    functions: HashMap<String, FunctionSet>,
-    table_functions: HashMap<String, TableFunctionSet>,
+    relations: HashMap<NameKey, RelationEntry>,
+    functions: HashMap<NameKey, FunctionSet>,
+    table_functions: HashMap<NameKey, TableFunctionSet>,
     /// Modules whose DDL has been merged into this layer. Used to dedupe
     /// `INCLUDE PERFETTO MODULE` imports — once imported, re-imports no-op.
     imports: HashSet<String>,
@@ -188,7 +189,7 @@ impl CatalogLayerContents {
 
     /// Iterate over all relation (table/view) names in this layer.
     pub fn relation_names(&self) -> impl Iterator<Item = &str> {
-        self.relations.keys().map(String::as_str)
+        self.relations.keys().map(NameKey::as_str)
     }
 
     /// Insert a table into this layer.
@@ -223,7 +224,7 @@ impl CatalogLayerContents {
     ) {
         let name = name.into();
         self.relations.insert(
-            name.to_ascii_lowercase(),
+            NameKey::new(&name),
             RelationEntry {
                 name,
                 columns,
@@ -252,7 +253,7 @@ impl CatalogLayerContents {
     pub fn insert_view(&mut self, name: impl Into<String>, columns: Option<Vec<String>>) {
         let name = name.into();
         self.relations.insert(
-            name.to_ascii_lowercase(),
+            NameKey::new(&name),
             RelationEntry {
                 name,
                 columns,
@@ -294,7 +295,7 @@ impl CatalogLayerContents {
         arity: AritySpec,
     ) {
         let name = name.into();
-        let key = name.to_ascii_lowercase();
+        let key = NameKey::new(&name);
         self.functions
             .entry(key)
             .and_modify(|set| set.overloads.push(FunctionOverload { category, arity }))
@@ -338,7 +339,7 @@ impl CatalogLayerContents {
         output_columns: Vec<String>,
     ) {
         let name = name.into();
-        let key = name.to_ascii_lowercase();
+        let key = NameKey::new(&name);
         self.table_functions
             .entry(key)
             .and_modify(|set| {
@@ -357,16 +358,16 @@ impl CatalogLayerContents {
             });
     }
 
-    fn relation(&self, name: &str) -> Option<&RelationEntry> {
-        self.relations.get(&name.to_ascii_lowercase())
+    fn relation(&self, key: &NameKey) -> Option<&RelationEntry> {
+        self.relations.get(key)
     }
 
-    fn function(&self, name: &str) -> Option<&FunctionSet> {
-        self.functions.get(&name.to_ascii_lowercase())
+    fn function(&self, key: &NameKey) -> Option<&FunctionSet> {
+        self.functions.get(key)
     }
 
-    fn table_function(&self, name: &str) -> Option<&TableFunctionSet> {
-        self.table_functions.get(&name.to_ascii_lowercase())
+    fn table_function(&self, key: &NameKey) -> Option<&TableFunctionSet> {
+        self.table_functions.get(key)
     }
 
     /// Populate this layer with the dialect's built-in functions.
@@ -699,27 +700,29 @@ impl Catalog {
                 select,
                 without_rowid,
             } => {
-                let Some(name_val) = stmt.span_field_text(&fields, name) else {
+                let Some(name_val) = stmt.span_field_ident_text(&fields, name) else {
                     return;
                 };
+                let normalized_name = name_val.into_owned();
                 let cols = reader.extract_columns(&fields, columns, select);
                 let is_without_rowid = without_rowid.field != FIELD_ABSENT
                     && matches!(
                         fields[without_rowid.field as usize],
                         FieldValue::Flags(f) if without_rowid.is_set(f)
                     );
-                layer.insert_table(name_val.to_string(), cols, is_without_rowid);
+                layer.insert_table(normalized_name, cols, is_without_rowid);
             }
             SemanticRole::DefineView {
                 name,
                 columns,
                 select,
             } => {
-                let Some(name_val) = stmt.span_field_text(&fields, name) else {
+                let Some(name_val) = stmt.span_field_ident_text(&fields, name) else {
                     return;
                 };
+                let normalized_name = name_val.into_owned();
                 let cols = reader.extract_columns(&fields, columns, select);
-                layer.insert_view(name_val.to_string(), cols);
+                layer.insert_view(normalized_name, cols);
             }
             SemanticRole::DefineFunction {
                 name,
@@ -727,17 +730,18 @@ impl Catalog {
                 return_type,
                 ..
             } => {
-                let Some(name_val) = stmt.span_field_text(&fields, name) else {
+                let Some(name_val) = stmt.span_field_ident_text(&fields, name) else {
                     return;
                 };
+                let normalized_name = name_val.into_owned();
                 let arity = reader.function_arity(&fields, args);
                 layer.insert_function_overload(
-                    name_val.to_string(),
+                    normalized_name.clone(),
                     FunctionCategory::Scalar,
                     arity,
                 );
                 if reader.is_table_returning(&fields, return_type) {
-                    layer.insert_table_function(name_val.to_string(), AritySpec::Any, Vec::new());
+                    layer.insert_table_function(normalized_name, AritySpec::Any, Vec::new());
                 }
             }
             // Non-DDL roles are irrelevant to catalog accumulation.
@@ -780,28 +784,28 @@ impl Catalog {
 
     // ── Resolution ────────────────────────────────────────────────────────────
 
-    /// Returns `true` if `name` is a known relation in any layer.
-    pub(crate) fn resolve_relation(&self, name: &str) -> bool {
+    /// Returns `true` if `key` is a known relation in any layer.
+    pub(crate) fn resolve_relation(&self, key: &NameKey) -> bool {
         self.all_layers_ordered()
-            .any(|layer| layer.relation(name).is_some())
+            .any(|layer| layer.relation(key).is_some())
     }
 
-    /// Returns `true` if `name` is a view in any layer.
-    pub(crate) fn is_view(&self, name: &str) -> bool {
+    /// Returns `true` if `key` is a view in any layer.
+    pub(crate) fn is_view(&self, key: &NameKey) -> bool {
         self.all_layers_ordered()
-            .any(|layer| layer.relation(name).is_some_and(|r| r.is_view))
+            .any(|layer| layer.relation(key).is_some_and(|r| r.is_view))
     }
 
-    /// Returns `true` if `name` is a known table-valued function in any layer.
-    pub(crate) fn resolve_table_function(&self, name: &str) -> bool {
+    /// Returns `true` if `key` is a known table-valued function in any layer.
+    pub(crate) fn resolve_table_function(&self, key: &NameKey) -> bool {
         self.all_layers_ordered()
-            .any(|layer| layer.table_function(name).is_some())
+            .any(|layer| layer.table_function(key).is_some())
     }
 
-    pub(crate) fn check_function(&self, name: &str, arg_count: usize) -> FunctionCheckResult {
+    pub(crate) fn check_function(&self, key: &NameKey, arg_count: usize) -> FunctionCheckResult {
         let set = self
             .all_layers_ordered()
-            .find_map(|layer| layer.function(name));
+            .find_map(|layer| layer.function(key));
         let Some(set) = set else {
             return FunctionCheckResult::Unknown;
         };
@@ -819,12 +823,12 @@ impl Catalog {
     /// - `columns = Some(cols)` — known column list.
     /// - `columns = None` — not found, or columns unknown (accept any ref).
     /// - `without_rowid = true` — no implicit rowid/oid/_rowid_ column.
-    pub(crate) fn table_source_info(&self, name: &str) -> (Option<Vec<String>>, bool) {
+    pub(crate) fn table_source_info(&self, key: &NameKey) -> (Option<Vec<String>>, bool) {
         for layer in self.all_layers_ordered() {
-            if let Some(rel) = layer.relation(name) {
+            if let Some(rel) = layer.relation(key) {
                 return (rel.columns.clone(), rel.without_rowid);
             }
-            if let Some(tf) = layer.table_function(name) {
+            if let Some(tf) = layer.table_function(key) {
                 let cols = if tf.output_columns.is_empty() {
                     None
                 } else {
@@ -863,11 +867,11 @@ impl Catalog {
     /// Look up function metadata by name: returns (category, arities) if found.
     pub(crate) fn function_signature(
         &self,
-        name: &str,
+        key: &NameKey,
     ) -> Option<(FunctionCategory, Vec<AritySpec>)> {
         let set = self
             .all_layers_ordered()
-            .find_map(|layer| layer.function(name))?;
+            .find_map(|layer| layer.function(key))?;
         let category = set
             .overloads
             .first()
@@ -931,9 +935,9 @@ mod tests {
             Some(vec!["id".to_string(), "name".to_string()]),
             false,
         );
-        assert!(cat.resolve_relation("users"));
-        assert!(cat.resolve_relation("USERS"));
-        assert!(!cat.resolve_relation("orders"));
+        assert!(cat.resolve_relation(&NameKey::new("users")));
+        assert!(cat.resolve_relation(&NameKey::new("USERS")));
+        assert!(!cat.resolve_relation(&NameKey::new("orders")));
     }
 
     #[test]
@@ -941,7 +945,7 @@ mod tests {
         let mut cat = sqlite_catalog();
         cat.layer_mut(CatalogLayer::Database)
             .insert_view("active_users", Some(vec!["id".to_string()]));
-        assert!(cat.resolve_relation("active_users"));
+        assert!(cat.resolve_relation(&NameKey::new("active_users")));
     }
 
     #[test]
@@ -950,11 +954,11 @@ mod tests {
         cat.layer_mut(CatalogLayer::Database)
             .insert_function_overload("my_func", FunctionCategory::Scalar, AritySpec::Exact(2));
         assert!(matches!(
-            cat.check_function("my_func", 2),
+            cat.check_function(&NameKey::new("my_func"), 2),
             FunctionCheckResult::Ok
         ));
         assert!(matches!(
-            cat.check_function("my_func", 1),
+            cat.check_function(&NameKey::new("my_func"), 1),
             FunctionCheckResult::WrongArity { .. }
         ));
     }
@@ -965,11 +969,11 @@ mod tests {
         cat.layer_mut(CatalogLayer::Database)
             .insert_function_overload("variadic_fn", FunctionCategory::Scalar, AritySpec::Any);
         assert!(matches!(
-            cat.check_function("variadic_fn", 0),
+            cat.check_function(&NameKey::new("variadic_fn"), 0),
             FunctionCheckResult::Ok
         ));
         assert!(matches!(
-            cat.check_function("variadic_fn", 100),
+            cat.check_function(&NameKey::new("variadic_fn"), 100),
             FunctionCheckResult::Ok
         ));
     }
@@ -978,11 +982,11 @@ mod tests {
     fn builtin_functions_resolved() {
         let cat = sqlite_catalog();
         assert!(!matches!(
-            cat.check_function("abs", 1),
+            cat.check_function(&NameKey::new("abs"), 1),
             FunctionCheckResult::Unknown
         ));
         assert!(!matches!(
-            cat.check_function("coalesce", 2),
+            cat.check_function(&NameKey::new("coalesce"), 2),
             FunctionCheckResult::Unknown
         ));
     }
@@ -991,14 +995,14 @@ mod tests {
     fn from_ddl_populates_tables() {
         let dialect = crate::sqlite::dialect::dialect();
         let cat = Catalog::from_ddl(dialect, &["CREATE TABLE users (id INTEGER, name TEXT);"]).0;
-        assert!(cat.resolve_relation("users"));
+        assert!(cat.resolve_relation(&NameKey::new("users")));
     }
 
     #[test]
     fn from_ddl_populates_virtual_tables() {
         let dialect = crate::sqlite::dialect::dialect();
         let cat = Catalog::from_ddl(dialect, &["CREATE VIRTUAL TABLE fts USING fts5(content);"]).0;
-        assert!(cat.resolve_relation("fts"));
+        assert!(cat.resolve_relation(&NameKey::new("fts")));
     }
 
     #[test]
@@ -1009,9 +1013,9 @@ mod tests {
             Some(vec!["id".to_string()]),
             false,
         );
-        assert!(cat.resolve_relation("tmp"));
+        assert!(cat.resolve_relation(&NameKey::new("tmp")));
         cat.new_database();
-        assert!(!cat.resolve_relation("tmp"));
+        assert!(!cat.resolve_relation(&NameKey::new("tmp")));
     }
 
     #[test]
@@ -1023,7 +1027,7 @@ mod tests {
             false,
         );
         cat.new_connection();
-        assert!(!cat.resolve_relation("conn_tbl"));
+        assert!(!cat.resolve_relation(&NameKey::new("conn_tbl")));
     }
 
     #[test]
@@ -1034,7 +1038,7 @@ mod tests {
             Some(vec!["id".to_string()]),
             false,
         );
-        assert!(cat.resolve_relation("conn_tbl"));
+        assert!(cat.resolve_relation(&NameKey::new("conn_tbl")));
     }
 
     #[test]
@@ -1045,9 +1049,9 @@ mod tests {
         cat.layer_mut(CatalogLayer::Database)
             .insert_view("active_users", Some(vec!["id".into()]));
 
-        assert!(!cat.is_view("users"));
-        assert!(cat.is_view("active_users"));
-        assert!(!cat.is_view("nonexistent"));
+        assert!(!cat.is_view(&NameKey::new("users")));
+        assert!(cat.is_view(&NameKey::new("active_users")));
+        assert!(!cat.is_view(&NameKey::new("nonexistent")));
     }
 
     #[test]

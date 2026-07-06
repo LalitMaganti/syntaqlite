@@ -1762,6 +1762,68 @@ mod tests {
     }
 
     #[test]
+    fn single_quoted_name_span_is_dequoted_and_flagged() {
+        // SQLite accepts a string literal in identifier positions
+        // (`nm ::= STRING`). The parser must strip the quotes from the
+        // span — like it does for `"x"`, `[x]`, and `` `x` `` — and
+        // record the single-quote style in the span flags.
+        let parser = Parser::new();
+        let source = "SELECT * FROM 't1'";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        let span = first_quoted_span_in_tree(&erased)
+            .expect("single-quoted table name should carry a quote flag");
+        assert_eq!(erased.span_text(span).0, "t1");
+        assert_eq!(span.quote_char(), Some('\''));
+    }
+
+    #[test]
+    fn single_quoted_name_span_keeps_escapes_verbatim() {
+        // Spans are zero-copy: the inner text of `'a''b'` keeps the
+        // doubled quote verbatim. Collapsing `''` → `'` is the job of
+        // `unescape_quoted`, applied by consumers.
+        let parser = Parser::new();
+        let source = "SELECT * FROM 'a''b'";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        let span = first_quoted_span_in_tree(&erased)
+            .expect("single-quoted table name should carry a quote flag");
+        assert_eq!(erased.span_text(span).0, "a''b");
+        assert_eq!(span.quote_char(), Some('\''));
+    }
+
+    #[test]
+    fn string_literal_span_stays_quoted_verbatim() {
+        // A string literal in expression position is NOT an identifier —
+        // its span must keep the quotes and carry no quote flag.
+        let parser = Parser::new();
+        let source = "SELECT 'lit'";
+        let mut session = parser.parse(source);
+        let stmt = match session.next() {
+            ParseOutcome::Ok(stmt) => stmt,
+            ParseOutcome::Done => panic!("expected statement"),
+            ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
+        };
+        let erased = stmt.erase();
+        assert!(
+            first_quoted_span_in_tree(&erased).is_none(),
+            "string literal must not be flagged as a quoted identifier"
+        );
+        let span = first_span_in_tree(&erased).expect("expected a Span field");
+        assert_eq!(erased.span_text(span).0, "'lit'");
+    }
+
+    #[test]
     fn span_text_preserves_offset_for_empty_quoted_token() {
         // Regression: an empty-but-quoted token like `""` has length 0 but a
         // real source position. `span_text` used to collapse any zero-length

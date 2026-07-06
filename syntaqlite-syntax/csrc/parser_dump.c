@@ -122,8 +122,22 @@ static void dump_node_recursive(DumpBuf* b,
                   ? p->stmt_source
                   : p->macro.layers.data[sp._layer_id].expansion_data;
 #endif
-          dump_printf(b, mem, "%s: \"%.*s\"\n", fm->name, (int)sp.length,
-                      base + sp.offset);
+          const char* text = base + sp.offset;
+          char q = syntaqlite_span_quote_char(sp);
+          dump_printf(b, mem, "%s: \"", fm->name);
+          if (q != 0 && q != '[' && memchr(text, q, sp.length)) {
+            // Quoted identifier containing its escape (doubled quote
+            // char): dump the identifier *value* so equal names dump
+            // equally regardless of the quote style that encoded them.
+            for (uint32_t i = 0; i < sp.length; i++) {
+              dump_append(b, mem, &text[i], 1);
+              if (text[i] == q && i + 1 < sp.length && text[i + 1] == q)
+                i++;
+            }
+          } else {
+            dump_append(b, mem, text, sp.length);
+          }
+          dump_append(b, mem, "\"\n", 2);
         }
         break;
       }

@@ -201,3 +201,75 @@ class ColumnRefBasic(TestSuite):
               window_clause: (none)
 """,
         )
+
+
+class ColumnRefQuoting(TestSuite):
+    """Quoted-identifier spans dump as the identifier value.
+
+    The parser strips enclosing quotes from all four styles ("x", [x],
+    `x`, 'x'); the dump additionally collapses SQLite's doubled-quote
+    escape so the same name dumps identically however it was encoded.
+    """
+
+    def test_single_quoted_column_dumps_bare(self):
+        return DiffTestBlueprint(
+            sql="SELECT 'x' FROM ('x')",
+            out="""\
+            SelectStmt
+              flags: (none)
+              columns:
+                ResultColumnList [1 items]
+                  ResultColumn
+                    flags: (none)
+                    alias: (none)
+                    expr:
+                      Literal
+                        literal_type: STRING
+                        source: "'x'"
+              from_clause:
+                TableRef
+                  table_name: "x"
+                  schema: (none)
+                  has_parens: FALSE
+                  alias: (none)
+                  args: (none)
+              where_clause: (none)
+              groupby: (none)
+              having: (none)
+              orderby: (none)
+              limit_clause: (none)
+              window_clause: (none)
+""",
+        )
+
+    def test_escaped_quotes_dump_identifier_value(self):
+        return DiffTestBlueprint(
+            sql='SELECT "a""b" FROM \'a\'\'b\'',
+            out="""\
+            SelectStmt
+              flags: (none)
+              columns:
+                ResultColumnList [1 items]
+                  ResultColumn
+                    flags: (none)
+                    alias: (none)
+                    expr:
+                      ColumnRef
+                        column: "a"b"
+                        table: (none)
+                        schema: (none)
+              from_clause:
+                TableRef
+                  table_name: "a'b"
+                  schema: (none)
+                  has_parens: FALSE
+                  alias: (none)
+                  args: (none)
+              where_clause: (none)
+              groupby: (none)
+              having: (none)
+              orderby: (none)
+              limit_clause: (none)
+              window_clause: (none)
+""",
+        )

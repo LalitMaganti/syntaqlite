@@ -57,6 +57,8 @@ mod lineage;
 #[cfg(feature = "analysis")]
 pub(crate) mod model;
 #[cfg(feature = "analysis")]
+pub(crate) mod name_key;
+#[cfg(feature = "analysis")]
 pub(crate) mod resolver;
 #[cfg(feature = "analysis")]
 pub(crate) mod stmt_reader;

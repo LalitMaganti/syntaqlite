@@ -12,6 +12,7 @@ use crate::analysis::Catalog;
 use crate::analysis::completion::{self, SignatureHelpInfo};
 use crate::analysis::diagnostics::Diagnostic;
 use crate::analysis::engine::Analyzer;
+use crate::analysis::name_key::NameKey;
 use crate::dialect::AnyDialect;
 use crate::fmt::FormatConfig;
 use crate::fmt::formatter::Formatter;
@@ -674,7 +675,9 @@ impl LspHost {
         let (func_name, active_param) =
             completion::find_enclosing_call(before, &data.tokens, &self.dialect)?;
 
-        let (_category, arities) = self.user_catalog.function_signature(&func_name)?;
+        let (_category, arities) = self
+            .user_catalog
+            .function_signature(&NameKey::new(&func_name))?;
 
         Some(SignatureHelpInfo {
             name: func_name,

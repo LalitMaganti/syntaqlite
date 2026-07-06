@@ -15,6 +15,8 @@
 //! [`AnyParsedStatement`] in `syntaqlite-syntax` directly — they're raw
 //! parse-tree convenience, not analysis.
 
+use std::borrow::Cow;
+
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 use syntaqlite_syntax::source::DocRange;
 
@@ -101,7 +103,7 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
     pub(crate) fn cte_declared_cols(
         &self,
         binding_node: AnyNodeId,
-    ) -> Option<Vec<(&'stmt str, DocRange)>> {
+    ) -> Option<Vec<(Cow<'stmt, str>, DocRange)>> {
         let (
             SemanticRole::CteBinding {
                 columns: cols_idx, ..
@@ -113,9 +115,9 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         };
         let list_id = fields.node_id_at(cols_idx)?;
         let children = self.stmt.list_children(list_id)?;
-        let mut names: Vec<(&'stmt str, DocRange)> = Vec::with_capacity(children.len());
+        let mut names: Vec<(Cow<'stmt, str>, DocRange)> = Vec::with_capacity(children.len());
         for &id in children {
-            let (text, range) = self.stmt.name_text(Some(id));
+            let (text, range) = self.stmt.name_ident_text(Some(id));
             if !text.is_empty() {
                 names.push((text, range));
             }
@@ -134,7 +136,8 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         else {
             return None;
         };
-        let (text, range) = self.stmt.span_field_range(&fields, name_idx)?;
+        let (_, range) = self.stmt.span_field_range(&fields, name_idx)?;
+        let text = self.stmt.span_field_ident_text(&fields, name_idx)?;
         Some((text.to_ascii_lowercase(), range))
     }
 
@@ -162,7 +165,7 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         out
     }
 
-    fn column_def_name_span(&self, node_id: AnyNodeId) -> Option<(&'stmt str, DocRange)> {
+    fn column_def_name_span(&self, node_id: AnyNodeId) -> Option<(Cow<'stmt, str>, DocRange)> {
         let (SemanticRole::ColumnDef { name: name_idx, .. }, fields) =
             self.role_for_node(node_id)?
         else {
@@ -174,8 +177,8 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
             if let FieldValue::Span(sp) = name_fields[j]
                 && !sp.is_empty()
             {
-                let (s, range) = self.stmt.span_text_abs(sp);
-                return Some((s, range));
+                let (_, range) = self.stmt.span_text_abs(sp);
+                return Some((self.stmt.span_ident_text(sp), range));
             }
         }
         None
@@ -192,9 +195,9 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
             SemanticRole::DefineView { name, .. } => (name, true),
             _ => return Vec::new(),
         };
-        match self.stmt.span_field_text(&fields, name_idx) {
+        match self.stmt.span_field_ident_text(&fields, name_idx) {
             Some(name) => vec![DefinedRelation {
-                name: name.to_string(),
+                name: name.into_owned(),
                 is_view,
             }],
             None => Vec::new(),
@@ -317,7 +320,7 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         expr_idx: u8,
     ) -> Option<String> {
         if let Some(alias_id) = child_fields.node_id_at(alias_idx)
-            && let Some(name) = self.stmt.first_span_text(alias_id)
+            && let Some(name) = self.stmt.first_span_ident_text(alias_id)
         {
             return Some(name.to_ascii_lowercase());
         }
@@ -328,7 +331,7 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
             },
             expr_fields,
         )) = self.role_for_node(expr_id)
-            && let Some(name) = self.stmt.span_field_text(&expr_fields, col_idx)
+            && let Some(name) = self.stmt.span_field_ident_text(&expr_fields, col_idx)
         {
             return Some(name.to_ascii_lowercase());
         }

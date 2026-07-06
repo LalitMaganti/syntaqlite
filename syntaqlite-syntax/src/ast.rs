@@ -444,6 +444,43 @@ mod serde_impl {
     }
 }
 
+/// Collapse doubled quote characters in the inner text of a quoted
+/// identifier.
+///
+/// Spans are zero-copy slices of the source, so the parser strips only the
+/// *enclosing* quotes ([`TextSpan::quote_char`] records which style). Inside
+/// the quotes, `SQLite` escapes the quote character by doubling it; that
+/// escape survives in the span text verbatim and is collapsed here:
+///
+/// - `unescape_quoted("a''b", '\'')` → `a'b` (from `'a''b'`)
+/// - `unescape_quoted(r#"a""b"#, '"')` → `a"b` (from `"a""b"`)
+/// - backticks collapse the same way (`a``b` → `` a`b ``)
+///
+/// `[...]` has no escape mechanism, and doubled characters of a *different*
+/// quote style are literal — both pass through unchanged. Borrows the input
+/// unless an escape is actually present.
+pub fn unescape_quoted(inner: &str, quote: char) -> std::borrow::Cow<'_, str> {
+    // `[...]` has no escape mechanism; everything else escapes by doubling.
+    if quote == '[' || !inner.contains(quote) {
+        return std::borrow::Cow::Borrowed(inner);
+    }
+    let mut out = String::with_capacity(inner.len());
+    let mut chars = inner.chars();
+    while let Some(c) = chars.next() {
+        out.push(c);
+        if c == quote {
+            // Skip the second char of a doubled pair; a lone (unpaired)
+            // quote char never appears in a well-formed token, but if one
+            // does, keep it rather than eat the next char.
+            let rest = chars.as_str();
+            if rest.starts_with(quote) {
+                chars = rest[quote.len_utf8()..].chars();
+            }
+        }
+    }
+    std::borrow::Cow::Owned(out)
+}
+
 // ── ffi ───────────────────────────────────────────────────────────────────────
 
 pub(crate) use ffi::CNodeList as RawNodeList;
@@ -478,8 +515,11 @@ mod ffi {
     const SPAN_FLAG_QUOTE_DOUBLE: u32 = 1;
     const SPAN_FLAG_QUOTE_BACKTICK: u32 = 2;
     const SPAN_FLAG_QUOTE_BRACKET: u32 = 4;
-    const SPAN_QUOTE_MASK: u32 =
-        SPAN_FLAG_QUOTE_DOUBLE | SPAN_FLAG_QUOTE_BACKTICK | SPAN_FLAG_QUOTE_BRACKET;
+    const SPAN_FLAG_QUOTE_SINGLE: u32 = 8;
+    const SPAN_QUOTE_MASK: u32 = SPAN_FLAG_QUOTE_DOUBLE
+        | SPAN_FLAG_QUOTE_BACKTICK
+        | SPAN_FLAG_QUOTE_BRACKET
+        | SPAN_FLAG_QUOTE_SINGLE;
 
     impl CTextSpan {
         /// Returns `true` if the span covers zero bytes.
@@ -488,20 +528,25 @@ mod ffi {
         }
 
         /// Was this identifier quoted in source?  True for `"..."`,
-        /// `` `...` ``, and `[...]` forms; false otherwise.  Use
+        /// `` `...` ``, `[...]`, and `'...'` (a string literal in
+        /// identifier position) forms; false otherwise.  Use
         /// [`Self::quote_char`] to distinguish which quote character
         /// bracketed it.
         ///
         /// Note that the span itself points at the *dequoted* inner text —
         /// the surrounding quote bytes are not part of `offset`/`length`.
+        /// A doubled quote char inside the text (`SQLite`'s escape) is kept
+        /// verbatim; collapse it with
+        /// [`unescape_quoted`](crate::ast::unescape_quoted) when you need
+        /// the identifier value.
         pub fn is_quoted(self) -> bool {
             (self.flags & SPAN_QUOTE_MASK) != 0
         }
 
         /// The character that opened this identifier's quotes in source:
-        /// `'"'`, `` '`' ``, or `'['`.  `None` if the span was unquoted.
-        /// For `[...]` only the opener is reported; the closer is always
-        /// `']'`.
+        /// `'"'`, `` '`' ``, `'['`, or `'\''`.  `None` if the span was
+        /// unquoted.  For `[...]` only the opener is reported; the closer
+        /// is always `']'`.
         pub fn quote_char(self) -> Option<char> {
             if self.flags & SPAN_FLAG_QUOTE_DOUBLE != 0 {
                 Some('"')
@@ -509,6 +554,8 @@ mod ffi {
                 Some('`')
             } else if self.flags & SPAN_FLAG_QUOTE_BRACKET != 0 {
                 Some('[')
+            } else if self.flags & SPAN_FLAG_QUOTE_SINGLE != 0 {
+                Some('\'')
             } else {
                 None
             }
@@ -547,5 +594,49 @@ mod ffi {
                 std::slice::from_raw_parts(base, self.count as usize)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::borrow::Cow;
+
+    use super::unescape_quoted;
+
+    #[test]
+    fn unescape_quoted_no_escape_borrows() {
+        assert!(matches!(unescape_quoted("abc", '\''), Cow::Borrowed("abc")));
+        assert!(matches!(unescape_quoted("", '"'), Cow::Borrowed("")));
+    }
+
+    #[test]
+    fn unescape_quoted_collapses_doubled_quote_char() {
+        assert_eq!(unescape_quoted("a''b", '\''), "a'b");
+        assert_eq!(unescape_quoted("a\"\"b", '"'), "a\"b");
+        assert_eq!(unescape_quoted("a``b", '`'), "a`b");
+        assert_eq!(unescape_quoted("a''b''c", '\''), "a'b'c");
+        // Inner text of `''''''` (six quotes): two escape pairs.
+        assert_eq!(unescape_quoted("''''", '\''), "''");
+    }
+
+    #[test]
+    fn unescape_quoted_other_quote_chars_are_literal() {
+        // Two single quotes inside a double-quoted identifier are literal,
+        // not an escape.
+        assert_eq!(unescape_quoted("a''b", '"'), "a''b");
+        assert_eq!(unescape_quoted("a\"\"b", '\''), "a\"\"b");
+    }
+
+    #[test]
+    fn unescape_quoted_brackets_have_no_escapes() {
+        assert_eq!(unescape_quoted("a\"b", '['), "a\"b");
+        assert_eq!(unescape_quoted("a''b", '['), "a''b");
+    }
+
+    #[test]
+    fn unescape_quoted_lone_quote_char_passes_through() {
+        // A well-formed token never contains an unpaired quote char, but a
+        // lone one must not be dropped.
+        assert_eq!(unescape_quoted("a'b", '\''), "a'b");
     }
 }

@@ -20,6 +20,7 @@ use super::catalog::Catalog;
 use super::engine::walker::{
     CteBindingEvent, ScopedSourceEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
 };
+use super::name_key::NameKey;
 use super::stmt_reader::StmtReader;
 use crate::dialect::SemanticRole;
 
@@ -102,16 +103,17 @@ impl LineageCapture {
     /// columns when the body hasn't been finalized yet (recursive
     /// self-reference).
     fn classify(&self, canonical: &str, catalog: &Catalog) -> (SourceKind, Option<Vec<String>>) {
+        let key = NameKey::new(canonical);
         if let Some(&body) = self.cte_bodies.get(canonical) {
             let cols = self
                 .per_query
                 .get(&body)
                 .map(|s| s.column_names.clone())
-                .or_else(|| catalog.table_source_info(canonical).0);
+                .or_else(|| catalog.table_source_info(&key).0);
             (SourceKind::Cte(body), cols)
         } else {
-            let (cols, _) = catalog.table_source_info(canonical);
-            let kind = if catalog.is_view(canonical) {
+            let (cols, _) = catalog.table_source_info(&key);
+            let kind = if catalog.is_view(&key) {
                 SourceKind::View
             } else {
                 SourceKind::Table

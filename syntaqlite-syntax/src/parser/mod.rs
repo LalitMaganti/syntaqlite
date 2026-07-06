@@ -1,6 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::ffi::CStr;
 use std::marker::PhantomData;
@@ -1175,6 +1176,79 @@ impl<'a> AnyParsedStatement<'a> {
             crate::ast::FieldValue::NodeId(id) if !id.is_null() => self.first_span_text(id),
             _ => None,
         }
+    }
+
+    // ── Identifier-value accessors ───────────────────────────────────────
+    //
+    // The `*_text` accessors above are zero-copy: a quoted identifier's
+    // span keeps `SQLite`'s doubled-quote escape verbatim (`'a''b'` →
+    // `a''b`). These variants collapse the escape via
+    // [`unescape_quoted`](crate::ast::unescape_quoted), yielding the
+    // identifier *value* (`a'b`) — what name comparison and catalog keys
+    // must use. Borrowed unless an escape is actually present.
+
+    /// Identifier value of a span: expanded text with quote escapes
+    /// collapsed.
+    pub fn span_ident_text(&self, span: crate::ast::TextSpan) -> Cow<'a, str> {
+        let text = self.span_expanded_text(span);
+        match span.quote_char() {
+            Some(q) => crate::ast::unescape_quoted(text, q),
+            None => Cow::Borrowed(text),
+        }
+    }
+
+    /// Identifier value of a span field. `None` under the same conditions
+    /// as [`Self::span_field_text`].
+    pub fn span_field_ident_text(
+        &self,
+        fields: &crate::ast::NodeFields,
+        idx: u8,
+    ) -> Option<Cow<'a, str>> {
+        if idx == crate::ast::FIELD_ABSENT {
+            return None;
+        }
+        match fields[idx as usize] {
+            crate::ast::FieldValue::Span(sp) if !sp.is_empty() => Some(self.span_ident_text(sp)),
+            _ => None,
+        }
+    }
+
+    /// Identifier value of a Name node's field-0 span. Empty-string/default
+    /// fallbacks as in [`Self::name_text`].
+    pub fn name_ident_text(&self, node_id: Option<AnyNodeId>) -> (Cow<'a, str>, DocRange) {
+        let Some(node_id) = node_id else {
+            return (Cow::Borrowed(""), DocRange::default());
+        };
+        let Some((_, fields)) = self.extract_fields(node_id) else {
+            return (Cow::Borrowed(""), DocRange::default());
+        };
+        if fields.is_empty() {
+            return (Cow::Borrowed(""), DocRange::default());
+        }
+        match fields[0] {
+            crate::ast::FieldValue::Span(sp) => {
+                let (_, range) = self.span_text_abs(sp);
+                (self.span_ident_text(sp), range)
+            }
+            _ => (Cow::Borrowed(""), DocRange::default()),
+        }
+    }
+
+    /// Identifier value of the first non-empty span in `node_id`'s fields.
+    /// The escape-collapsing sibling of [`Self::first_span_text`].
+    pub fn first_span_ident_text(&self, node_id: AnyNodeId) -> Option<Cow<'a, str>> {
+        if node_id.is_null() {
+            return None;
+        }
+        let (_, fields) = self.extract_fields(node_id)?;
+        for i in 0..fields.len() {
+            if let crate::ast::FieldValue::Span(sp) = fields[i]
+                && !sp.is_empty()
+            {
+                return Some(self.span_ident_text(sp));
+            }
+        }
+        None
     }
 
     /// Return child node IDs if `id` is a list node.

@@ -7566,12 +7566,10 @@ static YYACTIONTYPE yy_reduce(
     }
       yymsp[-4].minor.yy277 = yylhsminor.yy277;
       break;
-    case 46:  /* likeop ::= LIKE_KW|MATCH */
-    case 200: /* nm ::= STRING */
-      yytestcase(yyruleno == 200);
-      {
-        yylhsminor.yy0 = yymsp[0].minor.yy0;
-      }
+    case 46: /* likeop ::= LIKE_KW|MATCH */
+    {
+      yylhsminor.yy0 = yymsp[0].minor.yy0;
+    }
       yymsp[0].minor.yy0 = yylhsminor.yy0;
       break;
     case 47: /* likeop ::= NOT LIKE_KW|MATCH */
@@ -8848,10 +8846,12 @@ static YYACTIONTYPE yy_reduce(
       yymsp[-4].minor.yy277 = yylhsminor.yy277;
       break;
     case 199: /* nm ::= ID|INDEXED|JOIN_KW */
-    {
-      synq_mark_as_id(pCtx, yymsp[0].minor.yy0);
-      yylhsminor.yy0 = yymsp[0].minor.yy0;
-    }
+    case 200: /* nm ::= STRING */
+      yytestcase(yyruleno == 200);
+      {
+        synq_mark_as_id(pCtx, yymsp[0].minor.yy0);
+        yylhsminor.yy0 = yymsp[0].minor.yy0;
+      }
       yymsp[0].minor.yy0 = yylhsminor.yy0;
       break;
     case 201: /* nmorerr ::= nm */
