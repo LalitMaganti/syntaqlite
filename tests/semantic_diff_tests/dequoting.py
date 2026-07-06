@@ -60,3 +60,74 @@ class Dequoting(TestSuite):
             strict_schema=True,
             out="",
         )
+
+    # `SQLite` also accepts a string literal wherever an identifier is
+    # expected (table names, column names, aliases). The parser strips
+    # "double quotes", [brackets], and `backticks`, but retains the single
+    # quotes verbatim, so the analyzer normalizes those separately.
+
+    def test_table_single_quoted_ddl_bare_query(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE 't1' (a INTEGER); SELECT * FROM t1",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_table_single_quoted_ddl_bracket_query(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE '@abc' (a INTEGER); SELECT * FROM [@abc]",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_table_bare_ddl_single_quoted_query(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t1 (a INTEGER); DELETE FROM 't1'",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_table_single_quoted_escaped_ddl_double_quoted_query(self):
+        return DiffTestBlueprint(
+            sql='CREATE TABLE \'don\'\'t\' (a INTEGER); SELECT * FROM "don\'t"',
+            strict_schema=True,
+            out="",
+        )
+
+    def test_col_single_quoted_ddl_unquoted_query(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t ('col' INTEGER); SELECT col FROM t",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_aliased_col_single_quoted(self):
+        return DiffTestBlueprint(
+            sql="SELECT a FROM (SELECT avg(x) AS 'a' FROM (SELECT 1 AS x)) t1;",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_order_by_single_quoted_alias(self):
+        return DiffTestBlueprint(
+            sql="SELECT 2 AS 'x' ORDER BY x;",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_source_alias_single_quoted(self):
+        return DiffTestBlueprint(
+            sql="SELECT s.a FROM (SELECT 1 AS a) AS 's';",
+            strict_schema=True,
+            out="",
+        )
+
+    def test_qualified_col_single_quoted_table_and_column(self):
+        # Both the table qualifier and the column name are single-quoted
+        # string-literal identifiers (quote.test); the qualifier must
+        # normalize to match the source's scope key, not just the column.
+        return DiffTestBlueprint(
+            sql="CREATE TABLE '@abc' ('!pqr' INTEGER); SELECT '@abc'.'!pqr' FROM '@abc';",
+            strict_schema=True,
+            out="",
+        )

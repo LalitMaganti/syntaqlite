@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
 
-use super::stmt_reader::StmtReader;
+use super::stmt_reader::{StmtReader, normalize_quoted_identifier};
 use crate::dialect::AnyDialect;
 use crate::dialect::{
     FIELD_ABSENT, FunctionCategory as DialectFunctionCategory, SemanticRole, is_function_available,
@@ -702,13 +702,14 @@ impl Catalog {
                 let Some(name_val) = stmt.span_field_text(&fields, name) else {
                     return;
                 };
+                let normalized_name = normalize_quoted_identifier(name_val).into_owned();
                 let cols = reader.extract_columns(&fields, columns, select);
                 let is_without_rowid = without_rowid.field != FIELD_ABSENT
                     && matches!(
                         fields[without_rowid.field as usize],
                         FieldValue::Flags(f) if without_rowid.is_set(f)
                     );
-                layer.insert_table(name_val.to_string(), cols, is_without_rowid);
+                layer.insert_table(normalized_name, cols, is_without_rowid);
             }
             SemanticRole::DefineView {
                 name,
@@ -718,8 +719,9 @@ impl Catalog {
                 let Some(name_val) = stmt.span_field_text(&fields, name) else {
                     return;
                 };
+                let normalized_name = normalize_quoted_identifier(name_val).into_owned();
                 let cols = reader.extract_columns(&fields, columns, select);
-                layer.insert_view(name_val.to_string(), cols);
+                layer.insert_view(normalized_name, cols);
             }
             SemanticRole::DefineFunction {
                 name,
@@ -730,14 +732,15 @@ impl Catalog {
                 let Some(name_val) = stmt.span_field_text(&fields, name) else {
                     return;
                 };
+                let normalized_name = normalize_quoted_identifier(name_val).into_owned();
                 let arity = reader.function_arity(&fields, args);
                 layer.insert_function_overload(
-                    name_val.to_string(),
+                    normalized_name.clone(),
                     FunctionCategory::Scalar,
                     arity,
                 );
                 if reader.is_table_returning(&fields, return_type) {
-                    layer.insert_table_function(name_val.to_string(), AritySpec::Any, Vec::new());
+                    layer.insert_table_function(normalized_name, AritySpec::Any, Vec::new());
                 }
             }
             // Non-DDL roles are irrelevant to catalog accumulation.

@@ -15,12 +15,40 @@
 //! [`AnyParsedStatement`] in `syntaqlite-syntax` directly — they're raw
 //! parse-tree convenience, not analysis.
 
+use std::borrow::Cow;
+
 use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 use syntaqlite_syntax::source::DocRange;
 
 use crate::analysis::catalog::AritySpec;
 use crate::analysis::model::DefinedRelation;
 use crate::dialect::SemanticRole;
+
+/// Normalize a single-quoted identifier by stripping the quotes and
+/// unescaping doubled `''`.
+///
+/// `SQLite` accepts string literals in identifier positions (e.g. `FROM
+/// 't1'`, `AS 'a'`, `CREATE TABLE 't'(...)`). The parser retains the
+/// single quotes verbatim while stripping other quote styles (`"a"`,
+/// `[a]`, `` `a` ``), so this normalizes only that one remaining case.
+///
+/// Within single quotes, a doubled `''` represents a literal single
+/// quote:
+/// - `'a'` → `a`
+/// - `'a''b'` → `a'b`
+/// - `''''` → `'`
+///
+/// Unquoted text (and a lone/unmatched quote) is returned unchanged.
+pub(crate) fn normalize_quoted_identifier(name: &str) -> Cow<'_, str> {
+    let Some(inner) = name.strip_prefix('\'').and_then(|s| s.strip_suffix('\'')) else {
+        return Cow::Borrowed(name);
+    };
+    if inner.contains("''") {
+        Cow::Owned(inner.replace("''", "'"))
+    } else {
+        Cow::Borrowed(inner)
+    }
+}
 
 /// Bundles `(stmt, roles)` and exposes role-table-driven extraction.
 ///
@@ -156,7 +184,10 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
                 continue;
             }
             if let Some((name, range)) = self.column_def_name_span(child_id) {
-                out.push((name.to_ascii_lowercase(), range));
+                out.push((
+                    normalize_quoted_identifier(name).to_ascii_lowercase(),
+                    range,
+                ));
             }
         }
         out
@@ -230,7 +261,7 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         };
         for &child_id in children {
             if let Some((name, _)) = self.column_def_name_span(child_id) {
-                out.push(name.to_ascii_lowercase());
+                out.push(normalize_quoted_identifier(name).to_ascii_lowercase());
             }
         }
     }
@@ -319,7 +350,7 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         if let Some(alias_id) = child_fields.node_id_at(alias_idx)
             && let Some(name) = self.stmt.first_span_text(alias_id)
         {
-            return Some(name.to_ascii_lowercase());
+            return Some(normalize_quoted_identifier(name).to_ascii_lowercase());
         }
         let expr_id = child_fields.node_id_at(expr_idx)?;
         if let Some((
@@ -330,7 +361,7 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         )) = self.role_for_node(expr_id)
             && let Some(name) = self.stmt.span_field_text(&expr_fields, col_idx)
         {
-            return Some(name.to_ascii_lowercase());
+            return Some(normalize_quoted_identifier(name).to_ascii_lowercase());
         }
         // Fall back to the parser's recorded extent for this node — its
         // source-text slice covers the full expression including any
@@ -339,5 +370,50 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         self.stmt
             .node_text(expr_id)
             .map(|(text, _)| text.to_ascii_lowercase())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_quoted_identifier_plain_passthrough() {
+        assert_eq!(normalize_quoted_identifier("abc"), "abc");
+        assert_eq!(normalize_quoted_identifier(""), "");
+    }
+
+    #[test]
+    fn normalize_quoted_identifier_strips_single_quotes() {
+        assert_eq!(normalize_quoted_identifier("'abc'"), "abc");
+        assert_eq!(normalize_quoted_identifier("'@abc'"), "@abc");
+    }
+
+    #[test]
+    fn normalize_quoted_identifier_unescapes_doubled_quotes() {
+        assert_eq!(normalize_quoted_identifier("'don''t'"), "don't");
+        assert_eq!(normalize_quoted_identifier("'a''b''c'"), "a'b'c");
+    }
+
+    #[test]
+    fn normalize_quoted_identifier_degenerate_cases() {
+        // Empty quoted string.
+        assert_eq!(normalize_quoted_identifier("''"), "");
+        // A quoted string that is entirely escaped quotes: `''''''''`
+        // (8 quotes) is the SQLite literal for `'''` (3 quotes).
+        assert_eq!(normalize_quoted_identifier("''''''''"), "'''");
+        // A single stray quote isn't a matched pair — left untouched.
+        assert_eq!(normalize_quoted_identifier("'"), "'");
+    }
+
+    #[test]
+    fn normalize_quoted_identifier_leaves_other_quote_styles_alone() {
+        // Double quotes, brackets, and backticks are already stripped by
+        // the parser before this function ever sees the text; if they
+        // somehow show up here (e.g. a caller passes raw source text),
+        // this function must not misinterpret them as single-quote pairs.
+        assert_eq!(normalize_quoted_identifier("\"abc\""), "\"abc\"");
+        assert_eq!(normalize_quoted_identifier("[abc]"), "[abc]");
+        assert_eq!(normalize_quoted_identifier("`abc`"), "`abc`");
     }
 }

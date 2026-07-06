@@ -21,20 +21,10 @@ use syntaqlite_syntax::any::{
 use syntaqlite_syntax::source::DocRange;
 
 use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
-use crate::analysis::stmt_reader::StmtReader;
+use crate::analysis::stmt_reader::{StmtReader, normalize_quoted_identifier};
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 
 use super::query_scope::{QueryScope, RowIdPolicy};
-
-/// `SQLite` accepts a string literal as an alias (`FROM t AS 'a'`) and treats
-/// it as the identifier `a`. Identifier quotes (`"a"`, `[a]`, `` `a` ``)
-/// are already stripped by the parser; only string quotes survive.
-fn unquote_alias(alias: &str) -> &str {
-    alias
-        .strip_prefix('\'')
-        .and_then(|s| s.strip_suffix('\''))
-        .unwrap_or(alias)
-}
 
 // ── WalkCtx ───────────────────────────────────────────────────────────────────
 
@@ -457,13 +447,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             }
             SemanticRole::ScopedSource { body, alias } => {
                 // Bind the alias only; the body is its own scope.
-                let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias)).0);
-                if !alias_text.is_empty() {
+                let alias_normalized =
+                    normalize_quoted_identifier(self.stmt.name_text(fields.node_id_at(alias)).0);
+                if !alias_normalized.is_empty() {
                     let cols = fields.node_id_at(body).and_then(|id| {
                         StmtReader::new(self.stmt, self.roles).columns_from_select(id)
                     });
                     self.scope
-                        .add_table(alias_text, cols, RowIdPolicy::WithRowId);
+                        .add_table(&alias_normalized, cols, RowIdPolicy::WithRowId);
                 }
             }
             // Nested scopes own their sources.
@@ -496,12 +487,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let Some((name, _)) = self.stmt.span_field_range(fields, name_idx) else {
             return;
         };
-        let (columns, without_rowid) = self.catalog.table_source_info(name);
-        let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
-        let scope_name = if alias_text.is_empty() {
-            name
+        let name_normalized = normalize_quoted_identifier(name);
+        let (columns, without_rowid) = self.catalog.table_source_info(&name_normalized);
+        let alias_normalized =
+            normalize_quoted_identifier(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
+        let scope_name = if alias_normalized.is_empty() {
+            &*name_normalized
         } else {
-            alias_text
+            &*alias_normalized
         };
         self.scope
             .add_table(scope_name, columns, without_rowid.into());
@@ -521,13 +514,15 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             return;
         };
 
-        let is_known =
-            self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
-        let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
-        let alias = if alias_text.is_empty() {
+        let name_normalized = normalize_quoted_identifier(name);
+        let is_known = self.catalog.resolve_relation(&name_normalized)
+            || self.catalog.resolve_table_function(&name_normalized);
+        let alias_normalized =
+            normalize_quoted_identifier(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
+        let alias = if alias_normalized.is_empty() {
             None
         } else {
-            Some(alias_text)
+            Some(&*alias_normalized)
         };
 
         if V::WANTS_SOURCE_REF {
@@ -616,7 +611,15 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         // came from the original source (not a macro expansion).
         let dqs_candidate = col_sp.is_macro_free() && col_sp.quote_char() == Some('"');
 
-        let resolution = self.scope.resolve_column(table, column);
+        // `table`/`column` above keep the raw source text for display; the
+        // scope lookup key normalizes single-quoted identifiers to match
+        // how sources and columns were registered (see
+        // `normalize_quoted_identifier`).
+        let column_normalized = normalize_quoted_identifier(column);
+        let table_normalized = table.map(normalize_quoted_identifier);
+        let resolution = self
+            .scope
+            .resolve_column(table_normalized.as_deref(), &column_normalized);
 
         if V::WANTS_COLUMN_REF {
             let ev = ColumnRefEvent {
@@ -651,11 +654,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.walk_opt(visitor, body_id);
         self.scope.pop();
 
-        let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
-        let alias = if alias_text.is_empty() {
+        let alias_normalized =
+            normalize_quoted_identifier(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
+        let alias = if alias_normalized.is_empty() {
             None
         } else {
-            Some(alias_text)
+            Some(&*alias_normalized)
         };
 
         if V::WANTS_SCOPED_SOURCE {
@@ -726,7 +730,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             let alias_node = child_fields.node_id_at(alias_idx);
             let (alias_text, _) = reader.stmt().name_text(alias_node);
             if !alias_text.is_empty() {
-                aliases.push(alias_text.to_string());
+                aliases.push(normalize_quoted_identifier(alias_text).into_owned());
             }
             true
         });
