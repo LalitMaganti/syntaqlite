@@ -826,10 +826,12 @@ mod tests {
     //
     // `on_cte_binding` fires BEFORE the body walk so visitors (e.g.
     // LineageCapture) can register the name -> body_id mapping in time
-    // for body source-refs to resolve through it. The recursive-CTE
+    // for body source-refs to resolve through it. The self-reference
     // guarantee is separate: the body must observe the binding's own
-    // name as a *catalog-resolved* source (the walker pre-registers
-    // recursive CTE names in the catalog before the body walk).
+    // name as a *catalog-resolved* source (the walker pre-registers every
+    // CTE's name in the catalog before its body walk — SQLite treats the
+    // RECURSIVE keyword as decorative, so this applies whether or not the
+    // keyword is present).
 
     #[derive(Default)]
     struct HookCapture {

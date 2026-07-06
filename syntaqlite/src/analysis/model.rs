@@ -195,6 +195,7 @@ mod tests {
     use super::super::AnalysisContext;
     use super::super::catalog::{Catalog, CatalogLayer};
     use super::super::engine::Analyzer;
+    use super::StatementAnalysis;
 
     fn sqlite_catalog() -> Catalog {
         Catalog::new(crate::sqlite::dialect::dialect())
@@ -374,5 +375,79 @@ mod tests {
         let cols = lineage.into_inner();
         assert_eq!(cols.len(), 1);
         assert_eq!(cols[0].name, "id");
+    }
+
+    #[test]
+    fn cte_self_reference_resolves_without_recursive_keyword() {
+        // SQLite treats RECURSIVE as decorative: a CTE may reference itself
+        // whether or not the keyword is present.
+        let mut analyzer = Analyzer::new();
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze(
+            "WITH s(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM s WHERE i<100) \
+             SELECT count(*) FROM s",
+            &mut ctx,
+        );
+        assert!(
+            !model.has_diagnostics(),
+            "expected no diagnostics, got {:?}",
+            model
+                .statements()
+                .iter()
+                .flat_map(StatementAnalysis::diagnostics)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn cte_name_shadows_real_table_of_the_same_name() {
+        // A CTE named after an existing real table should shadow it for the
+        // duration of the WITH statement.
+        let mut analyzer = Analyzer::new();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "t",
+            Some(vec!["other".into()]),
+            false,
+        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("WITH t AS (SELECT 1 AS x) SELECT x FROM t", &mut ctx);
+        assert!(
+            !model.has_diagnostics(),
+            "expected no diagnostics, got {:?}",
+            model
+                .statements()
+                .iter()
+                .flat_map(StatementAnalysis::diagnostics)
+                .collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn non_self_referencing_cte_still_resolves() {
+        // A plain, non-recursive CTE (no self-reference at all) must remain
+        // unaffected by unconditional self-registration.
+        let mut analyzer = Analyzer::new();
+        let mut catalog = sqlite_catalog();
+        catalog.layer_mut(CatalogLayer::Database).insert_table(
+            "users",
+            Some(vec!["id".into()]),
+            false,
+        );
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze(
+            "WITH active AS (SELECT id FROM users) SELECT id FROM active",
+            &mut ctx,
+        );
+        assert!(
+            !model.has_diagnostics(),
+            "expected no diagnostics, got {:?}",
+            model
+                .statements()
+                .iter()
+                .flat_map(StatementAnalysis::diagnostics)
+                .collect::<Vec<_>>()
+        );
     }
 }
