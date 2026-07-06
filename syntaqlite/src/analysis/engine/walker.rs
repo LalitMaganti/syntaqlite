@@ -185,11 +185,11 @@ pub(crate) trait SemanticVisitor {
     ) {
     }
 
-    /// Called once per CTE binding, BEFORE its body is walked. For
-    /// recursive CTEs the body will observe the binding's own name as a
-    /// resolved catalog source; listeners that build a `name -> body`
-    /// map should populate it here so body-side references resolve
-    /// correctly.
+    /// Called once per CTE binding, BEFORE its body is walked. The body
+    /// will observe the binding's own name as a resolved catalog source
+    /// (`SQLite` allows any CTE to self-reference, with or without the
+    /// RECURSIVE keyword); listeners that build a `name -> body` map
+    /// should populate it here so body-side references resolve correctly.
     fn on_cte_binding(&mut self, _stmt: &mut AnyParsedStatement<'_>, _ev: CteBindingEvent<'_>) {}
 
     /// Called for a subquery-in-FROM after its body has been walked.
@@ -346,19 +346,19 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 limit_clause,
             ),
             SemanticRole::CteScope {
-                recursive,
+                recursive: _,
                 bindings,
                 body,
-            } => self.walk_cte_scope(visitor, fields, recursive, bindings, body),
+            } => self.walk_cte_scope(visitor, fields, bindings, body),
             SemanticRole::TriggerScope {
                 target: _,
                 when,
                 body,
             } => self.walk_trigger_scope(visitor, fields, when, body),
             SemanticRole::DmlScope {
-                with_recursive,
+                with_recursive: _,
                 with_ctes,
-            } => self.walk_dml_scope(visitor, fields, with_recursive, with_ctes),
+            } => self.walk_dml_scope(visitor, fields, with_ctes),
             SemanticRole::UpsertScope {
                 columns,
                 target_where,
@@ -841,12 +841,11 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         &mut self,
         visitor: &mut V,
         fields: &NodeFields,
-        recursive_idx: u8,
         bindings_idx: u8,
         body_idx: u8,
     ) {
         self.catalog.push_query_scope();
-        self.register_cte_bindings(visitor, fields, recursive_idx, bindings_idx);
+        self.register_cte_bindings(visitor, fields, bindings_idx);
         self.walk_opt(visitor, fields.node_id_at(body_idx));
         self.catalog.pop_query_scope();
     }
@@ -855,13 +854,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         &mut self,
         visitor: &mut V,
         fields: &NodeFields,
-        recursive_idx: u8,
         bindings_idx: u8,
     ) {
         let has_ctes = bindings_idx != FIELD_ABSENT;
         if has_ctes {
             self.catalog.push_query_scope();
-            self.register_cte_bindings(visitor, fields, recursive_idx, bindings_idx);
+            self.register_cte_bindings(visitor, fields, bindings_idx);
         }
         self.scope.push();
         // Bind the DML target and any UPDATE ... FROM sources before the
@@ -913,14 +911,11 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         &mut self,
         visitor: &mut V,
         fields: &NodeFields,
-        recursive_idx: u8,
         bindings_idx: u8,
     ) {
         if bindings_idx == FIELD_ABSENT {
             return;
         }
-        let is_recursive = recursive_idx != FIELD_ABSENT
-            && matches!(fields[recursive_idx as usize], FieldValue::Bool(true));
         let cte_ids: &[AnyNodeId] = fields
             .node_id_at(bindings_idx)
             .and_then(|id| self.stmt.list_children(id))
@@ -947,9 +942,11 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 visitor.on_cte_binding(self.stmt, ev);
             }
 
-            // For recursive CTEs, register the name before visiting the
-            // body so catalog source lookups inside the body resolve.
-            if is_recursive && !binding.name.is_empty() {
+            // Register the name before visiting the body so catalog source
+            // lookups inside the body resolve. SQLite treats the RECURSIVE
+            // keyword as decorative: any CTE may reference itself, with or
+            // without it.
+            if !binding.name.is_empty() {
                 let cols = binding
                     .declared_cols
                     .as_ref()
