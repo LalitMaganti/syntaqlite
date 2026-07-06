@@ -5,9 +5,10 @@
 //!
 //! Resolution order: query (innermost frame first) → document → connection → database → dialect.
 
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue};
+use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFields};
 
 use super::name_key::NameKey;
 use super::stmt_reader::StmtReader;
@@ -150,6 +151,11 @@ pub struct CatalogLayerContents {
     /// Modules whose DDL has been merged into this layer. Used to dedupe
     /// `INCLUDE PERFETTO MODULE` imports — once imported, re-imports no-op.
     imports: HashSet<String>,
+    /// Relation names this layer masks from outer layers — a tombstone for
+    /// `ALTER TABLE ... RENAME TO` / `DROP TABLE`. A name found here during
+    /// innermost-first resolution reads as absent even if an outer layer
+    /// still defines it.
+    removed_relations: HashSet<NameKey>,
 }
 
 impl CatalogLayerContents {
@@ -159,13 +165,22 @@ impl CatalogLayerContents {
         self.functions = HashMap::default();
         self.table_functions = HashMap::default();
         self.imports = HashSet::default();
+        self.removed_relations = HashSet::default();
     }
 
     /// Merge all entries from `other` into this layer (existing keys are
     /// overwritten).
+    ///
+    /// `other`'s tombstones are applied as concrete removals: a name `other`
+    /// masked is deleted from this layer's relations, so promoting a Document
+    /// layer that renamed/dropped a relation actually retires it here.
     pub(crate) fn merge_from(&mut self, other: &Self) {
-        self.relations
-            .extend(other.relations.iter().map(|(k, v)| (k.clone(), v.clone())));
+        for name in &other.removed_relations {
+            self.relations.remove(name);
+        }
+        for (k, v) in &other.relations {
+            self.relations.insert(k.clone(), v.clone());
+        }
         self.functions
             .extend(other.functions.iter().map(|(k, v)| (k.clone(), v.clone())));
         self.table_functions.extend(
@@ -223,8 +238,10 @@ impl CatalogLayerContents {
         without_rowid: bool,
     ) {
         let name = name.into();
+        let key = NameKey::new(&name);
+        self.removed_relations.remove(&key);
         self.relations.insert(
-            NameKey::new(&name),
+            key,
             RelationEntry {
                 name,
                 columns,
@@ -252,8 +269,10 @@ impl CatalogLayerContents {
     /// ```
     pub fn insert_view(&mut self, name: impl Into<String>, columns: Option<Vec<String>>) {
         let name = name.into();
+        let key = NameKey::new(&name);
+        self.removed_relations.remove(&key);
         self.relations.insert(
-            NameKey::new(&name),
+            key,
             RelationEntry {
                 name,
                 columns,
@@ -261,6 +280,21 @@ impl CatalogLayerContents {
                 is_view: true,
             },
         );
+    }
+
+    /// Tombstone `name` in this layer so it reads as absent even when an outer
+    /// layer still defines it. Also drops any same-layer definition.
+    fn remove_relation(&mut self, name: &str) {
+        let key = NameKey::new(name);
+        self.relations.remove(&key);
+        self.removed_relations.insert(key);
+    }
+
+    /// Insert a pre-built relation entry under `name`, clearing any tombstone.
+    fn insert_entry(&mut self, name: &str, entry: RelationEntry) {
+        let key = NameKey::new(name);
+        self.removed_relations.remove(&key);
+        self.relations.insert(key, entry);
     }
 
     /// Insert a single function overload into this layer.
@@ -691,7 +725,6 @@ impl Catalog {
             return;
         };
         let reader = StmtReader::new(stmt, dialect.roles());
-        let layer = &mut self.layers[target.index()];
 
         match role {
             SemanticRole::DefineTable {
@@ -710,7 +743,7 @@ impl Catalog {
                         fields[without_rowid.field as usize],
                         FieldValue::Flags(f) if without_rowid.is_set(f)
                     );
-                layer.insert_table(normalized_name, cols, is_without_rowid);
+                self.layers[target.index()].insert_table(normalized_name, cols, is_without_rowid);
             }
             SemanticRole::DefineView {
                 name,
@@ -722,7 +755,7 @@ impl Catalog {
                 };
                 let normalized_name = name_val.into_owned();
                 let cols = reader.extract_columns(&fields, columns, select);
-                layer.insert_view(normalized_name, cols);
+                self.layers[target.index()].insert_view(normalized_name, cols);
             }
             SemanticRole::DefineFunction {
                 name,
@@ -735,6 +768,7 @@ impl Catalog {
                 };
                 let normalized_name = name_val.into_owned();
                 let arity = reader.function_arity(&fields, args);
+                let layer = &mut self.layers[target.index()];
                 layer.insert_function_overload(
                     normalized_name.clone(),
                     FunctionCategory::Scalar,
@@ -744,8 +778,88 @@ impl Catalog {
                     layer.insert_table_function(normalized_name, AritySpec::Any, Vec::new());
                 }
             }
+            SemanticRole::AlterTable {
+                op,
+                target: target_idx,
+                new_name,
+                old_name,
+            } => {
+                self.accumulate_alter_table(
+                    target, stmt, &fields, op, target_idx, new_name, old_name,
+                );
+            }
             // Non-DDL roles are irrelevant to catalog accumulation.
             _ => {}
+        }
+    }
+
+    /// Apply an `ALTER TABLE` role's mutation to the catalog.
+    ///
+    /// Copy-on-write: the currently-visible relation entry is cloned, mutated,
+    /// and written into `target` so it shadows outer layers (and is retired
+    /// into Connection on promotion). A no-op when the target doesn't resolve —
+    /// `SQLite` rejects those, and the walker reports them as unknown tables.
+    #[expect(clippy::too_many_arguments)]
+    fn accumulate_alter_table(
+        &mut self,
+        target: CatalogLayer,
+        stmt: &AnyParsedStatement<'_>,
+        fields: &NodeFields,
+        op: u8,
+        target_idx: u8,
+        new_name: u8,
+        old_name: u8,
+    ) {
+        let Some(table_name) = alter_qualified_name(stmt, fields, target_idx) else {
+            return;
+        };
+        let FieldValue::Enum(op_val) = fields[op as usize] else {
+            return;
+        };
+        let Some(mut entry) = self.visible_relation(&NameKey::new(&table_name)).cloned() else {
+            return;
+        };
+        let layer = target.index();
+        match AlterOp::from_discriminant(op_val) {
+            Some(AlterOp::AddColumn) => {
+                if let (Some(cols), Some(col)) =
+                    (entry.columns.as_mut(), alter_name(stmt, fields, old_name))
+                {
+                    cols.push(col.to_ascii_lowercase());
+                }
+                self.layers[layer].insert_entry(&table_name, entry);
+            }
+            Some(AlterOp::DropColumn) => {
+                if let (Some(cols), Some(col)) =
+                    (entry.columns.as_mut(), alter_name(stmt, fields, old_name))
+                {
+                    cols.retain(|c| !c.eq_ignore_ascii_case(&col));
+                }
+                self.layers[layer].insert_entry(&table_name, entry);
+            }
+            Some(AlterOp::RenameColumn) => {
+                if let (Some(cols), Some(from), Some(to)) = (
+                    entry.columns.as_mut(),
+                    alter_name(stmt, fields, old_name),
+                    alter_name(stmt, fields, new_name),
+                ) {
+                    for c in cols.iter_mut() {
+                        if c.eq_ignore_ascii_case(&from) {
+                            *c = to.to_ascii_lowercase();
+                        }
+                    }
+                }
+                self.layers[layer].insert_entry(&table_name, entry);
+            }
+            Some(AlterOp::RenameTable) => {
+                let Some(new) = alter_name(stmt, fields, new_name) else {
+                    return;
+                };
+                entry.name = new.to_string();
+                self.layers[layer].insert_entry(&new, entry);
+                self.layers[layer].remove_relation(&table_name);
+            }
+            None => {}
         }
     }
 
@@ -784,16 +898,41 @@ impl Catalog {
 
     // ── Resolution ────────────────────────────────────────────────────────────
 
+    /// Innermost-first resolution honoring tombstones: the first layer that
+    /// either tombstones `key` (→ `None`) or defines it (→ its entry) wins.
+    fn visible_relation(&self, key: &NameKey) -> Option<&RelationEntry> {
+        for layer in self.all_layers_ordered() {
+            if layer.removed_relations.contains(key) {
+                return None;
+            }
+            if let Some(rel) = layer.relation(key) {
+                return Some(rel);
+            }
+        }
+        None
+    }
+
     /// Returns `true` if `key` is a known relation in any layer.
     pub(crate) fn resolve_relation(&self, key: &NameKey) -> bool {
-        self.all_layers_ordered()
-            .any(|layer| layer.relation(key).is_some())
+        self.visible_relation(key).is_some()
+    }
+
+    /// Returns `true` if `key` is (or was) defined as a relation in any layer,
+    /// counting tombstones as "defined". Used by the ALTER-target existence
+    /// check: a `RENAME TO` retires the old name in the same Document layer
+    /// before this check runs, so a tombstone here means the target *did*
+    /// exist and its rename must not flag its own source as missing. Erring
+    /// toward "defined" only ever risks accepting an ALTER of an
+    /// already-retired name (a gap), never a false unknown-table report.
+    pub(crate) fn relation_defined(&self, key: &NameKey) -> bool {
+        self.layers
+            .iter()
+            .any(|l| l.relations.contains_key(key) || l.removed_relations.contains(key))
     }
 
     /// Returns `true` if `key` is a view in any layer.
     pub(crate) fn is_view(&self, key: &NameKey) -> bool {
-        self.all_layers_ordered()
-            .any(|layer| layer.relation(key).is_some_and(|r| r.is_view))
+        self.visible_relation(key).is_some_and(|r| r.is_view)
     }
 
     /// Returns `true` if `key` is a known table-valued function in any layer.
@@ -825,6 +964,9 @@ impl Catalog {
     /// - `without_rowid = true` — no implicit rowid/oid/_rowid_ column.
     pub(crate) fn table_source_info(&self, key: &NameKey) -> (Option<Vec<String>>, bool) {
         for layer in self.all_layers_ordered() {
+            if layer.removed_relations.contains(key) {
+                return (None, false);
+            }
             if let Some(rel) = layer.relation(key) {
                 return (rel.columns.clone(), rel.without_rowid);
             }
@@ -843,7 +985,10 @@ impl Catalog {
     // ── Enumeration (for fuzzy suggestions and completions) ───────────────────
 
     pub(crate) fn all_relation_names(&self) -> Vec<String> {
-        self.unique_names_across_layers(|l| l.relations.values().map(|r| r.name.as_str()))
+        let mut names =
+            self.unique_names_across_layers(|l| l.relations.values().map(|r| r.name.as_str()));
+        names.retain(|n| self.resolve_relation(&NameKey::new(n)));
+        names
     }
 
     /// Enumerate column names across all layers, optionally filtered to a
@@ -917,6 +1062,57 @@ impl Catalog {
         self.layers.iter().rev()
     }
 }
+
+// ── ALTER TABLE helpers ────────────────────────────────────────────────────────
+
+/// The `ALTER TABLE` operation, mirroring the `AlterOp` enum ordering in
+/// `parser-nodes/schema_ops.synq`. Reordering that enum requires updating the
+/// discriminant mapping below.
+enum AlterOp {
+    RenameTable,
+    RenameColumn,
+    DropColumn,
+    AddColumn,
+}
+
+impl AlterOp {
+    fn from_discriminant(v: u32) -> Option<Self> {
+        match v {
+            0 => Some(Self::RenameTable),
+            1 => Some(Self::RenameColumn),
+            2 => Some(Self::DropColumn),
+            3 => Some(Self::AddColumn),
+            _ => None,
+        }
+    }
+}
+
+/// Unqualified table name from an `ALTER` target field. The field points at a
+/// `QualifiedName` node whose object name is its first child; the schema
+/// qualifier (if any) is dropped, matching how catalog keys are stored.
+fn alter_qualified_name(
+    stmt: &AnyParsedStatement<'_>,
+    fields: &NodeFields,
+    idx: u8,
+) -> Option<String> {
+    let target_id = fields.node_id_at(idx)?;
+    let (_, qf) = stmt.extract_fields(target_id)?;
+    let obj_id = qf.node_id_at(0)?;
+    let (text, _) = stmt.name_ident_text(Some(obj_id));
+    (!text.is_empty()).then(|| text.into_owned())
+}
+
+/// Identifier value of an `ALTER` name field (a `Name` node), or `None`.
+fn alter_name<'s>(
+    stmt: &AnyParsedStatement<'s>,
+    fields: &NodeFields,
+    idx: u8,
+) -> Option<Cow<'s, str>> {
+    let id = fields.node_id_at(idx)?;
+    let (text, _) = stmt.name_ident_text(Some(id));
+    (!text.is_empty()).then_some(text)
+}
+
 // ── Dialect layer builder ─────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -1003,6 +1199,127 @@ mod tests {
         let dialect = crate::sqlite::dialect::dialect();
         let cat = Catalog::from_ddl(dialect, &["CREATE VIRTUAL TABLE fts USING fts5(content);"]).0;
         assert!(cat.resolve_relation(&NameKey::new("fts")));
+    }
+
+    /// Parse `sql` and accumulate its DDL into `layer` of `cat`.
+    fn accumulate_into(cat: &mut Catalog, dialect: &AnyDialect, layer: CatalogLayer, sql: &str) {
+        use syntaqlite_syntax::ParseOutcome;
+        let parser = syntaqlite_syntax::Parser::new();
+        let mut session = parser.parse(sql);
+        loop {
+            match session.next() {
+                ParseOutcome::Ok(stmt) => {
+                    let Some(root) = stmt.root() else { continue };
+                    let root_id: AnyNodeId = root.node_id().into();
+                    let erased = stmt.erase();
+                    cat.accumulate_ddl(layer, &erased, root_id, dialect);
+                }
+                ParseOutcome::Done => break,
+                ParseOutcome::Err(_) => {}
+            }
+        }
+    }
+
+    #[test]
+    fn alter_add_column_registers_column() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(
+            dialect,
+            &["CREATE TABLE x1(a); ALTER TABLE x1 ADD COLUMN b DEFAULT 5;"],
+        )
+        .0;
+        assert_eq!(
+            cat.table_source_info(&NameKey::new("x1")).0,
+            Some(vec!["a".to_string(), "b".to_string()]),
+        );
+    }
+
+    #[test]
+    fn alter_add_column_none_columns_stays_none() {
+        // A table registered with unknown columns must stay column-agnostic
+        // after ADD COLUMN — no phantom Some(vec![...]) that would start
+        // rejecting every other column reference.
+        let dialect = crate::sqlite::dialect::dialect();
+        let mut cat = Catalog::new(dialect.clone());
+        cat.layer_mut(CatalogLayer::Database)
+            .insert_table("x1", None, false);
+        accumulate_into(
+            &mut cat,
+            &dialect,
+            CatalogLayer::Database,
+            "ALTER TABLE x1 ADD COLUMN b;",
+        );
+        assert_eq!(cat.table_source_info(&NameKey::new("x1")).0, None);
+    }
+
+    #[test]
+    fn alter_drop_and_rename_column() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(
+            dialect,
+            &["CREATE TABLE t(a, b, c); \
+                 ALTER TABLE t DROP COLUMN b; \
+                 ALTER TABLE t RENAME COLUMN c TO d;"],
+        )
+        .0;
+        assert_eq!(
+            cat.table_source_info(&NameKey::new("t")).0,
+            Some(vec!["a".to_string(), "d".to_string()]),
+        );
+    }
+
+    #[test]
+    fn alter_of_unknown_table_is_noop() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(dialect, &["ALTER TABLE nosuch DROP COLUMN z;"]).0;
+        assert!(!cat.resolve_relation(&NameKey::new("nosuch")));
+    }
+
+    #[test]
+    fn alter_rename_table_masks_old_and_registers_new_across_promotion() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let mut cat = Catalog::new(dialect.clone());
+        // Simulate a table established by an earlier (already promoted) pass.
+        cat.layer_mut(CatalogLayer::Connection).insert_table(
+            "t3",
+            Some(vec!["a".to_string()]),
+            false,
+        );
+        accumulate_into(
+            &mut cat,
+            &dialect,
+            CatalogLayer::Document,
+            "ALTER TABLE t3 RENAME TO t5;",
+        );
+
+        // The new name resolves; the old name is masked for FROM-source use...
+        assert!(cat.resolve_relation(&NameKey::new("t5")));
+        assert!(!cat.resolve_relation(&NameKey::new("t3")));
+        // ...but the rename's own existence check still sees the target
+        // (tombstone-ignoring), so RENAME TO doesn't flag its own source.
+        assert!(cat.relation_defined(&NameKey::new("t3")));
+        assert_eq!(cat.table_source_info(&NameKey::new("t5")).0, Some(vec!["a".to_string()]));
+
+        cat.promote_document_to_connection();
+        // Next analysis pass starts fresh — the Document tombstone is cleared,
+        // but Connection has already retired the old name for good.
+        cat.new_document();
+        assert!(cat.resolve_relation(&NameKey::new("t5")));
+        assert!(!cat.resolve_relation(&NameKey::new("t3")));
+        assert!(!cat.relation_defined(&NameKey::new("t3")));
+    }
+
+    #[test]
+    fn recreating_a_renamed_table_clears_the_tombstone() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(
+            dialect,
+            &["CREATE TABLE t3(a); ALTER TABLE t3 RENAME TO t5; CREATE TABLE t3(b);"],
+        )
+        .0;
+        assert!(cat.resolve_relation(&NameKey::new("t3")));
+        assert!(cat.resolve_relation(&NameKey::new("t5")));
+        assert_eq!(cat.table_source_info(&NameKey::new("t3")).0, Some(vec!["b".to_string()]));
     }
 
     #[test]

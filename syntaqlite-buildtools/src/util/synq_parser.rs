@@ -133,6 +133,14 @@ pub(crate) enum SemanticRole {
         orderby: Option<String>,
         limit_clause: Option<String>,
     },
+
+    // ── Schema mutation ───────────────────────────────────────────────────
+    AlterTable {
+        op: String,
+        target: String,
+        new_name: String,
+        old_name: String,
+    },
 }
 
 /// A `semantic { ... }` annotation on a node.
@@ -721,6 +729,12 @@ impl Parser {
                 right: require_param(&params, "right", node_name, "compound_scope")?,
                 orderby: get_param(&params, "orderby").map(str::to_string),
                 limit_clause: get_param(&params, "limit_clause").map(str::to_string),
+            },
+            "alter_table" => SemanticRole::AlterTable {
+                op: require_param(&params, "op", node_name, "alter_table")?,
+                target: require_param(&params, "target", node_name, "alter_table")?,
+                new_name: require_param(&params, "new_name", node_name, "alter_table")?,
+                old_name: require_param(&params, "old_name", node_name, "alter_table")?,
             },
             _ => {
                 return Err(format!(

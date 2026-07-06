@@ -283,6 +283,21 @@ pub mod roles {
             /// Field index of the hoisted LIMIT (`FIELD_ABSENT` if absent).
             limit_clause: FieldIdx,
         } = 18,
+
+        /// ALTER TABLE statement: existence-checks the target and mutates the
+        /// catalog (add/drop/rename column, rename table). The `op` field
+        /// selects which mutation to apply; the runtime interprets its enum
+        /// discriminant against the dialect's alter-op ordering.
+        AlterTable {
+            /// Field index of the alter-op enum discriminant.
+            op: FieldIdx,
+            /// Field index of the target relation (a qualified-name node).
+            target: FieldIdx,
+            /// Field index of the new name (rename table / rename column).
+            new_name: FieldIdx,
+            /// Field index of the old name (rename/drop/add column name).
+            old_name: FieldIdx,
+        } = 19,
     }
 
     /// Metadata for a node type that defines a template macro.
