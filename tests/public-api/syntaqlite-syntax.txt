@@ -1112,12 +1112,14 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> i
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_ident_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<alloc::borrow::Cow<'a, str>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::is_macro_free(&self) -> bool
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_field_text(&self, &syntaqlite_syntax::any::NodeFields, u8) -> core::option::Option<&'a str>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_ident_text(&self, core::option::Option<syntaqlite_syntax::any::AnyNodeId>) -> (alloc::borrow::Cow<'a, str>, syntaqlite_syntax::source::DocRange)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_text(&self, core::option::Option<syntaqlite_syntax::any::AnyNodeId>) -> (&'a str, syntaqlite_syntax::source::DocRange)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_expanded_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_is_macro_free(&self, syntaqlite_syntax::any::AnyNodeId) -> bool
@@ -1128,8 +1130,10 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::node_trailing_comments(&s
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_id(&self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::root_node(&self) -> core::option::Option<syntaqlite_syntax::any::AnyNode<'_>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_expanded_text(&self, syntaqlite_syntax::any::TextSpan) -> &'a str
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_field_ident_text(&self, &syntaqlite_syntax::any::NodeFields, u8) -> core::option::Option<alloc::borrow::Cow<'a, str>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_field_range(&self, &syntaqlite_syntax::any::NodeFields, u8) -> core::option::Option<(&'a str, syntaqlite_syntax::source::DocRange)>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_field_text(&self, &syntaqlite_syntax::any::NodeFields, u8) -> core::option::Option<&'a str>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_ident_text(&self, syntaqlite_syntax::any::TextSpan) -> alloc::borrow::Cow<'a, str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::StmtOffset)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::DocRange)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
@@ -1181,6 +1185,7 @@ pub fn syntaqlite_syntax::any::TextSpan::is_empty(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_macro_free(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::is_quoted(self) -> bool
 pub fn syntaqlite_syntax::any::TextSpan::quote_char(self) -> core::option::Option<char>
+pub fn syntaqlite_syntax::any::unescape_quoted(&str, char) -> alloc::borrow::Cow<'_, str>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::filter_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>

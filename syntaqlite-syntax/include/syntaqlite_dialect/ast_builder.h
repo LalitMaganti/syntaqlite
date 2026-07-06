@@ -387,22 +387,46 @@ static inline SyntaqliteTextSpan synq_span(SynqParseCtx* ctx,
 
 // Like synq_span() but strips surrounding quote characters from quoted
 // identifiers, matching SQLite's tokenExpr() dequoting behavior.
-// Handles "...", `...`, and [...] forms.  For unquoted tokens, equivalent
-// to synq_span().  Records which quote character bracketed the identifier
-// in the span flags so consumers can recover the original quote style.
+// Handles "...", `...`, [...], and '...' forms — every call site is an
+// identifier position, so a STRING token here is a string literal used
+// as an identifier (`nm ::= STRING`) and dequotes like the rest.  For
+// unquoted tokens, equivalent to synq_span().  Records which quote
+// character bracketed the identifier in the span flags so consumers can
+// recover the original quote style.
+//
+// The span stays a zero-copy slice: a doubled quote char inside the
+// token (SQLite's escape, e.g. `'a''b'` for `a'b`) survives verbatim in
+// the inner text.  Consumers that need the identifier *value* collapse
+// it with `unescape_quoted` (Rust) keyed off the span's quote flag.
 static inline SyntaqliteTextSpan synq_span_dequote(SynqParseCtx* ctx,
                                                    SynqParseToken tok) {
   (void)ctx;
   if (tok.z == NULL)
     return (SyntaqliteTextSpan){0};
   if (tok.n >= 2) {
-    char open = tok.z[0];
-    char close = tok.z[tok.n - 1];
-    if ((open == '"' && close == '"') || (open == '`' && close == '`') ||
-        (open == '[' && close == ']')) {
-      uint32_t kind_flag = (open == '"')   ? SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE
-                           : (open == '`') ? SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK
-                                           : SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET;
+    char expected_close = 0;
+    uint32_t kind_flag = 0;
+    switch (tok.z[0]) {
+      case '"':
+        expected_close = '"';
+        kind_flag = SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE;
+        break;
+      case '`':
+        expected_close = '`';
+        kind_flag = SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK;
+        break;
+      case '[':
+        expected_close = ']';
+        kind_flag = SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET;
+        break;
+      case '\'':
+        expected_close = '\'';
+        kind_flag = SYNTAQLITE_SPAN_FLAG_QUOTE_SINGLE;
+        break;
+      default:
+        break;
+    }
+    if (kind_flag != 0 && tok.z[tok.n - 1] == expected_close) {
       SyntaqliteTextSpan sp = {
           .offset = tok.offset + 1,
           .length = tok.n - 2,

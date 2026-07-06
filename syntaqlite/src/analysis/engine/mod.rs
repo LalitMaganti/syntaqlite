@@ -476,7 +476,7 @@ mod tests {
         scope.push();
         scope.add_anonymous(Some(vec!["x".into()]));
 
-        let res = scope.resolve_column(Some("sq"), "x");
+        let res = scope.resolve_column(Some(&crate::analysis::name_key::NameKey::new("sq")), "x");
         assert!(matches!(res, ColumnResolution::TableNotFound));
 
         scope.pop();

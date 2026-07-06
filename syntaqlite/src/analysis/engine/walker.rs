@@ -15,26 +15,19 @@
 //! [`SemanticVisitor`] by delegating to each at every hook — the
 //! composition is explicit and grep-able.
 
+use std::borrow::Cow;
+
 use syntaqlite_syntax::any::{
     AnyNodeId, AnyParseError, AnyParsedStatement, FieldValue, NodeFields,
 };
 use syntaqlite_syntax::source::DocRange;
 
 use crate::analysis::catalog::{Catalog, ColumnResolution, FunctionCheckResult};
+use crate::analysis::name_key::NameKey;
 use crate::analysis::stmt_reader::StmtReader;
 use crate::dialect::{FIELD_ABSENT, SemanticRole};
 
 use super::query_scope::{QueryScope, RowIdPolicy};
-
-/// `SQLite` accepts a string literal as an alias (`FROM t AS 'a'`) and treats
-/// it as the identifier `a`. Identifier quotes (`"a"`, `[a]`, `` `a` ``)
-/// are already stripped by the parser; only string quotes survive.
-fn unquote_alias(alias: &str) -> &str {
-    alias
-        .strip_prefix('\'')
-        .and_then(|s| s.strip_suffix('\''))
-        .unwrap_or(alias)
-}
 
 // ── WalkCtx ───────────────────────────────────────────────────────────────────
 
@@ -54,7 +47,7 @@ pub(crate) struct WalkCtx<'a> {
 /// A table/view/table-function reference in a FROM / JOIN / DML target.
 ///
 /// Visitors that need the relation's columns look them up via
-/// `cx.catalog.table_source_info(ev.name)`; the walker does not
+/// `cx.catalog.table_source_info(&NameKey::new(ev.name))`; the walker does not
 /// pre-compute that (it would be wasted work when no visitor wants it).
 #[derive(Copy, Clone)]
 pub(crate) struct SourceRefEvent<'a> {
@@ -94,7 +87,7 @@ pub(crate) struct ColumnRefEvent<'a> {
 /// A function / table-function / aggregate call.
 ///
 /// Visitors that need the resolved signature look it up via
-/// `cx.catalog.function_signature(ev.name)` themselves.
+/// `cx.catalog.function_signature(&NameKey::new(ev.name))` themselves.
 #[derive(Copy, Clone)]
 pub(crate) struct CallEvent<'a> {
     pub(crate) node_id: AnyNodeId,
@@ -242,6 +235,8 @@ pub(crate) struct SemanticWalker<'a, 'b> {
     roles: &'static [SemanticRole],
     /// Depth of nested CREATE VIEW bodies currently being walked.
     view_body_depth: u32,
+    /// Reusable lookup key — catalog/scope probes share one allocation.
+    key_scratch: NameKey,
 }
 
 impl<'a, 'b> SemanticWalker<'a, 'b> {
@@ -256,6 +251,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             scope: QueryScope::default(),
             roles,
             view_body_depth: 0,
+            key_scratch: NameKey::default(),
         }
     }
 
@@ -457,13 +453,13 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             }
             SemanticRole::ScopedSource { body, alias } => {
                 // Bind the alias only; the body is its own scope.
-                let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias)).0);
-                if !alias_text.is_empty() {
+                let (alias_ident, _) = self.stmt.name_ident_text(fields.node_id_at(alias));
+                if !alias_ident.is_empty() {
                     let cols = fields.node_id_at(body).and_then(|id| {
                         StmtReader::new(self.stmt, self.roles).columns_from_select(id)
                     });
                     self.scope
-                        .add_table(alias_text, cols, RowIdPolicy::WithRowId);
+                        .add_table(&alias_ident, cols, RowIdPolicy::WithRowId);
                 }
             }
             // Nested scopes own their sources.
@@ -493,15 +489,16 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
     /// Bind a source ref's addressable name (alias if present, else base
     /// name) into the current frame. Idempotent.
     fn bind_source_ref(&mut self, fields: &NodeFields, name_idx: u8, alias_idx: u8) {
-        let Some((name, _)) = self.stmt.span_field_range(fields, name_idx) else {
+        let Some(name_ident) = self.stmt.span_field_ident_text(fields, name_idx) else {
             return;
         };
-        let (columns, without_rowid) = self.catalog.table_source_info(name);
-        let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
-        let scope_name = if alias_text.is_empty() {
-            name
+        self.key_scratch.set(&name_ident);
+        let (columns, without_rowid) = self.catalog.table_source_info(&self.key_scratch);
+        let (alias_ident, _) = self.stmt.name_ident_text(fields.node_id_at(alias_idx));
+        let scope_name = if alias_ident.is_empty() {
+            &*name_ident
         } else {
-            alias_text
+            &*alias_ident
         };
         self.scope
             .add_table(scope_name, columns, without_rowid.into());
@@ -521,13 +518,20 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             return;
         };
 
-        let is_known =
-            self.catalog.resolve_relation(name) || self.catalog.resolve_table_function(name);
-        let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
-        let alias = if alias_text.is_empty() {
+        // `name` keeps the raw source text for display; catalog keys use
+        // the identifier value (escape-collapsed).
+        let name_ident = self
+            .stmt
+            .span_field_ident_text(fields, name_idx)
+            .unwrap_or(Cow::Borrowed(name));
+        self.key_scratch.set(&name_ident);
+        let is_known = self.catalog.resolve_relation(&self.key_scratch)
+            || self.catalog.resolve_table_function(&self.key_scratch);
+        let (alias_ident, _) = self.stmt.name_ident_text(fields.node_id_at(alias_idx));
+        let alias = if alias_ident.is_empty() {
             None
         } else {
-            Some(alias_text)
+            Some(&*alias_ident)
         };
 
         if V::WANTS_SOURCE_REF {
@@ -562,7 +566,12 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 .node_id_at(args_idx)
                 .and_then(|id| self.stmt.list_children(id))
                 .map_or(0, <[_]>::len);
-            let result = self.catalog.check_function(name, arg_count);
+            let name_ident = self
+                .stmt
+                .span_field_ident_text(fields, name_idx)
+                .unwrap_or(Cow::Borrowed(name));
+            self.key_scratch.set(&name_ident);
+            let result = self.catalog.check_function(&self.key_scratch, arg_count);
 
             if V::WANTS_CALL {
                 let ev = CallEvent {
@@ -603,12 +612,16 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             return;
         }
         let column = self.stmt.span_expanded_text(col_sp);
-        let (table, table_range) = match fields[table_idx as usize] {
+        let (table, table_range, table_ident) = match fields[table_idx as usize] {
             FieldValue::Span(sp) if !sp.is_empty() => {
                 let (_, r) = self.stmt.span_text_abs(sp);
-                (Some(self.stmt.span_expanded_text(sp)), Some(r))
+                (
+                    Some(self.stmt.span_expanded_text(sp)),
+                    Some(r),
+                    Some(self.stmt.span_ident_text(sp)),
+                )
             }
-            _ => (None, None),
+            _ => (None, None, None),
         };
         let (_, range) = self.stmt.span_text_abs(col_sp);
         // SQLite's DQS bug-compat applies only to identifiers that were
@@ -616,7 +629,18 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         // came from the original source (not a macro expansion).
         let dqs_candidate = col_sp.is_macro_free() && col_sp.quote_char() == Some('"');
 
-        let resolution = self.scope.resolve_column(table, column);
+        // `table`/`column` above keep the raw source text for display; the
+        // scope lookup uses the identifier value (escape-collapsed) to
+        // match how sources and columns were registered.
+        let column_ident = self.stmt.span_ident_text(col_sp);
+        let table_key = match table_ident.as_deref() {
+            Some(t) => {
+                self.key_scratch.set(t);
+                Some(&self.key_scratch)
+            }
+            None => None,
+        };
+        let resolution = self.scope.resolve_column(table_key, &column_ident);
 
         if V::WANTS_COLUMN_REF {
             let ev = ColumnRefEvent {
@@ -651,11 +675,11 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         self.walk_opt(visitor, body_id);
         self.scope.pop();
 
-        let alias_text = unquote_alias(self.stmt.name_text(fields.node_id_at(alias_idx)).0);
-        let alias = if alias_text.is_empty() {
+        let (alias_ident, _) = self.stmt.name_ident_text(fields.node_id_at(alias_idx));
+        let alias = if alias_ident.is_empty() {
             None
         } else {
-            Some(alias_text)
+            Some(&*alias_ident)
         };
 
         if V::WANTS_SCOPED_SOURCE {
@@ -724,9 +748,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
         let reader = StmtReader::new(self.stmt, self.roles);
         reader.for_each_result_column(list_id, |child_fields, _flags, alias_idx, _expr| {
             let alias_node = child_fields.node_id_at(alias_idx);
-            let (alias_text, _) = reader.stmt().name_text(alias_node);
-            if !alias_text.is_empty() {
-                aliases.push(alias_text.to_string());
+            let (alias_ident, _) = reader.stmt().name_ident_text(alias_node);
+            if !alias_ident.is_empty() {
+                aliases.push(alias_ident.into_owned());
             }
             true
         });
@@ -932,7 +956,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             // recursive self-reference case and outer-body uses.
             if V::WANTS_CTE_BINDING && !binding.name.is_empty() {
                 let ev = CteBindingEvent {
-                    name: binding.name,
+                    name: &binding.name,
                     body_id: binding.body_id,
                 };
                 visitor.on_cte_binding(self.stmt, ev);
@@ -946,8 +970,8 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                 let cols = binding
                     .declared_cols
                     .as_ref()
-                    .map(|v| v.iter().map(|(s, _)| (*s).to_string()).collect());
-                self.catalog.add_query_table(binding.name, cols);
+                    .map(|v| v.iter().map(|(s, _)| s.to_string()).collect());
+                self.catalog.add_query_table(&binding.name, cols);
             }
 
             self.scope.push();
@@ -959,7 +983,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             }
 
             if V::WANTS_RELATION_DEFINITION {
-                visitor.on_relation_definition(binding.name, binding.name_range);
+                visitor.on_relation_definition(&binding.name, binding.name_range);
             }
 
             let cols = if let Some(declared) = binding.declared_cols.as_ref() {
@@ -968,7 +992,7 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                     && actual != declared.len()
                 {
                     let ev = CteColumnCountMismatchEvent {
-                        name: binding.name,
+                        name: &binding.name,
                         name_range: binding.name_range,
                         declared: declared.len(),
                         actual,
@@ -976,20 +1000,20 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
                     visitor.on_cte_column_count_mismatch(self.stmt, ev);
                 }
                 if V::WANTS_COLUMN_DEFINITION {
-                    for &(col_name, col_range) in declared {
-                        visitor.on_column_definition(binding.name, col_name, col_range);
+                    for (col_name, col_range) in declared {
+                        visitor.on_column_definition(&binding.name, col_name, *col_range);
                     }
                 }
-                Some(declared.iter().map(|(s, _)| (*s).to_string()).collect())
+                Some(declared.iter().map(|(s, _)| s.to_string()).collect())
             } else {
                 if V::WANTS_COLUMN_DEFINITION {
-                    self.emit_select_column_definitions(visitor, binding.body_id, binding.name);
+                    self.emit_select_column_definitions(visitor, binding.body_id, &binding.name);
                 }
                 binding
                     .body_id
                     .and_then(|id| StmtReader::new(self.stmt, self.roles).columns_from_select(id))
             };
-            self.catalog.add_query_table(binding.name, cols);
+            self.catalog.add_query_table(&binding.name, cols);
         }
     }
 
@@ -1007,10 +1031,14 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             return None;
         };
 
-        let (name, name_range) = reader
+        let (_, name_range) = reader
             .stmt()
             .span_field_range(&fields, name_idx)
             .unwrap_or_default();
+        let name = reader
+            .stmt()
+            .span_field_ident_text(&fields, name_idx)
+            .unwrap_or(Cow::Borrowed(""));
         Some(CteBindingInfo {
             name,
             name_range,
@@ -1082,8 +1110,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
 // ── CteBindingInfo ────────────────────────────────────────────────────────────
 
 struct CteBindingInfo<'b> {
-    name: &'b str,
+    /// Identifier value (escape-collapsed) — used as the catalog key.
+    name: Cow<'b, str>,
     name_range: DocRange,
     body_id: Option<AnyNodeId>,
-    declared_cols: Option<Vec<(&'b str, DocRange)>>,
+    declared_cols: Option<Vec<(Cow<'b, str>, DocRange)>>,
 }

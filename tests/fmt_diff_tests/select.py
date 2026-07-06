@@ -260,6 +260,52 @@ class TableValuedFunctionFormat(TestSuite):
             out='SELECT "set" FROM t;',
         )
 
+    def test_single_quoted_table_normalizes_to_double_quote(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM 'set'",
+            out='SELECT * FROM "set";',
+        )
+
+    def test_single_quoted_alias_normalizes_to_double_quote(self):
+        return DiffTestBlueprint(
+            sql="SELECT 1 AS 'a'",
+            out='SELECT 1 AS "a";',
+        )
+
+    def test_single_quoted_string_literal_stays_single_quoted(self):
+        return DiffTestBlueprint(
+            sql="SELECT 'lit' FROM t",
+            out="SELECT 'lit' FROM t;",
+        )
+
+    # Re-emitting in canonical `"..."` style must translate the source
+    # style's escapes: collapse the doubled source quote char, then double
+    # any literal `"` in the identifier.
+
+    def test_single_quoted_escape_rewritten_for_double_quotes(self):
+        return DiffTestBlueprint(
+            sql="SELECT * FROM 'a''b'",
+            out='SELECT * FROM "a\'b";',
+        )
+
+    def test_backtick_escape_rewritten_for_double_quotes(self):
+        return DiffTestBlueprint(
+            sql="SELECT `a``b` FROM t",
+            out='SELECT "a`b" FROM t;',
+        )
+
+    def test_bracket_inner_double_quote_reescaped(self):
+        return DiffTestBlueprint(
+            sql='SELECT [a"b] FROM t',
+            out='SELECT "a""b" FROM t;',
+        )
+
+    def test_double_quoted_escape_preserved(self):
+        return DiffTestBlueprint(
+            sql='SELECT "a""b" FROM t',
+            out='SELECT "a""b" FROM t;',
+        )
+
     def test_qualified_quoted_column(self):
         return DiffTestBlueprint(
             sql='SELECT t."set" FROM t',

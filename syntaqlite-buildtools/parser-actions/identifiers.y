@@ -24,7 +24,11 @@ nm(A) ::= idj(B). {
     A = B;
 }
 
+// A string literal in identifier position is an identifier: mark the
+// token so classification consumers (e.g. semantic highlighting) see it
+// as one.
 nm(A) ::= STRING(B). {
+    synq_mark_as_id(pCtx, B);
     A = B;
 }
 

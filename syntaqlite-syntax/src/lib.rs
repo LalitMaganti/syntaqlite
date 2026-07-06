@@ -83,7 +83,7 @@ pub mod any {
     #[doc(inline)]
     pub use crate::ast::{
         AnyNode, AnyNodeId, AnyNodeTag, AnyTokenType, FIELD_ABSENT, FieldValue, NodeFields,
-        TextSpan,
+        TextSpan, unescape_quoted,
     };
     #[doc(inline)]
     pub use crate::dialect::{AnyDialect, FieldKind, FieldMeta, KeywordEntry, TokenCategory};

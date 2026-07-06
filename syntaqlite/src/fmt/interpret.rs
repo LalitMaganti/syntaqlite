@@ -1,7 +1,11 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, AnyTokenizer, FieldValue};
+use std::borrow::Cow;
+
+use syntaqlite_syntax::any::{
+    AnyNodeId, AnyParsedStatement, AnyTokenizer, FieldValue, unescape_quoted,
+};
 use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtText};
 
 use super::comment::{CommentCtx, DrainResult};
@@ -47,6 +51,25 @@ impl InterpretScratch {
             for_each: Vec::new(),
         }
     }
+}
+
+/// Translate a quoted identifier's inner text from its source quote style
+/// to canonical `"..."` escaping: collapse the doubled source quote char,
+/// then double any literal `"` in the identifier value.
+///
+/// For `"`-quoted source this is the identity (the escape style already
+/// matches), so existing double-quoted output is emitted verbatim.
+/// `[...]` has no escapes to collapse, but its inner text can hold a
+/// literal `"` that must be doubled.
+fn requote_ident(inner: &str, from: char) -> Cow<'_, str> {
+    if from == '"' {
+        return Cow::Borrowed(inner);
+    }
+    let unescaped = unescape_quoted(inner, from);
+    if !unescaped.contains('"') {
+        return unescaped;
+    }
+    Cow::Owned(unescaped.replace('"', "\"\""))
 }
 
 // ── Iterative interpreter ────────────────────────────────────────────────
@@ -267,8 +290,16 @@ pub(super) fn interpret_core<'a>(
                             cctx.discard_comments_before(span_end);
                         }
                         if quoted {
+                            // Quoted identifiers are canonicalized to
+                            // `"..."`, so the inner text must be
+                            // translated from the source style's escape
+                            // to double-quote escaping.
+                            let from = span.quote_char().unwrap_or('"');
+                            let txt = match requote_ident(s, from) {
+                                Cow::Borrowed(t) => arena.text(t),
+                                Cow::Owned(t) => arena.own_text(&t),
+                            };
                             let q = arena.text("\"");
-                            let txt = arena.text(s);
                             running = arena.cat(running, q);
                             running = arena.cat(running, txt);
                             running = arena.cat(running, q);

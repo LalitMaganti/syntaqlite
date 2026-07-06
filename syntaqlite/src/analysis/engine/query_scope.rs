@@ -12,6 +12,7 @@
 use std::collections::HashMap;
 
 use crate::analysis::catalog::ColumnResolution;
+use crate::analysis::name_key::NameKey;
 
 use super::helpers::is_rowid_alias;
 
@@ -53,8 +54,8 @@ impl ActiveTable {
 
 #[derive(Default)]
 pub(crate) struct ScopeFrame {
-    /// Named tables/aliases, keyed by lowercase name.
-    named: HashMap<String, ActiveTable>,
+    /// Named tables/aliases, keyed by normalized name.
+    named: HashMap<NameKey, ActiveTable>,
     /// Anonymous sources (unaliased subqueries). Participate in unqualified
     /// column resolution but cannot be referenced by name.
     anonymous: Vec<ActiveTable>,
@@ -87,7 +88,7 @@ impl QueryScope {
         if let Some(frame) = self.frames.last_mut() {
             frame
                 .named
-                .insert(name.to_ascii_lowercase(), ActiveTable { columns, rowid });
+                .insert(NameKey::new(name), ActiveTable { columns, rowid });
         }
     }
 
@@ -100,7 +101,7 @@ impl QueryScope {
         }
     }
 
-    pub(crate) fn resolve_column(&self, table: Option<&str>, column: &str) -> ColumnResolution {
+    pub(crate) fn resolve_column(&self, table: Option<&NameKey>, column: &str) -> ColumnResolution {
         if let Some(tbl) = table {
             self.resolve_qualified(tbl, column)
         } else {
@@ -108,22 +109,21 @@ impl QueryScope {
         }
     }
 
-    fn resolve_qualified(&self, table: &str, column: &str) -> ColumnResolution {
-        let key = table.to_ascii_lowercase();
+    fn resolve_qualified(&self, table: &NameKey, column: &str) -> ColumnResolution {
         for frame in self.frames.iter().rev() {
-            let Some(entry) = frame.named.get(&key) else {
+            let Some(entry) = frame.named.get(table) else {
                 continue;
             };
             if entry.has_column(column) {
                 return ColumnResolution::Found {
-                    table: table.to_string(),
+                    table: table.as_str().to_string(),
                     all_columns: entry.columns.clone().unwrap_or_default(),
                 };
             }
             return match &entry.columns {
                 Some(_) => ColumnResolution::TableFoundColumnMissing,
                 None => ColumnResolution::Found {
-                    table: table.to_string(),
+                    table: table.as_str().to_string(),
                     all_columns: Vec::new(),
                 },
             };
@@ -138,7 +138,7 @@ impl QueryScope {
             for (tbl_name, entry) in &frame.named {
                 if entry.has_column(column) {
                     return ColumnResolution::Found {
-                        table: tbl_name.clone(),
+                        table: tbl_name.as_str().to_string(),
                         all_columns: entry.columns.clone().unwrap_or_default(),
                     };
                 }
@@ -189,7 +189,7 @@ impl QueryScope {
             .frames
             .iter()
             .flat_map(|f| f.named.keys())
-            .cloned()
+            .map(|k| k.as_str().to_string())
             .collect();
         names.sort_unstable();
         names.dedup();
@@ -201,7 +201,7 @@ impl QueryScope {
         let mut names: Vec<String> = Vec::new();
         for frame in self.frames.iter().rev() {
             for (tbl_name, entry) in &frame.named {
-                if table.is_none_or(|t| tbl_name.eq_ignore_ascii_case(t))
+                if table.is_none_or(|t| tbl_name.as_str().eq_ignore_ascii_case(t))
                     && let Some(cs) = &entry.columns
                 {
                     names.extend(cs.iter().map(|c| c.to_ascii_lowercase()));

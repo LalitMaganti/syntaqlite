@@ -26,6 +26,7 @@ use crate::analysis::engine::tokens::{SemanticToken, StoredComment, StoredToken}
 use crate::analysis::engine::walker::{
     CallEvent, ColumnRefEvent, SemanticVisitor, SourceRefEvent, WalkCtx,
 };
+use crate::analysis::name_key::NameKey;
 use crate::dialect::AnyDialect;
 
 // ── Resolved symbols ──────────────────────────────────────────────────────────
@@ -332,7 +333,7 @@ impl SemanticVisitor for LspCapture<'_> {
         if !ev.resolved {
             return;
         }
-        let (columns, _without_rowid) = cx.catalog.table_source_info(ev.name);
+        let (columns, _without_rowid) = cx.catalog.table_source_info(&NameKey::new(ev.name));
         let definition = self.lookup_table_definition(ev.name);
         self.data.resolutions.push(Resolution {
             range: ev.range,
@@ -377,7 +378,8 @@ impl SemanticVisitor for LspCapture<'_> {
         if !matches!(ev.result, FunctionCheckResult::Ok) {
             return;
         }
-        let Some((category, arities)) = cx.catalog.function_signature(ev.name) else {
+        let Some((category, arities)) = cx.catalog.function_signature(&NameKey::new(ev.name))
+        else {
             return;
         };
         let cat_str = match category {

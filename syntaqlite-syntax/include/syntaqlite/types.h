@@ -96,20 +96,22 @@ typedef struct SyntaqliteTextSpan {
 #define SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE ((uint32_t)1u)    // "..."
 #define SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK ((uint32_t)2u)  // `...`
 #define SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET ((uint32_t)4u)   // [...]
+#define SYNTAQLITE_SPAN_FLAG_QUOTE_SINGLE ((uint32_t)8u)    // '...'
 
 #define SYNTAQLITE_SPAN_QUOTE_MASK                                           \
   (SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE | SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK | \
-   SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET)
+   SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET | SYNTAQLITE_SPAN_FLAG_QUOTE_SINGLE)
 
 // Was this identifier quoted in source?  Returns nonzero if `sp` came
-// from any of `"..."`, `` `...` ``, or `[...]`.
+// from any of `"..."`, `` `...` ``, `[...]`, or `'...'` (a string
+// literal in identifier position).
 static inline int syntaqlite_span_is_quoted(SyntaqliteTextSpan sp) {
   return (sp.flags & SYNTAQLITE_SPAN_QUOTE_MASK) != 0;
 }
 
 // The character that opened this identifier's quotes in source: `"`,
-// `` ` ``, or `[`.  Returns 0 if the span was unquoted.  For `[...]`
-// only the opener is reported; the closer is always `]`.
+// `` ` ``, `[`, or `'`.  Returns 0 if the span was unquoted.  For
+// `[...]` only the opener is reported; the closer is always `]`.
 static inline char syntaqlite_span_quote_char(SyntaqliteTextSpan sp) {
   if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE)
     return '"';
@@ -117,6 +119,8 @@ static inline char syntaqlite_span_quote_char(SyntaqliteTextSpan sp) {
     return '`';
   if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET)
     return '[';
+  if (sp.flags & SYNTAQLITE_SPAN_FLAG_QUOTE_SINGLE)
+    return '\'';
   return 0;
 }
 
