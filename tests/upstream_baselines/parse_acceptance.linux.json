@@ -2,12 +2,12 @@
   "total": 395694,
   "parse_ok": 290637,
   "parse_error": 105057,
-  "both_accept": 288664,
-  "both_reject": 105917,
-  "false_positive": 537,
-  "gap": 576,
+  "both_accept": 288716,
+  "both_reject": 105921,
+  "false_positive": 485,
+  "gap": 572,
   "false_positive_categories": {
-    "unknown column": 77,
+    "unknown column": 30,
     "unknown function: fts3_tokenizer": 12,
     "unknown function: log": 1,
     "unknown function: matchinfo": 9,
@@ -19,7 +19,7 @@
     "unknown table (system): sqlite_stat1": 52,
     "unknown table (system): sqlite_stat4": 1,
     "unknown table (system): sqlite_temp_master": 9,
-    "unknown table (user-defined)": 150
+    "unknown table (user-defined)": 147
   },
   "gap_categories": {
     "AUTOINCREMENT not allowed on WITHOUT ROWID tables": 2,
@@ -87,7 +87,7 @@
     "no such column": 26,
     "no such function": 36,
     "no such index: ?": 8,
-    "no such table": 87,
+    "no such table": 84,
     "no such trigger: ?": 5,
     "no such view: ?": 1,
     "no tables specified": 3,
@@ -106,7 +106,6 @@
     "table already exists": 7,
     "table c has N values for N columns": 1,
     "table i has N values for N columns": 4,
-    "table sqlite_master may not be altered": 1,
     "table terms may not be modified": 3,
     "target object/alias may not appear in FROM clause: ?": 2,
     "temporary trigger may not have qualified name": 1,

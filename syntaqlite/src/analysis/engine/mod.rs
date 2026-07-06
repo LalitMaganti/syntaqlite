@@ -805,6 +805,50 @@ mod tests {
     }
 
     #[test]
+    fn alter_add_column_makes_column_resolvable() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        // Regression: literal.test — the added column must resolve afterwards.
+        let model = analyzer.analyze(
+            "CREATE TABLE x1(a); ALTER TABLE x1 ADD COLUMN b DEFAULT 5; SELECT b FROM x1;",
+            &mut ctx,
+        );
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+    }
+
+    #[test]
+    fn alter_rename_table_registers_new_name_and_retires_old() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        // The new name resolves; the rename itself is not flagged.
+        let model = analyzer.analyze(
+            "CREATE TABLE t3(a); ALTER TABLE t3 RENAME TO t5; SELECT a FROM t5;",
+            &mut ctx,
+        );
+        assert_eq!(diag_messages(&model), Vec::<String>::new());
+        // The old name is retired — referencing it is an unknown table.
+        let model = analyzer.analyze(
+            "CREATE TABLE t3(a); ALTER TABLE t3 RENAME TO t5; SELECT a FROM t3;",
+            &mut ctx,
+        );
+        assert_eq!(diag_messages(&model), vec!["unknown table: t3".to_string()]);
+    }
+
+    #[test]
+    fn alter_of_unknown_table_reports_unknown_table() {
+        let mut analyzer = sqlite_analyzer();
+        let mut catalog = sqlite_catalog();
+        let mut ctx = AnalysisContext::new(&mut catalog);
+        let model = analyzer.analyze("ALTER TABLE nosuch DROP COLUMN z;", &mut ctx);
+        assert_eq!(
+            diag_messages(&model),
+            vec!["unknown table: nosuch".to_string()],
+        );
+    }
+
+    #[test]
     fn module_resolver_with_analyzer_does_not_panic() {
         let resolver = MapResolver(HashMap::new());
         let mut analyzer = sqlite_analyzer();
