@@ -12,6 +12,7 @@ import type {DiagnosticEntry, EmbeddedFragment, EmbeddedLanguage} from "syntaqli
 import {ThemeManager} from "./theme_manager";
 import {WindowManager} from "./window_manager";
 import {UrlStateManager} from "./url_state";
+import {LspSession} from "../lsp_session";
 
 export interface Attrs {
   app: App;
@@ -21,6 +22,10 @@ export class App {
   urlState: UrlStateManager;
   theme: ThemeManager;
   runtime: Engine;
+  /** LSP client over the runtime's in-process language server. All SQL
+   *  editor features (diagnostics, completions, semantic tokens) go
+   *  through this. */
+  lsp: LspSession;
   dialect: DialectManager;
   dialectConfig: DialectConfigManager;
   schemaContext: SchemaContextManager;
@@ -45,6 +50,7 @@ export class App {
 
     this.theme = new ThemeManager();
     this.runtime = new Engine({runtimeJsPath: "./syntaqlite-runtime.js"});
+    this.lsp = new LspSession(this.runtime);
     this.dialect = new DialectManager({
       presets: [
         {

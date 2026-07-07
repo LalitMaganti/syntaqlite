@@ -10,6 +10,21 @@
 //! so any transport that can shuttle strings — stdio, a web worker
 //! `postMessage` channel, a test harness — can run a full server on top of
 //! it. The stdio [`LspServer`](crate::lsp::LspServer) is one such transport.
+//!
+//! # Extension methods
+//!
+//! Beyond standard LSP, the dispatcher accepts `syntaqlite/setSessionContext`
+//! (advertised under `capabilities.experimental.syntaqlite`): a request that
+//! configures the schema catalog used for analysis. It is accepted even
+//! before `initialize` so embedders can configure the server up front, and
+//! it re-publishes diagnostics for every open document. Params are one of:
+//!
+//! - `{"ddl": "CREATE TABLE ..."}` — parse DDL into a catalog
+//! - `{"context": {...}}` — structured catalog JSON
+//! - `{}` or `null` — clear the session context
+//!
+//! The result is `{"errors": [...]}`; DDL that only partially parses is
+//! still applied, with the parse errors reported in `errors`.
 
 // Items here are only reachable via the `lsp` module re-exports.
 #![allow(unreachable_pub)]
@@ -21,13 +36,13 @@ use crate::AnalysisConfig;
 
 use lsp_server::{ErrorCode, Message, Notification, Request, Response};
 use lsp_types::notification::{
-    DidChangeConfiguration, DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, Exit,
-    Initialized, Notification as _, PublishDiagnostics,
+    DidChangeTextDocument, DidCloseTextDocument, DidOpenTextDocument, Exit, Initialized,
+    Notification as _, PublishDiagnostics,
 };
 use lsp_types::request::{
     Completion, DocumentHighlightRequest, Formatting, GotoDefinition, HoverRequest, Initialize,
-    PrepareRenameRequest, References, Rename, Request as _, SemanticTokensFullRequest, Shutdown,
-    SignatureHelpRequest,
+    PrepareRenameRequest, References, Rename, Request as _, SemanticTokensFullRequest,
+    SemanticTokensRangeRequest, Shutdown, SignatureHelpRequest,
 };
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionOptions, CompletionResponse, DiagnosticSeverity,
@@ -65,6 +80,10 @@ pub struct LspConfig {
 
 // ── LspDispatcher ─────────────────────────────────────────────────────────
 
+/// Extension request configuring the schema catalog used for analysis.
+/// See the module docs for the protocol.
+const SET_SESSION_CONTEXT_METHOD: &str = "syntaqlite/setSessionContext";
+
 /// LSP lifecycle phase, advanced by `initialize`/`shutdown`/`exit`.
 #[derive(PartialEq, Eq)]
 enum Lifecycle {
@@ -88,11 +107,13 @@ enum Lifecycle {
 /// - `textDocument/completion` (keywords and functions)
 /// - `textDocument/hover` (table, column, and function info)
 /// - `textDocument/signatureHelp` (function arities)
-/// - `textDocument/semanticTokens/full`
+/// - `textDocument/semanticTokens/full` + `semanticTokens/range`
 /// - `textDocument/formatting`
 /// - `textDocument/references` (find all references)
 /// - `textDocument/rename` + `textDocument/prepareRename`
-/// - `textDocument/publishDiagnostics` (parse + semantic errors)
+/// - `textDocument/publishDiagnostics` (parse + semantic errors; each
+///   diagnostic carries the full structured form in `data`)
+/// - `syntaqlite/setSessionContext` (schema context — see module docs)
 ///
 /// # Example
 ///
@@ -109,9 +130,6 @@ pub struct LspDispatcher {
     host: LspHost,
     lifecycle: Lifecycle,
     exited: bool,
-    /// Whether a schema came from project config, disabling the legacy
-    /// `initializationOptions.schemaPath` fallback.
-    has_config_schema: bool,
 }
 
 impl LspDispatcher {
@@ -124,7 +142,6 @@ impl LspDispatcher {
     pub fn with_config(dialect: impl Into<AnyDialect>, config: LspConfig) -> Self {
         let mut host = LspHost::with_dialect(dialect.into());
 
-        let has_config_schema = config.schema_catalog.is_some() || config.schema_map.is_some();
         let has_analysis_config = config.analysis_config.is_some();
         if let Some(fmt) = config.format_config {
             host.set_format_config(fmt);
@@ -149,7 +166,6 @@ impl LspDispatcher {
             host,
             lifecycle: Lifecycle::Uninitialized,
             exited: false,
-            has_config_schema,
         }
     }
 
@@ -199,6 +215,18 @@ impl LspDispatcher {
     // ── Lifecycle + request dispatch ──────────────────────────────────────
 
     fn handle_request(&mut self, req: Request) -> Vec<Message> {
+        // Extension methods configure the server, so they are accepted in
+        // any lifecycle state except after shutdown.
+        if req.method == SET_SESSION_CONTEXT_METHOD {
+            if self.lifecycle == Lifecycle::ShutDown {
+                return vec![Message::Response(Response::new_err(
+                    req.id,
+                    ErrorCode::InvalidRequest as i32,
+                    "server is shut down".to_string(),
+                ))];
+            }
+            return self.handle_set_session_context(req);
+        }
         let response = match (&self.lifecycle, req.method.as_str()) {
             (Lifecycle::Uninitialized, Initialize::METHOD) => self.handle_initialize(req),
             (Lifecycle::Uninitialized, _) => Response::new_err(
@@ -229,6 +257,7 @@ impl LspDispatcher {
                     SignatureHelpRequest::METHOD => handle_signature_help(req, host),
                     Formatting::METHOD => handle_formatting(req, host),
                     SemanticTokensFullRequest::METHOD => handle_semantic_tokens(req, host),
+                    SemanticTokensRangeRequest::METHOD => handle_semantic_tokens_range(req, host),
                     DocumentHighlightRequest::METHOD => handle_document_highlight(req, host),
                     References::METHOD => handle_references(req, host),
                     PrepareRenameRequest::METHOD => handle_prepare_rename(req, host),
@@ -256,13 +285,6 @@ impl LspDispatcher {
             eprintln!("syntaqlite-lsp: workspace root: {}", root.display());
         }
 
-        // Legacy fallback: load schema from initializationOptions.schemaPath
-        // if no project config schema was provided. This supports older VS Code
-        // extension versions that still send schemaPath.
-        if !self.has_config_schema {
-            load_schema_from_options(&params, &mut self.host);
-        }
-
         self.lifecycle = Lifecycle::Initialized;
         let result = serde_json::json!({
             "capabilities": server_capabilities(),
@@ -272,6 +294,67 @@ impl LspDispatcher {
             },
         });
         Response::new_ok(req.id, result)
+    }
+
+    /// `syntaqlite/setSessionContext` — see the module docs for the protocol.
+    fn handle_set_session_context(&mut self, req: Request) -> Vec<Message> {
+        let Request { id, params, .. } = req;
+        // Schema presence toggles strict schema checks, mirroring how
+        // project-config schemas behave.
+        let (errors, analysis) = if let Some(ddl) =
+            params.get("ddl").and_then(serde_json::Value::as_str)
+        {
+            // DDL that only partially parses is still applied; the parse
+            // errors are reported in the result.
+            let errors = self
+                .host
+                .set_session_context_from_ddl(ddl, None)
+                .err()
+                .unwrap_or_default();
+            (errors, AnalysisConfig::default().with_strict_schema())
+        } else if let Some(context) = params.get("context") {
+            if let Err(e) = self
+                .host
+                .set_session_context_from_json(&context.to_string())
+            {
+                return vec![Message::Response(Response::new_err(
+                    id,
+                    ErrorCode::InvalidParams as i32,
+                    e,
+                ))];
+            }
+            (Vec::new(), AnalysisConfig::default().with_strict_schema())
+        } else if params.is_null() || params.as_object().is_some_and(serde_json::Map::is_empty) {
+            self.host.clear_session_context();
+            (Vec::new(), AnalysisConfig::default())
+        } else {
+            return vec![Message::Response(Response::new_err(
+                id,
+                ErrorCode::InvalidParams as i32,
+                r#"expected {"ddl": string}, {"context": object}, or {} to clear"#.to_string(),
+            ))];
+        };
+        self.host.set_analysis_config(analysis);
+
+        let mut out = vec![Message::Response(Response::new_ok(
+            id,
+            serde_json::json!({"errors": errors}),
+        ))];
+        out.extend(self.republish_all().into_iter().map(Message::Notification));
+        out
+    }
+
+    /// Re-publish diagnostics for every open document, e.g. after a context
+    /// change invalidated all cached analysis.
+    fn republish_all(&mut self) -> Vec<Notification> {
+        self.host
+            .document_uris()
+            .into_iter()
+            .filter_map(|uri| {
+                let uri: Uri = uri.parse().ok()?;
+                diagnostics_notification(&mut self.host, &uri)
+            })
+            .collect()
     }
 
     // ── Notification dispatch ─────────────────────────────────────────────
@@ -324,15 +407,6 @@ impl LspDispatcher {
                     .map(Message::Notification)
                     .into_iter()
                     .collect()
-            }
-            DidChangeConfiguration::METHOD => {
-                let Ok(params) =
-                    serde_json::from_value::<lsp_types::DidChangeConfigurationParams>(notif.params)
-                else {
-                    return Vec::new();
-                };
-                load_schema_from_settings(&params.settings, &mut self.host);
-                Vec::new()
             }
             DidCloseTextDocument::METHOD => {
                 let Ok(params) =
@@ -405,10 +479,14 @@ fn server_capabilities() -> ServerCapabilities {
                         .collect(),
                     token_modifiers: vec![],
                 },
+                range: Some(true),
                 full: Some(SemanticTokensFullOptions::Bool(true)),
                 ..Default::default()
             },
         )),
+        experimental: Some(serde_json::json!({
+            "syntaqlite": {"setSessionContext": true},
+        })),
         ..Default::default()
     }
 }
@@ -671,6 +749,41 @@ fn handle_semantic_tokens(req: Request, host: &mut LspHost) -> Response {
     )
 }
 
+fn handle_semantic_tokens_range(req: Request, host: &mut LspHost) -> Response {
+    let params: lsp_types::SemanticTokensRangeParams = match serde_json::from_value(req.params) {
+        Ok(p) => p,
+        Err(e) => {
+            return Response::new_err(req.id, ErrorCode::InvalidParams as i32, e.to_string());
+        }
+    };
+    let uri = params.text_document.uri.as_str();
+    let range = host.document_source(uri).map(|source| {
+        let map = SourcePositionMap::new(source);
+        DocRange {
+            start: map.position_to_offset(params.range.start),
+            end: map.position_to_offset(params.range.end),
+        }
+    });
+    let encoded = host.semantic_tokens_encoded(uri, range);
+    let data: Vec<lsp_types::SemanticToken> = encoded
+        .chunks_exact(5)
+        .map(|c| lsp_types::SemanticToken {
+            delta_line: c[0],
+            delta_start: c[1],
+            length: c[2],
+            token_type: c[3],
+            token_modifiers_bitset: c[4],
+        })
+        .collect();
+    Response::new_ok(
+        req.id,
+        lsp_types::SemanticTokensRangeResult::Tokens(lsp_types::SemanticTokens {
+            result_id: None,
+            data,
+        }),
+    )
+}
+
 fn handle_document_highlight(req: Request, host: &mut LspHost) -> Response {
     let params: lsp_types::DocumentHighlightParams = match serde_json::from_value(req.params) {
         Ok(p) => p,
@@ -882,6 +995,9 @@ fn diagnostics_notification(host: &mut LspHost, uri: &Uri) -> Option<Notificatio
                 None => d.message().to_string(),
             },
             source: Some("syntaqlite".to_string()),
+            // Full structured diagnostic (byte offsets, kind, help detail)
+            // for clients that want more than the standard LSP fields.
+            data: serde_json::to_value(d).ok(),
             ..Default::default()
         })
         .collect();
@@ -895,55 +1011,6 @@ fn diagnostics_notification(host: &mut LspHost, uri: &Uri) -> Option<Notificatio
         PublishDiagnostics::METHOD.to_string(),
         params,
     ))
-}
-
-// ── Schema loading helpers ────────────────────────────────────────────────
-
-/// Load schema from `initializationOptions.schemaPath`.
-fn load_schema_from_options(params: &InitializeParams, host: &mut LspHost) {
-    let Some(opts) = &params.initialization_options else {
-        eprintln!("syntaqlite-lsp: no initializationOptions");
-        return;
-    };
-    eprintln!("syntaqlite-lsp: initializationOptions: {opts}");
-    load_schema_from_settings(opts, host);
-}
-
-/// Load schema DDL from a `schemaPath` key in a JSON settings object.
-fn load_schema_from_settings(settings: &serde_json::Value, host: &mut LspHost) {
-    eprintln!("syntaqlite-lsp: load_schema_from_settings: {settings}");
-    let path_str = settings
-        .get("schemaPath")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    if path_str.is_empty() {
-        eprintln!("syntaqlite-lsp: schemaPath is empty, skipping");
-        return;
-    }
-    let path = PathBuf::from(path_str);
-    let file_uri = format!("file://{}", path.display());
-    match std::fs::read_to_string(&path) {
-        Ok(contents) => match host.set_session_context_from_ddl(&contents, Some(&file_uri)) {
-            Ok(()) => {
-                host.set_analysis_config(AnalysisConfig::default().with_strict_schema());
-                eprintln!("syntaqlite-lsp: loaded schema from {}", path.display());
-            }
-            Err(errors) => {
-                eprintln!(
-                    "syntaqlite-lsp: schema loaded with {} parse error(s) from {}",
-                    errors.len(),
-                    path.display()
-                );
-            }
-        },
-        Err(e) => {
-            eprintln!(
-                "syntaqlite-lsp: failed to read schema file {}: {}",
-                path.display(),
-                e
-            );
-        }
-    }
 }
 
 fn workspace_root(params: &InitializeParams) -> Option<PathBuf> {
@@ -1131,6 +1198,147 @@ mod tests {
         let out = d.handle_json(r#"{"jsonrpc":"2.0","method":"exit","params":null}"#);
         assert!(out.is_empty());
         assert!(d.exited());
+    }
+
+    // ── syntaqlite/setSessionContext extension ────────────────────────
+
+    fn set_ddl_context(d: &mut LspDispatcher, id: u32, ddl: &str) -> Vec<serde_json::Value> {
+        d.handle_json(&format!(
+            r#"{{"jsonrpc":"2.0","id":{id},"method":"syntaqlite/setSessionContext","params":{{"ddl":"{ddl}"}}}}"#,
+        ))
+        .iter()
+        .map(|m| serde_json::from_str(m).unwrap())
+        .collect()
+    }
+
+    #[test]
+    fn set_session_context_accepted_before_initialize() {
+        let mut d = dispatcher();
+        let out = set_ddl_context(&mut d, 1, "CREATE TABLE t(a INTEGER);");
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0]["result"]["errors"].as_array().unwrap().len(), 0);
+        // Schema survives the subsequent handshake.
+        initialize(&mut d);
+        let open = d.handle_json(
+            r#"{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///q.sql","languageId":"sql","version":1,"text":"SELECT c FROM t"}}}"#,
+        );
+        let notif: serde_json::Value = serde_json::from_str(&open[0]).unwrap();
+        let messages: Vec<&str> = notif["params"]["diagnostics"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter_map(|d| d["message"].as_str())
+            .collect();
+        assert!(
+            messages.iter().any(|m| m.contains("unknown column")),
+            "expected unknown-column diagnostic, got: {messages:?}"
+        );
+    }
+
+    #[test]
+    fn set_session_context_republishes_open_documents() {
+        let mut d = dispatcher();
+        initialize(&mut d);
+        d.handle_json(
+            r#"{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///q.sql","languageId":"sql","version":1,"text":"SELECT c FROM t"}}}"#,
+        );
+        let out = set_ddl_context(&mut d, 2, "CREATE TABLE t(a INTEGER);");
+        assert_eq!(out.len(), 2, "expected response + publishDiagnostics");
+        assert!(out[0]["result"]["errors"].as_array().unwrap().is_empty());
+        assert_eq!(out[1]["method"], "textDocument/publishDiagnostics");
+        assert!(
+            out[1]["params"]["diagnostics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|d| d["message"].as_str().unwrap().contains("unknown column")),
+        );
+    }
+
+    #[test]
+    fn clear_session_context_republishes() {
+        let mut d = dispatcher();
+        initialize(&mut d);
+        set_ddl_context(&mut d, 2, "CREATE TABLE t(a INTEGER);");
+        d.handle_json(
+            r#"{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///q.sql","languageId":"sql","version":1,"text":"SELECT c FROM t"}}}"#,
+        );
+        let out = d.handle_json(
+            r#"{"jsonrpc":"2.0","id":3,"method":"syntaqlite/setSessionContext","params":{}}"#,
+        );
+        let notif: serde_json::Value = serde_json::from_str(&out[1]).unwrap();
+        assert!(
+            !notif["params"]["diagnostics"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|d| d["message"].as_str().unwrap().contains("unknown column")),
+            "clearing the context should drop schema diagnostics"
+        );
+    }
+
+    #[test]
+    fn set_session_context_reports_ddl_errors() {
+        let mut d = dispatcher();
+        let out = set_ddl_context(&mut d, 1, "CREATE TABLE t(a INTEGER); NOT SQL;");
+        assert!(
+            !out[0]["result"]["errors"].as_array().unwrap().is_empty(),
+            "expected DDL parse errors in result"
+        );
+    }
+
+    #[test]
+    fn set_session_context_rejects_bad_params() {
+        let mut d = dispatcher();
+        let out = d.handle_json(
+            r#"{"jsonrpc":"2.0","id":1,"method":"syntaqlite/setSessionContext","params":{"bogus":1}}"#,
+        );
+        let resp: serde_json::Value = serde_json::from_str(&out[0]).unwrap();
+        assert_eq!(resp["error"]["code"], ErrorCode::InvalidParams as i32);
+    }
+
+    #[test]
+    fn initialize_advertises_extension_and_range_tokens() {
+        let mut d = dispatcher();
+        let out = d.handle_json(
+            r#"{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"capabilities":{}}}"#,
+        );
+        let resp: serde_json::Value = serde_json::from_str(&out[0]).unwrap();
+        let caps = &resp["result"]["capabilities"];
+        assert_eq!(
+            caps["experimental"]["syntaqlite"]["setSessionContext"],
+            true
+        );
+        assert_eq!(caps["semanticTokensProvider"]["range"], true);
+    }
+
+    #[test]
+    fn semantic_tokens_range_roundtrip() {
+        let mut d = dispatcher();
+        initialize(&mut d);
+        d.handle_json(
+            r#"{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///q.sql","languageId":"sql","version":1,"text":"SELECT 1;\nSELECT 2;"}}}"#,
+        );
+        let out = d.handle_json(
+            r#"{"jsonrpc":"2.0","id":2,"method":"textDocument/semanticTokens/range","params":{"textDocument":{"uri":"file:///q.sql"},"range":{"start":{"line":0,"character":0},"end":{"line":0,"character":9}}}}"#,
+        );
+        let resp: serde_json::Value = serde_json::from_str(&out[0]).unwrap();
+        let data = resp["result"]["data"].as_array().unwrap();
+        assert!(!data.is_empty(), "expected tokens for the first line");
+        assert_eq!(data.len() % 5, 0);
+    }
+
+    #[test]
+    fn diagnostics_carry_structured_data() {
+        let mut d = dispatcher();
+        initialize(&mut d);
+        let out = d.handle_json(
+            r#"{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file:///q.sql","languageId":"sql","version":1,"text":"selec 1"}}}"#,
+        );
+        let notif: serde_json::Value = serde_json::from_str(&out[0]).unwrap();
+        let diag = &notif["params"]["diagnostics"][0];
+        assert!(diag["data"]["startOffset"].is_number(), "data: {diag}");
+        assert!(diag["data"]["endOffset"].is_number());
     }
 
     #[test]

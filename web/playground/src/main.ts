@@ -63,7 +63,7 @@ const TOKEN_LEGEND: monaco.languages.SemanticTokensLegend = {
   tokenModifiers: [],
 };
 
-function registerSemanticTokensProvider(engine: Engine): void {
+function registerSemanticTokensProvider(app: App, engine: Engine): void {
   const provider: monaco.languages.DocumentRangeSemanticTokensProvider = {
     getLegend: () => TOKEN_LEGEND,
 
@@ -77,13 +77,18 @@ function registerSemanticTokensProvider(engine: Engine): void {
         return {data: new Uint32Array(0)};
       }
       const source = model.getValue();
-      const version = model.getVersionId();
-      // engine.runSemanticTokens() dispatches to the correct implementation
-      // (SQL or embedded) based on the language mode set via engine.setLanguageMode().
-      // In embedded mode the WASM ignores the range and returns full-document tokens.
-      const rangeStart = model.getOffsetAt(range.getStartPosition());
-      const rangeEnd = model.getOffsetAt(range.getEndPosition());
-      const data = engine.runSemanticTokens(source, rangeStart, rangeEnd, version);
+      if (app.languageMode !== "sql") {
+        // Embedded analyzers ignore the range and return full-document tokens.
+        const data = engine.runEmbeddedSemanticTokens(source);
+        return {data: data ?? new Uint32Array(0)};
+      }
+      // Monaco positions are 1-based UTF-16; LSP positions are 0-based UTF-16.
+      const data = app.lsp.semanticTokens(uri, source, model.getVersionId(), {
+        startLine: range.startLineNumber - 1,
+        startCharacter: range.startColumn - 1,
+        endLine: range.endLineNumber - 1,
+        endCharacter: range.endColumn - 1,
+      });
       return {data: data ?? new Uint32Array(0)};
     },
   };
@@ -93,6 +98,14 @@ function registerSemanticTokensProvider(engine: Engine): void {
   monaco.languages.registerDocumentRangeSemanticTokensProvider("typescript", provider);
 }
 
+/** LSP `CompletionItemKind` values → Monaco kinds. */
+const LSP_COMPLETION_KINDS = new Map<number, monaco.languages.CompletionItemKind>([
+  [3, monaco.languages.CompletionItemKind.Function],
+  [5, monaco.languages.CompletionItemKind.Field], // column
+  [14, monaco.languages.CompletionItemKind.Keyword],
+  [22, monaco.languages.CompletionItemKind.Struct], // table
+]);
+
 function registerCompletionProvider(app: App, engine: Engine): void {
   monaco.languages.registerCompletionItemProvider("sql", {
     triggerCharacters: [" ", "\t", ";", "(", ","],
@@ -100,19 +113,21 @@ function registerCompletionProvider(app: App, engine: Engine): void {
       model: monaco.editor.ITextModel,
       position: monaco.Position,
     ): monaco.languages.ProviderResult<monaco.languages.CompletionList> {
-      if (!engine.ready) return {suggestions: []};
+      if (!engine.ready || !engine.lspSupported) return {suggestions: []};
       if (app.languageMode !== "sql") return {suggestions: []};
       if (model.uri.toString() !== INPUT_MODEL_URI) {
         return {suggestions: []};
       }
 
-      const source = model.getValue();
-      const offset = model.getOffsetAt(position);
-      const version = model.getVersionId();
-      const result = engine.runCompletions(source, offset, version);
-      if (!result.ok || result.items.length === 0) {
-        return {suggestions: []};
-      }
+      // Monaco positions are 1-based UTF-16; LSP positions are 0-based UTF-16.
+      const items = app.lsp.completions(
+        INPUT_MODEL_URI,
+        model.getValue(),
+        model.getVersionId(),
+        position.lineNumber - 1,
+        position.column - 1,
+      );
+      if (items.length === 0) return {suggestions: []};
 
       const word = model.getWordUntilPosition(position);
       const range = new monaco.Range(
@@ -122,15 +137,13 @@ function registerCompletionProvider(app: App, engine: Engine): void {
         word.endColumn,
       );
 
-      const suggestions: monaco.languages.CompletionItem[] = result.items.map((item) => ({
+      const suggestions: monaco.languages.CompletionItem[] = items.map((item) => ({
         label: item.label,
         insertText: item.label,
+        sortText: item.sortText,
+        detail: item.detail,
         kind:
-          item.kind === "function"
-            ? monaco.languages.CompletionItemKind.Function
-            : item.kind === "class"
-              ? monaco.languages.CompletionItemKind.Class
-              : monaco.languages.CompletionItemKind.Keyword,
+          LSP_COMPLETION_KINDS.get(item.kind ?? 0) ?? monaco.languages.CompletionItemKind.Text,
         range,
       }));
 
@@ -204,7 +217,7 @@ async function main() {
     // Apply URL-specified schema context (no-op if schema is empty).
     app.schemaContext.apply(app.runtime, schema, schemaFormat);
 
-    registerSemanticTokensProvider(app.runtime);
+    registerSemanticTokensProvider(app, app.runtime);
     registerCompletionProvider(app, app.runtime);
     registerCodeActionProvider(app);
     app.runtime.updateStatus("Ready.");

@@ -344,34 +344,38 @@ export class Workspace implements m.ClassComponent<Attrs> {
 
     const model = this.editor.getModel();
     if (!model) return;
+    const app = this.appRef;
+    if (!app) return;
 
     // Update SQL fragments for the embedded-mode UI. engine.runExtract() is a
     // fast no-op (O(1)) in SQL mode, so calling it unconditionally is safe.
-    if (this.appRef) {
-      const extractResult = engine.runExtract(sql);
-      this.appRef.embeddedFragments = extractResult.ok ? extractResult.fragments : [];
-    }
+    const extractResult = engine.runExtract(sql);
+    app.embeddedFragments = extractResult.ok ? extractResult.fragments : [];
 
-    // engine.runDiagnostics() dispatches to the correct implementation (SQL or
-    // embedded) based on the language mode set via engine.setLanguageMode().
-    const result = engine.runDiagnostics(sql, model.getVersionId());
-    if (!result.ok) {
-      monaco.editor.setModelMarkers(model, "syntaqlite", []);
-      if (this.appRef) this.appRef.diagnostics = [];
-      return;
+    let diagnostics: DiagnosticEntry[];
+    if (app.languageMode !== "sql") {
+      const result = engine.runEmbeddedDiagnostics(sql);
+      if (!result.ok) {
+        monaco.editor.setModelMarkers(model, "syntaqlite", []);
+        app.diagnostics = [];
+        return;
+      }
+      diagnostics = result.diagnostics;
+    } else {
+      diagnostics = app.lsp.diagnostics(model.uri.toString(), sql, model.getVersionId());
     }
 
     // Enrich diagnostics with line/col/statement info for the details panel.
-    for (const d of result.diagnostics) {
+    for (const d of diagnostics) {
       const pos = offsetToLineCol(sql, d.startOffset);
       d.line = pos.line;
       d.col = pos.col;
       d.stmtIndex = countStatements(sql, d.startOffset);
     }
 
-    if (this.appRef) this.appRef.diagnostics = result.diagnostics;
+    app.diagnostics = diagnostics;
 
-    const markers: monaco.editor.IMarkerData[] = result.diagnostics.map((d) => {
+    const markers: monaco.editor.IMarkerData[] = diagnostics.map((d) => {
       const start = offsetToLineCol(sql, d.startOffset);
       const end = offsetToLineCol(sql, d.endOffset);
       return {

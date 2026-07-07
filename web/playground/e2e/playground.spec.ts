@@ -89,6 +89,45 @@ test("default load writes a preset param to the hash (not custom SQL)", async ({
   expect(params.has("s")).toBe(false);
 });
 
+// ---------------------------------------------------------------------------
+// Editor features (served over the in-process LSP)
+// ---------------------------------------------------------------------------
+
+test("invalid SQL surfaces diagnostic markers", async ({page}) => {
+  await page.goto("/");
+  await expect(page.locator(".sq-viewer-pane")).toContainText(/SELECT/i, {timeout: 15000});
+
+  const editor = page.locator(".sq-workspace .monaco-editor").first();
+  await expect(editor).toBeVisible();
+  await editor.click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("selec 1");
+
+  await expect(
+    page.locator(".sq-workspace .monaco-editor .squiggly-error").first(),
+  ).toBeVisible({timeout: 10000});
+});
+
+test("typing in the editor surfaces SQL completions", async ({page}) => {
+  await page.goto("/");
+  // The viewer pane rendering formatted SQL proves the wasm engine and
+  // dialect finished loading — only then can completions answer.
+  await expect(page.locator(".sq-viewer-pane")).toContainText(/SELECT/i, {timeout: 15000});
+
+  const editor = page.locator(".sq-workspace .monaco-editor").first();
+  await expect(editor).toBeVisible();
+  await editor.click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("SELECT 1 FROM t WHERE ");
+  // Explicitly trigger suggest for determinism.
+  await page.keyboard.press("Control+Space");
+
+  const suggestions = page.locator(".suggest-widget .monaco-list-row");
+  await expect(suggestions.first()).toBeVisible({timeout: 10000});
+  // Keyword completions must be present (e.g. NOT/EXISTS/CASE after WHERE).
+  expect(await suggestions.count()).toBeGreaterThan(0);
+});
+
 test("switching output tab updates the URL hash to ot=ast", async ({page}) => {
   await page.goto("/");
   // Wait for page to settle.

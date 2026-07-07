@@ -300,6 +300,13 @@ impl LspHost {
         self.documents.invalidate_all();
     }
 
+    /// Drop the session context, restoring the dialect-only catalog.
+    /// Invalidates all cached analysis.
+    pub fn clear_session_context(&mut self) {
+        self.user_catalog = Catalog::new(self.dialect.clone());
+        self.documents.invalidate_all();
+    }
+
     // ── Document lifecycle ─────────────────────────────────────────────────────
 
     /// Register a newly opened document. `language_id` is the client's
@@ -322,6 +329,11 @@ impl LspHost {
     /// Remove a document from the host.
     pub(crate) fn close_document(&mut self, uri: &str) {
         self.documents.close(uri);
+    }
+
+    /// URIs of all open documents.
+    pub(crate) fn document_uris(&self) -> Vec<String> {
+        self.documents.uris()
     }
 
     /// Source text for a document.

@@ -34,7 +34,16 @@ async function main() {
   });
   log("fmt:", JSON.stringify(fmt));
 
-  const diag = engine.runDiagnostics("selec 1 frm t");
+  // Diagnostics are served over LSP: handshake, open a document, and read
+  // the publishDiagnostics push.
+  engine.lspMessage({jsonrpc: "2.0", id: 1, method: "initialize", params: {capabilities: {}}});
+  engine.lspMessage({jsonrpc: "2.0", method: "initialized", params: {}});
+  const out = engine.lspMessage({
+    jsonrpc: "2.0", method: "textDocument/didOpen",
+    params: {textDocument: {uri: "file:///s.sql", languageId: "sql", version: 1, text: "selec 1 frm t"}},
+  });
+  const pub = out.find((m) => m.method === "textDocument/publishDiagnostics");
+  const diag = {ok: pub !== undefined, diagnostics: pub?.params.diagnostics ?? []};
   log("diag count:", diag.diagnostics.length);
 
   window.__syntaqlite_result = {ok: true, fmt, diag};

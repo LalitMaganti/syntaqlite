@@ -62,11 +62,17 @@ Upload this file in the UI. Dialect symbol resolution can use either:
 
 All stateful entry points operate on a session created with
 `wasm_session_new() -> u32` and released with `wasm_session_free(session)`.
-A session owns its dialect, SQLite version/cflag overrides, and LSP analysis
-state; independent sessions can coexist in one runtime instance.
+A session owns its dialect, SQLite version/cflag overrides, and language
+server; independent sessions can coexist in one runtime instance.
 
-The runtime module exports (see `syntaqlite-wasm/src/main.rs` for the full
-list and signatures):
+All editor features (diagnostics, completions, semantic tokens, hover,
+schema session context, ...) are served over LSP JSON-RPC through
+`wasm_lsp_message(session, u32, u32) -> i32`: one message in, a JSON array
+of outgoing messages in the result buffer. Schema context uses the
+`syntaqlite/setSessionContext` extension request.
+
+The remaining direct exports (see `syntaqlite-wasm/src/main.rs` for
+signatures):
 
 - `memory`
 - `wasm_session_new() -> u32`, `wasm_session_free(u32)`
@@ -74,7 +80,7 @@ list and signatures):
 - `wasm_alloc(u32) -> u32`, `wasm_free(u32, u32)`
 - `wasm_ast_json(session, u32, u32) -> i32`
 - `wasm_fmt(session, u32, u32, u32, u32, u32, u32) -> i32`
-- `wasm_diagnostics` / `wasm_semantic_tokens` / `wasm_completions` (session-scoped)
+- `wasm_embedded_*` (experimental embedded-SQL analyzers)
 - `wasm_result_ptr() -> u32`, `wasm_result_len() -> u32`, `wasm_result_free()`
 
 Setter calls return status code `0` on success, non-zero on error; query
