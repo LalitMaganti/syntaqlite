@@ -29,9 +29,18 @@ const DEFAULT_RUNTIME_WASM = new URL("../wasm/syntaqlite-runtime.wasm", import.m
 export interface EngineConfig {
   runtimeJsPath?: string;
   runtimeWasmPath?: string;
+  /** Reuse an already-loaded runtime module instead of loading a new one.
+   *  The engines share linear memory and loaded dialect modules but get
+   *  independent WASM sessions (dialect, schema context, analysis state). */
+  runtime?: EmscriptenModule;
 }
 
 type WasmFn = (...args: number[]) => number;
+
+/** Host-language code for the embedded-SQL WASM exports. */
+function embeddedLangCode(lang: EmbeddedLanguage): number {
+  return lang === "python" ? 0 : 1;
+}
 
 export class Engine {
   status = "Loading...";
@@ -42,6 +51,8 @@ export class Engine {
   private encoder = new TextEncoder();
   private decoder = new TextDecoder();
 
+  private sessionNewRaw: WasmFn | undefined = undefined;
+  private sessionFreeRaw: WasmFn | undefined = undefined;
   private setDialectRaw: WasmFn | undefined = undefined;
   private clearDialectRaw: WasmFn | undefined = undefined;
   private allocRaw: WasmFn | undefined = undefined;
@@ -63,9 +74,12 @@ export class Engine {
   private setSessionContextRaw: WasmFn | undefined = undefined;
   private clearSessionContextRaw: WasmFn | undefined = undefined;
   private setSessionContextDdlRaw: WasmFn | undefined = undefined;
-  private setLanguageModeRaw: WasmFn | undefined = undefined;
-  private extractRaw: WasmFn | undefined = undefined;
+  private embeddedExtractRaw: WasmFn | undefined = undefined;
+  private embeddedDiagnosticsRaw: WasmFn | undefined = undefined;
+  private embeddedSemanticTokensRaw: WasmFn | undefined = undefined;
   private currentLangMode: "sql" | EmbeddedLanguage = "sql";
+  /** Handle for the WASM session all calls run against. 0 = not created yet. */
+  private session = 0;
   /** Last session context applied, so it can be re-applied after dialect switches. */
   private sessionContext: {kind: "json"; json: string} | {kind: "ddl"; sql: string} | null = null;
 
@@ -77,14 +91,30 @@ export class Engine {
     return this.module !== undefined;
   }
 
+  /** The underlying Emscripten module, e.g. to share with another Engine
+   *  via `EngineConfig.runtime`. Undefined until load() completes. */
+  get runtimeModule(): EmscriptenModule | undefined {
+    return this.module;
+  }
+
+  /** Free the WASM session. The engine must not be used after this. */
+  dispose(): void {
+    if (this.session !== 0 && this.sessionFreeRaw) {
+      this.sessionFreeRaw(this.session);
+      this.session = 0;
+    }
+  }
+
   updateStatus(text: string, isError = false): void {
     this.status = text;
     this.statusError = isError;
   }
 
   async load(): Promise<void> {
-    const module = await loadRuntimeModule(this.config);
+    const module = this.config.runtime ?? (await loadRuntimeModule(this.config));
     this.module = module;
+    this.sessionNewRaw = this.resolveRuntimeFn("wasm_session_new");
+    this.sessionFreeRaw = this.resolveRuntimeFn("wasm_session_free");
     this.setDialectRaw = this.tryResolveRuntimeFn("wasm_set_dialect");
     this.clearDialectRaw = this.tryResolveRuntimeFn("wasm_clear_dialect");
     this.allocRaw = this.resolveRuntimeFn("wasm_alloc");
@@ -106,8 +136,13 @@ export class Engine {
     this.setSessionContextRaw = this.tryResolveRuntimeFn("wasm_set_session_context");
     this.clearSessionContextRaw = this.tryResolveRuntimeFn("wasm_clear_session_context");
     this.setSessionContextDdlRaw = this.tryResolveRuntimeFn("wasm_set_session_context_ddl");
-    this.setLanguageModeRaw = this.tryResolveRuntimeFn("wasm_set_language_mode");
-    this.extractRaw = this.tryResolveRuntimeFn("wasm_extract");
+    this.embeddedExtractRaw = this.tryResolveRuntimeFn("wasm_embedded_extract");
+    this.embeddedDiagnosticsRaw = this.tryResolveRuntimeFn("wasm_embedded_diagnostics");
+    this.embeddedSemanticTokensRaw = this.tryResolveRuntimeFn("wasm_embedded_semantic_tokens");
+    this.session = this.sessionNewRaw() >>> 0;
+    if (this.session === 0) {
+      throw new Error("wasm_session_new failed");
+    }
   }
 
   private resolveRuntimeFn(symbol: string): WasmFn {
@@ -203,7 +238,7 @@ export class Engine {
 
   setDialectPointer(ptr: number): void {
     if (!this.setDialectRaw) throw new Error("dialect switching not supported by this runtime");
-    const status = this.setDialectRaw(ptr >>> 0);
+    const status = this.setDialectRaw(this.session, ptr >>> 0);
     const detail = this.readAndClearResult();
     if (status !== 0) {
       throw new Error(detail || `wasm_set_dialect failed with status ${status}`);
@@ -224,7 +259,7 @@ export class Engine {
 
   clearDialectPointer(): void {
     if (!this.clearDialectRaw) return;
-    this.clearDialectRaw();
+    this.clearDialectRaw(this.session);
     this.readAndClearResult();
   }
 
@@ -237,7 +272,7 @@ export class Engine {
 
   runAstJson(sql: string): AstResult {
     if (!this.astJsonRaw) return {ok: false, error: "AST JSON not supported by this runtime"};
-    const count = this.withInput(sql, (ptr, len) => this.astJsonRaw!(ptr, len));
+    const count = this.withInput(sql, (ptr, len) => this.astJsonRaw!(this.session, ptr, len));
     const text = this.readAndClearResult();
     if (count < 0) return {ok: false, error: text};
     if (count === 0) return {ok: true, statements: []};
@@ -250,7 +285,7 @@ export class Engine {
 
   runFmt(sql: string, opts: FormatOptions): FormatResult {
     const status = this.withInput(sql, (ptr, len) =>
-      this.fmtRaw!(ptr, len, opts.lineWidth, opts.indentWidth, opts.keywordCase, opts.semicolons ? 1 : 0),
+      this.fmtRaw!(this.session, ptr, len, opts.lineWidth, opts.indentWidth, opts.keywordCase, opts.semicolons ? 1 : 0),
     );
     const text = this.readAndClearResult();
     return {ok: status === 0, text};
@@ -266,11 +301,20 @@ export class Engine {
     rangeEnd = 0xffffffff,
     version = 1,
   ): Uint32Array | undefined {
-    if (!this.semanticTokensRaw) return undefined;
     try {
-      const count = this.withInput(sql, (ptr, len) =>
-        this.semanticTokensRaw!(ptr, len, rangeStart, rangeEnd, version),
-      );
+      let count: number;
+      if (this.currentLangMode !== "sql") {
+        if (!this.embeddedSemanticTokensRaw) return undefined;
+        const lang = embeddedLangCode(this.currentLangMode);
+        count = this.withInput(sql, (ptr, len) =>
+          this.embeddedSemanticTokensRaw!(this.session, lang, ptr, len),
+        );
+      } else {
+        if (!this.semanticTokensRaw) return undefined;
+        count = this.withInput(sql, (ptr, len) =>
+          this.semanticTokensRaw!(this.session, ptr, len, rangeStart, rangeEnd, version),
+        );
+      }
       if (count <= 0) {
         this.resultFreeRaw!();
         return count === 0 ? new Uint32Array(0) : undefined;
@@ -288,9 +332,20 @@ export class Engine {
   }
 
   runDiagnostics(sql: string, version = 1): DiagnosticsResult {
-    if (!this.diagnosticsRaw) return {ok: false, diagnostics: []};
     try {
-      const count = this.withInput(sql, (ptr, len) => this.diagnosticsRaw!(ptr, len, version));
+      let count: number;
+      if (this.currentLangMode !== "sql") {
+        if (!this.embeddedDiagnosticsRaw) return {ok: false, diagnostics: []};
+        const lang = embeddedLangCode(this.currentLangMode);
+        count = this.withInput(sql, (ptr, len) =>
+          this.embeddedDiagnosticsRaw!(this.session, lang, ptr, len),
+        );
+      } else {
+        if (!this.diagnosticsRaw) return {ok: false, diagnostics: []};
+        count = this.withInput(sql, (ptr, len) =>
+          this.diagnosticsRaw!(this.session, ptr, len, version),
+        );
+      }
       const text = this.readAndClearResult();
       if (count < 0) return {ok: false, diagnostics: []};
       if (count === 0) return {ok: true, diagnostics: []};
@@ -306,7 +361,7 @@ export class Engine {
     if (!this.completionsRaw) return {ok: false, items: []};
     try {
       const count = this.withInput(sql, (ptr, len) =>
-        this.completionsRaw!(ptr, len, offset >>> 0, version),
+        this.completionsRaw!(this.session, ptr, len, offset >>> 0, version),
       );
       const text = this.readAndClearResult();
       if (count < 0) return {ok: false, items: []};
@@ -318,38 +373,38 @@ export class Engine {
       return {ok: false, items: []};
     }
   }
-  /** Set the active language mode. Must be called before running diagnostics or semantic
-   *  tokens so the WASM can dispatch to the correct implementation automatically.
+  /** Set the active language mode. Diagnostics, semantic tokens, and extraction
+   *  dispatch to the SQL or embedded implementation based on this mode.
    *  @experimental Embedded language support is experimental and may change. */
   setLanguageMode(lang: "sql" | EmbeddedLanguage): void {
     this.currentLangMode = lang;
-    if (!this.setLanguageModeRaw) return;
-    const code = lang === "sql" ? 0xFFFFFFFF : (lang === "python" ? 0 : 1);
-    this.setLanguageModeRaw(code);
   }
 
   /** Extract SQL fragments from `source`. Returns empty in SQL mode (O(1) fast path).
-   *  In embedded mode the WASM extractor runs based on the language set by setLanguageMode.
+   *  In embedded mode the WASM extractor runs for the language set by setLanguageMode.
    *  @experimental Embedded language support is experimental and may change. */
   runExtract(source: string): EmbeddedExtractResult {
     if (this.currentLangMode === "sql") return {ok: true, fragments: []};
-    if (!this.extractRaw) return {ok: true, fragments: []};
+    if (!this.embeddedExtractRaw) return {ok: true, fragments: []};
+    const lang = embeddedLangCode(this.currentLangMode);
     try {
-      const count = this.withInput(source, (ptr, len) => this.extractRaw!(ptr, len));
+      const count = this.withInput(source, (ptr, len) => this.embeddedExtractRaw!(lang, ptr, len));
       const text = this.readAndClearResult();
       if (count < 0) return {ok: false, fragments: []};
       if (count === 0) return {ok: true, fragments: []};
       const fragments: EmbeddedFragment[] = JSON.parse(text);
       return {ok: true, fragments};
     } catch (e) {
-      console.warn("wasm_extract failed:", e);
+      console.warn("wasm_embedded_extract failed:", e);
       return {ok: false, fragments: []};
     }
   }
 
   setSqliteVersion(version: string): void {
     if (!this.setSqliteVersionRaw) return;
-    const status = this.withInput(version, (ptr, len) => this.setSqliteVersionRaw!(ptr, len));
+    const status = this.withInput(version, (ptr, len) =>
+      this.setSqliteVersionRaw!(this.session, ptr, len),
+    );
     const detail = this.readAndClearResult();
     if (status !== 0) {
       throw new Error(detail || `wasm_set_sqlite_version failed with status ${status}`);
@@ -358,7 +413,7 @@ export class Engine {
 
   setCflag(name: string): void {
     if (!this.setCflagRaw) return;
-    const status = this.withInput(name, (ptr, len) => this.setCflagRaw!(ptr, len));
+    const status = this.withInput(name, (ptr, len) => this.setCflagRaw!(this.session, ptr, len));
     const detail = this.readAndClearResult();
     if (status !== 0) {
       throw new Error(detail || `wasm_set_cflag failed with status ${status}`);
@@ -367,7 +422,7 @@ export class Engine {
 
   clearCflag(name: string): void {
     if (!this.clearCflagRaw) return;
-    const status = this.withInput(name, (ptr, len) => this.clearCflagRaw!(ptr, len));
+    const status = this.withInput(name, (ptr, len) => this.clearCflagRaw!(this.session, ptr, len));
     const detail = this.readAndClearResult();
     if (status !== 0) {
       throw new Error(detail || `wasm_clear_cflag failed with status ${status}`);
@@ -376,7 +431,7 @@ export class Engine {
 
   clearAllCflags(): void {
     if (!this.clearAllCflagsRaw) return;
-    this.clearAllCflagsRaw();
+    this.clearAllCflagsRaw(this.session);
   }
 
   getCflagList(): CflagEntry[] {
@@ -399,7 +454,7 @@ export class Engine {
   clearSessionContext(): void {
     this.sessionContext = null;
     if (!this.clearSessionContextRaw) return;
-    this.clearSessionContextRaw();
+    this.clearSessionContextRaw(this.session);
   }
 
   setSessionContextDdl(sql: string): {ok: true} | {ok: false; error: string} {
@@ -410,7 +465,9 @@ export class Engine {
 
   private applySessionContextJson(json: string): void {
     if (!this.setSessionContextRaw) return;
-    const status = this.withInput(json, (ptr, len) => this.setSessionContextRaw!(ptr, len));
+    const status = this.withInput(json, (ptr, len) =>
+      this.setSessionContextRaw!(this.session, ptr, len),
+    );
     const detail = this.readAndClearResult();
     if (status !== 0) {
       throw new Error(detail || `wasm_set_session_context failed with status ${status}`);
@@ -419,7 +476,9 @@ export class Engine {
 
   private applySessionContextDdl(sql: string): {ok: true} | {ok: false; error: string} {
     if (!this.setSessionContextDdlRaw) return {ok: false, error: "DDL context not supported"};
-    const status = this.withInput(sql, (ptr, len) => this.setSessionContextDdlRaw!(ptr, len));
+    const status = this.withInput(sql, (ptr, len) =>
+      this.setSessionContextDdlRaw!(this.session, ptr, len),
+    );
     const detail = this.readAndClearResult();
     if (status !== 0) return {ok: false, error: detail || "DDL parse failed"};
     return {ok: true};

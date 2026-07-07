@@ -60,21 +60,26 @@ Upload this file in the UI. Dialect symbol resolution can use either:
 
 ## Runtime ABI (`syntaqlite-wasm`)
 
-The runtime module exports:
+All stateful entry points operate on a session created with
+`wasm_session_new() -> u32` and released with `wasm_session_free(session)`.
+A session owns its dialect, SQLite version/cflag overrides, and LSP analysis
+state; independent sessions can coexist in one runtime instance.
+
+The runtime module exports (see `syntaqlite-wasm/src/main.rs` for the full
+list and signatures):
 
 - `memory`
-- `wasm_set_dialect(u32) -> i32`
-- `wasm_clear_dialect()`
-- `wasm_alloc(u32) -> u32`
-- `wasm_free(u32, u32)`
-- `wasm_ast(u32, u32) -> i32`
-- `wasm_fmt(u32, u32, u32, u32, u32) -> i32`
-- `wasm_result_ptr() -> u32`
-- `wasm_result_len() -> u32`
-- `wasm_result_free()`
+- `wasm_session_new() -> u32`, `wasm_session_free(u32)`
+- `wasm_set_dialect(session, u32) -> i32`, `wasm_clear_dialect(session)`
+- `wasm_alloc(u32) -> u32`, `wasm_free(u32, u32)`
+- `wasm_ast_json(session, u32, u32) -> i32`
+- `wasm_fmt(session, u32, u32, u32, u32, u32, u32) -> i32`
+- `wasm_diagnostics` / `wasm_semantic_tokens` / `wasm_completions` (session-scoped)
+- `wasm_result_ptr() -> u32`, `wasm_result_len() -> u32`, `wasm_result_free()`
 
-`wasm_ast` and `wasm_fmt` return status code `0` on success, non-zero on error.
-Result text is read using `wasm_result_ptr/wasm_result_len`.
+Setter calls return status code `0` on success, non-zero on error; query
+calls return a non-negative count on success, negative on error. Result
+text is read using `wasm_result_ptr/wasm_result_len`.
 
 At runtime, the playground uses Emscripten's loader from `syntaqlite-runtime.js`
 and loads `syntaqlite-sqlite.wasm` automatically as the built-in dialect.

@@ -3,7 +3,21 @@
 #![allow(missing_docs)] // ABI exports don't need rustdoc
 #![cfg_attr(test, expect(clippy::unwrap_used))]
 
+//! WASM ABI for syntaqlite.
+//!
+//! All stateful entry points operate on a *session* identified by an opaque
+//! `u32` handle from [`wasm_session_new`]. A session owns its dialect,
+//! `SQLite` version/cflag overrides, and LSP analysis state, so multiple
+//! independent sessions (e.g. two editors with different schemas) can
+//! coexist in one instance. Handle `0` is never valid.
+//!
+//! Calls return a status (`0` ok, negative on error; query calls return a
+//! non-negative count on success) and write their payload — or the error
+//! message — to a shared result buffer read via [`wasm_result_ptr`] /
+//! [`wasm_result_len`] and released with [`wasm_result_free`].
+
 use std::cell::{Cell, RefCell};
+use std::collections::HashMap;
 use std::slice;
 
 use serde::Serialize;
@@ -15,71 +29,113 @@ use syntaqlite::source::{DocLen, DocOffset, DocRange};
 use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
 use syntaqlite::{AnalysisConfig, FormatConfig, Formatter};
 
+// ── Session ──────────────────────────────────────────────────────────
+
+/// Per-session state: dialect (with version/cflag overrides layered on the
+/// loaded template) and the lazily built LSP host derived from it.
+struct Session {
+    /// Raw pointer to the active `SyntaqliteDialectTemplate`, retained so
+    /// version/cflag overrides can rebuild the dialect without reloading
+    /// the side module. `0` = no dialect loaded.
+    dialect_template: u32,
+    version: SqliteVersion,
+    cflags: SqliteFlags,
+    dialect: Option<AnyDialect>,
+    /// Lazily created from `dialect`; dropped whenever the dialect changes.
+    lsp: Option<LspHost>,
+}
+
+impl Session {
+    fn new() -> Self {
+        Session {
+            dialect_template: 0,
+            version: SqliteVersion::Latest,
+            cflags: SqliteFlags::default(),
+            dialect: None,
+            lsp: None,
+        }
+    }
+
+    /// Rebuild the dialect from the stored template pointer, applying the
+    /// session's version/cflag overrides. Drops the LSP host, which is bound
+    /// to the old dialect. No-op when no side module is loaded yet.
+    fn rebuild_dialect(&mut self) {
+        self.lsp = None;
+        if self.dialect_template == 0 {
+            self.dialect = None;
+            return;
+        }
+        // SAFETY: the pointer was validated in run_set_dialect when stored.
+        let dialect = unsafe {
+            AnyDialect::from_c_dialect_ptr(
+                self.dialect_template as *const syntaqlite::any::ffi::CDialectTemplate,
+            )
+        }
+        .with_version(self.version)
+        .with_cflags(self.cflags);
+        self.dialect = Some(dialect);
+    }
+
+    fn dialect(&self) -> Result<AnyDialect, String> {
+        self.dialect
+            .clone()
+            .ok_or_else(|| "no dialect loaded: call wasm_set_dialect first".to_string())
+    }
+
+    fn lsp_host(&mut self) -> Result<&mut LspHost, String> {
+        if self.lsp.is_none() {
+            self.lsp = Some(LspHost::with_dialect(self.dialect()?));
+        }
+        Ok(self.lsp.as_mut().expect("lsp host just created"))
+    }
+}
+
 thread_local! {
     static RESULT_BUF: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
-    /// Global LspHost reused across wasm calls. Invalidated when session context changes.
-    static LSP_HOST: RefCell<Option<LspHost>> = const { RefCell::new(None) };
-    /// Active dialect. Set via `wasm_set_dialect`; `None` until a dialect side module is loaded.
-    static DIALECT: RefCell<Option<AnyDialect>> = const { RefCell::new(None) };
-    /// Raw pointer to the active `SyntaqliteDialectTemplate`, retained so version/cflag
-    /// overrides can rebuild the dialect without reloading the side module.
-    static DIALECT_PTR: Cell<u32> = const { Cell::new(0) };
-    /// Active embedded language. `None` = raw SQL; `Some(n)` = embedded (0 = Python, 1 = TypeScript).
-    static EMBEDDED_LANG: RefCell<Option<u32>> = const { RefCell::new(None) };
-    /// SQLite version override applied on top of the loaded dialect.
-    static SQLITE_VERSION: RefCell<SqliteVersion> = const { RefCell::new(SqliteVersion::Latest) };
-    /// Cflag overrides applied on top of the loaded dialect.
-    static SQLITE_CFLAGS: RefCell<SqliteFlags> = RefCell::new(SqliteFlags::default());
+    static SESSIONS: RefCell<HashMap<u32, Session>> = RefCell::new(HashMap::new());
+    static NEXT_SESSION: Cell<u32> = const { Cell::new(1) };
 }
 
-/// Sentinel passed to [`wasm_set_language_mode`] to select raw SQL mode.
-const LANG_SQL_SENTINEL: u32 = u32::MAX;
-
-fn get_embedded_lang() -> Option<u32> {
-    EMBEDDED_LANG.with(|cell| *cell.borrow())
+/// Run `f` against the session for `handle`, or report an invalid handle.
+/// Returns `-1` on a bad handle, which is an error for every call convention
+/// (setters expect `0`, queries expect a non-negative count).
+fn with_session(handle: u32, f: impl FnOnce(&mut Session) -> i32) -> i32 {
+    SESSIONS.with(|cell| {
+        let mut sessions = cell.borrow_mut();
+        if let Some(session) = sessions.get_mut(&handle) {
+            f(session)
+        } else {
+            set_result("invalid session handle");
+            -1
+        }
+    })
 }
 
-fn get_dialect() -> Option<AnyDialect> {
-    DIALECT.with(|cell| cell.borrow().clone())
+fn session_new() -> u32 {
+    let handle = NEXT_SESSION.with(|next| {
+        let handle = next.get();
+        next.set(handle.wrapping_add(1).max(1));
+        handle
+    });
+    SESSIONS.with(|cell| cell.borrow_mut().insert(handle, Session::new()));
+    handle
 }
 
-fn take_or_create_lsp_host() -> Result<LspHost, String> {
-    LSP_HOST.with(|cell| cell.borrow_mut().take()).map_or_else(
-        || {
-            get_dialect()
-                .ok_or_else(|| "no dialect loaded: call wasm_set_dialect first".to_string())
-                .map(LspHost::with_dialect)
-        },
-        Ok,
-    )
+fn session_free(handle: u32) {
+    SESSIONS.with(|cell| cell.borrow_mut().remove(&handle));
 }
 
-fn store_lsp_host(lsp: LspHost) {
-    LSP_HOST.with(|cell| *cell.borrow_mut() = Some(lsp));
+#[unsafe(no_mangle)]
+pub extern "C" fn wasm_session_new() -> u32 {
+    catch_unwind_u32(session_new, "wasm_session_new panicked")
 }
 
-fn invalidate_lsp_host() {
-    LSP_HOST.with(|h| h.borrow_mut().take());
+#[unsafe(no_mangle)]
+pub extern "C" fn wasm_session_free(handle: u32) {
+    session_free(handle);
 }
 
-/// Rebuild the active dialect from the stored template pointer, applying any
-/// version/cflag overrides. No-op when no side module is loaded yet.
-fn rebuild_dialect_from_ptr() {
-    let ptr = DIALECT_PTR.with(Cell::get);
-    if ptr == 0 {
-        return;
-    }
-    let version = SQLITE_VERSION.with(|v| *v.borrow());
-    let cflags = SQLITE_CFLAGS.with(|c| *c.borrow());
-    // SAFETY: ptr was validated in run_set_dialect when it was stored.
-    let dialect = unsafe {
-        AnyDialect::from_c_dialect_ptr(ptr as *const syntaqlite::any::ffi::CDialectTemplate)
-    }
-    .with_version(version)
-    .with_cflags(cflags);
-    DIALECT.with(|cell| *cell.borrow_mut() = Some(dialect));
-    invalidate_lsp_host();
-}
+// ── Result buffer / input marshalling ────────────────────────────────
 
 fn set_result(text: &str) {
     RESULT_BUF.with(|buf| {
@@ -149,10 +205,21 @@ fn catch_unwind<F: FnOnce() -> i32>(f: F, msg: &'static str) -> i32 {
     }
 }
 
+/// Like [`catch_unwind`] but for exports returning `u32`; `0` on panic.
+fn catch_unwind_u32<F: FnOnce() -> u32>(f: F, msg: &'static str) -> u32 {
+    install_panic_hook();
+    if let Ok(result) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(f)) {
+        result
+    } else {
+        set_result(msg);
+        0
+    }
+}
+
 /// Unwraps a `Result`, writing the error to the result buffer and returning `$code` on failure.
 macro_rules! try_wasm {
     ($expr:expr) => {
-        try_wasm!($expr, 1)
+        try_wasm!($expr, -1)
     };
     ($expr:expr, $code:expr) => {
         match $expr {
@@ -242,9 +309,9 @@ pub extern "C" fn wasm_result_free() {
 
 // ── AST JSON ─────────────────────────────────────────────────────────
 
-fn run_ast_json(ptr: u32, len: u32) -> i32 {
+fn run_ast_json(session: &mut Session, ptr: u32, len: u32) -> i32 {
     let source = try_wasm!(decode_input(ptr, len));
-    let dialect = try_wasm!(get_dialect().ok_or("no dialect loaded: call wasm_set_dialect first"));
+    let dialect = try_wasm!(session.dialect());
     let grammar = (*dialect).clone();
     let parser = syntaqlite::any::AnyParser::with_config(
         grammar,
@@ -273,13 +340,17 @@ fn run_ast_json(ptr: u32, len: u32) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_ast_json(ptr: u32, len: u32) -> i32 {
-    catch_unwind(|| run_ast_json(ptr, len), "wasm_ast_json panicked")
+pub extern "C" fn wasm_ast_json(handle: u32, ptr: u32, len: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, |s| run_ast_json(s, ptr, len)),
+        "wasm_ast_json panicked",
+    )
 }
 
 // ── Formatter ────────────────────────────────────────────────────────
 
 fn run_fmt(
+    session: &mut Session,
     ptr: u32,
     len: u32,
     line_width: u32,
@@ -304,7 +375,7 @@ fn run_fmt(
             _ => KeywordCase::Upper,
         })
         .with_semicolons(semicolons != 0);
-    let dialect = try_wasm!(get_dialect().ok_or("no dialect loaded: call wasm_set_dialect first"));
+    let dialect = try_wasm!(session.dialect());
     let mut formatter = Formatter::with_dialect_config(dialect, &config);
     let sql = try_wasm!(formatter.format(&source).map_err(|e| e.to_string()));
     set_result(&sql);
@@ -313,6 +384,7 @@ fn run_fmt(
 
 #[unsafe(no_mangle)]
 pub extern "C" fn wasm_fmt(
+    handle: u32,
     ptr: u32,
     len: u32,
     line_width: u32,
@@ -320,25 +392,37 @@ pub extern "C" fn wasm_fmt(
     keyword_case: u32,
     semicolons: u32,
 ) -> i32 {
-    run_fmt(ptr, len, line_width, indent_width, keyword_case, semicolons)
+    catch_unwind(
+        || {
+            with_session(handle, |s| {
+                run_fmt(
+                    s,
+                    ptr,
+                    len,
+                    line_width,
+                    indent_width,
+                    keyword_case,
+                    semicolons,
+                )
+            })
+        },
+        "wasm_fmt panicked",
+    )
 }
 
 // ── Session context ──────────────────────────────────────────────────
 
-fn run_set_session_context(ptr: u32, len: u32) -> i32 {
+fn run_set_session_context(session: &mut Session, ptr: u32, len: u32) -> i32 {
     let input = try_wasm!(decode_input(ptr, len));
-    let mut lsp = try_wasm!(take_or_create_lsp_host());
+    let lsp = try_wasm!(session.lsp_host());
     try_wasm!(lsp.set_session_context_from_json(&input));
-    store_lsp_host(lsp);
     0
 }
 
-fn run_set_session_context_ddl(ptr: u32, len: u32) -> i32 {
+fn run_set_session_context_ddl(session: &mut Session, ptr: u32, len: u32) -> i32 {
     let source = try_wasm!(decode_input(ptr, len));
-    let mut lsp = try_wasm!(take_or_create_lsp_host());
-    let result = lsp.set_session_context_from_ddl(&source, None);
-    store_lsp_host(lsp);
-    match result {
+    let lsp = try_wasm!(session.lsp_host());
+    match lsp.set_session_context_from_ddl(&source, None) {
         Ok(()) => 0,
         Err(errors) => {
             set_result(&errors.join("\n"));
@@ -348,23 +432,30 @@ fn run_set_session_context_ddl(ptr: u32, len: u32) -> i32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_set_session_context(ptr: u32, len: u32) -> i32 {
+pub extern "C" fn wasm_set_session_context(handle: u32, ptr: u32, len: u32) -> i32 {
     catch_unwind(
-        || run_set_session_context(ptr, len),
+        || with_session(handle, |s| run_set_session_context(s, ptr, len)),
         "wasm_set_session_context panicked",
     )
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_clear_session_context() -> i32 {
-    invalidate_lsp_host();
-    0
+pub extern "C" fn wasm_clear_session_context(handle: u32) -> i32 {
+    catch_unwind(
+        || {
+            with_session(handle, |s| {
+                s.lsp = None;
+                0
+            })
+        },
+        "wasm_clear_session_context panicked",
+    )
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_set_session_context_ddl(ptr: u32, len: u32) -> i32 {
+pub extern "C" fn wasm_set_session_context_ddl(handle: u32, ptr: u32, len: u32) -> i32 {
     catch_unwind(
-        || run_set_session_context_ddl(ptr, len),
+        || with_session(handle, |s| run_set_session_context_ddl(s, ptr, len)),
         "wasm_set_session_context_ddl panicked",
     )
 }
@@ -373,20 +464,26 @@ pub extern "C" fn wasm_set_session_context_ddl(ptr: u32, len: u32) -> i32 {
 
 const WASM_DOC_URI: &str = "wasm://input";
 
-fn run_diagnostics(ptr: u32, len: u32, version: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len), -1);
-    let mut lsp = try_wasm!(take_or_create_lsp_host(), -1);
+fn run_diagnostics(session: &mut Session, ptr: u32, len: u32, version: u32) -> i32 {
+    let source = try_wasm!(decode_input(ptr, len));
+    let lsp = try_wasm!(session.lsp_host());
     lsp.update_document(WASM_DOC_URI, version.cast_signed(), source);
     let all_diags = lsp.all_diagnostics(WASM_DOC_URI, &AnalysisConfig::default());
     let total_count = all_diags.len();
     set_result(&serde_json::to_string(&all_diags).expect("diagnostic serialization failed"));
-    store_lsp_host(lsp);
     i32::try_from(total_count).expect("diagnostic count fits i32")
 }
 
-fn run_semantic_tokens(ptr: u32, len: u32, range_start: u32, range_end: u32, version: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len), -1);
-    let mut lsp = try_wasm!(take_or_create_lsp_host(), -1);
+fn run_semantic_tokens(
+    session: &mut Session,
+    ptr: u32,
+    len: u32,
+    range_start: u32,
+    range_end: u32,
+    version: u32,
+) -> i32 {
+    let source = try_wasm!(decode_input(ptr, len));
+    let lsp = try_wasm!(session.lsp_host());
     lsp.update_document(WASM_DOC_URI, version.cast_signed(), source);
     let range = if range_start == 0 && range_end == 0xFFFF_FFFF {
         None
@@ -399,7 +496,6 @@ fn run_semantic_tokens(ptr: u32, len: u32, range_start: u32, range_end: u32, ver
     let encoded = lsp.semantic_tokens_encoded(WASM_DOC_URI, range);
     let token_count = i32::try_from(encoded.len() / 5).expect("token count fits i32");
     set_result_u32s(&encoded);
-    store_lsp_host(lsp);
     token_count
 }
 
@@ -409,9 +505,9 @@ struct CompletionItem {
     kind: &'static str,
 }
 
-fn run_completions(ptr: u32, len: u32, offset: u32, version: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len), -1);
-    let mut lsp = try_wasm!(take_or_create_lsp_host(), -1);
+fn run_completions(session: &mut Session, ptr: u32, len: u32, offset: u32, version: u32) -> i32 {
+    let source = try_wasm!(decode_input(ptr, len));
+    let lsp = try_wasm!(session.lsp_host());
     lsp.update_document(WASM_DOC_URI, version.cast_signed(), source);
     let entries = lsp.completion_items(WASM_DOC_URI, DocOffset::from_raw(offset));
     let count = i32::try_from(entries.len()).expect("completion count fits i32");
@@ -423,40 +519,20 @@ fn run_completions(ptr: u32, len: u32, offset: u32, version: u32) -> i32 {
         })
         .collect();
     set_result(&serde_json::to_string(&items).expect("completions serialization failed"));
-    store_lsp_host(lsp);
     count
 }
 
-/// Set the active language mode. Pass `u32::MAX` for raw SQL mode, or a host-language
-/// code (0 = Python, 1 = TypeScript) for embedded-SQL mode. After this call,
-/// `wasm_diagnostics`, `wasm_semantic_tokens`, and `wasm_extract` dispatch automatically.
-///
-/// # Experimental
-///
-/// Embedded language support is experimental and may change in future releases.
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_set_language_mode(lang: u32) {
-    let embedded = if lang == LANG_SQL_SENTINEL {
-        None
-    } else {
-        Some(lang)
-    };
-    EMBEDDED_LANG.with(|cell| *cell.borrow_mut() = embedded);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_diagnostics(ptr: u32, len: u32, version: u32) -> i32 {
+pub extern "C" fn wasm_diagnostics(handle: u32, ptr: u32, len: u32, version: u32) -> i32 {
     catch_unwind(
-        || match get_embedded_lang() {
-            Some(lang) => run_embedded_diagnostics(lang, ptr, len),
-            None => run_diagnostics(ptr, len, version),
-        },
+        || with_session(handle, |s| run_diagnostics(s, ptr, len, version)),
         "wasm_diagnostics panicked",
     )
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn wasm_semantic_tokens(
+    handle: u32,
     ptr: u32,
     len: u32,
     range_start: u32,
@@ -464,44 +540,56 @@ pub extern "C" fn wasm_semantic_tokens(
     version: u32,
 ) -> i32 {
     catch_unwind(
-        || match get_embedded_lang() {
-            Some(lang) => run_embedded_semantic_tokens(lang, ptr, len),
-            None => run_semantic_tokens(ptr, len, range_start, range_end, version),
+        || {
+            with_session(handle, |s| {
+                run_semantic_tokens(s, ptr, len, range_start, range_end, version)
+            })
         },
         "wasm_semantic_tokens panicked",
     )
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_completions(ptr: u32, len: u32, offset: u32, version: u32) -> i32 {
+pub extern "C" fn wasm_completions(
+    handle: u32,
+    ptr: u32,
+    len: u32,
+    offset: u32,
+    version: u32,
+) -> i32 {
     catch_unwind(
-        || run_completions(ptr, len, offset, version),
+        || with_session(handle, |s| run_completions(s, ptr, len, offset, version)),
         "wasm_completions panicked",
     )
 }
 
 // ── Dialect switching ────────────────────────────────────────────────
 
-fn run_set_dialect(ptr: u32) -> i32 {
+fn run_set_dialect(session: &mut Session, ptr: u32) -> i32 {
     if ptr == 0 {
         set_result("null dialect pointer");
         return 1;
     }
-    DIALECT_PTR.with(|c| c.set(ptr));
-    rebuild_dialect_from_ptr();
+    session.dialect_template = ptr;
+    session.rebuild_dialect();
     0
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_set_dialect(ptr: u32) -> i32 {
-    catch_unwind(|| run_set_dialect(ptr), "wasm_set_dialect panicked")
+pub extern "C" fn wasm_set_dialect(handle: u32, ptr: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, |s| run_set_dialect(s, ptr)),
+        "wasm_set_dialect panicked",
+    )
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_clear_dialect() {
-    DIALECT_PTR.with(|c| c.set(0));
-    DIALECT.with(|cell| *cell.borrow_mut() = None);
-    invalidate_lsp_host();
+pub extern "C" fn wasm_clear_dialect(handle: u32) {
+    with_session(handle, |s| {
+        s.dialect_template = 0;
+        s.rebuild_dialect();
+        0
+    });
 }
 
 // ── Cflag list ───────────────────────────────────────────────────────
@@ -538,72 +626,76 @@ pub extern "C" fn wasm_get_cflag_list() -> i32 {
 
 // ── Version / cflag overrides ─────────────────────────────────────────
 //
-// These configure the active dialect with a target SQLite version or
-// compile-time flags. Stored state is re-applied whenever a dialect is
-// loaded (or reloaded) via `wasm_set_dialect`.
+// These configure the session's dialect with a target SQLite version or
+// compile-time flags. Overrides persist across `wasm_set_dialect` calls on
+// the same session and are re-applied when the dialect template changes.
 
-fn run_set_sqlite_version(ptr: u32, len: u32) -> i32 {
+fn run_set_sqlite_version(session: &mut Session, ptr: u32, len: u32) -> i32 {
     let s = try_wasm!(decode_input(ptr, len));
     let version = try_wasm!(SqliteVersion::parse_with_latest(&s));
-    SQLITE_VERSION.with(|v| *v.borrow_mut() = version);
-    rebuild_dialect_from_ptr();
+    session.version = version;
+    session.rebuild_dialect();
     0
 }
 
-fn run_set_cflag(ptr: u32, len: u32) -> i32 {
+fn run_set_cflag(session: &mut Session, ptr: u32, len: u32) -> i32 {
     let s = try_wasm!(decode_input(ptr, len));
     let flag = try_wasm!(SqliteFlag::from_name(&s).ok_or_else(|| format!("unknown cflag: {s}")));
-    SQLITE_CFLAGS.with(|c| {
-        let mut guard = c.borrow_mut();
-        *guard = std::mem::take(&mut *guard).with(flag);
-    });
-    rebuild_dialect_from_ptr();
+    session.cflags = std::mem::take(&mut session.cflags).with(flag);
+    session.rebuild_dialect();
     0
 }
 
-fn run_clear_cflag(ptr: u32, len: u32) -> i32 {
+fn run_clear_cflag(session: &mut Session, ptr: u32, len: u32) -> i32 {
     let s = try_wasm!(decode_input(ptr, len));
     let flag = try_wasm!(SqliteFlag::from_name(&s).ok_or_else(|| format!("unknown cflag: {s}")));
-    SQLITE_CFLAGS.with(|c| {
-        let mut guard = c.borrow_mut();
-        *guard = std::mem::take(&mut *guard).without(flag);
-    });
-    rebuild_dialect_from_ptr();
+    session.cflags = std::mem::take(&mut session.cflags).without(flag);
+    session.rebuild_dialect();
     0
 }
 
-fn run_clear_all_cflags() -> i32 {
-    SQLITE_CFLAGS.with(|c| *c.borrow_mut() = SqliteFlags::default());
-    rebuild_dialect_from_ptr();
+fn run_clear_all_cflags(session: &mut Session) -> i32 {
+    session.cflags = SqliteFlags::default();
+    session.rebuild_dialect();
     0
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_set_sqlite_version(ptr: u32, len: u32) -> i32 {
+pub extern "C" fn wasm_set_sqlite_version(handle: u32, ptr: u32, len: u32) -> i32 {
     catch_unwind(
-        || run_set_sqlite_version(ptr, len),
+        || with_session(handle, |s| run_set_sqlite_version(s, ptr, len)),
         "wasm_set_sqlite_version panicked",
     )
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_set_cflag(ptr: u32, len: u32) -> i32 {
-    catch_unwind(|| run_set_cflag(ptr, len), "wasm_set_cflag panicked")
+pub extern "C" fn wasm_set_cflag(handle: u32, ptr: u32, len: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, |s| run_set_cflag(s, ptr, len)),
+        "wasm_set_cflag panicked",
+    )
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_clear_cflag(ptr: u32, len: u32) -> i32 {
-    catch_unwind(|| run_clear_cflag(ptr, len), "wasm_clear_cflag panicked")
+pub extern "C" fn wasm_clear_cflag(handle: u32, ptr: u32, len: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, |s| run_clear_cflag(s, ptr, len)),
+        "wasm_clear_cflag panicked",
+    )
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_clear_all_cflags() -> i32 {
-    catch_unwind(run_clear_all_cflags, "wasm_clear_all_cflags panicked")
+pub extern "C" fn wasm_clear_all_cflags(handle: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, run_clear_all_cflags),
+        "wasm_clear_all_cflags panicked",
+    )
 }
 
 // ── Embedded SQL WASM exports (experimental) ─────────────────────────
 //
-// lang encoding: 0 = Python, 1 = TypeScript/JavaScript
+// lang encoding: 0 = Python, 1 = TypeScript/JavaScript. The language is an
+// explicit parameter on every call — there is no mode state.
 // NOTE: Embedded language support is experimental and may change.
 
 use syntaqlite::embedded::{EmbeddedAnalyzer, EmbeddedFragment};
@@ -614,11 +706,6 @@ fn embedded_fragments(lang: u32, source: &str) -> Result<Vec<EmbeddedFragment>, 
         1 => Ok(syntaqlite::embedded::extract_typescript(source)),
         _ => Err(format!("unknown host language id: {lang}")),
     }
-}
-
-fn make_embedded_analyzer() -> Result<EmbeddedAnalyzer, String> {
-    let dialect = get_dialect().ok_or("no dialect loaded: call wasm_set_dialect first")?;
-    Ok(EmbeddedAnalyzer::new(dialect))
 }
 
 #[derive(Serialize)]
@@ -636,8 +723,8 @@ struct WasmFragment {
 }
 
 fn run_embedded_extract(lang: u32, ptr: u32, len: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len), -1);
-    let fragments = try_wasm!(embedded_fragments(lang, &source), -1);
+    let source = try_wasm!(decode_input(ptr, len));
+    let fragments = try_wasm!(embedded_fragments(lang, &source));
     let count = i32::try_from(fragments.len()).expect("fragment count fits i32");
     let items: Vec<WasmFragment> = fragments
         .iter()
@@ -659,36 +746,49 @@ fn run_embedded_extract(lang: u32, ptr: u32, len: u32) -> i32 {
     count
 }
 
-fn run_embedded_diagnostics(lang: u32, ptr: u32, len: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len), -1);
-    let fragments = try_wasm!(embedded_fragments(lang, &source), -1);
-    let diags = try_wasm!(make_embedded_analyzer(), -1).analyze(&fragments);
+fn run_embedded_diagnostics(session: &mut Session, lang: u32, ptr: u32, len: u32) -> i32 {
+    let source = try_wasm!(decode_input(ptr, len));
+    let fragments = try_wasm!(embedded_fragments(lang, &source));
+    let dialect = try_wasm!(session.dialect());
+    let diags = EmbeddedAnalyzer::new(dialect).analyze(&fragments);
     let count = i32::try_from(diags.len()).expect("diag count fits i32");
     set_result(&serde_json::to_string(&diags).expect("embedded diagnostic serialization failed"));
     count
 }
 
-fn run_embedded_semantic_tokens(lang: u32, ptr: u32, len: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len), -1);
-    let fragments = try_wasm!(embedded_fragments(lang, &source), -1);
-    let encoded =
-        try_wasm!(make_embedded_analyzer(), -1).semantic_tokens_encoded(&fragments, &source);
+fn run_embedded_semantic_tokens(session: &mut Session, lang: u32, ptr: u32, len: u32) -> i32 {
+    let source = try_wasm!(decode_input(ptr, len));
+    let fragments = try_wasm!(embedded_fragments(lang, &source));
+    let dialect = try_wasm!(session.dialect());
+    let encoded = EmbeddedAnalyzer::new(dialect).semantic_tokens_encoded(&fragments, &source);
     let token_count = i32::try_from(encoded.len() / 5).expect("token count fits i32");
     set_result_u32s(&encoded);
     token_count
 }
 
-/// Extract SQL fragments from the current source using the active language mode.
-/// Returns 0 with no result in SQL mode. In embedded mode, dispatches to the
-/// appropriate extractor based on the language set by `wasm_set_language_mode`.
+/// Extract SQL fragments from `source` for host language `lang`.
+/// Dialect-independent, so no session handle is required.
 #[unsafe(no_mangle)]
-pub extern "C" fn wasm_extract(ptr: u32, len: u32) -> i32 {
+pub extern "C" fn wasm_embedded_extract(lang: u32, ptr: u32, len: u32) -> i32 {
     catch_unwind(
-        || match get_embedded_lang() {
-            Some(lang) => run_embedded_extract(lang, ptr, len),
-            None => 0,
-        },
-        "wasm_extract panicked",
+        || run_embedded_extract(lang, ptr, len),
+        "wasm_embedded_extract panicked",
+    )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn wasm_embedded_diagnostics(handle: u32, lang: u32, ptr: u32, len: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, |s| run_embedded_diagnostics(s, lang, ptr, len)),
+        "wasm_embedded_diagnostics panicked",
+    )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn wasm_embedded_semantic_tokens(handle: u32, lang: u32, ptr: u32, len: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, |s| run_embedded_semantic_tokens(s, lang, ptr, len)),
+        "wasm_embedded_semantic_tokens panicked",
     )
 }
 
@@ -719,5 +819,48 @@ mod tests {
                 "cflag list contains unknown flag name: {name}"
             );
         }
+    }
+
+    fn result_text() -> String {
+        RESULT_BUF.with(|buf| String::from_utf8(buf.borrow().clone()).unwrap())
+    }
+
+    #[test]
+    fn session_handles_are_distinct_and_freeable() {
+        let a = session_new();
+        let b = session_new();
+        assert_ne!(a, 0);
+        assert_ne!(b, 0);
+        assert_ne!(a, b);
+        session_free(a);
+        // Freed handle is rejected; live handle still works.
+        assert_eq!(with_session(a, |_| 0), -1);
+        assert_eq!(result_text(), "invalid session handle");
+        assert_eq!(with_session(b, |_| 0), 0);
+        session_free(b);
+    }
+
+    #[test]
+    fn invalid_handle_is_rejected() {
+        assert_eq!(with_session(0, |_| 0), -1);
+        assert_eq!(result_text(), "invalid session handle");
+    }
+
+    #[test]
+    fn session_without_dialect_reports_error() {
+        let h = session_new();
+        let status = with_session(h, |s| match s.lsp_host() {
+            Ok(_) => 0,
+            Err(e) => {
+                set_result(&e);
+                -1
+            }
+        });
+        assert_eq!(status, -1);
+        assert_eq!(
+            result_text(),
+            "no dialect loaded: call wasm_set_dialect first"
+        );
+        session_free(h);
     }
 }
