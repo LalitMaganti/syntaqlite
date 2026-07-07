@@ -10,8 +10,11 @@
 //!   analysis (diagnostics, semantic tokens, completions, formatting,
 //!   hover, signature help).
 //!   Delegates analysis to [`Analyzer`](crate::analysis::Analyzer).
-//! - [`LspServer`] — stdio JSON-RPC server that drives an `LspHost`
-//!   in response to LSP messages from an editor.
+//! - [`LspDispatcher`] — transport-agnostic JSON-RPC dispatch: turns
+//!   incoming LSP messages into outgoing ones over an `LspHost`,
+//!   including the `initialize`/`shutdown`/`exit` lifecycle.
+//! - [`LspServer`] — stdio transport that runs an `LspDispatcher`
+//!   as a standalone server process for editors.
 //!
 //! # Example
 //!
@@ -41,11 +44,13 @@ pub(crate) const SEMANTIC_TOKEN_LEGEND: &[&str] = &[
 
 // Public API starts here.
 #[doc(inline)]
+pub use dispatcher::{LspConfig, LspDispatcher};
+#[doc(inline)]
 pub use host::LspHost;
 #[doc(inline)]
 pub use host::SchemaMap;
 #[doc(inline)]
-pub use server::{LspConfig, LspServer};
+pub use server::LspServer;
 
 pub(crate) use crate::analysis::completion::{CompletionContext, CompletionInfo};
 
@@ -117,6 +122,7 @@ impl CompletionKind {
 
 mod analysis_data;
 mod completion_service;
+mod dispatcher;
 mod document_store;
 pub(crate) mod host;
 mod hover_service;
