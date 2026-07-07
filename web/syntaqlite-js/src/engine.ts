@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 import type {
+  AnalyzeOptions,
+  AnalyzeResult,
   AstResult,
   DiagnosticEntry,
   DiagnosticsResult,
@@ -346,14 +348,21 @@ export class Engine {
     return count === 0 ? [] : (JSON.parse(text) as unknown[]);
   }
 
-  /** One-shot JSON-RPC op (`parse`, `format`, `tokenize`, `analyze`) — the
-   *  same protocol as the CLI's `serve json` loop. Returns the op's result
-   *  value; throws on error. */
-  rpc(request: object | string): unknown {
+  /** Validate SQL in one shot — no editor session required. Schema-aware
+   *  when `schemaDdl` is provided. Throws on malformed input. */
+  analyze(sql: string, opts: AnalyzeOptions = {}): AnalyzeResult {
+    const request: Record<string, unknown> = {op: "analyze", sql};
+    if (opts.schemaDdl !== undefined) request.schema_ddl = opts.schemaDdl;
+    return this.rpc(request) as AnalyzeResult;
+  }
+
+  /** One-shot JSON-RPC op — the CLI `serve json` protocol. Returns the
+   *  op's result value; throws on error. */
+  private rpc(request: object): unknown {
     if (!this.rpcRaw) {
       throw new Error("RPC not supported by this runtime");
     }
-    const json = typeof request === "string" ? request : JSON.stringify(request);
+    const json = JSON.stringify(request);
     const status = this.withInput(json, (ptr, len) => this.rpcRaw!(this.session, ptr, len));
     const text = this.readAndClearResult();
     if (status !== 0) {

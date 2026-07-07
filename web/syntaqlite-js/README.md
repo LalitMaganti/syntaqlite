@@ -9,8 +9,8 @@ Built from SQLite's own grammar for 100% syntax compatibility.
 - **Parse** SQL into a full syntax tree
 - **Language server**: diagnostics, completions, hover, and semantic tokens
   over standard LSP JSON-RPC, schema-aware via your DDL
-- **One-shot ops**: parse, format, tokenize, and analyze over the same
-  JSON-RPC protocol as the CLI's `serve json`
+- **Analyze** SQL in one shot: schema-aware diagnostics without an
+  editor session
 
 ## Install
 
@@ -82,17 +82,14 @@ extension request to set or clear the schema catalog
 
 ## One-shot analysis
 
-For programmatic validation without an editor session, use the JSON-RPC
-op protocol shared with the CLI:
+For programmatic validation without an editor session:
 
 ```ts
-const analysis = engine.rpc({
-  op: "analyze",
-  sql: "SELECT c FROM users",
-  schema_ddl: "CREATE TABLE users(id INTEGER, name TEXT);",
+const analysis = engine.analyze("SELECT c FROM users", {
+  schemaDdl: "CREATE TABLE users(id INTEGER, name TEXT);",
 });
 console.log(analysis.diagnostics);
-// [{ message: "unknown column 'c'", ... }]
+// [{ message: "unknown column 'c'", severity: "error", ... }]
 ```
 
 ## Documentation

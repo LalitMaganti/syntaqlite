@@ -122,6 +122,30 @@ export interface DiagnosticsResult {
   diagnostics: DiagnosticEntry[];
 }
 
+/** One diagnostic from `Engine.analyze` (the CLI `analyze` op shape). */
+export interface AnalyzeDiagnostic {
+  severity: "error" | "warning" | "info" | "hint";
+  message: string;
+  start_offset: number;
+  end_offset: number;
+  /** Numeric diagnostic category (see `DIAG_CODE_*` in the Rust rpc module). */
+  code: number;
+  help?: string;
+}
+
+export interface AnalyzeOptions {
+  /** DDL parsed into a schema catalog for schema-aware validation. */
+  schemaDdl?: string;
+}
+
+export interface AnalyzeResult {
+  diagnostics: AnalyzeDiagnostic[];
+  /** Per-statement analysis (kind, references, lineage). */
+  statements: unknown[];
+  /** Lineage of the final query-bearing statement. */
+  lineage: unknown | null;
+}
+
 // ── Embedded SQL types (experimental) ──
 
 /** @experimental Embedded language support is experimental and may change. */
