@@ -388,6 +388,9 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             } => {
                 self.walk_compound_scope(visitor, fields, left, right, orderby, limit_clause);
             }
+            SemanticRole::AlterTable { target, .. } => {
+                self.walk_alter_table(visitor, node_id, fields, target);
+            }
         }
     }
 
@@ -692,6 +695,55 @@ impl<'a, 'b> SemanticWalker<'a, 'b> {
             None => self.scope.add_anonymous(cols),
             Some(name) => self.scope.add_table(name, cols, RowIdPolicy::WithRowId),
         }
+    }
+
+    /// Existence-check an `ALTER TABLE` target. Mirrors the DML target check:
+    /// fire a source-ref event so the diagnostic visitor reports an unknown
+    /// table (with suggestions). Resolution ignores tombstones so a `RENAME TO`
+    /// — which the catalog already applied for this statement, retiring the old
+    /// name — doesn't flag its own target as missing.
+    fn walk_alter_table<V: SemanticVisitor>(
+        &mut self,
+        visitor: &mut V,
+        node_id: AnyNodeId,
+        fields: &NodeFields,
+        target_idx: u8,
+    ) {
+        if !V::WANTS_SOURCE_REF {
+            return;
+        }
+        // target → QualifiedName node; its object name is the first child.
+        let Some(target_id) = fields.node_id_at(target_idx) else {
+            return;
+        };
+        let Some((_, qf)) = self.stmt.extract_fields(target_id) else {
+            return;
+        };
+        let Some(obj_id) = qf.node_id_at(0) else {
+            return;
+        };
+        let (name, range) = self.stmt.name_text(Some(obj_id));
+        if name.is_empty() {
+            return;
+        }
+        // `name` keeps the raw source text for display; the catalog key uses
+        // the identifier value (escape-collapsed).
+        let (name_ident, _) = self.stmt.name_ident_text(Some(obj_id));
+        self.key_scratch.set(&name_ident);
+        let resolved = self.catalog.relation_defined(&self.key_scratch);
+        let ev = SourceRefEvent {
+            node_id,
+            name_idx: target_idx,
+            range,
+            name,
+            alias: None,
+            resolved,
+        };
+        let mut cx = WalkCtx {
+            catalog: self.catalog,
+            scope: &mut self.scope,
+        };
+        visitor.on_source_ref(self.stmt, &mut cx, ev);
     }
 
     #[expect(clippy::too_many_arguments)]
