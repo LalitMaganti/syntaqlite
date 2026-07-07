@@ -18,11 +18,10 @@
 //!
 //! All editor features (diagnostics, completions, semantic tokens, schema
 //! session context, ...) are served over LSP JSON-RPC via
-//! [`wasm_lsp_message`]. One-shot programmatic ops (parse, format,
-//! tokenize, analyze) are served over [`wasm_rpc`], the same protocol as
-//! the CLI's `serve json` and the C API. The remaining direct calls are
-//! utilities (format, AST dump, cflag list) and the experimental embedded
-//! analyzers.
+//! [`wasm_lsp_message`]. One-shot ops (parse, format, tokenize, analyze)
+//! are served over [`wasm_rpc`], the same protocol as the CLI's
+//! `serve json` and the C API. The remaining direct calls are the cflag
+//! list and the experimental embedded analyzers.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -31,11 +30,9 @@ use std::slice;
 use serde::Serialize;
 
 use syntaqlite::any::AnyDialect;
-use syntaqlite::fmt::KeywordCase;
 use syntaqlite::lsp::LspDispatcher;
 use syntaqlite::rpc::RpcSession;
 use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
-use syntaqlite::{FormatConfig, Formatter};
 
 // ── Session ──────────────────────────────────────────────────────────
 
@@ -325,109 +322,6 @@ pub extern "C" fn wasm_result_len() -> u32 {
 #[unsafe(no_mangle)]
 pub extern "C" fn wasm_result_free() {
     result_free();
-}
-
-// ── AST JSON ─────────────────────────────────────────────────────────
-
-fn run_ast_json(session: &mut Session, ptr: u32, len: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len));
-    let dialect = try_wasm!(session.dialect());
-    let grammar = (*dialect).clone();
-    let parser = syntaqlite::any::AnyParser::with_config(
-        grammar,
-        &syntaqlite::parse::ParserConfig::default(),
-    );
-    let mut session = parser.parse(&source);
-    let mut nodes: Vec<serde_json::Value> = Vec::new();
-    loop {
-        match session.next() {
-            syntaqlite::any::ParseOutcome::Done => break,
-            syntaqlite::any::ParseOutcome::Ok(stmt) => {
-                let val = stmt
-                    .erase()
-                    .root_node()
-                    .map_or(serde_json::Value::Null, |n| {
-                        serde_json::to_value(n).unwrap_or(serde_json::Value::Null)
-                    });
-                nodes.push(val);
-            }
-            syntaqlite::any::ParseOutcome::Err(_) => {}
-        }
-    }
-    let count = i32::try_from(nodes.len()).expect("node count fits i32");
-    set_result(&serde_json::to_string(&nodes).expect("ast json serialization failed"));
-    count
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_ast_json(handle: u32, ptr: u32, len: u32) -> i32 {
-    catch_unwind(
-        || with_session(handle, |s| run_ast_json(s, ptr, len)),
-        "wasm_ast_json panicked",
-    )
-}
-
-// ── Formatter ────────────────────────────────────────────────────────
-
-fn run_fmt(
-    session: &mut Session,
-    ptr: u32,
-    len: u32,
-    line_width: u32,
-    indent_width: u32,
-    keyword_case: u32,
-    semicolons: u32,
-) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len));
-    let config = FormatConfig::default()
-        .with_line_width(if line_width == 0 {
-            80
-        } else {
-            line_width as usize
-        })
-        .with_indent_width(if indent_width == 0 {
-            2
-        } else {
-            indent_width as usize
-        })
-        .with_keyword_case(match keyword_case {
-            2 => KeywordCase::Lower,
-            _ => KeywordCase::Upper,
-        })
-        .with_semicolons(semicolons != 0);
-    let dialect = try_wasm!(session.dialect());
-    let mut formatter = Formatter::with_dialect_config(dialect, &config);
-    let sql = try_wasm!(formatter.format(&source).map_err(|e| e.to_string()));
-    set_result(&sql);
-    0
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_fmt(
-    handle: u32,
-    ptr: u32,
-    len: u32,
-    line_width: u32,
-    indent_width: u32,
-    keyword_case: u32,
-    semicolons: u32,
-) -> i32 {
-    catch_unwind(
-        || {
-            with_session(handle, |s| {
-                run_fmt(
-                    s,
-                    ptr,
-                    len,
-                    line_width,
-                    indent_width,
-                    keyword_case,
-                    semicolons,
-                )
-            })
-        },
-        "wasm_fmt panicked",
-    )
 }
 
 // ── LSP JSON-RPC ─────────────────────────────────────────────────────

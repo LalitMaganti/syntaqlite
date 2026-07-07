@@ -79,7 +79,7 @@ function registerSemanticTokensProvider(app: App, engine: Engine): void {
       const source = model.getValue();
       if (app.languageMode !== "sql") {
         // Embedded analyzers ignore the range and return full-document tokens.
-        const data = engine.runEmbeddedSemanticTokens(source);
+        const data = engine.embeddedSemanticTokens(source);
         return {data: data ?? new Uint32Array(0)};
       }
       // Monaco positions are 1-based UTF-16; LSP positions are 0-based UTF-16.

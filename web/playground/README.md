@@ -82,8 +82,6 @@ signatures):
 - `wasm_session_new() -> u32`, `wasm_session_free(u32)`
 - `wasm_set_dialect(session, u32) -> i32`, `wasm_clear_dialect(session)`
 - `wasm_alloc(u32) -> u32`, `wasm_free(u32, u32)`
-- `wasm_ast_json(session, u32, u32) -> i32`
-- `wasm_fmt(session, u32, u32, u32, u32, u32, u32) -> i32`
 - `wasm_embedded_*` (experimental embedded-SQL analyzers)
 - `wasm_result_ptr() -> u32`, `wasm_result_len() -> u32`, `wasm_result_free()`
 

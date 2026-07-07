@@ -36,15 +36,19 @@ const dm = new DialectManager();
 await dm.loadDefault(engine);
 if (!dm.active) throw new Error(`dialect did not load: ${engine.status}`);
 
-const fmt = engine.runFmt("select a,b from t where a=1", {
-  lineWidth: 80,
-  indentWidth: 2,
-  keywordCase: 1,
-  semicolons: true,
-});
-if (!fmt.ok) throw new Error(`fmt failed: ${fmt.text}`);
-if (!/SELECT a, b FROM t WHERE a = 1/.test(fmt.text)) {
-  throw new Error(`unexpected fmt output: ${fmt.text}`);
+const fmt = engine.format("select a,b from t where a=1", {keywordCase: "upper"});
+if (!/SELECT a, b FROM t WHERE a = 1/.test(fmt)) {
+  throw new Error(`unexpected format output: ${fmt}`);
+}
+
+const parsed = engine.parse("SELECT 1; selec 2");
+if (parsed.statements.length !== 1 || parsed.errors.length === 0) {
+  throw new Error(`unexpected parse result: ${JSON.stringify(parsed)}`);
+}
+
+const tokens = engine.tokenize("SELECT 1");
+if (tokens.length === 0 || tokens[0].category !== "keyword") {
+  throw new Error(`unexpected tokens: ${JSON.stringify(tokens)}`);
 }
 
 if (!engine.lspSupported) throw new Error("LSP entry point missing from runtime");

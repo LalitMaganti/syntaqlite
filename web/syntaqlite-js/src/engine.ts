@@ -4,7 +4,6 @@
 import type {
   AnalyzeOptions,
   AnalyzeResult,
-  AstResult,
   DiagnosticEntry,
   DiagnosticsResult,
   DialectBinding,
@@ -14,7 +13,8 @@ import type {
   EmscriptenModule,
   EmscriptenModuleConfig,
   FormatOptions,
-  FormatResult,
+  ParseResult,
+  TokenEntry,
 } from "./types.js";
 
 export interface CflagEntry {
@@ -57,8 +57,6 @@ export class Engine {
   private clearDialectRaw: WasmFn | undefined = undefined;
   private allocRaw: WasmFn | undefined = undefined;
   private freeRaw: WasmFn | undefined = undefined;
-  private astJsonRaw: WasmFn | undefined = undefined;
-  private fmtRaw: WasmFn | undefined = undefined;
   private resultPtrRaw: WasmFn | undefined = undefined;
   private resultLenRaw: WasmFn | undefined = undefined;
   private resultFreeRaw: WasmFn | undefined = undefined;
@@ -116,8 +114,6 @@ export class Engine {
     this.clearDialectRaw = this.tryResolveRuntimeFn("wasm_clear_dialect");
     this.allocRaw = this.resolveRuntimeFn("wasm_alloc");
     this.freeRaw = this.resolveRuntimeFn("wasm_free");
-    this.astJsonRaw = this.tryResolveRuntimeFn("wasm_ast_json");
-    this.fmtRaw = this.resolveRuntimeFn("wasm_fmt");
     this.resultPtrRaw = this.resolveRuntimeFn("wasm_result_ptr");
     this.resultLenRaw = this.resolveRuntimeFn("wasm_result_len");
     this.resultFreeRaw = this.resolveRuntimeFn("wasm_result_free");
@@ -255,32 +251,34 @@ export class Engine {
     this.readAndClearResult();
   }
 
-  runAstJson(sql: string): AstResult {
-    if (!this.astJsonRaw) return {ok: false, error: "AST JSON not supported by this runtime"};
-    const count = this.withInput(sql, (ptr, len) => this.astJsonRaw!(this.session, ptr, len));
-    const text = this.readAndClearResult();
-    if (count < 0) return {ok: false, error: text};
-    if (count === 0) return {ok: true, statements: []};
-    try {
-      return {ok: true, statements: JSON.parse(text, (_, v) => (v === null ? undefined : v))};
-    } catch (e) {
-      return {ok: false, error: `JSON parse error: ${(e as Error).message}`};
-    }
+  /** Parse SQL into AST JSON. Parse errors are data, not exceptions. */
+  parse(sql: string): ParseResult {
+    // AST nodes omit absent fields as null; expose them as undefined.
+    return this.rpc({op: "parse", sql}, (_, v) => (v === null ? undefined : v)) as ParseResult;
   }
 
-  runFmt(sql: string, opts: FormatOptions): FormatResult {
-    const status = this.withInput(sql, (ptr, len) =>
-      this.fmtRaw!(this.session, ptr, len, opts.lineWidth, opts.indentWidth, opts.keywordCase, opts.semicolons ? 1 : 0),
-    );
-    const text = this.readAndClearResult();
-    return {ok: status === 0, text};
+  /** Format SQL. Throws when the input cannot be formatted. */
+  format(sql: string, opts: FormatOptions = {}): string {
+    const request: Record<string, unknown> = {op: "format", sql};
+    if (opts.lineWidth !== undefined) request.line_width = opts.lineWidth;
+    if (opts.indentWidth !== undefined) request.indent_width = opts.indentWidth;
+    if (opts.keywordCase !== undefined) request.keyword_case = opts.keywordCase;
+    if (opts.semicolons !== undefined) request.semicolons = opts.semicolons;
+    const result = this.rpc(request) as {formatted: string};
+    return result.formatted;
+  }
+
+  /** Tokenize SQL. Throws on malformed input. */
+  tokenize(sql: string): TokenEntry[] {
+    const result = this.rpc({op: "tokenize", sql}) as {tokens: TokenEntry[]};
+    return result.tokens;
   }
 
   /** Semantic tokens for an embedded-language document (see setLanguageMode).
    *  Returns a pre-encoded Uint32Array (5 u32s per token) or undefined on
    *  failure. SQL documents are served over LSP (`textDocument/semanticTokens`).
    *  @experimental Embedded language support is experimental and may change. */
-  runEmbeddedSemanticTokens(source: string): Uint32Array | undefined {
+  embeddedSemanticTokens(source: string): Uint32Array | undefined {
     if (this.currentLangMode === "sql" || !this.embeddedSemanticTokensRaw) return undefined;
     const lang = embeddedLangCode(this.currentLangMode);
     try {
@@ -306,7 +304,7 @@ export class Engine {
   /** Diagnostics for an embedded-language document (see setLanguageMode).
    *  SQL documents are served over LSP (`textDocument/publishDiagnostics`).
    *  @experimental Embedded language support is experimental and may change. */
-  runEmbeddedDiagnostics(source: string): DiagnosticsResult {
+  embeddedDiagnostics(source: string): DiagnosticsResult {
     if (this.currentLangMode === "sql" || !this.embeddedDiagnosticsRaw) {
       return {ok: false, diagnostics: []};
     }
@@ -358,7 +356,10 @@ export class Engine {
 
   /** One-shot JSON-RPC op — the CLI `serve json` protocol. Returns the
    *  op's result value; throws on error. */
-  private rpc(request: object): unknown {
+  private rpc(
+    request: object,
+    reviver?: (key: string, value: unknown) => unknown,
+  ): unknown {
     if (!this.rpcRaw) {
       throw new Error("RPC not supported by this runtime");
     }
@@ -368,7 +369,11 @@ export class Engine {
     if (status !== 0) {
       throw new Error(text || "wasm_rpc failed");
     }
-    const frame = JSON.parse(text) as {ok: boolean; result?: unknown; error?: string};
+    const frame = JSON.parse(text, reviver as never) as {
+      ok: boolean;
+      result?: unknown;
+      error?: string;
+    };
     if (!frame.ok) {
       throw new Error(frame.error ?? "rpc failed");
     }
@@ -385,7 +390,7 @@ export class Engine {
   /** Extract SQL fragments from `source`. Returns empty in SQL mode (O(1) fast path).
    *  In embedded mode the WASM extractor runs for the language set by setLanguageMode.
    *  @experimental Embedded language support is experimental and may change. */
-  runExtract(source: string): EmbeddedExtractResult {
+  extract(source: string): EmbeddedExtractResult {
     if (this.currentLangMode === "sql") return {ok: true, fragments: []};
     if (!this.embeddedExtractRaw) return {ok: true, fragments: []};
     const lang = embeddedLangCode(this.currentLangMode);

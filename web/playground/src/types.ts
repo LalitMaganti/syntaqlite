@@ -10,11 +10,8 @@ export type {
   AstRegularNode,
   AstJsonNode,
   KeywordCase,
+  ParseResult,
   FormatOptions,
-  FormatResult,
-  AstResultOk,
-  AstResultError,
-  AstResult,
   DialectBinding,
   DiagnosticDetail,
   HelpDetail,
@@ -28,3 +25,16 @@ export type {
 
 export type Theme = "dark" | "light";
 export type ActiveTab = "format" | "ast" | "validation" | "schema";
+
+// ── Playground-local view types ──
+
+import type {AstJsonNode} from "syntaqlite";
+
+/** Rendered outcome of a format run, including engine errors. */
+export interface FormatResult {
+  ok: boolean;
+  text: string;
+}
+
+/** Rendered outcome of a parse run, including engine errors. */
+export type AstResult = {ok: true; statements: AstJsonNode[]} | {ok: false; error: string};

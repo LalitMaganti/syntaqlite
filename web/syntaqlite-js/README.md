@@ -28,17 +28,14 @@ await engine.load();
 await new DialectManager().loadDefault(engine);
 
 // Format SQL
-const fmt = engine.runFmt("select id,name from users where id=1", {
-  lineWidth: 80,
-  indentWidth: 2,
-  keywordCase: 1,
-  semicolons: true,
-});
-console.log(fmt.text);
+console.log(engine.format("select id,name from users where id=1"));
 // SELECT id, name FROM users WHERE id = 1;
 
-// Parse SQL to AST (JSON)
-const ast = engine.runAstJson("SELECT 1");
+// Parse SQL to AST (JSON); parse errors are data, not exceptions
+const {statements, errors} = engine.parse("SELECT 1");
+
+// Tokenize SQL
+const tokens = engine.tokenize("SELECT 1");
 
 // Give the analyzer your schema
 engine.setSessionContextDdl("CREATE TABLE users(id INTEGER, name TEXT);");
