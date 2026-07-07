@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.7.0
+
+**Breaking: WASM / JavaScript API rework:**
+- The wasm ABI now uses session handles: `wasm_session_new` returns a handle and every stateful export takes it, replacing the previous thread-local global state. `Engine` in syntaqlite-js gains `dispose()` and can share a runtime instance with other Engines via `EngineConfig.runtime` ([#299](https://github.com/LalitMaganti/syntaqlite/pull/299)).
+- LSP JSON-RPC is now the sole editor-feature surface in syntaqlite-wasm via `wasm_lsp_message`. The `wasm_diagnostics`, `wasm_semantic_tokens`, and `wasm_completions` exports are removed; schema context is set through the `syntaqlite/setSessionContext` extension request. `attachLspPort` gives worker embedders a one-line bridge ([#301](https://github.com/LalitMaganti/syntaqlite/pull/301)).
+- One-shot ops are served over the CLI RPC protocol via a single `wasm_rpc` export, replacing `wasm_fmt` and `wasm_ast_json`. The JS API exposes typed `parse`, `format`, `tokenize`, and `analyze` methods; the old `run*` method names are gone and `keywordCase` now takes `"upper"` / `"lower"` ([#303](https://github.com/LalitMaganti/syntaqlite/pull/303)).
+
+**Validation:**
+- ALTER TABLE is now modeled in the semantic catalog: added, dropped, and renamed columns resolve correctly afterward, renamed tables are tracked, and altering a missing table is flagged ([#297](https://github.com/LalitMaganti/syntaqlite/pull/297)).
+- Column references with a table qualifier that is not in scope are now flagged as "unknown table" with a fuzzy suggestion ([#292](https://github.com/LalitMaganti/syntaqlite/pull/292)).
+- Fixed upsert (`ON CONFLICT DO UPDATE`) validation, which previously produced spurious failures ([#286](https://github.com/LalitMaganti/syntaqlite/pull/286)).
+- CTEs are now registered as self-referential regardless of the `RECURSIVE` keyword, matching SQLite ([#293](https://github.com/LalitMaganti/syntaqlite/pull/293)).
+- Fixed `ORDER BY` scoping inside `UNION` / `UNION ALL` compound selects ([#290](https://github.com/LalitMaganti/syntaqlite/pull/290)).
+- FROM sources are captured before statement traversal, fixing resolution of tables that appear late in the AST ([#288](https://github.com/LalitMaganti/syntaqlite/pull/288)).
+- Quoted identifiers are handled uniformly with correct escape processing, and single-quoted string aliases are now accepted ([#296](https://github.com/LalitMaganti/syntaqlite/pull/296), [#287](https://github.com/LalitMaganti/syntaqlite/pull/287)).
+
+**Parser:**
+- Fixed node extents for `EXPLAIN` / `EXPLAIN QUERY PLAN` statements and other edge cases ([#280](https://github.com/LalitMaganti/syntaqlite/pull/280), [#283](https://github.com/LalitMaganti/syntaqlite/pull/283)).
+
 ## 0.6.0
 
 **Shell file support:**
