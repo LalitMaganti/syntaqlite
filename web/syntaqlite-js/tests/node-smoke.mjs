@@ -73,6 +73,16 @@ if (!schemaDiags.some((d) => d.data?.detail?.kind === "unknown_column")) {
   throw new Error("expected unknown-column diagnostic under schema context");
 }
 
+// One-shot analysis over the CLI-parity RPC protocol.
+const analysis = engine.rpc({
+  op: "analyze",
+  sql: "SELECT c FROM users",
+  schema_ddl: "CREATE TABLE users(id INTEGER, name TEXT);",
+});
+if (!analysis.diagnostics.some((d) => /unknown column/.test(d.message))) {
+  throw new Error(`expected unknown-column from rpc analyze: ${JSON.stringify(analysis)}`);
+}
+
 // Two engines share one runtime instance but have independent sessions:
 // schema context set on one must not leak into the other.
 const other = new Engine({runtime: engine.runtimeModule});

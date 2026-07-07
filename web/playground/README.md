@@ -71,6 +71,10 @@ schema session context, ...) are served over LSP JSON-RPC through
 of outgoing messages in the result buffer. Schema context uses the
 `syntaqlite/setSessionContext` extension request.
 
+One-shot ops (`parse`, `format`, `tokenize`, `analyze`) are served through
+`wasm_rpc(session, u32, u32) -> i32`, the same protocol as the CLI's
+`serve json` loop and the C API.
+
 The remaining direct exports (see `syntaqlite-wasm/src/main.rs` for
 signatures):
 

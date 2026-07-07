@@ -69,6 +69,7 @@ export class Engine {
   private embeddedDiagnosticsRaw: WasmFn | undefined = undefined;
   private embeddedSemanticTokensRaw: WasmFn | undefined = undefined;
   private lspMessageRaw: WasmFn | undefined = undefined;
+  private rpcRaw: WasmFn | undefined = undefined;
   private currentLangMode: "sql" | EmbeddedLanguage = "sql";
   /** Handle for the WASM session all calls run against. 0 = not created yet. */
   private session = 0;
@@ -127,6 +128,7 @@ export class Engine {
     this.embeddedDiagnosticsRaw = this.tryResolveRuntimeFn("wasm_embedded_diagnostics");
     this.embeddedSemanticTokensRaw = this.tryResolveRuntimeFn("wasm_embedded_semantic_tokens");
     this.lspMessageRaw = this.tryResolveRuntimeFn("wasm_lsp_message");
+    this.rpcRaw = this.tryResolveRuntimeFn("wasm_rpc");
     this.session = this.sessionNewRaw() >>> 0;
     if (this.session === 0) {
       throw new Error("wasm_session_new failed");
@@ -342,6 +344,26 @@ export class Engine {
       throw new Error(text || "wasm_lsp_message failed");
     }
     return count === 0 ? [] : (JSON.parse(text) as unknown[]);
+  }
+
+  /** One-shot JSON-RPC op (`parse`, `format`, `tokenize`, `analyze`) — the
+   *  same protocol as the CLI's `serve json` loop. Returns the op's result
+   *  value; throws on error. */
+  rpc(request: object | string): unknown {
+    if (!this.rpcRaw) {
+      throw new Error("RPC not supported by this runtime");
+    }
+    const json = typeof request === "string" ? request : JSON.stringify(request);
+    const status = this.withInput(json, (ptr, len) => this.rpcRaw!(this.session, ptr, len));
+    const text = this.readAndClearResult();
+    if (status !== 0) {
+      throw new Error(text || "wasm_rpc failed");
+    }
+    const frame = JSON.parse(text) as {ok: boolean; result?: unknown; error?: string};
+    if (!frame.ok) {
+      throw new Error(frame.error ?? "rpc failed");
+    }
+    return frame.result;
   }
 
   /** Set the active language mode. Diagnostics, semantic tokens, and extraction

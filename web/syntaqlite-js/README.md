@@ -9,6 +9,8 @@ Built from SQLite's own grammar for 100% syntax compatibility.
 - **Parse** SQL into a full syntax tree
 - **Language server**: diagnostics, completions, hover, and semantic tokens
   over standard LSP JSON-RPC, schema-aware via your DDL
+- **One-shot ops**: parse, format, tokenize, and analyze over the same
+  JSON-RPC protocol as the CLI's `serve json`
 
 ## Install
 
@@ -77,6 +79,21 @@ attachLspPort(engine, self as unknown as LspPortLike);
 Beyond standard LSP, the server accepts a `syntaqlite/setSessionContext`
 extension request to set or clear the schema catalog
 (`Engine.setSessionContextDdl` wraps it).
+
+## One-shot analysis
+
+For programmatic validation without an editor session, use the JSON-RPC
+op protocol shared with the CLI:
+
+```ts
+const analysis = engine.rpc({
+  op: "analyze",
+  sql: "SELECT c FROM users",
+  schema_ddl: "CREATE TABLE users(id INTEGER, name TEXT);",
+});
+console.log(analysis.diagnostics);
+// [{ message: "unknown column 'c'", ... }]
+```
 
 ## Documentation
 

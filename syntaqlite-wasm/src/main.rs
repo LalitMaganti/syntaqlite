@@ -18,8 +18,11 @@
 //!
 //! All editor features (diagnostics, completions, semantic tokens, schema
 //! session context, ...) are served over LSP JSON-RPC via
-//! [`wasm_lsp_message`]. The remaining direct calls are one-shot utilities
-//! (format, AST dump, cflag list) and the experimental embedded analyzers.
+//! [`wasm_lsp_message`]. One-shot programmatic ops (parse, format,
+//! tokenize, analyze) are served over [`wasm_rpc`], the same protocol as
+//! the CLI's `serve json` and the C API. The remaining direct calls are
+//! utilities (format, AST dump, cflag list) and the experimental embedded
+//! analyzers.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -30,6 +33,7 @@ use serde::Serialize;
 use syntaqlite::any::AnyDialect;
 use syntaqlite::fmt::KeywordCase;
 use syntaqlite::lsp::LspDispatcher;
+use syntaqlite::rpc::RpcSession;
 use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
 use syntaqlite::{FormatConfig, Formatter};
 
@@ -48,6 +52,8 @@ struct Session {
     /// Language server behind [`wasm_lsp_message`]; lazily created from
     /// `dialect` and dropped whenever the dialect changes.
     lsp: Option<LspDispatcher>,
+    /// One-shot op session behind [`wasm_rpc`]; same lifecycle as `lsp`.
+    rpc: Option<RpcSession>,
 }
 
 impl Session {
@@ -58,6 +64,7 @@ impl Session {
             cflags: SqliteFlags::default(),
             dialect: None,
             lsp: None,
+            rpc: None,
         }
     }
 
@@ -66,6 +73,7 @@ impl Session {
     /// is bound to the old dialect. No-op when no side module is loaded yet.
     fn rebuild_dialect(&mut self) {
         self.lsp = None;
+        self.rpc = None;
         if self.dialect_template == 0 {
             self.dialect = None;
             return;
@@ -92,6 +100,13 @@ impl Session {
             self.lsp = Some(LspDispatcher::new(self.dialect()?));
         }
         Ok(self.lsp.as_mut().expect("lsp dispatcher just created"))
+    }
+
+    fn rpc(&mut self) -> Result<&mut RpcSession, String> {
+        if self.rpc.is_none() {
+            self.rpc = Some(RpcSession::new(&self.dialect()?));
+        }
+        Ok(self.rpc.as_mut().expect("rpc session just created"))
     }
 }
 
@@ -443,6 +458,26 @@ pub extern "C" fn wasm_lsp_message(handle: u32, ptr: u32, len: u32) -> i32 {
     )
 }
 
+// ── RPC (one-shot ops) ───────────────────────────────────────────────
+
+fn run_rpc(session: &mut Session, ptr: u32, len: u32) -> i32 {
+    let input = try_wasm!(decode_input(ptr, len));
+    let rpc = try_wasm!(session.rpc());
+    set_result(&syntaqlite::rpc::call_json(rpc, &input));
+    0
+}
+
+/// One-shot JSON-RPC op (`parse`, `format`, `tokenize`, `analyze`) — the
+/// same protocol as the CLI's `serve json` loop and the C API. The result
+/// buffer receives the `{"ok":..}` response envelope.
+#[unsafe(no_mangle)]
+pub extern "C" fn wasm_rpc(handle: u32, ptr: u32, len: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, |s| run_rpc(s, ptr, len)),
+        "wasm_rpc panicked",
+    )
+}
+
 // ── Dialect switching ────────────────────────────────────────────────
 
 fn run_set_dialect(session: &mut Session, ptr: u32) -> i32 {
@@ -746,6 +781,25 @@ mod tests {
         assert_eq!(out.len(), 1);
         let resp: serde_json::Value = serde_json::from_str(&out[0]).unwrap();
         assert!(resp["result"]["capabilities"].is_object());
+    }
+
+    #[test]
+    fn rpc_analyze_roundtrip() {
+        let mut session = Session::new();
+        session.dialect = Some(syntaqlite::sqlite_dialect().into());
+        let response = syntaqlite::rpc::call_json(
+            session.rpc().unwrap(),
+            r#"{"op":"analyze","sql":"selec 1"}"#,
+        );
+        let frame: serde_json::Value = serde_json::from_str(&response).unwrap();
+        assert_eq!(frame["ok"], true, "response: {response}");
+        assert!(
+            !frame["result"]["diagnostics"]
+                .as_array()
+                .unwrap()
+                .is_empty(),
+            "expected a parse diagnostic"
+        );
     }
 
     #[test]
