@@ -84,6 +84,12 @@ const analysis = engine.analyze("SELECT c FROM users", {
 if (!analysis.diagnostics.some((d) => /unknown column/.test(d.message))) {
   throw new Error(`expected unknown-column from analyze: ${JSON.stringify(analysis)}`);
 }
+const tableAnalysis = engine.analyze("SELECT c FROM logs", {
+  tables: [{name: "logs", columns: ["id", "ts"]}],
+});
+if (!tableAnalysis.diagnostics.some((d) => /unknown column/.test(d.message))) {
+  throw new Error(`expected unknown-column from tables catalog: ${JSON.stringify(tableAnalysis)}`);
+}
 
 // Two engines share one runtime instance but have independent sessions:
 // schema context set on one must not leak into the other.

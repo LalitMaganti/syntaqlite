@@ -27,8 +27,14 @@ const engine = new Engine();
 await engine.load();
 await new DialectManager().loadDefault(engine);
 
-// Format SQL
-console.log(engine.format("select id,name from users where id=1"));
+// Format SQL. Options mirror the Rust FormatConfig; omitted fields use
+// the formatter defaults.
+console.log(engine.format("select id,name from users where id=1", {
+  lineWidth: 80,
+  indentWidth: 2,
+  keywordCase: "upper",
+  semicolons: true,
+}));
 // SELECT id, name FROM users WHERE id = 1;
 
 // Parse SQL to AST (JSON); parse errors are data, not exceptions
@@ -79,7 +85,8 @@ extension request to set or clear the schema catalog
 
 ## One-shot analysis
 
-For programmatic validation without an editor session:
+For programmatic validation without an editor session. The catalog can
+come from DDL, from structured `tables` and `views`, or both:
 
 ```ts
 const analysis = engine.analyze("SELECT c FROM users", {
@@ -87,6 +94,10 @@ const analysis = engine.analyze("SELECT c FROM users", {
 });
 console.log(analysis.diagnostics);
 // [{ message: "unknown column 'c'", severity: "error", ... }]
+
+engine.analyze("SELECT id FROM logs", {
+  tables: [{name: "logs", columns: ["id", "ts"]}],
+});
 ```
 
 ## Documentation

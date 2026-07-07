@@ -23,6 +23,7 @@ export type {
   DiagnosticEntry,
   DiagnosticsResult,
   AnalyzeDiagnostic,
+  RelationSpec,
   AnalyzeOptions,
   AnalyzeResult,
   CompletionEntry,

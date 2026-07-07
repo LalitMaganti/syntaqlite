@@ -132,9 +132,21 @@ export interface AnalyzeDiagnostic {
   help?: string;
 }
 
+/** A table or view added to the analysis catalog. */
+export interface RelationSpec {
+  name: string;
+  columns?: string[];
+}
+
 export interface AnalyzeOptions {
   /** DDL parsed into a schema catalog for schema-aware validation. */
   schemaDdl?: string;
+  /** Tables added to the catalog. */
+  tables?: RelationSpec[];
+  /** Views added to the catalog. */
+  views?: RelationSpec[];
+  /** Dotted module path to SQL source, resolving INCLUDE MODULE imports. */
+  modules?: Record<string, string>;
 }
 
 export interface AnalyzeResult {

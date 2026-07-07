@@ -346,11 +346,15 @@ export class Engine {
     return count === 0 ? [] : (JSON.parse(text) as unknown[]);
   }
 
-  /** Validate SQL in one shot — no editor session required. Schema-aware
-   *  when `schemaDdl` is provided. Throws on malformed input. */
+  /** Validate SQL in one shot without an editor session. Schema-aware when
+   *  a catalog is provided via `schemaDdl`, `tables`, or `views`. Throws on
+   *  malformed input. */
   analyze(sql: string, opts: AnalyzeOptions = {}): AnalyzeResult {
     const request: Record<string, unknown> = {op: "analyze", sql};
     if (opts.schemaDdl !== undefined) request.schema_ddl = opts.schemaDdl;
+    if (opts.tables !== undefined) request.tables = opts.tables;
+    if (opts.views !== undefined) request.views = opts.views;
+    if (opts.modules !== undefined) request.modules = opts.modules;
     return this.rpc(request) as AnalyzeResult;
   }
 
