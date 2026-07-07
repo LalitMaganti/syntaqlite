@@ -56,25 +56,24 @@ export type AstJsonNode = AstListNode | AstRegularNode;
 
 // ── Format types ──
 
-export type KeywordCase = 0 | 1 | 2; // 0=preserve, 1=upper, 2=lower
+export type KeywordCase = "upper" | "lower";
 
+/** Options for `Engine.format`, mirroring the CLI `format` op. Omitted
+ *  fields use the formatter defaults. */
 export interface FormatOptions {
-  lineWidth: number;
-  indentWidth: number;
-  keywordCase: KeywordCase;
-  semicolons: boolean;
+  lineWidth?: number;
+  indentWidth?: number;
+  keywordCase?: KeywordCase;
+  semicolons?: boolean;
 }
 
-export interface FormatResult {
-  ok: boolean;
-  text: string;
+// ── Parse types ──
+
+/** Result of `Engine.parse` (the CLI `parse` op shape). */
+export interface ParseResult {
+  statements: AstJsonNode[];
+  errors: AnalyzeDiagnostic[];
 }
-
-// ── AST result types ──
-
-export type AstResultOk = {ok: true; statements: AstJsonNode[]};
-export type AstResultError = {ok: false; error: string};
-export type AstResult = AstResultOk | AstResultError;
 
 // ── Dialect types ──
 
@@ -120,6 +119,53 @@ export interface DiagnosticEntry {
 export interface DiagnosticsResult {
   ok: boolean;
   diagnostics: DiagnosticEntry[];
+}
+
+/** One diagnostic from `Engine.analyze` (the CLI `analyze` op shape). */
+export interface AnalyzeDiagnostic {
+  severity: "error" | "warning" | "info" | "hint";
+  message: string;
+  start_offset: number;
+  end_offset: number;
+  /** Numeric diagnostic category (see `DIAG_CODE_*` in the Rust rpc module). */
+  code: number;
+  help?: string;
+}
+
+/** A table or view added to the analysis catalog. */
+export interface RelationSpec {
+  name: string;
+  columns?: string[];
+}
+
+export interface AnalyzeOptions {
+  /** DDL parsed into a schema catalog for schema-aware validation. */
+  schemaDdl?: string;
+  /** Tables added to the catalog. */
+  tables?: RelationSpec[];
+  /** Views added to the catalog. */
+  views?: RelationSpec[];
+  /** Dotted module path to SQL source, resolving INCLUDE MODULE imports. */
+  modules?: Record<string, string>;
+}
+
+export interface AnalyzeResult {
+  diagnostics: AnalyzeDiagnostic[];
+  /** Per-statement analysis (kind, references, lineage). */
+  statements: unknown[];
+  /** Lineage of the final query-bearing statement. */
+  lineage: unknown | null;
+}
+
+/** One token from `Engine.tokenize`. */
+export interface TokenEntry {
+  text: string;
+  offset: number;
+  length: number;
+  /** Numeric token id (dialect-specific). */
+  type: number;
+  /** Coarse category, e.g. "keyword", "identifier", "number". */
+  category: string;
 }
 
 // ── Embedded SQL types (experimental) ──

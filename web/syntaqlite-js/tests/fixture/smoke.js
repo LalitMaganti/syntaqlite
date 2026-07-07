@@ -26,13 +26,8 @@ async function main() {
   await dm.loadDefault(engine);
   log("dialect loaded");
 
-  const fmt = engine.runFmt("select a,b from t where a=1", {
-    lineWidth: 80,
-    indentWidth: 2,
-    keywordCase: 1,
-    semicolons: true,
-  });
-  log("fmt:", JSON.stringify(fmt));
+  const fmt = engine.format("select a,b from t where a=1");
+  log("fmt:", fmt);
 
   // Diagnostics are served over LSP: handshake, open a document, and read
   // the publishDiagnostics push.

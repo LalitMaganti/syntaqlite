@@ -347,14 +347,14 @@ export class Workspace implements m.ClassComponent<Attrs> {
     const app = this.appRef;
     if (!app) return;
 
-    // Update SQL fragments for the embedded-mode UI. engine.runExtract() is a
+    // Update SQL fragments for the embedded-mode UI. engine.extract() is a
     // fast no-op (O(1)) in SQL mode, so calling it unconditionally is safe.
-    const extractResult = engine.runExtract(sql);
+    const extractResult = engine.extract(sql);
     app.embeddedFragments = extractResult.ok ? extractResult.fragments : [];
 
     let diagnostics: DiagnosticEntry[];
     if (app.languageMode !== "sql") {
-      const result = engine.runEmbeddedDiagnostics(sql);
+      const result = engine.embeddedDiagnostics(sql);
       if (!result.ok) {
         monaco.editor.setModelMarkers(model, "syntaqlite", []);
         app.diagnostics = [];

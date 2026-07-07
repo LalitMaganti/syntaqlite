@@ -23,6 +23,15 @@ export class AstTab implements m.ClassComponent<AstTabAttrs> {
   private lastConfigKey: string | undefined = undefined;
   private initialized = false;
 
+  /** Parse `sql`, folding engine errors into a renderable result. */
+  private parse(app: App, sql: string): AstResult {
+    try {
+      return {ok: true, statements: app.runtime.parse(sql).statements};
+    } catch (e) {
+      return {ok: false, error: (e as Error).message};
+    }
+  }
+
   view(vnode: m.Vnode<AstTabAttrs>) {
     const {app, sql, active} = vnode.attrs;
 
@@ -46,12 +55,12 @@ export class AstTab implements m.ClassComponent<AstTabAttrs> {
 
         if (isEmbedded && app.embeddedFragments.length > 0) {
           if (fragIdx >= 0 && fragIdx < app.embeddedFragments.length) {
-            this.astResult = app.runtime.runAstJson(app.embeddedFragments[fragIdx].sql);
+            this.astResult = this.parse(app, app.embeddedFragments[fragIdx].sql);
           } else {
             // Merge all fragments' ASTs.
             const allStatements: import("../types").AstJsonNode[] = [];
             for (const f of app.embeddedFragments) {
-              const r = app.runtime.runAstJson(f.sql);
+              const r = this.parse(app, f.sql);
               if (r.ok) {
                 allStatements.push(...r.statements);
               }
@@ -59,7 +68,7 @@ export class AstTab implements m.ClassComponent<AstTabAttrs> {
             this.astResult = {ok: true, statements: allStatements};
           }
         } else {
-          this.astResult = app.runtime.runAstJson(sql);
+          this.astResult = this.parse(app, sql);
         }
       }
     }

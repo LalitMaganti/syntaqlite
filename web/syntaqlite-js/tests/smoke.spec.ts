@@ -17,7 +17,7 @@ test("packed tarball formats and validates SQL in a real browser", async ({page}
     ok: boolean;
     error?: string;
     stack?: string;
-    fmt?: {ok: boolean; text: string};
+    fmt?: string;
     diag?: {ok: boolean; diagnostics: unknown[]};
   } | undefined;
 
@@ -31,12 +31,11 @@ test("packed tarball formats and validates SQL in a real browser", async ({page}
     );
   }
 
-  // Formatting: `select a,b from t where a=1` with upper + 2-space indent
-  // should emit SELECT/FROM/WHERE in uppercase with a reformatted body.
-  expect(result.fmt!.ok).toBe(true);
-  expect(result.fmt!.text).toMatch(/SELECT/);
-  expect(result.fmt!.text).toMatch(/FROM/);
-  expect(result.fmt!.text).toMatch(/WHERE/);
+  // Formatting: `select a,b from t where a=1` should emit SELECT/FROM/WHERE
+  // in uppercase with a reformatted body.
+  expect(result.fmt!).toMatch(/SELECT/);
+  expect(result.fmt!).toMatch(/FROM/);
+  expect(result.fmt!).toMatch(/WHERE/);
 
   // Validation: `selec 1 frm t` is syntactically invalid; the validator
   // must report at least one diagnostic.

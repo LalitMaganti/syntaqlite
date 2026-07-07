@@ -71,6 +71,10 @@ schema session context, ...) are served over LSP JSON-RPC through
 of outgoing messages in the result buffer. Schema context uses the
 `syntaqlite/setSessionContext` extension request.
 
+One-shot ops (`parse`, `format`, `tokenize`, `analyze`) are served through
+`wasm_rpc(session, u32, u32) -> i32`, the same protocol as the CLI's
+`serve json` loop and the C API.
+
 The remaining direct exports (see `syntaqlite-wasm/src/main.rs` for
 signatures):
 
@@ -78,8 +82,6 @@ signatures):
 - `wasm_session_new() -> u32`, `wasm_session_free(u32)`
 - `wasm_set_dialect(session, u32) -> i32`, `wasm_clear_dialect(session)`
 - `wasm_alloc(u32) -> u32`, `wasm_free(u32, u32)`
-- `wasm_ast_json(session, u32, u32) -> i32`
-- `wasm_fmt(session, u32, u32, u32, u32, u32, u32) -> i32`
 - `wasm_embedded_*` (experimental embedded-SQL analyzers)
 - `wasm_result_ptr() -> u32`, `wasm_result_len() -> u32`, `wasm_result_free()`
 

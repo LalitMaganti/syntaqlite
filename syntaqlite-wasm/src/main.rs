@@ -18,8 +18,10 @@
 //!
 //! All editor features (diagnostics, completions, semantic tokens, schema
 //! session context, ...) are served over LSP JSON-RPC via
-//! [`wasm_lsp_message`]. The remaining direct calls are one-shot utilities
-//! (format, AST dump, cflag list) and the experimental embedded analyzers.
+//! [`wasm_lsp_message`]. One-shot ops (parse, format, tokenize, analyze)
+//! are served over [`wasm_rpc`], the same protocol as the CLI's
+//! `serve json` and the C API. The remaining direct calls are the cflag
+//! list and the experimental embedded analyzers.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -28,10 +30,9 @@ use std::slice;
 use serde::Serialize;
 
 use syntaqlite::any::AnyDialect;
-use syntaqlite::fmt::KeywordCase;
 use syntaqlite::lsp::LspDispatcher;
+use syntaqlite::rpc::RpcSession;
 use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
-use syntaqlite::{FormatConfig, Formatter};
 
 // ── Session ──────────────────────────────────────────────────────────
 
@@ -48,6 +49,8 @@ struct Session {
     /// Language server behind [`wasm_lsp_message`]; lazily created from
     /// `dialect` and dropped whenever the dialect changes.
     lsp: Option<LspDispatcher>,
+    /// One-shot op session behind [`wasm_rpc`]; same lifecycle as `lsp`.
+    rpc: Option<RpcSession>,
 }
 
 impl Session {
@@ -58,6 +61,7 @@ impl Session {
             cflags: SqliteFlags::default(),
             dialect: None,
             lsp: None,
+            rpc: None,
         }
     }
 
@@ -66,6 +70,7 @@ impl Session {
     /// is bound to the old dialect. No-op when no side module is loaded yet.
     fn rebuild_dialect(&mut self) {
         self.lsp = None;
+        self.rpc = None;
         if self.dialect_template == 0 {
             self.dialect = None;
             return;
@@ -92,6 +97,13 @@ impl Session {
             self.lsp = Some(LspDispatcher::new(self.dialect()?));
         }
         Ok(self.lsp.as_mut().expect("lsp dispatcher just created"))
+    }
+
+    fn rpc(&mut self) -> Result<&mut RpcSession, String> {
+        if self.rpc.is_none() {
+            self.rpc = Some(RpcSession::new(&self.dialect()?));
+        }
+        Ok(self.rpc.as_mut().expect("rpc session just created"))
     }
 }
 
@@ -312,109 +324,6 @@ pub extern "C" fn wasm_result_free() {
     result_free();
 }
 
-// ── AST JSON ─────────────────────────────────────────────────────────
-
-fn run_ast_json(session: &mut Session, ptr: u32, len: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len));
-    let dialect = try_wasm!(session.dialect());
-    let grammar = (*dialect).clone();
-    let parser = syntaqlite::any::AnyParser::with_config(
-        grammar,
-        &syntaqlite::parse::ParserConfig::default(),
-    );
-    let mut session = parser.parse(&source);
-    let mut nodes: Vec<serde_json::Value> = Vec::new();
-    loop {
-        match session.next() {
-            syntaqlite::any::ParseOutcome::Done => break,
-            syntaqlite::any::ParseOutcome::Ok(stmt) => {
-                let val = stmt
-                    .erase()
-                    .root_node()
-                    .map_or(serde_json::Value::Null, |n| {
-                        serde_json::to_value(n).unwrap_or(serde_json::Value::Null)
-                    });
-                nodes.push(val);
-            }
-            syntaqlite::any::ParseOutcome::Err(_) => {}
-        }
-    }
-    let count = i32::try_from(nodes.len()).expect("node count fits i32");
-    set_result(&serde_json::to_string(&nodes).expect("ast json serialization failed"));
-    count
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_ast_json(handle: u32, ptr: u32, len: u32) -> i32 {
-    catch_unwind(
-        || with_session(handle, |s| run_ast_json(s, ptr, len)),
-        "wasm_ast_json panicked",
-    )
-}
-
-// ── Formatter ────────────────────────────────────────────────────────
-
-fn run_fmt(
-    session: &mut Session,
-    ptr: u32,
-    len: u32,
-    line_width: u32,
-    indent_width: u32,
-    keyword_case: u32,
-    semicolons: u32,
-) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len));
-    let config = FormatConfig::default()
-        .with_line_width(if line_width == 0 {
-            80
-        } else {
-            line_width as usize
-        })
-        .with_indent_width(if indent_width == 0 {
-            2
-        } else {
-            indent_width as usize
-        })
-        .with_keyword_case(match keyword_case {
-            2 => KeywordCase::Lower,
-            _ => KeywordCase::Upper,
-        })
-        .with_semicolons(semicolons != 0);
-    let dialect = try_wasm!(session.dialect());
-    let mut formatter = Formatter::with_dialect_config(dialect, &config);
-    let sql = try_wasm!(formatter.format(&source).map_err(|e| e.to_string()));
-    set_result(&sql);
-    0
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_fmt(
-    handle: u32,
-    ptr: u32,
-    len: u32,
-    line_width: u32,
-    indent_width: u32,
-    keyword_case: u32,
-    semicolons: u32,
-) -> i32 {
-    catch_unwind(
-        || {
-            with_session(handle, |s| {
-                run_fmt(
-                    s,
-                    ptr,
-                    len,
-                    line_width,
-                    indent_width,
-                    keyword_case,
-                    semicolons,
-                )
-            })
-        },
-        "wasm_fmt panicked",
-    )
-}
-
 // ── LSP JSON-RPC ─────────────────────────────────────────────────────
 
 /// Join already-serialized JSON-RPC messages into one JSON array.
@@ -440,6 +349,26 @@ pub extern "C" fn wasm_lsp_message(handle: u32, ptr: u32, len: u32) -> i32 {
     catch_unwind(
         || with_session(handle, |s| run_lsp_message(s, ptr, len)),
         "wasm_lsp_message panicked",
+    )
+}
+
+// ── RPC (one-shot ops) ───────────────────────────────────────────────
+
+fn run_rpc(session: &mut Session, ptr: u32, len: u32) -> i32 {
+    let input = try_wasm!(decode_input(ptr, len));
+    let rpc = try_wasm!(session.rpc());
+    set_result(&syntaqlite::rpc::call_json(rpc, &input));
+    0
+}
+
+/// One-shot JSON-RPC op (`parse`, `format`, `tokenize`, `analyze`) — the
+/// same protocol as the CLI's `serve json` loop and the C API. The result
+/// buffer receives the `{"ok":..}` response envelope.
+#[unsafe(no_mangle)]
+pub extern "C" fn wasm_rpc(handle: u32, ptr: u32, len: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, |s| run_rpc(s, ptr, len)),
+        "wasm_rpc panicked",
     )
 }
 
@@ -746,6 +675,25 @@ mod tests {
         assert_eq!(out.len(), 1);
         let resp: serde_json::Value = serde_json::from_str(&out[0]).unwrap();
         assert!(resp["result"]["capabilities"].is_object());
+    }
+
+    #[test]
+    fn rpc_analyze_roundtrip() {
+        let mut session = Session::new();
+        session.dialect = Some(syntaqlite::sqlite_dialect().into());
+        let response = syntaqlite::rpc::call_json(
+            session.rpc().unwrap(),
+            r#"{"op":"analyze","sql":"selec 1"}"#,
+        );
+        let frame: serde_json::Value = serde_json::from_str(&response).unwrap();
+        assert_eq!(frame["ok"], true, "response: {response}");
+        assert!(
+            !frame["result"]["diagnostics"]
+                .as_array()
+                .unwrap()
+                .is_empty(),
+            "expected a parse diagnostic"
+        );
     }
 
     #[test]

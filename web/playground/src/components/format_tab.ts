@@ -16,10 +16,19 @@ export class FormatTab implements m.ClassComponent<FormatTabAttrs> {
   private formatOptions: FormatOptions = {
     lineWidth: 80,
     indentWidth: 2,
-    keywordCase: 1 as KeywordCase,
+    keywordCase: "upper",
     semicolons: true,
   };
   private formatResult: FormatResult | undefined = undefined;
+
+  /** Format `sql`, folding engine errors into a renderable result. */
+  private format(app: App, sql: string): FormatResult {
+    try {
+      return {ok: true, text: app.runtime.format(sql, this.formatOptions)};
+    } catch (e) {
+      return {ok: false, text: (e as Error).message};
+    }
+  }
   private lastSql: string | undefined = undefined;
   private lastOptionsKey: string | undefined = undefined;
   private lastDialectPtr: number | undefined = undefined;
@@ -48,19 +57,13 @@ export class FormatTab implements m.ClassComponent<FormatTabAttrs> {
 
         if (isEmbedded && app.embeddedFragments.length > 0) {
           if (fragIdx >= 0 && fragIdx < app.embeddedFragments.length) {
-            this.formatResult = app.runtime.runFmt(
-              app.embeddedFragments[fragIdx].sql,
-              this.formatOptions,
-            );
+            this.formatResult = this.format(app, app.embeddedFragments[fragIdx].sql);
           } else {
             // Format all fragments with separators.
             const parts: string[] = [];
             let allOk = true;
             for (let i = 0; i < app.embeddedFragments.length; i++) {
-              const r = app.runtime.runFmt(
-                app.embeddedFragments[i].sql,
-                this.formatOptions,
-              );
+              const r = this.format(app, app.embeddedFragments[i].sql);
               if (!r.ok) {
                 allOk = false;
                 parts.push(`-- Fragment ${i + 1} (error)\n${r.text}`);
@@ -71,7 +74,7 @@ export class FormatTab implements m.ClassComponent<FormatTabAttrs> {
             this.formatResult = {ok: allOk, text: parts.join("\n\n")};
           }
         } else {
-          this.formatResult = app.runtime.runFmt(sql, this.formatOptions);
+          this.formatResult = this.format(app, sql);
         }
       }
     }
@@ -109,17 +112,15 @@ export class FormatTab implements m.ClassComponent<FormatTabAttrs> {
         m(
           "select",
           {
-            value: String(this.formatOptions.keywordCase),
+            value: this.formatOptions.keywordCase,
             onchange: (e: Event) => {
-              this.formatOptions.keywordCase = Number(
-                (e.target as HTMLSelectElement).value,
-              ) as KeywordCase;
+              this.formatOptions.keywordCase = (e.target as HTMLSelectElement)
+                .value as KeywordCase;
             },
           },
           [
-            m("option", {value: "0"}, "Preserve"),
-            m("option", {value: "1"}, "Upper"),
-            m("option", {value: "2"}, "Lower"),
+            m("option", {value: "upper"}, "Upper"),
+            m("option", {value: "lower"}, "Lower"),
           ],
         ),
         m("input[type=checkbox]", {
