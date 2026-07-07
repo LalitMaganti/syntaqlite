@@ -3,8 +3,6 @@
 
 import type {
   AstResult,
-  CompletionEntry,
-  CompletionsResult,
   DiagnosticEntry,
   DiagnosticsResult,
   DialectBinding,
@@ -57,12 +55,8 @@ export class Engine {
   private clearDialectRaw: WasmFn | undefined = undefined;
   private allocRaw: WasmFn | undefined = undefined;
   private freeRaw: WasmFn | undefined = undefined;
-  private astRaw: WasmFn | undefined = undefined;
   private astJsonRaw: WasmFn | undefined = undefined;
   private fmtRaw: WasmFn | undefined = undefined;
-  private diagnosticsRaw: WasmFn | undefined = undefined;
-  private semanticTokensRaw: WasmFn | undefined = undefined;
-  private completionsRaw: WasmFn | undefined = undefined;
   private resultPtrRaw: WasmFn | undefined = undefined;
   private resultLenRaw: WasmFn | undefined = undefined;
   private resultFreeRaw: WasmFn | undefined = undefined;
@@ -71,9 +65,6 @@ export class Engine {
   private clearCflagRaw: WasmFn | undefined = undefined;
   private clearAllCflagsRaw: WasmFn | undefined = undefined;
   private getCflagListRaw: WasmFn | undefined = undefined;
-  private setSessionContextRaw: WasmFn | undefined = undefined;
-  private clearSessionContextRaw: WasmFn | undefined = undefined;
-  private setSessionContextDdlRaw: WasmFn | undefined = undefined;
   private embeddedExtractRaw: WasmFn | undefined = undefined;
   private embeddedDiagnosticsRaw: WasmFn | undefined = undefined;
   private embeddedSemanticTokensRaw: WasmFn | undefined = undefined;
@@ -81,6 +72,8 @@ export class Engine {
   private currentLangMode: "sql" | EmbeddedLanguage = "sql";
   /** Handle for the WASM session all calls run against. 0 = not created yet. */
   private session = 0;
+  /** Sequence for `syntaqlite/setSessionContext` request ids. */
+  private contextSeq = 0;
   /** Last session context applied, so it can be re-applied after dialect switches. */
   private sessionContext: {kind: "json"; json: string} | {kind: "ddl"; sql: string} | null = null;
 
@@ -120,12 +113,8 @@ export class Engine {
     this.clearDialectRaw = this.tryResolveRuntimeFn("wasm_clear_dialect");
     this.allocRaw = this.resolveRuntimeFn("wasm_alloc");
     this.freeRaw = this.resolveRuntimeFn("wasm_free");
-    this.astRaw = this.tryResolveRuntimeFn("wasm_ast");
     this.astJsonRaw = this.tryResolveRuntimeFn("wasm_ast_json");
     this.fmtRaw = this.resolveRuntimeFn("wasm_fmt");
-    this.diagnosticsRaw = this.tryResolveRuntimeFn("wasm_diagnostics");
-    this.semanticTokensRaw = this.tryResolveRuntimeFn("wasm_semantic_tokens");
-    this.completionsRaw = this.tryResolveRuntimeFn("wasm_completions");
     this.resultPtrRaw = this.resolveRuntimeFn("wasm_result_ptr");
     this.resultLenRaw = this.resolveRuntimeFn("wasm_result_len");
     this.resultFreeRaw = this.resolveRuntimeFn("wasm_result_free");
@@ -134,9 +123,6 @@ export class Engine {
     this.clearCflagRaw = this.tryResolveRuntimeFn("wasm_clear_cflag");
     this.clearAllCflagsRaw = this.tryResolveRuntimeFn("wasm_clear_all_cflags");
     this.getCflagListRaw = this.tryResolveRuntimeFn("wasm_get_cflag_list");
-    this.setSessionContextRaw = this.tryResolveRuntimeFn("wasm_set_session_context");
-    this.clearSessionContextRaw = this.tryResolveRuntimeFn("wasm_clear_session_context");
-    this.setSessionContextDdlRaw = this.tryResolveRuntimeFn("wasm_set_session_context_ddl");
     this.embeddedExtractRaw = this.tryResolveRuntimeFn("wasm_embedded_extract");
     this.embeddedDiagnosticsRaw = this.tryResolveRuntimeFn("wasm_embedded_diagnostics");
     this.embeddedSemanticTokensRaw = this.tryResolveRuntimeFn("wasm_embedded_semantic_tokens");
@@ -245,7 +231,7 @@ export class Engine {
     if (status !== 0) {
       throw new Error(detail || `wasm_set_dialect failed with status ${status}`);
     }
-    // The WASM invalidates the LSP host on dialect switch, discarding any
+    // The WASM drops the language server on dialect switch, discarding any
     // session context. Re-apply it so callers don't have to track this.
     this.reapplySessionContext();
   }
@@ -263,13 +249,6 @@ export class Engine {
     if (!this.clearDialectRaw) return;
     this.clearDialectRaw(this.session);
     this.readAndClearResult();
-  }
-
-  runAst(sql: string): FormatResult {
-    if (!this.astRaw) return {ok: false, text: "AST dump not supported by this runtime"};
-    const status = this.withInput(sql, (ptr, len) => this.astRaw!(ptr, len));
-    const text = this.readAndClearResult();
-    return {ok: status === 0, text};
   }
 
   runAstJson(sql: string): AstResult {
@@ -293,30 +272,17 @@ export class Engine {
     return {ok: status === 0, text};
   }
 
-  /** Run semantic token analysis over a byte range. Returns a pre-encoded
-   *  Uint32Array (5 u32s per token: deltaLine, deltaStartChar, length,
-   *  legendIndex, 0) ready for Monaco, or undefined on failure.
-   *  Pass rangeStart=0 and rangeEnd=0xFFFFFFFF for the full document. */
-  runSemanticTokens(
-    sql: string,
-    rangeStart = 0,
-    rangeEnd = 0xffffffff,
-    version = 1,
-  ): Uint32Array | undefined {
+  /** Semantic tokens for an embedded-language document (see setLanguageMode).
+   *  Returns a pre-encoded Uint32Array (5 u32s per token) or undefined on
+   *  failure. SQL documents are served over LSP (`textDocument/semanticTokens`).
+   *  @experimental Embedded language support is experimental and may change. */
+  runEmbeddedSemanticTokens(source: string): Uint32Array | undefined {
+    if (this.currentLangMode === "sql" || !this.embeddedSemanticTokensRaw) return undefined;
+    const lang = embeddedLangCode(this.currentLangMode);
     try {
-      let count: number;
-      if (this.currentLangMode !== "sql") {
-        if (!this.embeddedSemanticTokensRaw) return undefined;
-        const lang = embeddedLangCode(this.currentLangMode);
-        count = this.withInput(sql, (ptr, len) =>
-          this.embeddedSemanticTokensRaw!(this.session, lang, ptr, len),
-        );
-      } else {
-        if (!this.semanticTokensRaw) return undefined;
-        count = this.withInput(sql, (ptr, len) =>
-          this.semanticTokensRaw!(this.session, ptr, len, rangeStart, rangeEnd, version),
-        );
-      }
+      const count = this.withInput(source, (ptr, len) =>
+        this.embeddedSemanticTokensRaw!(this.session, lang, ptr, len),
+      );
       if (count <= 0) {
         this.resultFreeRaw!();
         return count === 0 ? new Uint32Array(0) : undefined;
@@ -328,65 +294,43 @@ export class Engine {
       this.resultFreeRaw!();
       return new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
     } catch (e) {
-      console.warn("wasm_semantic_tokens failed:", e);
+      console.warn("wasm_embedded_semantic_tokens failed:", e);
       return undefined;
     }
   }
 
-  runDiagnostics(sql: string, version = 1): DiagnosticsResult {
+  /** Diagnostics for an embedded-language document (see setLanguageMode).
+   *  SQL documents are served over LSP (`textDocument/publishDiagnostics`).
+   *  @experimental Embedded language support is experimental and may change. */
+  runEmbeddedDiagnostics(source: string): DiagnosticsResult {
+    if (this.currentLangMode === "sql" || !this.embeddedDiagnosticsRaw) {
+      return {ok: false, diagnostics: []};
+    }
+    const lang = embeddedLangCode(this.currentLangMode);
     try {
-      let count: number;
-      if (this.currentLangMode !== "sql") {
-        if (!this.embeddedDiagnosticsRaw) return {ok: false, diagnostics: []};
-        const lang = embeddedLangCode(this.currentLangMode);
-        count = this.withInput(sql, (ptr, len) =>
-          this.embeddedDiagnosticsRaw!(this.session, lang, ptr, len),
-        );
-      } else {
-        if (!this.diagnosticsRaw) return {ok: false, diagnostics: []};
-        count = this.withInput(sql, (ptr, len) =>
-          this.diagnosticsRaw!(this.session, ptr, len, version),
-        );
-      }
+      const count = this.withInput(source, (ptr, len) =>
+        this.embeddedDiagnosticsRaw!(this.session, lang, ptr, len),
+      );
       const text = this.readAndClearResult();
       if (count < 0) return {ok: false, diagnostics: []};
       if (count === 0) return {ok: true, diagnostics: []};
       const diagnostics: DiagnosticEntry[] = JSON.parse(text);
       return {ok: true, diagnostics};
     } catch (e) {
-      console.warn("wasm_diagnostics failed:", e);
+      console.warn("wasm_embedded_diagnostics failed:", e);
       return {ok: false, diagnostics: []};
     }
   }
 
-  runCompletions(sql: string, offset: number, version = 1): CompletionsResult {
-    if (!this.completionsRaw) return {ok: false, items: []};
-    try {
-      const count = this.withInput(sql, (ptr, len) =>
-        this.completionsRaw!(this.session, ptr, len, offset >>> 0, version),
-      );
-      const text = this.readAndClearResult();
-      if (count < 0) return {ok: false, items: []};
-      if (count === 0) return {ok: true, items: []};
-      const items: CompletionEntry[] = JSON.parse(text);
-      return {ok: true, items};
-    } catch (e) {
-      console.warn("wasm_completions failed:", e);
-      return {ok: false, items: []};
-    }
-  }
   /** Whether this runtime exposes the LSP JSON-RPC entry point. */
   get lspSupported(): boolean {
     return this.lspMessageRaw !== undefined;
   }
 
-  /** Handle one LSP JSON-RPC message (request or notification) against this
-   *  engine's in-process language server. Returns the outgoing messages as
-   *  parsed objects: the response, if any, plus server-initiated
-   *  notifications such as `textDocument/publishDiagnostics`.
-   *
-   *  The server lifecycle (`initialize`, `shutdown`, `exit`) is handled
-   *  inside the WASM; drive it exactly like a standalone LSP server. */
+  /** Handle one LSP JSON-RPC message against this engine's in-process
+   *  language server. Returns the outgoing messages as parsed objects
+   *  (response plus server notifications). Drive it exactly like a
+   *  standalone LSP server, lifecycle included. */
   lspMessage(message: string | object): unknown[] {
     if (!this.lspMessageRaw) {
       throw new Error("LSP not supported by this runtime");
@@ -473,6 +417,8 @@ export class Engine {
     }
   }
 
+  /** Set the schema session context from structured catalog JSON, via the
+   *  `syntaqlite/setSessionContext` extension request. Throws on rejection. */
   setSessionContext(json: string): void {
     this.sessionContext = {kind: "json", json};
     this.applySessionContextJson(json);
@@ -480,10 +426,16 @@ export class Engine {
 
   clearSessionContext(): void {
     this.sessionContext = null;
-    if (!this.clearSessionContextRaw) return;
-    this.clearSessionContextRaw(this.session);
+    try {
+      this.applySessionContext({});
+    } catch (e) {
+      // No dialect loaded yet means there is no context to clear.
+      console.warn("clearSessionContext skipped:", e);
+    }
   }
 
+  /** Set the schema session context from DDL. DDL that fails to parse is
+   *  reported in `error`; statements that did parse are still applied. */
   setSessionContextDdl(sql: string): {ok: true} | {ok: false; error: string} {
     const result = this.applySessionContextDdl(sql);
     if (result.ok) this.sessionContext = {kind: "ddl", sql};
@@ -491,24 +443,35 @@ export class Engine {
   }
 
   private applySessionContextJson(json: string): void {
-    if (!this.setSessionContextRaw) return;
-    const status = this.withInput(json, (ptr, len) =>
-      this.setSessionContextRaw!(this.session, ptr, len),
-    );
-    const detail = this.readAndClearResult();
-    if (status !== 0) {
-      throw new Error(detail || `wasm_set_session_context failed with status ${status}`);
-    }
+    this.applySessionContext({context: JSON.parse(json) as object});
   }
 
   private applySessionContextDdl(sql: string): {ok: true} | {ok: false; error: string} {
-    if (!this.setSessionContextDdlRaw) return {ok: false, error: "DDL context not supported"};
-    const status = this.withInput(sql, (ptr, len) =>
-      this.setSessionContextDdlRaw!(this.session, ptr, len),
-    );
-    const detail = this.readAndClearResult();
-    if (status !== 0) return {ok: false, error: detail || "DDL parse failed"};
-    return {ok: true};
+    try {
+      const errors = this.applySessionContext({ddl: sql});
+      if (errors.length > 0) return {ok: false, error: errors.join("\n")};
+      return {ok: true};
+    } catch (e) {
+      return {ok: false, error: (e as Error).message};
+    }
+  }
+
+  /** Send a `syntaqlite/setSessionContext` extension request to the
+   *  language server. Returns the (possibly empty) DDL parse errors;
+   *  throws if the server rejects the request. */
+  private applySessionContext(params: object): string[] {
+    const id = `session-context-${this.contextSeq++}`;
+    const out = this.lspMessage({
+      jsonrpc: "2.0",
+      id,
+      method: "syntaqlite/setSessionContext",
+      params,
+    }) as Array<{id?: unknown; result?: {errors?: string[]}; error?: {message: string}}>;
+    const response = out.find((m) => m && typeof m === "object" && m.id === id);
+    if (response?.error) {
+      throw new Error(response.error.message);
+    }
+    return response?.result?.errors ?? [];
   }
 }
 

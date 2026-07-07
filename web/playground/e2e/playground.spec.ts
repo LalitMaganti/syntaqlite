@@ -90,8 +90,23 @@ test("default load writes a preset param to the hash (not custom SQL)", async ({
 });
 
 // ---------------------------------------------------------------------------
-// Completions (served over the in-process LSP)
+// Editor features (served over the in-process LSP)
 // ---------------------------------------------------------------------------
+
+test("invalid SQL surfaces diagnostic markers", async ({page}) => {
+  await page.goto("/");
+  await expect(page.locator(".sq-viewer-pane")).toContainText(/SELECT/i, {timeout: 15000});
+
+  const editor = page.locator(".sq-workspace .monaco-editor").first();
+  await expect(editor).toBeVisible();
+  await editor.click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("selec 1");
+
+  await expect(
+    page.locator(".sq-workspace .monaco-editor .squiggly-error").first(),
+  ).toBeVisible({timeout: 10000});
+});
 
 test("typing in the editor surfaces SQL completions", async ({page}) => {
   await page.goto("/");

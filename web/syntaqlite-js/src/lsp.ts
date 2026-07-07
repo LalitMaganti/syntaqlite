@@ -12,9 +12,7 @@ export interface LspPortLike {
 
 /** Bridge LSP JSON-RPC messages between a `postMessage` channel and the
  *  engine's in-process language server, so a standard browser LSP client
- *  (CodeMirror, Monaco, ...) can talk to syntaqlite running in a Web Worker.
- *
- *  Inside a worker:
+ *  (CodeMirror, Monaco, ...) can talk to syntaqlite running in a Web Worker:
  *
  *  ```ts
  *  const engine = new Engine();
@@ -22,10 +20,7 @@ export interface LspPortLike {
  *  await new DialectManager().loadDefault(engine);
  *  attachLspPort(engine, self as unknown as LspPortLike);
  *  ```
- *
- *  Each incoming message is dispatched synchronously; every outgoing
- *  message (responses and server notifications like
- *  `textDocument/publishDiagnostics`) is posted back on the same port. */
+ */
 export function attachLspPort(engine: Engine, port: LspPortLike): void {
   port.onmessage = (ev) => {
     for (const out of engine.lspMessage(ev.data as object)) {

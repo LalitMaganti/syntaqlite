@@ -15,6 +15,11 @@
 //! non-negative count on success) and write their payload — or the error
 //! message — to a shared result buffer read via [`wasm_result_ptr`] /
 //! [`wasm_result_len`] and released with [`wasm_result_free`].
+//!
+//! All editor features (diagnostics, completions, semantic tokens, schema
+//! session context, ...) are served over LSP JSON-RPC via
+//! [`wasm_lsp_message`]. The remaining direct calls are one-shot utilities
+//! (format, AST dump, cflag list) and the experimental embedded analyzers.
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
@@ -24,15 +29,14 @@ use serde::Serialize;
 
 use syntaqlite::any::AnyDialect;
 use syntaqlite::fmt::KeywordCase;
-use syntaqlite::lsp::{LspDispatcher, LspHost};
-use syntaqlite::source::{DocLen, DocOffset, DocRange};
+use syntaqlite::lsp::LspDispatcher;
 use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
-use syntaqlite::{AnalysisConfig, FormatConfig, Formatter};
+use syntaqlite::{FormatConfig, Formatter};
 
 // ── Session ──────────────────────────────────────────────────────────
 
 /// Per-session state: dialect (with version/cflag overrides layered on the
-/// loaded template) and the lazily built LSP host derived from it.
+/// loaded template) and the lazily built language server derived from it.
 struct Session {
     /// Raw pointer to the active `SyntaqliteDialectTemplate`, retained so
     /// version/cflag overrides can rebuild the dialect without reloading
@@ -41,9 +45,8 @@ struct Session {
     version: SqliteVersion,
     cflags: SqliteFlags,
     dialect: Option<AnyDialect>,
-    /// Lazily created from `dialect`; dropped whenever the dialect changes.
-    /// Serves both the LSP JSON-RPC entry point and the direct analysis
-    /// calls, which share its host state.
+    /// Language server behind [`wasm_lsp_message`]; lazily created from
+    /// `dialect` and dropped whenever the dialect changes.
     lsp: Option<LspDispatcher>,
 }
 
@@ -59,8 +62,8 @@ impl Session {
     }
 
     /// Rebuild the dialect from the stored template pointer, applying the
-    /// session's version/cflag overrides. Drops the LSP host, which is bound
-    /// to the old dialect. No-op when no side module is loaded yet.
+    /// session's version/cflag overrides. Drops the language server, which
+    /// is bound to the old dialect. No-op when no side module is loaded yet.
     fn rebuild_dialect(&mut self) {
         self.lsp = None;
         if self.dialect_template == 0 {
@@ -89,10 +92,6 @@ impl Session {
             self.lsp = Some(LspDispatcher::new(self.dialect()?));
         }
         Ok(self.lsp.as_mut().expect("lsp dispatcher just created"))
-    }
-
-    fn lsp_host(&mut self) -> Result<&mut LspHost, String> {
-        Ok(self.lsp()?.host_mut())
     }
 }
 
@@ -416,159 +415,6 @@ pub extern "C" fn wasm_fmt(
     )
 }
 
-// ── Session context ──────────────────────────────────────────────────
-
-fn run_set_session_context(session: &mut Session, ptr: u32, len: u32) -> i32 {
-    let input = try_wasm!(decode_input(ptr, len));
-    let lsp = try_wasm!(session.lsp_host());
-    try_wasm!(lsp.set_session_context_from_json(&input));
-    0
-}
-
-fn run_set_session_context_ddl(session: &mut Session, ptr: u32, len: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len));
-    let lsp = try_wasm!(session.lsp_host());
-    match lsp.set_session_context_from_ddl(&source, None) {
-        Ok(()) => 0,
-        Err(errors) => {
-            set_result(&errors.join("\n"));
-            1
-        }
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_set_session_context(handle: u32, ptr: u32, len: u32) -> i32 {
-    catch_unwind(
-        || with_session(handle, |s| run_set_session_context(s, ptr, len)),
-        "wasm_set_session_context panicked",
-    )
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_clear_session_context(handle: u32) -> i32 {
-    catch_unwind(
-        || {
-            with_session(handle, |s| {
-                s.lsp = None;
-                0
-            })
-        },
-        "wasm_clear_session_context panicked",
-    )
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_set_session_context_ddl(handle: u32, ptr: u32, len: u32) -> i32 {
-    catch_unwind(
-        || with_session(handle, |s| run_set_session_context_ddl(s, ptr, len)),
-        "wasm_set_session_context_ddl panicked",
-    )
-}
-
-// ── Diagnostics / semantic tokens / completions ──────────────────────
-
-const WASM_DOC_URI: &str = "wasm://input";
-
-fn run_diagnostics(session: &mut Session, ptr: u32, len: u32, version: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len));
-    let lsp = try_wasm!(session.lsp_host());
-    lsp.update_document(WASM_DOC_URI, version.cast_signed(), source);
-    let all_diags = lsp.all_diagnostics(WASM_DOC_URI, &AnalysisConfig::default());
-    let total_count = all_diags.len();
-    set_result(&serde_json::to_string(&all_diags).expect("diagnostic serialization failed"));
-    i32::try_from(total_count).expect("diagnostic count fits i32")
-}
-
-fn run_semantic_tokens(
-    session: &mut Session,
-    ptr: u32,
-    len: u32,
-    range_start: u32,
-    range_end: u32,
-    version: u32,
-) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len));
-    let lsp = try_wasm!(session.lsp_host());
-    lsp.update_document(WASM_DOC_URI, version.cast_signed(), source);
-    let range = if range_start == 0 && range_end == 0xFFFF_FFFF {
-        None
-    } else {
-        Some(DocRange::from_offset_len(
-            DocOffset::from_raw(range_start),
-            DocLen::from_raw(range_end.saturating_sub(range_start)),
-        ))
-    };
-    let encoded = lsp.semantic_tokens_encoded(WASM_DOC_URI, range);
-    let token_count = i32::try_from(encoded.len() / 5).expect("token count fits i32");
-    set_result_u32s(&encoded);
-    token_count
-}
-
-#[derive(Serialize)]
-struct CompletionItem {
-    label: String,
-    kind: &'static str,
-}
-
-fn run_completions(session: &mut Session, ptr: u32, len: u32, offset: u32, version: u32) -> i32 {
-    let source = try_wasm!(decode_input(ptr, len));
-    let lsp = try_wasm!(session.lsp_host());
-    lsp.update_document(WASM_DOC_URI, version.cast_signed(), source);
-    let entries = lsp.completion_items(WASM_DOC_URI, DocOffset::from_raw(offset));
-    let count = i32::try_from(entries.len()).expect("completion count fits i32");
-    let items: Vec<CompletionItem> = entries
-        .into_iter()
-        .map(|e| CompletionItem {
-            label: e.label().to_string(),
-            kind: e.kind().as_str(),
-        })
-        .collect();
-    set_result(&serde_json::to_string(&items).expect("completions serialization failed"));
-    count
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_diagnostics(handle: u32, ptr: u32, len: u32, version: u32) -> i32 {
-    catch_unwind(
-        || with_session(handle, |s| run_diagnostics(s, ptr, len, version)),
-        "wasm_diagnostics panicked",
-    )
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_semantic_tokens(
-    handle: u32,
-    ptr: u32,
-    len: u32,
-    range_start: u32,
-    range_end: u32,
-    version: u32,
-) -> i32 {
-    catch_unwind(
-        || {
-            with_session(handle, |s| {
-                run_semantic_tokens(s, ptr, len, range_start, range_end, version)
-            })
-        },
-        "wasm_semantic_tokens panicked",
-    )
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn wasm_completions(
-    handle: u32,
-    ptr: u32,
-    len: u32,
-    offset: u32,
-    version: u32,
-) -> i32 {
-    catch_unwind(
-        || with_session(handle, |s| run_completions(s, ptr, len, offset, version)),
-        "wasm_completions panicked",
-    )
-}
-
 // ── LSP JSON-RPC ─────────────────────────────────────────────────────
 
 /// Join already-serialized JSON-RPC messages into one JSON array.
@@ -585,15 +431,10 @@ fn run_lsp_message(session: &mut Session, ptr: u32, len: u32) -> i32 {
     count
 }
 
-/// Handle one LSP JSON-RPC message (request or notification) against the
-/// session's language server. The result buffer receives a JSON array of
-/// outgoing messages: the response, if any, plus server-initiated
-/// notifications such as `textDocument/publishDiagnostics`. Returns the
-/// number of outgoing messages, or a negative value on error.
-///
-/// The server lifecycle (`initialize`, `shutdown`, `exit`) is handled by
-/// the dispatcher; the session itself outlives an `exit` notification and
-/// can be re-initialized.
+/// Handle one LSP JSON-RPC message against the session's language server.
+/// The result buffer receives a JSON array of outgoing messages (response
+/// plus server-initiated notifications); returns their count, negative on
+/// error. The session outlives `exit` and can be re-initialized.
 #[unsafe(no_mangle)]
 pub extern "C" fn wasm_lsp_message(handle: u32, ptr: u32, len: u32) -> i32 {
     catch_unwind(
@@ -910,7 +751,7 @@ mod tests {
     #[test]
     fn session_without_dialect_reports_error() {
         let h = session_new();
-        let status = with_session(h, |s| match s.lsp_host() {
+        let status = with_session(h, |s| match s.lsp() {
             Ok(_) => 0,
             Err(e) => {
                 set_result(&e);

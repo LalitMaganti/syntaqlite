@@ -9,7 +9,6 @@ import "monaco-editor/esm/vs/basic-languages/python/python.contribution";
 import "monaco-editor/esm/vs/basic-languages/typescript/typescript.contribution";
 import {FORMATTED_MODEL_URI, INPUT_MODEL_URI} from "./app/editor_models";
 import type {Engine} from "syntaqlite";
-import {LspSession} from "./lsp_session";
 import {AppComponent} from "./components/app";
 import "./styles/main.css";
 
@@ -64,7 +63,7 @@ const TOKEN_LEGEND: monaco.languages.SemanticTokensLegend = {
   tokenModifiers: [],
 };
 
-function registerSemanticTokensProvider(engine: Engine): void {
+function registerSemanticTokensProvider(app: App, engine: Engine): void {
   const provider: monaco.languages.DocumentRangeSemanticTokensProvider = {
     getLegend: () => TOKEN_LEGEND,
 
@@ -78,13 +77,18 @@ function registerSemanticTokensProvider(engine: Engine): void {
         return {data: new Uint32Array(0)};
       }
       const source = model.getValue();
-      const version = model.getVersionId();
-      // engine.runSemanticTokens() dispatches to the correct implementation
-      // (SQL or embedded) based on the language mode set via engine.setLanguageMode().
-      // In embedded mode the WASM ignores the range and returns full-document tokens.
-      const rangeStart = model.getOffsetAt(range.getStartPosition());
-      const rangeEnd = model.getOffsetAt(range.getEndPosition());
-      const data = engine.runSemanticTokens(source, rangeStart, rangeEnd, version);
+      if (app.languageMode !== "sql") {
+        // Embedded analyzers ignore the range and return full-document tokens.
+        const data = engine.runEmbeddedSemanticTokens(source);
+        return {data: data ?? new Uint32Array(0)};
+      }
+      // Monaco positions are 1-based UTF-16; LSP positions are 0-based UTF-16.
+      const data = app.lsp.semanticTokens(uri, source, model.getVersionId(), {
+        startLine: range.startLineNumber - 1,
+        startCharacter: range.startColumn - 1,
+        endLine: range.endLineNumber - 1,
+        endCharacter: range.endColumn - 1,
+      });
       return {data: data ?? new Uint32Array(0)};
     },
   };
@@ -102,7 +106,7 @@ const LSP_COMPLETION_KINDS = new Map<number, monaco.languages.CompletionItemKind
   [22, monaco.languages.CompletionItemKind.Struct], // table
 ]);
 
-function registerCompletionProvider(app: App, engine: Engine, lsp: LspSession): void {
+function registerCompletionProvider(app: App, engine: Engine): void {
   monaco.languages.registerCompletionItemProvider("sql", {
     triggerCharacters: [" ", "\t", ";", "(", ","],
     provideCompletionItems(
@@ -116,7 +120,7 @@ function registerCompletionProvider(app: App, engine: Engine, lsp: LspSession): 
       }
 
       // Monaco positions are 1-based UTF-16; LSP positions are 0-based UTF-16.
-      const items = lsp.completions(
+      const items = app.lsp.completions(
         INPUT_MODEL_URI,
         model.getValue(),
         model.getVersionId(),
@@ -213,8 +217,8 @@ async function main() {
     // Apply URL-specified schema context (no-op if schema is empty).
     app.schemaContext.apply(app.runtime, schema, schemaFormat);
 
-    registerSemanticTokensProvider(app.runtime);
-    registerCompletionProvider(app, app.runtime, new LspSession(app.runtime));
+    registerSemanticTokensProvider(app, app.runtime);
+    registerCompletionProvider(app, app.runtime);
     registerCodeActionProvider(app);
     app.runtime.updateStatus("Ready.");
   } catch (err) {
