@@ -45,6 +45,7 @@ impl syntaqlite::fmt::FormatConfig
 impl syntaqlite::fmt::FormatError
 impl syntaqlite::lsp::CompletionEntry
 impl syntaqlite::lsp::CompletionKind
+impl syntaqlite::lsp::LspDispatcher
 impl syntaqlite::lsp::LspHost
 impl syntaqlite::lsp::LspServer
 impl syntaqlite::lsp::SchemaMap
@@ -216,6 +217,11 @@ pub fn syntaqlite::lsp::CompletionEntry::kind(&self) -> syntaqlite::lsp::Complet
 pub fn syntaqlite::lsp::CompletionEntry::label(&self) -> &str
 pub fn syntaqlite::lsp::CompletionKind::as_str(self) -> &'static str
 pub fn syntaqlite::lsp::CompletionKind::sort_priority(self) -> u8
+pub fn syntaqlite::lsp::LspDispatcher::exited(&self) -> bool
+pub fn syntaqlite::lsp::LspDispatcher::handle(&mut self, lsp_server::msg::Message) -> alloc::vec::Vec<lsp_server::msg::Message>
+pub fn syntaqlite::lsp::LspDispatcher::handle_json(&mut self, &str) -> alloc::vec::Vec<alloc::string::String>
+pub fn syntaqlite::lsp::LspDispatcher::new(impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
+pub fn syntaqlite::lsp::LspDispatcher::with_config(impl core::convert::Into<syntaqlite::any::AnyDialect>, syntaqlite::lsp::LspConfig) -> Self
 pub fn syntaqlite::lsp::LspHost::all_diagnostics(&mut self, &str, &syntaqlite::AnalysisConfig) -> alloc::vec::Vec<syntaqlite::Diagnostic>
 pub fn syntaqlite::lsp::LspHost::available_function_names(&self) -> alloc::vec::Vec<alloc::string::String>
 pub fn syntaqlite::lsp::LspHost::completion_items(&mut self, &str, syntaqlite_syntax::source::DocOffset) -> alloc::vec::Vec<syntaqlite::lsp::CompletionEntry>
@@ -293,6 +299,7 @@ pub struct syntaqlite::fmt::FormatError
 pub struct syntaqlite::fmt::Formatter
 pub struct syntaqlite::lsp::CompletionEntry
 pub struct syntaqlite::lsp::LspConfig
+pub struct syntaqlite::lsp::LspDispatcher
 pub struct syntaqlite::lsp::LspHost
 pub struct syntaqlite::lsp::LspServer
 pub struct syntaqlite::lsp::SchemaMap
