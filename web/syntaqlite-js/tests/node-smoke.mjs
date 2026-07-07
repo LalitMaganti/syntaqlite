@@ -41,6 +41,15 @@ if (!/SELECT a, b FROM t WHERE a = 1/.test(fmt)) {
   throw new Error(`unexpected format output: ${fmt}`);
 }
 
+// Every format option must take effect.
+const narrow = engine.format(
+  "select aaaa,bbbb,cccc,dddd from a_long_table where aaaa=1",
+  {lineWidth: 20, indentWidth: 4, keywordCase: "lower", semicolons: false},
+);
+if (!/select\n/.test(narrow)) throw new Error(`lineWidth/keywordCase ignored: ${narrow}`);
+if (!/^ {4}\S/m.test(narrow)) throw new Error(`indentWidth ignored: ${narrow}`);
+if (/;/.test(narrow)) throw new Error(`semicolons ignored: ${narrow}`);
+
 const parsed = engine.parse("SELECT 1; selec 2");
 if (parsed.statements.length !== 1 || parsed.errors.length === 0) {
   throw new Error(`unexpected parse result: ${JSON.stringify(parsed)}`);
