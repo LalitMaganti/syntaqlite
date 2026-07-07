@@ -51,4 +51,32 @@ if (unaffected.diagnostics.some((d) => d.detail?.kind === "unknown_column")) {
 }
 other.dispose();
 
+// LSP JSON-RPC session against the in-process language server.
+if (!engine.lspSupported) throw new Error("LSP entry point missing from runtime");
+const init = engine.lspMessage({
+  jsonrpc: "2.0", id: 1, method: "initialize", params: {capabilities: {}},
+});
+if (init.length !== 1) throw new Error(`expected 1 initialize response, got ${init.length}`);
+if (init[0].result?.capabilities?.positionEncoding !== "utf-16") {
+  throw new Error(`unexpected initialize result: ${JSON.stringify(init[0])}`);
+}
+engine.lspMessage({jsonrpc: "2.0", method: "initialized", params: {}});
+const open = engine.lspMessage({
+  jsonrpc: "2.0", method: "textDocument/didOpen",
+  params: {textDocument: {uri: "file:///w.sql", languageId: "sql", version: 1, text: "selec 1"}},
+});
+if (open[0]?.method !== "textDocument/publishDiagnostics") {
+  throw new Error(`expected publishDiagnostics, got ${JSON.stringify(open)}`);
+}
+if (open[0].params.diagnostics.length === 0) {
+  throw new Error("expected a parse diagnostic from LSP didOpen");
+}
+const lspComp = engine.lspMessage({
+  jsonrpc: "2.0", id: 2, method: "textDocument/completion",
+  params: {textDocument: {uri: "file:///w.sql"}, position: {line: 0, character: 7}},
+});
+if (!Array.isArray(lspComp[0]?.result) || lspComp[0].result.length === 0) {
+  throw new Error("expected LSP completion items");
+}
+
 console.log("node smoke test: OK");

@@ -75,6 +75,8 @@ list and signatures):
 - `wasm_ast_json(session, u32, u32) -> i32`
 - `wasm_fmt(session, u32, u32, u32, u32, u32, u32) -> i32`
 - `wasm_diagnostics` / `wasm_semantic_tokens` / `wasm_completions` (session-scoped)
+- `wasm_lsp_message(session, u32, u32) -> i32` — LSP JSON-RPC entry point;
+  the result buffer receives a JSON array of outgoing messages
 - `wasm_result_ptr() -> u32`, `wasm_result_len() -> u32`, `wasm_result_free()`
 
 Setter calls return status code `0` on success, non-zero on error; query

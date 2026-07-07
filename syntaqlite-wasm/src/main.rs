@@ -24,7 +24,7 @@ use serde::Serialize;
 
 use syntaqlite::any::AnyDialect;
 use syntaqlite::fmt::KeywordCase;
-use syntaqlite::lsp::LspHost;
+use syntaqlite::lsp::{LspDispatcher, LspHost};
 use syntaqlite::source::{DocLen, DocOffset, DocRange};
 use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
 use syntaqlite::{AnalysisConfig, FormatConfig, Formatter};
@@ -42,7 +42,9 @@ struct Session {
     cflags: SqliteFlags,
     dialect: Option<AnyDialect>,
     /// Lazily created from `dialect`; dropped whenever the dialect changes.
-    lsp: Option<LspHost>,
+    /// Serves both the LSP JSON-RPC entry point and the direct analysis
+    /// calls, which share its host state.
+    lsp: Option<LspDispatcher>,
 }
 
 impl Session {
@@ -82,11 +84,15 @@ impl Session {
             .ok_or_else(|| "no dialect loaded: call wasm_set_dialect first".to_string())
     }
 
-    fn lsp_host(&mut self) -> Result<&mut LspHost, String> {
+    fn lsp(&mut self) -> Result<&mut LspDispatcher, String> {
         if self.lsp.is_none() {
-            self.lsp = Some(LspHost::with_dialect(self.dialect()?));
+            self.lsp = Some(LspDispatcher::new(self.dialect()?));
         }
-        Ok(self.lsp.as_mut().expect("lsp host just created"))
+        Ok(self.lsp.as_mut().expect("lsp dispatcher just created"))
+    }
+
+    fn lsp_host(&mut self) -> Result<&mut LspHost, String> {
+        Ok(self.lsp()?.host_mut())
     }
 }
 
@@ -563,6 +569,39 @@ pub extern "C" fn wasm_completions(
     )
 }
 
+// ── LSP JSON-RPC ─────────────────────────────────────────────────────
+
+/// Join already-serialized JSON-RPC messages into one JSON array.
+fn join_messages(messages: &[String]) -> String {
+    format!("[{}]", messages.join(","))
+}
+
+fn run_lsp_message(session: &mut Session, ptr: u32, len: u32) -> i32 {
+    let input = try_wasm!(decode_input(ptr, len));
+    let lsp = try_wasm!(session.lsp());
+    let out = lsp.handle_json(&input);
+    let count = i32::try_from(out.len()).expect("message count fits i32");
+    set_result(&join_messages(&out));
+    count
+}
+
+/// Handle one LSP JSON-RPC message (request or notification) against the
+/// session's language server. The result buffer receives a JSON array of
+/// outgoing messages: the response, if any, plus server-initiated
+/// notifications such as `textDocument/publishDiagnostics`. Returns the
+/// number of outgoing messages, or a negative value on error.
+///
+/// The server lifecycle (`initialize`, `shutdown`, `exit`) is handled by
+/// the dispatcher; the session itself outlives an `exit` notification and
+/// can be re-initialized.
+#[unsafe(no_mangle)]
+pub extern "C" fn wasm_lsp_message(handle: u32, ptr: u32, len: u32) -> i32 {
+    catch_unwind(
+        || with_session(handle, |s| run_lsp_message(s, ptr, len)),
+        "wasm_lsp_message panicked",
+    )
+}
+
 // ── Dialect switching ────────────────────────────────────────────────
 
 fn run_set_dialect(session: &mut Session, ptr: u32) -> i32 {
@@ -844,6 +883,28 @@ mod tests {
     fn invalid_handle_is_rejected() {
         assert_eq!(with_session(0, |_| 0), -1);
         assert_eq!(result_text(), "invalid session handle");
+    }
+
+    #[test]
+    fn join_messages_forms_a_json_array() {
+        assert_eq!(join_messages(&[]), "[]");
+        let joined = join_messages(&[r#"{"a":1}"#.to_string(), r#"{"b":2}"#.to_string()]);
+        let parsed: Vec<serde_json::Value> = serde_json::from_str(&joined).unwrap();
+        assert_eq!(parsed.len(), 2);
+    }
+
+    #[test]
+    fn lsp_message_initialize_roundtrip() {
+        // The dialect template pointer path is wasm-only; inject the SQLite
+        // dialect directly to exercise the dispatcher plumbing natively.
+        let mut session = Session::new();
+        session.dialect = Some(syntaqlite::sqlite_dialect().into());
+        let out = session.lsp().unwrap().handle_json(
+            r#"{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"capabilities":{}}}"#,
+        );
+        assert_eq!(out.len(), 1);
+        let resp: serde_json::Value = serde_json::from_str(&out[0]).unwrap();
+        assert!(resp["result"]["capabilities"].is_object());
     }
 
     #[test]

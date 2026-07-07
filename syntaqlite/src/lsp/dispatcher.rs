@@ -159,6 +159,13 @@ impl LspDispatcher {
         self.exited
     }
 
+    /// Direct access to the underlying host, for embedders that mix LSP
+    /// messages with programmatic calls (e.g. setting a session context
+    /// out of band). State changed here is visible to subsequent messages.
+    pub fn host_mut(&mut self) -> &mut LspHost {
+        &mut self.host
+    }
+
     /// Handle one incoming message, returning the messages to send back —
     /// at most one response, plus any server-initiated notifications.
     ///

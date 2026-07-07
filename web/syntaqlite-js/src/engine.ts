@@ -77,6 +77,7 @@ export class Engine {
   private embeddedExtractRaw: WasmFn | undefined = undefined;
   private embeddedDiagnosticsRaw: WasmFn | undefined = undefined;
   private embeddedSemanticTokensRaw: WasmFn | undefined = undefined;
+  private lspMessageRaw: WasmFn | undefined = undefined;
   private currentLangMode: "sql" | EmbeddedLanguage = "sql";
   /** Handle for the WASM session all calls run against. 0 = not created yet. */
   private session = 0;
@@ -139,6 +140,7 @@ export class Engine {
     this.embeddedExtractRaw = this.tryResolveRuntimeFn("wasm_embedded_extract");
     this.embeddedDiagnosticsRaw = this.tryResolveRuntimeFn("wasm_embedded_diagnostics");
     this.embeddedSemanticTokensRaw = this.tryResolveRuntimeFn("wasm_embedded_semantic_tokens");
+    this.lspMessageRaw = this.tryResolveRuntimeFn("wasm_lsp_message");
     this.session = this.sessionNewRaw() >>> 0;
     if (this.session === 0) {
       throw new Error("wasm_session_new failed");
@@ -373,6 +375,31 @@ export class Engine {
       return {ok: false, items: []};
     }
   }
+  /** Whether this runtime exposes the LSP JSON-RPC entry point. */
+  get lspSupported(): boolean {
+    return this.lspMessageRaw !== undefined;
+  }
+
+  /** Handle one LSP JSON-RPC message (request or notification) against this
+   *  engine's in-process language server. Returns the outgoing messages as
+   *  parsed objects: the response, if any, plus server-initiated
+   *  notifications such as `textDocument/publishDiagnostics`.
+   *
+   *  The server lifecycle (`initialize`, `shutdown`, `exit`) is handled
+   *  inside the WASM; drive it exactly like a standalone LSP server. */
+  lspMessage(message: string | object): unknown[] {
+    if (!this.lspMessageRaw) {
+      throw new Error("LSP not supported by this runtime");
+    }
+    const json = typeof message === "string" ? message : JSON.stringify(message);
+    const count = this.withInput(json, (ptr, len) => this.lspMessageRaw!(this.session, ptr, len));
+    const text = this.readAndClearResult();
+    if (count < 0) {
+      throw new Error(text || "wasm_lsp_message failed");
+    }
+    return count === 0 ? [] : (JSON.parse(text) as unknown[]);
+  }
+
   /** Set the active language mode. Diagnostics, semantic tokens, and extraction
    *  dispatch to the SQL or embedded implementation based on this mode.
    *  @experimental Embedded language support is experimental and may change. */
