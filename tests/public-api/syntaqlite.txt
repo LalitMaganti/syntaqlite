@@ -219,6 +219,7 @@ pub fn syntaqlite::lsp::CompletionKind::as_str(self) -> &'static str
 pub fn syntaqlite::lsp::CompletionKind::sort_priority(self) -> u8
 pub fn syntaqlite::lsp::LspDispatcher::exited(&self) -> bool
 pub fn syntaqlite::lsp::LspDispatcher::handle_json(&mut self, &str) -> alloc::vec::Vec<alloc::string::String>
+pub fn syntaqlite::lsp::LspDispatcher::host_mut(&mut self) -> &mut syntaqlite::lsp::LspHost
 pub fn syntaqlite::lsp::LspDispatcher::new(impl core::convert::Into<syntaqlite::any::AnyDialect>) -> Self
 pub fn syntaqlite::lsp::LspDispatcher::with_config(impl core::convert::Into<syntaqlite::any::AnyDialect>, syntaqlite::lsp::LspConfig) -> Self
 pub fn syntaqlite::lsp::LspHost::all_diagnostics(&mut self, &str, &syntaqlite::AnalysisConfig) -> alloc::vec::Vec<syntaqlite::Diagnostic>
