@@ -1298,7 +1298,10 @@ mod tests {
         // ...but the rename's own existence check still sees the target
         // (tombstone-ignoring), so RENAME TO doesn't flag its own source.
         assert!(cat.relation_defined(&NameKey::new("t3")));
-        assert_eq!(cat.table_source_info(&NameKey::new("t5")).0, Some(vec!["a".to_string()]));
+        assert_eq!(
+            cat.table_source_info(&NameKey::new("t5")).0,
+            Some(vec!["a".to_string()])
+        );
 
         cat.promote_document_to_connection();
         // Next analysis pass starts fresh — the Document tombstone is cleared,
@@ -1319,7 +1322,10 @@ mod tests {
         .0;
         assert!(cat.resolve_relation(&NameKey::new("t3")));
         assert!(cat.resolve_relation(&NameKey::new("t5")));
-        assert_eq!(cat.table_source_info(&NameKey::new("t3")).0, Some(vec!["b".to_string()]));
+        assert_eq!(
+            cat.table_source_info(&NameKey::new("t3")).0,
+            Some(vec!["b".to_string()])
+        );
     }
 
     #[test]
