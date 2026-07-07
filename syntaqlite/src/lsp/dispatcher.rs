@@ -75,9 +75,9 @@ enum Lifecycle {
 
 /// Transport-agnostic LSP server core.
 ///
-/// Feed incoming messages to [`handle`](Self::handle) (or JSON strings to
-/// [`handle_json`](Self::handle_json)) and forward the returned messages to
-/// the client. The dispatcher implements the full lifecycle: it answers
+/// Feed incoming messages as JSON strings to [`handle_json`](Self::handle_json)
+/// and forward the returned messages to the client. The dispatcher
+/// implements the full lifecycle: it answers
 /// `initialize`, rejects requests sent before initialization, and records
 /// the `exit` notification, exposed via [`exited`](Self::exited) so the
 /// transport knows when to stop.
@@ -161,7 +161,10 @@ impl LspDispatcher {
 
     /// Handle one incoming message, returning the messages to send back —
     /// at most one response, plus any server-initiated notifications.
-    pub fn handle(&mut self, msg: Message) -> Vec<Message> {
+    ///
+    /// Crate-private so `lsp_server` wire types stay out of the public API;
+    /// external transports go through [`handle_json`](Self::handle_json).
+    pub(crate) fn handle(&mut self, msg: Message) -> Vec<Message> {
         match msg {
             Message::Request(req) => self.handle_request(req),
             Message::Notification(notif) => self.handle_notification(notif),
