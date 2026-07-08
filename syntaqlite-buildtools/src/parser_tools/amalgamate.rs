@@ -651,10 +651,16 @@ fn emit_dispatch_macros(out: &mut String, dialect: &str) {
         out,
         "#define SYNQ_PARSER_FEED(d, p, t, m) Synq{pascal}Parse(p, t, m)"
     );
+    // SynqXParseTrace is only compiled under `#ifndef NDEBUG` (Lemon guards it),
+    // so the inline dispatch must degrade to a no-op in release builds.
+    out.push_str("#ifndef NDEBUG\n");
     let _ = writeln!(
         out,
         "#define SYNQ_PARSER_TRACE(d, f, s)   Synq{pascal}ParseTrace(f, s)"
     );
+    out.push_str("#else\n");
+    out.push_str("#define SYNQ_PARSER_TRACE(d, f, s)   ((void)0)\n");
+    out.push_str("#endif\n");
     let _ = writeln!(
         out,
         "#define SYNQ_GET_TOKEN(env, z, t)    Synq{pascal}GetToken(env, z, t)"
