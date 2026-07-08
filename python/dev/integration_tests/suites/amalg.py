@@ -43,6 +43,10 @@ def _dialect_configs(root_dir: Path) -> dict[str, DialectConfig]:
             name="sqlite", mode=AmalgMode.FULL,
             extra_cflags=("-DSYNTAQLITE_OMIT_MACROS",),
         ),
+        "sqliteamalgndebug": DialectConfig(
+            name="sqlite", mode=AmalgMode.FULL,
+            extra_cflags=("-DNDEBUG",),
+        ),
         "sqliteamalgomitruntime": DialectConfig(
             name="sqlite", mode=AmalgMode.FULL_OMIT_RUNTIME,
         ),
