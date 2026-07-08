@@ -3,7 +3,7 @@
 ## 0.7.1
 
 **Bug fixes:**
-- Fixed the full C amalgamation failing to compile under `-DNDEBUG`. The inline parser-trace dispatch macro called `Synq<Dialect>ParseTrace`, which Lemon only defines in debug builds, so release builds hit an undeclared-identifier error. The macro now degrades to a no-op when `NDEBUG` is defined.
+- Fixed the full C amalgamation failing to compile under `-DNDEBUG`. The inline parser-trace dispatch macro called `Synq<Dialect>ParseTrace`, which Lemon only defines in debug builds, so release builds hit an undeclared-identifier error. The macro now degrades to a no-op when `NDEBUG` is defined ([#305](https://github.com/LalitMaganti/syntaqlite/pull/305)).
 
 ## 0.7.0
 
