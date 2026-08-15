@@ -16,8 +16,8 @@
 // Sessions are reusable but single-threaded. A panic never crosses the
 // boundary — it surfaces as an {"ok":false,...} envelope.
 
-#ifndef SYNTAQLITE_SERVE_H
-#define SYNTAQLITE_SERVE_H
+#ifndef SYNTAQLITE_RPC_H
+#define SYNTAQLITE_RPC_H
 
 #include <stdint.h>
 #include "syntaqlite/config.h"
@@ -62,4 +62,4 @@ SYNTAQLITE_API SyntaqliteRpc* syntaqlite_rpc_create_sqlite(void);
 }
 #endif
 
-#endif  // SYNTAQLITE_SERVE_H
+#endif  // SYNTAQLITE_RPC_H

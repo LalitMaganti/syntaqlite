@@ -36,19 +36,33 @@ typedef struct SyntaqliteMemMethods {
   void (*xFree)(void*);
 } SyntaqliteMemMethods;
 
-// Source span (byte offset + length).
-typedef struct { uint32_t offset; uint32_t length; } SyntaqliteSpan;
+// AST source span. Expansion-layer spans must be resolved through the
+// syntaqlite_parser_span_* accessors rather than indexed into source directly.
+typedef struct SyntaqliteTextSpan {
+  SyntaqliteLayerOffset offset;
+  SyntaqliteLength length;
+  uint32_t flags;
+  uint32_t _layer_id;
+} SyntaqliteTextSpan;
 
-// Comment descriptor.
-typedef struct {
-  SyntaqliteSpan span;
-  uint32_t is_block;  // 0 = line comment, 1 = block comment
+// Comment descriptor from the per-statement side table.
+typedef struct SyntaqliteComment {
+  SyntaqliteStmtOffset offset;
+  SyntaqliteLength length;
+  SyntaqliteTokenIdx token_idx;
+  uint8_t kind;
+  uint8_t side;
+  uint8_t layer_id;
+  uint8_t _pad;
 } SyntaqliteComment;
 
-// Token from the token side-table.
-typedef struct {
-  uint32_t token_type;
-  SyntaqliteSpan span;
+// Token from the per-statement side table.
+typedef struct SyntaqliteParserToken {
+  SyntaqliteLayerOffset offset;
+  SyntaqliteLength length;
+  uint32_t type;
+  SyntaqliteParserTokenFlags flags;
+  uint32_t _layer_id;
 } SyntaqliteParserToken;
 ```
 
@@ -59,7 +73,7 @@ typedef struct {
 | `syntaqlite_parser_create(mem)` | Create a parser for the built-in SQLite dialect. `mem` may be `NULL` |
 | `syntaqlite_parser_create_with_dialect(mem, dialect)` | Create with a custom dialect |
 | `syntaqlite_parser_reset(p, source, len)` | Set source text for parsing |
-| `syntaqlite_parser_next(p)` | Parse the next statement. Returns `0` on success, `1` on error, `-1` when done |
+| `syntaqlite_parser_next(p)` | Parse the next statement. Returns `SYNTAQLITE_PARSE_OK` (`1`), `SYNTAQLITE_PARSE_ERROR` (`-1`), or `SYNTAQLITE_PARSE_DONE` (`0`) |
 | `syntaqlite_parser_destroy(p)` | Free the parser. No-op if `NULL` |
 
 ### Result access
@@ -79,10 +93,10 @@ typedef struct {
 | Function | Description |
 |----------|-------------|
 | `syntaqlite_parser_node(p, node_id)` | Pointer to node data in the arena |
-| `syntaqlite_parser_text(p)` | Pointer to the source text |
-| `syntaqlite_parser_text_length(p)` | Length of the source text |
-| `syntaqlite_parser_node_count(p)` | Number of nodes in the arena |
-| `syntaqlite_dump_node(p, node_id, indent)` | Pretty-print a node subtree. **Caller must `free()` the result** |
+| `syntaqlite_parser_text(p, &doc_offset, &len)` | Current statement text plus its document offset and byte length |
+| `syntaqlite_parser_full_text(p, &len)` | Full source buffer bound by the last `reset()` |
+| `syntaqlite_parser_node_count(p)` | Number of nodes in the current statement arena |
+| `syntaqlite_dump_node(p, node_id, indent)` | Pretty-print a node subtree. Release with the parser allocator's `xFree`, or `free()` when using the default allocator |
 
 ### Configuration
 
@@ -101,7 +115,7 @@ typedef struct {
 | `syntaqlite_tokenizer_create(mem)` | Create a tokenizer for the built-in SQLite dialect. `mem` may be `NULL` |
 | `syntaqlite_tokenizer_create_with_dialect(mem, dialect)` | Create with a custom dialect |
 | `syntaqlite_tokenizer_reset(tok, source, len)` | Set source text for tokenizing |
-| `syntaqlite_tokenizer_next(tok, &out)` | Read the next token into `out`. Returns the token type, `0` for EOF |
+| `syntaqlite_tokenizer_next(tok, &out)` | Read the next token into `out`. Returns `1` when a token was written, `0` at EOF; read the token type from `out.type` |
 | `syntaqlite_tokenizer_destroy(tok)` | Free the tokenizer. No-op if `NULL` |
 
 ## Formatter
@@ -165,9 +179,10 @@ typedef enum {
 // A single diagnostic from validation.
 typedef struct {
   SyntaqliteSeverity severity;
-  const char* message;       // NUL-terminated, borrowed
-  uint32_t start_offset;     // byte offset in source
-  uint32_t end_offset;       // byte offset in source
+  const char* message;                 // NUL-terminated, borrowed
+  SyntaqliteDocOffset start_offset;    // byte offset in source
+  SyntaqliteDocOffset end_offset;      // byte offset in source
+  uint32_t kind_code;                  // SyntaqliteDiagnosticCode value
 } SyntaqliteDiagnostic;
 
 // Relation definition for batch catalog registration (tables and views).
@@ -298,6 +313,8 @@ surfaces as an error envelope, never a crash. Sessions are single-threaded.
   call to analyze or destroy.
 - Strings from `syntaqlite_analyzer_render_diagnostics()` are **borrowed**,
   valid until the next `analyze()`, `render_diagnostics()`, or `destroy()` call.
-- Strings from `syntaqlite_dump_node()` are **owned**; caller must `free()`.
+- Strings from `syntaqlite_dump_node()` are **owned** and use the parser's
+  allocator. Call that allocator's `xFree`, or `free()` when the parser uses the
+  default allocator.
 - Buffers from `syntaqlite_rpc_call()` are **owned**; free with `syntaqlite_rpc_free()`.
 - Passing `NULL` to any destroy function is a safe no-op.
