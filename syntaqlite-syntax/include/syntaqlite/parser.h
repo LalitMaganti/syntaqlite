@@ -732,9 +732,11 @@ static inline const void* syntaqlite_list_child(SyntaqliteParser* p,
 // Debugging
 // ---------------------------------------------------------------------------
 
-// Dump an AST node tree as indented text. Returns a malloc'd NUL-terminated
-// string. The caller must free() the result. Returns NULL on allocation
-// failure.
+// Dump an AST node tree as an allocated NUL-terminated string. The result uses
+// the parser's configured allocator: release it with the `xFree` callback that
+// was passed to syntaqlite_parser_create(), or with free() when the parser uses
+// the default allocator. The allocator contract requires allocations to
+// succeed, so this function does not report allocation failure.
 SYNTAQLITE_API char* syntaqlite_dump_node(SyntaqliteParser* p,
                                           uint32_t node_id,
                                           uint32_t indent);

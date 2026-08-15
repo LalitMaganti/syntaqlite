@@ -4,9 +4,10 @@
 // Analysis C API — validates SQL against a catalog of known
 // tables, columns, and functions.
 //
-// The validator works incrementally: DDL statements (CREATE TABLE, etc.)
-// accumulate in the catalog as they are analyzed, so later statements can
-// reference earlier definitions.
+// Within one analyze() call, DDL statements (CREATE TABLE, etc.) become
+// visible to later statements in the same source. Across calls, behavior is
+// controlled by SyntaqliteAnalysisMode: DOCUMENT mode (the default) rebuilds
+// the document schema on each call, while EXECUTE mode accumulates DDL.
 //
 // Lifecycle:
 //   SyntaqliteAnalyzer* v = syntaqlite_analyzer_create_sqlite();
@@ -17,9 +18,9 @@
 //   }
 //   syntaqlite_analyzer_destroy(v);
 //
-// The catalog persists across analyze() calls — each call accumulates DDL
-// from the analyzed source. Call syntaqlite_analyzer_reset_catalog() to
-// clear accumulated schema.
+// Tables, views, and functions registered explicitly through the catalog APIs
+// persist across calls in both modes. Call syntaqlite_analyzer_reset_catalog()
+// to clear that user-registered schema (dialect builtins remain available).
 
 #ifndef SYNTAQLITE_ANALYSIS_H
 #define SYNTAQLITE_ANALYSIS_H
