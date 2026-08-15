@@ -3,7 +3,7 @@
 
 id = "syntaqlite-lsp"
 name = "syntaqlite: SQLite language server and formatter"
-version = "0.7.1"
+version = "0.8.0"
 schema_version = 1
 authors = ["Lalit Maganti <lalitmaganti@gmail.com>"]
 description = "SQLite SQL language server and formatter with schema-aware diagnostics, completions, navigation, and semantic highlighting."

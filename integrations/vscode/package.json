@@ -2,7 +2,7 @@
   "name": "syntaqlite",
   "displayName": "syntaqlite: SQLite language server and formatter",
   "description": "SQLite SQL language server and formatter with schema-aware diagnostics, completions, navigation, and semantic highlighting",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "publisher": "syntaqlite",
   "license": "Apache-2.0",
   "icon": "icon.png",

@@ -13,7 +13,7 @@ SQL. Its Rust API is published as the `syntaqlite` crate.
 
 ```toml
 [dependencies]
-syntaqlite = { version = "0.7.1", features = ["fmt"] }
+syntaqlite = { version = "0.8.0", features = ["fmt"] }
 ```
 
 ## Format a query
@@ -130,7 +130,7 @@ Add the `analysis` and `sqlite` features:
 
 ```toml
 [dependencies]
-syntaqlite = { version = "0.7.1", features = ["analysis", "sqlite"] }
+syntaqlite = { version = "0.8.0", features = ["analysis", "sqlite"] }
 ```
 
 ```rust
