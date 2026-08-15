@@ -59,13 +59,13 @@ methodology, and tool versions.
 
 Install the latest release on macOS, Linux, or Windows:
 
-```console
+```bash
 curl -sSf https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/tools/syntaqlite | python3 - install
 ```
 
 You can also install it with [mise](https://mise.jdx.dev), pip, Homebrew, or Cargo:
 
-```console
+```bash
 mise use github:LalitMaganti/syntaqlite
 pip install syntaqlite
 brew install LalitMaganti/tap/syntaqlite
@@ -77,8 +77,11 @@ platform-specific details.
 
 ### Format SQL
 
-```console
-$ syntaqlite fmt -e "select id,name,email from users where active=1 and role='admin' order by name"
+```bash
+syntaqlite fmt -e "select id,name,email from users where active=1 and role='admin' order by name"
+```
+
+```sql
 SELECT id, name, email
 FROM users
 WHERE
@@ -93,13 +96,20 @@ without changing anything.
 
 ### Analyze SQL
 
-Give the analyzer your schema and it can find mistakes without connecting to a database:
+Give the analyzer your schema and it can find mistakes without connecting to a database.
+For example, given this `schema.sql`:
 
-```console
-$ cat schema.sql
+```sql
 CREATE TABLE users (id, name, email);
+```
 
-$ syntaqlite analyze --schema schema.sql -e "SELECT nme, email FROM users"
+Run:
+
+```bash
+syntaqlite analyze --schema schema.sql -e "SELECT nme, email FROM users"
+```
+
+```text
 error: unknown column 'nme'
  --> <expression>:1:8
   |
@@ -118,9 +128,12 @@ example.
 The version and compile flags are global options shared by the parser, formatter, analyzer,
 and language server. For example, this checks a query as SQLite 3.32.0:
 
-```console
-$ syntaqlite --sqlite-version 3.32.0 analyze \
-    -e "DELETE FROM users WHERE id = 1 RETURNING *;"
+```bash
+syntaqlite --sqlite-version 3.32.0 analyze \
+  -e "DELETE FROM users WHERE id = 1 RETURNING *;"
+```
+
+```text
 error: syntax error near 'RETURNING'
  --> <expression>:1:32
   |
@@ -131,7 +144,7 @@ error: syntax error near 'RETURNING'
 `RETURNING` was added in SQLite 3.35.0. Optional SQLite features can be enabled in the same
 way:
 
-```console
+```bash
 syntaqlite --sqlite-cflag SQLITE_ENABLE_MATH_FUNCTIONS analyze query.sql
 ```
 
@@ -139,7 +152,7 @@ syntaqlite --sqlite-cflag SQLITE_ENABLE_MATH_FUNCTIONS analyze query.sql
 
 Print the full abstract syntax tree for a query:
 
-```console
+```bash
 syntaqlite parse -e "SELECT 1 + 2"
 ```
 
@@ -193,7 +206,7 @@ command-line interfaces may still change before 1.0.
 
 ## Building and contributing
 
-```console
+```bash
 tools/install-build-deps
 tools/cargo build
 ```
