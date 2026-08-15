@@ -1,6 +1,6 @@
-# syntaqlite
+# libsyntaqlite for Python
 
-Parse, format, and validate SQLite SQL from Python using SQLite's own grammar and tokenizer. No approximations: if SQLite accepts it, syntaqlite parses it.
+libsyntaqlite is a fast, embeddable parser, formatter, and static analyzer for SQLite SQL. The `syntaqlite` package provides its Python API.
 
 **[Docs](https://docs.syntaqlite.com)** · **[Playground](https://playground.syntaqlite.com)** · **[GitHub](https://github.com/LalitMaganti/syntaqlite)**
 
@@ -10,7 +10,7 @@ pip install syntaqlite
 
 Requires Python 3.10+. Wheels for Linux (x86_64, aarch64), macOS (x86_64, arm64), and Windows (x86_64).
 
-## Library
+## API
 
 Everything goes through a `Syntaqlite` instance. Create one and reuse it across many calls:
 
@@ -165,8 +165,8 @@ syntaqlite parse -e "SELECT * FROM users"
 The CLI supports pinning to a specific SQLite version or enabling compile-time flags to match your target environment:
 
 ```bash
-syntaqlite --sqlite-version 3.32.0 validate query.sql
-syntaqlite --sqlite-cflag SQLITE_ENABLE_MATH_FUNCTIONS validate query.sql
+syntaqlite --sqlite-version 3.32.0 analyze query.sql
+syntaqlite --sqlite-cflag SQLITE_ENABLE_MATH_FUNCTIONS analyze query.sql
 ```
 
 See the [CLI reference](https://docs.syntaqlite.com/main/reference/cli/) for all commands and flags.

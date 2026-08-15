@@ -1,6 +1,6 @@
 +++
 title = "VS Code"
-description = "Install the extension: diagnostics, formatting, and completions out of the box."
+description = "Install the SQLite SQL language server and formatter for VS Code."
 weight = 1
 +++
 
@@ -8,7 +8,7 @@ weight = 1
 
 ## 1. Install
 
-Install **[syntaqlite](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite)**
+Install **[syntaqlite: SQLite language server and formatter](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite)**
 from the VS Code Marketplace, or search for `syntaqlite` in the Extensions
 panel (`Cmd+Shift+X`). The extension bundles the binary. No other setup
 needed.
@@ -94,9 +94,9 @@ you'll see `users` offered as a completion. After `SELECT `, you'll see `id`,
 
 ## Next steps
 
-- [Formatting options](@/reference/formatting-options.md) — line width,
+- [Formatting options](@/reference/formatting-options.md): line width,
   keyword casing, semicolons
-- [Config file reference](@/reference/config-file.md) — glob-based schema
+- [Config file reference](@/reference/config-file.md): glob-based schema
   routing and all `syntaqlite.toml` options
-- [Project setup guide](@/guides/project-setup.md) — multi-schema
+- [Project setup guide](@/guides/project-setup.md): multi-schema
   setups, strict mode, CI integration

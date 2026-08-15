@@ -42,7 +42,7 @@ Lemon. The Rust layer wraps the C parser in safe APIs and builds everything
 else (formatter, semantic analyzer, LSP) on top.
 
 The parser action files in
-[`syntaqlite-syntax/parser-actions/`](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-syntax/parser-actions)
+[`syntaqlite-buildtools/parser-actions/`](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-buildtools/parser-actions)
 must match upstream grammar rule signatures exactly. A
 [grammar verification step](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite-buildtools/src/grammar_verify.rs)
 enforces this: any unintentional divergence from SQLite's grammar is a build
@@ -86,7 +86,7 @@ is designed to minimize the human effort needed:
 
 1. Grammar rules and the state machine are regenerated automatically
 2. AST node structure is defined in
-   [`.synq` files](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-syntax/parser-nodes).
+   [`.synq` files](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-buildtools/parser-nodes).
    New nodes need a `.synq` entry for formatting and validation
 3. Build tooling detects any divergence and guides the update
 

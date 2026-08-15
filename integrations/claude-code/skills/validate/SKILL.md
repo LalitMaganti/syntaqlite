@@ -11,22 +11,22 @@ Validate SQLite SQL and report diagnostics (errors, warnings) using the syntaqli
 
 ```bash
 # Validate a file
-syntaqlite validate query.sql
+syntaqlite analyze query.sql
 
 # Validate from stdin
-echo "SELECT * FORM t" | syntaqlite validate
+echo "SELECT * FORM t" | syntaqlite analyze
 
 # Validate an inline expression
-syntaqlite validate -e "SELECT 1 + "
+syntaqlite analyze -e "SELECT 1 + "
 
 # Validate against a schema
-syntaqlite validate --schema schema.sql query.sql
+syntaqlite analyze --schema schema.sql query.sql
 
 # Validate multiple files via glob
-syntaqlite validate "**/*.sql"
+syntaqlite analyze "**/*.sql"
 
 # Validate with multiple schema files
-syntaqlite validate --schema "migrations/*.sql" --schema extra.sql query.sql
+syntaqlite analyze --schema "migrations/*.sql" --schema extra.sql query.sql
 ```
 
 ## Options

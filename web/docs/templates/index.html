@@ -93,7 +93,7 @@ has 2 values for 3 columns</code></pre>
     </p>
     <pre><code class="language-bash"># RETURNING was added in SQLite 3.35.0
 # Android 13 ships SQLite 3.32.2 — catch the mismatch:
-syntaqlite --sqlite-version 3.32.0 validate \
+syntaqlite --sqlite-version 3.32.0 analyze \
   -e "DELETE FROM users WHERE id = 1 RETURNING *;"</code></pre>
     <pre class="home-diagnostic__output"><code><span class="diag-error">error</span>: syntax error near 'RETURNING'
  --> &lt;stdin&gt;:1:32
@@ -245,6 +245,22 @@ syntaqlite lsp</code></pre>
     <a href="{{ get_url(path='getting-started/other-editors') }}" class="entry-card">
       <span class="entry-card__title">Other editors</span>
       <span class="entry-card__desc">Neovim, Helix, or any editor with LSP support.</span>
+    </a>
+    <a href="{{ get_url(path='getting-started/rust') }}" class="entry-card">
+      <span class="entry-card__title">libsyntaqlite for Rust</span>
+      <span class="entry-card__desc">Embed the parser, formatter, and static analyzer in a Rust project.</span>
+    </a>
+    <a href="{{ get_url(path='getting-started/python') }}" class="entry-card">
+      <span class="entry-card__title">libsyntaqlite for Python</span>
+      <span class="entry-card__desc">Parse, format, and statically analyze SQLite SQL from Python.</span>
+    </a>
+    <a href="{{ get_url(path='getting-started/c-parser') }}" class="entry-card">
+      <span class="entry-card__title">libsyntaqlite for C</span>
+      <span class="entry-card__desc">Use the C API or compile the dependency-free parser amalgamation.</span>
+    </a>
+    <a href="https://www.npmjs.com/package/syntaqlite" class="entry-card">
+      <span class="entry-card__title">libsyntaqlite for JavaScript</span>
+      <span class="entry-card__desc">Use the parser, formatter, and static analyzer in JavaScript or WebAssembly.</span>
     </a>
   </div>
 

@@ -69,7 +69,7 @@ Check categories: `parse-errors`, `unknown-table`, `unknown-column`,
 `unknown-function`, `function-arity`, `cte-columns`. Groups: `schema` (all 4
 schema checks), `all`.
 
-When `--schema` is provided, the validator loads `CREATE TABLE` / `CREATE VIEW`
+When `--schema` is provided, the analyzer loads `CREATE TABLE` / `CREATE VIEW`
 statements from the schema files and checks the remaining input files against
 that schema. When `--schema` is omitted and a
 [`syntaqlite.toml`](@/reference/config-file.md) exists, schemas are resolved

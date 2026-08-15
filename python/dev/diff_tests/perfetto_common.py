@@ -113,6 +113,7 @@ def _compile_perfetto_dialect(cli_binary: Path, work_dir: Path) -> Path:
         str(parser_sys / "csrc" / "parser_spans.c"),
         str(parser_sys / "csrc" / "parser_extents.c"),
         str(parser_sys / "csrc" / "parser_dump.c"),
+        str(parser_sys / "csrc" / "tokenizer.c"),
         str(parser_sys / "csrc" / "token_wrapped.c"),
         "-DSYNTAQLITE_OMIT_SQLITE_API",
         "-I",

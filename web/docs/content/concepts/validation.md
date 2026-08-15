@@ -14,7 +14,7 @@ inline. This page explains the design. For practical usage, see
 ## Why single-pass
 
 The analyzer dispatches on **semantic roles** — annotations defined in the
-[`.synq` grammar files](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-syntax/parser-nodes)
+[`.synq` grammar files](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-buildtools/parser-nodes)
 that tell the analyzer what each AST node means:
 
 | Role | Triggers |

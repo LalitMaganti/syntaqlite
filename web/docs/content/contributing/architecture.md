@@ -37,9 +37,9 @@ Lemon-generated grammar and tokenizer, compiled from C and linked into Rust
 via FFI. The Rust layer wraps the C parser in safe APIs and builds the
 formatter, semantic analyzer, and LSP on top.
 
-There's also an outbound FFI layer: the Rust formatter and validator are
+There's also an outbound FFI layer: the Rust formatter and analyzer are
 exported back to C consumers through `#[no_mangle]` functions, so non-Rust
-projects can link syntaqlite as a C library. This makes the architecture a
+projects can link against libsyntaqlite. This makes the architecture a
 genuine sandwich: C at the bottom (parser), Rust in the middle (analysis,
 formatting, LSP), C at the top (consumer API).
 

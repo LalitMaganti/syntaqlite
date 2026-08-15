@@ -1,16 +1,17 @@
 +++
-title = "Python API reference"
-description = "The Syntaqlite class and its methods, exceptions, and result types."
+title = "libsyntaqlite Python API"
+description = "Python API for parsing, formatting, and statically analyzing SQLite SQL."
 weight = 6
 +++
 
-# Python API reference
+# libsyntaqlite Python API
 
-The Python package calls the syntaqlite core in-process through a bundled
-native library (loaded with `ctypes`), and also ships the `syntaqlite` CLI
-binary for the command-line entry point. Requires Python 3.10+. Wheels are
-published for macOS (arm64, x86_64), Linux (x86_64, aarch64), and Windows
-(x86_64).
+libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
+SQL. The `syntaqlite` package provides its Python API, calling the core
+in-process through a bundled native library loaded with `ctypes`. It also ships
+the `syntaqlite` CLI binary for the command-line entry point. Requires Python
+3.10+. Wheels are published for macOS (arm64, x86_64), Linux (x86_64,
+aarch64), and Windows (x86_64).
 
 ```python
 import syntaqlite

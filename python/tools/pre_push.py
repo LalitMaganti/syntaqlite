@@ -580,7 +580,9 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
     # WASM playground: only relevant when any compilation is needed.
     run_wasm = need_compilation
     if run_wasm and _has_emscripten():
-        diff_lanes.append([("tools/build-web-playground", [_tool("build-web-playground")])])
+        diff_lanes.append([
+            ("tools/build-web-playground", [_tool("build-web-playground"), "--hermetic"]),
+        ])
     elif verbosity >= 0:
         reason = "not affected" if not run_wasm else "emscripten not installed"
         print(f"\n{_YELLOW}==> tools/build-web-playground (skipped — {reason}){_RESET}")

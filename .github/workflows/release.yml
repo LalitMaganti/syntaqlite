@@ -24,8 +24,8 @@ env:
 jobs:
   # Single Rust build per platform. Produces:
   #   - CLI binary archive (tar.gz/zip)
-  #   - Static library (for clib archive)
-  #   - Shared library / cdylib (for clib)
+  #   - Static library (for C API tests)
+  #   - Shared libsyntaqlite library
   #   - buildtools binary (for amalgamation, linux-x64 only)
   build:
     name: build (${{ matrix.name }})
@@ -124,10 +124,10 @@ jobs:
           name: staticlib-${{ matrix.name }}
           path: target/release/${{ matrix.staticlib }}
 
-      - name: Upload cdylib
+      - name: Upload libsyntaqlite
         uses: actions/upload-artifact@v6
         with:
-          name: clib-${{ matrix.name }}
+          name: libsyntaqlite-${{ matrix.name }}
           path: ${{ !matrix.staticlib && format('target/{0}/release', matrix.target) || 'target/release' }}/${{ matrix.cdylib }}
 
       - name: Upload buildtools
@@ -380,7 +380,7 @@ jobs:
         with:
           packages-dir: dist/
 
-  # Package clib archive + syntax amalgamation and upload to GH Release.
+  # Package libsyntaqlite + syntax amalgamation and upload to GH Release.
   package-c-artifacts:
     name: Package C artifacts
     needs:
@@ -402,7 +402,7 @@ jobs:
       - name: Make buildtools executable
         run: chmod +x bin/syntaqlite-buildtools
 
-      # -- Clib archive --
+      # -- libsyntaqlite archive --
       - name: Generate amalgamated header
         run: |
           bin/syntaqlite-buildtools amalgamate \
@@ -413,17 +413,17 @@ jobs:
       - name: Download all platform libraries
         uses: actions/download-artifact@v7
         with:
-          pattern: clib-*
+          pattern: libsyntaqlite-*
           path: libs/
 
-      - name: Assemble clib archive
+      - name: Assemble libsyntaqlite archive
         run: |
-          for dir in libs/clib-*; do
-            platform=$(basename "$dir" | sed 's/^clib-//')
+          for dir in libs/libsyntaqlite-*; do
+            platform=$(basename "$dir" | sed 's/^libsyntaqlite-//')
             mkdir -p "staging/$platform"
             cp "$dir"/* "staging/$platform/"
           done
-          tar -czf "syntaqlite-clib.tar.gz" -C staging .
+          tar -czf "libsyntaqlite.tar.gz" -C staging .
 
       # -- Syntax amalgamation --
       - name: Generate syntax amalgamation
@@ -443,6 +443,6 @@ jobs:
       - name: Upload to GitHub Release
         run: |
           gh release upload "${{ github.ref_name }}" \
-            "syntaqlite-clib.tar.gz" \
+            "libsyntaqlite.tar.gz" \
             "syntaqlite-syntax-amalgamation.tar.gz" \
             --clobber

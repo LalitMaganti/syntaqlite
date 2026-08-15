@@ -5,9 +5,14 @@ sort_by = "weight"
 
 # Getting started
 
-syntaqlite is a parser, formatter, validator, and language server for SQLite SQL.
+syntaqlite provides a CLI and language server for parsing, formatting, and statically
+analyzing SQLite SQL.
 You can [try it in the browser](https://playground.syntaqlite.com) without
-installing anything, or install the CLI:
+installing anything, or install the CLI. To embed the same parser, formatter, and
+static analyzer in your own software, use libsyntaqlite from Rust, Python,
+JavaScript/WASM, or C.
+
+## Install the CLI
 
 <div class="tabs" data-tab-group="install">
   <div class="tab-buttons">
@@ -26,7 +31,7 @@ installing anything, or install the CLI:
   </div>
   <div class="tab-panel" data-tab="pip">
     <pre><code class="language-bash">pip install syntaqlite</code></pre>
-    <p>Installs the CLI binary and <a href="@/getting-started/python.md">Python library API</a>. No Rust toolchain needed.</p>
+    <p>Installs the CLI binary and the <a href="@/getting-started/python.md">libsyntaqlite Python API</a>. No Rust toolchain needed.</p>
   </div>
   <div class="tab-panel" data-tab="brew">
     <pre><code class="language-bash">brew install LalitMaganti/tap/syntaqlite</code></pre>
@@ -81,6 +86,6 @@ syntaqlite parse -e "SELECT 1 + 2"
 ```
 
 Useful for code generation, migration tooling, or static analysis. See
-[Rust API guide](@/guides/rust-api.md#parse-sql) or
-[Python library tutorial](@/getting-started/python.md) for details.
+[libsyntaqlite Rust guide](@/guides/rust-api.md#parse-sql) or
+[libsyntaqlite Python tutorial](@/getting-started/python.md) for details.
 

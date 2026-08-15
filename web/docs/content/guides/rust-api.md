@@ -1,10 +1,13 @@
 +++
-title = "Using from Rust"
-description = "Add syntaqlite to a Rust project and format your first query."
+title = "Using libsyntaqlite from Rust"
+description = "Parse, format, and statically analyze SQLite SQL from Rust."
 weight = 1
 +++
 
-# Using syntaqlite from Rust
+# Using libsyntaqlite from Rust
+
+libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
+SQL. Its Rust API is published as the `syntaqlite` crate.
 
 ## Add the dependency
 
@@ -222,5 +225,5 @@ partial result.
 
 ## Next steps
 
-- See the [Rust API reference](@/reference/rust-api.md) for all types and
+- See the [libsyntaqlite Rust API reference](@/reference/rust-api.md) for all types and
   methods

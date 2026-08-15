@@ -1,7 +1,7 @@
 {
   "name": "syntaqlite",
   "version": "0.7.1",
-  "description": "SQLite SQL parser, formatter, and validator for the browser — powered by WebAssembly",
+  "description": "JavaScript and WebAssembly API for libsyntaqlite: parse, format, and statically analyze SQLite SQL",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

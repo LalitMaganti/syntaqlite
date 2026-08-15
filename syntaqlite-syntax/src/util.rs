@@ -327,7 +327,7 @@ pub mod ffi {
 
     impl std::fmt::Debug for CCflags {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "Cflags({:02x?})", &self.bytes)
+            write!(f, "Cflags({:02x?})", self.bytes)
         }
     }
 }

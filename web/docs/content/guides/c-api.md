@@ -1,17 +1,17 @@
 +++
-title = "Using from C"
-description = "Link syntaqlite into a C or C++ project."
+title = "Using libsyntaqlite from C"
+description = "Parse, format, and statically analyze SQLite SQL from C or C++."
 weight = 2
 +++
 
-# Using syntaqlite from C
+# Using libsyntaqlite from C
 
-syntaqlite provides a C API for embedding in non-Rust projects. There are two
-distribution options with different scope:
+libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
+SQL. It provides a C API for C and C++ projects, with two distribution options:
 
 | | Source amalgamation | Prebuilt shared library |
 |---|---|---|
-| **Package** | `syntaqlite-syntax-amalgamation` | `syntaqlite-clib` |
+| **Package** | `syntaqlite-syntax-amalgamation` | `libsyntaqlite` |
 | **What you get** | Two C files to compile yourself | Shared library + header per platform |
 | **Parser & tokenizer** | Yes | Yes |
 | **Formatter** | No | Yes |
@@ -21,7 +21,7 @@ distribution options with different scope:
 ## Option 1: Source amalgamation (parser and tokenizer only)
 
 The source amalgamation contains the **parser and tokenizer** as two compilable C
-files. It does **not** include the formatter or validator; those require the
+files. It does **not** include the formatter or analyzer; those require the
 Rust runtime and are only available via the prebuilt shared library (option 2).
 
 Download from the
@@ -46,14 +46,14 @@ walkthrough.
 ## Option 2: Prebuilt shared library (full API)
 
 The prebuilt shared library includes the **full API**: parser, tokenizer,
-formatter, and validator. Download `syntaqlite-clib` from the
+formatter, and analyzer. Download `libsyntaqlite` from the
 [latest release](https://github.com/LalitMaganti/syntaqlite/releases). The
 archive contains a single `syntaqlite.h` header and shared libraries for each
 platform:
 
 ```bash
-curl -LO https://github.com/LalitMaganti/syntaqlite/releases/latest/download/syntaqlite-clib.tar.gz
-tar xf syntaqlite-clib.tar.gz
+curl -LO https://github.com/LalitMaganti/syntaqlite/releases/latest/download/libsyntaqlite.tar.gz
+tar xf libsyntaqlite.tar.gz
 ```
 
 ```
@@ -227,5 +227,5 @@ return NULL.
 
 ## Next steps
 
-- See the [C API reference](@/reference/c-api.md) for all functions, types,
+- See the [libsyntaqlite C API reference](@/reference/c-api.md) for all functions, types,
   and the memory model
