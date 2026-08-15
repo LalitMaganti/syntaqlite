@@ -6,10 +6,9 @@ weight = 4
 
 # Using libsyntaqlite from Rust
 
-libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
-SQL. The `syntaqlite` crate provides its Rust API. This tutorial walks you through
-adding it to a Rust project. By the end you'll have a small program that formats
-SQL, validates it against a schema, and prints diagnostics.
+The `syntaqlite` crate provides Rust APIs for formatting and analyzing SQLite
+SQL. This tutorial adds it to a small project, formats a query, validates the
+query against a schema, and prints any diagnostics.
 
 ## 1. Create a project
 
@@ -55,7 +54,7 @@ calls.
 
 ## 3. Validate against a schema
 
-Now let's add schema validation. Update `src/main.rs`:
+To add schema validation, update `src/main.rs`:
 
 ```rust
 use syntaqlite::{AnalysisContext, Catalog, Formatter, Analyzer, AnalysisConfig};
@@ -108,7 +107,7 @@ SELECT id, nme FROM users WHERE active = 1;
 Error: unknown column 'nme'
 ```
 
-The analyzer caught the typo: `nme` should be `name`.
+The diagnostic identifies `nme` as an unknown column in the supplied schema.
 
 ## 4. Parse and inspect the AST
 

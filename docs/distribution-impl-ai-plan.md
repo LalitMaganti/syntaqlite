@@ -7,14 +7,14 @@ with steps, verification gates, and a recommended execution order.
 
 ## Phase 1: Extract `syntaqlite-sys` crate
 
-The foundational change — all subsequent work depends on it.
+The foundational change: all subsequent work depends on it.
 
 ### 1.1 Create the crate skeleton
 
 - Create `syntaqlite-sys/Cargo.toml` with `links = "syntaqlite_parser"`,
   `cc` build dependency
 - Add it to the workspace `Cargo.toml`
-- Create `syntaqlite-sys/src/lib.rs` — empty or minimal (this is a `-sys`
+- Create `syntaqlite-sys/src/lib.rs`: empty or minimal (this is a `-sys`
   crate; Rust consumers use `syntaqlite`)
 
 ### 1.2 Move C sources and headers
@@ -35,7 +35,7 @@ The foundational change — all subsequent work depends on it.
 
 - Add `syntaqlite-sys = { path = "../syntaqlite-sys" }` dependency
 - Remove `cc` from build-dependencies
-- Replace `syntaqlite/build.rs` with a minimal one (or remove it) — C
+- Replace `syntaqlite/build.rs` with a minimal one (or remove it): C
   compilation now happens in the sys crate
 
 ### 1.5 Update codegen output paths
@@ -46,9 +46,9 @@ The foundational change — all subsequent work depends on it.
 
 ### 1.6 Verify
 
-- `cargo check && cargo clippy` — zero warnings
-- `tools/run-unit-tests` — all pass
-- `tools/run-ast-diff-tests`, `tools/run-fmt-diff-tests` — all pass
+- `cargo check && cargo clippy`: zero warnings
+- `tools/run-unit-tests`: all pass
+- `tools/run-ast-diff-tests`, `tools/run-fmt-diff-tests`: all pass
 - `tools/run-codegen` writes to the new paths
 
 ## Phase 2: Amalgamation generator
@@ -58,7 +58,7 @@ smoke test after Phase 1.
 
 ### 2.1 Update `syntaqlite-cli amalgamate` command
 
-The command already exists — update it to produce distribution-ready output:
+The command already exists: update it to produce distribution-ready output:
 
 - **`syntaqlite_parser.h`**: concatenation of core + SQLite public headers
   (`parser.h`, `tokenizer.h`, `dialect.h`, `types.h`, `config.h`, `sqlite.h`,
@@ -73,7 +73,7 @@ The command already exists — update it to produce distribution-ready output:
 
 ### 2.3 Verify
 
-- Generate amalgamation, compile with `gcc -c syntaqlite_parser.c` — no errors
+- Generate amalgamation, compile with `gcc -c syntaqlite_parser.c`: no errors
 - Write a minimal test program that parses SQL using only the amalgamation
 
 ## Phase 3: Sentinel symbol & coexistence infrastructure
@@ -119,7 +119,7 @@ The core value proposition for language bindings. Must be solid before bindings.
 
 ### 4.1 Write `syntaqlite.h`
 
-- Create `syntaqlite/include/syntaqlite.h` — hand-written header per the plan
+- Create `syntaqlite/include/syntaqlite.h`: hand-written header per the plan
 - ~20 functions:
   - Lifecycle: `syntaqlite_engine_new`, `syntaqlite_engine_free`
   - Operations: `syntaqlite_format`, `syntaqlite_ast_json`,
@@ -150,7 +150,7 @@ The core value proposition for language bindings. Must be solid before bindings.
 
 ### 4.4 Verify
 
-- `cargo check --features capi && cargo clippy --features capi` — zero warnings
+- `cargo check --features capi && cargo clippy --features capi`: zero warnings
 - Write a small C test program that links against the built library and calls
   `syntaqlite_format`
 
@@ -160,27 +160,27 @@ Thin wrappers over a stable C API. Can be done incrementally per language.
 
 ### 5.1 C++ RAII wrapper (~50 lines)
 
-- `syntaqlite/include/syntaqlite.hpp` — thin RAII wrapper around `syntaqlite.h`
+- `syntaqlite/include/syntaqlite.hpp`: thin RAII wrapper around `syntaqlite.h`
 - `SyntaqliteEngine` class with constructor/destructor, format/validate/complete
   methods
 - Ship in the `libsyntaqlite` archive
 
 ### 5.2 Go binding (~100 lines)
 
-- `bindings/go/syntaqlite/` — cgo package
+- `bindings/go/syntaqlite/`: cgo package
 - Vendor `syntaqlite.h` + `libsyntaqlite.a` (or use `pkg-config`)
 - Go functions wrapping each C API call, handling `C.free` on returned strings
 
 ### 5.3 Python binding (~100 lines)
 
-- `bindings/python/syntaqlite/` — cffi package
+- `bindings/python/syntaqlite/`: cffi package
 - Bundle `.so`/`.dylib` in the wheel
 - Pythonic class: `engine = syntaqlite.Engine(); result = engine.format(sql)`
 - `pyproject.toml` with `scikit-build` or `maturin` for wheel building
 
 ### 5.4 Update npm package
 
-- Already exists as `syntaqlite` with WASM — ensure the API surface matches
+- Already exists as `syntaqlite` with WASM: ensure the API surface matches
   (format, validate, completions, semantic tokens)
 
 ## Phase 6: Release artifacts & CI
@@ -215,9 +215,9 @@ Automation over a working system. Last because it needs all artifacts to exist.
 
 | Order | Phase | Risk | Rationale |
 |-------|-------|------|-----------|
-| 1 | Phase 1 — extract sys crate | High | Touches everything. If this breaks, nothing else works. |
-| 2 | Phase 2 — amalgamation | Medium | Validates the sys crate split for the embed use case. |
-| 3 | Phase 3 — sentinel/coexistence | Low | Small, self-contained. Testable with amalgamation + library. |
-| 4 | Phase 4 — C API | Medium | Core value prop for bindings. Must be solid first. |
-| 5 | Phase 5 — language bindings | Low | Thin wrappers over a stable C API. Incremental per language. |
-| 6 | Phase 6 — CI/release | Low | Automation over a working system. Needs all artifacts. |
+| 1 | Phase 1: extract sys crate | High | Touches everything. If this breaks, nothing else works. |
+| 2 | Phase 2: amalgamation | Medium | Validates the sys crate split for the embed use case. |
+| 3 | Phase 3: sentinel/coexistence | Low | Small, self-contained. Testable with amalgamation + library. |
+| 4 | Phase 4: C API | Medium | Core value prop for bindings. Must be solid first. |
+| 5 | Phase 5: language bindings | Low | Thin wrappers over a stable C API. Incremental per language. |
+| 6 | Phase 6: CI/release | Low | Automation over a working system. Needs all artifacts. |

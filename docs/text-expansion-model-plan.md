@@ -8,7 +8,7 @@ in, and consumers call `resolve_span` to walk the parent chain up to source.
 This model has leaked across the public API in inconsistent ways:
 
 - `FieldValue::Span::text` refers to the *expansion-buffer* slice, not the
-  authored text — backwards from how most consumers think about "text".
+  authored text: backwards from how most consumers think about "text".
 - `analyzer.rs::statement_source()` slices source using raw token offsets,
   which is silently broken for any statement containing a macro call (token
   offsets for expansion-buffer tokens aren't source positions).
@@ -23,7 +23,7 @@ This model has leaked across the public API in inconsistent ways:
 The goal of this plan is to replace the ad-hoc multi-buffer surface with a
 coherent vocabulary and API, and restore Perfetto-style traceback fidelity
 (argument-level). Issue #89 is addressed via targeted per-node annotations
-rather than a generalized subtree-text API — see the Step 8 reshape in
+rather than a generalized subtree-text API: see the Step 8 reshape in
 the session log.
 
 ## Core vocabulary
@@ -46,7 +46,7 @@ implementation term where appropriate).
 | ------------------- | ---------------------- | --------------------------- |
 | **Authored**        | `text()`               | `span_text(span)`           |
 | **Expanded**        | `expanded_text()`      | `span_expanded_text(span)`  |
-| **Range in text()** | —                      | `span_text_range(span)`     |
+| **Range in text()** |:                      | `span_text_range(span)`     |
 
 Invariants:
 
@@ -63,19 +63,19 @@ that need to forward authored SQL (e.g. the `select` body of
 `CREATE PERFETTO TABLE/VIEW/FUNCTION`) get a targeted span field (like
 `select_span`) populated explicitly by the grammar action. Consumers
 read that field like any other span. See the Step 8 reshape for
-details — there is no generalized `subtree_text(node)` accessor.
+details: there is no generalized `subtree_text(node)` accessor.
 
 ## Architectural decision: lazy layer tree, no materialization
 
-After considering two alternatives — (a) eager materialization into a single
+After considering two alternatives: (a) eager materialization into a single
 flat `expanded_text` string at end of parse, and (b) a Perfetto-style
-preprocessor pass producing a pre-built tree of `SqlSource` nodes — we
+preprocessor pass producing a pre-built tree of `SqlSource` nodes: we
 landed on a **lazy** model:
 
 - During parse, the parser maintains an in-memory tree of "expansion
   layers" (the same multi-buffer structure we have today, with richer
   per-layer metadata).
-- `parser_next` returns immediately after Lemon finishes — there is no
+- `parser_next` returns immediately after Lemon finishes: there is no
   post-parse materialization pass.
 - Queries (`text`, `expanded_text`, `traceback`) are computed on demand
   from the layer tree. The traceback walk writes into a small
@@ -84,9 +84,9 @@ landed on a **lazy** model:
 
 ### Why lazy?
 
-- **Zero baseline cost.** Parsers that don't ask about expanded text — the
+- **Zero baseline cost.** Parsers that don't ask about expanded text: the
   common case for formatters on macro-free SQL, validators, autocompletion
-  — pay nothing for the machinery. No allocation, no walk.
+ : pay nothing for the machinery. No allocation, no walk.
 - **No temporary state to reason about.** The parse result is the final
   state; there's no "materialized view" transition point that could go
   stale or be forgotten.
@@ -122,7 +122,7 @@ us the same end-state queryability without the baseline cost.
 The eager design also committed us to a single flat offset space, which
 would have made every span carry a rewritten-sql offset rather than a
 layer-local one. That is cleaner conceptually but required us to rewrite
-every AST span during materialization — more code churn for no functional
+every AST span during materialization: more code churn for no functional
 benefit once the public API is behind accessors.
 
 ## Encapsulation: layers are internal
@@ -255,7 +255,7 @@ Tokens need to know which layer they came from so `span_expanded_text`
 equivalents can resolve their buffer. Two options:
 
 **(a) Add `uint8_t layer_id` (+ padding) to `SyntaqliteParserToken`.**
-Same discipline as spans — public struct, underscore-prefixed field,
+Same discipline as spans: public struct, underscore-prefixed field,
 treated as internal. Grows tokens from 16 bytes to 20.
 
 **(b) Side vector `token_layer_ids` indexed parallel to `p->tokens`.**
@@ -285,7 +285,7 @@ typedef struct SyntaqliteParserToken {
 // ── Whole-statement text ─────────────────────────────────────────────────
 
 // The user's authored input. Same as syntaqlite_parser_text() today,
-// renamed for vocabulary consistency. (Deferred — see Step 15.)
+// renamed for vocabulary consistency. (Deferred: see Step 15.)
 SYNTAQLITE_API const char*
 syntaqlite_parser_text(SyntaqliteParser* p, uint32_t* out_len);
 
@@ -294,7 +294,7 @@ syntaqlite_parser_text(SyntaqliteParser* p, uint32_t* out_len);
 // Authored slice of text() corresponding to this span. For spans inside
 // a macro expansion, walks the expansion chain: drills through
 // substituted arg segments, otherwise collapses to the outermost
-// `name!(...)` call site in text(). Always a direct slice of text() —
+// `name!(...)` call site in text(). Always a direct slice of text():
 // no allocation.
 SYNTAQLITE_API const char*
 syntaqlite_parser_span_text(SyntaqliteParser* p,
@@ -303,7 +303,7 @@ syntaqlite_parser_span_text(SyntaqliteParser* p,
 
 // What the parser's tokenizer saw for this span. For spans outside a
 // macro, equals span_text. For spans inside a macro, a slice of the
-// expansion layer's buffer. Always a direct slice — no allocation.
+// expansion layer's buffer. Always a direct slice: no allocation.
 SYNTAQLITE_API const char*
 syntaqlite_parser_span_expanded_text(SyntaqliteParser* p,
                                      const SyntaqliteTextSpan* span,
@@ -324,7 +324,7 @@ syntaqlite_parser_span_text_range(SyntaqliteParser* p,
 // The returned pointer is backed by `p->traceback_buf`, which is cleared
 // and rewritten on every call. It remains valid until the next call to
 // syntaqlite_parser_traceback on the same parser or until the next
-// syntaqlite_parser_next resets the current statement — callers that
+// syntaqlite_parser_next resets the current statement: callers that
 // need to retain frames must copy them out.
 //
 // Writes the frame count to `*out_count`. Returns NULL (and 0) for
@@ -368,16 +368,16 @@ the authored text of a specific grammar rule (e.g. the `select` body
 of `CREATE PERFETTO TABLE`) read a dedicated span field placed on the
 parent AST node by the grammar action. See the Step 8 reshape.
 
-### `FieldValue::Span` — final shape
+### `FieldValue::Span`: final shape
 
 ```rust
 #[derive(Clone, Copy, Debug)]
 pub enum FieldValue<'a> {
     NodeId(AnyNodeId),
     Span {
-        /// Authored text — slice of `text()`.
+        /// Authored text: slice of `text()`.
         text: &'a str,
-        /// What the parser saw — slice of whichever layer buf
+        /// What the parser saw: slice of whichever layer buf
         /// this field's span came from.
         expanded_text: &'a str,
         /// Byte range of `text` in `text()`.
@@ -396,7 +396,7 @@ calling the parser's span accessors. No extra per-field storage.
 
 ## Internal mechanics
 
-### `span_text(span)` — O(depth)
+### `span_text(span)`: O(depth)
 
 Walk the span's layer parent chain:
 
@@ -415,17 +415,17 @@ Walk the span's layer parent chain:
 
 Bounded by `SYNQ_MAX_MACRO_DEPTH` (16). Typical case is 1-2 iterations.
 
-### `span_expanded_text(span)` — O(1)
+### `span_expanded_text(span)`: O(1)
 
 `&layers[span._layer_id].buf[span.offset..span.offset + span.length]`.
 Trivial.
 
-### `span_text_range(span)` — O(depth)
+### `span_text_range(span)`: O(depth)
 
 Same walk as `span_text`, but return the final `(off, off+len)` pair
 instead of slicing.
 
-### `traceback(span)` — O(depth)
+### `traceback(span)`: O(depth)
 
 Start at `span._layer_id` and walk toward root, emitting one frame per
 layer into a small on-stack buffer (innermost first). Drill through
@@ -494,7 +494,7 @@ From today's codebase:
 - `SynqMacroRegion` type (unified into `SynqExpansionLayer`).
 - `macro_regions` and `macro_expansions` parser vectors (unified into
   `layers`).
-- `synq_span_needs_resolve` inline helper (no longer meaningful — all
+- `synq_span_needs_resolve` inline helper (no longer meaningful: all
   accessors handle the layer walk internally).
 - `resolve_span`'s expansion-walking code path (simplified to a
   straight call into `span_text` / `span_expanded_text` /
@@ -503,7 +503,7 @@ From today's codebase:
 - `syntaqlite_parser_expansion_traceback` (replaced by the new
   `syntaqlite_parser_traceback` with argument fidelity).
 - `analyzer.rs::statement_source()` helper (replaced by
-  `stmt.text()` — which is now correct for macros instead of silently
+  `stmt.text()`, which is now correct for macros instead of silently
   broken; deferred to Step 11/15).
 - `FieldValue::Span::text` referring to the expansion-buffer slice (the
   name is reassigned to mean authored slice, with a new `expanded_text`
@@ -524,8 +524,8 @@ additive/rename work lands first, then behavior changes, then deletions.
 | 4. Record `SynqArgSegment` during param substitution| ✅ done | `SynqMacroExpansion` carries arg segments until transferred onto the layer in `feed_macro_expansion`; `reset_stmt` / `destroy` free both expansion buffers and segment arrays. |
 | 5. Add `_layer_id` to `SyntaqliteParserToken`       | ✅ done | ABI change (16 → 20 bytes). Python bindings unaffected (they don't use the struct); Rust `CParserToken` mirror updated. |
 | 6. Add `span_text` / `span_expanded_text` / `span_text_range` | ✅ done | See "Notes on Step 6" below. |
-| 7. Add `traceback` with arg-segment drilling        | ✅ done | New `SyntaqliteTracebackFrame` struct + `syntaqlite_parser_traceback` C API, `TracebackFrame<'a>` + `AnyParsedStatement::traceback` Rust method. Validator migrated off the old API. The C side owns a `SYNQ_VEC(SyntaqliteTracebackFrame) traceback_buf` scratch buffer (rewritten per call, freed on destroy); the function returns `const SyntaqliteTracebackFrame*` + `*out_count` in a single call. The Rust method takes `&mut self` and returns `impl Iterator<Item = TracebackFrame<'a>>` zero-copy borrowed from that buffer — `&mut self` makes "one live iterator at a time" a compile-time invariant. See session notes. |
-| 8. Targeted `select_span` on Perfetto CREATE stmts (was: subtree extent cache) | ✅ done (reshaped) | **Scope change**: the generalized `subtree_text` API was dropped in favor of a targeted grammar-annotation mechanism. Added `cur_shift_start`/`last_shifted_end` tracking on `SynqParseCtx` (updated in `record_and_feed` before/after `feed_one_token`) plus empty-marker rules `select_body_start` / `select_body_end` in `perfetto.y`. Added `select_span` field to `CreatePerfettoTableStmt` / `CreatePerfettoViewStmt` / `CreatePerfettoFunctionStmt`. Consumers read the field like any other span and call `span_text_range(select_span)` for the authored byte range. Perfetto macro body already lands as a span via existing `synq_span` conversion — no change needed. |
+| 7. Add `traceback` with arg-segment drilling        | ✅ done | New `SyntaqliteTracebackFrame` struct + `syntaqlite_parser_traceback` C API, `TracebackFrame<'a>` + `AnyParsedStatement::traceback` Rust method. Validator migrated off the old API. The C side owns a `SYNQ_VEC(SyntaqliteTracebackFrame) traceback_buf` scratch buffer (rewritten per call, freed on destroy); the function returns `const SyntaqliteTracebackFrame*` + `*out_count` in a single call. The Rust method takes `&mut self` and returns `impl Iterator<Item = TracebackFrame<'a>>` zero-copy borrowed from that buffer: `&mut self` makes "one live iterator at a time" a compile-time invariant. See session notes. |
+| 8. Targeted `select_span` on Perfetto CREATE stmts (was: subtree extent cache) | ✅ done (reshaped) | **Scope change**: the generalized `subtree_text` API was dropped in favor of a targeted grammar-annotation mechanism. Added `cur_shift_start`/`last_shifted_end` tracking on `SynqParseCtx` (updated in `record_and_feed` before/after `feed_one_token`) plus empty-marker rules `select_body_start` / `select_body_end` in `perfetto.y`. Added `select_span` field to `CreatePerfettoTableStmt` / `CreatePerfettoViewStmt` / `CreatePerfettoFunctionStmt`. Consumers read the field like any other span and call `span_text_range(select_span)` for the authored byte range. Perfetto macro body already lands as a span via existing `synq_span` conversion: no change needed. |
 | 9. Lazy expanded splicer + `subtree_expanded_text` / `expanded_text` | ❌ dropped | Obviated by Step 8's reshape. Macro-containing subtrees don't need a generalized splicer; Perfetto's actual use cases are handled by the `select_span` field (whose authored bytes come from the root layer directly). |
 | 10. Migrate formatter's `try_macro_verbatim`        | ❌ dropped | Obviated by Step 8's reshape. The formatter's existing `MacroRegion` + peek-next-token approach is correct and doesn't benefit from a subtree accessor. |
 | 11. Migrate analyzer's `statement_source`           | ⏳ deferred | |
@@ -537,7 +537,7 @@ additive/rename work lands first, then behavior changes, then deletions.
 **Notes on Step 6 (session 1):**
 - The existing Rust `AnyParsedStatement::span_text` method (which returned
   the expansion-buffer slice) was renamed to `span_expanded_text` as part
-  of this step — otherwise the new `span_text` (authored slice) would
+  of this step: otherwise the new `span_text` (authored slice) would
   silently change the semantics of every `self.stmt_result.span_text(...)`
   call site in the generated `sqlite/ast.rs`. The codegen
   (`syntaqlite-buildtools/src/dialect_codegen/rust_ast.rs`) was updated to
@@ -551,7 +551,7 @@ additive/rename work lands first, then behavior changes, then deletions.
 
 **Red-green discipline:** Steps 1–5 are mechanical renames and internal
 plumbing with no user-visible surface, so there is nothing to fail a
-test against — they proceed as straight refactors, verified by existing
+test against: they proceed as straight refactors, verified by existing
 tests staying green. Red-green begins at Step 6, where the first new
 public accessors are introduced: the unit tests for `span_text`,
 `span_expanded_text`, and `span_text_range` are written before the
@@ -569,7 +569,7 @@ implementation and must fail on the pre-change tree.
   work: removed `syntaqlite_parser_resolve_span` /
   `SyntaqliteResolvedSpan` (Step 14) and migrated `extract_field_value`
   to populate `FieldValue::Span` directly from `span_expanded_text` +
-  `span_text_range` + `sp.is_quoted()` — a partial Step 12 landing.
+  `span_text_range` + `sp.is_quoted()`: a partial Step 12 landing.
   Also replaced `syntaqlite_result_macros` (array-pointer view over
   `p->layers`) with a count + `_macro_at(idx)` pair so there is no
   separate "public view" data structure. Updated C examples
@@ -582,7 +582,7 @@ implementation and must fail on the pre-change tree.
   uses `stmt.traceback(node_id, field_idx)`. Step 13 followed
   immediately: the old `expansion_traceback` / `ExpansionFrame` /
   `field_expansion_traceback` symbols are gone entirely. The Perfetto
-  `MacroExpansionSpanRegression` diff test split into two cases — one
+  `MacroExpansionSpanRegression` diff test split into two cases: one
   for the arg-drill collapse (`_d!(a)` → single root frame, no "in
   macro expansion" note) and one for the macro-body case (`m!()`
   where the body contains a literal unknown ident, yielding two
@@ -597,19 +597,19 @@ implementation and must fail on the pre-change tree.
   populated via `cur_shift_start` / `last_shifted_end` ctx fields
   and `select_body_start` / `select_body_end` empty-marker rules.
   The span excludes leading/trailing whitespace. Macro body was
-  already handled by the existing `body` span — no changes needed.
+  already handled by the existing `body` span: no changes needed.
   Steps 9/10 are dropped (they only existed to support the
   generalized subtree abstraction).
 - **Session 2 follow-up (PR #96 review)** reworked the `traceback`
   API shape. The C side now owns a `SYNQ_VEC(SyntaqliteTracebackFrame)
   traceback_buf` scratch buffer on the parser; the function signature
   became `const SyntaqliteTracebackFrame* syntaqlite_parser_traceback(p,
-  span, *out_count)` — single call, parser-owned storage, no
+  span, *out_count)`: single call, parser-owned storage, no
   caller-provided buffer. The Rust wrapper takes `&mut self` and
   returns `impl Iterator<Item = TracebackFrame<'a>>` that borrows
   directly from that buffer (zero copy). The `&mut` receiver makes
   "only one live traceback iterator at a time" a compile-time
-  invariant — a second traceback call requires re-acquiring `&mut`,
+  invariant: a second traceback call requires re-acquiring `&mut`,
   which conflicts with any outstanding iterator. Cascade: the
   validator's `ValidationPass` methods that transitively reach
   `emit()` take `stmt: &mut AnyParsedStatement<'b>` with a
@@ -621,29 +621,29 @@ implementation and must fail on the pre-change tree.
   before the recursive `&mut` visits. Traceback unit tests
   `.collect::<Vec<_>>()` the iterator.
 
-### Step 1 — Rename `_buf_idx` to `_layer_id`
+### Step 1: Rename `_buf_idx` to `_layer_id`
 
 Pure rename at the field level. Touches:
-- `include/syntaqlite/types.h` — `SyntaqliteTextSpan._buf_idx` → `_layer_id`
-- `include/syntaqlite/dialect.h` — `SynqParseToken.buf_idx` → `layer_id`
-- `include/syntaqlite_dialect/ast_builder.h` — `SynqParseCtx.buf_idx` → `layer_id`
-- `csrc/parser*.c` — all references, including `synq_span`, `synq_span_dequote`
-- `src/parser/ffi.rs`, `src/ast.rs`, `src/parser/mod.rs` — Rust mirror
+- `include/syntaqlite/types.h`: `SyntaqliteTextSpan._buf_idx` → `_layer_id`
+- `include/syntaqlite/dialect.h`: `SynqParseToken.buf_idx` → `layer_id`
+- `include/syntaqlite_dialect/ast_builder.h`: `SynqParseCtx.buf_idx` → `layer_id`
+- `csrc/parser*.c`: all references, including `synq_span`, `synq_span_dequote`
+- `src/parser/ffi.rs`, `src/ast.rs`, `src/parser/mod.rs`: Rust mirror
 
 No semantic change. Tests untouched.
 
-### Step 2 — Rename `SynqMacroRegion` → `SynqExpansionLayer`
+### Step 2: Rename `SynqMacroRegion` → `SynqExpansionLayer`
 
 Internal rename. Unify `p->macro_expansions` and `p->macro_regions` into a
 single `p->layers` vector with the union of fields the two structs held.
 Update all internal call sites (`parser_macros.c`, `parser.c`,
 `parser_dump.c`). Public API unchanged.
 
-### Step 3 — Add new layer metadata fields
+### Step 3: Add new layer metadata fields
 
 Add to `SynqExpansionLayer`:
 - `template_body` / `template_body_len` (borrowed directly from the
-  macro registry entry's `body` field — no separate snapshot storage)
+  macro registry entry's `body` field: no separate snapshot storage)
 - `name` (borrowed from the registry entry's `name` field)
 - `def_line` / `def_col` (from the macro registration site)
 - `arg_segments` / `arg_segment_count` (empty for now)
@@ -655,14 +655,14 @@ register time). Source of these values: the statement position where
 
 **Decision on macro body provenance (resolves the open question
 below):** the `template_body` shown in traceback frames for a macro
-layer is sourced from the registry entry's existing `body` field — no
+layer is sourced from the registry entry's existing `body` field: no
 new `def_text_snapshot` field is added. The registry already owns a
 copy of each macro's template; we point `template_body` at that copy
 and rely on the fact that a registered macro's body outlives any parse
 using it. This is the cheapest of the three options in the Open
 Question section and costs zero extra memory.
 
-### Step 4 — Record `SynqArgSegment` during param substitution
+### Step 4: Record `SynqArgSegment` during param substitution
 
 Modify `synq_parser_expand_macro` to emit a `SynqArgSegment` each time
 it substitutes a `$param` with caller arg text. The segment records:
@@ -672,7 +672,7 @@ it substitutes a `$param` with caller arg text. The segment records:
 
 Attach the segment list to the new expansion layer.
 
-### Step 5 — Add `_layer_id` field to `SyntaqliteParserToken`
+### Step 5: Add `_layer_id` field to `SyntaqliteParserToken`
 
 Extend the public struct to carry layer_id. Populate at `synq_parser_record_and_feed`
 time using the current tokenizer layer. Update `SynqParseToken` shift-time
@@ -682,7 +682,7 @@ ABI change. Document in public API notes. In-tree consumers to update:
 - `python/csrc/_syntaqlite.c` (Python bindings)
 - any CLI/WASM code that reads `SyntaqliteParserToken` (audit)
 
-### Step 6 — Add `span_text` / `span_expanded_text` / `span_text_range`
+### Step 6: Add `span_text` / `span_expanded_text` / `span_text_range`
 
 New C accessors. New Rust methods on `AnyParsedStatement`. Implemented
 via the layer walk described under "Internal mechanics". Unit-tested
@@ -691,7 +691,7 @@ against simple nested macro cases.
 At this point, all the infrastructure is in place but nothing consumes it
 yet.
 
-### Step 7 — Add `traceback` with arg-segment drilling
+### Step 7: Add `traceback` with arg-segment drilling
 
 New C + Rust API. Replaces `expansion_traceback` semantically but is NOT
 wired up yet (the old API stays in parallel during migration).
@@ -708,10 +708,10 @@ The C function owns a `SYNQ_VEC(SyntaqliteTracebackFrame) traceback_buf`
 scratch buffer on the parser. Each call clears and rewrites it, then
 returns a pointer + count. The Rust wrapper takes `&mut self` and
 returns `impl Iterator<Item = TracebackFrame<'a>>` borrowed from the
-buffer — the `&mut` makes "one live iterator at a time" compile-time
+buffer: the `&mut` makes "one live iterator at a time" compile-time
 enforced.
 
-### Step 8 — Targeted `select_span` on Perfetto CREATE stmts
+### Step 8: Targeted `select_span` on Perfetto CREATE stmts
 
 **(Reshaped from the originally-planned generalized `subtree_text` API.)**
 
@@ -758,50 +758,50 @@ the authored byte range or slice.
 
 Perfetto `perfetto_macro_body` already produces a `SynqParseToken` with
 `.z`/`.n` merged across its ANY-wildcard tokens, which lands as a
-`body` span via the existing `synq_span(pCtx, BODY)` conversion — no
+`body` span via the existing `synq_span(pCtx, BODY)` conversion: no
 change needed for the macro body case.
 
 Test: an amalg diff test for `CREATE PERFETTO TABLE foo AS    SELECT 1   `
 verifies that the recorded `select_span` is exactly `"SELECT 1"` (no
 leading or trailing whitespace).
 
-### Step 9 — Lazy expanded splicer + `subtree_expanded_text` / `expanded_text`
+### Step 9: Lazy expanded splicer + `subtree_expanded_text` / `expanded_text`
 
 **Dropped.** This step only existed to support the generalized
 `subtree_text` / `subtree_expanded_text` accessors, which were also
 dropped in the Step 8 reshape. Perfetto's actual use cases (issue #89)
 are handled by the `select_span` field.
 
-### Step 10 — Migrate formatter's `try_macro_verbatim`
+### Step 10: Migrate formatter's `try_macro_verbatim`
 
 **Dropped.** The formatter's existing `MacroRegion` + peek-next-token
 approach is correct and requires no changes. This step was a
 consequence of the generalized subtree API that is no longer being
 built.
 
-### Step 11 — Migrate analyzer's `statement_source`
+### Step 11: Migrate analyzer's `statement_source`
 
 Replace `analyzer.rs::statement_source()` with `stmt.text()` at its call
 site. This is a silent correctness fix for statements containing macros;
 unit-test it.
 
-### Step 12 — `FieldValue::Span` rename
+### Step 12: `FieldValue::Span` rename
 
 Replace the current two-field `Span { text, source }` with four-field
 `Span { text, expanded_text, text_range, quoted }`:
 - old `text` (expansion-buffer slice) → new `expanded_text`
 - old `source` (byte range) → new `text_range`
-- new `text` (authored slice) — populated from `span_text`
+- new `text` (authored slice): populated from `span_text`
 
 Compile errors at every call site will pinpoint the rename. Update them
 all in one sweep.
 
-### Step 13 — Delete old expansion traceback API
+### Step 13: Delete old expansion traceback API
 
 Remove `syntaqlite_parser_expansion_traceback` and its C struct. Confirm
 no callers remain (likely none after #87, but verify).
 
-### Step 14 — Delete `resolve_span` and `SyntaqliteResolvedSpan`
+### Step 14: Delete `resolve_span` and `SyntaqliteResolvedSpan`
 
 Already done in the PR #90 follow-up: `extract_field_value` was
 migrated to populate `FieldValue::Span` directly from
@@ -810,7 +810,7 @@ removed the last caller of `resolve_span`. The C function and the
 `SyntaqliteResolvedSpan` struct were then deleted (hard removal, no
 shim retained).
 
-### Step 15 — Rename `syntaqlite_parser_text()` → `syntaqlite_parser_text()`
+### Step 15: Rename `syntaqlite_parser_text()` → `syntaqlite_parser_text()`
 
 Hard rename, no compat alias. Update CLI, WASM playground, Python
 bindings, and any tests referencing the old name. A grep for
@@ -830,7 +830,7 @@ The following parts of the codebase should require **no changes**:
 - Macro registration and lookup (registry data structures may gain
   `def_line`/`def_col`, but the hashmap logic is unchanged)
 - AST arena, node construction, list handling
-- The `check_macro_straddle` diagnostic — still enforced at its existing
+- The `check_macro_straddle` diagnostic: still enforced at its existing
   call site
 
 ## Deferred / out of scope
@@ -853,7 +853,7 @@ later if concrete need arises:
   then, modeled on Perfetto's 4-phase Build.
 - **Public `Substr` on `Span`.** Perfetto's `SqlSource::Substr` is used
   to carve macro arguments out of caller source. Our expansion pipeline
-  doesn't need it at the public boundary — arg segments are internal
+  doesn't need it at the public boundary: arg segments are internal
   metadata.
 - **Flat expanded offset space.** We chose lazy / layer-local offsets.
   If a future consumer genuinely needs "the expanded offset of this span
@@ -878,7 +878,7 @@ This refactor is done when:
 
 1. **Public API uses the new vocabulary.** Every `source` in a user-facing
    name has become `text` or `expanded_text`. All accessors are named
-   per the table above. *(Partially done — `parser_source` → `text`
+   per the table above. *(Partially done: `parser_source` → `text`
    rename is deferred to Step 15.)*
 2. **`_layer_id` is never referenced by any public API signature.** It
    exists as an implementation-detail field on `SyntaqliteTextSpan` and
@@ -886,7 +886,7 @@ This refactor is done when:
    or returns it. *(Done.)*
 3. **`statement_source` in `analyzer.rs` is deleted.** Its replacement
    (`stmt.text()`) produces correct output for statements containing
-   macros — tested via a regression test that would have failed today.
+   macros: tested via a regression test that would have failed today.
    *(Deferred to Step 11.)*
 4. **Traceback fidelity matches Perfetto.** A diagnostic at an offset
    inside a substituted macro argument produces a traceback whose
@@ -919,7 +919,7 @@ any parse that uses the macro.
 
 **Decision: point `SynqExpansionLayer.template_body` directly at the
 registry's `body` field.** No snapshot of the *defining statement* is
-captured — only the macro body itself, which is what the traceback
+captured: only the macro body itself, which is what the traceback
 needs for caret rendering. The `def_line` / `def_col` numbers are
 informational metadata for the frame header; they do not index into any
 buffer.

@@ -105,13 +105,13 @@ Use `--check` to verify files are formatted without modifying them. See the
 
 ## Next steps
 
-- [Project setup guide](@/guides/project-setup.md) — configure
+- [Project setup guide](@/guides/project-setup.md): configure
   `syntaqlite.toml` for a real project
 - [libsyntaqlite for Python](@/getting-started/python.md): use `parse`,
   `format_sql`, `analyze` from Python
-- [CLI reference](@/reference/cli.md) — all flags for `fmt`, `analyze`,
+- [CLI reference](@/reference/cli.md): all flags for `fmt`, `analyze`,
   `parse`, and `lsp`
-- [Config file reference](@/reference/config-file.md) — `syntaqlite.toml`
+- [Config file reference](@/reference/config-file.md): `syntaqlite.toml`
   format
-- [Formatting options](@/reference/formatting-options.md) — line width,
+- [Formatting options](@/reference/formatting-options.md): line width,
   keyword casing, and more

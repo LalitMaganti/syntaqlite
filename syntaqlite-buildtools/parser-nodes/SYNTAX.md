@@ -1,4 +1,4 @@
-# .synq — Node Definition Language
+# .synq: Node Definition Language
 
 These files define the AST that syntaqlite's parser produces. From
 them, the codegen tool generates:
@@ -31,25 +31,25 @@ and a formatter recipe.
 **Fields** describe what data the node stores. Each has a name, a
 storage class, and a type:
 
-- `expr: index Expr` — an `index` field is a reference to another
+- `expr: index Expr`: an `index` field is a reference to another
   node in the AST arena. The generated struct stores a node index; the
   builder function takes a node index parameter.
-- `type_name: inline SyntaqliteTextSpan` — an `inline` field is
+- `type_name: inline SyntaqliteTextSpan`: an `inline` field is
   stored directly in the node struct. Source spans, enums, flags, and
   bools are all inline.
 
 **The fmt block** is a recipe for the formatter. Items emit left to
 right:
 
-- `"CAST"` — a bare string emits a single SQL keyword
-- `"("` — punctuation, sits flush against the previous keyword
-- `child(expr)` — recursively formats a child node
-- `"AS"` — another keyword; the formatter inserts spaces between
+- `"CAST"`: a bare string emits a single SQL keyword
+- `"("`: punctuation, sits flush against the previous keyword
+- `child(expr)`: recursively formats a child node
+- `"AS"`: another keyword; the formatter inserts spaces between
   adjacent word-class atoms automatically
-- `span(type_name)` — prints the original source text of a span field
-- `")"` — closing paren
+- `span(type_name)`: prints the original source text of a span field
+- `")"`: closing paren
 
-Each keyword is a single SQL word — no embedded whitespace. The
+Each keyword is a single SQL word: no embedded whitespace. The
 formatter places one space between two adjacent word-class tokens at
 render time; punctuation transitions need an explicit `line` if a
 space is wanted there. Multiple items next to each other form a
@@ -120,30 +120,30 @@ if_xxx(args) { then_body }
 if_xxx(args) { then_body } else { else_body }
 ```
 
-**if_set** — is an index field non-null?
+**if_set**: is an index field non-null?
 
 ```synq
 if_set(columns) { "(" child(columns) ")" }
 ```
 
-**if_flag** — is a bool true or a flag bit set?
+**if_flag**: is a bool true or a flag bit set?
 
 ```synq
 # Bool field
 if_flag(is_temp) { "TEMP" }
 
-# Flag bit — use dot notation
+# Flag bit: use dot notation
 if_flag(flags.distinct) { "SELECT" "DISTINCT" } else { "SELECT" }
 ```
 
-**if_enum** — does an enum equal a specific variant?
+**if_enum**: does an enum equal a specific variant?
 
 ```synq
 if_enum(sort_order, DESC) { "DESC" }
 if_enum(kind, REINDEX) { "REINDEX" } else { "ANALYZE" }
 ```
 
-**if_span** — is a source span non-empty?
+**if_span**: is a source span non-empty?
 
 ```synq
 if_span(schema) { span(schema) "." }
@@ -166,11 +166,11 @@ if_flag(flags.star) {
 
 Three kinds, controlling how the formatter breaks lines:
 
-- `line` — a space when the group fits on one line, a newline when broken
-- `softline` — nothing when flat, a newline when broken
-- `hardline` — always a newline
+- `line`: a space when the group fits on one line, a newline when broken
+- `softline`: nothing when flat, a newline when broken
+- `hardline`: always a newline
 
-## group and nest — controlling layout
+## group and nest: controlling layout
 
 `group` marks a region the formatter tries to keep on one line. If it
 doesn't fit, all `line`/`softline` breaks inside become newlines:
@@ -187,9 +187,9 @@ group { nest { line child(columns) } }
 
 When the group breaks, `line` becomes an indented newline.
 
-## clause — the SQL clause shorthand
+## clause: the SQL clause shorthand
 
-SQL statements repeat this pattern constantly — "if a field is
+SQL statements repeat this pattern constantly: "if a field is
 present, start a new line, print the keyword, indent the body":
 
 ```synq
@@ -209,7 +209,7 @@ clause("GROUP", "BY", groupby)
 clause("ORDER", "BY", orderby)
 ```
 
-Each keyword is a single SQL word — no embedded whitespace. The
+Each keyword is a single SQL word: no embedded whitespace. The
 formatter inserts the inter-word space at render time. This makes
 SELECT-style statements very clean:
 
@@ -241,7 +241,7 @@ node SelectStmt {
 }
 ```
 
-## switch — branching on enum values
+## switch: branching on enum values
 
 When different enum values need entirely different output, use switch.
 Each case is `VARIANT { body }`:
@@ -281,7 +281,7 @@ switch(op) {
 }
 ```
 
-## enum_display — mapping enum values to text
+## enum_display: mapping enum values to text
 
 Emits a string based on the current value of an enum field:
 
@@ -294,7 +294,7 @@ enum_display(op, {
 
 Variants not listed produce no output.
 
-## for_each — iterating list children
+## for_each: iterating list children
 
 Use `child(_item)` for the current child during iteration.
 
@@ -319,7 +319,7 @@ for_each(sep: "," line) { "(" child(_item) ")" }
 
 ## Keyword spacing
 
-Keyword literals are single SQL words — no leading, trailing, or
+Keyword literals are single SQL words: no leading, trailing, or
 embedded whitespace. The renderer inserts a space between two
 adjacent word-class atoms automatically:
 

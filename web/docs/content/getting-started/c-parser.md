@@ -6,15 +6,15 @@ weight = 5
 
 # Parsing SQLite SQL from C
 
-This tutorial walks you through parsing SQL from C. By the end you'll have a
-small program that parses queries, prints their AST, recovers from errors, and
-lists tokens — with nothing to install beyond a C compiler.
+The source amalgamation lets you add SQLite parsing to a C program without any
+dependencies beyond a C compiler. The example below parses queries, prints their
+AST, recovers from errors, and lists the tokens produced by the tokenizer.
 
-There are two C distributions. This tutorial uses the **source amalgamation**,
-which provides the parser and tokenizer as two C files you compile directly into
-your project. The prebuilt libsyntaqlite library also adds formatting and static
-analysis; see the [libsyntaqlite C guide](@/guides/c-api.md)
-once you're done here.
+syntaqlite has two C distributions. This tutorial uses the **source
+amalgamation**, which provides the parser and tokenizer as two C files that you
+compile into your project. The prebuilt libsyntaqlite library also includes
+formatting and static analysis, as described in the
+[libsyntaqlite C guide](@/guides/c-api.md).
 
 ## 1. Download the amalgamation
 

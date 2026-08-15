@@ -6,10 +6,10 @@ The current validation/analysis architecture has fundamental ownership problems:
 
 ## Design Principles
 
-1. **One engine.** `SemanticAnalyzer` is the single entry point for all semantic analysis — diagnostics, semantic tokens, completions. No separate `Validator`, `EmbeddedAnalyzer`, or `AnalysisHost`.
+1. **One engine.** `SemanticAnalyzer` is the single entry point for all semantic analysis: diagnostics, semantic tokens, completions. No separate `Validator`, `EmbeddedAnalyzer`, or `AnalysisHost`.
 2. **Callers own lifecycle.** The analyzer takes borrowed inputs (`&str`, `&DatabaseCatalog`, `&SemanticModel`). Callers decide what's long-lived vs. transient. The analyzer never forces ownership transfer or cloning.
 3. **Parse once, query many.** `SemanticModel` is an opaque precomputed representation of SQL. Build it once with `prepare()`, pass it to any analysis method. Avoids re-parsing across diagnostics/tokens/completions.
-4. **Simple by default, fast when needed.** The primary API takes `&str` — no setup required. The advanced API (`prepare` + `_prepared` methods) is opt-in for callers that need to avoid redundant parsing.
+4. **Simple default with an optimized path.** The primary API takes `&str` without setup. Callers that need to avoid redundant parsing can opt into the advanced API (`prepare` and the `_prepared` methods).
 5. **Symmetric catalogs.** Functions and relations follow the same three-level resolution pattern: static (dialect) → database (user) → document (accumulated DDL). No asymmetric `FunctionCatalog` vs. bare relation slices.
 
 ## Public API
@@ -42,18 +42,18 @@ pub mod semantic {
 impl<'d> SemanticAnalyzer<'d> {
     pub fn new(dialect: RawDialect<'d>) -> Self;
 
-    // ── Primary API — string in, results out ───────────────────────
+    // ── Primary API: string in, results out ───────────────────────
     pub fn diagnostics(&mut self, source: &str, catalog: &DatabaseCatalog) -> Vec<Diagnostic>;
     pub fn semantic_tokens(&mut self, source: &str, catalog: &DatabaseCatalog) -> Vec<SemanticToken>;
     pub fn completions(&mut self, source: &str, offset: usize, catalog: &DatabaseCatalog) -> Vec<CompletionItem>;
 
-    // ── Advanced API — prepare once, query many times ──────────────
+    // ── Advanced API: prepare once, query many times ──────────────
     pub fn prepare(&mut self, source: impl Into<String>) -> SemanticModel;
     pub fn diagnostics_prepared(&mut self, model: &SemanticModel, catalog: &DatabaseCatalog) -> Vec<Diagnostic>;
     pub fn semantic_tokens_prepared(&mut self, model: &SemanticModel, catalog: &DatabaseCatalog) -> Vec<SemanticToken>;
     pub fn completions_prepared(&mut self, model: &SemanticModel, offset: usize, catalog: &DatabaseCatalog) -> Vec<CompletionItem>;
 
-    // ── Embedded SQL — extract from host language + analyze ────────
+    // ── Embedded SQL: extract from host language + analyze ────────
     pub fn diagnostics_embedded<L: LanguageExtractor>(&mut self, source: &str, catalog: &DatabaseCatalog) -> Vec<Diagnostic>;
 }
 ```
@@ -68,7 +68,7 @@ Opaque struct with no public methods. Produced only by `SemanticAnalyzer::prepar
 pub struct SemanticModel {
     // All private. Callers never look inside.
     source: String,
-    parser: RawParser<'d>,            // owns the arena — node IDs stay valid
+    parser: RawParser<'d>,            // owns the arena: node IDs stay valid
     stmts: Vec<Result<NodeId, ParseError>>,
     tokens: Vec<CachedToken>,
     // Future: symbol indexes, scope caches, type maps, hashmaps
@@ -79,7 +79,7 @@ Freely storable, cacheable. No lifetime parameters in the public type. The LSP s
 
 ### DatabaseCatalog
 
-The only external input the caller provides. Symmetric — both relations and functions.
+The only external input the caller provides. Symmetric: both relations and functions.
 
 ```rust
 pub struct DatabaseCatalog {
@@ -98,10 +98,10 @@ pub struct DatabaseCatalog {
 pub struct SemanticAnalyzer<'d> {
     dialect: RawDialect<'d>,
 
-    // Built once from dialect at construction — dialect builtins
+    // Built once from dialect at construction: dialect builtins
     static_catalog: StaticCatalog,
 
-    // Reusable scratch buffers — cleared, not reallocated
+    // Reusable scratch buffers: cleared, not reallocated
     diag_buf: Vec<Diagnostic>,
     doc_catalog: DocumentCatalog,
     scope_buf: Vec<Scope>,
@@ -122,11 +122,11 @@ Database (user):    user UDFs                user tables/views
 Document (DDL):     CREATE FUNCTION in file  CREATE TABLE/VIEW in file
 ```
 
-**StaticCatalog** — built from dialect data at `SemanticAnalyzer::new()`. Immutable. Contains dialect builtins and extensions. Internal type, not public.
+**StaticCatalog**: built from dialect data at `SemanticAnalyzer::new()`. Immutable. Contains dialect builtins and extensions. Internal type, not public.
 
-**DatabaseCatalog** — provided by the caller. Contains relations and functions from the user's live database or configuration. Public type.
+**DatabaseCatalog**: provided by the caller. Contains relations and functions from the user's live database or configuration. Public type.
 
-**DocumentCatalog** — accumulated from DDL statements during analysis. Rebuilt each analysis pass. Internal scratch buffer owned by the analyzer.
+**DocumentCatalog**: accumulated from DDL statements during analysis. Rebuilt each analysis pass. Internal scratch buffer owned by the analyzer.
 
 The C layer should expose static catalog data (both functions and relations) so the Rust side can read it through FFI at construction time, same pattern as existing function metadata.
 
@@ -184,7 +184,7 @@ Current `EmbeddedAnalyzer` logic for Rust/C extraction becomes `impl LanguageExt
 
 ## Call site examples
 
-### CLI — one-shot
+### CLI: one-shot
 
 ```rust
 let catalog = DatabaseCatalog::default(); // no DB context
@@ -195,7 +195,7 @@ for diag in &diags {
 }
 ```
 
-### LSP server — persistent, multi-document
+### LSP server: persistent, multi-document
 
 ```rust
 struct LspServer<'d> {
@@ -228,7 +228,7 @@ impl<'d> LspServer<'d> {
 }
 ```
 
-### Embedded SQL — host language extraction
+### Embedded SQL: host language extraction
 
 ```rust
 let catalog = DatabaseCatalog::default();
@@ -263,4 +263,4 @@ The `validation/` module ceases to exist. Everything is under `semantic/`.
 - **No rebuilding.** `StaticCatalog` is built once at construction. `DatabaseCatalog` is owned by the caller with whatever lifecycle they choose.
 - **Symmetric.** Functions and relations have identical resolution: document → database → static.
 - **Opaque intermediate.** `SemanticModel` is a black box. Internal representation can evolve (add indexes, caches, type maps) without API changes.
-- **Simple default.** The primary API is three methods that take `&str`. No setup, no intermediate types.
+- **Simple default.** The primary API consists of three methods that take `&str`, with no setup or intermediate types.

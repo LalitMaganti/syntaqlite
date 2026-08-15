@@ -6,11 +6,10 @@ weight = 6
 
 # Embedded SQL
 
-syntaqlite can analyze SQL that doesn't live in a plain `.sql` file: sqlite3
-command-line shell scripts (with `.read` and friends) and SQL string literals
-inside Python and TypeScript source files. In each case it isolates the SQL,
-then runs the full pipeline on it — syntax checking, schema validation, and
-function/arity checks all work exactly as they do on standalone SQL.
+syntaqlite can analyze SQL in sqlite3 command-line shell scripts (including
+scripts that use `.read`) and in string literals inside Python and TypeScript
+source files. It isolates the SQL before applying the same syntax, schema, and
+function-arity checks used for standalone `.sql` files.
 
 ## sqlite3 shell scripts
 
@@ -19,8 +18,8 @@ Scripts written for the `sqlite3` command-line shell interleave SQL with shell
 statement terminators. Those lines are not valid SQL, so a plain SQL parser
 fails with a syntax error on the first `.` command.
 
-syntaqlite detects such scripts automatically — no `--experimental-lang` flag
-required. When a file looks like a sqlite3 script, the non-SQL lines are set
+syntaqlite detects sqlite3 shell scripts automatically, so they do not require
+an `--experimental-lang` flag. When a file looks like a sqlite3 script, the non-SQL lines are set
 aside and only the SQL between them is parsed, validated, and formatted:
 
 ```bash
@@ -60,7 +59,7 @@ The extractor looks for string literals that contain SQL keywords (`SELECT`,
 f-strings, and template literals are supported:
 
 ```python
-# Python — all of these are recognized
+# All of these Python strings are recognized
 cursor.execute("SELECT id, name FROM users WHERE active = 1")
 
 query = """
@@ -73,7 +72,7 @@ cursor.execute(f"SELECT * FROM {table_name} WHERE id = ?")
 ```
 
 ```typescript
-// TypeScript — template literals work too
+// TypeScript template literals are recognized
 const query = `
   SELECT id, name
   FROM users
@@ -83,7 +82,8 @@ const query = `
 
 ## Limitations
 
-This feature is experimental. Some patterns are not recognized:
+Embedded string extraction is experimental and does not yet recognize these
+patterns:
 
 - String concatenation across multiple statements (`query += "..."`)
 - SQL built dynamically at runtime

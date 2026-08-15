@@ -6,10 +6,9 @@ weight = 6
 
 # Using libsyntaqlite from Python
 
-libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
-SQL. The `syntaqlite` package provides its Python API. This tutorial walks you
-through using it to format SQL, validate it against a schema, and inspect the
-AST.
+The `syntaqlite` package provides Python bindings for libsyntaqlite. The
+examples below cover formatting SQL, validating it against a schema, and
+inspecting the resulting AST.
 
 ## 1. Install
 
@@ -17,8 +16,8 @@ AST.
 pip install syntaqlite
 ```
 
-The pip package calls the syntaqlite core in-process via a bundled native
-library and also includes the `syntaqlite` CLI binary. Requires Python 3.10+.
+The pip package requires Python 3.10 or later. It bundles a native library for
+calling syntaqlite in-process and also installs the `syntaqlite` CLI binary.
 
 > **Pyodide / browser:** syntaqlite also ships an Emscripten wheel, so it runs
 > in [Pyodide](https://pyodide.org/) with no subprocess. `pip install syntaqlite`
@@ -127,8 +126,8 @@ error: unknown column 'nme'
 
 ### Column lineage
 
-When validating a SELECT, the result includes column lineage — which
-source table and column each output column traces back to:
+When validating a `SELECT`, the result includes the source table and column for
+each output column:
 
 ```python
 schema = Schema(tables=[Table("users", ["id", "name", "email"])])
@@ -162,9 +161,9 @@ example, a `CREATE TABLE` statement).
 
 ## 5. Parse and inspect the AST
 
-`sq.parse()` returns typed Python objects. Each statement is a class with
-named attributes — you get IDE autocomplete and `isinstance` checks instead
-of string-keyed dict access:
+`sq.parse()` returns typed Python objects. Each statement is represented by a
+class with named attributes, so IDE completion and `isinstance` checks work
+without string-keyed dictionary access:
 
 ```python
 stmt = sq.parse("SELECT id, name FROM users WHERE active = 1")[0]
@@ -187,8 +186,8 @@ BinaryExpr(...)
 
 ### Walking the AST
 
-Because nodes are typed, you can write recursive visitors with `isinstance`.
-Here's a function that counts arithmetic operators in a query:
+Because nodes are typed, recursive visitors can use `isinstance`. The following
+function counts arithmetic operators in a query:
 
 ```python
 from syntaqlite.nodes import BinaryExpr

@@ -1,4 +1,4 @@
-# Python RPC: programmatic module resolver — future enhancement
+# Python RPC: programmatic module resolver: future enhancement
 
 ## Status
 
@@ -10,7 +10,7 @@ has the shape in hand.
 
 ## What we have today
 
-`syntaqlite.Schema` accepts a `modules: dict[str, str]` — a map from
+`syntaqlite.Schema` accepts a `modules: dict[str, str]`: a map from
 dotted module path to SQL source. The `serve json` handler installs a
 `HashMapResolver` built from that map for the duration of one
 `validate` call, then clears it.
@@ -24,7 +24,7 @@ result = sq.validate(sql, schema)
 ```
 
 This works when the caller can enumerate the module set upfront. For
-Perfetto's stdlib (files on disk at known paths) that's fine — load
+Perfetto's stdlib (files on disk at known paths) that's fine: load
 them all and pass. For callers with dynamic resolution (e.g. modules
 generated on demand, fetched from a network cache, or keyed on a
 database) it's not.

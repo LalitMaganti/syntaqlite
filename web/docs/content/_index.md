@@ -2,9 +2,9 @@
 title = "syntaqlite"
 +++
 
-syntaqlite provides a fast CLI and language server for parsing, formatting, and statically
-analyzing SQLite SQL. libsyntaqlite is the fast, embeddable parser, formatter, and
-analyzer that powers those tools, with APIs for Rust, Python, JavaScript/WASM, and C.
+syntaqlite provides a CLI and language server for parsing, formatting, and statically
+analyzing SQLite SQL. libsyntaqlite contains the parser, formatter, and analyzer used by
+those tools, with APIs for Rust, Python, JavaScript/WASM, and C.
 
 Both are built from SQLite's own grammar and tokenizer and can target specific SQLite
 versions and compile-time flags.

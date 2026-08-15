@@ -8,12 +8,12 @@ weight = 3
 
 syntaqlite's validator is a single-pass semantic analyzer. It walks the AST
 once, resolving names against a layered catalog and emitting diagnostics
-inline. This page explains the design. For practical usage, see
+inline. For instructions on configuring a schema, see
 [project setup](@/guides/project-setup.md).
 
 ## Why single-pass
 
-The analyzer dispatches on **semantic roles** — annotations defined in the
+The analyzer dispatches on **semantic roles**, which are annotations defined in the
 [`.synq` grammar files](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-buildtools/parser-nodes)
 that tell the analyzer what each AST node means:
 

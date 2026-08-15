@@ -56,8 +56,8 @@ in CI with `syntaqlite fmt --check "**/*.sql"`.
 ## Analyze
 
 syntaqlite reads your `CREATE TABLE` statements to build a schema, then
-validates queries against it without needing a database. It finds **all** errors in
-one pass, with source locations and did-you-mean suggestions:
+validates queries against it without connecting to a database. A single run can
+report multiple errors, including source locations and spelling suggestions:
 
 ```bash
 syntaqlite analyze -e "CREATE TABLE users (id, name, email); SELECT nme FROM users;"
@@ -85,7 +85,8 @@ Inspect the full abstract syntax tree:
 syntaqlite parse -e "SELECT 1 + 2"
 ```
 
-Useful for code generation, migration tooling, or static analysis. See
-[libsyntaqlite Rust guide](@/guides/rust-api.md#parse-sql) or
-[libsyntaqlite Python tutorial](@/getting-started/python.md) for details.
+The AST can be used for code generation, migration tooling, and static
+analysis. The [libsyntaqlite Rust guide](@/guides/rust-api.md#parse-sql) and
+[libsyntaqlite Python tutorial](@/getting-started/python.md) show how to work
+with it programmatically.
 

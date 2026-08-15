@@ -7,7 +7,7 @@ user_invocable: true
 # commit-and-push-fast (PR workflow)
 
 Commit all current changes, push to a feature branch, and open a pull request.
-Skips pre-push checks for speed — CI will catch issues.
+Skips pre-push checks for speed; CI will catch issues.
 
 > **Note**: This skips `tools/pre-push`. If CI starts failing after using this,
 > switch to `/cp` which runs the full presubmit gate.
@@ -59,7 +59,7 @@ Skips pre-push checks for speed — CI will catch issues.
    ```
 
 7. **Create a PR** using `gh pr create`. For single-commit PRs the
-   body should be the commit body verbatim — the lead-in + bullets
+   body should be the commit body verbatim; the lead-in + bullets
    structure from step 3 is exactly the structure a PR wants. Don't
    rewrite it into a single paragraph, don't add section headings,
    don't restate the title. The shortcut:

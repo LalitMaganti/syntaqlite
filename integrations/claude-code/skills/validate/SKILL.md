@@ -31,9 +31,9 @@ syntaqlite analyze --schema "migrations/*.sql" --schema extra.sql query.sql
 
 ## Options
 
-- `-e, --expression <SQL>` — Validate an inline SQL expression instead of files
-- `--schema <FILE>` — Schema DDL file to load before validation (repeatable, supports globs)
-- `--experimental-lang <LANG>` — Extract embedded SQL from host language files (`python`, `typescript`)
+- `-e, --expression <SQL>`: Validate an inline SQL expression instead of files
+- `--schema <FILE>`: Schema DDL file to load before validation (repeatable, supports globs)
+- `--experimental-lang <LANG>`: Extract embedded SQL from host language files (`python`, `typescript`)
 
 ## Notes
 

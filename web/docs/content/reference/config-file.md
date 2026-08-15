@@ -109,8 +109,8 @@ Functions gated behind a flag you didn't specify will be flagged as unknown.
 
 ## `[format]`
 
-Default formatting options. All fields are optional. Omitted fields use
-built-in defaults. CLI flags override these values.
+All formatting fields are optional and use built-in defaults when omitted.
+CLI flags take precedence over values in this section.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
@@ -124,9 +124,9 @@ descriptions of each option.
 
 ## `[checks]`
 
-Per-category diagnostic levels. Each field accepts `"allow"` (suppress),
-`"warn"`, or `"deny"` (error). Omitted fields use built-in defaults.
-CLI flags (`-A`/`-W`/`-D`) override these values.
+Each field sets a diagnostic category to `"allow"` (suppress), `"warn"`, or
+`"deny"` (error). Omitted fields use built-in defaults, and CLI flags
+(`-A`/`-W`/`-D`) take precedence.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
@@ -136,8 +136,8 @@ CLI flags (`-A`/`-W`/`-D`) override these values.
 | `unknown-function` | string | `"warn"` | Unresolved function names |
 | `function-arity` | string | `"warn"` | Wrong number of function arguments |
 | `cte-columns` | string | `"deny"` | CTE column count mismatches |
-| `schema` | string | — | Shorthand for `unknown-table`, `unknown-column`, `unknown-function`, `function-arity` |
-| `all` | string | — | Shorthand for all categories |
+| `schema` | string | N/A | Shorthand for `unknown-table`, `unknown-column`, `unknown-function`, `function-arity` |
+| `all` | string | N/A | Shorthand for all categories |
 
 When a schema is provided (`--schema` or `syntaqlite.toml`), schema checks
 default to `"deny"` instead of `"warn"`. Explicit `[checks]` values override

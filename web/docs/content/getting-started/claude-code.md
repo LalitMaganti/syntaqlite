@@ -15,16 +15,16 @@ claude plugin marketplace add LalitMaganti/claude-code-plugin
 claude plugin install syntaqlite@lalitmaganti-plugins
 ```
 
-## What you get
+## Plugin features
 
-The plugin gives Claude two things:
+The plugin combines language-server feedback with CLI commands:
 
-**Language server** — starts automatically for `.sql` files. When Claude writes
+**Language server**: starts automatically for `.sql` files. When Claude writes
 or edits SQL, the server feeds back syntax errors, unknown tables/columns, and
-function typos. Claude sees these diagnostics and fixes mistakes on its own,
-without you having to ask.
+function typos. These diagnostics are available to Claude while it edits the
+file.
 
-**CLI skills** — Claude can run `syntaqlite fmt`, `syntaqlite analyze`, and
+**CLI skills**: Claude can run `syntaqlite fmt`, `syntaqlite analyze`, and
 `syntaqlite parse` directly when you ask it to format a query, check a file, or
 inspect a parse tree.
 

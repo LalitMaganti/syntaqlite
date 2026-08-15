@@ -12,7 +12,7 @@ SQL. It provides a C API for C and C++ projects, with two distribution options:
 | | Source amalgamation | Prebuilt shared library |
 |---|---|---|
 | **Package** | `syntaqlite-syntax-amalgamation` | `libsyntaqlite` |
-| **What you get** | Two C files to compile yourself | Shared library + header per platform |
+| **Contents** | Two C files to compile yourself | Shared library + header per platform |
 | **Parser & tokenizer** | Yes | Yes |
 | **Formatter** | No | Yes |
 | **Validator** | No | Yes |
@@ -32,8 +32,8 @@ curl -LO https://github.com/LalitMaganti/syntaqlite/releases/latest/download/syn
 tar xf syntaqlite-syntax-amalgamation.tar.gz
 ```
 
-You get `syntaqlite_syntax.h` and `syntaqlite_syntax.c`. Add them to your
-project and compile:
+The archive contains `syntaqlite_syntax.h` and `syntaqlite_syntax.c`. Add both
+to your project and compile them:
 
 ```bash
 cc -c -O2 syntaqlite_syntax.c -o syntaqlite_syntax.o

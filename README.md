@@ -32,9 +32,9 @@ source.
 and provide completions and navigation in your editor. The analyzer works without opening a
 database and can report multiple independent diagnostics in one pass.
 
-**`libsyntaqlite`** is a fast, embeddable parser, formatter, and static analyzer for SQLite SQL.
-It powers the CLI and language server. It is available through Rust and C APIs, with
-packages exposing the same functionality to Python and JavaScript/WASM. The AST retains
+**`libsyntaqlite`** provides the parser, formatter, and static analyzer used by the CLI
+and language server. It is available through Rust and C APIs, with packages exposing the
+same functionality to Python and JavaScript/WASM. The AST retains
 comments and whitespace, making it suitable for migration tools, code generation, and other
 source-to-source work.
 
@@ -49,9 +49,9 @@ keystroke in an editor as well as large, generated SQL files. The tokenizer and 
 written in C, parsing is incremental, and the library APIs reuse allocations across calls.
 The CLI also keeps startup overhead low.
 
-In reproducible head-to-head throughput benchmarks, syntaqlite was the fastest parser,
-formatter, and analyzer tested. The measurements include process startup, not just time
-spent inside the library. See the
+In reproducible head-to-head throughput benchmarks, syntaqlite had the lowest total run
+time among the parsers, formatters, and analyzers tested. These measurements include
+process startup as well as time spent inside the library. See the
 [full comparison](https://docs.syntaqlite.com/latest/reference/comparison/) for the numbers,
 methodology, and tool versions.
 

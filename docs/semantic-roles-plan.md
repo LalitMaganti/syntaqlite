@@ -5,11 +5,11 @@
 The semantic analyzer currently uses two separate, partial systems to understand what SQL statements
 mean:
 
-1. **`AstTypes<'a>`** — a generated bundle of ~30 associated types representing the syntactic shape
+1. **`AstTypes<'a>`**: a generated bundle of ~30 associated types representing the syntactic shape
    of a dialect's AST. Used by the `Walker` for expression validation, scope tracking, and column
    inference inside SELECT.
 
-2. **`SchemaContribution`** — a small data-driven structure (node tag → field indices) recording
+2. **`SchemaContribution`**: a small data-driven structure (node tag → field indices) recording
    which nodes contribute tables/views/functions to the catalog, and where to find the name and
    column list.
 
@@ -24,7 +24,7 @@ The semantic engine becomes a data-driven role interpreter that reads those anno
 them. It never navigates AST nodes via typed Rust traits. `AstTypes`, `SchemaContribution`, and the
 `Walker<A: AstTypes>` struct are all deleted.
 
-This is not a new idea invented here. It is a generalisation of something that already works.
+The proposal generalizes an approach that the formatter already uses successfully.
 
 ---
 
@@ -35,11 +35,11 @@ This is not a new idea invented here. It is a generalisation of something that a
 `DocumentCatalog::accumulate<A: AstTypes<'a>>` already has a split personality:
 
 ```rust
-// Half 1: data-driven — asks the dialect "does this tag contribute to the schema?"
+// Half 1: data-driven: asks the dialect "does this tag contribute to the schema?"
 let Some(contrib) = dialect.schema_contribution_for_tag(tag) else { return; };
 let name = fields[contrib.name_field as usize];
 
-// Half 2: trait-driven — uses AstTypes to walk column structures and SELECT results
+// Half 2: trait-driven: uses AstTypes to walk column structures and SELECT results
 if let Some(col_field) = contrib.columns_field {
     columns_from_column_list::<A>(stmt_result, col_list_id, dialect, &mut columns);
 }
@@ -66,13 +66,13 @@ CREATE PERFETTO TABLE foo(x INT, y LONG) AS SELECT 1 AS x, 2 AS y
 
 Both add a table to the catalog. Their root AST nodes are `CreateTableStmt` and
 `CreatePerfettoTableStmt` respectively. Both have `session_schema` annotations. But `CreatePerfettoTableStmt`
-has a `schema` field (`PerfettoArgDefList`) that is its explicit column list — nodes of type
+has a `schema` field (`PerfettoArgDefList`) that is its explicit column list: nodes of type
 `PerfettoArgDef` with `arg_name` and `arg_type` fields, not `ColumnDef` nodes. The current
 `columns_from_column_list::<A>` would fail to extract these correctly because it looks for a
 `column_name` span field on each child, not `arg_name`.
 
 More precisely: the current `session_schema` for `CreatePerfettoTableStmt` only passes
-`as_select: select` — not the explicit column list at all. It relies entirely on SELECT inference,
+`as_select: select`: not the explicit column list at all. It relies entirely on SELECT inference,
 which works for now, but loses the explicit type information (`INT`, `LONG`) that Perfetto declared.
 
 This is a bug today and it illustrates the deeper issue: the semantic layer cannot correctly handle
@@ -88,7 +88,7 @@ StmtKind::Other(node) => self.walk_other_node(node, scope),
 ```
 
 `walk_other_node` recursively pokes at children, trying to match them as `A::Stmt` or `A::Expr`.
-This is already transparent generic traversal — exactly what `Transparent` nodes do in the proposed
+This already uses the transparent generic traversal represented by `Transparent` nodes in the proposed
 system. For dialect-specific statements like `CREATE PERFETTO TABLE`, the walker falls into `Other`
 and descends generically. The typed trait provides no value for those nodes. The fallback is
 already doing the right thing, just implicitly.
@@ -96,7 +96,7 @@ already doing the right thing, just implicitly.
 ### `AstTypes` is a redundant layer
 
 The grammar files already have semantic field naming conventions. Fields are named `func_name`,
-`column_name`, `table_name`, `alias` — not `field_0`, `field_1`. `AstTypes` is just a compiled Rust
+`column_name`, `table_name`, `alias`: not `field_0`, `field_1`. `AstTypes` is just a compiled Rust
 view over information the grammar already carries. It adds a type-safe dispatch mechanism, but the
 underlying data (which fields have what names and what roles) is already present in the grammar.
 The question is whether the semantic layer reads it through a generated Rust trait or through
@@ -205,12 +205,12 @@ node IncludePerfettoModuleStmt {
 
 The `define_table` role accepts an optional `columns` field and an optional `select` field. When
 both are present (Perfetto with explicit columns AND an AS SELECT), explicit columns take precedence
-for catalog storage — they are the declared schema. When only `select` is present (SQLite's `CREATE
+for catalog storage: they are the declared schema. When only `select` is present (SQLite's `CREATE
 TABLE foo AS SELECT ...`), the engine infers columns from the SELECT result.
 
 **Column list heterogeneity.** SQLite's column list contains `ColumnDef` nodes; Perfetto's contains
 `PerfettoArgDef` nodes. Both need to produce `ColumnDef` entries for the catalog. The engine does
-not hardcode "how to read a column list" — instead, column-list item nodes carry their own
+not hardcode "how to read a column list": instead, column-list item nodes carry their own
 annotation:
 
 ```synq
@@ -235,12 +235,12 @@ collects all `column_def` roles it finds. Each dialect's column node maps onto t
 the appropriate field pointers. The consumer is dialect-agnostic.
 
 **`import` is a catalog effect, not a scope directive.** `INCLUDE PERFETTO MODULE 'foo.bar'` is a
-statement that runs and brings whatever `foo.bar` exports into the database engine — similar to how
+statement that runs and brings whatever `foo.bar` exports into the database engine: similar to how
 `CREATE TABLE` makes a table available for subsequent statements. It is not a file-level include or
 a compile-time scope annotation. Semantically it is a catalog mutation. The analyzer handles it by
 calling a **module resolver** (pluggable, provided by the caller) that returns what `foo.bar`
 exports. If the resolver is not available, the import is acknowledged and the contributed names are
-treated as unknown — analysis of subsequent statements continues without erroring on the import
+treated as unknown: analysis of subsequent statements continues without erroring on the import
 itself.
 
 ### Expression roles
@@ -306,7 +306,7 @@ diagnostic is emitted on mismatch.
 closes that scope. The columns produced by the subquery are bound under the alias in the *outer*
 scope. The alias is mandatory for subquery sources (enforced by the grammar, not the engine).
 
-`JoinClause` and `JoinPrefix` have no `semantic` block — they are `transparent`. The engine
+`JoinClause` and `JoinPrefix` have no `semantic` block: they are `transparent`. The engine
 recurses into their children and finds the `source_ref` and `scoped_source` nodes inside them, each
 of which independently introduces its bindings into the current scope.
 
@@ -369,7 +369,7 @@ scope with `OLD` and `NEW` bound to those columns. It validates `when_expr` and 
 `body` within that scope.
 
 `trigger_scope` is the only role that injects implicit bindings. There is no general mechanism for
-a dialect to declare "this scope has these magic names" — `trigger_scope` is a fixed, named concept
+a dialect to declare "this scope has these magic names": `trigger_scope` is a fixed, named concept
 in the engine vocabulary. Any future construct that injects implicit bindings would need its own
 named role.
 
@@ -378,8 +378,8 @@ named role.
 ## Scoping Semantics
 
 Scoping rules are **fixed and not configurable by dialects**. Any SQL dialect that diverges from
-standard SQL scoping is not meaningfully a SQL dialect. The value of syntaqlite — and the reason
-users chose SQL — depends on predictable scope semantics. Making them extensible would add
+standard SQL scoping is not meaningfully a SQL dialect. syntaqlite's value, and
+the reason users chose SQL, depends on predictable scope semantics. Making them extensible would add
 complexity without benefit.
 
 ### CTE scope
@@ -424,7 +424,7 @@ engine applies the fixed rules. The annotation does not parameterise the rules.
 
 All dialects syntaqlite supports are derived from SQLite and run on SQLite's query engine. SQLite
 enforces standard CTE semantics at the engine level. A dialect overlay cannot change what the
-underlying engine does — Perfetto runs on SQLite, and any future syntaqlite dialect will too. There
+underlying engine does: Perfetto runs on SQLite, and any future syntaqlite dialect will too. There
 is no realistic scenario where a SQLite-derived dialect would deviate from the standard CTE scoping
 model, because deviating would mean breaking the engine underneath it.
 
@@ -432,7 +432,7 @@ Some non-SQLite engines do deviate: BigQuery's `WITH RECURSIVE` allows forward r
 defined later in the same `WITH` clause, and SQL Server does not require the `WITH RECURSIVE` keyword
 at all (recursion is detected implicitly). These are intentional design choices in those engines.
 They are irrelevant to syntaqlite. If syntaqlite ever supported a non-SQLite-derived dialect, this
-assumption would need revisiting — that is not a current or planned concern.
+assumption would need revisiting, although that is not a current or planned concern.
 
 ---
 
@@ -499,10 +499,10 @@ The engine handles this during the `DefineRelation` processing pass (the forward
 4. For `SELECT *` or `SELECT t.*`, it expands using columns from the `known` map (relations
    accumulated so far in the document) or the external `DatabaseCatalog`.
 5. Result columns that are expressions without aliases (e.g. `SELECT 1`, `SELECT a + b`) produce
-   no column entry — they are not usefully addressable by name.
+   no column entry because they are not usefully addressable by name.
 
 This logic is identical to what `columns_from_select` does today. The difference is that it no
-longer requires `A: AstTypes` — instead it walks the SELECT subtree using the role table, finding
+longer requires `A: AstTypes`: instead it walks the SELECT subtree using the role table, finding
 `column_ref` and `star_expansion` roles rather than calling typed accessors on `A::SelectStmt`.
 
 `ResultColumn` needs an annotation to support star expansion:
@@ -524,21 +524,21 @@ logic above.
 
 ## Generated Role Table
 
-The codegen processes all `semantic { ... }` blocks and emits a `SemanticRole` table per dialect —
+The codegen processes all `semantic { ... }` blocks and emits a `SemanticRole` table per dialect:
 a static array indexed by node tag, one entry per node type:
 
 ```rust
 pub(crate) enum SemanticRole {
-    // Catalog — replaces SchemaContribution
+    // Catalog: replaces SchemaContribution
     DefineTable    { name: FieldIdx, columns: Option<FieldIdx>, select: Option<FieldIdx> },
     DefineView     { name: FieldIdx, select: FieldIdx },
     DefineFunction { name: FieldIdx, args: Option<FieldIdx> },
     Import         { module: FieldIdx },
 
-    // Column list items — used during define_table column extraction
+    // Column list items: used during define_table column extraction
     ColumnDef      { name: FieldIdx, type_: Option<FieldIdx>, constraints: Option<FieldIdx> },
 
-    // Result columns — used during SELECT column inference
+    // Result columns: used during SELECT column inference
     ResultColumn   { star: FieldIdx, alias: FieldIdx, expr: FieldIdx },
 
     // Expressions
@@ -555,7 +555,7 @@ pub(crate) enum SemanticRole {
     CteScope       { recursive: FieldIdx, bindings: FieldIdx, body: FieldIdx },
     TriggerScope   { target: FieldIdx, when: FieldIdx, body: FieldIdx },
 
-    // No semantic role — recurse into children
+    // No semantic role: recurse into children
     Transparent,
 }
 ```
@@ -580,8 +580,8 @@ pub(crate) struct AnyDialect {
     fmt_strings: ...,
     fmt_ops: ...,
     fmt_dispatch: ...,
-    roles: &'static [SemanticRole],          // new — replaces schema_contributions
-    constraint_roles: &'static [ConstraintRole], // new — for column constraint extraction
+    roles: &'static [SemanticRole],          // new: replaces schema_contributions
+    constraint_roles: &'static [ConstraintRole], // new: for column constraint extraction
 }
 ```
 
@@ -646,7 +646,7 @@ The two-pass model replaces the current combined accumulate-and-validate loop. T
 accumulates as it validates, which means the `DocumentCatalog` is only partially built at any point
 during validation. Two explicit passes is cleaner.
 
-No generics. No `AstTypes`. The same engine code runs for every dialect.
+The same non-generic engine code runs for every dialect without `AstTypes`.
 
 ---
 
@@ -667,7 +667,7 @@ No generics. No `AstTypes`. The same engine code runs for every dialect.
 | `extract_column_constraints::<A>` | Engine reads `constraint_roles` table from dialect |
 
 The generated typed node accessor structs (`FunctionCallView`, `ColumnRefView`, etc.) may be kept
-as a convenience API for formatter code and dialect-specific tests — they are generated from the
+as a convenience API for formatter code and dialect-specific tests: they are generated from the
 same grammar and remain accurate. But they are no longer part of the semantic interface. The
 `AstTypes` bundle trait that groups them together is deleted because nothing in the semantic layer
 needs it.
@@ -711,7 +711,7 @@ The migration is staged so each step compiles and tests pass throughout.
 
 ## Implementation Journal
 
-### Step 1 — ✅ Done (commit `65f734e`)
+### Step 1: ✅ Done (commit `65f734e`)
 
 `.synq` parser extended to accept `semantic { ... }` blocks. `session_schema { ... }` is parsed as
 a deprecated alias that maps to the same `SemanticRole` variants (`DefineTable`, `DefineView`,
@@ -723,7 +723,7 @@ without change.
 `SchemaContribution` struct deleted; `accumulate_ddl` in `catalog.rs` reads `SemanticRole::Define*`
 from `dialect.roles()`. The `Walker<A: AstTypes>` remains as the sole validation engine.
 
-### Step 2 — ✅ Done (commit `42e2c6c`)
+### Step 2: ✅ Done (commit `42e2c6c`)
 
 `generate_rust_semantic_roles()` wired into the `codegen-sqlite` stage 2 pipeline:
 
@@ -748,7 +748,7 @@ Three `#[ignore]` tests in `analyzer.rs` (DDL accumulation) are now live and pas
 - `session_schema` parsing in the `.synq` parser is still present (needed until step 3 migrates
   all files)
 
-### Step 3 — ✅ Done (commit `0c8c150`)
+### Step 3: ✅ Done (commit `0c8c150`)
 
 All `.synq` files migrated from `session_schema { ... }` to `semantic { define_* }` syntax:
 
@@ -772,7 +772,7 @@ call site removed, associated tests removed. `semantic_roles_codegen.rs` legacy 
 - `<A: AstTypes<'a>>` parameter removed from both functions
 - `extract_columns` simplified: explicit column-list path retained; SELECT-based inference
   removed (deferred to step 5 when `result_column` role annotations are added). AS-SELECT-only
-  definitions register with `None` columns — column refs against them are conservatively accepted.
+  definitions register with `None` columns: column refs against them are conservatively accepted.
 - `columns_from_select`, `collect_from_sources`, `name_str`, `FromSource`, `expand_star`,
   `lookup_columns` all deleted from `catalog.rs`
 - All `ast_traits` imports removed from `catalog.rs`
@@ -780,23 +780,23 @@ call site removed, associated tests removed. `semantic_roles_codegen.rs` legacy 
 Codegen re-run; `syntaqlite/src/sqlite/semantic_roles.rs` unchanged (field indices identical).
 101 unit tests pass.
 
-### Step 4 — ✅ Done
+### Step 4: ✅ Done
 
 `SemanticEngine` struct introduced in `syntaqlite/src/semantic/engine.rs`. It holds a reference to
 `AnyParsedStatement`, the `&'static [SemanticRole]` table, the `Catalog`, `ValidationConfig`, and
 a `Vec<Diagnostic>`. The `run` entry point calls `visit(root_id)`, which dispatches on
 `SemanticRole`:
 
-- `DefineTable / DefineView / DefineFunction / Import` — handled by the accumulation pass only;
+- `DefineTable / DefineView / DefineFunction / Import`: handled by the accumulation pass only;
   validation pass is a no-op (returns without recursing).
 - All other roles → `visit_children`, recursing via `stmt.child_node_ids(node_id)`.
 
 `engine.rs` added to `semantic/mod.rs` under `#[cfg(feature = "validation")]`.
 `analyzer.rs` calls `SemanticEngine::run` after `Walker<A>::run` and extends `diagnostics` with the
-result. At this step the engine produces no new diagnostics — it runs in parallel with the Walker
+result. At this step the engine produces no new diagnostics and runs in parallel with the Walker
 and agrees on all 53 unit tests.
 
-### Step 5 — ✅ Done
+### Step 5: ✅ Done
 
 Full semantic role vocabulary annotated in `.synq` files and emitted by codegen:
 
@@ -818,7 +818,7 @@ Full semantic role vocabulary annotated in `.synq` files and emitted by codegen:
 (`Table`, `View`, `Interval`, `Tree`, `Graph`).
 
 `synq_parser.rs` extended to parse all new role names. `source_ref`'s `kind` param is a literal
-enum value (not a field name) — handled via `literal_keys: &["kind"]` in `parse_semantic_params`.
+enum value (not a field name): handled via `literal_keys: &["kind"]` in `parse_semantic_params`.
 `semantic_roles_codegen.rs` updated to emit all new variants, with `SourceRef` mapping the literal
 string to `RelationKind::*`.
 
@@ -828,7 +828,7 @@ non-exhaustive-safe.
 
 Codegen regenerated; `semantic_roles.rs` now has 13 non-Transparent entries. All 53 unit tests pass.
 
-### Steps 6+7 — ✅ Done (commit `861eb24`)
+### Steps 6+7: ✅ Done (commit `861eb24`)
 
 All role handlers implemented in `SemanticEngine`:
 
@@ -855,14 +855,14 @@ ORDER BY, GROUP BY etc. are reachable.
 
 All 53 unit tests pass.
 
-### Step 8 — ✅ Done (commit `26898de`)
+### Step 8: ✅ Done (commit `26898de`)
 
 `walker.rs` deleted. `mod walker` removed from `semantic/mod.rs`. `Walker<A: AstTypes>` was the
 only caller of the `AstTypes` trait inside the `syntaqlite` crate.
 
 All 53 unit tests pass.
 
-### Step 9 — ✅ Done
+### Step 9: ✅ Done
 
 `AstTypes` trait and all generated `*Like` / `*View` / `*Kind` trait infrastructure removed:
 
@@ -911,5 +911,5 @@ independent. A future pass could support correlated references by making the out
 
 **`DROP` and `ALTER` effects.** `DropStmt` and `AlterTableStmt` currently have no `session_schema`
 and the accumulation pass ignores them. In a multi-file or incremental analysis context, drops and
-renames matter. For now, `Transparent` is correct — they contribute nothing to the forward catalog.
+renames matter. For now, `Transparent` is correct because these nodes contribute nothing to the forward catalog.
 Future work: `semantic { drop_table(target: target) }` etc.

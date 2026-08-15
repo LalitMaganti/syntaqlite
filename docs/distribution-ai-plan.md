@@ -4,9 +4,9 @@
 
 syntaqlite has three distinct audiences with different needs:
 
-1. **Embedders** — want to parse/tokenize SQL in C/C++/Zig with zero dependencies
-2. **Devtool authors** — want formatting, validation, completions in any language
-3. **Dialect authors** — want to define new SQL dialects on top of the core engine
+1. **Embedders**: want to parse/tokenize SQL in C/C++/Zig with zero dependencies
+2. **Devtool authors**: want formatting, validation, completions in any language
+3. **Dialect authors**: want to define new SQL dialects on top of the core engine
 
 Today we have a Rust crate and a hand-written WASM layer. We need a coherent
 distribution story that covers C, C++, Go, Zig, TypeScript, and Python without
@@ -34,11 +34,11 @@ creating an unsustainable maintenance burden.
 
 - Edition as filename infix: `hugo_extended_withdeploy_0.157.0_linux-amd64.tar.gz`
 - Self-documenting filenames, no matrix picker needed
-- No extension API — composition via themes/modules, not C plugins
+- No extension API: composition via themes/modules, not C plugins
 
 ### Tree-sitter (cautionary tale)
 
-- No dedicated embed artifact — C users must clone the repo
+- No dedicated embed artifact: C users must clone the repo
 - NxM packaging problem: every grammar × every language ecosystem
 - Grammar authoring requires Node.js regardless of target language
 - Community-acknowledged "packaging mess"
@@ -49,7 +49,7 @@ creating an unsustainable maintenance burden.
    generator complexity
 2. DuckDB's prefix namespacing (`duckdb_cli-`, `libduckdb-`) is unambiguous
 3. The extension header split (`sqlite3ext.h` / `duckdb_extension.h`) is a
-   proven pattern — both SQLite and DuckDB converged on it independently
+   proven pattern: both SQLite and DuckDB converged on it independently
 4. Tree-sitter's NxM grammar×language matrix is exactly what we want to avoid
 
 ## Architecture
@@ -79,7 +79,7 @@ These are two different products at two different abstraction levels:
 
 The C→Rust→C path is not circular. The low-level C core is a parser state
 machine. The high-level C API is a developer tool interface. They share a
-language at the boundary but are completely different abstraction levels — like
+language at the boundary but are completely different abstraction levels: like
 how SQLite's parser is C and `sqlite3_exec()` is also C, but they serve
 different purposes.
 
@@ -90,7 +90,7 @@ alongside** the format/validate/complete functions. It is a superset, not a
 separate world. Users who want low-level AST walking alongside formatting get
 it from one library.
 
-This is the right call because the library already contains a parser internally.
+Keeping the parser in the library avoids introducing a separate parser dependency.
 Refusing to expose it just creates frustration for users who want both levels.
 
 The amalgamation (`syntaqlite_parser.h` + `syntaqlite_parser.c`) is the
@@ -198,7 +198,7 @@ syntaqlite-amalgamation-{version}.zip
 ```c
 #include "syntaqlite_parser.h"
 
-// parse, walk AST, access tokens — all from two files
+// parse, walk AST, access tokens: all from two files
 ```
 
 ```sh
@@ -228,7 +228,7 @@ Same model as `sqlite3.c` + `sqlite3.h`. Two files, zero decisions.
 ```c
 // ── High-level engine API ─────────────────────────────────────────────
 //
-// Opaque engine handle — owns parser, formatter, validator internally.
+// Opaque engine handle: owns parser, formatter, validator internally.
 
 typedef struct SyntaqliteEngine SyntaqliteEngine;
 
@@ -242,7 +242,7 @@ typedef struct {
 SyntaqliteEngine* syntaqlite_engine_new(void);
 void              syntaqlite_engine_free(SyntaqliteEngine* e);
 
-// Core operations — return malloc'd strings, free with syntaqlite_string_free
+// Core operations: return malloc'd strings, free with syntaqlite_string_free
 char* syntaqlite_format(SyntaqliteEngine* e, const char* sql, size_t len,
                         const SyntaqliteFormatConfig* config);
 char* syntaqlite_ast_json(SyntaqliteEngine* e, const char* sql, size_t len);
@@ -281,7 +281,7 @@ The low-level parser functions are the same as the amalgamation header.
 
 Dialects always live out-of-tree. A dialect crate needs:
 
-1. `syntaqlite_dialect.h` — the dialect SPI contract (what tables/functions a
+1. `syntaqlite_dialect.h`: the dialect SPI contract (what tables/functions a
    dialect must provide). This is a small header from `syntaqlite-sys`
    and could even be auto-generated into the dialect crate by a build
    dependency.
@@ -329,13 +329,13 @@ most users want the high-level thing; the amalgamation is the specialized path.
 Following DuckDB's prefix pattern + Hugo's platform convention:
 
 ```
-# Amalgamation (embed story) — parser only, zero dependencies
+# Amalgamation (embed story): parser only, zero dependencies
 syntaqlite-amalgamation-{version}.zip
 
-# Amalgamation for dialect authors — core without SQLite
+# Amalgamation for dialect authors: core without SQLite
 syntaqlite-amalgamation-dialect-{version}.zip
 
-# High-level library (devtools story) — format, validate, complete, parse
+# High-level library (devtools story): format, validate, complete, parse
 libsyntaqlite-{version}-linux-x64.tar.gz
 libsyntaqlite-{version}-linux-arm64.tar.gz
 libsyntaqlite-{version}-macos-arm64.tar.gz
@@ -360,7 +360,7 @@ we're already using semver for the Rust crate.
 
 In a large codebase, it is possible for `libsyntaqlite.a` (the high-level
 library) and `syntaqlite_parser.c` (the amalgamation) to end up linked into the
-same binary — e.g. one team vendors the amalgamation for parsing, another
+same binary: e.g. one team vendors the amalgamation for parsing, another
 depends on the library for formatting, and a shared test binary pulls in both.
 
 The library contains a copy of the C parser internally (compiled via
@@ -370,7 +370,7 @@ they're different versions, you get silent ABI mismatches and mysterious crashes
 
 ### Background: how `.a` linking works
 
-Static archives (`.a`) use lazy linking — the linker only extracts `.o` members
+Static archives (`.a`) use lazy linking: the linker only extracts `.o` members
 when it needs an undefined symbol. If the amalgamation is linked first and
 already satisfies the parser symbols, the library's `.o` members *could* be
 skipped. But this depends on link order (not controllable in large build systems
@@ -380,7 +380,7 @@ causing a conflict). This is too fragile to rely on.
 
 ### Solution: three modes with explicit control
 
-#### Default — fail fast (no flags)
+#### Default: fail fast (no flags)
 
 Both the library and the amalgamation define a sentinel symbol:
 
@@ -397,10 +397,10 @@ name `syntaqlite_parser_sentinel_` tells the developer exactly what happened.
 Documentation says: "You're linking both the library and the amalgamation. Pick
 one, or see the coexistence flags below."
 
-This is the right default. Silent coexistence with potential version mismatches
+Failing by default prevents silent coexistence with potential version mismatches
 is far worse than a loud build failure.
 
-#### Mode 2: `-DSYNTAQLITE_ALLOW_DUPLICATE_PARSER` — tolerate coexistence
+#### Mode 2: `-DSYNTAQLITE_ALLOW_DUPLICATE_PARSER`: tolerate coexistence
 
 The amalgamation guards its sentinel:
 
@@ -416,16 +416,16 @@ parser (~200KB extra). The library's internal copy is built with
 `-fvisibility=hidden` so its parser symbols don't conflict with the
 amalgamation's visible ones. The library's high-level API uses
 `syntaqlite_engine_*` prefixed names for parser access, which are different from
-the amalgamation's `syntaqlite_parser_*` names — no symbol collision.
+the amalgamation's `syntaqlite_parser_*` names, avoiding a symbol collision.
 
 This mode is for: "I know both are present, I accept the binary size cost, just
 make it link."
 
-#### Mode 3: `no-bundled-parser` — library uses external parser
+#### Mode 3: `no-bundled-parser`: library uses external parser
 
 A Cargo feature on `syntaqlite-sys` that tells its `build.rs` to skip
 compiling the C parser entirely. The Rust code still declares `extern "C"` FFI
-imports for the parser functions, but provides no definitions — they become
+imports for the parser functions but provides no definitions, so they become
 undefined symbols that the linker must resolve from elsewhere.
 
 The user links `libsyntaqlite.a` (no parser inside) + `syntaqlite_parser.c`
@@ -482,7 +482,7 @@ conflict because the symbol sets are disjoint.
 
 | Language | How                                              | Maintenance                                  |
 |----------|--------------------------------------------------|----------------------------------------------|
-| C        | `syntaqlite.h` or `syntaqlite_parser.h` directly | None — headers are the source of truth       |
+| C        | `syntaqlite.h` or `syntaqlite_parser.h` directly | None: headers are the source of truth       |
 | C++      | Same headers (C linkage compatible), optional RAII wrapper | ~50 lines                           |
 | Zig      | `@cImport("syntaqlite.h")`, link `.a`            | None                                         |
 
@@ -490,7 +490,7 @@ conflict because the symbol sets are disjoint.
 
 | Language | How                                              | Maintenance                                  |
 |----------|--------------------------------------------------|----------------------------------------------|
-| Go       | cgo package wrapping `syntaqlite.h`              | Low — API is ~15 functions                   |
+| Go       | cgo package wrapping `syntaqlite.h`              | Low: API is ~15 functions                   |
 | Python   | cffi loading `.so` + Pythonic class wrapper       | Low                                          |
 
 ### Tier 3: Already exists / different path
@@ -519,7 +519,7 @@ Either you get the full thing or the bare core.
 ### 2. Can the amalgamation and library coexist?
 
 **Decision:** Three explicit modes. Default: fail fast with a sentinel symbol
-that causes a duplicate definition error if both are linked — catches accidents.
+that causes a duplicate definition error if both are linked: catches accidents.
 `-DSYNTAQLITE_ALLOW_DUPLICATE_PARSER`: amalgamation drops its sentinel, both
 link with ~200KB duplication, hidden visibility prevents symbol conflicts.
 `no-bundled-parser` Cargo feature: library ships without the C parser, uses the
@@ -577,8 +577,8 @@ This is acceptable because:
 
 **Decision:** Two workspace crates with a one-way dependency:
 
-- `syntaqlite-sys` — all C code (core engine + SQLite dialect)
-- `syntaqlite` — all Rust code + C API (feature-gated) + WASM target
+- `syntaqlite-sys`: all C code (core engine + SQLite dialect)
+- `syntaqlite`: all Rust code + C API (feature-gated) + WASM target
 
 The C API (`capi` feature) and WASM target both live in `syntaqlite` rather than
 separate crates. `syntaqlite` uses multiple crate types
@@ -598,7 +598,7 @@ dialect crates by a build dependency if needed.
 ### 1. Version mismatch detection in `no-bundled-parser` mode
 
 In mode 3 (external parser), the library and amalgamation must be the same
-version. If they're not, you get silent ABI mismatches — the Rust code expects
+version. If they're not, you get silent ABI mismatches: the Rust code expects
 one struct layout, the C parser provides another.
 
 The sentinel symbol from mode 1 catches the *presence* of both, but in mode 3
@@ -632,5 +632,5 @@ through (dynamic linking, dlopen).
 
 **Open sub-question:** how to reliably generate the versioned symbol, especially
 for catching drift from code built off `main` (not just releases). Needs more
-thought — could embed git SHA or build timestamp, but that may be too strict
+thought: could embed git SHA or build timestamp, but that may be too strict
 for development workflows.

@@ -6,8 +6,9 @@ weight = 3
 
 # Neovim, Helix, and other editors
 
-syntaqlite ships a language server that works with any editor that supports LSP.
-This tutorial gets you from zero to working diagnostics and formatting.
+syntaqlite's language server works with any editor that supports LSP. Configure
+your editor to start `syntaqlite lsp` for SQL files to enable diagnostics and
+formatting.
 
 ## 1. Install syntaqlite
 
@@ -61,8 +62,8 @@ vim.lsp.config('syntaqlite', {
 vim.lsp.enable('syntaqlite')
 ```
 
-Open a `.sql` file. You should see syntax errors underlined, and formatting
-works via your usual LSP format keybinding.
+After you open a `.sql` file, syntax errors should be underlined and your usual
+LSP format keybinding should format the file.
 
 ### Helix
 
@@ -78,8 +79,8 @@ command = "syntaqlite"
 args = ["lsp"]
 ```
 
-Restart Helix and open a `.sql` file. Diagnostics appear inline and `:format`
-formats the buffer.
+After restarting Helix, open a `.sql` file to check that diagnostics appear
+inline and that `:format` formats the buffer.
 
 ### Other LSP clients
 
@@ -95,8 +96,8 @@ Create a file called `test.sql`:
 SELEC id, name FROM users;
 ```
 
-Open it in your editor. You should see a syntax error diagnostic on `SELEC`.
-Fix it to `SELECT` and the error disappears.
+Open the file in your editor and check that `SELEC` has a syntax error
+diagnostic. Changing it to `SELECT` should remove the error.
 
 ## 4. Add schema validation
 

@@ -20,7 +20,7 @@ Create a file called `demo.sql` and paste this in:
 select id,name,email,created_at from users as u wehre active=1 and role='admin' order by created_at desc
 ```
 
-`wehre` is immediately underlined. Fix it to `where` and the error clears.
+Zed should underline `wehre`. Change it to `where` before continuing.
 
 ## 3. Format
 
@@ -56,9 +56,9 @@ Then create `syntaqlite.toml` in the same directory:
 "**/*.sql" = ["schema.sql"]
 ```
 
-Go back to `demo.sql` and change `name` to `nme`. You'll see `nme` underlined
-with a warning: *unknown column 'nme', did you mean 'name'?* Fix it back to
-`name` and the warning disappears.
+Go back to `demo.sql` and change `name` to `nme`. The language server should
+underline it and report *unknown column 'nme', did you mean 'name'?* Change it
+back to `name` before continuing.
 
 ## 5. Completions
 
@@ -68,8 +68,8 @@ you'll see `users` offered as a completion. After `SELECT `, you'll see `id`,
 
 ## Configuration
 
-The extension works out of the box but supports two optional settings in your
-Zed settings (`Cmd+,`):
+The extension needs no configuration for normal use. You can override the
+binary or config file in your Zed settings (`Cmd+,`) when necessary:
 
 **Custom binary path:** use your own build instead of the auto-downloaded one:
 

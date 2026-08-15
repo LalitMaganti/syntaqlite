@@ -4,7 +4,7 @@
 
 The `semantic/` module is mid-refactor. The active surface (`catalog.rs`, `diagnostics.rs`,
 `schema.rs`, `mod.rs`) has a catalog data layer but no analysis engine. The engine lives in
-`semantic/legacy/` — parked, unregistered, not compiling. There are several concrete problems:
+`semantic/legacy/`: parked, unregistered, not compiling. There are several concrete problems:
 
 1. **Too many catalog abstractions.** `DatabaseCatalog`, `DocumentCatalog`, `StaticCatalog`,
    `CatalogStack`, and `CatalogLayer` all exist. The first four are redundant wrappers that the
@@ -25,7 +25,7 @@ The `semantic/` module is mid-refactor. The active surface (`catalog.rs`, `diagn
 
 5. **`Walker::run` signature mismatch.** `legacy/analyzer.rs` calls `Walker::run` with 5 arguments
    (catalog and config separate). `legacy/walker.rs` defines `run` with 4 (catalog and config
-   bundled in `WalkContext`). This is a mid-refactor breakage — the legacy code does not compile.
+   bundled in `WalkContext`). This is a mid-refactor breakage: the legacy code does not compile.
 
 6. **`render.rs` hardcodes stderr.** `DiagnosticRenderer` calls `eprintln!` directly. The caller
    should control where output goes.
@@ -44,16 +44,16 @@ no redundant abstractions.
 | Decision | Choice |
 |----------|--------|
 | Catalog representation | `CatalogLayer` (`pub(crate)`) + `Catalog` with named layer slots (public) |
-| Named layers | `dialect`, `database`, `document`, `query` — fixed slots, not a raw `Vec` |
-| `CatalogLayer` visibility | `pub(crate)` — callers never touch it |
-| Public schema input API | `Catalog::add_table` / `add_view` / `add_function` — no DTOs, no `DatabaseCatalog` |
-| Scope resolution | Merged into `Catalog` — query layer stack replaces `ScopeStack` entirely |
-| Unknown columns | `Option<Vec<String>>` in `RelationEntry` — `None` means "table known, columns unknown, suppress column errors" |
-| Parse passes | Single pass — tokens and AST walk in the same session loop |
+| Named layers | `dialect`, `database`, `document`, `query`: fixed slots, not a raw `Vec` |
+| `CatalogLayer` visibility | `pub(crate)`: callers never touch it |
+| Public schema input API | `Catalog::add_table` / `add_view` / `add_function`: no DTOs, no `DatabaseCatalog` |
+| Scope resolution | Merged into `Catalog`: query layer stack replaces `ScopeStack` entirely |
+| Unknown columns | `Option<Vec<String>>` in `RelationEntry`: `None` means "table known, columns unknown, suppress column errors" |
+| Parse passes | Single pass: tokens and AST walk in the same session loop |
 | `SemanticModel` | Stores tokens + diagnostics from one pass; no prepare/diagnostics split |
-| `checks.rs` | Inlined into `walker.rs` — three thin functions, no independent reuse |
-| `scope.rs` | Deleted — replaced by `Catalog` query layer |
-| `schema.rs` | Deleted — types served only the deleted catalog wrappers |
+| `checks.rs` | Inlined into `walker.rs`: three thin functions, no independent reuse |
+| `scope.rs` | Deleted: replaced by `Catalog` query layer |
+| `schema.rs` | Deleted: types served only the deleted catalog wrappers |
 | `render.rs` | Write to `impl Write`, not stderr |
 | LSP module | Out of scope for this refactor |
 
@@ -64,7 +64,7 @@ no redundant abstractions.
 ### Internal representation
 
 ```rust
-// pub(crate) — callers never see this type
+// pub(crate): callers never see this type
 #[derive(Debug, Default, Clone)]
 pub(crate) struct CatalogLayer {
     relations:       HashMap<String, RelationEntry>,
@@ -111,7 +111,7 @@ pub(crate) enum AritySpec {
 
 `columns: Option<Vec<String>>` is the key change from today. `Some(vec)` means the column list is
 known and will be validated. `None` means the table exists but column references should not be
-flagged — used for subquery aliases and CTE names where we can't statically infer output columns.
+flagged: used for subquery aliases and CTE names where we can't statically infer output columns.
 
 ### Named-layer Catalog
 
@@ -137,7 +137,7 @@ pub(crate) enum ColumnResolution {
     Found,
     /// Table was found in scope but the column is not in its column list.
     TableFoundColumnMissing,
-    /// The qualifier table is not in scope at all — the table check already
+    /// The qualifier table is not in scope at all: the table check already
     /// reported this, so suppress the column error.
     TableNotFound,
     /// Unqualified column not found in any table in scope.
@@ -158,11 +158,11 @@ Callers build a `Catalog` and pass it to the analyzer. They never see `CatalogLa
 
 ```rust
 impl Catalog {
-    /// Create an empty catalog (no dialect builtins — those are added internally
+    /// Create an empty catalog (no dialect builtins: those are added internally
     /// by the analyzer at construction from the dialect).
     pub fn new() -> Self;
 
-    // ── Database layer — caller populates these ──────────────────────────────
+    // ── Database layer: caller populates these ──────────────────────────────
 
     pub fn add_table(&mut self, name: &str, columns: &[&str]);
     pub fn add_view(&mut self, name: &str, columns: &[&str]);
@@ -198,7 +198,7 @@ impl Catalog {
 
 ```rust
 impl Catalog {
-    // ── Dialect / database layers — set by analyzer ──────────────────────────
+    // ── Dialect / database layers: set by analyzer ──────────────────────────
 
     /// Set the dialect layer. Called once at `SemanticAnalyzer` construction.
     pub(crate) fn set_dialect_layer(&mut self, layer: CatalogLayer);
@@ -206,7 +206,7 @@ impl Catalog {
     /// Replace the database layer with the caller's schema for the current pass.
     pub(crate) fn set_database_layer(&mut self, layer: CatalogLayer);
 
-    // ── Document layer — managed by analyzer between statements ─────────────
+    // ── Document layer: managed by analyzer between statements ─────────────
     pub(crate) fn accumulate_ddl<A: AstTypes>(
         &mut self,
         stmt: AnyParsedStatement<'_>,
@@ -215,7 +215,7 @@ impl Catalog {
     );
     pub(crate) fn clear_document(&mut self);
 
-    // ── Query layer — managed by walker during AST traversal ────────────────
+    // ── Query layer: managed by walker during AST traversal ────────────────
 
     /// Push a new empty scope frame. Called on subquery / CTE entry.
     pub(crate) fn push_query_scope(&mut self);
@@ -228,7 +228,7 @@ impl Catalog {
     /// (e.g. a subquery alias we couldn't type, a CTE with complex body).
     pub(crate) fn add_query_table(&mut self, name: &str, columns: Option<Vec<String>>);
 
-    // ── Resolution — searches all layers in priority order ───────────────────
+    // ── Resolution: searches all layers in priority order ───────────────────
 
     pub(crate) fn resolve_relation(&self, name: &str) -> bool;
     /// Returns `true` if `name` is a known table-valued function in any layer.
@@ -245,14 +245,14 @@ impl Catalog {
     ) -> FunctionCheckResult;
 
     /// Return the column list for a relation or table-valued function.
-    /// `Some(cols)` — found with known columns.
-    /// `Some([])` — found, columns unknown (suppress column errors).
-    /// `None`     — not found in any layer.
+    /// `Some(cols)`: found with known columns.
+    /// `Some([])`: found, columns unknown (suppress column errors).
+    /// `None`    : not found in any layer.
     ///
     /// Used by the walker when registering a table reference in the query scope.
     pub(crate) fn columns_for_table_source(&self, name: &str) -> Option<Vec<String>>;
 
-    // ── Enumeration — used for fuzzy "did you mean?" suggestions ────────────
+    // ── Enumeration: used for fuzzy "did you mean?" suggestions ────────────
     pub(crate) fn all_relation_names(&self) -> Vec<String>;
     pub(crate) fn all_column_names(&self, table: Option<&str>) -> Vec<String>;
     pub(crate) fn all_function_names(&self) -> Vec<String>;
@@ -339,7 +339,7 @@ pub(crate) fn accumulate_ddl<A: AstTypes>(
             // Pass both the document layer (tables seen so far in this file)
             // and the database layer (user-provided schema) so that
             // CREATE TABLE AS SELECT can resolve its source table columns.
-            // Returns None when source columns cannot be determined —
+            // Returns None when source columns cannot be determined:
             // the RelationEntry is still inserted so the name is known,
             // but column errors against it are suppressed.
             let columns = extract_columns::<A>(
@@ -377,7 +377,7 @@ pub(crate) fn accumulate_ddl<A: AstTypes>(
 using the existing helpers (`columns_from_column_list`, `columns_from_select`). It receives
 `&database: &CatalogLayer` and `&document: &CatalogLayer` to resolve source table columns when
 processing `AS SELECT` bodies. The column names in the returned `Vec` are lowercased. If the SELECT
-references tables not present in either layer, `extract_columns` returns `None` — better to
+references tables not present in either layer, `extract_columns` returns `None`: better to
 suppress column errors than to report false positives.
 
 ---
@@ -416,7 +416,7 @@ collects diagnostics. It replaces `legacy/walker.rs` with the inline check logic
 ```rust
 // semantic/walker.rs
 
-// Not Copy — holds a mutable reference. The current WalkContext is #[derive(Clone, Copy)]
+// Not Copy: holds a mutable reference. The current WalkContext is #[derive(Clone, Copy)]
 // because it holds two immutable references; that derive must be removed here.
 pub(crate) struct WalkContext<'a> {
     pub catalog: &'a mut Catalog,
@@ -466,7 +466,7 @@ fn walk_stmt(&mut self, stmt: A::Stmt) {
 }
 ```
 
-### Scope management — direct catalog push/pop
+### Scope management: direct catalog push/pop
 
 Subqueries and CTEs use `catalog.push_query_scope()` / `pop_query_scope()` in place of the old
 `ScopeStack::push()` / `pop()`. A helper wraps the pattern:
@@ -550,7 +550,7 @@ fn check_and_add_table_ref(&mut self, table_ref: &A::TableRef) {
 
 `columns_for_table_source(name)` is an internal method that checks relations and table-valued
 functions across all layers. It returns `Some(cols)` when the entry is found with a known column
-list, `Some([])` when the entry is found but columns are not tracked (treated as unknown —
+list, `Some([])` when the entry is found but columns are not tracked (treated as unknown:
 column errors against it are suppressed), and `None` if not found at all.
 
 ### Column reference resolution (inlined from checks.rs)
@@ -599,7 +599,7 @@ fn check_column_ref(&mut self, col: A::ColumnRef) {
 }
 ```
 
-`TableNotFound` is silently ignored — the missing table was already reported by `check_and_add_table_ref`. Reporting the column error too would double-warn the user about a single root cause.
+`TableNotFound` is silently ignored: the missing table was already reported by `check_and_add_table_ref`. Reporting the column error too would double-warn the user about a single root cause.
 
 ### Function call resolution
 
@@ -729,7 +729,7 @@ while let Some(stmt) = session.next() {
 ### SemanticModel
 
 `SemanticModel` stores the complete result of one analysis pass. There is no longer a
-`prepare()` / `diagnostics_prepared()` split — the model is built by the analyzer's main method
+`prepare()` / `diagnostics_prepared()` split: the model is built by the analyzer's main method
 and contains everything the caller might query.
 
 ```rust
@@ -857,7 +857,7 @@ impl SemanticAnalyzer {
 ```
 
 `clear_document()` is called at the start of each `analyze()` call, resetting accumulated DDL.
-The document layer accumulates as statements are processed in order within the single-pass loop —
+The document layer accumulates as statements are processed in order within the single-pass loop:
 a `CREATE TABLE` statement seen earlier in the file makes the table visible to queries later in
 the same file.
 
@@ -928,22 +928,22 @@ each sub-module under that gate; the individual files do not repeat it.
 
 ```
 semantic/
-    mod.rs          — ValidationConfig, public re-exports (Diagnostic, Severity, Help,
+    mod.rs         : ValidationConfig, public re-exports (Diagnostic, Severity, Help,
                       DiagnosticMessage, Catalog); all sub-modules declared under
                       #[cfg(feature = "semantic")]
-    diagnostics.rs  — Diagnostic, DiagnosticMessage, Severity, Help; JSON serialization
+    diagnostics.rs : Diagnostic, DiagnosticMessage, Severity, Help; JSON serialization
                       (keep as-is)
-    catalog.rs      — CatalogLayer (pub(crate)), Catalog with named layers, all resolution
+    catalog.rs     : CatalogLayer (pub(crate)), Catalog with named layers, all resolution
                       logic, DDL extraction helpers, ColumnResolution, FunctionCheckResult,
                       TableFunctionSet
-    fuzzy.rs        — levenshtein_distance, best_suggestion (promoted from legacy, unchanged)
-    walker.rs       — Walker<A>, WalkContext (not Copy), full AST traversal, inlined check logic
-    analyzer.rs     — SemanticAnalyzer, single-pass analysis loop
-    model.rs        — SemanticModel, StoredToken, StoredComment, SemanticToken,
+    fuzzy.rs       : levenshtein_distance, best_suggestion (promoted from legacy, unchanged)
+    walker.rs      : Walker<A>, WalkContext (not Copy), full AST traversal, inlined check logic
+    analyzer.rs    : SemanticAnalyzer, single-pass analysis loop
+    model.rs       : SemanticModel, StoredToken, StoredComment, SemanticToken,
                       CompletionInfo, CompletionContext
-    render.rs       — DiagnosticRenderer writing to impl Write
+    render.rs      : DiagnosticRenderer writing to impl Write
 
-legacy/             — entire directory deleted after promotion is complete
+legacy/            : entire directory deleted after promotion is complete
 ```
 
 ### What is deleted
@@ -954,7 +954,7 @@ legacy/             — entire directory deleted after promotion is complete
 | `DatabaseCatalog` (in `catalog.rs`) | Replaced by `Catalog::add_table` / `add_view` / `add_function` |
 | `DocumentCatalog` (in `catalog.rs`) | Replaced by `Catalog::document` layer + `accumulate_ddl` |
 | `StaticCatalog` (in `catalog.rs`) | Replaced by `Catalog::dialect` layer built at construction |
-| `CatalogStack` (in `catalog.rs`) | Replaced by `Catalog` itself — no per-lookup rebuild |
+| `CatalogStack` (in `catalog.rs`) | Replaced by `Catalog` itself: no per-lookup rebuild |
 | `legacy/scope.rs` | `ScopeStack` replaced by `Catalog` query layer push/pop |
 | `legacy/checks.rs` | `check_table_ref`, `check_column_ref`, `make_diagnostic` inlined into `walker.rs` |
 | `legacy/` directory | Deleted after all files are promoted |
@@ -965,7 +965,7 @@ legacy/             — entire directory deleted after promotion is complete
 
 Each step should leave the codebase in a compilable state.
 
-### Step 1 — Restructure `catalog.rs`
+### Step 1: Restructure `catalog.rs`
 
 - Add `Option<Vec<String>>` to `RelationEntry`
 - Add `TableFunctionSet` and restore `table_functions` field to `CatalogLayer`
@@ -985,17 +985,17 @@ Each step should leave the codebase in a compilable state.
   `#[cfg(feature = "semantic")]`
 - Keep `CatalogLayer` `pub(crate)`
 
-### Step 2 — Delete `schema.rs`
+### Step 2: Delete `schema.rs`
 
 Update all imports. Inline any necessary type definitions into `catalog.rs` (none should be needed
 once the catalog types are rewritten).
 
-### Step 3 — Promote `fuzzy.rs`
+### Step 3: Promote `fuzzy.rs`
 
 Copy `legacy/fuzzy.rs` to `semantic/fuzzy.rs`. Declare `pub(crate) mod fuzzy` in `mod.rs`. No
 content changes.
 
-### Step 4 — Promote and rewrite `walker.rs`
+### Step 4: Promote and rewrite `walker.rs`
 
 - Copy `legacy/walker.rs` to `semantic/walker.rs`
 - Update `WalkContext` to hold `&'a mut Catalog` instead of `&'a CatalogStack<'a>`; remove
@@ -1005,17 +1005,17 @@ content changes.
 - Update `check_and_add_table_ref` to check both `resolve_relation` and `resolve_table_function`,
   include table function names in suggestion candidates, and use `columns_for_table_source`
 - Inline `check_table_ref`, `check_column_ref`, `make_diagnostic` from `checks.rs`
-- Fix `Walker::run` signature: 3 arguments (`stmt`, `root`, `ctx`) — `ctx` carries both catalog
+- Fix `Walker::run` signature: 3 arguments (`stmt`, `root`, `ctx`): `ctx` carries both catalog
   and config
 
-### Step 5 — Promote `model.rs`
+### Step 5: Promote `model.rs`
 
 - Copy `legacy/model.rs` to `semantic/model.rs`
-- Remove the prepare/diagnostics split — `SemanticModel` stores both tokens and diagnostics
+- Remove the prepare/diagnostics split: `SemanticModel` stores both tokens and diagnostics
 - Add `diagnostics()` accessor
 - Keep `semantic_tokens()` and `completion_info()` as methods on `SemanticModel`
 
-### Step 6 — Promote and rewrite `analyzer.rs`
+### Step 6: Promote and rewrite `analyzer.rs`
 
 - Copy `legacy/analyzer.rs` to `semantic/analyzer.rs`
 - Replace `StaticCatalog` / `DocumentCatalog` fields with `Catalog`
@@ -1023,14 +1023,14 @@ content changes.
 - Expose `analyze(&str, &Catalog, &ValidationConfig) -> SemanticModel` as the primary method
 - Remove the `prepare()` / `diagnostics_prepared()` split
 
-### Step 7 — Promote `render.rs`
+### Step 7: Promote `render.rs`
 
 - Copy `legacy/render.rs` to `semantic/render.rs`
 - Replace every `eprintln!(...)` call with `write!(out, ...)` / `writeln!(out, ...)`
 - Add `out: &mut impl Write` parameter to `render_diagnostic` and `render_diagnostics`
 - Add `use std::io::{self, Write}` import
 
-### Step 8 — Update `mod.rs` and delete `legacy/`
+### Step 8: Update `mod.rs` and delete `legacy/`
 
 - Declare `pub(crate) mod` for each new file under `#[cfg(feature = "semantic")]`
 - Update public re-exports: add `Catalog`, keep `Diagnostic` / `Severity` / `Help` /
@@ -1056,4 +1056,4 @@ content changes.
   `#[cfg(all(feature = "fmt", any(feature = "embedded", feature = "lsp")))]`. After the refactor,
   the entire `semantic/` module (catalog, walker, analyzer, model, render) is gated on
   `#[cfg(feature = "semantic")]`. All per-file `cfg` annotations are updated in Step 1 (catalog)
-  and Step 8 (mod.rs). No open question — `semantic` is the gate.
+  and Step 8 (mod.rs). No open question: `semantic` is the gate.

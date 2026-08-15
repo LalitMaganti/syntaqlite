@@ -16,7 +16,7 @@ All pre-push checks must pass before pushing.
    tools/pre-push --fix -q
    ```
    If this fails, fix the issues and re-run until it passes.
-   Do NOT skip this step — it is the project's only gate against broken code.
+   Do NOT skip this step; it is the project's only gate against broken code.
 
 2. **Check for changes**:
    ```sh
@@ -63,7 +63,7 @@ All pre-push checks must pass before pushing.
    ```
 
 8. **Create a PR** using `gh pr create`. For single-commit PRs the
-   body should be the commit body verbatim — the lead-in + bullets
+   body should be the commit body verbatim; the lead-in + bullets
    structure from step 4 is exactly the structure a PR wants. Don't
    rewrite it into a single paragraph, don't add section headings,
    don't restate the title. The shortcut:

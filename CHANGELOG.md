@@ -27,7 +27,7 @@
 ## 0.6.0
 
 **Shell file support:**
-- syntaqlite now understands SQLite shell scripts — files that mix `.dot` commands with SQL. The embedded SQL is extracted and the surrounding shell syntax is ignored, so `ast`, `fmt`, and `validate` all operate on just the SQL regions ([#275](https://github.com/LalitMaganti/syntaqlite/pull/275), [#276](https://github.com/LalitMaganti/syntaqlite/pull/276)).
+- syntaqlite now understands SQLite shell scripts that mix `.dot` commands with SQL. The embedded SQL is extracted and the surrounding shell syntax is ignored, so `ast`, `fmt`, and `validate` all operate on just the SQL regions ([#275](https://github.com/LalitMaganti/syntaqlite/pull/275), [#276](https://github.com/LalitMaganti/syntaqlite/pull/276)).
 - The LSP analyzes embedded SQL the same way, surfacing diagnostics on the SQL inside shell files directly in your editor ([#276](https://github.com/LalitMaganti/syntaqlite/pull/276)).
 
 **Python / Pyodide:**
@@ -35,7 +35,7 @@
 - The Python bindings now run the parser in-process instead of shelling out to a subprocess ([#271](https://github.com/LalitMaganti/syntaqlite/pull/271)).
 
 **Performance:**
-- Amalgamated builds are faster — dialect virtual functions are now inlined automatically ([#266](https://github.com/LalitMaganti/syntaqlite/pull/266)).
+- Amalgamated builds are faster: dialect virtual functions are now inlined automatically ([#266](https://github.com/LalitMaganti/syntaqlite/pull/266)).
 
 ## 0.5.10
 
@@ -65,7 +65,7 @@
 - Added `AnyParsedStatement::node_leading_comments` / `node_trailing_comments` as composition sugar over `node_token_range` + `token_{leading,trailing}_comments` for the common boundary-comment case ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
 - Token API is now layer-aware: offsets/lengths are typed as `LayerOffset` / `LayerLen`, `text()` resolves per-layer, and `stmt_range()` drills expansion tokens up to the authored call site in source coordinates. `layer_id()` is exposed on tokens ([#247](https://github.com/LalitMaganti/syntaqlite/pull/247)).
 - `Comment::layer_id` distinguishes authored-source comments (layer 0) from comments inside macro expansion bodies (layer > 0); `Comment::text()` resolves against the owning layer's buffer ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
-- Removed `AnyParsedStatement::token_spans()` — use `tokens().map(|t| t.stmt_range())` instead ([#247](https://github.com/LalitMaganti/syntaqlite/pull/247)).
+- Removed `AnyParsedStatement::token_spans()`: use `tokens().map(|t| t.stmt_range())` instead ([#247](https://github.com/LalitMaganti/syntaqlite/pull/247)).
 
 **C API:**
 - Added `syntaqlite_node_token_range(p, node_id, &first, &last)` for O(1) inclusive token ranges per AST node, and `syntaqlite_node_{leading,trailing}_comments` for boundary comments at the node level ([#248](https://github.com/LalitMaganti/syntaqlite/pull/248)).
@@ -172,7 +172,7 @@
 - `.synq` grammar files use `//` comments instead of `#` ([#115](https://github.com/LalitMaganti/syntaqlite/pull/115)).
 
 **Macros:**
-- Expansions are now exposed as a flat rewrite list with `$param` arg segments, nested call offsets, and APIs to ask whether a span/node/statement came from a macro — enough to map cleanly between expanded SQL and source for diagnostics, hovers, and refactors ([#124](https://github.com/LalitMaganti/syntaqlite/pull/124), [#142](https://github.com/LalitMaganti/syntaqlite/pull/142), [#145](https://github.com/LalitMaganti/syntaqlite/pull/145)).
+- Expansions are now exposed as a flat rewrite list with `$param` arg segments, nested call offsets, and APIs to ask whether a span/node/statement came from a macro, providing enough information to map cleanly between expanded SQL and source for diagnostics, hovers, and refactors ([#124](https://github.com/LalitMaganti/syntaqlite/pull/124), [#142](https://github.com/LalitMaganti/syntaqlite/pull/142), [#145](https://github.com/LalitMaganti/syntaqlite/pull/145)).
 - Unknown macro names now produce a hard parse error instead of silently expanding to nothing ([#139](https://github.com/LalitMaganti/syntaqlite/pull/139)). A permissive mode lets tools inspect bodies with unknown `$param` references ([#141](https://github.com/LalitMaganti/syntaqlite/pull/141)).
 - Embedders can compile macros out entirely with `SYNTAQLITE_OMIT_MACROS` ([#135](https://github.com/LalitMaganti/syntaqlite/pull/135)).
 - Fixed OOB read on non-NUL-terminated bodies ([#132](https://github.com/LalitMaganti/syntaqlite/pull/132)), layer-id overflow past 256 layers ([#134](https://github.com/LalitMaganti/syntaqlite/pull/134)), and several spurious-straddle and whitespace-handling bugs in deeply-nested expansions.
@@ -285,7 +285,7 @@
 
 ### Python library API
 
-The `pip install syntaqlite` package now includes a native C extension with a full library API — previously it only bundled the CLI binary. Four functions are available: `parse()`, `format_sql()`, `validate()`, and `tokenize()`.
+The `pip install syntaqlite` package now includes a native C extension with a full library API; previously, it only bundled the CLI binary. Four functions are available: `parse()`, `format_sql()`, `validate()`, and `tokenize()`.
 
 - `validate()` returns a `ValidationResult` with `.diagnostics` and `.lineage` attributes.
 - Schema can be provided via `Table`, `View` objects or raw DDL with `schema_ddl=`.
@@ -294,7 +294,7 @@ The `pip install syntaqlite` package now includes a native C extension with a fu
 
 ### Column lineage
 
-- New lineage analysis for SELECT statements — traces each result column back to its source table and column, resolving through CTEs, subqueries, and aliases.
+- New lineage analysis for SELECT statements: traces each result column back to its source table and column, resolving through CTEs, subqueries, and aliases.
 - `SemanticModel` gains `lineage()`, `relations_accessed()`, and `tables_accessed()` methods, returning `Complete` or `Partial` results depending on view resolution.
 - C API: 7 new lineage accessor functions (`syntaqlite_validator_column_lineage`, `syntaqlite_validator_relations`, `syntaqlite_validator_tables`, etc.).
 
@@ -311,21 +311,21 @@ The `pip install syntaqlite` package now includes a native C extension with a fu
 
 ## 0.1.0
 
-Initial release of syntaqlite — a fast, accurate SQL toolkit for SQLite, built from SQLite's own grammar.
+Initial release of syntaqlite: a fast, accurate SQL toolkit for SQLite, built from SQLite's own grammar.
 
 ### Highlights
 
-- **Formatter** — opinionated SQL formatter with configurable line width, keyword casing, and semicolons. Supports stdin, files, and glob patterns.
-- **Parser** — full SQLite SQL parser producing a concrete syntax tree. Handles all SQLite syntax including CTEs, window functions, upsert clauses, and `RETURNING`.
-- **Validator** — semantic analysis with diagnostics for unknown tables, columns, and functions. Supports embedded SQL extraction from Python and TypeScript.
-- **Language Server (LSP)** — diagnostics, formatting, completions, go-to-definition, document highlights, and semantic tokens over stdio.
-- **C API** — prebuilt shared libraries for macOS, Linux, and Windows, plus a source amalgamation for embedding.
-- **WASM / JS** — browser-ready builds powering the interactive playground.
-- **Dialect extensibility** — load custom grammars as shared libraries at runtime.
+- **Formatter**: opinionated SQL formatter with configurable line width, keyword casing, and semicolons. Supports stdin, files, and glob patterns.
+- **Parser**: full SQLite SQL parser producing a concrete syntax tree. Handles all SQLite syntax including CTEs, window functions, upsert clauses, and `RETURNING`.
+- **Validator**: semantic analysis with diagnostics for unknown tables, columns, and functions. Supports embedded SQL extraction from Python and TypeScript.
+- **Language Server (LSP)**: diagnostics, formatting, completions, go-to-definition, document highlights, and semantic tokens over stdio.
+- **C API**: prebuilt shared libraries for macOS, Linux, and Windows, plus a source amalgamation for embedding.
+- **WASM / JS**: browser-ready builds powering the interactive playground.
+- **Dialect extensibility**: load custom grammars as shared libraries at runtime.
 
 ### Project configuration
 
-`syntaqlite.toml` is the single, editor-agnostic source of truth for schemas and formatting — it works across VS Code, Claude Code, Neovim, Helix, and the CLI with no additional setup.
+`syntaqlite.toml` is the single, editor-agnostic source of truth for schemas and formatting across VS Code, Claude Code, Neovim, Helix, and the CLI.
 
 ```toml
 [schemas]
@@ -341,7 +341,7 @@ keyword-case = "lower"
 ### Install
 
 - CLI binaries for macOS (arm64, x86_64), Linux (arm64, x86_64), and Windows (x86_64, arm64)
-- `pip install syntaqlite` — bundled platform-specific binary, includes built-in MCP server (`syntaqlite mcp`)
+- `pip install syntaqlite`: bundled platform-specific binary, includes built-in MCP server (`syntaqlite mcp`)
 - `brew install LalitMaganti/tap/syntaqlite`
 - `cargo install syntaqlite-cli`
 - `mise use github:LalitMaganti/syntaqlite`

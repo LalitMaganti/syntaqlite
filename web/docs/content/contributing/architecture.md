@@ -95,10 +95,10 @@ SQLite's grammar rules as part of the syntaqlite build.
 The `.synq` grammar files in `syntaqlite-buildtools/parser-nodes/` are the source
 of truth for AST node structure. `syntaqlite-buildtools` generates from them:
 
-- **C headers** — struct layouts for AST nodes, parser action code, node
+- **C headers**: struct layouts for AST nodes, parser action code, node
   metadata (field names, field counts, list ranges), semantic role byte
   tables, and formatter dispatch tables
-- **Rust code** — typed AST node wrappers
+- **Rust code**: typed AST node wrappers
 
 ### The arena
 
@@ -135,12 +135,12 @@ functions (create, use, destroy).
 The source of truth for AST structure is a set of `.synq` files in
 `syntaqlite-buildtools/parser-nodes/`. These define:
 
-- **Nodes** — AST node types with typed fields
-- **Enums** — fixed value sets (e.g., sort order, join type)
-- **Flags** — bit-packed booleans
-- **Lists** — sequences of child nodes
-- **Semantic annotations** — instructions for the validator
-- **Formatting rules** — bytecode for the pretty-printer
+- **Nodes**: AST node types with typed fields
+- **Enums**: fixed value sets (e.g., sort order, join type)
+- **Flags**: bit-packed booleans
+- **Lists**: sequences of child nodes
+- **Semantic annotations**: instructions for the validator
+- **Formatting rules**: bytecode for the pretty-printer
 
 Adding a new AST node, its formatting, and its validation behavior is a single
 change to a `.synq` file followed by running code generation.
@@ -156,15 +156,15 @@ string. Exposed as a public API for consumers who only need lexical analysis.
 
 Driven by the Lemon-generated state machine. Key properties:
 
-- **Streaming** — yields one statement at a time, so memory usage doesn't grow
+- **Streaming**: yields one statement at a time, so memory usage doesn't grow
   with input size
-- **Error recovery** — on a syntax error, the parser skips to the next
+- **Error recovery**: on a syntax error, the parser skips to the next
   semicolon and continues
-- **Token collection** — optionally records tokens and comments alongside the
+- **Token collection**: optionally records tokens and comments alongside the
   AST (needed by the formatter to preserve whitespace and comment placement)
-- **Incremental parsing** — a separate mode for editors, where tokens are fed
+- **Incremental parsing**: a separate mode for editors, where tokens are fed
   one at a time for completion support
-- **Macro expansion** — registered macros are expanded during parsing with
+- **Macro expansion**: registered macros are expanded during parsing with
   recursion tracking
 
 ## Semantic analyzer
@@ -172,11 +172,11 @@ Driven by the Lemon-generated state machine. Key properties:
 Single-pass walk over the AST that validates references against a layered
 catalog:
 
-1. **Query** (innermost) — CTEs, subquery aliases
-2. **Document** — `CREATE TABLE` statements in the current file
-3. **Connection** — DDL from prior statements (Execute mode only)
-4. **Database** — user-provided schema
-5. **Dialect** (outermost) — built-in functions
+1. **Query** (innermost): CTEs, subquery aliases
+2. **Document**: `CREATE TABLE` statements in the current file
+3. **Connection**: DDL from prior statements (Execute mode only)
+4. **Database**: user-provided schema
+5. **Dialect** (outermost): built-in functions
 
 The walk is driven by a **semantic role table**, a byte-encoded instruction
 set generated from `.synq` annotations and stored as a flat C byte array. Each
@@ -184,27 +184,25 @@ AST node type maps to a role (e.g., `query`, `source_ref`, `cte_binding`) that
 tells the analyzer what to validate and how to update scope. Rust reads the
 table via a direct pointer cast, with zero decoding cost.
 
-Diagnostics are emitted inline during the walk. There's no separate "resolve"
-pass. Everything happens in one traversal.
+Diagnostics and name resolution are both handled during the same traversal.
 
 ## Formatter
 
 Uses Wadler-Lindig style document algebra:
 
-- **Group** — try to fit contents on one line; if too long, break
-- **Line** — space in flat mode, newline + indent in break mode
-- **SoftLine** — nothing in flat mode, newline + indent in break mode
-- **Nest** — increase indentation level
-- **Keyword** — SQL keyword (case-transformed per config)
-- **Text** — literal text from the source (never transformed)
+- **Group**: try to fit contents on one line; if too long, break
+- **Line**: space in flat mode, newline + indent in break mode
+- **SoftLine**: nothing in flat mode, newline + indent in break mode
+- **Nest**: increase indentation level
+- **Keyword**: SQL keyword (case-transformed per config)
+- **Text**: literal text from the source (never transformed)
 
 The formatting rules for each AST node are compiled from `.synq` `fmt` blocks
 into bytecode. At format time, the bytecode interpreter walks the AST and
 builds a document, which is then rendered with line-width-aware layout.
 
-Comment placement is handled separately. The formatter tracks comment
-positions from the parser and reattaches them to the appropriate locations in
-the formatted output.
+The formatter handles comments separately by tracking their parser positions
+and reattaching them at the appropriate locations in the formatted output.
 
 ## Diagnostic rendering
 

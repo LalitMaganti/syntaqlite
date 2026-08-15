@@ -174,7 +174,7 @@ impl<G: TypedGrammar> TypedParser<G> {
 Rework `scan_rust_macro_call` → `scan_macro_args`. Instead of just returning
 the end offset, it returns an array of `(offset, length)` pairs for each
 comma-separated argument (respecting nested parens). The arg text is raw
-source — the tokenizer handles turning it into tokens during expansion.
+source: the tokenizer handles turning it into tokens during expansion.
 
 ```c
 typedef struct SynqMacroArg {
@@ -232,7 +232,7 @@ if (expansion_stack_depth > 0) {
         // Read from top expansion frame.
         tokenize from top->buf + top->offset
     } else {
-        // Frame drained — pop and resume previous frame or source.
+        // Frame drained: pop and resume previous frame or source.
         expansion_stack_depth--;
         pop blue-paint stack, end_macro()
         if (expansion_stack_depth == 0) {
@@ -258,7 +258,7 @@ registered macro:
 7. The loop naturally starts reading from the new top frame on the next
    iteration.
 
-Nested macros work naturally — when the tokenizer encounters `ID + !`
+Nested macros work naturally: when the tokenizer encounters `ID + !`
 while reading from an expansion frame, it pushes another frame on top.
 
 ---
@@ -329,7 +329,7 @@ surfaced in the AST.
 ### Body Span
 
 The `perfetto_macro_body` rule accumulates `ANY` tokens. The body span is
-derived from the first and last tokens in the list — no special span
+derived from the first and last tokens in the list: no special span
 tracking needed. The host extracts `source[first_token.offset ..
 last_token.offset + last_token.length]` to get the raw body text.
 
@@ -382,7 +382,7 @@ Files: `dialects/perfetto/nodes/perfetto.synq`, `dialects/perfetto/actions/perfe
 Files: `syntaqlite-cli/src/codegen.rs`, `syntaqlite/src/fmt/formatter.rs`
 
 12. Verify formatter `try_macro_verbatim` works with expanded macros
-    (it should — the macro region still covers the original call site).
+    (it should: the macro region still covers the original call site).
 13. Add diff tests for macro call formatting in Perfetto.
 
 ---
@@ -403,27 +403,27 @@ Files: `syntaqlite-cli/src/codegen.rs`, `syntaqlite/src/fmt/formatter.rs`
 
 ## Resolved Questions
 
-1. **Unknown macro calls** — error. If `foo!(args)` is encountered and
+1. **Unknown macro calls**: error. If `foo!(args)` is encountered and
    `foo` is not registered, emit a parse error.
 
-2. **Body span in AST** — no special tracking needed. The
+2. **Body span in AST**: no special tracking needed. The
    `perfetto_macro_body` rule accumulates `ANY` tokens; the body span is
    derived from the first/last token offsets in the list.
 
-3. **Macro body storage** — raw source text. Re-tokenized on each expansion.
+3. **Macro body storage**: raw source text. Re-tokenized on each expansion.
    Simpler and sufficient for expected call frequency.
 
-4. **Nested expansion** — uses a stack of expansion buffers (one per active
+4. **Nested expansion**: uses a stack of expansion buffers (one per active
    macro frame), not a single flat buffer. The tokenizer always reads from
    the top frame; when drained, it pops and resumes the previous frame.
 
-5. **`!` tokenization** — `!` is tokenized as `TK_ILLEGAL` which is already
+5. **`!` tokenization**: `!` is tokenized as `TK_ILLEGAL` which is already
    handled; `!=` is a separate two-char token so there is no ambiguity.
 
-6. **Arg parsing scope** — `scan_macro_args` only needs to track balanced
+6. **Arg parsing scope**: `scan_macro_args` only needs to track balanced
    parens and commas. The arg text is raw source; the tokenizer handles
    turning it into tokens during expansion.
 
-7. **Memory ownership** — expansion buffers, registry entries, and intrinsic
+7. **Memory ownership**: expansion buffers, registry entries, and intrinsic
    output buffers are all owned by the parser and freed when the parser
    itself is freed.

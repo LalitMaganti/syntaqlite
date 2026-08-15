@@ -10,12 +10,11 @@ weight = 10
 > shared-library ABI are not yet stable and can change between releases.
 > Pin your syntaqlite version when you ship a dialect.
 
-If you have SQL that extends SQLite — custom statements, extra functions,
-new clauses — you can package it as a dialect that syntaqlite's parser,
-formatter, and analyzer will understand. This guide walks an end-to-end
-dialect from source files to a loaded shared library, using the in-tree
+A syntaqlite dialect can add custom statements, functions, or clauses to
+SQLite. This guide follows the process from source files to a loaded shared
+library, using the in-tree
 [Perfetto dialect](https://github.com/LalitMaganti/syntaqlite/tree/main/dialects/perfetto)
-as a running example.
+as an example.
 
 ## 1. Write the grammar
 
@@ -51,9 +50,9 @@ or reserved words may not need any.
 
 ## 2. Generate C sources
 
-`syntaqlite dialect generate` reads your `.synq` (and optional `.y`) files
-and emits a C amalgamation — the runtime plus your dialect, inlined into a
-single `.h`/`.c` pair:
+`syntaqlite dialect generate` reads your `.synq` files and any optional `.y`
+files, then emits a single `.h`/`.c` pair containing the runtime and your
+dialect:
 
 ```bash
 syntaqlite dialect generate \
@@ -138,12 +137,12 @@ Trade-offs:
 |---|---|---|
 | Distribution | One shared library, stock CLI | Single binary, your own name |
 | Startup cost | `dlopen` on every invocation | None |
-| ABI stability | Needed — library and CLI must match | Not needed — compiled together |
+| ABI stability | Library and CLI versions must match | No separate ABI boundary |
 | Tooling | Works with any `syntaqlite` install | Requires the Rust toolchain to build |
 
 ## Next steps
 
-- [Perfetto dialect source](https://github.com/LalitMaganti/syntaqlite/tree/main/dialects/perfetto)
-  — complete working example including advanced `.synq` features
-- [Architecture: grammar system](@/contributing/architecture.md#grammar-system)
-  — how `.synq` flows through codegen into the parser, formatter, and analyzer
+- [Perfetto dialect source](https://github.com/LalitMaganti/syntaqlite/tree/main/dialects/perfetto):
+  a working example that includes advanced `.synq` features
+- [Architecture: grammar system](@/contributing/architecture.md#grammar-system):
+  how `.synq` flows through code generation into the parser, formatter, and analyzer

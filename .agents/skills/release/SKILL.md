@@ -18,7 +18,7 @@ asks to "release", "bump version", "tag a release", or "publish".
 
    The bump script adds a `## <new_version>` section to `CHANGELOG.md`
    with a `*No changes yet.*` placeholder. Do NOT edit the CHANGELOG
-   before running bump-version — it will create a duplicate section.
+   before running bump-version; it will create a duplicate section.
 
 3. **Write the CHANGELOG.** After bump-version runs, replace the
    `*No changes yet.*` placeholder in `CHANGELOG.md` with real entries.
@@ -35,10 +35,10 @@ asks to "release", "bump version", "tag a release", or "publish".
    - CI/release pipeline plumbing
    - Changes to dev tooling or build scripts
 
-   Keep entries concise — one line per change, no sub-bullets.
+   Keep entries concise, with one line per change and no sub-bullets.
 
 4. **Commit on a release branch and open a PR.** `main` is protected and
-   rejects direct pushes — the bump must land via PR.
+   rejects direct pushes, so the bump must land via PR.
    ```sh
    git checkout -b release-<new_version>
    git add -A
@@ -65,7 +65,7 @@ asks to "release", "bump version", "tag a release", or "publish".
    )"
    ```
    **Stop and wait for the user to merge the PR** before continuing. Do not
-   attempt to merge it yourself — the user decides when the release goes out.
+   attempt to merge it yourself; the user decides when the release goes out.
 
 5. **After the PR merges**, fast-forward local main and tag the merge commit:
    ```sh
@@ -83,15 +83,15 @@ asks to "release", "bump version", "tag a release", or "publish".
      --notes "$(release notes here)"
    ```
    The tag must already exist on the remote before `gh release create`
-   will work — that's why we push it first.
+   will work, which is why we push it first.
 
    Pushing the tag triggers build workflows that upload artifacts to the
    draft release:
-   - `release.yml` — cargo-dist builds CLI binaries, Homebrew tap, installers
-   - `publish-crates.yml` — publishes to crates.io
-   - `vscode-extension.yml` — builds VS Code .vsix artifacts
-   - `release-amalgamation.yml` — C source amalgamation archive
-   - `release-clib.yml` — prebuilt C shared library archive
+   - `release.yml`: cargo-dist builds CLI binaries, Homebrew tap, installers
+   - `publish-crates.yml`: publishes to crates.io
+   - `vscode-extension.yml`: builds VS Code .vsix artifacts
+   - `release-amalgamation.yml`: C source amalgamation archive
+   - `release-clib.yml`: prebuilt C shared library archive
 
 7. **Report** the draft release URL to the user and remind them to publish
    the release manually once the builds complete and look good.

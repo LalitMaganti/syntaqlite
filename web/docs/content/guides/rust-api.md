@@ -29,9 +29,9 @@ println!("{output}");
 // WHERE x = 1;
 ```
 
-That's it. `Formatter::new()` uses sensible defaults (80-char lines, 2-space
-indent, uppercase keywords). The formatter is reusable: call `format()`
-repeatedly and internal allocations are recycled.
+`Formatter::new()` uses 80-character lines, two-space indentation, and
+uppercase keywords by default. The formatter can be reused across calls, and
+it recycles its internal allocations.
 
 ## Customize formatting
 
@@ -166,9 +166,9 @@ rest.
 If you know a table exists but don't know its columns, pass `None` to
 `insert_table`; this suppresses unknown-column warnings for that table.
 
-When a schema is provided (via `--schema` or `syntaqlite.toml`), the CLI and
-LSP automatically enable strict mode. When using the Rust API directly, set
-this explicitly with `AnalysisContext::new(&mut catalog).with_config(AnalysisConfig::default().with_strict_schema())`.
+The CLI and LSP enable strict mode when a schema is provided through `--schema`
+or `syntaqlite.toml`. Rust API callers must enable it explicitly with
+`AnalysisContext::new(&mut catalog).with_config(AnalysisConfig::default().with_strict_schema())`.
 
 ## Column lineage
 

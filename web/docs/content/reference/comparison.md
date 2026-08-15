@@ -17,8 +17,9 @@ and shows raw, reproducible results.
 
 # Parsing
 
-**What we test:** 40 statements covering advanced SQLite syntax — `UPSERT`,
-`RETURNING`, `STRICT` tables, window frames with `EXCLUDE`, numeric underscores,
+**What we test:** The corpus contains 40 statements covering advanced SQLite
+syntax, including `UPSERT`, `RETURNING`, `STRICT` tables, window frames with
+`EXCLUDE`, numeric underscores,
 `IS NOT DISTINCT FROM`, recursive CTEs, and more. Each statement is first
 validated against `sqlite3` itself (the ground truth), then run through every
 parser. A tool scores "correct" only if it agrees with sqlite3.
@@ -114,10 +115,11 @@ semantics, not just validity. Tools that crash or refuse to format score
 
 # Analysis
 
-**What we test:** Can the tool catch real SQL errors — unknown tables, bad
-column references, wrong function arity, CTE column mismatches — without
-running the query? We define 24 test cases (15 with intentional errors, 9
-valid) against a known schema, and check each tool's verdict against sqlite3.
+**What we test:** We check whether each tool can identify unknown tables, bad
+column references, incorrect function arity, and CTE column mismatches without
+running the query. The corpus contains 24 cases against a known schema, with 15
+intentional errors and 9 valid queries. Each tool's verdict is checked against
+sqlite3.
 
 ## Accuracy
 
@@ -132,8 +134,8 @@ Schema: `users`, `orders`, `products`, `order_items`. Ground truth: sqlite3.
 
 ## Diagnostic quality
 
-A real query with 2 subtle errors — CTE declares 3 columns but SELECT produces
-2, and a typo `ROUDN` instead of `ROUND`:
+The test query contains two errors: its CTE declares three columns while its
+`SELECT` produces two, and `ROUND` is misspelled as `ROUDN`:
 
 | Tool              | Approach          | Errors Found | Finds All | Did-you-mean |
 | ----------------- | ----------------- | :----------: | :-------: | :----------: |

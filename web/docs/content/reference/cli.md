@@ -29,20 +29,20 @@ file values.
 | `-i, --in-place` | | Write formatted output back to files |
 | `--check` | | Check if files are formatted (exit 1 if not, conflicts with `-i`) |
 | `-o, --output <FORMAT>` | `formatted` | Output mode: `formatted`, `bytecode`, or `doc-tree` |
-| `--experimental-lang <LANG>` | | Host language for embedded SQL: `python`, `typescript`, or `shell`. sqlite3 shell scripts are auto-detected when omitted — dot-commands are preserved and only the SQL is reformatted |
+| `--experimental-lang <LANG>` | | Host language for embedded SQL: `python`, `typescript`, or `shell`. sqlite3 shell scripts are auto-detected when omitted. Dot-commands are preserved and only the SQL is reformatted |
 | `--dialect <PATH>` | | Path to custom dialect shared library |
 | `--dialect-name <NAME>` | | Symbol name in dialect library |
 | `--sqlite-version <VER>` | `latest` | Target SQLite version (e.g., `3.47.0`) |
 | `--sqlite-cflag <FLAG>` | | Enable a compile-time flag (repeatable) |
 
 Output modes:
-- `formatted` — formatted SQL (default)
-- `bytecode` — dump raw interpreter bytecode for each statement (maintainer)
-- `doc-tree` — dump the Wadler-Lindig document tree after interpretation (maintainer)
+- `formatted`: formatted SQL (default)
+- `bytecode`: dump raw interpreter bytecode for each statement (maintainer)
+- `doc-tree`: dump the Wadler-Lindig document tree after interpretation (maintainer)
 
 Exit codes:
-- `0` — success (or all files already formatted with `--check`)
-- `1` — parse error (or files would be reformatted with `--check`)
+- `0`: success (or all files already formatted with `--check`)
+- `1`: parse error (or files would be reformatted with `--check`)
 
 ## syntaqlite analyze
 
@@ -59,7 +59,7 @@ syntaqlite analyze [OPTIONS] [FILES...]
 | `-A, --allow <CHECK>` | | Suppress a check category (repeatable) |
 | `-W, --warn <CHECK>` | | Warn on a check category (repeatable) |
 | `-D, --deny <CHECK>` | | Error on a check category (repeatable) |
-| `--experimental-lang <LANG>` | | Host language for embedded SQL: `python`, `typescript`, or `shell`. sqlite3 shell scripts (`.read` dot-commands) are auto-detected when omitted — see [Embedded SQL](@/guides/embedded-sql.md) |
+| `--experimental-lang <LANG>` | | Host language for embedded SQL: `python`, `typescript`, or `shell`. sqlite3 shell scripts (`.read` dot-commands) are auto-detected when omitted; see [Embedded SQL](@/guides/embedded-sql.md) |
 | `--dialect <PATH>` | | Path to custom dialect shared library |
 | `--dialect-name <NAME>` | | Symbol name in dialect library |
 | `--sqlite-version <VER>` | `latest` | Target SQLite version |
@@ -77,8 +77,8 @@ from the config file's glob patterns. Without either, inline DDL in the input
 is used instead. Diagnostics are printed to stderr in rustc-style format.
 
 Exit codes:
-- `0` — no errors (warnings may still be printed)
-- `1` — one or more error-level diagnostics
+- `0`: no errors (warnings may still be printed)
+- `1`: one or more error-level diagnostics
 
 When a schema is provided (`--schema` or `syntaqlite.toml`), schema checks
 default to `deny` (errors). Without a schema, they default to `warn`. Explicit
@@ -102,16 +102,16 @@ printed to stderr.
 | `-o, --output <FORMAT>` | `text` | Output format: `text`, `json`, or `summary` |
 
 Output formats:
-- `text` — print the AST as human-readable text (default)
-- `json` — print the AST as JSON
-- `summary` — print statement/error counts (compact, for benchmarks) (maintainer)
+- `text`: print the AST as human-readable text (default)
+- `json`: print the AST as JSON
+- `summary`: print statement/error counts (compact, for benchmarks) (maintainer)
 
 When `text` output is used with multiple files, each is prefixed with
 `==> filename <==`.
 
 Exit codes:
-- `0` — parsed successfully
-- `1` — parse error
+- `0`: parsed successfully
+- `1`: parse error
 
 ## syntaqlite lineage
 
@@ -141,16 +141,16 @@ error record instead and cause a non-zero exit.
 | `--sqlite-cflag <FLAG>` | | Enable a compile-time flag (repeatable) |
 
 Output formats:
-- `json` — newline-delimited JSON (NDJSON), one record per statement or
+- `json`: newline-delimited JSON (NDJSON), one record per statement or
   error. Each record includes `schema_version` (currently `0`, pre-stable),
   `file`, `statement_index`, `status` (`complete` or `partial`),
   `partial_reasons`, `target`, `columns`, `relations`, and
   `physical_tables`. Suitable for piping into lineage tooling.
-- `text` — human-readable indented format, one record per statement or error.
+- `text`: human-readable indented format, one record per statement or error.
 
 Scope subcommands project the output to a subset:
-- `tables` — emit only relations and physical tables (drops `columns`)
-- `columns` — emit only column lineage (drops `relations` and `physical_tables`)
+- `tables`: emit only relations and physical tables (drops `columns`)
+- `columns`: emit only column lineage (drops `relations` and `physical_tables`)
 
 A column's `origin` is populated only when the column is an untransformed
 passthrough (direct reference or pure rename alias). Expressions, casts,
@@ -162,8 +162,8 @@ becomes `partial` and `partial_reasons` includes an `unexpanded_view`
 entry with the view name.
 
 Exit codes:
-- `0` — all statements produced a lineage record
-- `1` — one or more error records were emitted
+- `0`: all statements produced a lineage record
+- `1`: one or more error records were emitted
 
 ## syntaqlite lsp
 

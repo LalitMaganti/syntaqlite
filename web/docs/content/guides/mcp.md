@@ -7,8 +7,8 @@ weight = 9
 # MCP server
 
 The `syntaqlite` binary ships a stdio-based MCP server. Any MCP-compatible
-agent can spawn it and call its tools to format, analyze, and parse SQL.
-This guide wires it up.
+agent can spawn it and call its tools to format, analyze, and parse SQL. Setup
+consists of adding `syntaqlite mcp` to the client's server configuration.
 
 Prerequisite: `syntaqlite` on your `$PATH`. See the
 [CLI tutorial](@/getting-started/cli.md) for install options.
@@ -60,10 +60,10 @@ SELECT id, name FROM users WHERE active = 1;
 
 If nothing happens, check the client's MCP/server log for spawn errors; the
 usual cause is `syntaqlite` not being on the `$PATH` seen by the GUI app (GUI
-apps often don't inherit your shell's environment — specify an absolute path
-to `syntaqlite` in the `command` field if needed).
+apps often don't inherit your shell's environment, so use an absolute path to
+`syntaqlite` in the `command` field if needed).
 
 ## Next steps
 
-- [MCP tools reference](@/reference/mcp-tools.md) — every tool the server
+- [MCP tools reference](@/reference/mcp-tools.md): every tool the server
   exposes and its parameters

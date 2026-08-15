@@ -8,7 +8,8 @@ libsyntaqlite is a fast, embeddable parser, formatter, and static analyzer for S
 pip install syntaqlite
 ```
 
-Requires Python 3.10+. Wheels for Linux (x86_64, aarch64), macOS (x86_64, arm64), and Windows (x86_64).
+The package requires Python 3.10 or later. Wheels are available for Linux
+(x86_64, aarch64), macOS (x86_64, arm64), and Windows (x86_64).
 
 ## API
 
@@ -55,8 +56,8 @@ print(stmt.from_clause)          # TableRef(...)
 print(stmt.where_clause)         # None
 ```
 
-Every node type is a `__slots__` class with typed attributes, so you get IDE
-autocomplete and `isinstance` checks:
+Every node type is a `__slots__` class with typed attributes, which supports
+IDE completion and `isinstance` checks:
 
 ```python
 from syntaqlite.nodes import SelectStmt, BinaryExpr

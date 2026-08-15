@@ -7,8 +7,8 @@ weight = 2
 # Formatting philosophy
 
 syntaqlite's formatter is deterministic and opinionated: the same SQL always
-produces the same output regardless of how it was originally written. This page
-explains the algorithm and the reasoning behind key formatting decisions.
+produces the same output regardless of how it was originally written. Its
+layout decisions follow the document model described below.
 
 ## The algorithm: Wadler-style pretty-printing
 
@@ -32,9 +32,9 @@ The document tree is built from a small set of primitives
 | `Keyword` | Keyword text (cased)     | Keyword text (cased)     |
 | `Text`    | Source text (as-is)      | Source text (as-is)      |
 
-The key is `Group`: the renderer tries to fit the group's contents on a single
-line. If it fits within the configured line width, everything stays flat. If
-not, the group *breaks*, and `Line`/`SoftLine` nodes become newlines.
+A `Group` controls whether its contents stay on one line. If the group fits
+within the configured line width, the renderer keeps it flat. Otherwise, the
+group *breaks* and its `Line` and `SoftLine` nodes become newlines.
 
 This means the formatter doesn't have hard-coded rules about "always break
 after FROM" or "always inline short WHERE clauses". Instead, it tries to keep
@@ -46,8 +46,8 @@ Each AST node type has formatting rules defined in a
 [`.synq` grammar file](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-buildtools/parser-nodes).
 These rules use a declarative DSL that compiles to bytecode at build time.
 
-For example, here's a simplified version of how `INSERT` statements are
-formatted (from
+For example, the following is a simplified formatting rule for `INSERT`
+statements (from
 [`dml.synq`](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite-buildtools/parser-nodes/dml.synq)):
 
 ```

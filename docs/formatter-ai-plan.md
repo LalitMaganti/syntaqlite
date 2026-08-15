@@ -278,7 +278,7 @@ enum KeywordCase { Preserve, Upper, Lower }
 
 ## Part 6: Error Handling
 
-**Parse error → leave entire file unformatted.** Emit original source text unchanged (like prettier). The formatter is not a linter — if it can't parse, it doesn't touch the file.
+**Parse error → leave entire file unformatted.** Emit original source text unchanged (like prettier). Because the formatter is not a linter, it leaves the file unchanged when parsing fails.
 
 **Semicolons**: Normalize (strip extra semicolons, ensure each statement ends with one).
 

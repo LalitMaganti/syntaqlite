@@ -1,4 +1,4 @@
-# Python RPC: msgpack + int-tag AST — future enhancement
+# Python RPC: msgpack + int-tag AST: future enhancement
 
 ## Status
 
@@ -27,7 +27,7 @@ Two cost centres remain that msgpack + msgspec would compress:
 2. **Python-side parse cost**. `json.loads` returns plain `dict`s; we
    then walk and wrap them via `_NODE_MAP` / `_wrap`. With msgspec we can
    describe the AST as a union of `msgspec.Struct(array_like=True, tag=N)`
-   classes and have the decoder hand us typed instances directly — one
+   classes and have the decoder hand us typed instances directly: one
    pass, no intermediate dicts.
 
 Benchmarks we ran on a stripped-down prototype showed roughly:
@@ -115,7 +115,7 @@ behind a `serde-rmp` or similar feature, parallel to the existing
 ### Other ops
 
 `format`, `tokenize`, `validate` stay as plain msgpack maps with
-string keys — they're small responses and the wins don't justify the
+string keys because they're small responses and the wins don't justify the
 extra ceremony. Only `parse` uses the tagged-array form.
 
 ## Framing
@@ -138,7 +138,7 @@ Current (JSON): `__slots__` classes, `d["type"]` string dispatch,
 `_wrap` walks dicts and builds typed instances.
 
 Proposed (msgpack): `msgspec.Struct(array_like=True, tag=N)` classes.
-The decoder is a single `msgspec.msgpack.Decoder(ParseResponse)` — no
+The decoder uses a single `msgspec.msgpack.Decoder(ParseResponse)` without
 `_wrap`, no `_NODE_MAP`, no per-field dict lookups. Generated `nodes.py`
 shrinks ~40 %.
 
@@ -156,7 +156,7 @@ Abstract types (`Expr`, `Stmt`, `TableSource`, …) become
 - **Versioning.** Today's JSON path gives us free schema flexibility.
   With pinned int tags, a codegen-renumbering on the server would break
   clients that pinned the old tags. We'd want a grammar-version handshake
-  — client sends `{"op":"hello","version":"0.4.2"}` first, server checks
+ : client sends `{"op":"hello","version":"0.4.2"}` first, server checks
   compatibility.
 - **Zero-copy spans.** msgpack supports raw-bytes fields, so spans could
   be emitted as `&[u8]` slices into the original request buffer, saving
