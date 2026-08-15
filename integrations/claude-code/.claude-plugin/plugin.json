@@ -1,6 +1,6 @@
 {
   "name": "syntaqlite",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "SQLite SQL language server and formatter with schema-aware diagnostics, completions, navigation, and semantic highlighting",
   "author": {
     "name": "Lalit Maganti"
