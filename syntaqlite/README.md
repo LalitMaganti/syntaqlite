@@ -1,6 +1,6 @@
-# syntaqlite
+# libsyntaqlite for Rust
 
-Parse, format, and validate SQLite SQL from Rust using SQLite's own grammar and tokenizer. No approximations: if SQLite accepts it, syntaqlite parses it.
+libsyntaqlite is a fast, embeddable parser, formatter, and static analyzer for SQLite SQL, built from SQLite's own grammar and tokenizer. The `syntaqlite` crate provides its Rust API.
 
 **[Docs](https://docs.syntaqlite.com)** · **[Playground](https://playground.syntaqlite.com)** · **[GitHub](https://github.com/LalitMaganti/syntaqlite)**
 

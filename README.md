@@ -1,266 +1,218 @@
-# <img src="https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/web/docs/static/favicon.svg" width="32" height="32" alt="">&nbsp;&nbsp;syntaqlite
+<!-- LOGO -->
+<h1 align="center">
+  <img src="https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/web/docs/static/favicon.svg" alt="syntaqlite logo" width="112">
+  <br>syntaqlite
+</h1>
+<p align="center">
+  A fast parser, formatter, static analyzer, and language server for SQLite SQL.
+  <br>
+  Available as a CLI or an embeddable library via <code>libsyntaqlite</code>.
+  <br><br>
+  <a href="#about">About</a>
+  ·
+  <a href="#performance">Performance</a>
+  ·
+  <a href="#quick-start">Install</a>
+  ·
+  <a href="https://docs.syntaqlite.com">Documentation</a>
+  ·
+  <a href="https://playground.syntaqlite.com">Playground</a>
+  ·
+  <a href="#building-and-contributing">Contributing</a>
+</p>
 
-A parser, formatter, validator, and language server for SQLite SQL, built on SQLite's own grammar and tokenizer. If SQLite accepts it, syntaqlite parses it. If SQLite rejects it, so does syntaqlite.
+## About
 
-**[Docs](https://docs.syntaqlite.com)** · **[Playground](https://playground.syntaqlite.com)** · **[VS Code Extension](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite)**
+Most SQL tooling treats SQLite as a variation of generic SQL. That works for common queries,
+but it misses SQLite-specific syntax and the differences introduced by SQLite versions and
+compile-time flags. syntaqlite instead builds its parser and tokenizer from SQLite's own
+source.
 
-> **Note:** syntaqlite is at 0.x. APIs and CLI flags may change before 1.0.
+**The `syntaqlite` CLI and language server** format SQL, analyze it against your schema,
+and provide completions and navigation in your editor. The analyzer works without opening a
+database and can report multiple independent diagnostics in one pass.
 
-## Why syntaqlite
+**`libsyntaqlite`** is a fast, embeddable parser, formatter, and static analyzer for SQLite SQL.
+It powers the CLI and language server. It is available through Rust and C APIs, with
+packages exposing the same functionality to Python and JavaScript/WASM. The AST retains
+comments and whitespace, making it suitable for migration tools, code generation, and other
+source-to-source work.
 
-Most SQLite tools build a generic SQL parser and bolt SQLite on as a "flavor" with hand-written grammars, regex-based tokenizers, or subsets that approximate the language. That falls apart because SQLite has a deep surface area of syntax that generic parsers don't handle.
+The parser has been checked against roughly 396,000 statements from
+[SQLite's upstream test suite](https://sqlite.org/testing.html), with about 99.7% agreement
+on whether a statement should parse.
 
-syntaqlite uses SQLite's own [Lemon-generated grammar](https://www.sqlite.org/lemon.html) and tokenizer, compiled from C. Its parser is that grammar compiled into a reusable library, not an approximation of it.
+## Performance
 
-SQLite SQL is also not one fixed language. It has [22 compile-time flags](https://www.sqlite.org/compile.html) that change what syntax the parser accepts, another 12 that gate built-in functions, and the language evolves across versions. Because SQLite is embedded, you can't assume everyone is on the latest version (Android 15 ships SQLite 3.44.3, seven major versions behind latest). syntaqlite tracks all of this:
+Performance is a design constraint for syntaqlite. It is built for tasks that run on every
+keystroke in an editor as well as large, generated SQL files. The tokenizer and parser are
+written in C, parsing is incremental, and the library APIs reuse allocations across calls.
+The CLI also keeps startup overhead low.
 
-```bash
-syntaqlite --sqlite-version 3.32.0 validate \
-  -e "DELETE FROM users WHERE id = 1 RETURNING *;"
+In reproducible head-to-head throughput benchmarks, syntaqlite was the fastest parser,
+formatter, and analyzer tested. The measurements include process startup, not just time
+spent inside the library. See the
+[full comparison](https://docs.syntaqlite.com/latest/reference/comparison/) for the numbers,
+methodology, and tool versions.
+
+## Quick start
+
+Install the latest release on macOS, Linux, or Windows:
+
+```console
+curl -sSf https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/tools/syntaqlite | python3 - install
 ```
-```text
+
+You can also install it with [mise](https://mise.jdx.dev), pip, Homebrew, or Cargo:
+
+```console
+mise use github:LalitMaganti/syntaqlite
+pip install syntaqlite
+brew install LalitMaganti/tap/syntaqlite
+cargo install syntaqlite-cli
+```
+
+See the [installation guide](https://docs.syntaqlite.com/latest/getting-started/cli/) for
+platform-specific details.
+
+### Format SQL
+
+```console
+$ syntaqlite fmt -e "select id,name,email from users where active=1 and role='admin' order by name"
+SELECT id, name, email
+FROM users
+WHERE
+  active = 1
+  AND role = 'admin'
+ORDER BY
+  name;
+```
+
+`syntaqlite fmt -i query.sql` formats a file in place, while `--check` checks formatting
+without changing anything.
+
+### Analyze SQL
+
+Give the analyzer your schema and it can find mistakes without connecting to a database:
+
+```console
+$ cat schema.sql
+CREATE TABLE users (id, name, email);
+
+$ syntaqlite analyze --schema schema.sql -e "SELECT nme, email FROM users"
+error: unknown column 'nme'
+ --> <expression>:1:8
+  |
+1 | SELECT nme, email FROM users
+  |        ^~~
+  = help: did you mean 'name'?
+```
+
+A `syntaqlite.toml` file can associate different groups of SQL files with different schema
+files. The CLI and language server both use it; see the
+[project setup guide](https://docs.syntaqlite.com/latest/guides/project-setup/) for an
+example.
+
+### Target a SQLite version
+
+The version and compile flags are global options shared by the parser, formatter, analyzer,
+and language server. For example, this checks a query as SQLite 3.32.0:
+
+```console
+$ syntaqlite --sqlite-version 3.32.0 analyze \
+    -e "DELETE FROM users WHERE id = 1 RETURNING *;"
 error: syntax error near 'RETURNING'
- --> <stdin>:1:32
+ --> <expression>:1:32
   |
 1 | DELETE FROM users WHERE id = 1 RETURNING *;
   |                                ^~~~~~~~~
 ```
 
-`RETURNING` was added in SQLite 3.35.0; Android 13 still ships SQLite 3.32.2.
+`RETURNING` was added in SQLite 3.35.0. Optional SQLite features can be enabled in the same
+way:
 
-We've tested against ~396K statements from [SQLite's upstream test suite](https://sqlite.org/testing.html) with ~99.7% agreement on parse acceptance. See the [detailed comparison](https://docs.syntaqlite.com/latest/reference/comparison/) for how syntaqlite stacks up against other tools.
-
-## What it does
-
-### Validate ([docs](https://docs.syntaqlite.com/latest/concepts/validation/))
-
-Finds unknown tables, columns, and functions against your schema, the same errors `sqlite3_prepare` would catch but without needing a database. Unlike `sqlite3`, syntaqlite finds **all** errors in one pass:
-
-```sql
-CREATE TABLE orders (id, status, total, created_at);
-
-WITH
-  monthly_stats(month, revenue, order_count) AS (
-    SELECT strftime('%Y-%m', o.created_at), SUM(o.total)
-    FROM orders o WHERE o.status = 'completed'
-    GROUP BY strftime('%Y-%m', o.created_at)
-  )
-SELECT ms.month, ms.revenue, ms.order_count,
-  ROUDN(ms.revenue / ms.order_count, 2) AS avg_order
-FROM monthly_stats ms;
+```console
+syntaqlite --sqlite-cflag SQLITE_ENABLE_MATH_FUNCTIONS analyze query.sql
 ```
 
-**sqlite3** stops at the first error and misses the function typo entirely:
-```text
-Error: in prepare, table monthly_stats has 2 values for 3 columns
-```
+### Parse SQL
 
-**syntaqlite** finds both the CTE column count mismatch and the `ROUDN` typo, with source locations and suggestions:
-```text
-error: table 'monthly_stats' has 2 values for 3 columns
-  |
-2 | monthly_stats(month, revenue,
-  | ^~~~~~~~~~~~~
+Print the full abstract syntax tree for a query:
 
-warning: unknown function 'ROUDN'
-   |
-14 | ROUDN(ms.revenue / ms.order_count,
-   | ^~~~~
-   = help: did you mean 'round'?
-```
-
-### Format ([docs](https://docs.syntaqlite.com/latest/reference/cli/#fmt))
-
-Deterministic formatting with configurable line width, keyword casing, and indentation:
-
-```bash
-echo "select u.id,u.name, p.title from users u join posts p on u.id=p.user_id
-where u.active=1 and p.published=true order by p.created_at desc limit 10" \
-  | syntaqlite fmt
-```
-```sql
-SELECT u.id, u.name, p.title
-FROM users u
-  JOIN posts p ON u.id = p.user_id
-WHERE u.active = 1
-  AND p.published = true
-ORDER BY p.created_at DESC
-LIMIT 10;
-```
-
-### Version and compile-flag aware ([docs](https://docs.syntaqlite.com/latest/guides/version-pinning/))
-
-Pin the parser to a specific SQLite version or enable [compile-time flags](https://www.sqlite.org/compile.html) to match your exact build:
-
-```bash
-# Reject syntax your target SQLite version doesn't support
-syntaqlite --sqlite-version 3.32.0 validate query.sql
-
-# Enable optional syntax from compile-time flags
-syntaqlite --sqlite-cflag SQLITE_ENABLE_MATH_FUNCTIONS validate query.sql
-```
-
-### Validate SQL inside other languages *(experimental)*
-
-SQL lives inside Python and TypeScript strings in most real codebases. syntaqlite extracts and validates it, handling interpolation holes:
-
-```python
-# app.py
-def get_user_stats(user_id: int):
-    return conn.execute(
-        f"SELECT nme, ROUDN(score, 2) FROM users WHERE id = {user_id}"
-    )
-```
-```bash
-syntaqlite analyze --experimental-lang python app.py
-```
-```text
-warning: unknown function 'ROUDN'
- --> app.py:3:23
-  |
-3 |         f"SELECT nme, ROUDN(score, 2) FROM users WHERE id = {user_id}"
-  |                       ^~~~~
-  = help: did you mean 'round'?
-```
-
-### sqlite3 shell scripts
-
-Scripts for the `sqlite3` CLI mix SQL with dot-commands like `.read` and `.print`. syntaqlite recognizes the dot-commands and skips over them rather than reporting a syntax error, so the surrounding SQL still formats and validates. The editor integration handles them the same way.
-
-```bash
-syntaqlite fmt schema.sql
-```
-```text
-.read tables.sql
-.read views.sql
-
-CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT);
-```
-
-### Project configuration
-
-Create a `syntaqlite.toml` in your project root to configure schemas and formatting. The LSP, CLI, and all editor integrations read it automatically:
-
-```toml
-# Map SQL files to schema DDL files for validation and completions.
-[schemas]
-"src/**/*.sql" = ["schema/main.sql", "schema/views.sql"]
-"tests/**/*.sql" = ["schema/main.sql", "schema/test_fixtures.sql"]
-"migrations/*.sql" = []  # no schema validation for migrations
-
-# Default schema for SQL files that don't match any glob above.
-# schema = ["schema.sql"]
-
-# Formatting options (all optional, shown with defaults).
-[format]
-line-width = 80
-indent-width = 2
-keyword-case = "upper"    # "upper" | "lower"
-semicolons = true
-```
-
-The config file is discovered by walking up from the file being processed, same as `rustfmt.toml` or `ruff.toml`. CLI flags override config file values.
-
-### Editor integration ([docs](https://docs.syntaqlite.com/latest/getting-started/vscode/))
-
-Full language server with no database connection required. Diagnostics, format on save, completions, and semantic highlighting.
-
-**VS Code** — install the [syntaqlite extension](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite) from the marketplace.
-
-**[Other editors](https://docs.syntaqlite.com/latest/getting-started/other-editors/)** — point your LSP client at:
-
-```bash
-syntaqlite lsp
-```
-
-**Claude Code** — `claude plugin install syntaqlite@lalitmaganti-plugins` ([docs](https://docs.syntaqlite.com/latest/getting-started/claude-code/))
-
-### Parse ([docs](https://docs.syntaqlite.com/latest/guides/parsing/))
-
-Full abstract syntax tree with side tables for tokens, comments, and whitespace, for code generation, migration tooling, or static analysis.
-
-```bash
+```console
 syntaqlite parse -e "SELECT 1 + 2"
 ```
 
-## Web Playground
+## Editor support
 
-Want to try syntaqlite without installing anything? The **[web playground](https://playground.syntaqlite.com)** runs entirely in your browser via WASM. Parse, format, and validate SQL instantly.
+The language server provides diagnostics, completion, formatting, semantic highlighting,
+rename, and navigation without requiring a live database connection.
 
-## Install ([all methods](https://docs.syntaqlite.com/latest/getting-started/cli/))
+- **VS Code:** install
+  [syntaqlite: SQLite language server and formatter](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite).
+- **Zed:** follow the [Zed setup guide](https://docs.syntaqlite.com/latest/getting-started/zed/).
+- **Other editors:** configure your LSP client to start `syntaqlite lsp`; the
+  [editor guide](https://docs.syntaqlite.com/latest/getting-started/other-editors/) has
+  examples.
+- **Claude Code:** install the plugin with
+  `claude plugin install syntaqlite@lalitmaganti-plugins`.
 
-**Download and run (all platforms, no install)**
+## libsyntaqlite
 
-```bash
-curl -sSf https://raw.githubusercontent.com/LalitMaganti/syntaqlite/main/tools/syntaqlite | python3 - fmt -e "select 1"
-```
+`libsyntaqlite` is available in the following ecosystems:
 
-Downloads the binary on first run, caches it, auto-updates weekly.
+- [Rust](https://docs.syntaqlite.com/latest/getting-started/rust/): `cargo add syntaqlite`
+- [Python](https://docs.syntaqlite.com/latest/getting-started/python/):
+  `pip install syntaqlite`
+- [JavaScript/WASM](https://www.npmjs.com/package/syntaqlite): `npm install syntaqlite`
+- [C](https://docs.syntaqlite.com/latest/guides/c-api/): parser, tokenizer, formatter, and
+  analyzer APIs
 
-**mise**
+## How it works
 
-```bash
-mise use github:LalitMaganti/syntaqlite
-```
+The parser generator consumes SQLite's `parse.y` grammar and combines the generated parser
+with SQLite's tokenizer. A small, hand-maintained layer folds the concrete syntax tree into
+an AST. Keeping those decisions separate from the grammar makes SQLite version updates less
+fragile.
 
-**pip (all platforms, bundled binary)**
+The parser and tokenizer are C, so they can be used in the same environments as SQLite. The
+formatter, analyzer, and language server are written in Rust. See the
+[architecture guide](https://docs.syntaqlite.com/latest/contributing/architecture/) for a
+more detailed tour.
 
-```bash
-pip install syntaqlite
-```
+SQLite-based dialects can add grammar, AST nodes, functions, and formatting rules while
+reusing the same runtime. The
+[custom dialect guide](https://docs.syntaqlite.com/latest/guides/custom-dialects/) describes
+the code-generation workflow.
 
-**Homebrew (macOS)**
+## Project status
 
-```bash
-brew install LalitMaganti/tap/syntaqlite
-```
+syntaqlite is usable today, but it is still a 0.x project. The parser, formatter, analyzer,
+language server, and `libsyntaqlite` APIs are all available; their public APIs and
+command-line interfaces may still change before 1.0.
 
-**Cargo**
+## Building and contributing
 
-```bash
-cargo install syntaqlite-cli
-```
-
-## Use as a library ([docs](https://docs.syntaqlite.com/latest/integrating/))
-
-**Rust** ([API docs](https://docs.syntaqlite.com/latest/integrating/rust-api/))
-
-```toml
-[dependencies]
-syntaqlite = { version = "0.7.1", features = ["fmt"] }
-```
-
-**Python** ([API docs](https://docs.syntaqlite.com/latest/reference/python-api/))
-
-```bash
-pip install syntaqlite
-```
-
-**JavaScript / WASM** ([API docs](https://docs.syntaqlite.com/latest/reference/js-api/))
-
-```bash
-npm install syntaqlite
-```
-
-**C** — the parser, tokenizer, formatter, and validator all have C APIs. See the [C API docs](https://docs.syntaqlite.com/latest/reference/c-api/).
-
-## Architecture ([docs](https://docs.syntaqlite.com/latest/contributing/architecture/))
-
-The parser and tokenizer are written in C, directly wrapping SQLite's own grammar. Everything else (formatter, validator, LSP) is written in Rust with C bindings available.
-
-The split is intentional. The C parser is as portable as SQLite itself: it can run inside database engines, embedded systems, or anywhere SQLite runs. The Rust layer moves fast for developer tooling where the standard library and crate ecosystem matter.
-
-## Building from source
-
-```bash
+```console
 tools/install-build-deps
 tools/cargo build
 ```
 
-## Contributing
+The [contributing guide](https://docs.syntaqlite.com/latest/contributing/) covers the
+repository layout and test commands. Changes are welcome through pull requests.
 
-See the [contributing guide](https://docs.syntaqlite.com/latest/contributing/) for architecture overview and testing instructions.
+## AI usage
+
+For coding: AI was used extensively for mechanical implementation, but the design,
+architecture, and overall shape of the project came from me. I understand all of the code
+and take full responsibility for it.
+
+For other tasks: AI was used for research, brainstorming, testing, documentation, and
+integrations. I wrote a
+[detailed account of how I built syntaqlite with AI](https://lalitm.com/post/building-syntaqlite-ai/),
+including where it helped and where it was detrimental.
 
 ## License
 
-Apache 2.0. SQLite components are public domain under the [SQLite blessing](https://www.sqlite.org/copyright.html). See [LICENSE](LICENSE) for details.
+Apache 2.0. The parts derived from SQLite are public domain under the
+[SQLite blessing](https://www.sqlite.org/copyright.html). See [LICENSE](LICENSE) for details.

@@ -1,6 +1,6 @@
 +++
 title = "Zed"
-description = "Install the extension: diagnostics, formatting, and completions out of the box."
+description = "Install the SQLite SQL language server and formatter for Zed."
 weight = 2
 +++
 
@@ -8,9 +8,9 @@ weight = 2
 
 ## 1. Install
 
-Open the Extensions panel (`Cmd+Shift+X`) and search for `syntaqlite`. Click
-**Install**. The extension downloads the binary automatically — no other setup
-needed.
+Open the Extensions panel (`Cmd+Shift+X`) and search for **syntaqlite: SQLite
+language server and formatter**. Click **Install**. The extension downloads the
+binary automatically; no other setup is needed.
 
 ## 2. See diagnostics
 
@@ -71,7 +71,7 @@ you'll see `users` offered as a completion. After `SELECT `, you'll see `id`,
 The extension works out of the box but supports two optional settings in your
 Zed settings (`Cmd+,`):
 
-**Custom binary path** — use your own build instead of the auto-downloaded one:
+**Custom binary path:** use your own build instead of the auto-downloaded one:
 
 ```json
 {
@@ -85,7 +85,7 @@ Zed settings (`Cmd+,`):
 }
 ```
 
-**Custom config path** — point to a specific `syntaqlite.toml` instead of
+**Custom config path:** point to a specific `syntaqlite.toml` instead of
 relying on auto-discovery:
 
 ```json
@@ -102,9 +102,9 @@ relying on auto-discovery:
 
 ## Next steps
 
-- [Formatting options](@/reference/formatting-options.md) — line width,
+- [Formatting options](@/reference/formatting-options.md): line width,
   keyword casing, semicolons
-- [Config file reference](@/reference/config-file.md) — glob-based schema
+- [Config file reference](@/reference/config-file.md): glob-based schema
   routing and all `syntaqlite.toml` options
-- [Project setup guide](@/guides/project-setup.md) — multi-schema
+- [Project setup guide](@/guides/project-setup.md): multi-schema
   setups, strict mode, CI integration

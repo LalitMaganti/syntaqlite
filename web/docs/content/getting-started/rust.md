@@ -1,14 +1,15 @@
 +++
-title = "Rust library"
-description = "Add syntaqlite to a Rust project and format, validate, and parse SQL."
+title = "libsyntaqlite for Rust"
+description = "Parse, format, and statically analyze SQLite SQL from Rust."
 weight = 4
 +++
 
-# Using syntaqlite from Rust
+# Using libsyntaqlite from Rust
 
-This tutorial walks you through adding syntaqlite to a Rust project. By the end
-you'll have a small program that formats SQL, validates it against a schema, and
-prints diagnostics.
+libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
+SQL. The `syntaqlite` crate provides its Rust API. This tutorial walks you through
+adding it to a Rust project. By the end you'll have a small program that formats
+SQL, validates it against a schema, and prints diagnostics.
 
 ## 1. Create a project
 
@@ -107,7 +108,7 @@ SELECT id, nme FROM users WHERE active = 1;
 Error: unknown column 'nme'
 ```
 
-The validator caught the typo: `nme` should be `name`.
+The analyzer caught the typo: `nme` should be `name`.
 
 ## 4. Parse and inspect the AST
 
@@ -144,6 +145,7 @@ fn main() {
 
 ## Next steps
 
-- [Using from Rust](@/guides/rust-api.md) — formatting, parsing, validation,
-  and config options
-- [Rust API reference](@/reference/rust-api.md) — all types and methods
+- [Using libsyntaqlite from Rust](@/guides/rust-api.md): formatting, parsing,
+  analysis, and config options
+- [libsyntaqlite Rust API reference](@/reference/rust-api.md): all types and
+  methods

@@ -1,17 +1,17 @@
-# syntaqlite — Claude Code Plugin
+# syntaqlite: SQLite language server and formatter for Claude Code
 
-SQLite SQL language support for [Claude Code](https://claude.ai/code). Provides
-diagnostics, formatting, completions, and semantic tokens via the syntaqlite LSP
-server.
+SQLite SQL language support for [Claude Code](https://claude.ai/code), with
+schema-aware diagnostics, formatting, completions, navigation, and semantic
+highlighting.
 
 ## Features
 
-- **LSP integration** — Automatically starts the syntaqlite language server for
+- **LSP integration:** automatically starts the syntaqlite language server for
   `.sql` files, providing diagnostics, formatting, completions, and semantic
   highlighting.
-- **`/syntaqlite:format` skill** — Format SQL files with configurable options.
-- **`/syntaqlite:parse` skill** — Inspect SQL parse trees and ASTs.
-- **`/syntaqlite:validate` skill** — Check SQL for errors against a schema.
+- **`/syntaqlite:format` skill:** format SQL files with configurable options.
+- **`/syntaqlite:parse` skill:** inspect SQL parse trees and ASTs.
+- **`/syntaqlite:validate` skill:** check SQL for errors against a schema.
 
 ## Prerequisites
 
@@ -43,7 +43,7 @@ claude plugin install syntaqlite@lalitmaganti-plugins
 ## Configuration
 
 Create a `syntaqlite.toml` in your project root to configure schemas and
-formatting. The LSP reads it automatically — no plugin settings needed.
+formatting. The LSP reads it automatically; no plugin settings are needed.
 
 ```toml
 [schemas]

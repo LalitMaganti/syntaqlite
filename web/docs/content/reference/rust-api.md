@@ -1,10 +1,13 @@
 +++
-title = "Rust API reference"
-description = "Feature flags, types, and methods."
+title = "libsyntaqlite Rust API"
+description = "Rust API for parsing, formatting, and statically analyzing SQLite SQL."
 weight = 4
 +++
 
-# Rust API reference
+# libsyntaqlite Rust API
+
+libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
+SQL. Its Rust API is published as the `syntaqlite` crate.
 
 ## Feature flags
 

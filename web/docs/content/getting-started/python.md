@@ -1,14 +1,15 @@
 +++
-title = "Python library"
-description = "Use syntaqlite from Python to parse, format, validate, and tokenize SQL."
+title = "libsyntaqlite for Python"
+description = "Parse, format, and statically analyze SQLite SQL from Python."
 weight = 6
 +++
 
-# Using syntaqlite from Python
+# Using libsyntaqlite from Python
 
-This tutorial walks you through using syntaqlite as a Python library. By the end
-you'll have a script that formats SQL, validates it against a schema, and
-inspects the AST — all from Python.
+libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
+SQL. The `syntaqlite` package provides its Python API. This tutorial walks you
+through using it to format SQL, validate it against a schema, and inspect the
+AST.
 
 ## 1. Install
 
@@ -258,9 +259,9 @@ for tok in sq.tokenize("SELECT 1"):
 
 ## Next steps
 
-- [Python API reference](@/reference/python-api.md) — the full `Syntaqlite`
-  class, parameters, and return types
-- [CLI reference](@/reference/cli.md) — the `syntaqlite` command installed
-  alongside the library
-- [Formatting options](@/reference/formatting-options.md) — line width, keyword
+- [libsyntaqlite Python API reference](@/reference/python-api.md): the full
+  `Syntaqlite` class, parameters, and return types
+- [CLI reference](@/reference/cli.md): the `syntaqlite` command installed
+  alongside the Python package
+- [Formatting options](@/reference/formatting-options.md): line width, keyword
   casing, and more

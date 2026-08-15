@@ -83,7 +83,7 @@ If you pin to 3.34.0, syntaqlite will reject it.
 Without `sqlite-cflags`, no optional features are enabled, so functions like
 `sin()` or `fts5()` will be flagged as unknown.
 
-These settings apply to all commands (`validate`, `fmt`, and `lsp`), so
+These settings apply to all commands (`analyze`, `fmt`, and `lsp`), so
 the formatter and language server also respect your target environment. CLI
 flags (`--sqlite-version`, `--sqlite-cflag`) override the config file when you
 need a one-off change.
@@ -124,12 +124,12 @@ shorthands set multiple categories at once; per-category keys override them.
 The config file works automatically with all integrations. No per-tool
 configuration of formatting or validation settings is needed.
 
-**VS Code** — install the
-[syntaqlite extension](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite).
+**VS Code:** install
+[syntaqlite: SQLite language server and formatter](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite).
 It discovers `syntaqlite.toml` on startup. See the
 [VS Code tutorial](@/getting-started/vscode.md).
 
-**Neovim, Helix, and other LSP clients** — point your LSP config at
+**Neovim, Helix, and other LSP clients:** point your LSP config at
 `syntaqlite lsp`. See [other editors](@/getting-started/other-editors.md) for
 copy-pasteable configs.
 
@@ -177,11 +177,11 @@ syntaqlite analyze --sqlite-version 3.46.0 "**/*.sql"
 
 ## Next steps
 
-- [Config file reference](@/reference/config-file.md) — full format
+- [Config file reference](@/reference/config-file.md): full format
   specification
-- [CI integration](@/guides/ci-integration.md) — GitHub Actions, pre-push
-  hooks, and validation in CI
-- [Embedded SQL](@/guides/embedded-sql.md) — validate SQL inside Python and
+- [CI integration](@/guides/ci-integration.md): GitHub Actions, pre-push hooks,
+  and validation in CI
+- [Embedded SQL](@/guides/embedded-sql.md): validate SQL inside Python and
   TypeScript files
-- [Using from Rust](@/guides/rust-api.md) — Rust API for formatting,
-  parsing, and validation
+- [Using libsyntaqlite from Rust](@/guides/rust-api.md): Rust API for formatting,
+  parsing, and analysis

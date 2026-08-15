@@ -43,12 +43,12 @@ things compact and breaks when the line would be too long.
 ## How formatting rules are defined
 
 Each AST node type has formatting rules defined in a
-[`.synq` grammar file](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-syntax/parser-nodes).
+[`.synq` grammar file](https://github.com/LalitMaganti/syntaqlite/tree/main/syntaqlite-buildtools/parser-nodes).
 These rules use a declarative DSL that compiles to bytecode at build time.
 
 For example, here's a simplified version of how `INSERT` statements are
 formatted (from
-[`dml.synq`](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite-syntax/parser-nodes/dml.synq)):
+[`dml.synq`](https://github.com/LalitMaganti/syntaqlite/blob/main/syntaqlite-buildtools/parser-nodes/dml.synq)):
 
 ```
 fmt {

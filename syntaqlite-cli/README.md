@@ -58,7 +58,7 @@ error: unknown column 'nme'
 Pin to a specific SQLite version to catch syntax that won't run on your target:
 
 ```bash
-syntaqlite --sqlite-version 3.32.0 validate -e "DELETE FROM users RETURNING *;"
+syntaqlite --sqlite-version 3.32.0 analyze -e "DELETE FROM users RETURNING *;"
 ```
 
 ### Parse

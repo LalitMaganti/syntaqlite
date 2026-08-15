@@ -1,9 +1,8 @@
-# syntaqlite
+# libsyntaqlite for JavaScript
 
-SQLite SQL parser, formatter, and language server for the browser — powered
-by WebAssembly.
-
-Built from SQLite's own grammar for 100% syntax compatibility.
+libsyntaqlite is a fast, embeddable parser, formatter, static analyzer, and
+language server for SQLite SQL. The `syntaqlite` package provides its JavaScript
+and WebAssembly API.
 
 - **Format** SQL with configurable line width, keyword casing, and semicolons
 - **Parse** SQL into a full syntax tree

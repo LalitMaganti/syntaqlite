@@ -111,5 +111,5 @@ SELECT 1
 
 These options are available in all embedding APIs:
 
-- [Rust API reference](@/reference/rust-api.md) — `FormatConfig` builder pattern
-- [C API reference](@/reference/c-api.md) — `SyntaqliteFormatConfig` struct
+- [libsyntaqlite Rust API](@/reference/rust-api.md): `FormatConfig` builder pattern
+- [libsyntaqlite C API](@/reference/c-api.md): `SyntaqliteFormatConfig` struct

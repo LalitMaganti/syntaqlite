@@ -1,23 +1,24 @@
 +++
-title = "C API reference"
-description = "FFI function signatures, types, and memory model."
+title = "libsyntaqlite C API"
+description = "C API for parsing, formatting, and statically analyzing SQLite SQL."
 weight = 5
 +++
 
-# C API reference
+# libsyntaqlite C API
 
 ## Distribution
 
-syntaqlite's C API is available in two forms:
+libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
+SQL. It is available to C and C++ programs in two forms:
 
 | Package | Contents | Header |
 |---------|----------|--------|
 | `syntaqlite-syntax-amalgamation` | Parser and tokenizer as compilable C source (`.c` + `.h`) | `syntaqlite_syntax.h` |
-| `syntaqlite-clib` | Prebuilt shared library (parser, formatter, validator, JSON-RPC) for all platforms | `syntaqlite.h` |
+| `libsyntaqlite` | Prebuilt shared library (parser + formatter + analyzer) for all platforms | `syntaqlite.h` |
 
 Both are attached to each
 [GitHub release](https://github.com/LalitMaganti/syntaqlite/releases).
-See [Using syntaqlite from C](@/guides/c-api.md) for compilation
+See [Using libsyntaqlite from C](@/guides/c-api.md) for compilation
 instructions.
 
 ## Parser
