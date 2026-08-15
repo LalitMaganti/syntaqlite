@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! `SQLite` dialect — semantic handle, function catalog, and formatter statics.
+//! `SQLite` dialect — semantic handle, built-in catalogs, and formatter statics.
 
 // `cflags` is always available — `SqliteFlag` ordinals are stable and
 // dialect-agnostic; callers use them without the full sqlite feature.
@@ -11,3 +11,5 @@ pub(crate) mod cflags;
 pub(crate) mod dialect;
 #[cfg(feature = "sqlite")]
 pub(crate) mod functions_catalog;
+#[cfg(feature = "sqlite")]
+pub(crate) mod relations_catalog;

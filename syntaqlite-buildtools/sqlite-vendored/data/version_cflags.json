@@ -2,84 +2,63 @@
   "cflags": [
     {
       "name": "SQLITE_OMIT_ALTERTABLE",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_ANALYZE",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_ATTACH",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_AUTOINCREMENT",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_CAST",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
-      "name": "SQLITE_OMIT_COMPILEOPTION_DIAGS",
-      "since": "3.30.1",
-      "categories": [
-        "functions"
-      ]
-    },
-    {
       "name": "SQLITE_OMIT_COMPOUND_SELECT",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_CTE",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
-      ]
-    },
-    {
-      "name": "SQLITE_OMIT_DATETIME_FUNCS",
-      "since": "3.30.1",
-      "categories": [
-        "functions"
       ]
     },
     {
       "name": "SQLITE_OMIT_EXPLAIN",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
-      "name": "SQLITE_OMIT_FLOATING_POINT",
-      "since": "3.30.1",
-      "categories": [
-        "functions"
-      ]
-    },
-    {
       "name": "SQLITE_OMIT_FOREIGN_KEY",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
@@ -92,29 +71,15 @@
       ]
     },
     {
-      "name": "SQLITE_OMIT_JSON",
-      "since": "3.38.5",
-      "categories": [
-        "functions"
-      ]
-    },
-    {
-      "name": "SQLITE_OMIT_LOAD_EXTENSION",
-      "since": "3.30.1",
-      "categories": [
-        "functions"
-      ]
-    },
-    {
       "name": "SQLITE_OMIT_PRAGMA",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_REINDEX",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
@@ -128,42 +93,43 @@
     },
     {
       "name": "SQLITE_OMIT_SUBQUERY",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_TEMPDB",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
-        "parser"
+        "parser",
+        "relations"
       ]
     },
     {
       "name": "SQLITE_OMIT_TRIGGER",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_VACUUM",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_VIEW",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser"
       ]
     },
     {
       "name": "SQLITE_OMIT_VIRTUALTABLE",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "parser",
         "vtable"
@@ -171,9 +137,59 @@
     },
     {
       "name": "SQLITE_OMIT_WINDOWFUNC",
-      "since": "3.30.1",
+      "since": "3.25.3",
       "categories": [
         "parser",
+        "functions"
+      ]
+    },
+    {
+      "name": "SQLITE_ENABLE_ORDERED_SET_AGGREGATES",
+      "since": "3.47.2",
+      "categories": [
+        "parser",
+        "functions"
+      ]
+    },
+    {
+      "name": "SQLITE_ENABLE_UPDATE_DELETE_LIMIT",
+      "since": "3.12.2",
+      "categories": [
+        "parser"
+      ]
+    },
+    {
+      "name": "SQLITE_OMIT_COMPILEOPTION_DIAGS",
+      "since": "3.12.2",
+      "categories": [
+        "functions"
+      ]
+    },
+    {
+      "name": "SQLITE_OMIT_DATETIME_FUNCS",
+      "since": "3.12.2",
+      "categories": [
+        "functions"
+      ]
+    },
+    {
+      "name": "SQLITE_OMIT_FLOATING_POINT",
+      "since": "3.12.2",
+      "categories": [
+        "functions"
+      ]
+    },
+    {
+      "name": "SQLITE_OMIT_JSON",
+      "since": "3.38.5",
+      "categories": [
+        "functions"
+      ]
+    },
+    {
+      "name": "SQLITE_OMIT_LOAD_EXTENSION",
+      "since": "3.12.2",
+      "categories": [
         "functions"
       ]
     },
@@ -193,49 +209,52 @@
     },
     {
       "name": "SQLITE_ENABLE_DBPAGE_VTAB",
-      "since": "3.30.1",
+      "since": "3.21.0",
       "categories": [
         "vtable"
       ]
     },
     {
       "name": "SQLITE_ENABLE_DBSTAT_VTAB",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "vtable"
       ]
     },
     {
       "name": "SQLITE_ENABLE_FTS3",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
-        "extensions"
+        "extensions",
+        "functions"
       ]
     },
     {
       "name": "SQLITE_ENABLE_FTS4",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "extensions"
       ]
     },
     {
       "name": "SQLITE_ENABLE_FTS5",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
-        "extensions"
+        "extensions",
+        "functions"
       ]
     },
     {
       "name": "SQLITE_ENABLE_GEOPOLY",
-      "since": "3.30.1",
+      "since": "3.25.3",
       "categories": [
-        "extensions"
+        "extensions",
+        "functions"
       ]
     },
     {
       "name": "SQLITE_ENABLE_JSON1",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "functions"
       ]
@@ -249,16 +268,8 @@
     },
     {
       "name": "SQLITE_ENABLE_OFFSET_SQL_FUNC",
-      "since": "3.30.1",
+      "since": "3.22.0",
       "categories": [
-        "functions"
-      ]
-    },
-    {
-      "name": "SQLITE_ENABLE_ORDERED_SET_AGGREGATES",
-      "since": "3.47.2",
-      "categories": [
-        "parser",
         "functions"
       ]
     },
@@ -271,28 +282,21 @@
     },
     {
       "name": "SQLITE_ENABLE_RTREE",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "extensions"
       ]
     },
     {
       "name": "SQLITE_ENABLE_STMTVTAB",
-      "since": "3.30.1",
+      "since": "3.20.1",
       "categories": [
         "vtable"
       ]
     },
     {
-      "name": "SQLITE_ENABLE_UPDATE_DELETE_LIMIT",
-      "since": "3.30.1",
-      "categories": [
-        "parser"
-      ]
-    },
-    {
       "name": "SQLITE_SOUNDEX",
-      "since": "3.30.1",
+      "since": "3.12.2",
       "categories": [
         "functions"
       ]

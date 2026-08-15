@@ -205,7 +205,7 @@ impl SqliteFlag {
         &["parser"],
         &["parser"],
         &["parser"],
-        &["parser"],
+        &["parser", "relations"],
         &["parser"],
         &["parser"],
         &["parser"],
@@ -236,48 +236,48 @@ impl SqliteFlag {
     ];
 
     const MIN_VERSIONS: &'static [SqliteVersion] = &[
-        SqliteVersion::V3_30, // SQLITE_OMIT_ALTERTABLE
-        SqliteVersion::V3_30, // SQLITE_OMIT_ANALYZE
-        SqliteVersion::V3_30, // SQLITE_OMIT_ATTACH
-        SqliteVersion::V3_30, // SQLITE_OMIT_AUTOINCREMENT
-        SqliteVersion::V3_30, // SQLITE_OMIT_CAST
-        SqliteVersion::V3_30, // SQLITE_OMIT_COMPOUND_SELECT
-        SqliteVersion::V3_30, // SQLITE_OMIT_CTE
-        SqliteVersion::V3_30, // SQLITE_OMIT_EXPLAIN
-        SqliteVersion::V3_30, // SQLITE_OMIT_FOREIGN_KEY
+        SqliteVersion::V3_12, // SQLITE_OMIT_ALTERTABLE
+        SqliteVersion::V3_12, // SQLITE_OMIT_ANALYZE
+        SqliteVersion::V3_12, // SQLITE_OMIT_ATTACH
+        SqliteVersion::V3_12, // SQLITE_OMIT_AUTOINCREMENT
+        SqliteVersion::V3_12, // SQLITE_OMIT_CAST
+        SqliteVersion::V3_12, // SQLITE_OMIT_COMPOUND_SELECT
+        SqliteVersion::V3_12, // SQLITE_OMIT_CTE
+        SqliteVersion::V3_12, // SQLITE_OMIT_EXPLAIN
+        SqliteVersion::V3_12, // SQLITE_OMIT_FOREIGN_KEY
         SqliteVersion::V3_31, // SQLITE_OMIT_GENERATED_COLUMNS
-        SqliteVersion::V3_30, // SQLITE_OMIT_PRAGMA
-        SqliteVersion::V3_30, // SQLITE_OMIT_REINDEX
+        SqliteVersion::V3_12, // SQLITE_OMIT_PRAGMA
+        SqliteVersion::V3_12, // SQLITE_OMIT_REINDEX
         SqliteVersion::V3_12, // SQLITE_OMIT_RETURNING
-        SqliteVersion::V3_30, // SQLITE_OMIT_SUBQUERY
-        SqliteVersion::V3_30, // SQLITE_OMIT_TEMPDB
-        SqliteVersion::V3_30, // SQLITE_OMIT_TRIGGER
-        SqliteVersion::V3_30, // SQLITE_OMIT_VACUUM
-        SqliteVersion::V3_30, // SQLITE_OMIT_VIEW
-        SqliteVersion::V3_30, // SQLITE_OMIT_VIRTUALTABLE
-        SqliteVersion::V3_30, // SQLITE_OMIT_WINDOWFUNC
+        SqliteVersion::V3_12, // SQLITE_OMIT_SUBQUERY
+        SqliteVersion::V3_12, // SQLITE_OMIT_TEMPDB
+        SqliteVersion::V3_12, // SQLITE_OMIT_TRIGGER
+        SqliteVersion::V3_12, // SQLITE_OMIT_VACUUM
+        SqliteVersion::V3_12, // SQLITE_OMIT_VIEW
+        SqliteVersion::V3_12, // SQLITE_OMIT_VIRTUALTABLE
+        SqliteVersion::V3_25, // SQLITE_OMIT_WINDOWFUNC
         SqliteVersion::V3_47, // SQLITE_ENABLE_ORDERED_SET_AGGREGATES
-        SqliteVersion::V3_30, // SQLITE_ENABLE_UPDATE_DELETE_LIMIT
-        SqliteVersion::V3_30, // SQLITE_OMIT_COMPILEOPTION_DIAGS
-        SqliteVersion::V3_30, // SQLITE_OMIT_DATETIME_FUNCS
-        SqliteVersion::V3_30, // SQLITE_OMIT_FLOATING_POINT
+        SqliteVersion::V3_12, // SQLITE_ENABLE_UPDATE_DELETE_LIMIT
+        SqliteVersion::V3_12, // SQLITE_OMIT_COMPILEOPTION_DIAGS
+        SqliteVersion::V3_12, // SQLITE_OMIT_DATETIME_FUNCS
+        SqliteVersion::V3_12, // SQLITE_OMIT_FLOATING_POINT
         SqliteVersion::V3_38, // SQLITE_OMIT_JSON
-        SqliteVersion::V3_30, // SQLITE_OMIT_LOAD_EXTENSION
+        SqliteVersion::V3_12, // SQLITE_OMIT_LOAD_EXTENSION
         SqliteVersion::V3_32, // SQLITE_ENABLE_BYTECODE_VTAB
         SqliteVersion::V3_51, // SQLITE_ENABLE_CARRAY
-        SqliteVersion::V3_30, // SQLITE_ENABLE_DBPAGE_VTAB
-        SqliteVersion::V3_30, // SQLITE_ENABLE_DBSTAT_VTAB
-        SqliteVersion::V3_30, // SQLITE_ENABLE_FTS3
-        SqliteVersion::V3_30, // SQLITE_ENABLE_FTS4
-        SqliteVersion::V3_30, // SQLITE_ENABLE_FTS5
-        SqliteVersion::V3_30, // SQLITE_ENABLE_GEOPOLY
-        SqliteVersion::V3_30, // SQLITE_ENABLE_JSON1
+        SqliteVersion::V3_21, // SQLITE_ENABLE_DBPAGE_VTAB
+        SqliteVersion::V3_12, // SQLITE_ENABLE_DBSTAT_VTAB
+        SqliteVersion::V3_12, // SQLITE_ENABLE_FTS3
+        SqliteVersion::V3_12, // SQLITE_ENABLE_FTS4
+        SqliteVersion::V3_12, // SQLITE_ENABLE_FTS5
+        SqliteVersion::V3_25, // SQLITE_ENABLE_GEOPOLY
+        SqliteVersion::V3_12, // SQLITE_ENABLE_JSON1
         SqliteVersion::V3_35, // SQLITE_ENABLE_MATH_FUNCTIONS
-        SqliteVersion::V3_30, // SQLITE_ENABLE_OFFSET_SQL_FUNC
+        SqliteVersion::V3_22, // SQLITE_ENABLE_OFFSET_SQL_FUNC
         SqliteVersion::V3_51, // SQLITE_ENABLE_PERCENTILE
-        SqliteVersion::V3_30, // SQLITE_ENABLE_RTREE
-        SqliteVersion::V3_30, // SQLITE_ENABLE_STMTVTAB
-        SqliteVersion::V3_30, // SQLITE_SOUNDEX
+        SqliteVersion::V3_12, // SQLITE_ENABLE_RTREE
+        SqliteVersion::V3_20, // SQLITE_ENABLE_STMTVTAB
+        SqliteVersion::V3_12, // SQLITE_SOUNDEX
     ];
 
     /// The canonical `SQLITE_*` flag name (e.g. `"SQLITE_OMIT_WINDOWFUNC"`).

@@ -8,7 +8,7 @@ Subcommands:
   download-sources       Download SQLite source files from the GitHub mirror.
   download-amalgamations Download SQLite amalgamation archives from sqlite.org.
   update-data            Download amalgamations, audit cflags, and extract the
-                         function catalog in one shot. This is the main command
+                         built-in catalogs in one shot. This is the main command
                          for keeping sqlite-vendored/data/ up to date.
 
 Usage:
@@ -53,19 +53,26 @@ SOURCE_FILES: list[str] = [
     "tool/mkkeywordhash.c",
 ]
 
-# Versions for amalgamation downloads (function extraction, 3.30.0+
-# since PRAGMA function_list requires 3.30.0; we compile with
-# SQLITE_INTROSPECTION_PRAGMAS so older versions also work).
+# Probe every supported version. Versions before PRAGMA function_list was
+# introduced simply yield no function rows, while the same probe still extracts
+# their built-in relations and cflag behavior.
 AMALGAMATION_VERSIONS: list[str] = [
-    "3.30.1", "3.31.1", "3.32.3", "3.33.0", "3.34.1", "3.35.5", "3.36.0",
-    "3.37.2", "3.38.5", "3.39.4", "3.40.1", "3.41.2", "3.42.0", "3.43.2",
-    "3.44.2", "3.45.3", "3.46.1", "3.47.2", "3.48.0", "3.49.2", "3.50.4",
-    "3.51.2",
+    "3.12.2", "3.13.0", "3.14.2", "3.15.2", "3.16.2", "3.17.0", "3.18.0",
+    "3.19.3", "3.20.1", "3.21.0", "3.22.0", "3.23.1", "3.24.0", "3.25.3",
+    "3.26.0", "3.27.2", "3.28.0", "3.29.0", "3.30.1", "3.31.1", "3.32.3",
+    "3.33.0", "3.34.1", "3.35.5", "3.36.0", "3.37.2", "3.38.5", "3.39.4",
+    "3.40.1", "3.41.2", "3.42.0", "3.43.2", "3.44.2", "3.45.3", "3.46.1",
+    "3.47.2", "3.48.0", "3.49.2", "3.50.4", "3.51.2",
 ]
 
 # Version → release year mapping (from sqlite.org/changes.html).
 # Needed to construct the amalgamation download URL.
 VERSION_YEAR: dict[str, int] = {
+    "3.12.2": 2016, "3.13.0": 2016, "3.14.2": 2016, "3.15.2": 2016,
+    "3.16.2": 2017, "3.17.0": 2017, "3.18.0": 2017, "3.19.3": 2017,
+    "3.20.1": 2017, "3.21.0": 2017, "3.22.0": 2018, "3.23.1": 2018,
+    "3.24.0": 2018, "3.25.3": 2018, "3.26.0": 2018, "3.27.2": 2019,
+    "3.28.0": 2019, "3.29.0": 2019,
     "3.30.0": 2019, "3.30.1": 2019,
     "3.31.0": 2020, "3.31.1": 2020,
     "3.32.0": 2020, "3.32.1": 2020, "3.32.2": 2020, "3.32.3": 2020,
@@ -230,7 +237,7 @@ DATA_DIR: Path = PROJECT_ROOT / "syntaqlite-buildtools" / "sqlite-vendored" / "d
 
 
 def cmd_update_data(args: argparse.Namespace) -> int:
-    """Download amalgamations, audit cflags, and extract function catalog in one shot."""
+    """Download amalgamations, audit cflags, and extract built-in catalogs."""
     amalgamation_dir = Path(args.amalgamation_dir)
     versions = args.versions or AMALGAMATION_VERSIONS
 
@@ -265,8 +272,9 @@ def cmd_update_data(args: argparse.Namespace) -> int:
     cli_bin = PROJECT_ROOT / "target" / "release" / "syntaqlite-buildtools"
     audit_output = str(DATA_DIR / "version_cflags.json")
     functions_output = str(DATA_DIR / "functions.json")
+    relations_output = str(DATA_DIR / "relations.json")
 
-    # Step 3: Audit cflags and extract function catalog in one shot.
+    # Step 3: Audit cflags and extract built-in catalogs in one shot.
     print()
     print("Step 3: Updating sqlite data...")
     result = subprocess.run([
@@ -274,6 +282,7 @@ def cmd_update_data(args: argparse.Namespace) -> int:
         "--amalgamation-dir", str(amalgamation_dir),
         "--version-cflags-output", audit_output,
         "--functions-output", functions_output,
+        "--relations-output", relations_output,
     ])
     if result.returncode != 0:
         print("update-data failed", file=sys.stderr)
@@ -283,6 +292,7 @@ def cmd_update_data(args: argparse.Namespace) -> int:
     print("Done. Updated files:")
     print(f"  {audit_output}")
     print(f"  {functions_output}")
+    print(f"  {relations_output}")
     return 0
 
 
@@ -327,7 +337,7 @@ def main() -> int:
     # update-data: the main command -- download + audit + extract
     p_update = sub.add_parser(
         "update-data",
-        help="Download amalgamations, audit cflags, and extract function catalog.",
+        help="Download amalgamations, audit cflags, and extract built-in catalogs.",
     )
     p_update.add_argument(
         "--amalgamation-dir", default="sqlite-amalgamations",

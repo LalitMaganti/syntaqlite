@@ -76,17 +76,32 @@ pub(crate) struct FunctionEntry<'a> {
     pub availability: &'a [AvailabilityRule],
 }
 
-/// Check whether a function entry is available for the given dialect config.
+/// Metadata for an always-present built-in relation.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BuiltinRelationInfo<'a> {
+    pub name: &'a str,
+    pub columns: &'a [&'a str],
+    pub without_rowid: bool,
+}
+
+/// A built-in relation and the configurations where it exists.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BuiltinRelationEntry<'a> {
+    pub info: BuiltinRelationInfo<'a>,
+    pub availability: &'a [AvailabilityRule],
+}
+
+/// Check whether an availability rule set passes for the dialect config.
 ///
-/// A function is available if at least one of its availability rules passes.
+/// An entry is available if at least one of its availability rules passes.
 /// Each rule checks:
 /// - version range (`since`/`until`)
 /// - cflag constraint: for `Enable` polarity the cflag must be set; for
 ///   `Omit` polarity the cflag must be clear. Rules with `cflag_index ==
 ///   u32::MAX` have no cflag constraint.
-pub(crate) fn is_function_available(entry: &FunctionEntry<'_>, dialect: &AnyDialect) -> bool {
+pub(crate) fn is_available(availability: &[AvailabilityRule], dialect: &AnyDialect) -> bool {
     let cflags = dialect.cflags();
-    entry.availability.iter().any(|rule| {
+    availability.iter().any(|rule| {
         if dialect.version() < rule.since {
             return false;
         }

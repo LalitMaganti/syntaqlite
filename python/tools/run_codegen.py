@@ -6,7 +6,7 @@
 
 Multi-stage bootstrap pipeline:
   Stage 1  (--extract): Extract C fragments from raw SQLite source.
-  Stage 1b (always):    Generate functions catalog Rust module.
+  Stage 1b (always):    Generate built-in catalog Rust modules.
   Stage 2  (always):    Generate base syntaqlite crate C + Rust code.
 
 The bootstrap tool (syntaqlite-buildtools) has no dependency on any generated
@@ -106,17 +106,19 @@ def main() -> int:
 
     tools_bin = project_root / "target" / "release" / "syntaqlite-buildtools"
 
-    # Stage 1b: Generate functions catalog and cflag Rust modules.
+    # Stage 1b: Generate built-in catalogs and cflag Rust modules.
     # Output paths are hardcoded in the Rust binary.
     functions_json = vendored_dir / "data" / "functions.json"
+    relations_json = vendored_dir / "data" / "relations.json"
     version_cflags_json = vendored_dir / "data" / "version_cflags.json"
 
-    log("Stage 1b: Generating functions catalog and cflag modules...")
+    log("Stage 1b: Generating built-in catalogs and cflag modules...")
     result = subprocess.run(
         [
             str(tools_bin),
             "codegen-sqlite-parser",
             "--functions-json", str(functions_json),
+            "--relations-json", str(relations_json),
             "--version-cflags-json", str(version_cflags_json),
         ],
         cwd=project_root,
