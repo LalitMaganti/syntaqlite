@@ -105,9 +105,9 @@ struct CodegenSqliteParserArgs {
     #[arg(long = "relations-json")]
     relations_source: Option<String>,
     /// Path to `version_cflags.json` (from sqlite-vendored/data/version_cflags.json).
-    /// When provided, emits `MIN_VERSIONS` and `min_version_int()` into cflags.rs.
-    #[arg(long = "version-cflags-json")]
-    version_cflags: Option<String>,
+    /// Supplies categories and minimum versions for generated cflag APIs.
+    #[arg(long = "version-cflags-json", required = true)]
+    version_cflags: String,
 }
 
 // ── sqlite-extract ────────────────────────────────────────────────────────────
@@ -135,7 +135,7 @@ struct UpdateDataArgs {
     /// Directory containing amalgamations (e.g., sqlite-amalgamations/3.35.5/sqlite3.c).
     #[arg(long, required = true)]
     amalgamation_dir: String,
-    /// Output path for `version_cflags.json`.
+    /// Path to `version_cflags.json`; existing categories are preserved.
     #[arg(long, required = true)]
     version_cflags_output: String,
     /// Output path for functions.json.
@@ -210,7 +210,7 @@ fn main() {
         Command::CodegenSqliteParser(args) => commands::SqliteParserCodegen {
             functions_json: args.functions_input.clone(),
             relations_json: args.relations_source.clone(),
-            version_cflags_json: args.version_cflags.clone(),
+            version_cflags_json: Some(args.version_cflags.clone()),
         }
         .run(),
         Command::SqliteExtract(args) => commands::SqliteExtract {

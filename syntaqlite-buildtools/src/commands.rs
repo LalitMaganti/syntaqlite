@@ -120,7 +120,7 @@ pub struct SqliteParserCodegen {
     pub functions_json: Option<String>,
     /// Path to relations.json. When provided, generates `relations_catalog.rs`.
     pub relations_json: Option<String>,
-    /// Path to `version_cflags.json`. When provided, emits `MIN_VERSIONS` into cflags.rs.
+    /// Path to `version_cflags.json`, the source of cflag categories and minimum versions.
     pub version_cflags_json: Option<String>,
 }
 
@@ -131,19 +131,22 @@ impl SqliteParserCodegen {
     ///
     /// Returns an error if codegen or file I/O fails.
     pub fn run(&self) -> Result<(), String> {
-        // Load version map from JSON if provided.
-        let version_map = self
+        let metadata_path = self
             .version_cflags_json
             .as_deref()
-            .map(crate::util::cflag_entries_codegen::load_version_map)
-            .transpose()?;
+            .ok_or("--version-cflags-json is required for cflag codegen")?;
+        let cflag_metadata =
+            crate::util::cflag_entries_codegen::load_cflag_metadata(metadata_path)?;
 
-        // Always regenerate both flag enums from the stable CFLAG_REGISTRY.
+        // Stable names and indices come from CFLAG_REGISTRY; all metadata comes from JSON.
         crate::util::cflag_entries_codegen::write_sqlite_flag_rs(
             SQLITE_CFLAGS_RS,
-            version_map.as_ref(),
+            &cflag_metadata,
         )?;
-        crate::util::cflag_entries_codegen::write_syntax_flag_rs(SYNTAX_CFLAGS_RS)?;
+        crate::util::cflag_entries_codegen::write_syntax_flag_rs(
+            SYNTAX_CFLAGS_RS,
+            &cflag_metadata,
+        )?;
 
         if let Some(json_path) = &self.functions_json {
             crate::util::functions_codegen::write_functions_catalog_file(
@@ -262,7 +265,7 @@ impl SqliteExtract {
 pub struct UpdateData {
     /// Directory containing amalgamations.
     pub amalgamation_dir: String,
-    /// Output path for the cflag audit JSON (`version_cflags.json`).
+    /// Path to `version_cflags.json`; the audit preserves its existing categories.
     pub version_cflags_output: String,
     /// Output path for the function catalog JSON (`functions.json`).
     pub functions_output: String,

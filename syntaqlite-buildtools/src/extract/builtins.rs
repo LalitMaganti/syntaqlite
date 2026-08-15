@@ -55,16 +55,14 @@ fn flag_polarity(flag_name: &str) -> &'static str {
 
 /// Returns the (`flag_name`, polarity) pairs to probe for the given available flags.
 ///
-/// Only flags in `CFLAG_REGISTRY` affecting functions or relations are
-/// considered, minus any with `None` in `PROBE_OVERRIDES`.
+/// Only available flags selected as built-in-relevant by `version_cflags.json`
+/// are considered, minus any with `None` in `PROBE_OVERRIDES`.
 fn probeable_flags(available: &BTreeSet<String>) -> Vec<(&'static str, &'static str)> {
     use crate::util::cflag_registry::CFLAG_REGISTRY;
     CFLAG_REGISTRY
         .iter()
-        .filter_map(|&(name, _, cats)| {
-            if !(cats.contains(&"functions") || cats.contains(&"relations"))
-                || !available.contains(name)
-            {
+        .filter_map(|&(name, _)| {
+            if !available.contains(name) {
                 return None;
             }
             // Skip flags that cannot be probed (e.g. compile failures).
@@ -344,7 +342,7 @@ pub(crate) fn discover_versions(amalgamation_dir: &Path) -> Result<Vec<String>, 
 fn all_flag_names() -> Vec<&'static str> {
     crate::util::cflag_registry::CFLAG_REGISTRY
         .iter()
-        .map(|(name, _, _)| *name)
+        .map(|(name, _)| *name)
         .collect()
 }
 
@@ -383,13 +381,15 @@ fn discover_relation_candidates(sqlite3_c: &str) -> BTreeSet<String> {
     candidates
 }
 
-/// Audit all versions and write cflag-centric availability data to `output_path`.
+/// Audit all versions and update cflag-centric availability data at `output_path`.
 ///
-/// Returns `CflagAvailability` with each cflag's earliest observed version (`since`).
+/// Recomputes each cflag's earliest observed version (`since`) while preserving
+/// the categories already stored in the JSON metadata file.
 ///
 /// # Errors
 ///
-/// Returns an error if no amalgamation versions are found, or if reading/writing files fails.
+/// Returns an error if no amalgamation versions are found, the existing metadata
+/// is missing or invalid, or reading/writing files fails.
 ///
 /// # Panics
 ///
@@ -414,6 +414,30 @@ pub(crate) fn audit_version_cflags(
         versions.last().expect("versions is non-empty")
     );
 
+    // Categories are editorial metadata. Preserve them while recomputing the
+    // source-derived minimum versions.
+    let existing_json = fs::read_to_string(output_path).map_err(|e| {
+        format!(
+            "reading existing cflag metadata {}: {e}",
+            output_path.display()
+        )
+    })?;
+    let existing: CflagAvailability = serde_json::from_str(&existing_json)
+        .map_err(|e| format!("parsing {}: {e}", output_path.display()))?;
+    let categories_by_name: BTreeMap<String, Vec<String>> = existing
+        .cflags
+        .into_iter()
+        .map(|entry| (entry.name, entry.categories))
+        .collect();
+    for &(name, _) in crate::util::cflag_registry::CFLAG_REGISTRY {
+        if !categories_by_name.contains_key(name) {
+            return Err(format!(
+                "{} is missing categories for {name}",
+                output_path.display()
+            ));
+        }
+    }
+
     // Scan each version's sqlite3.c for flag references.
     let mut per_version: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for version in &versions {
@@ -426,7 +450,7 @@ pub(crate) fn audit_version_cflags(
     }
 
     // Compute `since` per cflag (earliest version where it appears).
-    let availability = compute_cflag_availability(&per_version);
+    let availability = compute_cflag_availability(&per_version, &categories_by_name);
 
     // Write cflag-centric JSON output.
     let json = serde_json::to_string_pretty(&availability)
@@ -446,7 +470,10 @@ pub(crate) fn audit_version_cflags(
 /// For each cflag in `CFLAG_REGISTRY`, finds the earliest version where it
 /// appears in the amalgamation source. Cflags not observed in any version
 /// get `since: "0"`.
-fn compute_cflag_availability(per_version: &BTreeMap<String, Vec<String>>) -> CflagAvailability {
+fn compute_cflag_availability(
+    per_version: &BTreeMap<String, Vec<String>>,
+    categories_by_name: &BTreeMap<String, Vec<String>>,
+) -> CflagAvailability {
     // Sort versions.
     let mut sorted_versions: Vec<&String> = per_version.keys().collect();
     sorted_versions.sort_by(|a, b| {
@@ -456,7 +483,7 @@ fn compute_cflag_availability(per_version: &BTreeMap<String, Vec<String>>) -> Cf
     });
 
     let mut entries = Vec::new();
-    for &(flag_name, _, categories) in crate::util::cflag_registry::CFLAG_REGISTRY {
+    for &(flag_name, _) in crate::util::cflag_registry::CFLAG_REGISTRY {
         // Find earliest version containing this flag.
         let since = sorted_versions
             .iter()
@@ -470,7 +497,10 @@ fn compute_cflag_availability(per_version: &BTreeMap<String, Vec<String>>) -> Cf
         entries.push(CflagAvailabilityEntry {
             name: flag_name.to_string(),
             since,
-            categories: categories.iter().map(|s| (*s).to_string()).collect(),
+            categories: categories_by_name
+                .get(flag_name)
+                .expect("audit validated category metadata")
+                .clone(),
         });
     }
 
@@ -548,10 +578,8 @@ fn parse_probe_output(stdout: &str) -> ProbeSet {
 fn baseline_defines_for(available: &BTreeSet<String>) -> Vec<String> {
     use crate::util::cflag_registry::CFLAG_REGISTRY;
     let mut defines = Vec::new();
-    for &(name, _, cats) in CFLAG_REGISTRY {
-        if !(cats.contains(&"functions") || cats.contains(&"relations"))
-            || !available.contains(name)
-        {
+    for &(name, _) in CFLAG_REGISTRY {
+        if !available.contains(name) {
             continue;
         }
         if flag_polarity(name) == "enable"
@@ -570,10 +598,8 @@ fn baseline_defines_for(available: &BTreeSet<String>) -> Vec<String> {
 fn test_defines_for(flag_name: &str, polarity: &str, available: &BTreeSet<String>) -> Vec<String> {
     use crate::util::cflag_registry::CFLAG_REGISTRY;
     let mut defines = Vec::new();
-    for &(name, _, cats) in CFLAG_REGISTRY {
-        if !(cats.contains(&"functions") || cats.contains(&"relations"))
-            || !available.contains(name)
-        {
+    for &(name, _) in CFLAG_REGISTRY {
+        if !available.contains(name) {
             continue;
         }
         if polarity == "omit" {
@@ -757,16 +783,21 @@ pub(crate) fn extract_builtin_catalogs(
         let amal_dir = amalgamation_dir.join(version);
         let build_dir = build_root.join(version);
 
-        // Derive available flags: a flag is available if since <= this version.
+        // Derive built-in-relevant flags from JSON metadata. A flag is available
+        // when its minimum version has been reached.
         let ver_int = version_string_to_int(version);
         let available: BTreeSet<String> = availability
             .cflags
             .iter()
-            .filter(|e| {
-                let since_int = version_string_to_int(&e.since);
-                since_int > 0 && since_int <= ver_int
+            .filter(|entry| {
+                let affects_builtins = entry
+                    .categories
+                    .iter()
+                    .any(|category| category == "functions" || category == "relations");
+                let since_int = version_string_to_int(&entry.since);
+                affects_builtins && since_int > 0 && since_int <= ver_int
             })
-            .map(|e| e.name.clone())
+            .map(|entry| entry.name.clone())
             .collect();
 
         let sqlite3_c_path = amal_dir.join("sqlite3.c");
@@ -1097,6 +1128,25 @@ mod tests {
         assert!(flags.contains(&"SQLITE_ENABLE_MATH_FUNCTIONS".to_string()));
         assert!(flags.contains(&"SQLITE_OMIT_JSON".to_string()));
         assert!(!flags.contains(&"SQLITE_ENABLE_FTS5".to_string()));
+    }
+
+    #[test]
+    fn cflag_audit_preserves_existing_categories() {
+        use crate::util::cflag_registry::CFLAG_REGISTRY;
+
+        let categories: BTreeMap<String, Vec<String>> = CFLAG_REGISTRY
+            .iter()
+            .map(|&(name, _)| (name.to_string(), vec![format!("metadata-for-{name}")]))
+            .collect();
+        let availability = compute_cflag_availability(&BTreeMap::new(), &categories);
+
+        for entry in availability.cflags {
+            assert_eq!(
+                entry.categories, categories[&entry.name],
+                "audit changed categories for {}",
+                entry.name
+            );
+        }
     }
 
     #[test]
