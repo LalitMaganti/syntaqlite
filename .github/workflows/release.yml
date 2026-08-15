@@ -38,8 +38,8 @@ jobs:
           - {name: macos-x64, runner: macos-26-intel, target: x86_64-apple-darwin, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.dylib, archive: tar.gz}
           - {name: linux-x64, runner: ubuntu-latest, container: "quay.io/pypa/manylinux_2_28_x86_64", target: x86_64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz}
           - {name: linux-arm64, runner: ubuntu-24.04-arm, container: "quay.io/pypa/manylinux_2_28_aarch64", target: aarch64-unknown-linux-gnu, binary: syntaqlite, staticlib: libsyntaqlite.a, cdylib: libsyntaqlite.so, archive: tar.gz}
-          - {name: windows-x64, runner: windows-latest, target: x86_64-pc-windows-msvc, binary: syntaqlite.exe, staticlib: syntaqlite.lib, cdylib: syntaqlite.dll, archive: zip}
-          - {name: windows-arm64, runner: windows-latest, target: aarch64-pc-windows-msvc, binary: syntaqlite.exe, cdylib: syntaqlite.dll, archive: zip}
+          - {name: windows-x64, runner: windows-latest, target: x86_64-pc-windows-msvc, binary: syntaqlite.exe, staticlib: syntaqlite.lib, cdylib: syntaqlite.dll, importlib: syntaqlite.dll.lib, archive: zip}
+          - {name: windows-arm64, runner: windows-latest, target: aarch64-pc-windows-msvc, binary: syntaqlite.exe, cdylib: syntaqlite.dll, importlib: syntaqlite.dll.lib, archive: zip}
     runs-on: ${{ matrix.runner }}
     container: ${{ matrix.container }}
     env:
@@ -76,12 +76,11 @@ jobs:
         shell: bash
         run: cargo build --release -p syntaqlite-buildtools
 
-      - name: Build cdylib
+      - name: Build full C shared library
         shell: bash
         run: |
-          cargo rustc -p syntaqlite --release ${{ !matrix.staticlib && format('--target {0}', matrix.target) || '' }} \
-            --crate-type cdylib \
-            -- -C default-linker-libraries
+          python3 tools/build-c-library --release \
+            ${{ !matrix.staticlib && format('--target {0}', matrix.target) || '' }}
 
       # -- Smoke test CLI --
       - name: Smoke test CLI
@@ -128,7 +127,9 @@ jobs:
         uses: actions/upload-artifact@v6
         with:
           name: libsyntaqlite-${{ matrix.name }}
-          path: ${{ !matrix.staticlib && format('target/{0}/release', matrix.target) || 'target/release' }}/${{ matrix.cdylib }}
+          path: |
+            ${{ !matrix.staticlib && format('target/{0}/release', matrix.target) || 'target/release' }}/${{ matrix.cdylib }}
+            ${{ matrix.importlib && format('{0}/{1}', !matrix.staticlib && format('target/{0}/release', matrix.target) || 'target/release', matrix.importlib) || '' }}
 
       - name: Upload buildtools
         if: matrix.name == 'linux-x64'

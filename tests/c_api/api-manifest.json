@@ -1,0 +1,6261 @@
+{
+  "data_model": {
+    "pointer_size": 8,
+    "size_t_size": 8
+  },
+  "enums": {
+    "SynqTokenCategory": {
+      "SYNQ_TOKEN_CATEGORY_COMMENT": 7,
+      "SYNQ_TOKEN_CATEGORY_FUNCTION": 9,
+      "SYNQ_TOKEN_CATEGORY_IDENTIFIER": 2,
+      "SYNQ_TOKEN_CATEGORY_KEYWORD": 1,
+      "SYNQ_TOKEN_CATEGORY_NUMBER": 4,
+      "SYNQ_TOKEN_CATEGORY_OPERATOR": 5,
+      "SYNQ_TOKEN_CATEGORY_OTHER": 0,
+      "SYNQ_TOKEN_CATEGORY_PUNCTUATION": 6,
+      "SYNQ_TOKEN_CATEGORY_STRING": 3,
+      "SYNQ_TOKEN_CATEGORY_TYPE": 10,
+      "SYNQ_TOKEN_CATEGORY_VARIABLE": 8
+    },
+    "SyntaqliteAlterOp": {
+      "SYNTAQLITE_ALTER_OP_ADD_COLUMN": 3,
+      "SYNTAQLITE_ALTER_OP_DROP_COLUMN": 2,
+      "SYNTAQLITE_ALTER_OP_RENAME_COLUMN": 1,
+      "SYNTAQLITE_ALTER_OP_RENAME_TABLE": 0
+    },
+    "SyntaqliteAnalysisMode": {
+      "SYNTAQLITE_MODE_DOCUMENT": 0,
+      "SYNTAQLITE_MODE_EXECUTE": 1
+    },
+    "SyntaqliteAnalyzeOrReindexOp": {
+      "SYNTAQLITE_ANALYZE_OR_REINDEX_OP_ANALYZE": 0,
+      "SYNTAQLITE_ANALYZE_OR_REINDEX_OP_REINDEX": 1
+    },
+    "SyntaqliteAritySpecKind": {
+      "SYNTAQLITE_ARITY_ANY": 2,
+      "SYNTAQLITE_ARITY_AT_LEAST": 1,
+      "SYNTAQLITE_ARITY_EXACT": 0
+    },
+    "SyntaqliteBinaryOp": {
+      "SYNTAQLITE_BINARY_OP_AND": 11,
+      "SYNTAQLITE_BINARY_OP_BIT_AND": 13,
+      "SYNTAQLITE_BINARY_OP_BIT_OR": 14,
+      "SYNTAQLITE_BINARY_OP_CONCAT": 17,
+      "SYNTAQLITE_BINARY_OP_EQ": 9,
+      "SYNTAQLITE_BINARY_OP_GE": 8,
+      "SYNTAQLITE_BINARY_OP_GT": 6,
+      "SYNTAQLITE_BINARY_OP_LE": 7,
+      "SYNTAQLITE_BINARY_OP_LSHIFT": 15,
+      "SYNTAQLITE_BINARY_OP_LT": 5,
+      "SYNTAQLITE_BINARY_OP_MINUS": 1,
+      "SYNTAQLITE_BINARY_OP_NE": 10,
+      "SYNTAQLITE_BINARY_OP_OR": 12,
+      "SYNTAQLITE_BINARY_OP_PLUS": 0,
+      "SYNTAQLITE_BINARY_OP_PTR": 18,
+      "SYNTAQLITE_BINARY_OP_PTR2": 19,
+      "SYNTAQLITE_BINARY_OP_REM": 4,
+      "SYNTAQLITE_BINARY_OP_RSHIFT": 16,
+      "SYNTAQLITE_BINARY_OP_SLASH": 3,
+      "SYNTAQLITE_BINARY_OP_STAR": 2
+    },
+    "SyntaqliteBool": {
+      "SYNTAQLITE_BOOL_FALSE": 0,
+      "SYNTAQLITE_BOOL_TRUE": 1
+    },
+    "SyntaqliteCheckLevel": {
+      "SYNTAQLITE_CHECK_ALLOW": 0,
+      "SYNTAQLITE_CHECK_DENY": 2,
+      "SYNTAQLITE_CHECK_WARN": 1
+    },
+    "SyntaqliteColumnConstraintType": {
+      "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_CHECK": 4,
+      "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_COLLATE": 6,
+      "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT": 0,
+      "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED": 7,
+      "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NOT_NULL": 1,
+      "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NULL": 8,
+      "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_PRIMARY_KEY": 2,
+      "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES": 5,
+      "SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_UNIQUE": 3
+    },
+    "SyntaqliteCompoundOp": {
+      "SYNTAQLITE_COMPOUND_OP_EXCEPT": 3,
+      "SYNTAQLITE_COMPOUND_OP_INTERSECT": 2,
+      "SYNTAQLITE_COMPOUND_OP_UNION": 0,
+      "SYNTAQLITE_COMPOUND_OP_UNION_ALL": 1
+    },
+    "SyntaqliteConflictAction": {
+      "SYNTAQLITE_CONFLICT_ACTION_ABORT": 2,
+      "SYNTAQLITE_CONFLICT_ACTION_DEFAULT": 0,
+      "SYNTAQLITE_CONFLICT_ACTION_FAIL": 3,
+      "SYNTAQLITE_CONFLICT_ACTION_IGNORE": 4,
+      "SYNTAQLITE_CONFLICT_ACTION_REPLACE": 5,
+      "SYNTAQLITE_CONFLICT_ACTION_ROLLBACK": 1
+    },
+    "SyntaqliteDiagnosticCode": {
+      "SYNTAQLITE_DIAG_CTE_COLUMN_COUNT_MISMATCH": 6,
+      "SYNTAQLITE_DIAG_FUNCTION_ARITY": 5,
+      "SYNTAQLITE_DIAG_PARSE_ERROR": 0,
+      "SYNTAQLITE_DIAG_UNKNOWN_COLUMN": 2,
+      "SYNTAQLITE_DIAG_UNKNOWN_FUNCTION": 3,
+      "SYNTAQLITE_DIAG_UNKNOWN_MODULE": 4,
+      "SYNTAQLITE_DIAG_UNKNOWN_TABLE": 1
+    },
+    "SyntaqliteDropObjectType": {
+      "SYNTAQLITE_DROP_OBJECT_TYPE_INDEX": 1,
+      "SYNTAQLITE_DROP_OBJECT_TYPE_TABLE": 0,
+      "SYNTAQLITE_DROP_OBJECT_TYPE_TRIGGER": 3,
+      "SYNTAQLITE_DROP_OBJECT_TYPE_VIEW": 2
+    },
+    "SyntaqliteExplainMode": {
+      "SYNTAQLITE_EXPLAIN_MODE_EXPLAIN": 0,
+      "SYNTAQLITE_EXPLAIN_MODE_QUERY_PLAN": 1
+    },
+    "SyntaqliteForeignKeyAction": {
+      "SYNTAQLITE_FOREIGN_KEY_ACTION_CASCADE": 3,
+      "SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION": 0,
+      "SYNTAQLITE_FOREIGN_KEY_ACTION_RESTRICT": 4,
+      "SYNTAQLITE_FOREIGN_KEY_ACTION_SET_DEFAULT": 2,
+      "SYNTAQLITE_FOREIGN_KEY_ACTION_SET_NULL": 1
+    },
+    "SyntaqliteFrameBoundType": {
+      "SYNTAQLITE_FRAME_BOUND_TYPE_CURRENT_ROW": 2,
+      "SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_FOLLOWING": 3,
+      "SYNTAQLITE_FRAME_BOUND_TYPE_EXPR_PRECEDING": 1,
+      "SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_FOLLOWING": 4,
+      "SYNTAQLITE_FRAME_BOUND_TYPE_UNBOUNDED_PRECEDING": 0
+    },
+    "SyntaqliteFrameExclude": {
+      "SYNTAQLITE_FRAME_EXCLUDE_CURRENT_ROW": 2,
+      "SYNTAQLITE_FRAME_EXCLUDE_GROUP": 3,
+      "SYNTAQLITE_FRAME_EXCLUDE_NONE": 0,
+      "SYNTAQLITE_FRAME_EXCLUDE_NO_OTHERS": 1,
+      "SYNTAQLITE_FRAME_EXCLUDE_TIES": 4
+    },
+    "SyntaqliteFrameType": {
+      "SYNTAQLITE_FRAME_TYPE_GROUPS": 3,
+      "SYNTAQLITE_FRAME_TYPE_NONE": 0,
+      "SYNTAQLITE_FRAME_TYPE_RANGE": 1,
+      "SYNTAQLITE_FRAME_TYPE_ROWS": 2
+    },
+    "SyntaqliteFunctionCategory": {
+      "SYNTAQLITE_FUNCTION_AGGREGATE": 1,
+      "SYNTAQLITE_FUNCTION_SCALAR": 0,
+      "SYNTAQLITE_FUNCTION_WINDOW": 2
+    },
+    "SyntaqliteGeneratedColumnStorage": {
+      "SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED": 1,
+      "SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL": 0
+    },
+    "SyntaqliteIndexHint": {
+      "SYNTAQLITE_INDEX_HINT_DEFAULT": 0,
+      "SYNTAQLITE_INDEX_HINT_INDEXED": 2,
+      "SYNTAQLITE_INDEX_HINT_NOT_INDEXED": 1
+    },
+    "SyntaqliteIsOp": {
+      "SYNTAQLITE_IS_OP_IS": 0,
+      "SYNTAQLITE_IS_OP_IS_DISTINCT": 5,
+      "SYNTAQLITE_IS_OP_IS_NOT": 1,
+      "SYNTAQLITE_IS_OP_IS_NOT_DISTINCT": 4,
+      "SYNTAQLITE_IS_OP_IS_NULL": 2,
+      "SYNTAQLITE_IS_OP_NOT_NULL": 3
+    },
+    "SyntaqliteJoinType": {
+      "SYNTAQLITE_JOIN_TYPE_COMMA": 0,
+      "SYNTAQLITE_JOIN_TYPE_CROSS": 5,
+      "SYNTAQLITE_JOIN_TYPE_FULL": 4,
+      "SYNTAQLITE_JOIN_TYPE_INNER": 1,
+      "SYNTAQLITE_JOIN_TYPE_LEFT": 2,
+      "SYNTAQLITE_JOIN_TYPE_NATURAL_FULL": 9,
+      "SYNTAQLITE_JOIN_TYPE_NATURAL_INNER": 6,
+      "SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT": 7,
+      "SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT": 8,
+      "SYNTAQLITE_JOIN_TYPE_RIGHT": 3
+    },
+    "SyntaqliteKeywordCase": {
+      "SYNTAQLITE_KEYWORD_LOWER": 1,
+      "SYNTAQLITE_KEYWORD_UPPER": 0
+    },
+    "SyntaqliteLikeKeyword": {
+      "SYNTAQLITE_LIKE_KEYWORD_GLOB": 1,
+      "SYNTAQLITE_LIKE_KEYWORD_LIKE": 0,
+      "SYNTAQLITE_LIKE_KEYWORD_MATCH": 2,
+      "SYNTAQLITE_LIKE_KEYWORD_REGEXP": 3
+    },
+    "SyntaqliteLiteralType": {
+      "SYNTAQLITE_LITERAL_TYPE_BLOB": 3,
+      "SYNTAQLITE_LITERAL_TYPE_CURRENT": 5,
+      "SYNTAQLITE_LITERAL_TYPE_FLOAT": 1,
+      "SYNTAQLITE_LITERAL_TYPE_INTEGER": 0,
+      "SYNTAQLITE_LITERAL_TYPE_NULL": 4,
+      "SYNTAQLITE_LITERAL_TYPE_QNUMBER": 6,
+      "SYNTAQLITE_LITERAL_TYPE_STRING": 2
+    },
+    "SyntaqliteMacroStyle": {
+      "SYNQ_MACRO_STYLE_NONE": 0,
+      "SYNQ_MACRO_STYLE_RUST": 1
+    },
+    "SyntaqliteMaterialized": {
+      "SYNTAQLITE_MATERIALIZED_DEFAULT": 0,
+      "SYNTAQLITE_MATERIALIZED_MATERIALIZED": 1,
+      "SYNTAQLITE_MATERIALIZED_NOT_MATERIALIZED": 2
+    },
+    "SyntaqliteNodeTag": {
+      "SYNTAQLITE_NODE_AGGREGATE_FUNCTION_CALL": 1,
+      "SYNTAQLITE_NODE_ALTER_TABLE_STMT": 46,
+      "SYNTAQLITE_NODE_ANALYZE_OR_REINDEX_STMT": 64,
+      "SYNTAQLITE_NODE_ATTACH_STMT": 65,
+      "SYNTAQLITE_NODE_BETWEEN_EXPR": 10,
+      "SYNTAQLITE_NODE_BINARY_EXPR": 33,
+      "SYNTAQLITE_NODE_CASE_EXPR": 12,
+      "SYNTAQLITE_NODE_CASE_WHEN": 13,
+      "SYNTAQLITE_NODE_CASE_WHEN_LIST": 14,
+      "SYNTAQLITE_NODE_CAST_EXPR": 3,
+      "SYNTAQLITE_NODE_COLLATE_EXPR": 42,
+      "SYNTAQLITE_NODE_COLUMN_CONSTRAINT": 16,
+      "SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST": 17,
+      "SYNTAQLITE_NODE_COLUMN_DEF": 18,
+      "SYNTAQLITE_NODE_COLUMN_DEF_LIST": 19,
+      "SYNTAQLITE_NODE_COLUMN_REF": 4,
+      "SYNTAQLITE_NODE_COMPOUND_SELECT": 5,
+      "SYNTAQLITE_NODE_COUNT": 80,
+      "SYNTAQLITE_NODE_CREATE_INDEX_STMT": 69,
+      "SYNTAQLITE_NODE_CREATE_TABLE_STMT": 22,
+      "SYNTAQLITE_NODE_CREATE_TRIGGER_STMT": 61,
+      "SYNTAQLITE_NODE_CREATE_VIEW_STMT": 70,
+      "SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT": 62,
+      "SYNTAQLITE_NODE_CTE_DEFINITION": 23,
+      "SYNTAQLITE_NODE_CTE_LIST": 24,
+      "SYNTAQLITE_NODE_DELETE_STMT": 28,
+      "SYNTAQLITE_NODE_DETACH_STMT": 66,
+      "SYNTAQLITE_NODE_DROP_STMT": 45,
+      "SYNTAQLITE_NODE_ERROR": 38,
+      "SYNTAQLITE_NODE_EXISTS_EXPR": 7,
+      "SYNTAQLITE_NODE_EXPLAIN_STMT": 68,
+      "SYNTAQLITE_NODE_EXPR_LIST": 39,
+      "SYNTAQLITE_NODE_FILTER_OVER": 79,
+      "SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE": 15,
+      "SYNTAQLITE_NODE_FRAME_BOUND": 73,
+      "SYNTAQLITE_NODE_FRAME_SPEC": 74,
+      "SYNTAQLITE_NODE_FUNCTION_CALL": 40,
+      "SYNTAQLITE_NODE_IDENT_NAME": 37,
+      "SYNTAQLITE_NODE_INSERT_STMT": 32,
+      "SYNTAQLITE_NODE_IN_EXPR": 8,
+      "SYNTAQLITE_NODE_IS_EXPR": 9,
+      "SYNTAQLITE_NODE_JOIN_CLAUSE": 57,
+      "SYNTAQLITE_NODE_JOIN_PREFIX": 58,
+      "SYNTAQLITE_NODE_LIKE_EXPR": 11,
+      "SYNTAQLITE_NODE_LIMIT_CLAUSE": 54,
+      "SYNTAQLITE_NODE_LITERAL": 35,
+      "SYNTAQLITE_NODE_NAMED_WINDOW_DEF": 77,
+      "SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST": 78,
+      "SYNTAQLITE_NODE_NULL": 0,
+      "SYNTAQLITE_NODE_ORDERED_SET_FUNCTION_CALL": 2,
+      "SYNTAQLITE_NODE_ORDERING_TERM": 52,
+      "SYNTAQLITE_NODE_ORDER_BY_LIST": 53,
+      "SYNTAQLITE_NODE_PAREN_EXPR": 36,
+      "SYNTAQLITE_NODE_PRAGMA_STMT": 63,
+      "SYNTAQLITE_NODE_QUALIFIED_NAME": 44,
+      "SYNTAQLITE_NODE_RAISE_EXPR": 43,
+      "SYNTAQLITE_NODE_RESULT_COLUMN": 49,
+      "SYNTAQLITE_NODE_RESULT_COLUMN_LIST": 50,
+      "SYNTAQLITE_NODE_SAVEPOINT_STMT": 48,
+      "SYNTAQLITE_NODE_SELECT_STMT": 51,
+      "SYNTAQLITE_NODE_SET_CLAUSE": 29,
+      "SYNTAQLITE_NODE_SET_CLAUSE_LIST": 30,
+      "SYNTAQLITE_NODE_SUBQUERY_EXPR": 6,
+      "SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE": 56,
+      "SYNTAQLITE_NODE_TABLE_CONSTRAINT": 20,
+      "SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST": 21,
+      "SYNTAQLITE_NODE_TABLE_REF": 55,
+      "SYNTAQLITE_NODE_TRANSACTION_STMT": 47,
+      "SYNTAQLITE_NODE_TRIGGER_CMD_LIST": 60,
+      "SYNTAQLITE_NODE_TRIGGER_EVENT": 59,
+      "SYNTAQLITE_NODE_UNARY_EXPR": 34,
+      "SYNTAQLITE_NODE_UPDATE_STMT": 31,
+      "SYNTAQLITE_NODE_UPSERT_CLAUSE": 26,
+      "SYNTAQLITE_NODE_UPSERT_CLAUSE_LIST": 27,
+      "SYNTAQLITE_NODE_VACUUM_STMT": 67,
+      "SYNTAQLITE_NODE_VALUES_CLAUSE": 72,
+      "SYNTAQLITE_NODE_VALUES_ROW_LIST": 71,
+      "SYNTAQLITE_NODE_VARIABLE": 41,
+      "SYNTAQLITE_NODE_WINDOW_DEF": 75,
+      "SYNTAQLITE_NODE_WINDOW_DEF_LIST": 76,
+      "SYNTAQLITE_NODE_WITH_CLAUSE": 25
+    },
+    "SyntaqliteNullsOrder": {
+      "SYNTAQLITE_NULLS_ORDER_FIRST": 1,
+      "SYNTAQLITE_NULLS_ORDER_LAST": 2,
+      "SYNTAQLITE_NULLS_ORDER_NONE": 0
+    },
+    "SyntaqlitePragmaForm": {
+      "SYNTAQLITE_PRAGMA_FORM_BARE": 0,
+      "SYNTAQLITE_PRAGMA_FORM_CALL": 2,
+      "SYNTAQLITE_PRAGMA_FORM_EQ": 1
+    },
+    "SyntaqliteRaiseType": {
+      "SYNTAQLITE_RAISE_TYPE_ABORT": 2,
+      "SYNTAQLITE_RAISE_TYPE_FAIL": 3,
+      "SYNTAQLITE_RAISE_TYPE_IGNORE": 0,
+      "SYNTAQLITE_RAISE_TYPE_ROLLBACK": 1
+    },
+    "SyntaqliteRelationKind": {
+      "SYNTAQLITE_RELATION_TABLE": 0,
+      "SYNTAQLITE_RELATION_VIEW": 1
+    },
+    "SyntaqliteSavepointOp": {
+      "SYNTAQLITE_SAVEPOINT_OP_RELEASE": 1,
+      "SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO": 2,
+      "SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT": 0
+    },
+    "SyntaqliteSeverity": {
+      "SYNTAQLITE_SEVERITY_ERROR": 0,
+      "SYNTAQLITE_SEVERITY_HINT": 3,
+      "SYNTAQLITE_SEVERITY_INFO": 2,
+      "SYNTAQLITE_SEVERITY_WARNING": 1
+    },
+    "SyntaqliteSortOrder": {
+      "SYNTAQLITE_SORT_ORDER_ASC": 0,
+      "SYNTAQLITE_SORT_ORDER_DESC": 1
+    },
+    "SyntaqliteTableConstraintType": {
+      "SYNTAQLITE_TABLE_CONSTRAINT_TYPE_CHECK": 2,
+      "SYNTAQLITE_TABLE_CONSTRAINT_TYPE_FOREIGN_KEY": 3,
+      "SYNTAQLITE_TABLE_CONSTRAINT_TYPE_PRIMARY_KEY": 0,
+      "SYNTAQLITE_TABLE_CONSTRAINT_TYPE_UNIQUE": 1
+    },
+    "SyntaqliteTransactionOp": {
+      "SYNTAQLITE_TRANSACTION_OP_BEGIN": 0,
+      "SYNTAQLITE_TRANSACTION_OP_COMMIT": 1,
+      "SYNTAQLITE_TRANSACTION_OP_ROLLBACK": 2
+    },
+    "SyntaqliteTransactionType": {
+      "SYNTAQLITE_TRANSACTION_TYPE_DEFERRED": 0,
+      "SYNTAQLITE_TRANSACTION_TYPE_EXCLUSIVE": 2,
+      "SYNTAQLITE_TRANSACTION_TYPE_IMMEDIATE": 1
+    },
+    "SyntaqliteTriggerEventType": {
+      "SYNTAQLITE_TRIGGER_EVENT_TYPE_DELETE": 0,
+      "SYNTAQLITE_TRIGGER_EVENT_TYPE_INSERT": 1,
+      "SYNTAQLITE_TRIGGER_EVENT_TYPE_UPDATE": 2
+    },
+    "SyntaqliteTriggerTiming": {
+      "SYNTAQLITE_TRIGGER_TIMING_AFTER": 1,
+      "SYNTAQLITE_TRIGGER_TIMING_BEFORE": 0,
+      "SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF": 2
+    },
+    "SyntaqliteUnaryOp": {
+      "SYNTAQLITE_UNARY_OP_BIT_NOT": 2,
+      "SYNTAQLITE_UNARY_OP_MINUS": 0,
+      "SYNTAQLITE_UNARY_OP_NOT": 3,
+      "SYNTAQLITE_UNARY_OP_PLUS": 1
+    },
+    "SyntaqliteUpsertAction": {
+      "SYNTAQLITE_UPSERT_ACTION_NOTHING": 0,
+      "SYNTAQLITE_UPSERT_ACTION_UPDATE": 1
+    }
+  },
+  "functions": {
+    "syntaqlite_analyzer_add_function_overload": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *, const char *, SyntaqliteFunctionCategory, SyntaqliteAritySpecKind, uint32_t)"
+    },
+    "syntaqlite_analyzer_add_table_function": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *, const char *, SyntaqliteAritySpecKind, uint32_t, const char *const *, uint32_t)"
+    },
+    "syntaqlite_analyzer_add_tables": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteRelationDef *, uint32_t)"
+    },
+    "syntaqlite_analyzer_add_views": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *, const SyntaqliteRelationDef *, uint32_t)"
+    },
+    "syntaqlite_analyzer_analyze": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteAnalyzer *, const char *, SyntaqliteLength)"
+    },
+    "syntaqlite_analyzer_column_lineage": {
+      "linkage": "external",
+      "type": "const SyntaqliteColumnLineage *(const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_column_lineage_count": {
+      "linkage": "external",
+      "type": "uint32_t (const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_create_sqlite": {
+      "linkage": "external",
+      "type": "SyntaqliteAnalyzer *(void)"
+    },
+    "syntaqlite_analyzer_create_with_dialect": {
+      "linkage": "external",
+      "type": "SyntaqliteAnalyzer *(SyntaqliteDialect)"
+    },
+    "syntaqlite_analyzer_destroy": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_diagnostic_count": {
+      "linkage": "external",
+      "type": "uint32_t (const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_diagnostics": {
+      "linkage": "external",
+      "type": "const SyntaqliteDiagnostic *(const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_lineage_complete": {
+      "linkage": "external",
+      "type": "uint32_t (const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_load_schema_ddl": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteAnalyzer *, const char *, SyntaqliteLength)"
+    },
+    "syntaqlite_analyzer_physical_table_count": {
+      "linkage": "external",
+      "type": "uint32_t (const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_physical_tables": {
+      "linkage": "external",
+      "type": "const SyntaqlitePhysicalTableAccess *(const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_relation_count": {
+      "linkage": "external",
+      "type": "uint32_t (const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_relations": {
+      "linkage": "external",
+      "type": "const SyntaqliteRelationAccess *(const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_render_diagnostics": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteAnalyzer *, const char *)"
+    },
+    "syntaqlite_analyzer_reset_catalog": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_set_check_level": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteAnalyzer *, const char *, SyntaqliteCheckLevel)"
+    },
+    "syntaqlite_analyzer_set_mode": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *, SyntaqliteAnalysisMode)"
+    },
+    "syntaqlite_analyzer_set_module_resolver": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *, SyntaqliteModuleResolverFn, void *)"
+    },
+    "syntaqlite_analyzer_set_strict_schema": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_set_suggestion_threshold": {
+      "linkage": "external",
+      "type": "void (SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_column_lineage": {
+      "linkage": "external",
+      "type": "const SyntaqliteColumnLineage *(SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_column_lineage_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_statement_defined_relation_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_defined_relations": {
+      "linkage": "external",
+      "type": "const SyntaqliteDefinedRelation *(SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_diagnostic_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_diagnostics": {
+      "linkage": "external",
+      "type": "const SyntaqliteDiagnostic *(SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_physical_table_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_physical_tables": {
+      "linkage": "external",
+      "type": "const SyntaqlitePhysicalTableAccess *(SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_relation_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_relations": {
+      "linkage": "external",
+      "type": "const SyntaqliteRelationAccess *(SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_source": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_unexpanded_view_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_statement_unexpanded_views": {
+      "linkage": "external",
+      "type": "const SyntaqliteUnexpandedView *(SyntaqliteAnalyzer *, uint32_t)"
+    },
+    "syntaqlite_analyzer_unexpanded_view_count": {
+      "linkage": "external",
+      "type": "uint32_t (const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_analyzer_unexpanded_views": {
+      "linkage": "external",
+      "type": "const SyntaqliteUnexpandedView *(const SyntaqliteAnalyzer *)"
+    },
+    "syntaqlite_dialect_load": {
+      "linkage": "external",
+      "type": "SyntaqliteLoadedDialect *(const char *, const char *)"
+    },
+    "syntaqlite_dump_node": {
+      "linkage": "external",
+      "type": "char *(SyntaqliteParser *, uint32_t, uint32_t)"
+    },
+    "syntaqlite_expr_as_aggregate_function_call": {
+      "linkage": "internal",
+      "type": "const SyntaqliteAggregateFunctionCall *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_between_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteBetweenExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_binary_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteBinaryExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_case_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCaseExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_cast_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCastExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_collate_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCollateExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_column_ref": {
+      "linkage": "internal",
+      "type": "const SyntaqliteColumnRef *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_error": {
+      "linkage": "internal",
+      "type": "const SyntaqliteError *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_exists_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteExistsExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_function_call": {
+      "linkage": "internal",
+      "type": "const SyntaqliteFunctionCall *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_in_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteInExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_is_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteIsExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_like_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteLikeExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_literal": {
+      "linkage": "internal",
+      "type": "const SyntaqliteLiteral *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_ordered_set_function_call": {
+      "linkage": "internal",
+      "type": "const SyntaqliteOrderedSetFunctionCall *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_paren_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteParenExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_raise_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteRaiseExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_subquery_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteSubqueryExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_unary_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteUnaryExpr *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_expr_as_variable": {
+      "linkage": "internal",
+      "type": "const SyntaqliteVariable *(const SyntaqliteExpr *)"
+    },
+    "syntaqlite_formatter_create_sqlite": {
+      "linkage": "external",
+      "type": "SyntaqliteFormatter *(void)"
+    },
+    "syntaqlite_formatter_create_sqlite_with_config": {
+      "linkage": "external",
+      "type": "SyntaqliteFormatter *(const SyntaqliteFormatConfig *)"
+    },
+    "syntaqlite_formatter_create_with_dialect": {
+      "linkage": "external",
+      "type": "SyntaqliteFormatter *(SyntaqliteDialect, const SyntaqliteFormatConfig *)"
+    },
+    "syntaqlite_formatter_destroy": {
+      "linkage": "external",
+      "type": "void (SyntaqliteFormatter *)"
+    },
+    "syntaqlite_formatter_error_msg": {
+      "linkage": "external",
+      "type": "const char *(const SyntaqliteFormatter *)"
+    },
+    "syntaqlite_formatter_format": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteFormatter *, const char *, SyntaqliteLength)"
+    },
+    "syntaqlite_formatter_output": {
+      "linkage": "external",
+      "type": "const char *(const SyntaqliteFormatter *)"
+    },
+    "syntaqlite_formatter_output_len": {
+      "linkage": "external",
+      "type": "SyntaqliteLength (const SyntaqliteFormatter *)"
+    },
+    "syntaqlite_in_expr_source_as_compound_select": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCompoundSelect *(const SyntaqliteInExprSource *)"
+    },
+    "syntaqlite_in_expr_source_as_expr_list": {
+      "linkage": "internal",
+      "type": "const SyntaqliteExprList *(const SyntaqliteInExprSource *)"
+    },
+    "syntaqlite_in_expr_source_as_select_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteSelectStmt *(const SyntaqliteInExprSource *)"
+    },
+    "syntaqlite_in_expr_source_as_subquery_expr": {
+      "linkage": "internal",
+      "type": "const SyntaqliteSubqueryExpr *(const SyntaqliteInExprSource *)"
+    },
+    "syntaqlite_in_expr_source_as_table_ref": {
+      "linkage": "internal",
+      "type": "const SyntaqliteTableRef *(const SyntaqliteInExprSource *)"
+    },
+    "syntaqlite_in_expr_source_as_values_clause": {
+      "linkage": "internal",
+      "type": "const SyntaqliteValuesClause *(const SyntaqliteInExprSource *)"
+    },
+    "syntaqlite_in_expr_source_as_with_clause": {
+      "linkage": "internal",
+      "type": "const SyntaqliteWithClause *(const SyntaqliteInExprSource *)"
+    },
+    "syntaqlite_is_expr": {
+      "linkage": "internal",
+      "type": "int (SyntaqliteNodeTag)"
+    },
+    "syntaqlite_is_in_expr_source": {
+      "linkage": "internal",
+      "type": "int (SyntaqliteNodeTag)"
+    },
+    "syntaqlite_is_name": {
+      "linkage": "internal",
+      "type": "int (SyntaqliteNodeTag)"
+    },
+    "syntaqlite_is_select": {
+      "linkage": "internal",
+      "type": "int (SyntaqliteNodeTag)"
+    },
+    "syntaqlite_is_stmt": {
+      "linkage": "internal",
+      "type": "int (SyntaqliteNodeTag)"
+    },
+    "syntaqlite_is_table_source": {
+      "linkage": "internal",
+      "type": "int (SyntaqliteNodeTag)"
+    },
+    "syntaqlite_list_child": {
+      "linkage": "internal",
+      "type": "const void *(SyntaqliteParser *, const void *, uint32_t)"
+    },
+    "syntaqlite_list_child_id": {
+      "linkage": "internal",
+      "type": "uint32_t (const void *, uint32_t)"
+    },
+    "syntaqlite_list_count": {
+      "linkage": "internal",
+      "type": "uint32_t (const void *)"
+    },
+    "syntaqlite_loaded_dialect_destroy": {
+      "linkage": "external",
+      "type": "void (SyntaqliteLoadedDialect *)"
+    },
+    "syntaqlite_loaded_dialect_error": {
+      "linkage": "external",
+      "type": "const char *(const SyntaqliteLoadedDialect *)"
+    },
+    "syntaqlite_loaded_dialect_get": {
+      "linkage": "external",
+      "type": "SyntaqliteDialect (const SyntaqliteLoadedDialect *)"
+    },
+    "syntaqlite_macro_expansion_expand_and_set_result": {
+      "linkage": "external",
+      "type": "int (SyntaqliteParser *, const char *, SyntaqliteLength, const char *const *, const SyntaqliteLength *, uint32_t, uint32_t)"
+    },
+    "syntaqlite_macro_expansion_set_result": {
+      "linkage": "external",
+      "type": "void (SyntaqliteParser *, const char *, SyntaqliteLength, SyntaqliteLineNumber, SyntaqliteColumnNumber)"
+    },
+    "syntaqlite_macro_expansion_set_result_with_arg_map": {
+      "linkage": "external",
+      "type": "void (SyntaqliteParser *, const char *, SyntaqliteLength, SyntaqliteLineNumber, SyntaqliteColumnNumber, const SyntaqliteArgMapping *, uint32_t)"
+    },
+    "syntaqlite_macro_rewrite_arg_at": {
+      "linkage": "external",
+      "type": "SyntaqliteMacroCallArg (SyntaqliteParser *, uint32_t, uint32_t)"
+    },
+    "syntaqlite_macro_rewrite_arg_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteParser *, uint32_t)"
+    },
+    "syntaqlite_macro_rewrite_arg_segment_at": {
+      "linkage": "external",
+      "type": "SyntaqliteMacroArgSegment (SyntaqliteParser *, uint32_t, uint32_t)"
+    },
+    "syntaqlite_macro_rewrite_arg_segment_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteParser *, uint32_t)"
+    },
+    "syntaqlite_name_as_error": {
+      "linkage": "internal",
+      "type": "const SyntaqliteError *(const SyntaqliteName *)"
+    },
+    "syntaqlite_name_as_ident_name": {
+      "linkage": "internal",
+      "type": "const SyntaqliteIdentName *(const SyntaqliteName *)"
+    },
+    "syntaqlite_node_is_macro_free": {
+      "linkage": "external",
+      "type": "int (SyntaqliteParser *, uint32_t)"
+    },
+    "syntaqlite_node_is_present": {
+      "linkage": "internal",
+      "type": "uint32_t (uint32_t)"
+    },
+    "syntaqlite_node_leading_comments": {
+      "linkage": "external",
+      "type": "const SyntaqliteComment *(SyntaqliteParser *, uint32_t, uint32_t *)"
+    },
+    "syntaqlite_node_token_range": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *, uint32_t, SyntaqliteTokenIdx *, SyntaqliteTokenIdx *)"
+    },
+    "syntaqlite_node_trailing_comments": {
+      "linkage": "external",
+      "type": "const SyntaqliteComment *(SyntaqliteParser *, uint32_t, uint32_t *)"
+    },
+    "syntaqlite_parser_completion_context": {
+      "linkage": "external",
+      "type": "SyntaqliteCompletionContext (SyntaqliteParser *)"
+    },
+    "syntaqlite_parser_create": {
+      "linkage": "external",
+      "type": "SyntaqliteParser *(const SyntaqliteMemMethods *)"
+    },
+    "syntaqlite_parser_create_sqlite": {
+      "linkage": "external",
+      "type": "SyntaqliteParser *(const SyntaqliteMemMethods *)"
+    },
+    "syntaqlite_parser_create_with_dialect": {
+      "linkage": "external",
+      "type": "SyntaqliteParser *(const SyntaqliteMemMethods *, SyntaqliteDialect)"
+    },
+    "syntaqlite_parser_destroy": {
+      "linkage": "external",
+      "type": "void (SyntaqliteParser *)"
+    },
+    "syntaqlite_parser_expanded_text": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteParser *, SyntaqliteLength *)"
+    },
+    "syntaqlite_parser_expected_tokens": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteParser *, uint32_t *, uint32_t)"
+    },
+    "syntaqlite_parser_feed_token": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *, uint32_t, const char *, SyntaqliteLength)"
+    },
+    "syntaqlite_parser_finish": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *)"
+    },
+    "syntaqlite_parser_full_text": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteParser *, SyntaqliteLength *)"
+    },
+    "syntaqlite_parser_next": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *)"
+    },
+    "syntaqlite_parser_node": {
+      "linkage": "external",
+      "type": "const void *(SyntaqliteParser *, uint32_t)"
+    },
+    "syntaqlite_parser_node_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteParser *)"
+    },
+    "syntaqlite_parser_node_expanded_text": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteParser *, uint32_t, SyntaqliteLength *)"
+    },
+    "syntaqlite_parser_node_text": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteParser *, uint32_t, SyntaqliteLength *, SyntaqliteStmtOffset *)"
+    },
+    "syntaqlite_parser_reset": {
+      "linkage": "external",
+      "type": "void (SyntaqliteParser *, const char *, SyntaqliteLength)"
+    },
+    "syntaqlite_parser_set_collect_node_extents": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *, uint32_t)"
+    },
+    "syntaqlite_parser_set_collect_tokens": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *, uint32_t)"
+    },
+    "syntaqlite_parser_set_macro_fallback": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *, uint32_t)"
+    },
+    "syntaqlite_parser_set_macro_lookup": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *, SyntaqliteMacroLookupFn, void *)"
+    },
+    "syntaqlite_parser_set_trace": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *, uint32_t)"
+    },
+    "syntaqlite_parser_span_expanded_text": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteParser *, const SyntaqliteTextSpan *, SyntaqliteLength *)"
+    },
+    "syntaqlite_parser_span_text": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteParser *, const SyntaqliteTextSpan *, SyntaqliteLength *, SyntaqliteStmtOffset *)"
+    },
+    "syntaqlite_parser_text": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteParser *, SyntaqliteDocOffset *, SyntaqliteLength *)"
+    },
+    "syntaqlite_parser_traceback": {
+      "linkage": "external",
+      "type": "const SyntaqliteTracebackFrame *(SyntaqliteParser *, const SyntaqliteTextSpan *, uint32_t *)"
+    },
+    "syntaqlite_result_comments": {
+      "linkage": "external",
+      "type": "const SyntaqliteComment *(SyntaqliteParser *, uint32_t *)"
+    },
+    "syntaqlite_result_error_length": {
+      "linkage": "external",
+      "type": "SyntaqliteLength (SyntaqliteParser *)"
+    },
+    "syntaqlite_result_error_msg": {
+      "linkage": "external",
+      "type": "const char *(SyntaqliteParser *)"
+    },
+    "syntaqlite_result_error_offset": {
+      "linkage": "external",
+      "type": "SyntaqliteStmtOffset (SyntaqliteParser *)"
+    },
+    "syntaqlite_result_macro_count": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteParser *)"
+    },
+    "syntaqlite_result_macro_rewrite_at": {
+      "linkage": "external",
+      "type": "SyntaqliteMacroRewrite (SyntaqliteParser *, uint32_t)"
+    },
+    "syntaqlite_result_recovery_root": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteParser *)"
+    },
+    "syntaqlite_result_root": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteParser *)"
+    },
+    "syntaqlite_result_tokens": {
+      "linkage": "external",
+      "type": "const SyntaqliteParserToken *(SyntaqliteParser *, uint32_t *)"
+    },
+    "syntaqlite_rpc_call": {
+      "linkage": "external",
+      "type": "uint8_t *(SyntaqliteRpc *, const uint8_t *, uint64_t, uint64_t *)"
+    },
+    "syntaqlite_rpc_create_dialect": {
+      "linkage": "external",
+      "type": "SyntaqliteRpc *(const char *, uint64_t, const char *, uint64_t)"
+    },
+    "syntaqlite_rpc_create_sqlite": {
+      "linkage": "external",
+      "type": "SyntaqliteRpc *(void)"
+    },
+    "syntaqlite_rpc_destroy": {
+      "linkage": "external",
+      "type": "void (SyntaqliteRpc *)"
+    },
+    "syntaqlite_rpc_free": {
+      "linkage": "external",
+      "type": "void (uint8_t *, uint64_t)"
+    },
+    "syntaqlite_select_as_compound_select": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCompoundSelect *(const SyntaqliteSelect *)"
+    },
+    "syntaqlite_select_as_select_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteSelectStmt *(const SyntaqliteSelect *)"
+    },
+    "syntaqlite_select_as_values_clause": {
+      "linkage": "internal",
+      "type": "const SyntaqliteValuesClause *(const SyntaqliteSelect *)"
+    },
+    "syntaqlite_select_as_with_clause": {
+      "linkage": "internal",
+      "type": "const SyntaqliteWithClause *(const SyntaqliteSelect *)"
+    },
+    "syntaqlite_span_is_macro_free": {
+      "linkage": "internal",
+      "type": "int (const SyntaqliteTextSpan *)"
+    },
+    "syntaqlite_span_is_quoted": {
+      "linkage": "internal",
+      "type": "int (SyntaqliteTextSpan)"
+    },
+    "syntaqlite_span_quote_char": {
+      "linkage": "internal",
+      "type": "char (SyntaqliteTextSpan)"
+    },
+    "syntaqlite_sqlite_dialect": {
+      "linkage": "external",
+      "type": "SyntaqliteDialect (void)"
+    },
+    "syntaqlite_sqlite_dialect_template": {
+      "linkage": "external",
+      "type": "const SyntaqliteDialectTemplate *(void)"
+    },
+    "syntaqlite_stmt_as_alter_table_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteAlterTableStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_analyze_or_reindex_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteAnalyzeOrReindexStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_attach_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteAttachStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_compound_select": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCompoundSelect *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_create_index_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCreateIndexStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_create_table_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCreateTableStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_create_trigger_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCreateTriggerStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_create_view_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCreateViewStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_create_virtual_table_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteCreateVirtualTableStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_delete_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteDeleteStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_detach_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteDetachStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_drop_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteDropStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_explain_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteExplainStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_insert_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteInsertStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_pragma_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqlitePragmaStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_savepoint_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteSavepointStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_select_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteSelectStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_transaction_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteTransactionStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_update_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteUpdateStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_vacuum_stmt": {
+      "linkage": "internal",
+      "type": "const SyntaqliteVacuumStmt *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_values_clause": {
+      "linkage": "internal",
+      "type": "const SyntaqliteValuesClause *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_stmt_as_with_clause": {
+      "linkage": "internal",
+      "type": "const SyntaqliteWithClause *(const SyntaqliteStmt *)"
+    },
+    "syntaqlite_string_destroy": {
+      "linkage": "external",
+      "type": "void (char *)"
+    },
+    "syntaqlite_table_source_as_join_clause": {
+      "linkage": "internal",
+      "type": "const SyntaqliteJoinClause *(const SyntaqliteTableSource *)"
+    },
+    "syntaqlite_table_source_as_join_prefix": {
+      "linkage": "internal",
+      "type": "const SyntaqliteJoinPrefix *(const SyntaqliteTableSource *)"
+    },
+    "syntaqlite_table_source_as_subquery_table_source": {
+      "linkage": "internal",
+      "type": "const SyntaqliteSubqueryTableSource *(const SyntaqliteTableSource *)"
+    },
+    "syntaqlite_table_source_as_table_ref": {
+      "linkage": "internal",
+      "type": "const SyntaqliteTableRef *(const SyntaqliteTableSource *)"
+    },
+    "syntaqlite_token_leading_comments": {
+      "linkage": "external",
+      "type": "const SyntaqliteComment *(SyntaqliteParser *, SyntaqliteTokenIdx, uint32_t *)"
+    },
+    "syntaqlite_token_trailing_comments": {
+      "linkage": "external",
+      "type": "const SyntaqliteComment *(SyntaqliteParser *, SyntaqliteTokenIdx, uint32_t *)"
+    },
+    "syntaqlite_tokenizer_create": {
+      "linkage": "external",
+      "type": "SyntaqliteTokenizer *(const SyntaqliteMemMethods *)"
+    },
+    "syntaqlite_tokenizer_create_sqlite": {
+      "linkage": "external",
+      "type": "SyntaqliteTokenizer *(const SyntaqliteMemMethods *)"
+    },
+    "syntaqlite_tokenizer_create_with_dialect": {
+      "linkage": "external",
+      "type": "SyntaqliteTokenizer *(const SyntaqliteMemMethods *, SyntaqliteDialect)"
+    },
+    "syntaqlite_tokenizer_destroy": {
+      "linkage": "external",
+      "type": "void (SyntaqliteTokenizer *)"
+    },
+    "syntaqlite_tokenizer_next": {
+      "linkage": "external",
+      "type": "uint32_t (SyntaqliteTokenizer *, SyntaqliteToken *)"
+    },
+    "syntaqlite_tokenizer_reset": {
+      "linkage": "external",
+      "type": "void (SyntaqliteTokenizer *, const char *, SyntaqliteLength)"
+    }
+  },
+  "layouts": {
+    "enums": {
+      "SynqTokenCategory": {
+        "size": 4
+      },
+      "SyntaqliteAlterOp": {
+        "size": 4
+      },
+      "SyntaqliteAnalysisMode": {
+        "size": 4
+      },
+      "SyntaqliteAnalyzeOrReindexOp": {
+        "size": 4
+      },
+      "SyntaqliteAritySpecKind": {
+        "size": 4
+      },
+      "SyntaqliteBinaryOp": {
+        "size": 4
+      },
+      "SyntaqliteBool": {
+        "size": 4
+      },
+      "SyntaqliteCheckLevel": {
+        "size": 4
+      },
+      "SyntaqliteColumnConstraintType": {
+        "size": 4
+      },
+      "SyntaqliteCompoundOp": {
+        "size": 4
+      },
+      "SyntaqliteConflictAction": {
+        "size": 4
+      },
+      "SyntaqliteDiagnosticCode": {
+        "size": 4
+      },
+      "SyntaqliteDropObjectType": {
+        "size": 4
+      },
+      "SyntaqliteExplainMode": {
+        "size": 4
+      },
+      "SyntaqliteForeignKeyAction": {
+        "size": 4
+      },
+      "SyntaqliteFrameBoundType": {
+        "size": 4
+      },
+      "SyntaqliteFrameExclude": {
+        "size": 4
+      },
+      "SyntaqliteFrameType": {
+        "size": 4
+      },
+      "SyntaqliteFunctionCategory": {
+        "size": 4
+      },
+      "SyntaqliteGeneratedColumnStorage": {
+        "size": 4
+      },
+      "SyntaqliteIndexHint": {
+        "size": 4
+      },
+      "SyntaqliteIsOp": {
+        "size": 4
+      },
+      "SyntaqliteJoinType": {
+        "size": 4
+      },
+      "SyntaqliteKeywordCase": {
+        "size": 4
+      },
+      "SyntaqliteLikeKeyword": {
+        "size": 4
+      },
+      "SyntaqliteLiteralType": {
+        "size": 4
+      },
+      "SyntaqliteMacroStyle": {
+        "size": 4
+      },
+      "SyntaqliteMaterialized": {
+        "size": 4
+      },
+      "SyntaqliteNodeTag": {
+        "size": 4
+      },
+      "SyntaqliteNullsOrder": {
+        "size": 4
+      },
+      "SyntaqlitePragmaForm": {
+        "size": 4
+      },
+      "SyntaqliteRaiseType": {
+        "size": 4
+      },
+      "SyntaqliteRelationKind": {
+        "size": 4
+      },
+      "SyntaqliteSavepointOp": {
+        "size": 4
+      },
+      "SyntaqliteSeverity": {
+        "size": 4
+      },
+      "SyntaqliteSortOrder": {
+        "size": 4
+      },
+      "SyntaqliteTableConstraintType": {
+        "size": 4
+      },
+      "SyntaqliteTransactionOp": {
+        "size": 4
+      },
+      "SyntaqliteTransactionType": {
+        "size": 4
+      },
+      "SyntaqliteTriggerEventType": {
+        "size": 4
+      },
+      "SyntaqliteTriggerTiming": {
+        "size": 4
+      },
+      "SyntaqliteUnaryOp": {
+        "size": 4
+      },
+      "SyntaqliteUpsertAction": {
+        "size": 4
+      }
+    },
+    "records": {
+      "SynqParseToken": {
+        "align": 8,
+        "fields": {
+          "layer_id": 24,
+          "n": 8,
+          "offset": 20,
+          "token_idx": 16,
+          "type": 12,
+          "z": 0
+        },
+        "size": 32
+      },
+      "SyntaqliteAggregateFunctionCall": {
+        "align": 4,
+        "fields": {
+          "args": 24,
+          "filter_clause": 32,
+          "flags": 20,
+          "func_name": 4,
+          "orderby": 28,
+          "over_clause": 36,
+          "tag": 0
+        },
+        "size": 40
+      },
+      "SyntaqliteAggregateFunctionCallFlags": {
+        "align": 1,
+        "fields": {
+          "bits": 0,
+          "raw": 0
+        },
+        "size": 1
+      },
+      "SyntaqliteAlterTableStmt": {
+        "align": 4,
+        "fields": {
+          "new_name": 12,
+          "old_name": 16,
+          "op": 4,
+          "tag": 0,
+          "target": 8
+        },
+        "size": 20
+      },
+      "SyntaqliteAnalyzeOrReindexStmt": {
+        "align": 4,
+        "fields": {
+          "kind": 36,
+          "schema": 20,
+          "tag": 0,
+          "target_name": 4
+        },
+        "size": 40
+      },
+      "SyntaqliteArgMapping": {
+        "align": 4,
+        "fields": {
+          "arg_index": 4,
+          "body_offset": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteAttachStmt": {
+        "align": 4,
+        "fields": {
+          "db_name": 8,
+          "filename": 4,
+          "key": 12,
+          "tag": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteBetweenExpr": {
+        "align": 4,
+        "fields": {
+          "high": 16,
+          "low": 12,
+          "negated": 4,
+          "operand": 8,
+          "tag": 0
+        },
+        "size": 20
+      },
+      "SyntaqliteBinaryExpr": {
+        "align": 4,
+        "fields": {
+          "left": 8,
+          "op": 4,
+          "right": 12,
+          "tag": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteCaseExpr": {
+        "align": 4,
+        "fields": {
+          "else_expr": 8,
+          "operand": 4,
+          "tag": 0,
+          "whens": 12
+        },
+        "size": 16
+      },
+      "SyntaqliteCaseWhen": {
+        "align": 4,
+        "fields": {
+          "tag": 0,
+          "then_expr": 8,
+          "when_expr": 4
+        },
+        "size": 12
+      },
+      "SyntaqliteCaseWhenList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteCastExpr": {
+        "align": 4,
+        "fields": {
+          "expr": 4,
+          "tag": 0,
+          "type_name": 8
+        },
+        "size": 24
+      },
+      "SyntaqliteCflags": {
+        "align": 1,
+        "fields": {},
+        "size": 3
+      },
+      "SyntaqliteCollateExpr": {
+        "align": 4,
+        "fields": {
+          "collation": 8,
+          "expr": 4,
+          "tag": 0
+        },
+        "size": 24
+      },
+      "SyntaqliteColumnConstraint": {
+        "align": 4,
+        "fields": {
+          "check_expr": 60,
+          "collation_name": 36,
+          "constraint_name": 8,
+          "default_expr": 56,
+          "fk_clause": 68,
+          "generated_expr": 64,
+          "generated_storage": 52,
+          "is_autoincrement": 32,
+          "kind": 4,
+          "onconf": 24,
+          "sort_order": 28,
+          "tag": 0
+        },
+        "size": 72
+      },
+      "SyntaqliteColumnConstraintList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteColumnDef": {
+        "align": 4,
+        "fields": {
+          "column_name": 4,
+          "constraints": 24,
+          "tag": 0,
+          "type_name": 8
+        },
+        "size": 28
+      },
+      "SyntaqliteColumnDefList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteColumnLineage": {
+        "align": 8,
+        "fields": {
+          "index": 8,
+          "name": 0,
+          "origin": 16
+        },
+        "size": 32
+      },
+      "SyntaqliteColumnOrigin": {
+        "align": 8,
+        "fields": {
+          "column": 8,
+          "table": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteColumnRef": {
+        "align": 4,
+        "fields": {
+          "column": 4,
+          "schema": 36,
+          "table": 20,
+          "tag": 0
+        },
+        "size": 52
+      },
+      "SyntaqliteComment": {
+        "align": 4,
+        "fields": {
+          "_pad": 15,
+          "kind": 12,
+          "layer_id": 14,
+          "length": 4,
+          "offset": 0,
+          "side": 13,
+          "token_idx": 8
+        },
+        "size": 16
+      },
+      "SyntaqliteCompoundSelect": {
+        "align": 4,
+        "fields": {
+          "left": 8,
+          "limit_clause": 20,
+          "op": 4,
+          "orderby": 16,
+          "right": 12,
+          "tag": 0
+        },
+        "size": 24
+      },
+      "SyntaqliteCreateIndexStmt": {
+        "align": 4,
+        "fields": {
+          "columns": 60,
+          "if_not_exists": 56,
+          "index_name": 4,
+          "is_unique": 52,
+          "schema": 20,
+          "table_name": 36,
+          "tag": 0,
+          "where_clause": 64
+        },
+        "size": 68
+      },
+      "SyntaqliteCreateTableStmt": {
+        "align": 4,
+        "fields": {
+          "as_select": 56,
+          "columns": 48,
+          "flags": 44,
+          "if_not_exists": 40,
+          "is_temp": 36,
+          "schema": 20,
+          "table_constraints": 52,
+          "table_name": 4,
+          "tag": 0
+        },
+        "size": 60
+      },
+      "SyntaqliteCreateTableStmtFlags": {
+        "align": 1,
+        "fields": {
+          "bits": 0,
+          "raw": 0
+        },
+        "size": 1
+      },
+      "SyntaqliteCreateTriggerStmt": {
+        "align": 4,
+        "fields": {
+          "body": 60,
+          "event": 48,
+          "if_not_exists": 40,
+          "is_temp": 36,
+          "schema": 20,
+          "table": 52,
+          "tag": 0,
+          "timing": 44,
+          "trigger_name": 4,
+          "when_expr": 56
+        },
+        "size": 64
+      },
+      "SyntaqliteCreateViewStmt": {
+        "align": 4,
+        "fields": {
+          "column_names": 44,
+          "if_not_exists": 40,
+          "is_temp": 36,
+          "schema": 20,
+          "select": 48,
+          "tag": 0,
+          "view_name": 4
+        },
+        "size": 52
+      },
+      "SyntaqliteCreateVirtualTableStmt": {
+        "align": 4,
+        "fields": {
+          "if_not_exists": 52,
+          "module_args": 56,
+          "module_name": 36,
+          "schema": 20,
+          "table_name": 4,
+          "tag": 0
+        },
+        "size": 72
+      },
+      "SyntaqliteCteDefinition": {
+        "align": 4,
+        "fields": {
+          "columns": 24,
+          "cte_name": 4,
+          "materialized": 20,
+          "select": 28,
+          "tag": 0
+        },
+        "size": 32
+      },
+      "SyntaqliteCteList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteDefinedRelation": {
+        "align": 8,
+        "fields": {
+          "is_view": 8,
+          "name": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteDeleteStmt": {
+        "align": 4,
+        "fields": {
+          "index_hint": 16,
+          "index_name": 20,
+          "limit_clause": 44,
+          "orderby": 40,
+          "returning": 48,
+          "table": 12,
+          "tag": 0,
+          "where_clause": 36,
+          "with_ctes": 4,
+          "with_recursive": 8
+        },
+        "size": 52
+      },
+      "SyntaqliteDetachStmt": {
+        "align": 4,
+        "fields": {
+          "db_name": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteDiagnostic": {
+        "align": 8,
+        "fields": {
+          "end_offset": 20,
+          "kind_code": 24,
+          "message": 8,
+          "severity": 0,
+          "start_offset": 16
+        },
+        "size": 32
+      },
+      "SyntaqliteDialect": {
+        "align": 8,
+        "fields": {
+          "cflags": 12,
+          "sqlite_version": 8,
+          "tmpl": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteDialectTemplate": {
+        "align": 8,
+        "fields": {
+          "field_meta": 32,
+          "field_meta_counts": 40,
+          "fmt_dispatch": 248,
+          "fmt_dispatch_count": 256,
+          "fmt_enum_display": 216,
+          "fmt_enum_display_count": 224,
+          "fmt_expr_meta": 280,
+          "fmt_expr_meta_count": 288,
+          "fmt_ops": 232,
+          "fmt_ops_count": 240,
+          "fmt_prec_table": 264,
+          "fmt_prec_table_count": 272,
+          "fmt_str_count": 208,
+          "fmt_str_data": 192,
+          "fmt_str_offsets": 200,
+          "get_token": 128,
+          "keyword_codes": 160,
+          "keyword_count": 168,
+          "keyword_lens": 152,
+          "keyword_offsets": 144,
+          "keyword_text": 136,
+          "list_tags": 48,
+          "macro_defs_count": 320,
+          "macro_defs_data": 312,
+          "macro_style": 188,
+          "name": 0,
+          "node_count": 16,
+          "node_names": 24,
+          "parser_alloc": 56,
+          "parser_completion_context": 112,
+          "parser_expected_tokens": 104,
+          "parser_fallback": 120,
+          "parser_feed": 88,
+          "parser_finalize": 72,
+          "parser_free": 80,
+          "parser_init": 64,
+          "parser_trace": 96,
+          "range_meta": 8,
+          "roles_count": 304,
+          "roles_data": 296,
+          "token_categories": 176,
+          "token_type_count": 184
+        },
+        "size": 328
+      },
+      "SyntaqliteDropStmt": {
+        "align": 4,
+        "fields": {
+          "if_exists": 8,
+          "object_type": 4,
+          "tag": 0,
+          "target": 12
+        },
+        "size": 16
+      },
+      "SyntaqliteError": {
+        "align": 4,
+        "fields": {
+          "source": 4,
+          "tag": 0
+        },
+        "size": 20
+      },
+      "SyntaqliteExistsExpr": {
+        "align": 4,
+        "fields": {
+          "select": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteExplainStmt": {
+        "align": 4,
+        "fields": {
+          "explain_mode": 4,
+          "stmt": 8,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteExpr": {
+        "align": 4,
+        "fields": {
+          "aggregate_function_call": 0,
+          "between_expr": 0,
+          "binary_expr": 0,
+          "case_expr": 0,
+          "cast_expr": 0,
+          "collate_expr": 0,
+          "column_ref": 0,
+          "error": 0,
+          "exists_expr": 0,
+          "function_call": 0,
+          "in_expr": 0,
+          "is_expr": 0,
+          "like_expr": 0,
+          "literal": 0,
+          "ordered_set_function_call": 0,
+          "paren_expr": 0,
+          "raise_expr": 0,
+          "subquery_expr": 0,
+          "tag": 0,
+          "unary_expr": 0,
+          "variable": 0
+        },
+        "size": 52
+      },
+      "SyntaqliteExprList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteFilterOver": {
+        "align": 4,
+        "fields": {
+          "filter_expr": 4,
+          "over_def": 8,
+          "over_name": 12,
+          "tag": 0
+        },
+        "size": 28
+      },
+      "SyntaqliteForeignKeyClause": {
+        "align": 4,
+        "fields": {
+          "is_deferred": 32,
+          "on_delete": 24,
+          "on_update": 28,
+          "ref_columns": 20,
+          "ref_table": 4,
+          "tag": 0
+        },
+        "size": 36
+      },
+      "SyntaqliteFormatConfig": {
+        "align": 4,
+        "fields": {
+          "indent_width": 4,
+          "keyword_case": 8,
+          "line_width": 0,
+          "semicolons": 12
+        },
+        "size": 16
+      },
+      "SyntaqliteFrameBound": {
+        "align": 4,
+        "fields": {
+          "bound_type": 4,
+          "expr": 8,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteFrameSpec": {
+        "align": 4,
+        "fields": {
+          "end_bound": 16,
+          "exclude": 8,
+          "frame_type": 4,
+          "start_bound": 12,
+          "tag": 0
+        },
+        "size": 20
+      },
+      "SyntaqliteFunctionCall": {
+        "align": 4,
+        "fields": {
+          "args": 24,
+          "filter_clause": 28,
+          "flags": 20,
+          "func_name": 4,
+          "over_clause": 32,
+          "tag": 0
+        },
+        "size": 36
+      },
+      "SyntaqliteFunctionCallFlags": {
+        "align": 1,
+        "fields": {
+          "bits": 0,
+          "raw": 0
+        },
+        "size": 1
+      },
+      "SyntaqliteIdentName": {
+        "align": 4,
+        "fields": {
+          "source": 4,
+          "tag": 0
+        },
+        "size": 20
+      },
+      "SyntaqliteInExpr": {
+        "align": 4,
+        "fields": {
+          "bare_source": 8,
+          "negated": 4,
+          "operand": 12,
+          "source": 16,
+          "tag": 0
+        },
+        "size": 20
+      },
+      "SyntaqliteInExprSource": {
+        "align": 4,
+        "fields": {
+          "compound_select": 0,
+          "expr_list": 0,
+          "select_stmt": 0,
+          "subquery_expr": 0,
+          "table_ref": 0,
+          "tag": 0,
+          "values_clause": 0,
+          "with_clause": 0
+        },
+        "size": 48
+      },
+      "SyntaqliteInsertStmt": {
+        "align": 4,
+        "fields": {
+          "columns": 20,
+          "conflict_action": 12,
+          "returning": 32,
+          "source": 24,
+          "table": 16,
+          "tag": 0,
+          "upsert": 28,
+          "with_ctes": 4,
+          "with_recursive": 8
+        },
+        "size": 36
+      },
+      "SyntaqliteIsExpr": {
+        "align": 4,
+        "fields": {
+          "left": 8,
+          "op": 4,
+          "right": 12,
+          "tag": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteJoinClause": {
+        "align": 4,
+        "fields": {
+          "join_type": 4,
+          "left": 8,
+          "on_expr": 16,
+          "right": 12,
+          "tag": 0,
+          "using_columns": 20
+        },
+        "size": 24
+      },
+      "SyntaqliteJoinPrefix": {
+        "align": 4,
+        "fields": {
+          "join_type": 8,
+          "source": 4,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteLikeExpr": {
+        "align": 4,
+        "fields": {
+          "escape": 20,
+          "keyword": 8,
+          "negated": 4,
+          "operand": 12,
+          "pattern": 16,
+          "tag": 0
+        },
+        "size": 24
+      },
+      "SyntaqliteLimitClause": {
+        "align": 4,
+        "fields": {
+          "limit": 4,
+          "offset": 8,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteLiteral": {
+        "align": 4,
+        "fields": {
+          "literal_type": 4,
+          "source": 8,
+          "tag": 0
+        },
+        "size": 24
+      },
+      "SyntaqliteMacroArgSegment": {
+        "align": 4,
+        "fields": {
+          "body_length": 4,
+          "body_offset": 0,
+          "expansion_length": 12,
+          "expansion_offset": 8,
+          "origin_length": 24,
+          "origin_offset": 20,
+          "origin_parent_idx": 16
+        },
+        "size": 28
+      },
+      "SyntaqliteMacroCallArg": {
+        "align": 4,
+        "fields": {
+          "length": 4,
+          "offset": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteMacroRewrite": {
+        "align": 8,
+        "fields": {
+          "body_call_length": 56,
+          "body_call_offset": 52,
+          "call_length": 8,
+          "call_offset": 4,
+          "def_col": 48,
+          "def_line": 44,
+          "expansion": 16,
+          "expansion_len": 24,
+          "is_fallback": 76,
+          "name": 32,
+          "name_len": 40,
+          "parent_buffer": 64,
+          "parent_buffer_len": 72,
+          "parent_idx": 0
+        },
+        "size": 80
+      },
+      "SyntaqliteMemMethods": {
+        "align": 8,
+        "fields": {
+          "xFree": 16,
+          "xMalloc": 0,
+          "xRealloc": 8
+        },
+        "size": 24
+      },
+      "SyntaqliteName": {
+        "align": 4,
+        "fields": {
+          "error": 0,
+          "ident_name": 0,
+          "tag": 0
+        },
+        "size": 20
+      },
+      "SyntaqliteNamedWindowDef": {
+        "align": 4,
+        "fields": {
+          "tag": 0,
+          "window_def": 20,
+          "window_name": 4
+        },
+        "size": 24
+      },
+      "SyntaqliteNamedWindowDefList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteNode": {
+        "align": 4,
+        "fields": {
+          "aggregate_function_call": 0,
+          "alter_table_stmt": 0,
+          "analyze_or_reindex_stmt": 0,
+          "attach_stmt": 0,
+          "between_expr": 0,
+          "binary_expr": 0,
+          "case_expr": 0,
+          "case_when": 0,
+          "case_when_list": 0,
+          "cast_expr": 0,
+          "collate_expr": 0,
+          "column_constraint": 0,
+          "column_constraint_list": 0,
+          "column_def": 0,
+          "column_def_list": 0,
+          "column_ref": 0,
+          "compound_select": 0,
+          "create_index_stmt": 0,
+          "create_table_stmt": 0,
+          "create_trigger_stmt": 0,
+          "create_view_stmt": 0,
+          "create_virtual_table_stmt": 0,
+          "cte_definition": 0,
+          "cte_list": 0,
+          "delete_stmt": 0,
+          "detach_stmt": 0,
+          "drop_stmt": 0,
+          "error": 0,
+          "exists_expr": 0,
+          "explain_stmt": 0,
+          "expr_list": 0,
+          "filter_over": 0,
+          "foreign_key_clause": 0,
+          "frame_bound": 0,
+          "frame_spec": 0,
+          "function_call": 0,
+          "ident_name": 0,
+          "in_expr": 0,
+          "insert_stmt": 0,
+          "is_expr": 0,
+          "join_clause": 0,
+          "join_prefix": 0,
+          "like_expr": 0,
+          "limit_clause": 0,
+          "literal": 0,
+          "named_window_def": 0,
+          "named_window_def_list": 0,
+          "order_by_list": 0,
+          "ordered_set_function_call": 0,
+          "ordering_term": 0,
+          "paren_expr": 0,
+          "pragma_stmt": 0,
+          "qualified_name": 0,
+          "raise_expr": 0,
+          "result_column": 0,
+          "result_column_list": 0,
+          "savepoint_stmt": 0,
+          "select_stmt": 0,
+          "set_clause": 0,
+          "set_clause_list": 0,
+          "subquery_expr": 0,
+          "subquery_table_source": 0,
+          "table_constraint": 0,
+          "table_constraint_list": 0,
+          "table_ref": 0,
+          "tag": 0,
+          "transaction_stmt": 0,
+          "trigger_cmd_list": 0,
+          "trigger_event": 0,
+          "unary_expr": 0,
+          "update_stmt": 0,
+          "upsert_clause": 0,
+          "upsert_clause_list": 0,
+          "vacuum_stmt": 0,
+          "values_clause": 0,
+          "values_row_list": 0,
+          "variable": 0,
+          "window_def": 0,
+          "window_def_list": 0,
+          "with_clause": 0
+        },
+        "size": 72
+      },
+      "SyntaqliteOrderByList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteOrderedSetFunctionCall": {
+        "align": 4,
+        "fields": {
+          "args": 24,
+          "filter_clause": 32,
+          "flags": 20,
+          "func_name": 4,
+          "orderby_expr": 28,
+          "over_clause": 36,
+          "tag": 0
+        },
+        "size": 40
+      },
+      "SyntaqliteOrderingTerm": {
+        "align": 4,
+        "fields": {
+          "expr": 4,
+          "nulls_order": 12,
+          "sort_order": 8,
+          "tag": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteParenExpr": {
+        "align": 4,
+        "fields": {
+          "expr": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteParserToken": {
+        "align": 4,
+        "fields": {
+          "_layer_id": 16,
+          "flags": 12,
+          "length": 4,
+          "offset": 0,
+          "type": 8
+        },
+        "size": 20
+      },
+      "SyntaqlitePhysicalTableAccess": {
+        "align": 8,
+        "fields": {
+          "name": 0
+        },
+        "size": 8
+      },
+      "SyntaqlitePragmaStmt": {
+        "align": 4,
+        "fields": {
+          "pragma_form": 52,
+          "pragma_name": 4,
+          "schema": 20,
+          "tag": 0,
+          "value": 36
+        },
+        "size": 56
+      },
+      "SyntaqliteQualifiedName": {
+        "align": 4,
+        "fields": {
+          "object_name": 4,
+          "schema": 8,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteRaiseExpr": {
+        "align": 4,
+        "fields": {
+          "error_message": 8,
+          "raise_type": 4,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteRelationAccess": {
+        "align": 8,
+        "fields": {
+          "kind": 8,
+          "name": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteRelationDef": {
+        "align": 8,
+        "fields": {
+          "column_count": 16,
+          "columns": 8,
+          "name": 0
+        },
+        "size": 24
+      },
+      "SyntaqliteResultColumn": {
+        "align": 4,
+        "fields": {
+          "alias": 8,
+          "expr": 12,
+          "flags": 4,
+          "tag": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteResultColumnFlags": {
+        "align": 1,
+        "fields": {
+          "bits": 0,
+          "raw": 0
+        },
+        "size": 1
+      },
+      "SyntaqliteResultColumnList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteSavepointStmt": {
+        "align": 4,
+        "fields": {
+          "op": 4,
+          "savepoint_name": 8,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteSelect": {
+        "align": 4,
+        "fields": {
+          "compound_select": 0,
+          "select_stmt": 0,
+          "tag": 0,
+          "values_clause": 0,
+          "with_clause": 0
+        },
+        "size": 40
+      },
+      "SyntaqliteSelectStmt": {
+        "align": 4,
+        "fields": {
+          "columns": 8,
+          "flags": 4,
+          "from_clause": 12,
+          "groupby": 20,
+          "having": 24,
+          "limit_clause": 32,
+          "orderby": 28,
+          "tag": 0,
+          "where_clause": 16,
+          "window_clause": 36
+        },
+        "size": 40
+      },
+      "SyntaqliteSelectStmtFlags": {
+        "align": 1,
+        "fields": {
+          "bits": 0,
+          "raw": 0
+        },
+        "size": 1
+      },
+      "SyntaqliteSetClause": {
+        "align": 4,
+        "fields": {
+          "column": 4,
+          "columns": 20,
+          "tag": 0,
+          "value": 24
+        },
+        "size": 28
+      },
+      "SyntaqliteSetClauseList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteStmt": {
+        "align": 4,
+        "fields": {
+          "alter_table_stmt": 0,
+          "analyze_or_reindex_stmt": 0,
+          "attach_stmt": 0,
+          "compound_select": 0,
+          "create_index_stmt": 0,
+          "create_table_stmt": 0,
+          "create_trigger_stmt": 0,
+          "create_view_stmt": 0,
+          "create_virtual_table_stmt": 0,
+          "delete_stmt": 0,
+          "detach_stmt": 0,
+          "drop_stmt": 0,
+          "explain_stmt": 0,
+          "insert_stmt": 0,
+          "pragma_stmt": 0,
+          "savepoint_stmt": 0,
+          "select_stmt": 0,
+          "tag": 0,
+          "transaction_stmt": 0,
+          "update_stmt": 0,
+          "vacuum_stmt": 0,
+          "values_clause": 0,
+          "with_clause": 0
+        },
+        "size": 72
+      },
+      "SyntaqliteSubqueryExpr": {
+        "align": 4,
+        "fields": {
+          "select": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteSubqueryTableSource": {
+        "align": 4,
+        "fields": {
+          "alias": 8,
+          "select": 4,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteTableConstraint": {
+        "align": 4,
+        "fields": {
+          "check_expr": 40,
+          "constraint_name": 8,
+          "fk_clause": 44,
+          "fk_columns": 36,
+          "is_autoincrement": 28,
+          "kind": 4,
+          "onconf": 24,
+          "pk_columns": 32,
+          "tag": 0
+        },
+        "size": 48
+      },
+      "SyntaqliteTableConstraintList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteTableRef": {
+        "align": 4,
+        "fields": {
+          "alias": 40,
+          "args": 44,
+          "has_parens": 36,
+          "schema": 20,
+          "table_name": 4,
+          "tag": 0
+        },
+        "size": 48
+      },
+      "SyntaqliteTableSource": {
+        "align": 4,
+        "fields": {
+          "join_clause": 0,
+          "join_prefix": 0,
+          "subquery_table_source": 0,
+          "table_ref": 0,
+          "tag": 0
+        },
+        "size": 48
+      },
+      "SyntaqliteTextSpan": {
+        "align": 4,
+        "fields": {
+          "_layer_id": 12,
+          "flags": 8,
+          "length": 4,
+          "offset": 0
+        },
+        "size": 16
+      },
+      "SyntaqliteToken": {
+        "align": 8,
+        "fields": {
+          "length": 8,
+          "text": 0,
+          "type": 12
+        },
+        "size": 16
+      },
+      "SyntaqliteTracebackFrame": {
+        "align": 8,
+        "fields": {
+          "col": 16,
+          "length_in_snippet": 40,
+          "line": 12,
+          "name": 0,
+          "name_len": 8,
+          "offset_in_snippet": 36,
+          "snippet": 24,
+          "snippet_len": 32
+        },
+        "size": 48
+      },
+      "SyntaqliteTransactionStmt": {
+        "align": 4,
+        "fields": {
+          "op": 4,
+          "tag": 0,
+          "trans_type": 8
+        },
+        "size": 12
+      },
+      "SyntaqliteTriggerCmdList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteTriggerEvent": {
+        "align": 4,
+        "fields": {
+          "columns": 8,
+          "event_type": 4,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteUnaryExpr": {
+        "align": 4,
+        "fields": {
+          "op": 4,
+          "operand": 8,
+          "tag": 0
+        },
+        "size": 12
+      },
+      "SyntaqliteUnexpandedView": {
+        "align": 8,
+        "fields": {
+          "name": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteUpdateStmt": {
+        "align": 4,
+        "fields": {
+          "conflict_action": 12,
+          "from_clause": 44,
+          "index_hint": 20,
+          "index_name": 24,
+          "limit_clause": 56,
+          "orderby": 52,
+          "returning": 60,
+          "setlist": 40,
+          "table": 16,
+          "tag": 0,
+          "where_clause": 48,
+          "with_ctes": 4,
+          "with_recursive": 8
+        },
+        "size": 64
+      },
+      "SyntaqliteUpsertClause": {
+        "align": 4,
+        "fields": {
+          "action": 12,
+          "columns": 4,
+          "setlist": 16,
+          "tag": 0,
+          "target_where": 8,
+          "update_where": 20
+        },
+        "size": 24
+      },
+      "SyntaqliteUpsertClauseList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteVacuumStmt": {
+        "align": 4,
+        "fields": {
+          "filename": 20,
+          "schema": 4,
+          "tag": 0
+        },
+        "size": 24
+      },
+      "SyntaqliteValuesClause": {
+        "align": 4,
+        "fields": {
+          "rows": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteValuesRowList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteVariable": {
+        "align": 4,
+        "fields": {
+          "source": 4,
+          "tag": 0
+        },
+        "size": 20
+      },
+      "SyntaqliteWindowDef": {
+        "align": 4,
+        "fields": {
+          "base_window_name": 4,
+          "frame": 28,
+          "orderby": 24,
+          "partition_by": 20,
+          "tag": 0
+        },
+        "size": 32
+      },
+      "SyntaqliteWindowDefList": {
+        "align": 4,
+        "fields": {
+          "children": 8,
+          "count": 4,
+          "tag": 0
+        },
+        "size": 8
+      },
+      "SyntaqliteWithClause": {
+        "align": 4,
+        "fields": {
+          "ctes": 8,
+          "recursive": 4,
+          "select": 12,
+          "tag": 0
+        },
+        "size": 16
+      }
+    }
+  },
+  "macros": {
+    "SYNQ_CFLAGS_DEFAULT": "{0}",
+    "SYNQ_CFLAG_IDX_COUNT": "22",
+    "SYNQ_CFLAG_IDX_ENABLE_ORDERED_SET_AGGREGATES": "20",
+    "SYNQ_CFLAG_IDX_ENABLE_UPDATE_DELETE_LIMIT": "21",
+    "SYNQ_CFLAG_IDX_OMIT_ALTERTABLE": "0",
+    "SYNQ_CFLAG_IDX_OMIT_ANALYZE": "1",
+    "SYNQ_CFLAG_IDX_OMIT_ATTACH": "2",
+    "SYNQ_CFLAG_IDX_OMIT_AUTOINCREMENT": "3",
+    "SYNQ_CFLAG_IDX_OMIT_CAST": "4",
+    "SYNQ_CFLAG_IDX_OMIT_COMPOUND_SELECT": "5",
+    "SYNQ_CFLAG_IDX_OMIT_CTE": "6",
+    "SYNQ_CFLAG_IDX_OMIT_EXPLAIN": "7",
+    "SYNQ_CFLAG_IDX_OMIT_FOREIGN_KEY": "8",
+    "SYNQ_CFLAG_IDX_OMIT_GENERATED_COLUMNS": "9",
+    "SYNQ_CFLAG_IDX_OMIT_PRAGMA": "10",
+    "SYNQ_CFLAG_IDX_OMIT_REINDEX": "11",
+    "SYNQ_CFLAG_IDX_OMIT_RETURNING": "12",
+    "SYNQ_CFLAG_IDX_OMIT_SUBQUERY": "13",
+    "SYNQ_CFLAG_IDX_OMIT_TEMPDB": "14",
+    "SYNQ_CFLAG_IDX_OMIT_TRIGGER": "15",
+    "SYNQ_CFLAG_IDX_OMIT_VACUUM": "16",
+    "SYNQ_CFLAG_IDX_OMIT_VIEW": "17",
+    "SYNQ_CFLAG_IDX_OMIT_VIRTUALTABLE": "18",
+    "SYNQ_CFLAG_IDX_OMIT_WINDOWFUNC": "19",
+    "SYNQ_COMMENT_LEADING": "((SyntaqliteCommentSide)0)",
+    "SYNQ_COMMENT_TRAILING": "((SyntaqliteCommentSide)1)",
+    "SYNQ_DIALECT_DEFAULT(d)": "{(d), INT32_MAX, SYNQ_CFLAGS_DEFAULT}",
+    "SYNQ_TOKEN_FLAG_AS_FUNCTION": "((SyntaqliteParserTokenFlags)2)",
+    "SYNQ_TOKEN_FLAG_AS_ID": "((SyntaqliteParserTokenFlags)1)",
+    "SYNQ_TOKEN_FLAG_AS_TYPE": "((SyntaqliteParserTokenFlags)4)",
+    "SYNTAQLITE_COMPLETION_CONTEXT_EXPRESSION": "((SyntaqliteCompletionContext)1)",
+    "SYNTAQLITE_COMPLETION_CONTEXT_TABLE_REF": "((SyntaqliteCompletionContext)2)",
+    "SYNTAQLITE_COMPLETION_CONTEXT_UNKNOWN": "((SyntaqliteCompletionContext)0)",
+    "SYNTAQLITE_ERR_ALREADY_USED": "(-1)",
+    "SYNTAQLITE_ERR_OMITTED": "(-1)",
+    "SYNTAQLITE_EXPAND_PASSTHROUGH_UNKNOWN": "0x1u",
+    "SYNTAQLITE_FORMAT_ERROR": "(-1)",
+    "SYNTAQLITE_FORMAT_OK": "0",
+    "SYNTAQLITE_HAS_WITH_DIALECT_API": "1",
+    "SYNTAQLITE_LIST_FOREACH(p,Type,var,list_id)": "for (const void * _sqlist_##var = syntaqlite_node_is_present(list_id) ? syntaqlite_parser_node((p), (list_id)) : 0, *_sqonce_##var = 0; !_sqonce_##var; _sqonce_##var = (const void*)1) for (uint32_t _sqi_##var = 0, _sqn_##var = _sqlist_##var ? syntaqlite_list_count(_sqlist_##var) : 0; _sqi_##var < _sqn_##var; _sqi_##var++) for (const Type* var = SYNTAQLITE_LIST_ITEM(p, Type, _sqlist_##var, _sqi_##var); var; var = 0)",
+    "SYNTAQLITE_LIST_ITEM(p,Type,list,i)": "((const Type*)syntaqlite_list_child((p), (list), (i)))",
+    "SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL": "UINT32_MAX",
+    "SYNTAQLITE_MACRO_LOOKUP_ERROR": "(-2)",
+    "SYNTAQLITE_MACRO_LOOKUP_NOT_FOUND": "(-1)",
+    "SYNTAQLITE_MACRO_LOOKUP_OK": "0",
+    "SYNTAQLITE_MACRO_PARENT_SOURCE": "UINT32_MAX",
+    "SYNTAQLITE_MEM_METHODS_DEFAULT": "((SyntaqliteMemMethods){malloc, realloc, free})",
+    "SYNTAQLITE_NODE(p,Type,id)": "((id) == SYNTAQLITE_NULL_NODE ? (const Type*)0 : (const Type*)syntaqlite_parser_node((p), (id)))",
+    "SYNTAQLITE_NULL_NODE": "0xFFFFFFFFu",
+    "SYNTAQLITE_OK": "0",
+    "SYNTAQLITE_PARSE_DONE": "0",
+    "SYNTAQLITE_PARSE_ERROR": "(-1)",
+    "SYNTAQLITE_PARSE_OK": "1",
+    "SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK": "((uint32_t)2u)",
+    "SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET": "((uint32_t)4u)",
+    "SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE": "((uint32_t)1u)",
+    "SYNTAQLITE_SPAN_FLAG_QUOTE_SINGLE": "((uint32_t)8u)",
+    "SYNTAQLITE_SPAN_QUOTE_MASK": "(SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE | SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK | SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET | SYNTAQLITE_SPAN_FLAG_QUOTE_SINGLE)",
+    "SYNTAQLITE_TK_ABORT": "1",
+    "SYNTAQLITE_TK_ACTION": "2",
+    "SYNTAQLITE_TK_ADD": "158",
+    "SYNTAQLITE_TK_AFTER": "3",
+    "SYNTAQLITE_TK_AGG_COLUMN": "172",
+    "SYNTAQLITE_TK_AGG_FUNCTION": "171",
+    "SYNTAQLITE_TK_ALL": "121",
+    "SYNTAQLITE_TK_ALTER": "156",
+    "SYNTAQLITE_TK_ALWAYS": "85",
+    "SYNTAQLITE_TK_ANALYZE": "4",
+    "SYNTAQLITE_TK_AND": "23",
+    "SYNTAQLITE_TK_ANY": "92",
+    "SYNTAQLITE_TK_AS": "117",
+    "SYNTAQLITE_TK_ASC": "5",
+    "SYNTAQLITE_TK_ASTERISK": "182",
+    "SYNTAQLITE_TK_ATTACH": "6",
+    "SYNTAQLITE_TK_AUTOINCR": "139",
+    "SYNTAQLITE_TK_BANG": "188",
+    "SYNTAQLITE_TK_BEFORE": "7",
+    "SYNTAQLITE_TK_BEGIN": "8",
+    "SYNTAQLITE_TK_BETWEEN": "29",
+    "SYNTAQLITE_TK_BITAND": "93",
+    "SYNTAQLITE_TK_BITNOT": "105",
+    "SYNTAQLITE_TK_BITOR": "94",
+    "SYNTAQLITE_TK_BLOB": "151",
+    "SYNTAQLITE_TK_BY": "9",
+    "SYNTAQLITE_TK_CASCADE": "10",
+    "SYNTAQLITE_TK_CASE": "128",
+    "SYNTAQLITE_TK_CAST": "11",
+    "SYNTAQLITE_TK_CHECK": "137",
+    "SYNTAQLITE_TK_COLLATE": "104",
+    "SYNTAQLITE_TK_COLUMN": "170",
+    "SYNTAQLITE_TK_COLUMNKW": "41",
+    "SYNTAQLITE_TK_COMMA": "118",
+    "SYNTAQLITE_TK_COMMENT": "186",
+    "SYNTAQLITE_TK_COMMIT": "159",
+    "SYNTAQLITE_TK_CONCAT": "102",
+    "SYNTAQLITE_TK_CONFLICT": "12",
+    "SYNTAQLITE_TK_CONSTRAINT": "133",
+    "SYNTAQLITE_TK_CREATE": "166",
+    "SYNTAQLITE_TK_CTIME_KW": "90",
+    "SYNTAQLITE_TK_CURRENT": "74",
+    "SYNTAQLITE_TK_DATABASE": "13",
+    "SYNTAQLITE_TK_DEFAULT": "134",
+    "SYNTAQLITE_TK_DEFERRABLE": "144",
+    "SYNTAQLITE_TK_DEFERRED": "14",
+    "SYNTAQLITE_TK_DELETE": "141",
+    "SYNTAQLITE_TK_DESC": "15",
+    "SYNTAQLITE_TK_DETACH": "16",
+    "SYNTAQLITE_TK_DISTINCT": "126",
+    "SYNTAQLITE_TK_DO": "42",
+    "SYNTAQLITE_TK_DOT": "119",
+    "SYNTAQLITE_TK_DROP": "154",
+    "SYNTAQLITE_TK_EACH": "17",
+    "SYNTAQLITE_TK_ELSE": "131",
+    "SYNTAQLITE_TK_END": "18",
+    "SYNTAQLITE_TK_EQ": "34",
+    "SYNTAQLITE_TK_ERROR": "184",
+    "SYNTAQLITE_TK_ESCAPE": "39",
+    "SYNTAQLITE_TK_EXCEPT": "122",
+    "SYNTAQLITE_TK_EXCLUDE": "80",
+    "SYNTAQLITE_TK_EXCLUSIVE": "19",
+    "SYNTAQLITE_TK_EXISTS": "124",
+    "SYNTAQLITE_TK_EXPLAIN": "20",
+    "SYNTAQLITE_TK_FAIL": "21",
+    "SYNTAQLITE_TK_FILTER": "169",
+    "SYNTAQLITE_TK_FIRST": "72",
+    "SYNTAQLITE_TK_FLOAT": "111",
+    "SYNTAQLITE_TK_FOLLOWING": "75",
+    "SYNTAQLITE_TK_FOR": "43",
+    "SYNTAQLITE_TK_FOREIGN": "145",
+    "SYNTAQLITE_TK_FROM": "127",
+    "SYNTAQLITE_TK_FUNCTION": "174",
+    "SYNTAQLITE_TK_GE": "38",
+    "SYNTAQLITE_TK_GENERATED": "84",
+    "SYNTAQLITE_TK_GROUP": "116",
+    "SYNTAQLITE_TK_GROUPS": "81",
+    "SYNTAQLITE_TK_GT": "35",
+    "SYNTAQLITE_TK_HAVING": "162",
+    "SYNTAQLITE_TK_ID": "40",
+    "SYNTAQLITE_TK_IF": "91",
+    "SYNTAQLITE_TK_IF_NULL_ROW": "181",
+    "SYNTAQLITE_TK_IGNORE": "44",
+    "SYNTAQLITE_TK_ILLEGAL": "187",
+    "SYNTAQLITE_TK_IMMEDIATE": "45",
+    "SYNTAQLITE_TK_IN": "30",
+    "SYNTAQLITE_TK_INDEX": "155",
+    "SYNTAQLITE_TK_INDEXED": "107",
+    "SYNTAQLITE_TK_INITIALLY": "46",
+    "SYNTAQLITE_TK_INSERT": "140",
+    "SYNTAQLITE_TK_INSTEAD": "47",
+    "SYNTAQLITE_TK_INTEGER": "110",
+    "SYNTAQLITE_TK_INTERSECT": "123",
+    "SYNTAQLITE_TK_INTO": "146",
+    "SYNTAQLITE_TK_IS": "25",
+    "SYNTAQLITE_TK_ISNOT": "26",
+    "SYNTAQLITE_TK_ISNULL": "31",
+    "SYNTAQLITE_TK_JOIN": "164",
+    "SYNTAQLITE_TK_JOIN_KW": "109",
+    "SYNTAQLITE_TK_KEY": "51",
+    "SYNTAQLITE_TK_LAST": "73",
+    "SYNTAQLITE_TK_LE": "36",
+    "SYNTAQLITE_TK_LIKE_KW": "28",
+    "SYNTAQLITE_TK_LIMIT": "163",
+    "SYNTAQLITE_TK_LP": "113",
+    "SYNTAQLITE_TK_LSHIFT": "95",
+    "SYNTAQLITE_TK_LT": "37",
+    "SYNTAQLITE_TK_MATCH": "27",
+    "SYNTAQLITE_TK_MATERIALIZED": "87",
+    "SYNTAQLITE_TK_MINUS": "98",
+    "SYNTAQLITE_TK_NE": "33",
+    "SYNTAQLITE_TK_NO": "48",
+    "SYNTAQLITE_TK_NOT": "24",
+    "SYNTAQLITE_TK_NOTHING": "150",
+    "SYNTAQLITE_TK_NOTNULL": "32",
+    "SYNTAQLITE_TK_NULL": "125",
+    "SYNTAQLITE_TK_NULLS": "71",
+    "SYNTAQLITE_TK_OF": "52",
+    "SYNTAQLITE_TK_OFFSET": "53",
+    "SYNTAQLITE_TK_ON": "106",
+    "SYNTAQLITE_TK_OR": "22",
+    "SYNTAQLITE_TK_ORDER": "114",
+    "SYNTAQLITE_TK_OTHERS": "82",
+    "SYNTAQLITE_TK_OVER": "168",
+    "SYNTAQLITE_TK_PARTITION": "76",
+    "SYNTAQLITE_TK_PLAN": "49",
+    "SYNTAQLITE_TK_PLUS": "97",
+    "SYNTAQLITE_TK_PRAGMA": "54",
+    "SYNTAQLITE_TK_PRECEDING": "77",
+    "SYNTAQLITE_TK_PRIMARY": "135",
+    "SYNTAQLITE_TK_PTR": "103",
+    "SYNTAQLITE_TK_QNUMBER": "152",
+    "SYNTAQLITE_TK_QUERY": "50",
+    "SYNTAQLITE_TK_RAISE": "55",
+    "SYNTAQLITE_TK_RANGE": "78",
+    "SYNTAQLITE_TK_RECURSIVE": "56",
+    "SYNTAQLITE_TK_REFERENCES": "138",
+    "SYNTAQLITE_TK_REGISTER": "178",
+    "SYNTAQLITE_TK_REINDEX": "88",
+    "SYNTAQLITE_TK_RELEASE": "57",
+    "SYNTAQLITE_TK_REM": "101",
+    "SYNTAQLITE_TK_RENAME": "89",
+    "SYNTAQLITE_TK_REPLACE": "58",
+    "SYNTAQLITE_TK_RESTRICT": "59",
+    "SYNTAQLITE_TK_RETURNING": "149",
+    "SYNTAQLITE_TK_ROLLBACK": "62",
+    "SYNTAQLITE_TK_ROW": "60",
+    "SYNTAQLITE_TK_ROWS": "61",
+    "SYNTAQLITE_TK_RP": "115",
+    "SYNTAQLITE_TK_RSHIFT": "96",
+    "SYNTAQLITE_TK_SAVEPOINT": "63",
+    "SYNTAQLITE_TK_SELECT": "161",
+    "SYNTAQLITE_TK_SELECT_COLUMN": "180",
+    "SYNTAQLITE_TK_SEMI": "112",
+    "SYNTAQLITE_TK_SET": "143",
+    "SYNTAQLITE_TK_SLASH": "100",
+    "SYNTAQLITE_TK_SPACE": "185",
+    "SYNTAQLITE_TK_SPAN": "183",
+    "SYNTAQLITE_TK_STAR": "99",
+    "SYNTAQLITE_TK_STRING": "108",
+    "SYNTAQLITE_TK_TABLE": "132",
+    "SYNTAQLITE_TK_TEMP": "64",
+    "SYNTAQLITE_TK_THEN": "130",
+    "SYNTAQLITE_TK_TIES": "83",
+    "SYNTAQLITE_TK_TO": "157",
+    "SYNTAQLITE_TK_TRANSACTION": "160",
+    "SYNTAQLITE_TK_TRIGGER": "65",
+    "SYNTAQLITE_TK_TRUEFALSE": "173",
+    "SYNTAQLITE_TK_TRUTH": "177",
+    "SYNTAQLITE_TK_UMINUS": "176",
+    "SYNTAQLITE_TK_UNBOUNDED": "79",
+    "SYNTAQLITE_TK_UNION": "120",
+    "SYNTAQLITE_TK_UNIQUE": "136",
+    "SYNTAQLITE_TK_UPDATE": "142",
+    "SYNTAQLITE_TK_UPLUS": "175",
+    "SYNTAQLITE_TK_USING": "165",
+    "SYNTAQLITE_TK_VACUUM": "66",
+    "SYNTAQLITE_TK_VALUES": "147",
+    "SYNTAQLITE_TK_VARIABLE": "153",
+    "SYNTAQLITE_TK_VECTOR": "179",
+    "SYNTAQLITE_TK_VIEW": "67",
+    "SYNTAQLITE_TK_VIRTUAL": "68",
+    "SYNTAQLITE_TK_WHEN": "129",
+    "SYNTAQLITE_TK_WHERE": "148",
+    "SYNTAQLITE_TK_WINDOW": "167",
+    "SYNTAQLITE_TK_WITH": "69",
+    "SYNTAQLITE_TK_WITHIN": "86",
+    "SYNTAQLITE_TK_WITHOUT": "70"
+  },
+  "manifest_version": 1,
+  "records": {
+    "SynqParseToken": {
+      "fields": [
+        {
+          "name": "z",
+          "type": "const char *"
+        },
+        {
+          "name": "n",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "type",
+          "type": "uint32_t"
+        },
+        {
+          "name": "token_idx",
+          "type": "SyntaqliteTokenIdx"
+        },
+        {
+          "name": "offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "layer_id",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteAggregateFunctionCall": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "func_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "flags",
+          "type": "SyntaqliteAggregateFunctionCallFlags"
+        },
+        {
+          "name": "args",
+          "type": "uint32_t"
+        },
+        {
+          "name": "orderby",
+          "type": "uint32_t"
+        },
+        {
+          "name": "filter_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "over_clause",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteAggregateFunctionCallFlags": {
+      "fields": [
+        {
+          "name": "raw",
+          "type": "uint8_t"
+        },
+        {
+          "name": "bits",
+          "type": "struct (unnamed struct at syntaqlite.h:2054:3)"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteAlterTableStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "op",
+          "type": "SyntaqliteAlterOp"
+        },
+        {
+          "name": "target",
+          "type": "uint32_t"
+        },
+        {
+          "name": "new_name",
+          "type": "uint32_t"
+        },
+        {
+          "name": "old_name",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteAnalyzeOrReindexStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "target_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "kind",
+          "type": "SyntaqliteAnalyzeOrReindexOp"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteArgMapping": {
+      "fields": [
+        {
+          "name": "body_offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "arg_index",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteAttachStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "filename",
+          "type": "uint32_t"
+        },
+        {
+          "name": "db_name",
+          "type": "uint32_t"
+        },
+        {
+          "name": "key",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteBetweenExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "negated",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "operand",
+          "type": "uint32_t"
+        },
+        {
+          "name": "low",
+          "type": "uint32_t"
+        },
+        {
+          "name": "high",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteBinaryExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "op",
+          "type": "SyntaqliteBinaryOp"
+        },
+        {
+          "name": "left",
+          "type": "uint32_t"
+        },
+        {
+          "name": "right",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCaseExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "operand",
+          "type": "uint32_t"
+        },
+        {
+          "name": "else_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "whens",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCaseWhen": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "when_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "then_expr",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCaseWhenList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCastExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "type_name",
+          "type": "SyntaqliteTextSpan"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCflags": {
+      "fields": [
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_altertable",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_analyze",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_attach",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_autoincrement",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_cast",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_compound_select",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_cte",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_explain",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_foreign_key",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_generated_columns",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_pragma",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_reindex",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_returning",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_subquery",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_tempdb",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_trigger",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_vacuum",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_view",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_virtualtable",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "omit_windowfunc",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "enable_ordered_set_aggregates",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 1,
+          "bitfield": true,
+          "name": "enable_update_delete_limit",
+          "type": "uint8_t"
+        },
+        {
+          "bit_width": 2,
+          "bitfield": true,
+          "name": "_reserved",
+          "type": "uint8_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCollateExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "collation",
+          "type": "SyntaqliteTextSpan"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteColumnConstraint": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "kind",
+          "type": "SyntaqliteColumnConstraintType"
+        },
+        {
+          "name": "constraint_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "onconf",
+          "type": "SyntaqliteConflictAction"
+        },
+        {
+          "name": "sort_order",
+          "type": "SyntaqliteSortOrder"
+        },
+        {
+          "name": "is_autoincrement",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "collation_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "generated_storage",
+          "type": "SyntaqliteGeneratedColumnStorage"
+        },
+        {
+          "name": "default_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "check_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "generated_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "fk_clause",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteColumnConstraintList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteColumnDef": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "column_name",
+          "type": "uint32_t"
+        },
+        {
+          "name": "type_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "constraints",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteColumnDefList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteColumnLineage": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "index",
+          "type": "uint32_t"
+        },
+        {
+          "name": "origin",
+          "type": "SyntaqliteColumnOrigin"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteColumnOrigin": {
+      "fields": [
+        {
+          "name": "table",
+          "type": "const char *"
+        },
+        {
+          "name": "column",
+          "type": "const char *"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteColumnRef": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "column",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "table",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteComment": {
+      "fields": [
+        {
+          "name": "offset",
+          "type": "SyntaqliteStmtOffset"
+        },
+        {
+          "name": "length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "token_idx",
+          "type": "SyntaqliteTokenIdx"
+        },
+        {
+          "name": "kind",
+          "type": "uint8_t"
+        },
+        {
+          "name": "side",
+          "type": "uint8_t"
+        },
+        {
+          "name": "layer_id",
+          "type": "uint8_t"
+        },
+        {
+          "name": "_pad",
+          "type": "uint8_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCompoundSelect": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "op",
+          "type": "SyntaqliteCompoundOp"
+        },
+        {
+          "name": "left",
+          "type": "uint32_t"
+        },
+        {
+          "name": "right",
+          "type": "uint32_t"
+        },
+        {
+          "name": "orderby",
+          "type": "uint32_t"
+        },
+        {
+          "name": "limit_clause",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCreateIndexStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "index_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "table_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "is_unique",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "if_not_exists",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "where_clause",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCreateTableStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "table_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "is_temp",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "if_not_exists",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "flags",
+          "type": "SyntaqliteCreateTableStmtFlags"
+        },
+        {
+          "name": "columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "table_constraints",
+          "type": "uint32_t"
+        },
+        {
+          "name": "as_select",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCreateTableStmtFlags": {
+      "fields": [
+        {
+          "name": "raw",
+          "type": "uint8_t"
+        },
+        {
+          "name": "bits",
+          "type": "struct (unnamed struct at syntaqlite.h:2061:3)"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteCreateTriggerStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "trigger_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "is_temp",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "if_not_exists",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "timing",
+          "type": "SyntaqliteTriggerTiming"
+        },
+        {
+          "name": "event",
+          "type": "uint32_t"
+        },
+        {
+          "name": "table",
+          "type": "uint32_t"
+        },
+        {
+          "name": "when_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "body",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCreateViewStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "view_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "is_temp",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "if_not_exists",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "column_names",
+          "type": "uint32_t"
+        },
+        {
+          "name": "select",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCreateVirtualTableStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "table_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "module_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "if_not_exists",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "module_args",
+          "type": "SyntaqliteTextSpan"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCteDefinition": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "cte_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "materialized",
+          "type": "SyntaqliteMaterialized"
+        },
+        {
+          "name": "columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "select",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteCteList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteDefinedRelation": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "is_view",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteDeleteStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "with_ctes",
+          "type": "uint32_t"
+        },
+        {
+          "name": "with_recursive",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "table",
+          "type": "uint32_t"
+        },
+        {
+          "name": "index_hint",
+          "type": "SyntaqliteIndexHint"
+        },
+        {
+          "name": "index_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "where_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "orderby",
+          "type": "uint32_t"
+        },
+        {
+          "name": "limit_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "returning",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteDetachStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "db_name",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteDiagnostic": {
+      "fields": [
+        {
+          "name": "severity",
+          "type": "SyntaqliteSeverity"
+        },
+        {
+          "name": "message",
+          "type": "const char *"
+        },
+        {
+          "name": "start_offset",
+          "type": "SyntaqliteDocOffset"
+        },
+        {
+          "name": "end_offset",
+          "type": "SyntaqliteDocOffset"
+        },
+        {
+          "name": "kind_code",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteDialect": {
+      "fields": [
+        {
+          "name": "tmpl",
+          "type": "const SyntaqliteDialectTemplate *"
+        },
+        {
+          "name": "sqlite_version",
+          "type": "int32_t"
+        },
+        {
+          "name": "cflags",
+          "type": "SyntaqliteCflags"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteDialectTemplate": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "range_meta",
+          "type": "const SyntaqliteRangeMetaEntry *"
+        },
+        {
+          "name": "node_count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "node_names",
+          "type": "const char *const *"
+        },
+        {
+          "name": "field_meta",
+          "type": "const SyntaqliteFieldMeta *const *"
+        },
+        {
+          "name": "field_meta_counts",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "list_tags",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "parser_alloc",
+          "type": "void *(*)(void *(*)(size_t), SynqParseCtx *)"
+        },
+        {
+          "name": "parser_init",
+          "type": "void (*)(void *, SynqParseCtx *)"
+        },
+        {
+          "name": "parser_finalize",
+          "type": "void (*)(void *)"
+        },
+        {
+          "name": "parser_free",
+          "type": "void (*)(void *, void (*)(void *))"
+        },
+        {
+          "name": "parser_feed",
+          "type": "void (*)(void *, int, SynqParseToken)"
+        },
+        {
+          "name": "parser_trace",
+          "type": "void (*)(FILE *, char *)"
+        },
+        {
+          "name": "parser_expected_tokens",
+          "type": "uint32_t (*)(void *, uint32_t *, uint32_t)"
+        },
+        {
+          "name": "parser_completion_context",
+          "type": "uint32_t (*)(void *)"
+        },
+        {
+          "name": "parser_fallback",
+          "type": "int (*)(int)"
+        },
+        {
+          "name": "get_token",
+          "type": "int64_t (*)(const SyntaqliteDialect *, const unsigned char *, int *)"
+        },
+        {
+          "name": "keyword_text",
+          "type": "const char *"
+        },
+        {
+          "name": "keyword_offsets",
+          "type": "const uint16_t *"
+        },
+        {
+          "name": "keyword_lens",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "keyword_codes",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "keyword_count",
+          "type": "const uint32_t *"
+        },
+        {
+          "name": "token_categories",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "token_type_count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "macro_style",
+          "type": "SyntaqliteMacroStyle"
+        },
+        {
+          "name": "fmt_str_data",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "fmt_str_offsets",
+          "type": "const uint32_t *"
+        },
+        {
+          "name": "fmt_str_count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "fmt_enum_display",
+          "type": "const uint16_t *"
+        },
+        {
+          "name": "fmt_enum_display_count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "fmt_ops",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "fmt_ops_count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "fmt_dispatch",
+          "type": "const uint32_t *"
+        },
+        {
+          "name": "fmt_dispatch_count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "fmt_prec_table",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "fmt_prec_table_count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "fmt_expr_meta",
+          "type": "const uint32_t *"
+        },
+        {
+          "name": "fmt_expr_meta_count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "roles_data",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "roles_count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "macro_defs_data",
+          "type": "const uint8_t *"
+        },
+        {
+          "name": "macro_defs_count",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteDropStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "object_type",
+          "type": "SyntaqliteDropObjectType"
+        },
+        {
+          "name": "if_exists",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "target",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteError": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "source",
+          "type": "SyntaqliteTextSpan"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteExistsExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "select",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteExplainStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "explain_mode",
+          "type": "SyntaqliteExplainMode"
+        },
+        {
+          "name": "stmt",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "binary_expr",
+          "type": "SyntaqliteBinaryExpr"
+        },
+        {
+          "name": "unary_expr",
+          "type": "SyntaqliteUnaryExpr"
+        },
+        {
+          "name": "paren_expr",
+          "type": "SyntaqliteParenExpr"
+        },
+        {
+          "name": "literal",
+          "type": "SyntaqliteLiteral"
+        },
+        {
+          "name": "column_ref",
+          "type": "SyntaqliteColumnRef"
+        },
+        {
+          "name": "variable",
+          "type": "SyntaqliteVariable"
+        },
+        {
+          "name": "error",
+          "type": "SyntaqliteError"
+        },
+        {
+          "name": "function_call",
+          "type": "SyntaqliteFunctionCall"
+        },
+        {
+          "name": "aggregate_function_call",
+          "type": "SyntaqliteAggregateFunctionCall"
+        },
+        {
+          "name": "ordered_set_function_call",
+          "type": "SyntaqliteOrderedSetFunctionCall"
+        },
+        {
+          "name": "cast_expr",
+          "type": "SyntaqliteCastExpr"
+        },
+        {
+          "name": "collate_expr",
+          "type": "SyntaqliteCollateExpr"
+        },
+        {
+          "name": "case_expr",
+          "type": "SyntaqliteCaseExpr"
+        },
+        {
+          "name": "is_expr",
+          "type": "SyntaqliteIsExpr"
+        },
+        {
+          "name": "between_expr",
+          "type": "SyntaqliteBetweenExpr"
+        },
+        {
+          "name": "like_expr",
+          "type": "SyntaqliteLikeExpr"
+        },
+        {
+          "name": "in_expr",
+          "type": "SyntaqliteInExpr"
+        },
+        {
+          "name": "subquery_expr",
+          "type": "SyntaqliteSubqueryExpr"
+        },
+        {
+          "name": "exists_expr",
+          "type": "SyntaqliteExistsExpr"
+        },
+        {
+          "name": "raise_expr",
+          "type": "SyntaqliteRaiseExpr"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteExprList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteFilterOver": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "filter_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "over_def",
+          "type": "uint32_t"
+        },
+        {
+          "name": "over_name",
+          "type": "SyntaqliteTextSpan"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteForeignKeyClause": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "ref_table",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "ref_columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "on_delete",
+          "type": "SyntaqliteForeignKeyAction"
+        },
+        {
+          "name": "on_update",
+          "type": "SyntaqliteForeignKeyAction"
+        },
+        {
+          "name": "is_deferred",
+          "type": "SyntaqliteBool"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteFormatConfig": {
+      "fields": [
+        {
+          "name": "line_width",
+          "type": "uint32_t"
+        },
+        {
+          "name": "indent_width",
+          "type": "uint32_t"
+        },
+        {
+          "name": "keyword_case",
+          "type": "SyntaqliteKeywordCase"
+        },
+        {
+          "name": "semicolons",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteFrameBound": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "bound_type",
+          "type": "SyntaqliteFrameBoundType"
+        },
+        {
+          "name": "expr",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteFrameSpec": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "frame_type",
+          "type": "SyntaqliteFrameType"
+        },
+        {
+          "name": "exclude",
+          "type": "SyntaqliteFrameExclude"
+        },
+        {
+          "name": "start_bound",
+          "type": "uint32_t"
+        },
+        {
+          "name": "end_bound",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteFunctionCall": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "func_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "flags",
+          "type": "SyntaqliteFunctionCallFlags"
+        },
+        {
+          "name": "args",
+          "type": "uint32_t"
+        },
+        {
+          "name": "filter_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "over_clause",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteFunctionCallFlags": {
+      "fields": [
+        {
+          "name": "raw",
+          "type": "uint8_t"
+        },
+        {
+          "name": "bits",
+          "type": "struct (unnamed struct at syntaqlite.h:2069:3)"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteIdentName": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "source",
+          "type": "SyntaqliteTextSpan"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteInExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "negated",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "bare_source",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "operand",
+          "type": "uint32_t"
+        },
+        {
+          "name": "source",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteInExprSource": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "expr_list",
+          "type": "SyntaqliteExprList"
+        },
+        {
+          "name": "subquery_expr",
+          "type": "SyntaqliteSubqueryExpr"
+        },
+        {
+          "name": "select_stmt",
+          "type": "SyntaqliteSelectStmt"
+        },
+        {
+          "name": "compound_select",
+          "type": "SyntaqliteCompoundSelect"
+        },
+        {
+          "name": "with_clause",
+          "type": "SyntaqliteWithClause"
+        },
+        {
+          "name": "values_clause",
+          "type": "SyntaqliteValuesClause"
+        },
+        {
+          "name": "table_ref",
+          "type": "SyntaqliteTableRef"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteInsertStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "with_ctes",
+          "type": "uint32_t"
+        },
+        {
+          "name": "with_recursive",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "conflict_action",
+          "type": "SyntaqliteConflictAction"
+        },
+        {
+          "name": "table",
+          "type": "uint32_t"
+        },
+        {
+          "name": "columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "source",
+          "type": "uint32_t"
+        },
+        {
+          "name": "upsert",
+          "type": "uint32_t"
+        },
+        {
+          "name": "returning",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteIsExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "op",
+          "type": "SyntaqliteIsOp"
+        },
+        {
+          "name": "left",
+          "type": "uint32_t"
+        },
+        {
+          "name": "right",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteJoinClause": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "join_type",
+          "type": "SyntaqliteJoinType"
+        },
+        {
+          "name": "left",
+          "type": "uint32_t"
+        },
+        {
+          "name": "right",
+          "type": "uint32_t"
+        },
+        {
+          "name": "on_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "using_columns",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteJoinPrefix": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "source",
+          "type": "uint32_t"
+        },
+        {
+          "name": "join_type",
+          "type": "SyntaqliteJoinType"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteLikeExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "negated",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "keyword",
+          "type": "SyntaqliteLikeKeyword"
+        },
+        {
+          "name": "operand",
+          "type": "uint32_t"
+        },
+        {
+          "name": "pattern",
+          "type": "uint32_t"
+        },
+        {
+          "name": "escape",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteLimitClause": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "limit",
+          "type": "uint32_t"
+        },
+        {
+          "name": "offset",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteLiteral": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "literal_type",
+          "type": "SyntaqliteLiteralType"
+        },
+        {
+          "name": "source",
+          "type": "SyntaqliteTextSpan"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteMacroArgSegment": {
+      "fields": [
+        {
+          "name": "body_offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "body_length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "expansion_offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "expansion_length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "origin_parent_idx",
+          "type": "uint32_t"
+        },
+        {
+          "name": "origin_offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "origin_length",
+          "type": "SyntaqliteLength"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteMacroCallArg": {
+      "fields": [
+        {
+          "name": "offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "length",
+          "type": "SyntaqliteLength"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteMacroRewrite": {
+      "fields": [
+        {
+          "name": "parent_idx",
+          "type": "uint32_t"
+        },
+        {
+          "name": "call_offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "call_length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "expansion",
+          "type": "const char *"
+        },
+        {
+          "name": "expansion_len",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "name_len",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "def_line",
+          "type": "SyntaqliteLineNumber"
+        },
+        {
+          "name": "def_col",
+          "type": "SyntaqliteColumnNumber"
+        },
+        {
+          "name": "body_call_offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "body_call_length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "parent_buffer",
+          "type": "const char *"
+        },
+        {
+          "name": "parent_buffer_len",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "is_fallback",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteMemMethods": {
+      "fields": [
+        {
+          "name": "xMalloc",
+          "type": "void *(*)(size_t)"
+        },
+        {
+          "name": "xRealloc",
+          "type": "void *(*)(void *, size_t)"
+        },
+        {
+          "name": "xFree",
+          "type": "void (*)(void *)"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteName": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "ident_name",
+          "type": "SyntaqliteIdentName"
+        },
+        {
+          "name": "error",
+          "type": "SyntaqliteError"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteNamedWindowDef": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "window_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "window_def",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteNamedWindowDefList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteNode": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "aggregate_function_call",
+          "type": "SyntaqliteAggregateFunctionCall"
+        },
+        {
+          "name": "ordered_set_function_call",
+          "type": "SyntaqliteOrderedSetFunctionCall"
+        },
+        {
+          "name": "cast_expr",
+          "type": "SyntaqliteCastExpr"
+        },
+        {
+          "name": "column_ref",
+          "type": "SyntaqliteColumnRef"
+        },
+        {
+          "name": "compound_select",
+          "type": "SyntaqliteCompoundSelect"
+        },
+        {
+          "name": "subquery_expr",
+          "type": "SyntaqliteSubqueryExpr"
+        },
+        {
+          "name": "exists_expr",
+          "type": "SyntaqliteExistsExpr"
+        },
+        {
+          "name": "in_expr",
+          "type": "SyntaqliteInExpr"
+        },
+        {
+          "name": "is_expr",
+          "type": "SyntaqliteIsExpr"
+        },
+        {
+          "name": "between_expr",
+          "type": "SyntaqliteBetweenExpr"
+        },
+        {
+          "name": "like_expr",
+          "type": "SyntaqliteLikeExpr"
+        },
+        {
+          "name": "case_expr",
+          "type": "SyntaqliteCaseExpr"
+        },
+        {
+          "name": "case_when",
+          "type": "SyntaqliteCaseWhen"
+        },
+        {
+          "name": "case_when_list",
+          "type": "SyntaqliteCaseWhenList"
+        },
+        {
+          "name": "foreign_key_clause",
+          "type": "SyntaqliteForeignKeyClause"
+        },
+        {
+          "name": "column_constraint",
+          "type": "SyntaqliteColumnConstraint"
+        },
+        {
+          "name": "column_constraint_list",
+          "type": "SyntaqliteColumnConstraintList"
+        },
+        {
+          "name": "column_def",
+          "type": "SyntaqliteColumnDef"
+        },
+        {
+          "name": "column_def_list",
+          "type": "SyntaqliteColumnDefList"
+        },
+        {
+          "name": "table_constraint",
+          "type": "SyntaqliteTableConstraint"
+        },
+        {
+          "name": "table_constraint_list",
+          "type": "SyntaqliteTableConstraintList"
+        },
+        {
+          "name": "create_table_stmt",
+          "type": "SyntaqliteCreateTableStmt"
+        },
+        {
+          "name": "cte_definition",
+          "type": "SyntaqliteCteDefinition"
+        },
+        {
+          "name": "cte_list",
+          "type": "SyntaqliteCteList"
+        },
+        {
+          "name": "with_clause",
+          "type": "SyntaqliteWithClause"
+        },
+        {
+          "name": "upsert_clause",
+          "type": "SyntaqliteUpsertClause"
+        },
+        {
+          "name": "upsert_clause_list",
+          "type": "SyntaqliteUpsertClauseList"
+        },
+        {
+          "name": "delete_stmt",
+          "type": "SyntaqliteDeleteStmt"
+        },
+        {
+          "name": "set_clause",
+          "type": "SyntaqliteSetClause"
+        },
+        {
+          "name": "set_clause_list",
+          "type": "SyntaqliteSetClauseList"
+        },
+        {
+          "name": "update_stmt",
+          "type": "SyntaqliteUpdateStmt"
+        },
+        {
+          "name": "insert_stmt",
+          "type": "SyntaqliteInsertStmt"
+        },
+        {
+          "name": "binary_expr",
+          "type": "SyntaqliteBinaryExpr"
+        },
+        {
+          "name": "unary_expr",
+          "type": "SyntaqliteUnaryExpr"
+        },
+        {
+          "name": "literal",
+          "type": "SyntaqliteLiteral"
+        },
+        {
+          "name": "paren_expr",
+          "type": "SyntaqliteParenExpr"
+        },
+        {
+          "name": "ident_name",
+          "type": "SyntaqliteIdentName"
+        },
+        {
+          "name": "error",
+          "type": "SyntaqliteError"
+        },
+        {
+          "name": "expr_list",
+          "type": "SyntaqliteExprList"
+        },
+        {
+          "name": "function_call",
+          "type": "SyntaqliteFunctionCall"
+        },
+        {
+          "name": "variable",
+          "type": "SyntaqliteVariable"
+        },
+        {
+          "name": "collate_expr",
+          "type": "SyntaqliteCollateExpr"
+        },
+        {
+          "name": "raise_expr",
+          "type": "SyntaqliteRaiseExpr"
+        },
+        {
+          "name": "qualified_name",
+          "type": "SyntaqliteQualifiedName"
+        },
+        {
+          "name": "drop_stmt",
+          "type": "SyntaqliteDropStmt"
+        },
+        {
+          "name": "alter_table_stmt",
+          "type": "SyntaqliteAlterTableStmt"
+        },
+        {
+          "name": "transaction_stmt",
+          "type": "SyntaqliteTransactionStmt"
+        },
+        {
+          "name": "savepoint_stmt",
+          "type": "SyntaqliteSavepointStmt"
+        },
+        {
+          "name": "result_column",
+          "type": "SyntaqliteResultColumn"
+        },
+        {
+          "name": "result_column_list",
+          "type": "SyntaqliteResultColumnList"
+        },
+        {
+          "name": "select_stmt",
+          "type": "SyntaqliteSelectStmt"
+        },
+        {
+          "name": "ordering_term",
+          "type": "SyntaqliteOrderingTerm"
+        },
+        {
+          "name": "order_by_list",
+          "type": "SyntaqliteOrderByList"
+        },
+        {
+          "name": "limit_clause",
+          "type": "SyntaqliteLimitClause"
+        },
+        {
+          "name": "table_ref",
+          "type": "SyntaqliteTableRef"
+        },
+        {
+          "name": "subquery_table_source",
+          "type": "SyntaqliteSubqueryTableSource"
+        },
+        {
+          "name": "join_clause",
+          "type": "SyntaqliteJoinClause"
+        },
+        {
+          "name": "join_prefix",
+          "type": "SyntaqliteJoinPrefix"
+        },
+        {
+          "name": "trigger_event",
+          "type": "SyntaqliteTriggerEvent"
+        },
+        {
+          "name": "trigger_cmd_list",
+          "type": "SyntaqliteTriggerCmdList"
+        },
+        {
+          "name": "create_trigger_stmt",
+          "type": "SyntaqliteCreateTriggerStmt"
+        },
+        {
+          "name": "create_virtual_table_stmt",
+          "type": "SyntaqliteCreateVirtualTableStmt"
+        },
+        {
+          "name": "pragma_stmt",
+          "type": "SyntaqlitePragmaStmt"
+        },
+        {
+          "name": "analyze_or_reindex_stmt",
+          "type": "SyntaqliteAnalyzeOrReindexStmt"
+        },
+        {
+          "name": "attach_stmt",
+          "type": "SyntaqliteAttachStmt"
+        },
+        {
+          "name": "detach_stmt",
+          "type": "SyntaqliteDetachStmt"
+        },
+        {
+          "name": "vacuum_stmt",
+          "type": "SyntaqliteVacuumStmt"
+        },
+        {
+          "name": "explain_stmt",
+          "type": "SyntaqliteExplainStmt"
+        },
+        {
+          "name": "create_index_stmt",
+          "type": "SyntaqliteCreateIndexStmt"
+        },
+        {
+          "name": "create_view_stmt",
+          "type": "SyntaqliteCreateViewStmt"
+        },
+        {
+          "name": "values_row_list",
+          "type": "SyntaqliteValuesRowList"
+        },
+        {
+          "name": "values_clause",
+          "type": "SyntaqliteValuesClause"
+        },
+        {
+          "name": "frame_bound",
+          "type": "SyntaqliteFrameBound"
+        },
+        {
+          "name": "frame_spec",
+          "type": "SyntaqliteFrameSpec"
+        },
+        {
+          "name": "window_def",
+          "type": "SyntaqliteWindowDef"
+        },
+        {
+          "name": "window_def_list",
+          "type": "SyntaqliteWindowDefList"
+        },
+        {
+          "name": "named_window_def",
+          "type": "SyntaqliteNamedWindowDef"
+        },
+        {
+          "name": "named_window_def_list",
+          "type": "SyntaqliteNamedWindowDefList"
+        },
+        {
+          "name": "filter_over",
+          "type": "SyntaqliteFilterOver"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteOrderByList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteOrderedSetFunctionCall": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "func_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "flags",
+          "type": "SyntaqliteAggregateFunctionCallFlags"
+        },
+        {
+          "name": "args",
+          "type": "uint32_t"
+        },
+        {
+          "name": "orderby_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "filter_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "over_clause",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteOrderingTerm": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "sort_order",
+          "type": "SyntaqliteSortOrder"
+        },
+        {
+          "name": "nulls_order",
+          "type": "SyntaqliteNullsOrder"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteParenExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "expr",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteParserToken": {
+      "fields": [
+        {
+          "name": "offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "type",
+          "type": "uint32_t"
+        },
+        {
+          "name": "flags",
+          "type": "SyntaqliteParserTokenFlags"
+        },
+        {
+          "name": "_layer_id",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqlitePhysicalTableAccess": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqlitePragmaStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "pragma_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "value",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "pragma_form",
+          "type": "SyntaqlitePragmaForm"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteQualifiedName": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "object_name",
+          "type": "uint32_t"
+        },
+        {
+          "name": "schema",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteRaiseExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "raise_type",
+          "type": "SyntaqliteRaiseType"
+        },
+        {
+          "name": "error_message",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteRelationAccess": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "kind",
+          "type": "SyntaqliteRelationKind"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteRelationDef": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "columns",
+          "type": "const char *const *"
+        },
+        {
+          "name": "column_count",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteResultColumn": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "flags",
+          "type": "SyntaqliteResultColumnFlags"
+        },
+        {
+          "name": "alias",
+          "type": "uint32_t"
+        },
+        {
+          "name": "expr",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteResultColumnFlags": {
+      "fields": [
+        {
+          "name": "raw",
+          "type": "uint8_t"
+        },
+        {
+          "name": "bits",
+          "type": "struct (unnamed struct at syntaqlite.h:2077:3)"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteResultColumnList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteSavepointStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "op",
+          "type": "SyntaqliteSavepointOp"
+        },
+        {
+          "name": "savepoint_name",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteSelect": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "select_stmt",
+          "type": "SyntaqliteSelectStmt"
+        },
+        {
+          "name": "compound_select",
+          "type": "SyntaqliteCompoundSelect"
+        },
+        {
+          "name": "with_clause",
+          "type": "SyntaqliteWithClause"
+        },
+        {
+          "name": "values_clause",
+          "type": "SyntaqliteValuesClause"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteSelectStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "flags",
+          "type": "SyntaqliteSelectStmtFlags"
+        },
+        {
+          "name": "columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "from_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "where_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "groupby",
+          "type": "uint32_t"
+        },
+        {
+          "name": "having",
+          "type": "uint32_t"
+        },
+        {
+          "name": "orderby",
+          "type": "uint32_t"
+        },
+        {
+          "name": "limit_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "window_clause",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteSelectStmtFlags": {
+      "fields": [
+        {
+          "name": "raw",
+          "type": "uint8_t"
+        },
+        {
+          "name": "bits",
+          "type": "struct (unnamed struct at syntaqlite.h:2084:3)"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteSetClause": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "column",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "value",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteSetClauseList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "select_stmt",
+          "type": "SyntaqliteSelectStmt"
+        },
+        {
+          "name": "compound_select",
+          "type": "SyntaqliteCompoundSelect"
+        },
+        {
+          "name": "values_clause",
+          "type": "SyntaqliteValuesClause"
+        },
+        {
+          "name": "with_clause",
+          "type": "SyntaqliteWithClause"
+        },
+        {
+          "name": "insert_stmt",
+          "type": "SyntaqliteInsertStmt"
+        },
+        {
+          "name": "update_stmt",
+          "type": "SyntaqliteUpdateStmt"
+        },
+        {
+          "name": "delete_stmt",
+          "type": "SyntaqliteDeleteStmt"
+        },
+        {
+          "name": "create_table_stmt",
+          "type": "SyntaqliteCreateTableStmt"
+        },
+        {
+          "name": "create_index_stmt",
+          "type": "SyntaqliteCreateIndexStmt"
+        },
+        {
+          "name": "create_view_stmt",
+          "type": "SyntaqliteCreateViewStmt"
+        },
+        {
+          "name": "create_trigger_stmt",
+          "type": "SyntaqliteCreateTriggerStmt"
+        },
+        {
+          "name": "create_virtual_table_stmt",
+          "type": "SyntaqliteCreateVirtualTableStmt"
+        },
+        {
+          "name": "drop_stmt",
+          "type": "SyntaqliteDropStmt"
+        },
+        {
+          "name": "alter_table_stmt",
+          "type": "SyntaqliteAlterTableStmt"
+        },
+        {
+          "name": "transaction_stmt",
+          "type": "SyntaqliteTransactionStmt"
+        },
+        {
+          "name": "savepoint_stmt",
+          "type": "SyntaqliteSavepointStmt"
+        },
+        {
+          "name": "pragma_stmt",
+          "type": "SyntaqlitePragmaStmt"
+        },
+        {
+          "name": "analyze_or_reindex_stmt",
+          "type": "SyntaqliteAnalyzeOrReindexStmt"
+        },
+        {
+          "name": "attach_stmt",
+          "type": "SyntaqliteAttachStmt"
+        },
+        {
+          "name": "detach_stmt",
+          "type": "SyntaqliteDetachStmt"
+        },
+        {
+          "name": "vacuum_stmt",
+          "type": "SyntaqliteVacuumStmt"
+        },
+        {
+          "name": "explain_stmt",
+          "type": "SyntaqliteExplainStmt"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteSubqueryExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "select",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteSubqueryTableSource": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "select",
+          "type": "uint32_t"
+        },
+        {
+          "name": "alias",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteTableConstraint": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "kind",
+          "type": "SyntaqliteTableConstraintType"
+        },
+        {
+          "name": "constraint_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "onconf",
+          "type": "SyntaqliteConflictAction"
+        },
+        {
+          "name": "is_autoincrement",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "pk_columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "fk_columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "check_expr",
+          "type": "uint32_t"
+        },
+        {
+          "name": "fk_clause",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteTableConstraintList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteTableRef": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "table_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "has_parens",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "alias",
+          "type": "uint32_t"
+        },
+        {
+          "name": "args",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteTableSource": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "table_ref",
+          "type": "SyntaqliteTableRef"
+        },
+        {
+          "name": "subquery_table_source",
+          "type": "SyntaqliteSubqueryTableSource"
+        },
+        {
+          "name": "join_clause",
+          "type": "SyntaqliteJoinClause"
+        },
+        {
+          "name": "join_prefix",
+          "type": "SyntaqliteJoinPrefix"
+        }
+      ],
+      "kind": "union"
+    },
+    "SyntaqliteTextSpan": {
+      "fields": [
+        {
+          "name": "offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "flags",
+          "type": "uint32_t"
+        },
+        {
+          "name": "_layer_id",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteToken": {
+      "fields": [
+        {
+          "name": "text",
+          "type": "const char *"
+        },
+        {
+          "name": "length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "type",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteTracebackFrame": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "name_len",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "line",
+          "type": "SyntaqliteLineNumber"
+        },
+        {
+          "name": "col",
+          "type": "SyntaqliteColumnNumber"
+        },
+        {
+          "name": "snippet",
+          "type": "const char *"
+        },
+        {
+          "name": "snippet_len",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "offset_in_snippet",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "length_in_snippet",
+          "type": "SyntaqliteLength"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteTransactionStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "op",
+          "type": "SyntaqliteTransactionOp"
+        },
+        {
+          "name": "trans_type",
+          "type": "SyntaqliteTransactionType"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteTriggerCmdList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteTriggerEvent": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "event_type",
+          "type": "SyntaqliteTriggerEventType"
+        },
+        {
+          "name": "columns",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteUnaryExpr": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "op",
+          "type": "SyntaqliteUnaryOp"
+        },
+        {
+          "name": "operand",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteUnexpandedView": {
+      "fields": [
+        {
+          "name": "name",
+          "type": "const char *"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteUpdateStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "with_ctes",
+          "type": "uint32_t"
+        },
+        {
+          "name": "with_recursive",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "conflict_action",
+          "type": "SyntaqliteConflictAction"
+        },
+        {
+          "name": "table",
+          "type": "uint32_t"
+        },
+        {
+          "name": "index_hint",
+          "type": "SyntaqliteIndexHint"
+        },
+        {
+          "name": "index_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "setlist",
+          "type": "uint32_t"
+        },
+        {
+          "name": "from_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "where_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "orderby",
+          "type": "uint32_t"
+        },
+        {
+          "name": "limit_clause",
+          "type": "uint32_t"
+        },
+        {
+          "name": "returning",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteUpsertClause": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "columns",
+          "type": "uint32_t"
+        },
+        {
+          "name": "target_where",
+          "type": "uint32_t"
+        },
+        {
+          "name": "action",
+          "type": "SyntaqliteUpsertAction"
+        },
+        {
+          "name": "setlist",
+          "type": "uint32_t"
+        },
+        {
+          "name": "update_where",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteUpsertClauseList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteVacuumStmt": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "schema",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "filename",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteValuesClause": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "rows",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteValuesRowList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteVariable": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "source",
+          "type": "SyntaqliteTextSpan"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteWindowDef": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "base_window_name",
+          "type": "SyntaqliteTextSpan"
+        },
+        {
+          "name": "partition_by",
+          "type": "uint32_t"
+        },
+        {
+          "name": "orderby",
+          "type": "uint32_t"
+        },
+        {
+          "name": "frame",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteWindowDefList": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "uint32_t"
+        },
+        {
+          "name": "count",
+          "type": "uint32_t"
+        },
+        {
+          "name": "children",
+          "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteWithClause": {
+      "fields": [
+        {
+          "name": "tag",
+          "type": "SyntaqliteNodeTag"
+        },
+        {
+          "name": "recursive",
+          "type": "SyntaqliteBool"
+        },
+        {
+          "name": "ctes",
+          "type": "uint32_t"
+        },
+        {
+          "name": "select",
+          "type": "uint32_t"
+        }
+      ],
+      "kind": "struct"
+    }
+  },
+  "typedefs": {
+    "SynqParseCtx": "struct SynqParseCtx",
+    "SynqParseToken": "struct SynqParseToken",
+    "SynqTokenCategory": "enum SynqTokenCategory",
+    "SyntaqliteAggregateFunctionCall": "struct SyntaqliteAggregateFunctionCall",
+    "SyntaqliteAggregateFunctionCallFlags": "union SyntaqliteAggregateFunctionCallFlags",
+    "SyntaqliteAlterOp": "enum SyntaqliteAlterOp",
+    "SyntaqliteAlterTableStmt": "struct SyntaqliteAlterTableStmt",
+    "SyntaqliteAnalysisMode": "enum SyntaqliteAnalysisMode",
+    "SyntaqliteAnalyzeOrReindexOp": "enum SyntaqliteAnalyzeOrReindexOp",
+    "SyntaqliteAnalyzeOrReindexStmt": "struct SyntaqliteAnalyzeOrReindexStmt",
+    "SyntaqliteAnalyzer": "struct SyntaqliteAnalyzer",
+    "SyntaqliteArgMapping": "struct SyntaqliteArgMapping",
+    "SyntaqliteAritySpecKind": "enum SyntaqliteAritySpecKind",
+    "SyntaqliteAttachStmt": "struct SyntaqliteAttachStmt",
+    "SyntaqliteBetweenExpr": "struct SyntaqliteBetweenExpr",
+    "SyntaqliteBinaryExpr": "struct SyntaqliteBinaryExpr",
+    "SyntaqliteBinaryOp": "enum SyntaqliteBinaryOp",
+    "SyntaqliteBool": "enum SyntaqliteBool",
+    "SyntaqliteCaseExpr": "struct SyntaqliteCaseExpr",
+    "SyntaqliteCaseWhen": "struct SyntaqliteCaseWhen",
+    "SyntaqliteCaseWhenList": "struct SyntaqliteCaseWhenList",
+    "SyntaqliteCastExpr": "struct SyntaqliteCastExpr",
+    "SyntaqliteCflags": "struct SyntaqliteCflags",
+    "SyntaqliteCheckLevel": "enum SyntaqliteCheckLevel",
+    "SyntaqliteCollateExpr": "struct SyntaqliteCollateExpr",
+    "SyntaqliteColumnConstraint": "struct SyntaqliteColumnConstraint",
+    "SyntaqliteColumnConstraintList": "struct SyntaqliteColumnConstraintList",
+    "SyntaqliteColumnConstraintType": "enum SyntaqliteColumnConstraintType",
+    "SyntaqliteColumnDef": "struct SyntaqliteColumnDef",
+    "SyntaqliteColumnDefList": "struct SyntaqliteColumnDefList",
+    "SyntaqliteColumnLineage": "struct SyntaqliteColumnLineage",
+    "SyntaqliteColumnNumber": "uint32_t",
+    "SyntaqliteColumnOrigin": "struct SyntaqliteColumnOrigin",
+    "SyntaqliteColumnRef": "struct SyntaqliteColumnRef",
+    "SyntaqliteComment": "struct SyntaqliteComment",
+    "SyntaqliteCommentSide": "uint8_t",
+    "SyntaqliteCompletionContext": "uint32_t",
+    "SyntaqliteCompoundOp": "enum SyntaqliteCompoundOp",
+    "SyntaqliteCompoundSelect": "struct SyntaqliteCompoundSelect",
+    "SyntaqliteConflictAction": "enum SyntaqliteConflictAction",
+    "SyntaqliteCreateIndexStmt": "struct SyntaqliteCreateIndexStmt",
+    "SyntaqliteCreateTableStmt": "struct SyntaqliteCreateTableStmt",
+    "SyntaqliteCreateTableStmtFlags": "union SyntaqliteCreateTableStmtFlags",
+    "SyntaqliteCreateTriggerStmt": "struct SyntaqliteCreateTriggerStmt",
+    "SyntaqliteCreateViewStmt": "struct SyntaqliteCreateViewStmt",
+    "SyntaqliteCreateVirtualTableStmt": "struct SyntaqliteCreateVirtualTableStmt",
+    "SyntaqliteCteDefinition": "struct SyntaqliteCteDefinition",
+    "SyntaqliteCteList": "struct SyntaqliteCteList",
+    "SyntaqliteDefinedRelation": "struct SyntaqliteDefinedRelation",
+    "SyntaqliteDeleteStmt": "struct SyntaqliteDeleteStmt",
+    "SyntaqliteDetachStmt": "struct SyntaqliteDetachStmt",
+    "SyntaqliteDiagnostic": "struct SyntaqliteDiagnostic",
+    "SyntaqliteDiagnosticCode": "enum SyntaqliteDiagnosticCode",
+    "SyntaqliteDialect": "struct SyntaqliteDialect",
+    "SyntaqliteDialectTemplate": "struct SyntaqliteDialectTemplate",
+    "SyntaqliteDocOffset": "uint32_t",
+    "SyntaqliteDropObjectType": "enum SyntaqliteDropObjectType",
+    "SyntaqliteDropStmt": "struct SyntaqliteDropStmt",
+    "SyntaqliteError": "struct SyntaqliteError",
+    "SyntaqliteExistsExpr": "struct SyntaqliteExistsExpr",
+    "SyntaqliteExplainMode": "enum SyntaqliteExplainMode",
+    "SyntaqliteExplainStmt": "struct SyntaqliteExplainStmt",
+    "SyntaqliteExpr": "union SyntaqliteExpr",
+    "SyntaqliteExprList": "struct SyntaqliteExprList",
+    "SyntaqliteFieldMeta": "struct SyntaqliteFieldMeta",
+    "SyntaqliteFieldRangeMeta": "struct SyntaqliteFieldRangeMeta",
+    "SyntaqliteFilterOver": "struct SyntaqliteFilterOver",
+    "SyntaqliteForeignKeyAction": "enum SyntaqliteForeignKeyAction",
+    "SyntaqliteForeignKeyClause": "struct SyntaqliteForeignKeyClause",
+    "SyntaqliteFormatConfig": "struct SyntaqliteFormatConfig",
+    "SyntaqliteFormatter": "struct SyntaqliteFormatter",
+    "SyntaqliteFrameBound": "struct SyntaqliteFrameBound",
+    "SyntaqliteFrameBoundType": "enum SyntaqliteFrameBoundType",
+    "SyntaqliteFrameExclude": "enum SyntaqliteFrameExclude",
+    "SyntaqliteFrameSpec": "struct SyntaqliteFrameSpec",
+    "SyntaqliteFrameType": "enum SyntaqliteFrameType",
+    "SyntaqliteFunctionCall": "struct SyntaqliteFunctionCall",
+    "SyntaqliteFunctionCallFlags": "union SyntaqliteFunctionCallFlags",
+    "SyntaqliteFunctionCategory": "enum SyntaqliteFunctionCategory",
+    "SyntaqliteGeneratedColumnStorage": "enum SyntaqliteGeneratedColumnStorage",
+    "SyntaqliteIdentName": "struct SyntaqliteIdentName",
+    "SyntaqliteInExpr": "struct SyntaqliteInExpr",
+    "SyntaqliteInExprSource": "union SyntaqliteInExprSource",
+    "SyntaqliteIndexHint": "enum SyntaqliteIndexHint",
+    "SyntaqliteInsertStmt": "struct SyntaqliteInsertStmt",
+    "SyntaqliteIsExpr": "struct SyntaqliteIsExpr",
+    "SyntaqliteIsOp": "enum SyntaqliteIsOp",
+    "SyntaqliteJoinClause": "struct SyntaqliteJoinClause",
+    "SyntaqliteJoinPrefix": "struct SyntaqliteJoinPrefix",
+    "SyntaqliteJoinType": "enum SyntaqliteJoinType",
+    "SyntaqliteKeywordCase": "enum SyntaqliteKeywordCase",
+    "SyntaqliteLayerOffset": "uint32_t",
+    "SyntaqliteLength": "uint32_t",
+    "SyntaqliteLikeExpr": "struct SyntaqliteLikeExpr",
+    "SyntaqliteLikeKeyword": "enum SyntaqliteLikeKeyword",
+    "SyntaqliteLimitClause": "struct SyntaqliteLimitClause",
+    "SyntaqliteLineNumber": "uint32_t",
+    "SyntaqliteLiteral": "struct SyntaqliteLiteral",
+    "SyntaqliteLiteralType": "enum SyntaqliteLiteralType",
+    "SyntaqliteLoadedDialect": "struct SyntaqliteLoadedDialect",
+    "SyntaqliteMacroArgSegment": "struct SyntaqliteMacroArgSegment",
+    "SyntaqliteMacroCallArg": "struct SyntaqliteMacroCallArg",
+    "SyntaqliteMacroLookupFn": "int (*)(void *, SyntaqliteParser *, const char *, SyntaqliteLength, const SyntaqliteToken *, uint32_t)",
+    "SyntaqliteMacroRewrite": "struct SyntaqliteMacroRewrite",
+    "SyntaqliteMacroStyle": "enum SyntaqliteMacroStyle",
+    "SyntaqliteMaterialized": "enum SyntaqliteMaterialized",
+    "SyntaqliteMemMethods": "struct SyntaqliteMemMethods",
+    "SyntaqliteModuleResolverFn": "char *(*)(const char *, void *)",
+    "SyntaqliteName": "union SyntaqliteName",
+    "SyntaqliteNamedWindowDef": "struct SyntaqliteNamedWindowDef",
+    "SyntaqliteNamedWindowDefList": "struct SyntaqliteNamedWindowDefList",
+    "SyntaqliteNode": "union SyntaqliteNode",
+    "SyntaqliteNodeTag": "enum SyntaqliteNodeTag",
+    "SyntaqliteNullsOrder": "enum SyntaqliteNullsOrder",
+    "SyntaqliteOrderByList": "struct SyntaqliteOrderByList",
+    "SyntaqliteOrderedSetFunctionCall": "struct SyntaqliteOrderedSetFunctionCall",
+    "SyntaqliteOrderingTerm": "struct SyntaqliteOrderingTerm",
+    "SyntaqliteParenExpr": "struct SyntaqliteParenExpr",
+    "SyntaqliteParser": "struct SyntaqliteParser",
+    "SyntaqliteParserToken": "struct SyntaqliteParserToken",
+    "SyntaqliteParserTokenFlags": "uint32_t",
+    "SyntaqlitePhysicalTableAccess": "struct SyntaqlitePhysicalTableAccess",
+    "SyntaqlitePragmaForm": "enum SyntaqlitePragmaForm",
+    "SyntaqlitePragmaStmt": "struct SyntaqlitePragmaStmt",
+    "SyntaqliteQualifiedName": "struct SyntaqliteQualifiedName",
+    "SyntaqliteRaiseExpr": "struct SyntaqliteRaiseExpr",
+    "SyntaqliteRaiseType": "enum SyntaqliteRaiseType",
+    "SyntaqliteRangeMetaEntry": "struct SyntaqliteRangeMetaEntry",
+    "SyntaqliteRelationAccess": "struct SyntaqliteRelationAccess",
+    "SyntaqliteRelationDef": "struct SyntaqliteRelationDef",
+    "SyntaqliteRelationKind": "enum SyntaqliteRelationKind",
+    "SyntaqliteResultColumn": "struct SyntaqliteResultColumn",
+    "SyntaqliteResultColumnFlags": "union SyntaqliteResultColumnFlags",
+    "SyntaqliteResultColumnList": "struct SyntaqliteResultColumnList",
+    "SyntaqliteRpc": "struct SyntaqliteRpc",
+    "SyntaqliteSavepointOp": "enum SyntaqliteSavepointOp",
+    "SyntaqliteSavepointStmt": "struct SyntaqliteSavepointStmt",
+    "SyntaqliteSelect": "union SyntaqliteSelect",
+    "SyntaqliteSelectStmt": "struct SyntaqliteSelectStmt",
+    "SyntaqliteSelectStmtFlags": "union SyntaqliteSelectStmtFlags",
+    "SyntaqliteSetClause": "struct SyntaqliteSetClause",
+    "SyntaqliteSetClauseList": "struct SyntaqliteSetClauseList",
+    "SyntaqliteSeverity": "enum SyntaqliteSeverity",
+    "SyntaqliteSortOrder": "enum SyntaqliteSortOrder",
+    "SyntaqliteStmt": "union SyntaqliteStmt",
+    "SyntaqliteStmtOffset": "uint32_t",
+    "SyntaqliteSubqueryExpr": "struct SyntaqliteSubqueryExpr",
+    "SyntaqliteSubqueryTableSource": "struct SyntaqliteSubqueryTableSource",
+    "SyntaqliteTableConstraint": "struct SyntaqliteTableConstraint",
+    "SyntaqliteTableConstraintList": "struct SyntaqliteTableConstraintList",
+    "SyntaqliteTableConstraintType": "enum SyntaqliteTableConstraintType",
+    "SyntaqliteTableRef": "struct SyntaqliteTableRef",
+    "SyntaqliteTableSource": "union SyntaqliteTableSource",
+    "SyntaqliteTextSpan": "struct SyntaqliteTextSpan",
+    "SyntaqliteToken": "struct SyntaqliteToken",
+    "SyntaqliteTokenIdx": "uint32_t",
+    "SyntaqliteTokenizer": "struct SyntaqliteTokenizer",
+    "SyntaqliteTracebackFrame": "struct SyntaqliteTracebackFrame",
+    "SyntaqliteTransactionOp": "enum SyntaqliteTransactionOp",
+    "SyntaqliteTransactionStmt": "struct SyntaqliteTransactionStmt",
+    "SyntaqliteTransactionType": "enum SyntaqliteTransactionType",
+    "SyntaqliteTriggerCmdList": "struct SyntaqliteTriggerCmdList",
+    "SyntaqliteTriggerEvent": "struct SyntaqliteTriggerEvent",
+    "SyntaqliteTriggerEventType": "enum SyntaqliteTriggerEventType",
+    "SyntaqliteTriggerTiming": "enum SyntaqliteTriggerTiming",
+    "SyntaqliteUnaryExpr": "struct SyntaqliteUnaryExpr",
+    "SyntaqliteUnaryOp": "enum SyntaqliteUnaryOp",
+    "SyntaqliteUnexpandedView": "struct SyntaqliteUnexpandedView",
+    "SyntaqliteUpdateStmt": "struct SyntaqliteUpdateStmt",
+    "SyntaqliteUpsertAction": "enum SyntaqliteUpsertAction",
+    "SyntaqliteUpsertClause": "struct SyntaqliteUpsertClause",
+    "SyntaqliteUpsertClauseList": "struct SyntaqliteUpsertClauseList",
+    "SyntaqliteVacuumStmt": "struct SyntaqliteVacuumStmt",
+    "SyntaqliteValuesClause": "struct SyntaqliteValuesClause",
+    "SyntaqliteValuesRowList": "struct SyntaqliteValuesRowList",
+    "SyntaqliteVariable": "struct SyntaqliteVariable",
+    "SyntaqliteWindowDef": "struct SyntaqliteWindowDef",
+    "SyntaqliteWindowDefList": "struct SyntaqliteWindowDefList",
+    "SyntaqliteWithClause": "struct SyntaqliteWithClause"
+  }
+}

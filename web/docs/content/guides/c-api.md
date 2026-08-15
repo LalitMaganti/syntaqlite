@@ -63,7 +63,9 @@ macos-x64/libsyntaqlite.dylib
 linux-x64/libsyntaqlite.so
 linux-arm64/libsyntaqlite.so
 windows-x64/syntaqlite.dll
+windows-x64/syntaqlite.dll.lib
 windows-arm64/syntaqlite.dll
+windows-arm64/syntaqlite.dll.lib
 ```
 
 Compile and link against the library for your platform:
