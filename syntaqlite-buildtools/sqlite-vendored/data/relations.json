@@ -1,0 +1,72 @@
+{
+  "relations": [
+    {
+      "name": "sqlite_master",
+      "columns": [
+        "type",
+        "name",
+        "tbl_name",
+        "rootpage",
+        "sql"
+      ],
+      "without_rowid": false,
+      "availability": [
+        {
+          "since": "3.12.2"
+        }
+      ]
+    },
+    {
+      "name": "sqlite_schema",
+      "columns": [
+        "type",
+        "name",
+        "tbl_name",
+        "rootpage",
+        "sql"
+      ],
+      "without_rowid": false,
+      "availability": [
+        {
+          "since": "3.33.0"
+        }
+      ]
+    },
+    {
+      "name": "sqlite_temp_master",
+      "columns": [
+        "type",
+        "name",
+        "tbl_name",
+        "rootpage",
+        "sql"
+      ],
+      "without_rowid": false,
+      "availability": [
+        {
+          "since": "3.12.2",
+          "cflag": "SQLITE_OMIT_TEMPDB",
+          "polarity": "omit"
+        }
+      ]
+    },
+    {
+      "name": "sqlite_temp_schema",
+      "columns": [
+        "type",
+        "name",
+        "tbl_name",
+        "rootpage",
+        "sql"
+      ],
+      "without_rowid": false,
+      "availability": [
+        {
+          "since": "3.33.0",
+          "cflag": "SQLITE_OMIT_TEMPDB",
+          "polarity": "omit"
+        }
+      ]
+    }
+  ]
+}

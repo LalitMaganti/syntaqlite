@@ -240,7 +240,7 @@ fn emit_function_entry(w: &mut RustWriter, func: &JsonFunction) -> Result<(), St
 
 /// Like [`encode_version`] but returns the short `V::V3_NN` form for the
 /// re-aliased import in the catalog module.
-fn short_version(s: &str) -> Result<String, String> {
+pub(crate) fn short_version(s: &str) -> Result<String, String> {
     let full = encode_version(s)?;
     // "SqliteVersion::V3_38" -> "V::V3_38"
     Ok(full.replace("SqliteVersion::", "V::"))

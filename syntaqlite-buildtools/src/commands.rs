@@ -19,6 +19,7 @@ use crate::output_resolver::OutputLayout;
 const SQLITE_DIALECT_CRATE: &str = "syntaqlite-syntax";
 const SQLITE_SHARED_CRATE: &str = "syntaqlite-syntax";
 const SQLITE_FUNCTIONS_CATALOG: &str = "syntaqlite/src/sqlite/functions_catalog.rs";
+const SQLITE_RELATIONS_CATALOG: &str = "syntaqlite/src/sqlite/relations_catalog.rs";
 const SQLITE_CFLAGS_RS: &str = "syntaqlite/src/sqlite/cflags.rs";
 const SYNTAX_CFLAGS_RS: &str = "syntaqlite-syntax/src/sqlite/cflags.rs";
 
@@ -117,6 +118,8 @@ impl SqliteCodegen {
 pub struct SqliteParserCodegen {
     /// Path to functions.json. When provided, generates `functions_catalog.rs`.
     pub functions_json: Option<String>,
+    /// Path to relations.json. When provided, generates `relations_catalog.rs`.
+    pub relations_json: Option<String>,
     /// Path to `version_cflags.json`. When provided, emits `MIN_VERSIONS` into cflags.rs.
     pub version_cflags_json: Option<String>,
 }
@@ -146,6 +149,12 @@ impl SqliteParserCodegen {
             crate::util::functions_codegen::write_functions_catalog_file(
                 json_path,
                 SQLITE_FUNCTIONS_CATALOG,
+            )?;
+        }
+        if let Some(json_path) = &self.relations_json {
+            crate::util::relations_codegen::write_relations_catalog_file(
+                json_path,
+                SQLITE_RELATIONS_CATALOG,
             )?;
         }
 
@@ -245,11 +254,11 @@ impl SqliteExtract {
 
 // ── UpdateData ────────────────────────────────────────────────────────────────
 
-/// Audit cflag availability and extract the function catalog from amalgamations.
+/// Audit cflag availability and extract built-in catalogs from amalgamations.
 ///
 /// Runs both phases in sequence:
 ///   1. Scan each amalgamation for cflag references → `version_cflags.json`.
-///   2. Compile each amalgamation and query `PRAGMA function_list` → `functions.json`.
+///   2. Compile and probe each amalgamation → `functions.json` and `relations.json`.
 pub struct UpdateData {
     /// Directory containing amalgamations.
     pub amalgamation_dir: String,
@@ -257,6 +266,8 @@ pub struct UpdateData {
     pub version_cflags_output: String,
     /// Output path for the function catalog JSON (`functions.json`).
     pub functions_output: String,
+    /// Output path for the relation catalog JSON (`relations.json`).
+    pub relations_output: String,
 }
 
 impl UpdateData {
@@ -272,16 +283,17 @@ impl UpdateData {
         }
 
         eprintln!("Phase 1: Auditing cflags...");
-        crate::extract::functions::audit_version_cflags(
+        crate::extract::builtins::audit_version_cflags(
             amal_path,
             Path::new(&self.version_cflags_output),
         )?;
 
-        eprintln!("Phase 2: Extracting function catalog...");
-        crate::extract::functions::extract_function_catalog(
+        eprintln!("Phase 2: Extracting built-in catalogs...");
+        crate::extract::builtins::extract_builtin_catalogs(
             amal_path,
             Path::new(&self.version_cflags_output),
             Path::new(&self.functions_output),
+            Path::new(&self.relations_output),
         )
         .map(|_| ())
     }

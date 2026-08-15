@@ -13,9 +13,7 @@ use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, FieldValue, NodeFiel
 use super::name_key::NameKey;
 use super::stmt_reader::StmtReader;
 use crate::dialect::AnyDialect;
-use crate::dialect::{
-    FIELD_ABSENT, FunctionCategory as DialectFunctionCategory, SemanticRole, is_function_available,
-};
+use crate::dialect::{FIELD_ABSENT, FunctionCategory as DialectFunctionCategory, SemanticRole};
 
 // ── Core layer types ─────────────────────────────────────────────────────────
 
@@ -404,26 +402,56 @@ impl CatalogLayerContents {
         self.table_functions.get(key)
     }
 
-    /// Populate this layer with the dialect's built-in functions.
+    /// Populate this layer with the dialect's built-in functions and relations.
     fn populate_dialect_builtins(&mut self, dialect: &AnyDialect) {
-        #[cfg(feature = "sqlite")]
+        dialect_builtins::populate(self, dialect);
+    }
+}
+
+#[cfg(feature = "sqlite")]
+mod dialect_builtins {
+    use super::{AritySpec, CatalogLayerContents};
+    use crate::dialect::{AnyDialect, FunctionCategory as DialectFunctionCategory, is_available};
+
+    pub(super) fn populate(layer: &mut CatalogLayerContents, dialect: &AnyDialect) {
         for entry in crate::sqlite::functions_catalog::SQLITE_FUNCTIONS {
-            if !is_function_available(entry, dialect) {
+            if !is_available(entry.availability, dialect) {
                 continue;
             }
             if entry.info.category == DialectFunctionCategory::TableValued {
-                self.insert_table_function(entry.info.name.to_string(), AritySpec::Any, Vec::new());
+                layer.insert_table_function(
+                    entry.info.name.to_string(),
+                    AritySpec::Any,
+                    Vec::new(),
+                );
             } else {
-                self.insert_function_arities(
+                layer.insert_function_arities(
                     entry.info.name.to_string(),
                     entry.info.category.into(),
                     entry.info.arities,
                 );
             }
         }
-        #[cfg(not(feature = "sqlite"))]
-        let _ = dialect;
+
+        for entry in crate::sqlite::relations_catalog::SQLITE_RELATIONS {
+            if !is_available(entry.availability, dialect) {
+                continue;
+            }
+            layer.insert_table(
+                entry.info.name,
+                Some(entry.info.columns.iter().map(ToString::to_string).collect()),
+                entry.info.without_rowid,
+            );
+        }
     }
+}
+
+#[cfg(not(feature = "sqlite"))]
+mod dialect_builtins {
+    use super::CatalogLayerContents;
+    use crate::dialect::AnyDialect;
+
+    pub(super) fn populate(_layer: &mut CatalogLayerContents, _dialect: &AnyDialect) {}
 }
 
 // ── CatalogLayer enum ─────────────────────────────────────────────────────────
@@ -813,10 +841,16 @@ impl Catalog {
         let Some(table_name) = alter_qualified_name(stmt, fields, target_idx) else {
             return;
         };
+        let table_key = NameKey::new(&table_name);
+        // Dialect built-ins are immutable. Do not let an invalid ALTER mutate
+        // the analyzer's built-in relation and poison later statements.
+        if self.visible_relation_is_dialect_builtin(&table_key) {
+            return;
+        }
         let FieldValue::Enum(op_val) = fields[op as usize] else {
             return;
         };
-        let Some(mut entry) = self.visible_relation(&NameKey::new(&table_name)).cloned() else {
+        let Some(mut entry) = self.visible_relation(&table_key).cloned() else {
             return;
         };
         let layer = target.index();
@@ -910,6 +944,18 @@ impl Catalog {
             }
         }
         None
+    }
+
+    fn visible_relation_is_dialect_builtin(&self, key: &NameKey) -> bool {
+        for (index, layer) in self.layers.iter().enumerate().rev() {
+            if layer.removed_relations.contains(key) {
+                return false;
+            }
+            if layer.relation(key).is_some() {
+                return index == LAYER_DIALECT;
+            }
+        }
+        false
     }
 
     /// Returns `true` if `key` is a known relation in any layer.
@@ -1185,6 +1231,67 @@ mod tests {
             cat.check_function(&NameKey::new("coalesce"), 2),
             FunctionCheckResult::Unknown
         ));
+    }
+
+    #[test]
+    fn builtin_schema_tables_resolved() {
+        let cat = sqlite_catalog();
+        for name in [
+            "sqlite_master",
+            "sqlite_schema",
+            "sqlite_temp_master",
+            "sqlite_temp_schema",
+        ] {
+            assert!(cat.resolve_relation(&NameKey::new(name)), "{name}");
+            assert_eq!(
+                cat.table_source_info(&NameKey::new(name)).0,
+                Some(vec![
+                    "type".to_string(),
+                    "name".to_string(),
+                    "tbl_name".to_string(),
+                    "rootpage".to_string(),
+                    "sql".to_string(),
+                ]),
+                "{name}",
+            );
+        }
+    }
+
+    #[test]
+    fn sqlite_schema_alias_respects_version() {
+        let dialect = crate::Dialect::new()
+            .with_version(crate::util::SqliteVersion::V3_32)
+            .erase();
+        let cat = Catalog::new(dialect);
+        assert!(cat.resolve_relation(&NameKey::new("sqlite_master")));
+        assert!(!cat.resolve_relation(&NameKey::new("sqlite_schema")));
+    }
+
+    #[test]
+    fn temp_schema_aliases_respect_omit_tempdb() {
+        let flags = crate::util::SqliteFlags::default().with(crate::util::SqliteFlag::OmitTempdb);
+        let dialect = crate::Dialect::new().with_cflags(flags).erase();
+        let cat = Catalog::new(dialect);
+        assert!(cat.resolve_relation(&NameKey::new("sqlite_schema")));
+        assert!(!cat.resolve_relation(&NameKey::new("sqlite_temp_schema")));
+        assert!(!cat.resolve_relation(&NameKey::new("sqlite_temp_master")));
+    }
+
+    #[test]
+    fn invalid_alter_does_not_mutate_schema_table() {
+        let dialect = crate::sqlite::dialect::any_dialect();
+        let mut cat = Catalog::new(dialect.clone());
+        accumulate_into(
+            &mut cat,
+            &dialect,
+            CatalogLayer::Document,
+            "ALTER TABLE sqlite_schema DROP COLUMN sql;",
+        );
+        assert!(
+            cat.table_source_info(&NameKey::new("sqlite_schema"))
+                .0
+                .is_some_and(|columns| columns.iter().any(|column| column == "sql"))
+        );
     }
 
     #[test]

@@ -1,14 +1,15 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-//! Stage 1 function extraction: compile `SQLite` amalgamations with various cflag
-//! combos and use `PRAGMA function_list` to extract the built-in function catalog.
+//! Stage 1 built-in catalog extraction: compile `SQLite` amalgamations with
+//! various cflag combinations and probe the resulting library for functions
+//! and always-present relations.
 //!
 //! Two-phase approach:
 //!   Phase 1 (audit): Scan each version's sqlite3.c to determine which cflags
 //!     are referenced. Write `version_cflags.json` to data/.
 //!   Phase 2 (extract): For each version, compile only with flags that version
-//!     actually knows about. Write `functions.json` to data/.
+//!     actually knows about. Write `functions.json` and `relations.json` to data/.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -54,14 +55,16 @@ fn flag_polarity(flag_name: &str) -> &'static str {
 
 /// Returns the (`flag_name`, polarity) pairs to probe for the given available flags.
 ///
-/// Only flags in `CFLAG_REGISTRY` with `"functions"` in their categories are considered,
-/// minus any with `None` in `PROBE_OVERRIDES`.
+/// Only flags in `CFLAG_REGISTRY` affecting functions or relations are
+/// considered, minus any with `None` in `PROBE_OVERRIDES`.
 fn probeable_flags(available: &BTreeSet<String>) -> Vec<(&'static str, &'static str)> {
     use crate::util::cflag_registry::CFLAG_REGISTRY;
     CFLAG_REGISTRY
         .iter()
         .filter_map(|&(name, _, cats)| {
-            if !cats.contains(&"functions") || !available.contains(name) {
+            if !(cats.contains(&"functions") || cats.contains(&"relations"))
+                || !available.contains(name)
+            {
                 return None;
             }
             // Skip flags that cannot be probed (e.g. compile failures).
@@ -76,31 +79,44 @@ fn probeable_flags(available: &BTreeSet<String>) -> Vec<(&'static str, &'static 
         .collect()
 }
 
-/// The C probe program that extracts function data via PRAGMA `function_list`.
-const PROBE_C: &str = r#"
+/// Build the C probe program. Relation candidates are extracted from each
+/// amalgamation's own preprocessor definitions rather than maintained here.
+fn probe_c(relation_candidates: &BTreeSet<String>) -> String {
+    let candidates = relation_candidates
+        .iter()
+        .map(|name| format!("    \"{name}\","))
+        .collect::<Vec<_>>()
+        .join("\n");
+    format!(
+        r#"
 #include "sqlite3.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(void) {
+static const char *relation_candidates[] = {{
+{candidates}
+    NULL
+}};
+
+int main(void) {{
     sqlite3 *db;
     sqlite3_stmt *stmt;
     int rc;
 
     rc = sqlite3_open(":memory:", &db);
-    if (rc != SQLITE_OK) {
+    if (rc != SQLITE_OK) {{
         fprintf(stderr, "Cannot open database: %s\n", sqlite3_errmsg(db));
         return 1;
-    }
+    }}
 
     rc = sqlite3_prepare_v2(db, "PRAGMA function_list", -1, &stmt, 0);
-    if (rc != SQLITE_OK) {
+    if (rc != SQLITE_OK) {{
         fprintf(stderr, "Cannot prepare: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
         return 1;
-    }
+    }}
 
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
+    while (sqlite3_step(stmt) == SQLITE_ROW) {{
         const char *name = (const char *)sqlite3_column_text(stmt, 0);
         int builtin = sqlite3_column_int(stmt, 1);
         const char *ftype = (const char *)sqlite3_column_text(stmt, 2);
@@ -111,17 +127,43 @@ int main(void) {
         /* Emit both builtin and extension-registered functions.
          * Extension-registered functions (builtin=0) are still compiled into the
          * amalgamation and available — they're just registered via
-         * sqlite3BuiltinExtensions[] instead of sqlite3RegisterBuiltinFunctions().
-         * E.g., JSON1 on pre-3.38, FTS3/FTS5, geopoly, etc. */
+         * sqlite3BuiltinExtensions[] instead of sqlite3RegisterBuiltinFunctions(). */
         (void)builtin;
-        printf("%s\t%d\t%s\n", name, narg, ftype);
-    }
-
+        printf("F\t%s\t%d\t%s\n", name, narg, ftype);
+    }}
     sqlite3_finalize(stmt);
+
+    for (int i = 0; relation_candidates[i] != NULL; i++) {{
+        const char *name = relation_candidates[i];
+        char *sql = sqlite3_mprintf("SELECT * FROM \"%w\"", name);
+        rc = sqlite3_prepare_v2(db, sql, -1, &stmt, 0);
+        sqlite3_free(sql);
+        if (rc != SQLITE_OK) {{
+            continue;
+        }}
+
+        sqlite3_stmt *rowid_stmt;
+        sql = sqlite3_mprintf("SELECT rowid FROM \"%w\"", name);
+        int rowid_rc = sqlite3_prepare_v2(db, sql, -1, &rowid_stmt, 0);
+        sqlite3_free(sql);
+        if (rowid_rc == SQLITE_OK) {{
+            sqlite3_finalize(rowid_stmt);
+        }}
+
+        printf("R\t%s\t%d", name, rowid_rc != SQLITE_OK);
+        for (int col = 0; col < sqlite3_column_count(stmt); col++) {{
+            printf("\t%s", sqlite3_column_name(stmt, col));
+        }}
+        printf("\n");
+        sqlite3_finalize(stmt);
+    }}
+
     sqlite3_close(db);
     return 0;
+}}
+"#
+    )
 }
-"#;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -136,18 +178,29 @@ pub(crate) struct FunctionEntry {
     pub(crate) builtin: bool,
 }
 
-/// The set of functions available for a particular compilation.
-#[derive(Debug, Clone)]
-pub(crate) struct FunctionSet {
-    pub(crate) functions: BTreeSet<FunctionEntry>,
+/// A built-in relation discovered by preparing a query against a name taken
+/// from that `SQLite` version's own schema-table macros.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub(crate) struct RelationEntry {
+    pub(crate) name: String,
+    pub(crate) columns: Vec<String>,
+    pub(crate) without_rowid: bool,
 }
 
-/// Describes how a cflag affects functions for a particular version.
+/// The built-ins available for a particular compilation.
+#[derive(Debug, Clone)]
+pub(crate) struct ProbeSet {
+    pub(crate) functions: BTreeSet<FunctionEntry>,
+    pub(crate) relations: BTreeSet<RelationEntry>,
+}
+
+/// Describes how a cflag affects built-ins for a particular version.
 #[derive(Debug, Clone)]
 pub(crate) struct CflagEffect {
     pub(crate) flag: String,
     pub(crate) polarity: String,
     pub(crate) affected_functions: BTreeSet<String>,
+    pub(crate) affected_relations: BTreeSet<RelationEntry>,
 }
 
 /// A function's availability rule.
@@ -176,6 +229,21 @@ pub(crate) struct FunctionCatalogEntry {
 #[derive(Debug, Clone, serde::Serialize)]
 pub(crate) struct FunctionCatalog {
     pub(crate) functions: Vec<FunctionCatalogEntry>,
+}
+
+/// Complete catalog entry for an always-present built-in relation.
+#[derive(Debug, Clone, serde::Serialize)]
+pub(crate) struct RelationCatalogEntry {
+    pub(crate) name: String,
+    pub(crate) columns: Vec<String>,
+    pub(crate) without_rowid: bool,
+    pub(crate) availability: Vec<AvailabilityRule>,
+}
+
+/// The complete extracted relation catalog.
+#[derive(Debug, Clone, serde::Serialize)]
+pub(crate) struct RelationCatalog {
+    pub(crate) relations: Vec<RelationCatalogEntry>,
 }
 
 /// A single cflag availability entry (cflag-centric format).
@@ -290,6 +358,29 @@ fn scan_version_cflags(sqlite3_c: &str) -> Vec<String> {
         }
     }
     found
+}
+
+/// Discover candidate built-in relation names from quoted `sqlite_*` values in
+/// the amalgamation's preprocessor definitions. The probe subsequently keeps
+/// only names that can actually be prepared as relations in that build.
+fn discover_relation_candidates(sqlite3_c: &str) -> BTreeSet<String> {
+    let mut candidates = BTreeSet::new();
+    for line in sqlite3_c.lines() {
+        if !line.trim_start().starts_with("#define") {
+            continue;
+        }
+        for (idx, part) in line.split('"').enumerate() {
+            if idx % 2 == 1
+                && part.starts_with("sqlite_")
+                && part
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+            {
+                candidates.insert(part.to_string());
+            }
+        }
+    }
+    candidates
 }
 
 /// Audit all versions and write cflag-centric availability data to `output_path`.
@@ -407,35 +498,50 @@ fn version_string_to_int(s: &str) -> i32 {
 // Phase 2: Extract — compile with version-appropriate flags
 // ---------------------------------------------------------------------------
 
-/// Compile and run the function probe, returning a parsed `FunctionSet`.
+/// Compile and run the built-in probe, returning parsed functions and relations.
 fn compile_and_run_probe(
     amalgamation_dir: &Path,
     build_dir: &Path,
     defines: &[&str],
     label: &str,
-) -> Result<FunctionSet, String> {
+    relation_candidates: &BTreeSet<String>,
+) -> Result<ProbeSet, String> {
+    let source = probe_c(relation_candidates);
     let binary =
-        amalgamation_probe::compile_probe(amalgamation_dir, build_dir, defines, PROBE_C, label)?;
+        amalgamation_probe::compile_probe(amalgamation_dir, build_dir, defines, &source, label)?;
     let stdout = amalgamation_probe::run_probe(&binary)?;
-    Ok(parse_function_output(&stdout))
+    Ok(parse_probe_output(&stdout))
 }
 
-/// Parse tab-separated probe output into a `FunctionSet`.
-fn parse_function_output(stdout: &str) -> FunctionSet {
+/// Parse tab-separated probe output into a [`ProbeSet`].
+fn parse_probe_output(stdout: &str) -> ProbeSet {
     let mut functions = BTreeSet::new();
+    let mut relations = BTreeSet::new();
     for line in stdout.lines() {
         let parts: Vec<&str> = line.split('\t').collect();
-        if parts.len() != 3 {
-            continue;
+        match parts.as_slice() {
+            ["F", name, narg, func_type] => {
+                functions.insert(FunctionEntry {
+                    name: (*name).to_string(),
+                    narg: narg.parse().unwrap_or(0),
+                    func_type: (*func_type).to_string(),
+                    builtin: true,
+                });
+            }
+            ["R", name, without_rowid, columns @ ..] => {
+                relations.insert(RelationEntry {
+                    name: (*name).to_string(),
+                    columns: columns.iter().map(|column| (*column).to_string()).collect(),
+                    without_rowid: *without_rowid == "1",
+                });
+            }
+            _ => {}
         }
-        functions.insert(FunctionEntry {
-            name: parts[0].to_string(),
-            narg: parts[1].parse().unwrap_or(0),
-            func_type: parts[2].to_string(),
-            builtin: true,
-        });
     }
-    FunctionSet { functions }
+    ProbeSet {
+        functions,
+        relations,
+    }
 }
 
 /// Build the baseline compile defines for a version — all available ENABLE flags ON.
@@ -443,7 +549,9 @@ fn baseline_defines_for(available: &BTreeSet<String>) -> Vec<String> {
     use crate::util::cflag_registry::CFLAG_REGISTRY;
     let mut defines = Vec::new();
     for &(name, _, cats) in CFLAG_REGISTRY {
-        if !cats.contains(&"functions") || !available.contains(name) {
+        if !(cats.contains(&"functions") || cats.contains(&"relations"))
+            || !available.contains(name)
+        {
             continue;
         }
         if flag_polarity(name) == "enable"
@@ -463,7 +571,9 @@ fn test_defines_for(flag_name: &str, polarity: &str, available: &BTreeSet<String
     use crate::util::cflag_registry::CFLAG_REGISTRY;
     let mut defines = Vec::new();
     for &(name, _, cats) in CFLAG_REGISTRY {
-        if !cats.contains(&"functions") || !available.contains(name) {
+        if !(cats.contains(&"functions") || cats.contains(&"relations"))
+            || !available.contains(name)
+        {
             continue;
         }
         if polarity == "omit" {
@@ -516,22 +626,33 @@ fn is_known_broken(version: &str, flag_name: &str) -> bool {
         .any(|(ver_prefix, flag, _)| version.starts_with(ver_prefix) && *flag == flag_name)
 }
 
-/// Extract function data for a single version.
+/// Extract built-in data for a single version.
 fn extract_version(
     amalgamation_dir: &Path,
     version: &str,
     build_dir: &Path,
     available_flags: &BTreeSet<String>,
-) -> Result<(FunctionSet, Vec<CflagEffect>), String> {
+    relation_candidates: &BTreeSet<String>,
+) -> Result<(ProbeSet, Vec<CflagEffect>), String> {
     // Compile and run baseline (all available ENABLE flags ON, no OMIT flags).
     let bl_defs = baseline_defines_for(available_flags);
     let baseline_refs: Vec<&str> = bl_defs.iter().map(String::as_str).collect();
-    let baseline = compile_and_run_probe(amalgamation_dir, build_dir, &baseline_refs, "baseline")?;
+    let baseline = compile_and_run_probe(
+        amalgamation_dir,
+        build_dir,
+        &baseline_refs,
+        "baseline",
+        relation_candidates,
+    )?;
 
     let baseline_names: BTreeSet<String> =
         baseline.functions.iter().map(|f| f.name.clone()).collect();
 
-    eprintln!("    baseline: {} functions", baseline_names.len());
+    eprintln!(
+        "    baseline: {} functions, {} relations",
+        baseline_names.len(),
+        baseline.relations.len()
+    );
 
     let mut effects = Vec::new();
 
@@ -546,20 +667,36 @@ fn extract_version(
         let probe_refs: Vec<&str> = test_defs.iter().map(String::as_str).collect();
         let label = format!("{version}_{flag_name}");
 
-        let test_set = compile_and_run_probe(amalgamation_dir, build_dir, &probe_refs, &label)
-            .map_err(|e| format!("{version}/{flag_name}: {e}"))?;
+        let test_set = compile_and_run_probe(
+            amalgamation_dir,
+            build_dir,
+            &probe_refs,
+            &label,
+            relation_candidates,
+        )
+        .map_err(|e| format!("{version}/{flag_name}: {e}"))?;
 
         let test_names: BTreeSet<String> =
             test_set.functions.iter().map(|f| f.name.clone()).collect();
 
-        // Determine affected functions: present in baseline but absent in test.
-        let affected: BTreeSet<String> = baseline_names.difference(&test_names).cloned().collect();
-        if !affected.is_empty() {
-            eprintln!("    {flag_name}: {} functions affected", affected.len());
+        let affected_functions: BTreeSet<String> =
+            baseline_names.difference(&test_names).cloned().collect();
+        let affected_relations: BTreeSet<RelationEntry> = baseline
+            .relations
+            .difference(&test_set.relations)
+            .cloned()
+            .collect();
+        if !affected_functions.is_empty() || !affected_relations.is_empty() {
+            eprintln!(
+                "    {flag_name}: {} functions, {} relations affected",
+                affected_functions.len(),
+                affected_relations.len()
+            );
             effects.push(CflagEffect {
                 flag: flag_name.to_string(),
                 polarity: polarity.to_string(),
-                affected_functions: affected,
+                affected_functions,
+                affected_relations,
             });
         }
     }
@@ -581,11 +718,12 @@ fn extract_version(
 ///
 /// Panics if the discovered versions list is non-empty but `first()`/`last()` returns `None`
 /// (should be unreachable).
-pub(crate) fn extract_function_catalog(
+pub(crate) fn extract_builtin_catalogs(
     amalgamation_dir: &Path,
     audit_path: &Path,
-    output_path: &Path,
-) -> Result<FunctionCatalog, String> {
+    functions_output_path: &Path,
+    relations_output_path: &Path,
+) -> Result<(FunctionCatalog, RelationCatalog), String> {
     // Load audit data (cflag-centric format).
     let audit_json = fs::read_to_string(audit_path)
         .map_err(|e| format!("reading {}: {e}", audit_path.display()))?;
@@ -601,7 +739,7 @@ pub(crate) fn extract_function_catalog(
     }
 
     eprintln!(
-        "Extracting functions from {} versions: {} .. {}",
+        "Extracting built-ins from {} versions: {} .. {}",
         versions.len(),
         versions.first().expect("versions is non-empty"),
         versions.last().expect("versions is non-empty")
@@ -612,8 +750,8 @@ pub(crate) fn extract_function_catalog(
     let build_root = amalgamation_dir.join(".build-cache");
     fs::create_dir_all(&build_root).map_err(|e| format!("creating build cache dir: {e}"))?;
 
-    let mut per_version: Vec<(String, BTreeSet<String>, Vec<CflagEffect>)> = Vec::new();
-    let mut all_entries: BTreeMap<String, BTreeSet<(i32, String)>> = BTreeMap::new();
+    let mut per_version: Vec<VersionBuiltins> = Vec::new();
+    let mut all_function_entries: BTreeMap<String, BTreeSet<(i32, String)>> = BTreeMap::new();
 
     for version in &versions {
         let amal_dir = amalgamation_dir.join(version);
@@ -631,57 +769,112 @@ pub(crate) fn extract_function_catalog(
             .map(|e| e.name.clone())
             .collect();
 
-        eprintln!("  {version} ({} flags available)...", available.len());
-
-        let (baseline, effects) = extract_version(&amal_dir, version, &build_dir, &available)
-            .map_err(|e| format!("{version}: {e}"))?;
-
-        let names: BTreeSet<String> = baseline.functions.iter().map(|f| f.name.clone()).collect();
-
-        for entry in &baseline.functions {
-            all_entries
-                .entry(entry.name.clone())
-                .or_default()
-                .insert((entry.narg, entry.func_type.clone()));
+        let sqlite3_c_path = amal_dir.join("sqlite3.c");
+        let sqlite3_c = fs::read_to_string(&sqlite3_c_path)
+            .map_err(|e| format!("reading {}: {e}", sqlite3_c_path.display()))?;
+        let relation_candidates = discover_relation_candidates(&sqlite3_c);
+        if relation_candidates.is_empty() {
+            return Err(format!(
+                "{version}: no sqlite_* relation candidates found in preprocessor definitions"
+            ));
         }
 
-        per_version.push((version.clone(), names, effects));
+        eprintln!(
+            "  {version} ({} flags available, {} relation candidates)...",
+            available.len(),
+            relation_candidates.len()
+        );
+
+        let (baseline, effects) = extract_version(
+            &amal_dir,
+            version,
+            &build_dir,
+            &available,
+            &relation_candidates,
+        )
+        .map_err(|e| format!("{version}: {e}"))?;
+
+        // Keep the function catalog's established 3.30 extraction floor.
+        // Older amalgamations are included to cover the full supported range
+        // for relation and cflag extraction; their introspection pragma output
+        // is not complete enough to establish function availability.
+        let include_functions = ver_int >= version_string_to_int("3.30.0");
+        let function_names: BTreeSet<String> = if include_functions {
+            baseline.functions.iter().map(|f| f.name.clone()).collect()
+        } else {
+            BTreeSet::new()
+        };
+
+        if include_functions {
+            for entry in &baseline.functions {
+                all_function_entries
+                    .entry(entry.name.clone())
+                    .or_default()
+                    .insert((entry.narg, entry.func_type.clone()));
+            }
+        }
+
+        per_version.push(VersionBuiltins {
+            version: version.clone(),
+            function_names,
+            relations: baseline.relations,
+            effects,
+        });
     }
 
-    let catalog = build_catalog(&per_version, &all_entries);
+    let function_catalog = build_function_catalog(&per_version, &all_function_entries);
+    let relation_catalog = build_relation_catalog(&per_version);
 
-    let json =
-        serde_json::to_string_pretty(&catalog).map_err(|e| format!("serializing catalog: {e}"))?;
-    if let Some(parent) = output_path.parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("creating output dir: {e}"))?;
-    }
-    let mut file = fs::File::create(output_path)
-        .map_err(|e| format!("creating {}: {e}", output_path.display()))?;
-    file.write_all(json.as_bytes())
-        .map_err(|e| format!("writing {}: {e}", output_path.display()))?;
-    file.write_all(b"\n")
-        .map_err(|e| format!("writing {}: {e}", output_path.display()))?;
+    write_catalog(functions_output_path, &function_catalog)?;
+    write_catalog(relations_output_path, &relation_catalog)?;
 
     eprintln!(
         "Wrote {} functions to {}",
-        catalog.functions.len(),
-        output_path.display()
+        function_catalog.functions.len(),
+        functions_output_path.display()
+    );
+    eprintln!(
+        "Wrote {} relations to {}",
+        relation_catalog.relations.len(),
+        relations_output_path.display()
     );
 
-    Ok(catalog)
+    Ok((function_catalog, relation_catalog))
+}
+
+fn write_catalog(path: &Path, value: &impl serde::Serialize) -> Result<(), String> {
+    let json =
+        serde_json::to_string_pretty(value).map_err(|e| format!("serializing catalog: {e}"))?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| format!("creating output dir: {e}"))?;
+    }
+    let mut file =
+        fs::File::create(path).map_err(|e| format!("creating {}: {e}", path.display()))?;
+    file.write_all(json.as_bytes())
+        .map_err(|e| format!("writing {}: {e}", path.display()))?;
+    file.write_all(b"\n")
+        .map_err(|e| format!("writing {}: {e}", path.display()))
 }
 
 // ---------------------------------------------------------------------------
 // Catalog construction
 // ---------------------------------------------------------------------------
 
-fn build_catalog(
-    per_version: &[(String, BTreeSet<String>, Vec<CflagEffect>)],
+#[derive(Debug)]
+struct VersionBuiltins {
+    version: String,
+    function_names: BTreeSet<String>,
+    relations: BTreeSet<RelationEntry>,
+    effects: Vec<CflagEffect>,
+}
+
+fn build_function_catalog(
+    per_version: &[VersionBuiltins],
     all_entries: &BTreeMap<String, BTreeSet<(i32, String)>>,
 ) -> FunctionCatalog {
     let all_names: BTreeSet<&str> = per_version
         .iter()
-        .flat_map(|(_, names, _)| names.iter().map(String::as_str))
+        .flat_map(|version| version.function_names.iter().map(String::as_str))
         .collect();
 
     let mut functions = Vec::new();
@@ -709,7 +902,7 @@ fn build_catalog(
             })
             .to_string();
 
-        let availability = compute_availability(name, per_version);
+        let availability = compute_function_availability(name, per_version);
 
         functions.push(FunctionCatalogEntry {
             name: name.to_string(),
@@ -722,23 +915,63 @@ fn build_catalog(
     FunctionCatalog { functions }
 }
 
-fn compute_availability(
+fn build_relation_catalog(per_version: &[VersionBuiltins]) -> RelationCatalog {
+    let all_relations: BTreeSet<RelationEntry> = per_version
+        .iter()
+        .flat_map(|version| version.relations.iter().cloned())
+        .collect();
+    let relations = all_relations
+        .into_iter()
+        .map(|relation| RelationCatalogEntry {
+            availability: compute_relation_availability(&relation, per_version),
+            name: relation.name,
+            columns: relation.columns,
+            without_rowid: relation.without_rowid,
+        })
+        .collect();
+    RelationCatalog { relations }
+}
+
+fn compute_function_availability(
     func_name: &str,
-    per_version: &[(String, BTreeSet<String>, Vec<CflagEffect>)],
+    per_version: &[VersionBuiltins],
 ) -> Vec<AvailabilityRule> {
-    // (version, present_in_baseline, optional_gating_cflag_and_polarity)
-    type VersionState = (String, bool, Option<(String, String)>);
-    let mut version_states: Vec<VersionState> = Vec::new();
-
-    for (version, baseline_names, effects) in per_version {
-        let present = baseline_names.contains(func_name);
-        let gating_cflag = effects
+    compute_availability(per_version.iter().map(|version| {
+        let gating_cflag = version
+            .effects
             .iter()
-            .find(|e| e.affected_functions.contains(func_name))
-            .map(|e| (e.flag.clone(), e.polarity.clone()));
-        version_states.push((version.clone(), present, gating_cflag));
-    }
+            .find(|effect| effect.affected_functions.contains(func_name))
+            .map(|effect| (effect.flag.clone(), effect.polarity.clone()));
+        (
+            version.version.clone(),
+            version.function_names.contains(func_name),
+            gating_cflag,
+        )
+    }))
+}
 
+fn compute_relation_availability(
+    relation: &RelationEntry,
+    per_version: &[VersionBuiltins],
+) -> Vec<AvailabilityRule> {
+    compute_availability(per_version.iter().map(|version| {
+        let gating_cflag = version
+            .effects
+            .iter()
+            .find(|effect| effect.affected_relations.contains(relation))
+            .map(|effect| (effect.flag.clone(), effect.polarity.clone()));
+        (
+            version.version.clone(),
+            version.relations.contains(relation),
+            gating_cflag,
+        )
+    }))
+}
+
+fn compute_availability(
+    states: impl IntoIterator<Item = (String, bool, Option<(String, String)>)>,
+) -> Vec<AvailabilityRule> {
+    let version_states: Vec<_> = states.into_iter().collect();
     let mut rules = Vec::new();
     let mut i = 0;
     while i < version_states.len() {
@@ -867,13 +1100,46 @@ mod tests {
     }
 
     #[test]
+    fn discovers_relation_candidates_from_defines() {
+        let source = r#"
+#define MASTER_NAME "sqlite_master"
+#define NOT_A_DEFINE "sqlite_ignored"
+const char *runtime_string = "sqlite_not_a_candidate";
+#define TEMP_MASTER_NAME "sqlite_temp_master"
+"#;
+        assert_eq!(
+            discover_relation_candidates(source),
+            BTreeSet::from([
+                "sqlite_ignored".to_string(),
+                "sqlite_master".to_string(),
+                "sqlite_temp_master".to_string(),
+            ])
+        );
+    }
+
+    #[test]
+    fn parses_functions_and_relations_from_probe() {
+        let output = "F\tabs\t1\ts\nR\tsqlite_schema\t0\ttype\tname\tsql\n";
+        let parsed = parse_probe_output(output);
+        assert_eq!(parsed.functions.len(), 1);
+        assert_eq!(
+            parsed.relations,
+            BTreeSet::from([RelationEntry {
+                name: "sqlite_schema".to_string(),
+                columns: vec!["type".to_string(), "name".to_string(), "sql".to_string()],
+                without_rowid: false,
+            }])
+        );
+    }
+
+    #[test]
     fn compute_availability_always_present() {
-        let per_version = vec![
-            ("3.30.0".into(), BTreeSet::from(["abs".into()]), vec![]),
-            ("3.35.0".into(), BTreeSet::from(["abs".into()]), vec![]),
-            ("3.40.0".into(), BTreeSet::from(["abs".into()]), vec![]),
+        let states = [
+            ("3.30.0".into(), true, None),
+            ("3.35.0".into(), true, None),
+            ("3.40.0".into(), true, None),
         ];
-        let rules = compute_availability("abs", &per_version);
+        let rules = compute_availability(states);
         assert_eq!(rules.len(), 1);
         assert_eq!(rules[0].since.as_deref(), Some("3.30.0"));
         assert!(rules[0].until.is_none());
@@ -882,27 +1148,19 @@ mod tests {
 
     #[test]
     fn compute_availability_cflag_change() {
-        let per_version = vec![
+        let states = [
             (
                 "3.35.0".into(),
-                BTreeSet::from(["json_extract".into()]),
-                vec![CflagEffect {
-                    flag: "SQLITE_ENABLE_JSON1".into(),
-                    polarity: "enable".into(),
-                    affected_functions: BTreeSet::from(["json_extract".into()]),
-                }],
+                true,
+                Some(("SQLITE_ENABLE_JSON1".into(), "enable".into())),
             ),
             (
                 "3.38.0".into(),
-                BTreeSet::from(["json_extract".into()]),
-                vec![CflagEffect {
-                    flag: "SQLITE_OMIT_JSON".into(),
-                    polarity: "omit".into(),
-                    affected_functions: BTreeSet::from(["json_extract".into()]),
-                }],
+                true,
+                Some(("SQLITE_OMIT_JSON".into(), "omit".into())),
             ),
         ];
-        let rules = compute_availability("json_extract", &per_version);
+        let rules = compute_availability(states);
         assert_eq!(rules.len(), 2);
         assert_eq!(rules[0].cflag.as_deref(), Some("SQLITE_ENABLE_JSON1"));
         assert_eq!(rules[0].polarity.as_deref(), Some("enable"));

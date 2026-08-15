@@ -24,6 +24,7 @@
 /// - `categories`: editorial knowledge of what this flag affects.
 ///   - `"parser"`:     affects keyword recognition or SQL syntax
 ///   - `"functions"`:  affects built-in SQL function availability
+///   - `"relations"`:  affects built-in relation availability
 ///   - `"vtable"`:     affects virtual table module availability
 ///   - `"extensions"`: enables optional extension modules (FTS, `RTree`, etc.)
 ///
@@ -49,7 +50,7 @@ pub(crate) const CFLAG_REGISTRY: &[(&str, u32, &[&str])] = &[
     ("SQLITE_OMIT_REINDEX", 11, &["parser"]),
     ("SQLITE_OMIT_RETURNING", 12, &["parser"]),
     ("SQLITE_OMIT_SUBQUERY", 13, &["parser"]),
-    ("SQLITE_OMIT_TEMPDB", 14, &["parser"]),
+    ("SQLITE_OMIT_TEMPDB", 14, &["parser", "relations"]),
     ("SQLITE_OMIT_TRIGGER", 15, &["parser"]),
     ("SQLITE_OMIT_VACUUM", 16, &["parser"]),
     ("SQLITE_OMIT_VIEW", 17, &["parser"]),

@@ -36,6 +36,12 @@ fn has_unknown_function(diags: &[syntaqlite::Diagnostic], name: &str) -> bool {
         .any(|d| matches!(d.message(), DiagnosticMessage::UnknownFunction { name: n } if n == name))
 }
 
+fn has_unknown_table(diags: &[syntaqlite::Diagnostic], name: &str) -> bool {
+    diags
+        .iter()
+        .any(|d| matches!(d.message(), DiagnosticMessage::UnknownTable { name: n } if n == name))
+}
+
 fn has_parse_error(diags: &[syntaqlite::Diagnostic]) -> bool {
     diags.iter().any(|d| d.message().is_parse_error())
 }
@@ -256,6 +262,21 @@ fn returning_fails_parse_with_omit_returning() {
         has_parse_error(&diags),
         "RETURNING should fail to parse with OMIT_RETURNING"
     );
+}
+
+// ── SQLITE_OMIT_TEMPDB ───────────────────────────────────────────────────────
+
+#[test]
+fn temp_schema_available_without_omit_tempdb() {
+    let diags = analyze_default("SELECT name FROM sqlite_temp_schema;");
+    assert!(!has_unknown_table(&diags, "sqlite_temp_schema"));
+}
+
+#[test]
+fn temp_schema_flagged_with_omit_tempdb() {
+    let flags = SqliteFlags::default().with(SqliteFlag::OmitTempdb);
+    let diags = analyze_with_flags("SELECT name FROM sqlite_temp_schema;", flags);
+    assert!(has_unknown_table(&diags, "sqlite_temp_schema"));
 }
 
 // ── Cross-cutting: multiple cflags ───────────────────────────────────────────

@@ -8,9 +8,9 @@
 //!
 //! Subcommands:
 //!   codegen-sqlite          — regenerate the internal `SQLite` dialect (stage 2)
-//!   codegen-sqlite-parser   — regenerate `functions_catalog` (stage 1b)
+//!   codegen-sqlite-parser   — regenerate built-in catalogs (stage 1b)
 //!   sqlite-extract          — extract C fragments from raw `SQLite` source (stage 1)
-//!   update-data             — audit cflags and extract function catalog from amalgamations
+//!   update-data             — audit cflags and extract built-in catalogs from amalgamations
 //!   analyze-versions        — analyze `SQLite` source version history
 
 use clap::{Parser, Subcommand};
@@ -35,7 +35,7 @@ enum Command {
 
     /// Regenerate internal Rust artifacts for the `SQLite` parser crate (stage 1b).
     ///
-    /// Generates `functions_catalog.rs` and optionally `cflag_versions.rs`
+    /// Generates built-in catalog modules and optionally `cflag_versions.rs`
     /// from pre-existing inputs.
     #[command(name = "codegen-sqlite-parser")]
     CodegenSqliteParser(CodegenSqliteParserArgs),
@@ -44,10 +44,10 @@ enum Command {
     #[command(name = "sqlite-extract")]
     SqliteExtract(SqliteExtractArgs),
 
-    /// Audit cflag availability and extract function catalog from amalgamations.
+    /// Audit cflag availability and extract built-in catalogs from amalgamations.
     ///
     /// Runs the cflag audit (`version_cflags.json` + cflags.rs) followed by
-    /// function extraction (functions.json) in one shot.
+    /// built-in extraction (`functions.json` and `relations.json`) in one shot.
     #[command(name = "update-data")]
     UpdateData(UpdateDataArgs),
 
@@ -98,12 +98,16 @@ struct CodegenSqliteArgs {
 struct CodegenSqliteParserArgs {
     /// Path to functions.json (from sqlite-vendored/data/functions.json).
     /// When provided, generates `functions_catalog.rs` at its hardcoded workspace path.
-    #[arg(long)]
-    functions_json: Option<String>,
+    #[arg(long = "functions-json")]
+    functions_input: Option<String>,
+    /// Path to relations.json (from sqlite-vendored/data/relations.json).
+    /// When provided, generates `relations_catalog.rs` at its hardcoded workspace path.
+    #[arg(long = "relations-json")]
+    relations_source: Option<String>,
     /// Path to `version_cflags.json` (from sqlite-vendored/data/version_cflags.json).
     /// When provided, emits `MIN_VERSIONS` and `min_version_int()` into cflags.rs.
-    #[arg(long)]
-    version_cflags_json: Option<String>,
+    #[arg(long = "version-cflags-json")]
+    version_cflags: Option<String>,
 }
 
 // ── sqlite-extract ────────────────────────────────────────────────────────────
@@ -137,6 +141,9 @@ struct UpdateDataArgs {
     /// Output path for functions.json.
     #[arg(long, required = true)]
     functions_output: String,
+    /// Output path for relations.json.
+    #[arg(long, required = true)]
+    relations_output: String,
 }
 
 // ── analyze-versions ──────────────────────────────────────────────────────────
@@ -201,8 +208,9 @@ fn main() {
         }
         .run(),
         Command::CodegenSqliteParser(args) => commands::SqliteParserCodegen {
-            functions_json: args.functions_json.clone(),
-            version_cflags_json: args.version_cflags_json.clone(),
+            functions_json: args.functions_input.clone(),
+            relations_json: args.relations_source.clone(),
+            version_cflags_json: args.version_cflags.clone(),
         }
         .run(),
         Command::SqliteExtract(args) => commands::SqliteExtract {
@@ -216,6 +224,7 @@ fn main() {
             amalgamation_dir: args.amalgamation_dir.clone(),
             version_cflags_output: args.version_cflags_output.clone(),
             functions_output: args.functions_output.clone(),
+            relations_output: args.relations_output.clone(),
         }
         .run(),
         Command::AnalyzeVersions(args) => commands::AnalyzeVersions {
