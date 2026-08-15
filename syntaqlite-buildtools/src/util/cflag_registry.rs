@@ -4,8 +4,7 @@
 //! Stable cflag index registry — the single source of truth for name → index mapping.
 //!
 //! `CFLAG_REGISTRY` is the only place indices are hardcoded. All other cflag
-//! data (categories, `since` versions) either derives from this table or comes
-//! from the auto-generated `version_cflags.json`.
+//! metadata (categories and `since` versions) comes from `version_cflags.json`.
 //!
 //! # Invariants
 //!
@@ -16,73 +15,65 @@
 //! - Non-parser flags occupy indices 22–41.
 //! - New flags **must be appended** with the next unused index.
 
-/// Stable cflag registry: `(sqlite_flag_name, index, categories)`.
+/// Number of flags in the compact parser cflag bitset.
+///
+/// The corresponding registry entries permanently occupy indices 0–21, so their
+/// stable global indices are also their parser-group-local indices.
+pub(crate) const PARSER_CFLAG_COUNT: u32 = 22;
+
+/// Stable cflag registry: `(sqlite_flag_name, index)`.
 ///
 /// - `sqlite_flag_name`: canonical `SQLite` flag name (e.g. `"SQLITE_OMIT_WINDOWFUNC"`).
 /// - `index`: permanent bit-index in `SqliteFlags` / `SYNQ_CFLAG_IDX_*` C constant.
 ///   **Never reorder or reuse.**
-/// - `categories`: editorial knowledge of what this flag affects.
-///   - `"parser"`:     affects keyword recognition or SQL syntax
-///   - `"functions"`:  affects built-in SQL function availability
-///   - `"relations"`:  affects built-in relation availability
-///   - `"vtable"`:     affects virtual table module availability
-///   - `"extensions"`: enables optional extension modules (FTS, `RTree`, etc.)
 ///
-/// `SYNQ_CFLAG_IDX_*` constant names are derived automatically via [`synq_const_name`];
-/// there is no need to store them here.
-///
-/// Note: `since` version data lives in `version_cflags.json` and is injected at codegen
-/// time via `--version-cflags-json`. See <https://github.com/LalitMaganti/syntaqlite/issues/6>
-/// for the planned refactor to move categories there too.
-pub(crate) const CFLAG_REGISTRY: &[(&str, u32, &[&str])] = &[
+/// Categories and minimum versions live exclusively in `version_cflags.json`.
+/// `SYNQ_CFLAG_IDX_*` constant names are derived via [`synq_const_name`].
+pub(crate) const CFLAG_REGISTRY: &[(&str, u32)] = &[
     // ── Parser flags (0–21, matching C compact SYNQ_CFLAG_IDX_* values) ────────
-    ("SQLITE_OMIT_ALTERTABLE", 0, &["parser"]),
-    ("SQLITE_OMIT_ANALYZE", 1, &["parser"]),
-    ("SQLITE_OMIT_ATTACH", 2, &["parser"]),
-    ("SQLITE_OMIT_AUTOINCREMENT", 3, &["parser"]),
-    ("SQLITE_OMIT_CAST", 4, &["parser"]),
-    ("SQLITE_OMIT_COMPOUND_SELECT", 5, &["parser"]),
-    ("SQLITE_OMIT_CTE", 6, &["parser"]),
-    ("SQLITE_OMIT_EXPLAIN", 7, &["parser"]),
-    ("SQLITE_OMIT_FOREIGN_KEY", 8, &["parser"]),
-    ("SQLITE_OMIT_GENERATED_COLUMNS", 9, &["parser"]),
-    ("SQLITE_OMIT_PRAGMA", 10, &["parser"]),
-    ("SQLITE_OMIT_REINDEX", 11, &["parser"]),
-    ("SQLITE_OMIT_RETURNING", 12, &["parser"]),
-    ("SQLITE_OMIT_SUBQUERY", 13, &["parser"]),
-    ("SQLITE_OMIT_TEMPDB", 14, &["parser", "relations"]),
-    ("SQLITE_OMIT_TRIGGER", 15, &["parser"]),
-    ("SQLITE_OMIT_VACUUM", 16, &["parser"]),
-    ("SQLITE_OMIT_VIEW", 17, &["parser"]),
-    ("SQLITE_OMIT_VIRTUALTABLE", 18, &["parser", "vtable"]),
-    ("SQLITE_OMIT_WINDOWFUNC", 19, &["parser", "functions"]),
-    (
-        "SQLITE_ENABLE_ORDERED_SET_AGGREGATES",
-        20,
-        &["parser", "functions"],
-    ),
-    ("SQLITE_ENABLE_UPDATE_DELETE_LIMIT", 21, &["parser"]),
+    ("SQLITE_OMIT_ALTERTABLE", 0),
+    ("SQLITE_OMIT_ANALYZE", 1),
+    ("SQLITE_OMIT_ATTACH", 2),
+    ("SQLITE_OMIT_AUTOINCREMENT", 3),
+    ("SQLITE_OMIT_CAST", 4),
+    ("SQLITE_OMIT_COMPOUND_SELECT", 5),
+    ("SQLITE_OMIT_CTE", 6),
+    ("SQLITE_OMIT_EXPLAIN", 7),
+    ("SQLITE_OMIT_FOREIGN_KEY", 8),
+    ("SQLITE_OMIT_GENERATED_COLUMNS", 9),
+    ("SQLITE_OMIT_PRAGMA", 10),
+    ("SQLITE_OMIT_REINDEX", 11),
+    ("SQLITE_OMIT_RETURNING", 12),
+    ("SQLITE_OMIT_SUBQUERY", 13),
+    ("SQLITE_OMIT_TEMPDB", 14),
+    ("SQLITE_OMIT_TRIGGER", 15),
+    ("SQLITE_OMIT_VACUUM", 16),
+    ("SQLITE_OMIT_VIEW", 17),
+    ("SQLITE_OMIT_VIRTUALTABLE", 18),
+    ("SQLITE_OMIT_WINDOWFUNC", 19),
+    ("SQLITE_ENABLE_ORDERED_SET_AGGREGATES", 20),
+    ("SQLITE_ENABLE_UPDATE_DELETE_LIMIT", 21),
     // ── Non-parser flags (22–41, append new flags after 41) ─────────────────────
-    ("SQLITE_OMIT_COMPILEOPTION_DIAGS", 22, &["functions"]),
-    ("SQLITE_OMIT_DATETIME_FUNCS", 23, &["functions"]),
-    ("SQLITE_OMIT_FLOATING_POINT", 24, &["functions"]),
-    ("SQLITE_OMIT_JSON", 25, &["functions"]),
-    ("SQLITE_OMIT_LOAD_EXTENSION", 26, &["functions"]),
-    ("SQLITE_ENABLE_BYTECODE_VTAB", 27, &["vtable"]),
-    ("SQLITE_ENABLE_CARRAY", 28, &["vtable"]),
-    ("SQLITE_ENABLE_DBPAGE_VTAB", 29, &["vtable"]),
-    ("SQLITE_ENABLE_DBSTAT_VTAB", 30, &["vtable"]),
-    ("SQLITE_ENABLE_FTS3", 31, &["extensions", "functions"]),
-    ("SQLITE_ENABLE_FTS4", 32, &["extensions"]),
-    ("SQLITE_ENABLE_FTS5", 33, &["extensions", "functions"]),
-    ("SQLITE_ENABLE_GEOPOLY", 34, &["extensions", "functions"]),
-    ("SQLITE_ENABLE_JSON1", 35, &["functions"]),
-    ("SQLITE_ENABLE_MATH_FUNCTIONS", 36, &["functions"]),
-    ("SQLITE_ENABLE_OFFSET_SQL_FUNC", 37, &["functions"]),
-    ("SQLITE_ENABLE_PERCENTILE", 38, &["functions"]),
-    ("SQLITE_ENABLE_RTREE", 39, &["extensions"]),
-    ("SQLITE_ENABLE_STMTVTAB", 40, &["vtable"]),
-    ("SQLITE_SOUNDEX", 41, &["functions"]),
+    ("SQLITE_OMIT_COMPILEOPTION_DIAGS", 22),
+    ("SQLITE_OMIT_DATETIME_FUNCS", 23),
+    ("SQLITE_OMIT_FLOATING_POINT", 24),
+    ("SQLITE_OMIT_JSON", 25),
+    ("SQLITE_OMIT_LOAD_EXTENSION", 26),
+    ("SQLITE_ENABLE_BYTECODE_VTAB", 27),
+    ("SQLITE_ENABLE_CARRAY", 28),
+    ("SQLITE_ENABLE_DBPAGE_VTAB", 29),
+    ("SQLITE_ENABLE_DBSTAT_VTAB", 30),
+    ("SQLITE_ENABLE_FTS3", 31),
+    ("SQLITE_ENABLE_FTS4", 32),
+    ("SQLITE_ENABLE_FTS5", 33),
+    ("SQLITE_ENABLE_GEOPOLY", 34),
+    ("SQLITE_ENABLE_JSON1", 35),
+    ("SQLITE_ENABLE_MATH_FUNCTIONS", 36),
+    ("SQLITE_ENABLE_OFFSET_SQL_FUNC", 37),
+    ("SQLITE_ENABLE_PERCENTILE", 38),
+    ("SQLITE_ENABLE_RTREE", 39),
+    ("SQLITE_ENABLE_STMTVTAB", 40),
+    ("SQLITE_SOUNDEX", 41),
 ];
 
 /// Look up the stable index for a cflag by name.
@@ -91,8 +82,8 @@ pub(crate) const CFLAG_REGISTRY: &[(&str, u32, &[&str])] = &[
 pub(crate) fn cflag_index(name: &str) -> Option<u32> {
     CFLAG_REGISTRY
         .iter()
-        .find(|(n, _, _)| *n == name)
-        .map(|(_, i, _)| *i)
+        .find(|(n, _)| *n == name)
+        .map(|(_, i)| *i)
 }
 
 /// Derive the `SYNQ_CFLAG_IDX_*` C constant name from a `SQLITE_*` flag name.
@@ -109,7 +100,7 @@ mod tests {
 
     #[test]
     fn indices_are_unique_and_dense() {
-        let mut indices: Vec<u32> = CFLAG_REGISTRY.iter().map(|(_, i, _)| *i).collect();
+        let mut indices: Vec<u32> = CFLAG_REGISTRY.iter().map(|(_, i)| *i).collect();
         indices.sort_unstable();
         for (pos, &idx) in indices.iter().enumerate() {
             assert_eq!(
@@ -121,19 +112,17 @@ mod tests {
     }
 
     #[test]
-    fn parser_flags_occupy_indices_0_to_21() {
-        for &(name, idx, cats) in CFLAG_REGISTRY {
-            if cats.contains(&"parser") {
-                assert!(
-                    idx < 22,
-                    "parser flag {name} has index {idx}, expected < 22"
-                );
-            } else {
-                assert!(
-                    idx >= 22,
-                    "non-parser flag {name} has index {idx}, expected >= 22"
-                );
-            }
+    fn parser_flags_occupy_the_compact_index_prefix() {
+        for (expected, &(name, idx)) in CFLAG_REGISTRY
+            .iter()
+            .take(PARSER_CFLAG_COUNT as usize)
+            .enumerate()
+        {
+            assert_eq!(
+                idx,
+                u32::try_from(expected).expect("parser cflag count fits u32"),
+                "parser flag {name} must retain its compact index"
+            );
         }
     }
 

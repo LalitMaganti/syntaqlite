@@ -29,24 +29,19 @@ pub(crate) mod mkkeywordhash;
 pub(crate) mod tokenizer;
 pub(crate) mod virtual_tables;
 
-use crate::util::cflag_registry::{CFLAG_REGISTRY, synq_const_name};
+use crate::util::cflag_registry::{CFLAG_REGISTRY, PARSER_CFLAG_COUNT, synq_const_name};
 
-/// Compute the group-local index of `sqlite_flag` within the `group` category.
+/// Compute the parser-group-local index of `sqlite_flag`.
 ///
-/// Local indices are 0, 1, 2, … assigned by iterating `CFLAG_REGISTRY` in order
-/// and counting only entries whose categories slice contains `group`.
+/// Parser flags permanently occupy the global index prefix 0–21, so their stable
+/// global index is also their compact parser bitset index.
 #[must_use]
 pub(crate) fn group_local_index(group: &str, sqlite_flag: &str) -> Option<u32> {
-    let mut local = 0u32;
-    for &(name, _, cats) in CFLAG_REGISTRY {
-        if cats.contains(&group) {
-            if name == sqlite_flag {
-                return Some(local);
-            }
-            local += 1;
-        }
+    if group != "parser" {
+        return None;
     }
-    None
+    crate::util::cflag_registry::cflag_index(sqlite_flag)
+        .filter(|index| *index < PARSER_CFLAG_COUNT)
 }
 
 fn cflag_field_name(synq_name: &str) -> String {
@@ -162,16 +157,14 @@ fn write_cflag_pinning(out: &mut String, entries: &[(&str, &str, u32)]) {
 pub(crate) fn generate_cflags_h(group: &str) -> String {
     use std::fmt::Write as _;
     let mut local_idx: u32 = 0;
+    assert_eq!(group, "parser", "only the parser cflag group is compact");
     let entries: Vec<(&str, String, u32)> = CFLAG_REGISTRY
         .iter()
-        .filter_map(|&(sqlite_flag, _, cats)| {
-            if cats.contains(&group) {
-                let idx = local_idx;
-                local_idx += 1;
-                Some((sqlite_flag, synq_const_name(sqlite_flag), idx))
-            } else {
-                None
-            }
+        .take(PARSER_CFLAG_COUNT as usize)
+        .map(|&(sqlite_flag, _)| {
+            let idx = local_idx;
+            local_idx += 1;
+            (sqlite_flag, synq_const_name(sqlite_flag), idx)
         })
         .collect();
     let entries_ref: Vec<(&str, &str, u32)> = entries
@@ -230,13 +223,13 @@ pub(crate) fn generate_cflags_h(group: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::util::cflag_registry::CFLAG_REGISTRY;
+    use crate::util::cflag_registry::{CFLAG_REGISTRY, PARSER_CFLAG_COUNT};
 
     /// `CFLAG_REGISTRY` flag names must match `version_cflags.json` exactly.
     ///
     /// Catches two directions of drift:
-    /// - A flag added to `CFLAG_REGISTRY` without re-running `tools/sqlite-data update-data`
-    /// - The JSON being regenerated from a different flag set than the registry
+    /// - A flag added to `CFLAG_REGISTRY` without adding its JSON metadata
+    /// - The JSON containing a flag without a stable registry index
     #[test]
     fn cflag_registry_matches_version_cflags_json() {
         #[derive(serde::Deserialize)]
@@ -246,6 +239,7 @@ mod tests {
         #[derive(serde::Deserialize)]
         struct Entry {
             name: String,
+            categories: Vec<String>,
         }
 
         let json_content = include_str!("../../sqlite-vendored/data/version_cflags.json");
@@ -255,7 +249,7 @@ mod tests {
         let json_names: std::collections::HashSet<&str> =
             file.cflags.iter().map(|e| e.name.as_str()).collect();
         let registry_names: std::collections::HashSet<&str> =
-            CFLAG_REGISTRY.iter().map(|(n, _, _)| *n).collect();
+            CFLAG_REGISTRY.iter().map(|(n, _)| *n).collect();
 
         let mut in_registry_not_json: Vec<&str> =
             registry_names.difference(&json_names).copied().collect();
@@ -267,13 +261,32 @@ mod tests {
         assert!(
             in_registry_not_json.is_empty(),
             "flags in CFLAG_REGISTRY but missing from version_cflags.json \
-             (re-run `tools/sqlite-data update-data`): {in_registry_not_json:?}"
+             (add their metadata before running update-data): {in_registry_not_json:?}"
         );
         assert!(
             in_json_not_registry.is_empty(),
             "flags in version_cflags.json but missing from CFLAG_REGISTRY: \
              {in_json_not_registry:?}"
         );
+
+        for name in [
+            "SQLITE_ENABLE_FTS3",
+            "SQLITE_ENABLE_FTS5",
+            "SQLITE_ENABLE_GEOPOLY",
+        ] {
+            let entry = file
+                .cflags
+                .iter()
+                .find(|entry| entry.name == name)
+                .expect("registry/JSON name sets match");
+            assert!(
+                entry
+                    .categories
+                    .iter()
+                    .any(|category| category == "functions"),
+                "{name} must retain its discovered function dependencies"
+            );
+        }
     }
 
     /// Verify that `generate_cflags_h("parser")` is self-consistent: only parser-group
@@ -300,9 +313,9 @@ mod tests {
         }
 
         // Every parser-group entry must appear with its group-local index.
-        for &(sqlite_flag, _, cats) in CFLAG_REGISTRY {
+        for &(sqlite_flag, index) in CFLAG_REGISTRY {
             let const_name = synq_const_name(sqlite_flag);
-            if !cats.contains(&"parser") {
+            if index >= PARSER_CFLAG_COUNT {
                 assert!(
                     !defines.contains_key(&const_name),
                     "non-parser flag {const_name} should not be in parser cflags.h"
@@ -322,8 +335,8 @@ mod tests {
         // Every define in the header (except COUNT) must correspond to a parser-group entry.
         let parser_const_names: std::collections::HashSet<String> = CFLAG_REGISTRY
             .iter()
-            .filter(|(_, _, cats)| cats.contains(&"parser"))
-            .map(|(n, _, _)| synq_const_name(n))
+            .take(PARSER_CFLAG_COUNT as usize)
+            .map(|(name, _)| synq_const_name(name))
             .collect();
         for (name, val) in &defines {
             if name == "SYNQ_CFLAG_IDX_COUNT" {
