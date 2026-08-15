@@ -37,7 +37,7 @@ keywords, semicolons on.
 
 ## RPC
 
-`syntaqlite::rpc` (feature `rpc`) — one JSON request in, one JSON envelope out.
+`syntaqlite::rpc` (feature `rpc`) accepts one JSON request and returns one JSON envelope.
 Backs the CLI's `serve json` loop and the [C API](@/reference/c-api.md#rpc-json-dispatch).
 
 | Type / Method | Description |
@@ -100,9 +100,9 @@ methods are per-statement.
 | `stmt.lineage()` | Per-column lineage: `Option<LineageResult<&[ColumnLineage]>>` |
 | `stmt.relations_accessed()` | Relations in FROM: `Option<LineageResult<&[RelationAccess]>>` |
 | `stmt.physical_tables_accessed()` | Physical tables after resolving CTEs/views: `Option<LineageResult<&[PhysicalTableAccess]>>` |
-| `stmt.defined_relations()` | `&[DefinedRelation]` — targets created by DDL (`CREATE TABLE`/`CREATE VIEW`) |
-| `stmt.unexpanded_views()` | `&[String]` — canonical names of views whose bodies weren't available for expansion |
-| `LineageResult<T>` | `Complete(T)` — fully resolved, or `Partial(T)` — some view bodies unavailable |
+| `stmt.defined_relations()` | `&[DefinedRelation]` containing targets created by DDL (`CREATE TABLE`/`CREATE VIEW`) |
+| `stmt.unexpanded_views()` | `&[String]` containing canonical names of views whose bodies were unavailable for expansion |
+| `LineageResult<T>` | `Complete(T)` when fully resolved; `Partial(T)` when some view bodies are unavailable |
 | `ColumnLineage` | `name: String`, `index: u32`, `origin: Option<ColumnOrigin>` |
 | `ColumnOrigin` | `table: String`, `column: String` |
 | `RelationAccess` | `name: String`, `kind: RelationKind` |
@@ -112,7 +112,7 @@ methods are per-statement.
 
 Lineage methods return `None` for non-query statements (CREATE, INSERT,
 etc.). A column's `origin` is populated only when the column is an
-untransformed passthrough — a direct column reference or a pure rename
+untransformed passthrough, such as a direct column reference or a pure rename
 alias. Expressions, casts, aggregates, and set-op (`UNION`, etc.)
 columns have `origin: None`. Result is `Partial` when a referenced view's
 body is unavailable for tracing through; `unexpanded_views()` lists the

@@ -249,7 +249,7 @@ typedef struct {
 
 ## RPC (JSON dispatch)
 
-A coarse JSON-in / JSON-out entry point to parse / format / tokenize / analyze —
+A coarse JSON-in / JSON-out entry point to parse / format / tokenize / analyze:
 the same protocol as the CLI's `serve json`, for in-process embedding. Header:
 `syntaqlite/rpc.h`. Lengths are `uint64_t`.
 

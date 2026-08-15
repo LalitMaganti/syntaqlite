@@ -92,15 +92,15 @@ errors. These exist at two levels.
 `syntaqlite/tests/cflag_validation.rs` tests that functions are correctly
 gated behind SQLite compile-time flags:
 
-- `SQLITE_ENABLE_MATH_FUNCTIONS` — `sin()`, `cos()`, `sqrt()`, `pi()`
+- `SQLITE_ENABLE_MATH_FUNCTIONS`: `sin()`, `cos()`, `sqrt()`, `pi()`
   available only when enabled
-- `SQLITE_OMIT_DATETIME_FUNCS` — `date()`, `strftime()` unavailable when
+- `SQLITE_OMIT_DATETIME_FUNCS`: `date()`, `strftime()` unavailable when
   omitted
-- `SQLITE_SOUNDEX` — `soundex()` only available with flag
-- `SQLITE_OMIT_JSON` — `json()` unavailable when omitted
-- Parser-level flags — `OMIT_CTE` suppresses `WITH`, `OMIT_WINDOWFUNC`
+- `SQLITE_SOUNDEX`: `soundex()` only available with flag
+- `SQLITE_OMIT_JSON`: `json()` unavailable when omitted
+- Parser-level flags: `OMIT_CTE` suppresses `WITH`, `OMIT_WINDOWFUNC`
   suppresses `OVER`, `OMIT_RETURNING` suppresses `RETURNING`
-- Cross-cutting — enabling one flag doesn't affect unrelated functions
+- Cross-cutting: enabling one flag doesn't affect unrelated functions
 
 ### Embedded SQL tests (Rust)
 

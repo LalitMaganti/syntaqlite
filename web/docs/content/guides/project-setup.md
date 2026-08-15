@@ -101,8 +101,8 @@ keyword-case = "upper"
 semicolons = true
 ```
 
-These are defaults. CLI flags like `--line-width` override them for one-off
-use. All values are optional; omitted fields use built-in defaults.
+All values are optional and use built-in defaults when omitted. CLI flags such
+as `--line-width` can override them for an individual command.
 
 ## Check levels
 
@@ -121,8 +121,8 @@ shorthands set multiple categories at once; per-category keys override them.
 
 ## Editor and tool integration
 
-The config file works automatically with all integrations. No per-tool
-configuration of formatting or validation settings is needed.
+All integrations read the config file, so formatting and validation settings
+do not need to be repeated for each tool.
 
 **VS Code:** install
 [syntaqlite: SQLite language server and formatter](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite).
@@ -133,7 +133,7 @@ It discovers `syntaqlite.toml` on startup. See the
 `syntaqlite lsp`. See [other editors](@/getting-started/other-editors.md) for
 copy-pasteable configs.
 
-**Claude Code, Cursor, Windsurf** — set up the MCP server. See
+**Claude Code, Cursor, Windsurf**: set up the MCP server. See
 [MCP server setup](@/guides/mcp.md).
 
 Restart your editor after adding `syntaqlite.toml`. Diagnostics appear inline
@@ -159,8 +159,8 @@ indent-width = 4
 schema = "deny"
 ```
 
-Once committed, this applies everywhere: CLI, editors, and CI. No per-tool
-configuration needed.
+Once committed, this configuration applies to the CLI, editors, and CI without
+separate settings for each tool.
 
 ## Precedence
 

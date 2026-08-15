@@ -21,7 +21,7 @@ The core insight is using `sqlite3_prepare_v2()` as ground truth. The TCL extens
 
 1. `sqlite3_prepare_v2()` tells us exactly whether this is a prepare-time error
 2. syntaqlite's parser + validator tells us what syntaqlite catches
-3. Compare the two — no guessing about error categories
+3. Compare the two: no guessing about error categories
 
 Runtime errors (constraints, arithmetic, etc.) never appear because we only call `prepare()`, not `step()`. DDL is stepped so schema accumulates in both the real database and syntaqlite's catalog.
 
@@ -29,10 +29,10 @@ Runtime errors (constraints, arithmetic, etc.) never appear because we only call
 
 | `prepare()` result | syntaqlite result | Meaning |
 |--------------------|--------------------|---------|
-| OK | No diagnostics | **Agreement** — both accept |
-| OK | Has diagnostics | **False positive** — syntaqlite flags valid SQL (regression if new) |
-| ERROR | Has diagnostics | **Agreement** — both reject |
-| ERROR | No diagnostics | **Gap** — syntaqlite misses a prepare-time error (baselined) |
+| OK | No diagnostics | **Agreement**: both accept |
+| OK | Has diagnostics | **False positive**: syntaqlite flags valid SQL (regression if new) |
+| ERROR | Has diagnostics | **Agreement**: both reject |
+| ERROR | No diagnostics | **Gap**: syntaqlite misses a prepare-time error (baselined) |
 
 ## Components
 
@@ -41,10 +41,10 @@ Runtime errors (constraints, arithmetic, etc.) never appear because we only call
 Expose the existing Rust `SemanticAnalyzer` / `Catalog` to C, following the same FFI pattern as the parser.
 
 **Files:**
-- `syntaqlite-syntax/include/syntaqlite/validation.h` — C header
-- `syntaqlite/src/semantic/ffi.rs` — Rust FFI layer
+- `syntaqlite-syntax/include/syntaqlite/validation.h`: C header
+- `syntaqlite/src/semantic/ffi.rs`: Rust FFI layer
 
-The validator works incrementally — `accumulate_ddl()` updates the catalog after each statement, so later statements can reference earlier DDL. The C API preserves this:
+The validator works incrementally: `accumulate_ddl()` updates the catalog after each statement, so later statements can reference earlier DDL. The C API preserves this:
 
 ```c
 SyntaqliteValidator* syntaqlite_validator_create_sqlite(void);
@@ -64,10 +64,10 @@ const SyntaqliteDiagnostic* syntaqlite_validator_diagnostics(const SyntaqliteVal
 C shared library loaded by `tclsh` that implements the SQLite TCL API surface.
 
 **Key commands:**
-- `sqlite3 DBNAME FILENAME` — creates real `sqlite3*` handle (in-memory) + syntaqlite parser + validator
-- `DBNAME eval SQL` — runs SQL through **both** SQLite and syntaqlite, logs comparison as JSON lines
-- `DBNAME close` — destroys everything
-- Other subcommands (`exists`, `onecolumn`, `transaction`, `function`, `collate`) — stubs or delegate to real SQLite
+- `sqlite3 DBNAME FILENAME`: creates real `sqlite3*` handle (in-memory) + syntaqlite parser + validator
+- `DBNAME eval SQL`: runs SQL through **both** SQLite and syntaqlite, logs comparison as JSON lines
+- `DBNAME close`: destroys everything
+- Other subcommands (`exists`, `onecolumn`, `transaction`, `function`, `collate`): stubs or delegate to real SQLite
 
 **Output**: JSON lines to a file, one per SQL statement:
 ```json
@@ -78,12 +78,12 @@ C shared library loaded by `tclsh` that implements the SQLite TCL API surface.
 
 ### 3. Tester Shim (`tester_shim.tcl`)
 
-Minimal replacement for SQLite's `tester.tcl`. The C extension handles dual-path comparison — the shim just routes SQL and handles test framework conventions:
+Minimal replacement for SQLite's `tester.tcl`. The C extension handles dual-path comparison: the shim just routes SQL and handles test framework conventions:
 
-- `execsql`, `catchsql` — delegate to extension's `db eval`
-- `do_test`, `do_execsql_test`, `do_catchsql_test` — run test body, don't check results
-- `ifcapable` — capability check (all enabled by default)
-- `finish_test`, `reset_db`, memory debug stubs, etc. — no-ops
+- `execsql`, `catchsql`: delegate to extension's `db eval`
+- `do_test`, `do_execsql_test`, `do_catchsql_test`: run test body, don't check results
+- `ifcapable`: capability check (all enabled by default)
+- `finish_test`, `reset_db`, memory debug stubs, etc.: no-ops
 
 **Location:** `tests/upstream/tcl/tester_shim.tcl`
 
@@ -118,7 +118,7 @@ syntaqlite-buildtools run-upstream-tests \
 
 ### 5. Convenience Script
 
-`tools/run-upstream-tests` — builds the TCL extension, builds the runner, and invokes with standard paths.
+`tools/run-upstream-tests`: builds the TCL extension, builds the runner, and invokes with standard paths.
 
 ## File Structure
 
@@ -158,7 +158,7 @@ tests/upstream_baselines/
 - **CI**: Separate CI job (requires tclsh + tcl-dev)
 - **Cflags**: `ifcapable` works natively via real TCL interpreter
 - **Formatting roundtrip testing**: Deferred to issue #8
-- **Validation**: Included from the start — validator C API is independently valuable
+- **Validation**: Included from the start: validator C API is independently valuable
 - **Error matching**: `sqlite3_prepare_v2()` as ground truth, no regex classifier needed
 
 ## Expected Output

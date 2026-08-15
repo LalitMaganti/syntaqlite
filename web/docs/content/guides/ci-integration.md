@@ -10,9 +10,9 @@ Run syntaqlite in CI to enforce consistent SQL formatting and catch schema
 errors before they reach production.
 
 If your project has a [`syntaqlite.toml`](@/reference/config-file.md),
-formatting options, schema routing, and check levels are all read
-automatically. No flags needed in CI. This keeps CI in sync with local
-development.
+syntaqlite reads its formatting options, schema routing, and check levels in CI
+as well as during local development, so the commands below do not need extra
+flags.
 
 ## Format checking
 
@@ -94,8 +94,8 @@ chmod +x .git/hooks/pre-push
 
 ## Formatting at scale
 
-syntaqlite is fast: it reuses internal allocations across files, so formatting
-thousands of files is practical:
+The formatter reuses internal allocations across files, which keeps this
+command practical even for repositories with thousands of SQL files:
 
 ```bash
 syntaqlite fmt -i "**/*.sql"

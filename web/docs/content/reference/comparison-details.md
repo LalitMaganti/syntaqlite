@@ -350,7 +350,7 @@ LIMIT 12;
 
 ### syntaqlite
 
-Static analysis — offline, no database needed. Finds **both** errors in one pass:
+Static analysis runs offline and reports **both** errors in one pass:
 
 ```text
 error: table 'monthly_stats' has 2 values for 3 columns
@@ -368,7 +368,7 @@ warning: unknown function 'ROUDN'
 
 ### sqlite3
 
-Runtime execution — stops at first error:
+Runtime execution stops at the first error:
 
 ```text
 Error: in prepare, table monthly_stats has 2 values for 3 columns
@@ -376,7 +376,7 @@ Error: in prepare, table monthly_stats has 2 values for 3 columns
 
 ### sqlite-runner-lsp
 
-Runtime via LSP — wraps sqlite3, same single error:
+The LSP wraps sqlite3 at runtime and reports the same single error:
 
 ```text
 (no diagnostics)

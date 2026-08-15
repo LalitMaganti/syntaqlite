@@ -98,7 +98,7 @@ body {
 }
 
 /* ------------------------------------------------------------------ */
-/* Content — shared styles for .home and article                      */
+/* Content: shared styles for .home and article                      */
 /* ------------------------------------------------------------------ */
 
 .home h1, article h1 { font-size: var(--text-xl); font-weight: 700; margin-bottom: var(--sp-xl); }
@@ -156,7 +156,7 @@ article hr { border: none; border-top: 1px solid var(--c-border); margin: var(--
 article blockquote { border-left: 3px solid var(--c-border-strong); padding-left: var(--sp-lg); color: var(--c-muted); margin-bottom: var(--sp-lg); }
 
 /* ------------------------------------------------------------------ */
-/* Label — reusable uppercase muted caption                           */
+/* Label: reusable uppercase muted caption                           */
 /* ------------------------------------------------------------------ */
 
 .label,
@@ -173,7 +173,7 @@ article th,
 }
 
 /* ------------------------------------------------------------------ */
-/* Card — reusable bordered link block                                */
+/* Card: reusable bordered link block                                */
 /* ------------------------------------------------------------------ */
 
 .entry-card,
@@ -428,7 +428,7 @@ main {
 }
 
 /* ------------------------------------------------------------------ */
-/* Home — example columns                                             */
+/* Home: example columns                                             */
 /* ------------------------------------------------------------------ */
 
 .home-example {
@@ -448,7 +448,7 @@ main {
 }
 
 /* ------------------------------------------------------------------ */
-/* Home — feature blocks                                              */
+/* Home: feature blocks                                              */
 /* ------------------------------------------------------------------ */
 
 .home-feature {
@@ -485,7 +485,7 @@ main {
 }
 
 /* ------------------------------------------------------------------ */
-/* Home — diagnostics                                                 */
+/* Home: diagnostics                                                 */
 /* ------------------------------------------------------------------ */
 
 .home-diagnostic { margin: var(--sp-2xl) 0; }
@@ -498,7 +498,7 @@ main {
 .diag-help      { color: var(--c-diag-help); }
 
 /* ------------------------------------------------------------------ */
-/* Home — entry card grid                                             */
+/* Home: entry card grid                                             */
 /* ------------------------------------------------------------------ */
 
 .entry-cards {
@@ -514,7 +514,7 @@ main {
 .home h2:last-of-type { margin-top: 2.5rem; }
 
 /* ------------------------------------------------------------------ */
-/* Home — tag badge                                                   */
+/* Home: tag badge                                                   */
 /* ------------------------------------------------------------------ */
 
 .home-tag {
@@ -587,7 +587,7 @@ main {
 }
 
 /* ------------------------------------------------------------------ */
-/* Syntax highlighting — Prism token colors                           */
+/* Syntax highlighting: Prism token colors                           */
 /* ------------------------------------------------------------------ */
 
 pre[class*="language-"],

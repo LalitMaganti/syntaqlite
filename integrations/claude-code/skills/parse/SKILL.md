@@ -25,13 +25,13 @@ syntaqlite parse -o json query.sql
 
 ## Options
 
-- `-e, --expression <SQL>` — parse an inline SQL expression instead of files
-- `-o, --output <FORMAT>` — output format (default: text)
+- `-e, --expression <SQL>`: parse an inline SQL expression instead of files
+- `-o, --output <FORMAT>`: output format (default: text)
 
 ## Output modes
 
-- `text` — Human-readable indented AST tree (default)
-- `json` — Machine-readable JSON AST
+- `text`: Human-readable indented AST tree (default)
+- `json`: Machine-readable JSON AST
 
 ## Notes
 

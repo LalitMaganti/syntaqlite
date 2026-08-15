@@ -5,7 +5,7 @@ Date: 2026-03-01
 
 ## Key Finding
 
-String extraction complexity is concentrated in Python and JS/TS. Most target languages (Go, Rust, Java, C++, Kotlin, Swift) have no interpolation inside string literals or only simple interpolation — making extraction trivial.
+String extraction complexity is concentrated in Python and JS/TS. Most target languages (Go, Rust, Java, C++, Kotlin, Swift) have no interpolation inside string literals or only simple interpolation: making extraction trivial.
 
 ## Per-Language Analysis
 
@@ -24,7 +24,7 @@ String extraction complexity is concentrated in Python and JS/TS. Most target la
 
 ### Default: server-side extraction in Rust
 
-For most languages, a lightweight Rust string-literal finder (50–100 lines per language) is sufficient. No external parser dependency needed — just match quote characters, handle escapes, and optionally match simple interpolation delimiters.
+For most languages, a lightweight Rust string-literal finder (50–100 lines per language) is sufficient. No external parser dependency needed: just match quote characters, handle escapes, and optionally match simple interpolation delimiters.
 
 This covers: Go, Rust, Java, C++, Kotlin, Swift, and Python.
 
@@ -36,7 +36,7 @@ TypeScript's own language service already has perfect AST knowledge of template 
 - `${expr}` substitution handling with offset preservation
 - Proxying of LanguageService methods
 
-This means a thin TS plugin (~50 lines of glue) can send `EmbeddedSqlFragment` data to syntaqlite, avoiding any JS/TS parsing in Rust. The CLI (`syntaqlite validate file.js`) would still need a simple server-side fallback — but template literal tokenizing is straightforward (match `` ` `` and `${`/`}`).
+A thin TS plugin (about 50 lines of glue) can send `EmbeddedSqlFragment` data to syntaqlite, avoiding any JS/TS parsing in Rust. The CLI (`syntaqlite validate file.js`) would still need a simple server-side fallback, but tokenizing template literals is straightforward: match `` ` `` and `${`/`}`.
 
 ### The unified interface
 
@@ -85,7 +85,7 @@ It doesn't matter whether this struct was built by Rust code inside the server o
 
 For Python, start with a hand-rolled extractor. F-string brace matching is well-scoped and avoids adding a parser dependency. Fall back to tree-sitter-python later only if edge cases (PEP 701 nested f-strings) prove painful.
 
-For JS/TS, use the TS plugin for editor contexts. For CLI, a hand-rolled template literal tokenizer is straightforward — `${}` hole detection is simpler than Python's `{}` (no ambiguity with dict literals).
+For JS/TS, use the TS plugin for editor contexts. For CLI, a hand-rolled template literal tokenizer is straightforward: `${}` hole detection is simpler than Python's `{}` (no ambiguity with dict literals).
 
 Tree-sitter is the insurance policy: if hand-rolled extractors accumulate too many edge cases, swap to tree-sitter for both languages with one shared runtime dependency.
 
@@ -94,9 +94,9 @@ Tree-sitter is the insurance policy: if hand-rolled extractors accumulate too ma
 ### The problem
 
 Formatting SQL inside host language strings requires three steps:
-1. **Format the SQL** — the existing formatter handles this, with `begin_macro`/`end_macro` emitting holes verbatim
-2. **Re-embed** — splice the formatted SQL back into the host string, handling indentation, quoting, and escapes
-3. **Coexist** — don't fight the user's existing host language formatter (Black, Ruff, Prettier)
+1. **Format the SQL**: the existing formatter handles this, with `begin_macro`/`end_macro` emitting holes verbatim
+2. **Re-embed**: splice the formatted SQL back into the host string, handling indentation, quoting, and escapes
+3. **Coexist**: don't fight the user's existing host language formatter (Black, Ruff, Prettier)
 
 ### Re-embedding challenges
 
@@ -107,7 +107,7 @@ Formatting SQL inside host language strings requires three steps:
 def get_users():
     query = f"SELECT * FROM {table} WHERE id = {user_id} AND active = 1"
 
-# After — lines aligned to string indentation
+# After: lines aligned to string indentation
 def get_users():
     query = f"""
         SELECT
@@ -133,7 +133,7 @@ There is no LSP primitive for embedded language formatting. Projects that format
 | **Formatter owns everything** | One formatter handles the whole file, calling sub-formatters for embedded regions internally | Prettier (HTML → CSS/JS), VS Code HTML extension |
 | **Virtual document projection** | Language server creates virtual documents per embedded region, dispatches formatting to other servers | Volar (Vue), Astro language server |
 
-syntaqlite is in the "owns everything" position for SQL — it IS the SQL formatter. But it can't own the host file (Python/JS). So the question is: can the host formatter delegate to syntaqlite?
+syntaqlite owns the SQL formatting step, but it cannot own the host Python or JavaScript file. The remaining question is whether the host formatter can delegate SQL formatting to syntaqlite.
 
 ### Delegation from host formatters
 
@@ -144,7 +144,7 @@ syntaqlite is in the "owns everything" position for SQL — it IS the SQL format
 | **Black** | No | Doesn't touch string contents, no plugin hook |
 | **Ruff** | No | Same as Black |
 
-For **JS/TS**, a Prettier plugin is the natural distribution path — ~50 lines of glue, users already have Prettier, and Prettier handles all re-embedding (indentation, template literal syntax).
+For **JS/TS**, a Prettier plugin is the natural distribution path: ~50 lines of glue, users already have Prettier, and Prettier handles all re-embedding (indentation, template literal syntax).
 
 For **Python**, no formatter will delegate. The only options are the syntaqlite **CLI** (`syntaqlite fmt --lang python`) or an **LSP Code Action** ("Format embedded SQL").
 
@@ -152,7 +152,7 @@ For **Python**, no formatter will delegate. The only options are the syntaqlite 
 
 ### Key insight
 
-TypeScript has a rich plugin ecosystem (TS Language Service Plugins, Prettier plugins) that runs inside the user's existing toolchain. Other languages (Python, Go, Rust, etc.) don't have equivalents — they need a standalone LSP server or CLI.
+TypeScript has a rich plugin ecosystem (TS Language Service Plugins, Prettier plugins) that runs inside the user's existing toolchain. Other languages (Python, Go, Rust, etc.) don't have equivalents and therefore need a standalone LSP server or CLI.
 
 This means two different distribution strategies:
 
@@ -164,7 +164,7 @@ This means two different distribution strategies:
      ├── @syntaqlite/ts-plugin     ← TS Language Service Plugin
      │     runs inside tsserver
      │     provides: validation, completions, diagnostics
-     │     works in: VS Code, Neovim, JetBrains — anywhere tsserver runs
+     │     works in: VS Code, Neovim, JetBrains: anywhere tsserver runs
      │
      └── prettier-plugin-syntaqlite ← Prettier plugin
            runs inside prettier
@@ -175,7 +175,7 @@ This means two different distribution strategies:
 Both packages call into the WASM build. The TS plugin handles validation + completions. The Prettier plugin handles formatting. Users install both and get the full experience with zero extra processes.
 
 **TS Language Service Plugin advantages:**
-- Runs inside tsserver — zero extra processes
+- Runs inside tsserver: zero extra processes
 - Sees tagged template literals with full type information
 - Diagnostics appear as native TypeScript errors
 - Works in any editor that uses tsserver (VS Code, Neovim, JetBrains, etc.)

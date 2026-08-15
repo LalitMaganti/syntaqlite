@@ -2,7 +2,7 @@
 
 ## Overview
 
-syntaqlite needs to support SQLite dialects — databases that use SQLite as a base and add extensions (libSQL, Perfetto, rqlite, etc.). This document describes the architecture for making the parser, formatter, linter, and LSP work with arbitrary grammar extensions while keeping the core runtime grammar-agnostic.
+syntaqlite needs to support SQLite dialects: databases that use SQLite as a base and add extensions (libSQL, Perfetto, rqlite, etc.). This document describes the architecture for making the parser, formatter, linter, and LSP work with arbitrary grammar extensions while keeping the core runtime grammar-agnostic.
 
 ## Design Principles
 
@@ -24,22 +24,22 @@ syntaqlite-cli            # lib + bin: reusable CLI framework + default binary
 
 ### syntaqlite-runtime
 
-The runtime crate contains all grammar-agnostic machinery. It works with opaque `u32` tags and descriptor tables — never names a specific node type or token.
+The runtime crate contains all grammar-agnostic machinery. It works with opaque `u32` tags and descriptor tables: never names a specific node type or token.
 
 **C code (compiled via `build.rs`):**
 
-- `arena.c` — arena allocator for AST nodes
-- `parser_engine.c` — Lemon push-parser loop (derived from `lempar.c` template)
-- `tokenizer.c` — tokenizer framework (scan loop, trivia collection, char class logic)
+- `arena.c`: arena allocator for AST nodes
+- `parser_engine.c`: Lemon push-parser loop (derived from `lempar.c` template)
+- `tokenizer.c`: tokenizer framework (scan loop, trivia collection, char class logic)
 
 **Rust code:**
 
-- `parser.rs` — generic parser driver, feeds tokens into the C engine
-- `node.rs` — `FieldDescriptor`, `FieldVal`, raw node access by tag + offset
-- `fmt/interpreter.rs` — bytecode interpreter (generic, dialect provides bytecode blob)
-- `fmt/doc.rs` — Doc IR and renderer (Wadler-Lindig style)
-- `lint/engine.rs` — rule runner, diagnostic infrastructure
-- `lsp/server.rs` — LSP protocol handling, workspace management
+- `parser.rs`: generic parser driver, feeds tokens into the C engine
+- `node.rs`: `FieldDescriptor`, `FieldVal`, raw node access by tag + offset
+- `fmt/interpreter.rs`: bytecode interpreter (generic, dialect provides bytecode blob)
+- `fmt/doc.rs`: Doc IR and renderer (Wadler-Lindig style)
+- `lint/engine.rs`: rule runner, diagnostic infrastructure
+- `lsp/server.rs`: LSP protocol handling, workspace management
 
 **Rust API (data-pointer parameterized, no generics/traits):**
 
@@ -74,22 +74,22 @@ The SQLite dialect crate. Depends on `syntaqlite-runtime`. Provides both the gen
 
 **Generated C code (via `syntaqlite-codegen`):**
 
-- `sqlite_parse_tables.c` — Lemon parser state machine (`yy_action[]`, `yy_lookahead[]`, etc.)
-- `sqlite_reduce.c` — reduce function (switch statement calling builder functions)
-- `sqlite_keyword.c` — keyword hash tables
-- `node.h` — node struct typedefs
-- `ast_builder.h` — inline builder functions (one per node type)
+- `sqlite_parse_tables.c`: Lemon parser state machine (`yy_action[]`, `yy_lookahead[]`, etc.)
+- `sqlite_reduce.c`: reduce function (switch statement calling builder functions)
+- `sqlite_keyword.c`: keyword hash tables
+- `node.h`: node struct typedefs
+- `ast_builder.h`: inline builder functions (one per node type)
 
 **Generated Rust code (via `syntaqlite-codegen`):**
 
-- `tokens.rs` — `TokenType` enum
-- `nodes.rs` — node structs, `NodeTag` enum, `FieldDescriptor` arrays per node type
-- `fmt.bin` — formatter bytecode blob
+- `tokens.rs`: `TokenType` enum
+- `nodes.rs`: node structs, `NodeTag` enum, `FieldDescriptor` arrays per node type
+- `fmt.bin`: formatter bytecode blob
 
 **Hand-written Rust code:**
 
-- `lib.rs` — high-level API wrapping the runtime with SQLite-specific data
-- `lint_rules.rs` — SQLite-specific lint rules (uses generated node types)
+- `lib.rs`: high-level API wrapping the runtime with SQLite-specific data
+- `lint_rules.rs`: SQLite-specific lint rules (uses generated node types)
 
 **High-level API example:**
 
@@ -121,7 +121,7 @@ lint = ["parser", "syntaqlite-runtime/lint"]
 
 `syntaqlite-codegen-sqlite` handles SQLite-specific extraction and orchestration: tokenizer/keyword extraction from SQLite C sources, lemon/mkkeyword tools, and the pipeline that wires SQLite extraction into generic dialect codegen.
 
-For extension dialects, codegen merges the base SQLite grammar with extension grammar files and generates a complete set of artifacts (not a delta — Lemon produces monolithic tables).
+For extension dialects, codegen merges the base SQLite grammar with extension grammar files and generates a complete set of artifacts (not a delta: Lemon produces monolithic tables).
 
 ### syntaqlite-cli
 
@@ -194,7 +194,7 @@ Extension grammar files are merged with the base SQLite grammar:
 
 **Token ID stability:** Base token IDs are stable regardless of extensions because base terminals appear first in the grammar and get IDs by order of first appearance. A test verifies this property (compare base-only vs. merged token IDs).
 
-**Modifying existing rules:** Extensions can add new alternatives to existing nonterminals (e.g., `expr ::= expr ARROW expr`). This works naturally — Lemon just gets more rules for that nonterminal. The parser tables are regenerated from scratch, and the new node type flows through the existing nonterminal.
+**Modifying existing rules:** Extensions can add new alternatives to existing nonterminals (e.g., `expr ::= expr ARROW expr`). This works naturally: Lemon just gets more rules for that nonterminal. The parser tables are regenerated from scratch, and the new node type flows through the existing nonterminal.
 
 ### What codegen produces
 
@@ -202,8 +202,8 @@ Given base grammar + extension grammar + extension nodes, codegen generates:
 
 **C outputs:**
 
-- Parser tables (complete, not a delta — includes base + extension)
-- Reduce function (complete — handles all rules)
+- Parser tables (complete, not a delta: includes base + extension)
+- Reduce function (complete: handles all rules)
 - Keyword hash (regenerated with base + extension keywords)
 - Node structs + builders (base + extension nodes)
 
@@ -254,7 +254,7 @@ The amalgamation includes both runtime engine code and dialect-specific tables:
 1. Run codegen with extension grammar → produces `my_dialect.h`
 2. Compile: `cc -c syntaqlite.c -DSYNTAQLITE_DIALECT=\"my_dialect.h\"`
 
-The dialect header is a **complete replacement** of the dialect section (not a delta). This is necessary because Lemon produces monolithic parser tables — adding a grammar rule changes the entire state machine.
+The dialect header is a **complete replacement** of the dialect section (not a delta). This is necessary because Lemon produces monolithic parser tables: adding a grammar rule changes the entire state machine.
 
 ### C API
 
@@ -349,7 +349,7 @@ The current codebase has everything in a handful of crates. The migration to the
 
 1. **Extract the runtime.** Move grammar-agnostic C code (arena, parser engine, tokenizer framework) and Rust code (generic parser driver, bytecode interpreter, doc renderer) into `syntaqlite-runtime`.
 
-2. **Reshape `syntaqlite` as a dialect crate.** The remaining code — generated parser tables, token/node definitions, keyword hash, formatter bytecode — becomes the SQLite dialect crate. Add the high-level typed API.
+2. **Reshape `syntaqlite` as a dialect crate.** The remaining code: generated parser tables, token/node definitions, keyword hash, formatter bytecode: becomes the SQLite dialect crate. Add the high-level typed API.
 
 3. **Update codegen.** Teach `syntaqlite-codegen`/`syntaqlite-codegen-sqlite` to accept extension grammar/node directories and produce merged output. Add amalgamation generation.
 
@@ -361,7 +361,7 @@ The current codebase has everything in a handful of crates. The migration to the
 
 - **Tokenizer boundary.** How much of the tokenizer is runtime vs. dialect-specific? The scan loop and trivia collection are generic, but `getToken()` itself has SQLite-specific rules (string literals, hex integers, etc.). Dialects might need custom tokenizer behavior (e.g., `#` comments). Need to define the extension point.
 
-- **Lint rule distribution.** Some lint rules are generic (e.g., "unused alias"), some are dialect-specific (e.g., "SQLite < 3.39 doesn't support RIGHT JOIN"). Where do generic rules live — in the runtime or in `syntaqlite`?
+- **Lint rule distribution.** Some lint rules are generic (e.g., "unused alias"), some are dialect-specific (e.g., "SQLite < 3.39 doesn't support RIGHT JOIN"). Where do generic rules live: in the runtime or in `syntaqlite`?
 
 - **Node ID allocation convention.** Codegen assigns node tags sequentially across base + extension. Should we guarantee base tags are always 1–N and extension tags start at N+1? This would let code distinguish base vs. extension nodes without knowing the specific dialect.
 

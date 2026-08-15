@@ -5,16 +5,16 @@ Last updated: 2026-02-28
 
 ## Goal
 
-Add LSP support for SQL embedded inside host language strings — Python f-strings, JavaScript template literals, etc. The primary consumers are AI coding tools (Claude, Gemini, Codex) that speak LSP, not just VS Code.
+Add LSP support for SQL embedded inside host language strings: Python f-strings, JavaScript template literals, etc. The primary consumers are AI coding tools (Claude, Gemini, Codex) that speak LSP, not just VS Code.
 
 The approach is **server-side**: the smarts live in the syntaqlite engine, not in editor-specific extensions. Any LSP client gets embedded SQL support for free.
 
 ## Design Principles
 
-1. **Server-side extraction** — the syntaqlite engine understands host languages, not the client
-2. **Holes, not heuristics** — interpolation expressions (`{x}`, `${x}`) become typed ErrorNode placeholders in the AST, not synthetic identifiers
-3. **Reuse existing infrastructure** — `begin_macro`/`end_macro` for hole regions, Lemon error recovery for hole parsing, the validation walker already handles `Other` nodes gracefully
-4. **Incremental** — start with Python f-strings, extend to JS/TS template literals, then others
+1. **Server-side extraction**: the syntaqlite engine understands host languages, not the client
+2. **Holes, not heuristics**: interpolation expressions (`{x}`, `${x}`) become typed ErrorNode placeholders in the AST, not synthetic identifiers
+3. **Reuse existing infrastructure**: `begin_macro`/`end_macro` for hole regions, Lemon error recovery for hole parsing, the validation walker already handles `Other` nodes gracefully
+4. **Incremental**: start with Python f-strings, extend to JS/TS template literals, then others
 
 ## Architecture
 
@@ -35,7 +35,7 @@ The approach is **server-side**: the smarts live in the syntaqlite engine, not i
              │  ParseError { root: Some(tree) }
              ▼
   ┌─────────────────────┐
-  │  Validation Walker   │  Existing walker — ErrorNodes are
+  │  Validation Walker   │  Existing walker: ErrorNodes are
   │  (unchanged)         │  silently skipped in all positions
   └──────────┬──────────┘
              │  Vec<Diagnostic> with SQL-relative offsets
@@ -111,7 +111,7 @@ ErrorNode (tag 0) flows through the AST dispatch as `Other`:
 
 ### Macro regions for verbatim formatting
 
-`begin_macro(call_offset, call_length)` / `end_macro()` already mark regions where the formatter emits the original source text verbatim. This is exactly right for interpolation holes — `{user_id}` should format as `{user_id}`, not get reformatted.
+`begin_macro(call_offset, call_length)` / `end_macro()` already mark regions where the formatter emits the original source text verbatim. This is exactly right for interpolation holes: `{user_id}` should format as `{user_id}`, not get reformatted.
 
 ### Prototype tests
 
@@ -132,7 +132,7 @@ A lightweight tokenizer for each host language that:
 2. Identifies the string boundaries (excluding quotes, prefix characters)
 3. Locates interpolation holes and their byte ranges
 
-**Not a full parser.** We only need to find strings and their holes. The extractor doesn't need to understand the host language's AST — just its string literal syntax.
+**Not a full parser.** We only need to find strings and their holes. The extractor doesn't need to understand the host language's AST: just its string literal syntax.
 
 #### Python f-strings
 
@@ -360,7 +360,7 @@ For `.py`/`.js`/`.ts` files, the server uses `open_host_document` instead of `op
 | String type | Example | SQL detection |
 |-------------|---------|---------------|
 | f-string | `f"SELECT * FROM {t}"` | Starts with SQL keyword |
-| Tagged f-string | _(N/A in Python)_ | — |
+| Tagged f-string | _(N/A in Python)_ |: |
 | Raw f-string | `rf"SELECT * FROM {t}"` | Same as f-string |
 | Multi-line f-string | `f"""SELECT ..."""` | Same, handle triple quotes |
 | Concatenated | `f"SELECT " + f"FROM {t}"` | Future: join fragments |
@@ -377,7 +377,7 @@ f"WHERE name = '{name}'"                # nested quotes
 f"SELECT {','.join(cols)} FROM t"       # complex expression
 ```
 
-We don't need to parse the Python expression — just find matching braces. Handle:
+We don't need to parse the Python expression: just find matching braces. Handle:
 - Nested `{}` (dict literals, set comprehensions)
 - Strings within holes (which may contain `}`)
 - `{{` / `}}` escape sequences (literal braces, not holes)
@@ -416,16 +416,16 @@ Same approach: find `${`, track brace depth to find matching `}`.
 
 ## Open Questions
 
-1. **Multi-statement strings**: `f"CREATE TABLE t(x); INSERT INTO t VALUES({v})"` — do we handle multiple statements in one string? The parser already supports multi-statement parsing, so this should work.
+1. **Multi-statement strings**: `f"CREATE TABLE t(x); INSERT INTO t VALUES({v})"`: do we handle multiple statements in one string? The parser already supports multi-statement parsing, so this should work.
 
-2. **String concatenation**: `f"SELECT * FROM " + f"{table}"` — joining fragments across concatenation operators is harder. Defer to Phase 2+.
+2. **String concatenation**: `f"SELECT * FROM " + f"{table}"`: joining fragments across concatenation operators is harder. Defer to Phase 2+.
 
-3. **Nested f-strings**: Python 3.12+ allows `f"{'SELECT' if x else 'INSERT'}"` — the SQL content itself could be dynamic. These are fundamentally unparseable; skip them.
+3. **Nested f-strings**: Python 3.12+ allows `f"{'SELECT' if x else 'INSERT'}"`: the SQL content itself could be dynamic. These are fundamentally unparseable; skip them.
 
 4. **Schema context**: How does the LSP know about the database schema for a Python project? Options: parse `CREATE TABLE` in `.sql` files, read `alembic` migrations, accept a config file, or let the client provide `SessionContext`. Start with client-provided context.
 
 5. **False positive suppression**: What if a string looks like SQL but isn't? Provide a `# syntaqlite: ignore` comment directive, or only activate on tagged strings / explicit opt-in.
 
-6. **Format specifiers**: `f"WHERE id = {uid!r}"` — the `!r` is a Python format spec, not SQL. The hole extractor must strip format specifiers from the hole range.
+6. **Format specifiers**: `f"WHERE id = {uid!r}"`: the `!r` is a Python format spec, not SQL. The hole extractor must strip format specifiers from the hole range.
 
-7. **Escape sequences**: `f"WHERE name = 'O\\'Brien'"` — Python string escapes affect the SQL content. The extractor must unescape before feeding to the SQL parser.
+7. **Escape sequences**: `f"WHERE name = 'O\\'Brien'"`: Python string escapes affect the SQL content. The extractor must unescape before feeding to the SQL parser.

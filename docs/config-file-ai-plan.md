@@ -9,14 +9,14 @@ Add a `syntaqlite.toml` project configuration file that serves as the single,
 editor-agnostic source of truth for syntaqlite settings. Today, configuration is
 fragmented: formatting options are CLI-only flags, schema paths are VS Code-only
 settings, and the LSP hardcodes `FormatConfig::default()`. A project config file
-unifies all of these and makes syntaqlite work properly in any editor — Claude
-Code, Neovim, Helix, Zed — without each needing bespoke configuration plumbing.
+unifies all of these and lets syntaqlite work in Claude Code, Neovim, Helix,
+and Zed without bespoke configuration for each editor.
 
 ## Why now
 
 The immediate trigger is the Claude Code plugin. The VS Code extension has a
 settings UI for `syntaqlite.schemaPath` and `syntaqlite.schemas` (glob-based
-schema routing). Claude Code plugins have no equivalent mechanism — there's no
+schema routing). Claude Code plugins have no equivalent mechanism: there's no
 runtime UI for user settings. Without a config file, Claude Code users have no
 way to tell the LSP which schema to use.
 
@@ -28,12 +28,12 @@ directly eliminates this entirely.
 
 ## Design Principles
 
-1. **Server-side** — the LSP reads the config file itself; editors don't need to
+1. **Server-side**: the LSP reads the config file itself; editors don't need to
    understand it or translate it into `initializationOptions`
-2. **Walk up** — search from the file being processed up to the filesystem root,
+2. **Walk up**: search from the file being processed up to the filesystem root,
    stop at the first `syntaqlite.toml` found (same as rustfmt, Ruff, Prettier)
-3. **CLI flag override** — CLI args always win over config file values
-4. **Config file is the single source of truth** — editor extensions do not
+3. **CLI flag override**: CLI args always win over config file values
+4. **Config file is the single source of truth**: editor extensions do not
    duplicate tool settings. Following rustfmt, Ruff, Prettier, and Pyright:
    editors only have settings for editor-specific concerns (binary path,
    enable/disable), not tool behavior. The VS Code extension's `schemaPath`,
@@ -51,7 +51,7 @@ directly eliminates this entirely.
 | Prettier | `.prettierrc` | JSON/YAML/TOML | Walk up |
 | SQLFluff | `.sqlfluff` | INI | Walk up |
 | Pyright | `pyrightconfig.json` | JSON | Project root |
-| gopls | None | — | Editor settings only |
+| gopls | None |: | Editor settings only |
 
 ### Editor extension behavior
 
@@ -60,14 +60,14 @@ duplicate tool settings. The project config file is authoritative.
 
 | Tool | VS Code extension settings | Project config |
 |------|---------------------------|----------------|
-| rustfmt | None — rust-analyzer reads `rustfmt.toml` | `rustfmt.toml` |
+| rustfmt | None: rust-analyzer reads `rustfmt.toml` | `rustfmt.toml` |
 | Ruff | Extension behavior only (enable/disable) | `ruff.toml` / `pyproject.toml` |
 | Prettier | Fallback only when no project config | `.prettierrc` |
 | Pyright | Defers to project config | `pyrightconfig.json` |
 | ESLint | Defers to project config | `eslint.config.js` |
 
 We follow both conventions: `syntaqlite.toml` for tool config, and the VS Code
-extension only keeps `syntaqlite.serverPath` (binary location — genuinely
+extension only keeps `syntaqlite.serverPath` (binary location: genuinely
 editor-specific).
 
 ## File format
@@ -82,7 +82,7 @@ editor-specific).
 "migrations/*.sql" = []  # no schema validation for migrations
 
 # Default schema for SQL files that don't match any glob above.
-# Optional — if omitted, unmatched files get no schema.
+# Optional: if omitted, unmatched files get no schema.
 # schema = "schema.sql"
 
 # Formatting options (all optional, shown with defaults).
@@ -100,9 +100,9 @@ matched against the path of the SQL file relative to the directory containing
 `syntaqlite.toml`.
 
 Resolution order (first match wins):
-1. `[schemas]` glob entries — checked in order, first matching glob wins
-2. `schema` top-level key — fallback for unmatched files
-3. No schema — syntax-only validation
+1. `[schemas]` glob entries: checked in order, first matching glob wins
+2. `schema` top-level key: fallback for unmatched files
+3. No schema: syntax-only validation
 
 Schema file paths are relative to the directory containing `syntaqlite.toml`.
 
@@ -141,10 +141,10 @@ The LSP no longer accepts schema paths from `initializationOptions` or
 `workspace/didChangeConfiguration`. The config file is the only source.
 
 **Files changed:**
-- `syntaqlite/src/lsp/server.rs` — config discovery, schema resolution per
+- `syntaqlite/src/lsp/server.rs`: config discovery, schema resolution per
   document, format config from file, remove `load_schema_from_settings()` and
   `load_schema_from_options()`
-- `syntaqlite/src/lsp/host.rs` — store `FormatConfig` (currently missing), store
+- `syntaqlite/src/lsp/host.rs`: store `FormatConfig` (currently missing), store
   per-glob schema catalogs
 
 ### 2. CLI `fmt` command
@@ -165,7 +165,7 @@ syntaqlite fmt -w 120 query.sql
 ```
 
 **Files changed:**
-- `syntaqlite-cli/src/runtime.rs` — load config, merge with CLI args in
+- `syntaqlite-cli/src/runtime.rs`: load config, merge with CLI args in
   `cmd_format()`
 
 ### 3. CLI `validate` command
@@ -187,7 +187,7 @@ syntaqlite validate --schema other.sql src/query.sql
 ```
 
 **Files changed:**
-- `syntaqlite-cli/src/runtime.rs` — load config, resolve schemas in
+- `syntaqlite-cli/src/runtime.rs`: load config, resolve schemas in
   `cmd_validate()`
 
 ### 4. CLI `fmt --check` (CI usage)
@@ -231,19 +231,19 @@ The following are **deleted** from the extension:
 - `initializationOptions.schemaPath`
 
 The only remaining VS Code setting is `syntaqlite.serverPath` (where to find the
-binary — genuinely editor-specific, not tool behavior).
+binary: genuinely editor-specific, not tool behavior).
 
 **Files changed:**
-- `integrations/vscode/src/extension.ts` — delete schema resolution, simplify
+- `integrations/vscode/src/extension.ts`: delete schema resolution, simplify
   activation
-- `integrations/vscode/package.json` — remove `schemaPath`, `schemas` settings,
+- `integrations/vscode/package.json`: remove `schemaPath`, `schemas` settings,
   remove `minimatch` dependency
 
 ### 6. Claude Code plugin
 
 **Current state:** The LSP config in `plugin.json` has no way to specify schemas.
 
-**After:** Works automatically — the LSP discovers `syntaqlite.toml` in the
+**After:** Works automatically: the LSP discovers `syntaqlite.toml` in the
 project. No changes needed to the Claude Code plugin itself.
 
 **Files changed:** None. This is the whole point.
@@ -255,18 +255,18 @@ use hardcoded defaults. No schema or config support.
 
 **After:** The MCP server could optionally discover `syntaqlite.toml` from the
 working directory to use project-specific formatting options and schemas. This is
-a stretch goal — the MCP server processes inline SQL snippets, not files, so
+a stretch goal: the MCP server processes inline SQL snippets, not files, so
 glob-based schema routing doesn't apply naturally. The format config section is
 useful though.
 
-**Files changed:** `syntaqlite-cli/src/mcp.rs` — optional, low priority.
+**Files changed:** `syntaqlite-cli/src/mcp.rs`: optional, low priority.
 
 ## Implementation
 
 ### New crate dependency
 
 Add `toml = "0.8"` to `syntaqlite-cli/Cargo.toml`. The TOML parsing lives in
-the CLI crate, not the core library — the core library doesn't need to know about
+the CLI crate, not the core library: the core library doesn't need to know about
 config files.
 
 ### New module: `syntaqlite-cli/src/config.rs`
@@ -307,7 +307,7 @@ Key details:
 - Uses `indexmap::IndexMap` (not `HashMap`) for schemas so glob order is
   preserved (first match wins)
 - All format fields are `Option` so we can distinguish "not set" from "set to
-  default" — unset fields fall back to CLI args or hardcoded defaults
+  default": unset fields fall back to CLI args or hardcoded defaults
 - `discover()` returns the config dir so relative schema paths can be resolved
 
 ### Config discovery function
@@ -393,7 +393,7 @@ The LSP server changes are the most involved:
 4. **On file watch:** re-read `syntaqlite.toml` when it changes
 5. **Delete:** `load_schema_from_settings()`, `load_schema_from_options()`, and
    all `initializationOptions.schemaPath` / `didChangeConfiguration` schema
-   handling — editors no longer send schema config
+   handling: editors no longer send schema config
 
 The main architectural question is schema catalog caching. If five SQL files all
 map to the same `schema/main.sql`, we should parse that schema file once, not
@@ -439,11 +439,11 @@ reuse catalogs across documents.
 ## Open questions
 
 1. **Should `syntaqlite.toml` support validation config?** (`strict_schema`,
-   `suggestion_threshold`) — probably yes, but low priority since these are
+   `suggestion_threshold`): probably yes, but low priority since these are
    rarely changed from defaults.
 
 2. **Should the config file support per-file format overrides?** E.g. different
-   line widths for migration files vs application SQL. Probably not in v1 — keep
+   line widths for migration files vs application SQL. Probably not in v1: keep
    it simple.
 
 3. **Should `syntaqlite init` exist?** A command that generates a starter

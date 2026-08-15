@@ -6,8 +6,8 @@ Last updated: 2026-02-21
 ## Goal
 
 Add language server capabilities to syntaqlite, usable from:
-1. **VSCode** (and any LSP-capable editor) — via `syntaqlite lsp` subcommand over stdio
-2. **Monaco in the browser** — via typed WASM exports in the existing web playground
+1. **VSCode** (and any LSP-capable editor): via `syntaqlite lsp` subcommand over stdio
+2. **Monaco in the browser**: via typed WASM exports in the existing web playground
 
 Both targets share the same analysis engine. The native path speaks LSP/JSON-RPC; the browser path uses direct function calls through Monaco's provider API.
 
@@ -31,13 +31,13 @@ Both targets share the same analysis engine. The native path speaks LSP/JSON-RPC
 
 ### `syntaqlite-lsp` crate
 
-Workspace member (`syntaqlite-lsp/`). Depends on `syntaqlite-runtime` with `fmt` feature. No async, no IO, no transport concerns — pure computation.
+Workspace member (`syntaqlite-lsp/`). Depends on `syntaqlite-runtime` with `fmt` feature. No async, no IO, no transport concerns: pure computation.
 
 Files:
-- `src/lib.rs` — re-exports `AnalysisHost`, `FormatError`, `AmbientContext`, `Diagnostic`, `Severity`
-- `src/host.rs` — `AnalysisHost`, `FormatError`, diagnostics computation
-- `src/context.rs` — `AmbientContext` and schema types
-- `src/types.rs` — `Diagnostic`, `Severity`
+- `src/lib.rs`: re-exports `AnalysisHost`, `FormatError`, `AmbientContext`, `Diagnostic`, `Severity`
+- `src/host.rs`: `AnalysisHost`, `FormatError`, diagnostics computation
+- `src/context.rs`: `AmbientContext` and schema types
+- `src/types.rs`: `Diagnostic`, `Severity`
 
 #### Core types
 
@@ -120,7 +120,7 @@ pub enum FormatError {
 
 ### Ambient Context
 
-The `AnalysisHost` accepts an optional `AmbientContext` — an abstract representation of the database schema against which queries are analyzed. Callers populate it however they want (introspecting a live SQLite DB, parsing CREATE statements, loading from a config file, etc.). It is global to the host — all open documents share the same context.
+The `AnalysisHost` accepts an optional `AmbientContext`, which represents the database schema against which queries are analyzed. Callers populate it however they want (introspecting a live SQLite DB, parsing CREATE statements, loading from a config file, etc.). The context is global to the host and shared by all open documents.
 
 ```rust
 pub struct AmbientContext {
@@ -154,7 +154,7 @@ pub struct FunctionDef {
 ```
 
 **Phase usage:**
-- Phase 1 (Diagnostics + Formatting): Not used — parse-level only
+- Phase 1 (Diagnostics + Formatting): Not used: parse-level only
 - Phase 3 (Completions): Suggest table/column/function names from context
 - Phase 4 (Hover): Show column types, table schemas
 - Phase 5 (Go-to-Definition): Resolve references against schema
@@ -202,7 +202,7 @@ pub extern "C" fn wasm_diagnostics(ptr: u32, len: u32) -> i32;
 
 Returns the number of diagnostics (>= 0) on success, or -1 on error. Result is serialized into `RESULT_BUF` as a JSON array.
 
-Implementation creates a temporary `AnalysisHost` per call (stateless — Monaco holds the document).
+Implementation creates a temporary `AnalysisHost` per call (stateless: Monaco holds the document).
 
 JSON output format:
 ```json
@@ -246,11 +246,11 @@ if (count > 0) {
 |------|--------|
 | `include/syntaqlite_dialect/ast_builder.h` | Added `uint32_t error_length` to `SynqParseCtx` |
 | `include/syntaqlite/parser.h` | Added `uint32_t error_offset` and `uint32_t error_length` to `SyntaqliteParseResult` |
-| `csrc/parser.c` — `feed_one_token()` | Sets `ctx.error_offset = tok.z - source`, `ctx.error_length = tok.n` on error |
-| `csrc/parser.c` — `finish_input()` | Sets `error_offset = p->offset` (end of input), `error_length = 0` for incomplete statements |
-| `csrc/parser.c` — `syntaqlite_parser_next()` | Propagates `ctx.error_offset`/`error_length` into `ParseResult` on all error paths |
-| `csrc/parser.c` — `syntaqlite_parser_result()` | Same propagation for low-level API |
-| `csrc/parser.c` — `syntaqlite_parser_reset()` | Initializes `error_offset = 0xFFFFFFFF`, `error_length = 0` |
+| `csrc/parser.c`: `feed_one_token()` | Sets `ctx.error_offset = tok.z - source`, `ctx.error_length = tok.n` on error |
+| `csrc/parser.c`: `finish_input()` | Sets `error_offset = p->offset` (end of input), `error_length = 0` for incomplete statements |
+| `csrc/parser.c`: `syntaqlite_parser_next()` | Propagates `ctx.error_offset`/`error_length` into `ParseResult` on all error paths |
+| `csrc/parser.c`: `syntaqlite_parser_result()` | Same propagation for low-level API |
+| `csrc/parser.c`: `syntaqlite_parser_reset()` | Initializes `error_offset = 0xFFFFFFFF`, `error_length = 0` |
 
 Sentinel: `error_offset == 0xFFFFFFFF` means "unknown offset". Zero-length means "unknown length" (point diagnostic).
 
@@ -260,12 +260,12 @@ Sentinel: `error_offset == 0xFFFFFFFF` means "unknown offset". Zero-length means
 |------|--------|
 | `src/parser/ffi.rs` | Added `error_offset: u32`, `error_length: u32` to `ParseResult` |
 | `src/parser/parser.rs` | `ParseError` gains `offset: Option<usize>`, `length: Option<usize>` |
-| `src/parser/parser.rs` — `StatementCursor::next_statement()` | Converts sentinel → `None`, populates fields |
-| `src/parser/token_parser.rs` — `LowLevelCursor::finish()` | Same conversion for low-level API |
+| `src/parser/parser.rs`: `StatementCursor::next_statement()` | Converts sentinel → `None`, populates fields |
+| `src/parser/token_parser.rs`: `LowLevelCursor::finish()` | Same conversion for low-level API |
 
 ### Token collection
 
-The parser already supports `collect_tokens: true` which records every token with its type and span. This is exactly what semantic tokens needs. No new work required, just ensure `AnalysisHost` enables this flag when needed (Phase 1 uses `collect_tokens: false` for diagnostics-only parsing).
+The parser's existing `collect_tokens: true` option records every token with its type and span, which provides the data needed for semantic tokens. `AnalysisHost` only needs to enable the option when necessary; Phase 1 uses `collect_tokens: false` for diagnostics-only parsing.
 
 ## Feature Phases
 
@@ -286,7 +286,7 @@ The parser already supports `collect_tokens: true` which records every token wit
 
 - Use `collect_tokens` to get token stream with types
 - Map token types to LSP semantic token types (keyword, string, number, comment, identifier, operator)
-- Better highlighting than regex-based TextMate grammars — the real tokenizer knows about SQLite-specific tokens
+- Better highlighting than regex-based TextMate grammars: the real tokenizer knows about SQLite-specific tokens
 - `textDocument/semanticTokens/full` in LSP
 - `monaco.languages.registerDocumentSemanticTokensProvider` in Monaco
 
@@ -300,7 +300,7 @@ The parser already supports `collect_tokens: true` which records every token wit
 
 ### Phase 4: Hover
 
-- Keyword hover: show brief documentation for SQL keywords (e.g., "SELECT — Retrieves rows from one or more tables")
+- Keyword hover: show brief documentation for SQL keywords (e.g., "SELECT: Retrieves rows from one or more tables")
 - Function hover: show SQLite built-in function signatures and descriptions
 - Table/column hover from ambient context: show column types, table schemas
 - Static data, hand-curated or extracted from SQLite docs
@@ -338,13 +338,13 @@ syntaqlite-wasm
 
 2. **VSCode extension packaging?** Out of scope for this plan. The extension is a thin `vscode-languageclient` wrapper. Can be a separate repo or a `vscode/` directory in this repo.
 
-3. **Position encoding?** Current `offset_to_position()` counts UTF-8 bytes for the character field. LSP specifies UTF-16 by default but supports UTF-8 when negotiated. The `lsp-server` 0.7 / `lsp-types` 0.97 stack supports position encoding negotiation. For now, the implementation uses UTF-8 byte counts — this works correctly for ASCII SQL but may need adjustment for non-ASCII identifiers or string literals.
+3. **Position encoding?** Current `offset_to_position()` counts UTF-8 bytes for the character field. LSP specifies UTF-16 by default but supports UTF-8 when negotiated. The `lsp-server` 0.7 / `lsp-types` 0.97 stack supports position encoding negotiation. For now, the implementation uses UTF-8 byte counts. This works correctly for ASCII SQL but may need adjustment for non-ASCII identifiers or string literals.
 
 ## Notes
 
-- The `lsp` subcommand reuses the same dialect loading path as `ast`/`fmt` — `--dialect` flag works the same way.
+- The `lsp` subcommand reuses the same dialect loading path as `ast`/`fmt`: `--dialect` flag works the same way.
 - No new codegen needed. `syntaqlite-lsp` works purely at the runtime level.
-- The WASM path doesn't need a document store because Monaco manages documents. Each WASM call gets full text — stateless from the WASM side (though we could add caching later).
+- The WASM path doesn't need a document store because Monaco manages documents. Each WASM call gets full text: stateless from the WASM side (though we could add caching later).
 - `lsp-server` chosen over `tower-lsp`: sync is fine for a single-file SQL tool, and it keeps deps minimal (no tokio needed).
-- Multi-file schema awareness is handled via the ambient context API — callers populate it from whatever source they want, rather than the LSP scanning files.
+- Multi-file schema awareness is handled via the ambient context API: callers populate it from whatever source they want, rather than the LSP scanning files.
 - `ParseError` changes are fully backward-compatible: the new `offset`/`length` fields are `Option` types, so existing code constructing `ParseError` just needs to add `offset: None, length: None`.

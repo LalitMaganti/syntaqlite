@@ -9,9 +9,9 @@ weight = 6
 libsyntaqlite is an embeddable parser, formatter, and static analyzer for SQLite
 SQL. The `syntaqlite` package provides its Python API, calling the core
 in-process through a bundled native library loaded with `ctypes`. It also ships
-the `syntaqlite` CLI binary for the command-line entry point. Requires Python
-3.10+. Wheels are published for macOS (arm64, x86_64), Linux (x86_64,
-aarch64), and Windows (x86_64).
+the `syntaqlite` CLI binary for the command-line entry point. The package
+requires Python 3.10 or later. Wheels are published for macOS (arm64, x86_64),
+Linux (x86_64, aarch64), and Windows (x86_64).
 
 ```python
 import syntaqlite
@@ -24,7 +24,7 @@ with syntaqlite.Syntaqlite() as sq:
 ## `syntaqlite.Syntaqlite`
 
 The entry point for all SQL operations. Create one instance and reuse it
-across many calls — each instance loads the syntaqlite core in-process on
+across many calls because each instance loads the syntaqlite core in-process on
 construction and keeps it ready until `close()` is called.
 
 ```python
@@ -37,7 +37,7 @@ syntaqlite.Syntaqlite(*, dialect_path=None, dialect_name=None)
 | `dialect_name` | `str \| None` | `None` | Dialect name. Required only when `dialect_path` exports more than one dialect. |
 
 Supports the context-manager protocol, so `with syntaqlite.Syntaqlite() as sq:`
-cleans up automatically. Not intended for concurrent use — if you want
+cleans up automatically. An instance is not intended for concurrent use; if you want
 parallelism, create one instance per thread.
 
 ### `sq.format_sql`
@@ -50,13 +50,13 @@ sq.format_sql(sql, *, line_width=80, indent_width=2, keyword_case="upper", semic
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `sql` | `str` | — | SQL to format |
+| `sql` | `str` | Required | SQL to format |
 | `line_width` | `int` | `80` | Maximum line width |
 | `indent_width` | `int` | `2` | Spaces per indent level |
 | `keyword_case` | `str` | `"upper"` | `"upper"` or `"lower"` |
 | `semicolons` | `bool` | `True` | Append semicolons to statements |
 
-**Returns:** `str` — the formatted SQL.
+**Returns:** A `str` containing the formatted SQL.
 
 **Raises:** [`FormatError`](#syntaqlite-formaterror) when the input cannot
 be parsed.
@@ -80,7 +80,7 @@ sq.parse(sql)
 |-----------|------|-------------|
 | `sql` | `str` | SQL to parse (may contain multiple statements) |
 
-**Returns:** `list` — one typed AST node per statement. Each node is a
+**Returns:** A `list` containing one typed AST node per statement. Each node is a
 `__slots__` class (e.g. `SelectStmt`, `CreateTableStmt`) with typed
 attributes.
 
@@ -136,9 +136,9 @@ sq.analyze(sql, schema=None, *, output=AnalysisOutput.STRUCTURED, render_options
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `sql` | `str` | — | SQL to analyze |
+| `sql` | `str` | Required | SQL to analyze |
 | `schema` | [`Schema`](#syntaqlite-schema) `\| None` | `None` | Catalog schema to analyze against |
-| `output` | [`AnalysisOutput`](#analysisoutput) `\| str` | `STRUCTURED` | Return shape — typed result or rendered string |
+| `output` | [`AnalysisOutput`](#analysisoutput) `\| str` | `STRUCTURED` | Selects a typed result or rendered string |
 | `render_options` | [`RenderOptions`](#renderoptions) `\| None` | `None` | Fine-grained options for text rendering (source label, etc.). Ignored unless `output=TEXT`. |
 
 `Schema` can be built from explicit tables/views, from DDL text, or both:
@@ -188,7 +188,7 @@ sq.tokenize(sql)
 |-----------|------|-------------|
 | `sql` | `str` | SQL to tokenize |
 
-**Returns:** `list[dict]` — one entry per token:
+**Returns:** A `list[dict]` containing one entry per token:
 
 | Key | Type | Description |
 |-----|------|-------------|
@@ -220,8 +220,8 @@ After `close()`, any method call raises
 
 ### `syntaqlite.Schema`
 
-A catalog schema. Everything that contributes to the analyzer's catalog
-lives here — pick whichever combination fits your use case.
+A catalog schema containing any combination of the tables, views, DDL, and
+modules used by the analyzer.
 
 ```python
 syntaqlite.Schema(*, tables=None, views=None, ddl=None, modules=None)
@@ -366,8 +366,8 @@ syntaqlite.RenderOptions(*, source_name="")
 
 ### `syntaqlite.FormatError`
 
-Raised by [`format_sql`](#sq-format-sql) when the input SQL cannot be
-parsed. Inherits from `Exception`.
+Raised by [`format_sql`](#sq-format-sql) when the input SQL cannot be parsed.
+This class inherits from `Exception`.
 
 ```python
 try:
@@ -379,5 +379,5 @@ except syntaqlite.FormatError as e:
 ### `syntaqlite.SyntaqliteError`
 
 Base class for runtime errors raised by a [`Syntaqlite`](#syntaqlite-syntaqlite)
-instance — for example, calls made after [`close`](#sq-close). Inherits
+instance, such as a call made after [`close`](#sq-close). This class inherits
 from `RuntimeError`.

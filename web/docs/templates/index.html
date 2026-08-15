@@ -12,8 +12,8 @@
   <div class="home-feature">
     <h3>Format</h3>
     <p>
-      Configurable line width, keyword casing, and indentation. The formatter
-      is deterministic — the same input always produces the same output.
+      Line width, keyword casing, and indentation are configurable, while the
+      same input always produces the same deterministic output.
     </p>
     <div class="home-example">
       <div class="home-example__col">
@@ -41,10 +41,10 @@ LIMIT 10;</code></pre>
   <div class="home-feature">
     <h3>Validate</h3>
     <p>
-      Catches unknown tables, columns, and functions against your schema —
-      the same errors <code>sqlite3_prepare</code> would catch, but without
-      needing a database. Unlike <code>sqlite3</code>, syntaqlite finds
-      <strong>all</strong> errors in one pass and shows exactly where they are:
+      The analyzer checks tables, columns, and functions against your schema
+      without opening a database. These are the same errors that
+      <code>sqlite3_prepare</code> catches, but syntaqlite can report multiple
+      errors from one analysis and include a source location for each:
     </p>
     <pre><code class="language-sql">CREATE TABLE orders (id, status, total, created_at);
 
@@ -64,7 +64,7 @@ FROM monthly_stats ms;</code></pre>
         <div class="home-example__label">sqlite3</div>
         <pre class="home-diagnostic__output"><code>Error: in prepare, table monthly_stats
 has 2 values for 3 columns</code></pre>
-        <p class="home-example__note">Stops at first error. Misses the <code>ROUDN</code> typo entirely.</p>
+        <p class="home-example__note">Stops after the first error and therefore does not report the <code>ROUDN</code> typo.</p>
       </div>
       <div class="home-example__col">
         <div class="home-example__label">syntaqlite</div>
@@ -86,13 +86,13 @@ has 2 values for 3 columns</code></pre>
   <div class="home-feature">
     <h3>Version and compile-flag aware</h3>
     <p>
-      SQLite isn't one fixed language — syntax changes between releases, and
+      SQLite syntax changes between releases, and
       <a href="https://www.sqlite.org/compile.html">compile-time flags</a> enable
-      optional features. syntaqlite tracks this across all tools: parser,
+      optional features. syntaqlite accounts for both across the parser,
       formatter, validator, and LSP.
     </p>
     <pre><code class="language-bash"># RETURNING was added in SQLite 3.35.0
-# Android 13 ships SQLite 3.32.2 — catch the mismatch:
+# Check for incompatibility with Android 13's SQLite 3.32.2:
 syntaqlite --sqlite-version 3.32.0 analyze \
   -e "DELETE FROM users WHERE id = 1 RETURNING *;"</code></pre>
     <pre class="home-diagnostic__output"><code><span class="diag-error">error</span>: syntax error near 'RETURNING'
@@ -106,8 +106,8 @@ syntaqlite --sqlite-version 3.32.0 analyze \
     <h3>Validate SQL inside other languages <span class="home-tag">experimental</span></h3>
     <p>
       SQL lives inside Python and TypeScript strings in most real codebases.
-      syntaqlite extracts and validates it — handling interpolation holes and
-      still catching errors with did-you-mean suggestions.
+      syntaqlite extracts and validates these strings while preserving
+      interpolation holes and suggesting corrections for misspelled names.
     </p>
     <div class="home-example">
       <div class="home-example__col">
@@ -133,8 +133,8 @@ syntaqlite --sqlite-version 3.32.0 analyze \
     <div class="home-feature">
       <h3>Parse</h3>
       <p>
-        Abstract syntax tree with side tables for tokens, comments, and
-        whitespace boundaries.
+        The parser returns an abstract syntax tree with side tables for tokens,
+        comments, and whitespace boundaries.
       </p>
       <pre><code>SelectStmt
   columns:
@@ -161,14 +161,14 @@ syntaqlite --sqlite-version 3.32.0 analyze \
     <div class="home-feature">
       <h3>Editor integration</h3>
       <p>
-        Full language server (LSP) — no database connection required. Real-time
-        diagnostics, format on save, completions for keywords, functions, tables
-        and columns, and semantic syntax highlighting.
+        The language server provides diagnostics, format on save, completions
+        for keywords, functions, tables, and columns, and semantic highlighting
+        without requiring a database connection.
       </p>
-      <pre><code class="language-bash"># VS Code — install from the marketplace
+      <pre><code class="language-bash"># Install the VS Code extension from the marketplace
 ext install syntaqlite.syntaqlite
 
-# Any editor — point your LSP client at:
+# Or point any LSP client at this command:
 syntaqlite lsp</code></pre>
     </div>
   </div>
@@ -177,21 +177,21 @@ syntaqlite lsp</code></pre>
 
   <ul>
     <li>
-      <strong>Reliability</strong> — uses SQLite's own tokenizer and grammar
-      rules, verified by running the full SQLite test suite through the parser.
+      <strong>Reliability:</strong> syntaqlite uses SQLite's own tokenizer and
+      grammar rules, verified by running the full SQLite test suite through the parser.
     </li>
     <li>
-      <strong>Speed</strong> — parses 3,500 lines of SQL in 2.6ms, formats in
-      4.9ms, validates in 7.3ms. Faster than <code>sqlite3</code> itself for
-      validation. Zero-copy tokenizer, arena-allocated parser, Wadler-Lindig
-      formatter — all allocations are reused across inputs.
+      <strong>Speed:</strong> in the comparison benchmark, syntaqlite parses
+      3,500 lines of SQL in 2.6ms, formats them in 4.9ms, and validates them in
+      7.3ms. The tokenizer avoids copying, the parser uses an arena, and the
+      formatter reuses allocations across inputs.
     </li>
     <li>
-      <strong>Portability</strong> — no runtime dependencies beyond the C and
-      Rust standard libraries. Runs natively, in WASM, and as a shared library.
+      <strong>Portability:</strong> the runtime has no dependencies beyond the C
+      and Rust standard libraries, and runs natively, in WASM, or as a shared library.
     </li>
     <li>
-      <strong>Extensibility</strong> — the grammar system supports database
+      <strong>Extensibility:</strong> the grammar system supports database
       engines that extend SQLite's syntax. Define custom grammar rules, AST
       nodes, and formatting recipes, then load your dialect as a shared library
       at runtime.
@@ -211,7 +211,7 @@ syntaqlite lsp</code></pre>
   <ul>
     <li>
       It does not support other SQL engines. syntaqlite is SQLite-only by
-      design — this is what allows it to use the real grammar rather than a
+      design, which allows it to use the real grammar rather than a
       lowest-common-denominator subset.
     </li>
     <li>
@@ -228,11 +228,11 @@ syntaqlite lsp</code></pre>
   <div class="entry-cards">
     <a href="https://playground.syntaqlite.com" class="entry-card entry-card--playground">
       <span class="entry-card__title">Try it without installing</span>
-      <span class="entry-card__desc">Open the playground — format, validate, and parse SQL directly in your browser.</span>
+      <span class="entry-card__desc">Open the playground to format, validate, and parse SQL in your browser.</span>
     </a>
     <a href="{{ get_url(path='getting-started/vscode') }}" class="entry-card">
       <span class="entry-card__title">VS Code</span>
-      <span class="entry-card__desc">Install the extension — diagnostics, formatting, and completions out of the box.</span>
+      <span class="entry-card__desc">Install the extension for diagnostics, formatting, and completions.</span>
     </a>
     <a href="{{ get_url(path='getting-started/claude-code') }}" class="entry-card">
       <span class="entry-card__title">Claude Code</span>
@@ -273,7 +273,7 @@ syntaqlite lsp</code></pre>
     </a>
     <a href="{{ get_url(path='concepts') }}" class="entry-card">
       <span class="entry-card__title">Concepts</span>
-      <span class="entry-card__desc">Design rationale — why things work the way they do.</span>
+      <span class="entry-card__desc">The rationale behind the parser, formatter, and analyzer designs.</span>
     </a>
     <a href="{{ get_url(path='reference') }}" class="entry-card">
       <span class="entry-card__title">Reference</span>

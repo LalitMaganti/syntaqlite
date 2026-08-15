@@ -1,6 +1,6 @@
 ---
 name: debug-formatter
-description: Debug a SQL formatter bug. Use when the user reports incorrect formatting output — wrong whitespace, misplaced comments, blank lines, etc.
+description: Debug a SQL formatter bug. Use when the user reports incorrect formatting, such as wrong whitespace, misplaced comments, or blank lines.
 user_invocable: true
 ---
 

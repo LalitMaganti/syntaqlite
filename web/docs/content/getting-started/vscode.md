@@ -10,8 +10,8 @@ weight = 1
 
 Install **[syntaqlite: SQLite language server and formatter](https://marketplace.visualstudio.com/items?itemName=syntaqlite.syntaqlite)**
 from the VS Code Marketplace, or search for `syntaqlite` in the Extensions
-panel (`Cmd+Shift+X`). The extension bundles the binary. No other setup
-needed.
+panel (`Cmd+Shift+X`). Because the extension bundles the binary, it does not
+require any additional setup.
 
 ## 2. Create a project folder
 
@@ -26,8 +26,8 @@ Create a file called `demo.sql` and paste this in:
 select id,name,email,created_at from users as u wehre active=1 and role='admin' order by created_at desc
 ```
 
-`wehre` is immediately underlined in red. Fix it to `where` and the error
-clears.
+VS Code should underline `wehre` in red. Change it to `where` before
+continuing.
 
 ## 4. Format
 
@@ -83,8 +83,8 @@ ORDER BY
   created_at DESC;
 ```
 
-You'll see `nme` underlined with a warning: *unknown column 'nme', did you
-mean 'name'?* Fix it back to `name` and the warning disappears.
+The language server should underline `nme` and report *unknown column 'nme', did
+you mean 'name'?* Change it back to `name` before continuing.
 
 ## 6. Completions
 

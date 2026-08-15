@@ -7,9 +7,9 @@ The codebase is mid-refactoring. The file reorganization (splitting `types.rs`, 
 ### What's already done
 
 - `validation/types.rs` deleted, split into:
-  - `validation/diagnostics.rs` — `Diagnostic`, `DiagnosticMessage`, `Severity`, `Help`, `Diagnostic::from_parse_error`
-  - `validation/schema.rs` — `DocumentSchema` (was `DocumentContext`), extraction helpers
-  - `semantic/schema.rs` — `Schema` (was `SessionContext`), constructors
+  - `validation/diagnostics.rs`: `Diagnostic`, `DiagnosticMessage`, `Severity`, `Help`, `Diagnostic::from_parse_error`
+  - `validation/schema.rs`: `DocumentSchema` (was `DocumentContext`), extraction helpers
+  - `semantic/schema.rs`: `Schema` (was `SessionContext`), constructors
 - `SourceContext` renamed to `DiagnosticRenderer` in `validation/render.rs`
 - `AnalysisHost::validate_dialect` delegates to `Validator::validate_document`
 - Free functions `validate_parse_results` / `validate_document` moved onto `Validator` as methods
@@ -56,7 +56,7 @@ pub struct EmbeddedAnalyzer<'d> {
 
 When `EmbeddedAnalyzer` needs to call `Validator::validate_results`, it must construct a new `Validator`, which requires surrendering its catalog or cloning it. Neither option is available.
 
-`AnalysisHost` doesn't store a `FunctionCatalog` at all — it rebuilds one from scratch every time `function_catalog()` is called (see Problem 2).
+`AnalysisHost` doesn't store a `FunctionCatalog`; it rebuilds one from scratch every time `function_catalog()` is called (see Problem 2).
 
 ### Problem 2: Pervasive copying and redundant work
 
@@ -90,7 +90,7 @@ pub fn all_diagnostics(&mut self, uri: &str, config: &ValidationConfig) -> Vec<D
 }
 ```
 
-`DocumentAnalysis::compute` parses the document with `collect_tokens: true` for syntax highlighting and completions. `validate_dialect` then re-parses the same document from scratch for semantic validation. The parse results (AST nodes) from the first parse are thrown away — `DocumentAnalysis` only keeps diagnostics, semantic tokens, and raw token positions.
+`DocumentAnalysis::compute` parses the document with `collect_tokens: true` for syntax highlighting and completions. `validate_dialect` then re-parses the same document from scratch for semantic validation. The parse results (AST nodes) from the first parse are thrown away: `DocumentAnalysis` only keeps diagnostics, semantic tokens, and raw token positions.
 
 **`validate_dialect` also creates a throwaway `Validator`:**
 
@@ -105,11 +105,11 @@ pub fn validate_dialect<A>(&self, uri: &str, config: &ValidationConfig) -> Vec<D
 ### Problem 3: The catalog is dynamic
 
 `FunctionCatalog` has three layers:
-1. `builtins: Vec<&'static FunctionInfo>` — filtered from a static table at construction
-2. `extensions: Vec<OwnedFunctionInfo>` — copied from C dialect data at construction
-3. `session: Vec<SessionFunction>` — added via `add_session_functions(&mut self, ...)`
+1. `builtins: Vec<&'static FunctionInfo>`: filtered from a static table at construction
+2. `extensions: Vec<OwnedFunctionInfo>`: copied from C dialect data at construction
+3. `session: Vec<SessionFunction>`: added via `add_session_functions(&mut self, ...)`
 
-Layers 1 and 2 are immutable after construction. Layer 3 is mutable — session functions are added when the user provides a schema context. This mutation makes it non-trivial to have `Validator` borrow `&FunctionCatalog` instead of owning it, because someone needs to own the mutable catalog and its lifetime must outlive the borrower.
+Layers 1 and 2 are immutable after construction. Layer 3 is mutable: session functions are added when the user provides a schema context. This mutation makes it non-trivial to have `Validator` borrow `&FunctionCatalog` instead of owning it, because someone needs to own the mutable catalog and its lifetime must outlive the borrower.
 
 In `AnalysisHost`, session functions come from `self.context: Option<Schema>`, which holds `functions: Vec<SessionFunction>`. The mutation path is:
 ```
@@ -117,7 +117,7 @@ AnalysisHost::set_session_context(ctx) → stores Schema
 AnalysisHost::function_catalog() → builds FunctionCatalog, calls add_session_functions(&ctx.functions)
 ```
 
-So the "dynamism" is really: the catalog is rebuilt from `(dialect, config, session_context)` inputs whenever any of those inputs changes. It's not truly incremental mutation — it's full reconstruction.
+In practice, the catalog is rebuilt from `(dialect, config, session_context)` whenever any input changes. This is full reconstruction rather than incremental mutation.
 
 ---
 
@@ -176,7 +176,7 @@ So the "dynamism" is really: the catalog is rebuilt from `(dialect, config, sess
 
 **Own (current):** Simple lifetime story, but prevents sharing. Each consumer that wants to validate must either clone the catalog or construct their own `Validator`.
 
-**Borrow `&'a FunctionCatalog`:** Validator becomes a lightweight view. But who owns the catalog? In `AnalysisHost`, the catalog is currently rebuilt each time — so it would need to be cached as a field. In `EmbeddedAnalyzer`, it's already owned.
+**Borrow `&'a FunctionCatalog`:** Validator becomes a lightweight view. But who owns the catalog? In `AnalysisHost`, the catalog is currently rebuilt each time: so it would need to be cached as a field. In `EmbeddedAnalyzer`, it's already owned.
 
 The borrow approach would look like:
 
@@ -226,7 +226,7 @@ Two approaches:
 
 **B. Unified entry point:** A single method that parses once and produces both parse diagnostics + semantic diagnostics + semantic tokens + completion tokens. This is what `Validator::validate` already does for the parse+semantic part, but `DocumentAnalysis` adds tokens and completion data.
 
-Option A is more modular — it separates the "parsing" step from the "analysis" steps. The challenge is that the parser arena has a complex lifetime (it borrows from the parser, which borrows from the source text). Storing it requires either:
+Option A is more modular because it separates parsing from analysis. The challenge is that the parser arena has a complex lifetime (it borrows from the parser, which borrows from the source text). Storing it requires either:
 - Making `DocumentAnalysis` own the parser and arena
 - Storing just the data needed (stmt_ids, NodeId-based results) and having `validate_dialect` accept those as input
 
@@ -239,7 +239,7 @@ pub struct DocumentAnalysis {
     diagnostics: Vec<Diagnostic>,
     semantic_tokens: Vec<SemanticToken>,
     tokens: Vec<CachedToken>,
-    stmt_results: Vec<Result<NodeId, ParseError>>,  // NEW — reusable by validation
+    stmt_results: Vec<Result<NodeId, ParseError>>,  // NEW: reusable by validation
 }
 ```
 
@@ -247,12 +247,12 @@ But `validate_document` needs a `RawParseResult` to walk the AST, and that borro
 
 ### 4. What should the core validation API look like?
 
-Currently `Validator` bundles parser + dialect + catalog + "validate" method. The actual validation logic (`validate_document`, `validate_results`) only needs `(dialect, catalog)` — the parser is just there because `Validator::validate()` does "parse then validate" as a convenience.
+Currently `Validator` bundles parser + dialect + catalog + "validate" method. The actual validation logic (`validate_document`, `validate_results`) only needs `(dialect, catalog)`: the parser is just there because `Validator::validate()` does "parse then validate" as a convenience.
 
 Possible redesign:
 
 ```rust
-/// Core validation — borrows everything, owns nothing.
+/// Core validation: borrows everything, owns nothing.
 pub fn validate_document<A: for<'a> AstTypes<'a>>(
     reader: RawParseResult<'_>,
     stmt_ids: &[NodeId],
@@ -280,7 +280,7 @@ This makes `validate_document` a free function that takes `&FunctionCatalog` as 
 
 ### 5. Should `EmbeddedAnalyzer` own or borrow the catalog?
 
-If `validate_document` becomes a free function taking `&FunctionCatalog`, then `EmbeddedAnalyzer` can either own or borrow the catalog — it doesn't matter, because it just passes a `&` reference to the free function.
+If `validate_document` becomes a free function taking `&FunctionCatalog`, then `EmbeddedAnalyzer` can either own or borrow the catalog because it only passes a `&` reference to the free function.
 
 But consider: `EmbeddedAnalyzer` is typically created once per CLI invocation or LSP request. In the CLI (`runtime.rs`), the catalog is built just before creating the analyzer:
 
@@ -322,7 +322,7 @@ Make `validate_document` and `validate_results` free functions (or static method
 This resolves all three problems:
 1. **Ownership coupling**: `EmbeddedAnalyzer` and `AnalysisHost` call `validate_document(&self.catalog, ...)` directly
 2. **Copying**: `AnalysisHost` caches the catalog, rebuilds only on config/context change
-3. **Dynamism**: The cached catalog is rebuilt (not mutated) when inputs change — `add_session_functions` is only called during cache construction
+3. **Dynamism**: The cached catalog is rebuilt (not mutated) when inputs change: `add_session_functions` is only called during cache construction
 
 The double-parse in `all_diagnostics` is a separate optimization that can be done independently by having `DocumentAnalysis` store parse results for reuse.
 
