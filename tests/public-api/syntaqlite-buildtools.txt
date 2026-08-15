@@ -95,9 +95,11 @@ pub syntaqlite_buildtools::commands::SqliteExtract::nodes_dir: alloc::string::St
 pub syntaqlite_buildtools::commands::SqliteExtract::output_dir: alloc::string::String
 pub syntaqlite_buildtools::commands::SqliteExtract::sqlite_src: alloc::string::String
 pub syntaqlite_buildtools::commands::SqliteParserCodegen::functions_json: core::option::Option<alloc::string::String>
+pub syntaqlite_buildtools::commands::SqliteParserCodegen::relations_json: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::commands::SqliteParserCodegen::version_cflags_json: core::option::Option<alloc::string::String>
 pub syntaqlite_buildtools::commands::UpdateData::amalgamation_dir: alloc::string::String
 pub syntaqlite_buildtools::commands::UpdateData::functions_output: alloc::string::String
+pub syntaqlite_buildtools::commands::UpdateData::relations_output: alloc::string::String
 pub syntaqlite_buildtools::commands::UpdateData::version_cflags_output: alloc::string::String
 pub syntaqlite_buildtools::output_resolver::CHeader::include: alloc::string::String
 pub syntaqlite_buildtools::output_resolver::CHeader::write: core::option::Option<alloc::string::String>
