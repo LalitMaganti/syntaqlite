@@ -928,6 +928,13 @@ fn emit(files: &FileMap, mode: EmitMode, omit_macros: bool) -> AmalgamateOutput 
 // Full API header amalgamation (syntaqlite.h)
 // ---------------------------------------------------------------------------
 
+fn is_redundant_lib_header_include(line: &str) -> bool {
+    match parse_include_directive(line) {
+        Some(IncludeDirective::Quoted(path)) => path.starts_with("syntaqlite/"),
+        _ => line.trim() == "#include <stdint.h>",
+    }
+}
+
 /// Produce a single `syntaqlite.h` that combines:
 /// - All public headers from `syntaqlite-syntax` (parser, tokenizer, grammar, etc.)
 /// - All FFI headers from `syntaqlite` (formatter, validator)
@@ -1002,9 +1009,9 @@ pub fn amalgamate_header(syntax_dir: &Path, lib_dir: &Path) -> Result<String, St
                     }
 
                     // Skip includes already provided by the syntax headers above.
-                    if trimmed == "#include <stdint.h>"
-                        || trimmed == "#include \"syntaqlite/config.h\""
-                    {
+                    // The shipped amalgamated header must compile standalone: its
+                    // archive does not contain the original include/ directory.
+                    if is_redundant_lib_header_include(trimmed) {
                         continue;
                     }
 
@@ -1024,6 +1031,19 @@ pub fn amalgamate_header(syntax_dir: &Path, lib_dir: &Path) -> Result<String, St
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn redundant_lib_header_includes_cover_all_syntaqlite_headers() {
+        assert!(is_redundant_lib_header_include("#include <stdint.h>"));
+        assert!(is_redundant_lib_header_include(
+            "#include \"syntaqlite/dialect.h\""
+        ));
+        assert!(is_redundant_lib_header_include(
+            "# include \"syntaqlite/types.h\""
+        ));
+        assert!(!is_redundant_lib_header_include("#include <stddef.h>"));
+        assert!(!is_redundant_lib_header_include("#include \"other/api.h\""));
+    }
 
     #[test]
     fn parse_include_directive_accepts_spaced_form() {
