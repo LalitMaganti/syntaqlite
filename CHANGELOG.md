@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.2
+
+**Validation:**
+- SQLite's built-in schema relations (`sqlite_master`, `sqlite_schema`, and their temporary-database variants) are now included in the semantic catalog with version and build-flag awareness, preventing spurious unknown-table and unknown-column diagnostics ([#309](https://github.com/LalitMaganti/syntaqlite/pull/309)).
+
+**Documentation:**
+- Overhauled the README and library documentation, improved prose throughout the documentation site, and fixed README syntax highlighting ([#307](https://github.com/LalitMaganti/syntaqlite/pull/307), [#308](https://github.com/LalitMaganti/syntaqlite/pull/308), [#310](https://github.com/LalitMaganti/syntaqlite/pull/310)).
+
 ## 0.7.1
 
 **Bug fixes:**
