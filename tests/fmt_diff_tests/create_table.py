@@ -88,6 +88,25 @@ class ColumnConstraintFormat(TestSuite):
             out="CREATE TABLE t(a int PRIMARY KEY DESC);",
         )
 
+    def test_primary_key_conflict_then_autoincrement(self):
+        """Grammar order is `PRIMARY KEY sortorder onconf autoinc`."""
+        return DiffTestBlueprint(
+            sql="create table t(a integer primary key on conflict ignore autoincrement)",
+            out="CREATE TABLE t(a integer PRIMARY KEY ON CONFLICT IGNORE AUTOINCREMENT);",
+        )
+
+    def test_primary_key_desc_conflict(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int primary key desc on conflict rollback)",
+            out="CREATE TABLE t(a int PRIMARY KEY DESC ON CONFLICT ROLLBACK);",
+        )
+
+    def test_primary_key_conflict_only(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int primary key on conflict fail)",
+            out="CREATE TABLE t(a int PRIMARY KEY ON CONFLICT FAIL);",
+        )
+
     def test_not_null(self):
         return DiffTestBlueprint(
             sql="create table t(a text not null)",
