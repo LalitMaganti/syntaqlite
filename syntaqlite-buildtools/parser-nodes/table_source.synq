@@ -1,6 +1,6 @@
 enum JoinType {
   COMMA INNER LEFT RIGHT FULL CROSS
-  NATURAL_INNER NATURAL_LEFT NATURAL_RIGHT NATURAL_FULL
+  NATURAL_INNER NATURAL_LEFT NATURAL_RIGHT NATURAL_FULL NATURAL_CROSS
 }
 
 node TableRef {
@@ -63,6 +63,7 @@ node JoinClause {
             NATURAL_LEFT  { "NATURAL" "LEFT" "JOIN" }
             NATURAL_RIGHT { "NATURAL" "RIGHT" "JOIN" }
             NATURAL_FULL  { "NATURAL" "FULL" "JOIN" }
+            NATURAL_CROSS { "NATURAL" "CROSS" "JOIN" }
             COMMA         { "," }
           }
           space child(right)
