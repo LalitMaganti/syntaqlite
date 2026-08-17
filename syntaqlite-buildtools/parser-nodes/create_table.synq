@@ -78,7 +78,6 @@ node ColumnConstraint {
       PRIMARY_KEY {
         "PRIMARY" "KEY"
         if_enum(sort_order, DESC) { space "DESC" }
-        if_flag(is_autoincrement) { space "AUTOINCREMENT" }
         switch(onconf) {
           ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
           ABORT    { space "ON" "CONFLICT" "ABORT" }
@@ -86,6 +85,7 @@ node ColumnConstraint {
           IGNORE   { space "ON" "CONFLICT" "IGNORE" }
           REPLACE  { space "ON" "CONFLICT" "REPLACE" }
         }
+        if_flag(is_autoincrement) { space "AUTOINCREMENT" }
       }
       NOT_NULL {
         "NOT" "NULL"
