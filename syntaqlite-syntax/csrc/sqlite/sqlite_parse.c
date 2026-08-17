@@ -9671,13 +9671,13 @@ static YYACTIONTYPE yy_reduce(
     case 317: /* trnm ::= nm DOT nm */
     {
       yymsp[-2].minor.yy0 = yymsp[0].minor.yy0;
-      // Qualified names not allowed in triggers, but grammar accepts them
+      pCtx->error = 1;
     } break;
     case 319: /* tridxby ::= INDEXED BY nm */
     case 320: /* tridxby ::= NOT INDEXED */
       yytestcase(yyruleno == 320);
       {
-        // Not allowed in triggers, but grammar accepts
+        pCtx->error = 1;
       }
       break;
     case 321: /* trigger_cmd ::= UPDATE orconf trnm tridxby SET setlist from

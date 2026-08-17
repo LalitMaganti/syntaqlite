@@ -117,21 +117,21 @@ trnm(A) ::= nm(A). {
 
 trnm(A) ::= nm DOT nm(X). {
     A = X;
-    // Qualified names not allowed in triggers, but grammar accepts them
+    pCtx->error = 1;
 }
 
-// ============ tridxby (index hints in triggers - ignored) ============
+// ============ tridxby (index hints; SQLite rejects these in triggers) ============
 
 tridxby ::= . {
     // empty
 }
 
 tridxby ::= INDEXED BY nm. {
-    // Not allowed in triggers, but grammar accepts
+    pCtx->error = 1;
 }
 
 tridxby ::= NOT INDEXED. {
-    // Not allowed in triggers, but grammar accepts
+    pCtx->error = 1;
 }
 
 // ============ Trigger commands ============

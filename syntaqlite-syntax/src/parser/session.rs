@@ -591,6 +591,27 @@ mod tests {
     }
 
     #[test]
+    fn trigger_bodies_reject_qualified_names_and_index_hints() {
+        for sql in [
+            "CREATE TRIGGER tr AFTER INSERT ON t BEGIN DELETE FROM main.u WHERE x=1; END;",
+            "CREATE TRIGGER tr AFTER INSERT ON t BEGIN DELETE FROM u INDEXED BY i WHERE x=1; END;",
+            "CREATE TRIGGER tr AFTER INSERT ON t BEGIN UPDATE u NOT INDEXED SET x=1; END;",
+        ] {
+            let parser = Parser::new();
+            let mut session = parser.parse(sql);
+            assert!(
+                matches!(session.next(), ParseOutcome::Err(_)),
+                "should be rejected: {sql}"
+            );
+        }
+
+        let parser = Parser::new();
+        let mut session =
+            parser.parse("CREATE TRIGGER tr AFTER INSERT ON t BEGIN DELETE FROM u WHERE x=1; END;");
+        assert!(matches!(session.next(), ParseOutcome::Ok(_)));
+    }
+
+    #[test]
     fn parser_continues_after_statement_error() {
         let parser = Parser::new();
         let mut session = parser.parse("SELECT 1; SELECT ; SELECT 2;");
