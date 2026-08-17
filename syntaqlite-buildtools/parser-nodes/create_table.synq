@@ -67,6 +67,10 @@ node ColumnConstraint {
   generated_storage: inline GeneratedColumnStorage
   deferrable: inline Deferrable
   initial_defer: inline InitialDeferMode
+  // Only `DEFAULT ( expr )` is parenthesised upstream; adding parens to the
+  // other three productions changes a bare identifier from a string literal
+  // into a column reference.
+  default_has_parens: inline Bool
   default_expr: index Expr
   check_expr: index Expr
   generated_expr: index Expr
@@ -108,7 +112,14 @@ node ColumnConstraint {
         }
       }
       CHECK     { group { "CHECK(" nest { softline child(check_expr) } softline ")" } }
-      DEFAULT   { group { "DEFAULT" space "(" nest { softline child(default_expr) } softline ")" } }
+      DEFAULT {
+        "DEFAULT" space
+        if_flag(default_has_parens) {
+          group { "(" nest { softline child(default_expr) } softline ")" }
+        } else {
+          child(default_expr)
+        }
+      }
       COLLATE   { "COLLATE" space span(collation_name) }
       REFERENCES { child(fk_clause) }
       GENERATED {

@@ -421,6 +421,9 @@ static const SyntaqliteFieldMeta field_meta_column_constraint[] = {
      "initial_defer", display_initial_defer_mode,
      sizeof(display_initial_defer_mode) /
          sizeof(display_initial_defer_mode[0])},
+    {offsetof(SyntaqliteColumnConstraint, default_has_parens),
+     SYNTAQLITE_FIELD_BOOL, "default_has_parens", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteColumnConstraint, default_expr),
      SYNTAQLITE_FIELD_NODE_ID, "default_expr", NULL, 0},
     {offsetof(SyntaqliteColumnConstraint, check_expr), SYNTAQLITE_FIELD_NODE_ID,
@@ -1364,7 +1367,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* CaseWhen */
     0,  /* CaseWhenList */
     8,  /* ForeignKeyClause */
-    13, /* ColumnConstraint */
+    14, /* ColumnConstraint */
     0,  /* ColumnConstraintList */
     3,  /* ColumnDef */
     0,  /* ColumnDefList */
