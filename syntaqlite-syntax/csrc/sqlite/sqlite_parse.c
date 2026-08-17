@@ -60,7 +60,14 @@ typedef struct SynqConstraintValue {
 typedef struct SynqConstraintListValue {
   uint32_t list;
   SyntaqliteTextSpan pending_name;
+  uint32_t last_node;
 } SynqConstraintListValue;
+
+// defer_subclause: DEFERRABLE / NOT DEFERRABLE plus the INITIALLY mode.
+typedef struct SynqDeferValue {
+  SyntaqliteDeferrable deferrable;
+  SyntaqliteInitialDeferMode initial;
+} SynqDeferValue;
 
 // on_using: ON expr / USING column-list discriminator.
 typedef struct SynqOnUsingValue {
@@ -119,6 +126,41 @@ typedef struct SynqParenExprlistValue {
 /* END GRAMMAR_TYPES */
 
 #define YYPARSEFREENEVERNULL 1
+
+// A defer_subclause reduces to a REFERENCES constraint that names no table.
+static inline int synq_is_defer_marker(SynqParseCtx* pCtx, uint32_t node_id) {
+  SyntaqliteNode* n = AST_NODE(&pCtx->ast, node_id);
+  if (n->tag != SYNTAQLITE_NODE_COLUMN_CONSTRAINT ||
+      n->column_constraint.kind !=
+          SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES ||
+      n->column_constraint.fk_clause == SYNTAQLITE_NULL_NODE) {
+    return 0;
+  }
+  SyntaqliteNode* fk = AST_NODE(&pCtx->ast, n->column_constraint.fk_clause);
+  return fk->foreign_key_clause.ref_table.length == 0;
+}
+
+// Returns 0 with no FK to attach to, as sqlite3DeferForeignKey no-ops there.
+static inline int synq_merge_defer(SynqParseCtx* pCtx,
+                                   uint32_t target_id,
+                                   uint32_t marker_id) {
+  if (target_id == SYNTAQLITE_NULL_NODE) {
+    return 0;
+  }
+  SyntaqliteNode* target = AST_NODE(&pCtx->ast, target_id);
+  if (target->tag != SYNTAQLITE_NODE_COLUMN_CONSTRAINT ||
+      target->column_constraint.fk_clause == SYNTAQLITE_NULL_NODE) {
+    return 0;
+  }
+  SyntaqliteNode* marker = AST_NODE(&pCtx->ast, marker_id);
+  SyntaqliteNode* src =
+      AST_NODE(&pCtx->ast, marker->column_constraint.fk_clause);
+  SyntaqliteNode* dst =
+      AST_NODE(&pCtx->ast, target->column_constraint.fk_clause);
+  dst->foreign_key_clause.deferrable = src->foreign_key_clause.deferrable;
+  dst->foreign_key_clause.initial_defer = src->foreign_key_clause.initial_defer;
+  return 1;
+}
 
 // Map parser error bookkeeping to a best-effort source span.
 static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
@@ -408,6 +450,7 @@ typedef union {
   int yy320;
   SynqUpsertValue yy352;
   SynqConstraintListValue yy430;
+  SynqDeferValue yy519;
   SynqWithValue yy541;
   SynqRefArgsValue yy603;
   SynqParenExprlistValue yy618;
@@ -7777,10 +7820,6 @@ static YYACTIONTYPE yy_reduce(
     case 61: /* table_option_set ::= */
     case 88: /* autoinc ::= */
       yytestcase(yyruleno == 88);
-    case 103: /* init_deferred_pred_opt ::= */
-      yytestcase(yyruleno == 103);
-    case 117: /* defer_subclause_opt ::= */
-      yytestcase(yyruleno == 117);
     case 135: /* collate ::= */
       yytestcase(yyruleno == 135);
     case 226: /* ifexists ::= */
@@ -7860,7 +7899,14 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 68: /* carglist ::= carglist ccons */
     {
-      if (yymsp[0].minor.yy150.node != SYNTAQLITE_NULL_NODE) {
+      if (yymsp[0].minor.yy150.node != SYNTAQLITE_NULL_NODE &&
+          synq_is_defer_marker(pCtx, yymsp[0].minor.yy150.node)) {
+        yylhsminor.yy430 = yymsp[-1].minor.yy430;
+        if (synq_merge_defer(pCtx, yymsp[-1].minor.yy430.last_node,
+                             yymsp[0].minor.yy150.node)) {
+          yylhsminor.yy430.pending_name = yymsp[-1].minor.yy430.pending_name;
+        }
+      } else if (yymsp[0].minor.yy150.node != SYNTAQLITE_NULL_NODE) {
         // Apply pending constraint name from the list to this node
         SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[0].minor.yy150.node);
         node->column_constraint.constraint_name =
@@ -7873,10 +7919,12 @@ static YYACTIONTYPE yy_reduce(
               pCtx, yymsp[-1].minor.yy430.list, yymsp[0].minor.yy150.node);
         }
         yylhsminor.yy430.pending_name = SYNQ_NO_SPAN;
+        yylhsminor.yy430.last_node = yymsp[0].minor.yy150.node;
       } else if (yymsp[0].minor.yy150.pending_name.length > 0) {
         // CONSTRAINT nm — store pending name for next constraint
         yylhsminor.yy430.list = yymsp[-1].minor.yy430.list;
         yylhsminor.yy430.pending_name = yymsp[0].minor.yy150.pending_name;
+        yylhsminor.yy430.last_node = yymsp[-1].minor.yy430.last_node;
       } else {
         yylhsminor.yy430 = yymsp[-1].minor.yy430;
       }
@@ -7887,6 +7935,7 @@ static YYACTIONTYPE yy_reduce(
     {
       yymsp[1].minor.yy430.list = SYNTAQLITE_NULL_NODE;
       yymsp[1].minor.yy430.pending_name = SYNQ_NO_SPAN;
+      yymsp[1].minor.yy430.last_node = SYNTAQLITE_NULL_NODE;
     } break;
     case 70:  /* ccons ::= CONSTRAINT nm */
     case 112: /* tcons ::= CONSTRAINT nm */
@@ -8010,7 +8059,7 @@ static YYACTIONTYPE yy_reduce(
           pCtx, synq_span(pCtx, yymsp[-2].minor.yy0), yymsp[-1].minor.yy277,
           yymsp[0].minor.yy603.match_name, yymsp[0].minor.yy603.on_delete,
           yymsp[0].minor.yy603.on_update, yymsp[0].minor.yy603.on_insert,
-          SYNTAQLITE_BOOL_FALSE);
+          SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET);
       yymsp[-3].minor.yy150.node = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES, SYNQ_NO_SPAN,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
@@ -8021,17 +8070,12 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 82: /* ccons ::= defer_subclause */
     {
-      // Create a minimal constraint that just marks deferral.
-      // In practice, this follows a REFERENCES ccons. We'll handle it
-      // by updating the last constraint in the list if possible.
-      // For simplicity, we create a separate REFERENCES constraint with just
-      // deferral info. The printer will show it as a separate constraint entry.
       uint32_t fk = synq_parse_foreign_key_clause(
           pCtx, SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNQ_NO_SPAN,
           SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
           SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
-          SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
-          (SyntaqliteBool)yymsp[0].minor.yy320);
+          SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET, yymsp[0].minor.yy519.deferrable,
+          yymsp[0].minor.yy519.initial);
       yylhsminor.yy150.node = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES, SYNQ_NO_SPAN,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
@@ -8170,35 +8214,28 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 101: /* defer_subclause ::= NOT DEFERRABLE init_deferred_pred_opt */
     {
-      yymsp[-2].minor.yy320 = 0;
+      yymsp[-2].minor.yy519.deferrable = SYNTAQLITE_DEFERRABLE_NOT_DEFERRABLE;
+      yymsp[-2].minor.yy519.initial =
+          (SyntaqliteInitialDeferMode)yymsp[0].minor.yy320;
     } break;
     case 102: /* defer_subclause ::= DEFERRABLE init_deferred_pred_opt */
-    case 144: /* insert_cmd ::= INSERT orconf */
-      yytestcase(yyruleno == 144);
-    case 147: /* orconf ::= OR resolvetype */
-      yytestcase(yyruleno == 147);
-    case 404: /* frame_exclude_opt ::= EXCLUDE frame_exclude */
-      yytestcase(yyruleno == 404);
-      {
-        yymsp[-1].minor.yy320 = yymsp[0].minor.yy320;
-      }
-      break;
+    {
+      yymsp[-1].minor.yy519.deferrable = SYNTAQLITE_DEFERRABLE_DEFERRABLE;
+      yymsp[-1].minor.yy519.initial =
+          (SyntaqliteInitialDeferMode)yymsp[0].minor.yy320;
+    } break;
+    case 103: /* init_deferred_pred_opt ::= */
+    {
+      yymsp[1].minor.yy320 = (int)SYNTAQLITE_INITIAL_DEFER_MODE_UNSET;
+    } break;
     case 104: /* init_deferred_pred_opt ::= INITIALLY DEFERRED */
-    case 136: /* collate ::= COLLATE ID|STRING */
-      yytestcase(yyruleno == 136);
-    case 225: /* ifexists ::= IF EXISTS */
-      yytestcase(yyruleno == 225);
-      {
-        yymsp[-1].minor.yy320 = 1;
-      }
-      break;
+    {
+      yymsp[-1].minor.yy320 = (int)SYNTAQLITE_INITIAL_DEFER_MODE_DEFERRED;
+    } break;
     case 105: /* init_deferred_pred_opt ::= INITIALLY IMMEDIATE */
-    case 248: /* trans_opt ::= TRANSACTION nm */
-      yytestcase(yyruleno == 248);
-      {
-        yymsp[-1].minor.yy320 = 0;
-      }
-      break;
+    {
+      yymsp[-1].minor.yy320 = (int)SYNTAQLITE_INITIAL_DEFER_MODE_IMMEDIATE;
+    } break;
     case 107: /* conslist_opt ::= COMMA conslist */
     {
       yymsp[-1].minor.yy277 = yymsp[0].minor.yy430.list;
@@ -8220,9 +8257,11 @@ static YYACTIONTYPE yy_reduce(
               pCtx, yymsp[-2].minor.yy430.list, yymsp[0].minor.yy150.node);
         }
         yylhsminor.yy430.pending_name = SYNQ_NO_SPAN;
+        yylhsminor.yy430.last_node = yymsp[0].minor.yy150.node;
       } else if (yymsp[0].minor.yy150.pending_name.length > 0) {
         yylhsminor.yy430.list = yymsp[-2].minor.yy430.list;
         yylhsminor.yy430.pending_name = yymsp[0].minor.yy150.pending_name;
+        yylhsminor.yy430.last_node = yymsp[-2].minor.yy430.last_node;
       } else {
         yylhsminor.yy430 = yymsp[-2].minor.yy430;
       }
@@ -8235,9 +8274,11 @@ static YYACTIONTYPE yy_reduce(
         yylhsminor.yy430.list = synq_parse_table_constraint_list(
             pCtx, SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy150.node);
         yylhsminor.yy430.pending_name = SYNQ_NO_SPAN;
+        yylhsminor.yy430.last_node = yymsp[0].minor.yy150.node;
       } else {
         yylhsminor.yy430.list = SYNTAQLITE_NULL_NODE;
         yylhsminor.yy430.pending_name = yymsp[0].minor.yy150.pending_name;
+        yylhsminor.yy430.last_node = SYNTAQLITE_NULL_NODE;
       }
     }
       yymsp[0].minor.yy430 = yylhsminor.yy430;
@@ -8284,13 +8325,18 @@ static YYACTIONTYPE yy_reduce(
           pCtx, synq_span(pCtx, yymsp[-3].minor.yy0), yymsp[-2].minor.yy277,
           yymsp[-1].minor.yy603.match_name, yymsp[-1].minor.yy603.on_delete,
           yymsp[-1].minor.yy603.on_update, yymsp[-1].minor.yy603.on_insert,
-          (SyntaqliteBool)yymsp[0].minor.yy320);
+          yymsp[0].minor.yy519.deferrable, yymsp[0].minor.yy519.initial);
       yymsp[-9].minor.yy150.node = synq_parse_table_constraint(
           pCtx, SYNTAQLITE_TABLE_CONSTRAINT_TYPE_FOREIGN_KEY, SYNQ_NO_SPAN,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_BOOL_FALSE,
           SYNTAQLITE_NULL_NODE, yymsp[-6].minor.yy277, SYNTAQLITE_NULL_NODE,
           fk);
       yymsp[-9].minor.yy150.pending_name = SYNQ_NO_SPAN;
+    } break;
+    case 117: /* defer_subclause_opt ::= */
+    {
+      yymsp[1].minor.yy519.deferrable = SYNTAQLITE_DEFERRABLE_UNSET;
+      yymsp[1].minor.yy519.initial = SYNTAQLITE_INITIAL_DEFER_MODE_UNSET;
     } break;
     case 119: /* onconf ::= */
     case 146: /* orconf ::= */
@@ -8390,6 +8436,13 @@ static YYACTIONTYPE yy_reduce(
       yymsp[-4].minor.yy277 =
           synq_parse_expr_list(pCtx, yymsp[-4].minor.yy277, col);
     } break;
+    case 136: /* collate ::= COLLATE ID|STRING */
+    case 225: /* ifexists ::= IF EXISTS */
+      yytestcase(yyruleno == 225);
+      {
+        yymsp[-1].minor.yy320 = 1;
+      }
+      break;
     case 137: /* with ::= */
     {
       yymsp[1].minor.yy541.cte_list = SYNTAQLITE_NULL_NODE;
@@ -8482,6 +8535,15 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277);
     }
       yymsp[-7].minor.yy277 = yylhsminor.yy277;
+      break;
+    case 144: /* insert_cmd ::= INSERT orconf */
+    case 147: /* orconf ::= OR resolvetype */
+      yytestcase(yyruleno == 147);
+    case 404: /* frame_exclude_opt ::= EXCLUDE frame_exclude */
+      yytestcase(yyruleno == 404);
+      {
+        yymsp[-1].minor.yy320 = yymsp[0].minor.yy320;
+      }
       break;
     case 145: /* insert_cmd ::= REPLACE */
     case 150: /* resolvetype ::= REPLACE */
@@ -9157,6 +9219,10 @@ static YYACTIONTYPE yy_reduce(
         yymsp[0].minor.yy320 = 0;
       }
       break;
+    case 248: /* trans_opt ::= TRANSACTION nm */
+    {
+      yymsp[-1].minor.yy320 = 0;
+    } break;
     case 251: /* cmd ::= SAVEPOINT nmorerr */
     {
       yymsp[-1].minor.yy277 = synq_parse_savepoint_stmt(

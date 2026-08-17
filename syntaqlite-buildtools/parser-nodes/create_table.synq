@@ -1,4 +1,6 @@
 enum ForeignKeyAction { UNSET NO_ACTION SET_NULL SET_DEFAULT CASCADE RESTRICT }
+enum Deferrable { UNSET NOT_DEFERRABLE DEFERRABLE }
+enum InitialDeferMode { UNSET DEFERRED IMMEDIATE }
 enum GeneratedColumnStorage { VIRTUAL STORED }
 enum ColumnConstraintType { DEFAULT NOT_NULL PRIMARY_KEY UNIQUE CHECK REFERENCES COLLATE GENERATED NULL }
 enum TableConstraintType { PRIMARY_KEY UNIQUE CHECK FOREIGN_KEY }
@@ -12,34 +14,46 @@ node ForeignKeyClause {
   on_delete: inline ForeignKeyAction
   on_update: inline ForeignKeyAction
   on_insert: inline ForeignKeyAction
-  is_deferred: inline Bool
+  deferrable: inline Deferrable
+  initial_defer: inline InitialDeferMode
 
   fmt {
-    if_span(ref_table) { "REFERENCES" space span(ref_table) }
-    if_set(ref_columns) { group { "(" nest { softline child(ref_columns) } softline ")" } }
-    if_span(match_name) { space "MATCH" space span(match_name) }
-    switch(on_delete) {
-      NO_ACTION   { space "ON" "DELETE" "NO" "ACTION" }
-      SET_NULL    { space "ON" "DELETE" "SET" "NULL" }
-      SET_DEFAULT { space "ON" "DELETE" "SET" "DEFAULT" }
-      CASCADE     { space "ON" "DELETE" "CASCADE" }
-      RESTRICT    { space "ON" "DELETE" "RESTRICT" }
+    group {
+      if_span(ref_table) { "REFERENCES" space span(ref_table) }
+      if_set(ref_columns) { group { "(" nest { softline child(ref_columns) } softline ")" } }
+      nest {
+        if_span(match_name) { line "MATCH" space span(match_name) }
+        switch(on_delete) {
+          NO_ACTION   { line "ON" "DELETE" "NO" "ACTION" }
+          SET_NULL    { line "ON" "DELETE" "SET" "NULL" }
+          SET_DEFAULT { line "ON" "DELETE" "SET" "DEFAULT" }
+          CASCADE     { line "ON" "DELETE" "CASCADE" }
+          RESTRICT    { line "ON" "DELETE" "RESTRICT" }
+        }
+        switch(on_update) {
+          NO_ACTION   { line "ON" "UPDATE" "NO" "ACTION" }
+          SET_NULL    { line "ON" "UPDATE" "SET" "NULL" }
+          SET_DEFAULT { line "ON" "UPDATE" "SET" "DEFAULT" }
+          CASCADE     { line "ON" "UPDATE" "CASCADE" }
+          RESTRICT    { line "ON" "UPDATE" "RESTRICT" }
+        }
+        switch(on_insert) {
+          NO_ACTION   { line "ON" "INSERT" "NO" "ACTION" }
+          SET_NULL    { line "ON" "INSERT" "SET" "NULL" }
+          SET_DEFAULT { line "ON" "INSERT" "SET" "DEFAULT" }
+          CASCADE     { line "ON" "INSERT" "CASCADE" }
+          RESTRICT    { line "ON" "INSERT" "RESTRICT" }
+        }
+        switch(deferrable) {
+          NOT_DEFERRABLE { line "NOT" "DEFERRABLE" }
+          DEFERRABLE     { line "DEFERRABLE" }
+        }
+        switch(initial_defer) {
+          DEFERRED  { space "INITIALLY" "DEFERRED" }
+          IMMEDIATE { space "INITIALLY" "IMMEDIATE" }
+        }
+      }
     }
-    switch(on_update) {
-      NO_ACTION   { space "ON" "UPDATE" "NO" "ACTION" }
-      SET_NULL    { space "ON" "UPDATE" "SET" "NULL" }
-      SET_DEFAULT { space "ON" "UPDATE" "SET" "DEFAULT" }
-      CASCADE     { space "ON" "UPDATE" "CASCADE" }
-      RESTRICT    { space "ON" "UPDATE" "RESTRICT" }
-    }
-    switch(on_insert) {
-      NO_ACTION   { space "ON" "INSERT" "NO" "ACTION" }
-      SET_NULL    { space "ON" "INSERT" "SET" "NULL" }
-      SET_DEFAULT { space "ON" "INSERT" "SET" "DEFAULT" }
-      CASCADE     { space "ON" "INSERT" "CASCADE" }
-      RESTRICT    { space "ON" "INSERT" "RESTRICT" }
-    }
-    if_flag(is_deferred) { if_span(ref_table) { space } "DEFERRABLE" "INITIALLY" "DEFERRED" }
   }
 }
 

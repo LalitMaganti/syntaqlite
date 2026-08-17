@@ -101,6 +101,18 @@ typedef enum SyntaqliteForeignKeyAction {
   SYNTAQLITE_FOREIGN_KEY_ACTION_RESTRICT = 5
 } SyntaqliteForeignKeyAction;
 
+typedef enum SyntaqliteDeferrable {
+  SYNTAQLITE_DEFERRABLE_UNSET = 0,
+  SYNTAQLITE_DEFERRABLE_NOT_DEFERRABLE = 1,
+  SYNTAQLITE_DEFERRABLE_DEFERRABLE = 2
+} SyntaqliteDeferrable;
+
+typedef enum SyntaqliteInitialDeferMode {
+  SYNTAQLITE_INITIAL_DEFER_MODE_UNSET = 0,
+  SYNTAQLITE_INITIAL_DEFER_MODE_DEFERRED = 1,
+  SYNTAQLITE_INITIAL_DEFER_MODE_IMMEDIATE = 2
+} SyntaqliteInitialDeferMode;
+
 typedef enum SyntaqliteGeneratedColumnStorage {
   SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL = 0,
   SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED = 1
@@ -506,7 +518,8 @@ typedef struct SyntaqliteForeignKeyClause {
   SyntaqliteForeignKeyAction on_delete;
   SyntaqliteForeignKeyAction on_update;
   SyntaqliteForeignKeyAction on_insert;
-  SyntaqliteBool is_deferred;
+  SyntaqliteDeferrable deferrable;
+  SyntaqliteInitialDeferMode initial_defer;
 } SyntaqliteForeignKeyClause;
 
 typedef struct SyntaqliteColumnConstraint {

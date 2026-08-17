@@ -168,6 +168,18 @@ class ForeignKeyAction(IntEnum):
     RESTRICT = 5
 
 
+class Deferrable(IntEnum):
+    UNSET = 0
+    NOT_DEFERRABLE = 1
+    DEFERRABLE = 2
+
+
+class InitialDeferMode(IntEnum):
+    UNSET = 0
+    DEFERRED = 1
+    IMMEDIATE = 2
+
+
 class GeneratedColumnStorage(IntEnum):
     VIRTUAL = 0
     STORED = 1

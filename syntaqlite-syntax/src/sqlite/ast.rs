@@ -379,6 +379,42 @@ impl ForeignKeyAction {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
+pub enum Deferrable {
+    Unset = 0,
+    NotDeferrable = 1,
+    Deferrable = 2,
+}
+
+impl Deferrable {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Deferrable::Unset => "UNSET",
+            Deferrable::NotDeferrable => "NOT_DEFERRABLE",
+            Deferrable::Deferrable => "DEFERRABLE",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum InitialDeferMode {
+    Unset = 0,
+    Deferred = 1,
+    Immediate = 2,
+}
+
+impl InitialDeferMode {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            InitialDeferMode::Unset => "UNSET",
+            InitialDeferMode::Deferred => "DEFERRED",
+            InitialDeferMode::Immediate => "IMMEDIATE",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
 pub enum GeneratedColumnStorage {
     Virtual = 0,
     Stored = 1,
@@ -2418,8 +2454,11 @@ impl<'a> ForeignKeyClause<'a> {
     pub fn on_insert(&self) -> ForeignKeyAction {
         self.raw.on_insert
     }
-    pub fn is_deferred(&self) -> bool {
-        self.raw.is_deferred == super::ffi::Bool::True
+    pub fn deferrable(&self) -> Deferrable {
+        self.raw.deferrable
+    }
+    pub fn initial_defer(&self) -> InitialDeferMode {
+        self.raw.initial_defer
     }
 }
 

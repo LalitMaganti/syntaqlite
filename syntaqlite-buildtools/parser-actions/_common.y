@@ -59,7 +59,14 @@ typedef struct SynqConstraintValue {
 typedef struct SynqConstraintListValue {
   uint32_t list;
   SyntaqliteTextSpan pending_name;
+  uint32_t last_node;
 } SynqConstraintListValue;
+
+// defer_subclause: DEFERRABLE / NOT DEFERRABLE plus the INITIALLY mode.
+typedef struct SynqDeferValue {
+  SyntaqliteDeferrable deferrable;
+  SyntaqliteInitialDeferMode initial;
+} SynqDeferValue;
 
 // on_using: ON expr / USING column-list discriminator.
 typedef struct SynqOnUsingValue {
@@ -117,6 +124,38 @@ typedef struct SynqParenExprlistValue {
 /* END GRAMMAR_TYPES */
 
 #define YYPARSEFREENEVERNULL 1
+
+// A defer_subclause reduces to a REFERENCES constraint that names no table.
+static inline int synq_is_defer_marker(SynqParseCtx* pCtx, uint32_t node_id) {
+  SyntaqliteNode* n = AST_NODE(&pCtx->ast, node_id);
+  if (n->tag != SYNTAQLITE_NODE_COLUMN_CONSTRAINT ||
+      n->column_constraint.kind != SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES ||
+      n->column_constraint.fk_clause == SYNTAQLITE_NULL_NODE) {
+    return 0;
+  }
+  SyntaqliteNode* fk = AST_NODE(&pCtx->ast, n->column_constraint.fk_clause);
+  return fk->foreign_key_clause.ref_table.length == 0;
+}
+
+// Returns 0 with no FK to attach to, as sqlite3DeferForeignKey no-ops there.
+static inline int synq_merge_defer(SynqParseCtx* pCtx,
+                                   uint32_t target_id,
+                                   uint32_t marker_id) {
+  if (target_id == SYNTAQLITE_NULL_NODE) {
+    return 0;
+  }
+  SyntaqliteNode* target = AST_NODE(&pCtx->ast, target_id);
+  if (target->tag != SYNTAQLITE_NODE_COLUMN_CONSTRAINT ||
+      target->column_constraint.fk_clause == SYNTAQLITE_NULL_NODE) {
+    return 0;
+  }
+  SyntaqliteNode* marker = AST_NODE(&pCtx->ast, marker_id);
+  SyntaqliteNode* src = AST_NODE(&pCtx->ast, marker->column_constraint.fk_clause);
+  SyntaqliteNode* dst = AST_NODE(&pCtx->ast, target->column_constraint.fk_clause);
+  dst->foreign_key_clause.deferrable = src->foreign_key_clause.deferrable;
+  dst->foreign_key_clause.initial_defer = src->foreign_key_clause.initial_defer;
+  return 1;
+}
 
 // Map parser error bookkeeping to a best-effort source span.
 static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
