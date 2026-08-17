@@ -1466,6 +1466,7 @@ pub fn syntaqlite_syntax::nodes::ForeignKeyAction::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::is_deferred(&self) -> bool
+pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::match_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ForeignKeyClauseId
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::on_delete(&self) -> syntaqlite_syntax::nodes::ForeignKeyAction
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::on_update(&self) -> syntaqlite_syntax::nodes::ForeignKeyAction

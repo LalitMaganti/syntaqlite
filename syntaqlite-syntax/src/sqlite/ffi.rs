@@ -144,6 +144,7 @@ pub(crate) struct ForeignKeyClause {
     pub(crate) tag: u32,
     pub(crate) ref_table: TextSpan,
     pub(crate) ref_columns: AnyNodeId,
+    pub(crate) match_name: TextSpan,
     pub(crate) on_delete: super::ast::ForeignKeyAction,
     pub(crate) on_update: super::ast::ForeignKeyAction,
     pub(crate) is_deferred: Bool,

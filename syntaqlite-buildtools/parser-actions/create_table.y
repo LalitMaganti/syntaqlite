@@ -14,8 +14,8 @@
 
 %type scantok {SynqParseToken}
 %type autoinc {int}
-%type refargs {int}
-%type refarg {int}
+%type refargs {SynqRefArgsValue}
+%type refarg {SynqRefArgValue}
 %type refact {int}
 %type defer_subclause {int}
 %type init_deferred_pred_opt {int}
@@ -285,11 +285,9 @@ ccons(A) ::= CHECK LP expr(X) RP. {
 
 // REFERENCES nm eidlist_opt refargs
 ccons(A) ::= REFERENCES nm(T) eidlist_opt(TA) refargs(R). {
-    // Decode refargs: low byte = on_delete, next byte = on_update
-    SyntaqliteForeignKeyAction on_del = (SyntaqliteForeignKeyAction)(R & 0xff);
-    SyntaqliteForeignKeyAction on_upd = (SyntaqliteForeignKeyAction)((R >> 8) & 0xff);
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
-        synq_span(pCtx, T), TA, on_del, on_upd, SYNTAQLITE_BOOL_FALSE);
+        synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
+        SYNTAQLITE_BOOL_FALSE);
     A.node = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
         SYNQ_NO_SPAN,
@@ -308,7 +306,7 @@ ccons(A) ::= defer_subclause(D). {
     // For simplicity, we create a separate REFERENCES constraint with just deferral info.
     // The printer will show it as a separate constraint entry.
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
-        SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE,
+        SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNQ_NO_SPAN,
         SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION,
         SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION,
         (SyntaqliteBool)D);
@@ -384,36 +382,45 @@ autoinc(A) ::= AUTOINCR. {
 }
 
 // ============ Foreign key reference args ============
-// We pack on_delete in low byte, on_update in byte 1.
-// ForeignKeyAction enum: NO_ACTION=0, SET_NULL=1, SET_DEFAULT=2, CASCADE=3, RESTRICT=4
+// SQLite ignores MATCH semantically, but the text still has to survive.
 
 refargs(A) ::= . {
-    A = 0; // NO_ACTION for both
+    A.on_delete = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+    A.on_update = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+    A.match_name = SYNQ_NO_SPAN;
 }
 
 refargs(A) ::= refargs(A) refarg(Y). {
-    // refarg encodes: low byte = value, byte 1 = shift amount (0 or 8)
-    int val = Y & 0xff;
-    int shift = (Y >> 8) & 0xff;
-    // Clear the target byte in A and set new value
-    A = (A & ~(0xff << shift)) | (val << shift);
+    switch (Y.kind) {
+        case SYNQ_REFARG_DELETE: A.on_delete = Y.action; break;
+        case SYNQ_REFARG_UPDATE: A.on_update = Y.action; break;
+        case SYNQ_REFARG_MATCH:  A.match_name = Y.match_name; break;
+        default: break;
+    }
 }
 
-// refarg encodes value + shift: low byte = action enum value, byte 1 = bit shift (0=DELETE, 8=UPDATE)
-refarg(A) ::= MATCH nm. {
-    A = 0; // MATCH is ignored
+refarg(A) ::= MATCH nm(X). {
+    A.kind = SYNQ_REFARG_MATCH;
+    A.action = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+    A.match_name = synq_span(pCtx, X);
 }
 
 refarg(A) ::= ON INSERT refact. {
-    A = 0; // ON INSERT is ignored
+    A.kind = SYNQ_REFARG_NONE;
+    A.action = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+    A.match_name = SYNQ_NO_SPAN;
 }
 
 refarg(A) ::= ON DELETE refact(X). {
-    A = X; // shift=0 for DELETE
+    A.kind = SYNQ_REFARG_DELETE;
+    A.action = (SyntaqliteForeignKeyAction)X;
+    A.match_name = SYNQ_NO_SPAN;
 }
 
 refarg(A) ::= ON UPDATE refact(X). {
-    A = X | (8 << 8); // shift=8 for UPDATE
+    A.kind = SYNQ_REFARG_UPDATE;
+    A.action = (SyntaqliteForeignKeyAction)X;
+    A.match_name = SYNQ_NO_SPAN;
 }
 
 // refact returns ForeignKeyAction enum values
@@ -537,10 +544,9 @@ tcons(A) ::= CHECK LP expr(E) RP onconf(R). {
 }
 
 tcons(A) ::= FOREIGN KEY LP eidlist(FA) RP REFERENCES nm(T) eidlist_opt(TA) refargs(R) defer_subclause_opt(D). {
-    SyntaqliteForeignKeyAction on_del = (SyntaqliteForeignKeyAction)(R & 0xff);
-    SyntaqliteForeignKeyAction on_upd = (SyntaqliteForeignKeyAction)((R >> 8) & 0xff);
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
-        synq_span(pCtx, T), TA, on_del, on_upd, (SyntaqliteBool)D);
+        synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
+        (SyntaqliteBool)D);
     A.node = synq_parse_table_constraint(pCtx,
         SYNTAQLITE_TABLE_CONSTRAINT_TYPE_FOREIGN_KEY,
         SYNQ_NO_SPAN,

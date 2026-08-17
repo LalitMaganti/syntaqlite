@@ -85,6 +85,24 @@ typedef struct SynqUpsertValue {
   uint32_t returning;
 } SynqUpsertValue;
 
+// refarg / refargs: MATCH carries an identifier, so this cannot be a packed int.
+#define SYNQ_REFARG_NONE   0
+#define SYNQ_REFARG_DELETE 1
+#define SYNQ_REFARG_UPDATE 2
+#define SYNQ_REFARG_MATCH  3
+
+typedef struct SynqRefArgValue {
+  int kind;
+  SyntaqliteForeignKeyAction action;
+  SyntaqliteTextSpan match_name;
+} SynqRefArgValue;
+
+typedef struct SynqRefArgsValue {
+  SyntaqliteForeignKeyAction on_delete;
+  SyntaqliteForeignKeyAction on_update;
+  SyntaqliteTextSpan match_name;
+} SynqRefArgsValue;
+
 // paren_exprlist: optional `LP exprlist RP` tail. Tracks whether the
 // parens were present so callers can distinguish `foo` (has_parens=0)
 // from `foo()` (has_parens=1, args=NULL_NODE) — relevant for table /

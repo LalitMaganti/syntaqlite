@@ -501,6 +501,7 @@ typedef struct SyntaqliteForeignKeyClause {
   SyntaqliteNodeTag tag;
   SyntaqliteTextSpan ref_table;
   uint32_t ref_columns;
+  SyntaqliteTextSpan match_name;
   SyntaqliteForeignKeyAction on_delete;
   SyntaqliteForeignKeyAction on_update;
   SyntaqliteBool is_deferred;

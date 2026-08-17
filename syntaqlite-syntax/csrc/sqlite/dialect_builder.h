@@ -201,6 +201,7 @@ static inline uint32_t synq_parse_foreign_key_clause(
     SynqParseCtx* ctx,
     SyntaqliteTextSpan ref_table,
     uint32_t ref_columns,
+    SyntaqliteTextSpan match_name,
     SyntaqliteForeignKeyAction on_delete,
     SyntaqliteForeignKeyAction on_update,
     SyntaqliteBool is_deferred) {
@@ -209,6 +210,7 @@ static inline uint32_t synq_parse_foreign_key_clause(
       &(SyntaqliteForeignKeyClause){.tag = SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE,
                                     .ref_table = ref_table,
                                     .ref_columns = ref_columns,
+                                    .match_name = match_name,
                                     .on_delete = on_delete,
                                     .on_update = on_update,
                                     .is_deferred = is_deferred},

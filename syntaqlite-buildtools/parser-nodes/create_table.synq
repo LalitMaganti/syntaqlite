@@ -8,6 +8,7 @@ flags CreateTableStmtFlags { WITHOUT_ROWID = 1 STRICT = 2 }
 node ForeignKeyClause {
   ref_table: inline SyntaqliteTextSpan
   ref_columns: index ExprList
+  match_name: inline SyntaqliteTextSpan
   on_delete: inline ForeignKeyAction
   on_update: inline ForeignKeyAction
   is_deferred: inline Bool
@@ -15,6 +16,7 @@ node ForeignKeyClause {
   fmt {
     if_span(ref_table) { "REFERENCES" space span(ref_table) }
     if_set(ref_columns) { group { "(" nest { softline child(ref_columns) } softline ")" } }
+    if_span(match_name) { space "MATCH" space span(match_name) }
     switch(on_delete) {
       SET_NULL    { space "ON" "DELETE" "SET" "NULL" }
       SET_DEFAULT { space "ON" "DELETE" "SET" "DEFAULT" }

@@ -355,6 +355,8 @@ static const SyntaqliteFieldMeta field_meta_foreign_key_clause[] = {
      "ref_table", NULL, 0},
     {offsetof(SyntaqliteForeignKeyClause, ref_columns),
      SYNTAQLITE_FIELD_NODE_ID, "ref_columns", NULL, 0},
+    {offsetof(SyntaqliteForeignKeyClause, match_name), SYNTAQLITE_FIELD_SPAN,
+     "match_name", NULL, 0},
     {offsetof(SyntaqliteForeignKeyClause, on_delete), SYNTAQLITE_FIELD_ENUM,
      "on_delete", display_foreign_key_action,
      sizeof(display_foreign_key_action) /
@@ -994,6 +996,7 @@ static const SyntaqliteFieldRangeMeta range_meta_column_ref[] = {
 
 static const SyntaqliteFieldRangeMeta range_meta_foreign_key_clause[] = {
     {offsetof(SyntaqliteForeignKeyClause, ref_table), 1},
+    {offsetof(SyntaqliteForeignKeyClause, match_name), 1},
 };
 
 static const SyntaqliteFieldRangeMeta range_meta_column_constraint[] = {
@@ -1295,7 +1298,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* CaseExpr */
     2,  /* CaseWhen */
     0,  /* CaseWhenList */
-    5,  /* ForeignKeyClause */
+    6,  /* ForeignKeyClause */
     11, /* ColumnConstraint */
     0,  /* ColumnConstraintList */
     3,  /* ColumnDef */
@@ -1465,7 +1468,7 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                 /* CaseExpr */
     {NULL, 0},                                 /* CaseWhen */
     {NULL, 0},                                 /* CaseWhenList */
-    {range_meta_foreign_key_clause, 1},        /* ForeignKeyClause */
+    {range_meta_foreign_key_clause, 2},        /* ForeignKeyClause */
     {range_meta_column_constraint, 2},         /* ColumnConstraint */
     {NULL, 0},                                 /* ColumnConstraintList */
     {range_meta_column_def, 1},                /* ColumnDef */
