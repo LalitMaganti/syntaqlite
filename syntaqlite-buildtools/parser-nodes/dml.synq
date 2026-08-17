@@ -58,9 +58,9 @@ node DeleteStmt {
         NOT_INDEXED { space "NOT" "INDEXED" }
       }
       clause("WHERE", where_clause)
+      if_set(returning) { line "RETURNING" group { nest { line child(returning) } } }
       clause("ORDER", "BY", orderby)
       if_set(limit_clause) { line "LIMIT" space child(limit_clause) }
-      if_set(returning) { line "RETURNING" group { nest { line child(returning) } } }
     }
   }
 }
@@ -118,9 +118,9 @@ node UpdateStmt {
       clause("SET", setlist)
       if_set(from_clause) { line "FROM" space child(from_clause) }
       clause("WHERE", where_clause)
+      if_set(returning) { line "RETURNING" group { nest { line child(returning) } } }
       clause("ORDER", "BY", orderby)
       if_set(limit_clause) { line "LIMIT" space child(limit_clause) }
-      if_set(returning) { line "RETURNING" group { nest { line child(returning) } } }
     }
   }
 }
