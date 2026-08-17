@@ -484,7 +484,8 @@ class SelectWindow(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
-                            base_window_name: "w"
+                            ref_window_name: "w"
+                            base_window_name: (none)
                             partition_by: (none)
                             orderby: (none)
                             frame: (none)
@@ -508,6 +509,7 @@ class SelectWindow(TestSuite):
                     window_name: "w"
                     window_def:
                       WindowDef
+                        ref_window_name: (none)
                         base_window_name: (none)
                         partition_by: (none)
                         orderby:

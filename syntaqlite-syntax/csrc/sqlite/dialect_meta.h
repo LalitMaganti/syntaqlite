@@ -990,6 +990,8 @@ static const SyntaqliteFieldMeta field_meta_frame_spec[] = {
 };
 
 static const SyntaqliteFieldMeta field_meta_window_def[] = {
+    {offsetof(SyntaqliteWindowDef, ref_window_name), SYNTAQLITE_FIELD_SPAN,
+     "ref_window_name", NULL, 0},
     {offsetof(SyntaqliteWindowDef, base_window_name), SYNTAQLITE_FIELD_SPAN,
      "base_window_name", NULL, 0},
     {offsetof(SyntaqliteWindowDef, partition_by), SYNTAQLITE_FIELD_NODE_ID,
@@ -1142,6 +1144,7 @@ static const SyntaqliteFieldRangeMeta range_meta_create_view_stmt[] = {
 };
 
 static const SyntaqliteFieldRangeMeta range_meta_window_def[] = {
+    {offsetof(SyntaqliteWindowDef, ref_window_name), 1},
     {offsetof(SyntaqliteWindowDef, base_window_name), 1},
 };
 
@@ -1402,7 +1405,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     1,  /* ValuesClause */
     2,  /* FrameBound */
     4,  /* FrameSpec */
-    4,  /* WindowDef */
+    5,  /* WindowDef */
     0,  /* WindowDefList */
     2,  /* NamedWindowDef */
     0,  /* NamedWindowDefList */
@@ -1574,7 +1577,7 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                 /* ValuesClause */
     {NULL, 0},                                 /* FrameBound */
     {NULL, 0},                                 /* FrameSpec */
-    {range_meta_window_def, 1},                /* WindowDef */
+    {range_meta_window_def, 2},                /* WindowDef */
     {NULL, 0},                                 /* WindowDefList */
     {range_meta_named_window_def, 1},          /* NamedWindowDef */
     {NULL, 0},                                 /* NamedWindowDefList */

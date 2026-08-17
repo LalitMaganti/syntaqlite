@@ -996,6 +996,7 @@ typedef struct SyntaqliteFrameSpec {
 
 typedef struct SyntaqliteWindowDef {
   SyntaqliteNodeTag tag;
+  SyntaqliteTextSpan ref_window_name;
   SyntaqliteTextSpan base_window_name;
   uint32_t partition_by;
   uint32_t orderby;

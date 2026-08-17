@@ -41,6 +41,7 @@ windowdefn(A) ::= nm(B) AS LP window(C) RP. {
 window(A) ::= PARTITION BY nexprlist(B) orderby_opt(C) frame_opt(D). {
     A = synq_parse_window_def(pCtx,
         SYNQ_NO_SPAN,
+        SYNQ_NO_SPAN,
         B,
         C,
         D);
@@ -48,6 +49,7 @@ window(A) ::= PARTITION BY nexprlist(B) orderby_opt(C) frame_opt(D). {
 
 window(A) ::= nm(B) PARTITION BY nexprlist(C) orderby_opt(D) frame_opt(E). {
     A = synq_parse_window_def(pCtx,
+        SYNQ_NO_SPAN,
         synq_span(pCtx, B),
         C,
         D,
@@ -57,6 +59,7 @@ window(A) ::= nm(B) PARTITION BY nexprlist(C) orderby_opt(D) frame_opt(E). {
 window(A) ::= ORDER BY sortlist(B) frame_opt(C). {
     A = synq_parse_window_def(pCtx,
         SYNQ_NO_SPAN,
+        SYNQ_NO_SPAN,
         SYNTAQLITE_NULL_NODE,
         B,
         C);
@@ -64,6 +67,7 @@ window(A) ::= ORDER BY sortlist(B) frame_opt(C). {
 
 window(A) ::= nm(B) ORDER BY sortlist(C) frame_opt(D). {
     A = synq_parse_window_def(pCtx,
+        SYNQ_NO_SPAN,
         synq_span(pCtx, B),
         SYNTAQLITE_NULL_NODE,
         C,
@@ -73,6 +77,7 @@ window(A) ::= nm(B) ORDER BY sortlist(C) frame_opt(D). {
 window(A) ::= frame_opt(B). {
     A = synq_parse_window_def(pCtx,
         SYNQ_NO_SPAN,
+        SYNQ_NO_SPAN,
         SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE,
         B);
@@ -80,6 +85,7 @@ window(A) ::= frame_opt(B). {
 
 window(A) ::= nm(B) frame_opt(C). {
     A = synq_parse_window_def(pCtx,
+        SYNQ_NO_SPAN,
         synq_span(pCtx, B),
         SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE,
@@ -219,9 +225,9 @@ over_clause(A) ::= OVER LP window(B) RP. {
 }
 
 over_clause(A) ::= OVER nm(B). {
-    // Create a WindowDef with just base_window_name to represent a named window ref
     uint32_t wdef = synq_parse_window_def(pCtx,
         synq_span(pCtx, B),
+        SYNQ_NO_SPAN,
         SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE);

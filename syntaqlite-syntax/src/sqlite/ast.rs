@@ -6359,6 +6359,10 @@ impl<'a> WindowDef<'a> {
     pub fn node_id(&self) -> WindowDefId {
         WindowDefId(self.id)
     }
+    pub fn ref_window_name(&self) -> &'a str {
+        self.stmt_result
+            .span_expanded_text(self.raw.ref_window_name)
+    }
     pub fn base_window_name(&self) -> &'a str {
         self.stmt_result
             .span_expanded_text(self.raw.base_window_name)
