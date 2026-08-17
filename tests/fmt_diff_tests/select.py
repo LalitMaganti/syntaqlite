@@ -116,6 +116,31 @@ class ExprFormat(TestSuite):
             out="SELECT -x FROM t;",
         )
 
+    def test_nested_unary_minus_does_not_paste_into_comment(self):
+        """`-` before `-` must stay separated; `--` would comment out the rest."""
+        return DiffTestBlueprint(
+            sql="select - -1",
+            out="SELECT - -1;",
+        )
+
+    def test_binary_minus_before_unary_minus(self):
+        return DiffTestBlueprint(
+            sql="select 1 - -1",
+            out="SELECT 1 - -1;",
+        )
+
+    def test_nested_unary_minus_on_column(self):
+        return DiffTestBlueprint(
+            sql="select - -x from t",
+            out="SELECT - -x FROM t;",
+        )
+
+    def test_unary_minus_keeps_author_parens(self):
+        return DiffTestBlueprint(
+            sql="select -(-1)",
+            out="SELECT -(-1);",
+        )
+
     def test_and_or(self):
         return DiffTestBlueprint(
             sql="select a from t where x = 1 and y = 2",
