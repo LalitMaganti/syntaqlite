@@ -674,6 +674,8 @@ static const SyntaqliteFieldMeta field_meta_alter_table_stmt[] = {
      "new_name", NULL, 0},
     {offsetof(SyntaqliteAlterTableStmt, old_name), SYNTAQLITE_FIELD_NODE_ID,
      "old_name", NULL, 0},
+    {offsetof(SyntaqliteAlterTableStmt, column), SYNTAQLITE_FIELD_NODE_ID,
+     "column", NULL, 0},
 };
 
 static const SyntaqliteFieldMeta field_meta_transaction_stmt[] = {
@@ -1324,7 +1326,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* RaiseExpr */
     2,  /* QualifiedName */
     3,  /* DropStmt */
-    4,  /* AlterTableStmt */
+    5,  /* AlterTableStmt */
     2,  /* TransactionStmt */
     2,  /* SavepointStmt */
     3,  /* ResultColumn */

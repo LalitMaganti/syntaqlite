@@ -335,17 +335,20 @@ fn role_to_bytes(
             target,
             new_name,
             old_name,
+            column,
         } => {
             bytes[0] = disc(SemanticRole::AlterTable {
                 op: 0,
                 target: 0,
                 new_name: 0,
                 old_name: 0,
+                column: 0,
             });
             bytes[1] = fi(op);
             bytes[2] = fi(target);
             bytes[3] = fi(new_name);
             bytes[4] = fi(old_name);
+            bytes[5] = opt(column);
         }
     }
 

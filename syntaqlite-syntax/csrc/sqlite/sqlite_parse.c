@@ -9040,27 +9040,30 @@ static YYACTIONTYPE yy_reduce(
     {
       yymsp[-5].minor.yy277 = synq_parse_alter_table_stmt(
           pCtx, SYNTAQLITE_ALTER_OP_RENAME_TABLE, yymsp[-3].minor.yy277,
-          yymsp[0].minor.yy277, SYNTAQLITE_NULL_NODE);
+          yymsp[0].minor.yy277, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
     } break;
     case 232: /* cmd ::= ALTER TABLE fullname RENAME kwcolumn_opt nmorerr TO
                  nmorerr */
     {
       yymsp[-7].minor.yy277 = synq_parse_alter_table_stmt(
           pCtx, SYNTAQLITE_ALTER_OP_RENAME_COLUMN, yymsp[-5].minor.yy277,
-          yymsp[0].minor.yy277, yymsp[-2].minor.yy277);
+          yymsp[0].minor.yy277, yymsp[-2].minor.yy277, SYNTAQLITE_NULL_NODE);
     } break;
     case 233: /* cmd ::= ALTER TABLE fullname DROP kwcolumn_opt nmorerr */
     {
       yymsp[-5].minor.yy277 = synq_parse_alter_table_stmt(
           pCtx, SYNTAQLITE_ALTER_OP_DROP_COLUMN, yymsp[-3].minor.yy277,
-          SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277);
+          SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277, SYNTAQLITE_NULL_NODE);
     } break;
     case 234: /* cmd ::= ALTER TABLE add_column_fullname ADD kwcolumn_opt
                  columnname carglist */
     {
+      uint32_t col = synq_parse_column_def(pCtx, yymsp[-1].minor.yy640.name,
+                                           yymsp[-1].minor.yy640.typetoken,
+                                           yymsp[0].minor.yy430.list);
       yymsp[-6].minor.yy277 = synq_parse_alter_table_stmt(
           pCtx, SYNTAQLITE_ALTER_OP_ADD_COLUMN, yymsp[-4].minor.yy277,
-          SYNTAQLITE_NULL_NODE, yymsp[-1].minor.yy640.name);
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, col);
     } break;
     case 238: /* columnname ::= nmorerr typetoken */
     {

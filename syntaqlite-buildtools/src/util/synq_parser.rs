@@ -140,6 +140,7 @@ pub(crate) enum SemanticRole {
         target: String,
         new_name: String,
         old_name: String,
+        column: Option<String>,
     },
 }
 
@@ -735,6 +736,7 @@ impl Parser {
                 target: require_param(&params, "target", node_name, "alter_table")?,
                 new_name: require_param(&params, "new_name", node_name, "alter_table")?,
                 old_name: require_param(&params, "old_name", node_name, "alter_table")?,
+                column: get_param(&params, "column").map(str::to_string),
             },
             _ => {
                 return Err(format!(

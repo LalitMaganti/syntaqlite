@@ -579,14 +579,16 @@ static inline uint32_t synq_parse_alter_table_stmt(SynqParseCtx* ctx,
                                                    SyntaqliteAlterOp op,
                                                    uint32_t target,
                                                    uint32_t new_name,
-                                                   uint32_t old_name) {
+                                                   uint32_t old_name,
+                                                   uint32_t column) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteAlterTableStmt){.tag = SYNTAQLITE_NODE_ALTER_TABLE_STMT,
                                   .op = op,
                                   .target = target,
                                   .new_name = new_name,
-                                  .old_name = old_name},
+                                  .old_name = old_name,
+                                  .column = column},
       (uint32_t)sizeof(SyntaqliteAlterTableStmt));
 }
 

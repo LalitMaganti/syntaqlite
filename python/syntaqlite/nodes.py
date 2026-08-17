@@ -567,13 +567,14 @@ class DropStmt:
 class AlterTableStmt:
     """AST node: AlterTableStmt"""
 
-    __slots__ = ("op", "target", "new_name", "old_name")
+    __slots__ = ("op", "target", "new_name", "old_name", "column")
 
     def __init__(self, d: dict):
         self.op: AlterOp = AlterOp[d["op"]]
         self.target: QualifiedName | None = _wrap(d.get("target"))
         self.new_name: Name | None = _wrap(d.get("new_name"))
         self.old_name: Name | None = _wrap(d.get("old_name"))
+        self.column: ColumnDef | None = _wrap(d.get("column"))
 
     def __repr__(self):
         return "AlterTableStmt(...)"

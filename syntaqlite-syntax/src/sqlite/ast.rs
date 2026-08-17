@@ -4308,6 +4308,9 @@ impl<'a> AlterTableStmt<'a> {
     pub fn old_name(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.old_name)
     }
+    pub fn column(&self) -> Option<ColumnDef<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.column)
+    }
 }
 
 impl<'a> GrammarNodeType<'a> for AlterTableStmt<'a> {

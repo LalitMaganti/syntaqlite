@@ -165,6 +165,13 @@ impl<'a, 'stmt> StmtReader<'a, 'stmt> {
         out
     }
 
+    /// Identifier value of a `ColumnDef` node's name.
+    pub(crate) fn column_def_name(&self, node_id: AnyNodeId) -> Option<Cow<'stmt, str>> {
+        self.column_def_name_span(node_id)
+            .map(|(name, _)| name)
+            .filter(|name| !name.is_empty())
+    }
+
     fn column_def_name_span(&self, node_id: AnyNodeId) -> Option<(Cow<'stmt, str>, DocRange)> {
         let (SemanticRole::ColumnDef { name: name_idx, .. }, fields) =
             self.role_for_node(node_id)?
