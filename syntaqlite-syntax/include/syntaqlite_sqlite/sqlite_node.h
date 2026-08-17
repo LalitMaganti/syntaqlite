@@ -378,29 +378,30 @@ typedef enum SyntaqliteNodeTag {
   SYNTAQLITE_NODE_LIMIT_CLAUSE = 54,
   SYNTAQLITE_NODE_TABLE_REF = 55,
   SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE = 56,
-  SYNTAQLITE_NODE_JOIN_CLAUSE = 57,
-  SYNTAQLITE_NODE_JOIN_PREFIX = 58,
-  SYNTAQLITE_NODE_TRIGGER_EVENT = 59,
-  SYNTAQLITE_NODE_TRIGGER_CMD_LIST = 60,
-  SYNTAQLITE_NODE_CREATE_TRIGGER_STMT = 61,
-  SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT = 62,
-  SYNTAQLITE_NODE_PRAGMA_STMT = 63,
-  SYNTAQLITE_NODE_ANALYZE_OR_REINDEX_STMT = 64,
-  SYNTAQLITE_NODE_ATTACH_STMT = 65,
-  SYNTAQLITE_NODE_DETACH_STMT = 66,
-  SYNTAQLITE_NODE_VACUUM_STMT = 67,
-  SYNTAQLITE_NODE_EXPLAIN_STMT = 68,
-  SYNTAQLITE_NODE_CREATE_INDEX_STMT = 69,
-  SYNTAQLITE_NODE_CREATE_VIEW_STMT = 70,
-  SYNTAQLITE_NODE_VALUES_ROW_LIST = 71,
-  SYNTAQLITE_NODE_VALUES_CLAUSE = 72,
-  SYNTAQLITE_NODE_FRAME_BOUND = 73,
-  SYNTAQLITE_NODE_FRAME_SPEC = 74,
-  SYNTAQLITE_NODE_WINDOW_DEF = 75,
-  SYNTAQLITE_NODE_WINDOW_DEF_LIST = 76,
-  SYNTAQLITE_NODE_NAMED_WINDOW_DEF = 77,
-  SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST = 78,
-  SYNTAQLITE_NODE_FILTER_OVER = 79,
+  SYNTAQLITE_NODE_PAREN_TABLE_SOURCE = 57,
+  SYNTAQLITE_NODE_JOIN_CLAUSE = 58,
+  SYNTAQLITE_NODE_JOIN_PREFIX = 59,
+  SYNTAQLITE_NODE_TRIGGER_EVENT = 60,
+  SYNTAQLITE_NODE_TRIGGER_CMD_LIST = 61,
+  SYNTAQLITE_NODE_CREATE_TRIGGER_STMT = 62,
+  SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT = 63,
+  SYNTAQLITE_NODE_PRAGMA_STMT = 64,
+  SYNTAQLITE_NODE_ANALYZE_OR_REINDEX_STMT = 65,
+  SYNTAQLITE_NODE_ATTACH_STMT = 66,
+  SYNTAQLITE_NODE_DETACH_STMT = 67,
+  SYNTAQLITE_NODE_VACUUM_STMT = 68,
+  SYNTAQLITE_NODE_EXPLAIN_STMT = 69,
+  SYNTAQLITE_NODE_CREATE_INDEX_STMT = 70,
+  SYNTAQLITE_NODE_CREATE_VIEW_STMT = 71,
+  SYNTAQLITE_NODE_VALUES_ROW_LIST = 72,
+  SYNTAQLITE_NODE_VALUES_CLAUSE = 73,
+  SYNTAQLITE_NODE_FRAME_BOUND = 74,
+  SYNTAQLITE_NODE_FRAME_SPEC = 75,
+  SYNTAQLITE_NODE_WINDOW_DEF = 76,
+  SYNTAQLITE_NODE_WINDOW_DEF_LIST = 77,
+  SYNTAQLITE_NODE_NAMED_WINDOW_DEF = 78,
+  SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST = 79,
+  SYNTAQLITE_NODE_FILTER_OVER = 80,
   SYNTAQLITE_NODE_COUNT
 } SyntaqliteNodeTag;
 SYNQ_STATIC_ASSERT(sizeof(SyntaqliteNodeTag) == sizeof(uint32_t),
@@ -851,6 +852,12 @@ typedef struct SyntaqliteSubqueryTableSource {
   uint32_t alias;
 } SyntaqliteSubqueryTableSource;
 
+typedef struct SyntaqliteParenTableSource {
+  SyntaqliteNodeTag tag;
+  uint32_t source;
+  uint32_t alias;
+} SyntaqliteParenTableSource;
+
 typedef struct SyntaqliteJoinClause {
   SyntaqliteNodeTag tag;
   SyntaqliteJoinType join_type;
@@ -1082,6 +1089,7 @@ typedef union SyntaqliteNode {
   SyntaqliteLimitClause limit_clause;
   SyntaqliteTableRef table_ref;
   SyntaqliteSubqueryTableSource subquery_table_source;
+  SyntaqliteParenTableSource paren_table_source;
   SyntaqliteJoinClause join_clause;
   SyntaqliteJoinPrefix join_prefix;
   SyntaqliteTriggerEvent trigger_event;
@@ -1646,6 +1654,7 @@ typedef union SyntaqliteTableSource {
   SyntaqliteNodeTag tag;
   SyntaqliteTableRef table_ref;
   SyntaqliteSubqueryTableSource subquery_table_source;
+  SyntaqliteParenTableSource paren_table_source;
   SyntaqliteJoinClause join_clause;
   SyntaqliteJoinPrefix join_prefix;
 } SyntaqliteTableSource;
@@ -1655,6 +1664,8 @@ static inline int syntaqlite_is_table_source(SyntaqliteNodeTag tag) {
     case SYNTAQLITE_NODE_TABLE_REF:
       return 1;
     case SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE:
+      return 1;
+    case SYNTAQLITE_NODE_PAREN_TABLE_SOURCE:
       return 1;
     case SYNTAQLITE_NODE_JOIN_CLAUSE:
       return 1;
@@ -1675,6 +1686,14 @@ syntaqlite_table_source_as_subquery_table_source(
     const SyntaqliteTableSource* node) {
   return node->tag == SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE
              ? &node->subquery_table_source
+             : NULL;
+}
+
+static inline const SyntaqliteParenTableSource*
+syntaqlite_table_source_as_paren_table_source(
+    const SyntaqliteTableSource* node) {
+  return node->tag == SYNTAQLITE_NODE_PAREN_TABLE_SOURCE
+             ? &node->paren_table_source
              : NULL;
 }
 
@@ -1981,6 +2000,11 @@ template <>
 struct NodeTag<SyntaqliteSubqueryTableSource> {
   static constexpr bool kHasTag = true;
   static constexpr uint32_t kValue = SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE;
+};
+template <>
+struct NodeTag<SyntaqliteParenTableSource> {
+  static constexpr bool kHasTag = true;
+  static constexpr uint32_t kValue = SYNTAQLITE_NODE_PAREN_TABLE_SOURCE;
 };
 template <>
 struct NodeTag<SyntaqliteJoinClause> {

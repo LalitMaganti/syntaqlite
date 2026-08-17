@@ -573,7 +573,8 @@ mod tests {
         assert_eq!(model.tag_for("AggregateFunctionCall"), 1);
         assert_eq!(model.tag_for("ParenExpr"), 36);
         assert_eq!(model.tag_for("SelectStmt"), 51);
-        assert_eq!(model.tag_for("FilterOver"), 79);
-        assert_eq!(model.base_tag_count(), 79);
+        assert_eq!(model.tag_for("ParenTableSource"), 57);
+        assert_eq!(model.tag_for("FilterOver"), 80);
+        assert_eq!(model.base_tag_count(), 80);
     }
 }

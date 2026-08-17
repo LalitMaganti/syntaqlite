@@ -703,6 +703,19 @@ class SubqueryTableSource:
         return "SubqueryTableSource(...)"
 
 
+class ParenTableSource:
+    """AST node: ParenTableSource"""
+
+    __slots__ = ("source", "alias")
+
+    def __init__(self, d: dict):
+        self.source: TableSource | None = _wrap(d.get("source"))
+        self.alias: Name | None = _wrap(d.get("alias"))
+
+    def __repr__(self):
+        return "ParenTableSource(...)"
+
+
 class JoinClause:
     """AST node: JoinClause"""
 
@@ -1026,6 +1039,7 @@ _NODE_MAP: dict[str, type] = {
     "LimitClause": LimitClause,
     "TableRef": TableRef,
     "SubqueryTableSource": SubqueryTableSource,
+    "ParenTableSource": ParenTableSource,
     "JoinClause": JoinClause,
     "JoinPrefix": JoinPrefix,
     "TriggerEvent": TriggerEvent,

@@ -42,6 +42,17 @@ node SubqueryTableSource {
   }
 }
 
+// Structurally required once the term has an alias or ON/USING.
+node ParenTableSource {
+  source: index TableSource
+  alias: index Name
+
+  fmt {
+    group { "(" nest { softline child(source) } softline ")" }
+    if_set(alias) { space "AS" space child(alias) }
+  }
+}
+
 node JoinClause {
   join_type: inline JoinType
   left: index TableSource
@@ -89,5 +100,5 @@ node JoinPrefix {
 }
 
 abstract TableSource {
-  TableRef SubqueryTableSource JoinClause JoinPrefix
+  TableRef SubqueryTableSource ParenTableSource JoinClause JoinPrefix
 }
