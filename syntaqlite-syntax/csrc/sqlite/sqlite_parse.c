@@ -9948,45 +9948,45 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 387: /* window ::= PARTITION BY nexprlist orderby_opt frame_opt */
     {
-      yymsp[-4].minor.yy277 =
-          synq_parse_window_def(pCtx, SYNQ_NO_SPAN, yymsp[-2].minor.yy277,
-                                yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
+      yymsp[-4].minor.yy277 = synq_parse_window_def(
+          pCtx, SYNQ_NO_SPAN, SYNQ_NO_SPAN, yymsp[-2].minor.yy277,
+          yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
     } break;
     case 388: /* window ::= nm PARTITION BY nexprlist orderby_opt frame_opt */
     {
       yylhsminor.yy277 = synq_parse_window_def(
-          pCtx, synq_span(pCtx, yymsp[-5].minor.yy0), yymsp[-2].minor.yy277,
-          yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
+          pCtx, SYNQ_NO_SPAN, synq_span(pCtx, yymsp[-5].minor.yy0),
+          yymsp[-2].minor.yy277, yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
     }
       yymsp[-5].minor.yy277 = yylhsminor.yy277;
       break;
     case 389: /* window ::= ORDER BY sortlist frame_opt */
     {
-      yymsp[-3].minor.yy277 =
-          synq_parse_window_def(pCtx, SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE,
-                                yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
+      yymsp[-3].minor.yy277 = synq_parse_window_def(
+          pCtx, SYNQ_NO_SPAN, SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE,
+          yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
     } break;
     case 390: /* window ::= nm ORDER BY sortlist frame_opt */
     {
       yylhsminor.yy277 = synq_parse_window_def(
-          pCtx, synq_span(pCtx, yymsp[-4].minor.yy0), SYNTAQLITE_NULL_NODE,
-          yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
+          pCtx, SYNQ_NO_SPAN, synq_span(pCtx, yymsp[-4].minor.yy0),
+          SYNTAQLITE_NULL_NODE, yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
     }
       yymsp[-4].minor.yy277 = yylhsminor.yy277;
       break;
     case 391: /* window ::= frame_opt */
     {
-      yylhsminor.yy277 =
-          synq_parse_window_def(pCtx, SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE,
-                                SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277);
+      yylhsminor.yy277 = synq_parse_window_def(
+          pCtx, SYNQ_NO_SPAN, SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277);
     }
       yymsp[0].minor.yy277 = yylhsminor.yy277;
       break;
     case 392: /* window ::= nm frame_opt */
     {
       yylhsminor.yy277 = synq_parse_window_def(
-          pCtx, synq_span(pCtx, yymsp[-1].minor.yy0), SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277);
+          pCtx, SYNQ_NO_SPAN, synq_span(pCtx, yymsp[-1].minor.yy0),
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277);
     }
       yymsp[-1].minor.yy277 = yylhsminor.yy277;
       break;
@@ -10100,11 +10100,9 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 413: /* over_clause ::= OVER nm */
     {
-      // Create a WindowDef with just base_window_name to represent a named
-      // window ref
       uint32_t wdef = synq_parse_window_def(
-          pCtx, synq_span(pCtx, yymsp[0].minor.yy0), SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          pCtx, synq_span(pCtx, yymsp[0].minor.yy0), SYNQ_NO_SPAN,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-1].minor.yy277 = synq_parse_filter_over(pCtx, SYNTAQLITE_NULL_NODE,
                                                      wdef, SYNQ_NO_SPAN);
     } break;

@@ -28,6 +28,7 @@ class WindowFunctionBasic(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby:
@@ -78,6 +79,7 @@ class WindowFunctionBasic(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by:
                               ExprList [1 items]
@@ -129,7 +131,8 @@ class WindowFunctionBasic(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
-                            base_window_name: "w"
+                            ref_window_name: "w"
+                            base_window_name: (none)
                             partition_by: (none)
                             orderby: (none)
                             frame: (none)
@@ -153,6 +156,7 @@ class WindowFunctionBasic(TestSuite):
                     window_name: "w"
                     window_def:
                       WindowDef
+                        ref_window_name: (none)
                         base_window_name: (none)
                         partition_by: (none)
                         orderby:
@@ -194,6 +198,7 @@ class WindowFunctionBasic(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby: (none)
@@ -240,6 +245,7 @@ class WindowFunctionBasic(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by:
                               ExprList [1 items]
@@ -300,6 +306,7 @@ class WindowFunctionBasic(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by:
                               ExprList [2 items]
@@ -364,6 +371,7 @@ class WindowFunctionBasic(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby:
@@ -486,6 +494,7 @@ class FilterClause(TestSuite):
                                 source: "0"
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby:
@@ -545,6 +554,7 @@ class FrameSpecification(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby:
@@ -617,6 +627,7 @@ class FrameSpecification(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby:
@@ -683,6 +694,7 @@ class FrameSpecification(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby:
@@ -749,6 +761,7 @@ class FrameSpecification(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby: (none)
@@ -806,6 +819,7 @@ class FrameSpecification(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby: (none)
@@ -863,6 +877,7 @@ class FrameSpecification(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby: (none)
@@ -920,6 +935,7 @@ class FrameSpecification(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby:
@@ -1001,6 +1017,7 @@ class WindowClause(TestSuite):
                     window_name: "w"
                     window_def:
                       WindowDef
+                        ref_window_name: (none)
                         base_window_name: (none)
                         partition_by: (none)
                         orderby:
@@ -1041,7 +1058,8 @@ class WindowClause(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
-                            base_window_name: "w1"
+                            ref_window_name: "w1"
+                            base_window_name: (none)
                             partition_by: (none)
                             orderby: (none)
                             frame: (none)
@@ -1061,7 +1079,8 @@ class WindowClause(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
-                            base_window_name: "w2"
+                            ref_window_name: "w2"
+                            base_window_name: (none)
                             partition_by: (none)
                             orderby: (none)
                             frame: (none)
@@ -1085,6 +1104,7 @@ class WindowClause(TestSuite):
                     window_name: "w1"
                     window_def:
                       WindowDef
+                        ref_window_name: (none)
                         base_window_name: (none)
                         partition_by: (none)
                         orderby:
@@ -1102,6 +1122,7 @@ class WindowClause(TestSuite):
                     window_name: "w2"
                     window_def:
                       WindowDef
+                        ref_window_name: (none)
                         base_window_name: (none)
                         partition_by:
                           ExprList [1 items]
@@ -1175,6 +1196,7 @@ class AggregateWithWindowFunction(TestSuite):
                                 source: "0"
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by:
                               ExprList [1 items]

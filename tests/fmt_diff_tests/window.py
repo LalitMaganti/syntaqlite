@@ -276,3 +276,57 @@ class FrameSpecFormat(TestSuite):
                 FROM t;
             """,
         )
+
+
+class WindowBaseName(TestSuite):
+    def test_base_name_with_orderby(self):
+        """A base window name lives inside the parens, alongside the rest."""
+        return DiffTestBlueprint(
+            sql="select sum(x) over (w1 order by b) from t window w1 as (partition by a)",
+            out=(
+                "SELECT sum(x) OVER (w1 ORDER BY b) "
+                "FROM t WINDOW w1 AS (PARTITION BY a);"
+            ),
+        )
+
+    def test_base_name_with_partition_by(self):
+        return DiffTestBlueprint(
+            sql="select sum(x) over (w1 partition by a) from t window w1 as (order by b)",
+            out=(
+                "SELECT sum(x) OVER (w1 PARTITION BY a) "
+                "FROM t WINDOW w1 AS (ORDER BY b);"
+            ),
+        )
+
+    def test_base_name_with_frame(self):
+        return DiffTestBlueprint(
+            sql="select sum(x) over (w1 rows between 1 preceding and current row) from t window w1 as (order by b)",
+            out="""\
+                SELECT sum(x) OVER (w1 ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
+                FROM t
+                WINDOW
+                  w1 AS (ORDER BY b);
+            """,
+        )
+
+    def test_base_name_in_window_clause(self):
+        """`w2 AS w1` is not valid SQL; the parens must survive."""
+        return DiffTestBlueprint(
+            sql="select sum(x) from t window w1 as (partition by a), w2 as (w1 order by b)",
+            out=(
+                "SELECT sum(x) FROM t "
+                "WINDOW w1 AS (PARTITION BY a), w2 AS (w1 ORDER BY b);"
+            ),
+        )
+
+    def test_bare_over_name_is_not_parenthesised(self):
+        return DiffTestBlueprint(
+            sql="select sum(x) over w1 from t window w1 as (partition by a)",
+            out="SELECT sum(x) OVER w1 FROM t WINDOW w1 AS (PARTITION BY a);",
+        )
+
+    def test_empty_over(self):
+        return DiffTestBlueprint(
+            sql="select sum(x) over () from t",
+            out="SELECT sum(x) OVER () FROM t;",
+        )

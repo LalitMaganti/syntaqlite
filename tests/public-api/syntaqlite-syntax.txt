@@ -1878,6 +1878,7 @@ pub fn syntaqlite_syntax::nodes::WindowDef<'a>::from_result(&'a syntaqlite_synta
 pub fn syntaqlite_syntax::nodes::WindowDef<'a>::node_id(&self) -> syntaqlite_syntax::nodes::WindowDefId
 pub fn syntaqlite_syntax::nodes::WindowDef<'a>::orderby(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
 pub fn syntaqlite_syntax::nodes::WindowDef<'a>::partition_by(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
+pub fn syntaqlite_syntax::nodes::WindowDef<'a>::ref_window_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::WindowDefId::from(syntaqlite_syntax::nodes::WindowDef<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::WindowDefId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::WindowDefListId::from(syntaqlite_syntax::nodes::WindowDefList<'a>) -> Self

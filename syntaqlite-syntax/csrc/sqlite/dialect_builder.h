@@ -970,6 +970,7 @@ static inline uint32_t synq_parse_frame_spec(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_window_def(
     SynqParseCtx* ctx,
+    SyntaqliteTextSpan ref_window_name,
     SyntaqliteTextSpan base_window_name,
     uint32_t partition_by,
     uint32_t orderby,
@@ -977,6 +978,7 @@ static inline uint32_t synq_parse_window_def(
   return synq_parse_build(
       ctx,
       &(SyntaqliteWindowDef){.tag = SYNTAQLITE_NODE_WINDOW_DEF,
+                             .ref_window_name = ref_window_name,
                              .base_window_name = base_window_name,
                              .partition_by = partition_by,
                              .orderby = orderby,

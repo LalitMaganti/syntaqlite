@@ -40,31 +40,41 @@ node FrameSpec {
 }
 
 node WindowDef {
+  // Which span is set decides reference vs definition (upstream zName/zBase).
+  ref_window_name: inline SyntaqliteTextSpan
   base_window_name: inline SyntaqliteTextSpan
   partition_by: index ExprList
   orderby: index OrderByList
   frame: index FrameSpec
 
   fmt {
-    if_span(base_window_name) { span(base_window_name) } else {
-      group {
-        "("
-        nest {
-          softline
-          if_set(partition_by) { "PARTITION" "BY" nest { line child(partition_by) } }
-          if_set(orderby) {
-            if_set(partition_by) { line }
-            "ORDER" "BY" group { nest { line child(orderby) } }
-          }
-          if_set(frame) {
-            if_set(partition_by) { line } else {
-              if_set(orderby) { line }
-            }
-            child(frame)
-          }
+    if_span(ref_window_name) { span(ref_window_name) } else {
+    group {
+      "("
+      nest {
+        softline
+        if_span(base_window_name) { span(base_window_name) }
+        if_set(partition_by) {
+          if_span(base_window_name) { line }
+          "PARTITION" "BY" nest { line child(partition_by) }
         }
-        softline ")"
+        if_set(orderby) {
+          if_set(partition_by) { line } else {
+            if_span(base_window_name) { line }
+          }
+          "ORDER" "BY" group { nest { line child(orderby) } }
+        }
+        if_set(frame) {
+          if_set(partition_by) { line } else {
+            if_set(orderby) { line } else {
+              if_span(base_window_name) { line }
+            }
+          }
+          child(frame)
+        }
       }
+      softline ")"
+    }
     }
   }
 }

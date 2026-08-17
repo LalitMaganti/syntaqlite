@@ -646,6 +646,7 @@ pub(crate) struct FrameSpec {
 #[repr(C)]
 pub(crate) struct WindowDef {
     pub(crate) tag: u32,
+    pub(crate) ref_window_name: TextSpan,
     pub(crate) base_window_name: TextSpan,
     pub(crate) partition_by: AnyNodeId,
     pub(crate) orderby: AnyNodeId,

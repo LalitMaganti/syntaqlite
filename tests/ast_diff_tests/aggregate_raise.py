@@ -567,6 +567,7 @@ class OrderedSetFunctionCall(TestSuite):
                         filter_clause: (none)
                         over_clause:
                           WindowDef
+                            ref_window_name: (none)
                             base_window_name: (none)
                             partition_by: (none)
                             orderby: (none)

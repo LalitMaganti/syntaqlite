@@ -953,9 +953,10 @@ class FrameSpec:
 class WindowDef:
     """AST node: WindowDef"""
 
-    __slots__ = ("base_window_name", "partition_by", "orderby", "frame")
+    __slots__ = ("ref_window_name", "base_window_name", "partition_by", "orderby", "frame")
 
     def __init__(self, d: dict):
+        self.ref_window_name: str | None = d.get("ref_window_name")
         self.base_window_name: str | None = d.get("base_window_name")
         self.partition_by: list[Expr] | None = _wrap(d.get("partition_by"))
         self.orderby: list[OrderingTerm] | None = _wrap(d.get("orderby"))
