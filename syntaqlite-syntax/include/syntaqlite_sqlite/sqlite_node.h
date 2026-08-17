@@ -752,6 +752,7 @@ typedef struct SyntaqliteAlterTableStmt {
   uint32_t target;
   uint32_t new_name;
   uint32_t old_name;
+  uint32_t column;
 } SyntaqliteAlterTableStmt;
 
 typedef struct SyntaqliteTransactionStmt {

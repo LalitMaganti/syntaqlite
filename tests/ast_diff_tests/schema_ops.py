@@ -179,6 +179,7 @@ class AlterTableRename(TestSuite):
                 IdentName
                   source: "t2"
               old_name: (none)
+              column: (none)
 """,
         )
 
@@ -200,6 +201,7 @@ class AlterTableRename(TestSuite):
                 IdentName
                   source: "t2"
               old_name: (none)
+              column: (none)
 """,
         )
 
@@ -221,6 +223,7 @@ class AlterTableRename(TestSuite):
               old_name:
                 IdentName
                   source: "c1"
+              column: (none)
 """,
         )
 
@@ -242,6 +245,7 @@ class AlterTableRename(TestSuite):
               old_name:
                 IdentName
                   source: "c1"
+              column: (none)
 """,
         )
 
@@ -265,6 +269,7 @@ class AlterTableDropAdd(TestSuite):
               old_name:
                 IdentName
                   source: "c1"
+              column: (none)
 """,
         )
 
@@ -281,9 +286,14 @@ class AlterTableDropAdd(TestSuite):
                       source: "t"
                   schema: (none)
               new_name: (none)
-              old_name:
-                IdentName
-                  source: "c1"
+              old_name: (none)
+              column:
+                ColumnDef
+                  column_name:
+                    IdentName
+                      source: "c1"
+                  type_name: (none)
+                  constraints: (none)
 """,
         )
 
@@ -300,9 +310,42 @@ class AlterTableDropAdd(TestSuite):
                       source: "t"
                   schema: (none)
               new_name: (none)
-              old_name:
-                IdentName
-                  source: "c1"
+              old_name: (none)
+              column:
+                ColumnDef
+                  column_name:
+                    IdentName
+                      source: "c1"
+                  type_name: "INT"
+                  constraints:
+                    ColumnConstraintList [2 items]
+                      ColumnConstraint
+                        kind: NOT_NULL
+                        constraint_name: (none)
+                        onconf: DEFAULT
+                        sort_order: ASC
+                        is_autoincrement: FALSE
+                        collation_name: (none)
+                        generated_storage: VIRTUAL
+                        default_expr: (none)
+                        check_expr: (none)
+                        generated_expr: (none)
+                        fk_clause: (none)
+                      ColumnConstraint
+                        kind: DEFAULT
+                        constraint_name: (none)
+                        onconf: DEFAULT
+                        sort_order: ASC
+                        is_autoincrement: FALSE
+                        collation_name: (none)
+                        generated_storage: VIRTUAL
+                        default_expr:
+                          Literal
+                            literal_type: INTEGER
+                            source: "0"
+                        check_expr: (none)
+                        generated_expr: (none)
+                        fk_clause: (none)
 """,
         )
 

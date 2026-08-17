@@ -34,8 +34,9 @@ node AlterTableStmt {
   target: index QualifiedName
   new_name: index Name
   old_name: index Name
+  column: index ColumnDef
 
-  semantic { alter_table(op: op, target: target, new_name: new_name, old_name: old_name) }
+  semantic { alter_table(op: op, target: target, new_name: new_name, old_name: old_name, column: column) }
 
   fmt {
     "ALTER" "TABLE" space
@@ -44,7 +45,7 @@ node AlterTableStmt {
       RENAME_TABLE  { "RENAME" "TO" space child(new_name) }
       RENAME_COLUMN { "RENAME" "COLUMN" space child(old_name) space "TO" space child(new_name) }
       DROP_COLUMN   { "DROP" "COLUMN" space child(old_name) }
-      ADD_COLUMN    { "ADD" "COLUMN" space child(old_name) }
+      ADD_COLUMN    { "ADD" "COLUMN" space child(column) }
     }
   }
 }

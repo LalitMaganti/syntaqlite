@@ -1201,6 +1201,7 @@ pub fn syntaqlite_syntax::nodes::AggregateFunctionCallId::from(syntaqlite_syntax
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCallId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::AlterOp::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::column(&self) -> core::option::Option<syntaqlite_syntax::nodes::ColumnDef<'a>>
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::new_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::AlterTableStmtId

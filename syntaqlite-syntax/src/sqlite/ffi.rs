@@ -394,6 +394,7 @@ pub(crate) struct AlterTableStmt {
     pub(crate) target: AnyNodeId,
     pub(crate) new_name: AnyNodeId,
     pub(crate) old_name: AnyNodeId,
+    pub(crate) column: AnyNodeId,
 }
 
 #[derive(Debug, Clone)]

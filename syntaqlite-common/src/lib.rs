@@ -295,8 +295,10 @@ pub mod roles {
             target: FieldIdx,
             /// Field index of the new name (rename table / rename column).
             new_name: FieldIdx,
-            /// Field index of the old name (rename/drop/add column name).
+            /// Field index of the old name (rename/drop column name).
             old_name: FieldIdx,
+            /// Field index of the added column definition (`FIELD_ABSENT` if absent).
+            column: FieldIdx,
         } = 19,
     }
 

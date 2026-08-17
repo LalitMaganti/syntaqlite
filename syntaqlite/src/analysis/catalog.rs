@@ -811,9 +811,10 @@ impl Catalog {
                 target: target_idx,
                 new_name,
                 old_name,
+                column,
             } => {
                 self.accumulate_alter_table(
-                    target, stmt, &fields, op, target_idx, new_name, old_name,
+                    target, stmt, &reader, &fields, op, target_idx, new_name, old_name, column,
                 );
             }
             // Non-DDL roles are irrelevant to catalog accumulation.
@@ -832,11 +833,13 @@ impl Catalog {
         &mut self,
         target: CatalogLayer,
         stmt: &AnyParsedStatement<'_>,
+        reader: &StmtReader<'_, '_>,
         fields: &NodeFields,
         op: u8,
         target_idx: u8,
         new_name: u8,
         old_name: u8,
+        column: u8,
     ) {
         let Some(table_name) = alter_qualified_name(stmt, fields, target_idx) else {
             return;
@@ -856,9 +859,11 @@ impl Catalog {
         let layer = target.index();
         match AlterOp::from_discriminant(op_val) {
             Some(AlterOp::AddColumn) => {
-                if let (Some(cols), Some(col)) =
-                    (entry.columns.as_mut(), alter_name(stmt, fields, old_name))
-                {
+                let added = fields
+                    .node_id_at(column)
+                    .and_then(|id| reader.column_def_name(id))
+                    .or_else(|| alter_name(stmt, fields, old_name));
+                if let (Some(cols), Some(col)) = (entry.columns.as_mut(), added) {
                     cols.push(col.to_ascii_lowercase());
                 }
                 self.layers[layer].insert_entry(&table_name, entry);
@@ -1333,6 +1338,21 @@ mod tests {
         let cat = Catalog::from_ddl(
             dialect,
             &["CREATE TABLE x1(a); ALTER TABLE x1 ADD COLUMN b DEFAULT 5;"],
+        )
+        .0;
+        assert_eq!(
+            cat.table_source_info(&NameKey::new("x1")).0,
+            Some(vec!["a".to_string(), "b".to_string()]),
+        );
+    }
+
+    #[test]
+    fn alter_add_column_with_full_definition_registers_column() {
+        let dialect = crate::sqlite::dialect::dialect();
+        let cat = Catalog::from_ddl(
+            dialect,
+            &["CREATE TABLE x1(a); \
+                 ALTER TABLE x1 ADD COLUMN b TEXT NOT NULL DEFAULT '' COLLATE NOCASE;"],
         )
         .0;
         assert_eq!(
