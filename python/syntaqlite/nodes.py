@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, DropObjectType, ExplainMode, ForeignKeyAction, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, IsOp, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
+from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, Deferrable, DropObjectType, ExplainMode, ForeignKeyAction, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, InitialDeferMode, IsOp, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
 
 
 class AggregateFunctionCall:
@@ -199,7 +199,7 @@ class CaseWhen:
 class ForeignKeyClause:
     """AST node: ForeignKeyClause"""
 
-    __slots__ = ("ref_table", "ref_columns", "match_name", "on_delete", "on_update", "on_insert", "is_deferred")
+    __slots__ = ("ref_table", "ref_columns", "match_name", "on_delete", "on_update", "on_insert", "deferrable", "initial_defer")
 
     def __init__(self, d: dict):
         self.ref_table: str | None = d.get("ref_table")
@@ -208,7 +208,8 @@ class ForeignKeyClause:
         self.on_delete: ForeignKeyAction = ForeignKeyAction[d["on_delete"]]
         self.on_update: ForeignKeyAction = ForeignKeyAction[d["on_update"]]
         self.on_insert: ForeignKeyAction = ForeignKeyAction[d["on_insert"]]
-        self.is_deferred: bool = d["is_deferred"]
+        self.deferrable: Deferrable = Deferrable[d["deferrable"]]
+        self.initial_defer: InitialDeferMode = InitialDeferMode[d["initial_defer"]]
 
     def __repr__(self):
         return "ForeignKeyClause(...)"

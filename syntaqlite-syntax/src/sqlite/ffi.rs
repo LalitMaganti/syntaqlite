@@ -148,7 +148,8 @@ pub(crate) struct ForeignKeyClause {
     pub(crate) on_delete: super::ast::ForeignKeyAction,
     pub(crate) on_update: super::ast::ForeignKeyAction,
     pub(crate) on_insert: super::ast::ForeignKeyAction,
-    pub(crate) is_deferred: Bool,
+    pub(crate) deferrable: super::ast::Deferrable,
+    pub(crate) initial_defer: super::ast::InitialDeferMode,
 }
 
 #[derive(Debug, Clone)]

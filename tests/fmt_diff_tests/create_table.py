@@ -199,6 +199,45 @@ class ForeignKeyFormat(TestSuite):
             ),
         )
 
+    def test_references_not_deferrable(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) not deferrable)",
+            out="CREATE TABLE t(a int REFERENCES other(id) NOT DEFERRABLE);",
+        )
+
+    def test_references_deferrable_bare(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) deferrable)",
+            out="CREATE TABLE t(a int REFERENCES other(id) DEFERRABLE);",
+        )
+
+    def test_references_deferrable_initially_immediate(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) deferrable initially immediate)",
+            out=(
+                "CREATE TABLE t(a int REFERENCES other(id) "
+                "DEFERRABLE INITIALLY IMMEDIATE);"
+            ),
+        )
+
+    def test_references_not_deferrable_initially_deferred(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) not deferrable initially deferred)",
+            out=(
+                "CREATE TABLE t(a int REFERENCES other(id) "
+                "NOT DEFERRABLE INITIALLY DEFERRED);"
+            ),
+        )
+
+    def test_foreign_key_constraint_not_deferrable(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int, foreign key(a) references other(id) not deferrable)",
+            out=(
+                "CREATE TABLE t(a int, FOREIGN KEY(a) REFERENCES other(id) "
+                "NOT DEFERRABLE);"
+            ),
+        )
+
     def test_references_on_insert(self):
         # SQLite parses ON INSERT and ignores it; the text still has to survive.
         return DiffTestBlueprint(
@@ -260,8 +299,10 @@ class ForeignKeyFormat(TestSuite):
                 CREATE TABLE measurements(
                   sensor_id text
                     NOT NULL
-                    REFERENCES sensors(id) ON DELETE CASCADE ON UPDATE SET NULL
-                    DEFERRABLE INITIALLY DEFERRED
+                    REFERENCES sensors(id)
+                      ON DELETE CASCADE
+                      ON UPDATE SET NULL
+                      DEFERRABLE INITIALLY DEFERRED
                 );
             """,
         )
@@ -316,7 +357,9 @@ class TableConstraintFormat(TestSuite):
             out="""\
                 CREATE TABLE t(
                   a int,
-                  FOREIGN KEY(a) REFERENCES other(id) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED
+                  FOREIGN KEY(a) REFERENCES other(id)
+                    ON DELETE CASCADE
+                    DEFERRABLE INITIALLY DEFERRED
                 );
             """,
         )

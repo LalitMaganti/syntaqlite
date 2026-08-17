@@ -55,6 +55,18 @@ static const char* const display_foreign_key_action[] = {
     "UNSET", "NO_ACTION", "SET_NULL", "SET_DEFAULT", "CASCADE", "RESTRICT",
 };
 
+static const char* const display_deferrable[] = {
+    "UNSET",
+    "NOT_DEFERRABLE",
+    "DEFERRABLE",
+};
+
+static const char* const display_initial_defer_mode[] = {
+    "UNSET",
+    "DEFERRED",
+    "IMMEDIATE",
+};
+
 static const char* const display_generated_column_storage[] = {
     "VIRTUAL",
     "STORED",
@@ -369,9 +381,13 @@ static const SyntaqliteFieldMeta field_meta_foreign_key_clause[] = {
      "on_insert", display_foreign_key_action,
      sizeof(display_foreign_key_action) /
          sizeof(display_foreign_key_action[0])},
-    {offsetof(SyntaqliteForeignKeyClause, is_deferred), SYNTAQLITE_FIELD_BOOL,
-     "is_deferred", display_bool,
-     sizeof(display_bool) / sizeof(display_bool[0])},
+    {offsetof(SyntaqliteForeignKeyClause, deferrable), SYNTAQLITE_FIELD_ENUM,
+     "deferrable", display_deferrable,
+     sizeof(display_deferrable) / sizeof(display_deferrable[0])},
+    {offsetof(SyntaqliteForeignKeyClause, initial_defer), SYNTAQLITE_FIELD_ENUM,
+     "initial_defer", display_initial_defer_mode,
+     sizeof(display_initial_defer_mode) /
+         sizeof(display_initial_defer_mode[0])},
 };
 
 static const SyntaqliteFieldMeta field_meta_column_constraint[] = {
@@ -1302,7 +1318,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* CaseExpr */
     2,  /* CaseWhen */
     0,  /* CaseWhenList */
-    7,  /* ForeignKeyClause */
+    8,  /* ForeignKeyClause */
     11, /* ColumnConstraint */
     0,  /* ColumnConstraintList */
     3,  /* ColumnDef */

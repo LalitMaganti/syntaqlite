@@ -32,6 +32,7 @@
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::ColumnConstraintType
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::CompoundOp
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::ConflictAction
+#[repr(u32)] pub enum syntaqlite_syntax::nodes::Deferrable
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::DropObjectType
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::ExplainMode
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::ForeignKeyAction
@@ -40,6 +41,7 @@
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::FrameType
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::GeneratedColumnStorage
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::IndexHint
+#[repr(u32)] pub enum syntaqlite_syntax::nodes::InitialDeferMode
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::IsOp
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::JoinType
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::LikeKeyword
@@ -427,6 +429,7 @@ impl syntaqlite_syntax::nodes::CreateViewStmtId
 impl syntaqlite_syntax::nodes::CreateVirtualTableStmtId
 impl syntaqlite_syntax::nodes::CteDefinitionId
 impl syntaqlite_syntax::nodes::CteListId
+impl syntaqlite_syntax::nodes::Deferrable
 impl syntaqlite_syntax::nodes::DeleteStmtId
 impl syntaqlite_syntax::nodes::DetachStmtId
 impl syntaqlite_syntax::nodes::DropObjectType
@@ -452,6 +455,7 @@ impl syntaqlite_syntax::nodes::IdentNameId
 impl syntaqlite_syntax::nodes::InExprId
 impl syntaqlite_syntax::nodes::InExprSourceId
 impl syntaqlite_syntax::nodes::IndexHint
+impl syntaqlite_syntax::nodes::InitialDeferMode
 impl syntaqlite_syntax::nodes::InsertStmtId
 impl syntaqlite_syntax::nodes::IsExprId
 impl syntaqlite_syntax::nodes::IsOp
@@ -1399,6 +1403,7 @@ pub fn syntaqlite_syntax::nodes::CteDefinitionId::from(syntaqlite_syntax::nodes:
 pub fn syntaqlite_syntax::nodes::CteDefinitionId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::CteListId::from(syntaqlite_syntax::nodes::CteList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CteListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::nodes::Deferrable::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::DeleteStmt<'a>::index_hint(&self) -> syntaqlite_syntax::nodes::IndexHint
@@ -1464,8 +1469,9 @@ pub fn syntaqlite_syntax::nodes::FilterOverId::from(syntaqlite_syntax::nodes::Fi
 pub fn syntaqlite_syntax::nodes::FilterOverId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::ForeignKeyAction::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::deferrable(&self) -> syntaqlite_syntax::nodes::Deferrable
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
-pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::is_deferred(&self) -> bool
+pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::initial_defer(&self) -> syntaqlite_syntax::nodes::InitialDeferMode
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::match_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ForeignKeyClauseId
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::on_delete(&self) -> syntaqlite_syntax::nodes::ForeignKeyAction
@@ -1528,6 +1534,7 @@ pub fn syntaqlite_syntax::nodes::InExprSource<'a>::node_id(&self) -> syntaqlite_
 pub fn syntaqlite_syntax::nodes::InExprSourceId::from(syntaqlite_syntax::nodes::InExprSource<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::InExprSourceId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::IndexHint::as_str(&self) -> &'static str
+pub fn syntaqlite_syntax::nodes::InitialDeferMode::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::InsertStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::conflict_action(&self) -> syntaqlite_syntax::nodes::ConflictAction
@@ -2495,6 +2502,9 @@ pub syntaqlite_syntax::nodes::ConflictAction::Fail = 3
 pub syntaqlite_syntax::nodes::ConflictAction::Ignore = 4
 pub syntaqlite_syntax::nodes::ConflictAction::Replace = 5
 pub syntaqlite_syntax::nodes::ConflictAction::Rollback = 1
+pub syntaqlite_syntax::nodes::Deferrable::Deferrable = 2
+pub syntaqlite_syntax::nodes::Deferrable::NotDeferrable = 1
+pub syntaqlite_syntax::nodes::Deferrable::Unset = 0
 pub syntaqlite_syntax::nodes::DropObjectType::Index = 1
 pub syntaqlite_syntax::nodes::DropObjectType::Table = 0
 pub syntaqlite_syntax::nodes::DropObjectType::Trigger = 3
@@ -2553,6 +2563,9 @@ pub syntaqlite_syntax::nodes::InExprSource::WithClause(syntaqlite_syntax::nodes:
 pub syntaqlite_syntax::nodes::IndexHint::Default = 0
 pub syntaqlite_syntax::nodes::IndexHint::Indexed = 2
 pub syntaqlite_syntax::nodes::IndexHint::NotIndexed = 1
+pub syntaqlite_syntax::nodes::InitialDeferMode::Deferred = 1
+pub syntaqlite_syntax::nodes::InitialDeferMode::Immediate = 2
+pub syntaqlite_syntax::nodes::InitialDeferMode::Unset = 0
 pub syntaqlite_syntax::nodes::IsOp::Is = 0
 pub syntaqlite_syntax::nodes::IsOp::IsDistinct = 5
 pub syntaqlite_syntax::nodes::IsOp::IsNot = 1

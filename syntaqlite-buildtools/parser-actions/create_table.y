@@ -17,9 +17,9 @@
 %type refargs {SynqRefArgsValue}
 %type refarg {SynqRefArgValue}
 %type refact {int}
-%type defer_subclause {int}
+%type defer_subclause {SynqDeferValue}
 %type init_deferred_pred_opt {int}
-%type defer_subclause_opt {int}
+%type defer_subclause_opt {SynqDeferValue}
 %type table_option_set {int}
 %type table_option {int}
 %type tconscomma {int}
@@ -123,7 +123,12 @@ columnlist(A) ::= columnname(CN) carglist(CG). {
 // ============ Column constraint list (carglist) ============
 
 carglist(A) ::= carglist(L) ccons(C). {
-    if (C.node != SYNTAQLITE_NULL_NODE) {
+    if (C.node != SYNTAQLITE_NULL_NODE && synq_is_defer_marker(pCtx, C.node)) {
+        A = L;
+        if (synq_merge_defer(pCtx, L.last_node, C.node)) {
+            A.pending_name = L.pending_name;
+        }
+    } else if (C.node != SYNTAQLITE_NULL_NODE) {
         // Apply pending constraint name from the list to this node
         SyntaqliteNode *node = AST_NODE(&pCtx->ast, C.node);
         node->column_constraint.constraint_name = L.pending_name;
@@ -133,10 +138,12 @@ carglist(A) ::= carglist(L) ccons(C). {
             A.list = synq_parse_column_constraint_list(pCtx, L.list, C.node);
         }
         A.pending_name = SYNQ_NO_SPAN;
+        A.last_node = C.node;
     } else if (C.pending_name.length > 0) {
         // CONSTRAINT nm — store pending name for next constraint
         A.list = L.list;
         A.pending_name = C.pending_name;
+        A.last_node = L.last_node;
     } else {
         A = L;
     }
@@ -145,6 +152,7 @@ carglist(A) ::= carglist(L) ccons(C). {
 carglist(A) ::= . {
     A.list = SYNTAQLITE_NULL_NODE;
     A.pending_name = SYNQ_NO_SPAN;
+    A.last_node = SYNTAQLITE_NULL_NODE;
 }
 
 // ============ Column constraints (ccons) ============
@@ -288,7 +296,7 @@ ccons(A) ::= REFERENCES nm(T) eidlist_opt(TA) refargs(R). {
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
         synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
         R.on_insert,
-        SYNTAQLITE_BOOL_FALSE);
+        SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET);
     A.node = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
         SYNQ_NO_SPAN,
@@ -300,18 +308,14 @@ ccons(A) ::= REFERENCES nm(T) eidlist_opt(TA) refargs(R). {
 }
 
 // defer_subclause (applied to preceding REFERENCES constraint)
+// Its own ccons, but belongs to the REFERENCES before it; carglist folds it in.
 ccons(A) ::= defer_subclause(D). {
-    // Create a minimal constraint that just marks deferral.
-    // In practice, this follows a REFERENCES ccons. We'll handle it
-    // by updating the last constraint in the list if possible.
-    // For simplicity, we create a separate REFERENCES constraint with just deferral info.
-    // The printer will show it as a separate constraint entry.
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
         SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNQ_NO_SPAN,
         SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
         SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
         SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
-        (SyntaqliteBool)D);
+        D.deferrable, D.initial);
     A.node = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
         SYNQ_NO_SPAN,
@@ -450,24 +454,26 @@ refact(A) ::= NO ACTION. {
 
 // ============ Defer subclause ============
 
-defer_subclause(A) ::= NOT DEFERRABLE init_deferred_pred_opt. {
-    A = 0;
+defer_subclause(A) ::= NOT DEFERRABLE init_deferred_pred_opt(X). {
+    A.deferrable = SYNTAQLITE_DEFERRABLE_NOT_DEFERRABLE;
+    A.initial = (SyntaqliteInitialDeferMode)X;
 }
 
 defer_subclause(A) ::= DEFERRABLE init_deferred_pred_opt(X). {
-    A = X;
+    A.deferrable = SYNTAQLITE_DEFERRABLE_DEFERRABLE;
+    A.initial = (SyntaqliteInitialDeferMode)X;
 }
 
 init_deferred_pred_opt(A) ::= . {
-    A = 0;
+    A = (int)SYNTAQLITE_INITIAL_DEFER_MODE_UNSET;
 }
 
 init_deferred_pred_opt(A) ::= INITIALLY DEFERRED. {
-    A = 1;
+    A = (int)SYNTAQLITE_INITIAL_DEFER_MODE_DEFERRED;
 }
 
 init_deferred_pred_opt(A) ::= INITIALLY IMMEDIATE. {
-    A = 0;
+    A = (int)SYNTAQLITE_INITIAL_DEFER_MODE_IMMEDIATE;
 }
 
 // ============ Table constraint list support ============
@@ -492,9 +498,11 @@ conslist(A) ::= conslist(L) tconscomma(SEP) tcons(TC). {
             A.list = synq_parse_table_constraint_list(pCtx, L.list, TC.node);
         }
         A.pending_name = SYNQ_NO_SPAN;
+        A.last_node = TC.node;
     } else if (TC.pending_name.length > 0) {
         A.list = L.list;
         A.pending_name = TC.pending_name;
+        A.last_node = L.last_node;
     } else {
         A = L;
     }
@@ -504,9 +512,11 @@ conslist(A) ::= tcons(TC). {
     if (TC.node != SYNTAQLITE_NULL_NODE) {
         A.list = synq_parse_table_constraint_list(pCtx, SYNTAQLITE_NULL_NODE, TC.node);
         A.pending_name = SYNQ_NO_SPAN;
+        A.last_node = TC.node;
     } else {
         A.list = SYNTAQLITE_NULL_NODE;
         A.pending_name = TC.pending_name;
+        A.last_node = SYNTAQLITE_NULL_NODE;
     }
 }
 
@@ -551,7 +561,7 @@ tcons(A) ::= FOREIGN KEY LP eidlist(FA) RP REFERENCES nm(T) eidlist_opt(TA) refa
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
         synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
         R.on_insert,
-        (SyntaqliteBool)D);
+        D.deferrable, D.initial);
     A.node = synq_parse_table_constraint(pCtx,
         SYNTAQLITE_TABLE_CONSTRAINT_TYPE_FOREIGN_KEY,
         SYNQ_NO_SPAN,
@@ -563,7 +573,8 @@ tcons(A) ::= FOREIGN KEY LP eidlist(FA) RP REFERENCES nm(T) eidlist_opt(TA) refa
 // ============ Defer subclause opt ============
 
 defer_subclause_opt(A) ::= . {
-    A = 0;
+    A.deferrable = SYNTAQLITE_DEFERRABLE_UNSET;
+    A.initial = SYNTAQLITE_INITIAL_DEFER_MODE_UNSET;
 }
 
 defer_subclause_opt(A) ::= defer_subclause(A). {

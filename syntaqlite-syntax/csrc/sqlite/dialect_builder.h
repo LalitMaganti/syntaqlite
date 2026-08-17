@@ -205,7 +205,8 @@ static inline uint32_t synq_parse_foreign_key_clause(
     SyntaqliteForeignKeyAction on_delete,
     SyntaqliteForeignKeyAction on_update,
     SyntaqliteForeignKeyAction on_insert,
-    SyntaqliteBool is_deferred) {
+    SyntaqliteDeferrable deferrable,
+    SyntaqliteInitialDeferMode initial_defer) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteForeignKeyClause){.tag = SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE,
@@ -215,7 +216,8 @@ static inline uint32_t synq_parse_foreign_key_clause(
                                     .on_delete = on_delete,
                                     .on_update = on_update,
                                     .on_insert = on_insert,
-                                    .is_deferred = is_deferred},
+                                    .deferrable = deferrable,
+                                    .initial_defer = initial_defer},
       (uint32_t)sizeof(SyntaqliteForeignKeyClause));
 }
 

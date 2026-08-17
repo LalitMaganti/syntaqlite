@@ -836,7 +836,8 @@ class ColumnConstraintReferences(TestSuite):
                               on_delete: UNSET
                               on_update: UNSET
                               on_insert: UNSET
-                              is_deferred: FALSE
+                              deferrable: UNSET
+                              initial_defer: UNSET
               table_constraints: (none)
               as_select: (none)
 """,
@@ -885,7 +886,8 @@ class ColumnConstraintReferences(TestSuite):
                               on_delete: CASCADE
                               on_update: UNSET
                               on_insert: UNSET
-                              is_deferred: FALSE
+                              deferrable: UNSET
+                              initial_defer: UNSET
               table_constraints: (none)
               as_select: (none)
 """,
@@ -934,7 +936,8 @@ class ColumnConstraintReferences(TestSuite):
                               on_delete: UNSET
                               on_update: SET_NULL
                               on_insert: UNSET
-                              is_deferred: FALSE
+                              deferrable: UNSET
+                              initial_defer: UNSET
               table_constraints: (none)
               as_select: (none)
 """,
@@ -1397,7 +1400,8 @@ class TableConstraintForeignKey(TestSuite):
                         on_delete: UNSET
                         on_update: UNSET
                         on_insert: UNSET
-                        is_deferred: FALSE
+                        deferrable: UNSET
+                        initial_defer: UNSET
               as_select: (none)
 """,
         )
@@ -1448,7 +1452,8 @@ class TableConstraintForeignKey(TestSuite):
                         on_delete: CASCADE
                         on_update: SET_NULL
                         on_insert: UNSET
-                        is_deferred: FALSE
+                        deferrable: UNSET
+                        initial_defer: UNSET
               as_select: (none)
 """,
         )
@@ -1499,7 +1504,8 @@ class TableConstraintForeignKey(TestSuite):
                         on_delete: UNSET
                         on_update: UNSET
                         on_insert: UNSET
-                        is_deferred: TRUE
+                        deferrable: DEFERRABLE
+                        initial_defer: DEFERRED
               as_select: (none)
 """,
         )
@@ -1551,7 +1557,8 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                               on_delete: SET_DEFAULT
                               on_update: UNSET
                               on_insert: UNSET
-                              is_deferred: FALSE
+                              deferrable: UNSET
+                              initial_defer: UNSET
               table_constraints: (none)
               as_select: (none)
 """,
@@ -1600,7 +1607,8 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                               on_delete: RESTRICT
                               on_update: UNSET
                               on_insert: UNSET
-                              is_deferred: FALSE
+                              deferrable: UNSET
+                              initial_defer: UNSET
               table_constraints: (none)
               as_select: (none)
 """,
@@ -1649,7 +1657,8 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                               on_delete: UNSET
                               on_update: SET_DEFAULT
                               on_insert: UNSET
-                              is_deferred: FALSE
+                              deferrable: UNSET
+                              initial_defer: UNSET
               table_constraints: (none)
               as_select: (none)
 """,
@@ -1698,7 +1707,8 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                               on_delete: UNSET
                               on_update: RESTRICT
                               on_insert: UNSET
-                              is_deferred: FALSE
+                              deferrable: UNSET
+                              initial_defer: UNSET
               table_constraints: (none)
               as_select: (none)
 """,
@@ -2103,7 +2113,8 @@ class NamedTableConstraints(TestSuite):
                         on_delete: UNSET
                         on_update: UNSET
                         on_insert: UNSET
-                        is_deferred: FALSE
+                        deferrable: UNSET
+                        initial_defer: UNSET
               as_select: (none)
 """,
         )
