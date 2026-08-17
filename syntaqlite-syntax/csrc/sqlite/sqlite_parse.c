@@ -7862,8 +7862,6 @@ static YYACTIONTYPE yy_reduce(
       yytestcase(yyruleno == 226);
     case 236: /* kwcolumn_opt ::= */
       yytestcase(yyruleno == 236);
-    case 246: /* trans_opt ::= */
-      yytestcase(yyruleno == 246);
     case 250: /* savepoint_opt ::= */
       yytestcase(yyruleno == 250);
     case 359: /* uniqueflag ::= */
@@ -8402,6 +8400,8 @@ static YYACTIONTYPE yy_reduce(
     case 121: /* scantok ::= */
     case 155: /* indexed_opt ::= */
       yytestcase(yyruleno == 155);
+    case 246: /* trans_opt ::= */
+      yytestcase(yyruleno == 246);
     case 263: /* scanpt ::= */
       yytestcase(yyruleno == 263);
       {
@@ -9239,19 +9239,25 @@ static YYACTIONTYPE yy_reduce(
     {
       yymsp[-2].minor.yy277 = synq_parse_transaction_stmt(
           pCtx, SYNTAQLITE_TRANSACTION_OP_BEGIN,
-          (SyntaqliteTransactionType)yymsp[-1].minor.yy320);
+          (SyntaqliteTransactionType)yymsp[-1].minor.yy320,
+          yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[0].minor.yy0)
+                               : SYNQ_NO_SPAN);
     } break;
     case 240: /* cmd ::= COMMIT|END trans_opt */
     {
-      yymsp[-1].minor.yy277 =
-          synq_parse_transaction_stmt(pCtx, SYNTAQLITE_TRANSACTION_OP_COMMIT,
-                                      SYNTAQLITE_TRANSACTION_TYPE_DEFERRED);
+      yymsp[-1].minor.yy277 = synq_parse_transaction_stmt(
+          pCtx, SYNTAQLITE_TRANSACTION_OP_COMMIT,
+          SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
+          yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[0].minor.yy0)
+                               : SYNQ_NO_SPAN);
     } break;
     case 241: /* cmd ::= ROLLBACK trans_opt */
     {
-      yymsp[-1].minor.yy277 =
-          synq_parse_transaction_stmt(pCtx, SYNTAQLITE_TRANSACTION_OP_ROLLBACK,
-                                      SYNTAQLITE_TRANSACTION_TYPE_DEFERRED);
+      yymsp[-1].minor.yy277 = synq_parse_transaction_stmt(
+          pCtx, SYNTAQLITE_TRANSACTION_OP_ROLLBACK,
+          SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
+          yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[0].minor.yy0)
+                               : SYNQ_NO_SPAN);
     } break;
     case 242: /* transtype ::= */
     {
@@ -9270,30 +9276,39 @@ static YYACTIONTYPE yy_reduce(
       yymsp[0].minor.yy320 = (int)SYNTAQLITE_TRANSACTION_TYPE_EXCLUSIVE;
     } break;
     case 247: /* trans_opt ::= TRANSACTION */
-    case 249: /* savepoint_opt ::= SAVEPOINT */
-      yytestcase(yyruleno == 249);
+    {
+      yymsp[0].minor.yy0.z = NULL;
+      yymsp[0].minor.yy0.n = 0;
+    } break;
+    case 248: /* trans_opt ::= TRANSACTION nm */
+    case 335: /* plus_num ::= PLUS INTEGER|FLOAT */
+      yytestcase(yyruleno == 335);
       {
-        yymsp[0].minor.yy320 = 0;
+        yymsp[-1].minor.yy0 = yymsp[0].minor.yy0;
       }
       break;
-    case 248: /* trans_opt ::= TRANSACTION nm */
+    case 249: /* savepoint_opt ::= SAVEPOINT */
     {
-      yymsp[-1].minor.yy320 = 0;
+      yymsp[0].minor.yy320 = 0;
     } break;
     case 251: /* cmd ::= SAVEPOINT nmorerr */
     {
-      yymsp[-1].minor.yy277 = synq_parse_savepoint_stmt(
-          pCtx, SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT, yymsp[0].minor.yy277);
+      yymsp[-1].minor.yy277 =
+          synq_parse_savepoint_stmt(pCtx, SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT,
+                                    yymsp[0].minor.yy277, SYNQ_NO_SPAN);
     } break;
     case 252: /* cmd ::= RELEASE savepoint_opt nmorerr */
     {
-      yymsp[-2].minor.yy277 = synq_parse_savepoint_stmt(
-          pCtx, SYNTAQLITE_SAVEPOINT_OP_RELEASE, yymsp[0].minor.yy277);
+      yymsp[-2].minor.yy277 =
+          synq_parse_savepoint_stmt(pCtx, SYNTAQLITE_SAVEPOINT_OP_RELEASE,
+                                    yymsp[0].minor.yy277, SYNQ_NO_SPAN);
     } break;
     case 253: /* cmd ::= ROLLBACK trans_opt TO savepoint_opt nmorerr */
     {
       yymsp[-4].minor.yy277 = synq_parse_savepoint_stmt(
-          pCtx, SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO, yymsp[0].minor.yy277);
+          pCtx, SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO, yymsp[0].minor.yy277,
+          yymsp[-3].minor.yy0.z ? synq_span(pCtx, yymsp[-3].minor.yy0)
+                                : SYNQ_NO_SPAN);
     } break;
     case 257: /* oneselect ::= SELECT distinct selcollist from where_opt
                  groupby_opt having_opt orderby_opt limit_opt */
@@ -9745,10 +9760,6 @@ static YYACTIONTYPE yy_reduce(
             SYNTAQLITE_PRAGMA_FORM_CALL);
       }
       break;
-    case 335: /* plus_num ::= PLUS INTEGER|FLOAT */
-    {
-      yymsp[-1].minor.yy0 = yymsp[0].minor.yy0;
-    } break;
     case 337: /* minus_num ::= MINUS INTEGER|FLOAT */
     {
       // Build a token that spans from the MINUS sign through the number

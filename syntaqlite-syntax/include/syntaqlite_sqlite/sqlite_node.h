@@ -786,12 +786,14 @@ typedef struct SyntaqliteTransactionStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteTransactionOp op;
   SyntaqliteTransactionType trans_type;
+  SyntaqliteTextSpan name;
 } SyntaqliteTransactionStmt;
 
 typedef struct SyntaqliteSavepointStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteSavepointOp op;
   uint32_t savepoint_name;
+  SyntaqliteTextSpan transaction_name;
 } SyntaqliteSavepointStmt;
 
 typedef struct SyntaqliteResultColumn {

@@ -720,6 +720,8 @@ static const SyntaqliteFieldMeta field_meta_transaction_stmt[] = {
     {offsetof(SyntaqliteTransactionStmt, trans_type), SYNTAQLITE_FIELD_ENUM,
      "trans_type", display_transaction_type,
      sizeof(display_transaction_type) / sizeof(display_transaction_type[0])},
+    {offsetof(SyntaqliteTransactionStmt, name), SYNTAQLITE_FIELD_SPAN, "name",
+     NULL, 0},
 };
 
 static const SyntaqliteFieldMeta field_meta_savepoint_stmt[] = {
@@ -728,6 +730,8 @@ static const SyntaqliteFieldMeta field_meta_savepoint_stmt[] = {
      sizeof(display_savepoint_op) / sizeof(display_savepoint_op[0])},
     {offsetof(SyntaqliteSavepointStmt, savepoint_name),
      SYNTAQLITE_FIELD_NODE_ID, "savepoint_name", NULL, 0},
+    {offsetof(SyntaqliteSavepointStmt, transaction_name), SYNTAQLITE_FIELD_SPAN,
+     "transaction_name", NULL, 0},
 };
 
 static const SyntaqliteFieldMeta field_meta_result_column[] = {
@@ -1104,6 +1108,14 @@ static const SyntaqliteFieldRangeMeta range_meta_collate_expr[] = {
     {offsetof(SyntaqliteCollateExpr, collation), 1},
 };
 
+static const SyntaqliteFieldRangeMeta range_meta_transaction_stmt[] = {
+    {offsetof(SyntaqliteTransactionStmt, name), 1},
+};
+
+static const SyntaqliteFieldRangeMeta range_meta_savepoint_stmt[] = {
+    {offsetof(SyntaqliteSavepointStmt, transaction_name), 1},
+};
+
 static const SyntaqliteFieldRangeMeta range_meta_table_ref[] = {
     {offsetof(SyntaqliteTableRef, table_name), 1},
     {offsetof(SyntaqliteTableRef, schema), 1},
@@ -1384,8 +1396,8 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* QualifiedName */
     3,  /* DropStmt */
     5,  /* AlterTableStmt */
-    2,  /* TransactionStmt */
-    2,  /* SavepointStmt */
+    3,  /* TransactionStmt */
+    3,  /* SavepointStmt */
     3,  /* ResultColumn */
     0,  /* ResultColumnList */
     9,  /* SelectStmt */
@@ -1558,8 +1570,8 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                 /* QualifiedName */
     {NULL, 0},                                 /* DropStmt */
     {NULL, 0},                                 /* AlterTableStmt */
-    {NULL, 0},                                 /* TransactionStmt */
-    {NULL, 0},                                 /* SavepointStmt */
+    {range_meta_transaction_stmt, 1},          /* TransactionStmt */
+    {range_meta_savepoint_stmt, 1},            /* SavepointStmt */
     {NULL, 0},                                 /* ResultColumn */
     {NULL, 0},                                 /* ResultColumnList */
     {NULL, 0},                                 /* SelectStmt */

@@ -53,6 +53,7 @@ node AlterTableStmt {
 node TransactionStmt {
   op: inline TransactionOp
   trans_type: inline TransactionType
+  name: inline SyntaqliteTextSpan
 
   fmt {
     switch(op) {
@@ -64,18 +65,24 @@ node TransactionStmt {
       COMMIT   { "COMMIT" }
       ROLLBACK { "ROLLBACK" }
     }
+    if_span(name) { space "TRANSACTION" space span(name) }
   }
 }
 
 node SavepointStmt {
   op: inline SavepointOp
   savepoint_name: index Name
+  transaction_name: inline SyntaqliteTextSpan
 
   fmt {
     switch(op) {
       SAVEPOINT   { "SAVEPOINT" space child(savepoint_name) }
       RELEASE     { "RELEASE" "SAVEPOINT" space child(savepoint_name) }
-      ROLLBACK_TO { "ROLLBACK" "TO" "SAVEPOINT" space child(savepoint_name) }
+      ROLLBACK_TO {
+        "ROLLBACK"
+        if_span(transaction_name) { space "TRANSACTION" space span(transaction_name) }
+        space "TO" "SAVEPOINT" space child(savepoint_name)
+      }
     }
   }
 }

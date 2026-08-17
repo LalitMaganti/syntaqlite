@@ -17,7 +17,7 @@
 %type columnname {SynqColumnNameValue}
 %type ifexists {int}
 %type transtype {int}
-%type trans_opt {int}
+%type trans_opt {SynqParseToken}
 %type savepoint_opt {int}
 %type kwcolumn_opt {int}
 
@@ -121,22 +121,25 @@ columnname(A) ::= nmorerr(X) typetoken(Y). {
 
 // ============ Transaction control ============
 
-cmd(A) ::= BEGIN transtype(Y) trans_opt. {
+cmd(A) ::= BEGIN transtype(Y) trans_opt(T). {
     A = synq_parse_transaction_stmt(pCtx,
         SYNTAQLITE_TRANSACTION_OP_BEGIN,
-        (SyntaqliteTransactionType)Y);
+        (SyntaqliteTransactionType)Y,
+        T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
 }
 
-cmd(A) ::= COMMIT|END trans_opt. {
+cmd(A) ::= COMMIT|END trans_opt(T). {
     A = synq_parse_transaction_stmt(pCtx,
         SYNTAQLITE_TRANSACTION_OP_COMMIT,
-        SYNTAQLITE_TRANSACTION_TYPE_DEFERRED);
+        SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
+        T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
 }
 
-cmd(A) ::= ROLLBACK trans_opt. {
+cmd(A) ::= ROLLBACK trans_opt(T). {
     A = synq_parse_transaction_stmt(pCtx,
         SYNTAQLITE_TRANSACTION_OP_ROLLBACK,
-        SYNTAQLITE_TRANSACTION_TYPE_DEFERRED);
+        SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
+        T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
 }
 
 // ============ Transaction type ============
@@ -160,15 +163,15 @@ transtype(A) ::= EXCLUSIVE. {
 // ============ Transaction option ============
 
 trans_opt(A) ::= . {
-    A = 0;
+    A.z = NULL; A.n = 0;
 }
 
 trans_opt(A) ::= TRANSACTION. {
-    A = 0;
+    A.z = NULL; A.n = 0;
 }
 
-trans_opt(A) ::= TRANSACTION nm. {
-    A = 0;
+trans_opt(A) ::= TRANSACTION nm(X). {
+    A = X;
 }
 
 // ============ Savepoint ============
@@ -184,17 +187,17 @@ savepoint_opt(A) ::= . {
 cmd(A) ::= SAVEPOINT nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT,
-        X);
+        X, SYNQ_NO_SPAN);
 }
 
 cmd(A) ::= RELEASE savepoint_opt nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_RELEASE,
-        X);
+        X, SYNQ_NO_SPAN);
 }
 
-cmd(A) ::= ROLLBACK trans_opt TO savepoint_opt nmorerr(X). {
+cmd(A) ::= ROLLBACK trans_opt(T) TO savepoint_opt nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO,
-        X);
+        X, T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
 }

@@ -1725,6 +1725,7 @@ pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::from_result(&'a syntaqlite_s
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::SavepointStmtId
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::op(&self) -> syntaqlite_syntax::nodes::SavepointOp
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::savepoint_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
+pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::transaction_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::SavepointStmtId::from(syntaqlite_syntax::nodes::SavepointStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::SavepointStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::Select<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
@@ -1810,6 +1811,7 @@ pub fn syntaqlite_syntax::nodes::TableSourceId::into_inner(self) -> syntaqlite_s
 pub fn syntaqlite_syntax::nodes::TransactionOp::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TransactionStmtId
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::op(&self) -> syntaqlite_syntax::nodes::TransactionOp
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::trans_type(&self) -> syntaqlite_syntax::nodes::TransactionType
