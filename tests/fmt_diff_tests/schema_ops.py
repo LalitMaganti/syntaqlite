@@ -148,6 +148,36 @@ class TransactionFormat(TestSuite):
             out="ROLLBACK;",
         )
 
+    def test_begin_transaction_unnamed(self):
+        return DiffTestBlueprint(
+            sql="begin transaction",
+            out="BEGIN;",
+        )
+
+    def test_begin_transaction_named(self):
+        return DiffTestBlueprint(
+            sql="begin transaction foo",
+            out="BEGIN TRANSACTION foo;",
+        )
+
+    def test_begin_immediate_transaction_named(self):
+        return DiffTestBlueprint(
+            sql="begin immediate transaction foo",
+            out="BEGIN IMMEDIATE TRANSACTION foo;",
+        )
+
+    def test_commit_transaction_named(self):
+        return DiffTestBlueprint(
+            sql="commit transaction foo",
+            out="COMMIT TRANSACTION foo;",
+        )
+
+    def test_rollback_transaction_named(self):
+        return DiffTestBlueprint(
+            sql="rollback transaction foo",
+            out="ROLLBACK TRANSACTION foo;",
+        )
+
 
 class SavepointFormat(TestSuite):
     def test_savepoint(self):
@@ -178,4 +208,10 @@ class SavepointFormat(TestSuite):
         return DiffTestBlueprint(
             sql="rollback to savepoint sp1",
             out="ROLLBACK TO SAVEPOINT sp1;",
+        )
+
+    def test_rollback_transaction_named_to_savepoint(self):
+        return DiffTestBlueprint(
+            sql="rollback transaction foo to savepoint sp1",
+            out="ROLLBACK TRANSACTION foo TO SAVEPOINT sp1;",
         )

@@ -4519,6 +4519,9 @@ impl<'a> TransactionStmt<'a> {
     pub fn trans_type(&self) -> TransactionType {
         self.raw.trans_type
     }
+    pub fn name(&self) -> &'a str {
+        self.stmt_result.span_expanded_text(self.raw.name)
+    }
 }
 
 impl<'a> GrammarNodeType<'a> for TransactionStmt<'a> {
@@ -4590,6 +4593,10 @@ impl<'a> SavepointStmt<'a> {
     }
     pub fn savepoint_name(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.savepoint_name)
+    }
+    pub fn transaction_name(&self) -> &'a str {
+        self.stmt_result
+            .span_expanded_text(self.raw.transaction_name)
     }
 }
 

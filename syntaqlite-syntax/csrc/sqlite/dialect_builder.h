@@ -612,23 +612,28 @@ static inline uint32_t synq_parse_alter_table_stmt(SynqParseCtx* ctx,
 static inline uint32_t synq_parse_transaction_stmt(
     SynqParseCtx* ctx,
     SyntaqliteTransactionOp op,
-    SyntaqliteTransactionType trans_type) {
+    SyntaqliteTransactionType trans_type,
+    SyntaqliteTextSpan name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteTransactionStmt){.tag = SYNTAQLITE_NODE_TRANSACTION_STMT,
                                    .op = op,
-                                   .trans_type = trans_type},
+                                   .trans_type = trans_type,
+                                   .name = name},
       (uint32_t)sizeof(SyntaqliteTransactionStmt));
 }
 
-static inline uint32_t synq_parse_savepoint_stmt(SynqParseCtx* ctx,
-                                                 SyntaqliteSavepointOp op,
-                                                 uint32_t savepoint_name) {
+static inline uint32_t synq_parse_savepoint_stmt(
+    SynqParseCtx* ctx,
+    SyntaqliteSavepointOp op,
+    uint32_t savepoint_name,
+    SyntaqliteTextSpan transaction_name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteSavepointStmt){.tag = SYNTAQLITE_NODE_SAVEPOINT_STMT,
                                  .op = op,
-                                 .savepoint_name = savepoint_name},
+                                 .savepoint_name = savepoint_name,
+                                 .transaction_name = transaction_name},
       (uint32_t)sizeof(SyntaqliteSavepointStmt));
 }
 

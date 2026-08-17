@@ -415,6 +415,7 @@ pub(crate) struct TransactionStmt {
     pub(crate) tag: u32,
     pub(crate) op: super::ast::TransactionOp,
     pub(crate) trans_type: super::ast::TransactionType,
+    pub(crate) name: TextSpan,
 }
 
 #[derive(Debug, Clone)]
@@ -423,6 +424,7 @@ pub(crate) struct SavepointStmt {
     pub(crate) tag: u32,
     pub(crate) op: super::ast::SavepointOp,
     pub(crate) savepoint_name: AnyNodeId,
+    pub(crate) transaction_name: TextSpan,
 }
 
 #[derive(Debug, Clone)]

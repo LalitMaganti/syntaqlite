@@ -361,9 +361,10 @@ class TransactionControl(TestSuite):
         return DiffTestBlueprint(
             sql="BEGIN",
             out="""\
-TransactionStmt
-  op: BEGIN
-  trans_type: DEFERRED
+            TransactionStmt
+              op: BEGIN
+              trans_type: DEFERRED
+              name: (none)
 """,
         )
 
@@ -371,9 +372,10 @@ TransactionStmt
         return DiffTestBlueprint(
             sql="BEGIN DEFERRED",
             out="""\
-TransactionStmt
-  op: BEGIN
-  trans_type: DEFERRED
+            TransactionStmt
+              op: BEGIN
+              trans_type: DEFERRED
+              name: (none)
 """,
         )
 
@@ -381,9 +383,10 @@ TransactionStmt
         return DiffTestBlueprint(
             sql="BEGIN IMMEDIATE TRANSACTION",
             out="""\
-TransactionStmt
-  op: BEGIN
-  trans_type: IMMEDIATE
+            TransactionStmt
+              op: BEGIN
+              trans_type: IMMEDIATE
+              name: (none)
 """,
         )
 
@@ -391,9 +394,10 @@ TransactionStmt
         return DiffTestBlueprint(
             sql="BEGIN EXCLUSIVE",
             out="""\
-TransactionStmt
-  op: BEGIN
-  trans_type: EXCLUSIVE
+            TransactionStmt
+              op: BEGIN
+              trans_type: EXCLUSIVE
+              name: (none)
 """,
         )
 
@@ -401,9 +405,10 @@ TransactionStmt
         return DiffTestBlueprint(
             sql="COMMIT",
             out="""\
-TransactionStmt
-  op: COMMIT
-  trans_type: DEFERRED
+            TransactionStmt
+              op: COMMIT
+              trans_type: DEFERRED
+              name: (none)
 """,
         )
 
@@ -411,9 +416,10 @@ TransactionStmt
         return DiffTestBlueprint(
             sql="END",
             out="""\
-TransactionStmt
-  op: COMMIT
-  trans_type: DEFERRED
+            TransactionStmt
+              op: COMMIT
+              trans_type: DEFERRED
+              name: (none)
 """,
         )
 
@@ -421,9 +427,10 @@ TransactionStmt
         return DiffTestBlueprint(
             sql="ROLLBACK",
             out="""\
-TransactionStmt
-  op: ROLLBACK
-  trans_type: DEFERRED
+            TransactionStmt
+              op: ROLLBACK
+              trans_type: DEFERRED
+              name: (none)
 """,
         )
 
@@ -440,6 +447,7 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              transaction_name: (none)
 """,
         )
 
@@ -452,6 +460,7 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              transaction_name: (none)
 """,
         )
 
@@ -464,6 +473,7 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              transaction_name: (none)
 """,
         )
 
@@ -476,6 +486,7 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              transaction_name: (none)
 """,
         )
 
@@ -488,5 +499,6 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              transaction_name: (none)
 """,
         )
