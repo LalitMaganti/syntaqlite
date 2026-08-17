@@ -274,6 +274,54 @@ class JoinFormat(TestSuite):
         )
 
 
+class ParenthesizedFromFormat(TestSuite):
+    """Parens around a FROM term group the join and are load-bearing."""
+
+    def test_nested_join_keeps_parens(self):
+        # Flattened, the trailing ON has nothing to attach to and will not parse.
+        return DiffTestBlueprint(
+            sql="select count(*) from a left join (b join c on b.x=c.x) on a.x=b.x",
+            out="""\
+                SELECT count(*)
+                FROM a
+                LEFT JOIN (
+                  b
+                  JOIN c ON b.x = c.x
+                )
+                  ON a.x = b.x;
+            """,
+        )
+
+    def test_alias_on_table_list(self):
+        return DiffTestBlueprint(
+            sql="select zz.a from (t1,t2) as zz",
+            out="SELECT zz.a FROM (t1, t2) AS zz;",
+        )
+
+    def test_alias_on_single_table(self):
+        return DiffTestBlueprint(
+            sql="select zz.a from (t1) as zz",
+            out="SELECT zz.a FROM (t1) AS zz;",
+        )
+
+    def test_cosmetic_parens_are_dropped(self):
+        # Upstream discards these: whole FROM clause, no alias, no ON/USING.
+        return DiffTestBlueprint(
+            sql="select * from (t1,t2)",
+            out="SELECT * FROM t1, t2;",
+        )
+
+    def test_cosmetic_parens_around_join_are_dropped(self):
+        return DiffTestBlueprint(
+            sql="select * from (a join b on a.x=b.x)",
+            out="""\
+                SELECT *
+                FROM a
+                JOIN b ON a.x = b.x;
+            """,
+        )
+
+
 class SubqueryFormat(TestSuite):
     def test_subquery_table_source(self):
         return DiffTestBlueprint(

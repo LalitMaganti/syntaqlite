@@ -72,29 +72,30 @@ pub enum NodeTag {
     LimitClause = 54,
     TableRef = 55,
     SubqueryTableSource = 56,
-    JoinClause = 57,
-    JoinPrefix = 58,
-    TriggerEvent = 59,
-    TriggerCmdList = 60,
-    CreateTriggerStmt = 61,
-    CreateVirtualTableStmt = 62,
-    PragmaStmt = 63,
-    AnalyzeOrReindexStmt = 64,
-    AttachStmt = 65,
-    DetachStmt = 66,
-    VacuumStmt = 67,
-    ExplainStmt = 68,
-    CreateIndexStmt = 69,
-    CreateViewStmt = 70,
-    ValuesRowList = 71,
-    ValuesClause = 72,
-    FrameBound = 73,
-    FrameSpec = 74,
-    WindowDef = 75,
-    WindowDefList = 76,
-    NamedWindowDef = 77,
-    NamedWindowDefList = 78,
-    FilterOver = 79,
+    ParenTableSource = 57,
+    JoinClause = 58,
+    JoinPrefix = 59,
+    TriggerEvent = 60,
+    TriggerCmdList = 61,
+    CreateTriggerStmt = 62,
+    CreateVirtualTableStmt = 63,
+    PragmaStmt = 64,
+    AnalyzeOrReindexStmt = 65,
+    AttachStmt = 66,
+    DetachStmt = 67,
+    VacuumStmt = 68,
+    ExplainStmt = 69,
+    CreateIndexStmt = 70,
+    CreateViewStmt = 71,
+    ValuesRowList = 72,
+    ValuesClause = 73,
+    FrameBound = 74,
+    FrameSpec = 75,
+    WindowDef = 76,
+    WindowDefList = 77,
+    NamedWindowDef = 78,
+    NamedWindowDefList = 79,
+    FilterOver = 80,
 }
 
 impl From<NodeTag> for crate::any::AnyNodeTag {
@@ -163,29 +164,30 @@ impl NodeTag {
             54 => Some(NodeTag::LimitClause),
             55 => Some(NodeTag::TableRef),
             56 => Some(NodeTag::SubqueryTableSource),
-            57 => Some(NodeTag::JoinClause),
-            58 => Some(NodeTag::JoinPrefix),
-            59 => Some(NodeTag::TriggerEvent),
-            60 => Some(NodeTag::TriggerCmdList),
-            61 => Some(NodeTag::CreateTriggerStmt),
-            62 => Some(NodeTag::CreateVirtualTableStmt),
-            63 => Some(NodeTag::PragmaStmt),
-            64 => Some(NodeTag::AnalyzeOrReindexStmt),
-            65 => Some(NodeTag::AttachStmt),
-            66 => Some(NodeTag::DetachStmt),
-            67 => Some(NodeTag::VacuumStmt),
-            68 => Some(NodeTag::ExplainStmt),
-            69 => Some(NodeTag::CreateIndexStmt),
-            70 => Some(NodeTag::CreateViewStmt),
-            71 => Some(NodeTag::ValuesRowList),
-            72 => Some(NodeTag::ValuesClause),
-            73 => Some(NodeTag::FrameBound),
-            74 => Some(NodeTag::FrameSpec),
-            75 => Some(NodeTag::WindowDef),
-            76 => Some(NodeTag::WindowDefList),
-            77 => Some(NodeTag::NamedWindowDef),
-            78 => Some(NodeTag::NamedWindowDefList),
-            79 => Some(NodeTag::FilterOver),
+            57 => Some(NodeTag::ParenTableSource),
+            58 => Some(NodeTag::JoinClause),
+            59 => Some(NodeTag::JoinPrefix),
+            60 => Some(NodeTag::TriggerEvent),
+            61 => Some(NodeTag::TriggerCmdList),
+            62 => Some(NodeTag::CreateTriggerStmt),
+            63 => Some(NodeTag::CreateVirtualTableStmt),
+            64 => Some(NodeTag::PragmaStmt),
+            65 => Some(NodeTag::AnalyzeOrReindexStmt),
+            66 => Some(NodeTag::AttachStmt),
+            67 => Some(NodeTag::DetachStmt),
+            68 => Some(NodeTag::VacuumStmt),
+            69 => Some(NodeTag::ExplainStmt),
+            70 => Some(NodeTag::CreateIndexStmt),
+            71 => Some(NodeTag::CreateViewStmt),
+            72 => Some(NodeTag::ValuesRowList),
+            73 => Some(NodeTag::ValuesClause),
+            74 => Some(NodeTag::FrameBound),
+            75 => Some(NodeTag::FrameSpec),
+            76 => Some(NodeTag::WindowDef),
+            77 => Some(NodeTag::WindowDefList),
+            78 => Some(NodeTag::NamedWindowDef),
+            79 => Some(NodeTag::NamedWindowDefList),
+            80 => Some(NodeTag::FilterOver),
             _ => None,
         }
     }
@@ -1365,6 +1367,7 @@ impl TypedNodeId for StmtId {
 pub enum TableSource<'a> {
     TableRef(TableRef<'a>),
     SubqueryTableSource(SubqueryTableSource<'a>),
+    ParenTableSource(ParenTableSource<'a>),
     JoinClause(JoinClause<'a>),
     JoinPrefix(JoinPrefix<'a>),
 }
@@ -1375,6 +1378,7 @@ impl<'a> TableSource<'a> {
         match self {
             TableSource::TableRef(n) => TableSourceId(n.node_id().into()),
             TableSource::SubqueryTableSource(n) => TableSourceId(n.node_id().into()),
+            TableSource::ParenTableSource(n) => TableSourceId(n.node_id().into()),
             TableSource::JoinClause(n) => TableSourceId(n.node_id().into()),
             TableSource::JoinPrefix(n) => TableSourceId(n.node_id().into()),
         }
@@ -1387,6 +1391,7 @@ impl<'a> GrammarNodeType<'a> for TableSource<'a> {
         match node {
             Node::TableRef(n) => Some(TableSource::TableRef(n)),
             Node::SubqueryTableSource(n) => Some(TableSource::SubqueryTableSource(n)),
+            Node::ParenTableSource(n) => Some(TableSource::ParenTableSource(n)),
             Node::JoinClause(n) => Some(TableSource::JoinClause(n)),
             Node::JoinPrefix(n) => Some(TableSource::JoinPrefix(n)),
             _ => None,
@@ -5025,6 +5030,78 @@ impl TypedNodeId for SubqueryTableSourceId {
 }
 
 #[derive(Clone, Copy)]
+pub struct ParenTableSource<'a> {
+    raw: &'a super::ffi::ParenTableSource,
+    stmt_result: &'a AnyParsedStatement<'a>,
+    id: AnyNodeId,
+}
+
+impl std::fmt::Debug for ParenTableSource<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.raw.fmt(f)
+    }
+}
+
+impl std::fmt::Display for ParenTableSource<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        AnyNode {
+            id: self.id,
+            stmt_result: self.stmt_result,
+        }
+        .fmt(f)
+    }
+}
+
+impl<'a> ParenTableSource<'a> {
+    /// The typed node ID of this node.
+    pub fn node_id(&self) -> ParenTableSourceId {
+        ParenTableSourceId(self.id)
+    }
+    pub fn source(&self) -> Option<TableSource<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.source)
+    }
+    pub fn alias(&self) -> Option<Name<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.alias)
+    }
+}
+
+impl<'a> GrammarNodeType<'a> for ParenTableSource<'a> {
+    fn from_result(stmt_result: &'a AnyParsedStatement<'a>, id: AnyNodeId) -> Option<Self> {
+        let raw = stmt_result.resolve_as::<super::ffi::ParenTableSource>(id)?;
+        Some(ParenTableSource {
+            raw,
+            stmt_result,
+            id,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ParenTableSourceId(AnyNodeId);
+
+impl ParenTableSourceId {
+    pub fn into_inner(self) -> AnyNodeId {
+        self.0
+    }
+}
+
+impl<'a> From<ParenTableSource<'a>> for ParenTableSourceId {
+    fn from(n: ParenTableSource<'a>) -> Self {
+        n.node_id()
+    }
+}
+
+impl From<ParenTableSourceId> for AnyNodeId {
+    fn from(id: ParenTableSourceId) -> AnyNodeId {
+        id.0
+    }
+}
+
+impl TypedNodeId for ParenTableSourceId {
+    type Node<'a> = ParenTableSource<'a>;
+}
+
+#[derive(Clone, Copy)]
 pub struct JoinClause<'a> {
     raw: &'a super::ffi::JoinClause,
     stmt_result: &'a AnyParsedStatement<'a>,
@@ -6942,6 +7019,7 @@ pub enum Node<'a> {
     LimitClause(LimitClause<'a>),
     TableRef(TableRef<'a>),
     SubqueryTableSource(SubqueryTableSource<'a>),
+    ParenTableSource(ParenTableSource<'a>),
     JoinClause(JoinClause<'a>),
     JoinPrefix(JoinPrefix<'a>),
     TriggerEvent(TriggerEvent<'a>),
@@ -7256,6 +7334,11 @@ impl<'a> Node<'a> {
                     stmt_result,
                     id,
                 }),
+                NodeTag::ParenTableSource => Node::ParenTableSource(ParenTableSource {
+                    raw: &*ptr.cast::<super::ffi::ParenTableSource>(),
+                    stmt_result,
+                    id,
+                }),
                 NodeTag::JoinClause => Node::JoinClause(JoinClause {
                     raw: &*ptr.cast::<super::ffi::JoinClause>(),
                     stmt_result,
@@ -7444,6 +7527,7 @@ impl<'a> Node<'a> {
             Node::LimitClause(..) => NodeTag::LimitClause,
             Node::TableRef(..) => NodeTag::TableRef,
             Node::SubqueryTableSource(..) => NodeTag::SubqueryTableSource,
+            Node::ParenTableSource(..) => NodeTag::ParenTableSource,
             Node::JoinClause(..) => NodeTag::JoinClause,
             Node::JoinPrefix(..) => NodeTag::JoinPrefix,
             Node::TriggerEvent(..) => NodeTag::TriggerEvent,
@@ -7530,6 +7614,7 @@ impl<'a> Node<'a> {
             Node::LimitClause(n) => NodeId(n.node_id().into()),
             Node::TableRef(n) => NodeId(n.node_id().into()),
             Node::SubqueryTableSource(n) => NodeId(n.node_id().into()),
+            Node::ParenTableSource(n) => NodeId(n.node_id().into()),
             Node::JoinClause(n) => NodeId(n.node_id().into()),
             Node::JoinPrefix(n) => NodeId(n.node_id().into()),
             Node::TriggerEvent(n) => NodeId(n.node_id().into()),

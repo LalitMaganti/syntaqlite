@@ -721,6 +721,17 @@ static inline uint32_t synq_parse_subquery_table_source(SynqParseCtx* ctx,
                           (uint32_t)sizeof(SyntaqliteSubqueryTableSource));
 }
 
+static inline uint32_t synq_parse_paren_table_source(SynqParseCtx* ctx,
+                                                     uint32_t source,
+                                                     uint32_t alias) {
+  return synq_parse_build(
+      ctx,
+      &(SyntaqliteParenTableSource){.tag = SYNTAQLITE_NODE_PAREN_TABLE_SOURCE,
+                                    .source = source,
+                                    .alias = alias},
+      (uint32_t)sizeof(SyntaqliteParenTableSource));
+}
+
 static inline uint32_t synq_parse_join_clause(SynqParseCtx* ctx,
                                               SyntaqliteJoinType join_type,
                                               uint32_t left,

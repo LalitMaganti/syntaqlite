@@ -9454,16 +9454,22 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 290: /* seltablist ::= stl_prefix LP seltablist RP as on_using */
     {
-      (void)yymsp[-1].minor.yy277;
-      (void)yymsp[0].minor.yy632;
-      if (yymsp[-5].minor.yy277 == SYNTAQLITE_NULL_NODE) {
+      if (yymsp[-5].minor.yy277 == SYNTAQLITE_NULL_NODE &&
+          yymsp[-1].minor.yy277 == SYNTAQLITE_NULL_NODE &&
+          yymsp[0].minor.yy632.on_expr == SYNTAQLITE_NULL_NODE &&
+          yymsp[0].minor.yy632.using_cols == SYNTAQLITE_NULL_NODE) {
         yymsp[-5].minor.yy277 = synq_pass(pCtx, yymsp[-3].minor.yy277);
       } else {
-        SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-5].minor.yy277);
-        yymsp[-5].minor.yy277 = synq_parse_join_clause(
-            pCtx, pfx->join_prefix.join_type, pfx->join_prefix.source,
-            yymsp[-3].minor.yy277, yymsp[0].minor.yy632.on_expr,
-            yymsp[0].minor.yy632.using_cols);
+        uint32_t paren = synq_parse_paren_table_source(
+            pCtx, yymsp[-3].minor.yy277, yymsp[-1].minor.yy277);
+        if (yymsp[-5].minor.yy277 == SYNTAQLITE_NULL_NODE) {
+          yymsp[-5].minor.yy277 = paren;
+        } else {
+          SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-5].minor.yy277);
+          yymsp[-5].minor.yy277 = synq_parse_join_clause(
+              pCtx, pfx->join_prefix.join_type, pfx->join_prefix.source, paren,
+              yymsp[0].minor.yy632.on_expr, yymsp[0].minor.yy632.using_cols);
+        }
       }
     } break;
     case 291: /* joinop ::= COMMA|JOIN */

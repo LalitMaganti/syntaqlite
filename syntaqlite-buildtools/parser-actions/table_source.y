@@ -131,17 +131,23 @@ seltablist(A) ::= stl_prefix(A) LP select(S) RP as(Z) on_using(N). {
     }
 }
 
-// Parenthesized seltablist: FROM (a, b) - pass through
+// Upstream drops these only for a whole-FROM term with no alias or ON/USING.
 seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
-    (void)Z; (void)N;
-    if (A == SYNTAQLITE_NULL_NODE) {
+    if (A == SYNTAQLITE_NULL_NODE && Z == SYNTAQLITE_NULL_NODE
+        && N.on_expr == SYNTAQLITE_NULL_NODE
+        && N.using_cols == SYNTAQLITE_NULL_NODE) {
         A = synq_pass(pCtx, F);
     } else {
-        SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
-        A = synq_parse_join_clause(pCtx,
-            pfx->join_prefix.join_type,
-            pfx->join_prefix.source,
-            F, N.on_expr, N.using_cols);
+        uint32_t paren = synq_parse_paren_table_source(pCtx, F, Z);
+        if (A == SYNTAQLITE_NULL_NODE) {
+            A = paren;
+        } else {
+            SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
+            A = synq_parse_join_clause(pCtx,
+                pfx->join_prefix.join_type,
+                pfx->join_prefix.source,
+                paren, N.on_expr, N.using_cols);
+        }
     }
 }
 

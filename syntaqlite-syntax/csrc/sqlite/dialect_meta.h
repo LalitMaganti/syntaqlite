@@ -802,6 +802,13 @@ static const SyntaqliteFieldMeta field_meta_subquery_table_source[] = {
      "alias", NULL, 0},
 };
 
+static const SyntaqliteFieldMeta field_meta_paren_table_source[] = {
+    {offsetof(SyntaqliteParenTableSource, source), SYNTAQLITE_FIELD_NODE_ID,
+     "source", NULL, 0},
+    {offsetof(SyntaqliteParenTableSource, alias), SYNTAQLITE_FIELD_NODE_ID,
+     "alias", NULL, 0},
+};
+
 static const SyntaqliteFieldMeta field_meta_join_clause[] = {
     {offsetof(SyntaqliteJoinClause, join_type), SYNTAQLITE_FIELD_ENUM,
      "join_type", display_join_type,
@@ -1206,6 +1213,7 @@ static const char* const ast_meta_node_names[] = {
     "LimitClause",
     "TableRef",
     "SubqueryTableSource",
+    "ParenTableSource",
     "JoinClause",
     "JoinPrefix",
     "TriggerEvent",
@@ -1291,6 +1299,7 @@ static const SyntaqliteFieldMeta* const ast_meta_field_meta[] = {
     field_meta_limit_clause,              /* LimitClause */
     field_meta_table_ref,                 /* TableRef */
     field_meta_subquery_table_source,     /* SubqueryTableSource */
+    field_meta_paren_table_source,        /* ParenTableSource */
     field_meta_join_clause,               /* JoinClause */
     field_meta_join_prefix,               /* JoinPrefix */
     field_meta_trigger_event,             /* TriggerEvent */
@@ -1374,6 +1383,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* LimitClause */
     7,  /* TableRef */
     2,  /* SubqueryTableSource */
+    2,  /* ParenTableSource */
     5,  /* JoinClause */
     2,  /* JoinPrefix */
     2,  /* TriggerEvent */
@@ -1459,6 +1469,7 @@ static const uint8_t ast_meta_list_tags[] = {
     0, /* LimitClause */
     0, /* TableRef */
     0, /* SubqueryTableSource */
+    0, /* ParenTableSource */
     0, /* JoinClause */
     0, /* JoinPrefix */
     0, /* TriggerEvent */
@@ -1544,6 +1555,7 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                 /* LimitClause */
     {range_meta_table_ref, 3},                 /* TableRef */
     {NULL, 0},                                 /* SubqueryTableSource */
+    {NULL, 0},                                 /* ParenTableSource */
     {NULL, 0},                                 /* JoinClause */
     {NULL, 0},                                 /* JoinPrefix */
     {NULL, 0},                                 /* TriggerEvent */
