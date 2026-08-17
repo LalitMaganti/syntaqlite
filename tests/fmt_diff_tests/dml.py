@@ -339,3 +339,39 @@ class DmlWithCte(TestSuite):
                 "RETURNING id, user_id;"
             ),
         )
+
+class ReturningClauseOrder(TestSuite):
+    """RETURNING belongs to `where_opt_ret`, so it precedes ORDER BY and LIMIT."""
+
+    def test_delete_returning_before_orderby_limit(self):
+        return DiffTestBlueprint(
+            sql="delete from t where x returning a order by a limit 1",
+            out="DELETE FROM t WHERE x RETURNING a ORDER BY a LIMIT 1;",
+            cflags=["SQLITE_ENABLE_UPDATE_DELETE_LIMIT"],
+        )
+
+    def test_update_returning_before_orderby_limit(self):
+        return DiffTestBlueprint(
+            sql="update t set a = 1 where x returning a order by a limit 1",
+            out="UPDATE t SET a = 1 WHERE x RETURNING a ORDER BY a LIMIT 1;",
+            cflags=["SQLITE_ENABLE_UPDATE_DELETE_LIMIT"],
+        )
+
+    def test_delete_returning_before_limit(self):
+        return DiffTestBlueprint(
+            sql="delete from t where x returning a limit 1",
+            out="DELETE FROM t WHERE x RETURNING a LIMIT 1;",
+            cflags=["SQLITE_ENABLE_UPDATE_DELETE_LIMIT"],
+        )
+
+    def test_delete_returning_only(self):
+        return DiffTestBlueprint(
+            sql="delete from t where x returning a",
+            out="DELETE FROM t WHERE x RETURNING a;",
+        )
+
+    def test_update_returning_only(self):
+        return DiffTestBlueprint(
+            sql="update t set a = 1 where x returning a",
+            out="UPDATE t SET a = 1 WHERE x RETURNING a;",
+        )
