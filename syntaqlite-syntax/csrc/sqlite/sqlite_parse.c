@@ -7936,7 +7936,8 @@ static YYACTIONTYPE yy_reduce(
     case 68: /* carglist ::= carglist ccons */
     {
       if (yymsp[0].minor.yy150.node != SYNTAQLITE_NULL_NODE) {
-        // Apply pending constraint name from the list to this node
+        // The name stays pending: SQLite reads it without clearing, so it
+        // names every constraint until a new column or a tconscomma.
         SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[0].minor.yy150.node);
         node->column_constraint.constraint_name =
             yymsp[-1].minor.yy430.pending_name;
@@ -7947,7 +7948,7 @@ static YYACTIONTYPE yy_reduce(
           yylhsminor.yy430.list = synq_parse_column_constraint_list(
               pCtx, yymsp[-1].minor.yy430.list, yymsp[0].minor.yy150.node);
         }
-        yylhsminor.yy430.pending_name = SYNQ_NO_SPAN;
+        yylhsminor.yy430.pending_name = yymsp[-1].minor.yy430.pending_name;
         yylhsminor.yy430.last_node = yymsp[0].minor.yy150.node;
       } else if (yymsp[0].minor.yy150.pending_name.length > 0) {
         // CONSTRAINT nm — store pending name for next constraint
@@ -8306,7 +8307,7 @@ static YYACTIONTYPE yy_reduce(
           yylhsminor.yy430.list = synq_parse_table_constraint_list(
               pCtx, yymsp[-2].minor.yy430.list, yymsp[0].minor.yy150.node);
         }
-        yylhsminor.yy430.pending_name = SYNQ_NO_SPAN;
+        yylhsminor.yy430.pending_name = pending;
         yylhsminor.yy430.last_node = yymsp[0].minor.yy150.node;
       } else if (yymsp[0].minor.yy150.pending_name.length > 0) {
         yylhsminor.yy430.list = yymsp[-2].minor.yy430.list;

@@ -526,3 +526,37 @@ class TableConstraintFormat(TestSuite):
             sql="create table t (id integer, [set] text)",
             out='CREATE TABLE t(id integer, "set" text);',
         )
+
+class ConstraintNamePropagation(TestSuite):
+    """A pending CONSTRAINT name applies to every constraint until cleared.
+
+    SQLite reads `constraintName` without clearing it (build.c:1915); it is
+    cleared only by a `tconscomma` or by starting a new column.
+    """
+
+    def test_name_applies_to_every_column_constraint(self):
+        return DiffTestBlueprint(
+            sql="create table t(a constraint c check(a>0) check(a<9))",
+            out="CREATE TABLE t(a CONSTRAINT c CHECK(a > 0) CONSTRAINT c CHECK(a < 9));",
+        )
+
+    def test_name_applies_to_every_table_constraint(self):
+        return DiffTestBlueprint(
+            sql="create table t(a, b, constraint two check(b<10) check(a>0))",
+            out=(
+                "CREATE TABLE t(a, b, CONSTRAINT two CHECK(b < 10), "
+                "CONSTRAINT two CHECK(a > 0));"
+            ),
+        )
+
+    def test_comma_clears_the_pending_name(self):
+        return DiffTestBlueprint(
+            sql="create table t(a, b, constraint two check(b<10), check(a>0))",
+            out="CREATE TABLE t(a, b, CONSTRAINT two CHECK(b < 10), CHECK(a > 0));",
+        )
+
+    def test_name_does_not_cross_a_column_boundary(self):
+        return DiffTestBlueprint(
+            sql="create table t(a constraint c check(a>0), b check(b>0))",
+            out="CREATE TABLE t(a CONSTRAINT c CHECK(a > 0), b CHECK(b > 0));",
+        )
