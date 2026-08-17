@@ -24,14 +24,35 @@ typedef uint32_t u32;
 #define SQLITE_DIGIT_SEPARATOR '_'
 #endif
 
-// Case-insensitive string comparison (POSIX strncasecmp / MSVC _strnicmp)
-#ifdef _MSC_VER
-#include <string.h>
-#define SYNQ_STRNCASECMP _strnicmp
-#else
-#include <strings.h>
-#define SYNQ_STRNCASECMP strncasecmp
-#endif
+// Case-insensitive comparison over ASCII, which is all SQL keywords need.
+// Deliberately not libc's strncasecmp: the generated parser is compiled into
+// embeddings that do not necessarily provide it, such as an Emscripten side
+// module, where the unresolved import aborts the engine mid-parse.
+#include <stddef.h>
+
+static inline int synq_strncasecmp_ascii(const char* a,
+                                         const char* b,
+                                         size_t n) {
+  for (size_t i = 0; i < n; i++) {
+    unsigned char ca = (unsigned char)a[i];
+    unsigned char cb = (unsigned char)b[i];
+    if (ca >= 'A' && ca <= 'Z') {
+      ca = (unsigned char)(ca - 'A' + 'a');
+    }
+    if (cb >= 'A' && cb <= 'Z') {
+      cb = (unsigned char)(cb - 'A' + 'a');
+    }
+    if (ca != cb) {
+      return (int)ca - (int)cb;
+    }
+    if (ca == 0) {
+      return 0;
+    }
+  }
+  return 0;
+}
+
+#define SYNQ_STRNCASECMP synq_strncasecmp_ascii
 
 // C++17 fallthrough, C no-op
 #ifdef __cplusplus
