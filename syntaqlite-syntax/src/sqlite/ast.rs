@@ -2415,6 +2415,9 @@ impl<'a> ForeignKeyClause<'a> {
     pub fn on_update(&self) -> ForeignKeyAction {
         self.raw.on_update
     }
+    pub fn on_insert(&self) -> ForeignKeyAction {
+        self.raw.on_insert
+    }
     pub fn is_deferred(&self) -> bool {
         self.raw.is_deferred == super::ffi::Bool::True
     }

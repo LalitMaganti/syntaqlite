@@ -287,6 +287,7 @@ ccons(A) ::= CHECK LP expr(X) RP. {
 ccons(A) ::= REFERENCES nm(T) eidlist_opt(TA) refargs(R). {
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
         synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
+        R.on_insert,
         SYNTAQLITE_BOOL_FALSE);
     A.node = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
@@ -307,6 +308,7 @@ ccons(A) ::= defer_subclause(D). {
     // The printer will show it as a separate constraint entry.
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
         SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNQ_NO_SPAN,
+        SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
         SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
         SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
         (SyntaqliteBool)D);
@@ -387,6 +389,7 @@ autoinc(A) ::= AUTOINCR. {
 refargs(A) ::= . {
     A.on_delete = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
     A.on_update = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
+    A.on_insert = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
     A.match_name = SYNQ_NO_SPAN;
 }
 
@@ -394,6 +397,7 @@ refargs(A) ::= refargs(A) refarg(Y). {
     switch (Y.kind) {
         case SYNQ_REFARG_DELETE: A.on_delete = Y.action; break;
         case SYNQ_REFARG_UPDATE: A.on_update = Y.action; break;
+        case SYNQ_REFARG_INSERT: A.on_insert = Y.action; break;
         case SYNQ_REFARG_MATCH:  A.match_name = Y.match_name; break;
         default: break;
     }
@@ -405,9 +409,9 @@ refarg(A) ::= MATCH nm(X). {
     A.match_name = synq_span(pCtx, X);
 }
 
-refarg(A) ::= ON INSERT refact. {
-    A.kind = SYNQ_REFARG_NONE;
-    A.action = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
+refarg(A) ::= ON INSERT refact(X). {
+    A.kind = SYNQ_REFARG_INSERT;
+    A.action = (SyntaqliteForeignKeyAction)X;
     A.match_name = SYNQ_NO_SPAN;
 }
 
@@ -546,6 +550,7 @@ tcons(A) ::= CHECK LP expr(E) RP onconf(R). {
 tcons(A) ::= FOREIGN KEY LP eidlist(FA) RP REFERENCES nm(T) eidlist_opt(TA) refargs(R) defer_subclause_opt(D). {
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
         synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
+        R.on_insert,
         (SyntaqliteBool)D);
     A.node = synq_parse_table_constraint(pCtx,
         SYNTAQLITE_TABLE_CONSTRAINT_TYPE_FOREIGN_KEY,

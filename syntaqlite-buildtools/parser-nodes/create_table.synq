@@ -11,6 +11,7 @@ node ForeignKeyClause {
   match_name: inline SyntaqliteTextSpan
   on_delete: inline ForeignKeyAction
   on_update: inline ForeignKeyAction
+  on_insert: inline ForeignKeyAction
   is_deferred: inline Bool
 
   fmt {
@@ -30,6 +31,13 @@ node ForeignKeyClause {
       SET_DEFAULT { space "ON" "UPDATE" "SET" "DEFAULT" }
       CASCADE     { space "ON" "UPDATE" "CASCADE" }
       RESTRICT    { space "ON" "UPDATE" "RESTRICT" }
+    }
+    switch(on_insert) {
+      NO_ACTION   { space "ON" "INSERT" "NO" "ACTION" }
+      SET_NULL    { space "ON" "INSERT" "SET" "NULL" }
+      SET_DEFAULT { space "ON" "INSERT" "SET" "DEFAULT" }
+      CASCADE     { space "ON" "INSERT" "CASCADE" }
+      RESTRICT    { space "ON" "INSERT" "RESTRICT" }
     }
     if_flag(is_deferred) { if_span(ref_table) { space } "DEFERRABLE" "INITIALLY" "DEFERRED" }
   }

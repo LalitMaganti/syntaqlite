@@ -92,6 +92,7 @@ typedef struct SynqUpsertValue {
 #define SYNQ_REFARG_DELETE 1
 #define SYNQ_REFARG_UPDATE 2
 #define SYNQ_REFARG_MATCH 3
+#define SYNQ_REFARG_INSERT 4
 
 typedef struct SynqRefArgValue {
   int kind;
@@ -102,6 +103,7 @@ typedef struct SynqRefArgValue {
 typedef struct SynqRefArgsValue {
   SyntaqliteForeignKeyAction on_delete;
   SyntaqliteForeignKeyAction on_update;
+  SyntaqliteForeignKeyAction on_insert;
   SyntaqliteTextSpan match_name;
 } SynqRefArgsValue;
 
@@ -8007,7 +8009,8 @@ static YYACTIONTYPE yy_reduce(
       uint32_t fk = synq_parse_foreign_key_clause(
           pCtx, synq_span(pCtx, yymsp[-2].minor.yy0), yymsp[-1].minor.yy277,
           yymsp[0].minor.yy603.match_name, yymsp[0].minor.yy603.on_delete,
-          yymsp[0].minor.yy603.on_update, SYNTAQLITE_BOOL_FALSE);
+          yymsp[0].minor.yy603.on_update, yymsp[0].minor.yy603.on_insert,
+          SYNTAQLITE_BOOL_FALSE);
       yymsp[-3].minor.yy150.node = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES, SYNQ_NO_SPAN,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
@@ -8025,6 +8028,7 @@ static YYACTIONTYPE yy_reduce(
       // deferral info. The printer will show it as a separate constraint entry.
       uint32_t fk = synq_parse_foreign_key_clause(
           pCtx, SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNQ_NO_SPAN,
+          SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
           SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
           SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
           (SyntaqliteBool)yymsp[0].minor.yy320);
@@ -8095,6 +8099,7 @@ static YYACTIONTYPE yy_reduce(
     {
       yymsp[1].minor.yy603.on_delete = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
       yymsp[1].minor.yy603.on_update = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
+      yymsp[1].minor.yy603.on_insert = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
       yymsp[1].minor.yy603.match_name = SYNQ_NO_SPAN;
     } break;
     case 91: /* refargs ::= refargs refarg */
@@ -8105,6 +8110,9 @@ static YYACTIONTYPE yy_reduce(
           break;
         case SYNQ_REFARG_UPDATE:
           yymsp[-1].minor.yy603.on_update = yymsp[0].minor.yy76.action;
+          break;
+        case SYNQ_REFARG_INSERT:
+          yymsp[-1].minor.yy603.on_insert = yymsp[0].minor.yy76.action;
           break;
         case SYNQ_REFARG_MATCH:
           yymsp[-1].minor.yy603.match_name = yymsp[0].minor.yy76.match_name;
@@ -8121,8 +8129,9 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 93: /* refarg ::= ON INSERT refact */
     {
-      yymsp[-2].minor.yy76.kind = SYNQ_REFARG_NONE;
-      yymsp[-2].minor.yy76.action = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
+      yymsp[-2].minor.yy76.kind = SYNQ_REFARG_INSERT;
+      yymsp[-2].minor.yy76.action =
+          (SyntaqliteForeignKeyAction)yymsp[0].minor.yy320;
       yymsp[-2].minor.yy76.match_name = SYNQ_NO_SPAN;
     } break;
     case 94: /* refarg ::= ON DELETE refact */
@@ -8274,7 +8283,7 @@ static YYACTIONTYPE yy_reduce(
       uint32_t fk = synq_parse_foreign_key_clause(
           pCtx, synq_span(pCtx, yymsp[-3].minor.yy0), yymsp[-2].minor.yy277,
           yymsp[-1].minor.yy603.match_name, yymsp[-1].minor.yy603.on_delete,
-          yymsp[-1].minor.yy603.on_update,
+          yymsp[-1].minor.yy603.on_update, yymsp[-1].minor.yy603.on_insert,
           (SyntaqliteBool)yymsp[0].minor.yy320);
       yymsp[-9].minor.yy150.node = synq_parse_table_constraint(
           pCtx, SYNTAQLITE_TABLE_CONSTRAINT_TYPE_FOREIGN_KEY, SYNQ_NO_SPAN,

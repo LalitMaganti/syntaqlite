@@ -365,6 +365,10 @@ static const SyntaqliteFieldMeta field_meta_foreign_key_clause[] = {
      "on_update", display_foreign_key_action,
      sizeof(display_foreign_key_action) /
          sizeof(display_foreign_key_action[0])},
+    {offsetof(SyntaqliteForeignKeyClause, on_insert), SYNTAQLITE_FIELD_ENUM,
+     "on_insert", display_foreign_key_action,
+     sizeof(display_foreign_key_action) /
+         sizeof(display_foreign_key_action[0])},
     {offsetof(SyntaqliteForeignKeyClause, is_deferred), SYNTAQLITE_FIELD_BOOL,
      "is_deferred", display_bool,
      sizeof(display_bool) / sizeof(display_bool[0])},
@@ -1298,7 +1302,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* CaseExpr */
     2,  /* CaseWhen */
     0,  /* CaseWhenList */
-    6,  /* ForeignKeyClause */
+    7,  /* ForeignKeyClause */
     11, /* ColumnConstraint */
     0,  /* ColumnConstraintList */
     3,  /* ColumnDef */

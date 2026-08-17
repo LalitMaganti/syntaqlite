@@ -505,6 +505,7 @@ typedef struct SyntaqliteForeignKeyClause {
   SyntaqliteTextSpan match_name;
   SyntaqliteForeignKeyAction on_delete;
   SyntaqliteForeignKeyAction on_update;
+  SyntaqliteForeignKeyAction on_insert;
   SyntaqliteBool is_deferred;
 } SyntaqliteForeignKeyClause;
 
