@@ -143,6 +143,26 @@ class ColumnConstraintFormat(TestSuite):
             out="CREATE TABLE t(a text COLLATE nocase);",
         )
 
+    def test_null_on_conflict(self):
+        """`ccons ::= NULL onconf` — SQLite keeps the clause verbatim."""
+        return DiffTestBlueprint(
+            sql="create table t(a null on conflict rollback)",
+            out="CREATE TABLE t(a NULL ON CONFLICT ROLLBACK);",
+        )
+
+    def test_null_without_conflict(self):
+        return DiffTestBlueprint(
+            sql="create table t(a null)",
+            out="CREATE TABLE t(a NULL);",
+        )
+
+    def test_column_check_takes_no_conflict_clause(self):
+        """Column-level CHECK has no `onconf` in the grammar, unlike table-level."""
+        return DiffTestBlueprint(
+            sql="create table t(a int check(a > 0))",
+            out="CREATE TABLE t(a int CHECK(a > 0));",
+        )
+
     def test_named_constraint(self):
         return DiffTestBlueprint(
             sql="create table t(a int constraint nn not null)",
@@ -364,6 +384,19 @@ class TableConstraintFormat(TestSuite):
         return DiffTestBlueprint(
             sql="create table t(a int, b int, primary key(a, b))",
             out="CREATE TABLE t(a int, b int, PRIMARY KEY(a, b));",
+        )
+
+    def test_table_check_on_conflict(self):
+        """`tcons ::= CHECK LP expr RP onconf` — SQLite keeps the clause verbatim."""
+        return DiffTestBlueprint(
+            sql="create table t(a, check(a > 0) on conflict fail)",
+            out="CREATE TABLE t(a, CHECK(a > 0) ON CONFLICT FAIL);",
+        )
+
+    def test_table_check_without_conflict(self):
+        return DiffTestBlueprint(
+            sql="create table t(a, check(a > 0))",
+            out="CREATE TABLE t(a, CHECK(a > 0));",
         )
 
     def test_named_table_pk(self):

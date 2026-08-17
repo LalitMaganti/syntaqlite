@@ -115,7 +115,16 @@ node ColumnConstraint {
         group { "AS" space "(" nest { softline child(generated_expr) } softline ")" }
         if_enum(generated_storage, STORED) { space "STORED" }
       }
-      NULL { "NULL" }
+      NULL {
+        "NULL"
+        switch(onconf) {
+          ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
+          ABORT    { space "ON" "CONFLICT" "ABORT" }
+          FAIL     { space "ON" "CONFLICT" "FAIL" }
+          IGNORE   { space "ON" "CONFLICT" "IGNORE" }
+          REPLACE  { space "ON" "CONFLICT" "REPLACE" }
+        }
+      }
       DEFERRABLE {
         switch(deferrable) {
           NOT_DEFERRABLE { "NOT" "DEFERRABLE" }
@@ -189,7 +198,16 @@ node TableConstraint {
           REPLACE  { space "ON" "CONFLICT" "REPLACE" }
         }
       }
-      CHECK       { group { "CHECK(" nest { softline child(check_expr) } softline ")" } }
+      CHECK {
+        group { "CHECK(" nest { softline child(check_expr) } softline ")" }
+        switch(onconf) {
+          ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
+          ABORT    { space "ON" "CONFLICT" "ABORT" }
+          FAIL     { space "ON" "CONFLICT" "FAIL" }
+          IGNORE   { space "ON" "CONFLICT" "IGNORE" }
+          REPLACE  { space "ON" "CONFLICT" "REPLACE" }
+        }
+      }
       FOREIGN_KEY { group { "FOREIGN" "KEY(" nest { softline child(fk_columns) } softline ")" } space child(fk_clause) }
     }
   }
