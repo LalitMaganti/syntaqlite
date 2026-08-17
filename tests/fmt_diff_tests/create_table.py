@@ -574,3 +574,28 @@ class ConstraintNamePropagation(TestSuite):
             sql="create table t(a, b, check(a>0))",
             out="CREATE TABLE t(a, b, CHECK(a > 0));",
         )
+
+    def test_dangling_column_constraint_name_is_dropped(self):
+        """A CONSTRAINT that names nothing is inert, so it is not re-emitted.
+
+        SQLite accepts it and keeps the bytes in sqlite_schema, but it creates
+        nothing and cannot affect a later constraint, so dropping it is a
+        deliberate normalisation rather than a loss.
+        """
+        return DiffTestBlueprint(
+            sql="create table t(a constraint c)",
+            out="CREATE TABLE t(a);",
+        )
+
+    def test_dangling_table_constraint_name_is_dropped(self):
+        return DiffTestBlueprint(
+            sql="create table t(a, constraint foo)",
+            out="CREATE TABLE t(a);",
+        )
+
+    def test_dangling_name_before_a_comma_does_not_name_what_follows(self):
+        """The comma clears it, so the CHECK stays unnamed — as in SQLite."""
+        return DiffTestBlueprint(
+            sql="create table t(a, constraint foo, check(a>0))",
+            out="CREATE TABLE t(a, CHECK(a > 0));",
+        )
