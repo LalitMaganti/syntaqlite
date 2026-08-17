@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 import {test, expect} from "@playwright/test";
+import LZString from "lz-string";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -141,4 +142,18 @@ test("switching output tab updates the URL hash to ot=ast", async ({page}) => {
     const hash = await getHash(page);
     expect(new URLSearchParams(hash).get("ot")).toBe("ast");
   }
+});
+
+test("table options parse without trapping the wasm engine", async ({page}) => {
+  // Table options are matched with a case-insensitive compare in the dialect's
+  // generated parser. libc's strncasecmp is not resolvable from the emscripten
+  // side module, so relying on it aborts the engine mid-parse.
+  const sql = "CREATE TABLE t(a PRIMARY KEY) WITHOUT ROWID;";
+  await page.goto("/#s=" + LZString.compressToEncodedURIComponent(sql));
+
+  // Syntax highlighting splits keywords into spans, so match them singly.
+  const viewer = page.locator(".sq-viewer-pane");
+  await expect(viewer).toContainText(/WITHOUT/i, {timeout: 15000});
+  await expect(viewer).toContainText(/ROWID/i);
+  await expect(viewer).not.toContainText(/unreachable/i);
 });
