@@ -354,3 +354,58 @@ class TableValuedFunctionFormat(TestSuite):
             sql='SELECT "", 1;',
             out='SELECT "", 1;',
         )
+
+class RowValueFormat(TestSuite):
+    """`LP nexprlist COMMA expr RP` is a row value, not a bare list.
+
+    Upstream builds a distinct TK_VECTOR node for it; without one the parens
+    vanish wherever the surrounding context does not supply its own.
+    """
+
+    def test_row_value_between(self):
+        return DiffTestBlueprint(
+            sql="select * from t where (a,b) between ('x','y') and ('p','q')",
+            out="SELECT * FROM t WHERE (a, b) BETWEEN ('x', 'y') AND ('p', 'q');",
+        )
+
+    def test_row_value_not_between(self):
+        return DiffTestBlueprint(
+            sql="select * from t where (a,b) not between ('x','y') and ('p','q')",
+            out="SELECT * FROM t WHERE (a, b) NOT BETWEEN ('x', 'y') AND ('p', 'q');",
+        )
+
+    def test_row_value_in_list(self):
+        return DiffTestBlueprint(
+            sql="select * from t where (a,b) in ((1,2),(3,4))",
+            out="SELECT * FROM t WHERE (a, b) IN ((1, 2), (3, 4));",
+        )
+
+    def test_row_value_in_case(self):
+        return DiffTestBlueprint(
+            sql="select case (a,b) when (1,2) then 1 end",
+            out="SELECT CASE (a, b) WHEN (1, 2) THEN 1 END;",
+        )
+
+    def test_nested_row_value(self):
+        return DiffTestBlueprint(
+            sql="select (1,(2,3))",
+            out="SELECT (1, (2, 3));",
+        )
+
+    def test_row_value_comparison_unchanged(self):
+        return DiffTestBlueprint(
+            sql="select * from t where (a,b) = ('x','y')",
+            out="SELECT * FROM t WHERE (a, b) = ('x', 'y');",
+        )
+
+    def test_row_value_in_subquery_unchanged(self):
+        return DiffTestBlueprint(
+            sql="select * from t where (a,b) in (select x, y from u)",
+            out="SELECT * FROM t WHERE (a, b) IN (SELECT x, y FROM u);",
+        )
+
+    def test_function_args_are_not_row_values(self):
+        return DiffTestBlueprint(
+            sql="select f(1, 2) from t",
+            out="SELECT f(1, 2) FROM t;",
+        )

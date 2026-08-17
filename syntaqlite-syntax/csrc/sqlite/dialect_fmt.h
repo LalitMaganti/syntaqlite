@@ -575,7 +575,10 @@ static const uint8_t sqlite_fmt_ops[] = {
     6,  0,  0,   0, 0,   0, 0,  0,  0,   0, 0,  0, 2,  0,  0,   0, 0,   0,
     0,  0,  5,   0, 0,   0, 7,  0,  0,   0, 0,  0, 1,  0,  0,   0, 0,   0,
     20, 0,  0,   0, 2,   0, 1,  0,  0,   0, 0,  0, 11, 0,  0,   0, 2,   0,
-    0,  0,  111, 0, 0,   0, 12, 0,  0,   0, 0,  0, 22, 0,  0,   0, 0,   0,
+    0,  0,  111, 0, 0,   0, 12, 0,  0,   0, 0,  0, 6,  0,  0,   0, 0,   0,
+    0,  0,  0,   0, 0,   0, 8,  0,  0,   0, 0,  0, 4,  0,  0,   0, 0,   0,
+    2,  0,  0,   0, 0,   0, 9,  0,  0,   0, 0,  0, 4,  0,  0,   0, 0,   0,
+    0,  0,  5,   0, 0,   0, 7,  0,  0,   0, 0,  0, 22, 0,  0,   0, 0,   0,
     14, 0,  0,   0, 0,   0, 15, 0,  71,  0, 0,  0, 3,  0,  0,   0, 0,   0,
     16, 0,  0,   0, 0,   0, 1,  0,  0,   0, 0,  0, 6,  0,  0,   0, 0,   0,
     0,  0,  0,   0, 0,   0, 18, 1,  1,   0, 3,  0, 0,  0,  1,   0, 0,   0,
@@ -880,7 +883,7 @@ static const uint8_t sqlite_fmt_ops[] = {
     1,  2,  0,   0, 0,   0, 12, 0,  0,   0, 0,  0,
 };
 
-static const uint32_t sqlite_fmt_ops_count = 13872;
+static const uint32_t sqlite_fmt_ops_count = 13926;
 
 static const uint32_t sqlite_fmt_dispatch[] = {
     0xffff0000, 0x0000002d, 0x002d0035, 0x00620007, 0x00690009, 0x00720025,
@@ -889,17 +892,17 @@ static const uint32_t sqlite_fmt_dispatch[] = {
     0x02d8000d, 0x02e50005, 0x02ea009f, 0x03890005, 0x038e0037, 0x03c50021,
     0x03e60005, 0x03eb0010, 0x03fb002d, 0x04280005, 0x042d0043, 0x04700013,
     0x04830005, 0x0488006d, 0x04f50052, 0x05470017, 0x055e0014, 0x05720001,
-    0x05730005, 0x05780001, 0x05790005, 0x057e0005, 0x0583002a, 0x05ad0001,
-    0x05ae0005, 0x05b30016, 0x05c90005, 0x05ce000a, 0x05d80026, 0x05fe0013,
-    0x06110014, 0x06250010, 0x06350005, 0x063a0046, 0x0680000f, 0x068f0005,
-    0x06940007, 0x069b0027, 0x06c2000f, 0x06d1000f, 0x06e0006f, 0x074f0001,
-    0x07500013, 0x07630006, 0x07690036, 0x079f0018, 0x07b70013, 0x07ca0010,
-    0x07da000d, 0x07e70003, 0x07ea000b, 0x07f50009, 0x07fe002b, 0x08290022,
-    0x084b000d, 0x08580007, 0x085f001a, 0x0879002c, 0x08a50039, 0x08de0005,
-    0x08e30005, 0x08e80005, 0x08ed001b,
+    0x05730005, 0x05780001, 0x05790005, 0x057e0009, 0x05870005, 0x058c002a,
+    0x05b60001, 0x05b70005, 0x05bc0016, 0x05d20005, 0x05d7000a, 0x05e10026,
+    0x06070013, 0x061a0014, 0x062e0010, 0x063e0005, 0x06430046, 0x0689000f,
+    0x06980005, 0x069d0007, 0x06a40027, 0x06cb000f, 0x06da000f, 0x06e9006f,
+    0x07580001, 0x07590013, 0x076c0006, 0x07720036, 0x07a80018, 0x07c00013,
+    0x07d30010, 0x07e3000d, 0x07f00003, 0x07f3000b, 0x07fe0009, 0x0807002b,
+    0x08320022, 0x0854000d, 0x08610007, 0x0868001a, 0x0882002c, 0x08ae0039,
+    0x08e70005, 0x08ec0005, 0x08f10005, 0x08f6001b,
 };
 
-static const uint32_t sqlite_fmt_dispatch_count = 81;
+static const uint32_t sqlite_fmt_dispatch_count = 82;
 
 static const uint8_t sqlite_fmt_prec_table[] = {
     6, 0,   6, 0,   7, 0,   7,   0,   7, 0, 4, 0, 4, 0, 4, 0, 4,   0,   3, 0,
@@ -917,15 +920,15 @@ static const uint32_t sqlite_fmt_expr_meta[] = {
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
     0xffffffff, 0xffffffff, 0xffffffff, 0x00000000, 0x00001400, 0xffffffff,
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-    0x00001dff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
+    0xffffffff, 0x00001dff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
     0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
-    0xffffffff, 0xffffffff, 0xffffffff,
+    0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff,
 };
 
-static const uint32_t sqlite_fmt_expr_meta_count = 81;
+static const uint32_t sqlite_fmt_expr_meta_count = 82;
 
 #endif  // SYNTAQLITE_SQLITE_DIALECT_FMT_H

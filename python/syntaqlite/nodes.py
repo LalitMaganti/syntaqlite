@@ -488,6 +488,18 @@ class Error:
         return "Error(...)"
 
 
+class RowValue:
+    """AST node: RowValue"""
+
+    __slots__ = ("items")
+
+    def __init__(self, d: dict):
+        self.items: list[Expr] | None = _wrap(d.get("items"))
+
+    def __repr__(self):
+        return "RowValue(...)"
+
+
 class FunctionCall:
     """AST node: FunctionCall"""
 
@@ -1025,6 +1037,7 @@ _NODE_MAP: dict[str, type] = {
     "ParenExpr": ParenExpr,
     "IdentName": IdentName,
     "Error": Error,
+    "RowValue": RowValue,
     "FunctionCall": FunctionCall,
     "Variable": Variable,
     "CollateExpr": CollateExpr,

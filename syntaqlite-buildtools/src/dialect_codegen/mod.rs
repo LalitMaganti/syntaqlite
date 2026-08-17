@@ -572,9 +572,10 @@ mod tests {
         // These values match the current generated NodeTag enum.
         assert_eq!(model.tag_for("AggregateFunctionCall"), 1);
         assert_eq!(model.tag_for("ParenExpr"), 36);
-        assert_eq!(model.tag_for("SelectStmt"), 51);
-        assert_eq!(model.tag_for("ParenTableSource"), 57);
-        assert_eq!(model.tag_for("FilterOver"), 80);
-        assert_eq!(model.base_tag_count(), 80);
+        assert_eq!(model.tag_for("RowValue"), 39);
+        assert_eq!(model.tag_for("SelectStmt"), 52);
+        assert_eq!(model.tag_for("ParenTableSource"), 58);
+        assert_eq!(model.tag_for("FilterOver"), 81);
+        assert_eq!(model.base_tag_count(), 81);
     }
 }

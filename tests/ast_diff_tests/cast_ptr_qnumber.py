@@ -421,13 +421,15 @@ class RowValue(TestSuite):
                     flags: (none)
                     alias: (none)
                     expr:
-                      ExprList [2 items]
-                        Literal
-                          literal_type: INTEGER
-                          source: "1"
-                        Literal
-                          literal_type: INTEGER
-                          source: "2"
+                      RowValue
+                        items:
+                          ExprList [2 items]
+                            Literal
+                              literal_type: INTEGER
+                              source: "1"
+                            Literal
+                              literal_type: INTEGER
+                              source: "2"
               from_clause: (none)
               where_clause: (none)
               groupby: (none)
@@ -450,16 +452,18 @@ class RowValue(TestSuite):
                     flags: (none)
                     alias: (none)
                     expr:
-                      ExprList [3 items]
-                        Literal
-                          literal_type: INTEGER
-                          source: "1"
-                        Literal
-                          literal_type: INTEGER
-                          source: "2"
-                        Literal
-                          literal_type: INTEGER
-                          source: "3"
+                      RowValue
+                        items:
+                          ExprList [3 items]
+                            Literal
+                              literal_type: INTEGER
+                              source: "1"
+                            Literal
+                              literal_type: INTEGER
+                              source: "2"
+                            Literal
+                              literal_type: INTEGER
+                              source: "3"
               from_clause: (none)
               where_clause: (none)
               groupby: (none)

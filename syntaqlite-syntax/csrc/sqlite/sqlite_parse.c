@@ -8955,8 +8955,9 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 194: /* expr ::= LP nexprlist COMMA expr RP */
     {
-      yymsp[-4].minor.yy277 = synq_parse_expr_list(pCtx, yymsp[-3].minor.yy277,
-                                                   yymsp[-1].minor.yy277);
+      yymsp[-4].minor.yy277 = synq_parse_row_value(
+          pCtx, synq_parse_expr_list(pCtx, yymsp[-3].minor.yy277,
+                                     yymsp[-1].minor.yy277));
     } break;
     case 195: /* expr ::= ID|INDEXED|JOIN_KW LP distinct exprlist RP */
     {

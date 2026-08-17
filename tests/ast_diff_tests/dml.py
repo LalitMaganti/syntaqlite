@@ -967,13 +967,15 @@ class UpdateSetClauseMultiColumn(TestSuite):
                           table: (none)
                           schema: (none)
                     value:
-                      ExprList [2 items]
-                        Literal
-                          literal_type: INTEGER
-                          source: "1"
-                        Literal
-                          literal_type: INTEGER
-                          source: "2"
+                      RowValue
+                        items:
+                          ExprList [2 items]
+                            Literal
+                              literal_type: INTEGER
+                              source: "1"
+                            Literal
+                              literal_type: INTEGER
+                              source: "2"
               from_clause: (none)
               where_clause: (none)
               orderby: (none)

@@ -36,5 +36,5 @@ nexprlist(A) ::= expr(B). {
 // (1, 2, 3) => ExprList with 3 elements
 
 expr(A) ::= LP nexprlist(X) COMMA expr(Y) RP. {
-    A = synq_parse_expr_list(pCtx, X, Y);
+    A = synq_parse_row_value(pCtx, synq_parse_expr_list(pCtx, X, Y));
 }

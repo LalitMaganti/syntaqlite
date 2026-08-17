@@ -512,6 +512,13 @@ static inline uint32_t synq_parse_error(SynqParseCtx* ctx,
       (uint32_t)sizeof(SyntaqliteError));
 }
 
+static inline uint32_t synq_parse_row_value(SynqParseCtx* ctx, uint32_t items) {
+  return synq_parse_build(
+      ctx,
+      &(SyntaqliteRowValue){.tag = SYNTAQLITE_NODE_ROW_VALUE, .items = items},
+      (uint32_t)sizeof(SyntaqliteRowValue));
+}
+
 static inline uint32_t synq_parse_function_call(
     SynqParseCtx* ctx,
     SyntaqliteTextSpan func_name,

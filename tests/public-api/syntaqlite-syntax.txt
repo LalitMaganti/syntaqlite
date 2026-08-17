@@ -148,6 +148,7 @@ impl core::convert::From<syntaqlite_syntax::nodes::QualifiedNameId> for syntaqli
 impl core::convert::From<syntaqlite_syntax::nodes::RaiseExprId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::ResultColumnId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::ResultColumnListId> for syntaqlite_syntax::any::AnyNodeId
+impl core::convert::From<syntaqlite_syntax::nodes::RowValueId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::SavepointStmtId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::SelectId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::SelectStmtId> for syntaqlite_syntax::any::AnyNodeId
@@ -235,6 +236,7 @@ impl core::fmt::Debug for syntaqlite_syntax::nodes::PragmaStmt<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::QualifiedName<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::RaiseExpr<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::ResultColumn<'_>
+impl core::fmt::Debug for syntaqlite_syntax::nodes::RowValue<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::SavepointStmt<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::SelectStmt<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::SetClause<'_>
@@ -317,6 +319,7 @@ impl core::fmt::Display for syntaqlite_syntax::nodes::PragmaStmt<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::QualifiedName<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::RaiseExpr<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::ResultColumn<'_>
+impl core::fmt::Display for syntaqlite_syntax::nodes::RowValue<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::SavepointStmt<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::SelectStmt<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::SetClause<'_>
@@ -489,6 +492,7 @@ impl syntaqlite_syntax::nodes::RaiseType
 impl syntaqlite_syntax::nodes::ResultColumnFlags
 impl syntaqlite_syntax::nodes::ResultColumnId
 impl syntaqlite_syntax::nodes::ResultColumnListId
+impl syntaqlite_syntax::nodes::RowValueId
 impl syntaqlite_syntax::nodes::SavepointOp
 impl syntaqlite_syntax::nodes::SavepointStmtId
 impl syntaqlite_syntax::nodes::SelectId
@@ -610,6 +614,7 @@ impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::Qualifi
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::RaiseExprId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::ResultColumnId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::ResultColumnListId
+impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::RowValueId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::SavepointStmtId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::SelectId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::SelectStmtId
@@ -698,6 +703,7 @@ impl<'a> core::convert::From<syntaqlite_syntax::nodes::PragmaStmt<'a>> for synta
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::QualifiedName<'a>> for syntaqlite_syntax::nodes::QualifiedNameId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::RaiseExpr<'a>> for syntaqlite_syntax::nodes::RaiseExprId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::ResultColumn<'a>> for syntaqlite_syntax::nodes::ResultColumnId
+impl<'a> core::convert::From<syntaqlite_syntax::nodes::RowValue<'a>> for syntaqlite_syntax::nodes::RowValueId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::SavepointStmt<'a>> for syntaqlite_syntax::nodes::SavepointStmtId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::Select<'a>> for syntaqlite_syntax::nodes::SelectId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::SelectStmt<'a>> for syntaqlite_syntax::nodes::SelectStmtId
@@ -790,6 +796,7 @@ impl<'a> syntaqlite_syntax::nodes::PragmaStmt<'a>
 impl<'a> syntaqlite_syntax::nodes::QualifiedName<'a>
 impl<'a> syntaqlite_syntax::nodes::RaiseExpr<'a>
 impl<'a> syntaqlite_syntax::nodes::ResultColumn<'a>
+impl<'a> syntaqlite_syntax::nodes::RowValue<'a>
 impl<'a> syntaqlite_syntax::nodes::SavepointStmt<'a>
 impl<'a> syntaqlite_syntax::nodes::Select<'a>
 impl<'a> syntaqlite_syntax::nodes::SelectStmt<'a>
@@ -864,6 +871,7 @@ impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::no
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::QualifiedName<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::RaiseExpr<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::ResultColumn<'a>
+impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::RowValue<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::SavepointStmt<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::Select<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::SelectStmt<'a>
@@ -1091,6 +1099,7 @@ pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::Qualifi
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::RaiseExprId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ResultColumnId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::ResultColumnListId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::RowValueId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SavepointStmtId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SelectId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SelectStmtId) -> syntaqlite_syntax::any::AnyNodeId
@@ -1704,6 +1713,12 @@ pub fn syntaqlite_syntax::nodes::ResultColumnId::from(syntaqlite_syntax::nodes::
 pub fn syntaqlite_syntax::nodes::ResultColumnId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::ResultColumnListId::from(syntaqlite_syntax::nodes::ResultColumnList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::ResultColumnListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::nodes::RowValue<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::RowValue<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::RowValue<'a>::items(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
+pub fn syntaqlite_syntax::nodes::RowValue<'a>::node_id(&self) -> syntaqlite_syntax::nodes::RowValueId
+pub fn syntaqlite_syntax::nodes::RowValueId::from(syntaqlite_syntax::nodes::RowValue<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::RowValueId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::SavepointOp::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
@@ -2189,6 +2204,8 @@ pub struct syntaqlite_syntax::nodes::RaiseExprId(_)
 pub struct syntaqlite_syntax::nodes::ResultColumn<'a>
 pub struct syntaqlite_syntax::nodes::ResultColumnId(_)
 pub struct syntaqlite_syntax::nodes::ResultColumnListId(_)
+pub struct syntaqlite_syntax::nodes::RowValue<'a>
+pub struct syntaqlite_syntax::nodes::RowValueId(_)
 pub struct syntaqlite_syntax::nodes::SavepointStmt<'a>
 pub struct syntaqlite_syntax::nodes::SavepointStmtId(_)
 pub struct syntaqlite_syntax::nodes::SelectId(_)
@@ -2552,6 +2569,7 @@ pub syntaqlite_syntax::nodes::Expr::Literal(syntaqlite_syntax::nodes::Literal<'a
 pub syntaqlite_syntax::nodes::Expr::OrderedSetFunctionCall(syntaqlite_syntax::nodes::OrderedSetFunctionCall<'a>)
 pub syntaqlite_syntax::nodes::Expr::ParenExpr(syntaqlite_syntax::nodes::ParenExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::RaiseExpr(syntaqlite_syntax::nodes::RaiseExpr<'a>)
+pub syntaqlite_syntax::nodes::Expr::RowValue(syntaqlite_syntax::nodes::RowValue<'a>)
 pub syntaqlite_syntax::nodes::Expr::SubqueryExpr(syntaqlite_syntax::nodes::SubqueryExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::UnaryExpr(syntaqlite_syntax::nodes::UnaryExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::Variable(syntaqlite_syntax::nodes::Variable<'a>)
@@ -2683,6 +2701,7 @@ pub syntaqlite_syntax::nodes::Node::QualifiedName(syntaqlite_syntax::nodes::Qual
 pub syntaqlite_syntax::nodes::Node::RaiseExpr(syntaqlite_syntax::nodes::RaiseExpr<'a>)
 pub syntaqlite_syntax::nodes::Node::ResultColumn(syntaqlite_syntax::nodes::ResultColumn<'a>)
 pub syntaqlite_syntax::nodes::Node::ResultColumnList(syntaqlite_syntax::nodes::ResultColumnList<'a>)
+pub syntaqlite_syntax::nodes::Node::RowValue(syntaqlite_syntax::nodes::RowValue<'a>)
 pub syntaqlite_syntax::nodes::Node::SavepointStmt(syntaqlite_syntax::nodes::SavepointStmt<'a>)
 pub syntaqlite_syntax::nodes::Node::SelectStmt(syntaqlite_syntax::nodes::SelectStmt<'a>)
 pub syntaqlite_syntax::nodes::Node::SetClause(syntaqlite_syntax::nodes::SetClause<'a>)
@@ -2707,85 +2726,86 @@ pub syntaqlite_syntax::nodes::Node::WindowDef(syntaqlite_syntax::nodes::WindowDe
 pub syntaqlite_syntax::nodes::Node::WindowDefList(syntaqlite_syntax::nodes::WindowDefList<'a>)
 pub syntaqlite_syntax::nodes::Node::WithClause(syntaqlite_syntax::nodes::WithClause<'a>)
 pub syntaqlite_syntax::nodes::NodeTag::AggregateFunctionCall = 1
-pub syntaqlite_syntax::nodes::NodeTag::AlterTableStmt = 46
-pub syntaqlite_syntax::nodes::NodeTag::AnalyzeOrReindexStmt = 65
-pub syntaqlite_syntax::nodes::NodeTag::AttachStmt = 66
+pub syntaqlite_syntax::nodes::NodeTag::AlterTableStmt = 47
+pub syntaqlite_syntax::nodes::NodeTag::AnalyzeOrReindexStmt = 66
+pub syntaqlite_syntax::nodes::NodeTag::AttachStmt = 67
 pub syntaqlite_syntax::nodes::NodeTag::BetweenExpr = 10
 pub syntaqlite_syntax::nodes::NodeTag::BinaryExpr = 33
 pub syntaqlite_syntax::nodes::NodeTag::CaseExpr = 12
 pub syntaqlite_syntax::nodes::NodeTag::CaseWhen = 13
 pub syntaqlite_syntax::nodes::NodeTag::CaseWhenList = 14
 pub syntaqlite_syntax::nodes::NodeTag::CastExpr = 3
-pub syntaqlite_syntax::nodes::NodeTag::CollateExpr = 42
+pub syntaqlite_syntax::nodes::NodeTag::CollateExpr = 43
 pub syntaqlite_syntax::nodes::NodeTag::ColumnConstraint = 16
 pub syntaqlite_syntax::nodes::NodeTag::ColumnConstraintList = 17
 pub syntaqlite_syntax::nodes::NodeTag::ColumnDef = 18
 pub syntaqlite_syntax::nodes::NodeTag::ColumnDefList = 19
 pub syntaqlite_syntax::nodes::NodeTag::ColumnRef = 4
 pub syntaqlite_syntax::nodes::NodeTag::CompoundSelect = 5
-pub syntaqlite_syntax::nodes::NodeTag::CreateIndexStmt = 70
+pub syntaqlite_syntax::nodes::NodeTag::CreateIndexStmt = 71
 pub syntaqlite_syntax::nodes::NodeTag::CreateTableStmt = 22
-pub syntaqlite_syntax::nodes::NodeTag::CreateTriggerStmt = 62
-pub syntaqlite_syntax::nodes::NodeTag::CreateViewStmt = 71
-pub syntaqlite_syntax::nodes::NodeTag::CreateVirtualTableStmt = 63
+pub syntaqlite_syntax::nodes::NodeTag::CreateTriggerStmt = 63
+pub syntaqlite_syntax::nodes::NodeTag::CreateViewStmt = 72
+pub syntaqlite_syntax::nodes::NodeTag::CreateVirtualTableStmt = 64
 pub syntaqlite_syntax::nodes::NodeTag::CteDefinition = 23
 pub syntaqlite_syntax::nodes::NodeTag::CteList = 24
 pub syntaqlite_syntax::nodes::NodeTag::DeleteStmt = 28
-pub syntaqlite_syntax::nodes::NodeTag::DetachStmt = 67
-pub syntaqlite_syntax::nodes::NodeTag::DropStmt = 45
+pub syntaqlite_syntax::nodes::NodeTag::DetachStmt = 68
+pub syntaqlite_syntax::nodes::NodeTag::DropStmt = 46
 pub syntaqlite_syntax::nodes::NodeTag::Error = 38
 pub syntaqlite_syntax::nodes::NodeTag::ExistsExpr = 7
-pub syntaqlite_syntax::nodes::NodeTag::ExplainStmt = 69
-pub syntaqlite_syntax::nodes::NodeTag::ExprList = 39
-pub syntaqlite_syntax::nodes::NodeTag::FilterOver = 80
+pub syntaqlite_syntax::nodes::NodeTag::ExplainStmt = 70
+pub syntaqlite_syntax::nodes::NodeTag::ExprList = 40
+pub syntaqlite_syntax::nodes::NodeTag::FilterOver = 81
 pub syntaqlite_syntax::nodes::NodeTag::ForeignKeyClause = 15
-pub syntaqlite_syntax::nodes::NodeTag::FrameBound = 74
-pub syntaqlite_syntax::nodes::NodeTag::FrameSpec = 75
-pub syntaqlite_syntax::nodes::NodeTag::FunctionCall = 40
+pub syntaqlite_syntax::nodes::NodeTag::FrameBound = 75
+pub syntaqlite_syntax::nodes::NodeTag::FrameSpec = 76
+pub syntaqlite_syntax::nodes::NodeTag::FunctionCall = 41
 pub syntaqlite_syntax::nodes::NodeTag::IdentName = 37
 pub syntaqlite_syntax::nodes::NodeTag::InExpr = 8
 pub syntaqlite_syntax::nodes::NodeTag::InsertStmt = 32
 pub syntaqlite_syntax::nodes::NodeTag::IsExpr = 9
-pub syntaqlite_syntax::nodes::NodeTag::JoinClause = 58
-pub syntaqlite_syntax::nodes::NodeTag::JoinPrefix = 59
+pub syntaqlite_syntax::nodes::NodeTag::JoinClause = 59
+pub syntaqlite_syntax::nodes::NodeTag::JoinPrefix = 60
 pub syntaqlite_syntax::nodes::NodeTag::LikeExpr = 11
-pub syntaqlite_syntax::nodes::NodeTag::LimitClause = 54
+pub syntaqlite_syntax::nodes::NodeTag::LimitClause = 55
 pub syntaqlite_syntax::nodes::NodeTag::Literal = 35
-pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDef = 78
-pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDefList = 79
+pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDef = 79
+pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDefList = 80
 pub syntaqlite_syntax::nodes::NodeTag::Null = 0
-pub syntaqlite_syntax::nodes::NodeTag::OrderByList = 53
+pub syntaqlite_syntax::nodes::NodeTag::OrderByList = 54
 pub syntaqlite_syntax::nodes::NodeTag::OrderedSetFunctionCall = 2
-pub syntaqlite_syntax::nodes::NodeTag::OrderingTerm = 52
+pub syntaqlite_syntax::nodes::NodeTag::OrderingTerm = 53
 pub syntaqlite_syntax::nodes::NodeTag::ParenExpr = 36
-pub syntaqlite_syntax::nodes::NodeTag::ParenTableSource = 57
-pub syntaqlite_syntax::nodes::NodeTag::PragmaStmt = 64
-pub syntaqlite_syntax::nodes::NodeTag::QualifiedName = 44
-pub syntaqlite_syntax::nodes::NodeTag::RaiseExpr = 43
-pub syntaqlite_syntax::nodes::NodeTag::ResultColumn = 49
-pub syntaqlite_syntax::nodes::NodeTag::ResultColumnList = 50
-pub syntaqlite_syntax::nodes::NodeTag::SavepointStmt = 48
-pub syntaqlite_syntax::nodes::NodeTag::SelectStmt = 51
+pub syntaqlite_syntax::nodes::NodeTag::ParenTableSource = 58
+pub syntaqlite_syntax::nodes::NodeTag::PragmaStmt = 65
+pub syntaqlite_syntax::nodes::NodeTag::QualifiedName = 45
+pub syntaqlite_syntax::nodes::NodeTag::RaiseExpr = 44
+pub syntaqlite_syntax::nodes::NodeTag::ResultColumn = 50
+pub syntaqlite_syntax::nodes::NodeTag::ResultColumnList = 51
+pub syntaqlite_syntax::nodes::NodeTag::RowValue = 39
+pub syntaqlite_syntax::nodes::NodeTag::SavepointStmt = 49
+pub syntaqlite_syntax::nodes::NodeTag::SelectStmt = 52
 pub syntaqlite_syntax::nodes::NodeTag::SetClause = 29
 pub syntaqlite_syntax::nodes::NodeTag::SetClauseList = 30
 pub syntaqlite_syntax::nodes::NodeTag::SubqueryExpr = 6
-pub syntaqlite_syntax::nodes::NodeTag::SubqueryTableSource = 56
+pub syntaqlite_syntax::nodes::NodeTag::SubqueryTableSource = 57
 pub syntaqlite_syntax::nodes::NodeTag::TableConstraint = 20
 pub syntaqlite_syntax::nodes::NodeTag::TableConstraintList = 21
-pub syntaqlite_syntax::nodes::NodeTag::TableRef = 55
-pub syntaqlite_syntax::nodes::NodeTag::TransactionStmt = 47
-pub syntaqlite_syntax::nodes::NodeTag::TriggerCmdList = 61
-pub syntaqlite_syntax::nodes::NodeTag::TriggerEvent = 60
+pub syntaqlite_syntax::nodes::NodeTag::TableRef = 56
+pub syntaqlite_syntax::nodes::NodeTag::TransactionStmt = 48
+pub syntaqlite_syntax::nodes::NodeTag::TriggerCmdList = 62
+pub syntaqlite_syntax::nodes::NodeTag::TriggerEvent = 61
 pub syntaqlite_syntax::nodes::NodeTag::UnaryExpr = 34
 pub syntaqlite_syntax::nodes::NodeTag::UpdateStmt = 31
 pub syntaqlite_syntax::nodes::NodeTag::UpsertClause = 26
 pub syntaqlite_syntax::nodes::NodeTag::UpsertClauseList = 27
-pub syntaqlite_syntax::nodes::NodeTag::VacuumStmt = 68
-pub syntaqlite_syntax::nodes::NodeTag::ValuesClause = 73
-pub syntaqlite_syntax::nodes::NodeTag::ValuesRowList = 72
-pub syntaqlite_syntax::nodes::NodeTag::Variable = 41
-pub syntaqlite_syntax::nodes::NodeTag::WindowDef = 76
-pub syntaqlite_syntax::nodes::NodeTag::WindowDefList = 77
+pub syntaqlite_syntax::nodes::NodeTag::VacuumStmt = 69
+pub syntaqlite_syntax::nodes::NodeTag::ValuesClause = 74
+pub syntaqlite_syntax::nodes::NodeTag::ValuesRowList = 73
+pub syntaqlite_syntax::nodes::NodeTag::Variable = 42
+pub syntaqlite_syntax::nodes::NodeTag::WindowDef = 77
+pub syntaqlite_syntax::nodes::NodeTag::WindowDefList = 78
 pub syntaqlite_syntax::nodes::NodeTag::WithClause = 25
 pub syntaqlite_syntax::nodes::NullsOrder::First = 1
 pub syntaqlite_syntax::nodes::NullsOrder::Last = 2
@@ -3012,6 +3032,7 @@ pub type syntaqlite_syntax::nodes::RaiseExprId::Node<'a> = syntaqlite_syntax::no
 pub type syntaqlite_syntax::nodes::ResultColumnId::Node<'a> = syntaqlite_syntax::nodes::ResultColumn<'a>
 pub type syntaqlite_syntax::nodes::ResultColumnList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ResultColumn<'a>>
 pub type syntaqlite_syntax::nodes::ResultColumnListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ResultColumn<'a>>
+pub type syntaqlite_syntax::nodes::RowValueId::Node<'a> = syntaqlite_syntax::nodes::RowValue<'a>
 pub type syntaqlite_syntax::nodes::SavepointStmtId::Node<'a> = syntaqlite_syntax::nodes::SavepointStmt<'a>
 pub type syntaqlite_syntax::nodes::SelectId::Node<'a> = syntaqlite_syntax::nodes::Select<'a>
 pub type syntaqlite_syntax::nodes::SelectStmtId::Node<'a> = syntaqlite_syntax::nodes::SelectStmt<'a>
