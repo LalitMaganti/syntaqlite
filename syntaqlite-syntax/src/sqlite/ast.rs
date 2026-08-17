@@ -441,6 +441,7 @@ pub enum ColumnConstraintType {
     Collate = 6,
     Generated = 7,
     Null = 8,
+    Deferrable = 9,
 }
 
 impl ColumnConstraintType {
@@ -455,6 +456,7 @@ impl ColumnConstraintType {
             ColumnConstraintType::Collate => "COLLATE",
             ColumnConstraintType::Generated => "GENERATED",
             ColumnConstraintType::Null => "NULL",
+            ColumnConstraintType::Deferrable => "DEFERRABLE",
         }
     }
 }
@@ -2547,6 +2549,12 @@ impl<'a> ColumnConstraint<'a> {
     }
     pub fn generated_storage(&self) -> GeneratedColumnStorage {
         self.raw.generated_storage
+    }
+    pub fn deferrable(&self) -> Deferrable {
+        self.raw.deferrable
+    }
+    pub fn initial_defer(&self) -> InitialDeferMode {
+        self.raw.initial_defer
     }
     pub fn default_expr(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.default_expr)

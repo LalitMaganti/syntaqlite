@@ -163,6 +163,8 @@ pub(crate) struct ColumnConstraint {
     pub(crate) is_autoincrement: Bool,
     pub(crate) collation_name: TextSpan,
     pub(crate) generated_storage: super::ast::GeneratedColumnStorage,
+    pub(crate) deferrable: super::ast::Deferrable,
+    pub(crate) initial_defer: super::ast::InitialDeferMode,
     pub(crate) default_expr: AnyNodeId,
     pub(crate) check_expr: AnyNodeId,
     pub(crate) generated_expr: AnyNodeId,

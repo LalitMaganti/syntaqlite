@@ -127,7 +127,8 @@ typedef enum SyntaqliteColumnConstraintType {
   SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES = 5,
   SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_COLLATE = 6,
   SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED = 7,
-  SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NULL = 8
+  SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NULL = 8,
+  SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFERRABLE = 9
 } SyntaqliteColumnConstraintType;
 
 typedef enum SyntaqliteTableConstraintType {
@@ -531,6 +532,8 @@ typedef struct SyntaqliteColumnConstraint {
   SyntaqliteBool is_autoincrement;
   SyntaqliteTextSpan collation_name;
   SyntaqliteGeneratedColumnStorage generated_storage;
+  SyntaqliteDeferrable deferrable;
+  SyntaqliteInitialDeferMode initial_defer;
   uint32_t default_expr;
   uint32_t check_expr;
   uint32_t generated_expr;

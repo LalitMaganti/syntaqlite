@@ -2,7 +2,7 @@ enum ForeignKeyAction { UNSET NO_ACTION SET_NULL SET_DEFAULT CASCADE RESTRICT }
 enum Deferrable { UNSET NOT_DEFERRABLE DEFERRABLE }
 enum InitialDeferMode { UNSET DEFERRED IMMEDIATE }
 enum GeneratedColumnStorage { VIRTUAL STORED }
-enum ColumnConstraintType { DEFAULT NOT_NULL PRIMARY_KEY UNIQUE CHECK REFERENCES COLLATE GENERATED NULL }
+enum ColumnConstraintType { DEFAULT NOT_NULL PRIMARY_KEY UNIQUE CHECK REFERENCES COLLATE GENERATED NULL DEFERRABLE }
 enum TableConstraintType { PRIMARY_KEY UNIQUE CHECK FOREIGN_KEY }
 
 flags CreateTableStmtFlags { WITHOUT_ROWID = 1 STRICT = 2 }
@@ -65,6 +65,8 @@ node ColumnConstraint {
   is_autoincrement: inline Bool
   collation_name: inline SyntaqliteTextSpan
   generated_storage: inline GeneratedColumnStorage
+  deferrable: inline Deferrable
+  initial_defer: inline InitialDeferMode
   default_expr: index Expr
   check_expr: index Expr
   generated_expr: index Expr
@@ -114,6 +116,16 @@ node ColumnConstraint {
         if_enum(generated_storage, STORED) { space "STORED" }
       }
       NULL { "NULL" }
+      DEFERRABLE {
+        switch(deferrable) {
+          NOT_DEFERRABLE { "NOT" "DEFERRABLE" }
+          DEFERRABLE     { "DEFERRABLE" }
+        }
+        switch(initial_defer) {
+          DEFERRED  { space "INITIALLY" "DEFERRED" }
+          IMMEDIATE { space "INITIALLY" "IMMEDIATE" }
+        }
+      }
     }
   }
 }

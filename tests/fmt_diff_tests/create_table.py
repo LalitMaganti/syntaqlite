@@ -299,12 +299,44 @@ class ForeignKeyFormat(TestSuite):
                 CREATE TABLE measurements(
                   sensor_id text
                     NOT NULL
-                    REFERENCES sensors(id)
-                      ON DELETE CASCADE
-                      ON UPDATE SET NULL
-                      DEFERRABLE INITIALLY DEFERRED
+                    REFERENCES sensors(id) ON DELETE CASCADE ON UPDATE SET NULL
+                    DEFERRABLE INITIALLY DEFERRED
                 );
             """,
+        )
+
+    def test_long_references_clause_wraps_internally(self):
+        """A REFERENCES clause too long for one line breaks at its ON actions."""
+        return DiffTestBlueprint(
+            sql="create table measurements(sensor_identifier text references sensor_registry(identifier) on delete cascade on update set default)",
+            out="""\
+                CREATE TABLE measurements(
+                  sensor_identifier text
+                    REFERENCES sensor_registry(identifier)
+                      ON DELETE CASCADE
+                      ON UPDATE SET DEFAULT
+                );
+            """,
+        )
+
+    def test_deferrable_without_references(self):
+        """A defer subclause with no foreign key is inert but must survive."""
+        return DiffTestBlueprint(
+            sql="create table t(a integer deferrable initially deferred)",
+            out="CREATE TABLE t(a integer DEFERRABLE INITIALLY DEFERRED);",
+        )
+
+    def test_deferrable_separated_from_references(self):
+        """SQLite defers the table's most recent FK across intervening constraints."""
+        return DiffTestBlueprint(
+            sql="create table t(a references p not null deferrable initially deferred)",
+            out="CREATE TABLE t(a REFERENCES p NOT NULL DEFERRABLE INITIALLY DEFERRED);",
+        )
+
+    def test_named_constraint_before_deferrable(self):
+        return DiffTestBlueprint(
+            sql="create table t(a references p constraint c1 deferrable initially deferred)",
+            out="CREATE TABLE t(a REFERENCES p CONSTRAINT c1 DEFERRABLE INITIALLY DEFERRED);",
         )
 
 
