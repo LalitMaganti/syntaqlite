@@ -444,6 +444,8 @@ class SubqueryExpr(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause:
                 UnaryExpr
                   op: NOT
@@ -468,6 +470,8 @@ class SubqueryExpr(TestSuite):
                               has_parens: FALSE
                               alias: (none)
                               args: (none)
+                              index_hint: DEFAULT
+                              index_name: (none)
                           where_clause: (none)
                           groupby: (none)
                           having: (none)
@@ -585,6 +589,8 @@ class InExpr(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause:
                 InExpr
                   negated: TRUE
@@ -614,6 +620,8 @@ class InExpr(TestSuite):
                           has_parens: FALSE
                           alias: (none)
                           args: (none)
+                          index_hint: DEFAULT
+                          index_name: (none)
                       where_clause: (none)
                       groupby: (none)
                       having: (none)

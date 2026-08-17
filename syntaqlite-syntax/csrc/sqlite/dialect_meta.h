@@ -788,6 +788,11 @@ static const SyntaqliteFieldMeta field_meta_table_ref[] = {
      NULL, 0},
     {offsetof(SyntaqliteTableRef, args), SYNTAQLITE_FIELD_NODE_ID, "args", NULL,
      0},
+    {offsetof(SyntaqliteTableRef, index_hint), SYNTAQLITE_FIELD_ENUM,
+     "index_hint", display_index_hint,
+     sizeof(display_index_hint) / sizeof(display_index_hint[0])},
+    {offsetof(SyntaqliteTableRef, index_name), SYNTAQLITE_FIELD_SPAN,
+     "index_name", NULL, 0},
 };
 
 static const SyntaqliteFieldMeta field_meta_subquery_table_source[] = {
@@ -1088,6 +1093,7 @@ static const SyntaqliteFieldRangeMeta range_meta_collate_expr[] = {
 static const SyntaqliteFieldRangeMeta range_meta_table_ref[] = {
     {offsetof(SyntaqliteTableRef, table_name), 1},
     {offsetof(SyntaqliteTableRef, schema), 1},
+    {offsetof(SyntaqliteTableRef, index_name), 1},
 };
 
 static const SyntaqliteFieldRangeMeta range_meta_create_trigger_stmt[] = {
@@ -1366,7 +1372,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* OrderingTerm */
     0,  /* OrderByList */
     2,  /* LimitClause */
-    5,  /* TableRef */
+    7,  /* TableRef */
     2,  /* SubqueryTableSource */
     5,  /* JoinClause */
     2,  /* JoinPrefix */
@@ -1536,7 +1542,7 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                 /* OrderingTerm */
     {NULL, 0},                                 /* OrderByList */
     {NULL, 0},                                 /* LimitClause */
-    {range_meta_table_ref, 2},                 /* TableRef */
+    {range_meta_table_ref, 3},                 /* TableRef */
     {NULL, 0},                                 /* SubqueryTableSource */
     {NULL, 0},                                 /* JoinClause */
     {NULL, 0},                                 /* JoinPrefix */

@@ -9,6 +9,8 @@ node TableRef {
   has_parens: inline Bool
   alias: index Name
   args: index ExprList
+  index_hint: inline IndexHint
+  index_name: inline SyntaqliteTextSpan
 
   semantic { source_ref(kind: table, name: table_name, alias: alias) }
 
@@ -21,6 +23,10 @@ node TableRef {
       if_flag(has_parens) { "()" }
     }
     if_set(alias) { space "AS" space child(alias) }
+    switch(index_hint) {
+      INDEXED { space "INDEXED" "BY" space span(index_name) }
+      NOT_INDEXED { space "NOT" "INDEXED" }
+    }
   }
 }
 

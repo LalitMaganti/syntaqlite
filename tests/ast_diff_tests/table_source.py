@@ -28,6 +28,8 @@ class TableRefBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -58,6 +60,8 @@ class TableRefBasic(TestSuite):
                     IdentName
                       source: "x"
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -88,6 +92,8 @@ class TableRefBasic(TestSuite):
                     IdentName
                       source: "x"
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -116,6 +122,8 @@ class TableRefBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -146,6 +154,8 @@ class TableRefBasic(TestSuite):
                     IdentName
                       source: "x"
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -181,6 +191,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -188,6 +200,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr: (none)
                   using_columns: (none)
               where_clause: (none)
@@ -224,6 +238,8 @@ class JoinBasic(TestSuite):
                           has_parens: FALSE
                           alias: (none)
                           args: (none)
+                          index_hint: DEFAULT
+                          index_name: (none)
                       right:
                         TableRef
                           table_name: "b"
@@ -231,6 +247,8 @@ class JoinBasic(TestSuite):
                           has_parens: FALSE
                           alias: (none)
                           args: (none)
+                          index_hint: DEFAULT
+                          index_name: (none)
                       on_expr: (none)
                       using_columns: (none)
                   right:
@@ -240,6 +258,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr: (none)
                   using_columns: (none)
               where_clause: (none)
@@ -273,6 +293,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -280,6 +302,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr:
                     BinaryExpr
                       op: EQ
@@ -325,6 +349,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -332,6 +358,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr:
                     BinaryExpr
                       op: EQ
@@ -377,6 +405,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -384,6 +414,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr:
                     BinaryExpr
                       op: EQ
@@ -429,6 +461,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -436,6 +470,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr: (none)
                   using_columns: (none)
               where_clause: (none)
@@ -469,6 +505,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -476,6 +514,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr:
                     BinaryExpr
                       op: EQ
@@ -521,6 +561,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -528,6 +570,8 @@ class JoinBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr:
                     BinaryExpr
                       op: EQ
@@ -577,6 +621,8 @@ class JoinNatural(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -584,6 +630,8 @@ class JoinNatural(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr: (none)
                   using_columns: (none)
               where_clause: (none)
@@ -617,6 +665,8 @@ class JoinNatural(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -624,6 +674,8 @@ class JoinNatural(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr: (none)
                   using_columns: (none)
               where_clause: (none)
@@ -657,6 +709,8 @@ class JoinNatural(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -664,6 +718,8 @@ class JoinNatural(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr: (none)
                   using_columns: (none)
               where_clause: (none)
@@ -697,6 +753,8 @@ class JoinNatural(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -704,6 +762,8 @@ class JoinNatural(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr: (none)
                   using_columns: (none)
               where_clause: (none)
@@ -741,6 +801,8 @@ class JoinUsing(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -748,6 +810,8 @@ class JoinUsing(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr: (none)
                   using_columns:
                     ExprList [1 items]
@@ -786,6 +850,8 @@ class JoinUsing(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "b"
@@ -793,6 +859,8 @@ class JoinUsing(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr: (none)
                   using_columns:
                     ExprList [2 items]
@@ -842,6 +910,8 @@ class JoinMultiple(TestSuite):
                           has_parens: FALSE
                           alias: (none)
                           args: (none)
+                          index_hint: DEFAULT
+                          index_name: (none)
                       right:
                         TableRef
                           table_name: "b"
@@ -849,6 +919,8 @@ class JoinMultiple(TestSuite):
                           has_parens: FALSE
                           alias: (none)
                           args: (none)
+                          index_hint: DEFAULT
+                          index_name: (none)
                       on_expr:
                         BinaryExpr
                           op: EQ
@@ -870,6 +942,8 @@ class JoinMultiple(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr:
                     BinaryExpr
                       op: EQ
@@ -972,6 +1046,8 @@ class TableValuedFunction(TestSuite):
                       Literal
                         literal_type: INTEGER
                         source: "10"
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -1006,6 +1082,8 @@ class TableValuedFunction(TestSuite):
                       Literal
                         literal_type: STRING
                         source: "'[]'"
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -1044,6 +1122,8 @@ class TableValuedFunction(TestSuite):
                       Literal
                         literal_type: INTEGER
                         source: "5"
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -1075,6 +1155,8 @@ class TableValuedFunction(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   right:
                     TableRef
                       table_name: "json_each"
@@ -1089,6 +1171,8 @@ class TableValuedFunction(TestSuite):
                             column: "col"
                             table: "t"
                             schema: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   on_expr:
                     Literal
                       literal_type: INTEGER

@@ -675,7 +675,7 @@ class LimitClause:
 class TableRef:
     """AST node: TableRef"""
 
-    __slots__ = ("table_name", "schema", "has_parens", "alias", "args")
+    __slots__ = ("table_name", "schema", "has_parens", "alias", "args", "index_hint", "index_name")
 
     def __init__(self, d: dict):
         self.table_name: str | None = d.get("table_name")
@@ -683,6 +683,8 @@ class TableRef:
         self.has_parens: bool = d["has_parens"]
         self.alias: Name | None = _wrap(d.get("alias"))
         self.args: list[Expr] | None = _wrap(d.get("args"))
+        self.index_hint: IndexHint = IndexHint[d["index_hint"]]
+        self.index_name: str | None = d.get("index_name")
 
     def __repr__(self):
         return "TableRef(...)"

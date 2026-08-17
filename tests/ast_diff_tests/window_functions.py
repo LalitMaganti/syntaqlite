@@ -48,6 +48,8 @@ class WindowFunctionBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -92,6 +94,8 @@ class WindowFunctionBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -136,6 +140,8 @@ class WindowFunctionBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -199,6 +205,8 @@ class WindowFunctionBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -257,6 +265,8 @@ class WindowFunctionBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -319,6 +329,8 @@ class WindowFunctionBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -372,6 +384,8 @@ class WindowFunctionBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -426,6 +440,8 @@ class FilterClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -490,6 +506,8 @@ class FilterClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -564,6 +582,8 @@ class FrameSpecification(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -628,6 +648,8 @@ class FrameSpecification(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -692,6 +714,8 @@ class FrameSpecification(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -747,6 +771,8 @@ class FrameSpecification(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -802,6 +828,8 @@ class FrameSpecification(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -857,6 +885,8 @@ class FrameSpecification(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -924,6 +954,8 @@ class FrameSpecification(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -956,6 +988,8 @@ class WindowClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -1038,6 +1072,8 @@ class WindowClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -1155,6 +1191,8 @@ class AggregateWithWindowFunction(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)

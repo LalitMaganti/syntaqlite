@@ -23,6 +23,8 @@ class DeleteBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               where_clause: (none)
@@ -46,6 +48,8 @@ class DeleteBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               where_clause:
@@ -80,6 +84,8 @@ class DeleteBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               where_clause: (none)
@@ -103,6 +109,8 @@ class DeleteBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: INDEXED
               index_name: "idx_foo"
               where_clause:
@@ -137,6 +145,8 @@ class DeleteBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: NOT_INDEXED
               index_name: (none)
               where_clause:
@@ -176,6 +186,8 @@ class UpdateIndexedBy(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: INDEXED
               index_name: "idx_foo"
               setlist:
@@ -210,6 +222,8 @@ class UpdateIndexedBy(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: NOT_INDEXED
               index_name: (none)
               setlist:
@@ -248,6 +262,8 @@ class InsertBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -283,6 +299,8 @@ class InsertBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns:
                 ExprList [2 items]
                   ColumnRef
@@ -324,6 +342,8 @@ class InsertBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 SelectStmt
@@ -341,6 +361,8 @@ class InsertBasic(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -367,6 +389,8 @@ class InsertBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source: (none)
               upsert: (none)
@@ -393,6 +417,8 @@ class InsertConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -422,6 +448,8 @@ class InsertConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -451,6 +479,8 @@ class InsertConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -480,6 +510,8 @@ class InsertConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -509,6 +541,8 @@ class InsertConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -538,6 +572,8 @@ class InsertConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -571,6 +607,8 @@ class UpdateBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -605,6 +643,8 @@ class UpdateBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -657,6 +697,8 @@ class UpdateBasic(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -695,6 +737,8 @@ class UpdateFrom(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -716,6 +760,8 @@ class UpdateFrom(TestSuite):
                     IdentName
                       source: "o"
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause:
                 BinaryExpr
                   op: EQ
@@ -754,6 +800,8 @@ class UpdateConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -788,6 +836,8 @@ class UpdateConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -822,6 +872,8 @@ class UpdateConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -856,6 +908,8 @@ class UpdateConflict(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -894,6 +948,8 @@ class UpdateSetClauseMultiColumn(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -945,6 +1001,8 @@ class InsertMultipleRows(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -1019,6 +1077,8 @@ class DmlWithCte(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 SelectStmt
@@ -1036,6 +1096,8 @@ class DmlWithCte(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -1078,6 +1140,8 @@ class DmlWithCte(TestSuite):
                             has_parens: FALSE
                             alias: (none)
                             args: (none)
+                            index_hint: DEFAULT
+                            index_name: (none)
                         where_clause: (none)
                         groupby: (none)
                         having: (none)
@@ -1092,6 +1156,8 @@ class DmlWithCte(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               where_clause:
@@ -1123,6 +1189,8 @@ class DmlWithCte(TestSuite):
                           has_parens: FALSE
                           alias: (none)
                           args: (none)
+                          index_hint: DEFAULT
+                          index_name: (none)
                       where_clause: (none)
                       groupby: (none)
                       having: (none)
@@ -1174,6 +1242,8 @@ class DmlWithCte(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -1237,6 +1307,8 @@ class DmlWithCte(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns:
                 ExprList [1 items]
                   ColumnRef
@@ -1263,6 +1335,8 @@ class DmlWithCte(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -1292,6 +1366,8 @@ class ReturningClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               where_clause:
@@ -1331,6 +1407,8 @@ class ReturningClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               where_clause: (none)
@@ -1372,6 +1450,8 @@ class ReturningClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -1411,6 +1491,8 @@ class ReturningClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               index_hint: DEFAULT
               index_name: (none)
               setlist:
@@ -1473,6 +1555,8 @@ class ReturningClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -1514,6 +1598,8 @@ class ReturningClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source: (none)
               upsert: (none)
@@ -1545,6 +1631,8 @@ class UpsertClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -1581,6 +1669,8 @@ class UpsertClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -1625,6 +1715,8 @@ class UpsertClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -1670,6 +1762,8 @@ class UpsertClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns:
                 ExprList [2 items]
                   ColumnRef
@@ -1736,6 +1830,8 @@ class UpsertClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -1811,6 +1907,8 @@ class UpsertClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -1852,6 +1950,8 @@ class UpsertClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause
@@ -1923,6 +2023,8 @@ class UpsertClause(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               columns: (none)
               source:
                 ValuesClause

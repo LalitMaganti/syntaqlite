@@ -118,6 +118,8 @@ class SelectGroupBy(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby:
                 ExprList [2 items]
@@ -493,6 +495,8 @@ class SelectWindow(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -596,6 +600,8 @@ class SelectCombined(TestSuite):
                   has_parens: FALSE
                   alias: (none)
                   args: (none)
+                  index_hint: DEFAULT
+                  index_name: (none)
               where_clause:
                 BinaryExpr
                   op: GT
