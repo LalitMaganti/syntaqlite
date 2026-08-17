@@ -2571,6 +2571,9 @@ impl<'a> ColumnConstraint<'a> {
     pub fn default_has_parens(&self) -> bool {
         self.raw.default_has_parens == super::ffi::Bool::True
     }
+    pub fn generated_always(&self) -> bool {
+        self.raw.generated_always == super::ffi::Bool::True
+    }
     pub fn default_expr(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.default_expr)
     }

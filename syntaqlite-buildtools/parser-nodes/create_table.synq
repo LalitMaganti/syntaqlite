@@ -71,6 +71,9 @@ node ColumnConstraint {
   // other three productions changes a bare identifier from a string literal
   // into a column reference.
   default_has_parens: inline Bool
+  // `GENERATED ALWAYS AS` and bare `AS` are separate productions; only one
+  // writes the keywords.
+  generated_always: inline Bool
   default_expr: index Expr
   check_expr: index Expr
   generated_expr: index Expr
@@ -123,6 +126,7 @@ node ColumnConstraint {
       COLLATE   { "COLLATE" space span(collation_name) }
       REFERENCES { child(fk_clause) }
       GENERATED {
+        if_flag(generated_always) { "GENERATED" "ALWAYS" space }
         group { "AS" space "(" nest { softline child(generated_expr) } softline ")" }
         if_enum(generated_storage, STORED) { space "STORED" }
       }

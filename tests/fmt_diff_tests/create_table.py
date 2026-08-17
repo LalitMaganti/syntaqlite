@@ -644,3 +644,39 @@ class DefaultValueFidelity(TestSuite):
             sql="create table t(a default +1)",
             out="CREATE TABLE t(a DEFAULT +1);",
         )
+
+
+class GeneratedColumnKeywords(TestSuite):
+    """`GENERATED ALWAYS AS` and bare `AS` are separate productions.
+
+    Only one of them writes the keywords, so the node has to record which,
+    or the longer spelling is lost whenever a constraint precedes it and the
+    keywords are not swallowed by the type name.
+    """
+
+    def test_generated_always_after_a_constraint(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int not null generated always as (1))",
+            out="CREATE TABLE t(a int NOT NULL GENERATED ALWAYS AS (1));",
+        )
+
+    def test_generated_always_after_type(self):
+        """The parser folds the keywords into the type name via the ID
+        fallback; `sqlite3AddColumn` trims them back off, and so do we.
+        """
+        return DiffTestBlueprint(
+            sql="create table t(a int generated always as (1))",
+            out="CREATE TABLE t(a int GENERATED ALWAYS AS (1));",
+        )
+
+    def test_bare_as_is_not_expanded(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int as (1))",
+            out="CREATE TABLE t(a int AS (1));",
+        )
+
+    def test_generated_always_stored(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int not null generated always as (1) stored)",
+            out="CREATE TABLE t(a int NOT NULL GENERATED ALWAYS AS (1) STORED);",
+        )

@@ -127,6 +127,33 @@ typedef struct SynqParenExprlistValue {
 
 #define YYPARSEFREENEVERNULL 1
 
+// The ID fallback lets `GENERATED ALWAYS` be absorbed into a preceding type
+// name. Trim it back off as sqlite3AddColumn does, reporting whether it was
+// there so the keywords can still be emitted.
+static inline int synq_trim_generated_always(SynqParseToken* t) {
+  if (t->z == NULL || t->n < 16) {
+    return 0;
+  }
+  if (SYNQ_STRNCASECMP(t->z + (t->n - 6), "always", 6) != 0) {
+    return 0;
+  }
+  int n = t->n - 6;
+  while (n > 0 && (t->z[n - 1] == ' ' || t->z[n - 1] == '\t' ||
+                   t->z[n - 1] == '\n' || t->z[n - 1] == '\r')) {
+    n--;
+  }
+  if (n < 9 || SYNQ_STRNCASECMP(t->z + (n - 9), "generated", 9) != 0) {
+    return 0;
+  }
+  n -= 9;
+  while (n > 0 && (t->z[n - 1] == ' ' || t->z[n - 1] == '\t' ||
+                   t->z[n - 1] == '\n' || t->z[n - 1] == '\r')) {
+    n--;
+  }
+  t->n = n;
+  return 1;
+}
+
 // Join keywords are an unordered set, not a sequence; see sqlite3JoinType().
 #define SYNQ_JT_INNER 0x01
 #define SYNQ_JT_CROSS 0x02
@@ -7982,8 +8009,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, yymsp[0].minor.yy277, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, yymsp[0].minor.yy277,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-2].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 72: /* ccons ::= DEFAULT LP expr RP */
@@ -7994,8 +8021,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_TRUE, yymsp[-1].minor.yy277, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_TRUE, SYNTAQLITE_BOOL_FALSE, yymsp[-1].minor.yy277,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 73: /* ccons ::= DEFAULT PLUS scantok term */
@@ -8008,8 +8035,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, pos, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, pos,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 74: /* ccons ::= DEFAULT MINUS scantok term */
@@ -8023,8 +8050,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, neg, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, neg,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 75: /* ccons ::= DEFAULT scantok ID|INDEXED */
@@ -8039,8 +8066,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, ref, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, ref,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-2].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 76: /* ccons ::= NULL onconf */
@@ -8051,8 +8078,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-1].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 77: /* ccons ::= NOT NULL onconf */
@@ -8063,8 +8090,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-2].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 78: /* ccons ::= PRIMARY KEY sortorder onconf autoinc */
@@ -8076,8 +8103,8 @@ static YYACTIONTYPE yy_reduce(
           (SyntaqliteBool)yymsp[0].minor.yy320, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-4].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 79: /* ccons ::= UNIQUE onconf */
@@ -8088,8 +8115,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-1].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 80: /* ccons ::= CHECK LP expr RP */
@@ -8100,8 +8127,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, yymsp[-1].minor.yy277,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          yymsp[-1].minor.yy277, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 81: /* ccons ::= REFERENCES nm eidlist_opt refargs */
@@ -8117,8 +8144,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, fk);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, fk);
       yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 82: /* ccons ::= defer_subclause */
@@ -8129,8 +8156,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           yymsp[0].minor.yy519.deferrable, yymsp[0].minor.yy519.initial,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yylhsminor.yy150.pending_name = SYNQ_NO_SPAN;
     }
       yymsp[0].minor.yy150 = yylhsminor.yy150;
@@ -8142,17 +8169,26 @@ static YYACTIONTYPE yy_reduce(
           0, synq_span(pCtx, yymsp[0].minor.yy0),
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
       yymsp[-1].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 84: /* ccons ::= GENERATED ALWAYS AS generated */
     {
       yymsp[-3].minor.yy150 = yymsp[0].minor.yy150;
+      if (yymsp[-3].minor.yy150.node != SYNTAQLITE_NULL_NODE) {
+        SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[-3].minor.yy150.node);
+        node->column_constraint.generated_always = SYNTAQLITE_BOOL_TRUE;
+      }
     } break;
     case 85: /* ccons ::= AS generated */
     {
       yymsp[-1].minor.yy150 = yymsp[0].minor.yy150;
+      if (yymsp[-1].minor.yy150.node != SYNTAQLITE_NULL_NODE &&
+          pCtx->generated_always) {
+        SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[-1].minor.yy150.node);
+        node->column_constraint.generated_always = SYNTAQLITE_BOOL_TRUE;
+      }
     } break;
     case 86: /* generated ::= LP expr RP */
     {
@@ -8162,8 +8198,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          yymsp[-1].minor.yy277, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, yymsp[-1].minor.yy277, SYNTAQLITE_NULL_NODE);
       yymsp[-2].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 87: /* generated ::= LP expr RP ID */
@@ -8179,8 +8215,8 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN, storage,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
-          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
-          yymsp[-2].minor.yy277, SYNTAQLITE_NULL_NODE);
+          SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
+          SYNTAQLITE_NULL_NODE, yymsp[-2].minor.yy277, SYNTAQLITE_NULL_NODE);
       yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 89:  /* autoinc ::= AUTOINCR */
@@ -9233,9 +9269,11 @@ static YYACTIONTYPE yy_reduce(
     case 238: /* columnname ::= nmorerr typetoken */
     {
       yylhsminor.yy640.name = yymsp[-1].minor.yy277;
-      yylhsminor.yy640.typetoken = yymsp[0].minor.yy0.z
-                                       ? synq_span(pCtx, yymsp[0].minor.yy0)
-                                       : SYNQ_NO_SPAN;
+      pCtx->generated_always = synq_trim_generated_always(&yymsp[0].minor.yy0);
+      yylhsminor.yy640.typetoken =
+          (yymsp[0].minor.yy0.z && yymsp[0].minor.yy0.n)
+              ? synq_span(pCtx, yymsp[0].minor.yy0)
+              : SYNQ_NO_SPAN;
       // Starting a column ends the previous one's pending CONSTRAINT name.
       pCtx->constraint_name = SYNQ_NO_SPAN;
     }

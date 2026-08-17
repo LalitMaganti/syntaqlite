@@ -538,6 +538,7 @@ typedef struct SyntaqliteColumnConstraint {
   SyntaqliteDeferrable deferrable;
   SyntaqliteInitialDeferMode initial_defer;
   SyntaqliteBool default_has_parens;
+  SyntaqliteBool generated_always;
   uint32_t default_expr;
   uint32_t check_expr;
   uint32_t generated_expr;
