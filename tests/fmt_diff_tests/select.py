@@ -409,3 +409,35 @@ class RowValueFormat(TestSuite):
             sql="select f(1, 2) from t",
             out="SELECT f(1, 2) FROM t;",
         )
+
+
+class EmptySchemaQualifier(TestSuite):
+    """`""` is a real, empty-named schema — not an absent qualifier.
+
+    SQLite resolves `"".t` against a schema literally named "", so dropping
+    the qualifier silently retargets the statement at a different table.
+    """
+
+    def test_empty_schema_on_table_ref(self):
+        return DiffTestBlueprint(
+            sql='select * from "".t',
+            out='SELECT * FROM "".t;',
+        )
+
+    def test_empty_schema_on_column_ref(self):
+        return DiffTestBlueprint(
+            sql='select "".t.a from x',
+            out='SELECT "".t.a FROM x;',
+        )
+
+    def test_named_schema_unchanged(self):
+        return DiffTestBlueprint(
+            sql="select * from main.t",
+            out="SELECT * FROM main.t;",
+        )
+
+    def test_absent_schema_unchanged(self):
+        return DiffTestBlueprint(
+            sql="select * from t",
+            out="SELECT * FROM t;",
+        )

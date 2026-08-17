@@ -560,7 +560,10 @@ pub(super) fn interpret_core<'a>(
                     let FieldValue::Span(span) = fields[idx as usize] else {
                         panic!("IfSpan: field {idx} is not a Span");
                     };
-                    if span.is_empty() {
+                    // Absent means zero-length *and* unquoted, matching
+                    // `FmtOp::Span`: a zero-length quoted span is a real `""`
+                    // token, and treating it as absent drops it on output.
+                    if span.is_empty() && !span.is_quoted() {
                         ip += skip as usize;
                     }
                 }
