@@ -330,3 +330,30 @@ class WindowBaseName(TestSuite):
             sql="select sum(x) over () from t",
             out="SELECT sum(x) OVER () FROM t;",
         )
+
+
+class WindowClauseOrder(TestSuite):
+    def test_window_before_limit(self):
+        """Grammar order is `having_opt window_clause orderby_opt limit_opt`."""
+        return DiffTestBlueprint(
+            sql="select a from t window w as (order by a) limit 1",
+            out="SELECT a FROM t WINDOW w AS (ORDER BY a) LIMIT 1;",
+        )
+
+    def test_window_before_orderby(self):
+        return DiffTestBlueprint(
+            sql="select a from t window w as (order by a) order by a",
+            out="SELECT a FROM t WINDOW w AS (ORDER BY a) ORDER BY a;",
+        )
+
+    def test_window_before_orderby_and_limit(self):
+        return DiffTestBlueprint(
+            sql="select a from t window w as (order by a) order by a limit 1",
+            out="SELECT a FROM t WINDOW w AS (ORDER BY a) ORDER BY a LIMIT 1;",
+        )
+
+    def test_window_only(self):
+        return DiffTestBlueprint(
+            sql="select a from t window w as (order by a)",
+            out="SELECT a FROM t WINDOW w AS (ORDER BY a);",
+        )

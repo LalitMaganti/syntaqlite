@@ -44,9 +44,9 @@ node SelectStmt {
       clause("WHERE", where_clause)
       clause("GROUP", "BY", groupby)
       clause("HAVING", having)
+      clause("WINDOW", window_clause)
       clause("ORDER", "BY", orderby)
       if_set(limit_clause) { line "LIMIT" space child(limit_clause) }
-      clause("WINDOW", window_clause)
     }
   }
 }
