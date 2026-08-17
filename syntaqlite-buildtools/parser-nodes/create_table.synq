@@ -1,4 +1,4 @@
-enum ForeignKeyAction { NO_ACTION SET_NULL SET_DEFAULT CASCADE RESTRICT }
+enum ForeignKeyAction { UNSET NO_ACTION SET_NULL SET_DEFAULT CASCADE RESTRICT }
 enum GeneratedColumnStorage { VIRTUAL STORED }
 enum ColumnConstraintType { DEFAULT NOT_NULL PRIMARY_KEY UNIQUE CHECK REFERENCES COLLATE GENERATED NULL }
 enum TableConstraintType { PRIMARY_KEY UNIQUE CHECK FOREIGN_KEY }
@@ -18,12 +18,14 @@ node ForeignKeyClause {
     if_set(ref_columns) { group { "(" nest { softline child(ref_columns) } softline ")" } }
     if_span(match_name) { space "MATCH" space span(match_name) }
     switch(on_delete) {
+      NO_ACTION   { space "ON" "DELETE" "NO" "ACTION" }
       SET_NULL    { space "ON" "DELETE" "SET" "NULL" }
       SET_DEFAULT { space "ON" "DELETE" "SET" "DEFAULT" }
       CASCADE     { space "ON" "DELETE" "CASCADE" }
       RESTRICT    { space "ON" "DELETE" "RESTRICT" }
     }
     switch(on_update) {
+      NO_ACTION   { space "ON" "UPDATE" "NO" "ACTION" }
       SET_NULL    { space "ON" "UPDATE" "SET" "NULL" }
       SET_DEFAULT { space "ON" "UPDATE" "SET" "DEFAULT" }
       CASCADE     { space "ON" "UPDATE" "CASCADE" }

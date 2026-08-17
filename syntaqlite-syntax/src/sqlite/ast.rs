@@ -356,16 +356,18 @@ impl LikeKeyword {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum ForeignKeyAction {
-    NoAction = 0,
-    SetNull = 1,
-    SetDefault = 2,
-    Cascade = 3,
-    Restrict = 4,
+    Unset = 0,
+    NoAction = 1,
+    SetNull = 2,
+    SetDefault = 3,
+    Cascade = 4,
+    Restrict = 5,
 }
 
 impl ForeignKeyAction {
     pub fn as_str(&self) -> &'static str {
         match self {
+            ForeignKeyAction::Unset => "UNSET",
             ForeignKeyAction::NoAction => "NO_ACTION",
             ForeignKeyAction::SetNull => "SET_NULL",
             ForeignKeyAction::SetDefault => "SET_DEFAULT",

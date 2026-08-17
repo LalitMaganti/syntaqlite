@@ -52,7 +52,7 @@ static const char* const display_like_keyword[] = {
 };
 
 static const char* const display_foreign_key_action[] = {
-    "NO_ACTION", "SET_NULL", "SET_DEFAULT", "CASCADE", "RESTRICT",
+    "UNSET", "NO_ACTION", "SET_NULL", "SET_DEFAULT", "CASCADE", "RESTRICT",
 };
 
 static const char* const display_generated_column_storage[] = {

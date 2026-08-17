@@ -2520,11 +2520,12 @@ pub syntaqlite_syntax::nodes::Expr::RaiseExpr(syntaqlite_syntax::nodes::RaiseExp
 pub syntaqlite_syntax::nodes::Expr::SubqueryExpr(syntaqlite_syntax::nodes::SubqueryExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::UnaryExpr(syntaqlite_syntax::nodes::UnaryExpr<'a>)
 pub syntaqlite_syntax::nodes::Expr::Variable(syntaqlite_syntax::nodes::Variable<'a>)
-pub syntaqlite_syntax::nodes::ForeignKeyAction::Cascade = 3
-pub syntaqlite_syntax::nodes::ForeignKeyAction::NoAction = 0
-pub syntaqlite_syntax::nodes::ForeignKeyAction::Restrict = 4
-pub syntaqlite_syntax::nodes::ForeignKeyAction::SetDefault = 2
-pub syntaqlite_syntax::nodes::ForeignKeyAction::SetNull = 1
+pub syntaqlite_syntax::nodes::ForeignKeyAction::Cascade = 4
+pub syntaqlite_syntax::nodes::ForeignKeyAction::NoAction = 1
+pub syntaqlite_syntax::nodes::ForeignKeyAction::Restrict = 5
+pub syntaqlite_syntax::nodes::ForeignKeyAction::SetDefault = 3
+pub syntaqlite_syntax::nodes::ForeignKeyAction::SetNull = 2
+pub syntaqlite_syntax::nodes::ForeignKeyAction::Unset = 0
 pub syntaqlite_syntax::nodes::FrameBoundType::CurrentRow = 2
 pub syntaqlite_syntax::nodes::FrameBoundType::ExprFollowing = 3
 pub syntaqlite_syntax::nodes::FrameBoundType::ExprPreceding = 1

@@ -307,8 +307,8 @@ ccons(A) ::= defer_subclause(D). {
     // The printer will show it as a separate constraint entry.
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
         SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNQ_NO_SPAN,
-        SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION,
-        SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION,
+        SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
+        SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
         (SyntaqliteBool)D);
     A.node = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
@@ -385,8 +385,8 @@ autoinc(A) ::= AUTOINCR. {
 // SQLite ignores MATCH semantically, but the text still has to survive.
 
 refargs(A) ::= . {
-    A.on_delete = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
-    A.on_update = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+    A.on_delete = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
+    A.on_update = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
     A.match_name = SYNQ_NO_SPAN;
 }
 
@@ -401,13 +401,13 @@ refargs(A) ::= refargs(A) refarg(Y). {
 
 refarg(A) ::= MATCH nm(X). {
     A.kind = SYNQ_REFARG_MATCH;
-    A.action = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+    A.action = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
     A.match_name = synq_span(pCtx, X);
 }
 
 refarg(A) ::= ON INSERT refact. {
     A.kind = SYNQ_REFARG_NONE;
-    A.action = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+    A.action = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
     A.match_name = SYNQ_NO_SPAN;
 }
 

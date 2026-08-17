@@ -8025,8 +8025,8 @@ static YYACTIONTYPE yy_reduce(
       // deferral info. The printer will show it as a separate constraint entry.
       uint32_t fk = synq_parse_foreign_key_clause(
           pCtx, SYNQ_NO_SPAN, SYNTAQLITE_NULL_NODE, SYNQ_NO_SPAN,
-          SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION,
-          SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION,
+          SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
+          SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
           (SyntaqliteBool)yymsp[0].minor.yy320);
       yylhsminor.yy150.node = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES, SYNQ_NO_SPAN,
@@ -8093,8 +8093,8 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 90: /* refargs ::= */
     {
-      yymsp[1].minor.yy603.on_delete = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
-      yymsp[1].minor.yy603.on_update = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+      yymsp[1].minor.yy603.on_delete = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
+      yymsp[1].minor.yy603.on_update = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
       yymsp[1].minor.yy603.match_name = SYNQ_NO_SPAN;
     } break;
     case 91: /* refargs ::= refargs refarg */
@@ -8116,13 +8116,13 @@ static YYACTIONTYPE yy_reduce(
     case 92: /* refarg ::= MATCH nm */
     {
       yymsp[-1].minor.yy76.kind = SYNQ_REFARG_MATCH;
-      yymsp[-1].minor.yy76.action = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+      yymsp[-1].minor.yy76.action = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
       yymsp[-1].minor.yy76.match_name = synq_span(pCtx, yymsp[0].minor.yy0);
     } break;
     case 93: /* refarg ::= ON INSERT refact */
     {
       yymsp[-2].minor.yy76.kind = SYNQ_REFARG_NONE;
-      yymsp[-2].minor.yy76.action = SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION;
+      yymsp[-2].minor.yy76.action = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
       yymsp[-2].minor.yy76.match_name = SYNQ_NO_SPAN;
     } break;
     case 94: /* refarg ::= ON DELETE refact */
