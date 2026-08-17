@@ -124,7 +124,8 @@ columnlist(A) ::= columnname(CN) carglist(CG). {
 
 carglist(A) ::= carglist(L) ccons(C). {
     if (C.node != SYNTAQLITE_NULL_NODE) {
-        // Apply pending constraint name from the list to this node
+        // The name stays pending: SQLite reads it without clearing, so it
+        // names every constraint until a new column or a tconscomma.
         SyntaqliteNode *node = AST_NODE(&pCtx->ast, C.node);
         node->column_constraint.constraint_name = L.pending_name;
         if (L.list == SYNTAQLITE_NULL_NODE) {
@@ -132,7 +133,7 @@ carglist(A) ::= carglist(L) ccons(C). {
         } else {
             A.list = synq_parse_column_constraint_list(pCtx, L.list, C.node);
         }
-        A.pending_name = SYNQ_NO_SPAN;
+        A.pending_name = L.pending_name;
         A.last_node = C.node;
     } else if (C.pending_name.length > 0) {
         // CONSTRAINT nm — store pending name for next constraint
@@ -502,7 +503,7 @@ conslist(A) ::= conslist(L) tconscomma(SEP) tcons(TC). {
         } else {
             A.list = synq_parse_table_constraint_list(pCtx, L.list, TC.node);
         }
-        A.pending_name = SYNQ_NO_SPAN;
+        A.pending_name = pending;
         A.last_node = TC.node;
     } else if (TC.pending_name.length > 0) {
         A.list = L.list;
