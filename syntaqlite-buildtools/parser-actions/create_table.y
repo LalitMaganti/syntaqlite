@@ -91,6 +91,7 @@ table_option(A) ::= WITHOUT nm(X). {
         A = 1;
     } else {
         A = 0;
+        pCtx->error = 1;
     }
 }
 
@@ -100,6 +101,7 @@ table_option(A) ::= nm(X). {
         A = 2;
     } else {
         A = 0;
+        pCtx->error = 1;
     }
 }
 

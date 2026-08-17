@@ -7799,6 +7799,7 @@ static YYACTIONTYPE yy_reduce(
         yymsp[-1].minor.yy320 = 1;
       } else {
         yymsp[-1].minor.yy320 = 0;
+        pCtx->error = 1;
       }
     } break;
     case 65: /* table_option ::= nm */
@@ -7809,6 +7810,7 @@ static YYACTIONTYPE yy_reduce(
         yylhsminor.yy320 = 2;
       } else {
         yylhsminor.yy320 = 0;
+        pCtx->error = 1;
       }
     }
       yymsp[0].minor.yy320 = yylhsminor.yy320;
