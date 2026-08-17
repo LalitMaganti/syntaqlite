@@ -199,6 +199,25 @@ class ForeignKeyFormat(TestSuite):
             ),
         )
 
+    def test_references_on_insert(self):
+        # SQLite parses ON INSERT and ignores it; the text still has to survive.
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) on insert cascade)",
+            out="CREATE TABLE t(a int REFERENCES other(id) ON INSERT CASCADE);",
+        )
+
+    def test_references_on_insert_with_delete(self):
+        return DiffTestBlueprint(
+            sql=(
+                "create table t(a int references other(id) "
+                "on insert set null on delete cascade)"
+            ),
+            out=(
+                "CREATE TABLE t(a int REFERENCES other(id) "
+                "ON DELETE CASCADE ON INSERT SET NULL);"
+            ),
+        )
+
     def test_references_match(self):
         return DiffTestBlueprint(
             sql="create table t(a int references other(id) match full)",

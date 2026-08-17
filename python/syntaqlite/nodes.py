@@ -199,7 +199,7 @@ class CaseWhen:
 class ForeignKeyClause:
     """AST node: ForeignKeyClause"""
 
-    __slots__ = ("ref_table", "ref_columns", "match_name", "on_delete", "on_update", "is_deferred")
+    __slots__ = ("ref_table", "ref_columns", "match_name", "on_delete", "on_update", "on_insert", "is_deferred")
 
     def __init__(self, d: dict):
         self.ref_table: str | None = d.get("ref_table")
@@ -207,6 +207,7 @@ class ForeignKeyClause:
         self.match_name: str | None = d.get("match_name")
         self.on_delete: ForeignKeyAction = ForeignKeyAction[d["on_delete"]]
         self.on_update: ForeignKeyAction = ForeignKeyAction[d["on_update"]]
+        self.on_insert: ForeignKeyAction = ForeignKeyAction[d["on_insert"]]
         self.is_deferred: bool = d["is_deferred"]
 
     def __repr__(self):

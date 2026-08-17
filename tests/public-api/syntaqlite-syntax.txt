@@ -1469,6 +1469,7 @@ pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::is_deferred(&self) -> boo
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::match_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ForeignKeyClauseId
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::on_delete(&self) -> syntaqlite_syntax::nodes::ForeignKeyAction
+pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::on_insert(&self) -> syntaqlite_syntax::nodes::ForeignKeyAction
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::on_update(&self) -> syntaqlite_syntax::nodes::ForeignKeyAction
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::ref_columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::ForeignKeyClause<'a>::ref_table(&self) -> &'a str

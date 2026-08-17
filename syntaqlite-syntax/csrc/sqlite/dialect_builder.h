@@ -204,6 +204,7 @@ static inline uint32_t synq_parse_foreign_key_clause(
     SyntaqliteTextSpan match_name,
     SyntaqliteForeignKeyAction on_delete,
     SyntaqliteForeignKeyAction on_update,
+    SyntaqliteForeignKeyAction on_insert,
     SyntaqliteBool is_deferred) {
   return synq_parse_build(
       ctx,
@@ -213,6 +214,7 @@ static inline uint32_t synq_parse_foreign_key_clause(
                                     .match_name = match_name,
                                     .on_delete = on_delete,
                                     .on_update = on_update,
+                                    .on_insert = on_insert,
                                     .is_deferred = is_deferred},
       (uint32_t)sizeof(SyntaqliteForeignKeyClause));
 }

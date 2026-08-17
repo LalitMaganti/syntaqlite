@@ -147,6 +147,7 @@ pub(crate) struct ForeignKeyClause {
     pub(crate) match_name: TextSpan,
     pub(crate) on_delete: super::ast::ForeignKeyAction,
     pub(crate) on_update: super::ast::ForeignKeyAction,
+    pub(crate) on_insert: super::ast::ForeignKeyAction,
     pub(crate) is_deferred: Bool,
 }
 

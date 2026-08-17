@@ -90,6 +90,7 @@ typedef struct SynqUpsertValue {
 #define SYNQ_REFARG_DELETE 1
 #define SYNQ_REFARG_UPDATE 2
 #define SYNQ_REFARG_MATCH  3
+#define SYNQ_REFARG_INSERT 4
 
 typedef struct SynqRefArgValue {
   int kind;
@@ -100,6 +101,7 @@ typedef struct SynqRefArgValue {
 typedef struct SynqRefArgsValue {
   SyntaqliteForeignKeyAction on_delete;
   SyntaqliteForeignKeyAction on_update;
+  SyntaqliteForeignKeyAction on_insert;
   SyntaqliteTextSpan match_name;
 } SynqRefArgsValue;
 
