@@ -560,3 +560,17 @@ class ConstraintNamePropagation(TestSuite):
             sql="create table t(a constraint c check(a>0), b check(b>0))",
             out="CREATE TABLE t(a CONSTRAINT c CHECK(a > 0), b CHECK(b > 0));",
         )
+
+    def test_name_pending_after_last_column_names_first_table_constraint(self):
+        """`conslist_opt ::= COMMA conslist` is not a tconscomma, so it does
+        not clear the name a column left pending."""
+        return DiffTestBlueprint(
+            sql="create table t(a, b constraint xyz, check(a>0))",
+            out="CREATE TABLE t(a, b, CONSTRAINT xyz CHECK(a > 0));",
+        )
+
+    def test_unnamed_table_constraint_after_plain_column(self):
+        return DiffTestBlueprint(
+            sql="create table t(a, b, check(a>0))",
+            out="CREATE TABLE t(a, b, CHECK(a > 0));",
+        )

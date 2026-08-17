@@ -24,6 +24,8 @@
 #include "syntaqlite_dialect/arena.h"
 #include "syntaqlite_dialect/vec.h"
 
+#define SYNQ_NO_SPAN ((SyntaqliteTextSpan){0})
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -164,6 +166,9 @@ typedef struct SynqParseCtx {
   uint32_t has_macro_straddle;  // Sticky flag set during reduce.
   uint32_t lemon_depth;  // Lemon stack depth (always tracked, for lazy init).
   SYNQ_VEC(uint32_t) straddle_stack;  // Lazily initialized on first macro use.
+  // Name from `CONSTRAINT nm`, naming every constraint until the next column
+  // or comma clears it. Mirrors Parse.u1.cr.constraintName.
+  SyntaqliteTextSpan constraint_name;
 } SynqParseCtx;
 
 // Common header for all list nodes in the arena.
@@ -223,6 +228,7 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   ctx->has_macro_straddle = 0;
   ctx->lemon_depth = 0;
   syntaqlite_vec_init(&ctx->straddle_stack);
+  ctx->constraint_name = SYNQ_NO_SPAN;
 }
 
 static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
@@ -442,8 +448,6 @@ static inline SyntaqliteTextSpan synq_span_dequote(SynqParseCtx* ctx,
       ._layer_id = tok.layer_id,
   };
 }
-
-#define SYNQ_NO_SPAN ((SyntaqliteTextSpan){0})
 
 // Mark a token as "used as identifier" (fallback from keyword).
 // O(1) — uses the token_idx stored in SynqParseToken at collection time.

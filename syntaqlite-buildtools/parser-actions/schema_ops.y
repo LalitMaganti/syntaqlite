@@ -115,6 +115,8 @@ kwcolumn_opt(A) ::= COLUMNKW. {
 columnname(A) ::= nmorerr(X) typetoken(Y). {
     A.name = X;
     A.typetoken = Y.z ? synq_span(pCtx, Y) : SYNQ_NO_SPAN;
+    // Starting a column ends the previous one's pending CONSTRAINT name.
+    pCtx->constraint_name = SYNQ_NO_SPAN;
 }
 
 // ============ Transaction control ============
