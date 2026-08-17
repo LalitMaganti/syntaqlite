@@ -195,6 +195,7 @@ class ColumnConstraintType(IntEnum):
     COLLATE = 6
     GENERATED = 7
     NULL = 8
+    DEFERRABLE = 9
 
 
 class TableConstraintType(IntEnum):

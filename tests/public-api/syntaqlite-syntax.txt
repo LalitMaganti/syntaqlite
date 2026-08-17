@@ -1285,10 +1285,12 @@ pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::check_expr(&self) -> core
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::collation_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::constraint_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::default_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
+pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::deferrable(&self) -> syntaqlite_syntax::nodes::Deferrable
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::fk_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::ForeignKeyClause<'a>>
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::generated_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::generated_storage(&self) -> syntaqlite_syntax::nodes::GeneratedColumnStorage
+pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::initial_defer(&self) -> syntaqlite_syntax::nodes::InitialDeferMode
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::is_autoincrement(&self) -> bool
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::kind(&self) -> syntaqlite_syntax::nodes::ColumnConstraintType
 pub fn syntaqlite_syntax::nodes::ColumnConstraint<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ColumnConstraintId
@@ -2486,6 +2488,7 @@ pub syntaqlite_syntax::nodes::BinaryOp::Star = 2
 pub syntaqlite_syntax::nodes::ColumnConstraintType::Check = 4
 pub syntaqlite_syntax::nodes::ColumnConstraintType::Collate = 6
 pub syntaqlite_syntax::nodes::ColumnConstraintType::Default = 0
+pub syntaqlite_syntax::nodes::ColumnConstraintType::Deferrable = 9
 pub syntaqlite_syntax::nodes::ColumnConstraintType::Generated = 7
 pub syntaqlite_syntax::nodes::ColumnConstraintType::NotNull = 1
 pub syntaqlite_syntax::nodes::ColumnConstraintType::Null = 8

@@ -235,6 +235,8 @@ class CreateTableOptions(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -294,6 +296,8 @@ class CreateTableOptions(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -375,6 +379,8 @@ class ColumnConstraintDefault(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr:
                             Literal
                               literal_type: INTEGER
@@ -414,6 +420,8 @@ class ColumnConstraintDefault(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr:
                             Literal
                               literal_type: STRING
@@ -453,6 +461,8 @@ class ColumnConstraintDefault(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr:
                             UnaryExpr
                               op: MINUS
@@ -495,6 +505,8 @@ class ColumnConstraintDefault(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr:
                             BinaryExpr
                               op: PLUS
@@ -541,6 +553,8 @@ class ColumnConstraintDefault(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr:
                             ColumnRef
                               column: "TRUE"
@@ -585,6 +599,8 @@ class ColumnConstraintKeys(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -621,6 +637,8 @@ class ColumnConstraintKeys(TestSuite):
                           is_autoincrement: TRUE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -657,6 +675,8 @@ class ColumnConstraintKeys(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -693,6 +713,8 @@ class ColumnConstraintKeys(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -729,6 +751,8 @@ class ColumnConstraintKeys(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -769,6 +793,8 @@ class ColumnConstraintCheck(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr:
                             BinaryExpr
@@ -820,6 +846,8 @@ class ColumnConstraintReferences(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -870,6 +898,8 @@ class ColumnConstraintReferences(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -920,6 +950,8 @@ class ColumnConstraintReferences(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -974,6 +1006,8 @@ class ColumnConstraintCollate(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: "NOCASE"
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1020,6 +1054,8 @@ class ColumnConstraintGenerated(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: STORED
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr:
@@ -1073,6 +1109,8 @@ class ColumnConstraintGenerated(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr:
@@ -1124,6 +1162,8 @@ class ColumnConstraintName(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1541,6 +1581,8 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1591,6 +1633,8 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1641,6 +1685,8 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1691,6 +1737,8 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1745,6 +1793,8 @@ class OnConflictClause(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1781,6 +1831,8 @@ class OnConflictClause(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1817,6 +1869,8 @@ class OnConflictClause(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1941,6 +1995,8 @@ class MultipleColumnConstraints(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1953,6 +2009,8 @@ class MultipleColumnConstraints(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr:
                             Literal
                               literal_type: INTEGER
@@ -1968,6 +2026,8 @@ class MultipleColumnConstraints(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -2156,6 +2216,8 @@ class GeneratedColumn(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: STORED
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr:
@@ -2207,6 +2269,8 @@ class ColumnConstraintNull(TestSuite):
                           is_autoincrement: FALSE
                           collation_name: (none)
                           generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)

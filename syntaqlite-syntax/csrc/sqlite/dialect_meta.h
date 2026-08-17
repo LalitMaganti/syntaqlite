@@ -74,7 +74,7 @@ static const char* const display_generated_column_storage[] = {
 
 static const char* const display_column_constraint_type[] = {
     "DEFAULT",    "NOT_NULL", "PRIMARY_KEY", "UNIQUE", "CHECK",
-    "REFERENCES", "COLLATE",  "GENERATED",   "NULL",
+    "REFERENCES", "COLLATE",  "GENERATED",   "NULL",   "DEFERRABLE",
 };
 
 static const char* const display_table_constraint_type[] = {
@@ -413,6 +413,13 @@ static const SyntaqliteFieldMeta field_meta_column_constraint[] = {
      display_generated_column_storage,
      sizeof(display_generated_column_storage) /
          sizeof(display_generated_column_storage[0])},
+    {offsetof(SyntaqliteColumnConstraint, deferrable), SYNTAQLITE_FIELD_ENUM,
+     "deferrable", display_deferrable,
+     sizeof(display_deferrable) / sizeof(display_deferrable[0])},
+    {offsetof(SyntaqliteColumnConstraint, initial_defer), SYNTAQLITE_FIELD_ENUM,
+     "initial_defer", display_initial_defer_mode,
+     sizeof(display_initial_defer_mode) /
+         sizeof(display_initial_defer_mode[0])},
     {offsetof(SyntaqliteColumnConstraint, default_expr),
      SYNTAQLITE_FIELD_NODE_ID, "default_expr", NULL, 0},
     {offsetof(SyntaqliteColumnConstraint, check_expr), SYNTAQLITE_FIELD_NODE_ID,
@@ -1319,7 +1326,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* CaseWhen */
     0,  /* CaseWhenList */
     8,  /* ForeignKeyClause */
-    11, /* ColumnConstraint */
+    13, /* ColumnConstraint */
     0,  /* ColumnConstraintList */
     3,  /* ColumnDef */
     0,  /* ColumnDefList */

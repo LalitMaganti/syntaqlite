@@ -327,6 +327,8 @@ class AlterTableDropAdd(TestSuite):
                         is_autoincrement: FALSE
                         collation_name: (none)
                         generated_storage: VIRTUAL
+                        deferrable: UNSET
+                        initial_defer: UNSET
                         default_expr: (none)
                         check_expr: (none)
                         generated_expr: (none)
@@ -339,6 +341,8 @@ class AlterTableDropAdd(TestSuite):
                         is_autoincrement: FALSE
                         collation_name: (none)
                         generated_storage: VIRTUAL
+                        deferrable: UNSET
+                        initial_defer: UNSET
                         default_expr:
                           Literal
                             literal_type: INTEGER
