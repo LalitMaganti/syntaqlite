@@ -174,6 +174,40 @@ class ForeignKeyFormat(TestSuite):
             out="CREATE TABLE t(a int REFERENCES other(id) DEFERRABLE INITIALLY DEFERRED);",
         )
 
+    def test_references_match(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) match full)",
+            out="CREATE TABLE t(a int REFERENCES other(id) MATCH full);",
+        )
+
+    def test_references_match_with_actions(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) match simple on delete cascade)",
+            out=(
+                "CREATE TABLE t(a int REFERENCES other(id) MATCH simple "
+                "ON DELETE CASCADE);"
+            ),
+        )
+
+    def test_references_match_after_actions_is_canonicalized(self):
+        # refargs may appear in any order; the formatter emits MATCH first.
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) on delete cascade match partial)",
+            out=(
+                "CREATE TABLE t(a int REFERENCES other(id) MATCH partial "
+                "ON DELETE CASCADE);"
+            ),
+        )
+
+    def test_foreign_key_constraint_match(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int, foreign key(a) references other(id) match full)",
+            out=(
+                "CREATE TABLE t(a int, FOREIGN KEY(a) REFERENCES other(id) "
+                "MATCH full);"
+            ),
+        )
+
     def test_long_column_constraints_wrap(self):
         """Column constraints should wrap when they exceed the line width."""
         return DiffTestBlueprint(

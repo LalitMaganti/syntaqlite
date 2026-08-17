@@ -2404,6 +2404,9 @@ impl<'a> ForeignKeyClause<'a> {
     pub fn ref_columns(&self) -> Option<ExprList<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.ref_columns)
     }
+    pub fn match_name(&self) -> &'a str {
+        self.stmt_result.span_expanded_text(self.raw.match_name)
+    }
     pub fn on_delete(&self) -> ForeignKeyAction {
         self.raw.on_delete
     }

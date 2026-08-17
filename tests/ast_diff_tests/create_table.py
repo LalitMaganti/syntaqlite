@@ -832,6 +832,7 @@ class ColumnConstraintReferences(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
+                              match_name: (none)
                               on_delete: NO_ACTION
                               on_update: NO_ACTION
                               is_deferred: FALSE
@@ -879,6 +880,7 @@ class ColumnConstraintReferences(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
+                              match_name: (none)
                               on_delete: CASCADE
                               on_update: NO_ACTION
                               is_deferred: FALSE
@@ -926,6 +928,7 @@ class ColumnConstraintReferences(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
+                              match_name: (none)
                               on_delete: NO_ACTION
                               on_update: SET_NULL
                               is_deferred: FALSE
@@ -1387,6 +1390,7 @@ class TableConstraintForeignKey(TestSuite):
                               column: "id"
                               table: (none)
                               schema: (none)
+                        match_name: (none)
                         on_delete: NO_ACTION
                         on_update: NO_ACTION
                         is_deferred: FALSE
@@ -1436,6 +1440,7 @@ class TableConstraintForeignKey(TestSuite):
                               column: "id"
                               table: (none)
                               schema: (none)
+                        match_name: (none)
                         on_delete: CASCADE
                         on_update: SET_NULL
                         is_deferred: FALSE
@@ -1485,6 +1490,7 @@ class TableConstraintForeignKey(TestSuite):
                               column: "id"
                               table: (none)
                               schema: (none)
+                        match_name: (none)
                         on_delete: NO_ACTION
                         on_update: NO_ACTION
                         is_deferred: TRUE
@@ -1535,6 +1541,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
+                              match_name: (none)
                               on_delete: SET_DEFAULT
                               on_update: NO_ACTION
                               is_deferred: FALSE
@@ -1582,6 +1589,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
+                              match_name: (none)
                               on_delete: RESTRICT
                               on_update: NO_ACTION
                               is_deferred: FALSE
@@ -1629,6 +1637,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
+                              match_name: (none)
                               on_delete: NO_ACTION
                               on_update: SET_DEFAULT
                               is_deferred: FALSE
@@ -1676,6 +1685,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
+                              match_name: (none)
                               on_delete: NO_ACTION
                               on_update: RESTRICT
                               is_deferred: FALSE
@@ -2079,6 +2089,7 @@ class NamedTableConstraints(TestSuite):
                               column: "id"
                               table: (none)
                               schema: (none)
+                        match_name: (none)
                         on_delete: NO_ACTION
                         on_update: NO_ACTION
                         is_deferred: FALSE
