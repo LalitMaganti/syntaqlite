@@ -237,6 +237,7 @@ class CreateTableOptions(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -298,6 +299,7 @@ class CreateTableOptions(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -383,6 +385,7 @@ class ColumnConstraintDefault(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr:
                             Literal
                               literal_type: INTEGER
@@ -424,6 +427,7 @@ class ColumnConstraintDefault(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr:
                             Literal
                               literal_type: STRING
@@ -465,6 +469,7 @@ class ColumnConstraintDefault(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr:
                             UnaryExpr
                               op: MINUS
@@ -509,6 +514,7 @@ class ColumnConstraintDefault(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: TRUE
                           default_expr:
                             BinaryExpr
                               op: PLUS
@@ -557,11 +563,11 @@ class ColumnConstraintDefault(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr:
-                            ColumnRef
-                              column: "TRUE"
-                              table: (none)
-                              schema: (none)
+                            Literal
+                              literal_type: STRING
+                              source: "TRUE"
                           check_expr: (none)
                           generated_expr: (none)
                           fk_clause: (none)
@@ -603,6 +609,7 @@ class ColumnConstraintKeys(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -641,6 +648,7 @@ class ColumnConstraintKeys(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -679,6 +687,7 @@ class ColumnConstraintKeys(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -717,6 +726,7 @@ class ColumnConstraintKeys(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -755,6 +765,7 @@ class ColumnConstraintKeys(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -797,6 +808,7 @@ class ColumnConstraintCheck(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr:
                             BinaryExpr
@@ -850,6 +862,7 @@ class ColumnConstraintReferences(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -902,6 +915,7 @@ class ColumnConstraintReferences(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -954,6 +968,7 @@ class ColumnConstraintReferences(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1010,6 +1025,7 @@ class ColumnConstraintCollate(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1058,6 +1074,7 @@ class ColumnConstraintGenerated(TestSuite):
                           generated_storage: STORED
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr:
@@ -1113,6 +1130,7 @@ class ColumnConstraintGenerated(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr:
@@ -1166,6 +1184,7 @@ class ColumnConstraintName(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1585,6 +1604,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1637,6 +1657,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1689,6 +1710,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1741,6 +1763,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1797,6 +1820,7 @@ class OnConflictClause(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1835,6 +1859,7 @@ class OnConflictClause(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1873,6 +1898,7 @@ class OnConflictClause(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -1999,6 +2025,7 @@ class MultipleColumnConstraints(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -2013,6 +2040,7 @@ class MultipleColumnConstraints(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr:
                             Literal
                               literal_type: INTEGER
@@ -2030,6 +2058,7 @@ class MultipleColumnConstraints(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -2220,6 +2249,7 @@ class GeneratedColumn(TestSuite):
                           generated_storage: STORED
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr:
@@ -2273,6 +2303,7 @@ class ColumnConstraintNull(TestSuite):
                           generated_storage: VIRTUAL
                           deferrable: UNSET
                           initial_defer: UNSET
+                          default_has_parens: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)

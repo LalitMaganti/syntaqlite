@@ -2568,6 +2568,9 @@ impl<'a> ColumnConstraint<'a> {
     pub fn initial_defer(&self) -> InitialDeferMode {
         self.raw.initial_defer
     }
+    pub fn default_has_parens(&self) -> bool {
+        self.raw.default_has_parens == super::ffi::Bool::True
+    }
     pub fn default_expr(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.default_expr)
     }

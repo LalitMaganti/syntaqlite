@@ -82,7 +82,7 @@ class AlterTableFormat(TestSuite):
     def test_add_column_not_null_default(self):
         return DiffTestBlueprint(
             sql="alter table t add column c1 text not null default ''",
-            out="ALTER TABLE t ADD COLUMN c1 text NOT NULL DEFAULT ('');",
+            out="ALTER TABLE t ADD COLUMN c1 text NOT NULL DEFAULT '';",
         )
 
     def test_add_column_named_constraint(self):

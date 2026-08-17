@@ -218,7 +218,7 @@ class ForeignKeyClause:
 class ColumnConstraint:
     """AST node: ColumnConstraint"""
 
-    __slots__ = ("kind", "constraint_name", "onconf", "sort_order", "is_autoincrement", "collation_name", "generated_storage", "deferrable", "initial_defer", "default_expr", "check_expr", "generated_expr", "fk_clause")
+    __slots__ = ("kind", "constraint_name", "onconf", "sort_order", "is_autoincrement", "collation_name", "generated_storage", "deferrable", "initial_defer", "default_has_parens", "default_expr", "check_expr", "generated_expr", "fk_clause")
 
     def __init__(self, d: dict):
         self.kind: ColumnConstraintType = ColumnConstraintType[d["kind"]]
@@ -230,6 +230,7 @@ class ColumnConstraint:
         self.generated_storage: GeneratedColumnStorage = GeneratedColumnStorage[d["generated_storage"]]
         self.deferrable: Deferrable = Deferrable[d["deferrable"]]
         self.initial_defer: InitialDeferMode = InitialDeferMode[d["initial_defer"]]
+        self.default_has_parens: bool = d["default_has_parens"]
         self.default_expr: Expr | None = _wrap(d.get("default_expr"))
         self.check_expr: Expr | None = _wrap(d.get("check_expr"))
         self.generated_expr: Expr | None = _wrap(d.get("generated_expr"))

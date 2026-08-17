@@ -122,13 +122,13 @@ class ColumnConstraintFormat(TestSuite):
     def test_default_integer(self):
         return DiffTestBlueprint(
             sql="create table t(a int default 42)",
-            out="CREATE TABLE t(a int DEFAULT (42));",
+            out="CREATE TABLE t(a int DEFAULT 42);",
         )
 
     def test_default_string(self):
         return DiffTestBlueprint(
             sql="create table t(a text default 'hello')",
-            out="CREATE TABLE t(a text DEFAULT ('hello'));",
+            out="CREATE TABLE t(a text DEFAULT 'hello');",
         )
 
     def test_check(self):
@@ -598,4 +598,49 @@ class ConstraintNamePropagation(TestSuite):
         return DiffTestBlueprint(
             sql="create table t(a, constraint foo, check(a>0))",
             out="CREATE TABLE t(a, CHECK(a > 0));",
+        )
+
+
+class DefaultValueFidelity(TestSuite):
+    """`DEFAULT` has four productions upstream and only one takes parens.
+
+    Adding parens to the others changes what SQLite sees: a bare identifier
+    is a string literal in `DEFAULT foo`, but a column reference — and so
+    not constant — in `DEFAULT (foo)`.
+    """
+
+    def test_default_bare_identifier(self):
+        return DiffTestBlueprint(
+            sql="create table t(a default foo)",
+            out="CREATE TABLE t(a DEFAULT foo);",
+        )
+
+    def test_default_parenthesised_expression_keeps_parens(self):
+        return DiffTestBlueprint(
+            sql="create table t(a default (1+2))",
+            out="CREATE TABLE t(a DEFAULT (1 + 2));",
+        )
+
+    def test_default_integer_keeps_source_form(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int default 42)",
+            out="CREATE TABLE t(a int DEFAULT 42);",
+        )
+
+    def test_default_string_keeps_source_form(self):
+        return DiffTestBlueprint(
+            sql="create table t(a text default 'hello')",
+            out="CREATE TABLE t(a text DEFAULT 'hello');",
+        )
+
+    def test_default_negative_number(self):
+        return DiffTestBlueprint(
+            sql="create table t(a default -1)",
+            out="CREATE TABLE t(a DEFAULT -1);",
+        )
+
+    def test_default_unary_plus_is_preserved(self):
+        return DiffTestBlueprint(
+            sql="create table t(a default +1)",
+            out="CREATE TABLE t(a DEFAULT +1);",
         )
