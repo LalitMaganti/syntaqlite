@@ -22,7 +22,6 @@
 %type defer_subclause_opt {SynqDeferValue}
 %type table_option_set {int}
 %type table_option {int}
-%type tconscomma {int}
 %type onconf {int}
 %type ccons {SynqConstraintValue}
 %type carglist {SynqConstraintListValue}
@@ -127,7 +126,7 @@ carglist(A) ::= carglist(L) ccons(C). {
         // The name stays pending: SQLite reads it without clearing, so it
         // names every constraint until a new column or a tconscomma.
         SyntaqliteNode *node = AST_NODE(&pCtx->ast, C.node);
-        node->column_constraint.constraint_name = L.pending_name;
+        node->column_constraint.constraint_name = pCtx->constraint_name;
         if (L.list == SYNTAQLITE_NULL_NODE) {
             A.list = synq_parse_column_constraint_list(pCtx, SYNTAQLITE_NULL_NODE, C.node);
         } else {
@@ -157,6 +156,7 @@ carglist(A) ::= . {
 ccons(A) ::= CONSTRAINT nm(X). {
     A.node = SYNTAQLITE_NULL_NODE;
     A.pending_name = synq_span(pCtx, X);
+    pCtx->constraint_name = A.pending_name;
 }
 
 // DEFAULT scantok term
@@ -492,9 +492,9 @@ conslist_opt(A) ::= COMMA conslist(L). {
     A = L.list;
 }
 
-conslist(A) ::= conslist(L) tconscomma(SEP) tcons(TC). {
+conslist(A) ::= conslist(L) tconscomma tcons(TC). {
     // If comma separator was present, clear pending constraint name
-    SyntaqliteTextSpan pending = SEP ? SYNQ_NO_SPAN : L.pending_name;
+    SyntaqliteTextSpan pending = pCtx->constraint_name;
     if (TC.node != SYNTAQLITE_NULL_NODE) {
         SyntaqliteNode *node = AST_NODE(&pCtx->ast, TC.node);
         node->table_constraint.constraint_name = pending;
@@ -516,8 +516,10 @@ conslist(A) ::= conslist(L) tconscomma(SEP) tcons(TC). {
 
 conslist(A) ::= tcons(TC). {
     if (TC.node != SYNTAQLITE_NULL_NODE) {
+        SyntaqliteNode *node = AST_NODE(&pCtx->ast, TC.node);
+        node->table_constraint.constraint_name = pCtx->constraint_name;
         A.list = synq_parse_table_constraint_list(pCtx, SYNTAQLITE_NULL_NODE, TC.node);
-        A.pending_name = SYNQ_NO_SPAN;
+        A.pending_name = pCtx->constraint_name;
         A.last_node = TC.node;
     } else {
         A.list = SYNTAQLITE_NULL_NODE;
@@ -526,14 +528,15 @@ conslist(A) ::= tcons(TC). {
     }
 }
 
-tconscomma(A) ::= COMMA. { A = 1; }
-tconscomma(A) ::= . { A = 0; }
+tconscomma ::= COMMA. { pCtx->constraint_name = SYNQ_NO_SPAN; }
+tconscomma ::= . { }
 
 // ============ Table constraints (tcons) ============
 
 tcons(A) ::= CONSTRAINT nm(X). {
     A.node = SYNTAQLITE_NULL_NODE;
     A.pending_name = synq_span(pCtx, X);
+    pCtx->constraint_name = A.pending_name;
 }
 
 tcons(A) ::= PRIMARY KEY LP sortlist(X) autoinc(I) RP onconf(R). {
