@@ -46,6 +46,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
                                          alias, SYNTAQLITE_NULL_NODE,
                                          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
     if (A == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, N);
         A = tref;
     } else {
         SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
@@ -76,6 +77,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
                                          alias, SYNTAQLITE_NULL_NODE,
                                          ih, synq_span(pCtx, I));
     if (A == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, N);
         A = tref;
     } else {
         SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
@@ -105,6 +107,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N
                                          alias, E,
                                          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
     if (A == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, N);
         A = tref;
     } else {
         SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
@@ -121,6 +124,7 @@ seltablist(A) ::= stl_prefix(A) LP select(S) RP as(Z) on_using(N). {
     uint32_t alias = Z;
     uint32_t sub = synq_parse_subquery_table_source(pCtx, S, alias);
     if (A == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, N);
         A = sub;
     } else {
         SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
@@ -140,6 +144,7 @@ seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
     } else {
         uint32_t paren = synq_parse_paren_table_source(pCtx, F, Z);
         if (A == SYNTAQLITE_NULL_NODE) {
+            synq_reject_dangling_on_using(pCtx, N);
             A = paren;
         } else {
             SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
