@@ -54,48 +54,49 @@ pub enum NodeTag {
     ParenExpr = 36,
     IdentName = 37,
     Error = 38,
-    ExprList = 39,
-    FunctionCall = 40,
-    Variable = 41,
-    CollateExpr = 42,
-    RaiseExpr = 43,
-    QualifiedName = 44,
-    DropStmt = 45,
-    AlterTableStmt = 46,
-    TransactionStmt = 47,
-    SavepointStmt = 48,
-    ResultColumn = 49,
-    ResultColumnList = 50,
-    SelectStmt = 51,
-    OrderingTerm = 52,
-    OrderByList = 53,
-    LimitClause = 54,
-    TableRef = 55,
-    SubqueryTableSource = 56,
-    ParenTableSource = 57,
-    JoinClause = 58,
-    JoinPrefix = 59,
-    TriggerEvent = 60,
-    TriggerCmdList = 61,
-    CreateTriggerStmt = 62,
-    CreateVirtualTableStmt = 63,
-    PragmaStmt = 64,
-    AnalyzeOrReindexStmt = 65,
-    AttachStmt = 66,
-    DetachStmt = 67,
-    VacuumStmt = 68,
-    ExplainStmt = 69,
-    CreateIndexStmt = 70,
-    CreateViewStmt = 71,
-    ValuesRowList = 72,
-    ValuesClause = 73,
-    FrameBound = 74,
-    FrameSpec = 75,
-    WindowDef = 76,
-    WindowDefList = 77,
-    NamedWindowDef = 78,
-    NamedWindowDefList = 79,
-    FilterOver = 80,
+    RowValue = 39,
+    ExprList = 40,
+    FunctionCall = 41,
+    Variable = 42,
+    CollateExpr = 43,
+    RaiseExpr = 44,
+    QualifiedName = 45,
+    DropStmt = 46,
+    AlterTableStmt = 47,
+    TransactionStmt = 48,
+    SavepointStmt = 49,
+    ResultColumn = 50,
+    ResultColumnList = 51,
+    SelectStmt = 52,
+    OrderingTerm = 53,
+    OrderByList = 54,
+    LimitClause = 55,
+    TableRef = 56,
+    SubqueryTableSource = 57,
+    ParenTableSource = 58,
+    JoinClause = 59,
+    JoinPrefix = 60,
+    TriggerEvent = 61,
+    TriggerCmdList = 62,
+    CreateTriggerStmt = 63,
+    CreateVirtualTableStmt = 64,
+    PragmaStmt = 65,
+    AnalyzeOrReindexStmt = 66,
+    AttachStmt = 67,
+    DetachStmt = 68,
+    VacuumStmt = 69,
+    ExplainStmt = 70,
+    CreateIndexStmt = 71,
+    CreateViewStmt = 72,
+    ValuesRowList = 73,
+    ValuesClause = 74,
+    FrameBound = 75,
+    FrameSpec = 76,
+    WindowDef = 77,
+    WindowDefList = 78,
+    NamedWindowDef = 79,
+    NamedWindowDefList = 80,
+    FilterOver = 81,
 }
 
 impl From<NodeTag> for crate::any::AnyNodeTag {
@@ -146,48 +147,49 @@ impl NodeTag {
             36 => Some(NodeTag::ParenExpr),
             37 => Some(NodeTag::IdentName),
             38 => Some(NodeTag::Error),
-            39 => Some(NodeTag::ExprList),
-            40 => Some(NodeTag::FunctionCall),
-            41 => Some(NodeTag::Variable),
-            42 => Some(NodeTag::CollateExpr),
-            43 => Some(NodeTag::RaiseExpr),
-            44 => Some(NodeTag::QualifiedName),
-            45 => Some(NodeTag::DropStmt),
-            46 => Some(NodeTag::AlterTableStmt),
-            47 => Some(NodeTag::TransactionStmt),
-            48 => Some(NodeTag::SavepointStmt),
-            49 => Some(NodeTag::ResultColumn),
-            50 => Some(NodeTag::ResultColumnList),
-            51 => Some(NodeTag::SelectStmt),
-            52 => Some(NodeTag::OrderingTerm),
-            53 => Some(NodeTag::OrderByList),
-            54 => Some(NodeTag::LimitClause),
-            55 => Some(NodeTag::TableRef),
-            56 => Some(NodeTag::SubqueryTableSource),
-            57 => Some(NodeTag::ParenTableSource),
-            58 => Some(NodeTag::JoinClause),
-            59 => Some(NodeTag::JoinPrefix),
-            60 => Some(NodeTag::TriggerEvent),
-            61 => Some(NodeTag::TriggerCmdList),
-            62 => Some(NodeTag::CreateTriggerStmt),
-            63 => Some(NodeTag::CreateVirtualTableStmt),
-            64 => Some(NodeTag::PragmaStmt),
-            65 => Some(NodeTag::AnalyzeOrReindexStmt),
-            66 => Some(NodeTag::AttachStmt),
-            67 => Some(NodeTag::DetachStmt),
-            68 => Some(NodeTag::VacuumStmt),
-            69 => Some(NodeTag::ExplainStmt),
-            70 => Some(NodeTag::CreateIndexStmt),
-            71 => Some(NodeTag::CreateViewStmt),
-            72 => Some(NodeTag::ValuesRowList),
-            73 => Some(NodeTag::ValuesClause),
-            74 => Some(NodeTag::FrameBound),
-            75 => Some(NodeTag::FrameSpec),
-            76 => Some(NodeTag::WindowDef),
-            77 => Some(NodeTag::WindowDefList),
-            78 => Some(NodeTag::NamedWindowDef),
-            79 => Some(NodeTag::NamedWindowDefList),
-            80 => Some(NodeTag::FilterOver),
+            39 => Some(NodeTag::RowValue),
+            40 => Some(NodeTag::ExprList),
+            41 => Some(NodeTag::FunctionCall),
+            42 => Some(NodeTag::Variable),
+            43 => Some(NodeTag::CollateExpr),
+            44 => Some(NodeTag::RaiseExpr),
+            45 => Some(NodeTag::QualifiedName),
+            46 => Some(NodeTag::DropStmt),
+            47 => Some(NodeTag::AlterTableStmt),
+            48 => Some(NodeTag::TransactionStmt),
+            49 => Some(NodeTag::SavepointStmt),
+            50 => Some(NodeTag::ResultColumn),
+            51 => Some(NodeTag::ResultColumnList),
+            52 => Some(NodeTag::SelectStmt),
+            53 => Some(NodeTag::OrderingTerm),
+            54 => Some(NodeTag::OrderByList),
+            55 => Some(NodeTag::LimitClause),
+            56 => Some(NodeTag::TableRef),
+            57 => Some(NodeTag::SubqueryTableSource),
+            58 => Some(NodeTag::ParenTableSource),
+            59 => Some(NodeTag::JoinClause),
+            60 => Some(NodeTag::JoinPrefix),
+            61 => Some(NodeTag::TriggerEvent),
+            62 => Some(NodeTag::TriggerCmdList),
+            63 => Some(NodeTag::CreateTriggerStmt),
+            64 => Some(NodeTag::CreateVirtualTableStmt),
+            65 => Some(NodeTag::PragmaStmt),
+            66 => Some(NodeTag::AnalyzeOrReindexStmt),
+            67 => Some(NodeTag::AttachStmt),
+            68 => Some(NodeTag::DetachStmt),
+            69 => Some(NodeTag::VacuumStmt),
+            70 => Some(NodeTag::ExplainStmt),
+            71 => Some(NodeTag::CreateIndexStmt),
+            72 => Some(NodeTag::CreateViewStmt),
+            73 => Some(NodeTag::ValuesRowList),
+            74 => Some(NodeTag::ValuesClause),
+            75 => Some(NodeTag::FrameBound),
+            76 => Some(NodeTag::FrameSpec),
+            77 => Some(NodeTag::WindowDef),
+            78 => Some(NodeTag::WindowDefList),
+            79 => Some(NodeTag::NamedWindowDef),
+            80 => Some(NodeTag::NamedWindowDefList),
+            81 => Some(NodeTag::FilterOver),
             _ => None,
         }
     }
@@ -1165,6 +1167,7 @@ pub enum Expr<'a> {
     SubqueryExpr(SubqueryExpr<'a>),
     ExistsExpr(ExistsExpr<'a>),
     RaiseExpr(RaiseExpr<'a>),
+    RowValue(RowValue<'a>),
 }
 
 impl<'a> Expr<'a> {
@@ -1191,6 +1194,7 @@ impl<'a> Expr<'a> {
             Expr::SubqueryExpr(n) => ExprId(n.node_id().into()),
             Expr::ExistsExpr(n) => ExprId(n.node_id().into()),
             Expr::RaiseExpr(n) => ExprId(n.node_id().into()),
+            Expr::RowValue(n) => ExprId(n.node_id().into()),
         }
     }
 }
@@ -1219,6 +1223,7 @@ impl<'a> GrammarNodeType<'a> for Expr<'a> {
             Node::SubqueryExpr(n) => Some(Expr::SubqueryExpr(n)),
             Node::ExistsExpr(n) => Some(Expr::ExistsExpr(n)),
             Node::RaiseExpr(n) => Some(Expr::RaiseExpr(n)),
+            Node::RowValue(n) => Some(Expr::RowValue(n)),
             _ => None,
         }
     }
@@ -3887,6 +3892,75 @@ impl From<ErrorId> for AnyNodeId {
 
 impl TypedNodeId for ErrorId {
     type Node<'a> = Error<'a>;
+}
+
+#[derive(Clone, Copy)]
+pub struct RowValue<'a> {
+    raw: &'a super::ffi::RowValue,
+    stmt_result: &'a AnyParsedStatement<'a>,
+    id: AnyNodeId,
+}
+
+impl std::fmt::Debug for RowValue<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.raw.fmt(f)
+    }
+}
+
+impl std::fmt::Display for RowValue<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        AnyNode {
+            id: self.id,
+            stmt_result: self.stmt_result,
+        }
+        .fmt(f)
+    }
+}
+
+impl<'a> RowValue<'a> {
+    /// The typed node ID of this node.
+    pub fn node_id(&self) -> RowValueId {
+        RowValueId(self.id)
+    }
+    pub fn items(&self) -> Option<ExprList<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.items)
+    }
+}
+
+impl<'a> GrammarNodeType<'a> for RowValue<'a> {
+    fn from_result(stmt_result: &'a AnyParsedStatement<'a>, id: AnyNodeId) -> Option<Self> {
+        let raw = stmt_result.resolve_as::<super::ffi::RowValue>(id)?;
+        Some(RowValue {
+            raw,
+            stmt_result,
+            id,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct RowValueId(AnyNodeId);
+
+impl RowValueId {
+    pub fn into_inner(self) -> AnyNodeId {
+        self.0
+    }
+}
+
+impl<'a> From<RowValue<'a>> for RowValueId {
+    fn from(n: RowValue<'a>) -> Self {
+        n.node_id()
+    }
+}
+
+impl From<RowValueId> for AnyNodeId {
+    fn from(id: RowValueId) -> AnyNodeId {
+        id.0
+    }
+}
+
+impl TypedNodeId for RowValueId {
+    type Node<'a> = RowValue<'a>;
 }
 
 #[derive(Clone, Copy)]
@@ -7002,6 +7076,7 @@ pub enum Node<'a> {
     ParenExpr(ParenExpr<'a>),
     IdentName(IdentName<'a>),
     Error(Error<'a>),
+    RowValue(RowValue<'a>),
     /// List of [`Expr`].
     ExprList(ExprList<'a>),
     FunctionCall(FunctionCall<'a>),
@@ -7251,6 +7326,11 @@ impl<'a> Node<'a> {
                 }),
                 NodeTag::Error => Node::Error(Error {
                     raw: &*ptr.cast::<super::ffi::Error>(),
+                    stmt_result,
+                    id,
+                }),
+                NodeTag::RowValue => Node::RowValue(RowValue {
+                    raw: &*ptr.cast::<super::ffi::RowValue>(),
                     stmt_result,
                     id,
                 }),
@@ -7513,6 +7593,7 @@ impl<'a> Node<'a> {
             Node::ParenExpr(..) => NodeTag::ParenExpr,
             Node::IdentName(..) => NodeTag::IdentName,
             Node::Error(..) => NodeTag::Error,
+            Node::RowValue(..) => NodeTag::RowValue,
             Node::ExprList(..) => NodeTag::ExprList,
             Node::FunctionCall(..) => NodeTag::FunctionCall,
             Node::Variable(..) => NodeTag::Variable,
@@ -7600,6 +7681,7 @@ impl<'a> Node<'a> {
             Node::ParenExpr(n) => NodeId(n.node_id().into()),
             Node::IdentName(n) => NodeId(n.node_id().into()),
             Node::Error(n) => NodeId(n.node_id().into()),
+            Node::RowValue(n) => NodeId(n.node_id().into()),
             Node::ExprList(n) => NodeId(n.node_id().into()),
             Node::FunctionCall(n) => NodeId(n.node_id().into()),
             Node::Variable(n) => NodeId(n.node_id().into()),

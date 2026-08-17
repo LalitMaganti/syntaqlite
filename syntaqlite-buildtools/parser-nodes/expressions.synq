@@ -88,6 +88,15 @@ node Error {
   }
 }
 
+// `(a, b)` in an expression position. Upstream models this as TK_VECTOR:
+// without a node of its own the parens are lost wherever the surrounding
+// context does not supply them, and nested lists splice into their parent.
+node RowValue {
+  items: index ExprList
+
+  fmt { group { "(" nest { softline child(items) } softline ")" } }
+}
+
 list ExprList { Expr }
 
 abstract Name {
@@ -99,7 +108,7 @@ abstract Expr {
   FunctionCall AggregateFunctionCall OrderedSetFunctionCall
   CastExpr CollateExpr CaseExpr
   IsExpr BetweenExpr LikeExpr InExpr
-  SubqueryExpr ExistsExpr RaiseExpr
+  SubqueryExpr ExistsExpr RaiseExpr RowValue
 }
 
 abstract Stmt {

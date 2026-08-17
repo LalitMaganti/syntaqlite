@@ -643,6 +643,11 @@ static const SyntaqliteFieldMeta field_meta_error[] = {
      0},
 };
 
+static const SyntaqliteFieldMeta field_meta_row_value[] = {
+    {offsetof(SyntaqliteRowValue, items), SYNTAQLITE_FIELD_NODE_ID, "items",
+     NULL, 0},
+};
+
 static const SyntaqliteFieldMeta field_meta_function_call[] = {
     {offsetof(SyntaqliteFunctionCall, func_name), SYNTAQLITE_FIELD_SPAN,
      "func_name", NULL, 0},
@@ -1198,6 +1203,7 @@ static const char* const ast_meta_node_names[] = {
     "ParenExpr",
     "IdentName",
     "Error",
+    "RowValue",
     "ExprList",
     "FunctionCall",
     "Variable",
@@ -1284,6 +1290,7 @@ static const SyntaqliteFieldMeta* const ast_meta_field_meta[] = {
     field_meta_paren_expr,                /* ParenExpr */
     field_meta_ident_name,                /* IdentName */
     field_meta_error,                     /* Error */
+    field_meta_row_value,                 /* RowValue */
     NULL,                                 /* ExprList */
     field_meta_function_call,             /* FunctionCall */
     field_meta_variable,                  /* Variable */
@@ -1368,6 +1375,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     1,  /* ParenExpr */
     1,  /* IdentName */
     1,  /* Error */
+    1,  /* RowValue */
     0,  /* ExprList */
     5,  /* FunctionCall */
     1,  /* Variable */
@@ -1454,6 +1462,7 @@ static const uint8_t ast_meta_list_tags[] = {
     0, /* ParenExpr */
     0, /* IdentName */
     0, /* Error */
+    0, /* RowValue */
     1, /* ExprList */
     0, /* FunctionCall */
     0, /* Variable */
@@ -1540,6 +1549,7 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                 /* ParenExpr */
     {range_meta_ident_name, 1},                /* IdentName */
     {range_meta_error, 1},                     /* Error */
+    {NULL, 0},                                 /* RowValue */
     {NULL, 0},                                 /* ExprList */
     {range_meta_function_call, 1},             /* FunctionCall */
     {range_meta_variable, 1},                  /* Variable */
