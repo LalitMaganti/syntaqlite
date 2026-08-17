@@ -330,6 +330,7 @@ class AlterTableDropAdd(TestSuite):
                         deferrable: UNSET
                         initial_defer: UNSET
                         default_has_parens: FALSE
+                        generated_always: FALSE
                         default_expr: (none)
                         check_expr: (none)
                         generated_expr: (none)
@@ -345,6 +346,7 @@ class AlterTableDropAdd(TestSuite):
                         deferrable: UNSET
                         initial_defer: UNSET
                         default_has_parens: FALSE
+                        generated_always: FALSE
                         default_expr:
                           Literal
                             literal_type: INTEGER

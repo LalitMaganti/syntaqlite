@@ -166,6 +166,7 @@ pub(crate) struct ColumnConstraint {
     pub(crate) deferrable: super::ast::Deferrable,
     pub(crate) initial_defer: super::ast::InitialDeferMode,
     pub(crate) default_has_parens: Bool,
+    pub(crate) generated_always: Bool,
     pub(crate) default_expr: AnyNodeId,
     pub(crate) check_expr: AnyNodeId,
     pub(crate) generated_expr: AnyNodeId,

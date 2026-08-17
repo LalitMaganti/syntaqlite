@@ -68,6 +68,7 @@ class SqliteAmalgRuntimeOnly(TestSuite):
                           deferrable: UNSET
                           initial_defer: UNSET
                           default_has_parens: FALSE
+                          generated_always: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)
@@ -90,6 +91,7 @@ class SqliteAmalgRuntimeOnly(TestSuite):
                           deferrable: UNSET
                           initial_defer: UNSET
                           default_has_parens: FALSE
+                          generated_always: FALSE
                           default_expr: (none)
                           check_expr: (none)
                           generated_expr: (none)

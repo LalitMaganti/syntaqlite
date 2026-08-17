@@ -169,6 +169,9 @@ typedef struct SynqParseCtx {
   // Name from `CONSTRAINT nm`, naming every constraint until the next column
   // or comma clears it. Mirrors Parse.u1.cr.constraintName.
   SyntaqliteTextSpan constraint_name;
+  // Set when `GENERATED ALWAYS` was trimmed off a column's type name, so the
+  // `AS` production can still emit the keywords.
+  uint32_t generated_always;
 } SynqParseCtx;
 
 // Common header for all list nodes in the arena.
@@ -229,6 +232,7 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   ctx->lemon_depth = 0;
   syntaqlite_vec_init(&ctx->straddle_stack);
   ctx->constraint_name = SYNQ_NO_SPAN;
+  ctx->generated_always = 0;
 }
 
 static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {

@@ -125,6 +125,33 @@ typedef struct SynqParenExprlistValue {
 
 #define YYPARSEFREENEVERNULL 1
 
+// The ID fallback lets `GENERATED ALWAYS` be absorbed into a preceding type
+// name. Trim it back off as sqlite3AddColumn does, reporting whether it was
+// there so the keywords can still be emitted.
+static inline int synq_trim_generated_always(SynqParseToken* t) {
+  if (t->z == NULL || t->n < 16) {
+    return 0;
+  }
+  if (SYNQ_STRNCASECMP(t->z + (t->n - 6), "always", 6) != 0) {
+    return 0;
+  }
+  int n = t->n - 6;
+  while (n > 0 && (t->z[n - 1] == ' ' || t->z[n - 1] == '\t' ||
+                   t->z[n - 1] == '\n' || t->z[n - 1] == '\r')) {
+    n--;
+  }
+  if (n < 9 || SYNQ_STRNCASECMP(t->z + (n - 9), "generated", 9) != 0) {
+    return 0;
+  }
+  n -= 9;
+  while (n > 0 && (t->z[n - 1] == ' ' || t->z[n - 1] == '\t' ||
+                   t->z[n - 1] == '\n' || t->z[n - 1] == '\r')) {
+    n--;
+  }
+  t->n = n;
+  return 1;
+}
+
 // Join keywords are an unordered set, not a sequence; see sqlite3JoinType().
 #define SYNQ_JT_INNER   0x01
 #define SYNQ_JT_CROSS   0x02
