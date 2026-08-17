@@ -2,7 +2,7 @@ enum SortOrder { ASC DESC }
 enum NullsOrder { NONE FIRST LAST }
 
 flags ResultColumnFlags { STAR = 1 }
-flags SelectStmtFlags { DISTINCT = 1 }
+flags SelectStmtFlags { DISTINCT = 1 ALL = 4 }
 
 node ResultColumn {
   flags: inline ResultColumnFlags
@@ -38,7 +38,9 @@ node SelectStmt {
 
   fmt {
     group {
-      if_flag(flags.distinct) { "SELECT" "DISTINCT" } else { "SELECT" }
+      if_flag(flags.distinct) { "SELECT" "DISTINCT" } else {
+        if_flag(flags.all) { "SELECT" "ALL" } else { "SELECT" }
+      }
       if_set(columns) { group { nest { line child(columns) } } }
       if_set(from_clause) { line "FROM" space child(from_clause) }
       clause("WHERE", where_clause)

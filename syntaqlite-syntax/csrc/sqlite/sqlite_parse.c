@@ -7674,8 +7674,6 @@ static YYACTIONTYPE yy_reduce(
     case 43:  /* between_op ::= BETWEEN */
     case 212: /* sortorder ::= ASC */
       yytestcase(yyruleno == 212);
-    case 268: /* distinct ::= ALL */
-      yytestcase(yyruleno == 268);
       {
         yymsp[0].minor.yy277 = 0;
       }
@@ -9396,6 +9394,12 @@ static YYACTIONTYPE yy_reduce(
     }
       yymsp[-2].minor.yy277 = yylhsminor.yy277;
       break;
+    case 268: /* distinct ::= ALL */
+    {
+      // Bit 2 is STAR in FunctionCallFlags, so ALL takes bit 4 in every set
+      // that this value is cast into.
+      yymsp[0].minor.yy277 = 4;
+    } break;
     case 275: /* groupby_opt ::= GROUP BY nexprlist */
     case 279: /* orderby_opt ::= ORDER BY sortlist */
       yytestcase(yyruleno == 279);

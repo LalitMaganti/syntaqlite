@@ -441,3 +441,48 @@ class EmptySchemaQualifier(TestSuite):
             sql="select * from t",
             out="SELECT * FROM t;",
         )
+
+
+class AllKeyword(TestSuite):
+    """`ALL` is a third state, not a synonym for omitting DISTINCT.
+
+    Upstream's `distinct` yields SF_Distinct, SF_All or 0, and SF_All is
+    not inert: expr.c consults it to suppress reuse of a materialised
+    IN-subquery right-hand side.
+    """
+
+    def test_select_all(self):
+        return DiffTestBlueprint(
+            sql="select all a from t",
+            out="SELECT ALL a FROM t;",
+        )
+
+    def test_select_distinct_unchanged(self):
+        return DiffTestBlueprint(
+            sql="select distinct a from t",
+            out="SELECT DISTINCT a FROM t;",
+        )
+
+    def test_select_plain_unchanged(self):
+        return DiffTestBlueprint(
+            sql="select a from t",
+            out="SELECT a FROM t;",
+        )
+
+    def test_aggregate_all(self):
+        return DiffTestBlueprint(
+            sql="select count(all a) from t",
+            out="SELECT count(ALL a) FROM t;",
+        )
+
+    def test_aggregate_distinct_unchanged(self):
+        return DiffTestBlueprint(
+            sql="select count(distinct a) from t",
+            out="SELECT count(DISTINCT a) FROM t;",
+        )
+
+    def test_aggregate_star_unchanged(self):
+        return DiffTestBlueprint(
+            sql="select count(*) from t",
+            out="SELECT count(*) FROM t;",
+        )

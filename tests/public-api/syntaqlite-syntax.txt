@@ -1217,6 +1217,7 @@ pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::func_name(&self) -> 
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::node_id(&self) -> syntaqlite_syntax::nodes::AggregateFunctionCallId
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::orderby(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCall<'a>::over_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::WindowDef<'a>>
+pub fn syntaqlite_syntax::nodes::AggregateFunctionCallFlags::all(&self) -> bool
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCallFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCallFlags::distinct(&self) -> bool
 pub fn syntaqlite_syntax::nodes::AggregateFunctionCallId::from(syntaqlite_syntax::nodes::AggregateFunctionCall<'a>) -> Self
@@ -1530,6 +1531,7 @@ pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::from_result(&'a syntaqlite_sy
 pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::func_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::node_id(&self) -> syntaqlite_syntax::nodes::FunctionCallId
 pub fn syntaqlite_syntax::nodes::FunctionCall<'a>::over_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::WindowDef<'a>>
+pub fn syntaqlite_syntax::nodes::FunctionCallFlags::all(&self) -> bool
 pub fn syntaqlite_syntax::nodes::FunctionCallFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::nodes::FunctionCallFlags::distinct(&self) -> bool
 pub fn syntaqlite_syntax::nodes::FunctionCallFlags::star(&self) -> bool
@@ -1746,6 +1748,7 @@ pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::node_id(&self) -> syntaqlite_sy
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::orderby(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::where_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::SelectStmt<'a>::window_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::NamedWindowDefList<'a>>
+pub fn syntaqlite_syntax::nodes::SelectStmtFlags::all(&self) -> bool
 pub fn syntaqlite_syntax::nodes::SelectStmtFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::nodes::SelectStmtFlags::distinct(&self) -> bool
 pub fn syntaqlite_syntax::nodes::SelectStmtId::from(syntaqlite_syntax::nodes::SelectStmt<'a>) -> Self

@@ -285,6 +285,8 @@ typedef union SyntaqliteAggregateFunctionCallFlags {
   uint8_t raw;
   struct {
     uint8_t distinct : 1;
+    uint8_t : 1;
+    uint8_t all : 1;
   } bits;
 } SyntaqliteAggregateFunctionCallFlags;
 
@@ -301,6 +303,7 @@ typedef union SyntaqliteFunctionCallFlags {
   struct {
     uint8_t distinct : 1;
     uint8_t star : 1;
+    uint8_t all : 1;
   } bits;
 } SyntaqliteFunctionCallFlags;
 
@@ -315,6 +318,8 @@ typedef union SyntaqliteSelectStmtFlags {
   uint8_t raw;
   struct {
     uint8_t distinct : 1;
+    uint8_t : 1;
+    uint8_t all : 1;
   } bits;
 } SyntaqliteSelectStmtFlags;
 
