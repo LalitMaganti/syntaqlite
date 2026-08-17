@@ -718,6 +718,7 @@ pub enum JoinType {
     NaturalLeft = 7,
     NaturalRight = 8,
     NaturalFull = 9,
+    NaturalCross = 10,
 }
 
 impl JoinType {
@@ -733,6 +734,7 @@ impl JoinType {
             JoinType::NaturalLeft => "NATURAL_LEFT",
             JoinType::NaturalRight => "NATURAL_RIGHT",
             JoinType::NaturalFull => "NATURAL_FULL",
+            JoinType::NaturalCross => "NATURAL_CROSS",
         }
     }
 }

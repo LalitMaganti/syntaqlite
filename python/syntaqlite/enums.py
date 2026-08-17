@@ -292,6 +292,7 @@ class JoinType(IntEnum):
     NATURAL_LEFT = 7
     NATURAL_RIGHT = 8
     NATURAL_FULL = 9
+    NATURAL_CROSS = 10
 
 
 class TriggerTiming(IntEnum):

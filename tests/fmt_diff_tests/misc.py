@@ -184,6 +184,79 @@ class JoinFormat(TestSuite):
             """,
         )
 
+    def test_natural_join(self):
+        return DiffTestBlueprint(
+            sql="select * from a natural join b",
+            out="""\
+                SELECT *
+                FROM a
+                NATURAL JOIN b;
+            """,
+        )
+
+    def test_natural_cross_join(self):
+        # NATURAL CROSS JOIN joins on common columns; CROSS JOIN does not.
+        return DiffTestBlueprint(
+            sql="select * from a natural cross join b",
+            out="""\
+                SELECT *
+                FROM a
+                NATURAL CROSS JOIN b;
+            """,
+        )
+
+    def test_natural_left_outer_join(self):
+        return DiffTestBlueprint(
+            sql="select * from a natural left outer join b",
+            out="""\
+                SELECT *
+                FROM a
+                NATURAL LEFT JOIN b;
+            """,
+        )
+
+    def test_natural_full_join(self):
+        return DiffTestBlueprint(
+            sql="select * from a natural full join b",
+            out="""\
+                SELECT *
+                FROM a
+                NATURAL FULL JOIN b;
+            """,
+        )
+
+    def test_join_keywords_are_a_set_not_a_sequence(self):
+        # Keywords are a set, so this is exactly NATURAL LEFT OUTER JOIN.
+        return DiffTestBlueprint(
+            sql="select * from a outer left natural join b",
+            out="""\
+                SELECT *
+                FROM a
+                NATURAL LEFT JOIN b;
+            """,
+        )
+
+    def test_cross_natural_join_reordered(self):
+        return DiffTestBlueprint(
+            sql="select * from a cross natural join b",
+            out="""\
+                SELECT *
+                FROM a
+                NATURAL CROSS JOIN b;
+            """,
+        )
+
+    def test_unknown_join_type_falls_back_to_inner(self):
+        # sqlite3JoinType() falls back to JT_INNER after erroring; we match that.
+        return DiffTestBlueprint(
+            sql="select * from a left bogus join b",
+            out="""\
+                SELECT *
+                FROM a
+                JOIN b;
+            """,
+        )
+
     def test_join_using(self):
         return DiffTestBlueprint(
             sql="select * from a join b using (id)",
@@ -329,6 +402,48 @@ class TriggerFormat(TestSuite):
                 CREATE TRIGGER tr INSTEAD OF INSERT ON v
                 BEGIN
                   SELECT 1;
+                END;
+            """,
+        )
+
+    def test_trigger_insert_upsert_do_nothing(self):
+        return DiffTestBlueprint(
+            sql=(
+                "create trigger tr after insert on t begin "
+                "insert into u values(1) on conflict do nothing; end"
+            ),
+            out="""\
+                CREATE TRIGGER tr AFTER INSERT ON t
+                BEGIN
+                  INSERT INTO u VALUES (1) ON CONFLICT DO NOTHING;
+                END;
+            """,
+        )
+
+    def test_trigger_insert_upsert_do_update(self):
+        return DiffTestBlueprint(
+            sql=(
+                "create trigger tr after insert on t begin "
+                "insert into u values(1) on conflict(x) do update set y=2 where z=3; end"
+            ),
+            out="""\
+                CREATE TRIGGER tr AFTER INSERT ON t
+                BEGIN
+                  INSERT INTO u VALUES (1) ON CONFLICT (x) DO UPDATE SET y = 2 WHERE z = 3;
+                END;
+            """,
+        )
+
+    def test_trigger_insert_returning(self):
+        return DiffTestBlueprint(
+            sql=(
+                "create trigger tr after insert on t begin "
+                "insert into u values(1) returning x; end"
+            ),
+            out="""\
+                CREATE TRIGGER tr AFTER INSERT ON t
+                BEGIN
+                  INSERT INTO u VALUES (1) RETURNING x;
                 END;
             """,
         )

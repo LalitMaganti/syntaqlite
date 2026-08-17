@@ -125,6 +125,67 @@ typedef struct SynqParenExprlistValue {
 
 #define YYPARSEFREENEVERNULL 1
 
+// Join keywords are an unordered set, not a sequence; see sqlite3JoinType().
+#define SYNQ_JT_INNER   0x01
+#define SYNQ_JT_CROSS   0x02
+#define SYNQ_JT_NATURAL 0x04
+#define SYNQ_JT_LEFT    0x08
+#define SYNQ_JT_RIGHT   0x10
+#define SYNQ_JT_OUTER   0x20
+#define SYNQ_JT_ERROR   0x40
+
+static inline int synq_join_keyword_mask(const SynqParseToken* p) {
+  static const struct {
+    const char* text;
+    unsigned char len;
+    unsigned char code;
+  } kw[] = {
+      {"natural", 7, SYNQ_JT_NATURAL},
+      {"left", 4, SYNQ_JT_LEFT | SYNQ_JT_OUTER},
+      {"outer", 5, SYNQ_JT_OUTER},
+      {"right", 5, SYNQ_JT_RIGHT | SYNQ_JT_OUTER},
+      {"full", 4, SYNQ_JT_LEFT | SYNQ_JT_RIGHT | SYNQ_JT_OUTER},
+      {"inner", 5, SYNQ_JT_INNER},
+      {"cross", 5, SYNQ_JT_INNER | SYNQ_JT_CROSS},
+  };
+  if (p == NULL || p->z == NULL) {
+    return 0;
+  }
+  for (unsigned j = 0; j < sizeof(kw) / sizeof(kw[0]); j++) {
+    if (p->n == kw[j].len && SYNQ_STRNCASECMP(p->z, kw[j].text, p->n) == 0) {
+      return kw[j].code;
+    }
+  }
+  return SYNQ_JT_ERROR;
+}
+
+// Invalid combinations collapse to INNER, as sqlite3JoinType() does after erroring.
+static inline SyntaqliteJoinType synq_join_type(const SynqParseToken* a,
+                                                const SynqParseToken* b,
+                                                const SynqParseToken* c) {
+  int m = synq_join_keyword_mask(a) | synq_join_keyword_mask(b) |
+          synq_join_keyword_mask(c);
+  if ((m & (SYNQ_JT_INNER | SYNQ_JT_OUTER)) == (SYNQ_JT_INNER | SYNQ_JT_OUTER) ||
+      (m & SYNQ_JT_ERROR) != 0 ||
+      (m & (SYNQ_JT_OUTER | SYNQ_JT_LEFT | SYNQ_JT_RIGHT)) == SYNQ_JT_OUTER) {
+    return SYNTAQLITE_JOIN_TYPE_INNER;
+  }
+  if (m & SYNQ_JT_NATURAL) {
+    if (m & SYNQ_JT_CROSS) return SYNTAQLITE_JOIN_TYPE_NATURAL_CROSS;
+    if ((m & SYNQ_JT_LEFT) && (m & SYNQ_JT_RIGHT))
+      return SYNTAQLITE_JOIN_TYPE_NATURAL_FULL;
+    if (m & SYNQ_JT_LEFT) return SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT;
+    if (m & SYNQ_JT_RIGHT) return SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT;
+    return SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
+  }
+  if (m & SYNQ_JT_CROSS) return SYNTAQLITE_JOIN_TYPE_CROSS;
+  if ((m & SYNQ_JT_LEFT) && (m & SYNQ_JT_RIGHT))
+    return SYNTAQLITE_JOIN_TYPE_FULL;
+  if (m & SYNQ_JT_LEFT) return SYNTAQLITE_JOIN_TYPE_LEFT;
+  if (m & SYNQ_JT_RIGHT) return SYNTAQLITE_JOIN_TYPE_RIGHT;
+  return SYNTAQLITE_JOIN_TYPE_INNER;
+}
+
 // Map parser error bookkeeping to a best-effort source span.
 static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
   if (pCtx->error_offset == 0xFFFFFFFF || pCtx->error_length == 0) {

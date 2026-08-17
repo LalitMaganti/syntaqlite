@@ -156,8 +156,9 @@ static const char* const display_nulls_order[] = {
 };
 
 static const char* const display_join_type[] = {
-    "COMMA", "INNER",         "LEFT",         "RIGHT",         "FULL",
-    "CROSS", "NATURAL_INNER", "NATURAL_LEFT", "NATURAL_RIGHT", "NATURAL_FULL",
+    "COMMA",         "INNER",        "LEFT",          "RIGHT",
+    "FULL",          "CROSS",        "NATURAL_INNER", "NATURAL_LEFT",
+    "NATURAL_RIGHT", "NATURAL_FULL", "NATURAL_CROSS",
 };
 
 static const char* const display_trigger_timing[] = {

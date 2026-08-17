@@ -127,6 +127,75 @@ typedef struct SynqParenExprlistValue {
 
 #define YYPARSEFREENEVERNULL 1
 
+// Join keywords are an unordered set, not a sequence; see sqlite3JoinType().
+#define SYNQ_JT_INNER 0x01
+#define SYNQ_JT_CROSS 0x02
+#define SYNQ_JT_NATURAL 0x04
+#define SYNQ_JT_LEFT 0x08
+#define SYNQ_JT_RIGHT 0x10
+#define SYNQ_JT_OUTER 0x20
+#define SYNQ_JT_ERROR 0x40
+
+static inline int synq_join_keyword_mask(const SynqParseToken* p) {
+  static const struct {
+    const char* text;
+    unsigned char len;
+    unsigned char code;
+  } kw[] = {
+      {"natural", 7, SYNQ_JT_NATURAL},
+      {"left", 4, SYNQ_JT_LEFT | SYNQ_JT_OUTER},
+      {"outer", 5, SYNQ_JT_OUTER},
+      {"right", 5, SYNQ_JT_RIGHT | SYNQ_JT_OUTER},
+      {"full", 4, SYNQ_JT_LEFT | SYNQ_JT_RIGHT | SYNQ_JT_OUTER},
+      {"inner", 5, SYNQ_JT_INNER},
+      {"cross", 5, SYNQ_JT_INNER | SYNQ_JT_CROSS},
+  };
+  if (p == NULL || p->z == NULL) {
+    return 0;
+  }
+  for (unsigned j = 0; j < sizeof(kw) / sizeof(kw[0]); j++) {
+    if (p->n == kw[j].len && SYNQ_STRNCASECMP(p->z, kw[j].text, p->n) == 0) {
+      return kw[j].code;
+    }
+  }
+  return SYNQ_JT_ERROR;
+}
+
+// Invalid combinations collapse to INNER, as sqlite3JoinType() does after
+// erroring.
+static inline SyntaqliteJoinType synq_join_type(const SynqParseToken* a,
+                                                const SynqParseToken* b,
+                                                const SynqParseToken* c) {
+  int m = synq_join_keyword_mask(a) | synq_join_keyword_mask(b) |
+          synq_join_keyword_mask(c);
+  if ((m & (SYNQ_JT_INNER | SYNQ_JT_OUTER)) ==
+          (SYNQ_JT_INNER | SYNQ_JT_OUTER) ||
+      (m & SYNQ_JT_ERROR) != 0 ||
+      (m & (SYNQ_JT_OUTER | SYNQ_JT_LEFT | SYNQ_JT_RIGHT)) == SYNQ_JT_OUTER) {
+    return SYNTAQLITE_JOIN_TYPE_INNER;
+  }
+  if (m & SYNQ_JT_NATURAL) {
+    if (m & SYNQ_JT_CROSS)
+      return SYNTAQLITE_JOIN_TYPE_NATURAL_CROSS;
+    if ((m & SYNQ_JT_LEFT) && (m & SYNQ_JT_RIGHT))
+      return SYNTAQLITE_JOIN_TYPE_NATURAL_FULL;
+    if (m & SYNQ_JT_LEFT)
+      return SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT;
+    if (m & SYNQ_JT_RIGHT)
+      return SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT;
+    return SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
+  }
+  if (m & SYNQ_JT_CROSS)
+    return SYNTAQLITE_JOIN_TYPE_CROSS;
+  if ((m & SYNQ_JT_LEFT) && (m & SYNQ_JT_RIGHT))
+    return SYNTAQLITE_JOIN_TYPE_FULL;
+  if (m & SYNQ_JT_LEFT)
+    return SYNTAQLITE_JOIN_TYPE_LEFT;
+  if (m & SYNQ_JT_RIGHT)
+    return SYNTAQLITE_JOIN_TYPE_RIGHT;
+  return SYNTAQLITE_JOIN_TYPE_INNER;
+}
+
 // Map parser error bookkeeping to a best-effort source span.
 static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
   if (pCtx->error_offset == 0xFFFFFFFF || pCtx->error_length == 0) {
@@ -409,6 +478,7 @@ typedef union {
   int yyinit;
   SynqSqliteParseTOKENTYPE yy0;
   SynqRefArgValue yy76;
+  SyntaqliteJoinType yy81;
   SynqWhereRetValue yy119;
   SynqConstraintValue yy150;
   uint32_t yy277;
@@ -9283,9 +9353,8 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 284: /* stl_prefix ::= seltablist joinop */
     {
-      yymsp[-1].minor.yy277 =
-          synq_parse_join_prefix(pCtx, yymsp[-1].minor.yy277,
-                                 (SyntaqliteJoinType)yymsp[0].minor.yy320);
+      yymsp[-1].minor.yy277 = synq_parse_join_prefix(
+          pCtx, yymsp[-1].minor.yy277, yymsp[0].minor.yy81);
     } break;
     case 286: /* seltablist ::= stl_prefix nm dbnm as on_using */
     {
@@ -9391,127 +9460,31 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 291: /* joinop ::= COMMA|JOIN */
     {
-      yylhsminor.yy320 = (yymsp[0].minor.yy0.type == SYNTAQLITE_TK_COMMA)
-                             ? (int)SYNTAQLITE_JOIN_TYPE_COMMA
-                             : (int)SYNTAQLITE_JOIN_TYPE_INNER;
+      yylhsminor.yy81 = (yymsp[0].minor.yy0.type == SYNTAQLITE_TK_COMMA)
+                            ? SYNTAQLITE_JOIN_TYPE_COMMA
+                            : SYNTAQLITE_JOIN_TYPE_INNER;
     }
-      yymsp[0].minor.yy320 = yylhsminor.yy320;
+      yymsp[0].minor.yy81 = yylhsminor.yy81;
       break;
     case 292: /* joinop ::= JOIN_KW JOIN */
     {
-      // Single keyword: LEFT, RIGHT, INNER, OUTER, CROSS, NATURAL, FULL
-      if (yymsp[-1].minor.yy0.n == 4 && (yymsp[-1].minor.yy0.z[0] == 'L' ||
-                                         yymsp[-1].minor.yy0.z[0] == 'l')) {
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_LEFT;
-      } else if (yymsp[-1].minor.yy0.n == 5 &&
-                 (yymsp[-1].minor.yy0.z[0] == 'R' ||
-                  yymsp[-1].minor.yy0.z[0] == 'r')) {
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_RIGHT;
-      } else if (yymsp[-1].minor.yy0.n == 5 &&
-                 (yymsp[-1].minor.yy0.z[0] == 'I' ||
-                  yymsp[-1].minor.yy0.z[0] == 'i')) {
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-      } else if (yymsp[-1].minor.yy0.n == 5 &&
-                 (yymsp[-1].minor.yy0.z[0] == 'O' ||
-                  yymsp[-1].minor.yy0.z[0] == 'o')) {
-        // OUTER alone is not valid but treat as INNER
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-      } else if (yymsp[-1].minor.yy0.n == 5 &&
-                 (yymsp[-1].minor.yy0.z[0] == 'C' ||
-                  yymsp[-1].minor.yy0.z[0] == 'c')) {
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_CROSS;
-      } else if (yymsp[-1].minor.yy0.n == 7 &&
-                 (yymsp[-1].minor.yy0.z[0] == 'N' ||
-                  yymsp[-1].minor.yy0.z[0] == 'n')) {
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
-      } else if (yymsp[-1].minor.yy0.n == 4 &&
-                 (yymsp[-1].minor.yy0.z[0] == 'F' ||
-                  yymsp[-1].minor.yy0.z[0] == 'f')) {
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_FULL;
-      } else {
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-      }
+      yylhsminor.yy81 = synq_join_type(&yymsp[-1].minor.yy0, NULL, NULL);
     }
-      yymsp[-1].minor.yy320 = yylhsminor.yy320;
+      yymsp[-1].minor.yy81 = yylhsminor.yy81;
       break;
     case 293: /* joinop ::= JOIN_KW nm JOIN */
     {
-      // Two keywords: LEFT OUTER, NATURAL LEFT, NATURAL RIGHT, etc.
-      (void)yymsp[-1].minor.yy0;
-      if (yymsp[-2].minor.yy0.n == 7 && (yymsp[-2].minor.yy0.z[0] == 'N' ||
-                                         yymsp[-2].minor.yy0.z[0] == 'n')) {
-        // NATURAL + something
-        if (yymsp[-1].minor.yy0.n == 4 && (yymsp[-1].minor.yy0.z[0] == 'L' ||
-                                           yymsp[-1].minor.yy0.z[0] == 'l')) {
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT;
-        } else if (yymsp[-1].minor.yy0.n == 5 &&
-                   (yymsp[-1].minor.yy0.z[0] == 'R' ||
-                    yymsp[-1].minor.yy0.z[0] == 'r')) {
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT;
-        } else if (yymsp[-1].minor.yy0.n == 5 &&
-                   (yymsp[-1].minor.yy0.z[0] == 'I' ||
-                    yymsp[-1].minor.yy0.z[0] == 'i')) {
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
-        } else if (yymsp[-1].minor.yy0.n == 4 &&
-                   (yymsp[-1].minor.yy0.z[0] == 'F' ||
-                    yymsp[-1].minor.yy0.z[0] == 'f')) {
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_FULL;
-        } else if (yymsp[-1].minor.yy0.n == 5 &&
-                   (yymsp[-1].minor.yy0.z[0] == 'C' ||
-                    yymsp[-1].minor.yy0.z[0] == 'c')) {
-          // NATURAL CROSS -> just CROSS
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_CROSS;
-        } else {
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
-        }
-      } else if (yymsp[-2].minor.yy0.n == 4 &&
-                 (yymsp[-2].minor.yy0.z[0] == 'L' ||
-                  yymsp[-2].minor.yy0.z[0] == 'l')) {
-        // LEFT OUTER
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_LEFT;
-      } else if (yymsp[-2].minor.yy0.n == 5 &&
-                 (yymsp[-2].minor.yy0.z[0] == 'R' ||
-                  yymsp[-2].minor.yy0.z[0] == 'r')) {
-        // RIGHT OUTER
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_RIGHT;
-      } else if (yymsp[-2].minor.yy0.n == 4 &&
-                 (yymsp[-2].minor.yy0.z[0] == 'F' ||
-                  yymsp[-2].minor.yy0.z[0] == 'f')) {
-        // FULL OUTER
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_FULL;
-      } else {
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-      }
+      yylhsminor.yy81 =
+          synq_join_type(&yymsp[-2].minor.yy0, &yymsp[-1].minor.yy0, NULL);
     }
-      yymsp[-2].minor.yy320 = yylhsminor.yy320;
+      yymsp[-2].minor.yy81 = yylhsminor.yy81;
       break;
     case 294: /* joinop ::= JOIN_KW nm nm JOIN */
     {
-      // Three keywords: NATURAL LEFT OUTER, NATURAL RIGHT OUTER, etc.
-      (void)yymsp[-2].minor.yy0;
-      (void)yymsp[-1].minor.yy0;
-      if (yymsp[-3].minor.yy0.n == 7 && (yymsp[-3].minor.yy0.z[0] == 'N' ||
-                                         yymsp[-3].minor.yy0.z[0] == 'n')) {
-        // NATURAL yylhsminor.yy320 OUTER
-        if (yymsp[-2].minor.yy0.n == 4 && (yymsp[-2].minor.yy0.z[0] == 'L' ||
-                                           yymsp[-2].minor.yy0.z[0] == 'l')) {
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT;
-        } else if (yymsp[-2].minor.yy0.n == 5 &&
-                   (yymsp[-2].minor.yy0.z[0] == 'R' ||
-                    yymsp[-2].minor.yy0.z[0] == 'r')) {
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT;
-        } else if (yymsp[-2].minor.yy0.n == 4 &&
-                   (yymsp[-2].minor.yy0.z[0] == 'F' ||
-                    yymsp[-2].minor.yy0.z[0] == 'f')) {
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_FULL;
-        } else {
-          yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
-        }
-      } else {
-        yylhsminor.yy320 = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-      }
+      yylhsminor.yy81 = synq_join_type(
+          &yymsp[-3].minor.yy0, &yymsp[-2].minor.yy0, &yymsp[-1].minor.yy0);
     }
-      yymsp[-3].minor.yy320 = yylhsminor.yy320;
+      yymsp[-3].minor.yy81 = yylhsminor.yy81;
       break;
     case 295: /* on_using ::= ON expr */
     {
@@ -9697,8 +9670,8 @@ static YYACTIONTYPE yy_reduce(
       yymsp[-7].minor.yy277 = synq_parse_insert_stmt(
           pCtx, SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
           (SyntaqliteConflictAction)yymsp[-6].minor.yy320, tbl,
-          yymsp[-3].minor.yy277, yymsp[-2].minor.yy277, SYNTAQLITE_NULL_NODE,
-          SYNTAQLITE_NULL_NODE);
+          yymsp[-3].minor.yy277, yymsp[-2].minor.yy277,
+          yymsp[-1].minor.yy352.clauses, yymsp[-1].minor.yy352.returning);
     } break;
     case 323: /* trigger_cmd ::= DELETE FROM trnm tridxby where_opt scanpt */
     {

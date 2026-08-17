@@ -15,14 +15,14 @@
 // - Non-terminals are u32 node IDs
 
 %type on_using {SynqOnUsingValue}
-%type joinop {int}
+%type joinop {SyntaqliteJoinType}
 %type indexed_by {SynqParseToken}
 
 // ============ FROM clause table sources ============
 
 // stl_prefix carries the accumulated seltablist plus pending join type
 stl_prefix(A) ::= seltablist(A) joinop(Y). {
-    A = synq_parse_join_prefix(pCtx, A, (SyntaqliteJoinType)Y);
+    A = synq_parse_join_prefix(pCtx, A, Y);
 }
 
 stl_prefix(A) ::= . {
@@ -144,82 +144,20 @@ seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
 
 joinop(X) ::= COMMA|JOIN(OP). {
     X = (OP.type == SYNTAQLITE_TK_COMMA)
-        ? (int)SYNTAQLITE_JOIN_TYPE_COMMA
-        : (int)SYNTAQLITE_JOIN_TYPE_INNER;
+        ? SYNTAQLITE_JOIN_TYPE_COMMA
+        : SYNTAQLITE_JOIN_TYPE_INNER;
 }
 
 joinop(X) ::= JOIN_KW(A) JOIN. {
-    // Single keyword: LEFT, RIGHT, INNER, OUTER, CROSS, NATURAL, FULL
-    if (A.n == 4 && (A.z[0] == 'L' || A.z[0] == 'l')) {
-        X = (int)SYNTAQLITE_JOIN_TYPE_LEFT;
-    } else if (A.n == 5 && (A.z[0] == 'R' || A.z[0] == 'r')) {
-        X = (int)SYNTAQLITE_JOIN_TYPE_RIGHT;
-    } else if (A.n == 5 && (A.z[0] == 'I' || A.z[0] == 'i')) {
-        X = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-    } else if (A.n == 5 && (A.z[0] == 'O' || A.z[0] == 'o')) {
-        // OUTER alone is not valid but treat as INNER
-        X = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-    } else if (A.n == 5 && (A.z[0] == 'C' || A.z[0] == 'c')) {
-        X = (int)SYNTAQLITE_JOIN_TYPE_CROSS;
-    } else if (A.n == 7 && (A.z[0] == 'N' || A.z[0] == 'n')) {
-        X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
-    } else if (A.n == 4 && (A.z[0] == 'F' || A.z[0] == 'f')) {
-        X = (int)SYNTAQLITE_JOIN_TYPE_FULL;
-    } else {
-        X = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-    }
+    X = synq_join_type(&A, NULL, NULL);
 }
 
 joinop(X) ::= JOIN_KW(A) nm(B) JOIN. {
-    // Two keywords: LEFT OUTER, NATURAL LEFT, NATURAL RIGHT, etc.
-    (void)B;
-    if (A.n == 7 && (A.z[0] == 'N' || A.z[0] == 'n')) {
-        // NATURAL + something
-        if (B.n == 4 && (B.z[0] == 'L' || B.z[0] == 'l')) {
-            X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT;
-        } else if (B.n == 5 && (B.z[0] == 'R' || B.z[0] == 'r')) {
-            X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT;
-        } else if (B.n == 5 && (B.z[0] == 'I' || B.z[0] == 'i')) {
-            X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
-        } else if (B.n == 4 && (B.z[0] == 'F' || B.z[0] == 'f')) {
-            X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_FULL;
-        } else if (B.n == 5 && (B.z[0] == 'C' || B.z[0] == 'c')) {
-            // NATURAL CROSS -> just CROSS
-            X = (int)SYNTAQLITE_JOIN_TYPE_CROSS;
-        } else {
-            X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
-        }
-    } else if (A.n == 4 && (A.z[0] == 'L' || A.z[0] == 'l')) {
-        // LEFT OUTER
-        X = (int)SYNTAQLITE_JOIN_TYPE_LEFT;
-    } else if (A.n == 5 && (A.z[0] == 'R' || A.z[0] == 'r')) {
-        // RIGHT OUTER
-        X = (int)SYNTAQLITE_JOIN_TYPE_RIGHT;
-    } else if (A.n == 4 && (A.z[0] == 'F' || A.z[0] == 'f')) {
-        // FULL OUTER
-        X = (int)SYNTAQLITE_JOIN_TYPE_FULL;
-    } else {
-        X = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-    }
+    X = synq_join_type(&A, &B, NULL);
 }
 
 joinop(X) ::= JOIN_KW(A) nm(B) nm(C) JOIN. {
-    // Three keywords: NATURAL LEFT OUTER, NATURAL RIGHT OUTER, etc.
-    (void)B; (void)C;
-    if (A.n == 7 && (A.z[0] == 'N' || A.z[0] == 'n')) {
-        // NATURAL X OUTER
-        if (B.n == 4 && (B.z[0] == 'L' || B.z[0] == 'l')) {
-            X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_LEFT;
-        } else if (B.n == 5 && (B.z[0] == 'R' || B.z[0] == 'r')) {
-            X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_RIGHT;
-        } else if (B.n == 4 && (B.z[0] == 'F' || B.z[0] == 'f')) {
-            X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_FULL;
-        } else {
-            X = (int)SYNTAQLITE_JOIN_TYPE_NATURAL_INNER;
-        }
-    } else {
-        X = (int)SYNTAQLITE_JOIN_TYPE_INNER;
-    }
+    X = synq_join_type(&A, &B, &C);
 }
 
 // ============ ON / USING clauses ============

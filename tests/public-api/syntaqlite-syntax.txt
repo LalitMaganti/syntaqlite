@@ -2580,6 +2580,7 @@ pub syntaqlite_syntax::nodes::JoinType::Cross = 5
 pub syntaqlite_syntax::nodes::JoinType::Full = 4
 pub syntaqlite_syntax::nodes::JoinType::Inner = 1
 pub syntaqlite_syntax::nodes::JoinType::Left = 2
+pub syntaqlite_syntax::nodes::JoinType::NaturalCross = 10
 pub syntaqlite_syntax::nodes::JoinType::NaturalFull = 9
 pub syntaqlite_syntax::nodes::JoinType::NaturalInner = 6
 pub syntaqlite_syntax::nodes::JoinType::NaturalLeft = 7

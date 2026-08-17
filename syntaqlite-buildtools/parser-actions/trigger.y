@@ -151,7 +151,7 @@ trigger_cmd(A) ::= UPDATE orconf(R) trnm(X) tridxby SET setlist(Y) from(F) where
 }
 
 // INSERT within trigger
-trigger_cmd(A) ::= scanpt insert_cmd(R) INTO trnm(X) idlist_opt(F) select(S) upsert scanpt. {
+trigger_cmd(A) ::= scanpt insert_cmd(R) INTO trnm(X) idlist_opt(F) select(S) upsert(U) scanpt. {
     uint32_t tbl = synq_parse_table_ref(pCtx,
         synq_span(pCtx, X), SYNQ_NO_SPAN,
         SYNTAQLITE_BOOL_FALSE,
@@ -159,7 +159,7 @@ trigger_cmd(A) ::= scanpt insert_cmd(R) INTO trnm(X) idlist_opt(F) select(S) ups
     A = synq_parse_insert_stmt(pCtx,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
         (SyntaqliteConflictAction)R, tbl, F, S,
-        SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
+        U.clauses, U.returning);
 }
 
 // DELETE within trigger
