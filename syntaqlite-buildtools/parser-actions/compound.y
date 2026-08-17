@@ -94,7 +94,8 @@ expr(A) ::= expr(A) in_op(N) nm(Y) dbnm(Z) paren_exprlist(E). [IN] {
     }
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
                                          E.has_parens,
-                                         SYNTAQLITE_NULL_NODE, E.args);
+                                         SYNTAQLITE_NULL_NODE, E.args,
+                                         SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
     A = synq_parse_in_expr(pCtx, (SyntaqliteBool)N,
                            SYNTAQLITE_BOOL_TRUE, A, tref);
 }

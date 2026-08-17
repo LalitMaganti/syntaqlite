@@ -251,6 +251,40 @@ class IndexedByFormat(TestSuite):
             out="DELETE FROM t NOT INDEXED WHERE y = 2;",
         )
 
+    def test_select_indexed_by(self):
+        return DiffTestBlueprint(
+            sql="select * from t indexed by idx_foo where y = 2",
+            out="SELECT * FROM t INDEXED BY idx_foo WHERE y = 2;",
+        )
+
+    def test_select_not_indexed(self):
+        return DiffTestBlueprint(
+            sql="select * from t not indexed where y = 2",
+            out="SELECT * FROM t NOT INDEXED WHERE y = 2;",
+        )
+
+    def test_select_indexed_by_with_alias(self):
+        return DiffTestBlueprint(
+            sql="select * from t as x indexed by idx_foo where y = 2",
+            out="SELECT * FROM t AS x INDEXED BY idx_foo WHERE y = 2;",
+        )
+
+    def test_select_indexed_by_schema_qualified(self):
+        return DiffTestBlueprint(
+            sql="select * from main.t indexed by idx_foo",
+            out="SELECT * FROM main.t INDEXED BY idx_foo;",
+        )
+
+    def test_select_indexed_by_both_sides_of_join(self):
+        return DiffTestBlueprint(
+            sql="select * from t indexed by i1 join u indexed by i2 on t.a = u.a",
+            out="""\
+                SELECT *
+                FROM t INDEXED BY i1
+                JOIN u INDEXED BY i2 ON t.a = u.a;
+            """,
+        )
+
 
 class DmlWithCte(TestSuite):
     """WITH-prefixed DML statements (DELETE / UPDATE / INSERT)."""

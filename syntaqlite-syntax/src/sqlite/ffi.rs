@@ -468,6 +468,8 @@ pub(crate) struct TableRef {
     pub(crate) has_parens: Bool,
     pub(crate) alias: AnyNodeId,
     pub(crate) args: AnyNodeId,
+    pub(crate) index_hint: super::ast::IndexHint,
+    pub(crate) index_name: TextSpan,
 }
 
 #[derive(Debug, Clone)]

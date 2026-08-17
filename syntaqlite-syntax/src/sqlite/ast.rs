@@ -4908,6 +4908,12 @@ impl<'a> TableRef<'a> {
     pub fn args(&self) -> Option<ExprList<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.args)
     }
+    pub fn index_hint(&self) -> IndexHint {
+        self.raw.index_hint
+    }
+    pub fn index_name(&self) -> &'a str {
+        self.stmt_result.span_expanded_text(self.raw.index_name)
+    }
 }
 
 impl<'a> GrammarNodeType<'a> for TableRef<'a> {

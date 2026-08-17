@@ -56,6 +56,8 @@ class WithClause(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -128,6 +130,8 @@ class WithClause(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -203,6 +207,8 @@ class WithClause(TestSuite):
                                 has_parens: FALSE
                                 alias: (none)
                                 args: (none)
+                                index_hint: DEFAULT
+                                index_name: (none)
                             where_clause: (none)
                             groupby: (none)
                             having: (none)
@@ -231,6 +237,8 @@ class WithClause(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -310,6 +318,8 @@ class WithClause(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -366,6 +376,8 @@ class WithClause(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -422,6 +434,8 @@ class WithClause(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -470,6 +484,8 @@ class WithClause(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)
@@ -531,6 +547,8 @@ class WithClause(TestSuite):
                           has_parens: FALSE
                           alias: (none)
                           args: (none)
+                          index_hint: DEFAULT
+                          index_name: (none)
                       where_clause: (none)
                       groupby: (none)
                       having: (none)
@@ -627,6 +645,8 @@ class WithClause(TestSuite):
                                 has_parens: FALSE
                                 alias: (none)
                                 args: (none)
+                                index_hint: DEFAULT
+                                index_name: (none)
                             where_clause:
                               BinaryExpr
                                 op: LT
@@ -666,6 +686,8 @@ class WithClause(TestSuite):
                       has_parens: FALSE
                       alias: (none)
                       args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
                   where_clause: (none)
                   groupby: (none)
                   having: (none)

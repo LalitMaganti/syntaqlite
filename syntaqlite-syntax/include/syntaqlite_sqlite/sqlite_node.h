@@ -841,6 +841,8 @@ typedef struct SyntaqliteTableRef {
   SyntaqliteBool has_parens;
   uint32_t alias;
   uint32_t args;
+  SyntaqliteIndexHint index_hint;
+  SyntaqliteTextSpan index_name;
 } SyntaqliteTableRef;
 
 typedef struct SyntaqliteSubqueryTableSource {

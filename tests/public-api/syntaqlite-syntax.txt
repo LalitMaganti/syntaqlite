@@ -1765,6 +1765,8 @@ pub fn syntaqlite_syntax::nodes::TableRef<'a>::alias(&self) -> core::option::Opt
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::has_parens(&self) -> bool
+pub fn syntaqlite_syntax::nodes::TableRef<'a>::index_hint(&self) -> syntaqlite_syntax::nodes::IndexHint
+pub fn syntaqlite_syntax::nodes::TableRef<'a>::index_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TableRefId
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::table_name(&self) -> &'a str

@@ -43,7 +43,8 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
     }
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
                                          SYNTAQLITE_BOOL_FALSE,
-                                         alias, SYNTAQLITE_NULL_NODE);
+                                         alias, SYNTAQLITE_NULL_NODE,
+                                         SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
     if (A == SYNTAQLITE_NULL_NODE) {
         A = tref;
     } else {
@@ -55,9 +56,8 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
     }
 }
 
-// Table reference with INDEXED BY (ignore index hint in AST)
+// The hint constrains the planner and errors on a missing index, so it must survive.
 seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
-    (void)I;
     uint32_t alias = Z;
     SyntaqliteTextSpan table_name;
     SyntaqliteTextSpan schema;
@@ -68,9 +68,13 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
         table_name = synq_span_dequote(pCtx, Y);
         schema = SYNQ_NO_SPAN;
     }
+    SyntaqliteIndexHint ih = (I.z != NULL) ? SYNTAQLITE_INDEX_HINT_INDEXED
+                           : (I.n == 1)    ? SYNTAQLITE_INDEX_HINT_NOT_INDEXED
+                           :                 SYNTAQLITE_INDEX_HINT_DEFAULT;
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
                                          SYNTAQLITE_BOOL_FALSE,
-                                         alias, SYNTAQLITE_NULL_NODE);
+                                         alias, SYNTAQLITE_NULL_NODE,
+                                         ih, synq_span(pCtx, I));
     if (A == SYNTAQLITE_NULL_NODE) {
         A = tref;
     } else {
@@ -98,7 +102,8 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N
     }
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
                                          SYNTAQLITE_BOOL_TRUE,
-                                         alias, E);
+                                         alias, E,
+                                         SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
     if (A == SYNTAQLITE_NULL_NODE) {
         A = tref;
     } else {

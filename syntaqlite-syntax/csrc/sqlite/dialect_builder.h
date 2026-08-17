@@ -694,7 +694,9 @@ static inline uint32_t synq_parse_table_ref(SynqParseCtx* ctx,
                                             SyntaqliteTextSpan schema,
                                             SyntaqliteBool has_parens,
                                             uint32_t alias,
-                                            uint32_t args) {
+                                            uint32_t args,
+                                            SyntaqliteIndexHint index_hint,
+                                            SyntaqliteTextSpan index_name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteTableRef){.tag = SYNTAQLITE_NODE_TABLE_REF,
@@ -702,7 +704,9 @@ static inline uint32_t synq_parse_table_ref(SynqParseCtx* ctx,
                             .schema = schema,
                             .has_parens = has_parens,
                             .alias = alias,
-                            .args = args},
+                            .args = args,
+                            .index_hint = index_hint,
+                            .index_name = index_name},
       (uint32_t)sizeof(SyntaqliteTableRef));
 }
 
