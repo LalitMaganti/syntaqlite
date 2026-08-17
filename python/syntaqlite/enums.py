@@ -160,11 +160,12 @@ class LikeKeyword(IntEnum):
 
 
 class ForeignKeyAction(IntEnum):
-    NO_ACTION = 0
-    SET_NULL = 1
-    SET_DEFAULT = 2
-    CASCADE = 3
-    RESTRICT = 4
+    UNSET = 0
+    NO_ACTION = 1
+    SET_NULL = 2
+    SET_DEFAULT = 3
+    CASCADE = 4
+    RESTRICT = 5
 
 
 class GeneratedColumnStorage(IntEnum):

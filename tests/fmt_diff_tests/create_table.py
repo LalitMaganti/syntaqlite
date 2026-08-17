@@ -174,6 +174,31 @@ class ForeignKeyFormat(TestSuite):
             out="CREATE TABLE t(a int REFERENCES other(id) DEFERRABLE INITIALLY DEFERRED);",
         )
 
+    def test_references_on_delete_no_action(self):
+        # Explicitly written NO ACTION is not the same as writing nothing.
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) on delete no action)",
+            out="CREATE TABLE t(a int REFERENCES other(id) ON DELETE NO ACTION);",
+        )
+
+    def test_references_on_update_no_action(self):
+        return DiffTestBlueprint(
+            sql="create table t(a int references other(id) on update no action)",
+            out="CREATE TABLE t(a int REFERENCES other(id) ON UPDATE NO ACTION);",
+        )
+
+    def test_references_no_action_and_cascade(self):
+        return DiffTestBlueprint(
+            sql=(
+                "create table t(a int references other(id) "
+                "on delete no action on update cascade)"
+            ),
+            out=(
+                "CREATE TABLE t(a int REFERENCES other(id) "
+                "ON DELETE NO ACTION ON UPDATE CASCADE);"
+            ),
+        )
+
     def test_references_match(self):
         return DiffTestBlueprint(
             sql="create table t(a int references other(id) match full)",

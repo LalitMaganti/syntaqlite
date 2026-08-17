@@ -833,8 +833,8 @@ class ColumnConstraintReferences(TestSuite):
                                     table: (none)
                                     schema: (none)
                               match_name: (none)
-                              on_delete: NO_ACTION
-                              on_update: NO_ACTION
+                              on_delete: UNSET
+                              on_update: UNSET
                               is_deferred: FALSE
               table_constraints: (none)
               as_select: (none)
@@ -882,7 +882,7 @@ class ColumnConstraintReferences(TestSuite):
                                     schema: (none)
                               match_name: (none)
                               on_delete: CASCADE
-                              on_update: NO_ACTION
+                              on_update: UNSET
                               is_deferred: FALSE
               table_constraints: (none)
               as_select: (none)
@@ -929,7 +929,7 @@ class ColumnConstraintReferences(TestSuite):
                                     table: (none)
                                     schema: (none)
                               match_name: (none)
-                              on_delete: NO_ACTION
+                              on_delete: UNSET
                               on_update: SET_NULL
                               is_deferred: FALSE
               table_constraints: (none)
@@ -1391,8 +1391,8 @@ class TableConstraintForeignKey(TestSuite):
                               table: (none)
                               schema: (none)
                         match_name: (none)
-                        on_delete: NO_ACTION
-                        on_update: NO_ACTION
+                        on_delete: UNSET
+                        on_update: UNSET
                         is_deferred: FALSE
               as_select: (none)
 """,
@@ -1491,8 +1491,8 @@ class TableConstraintForeignKey(TestSuite):
                               table: (none)
                               schema: (none)
                         match_name: (none)
-                        on_delete: NO_ACTION
-                        on_update: NO_ACTION
+                        on_delete: UNSET
+                        on_update: UNSET
                         is_deferred: TRUE
               as_select: (none)
 """,
@@ -1543,7 +1543,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     schema: (none)
                               match_name: (none)
                               on_delete: SET_DEFAULT
-                              on_update: NO_ACTION
+                              on_update: UNSET
                               is_deferred: FALSE
               table_constraints: (none)
               as_select: (none)
@@ -1591,7 +1591,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     schema: (none)
                               match_name: (none)
                               on_delete: RESTRICT
-                              on_update: NO_ACTION
+                              on_update: UNSET
                               is_deferred: FALSE
               table_constraints: (none)
               as_select: (none)
@@ -1638,7 +1638,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     table: (none)
                                     schema: (none)
                               match_name: (none)
-                              on_delete: NO_ACTION
+                              on_delete: UNSET
                               on_update: SET_DEFAULT
                               is_deferred: FALSE
               table_constraints: (none)
@@ -1686,7 +1686,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     table: (none)
                                     schema: (none)
                               match_name: (none)
-                              on_delete: NO_ACTION
+                              on_delete: UNSET
                               on_update: RESTRICT
                               is_deferred: FALSE
               table_constraints: (none)
@@ -2090,8 +2090,8 @@ class NamedTableConstraints(TestSuite):
                               table: (none)
                               schema: (none)
                         match_name: (none)
-                        on_delete: NO_ACTION
-                        on_update: NO_ACTION
+                        on_delete: UNSET
+                        on_update: UNSET
                         is_deferred: FALSE
               as_select: (none)
 """,
