@@ -25,6 +25,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from collections import Counter
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -263,12 +264,14 @@ def _run_single_test(
     env["SYNTAQLITE_TEST_VALIDATE"] = "1" if validate else "0"
     env["tcl_interactive"] = "0"
 
+    # Concurrent tests would otherwise race over db files in a shared cwd.
     try:
-        proc = subprocess.run(
-            ["tclsh", "-"],
-            input=script, capture_output=True, text=True,
-            env=env, timeout=60,
-        )
+        with tempfile.TemporaryDirectory(prefix="synq-upstream-") as workdir:
+            proc = subprocess.run(
+                ["tclsh", "-"],
+                input=script, capture_output=True, text=True,
+                env=env, timeout=60, cwd=workdir,
+            )
     except subprocess.TimeoutExpired:
         log_file.unlink(missing_ok=True)
         return FileResult(file=name, error=f"tclsh timed out for {name}")
