@@ -598,13 +598,15 @@ fn maybe_emit_auto_space(next_first: Option<u8>, out: &mut String) -> bool {
     let Some(first) = next_first else {
         return false;
     };
-    if !is_word_byte(first) {
-        return false;
-    }
     let Some(&last) = out.as_bytes().last() else {
         return false;
     };
-    if !is_word_byte(last) {
+    let needs_space = if is_word_byte(first) {
+        is_word_byte(last)
+    } else {
+        would_lex_as_one_token(last, first)
+    };
+    if !needs_space {
         return false;
     }
     out.push(' ');
@@ -614,6 +616,27 @@ fn maybe_emit_auto_space(next_first: Option<u8>, out: &mut String) -> bool {
 #[inline]
 fn is_word_byte(b: u8) -> bool {
     b.is_ascii_alphanumeric() || b == b'_'
+}
+
+/// Operator bytes that `SQLite`'s tokenizer reads as a single token when
+/// adjacent, so emitting them flush would change what the output means.
+///
+/// `-` before `-` is the dangerous one: it opens a line comment that eats the
+/// rest of the statement. The others cannot currently be produced by any fmt
+/// block, but the pair is what makes the output wrong, not the caller, so the
+/// guard belongs here rather than at each emission site.
+#[inline]
+fn would_lex_as_one_token(last: u8, first: u8) -> bool {
+    matches!(
+        (last, first),
+        (b'-', b'-' | b'>')
+            | (b'/', b'*')
+            | (b'*', b'/')
+            | (b'|', b'|')
+            | (b'<', b'<' | b'=' | b'>')
+            | (b'>', b'>' | b'=')
+            | (b'=' | b'!', b'=')
+    )
 }
 
 /// Push a keyword string with the appropriate casing to the output.
