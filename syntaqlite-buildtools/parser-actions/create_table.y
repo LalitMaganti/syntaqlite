@@ -273,7 +273,7 @@ ccons(A) ::= PRIMARY KEY sortorder(Z) onconf(R) autoinc(I). {
     A.node = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_PRIMARY_KEY,
         SYNQ_NO_SPAN,
-        (SyntaqliteConflictAction)R, (SyntaqliteSortOrder)Z, (SyntaqliteBool)I,
+        (SyntaqliteConflictAction)R, synq_sortorder(Z), (SyntaqliteBool)I,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -396,6 +396,9 @@ generated(A) ::= LP expr(E) RP ID(TYPE). {
     SyntaqliteGeneratedColumnStorage storage = SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL;
     if (TYPE.n == 6 && SYNQ_STRNCASECMP(TYPE.z, "stored", 6) == 0) {
         storage = SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED;
+    } else if (!(TYPE.n == 7 && SYNQ_STRNCASECMP(TYPE.z, "virtual", 7) == 0)) {
+        // Quoted spellings land here too, and upstream rejects those as well.
+        pCtx->error = 1;
     }
     A.node = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED,

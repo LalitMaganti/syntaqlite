@@ -482,20 +482,6 @@ class TriggerFormat(TestSuite):
             """,
         )
 
-    def test_trigger_insert_returning(self):
-        return DiffTestBlueprint(
-            sql=(
-                "create trigger tr after insert on t begin "
-                "insert into u values(1) returning x; end"
-            ),
-            out="""\
-                CREATE TRIGGER tr AFTER INSERT ON t
-                BEGIN
-                  INSERT INTO u VALUES (1) RETURNING x;
-                END;
-            """,
-        )
-
     def test_temp_trigger(self):
         return DiffTestBlueprint(
             sql="create temp trigger tr before insert on t begin select 1; end",

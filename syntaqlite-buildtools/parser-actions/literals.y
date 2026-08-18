@@ -36,6 +36,9 @@ term(A) ::= NULL|FLOAT|BLOB(B). {
 }
 
 term(A) ::= QNUMBER(B). {
+    if (!synq_qnumber_is_valid(B.z, B.n)) {
+        pCtx->error = 1;
+    }
     A = synq_parse_literal(pCtx, SYNTAQLITE_LITERAL_TYPE_QNUMBER, synq_span(pCtx, B));
 }
 

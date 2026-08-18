@@ -33,6 +33,10 @@ trigger_decl(A) ::= temp(T) TRIGGER ifnotexists(NOERR) nm(B) dbnm(Z)
                     ON fullname(E) foreach_clause when_clause(G). {
     SyntaqliteTextSpan trig_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, B);
     SyntaqliteTextSpan trig_schema = Z.z ? synq_span(pCtx, B) : SYNQ_NO_SPAN;
+    // A TEMP trigger always lives in the temp schema, so it cannot be qualified.
+    if (T && Z.z) {
+        pCtx->error = 1;
+    }
     A = synq_parse_create_trigger_stmt(pCtx,
         trig_name,
         trig_schema,
@@ -158,6 +162,9 @@ trigger_cmd(A) ::= scanpt insert_cmd(R) INTO trnm(X) idlist_opt(F) select(S) ups
         SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
                                          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
+    if (U.returning != SYNTAQLITE_NULL_NODE) {
+        pCtx->error = 1;
+    }
     A = synq_parse_insert_stmt(pCtx,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
         (SyntaqliteConflictAction)R, tbl, F, S,

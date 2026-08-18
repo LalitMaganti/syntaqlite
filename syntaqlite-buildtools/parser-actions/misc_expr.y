@@ -17,6 +17,11 @@
 // ============ Bind Parameters ============
 
 expr(A) ::= VARIABLE(B). {
+    // `#N` names a VM register and is only legal in a nested parse, which we
+    // never do.
+    if (B.n >= 2 && B.z[0] == '#' && B.z[1] >= '0' && B.z[1] <= '9') {
+        pCtx->error = 1;
+    }
     A = synq_parse_variable(pCtx, synq_span(pCtx, B));
 }
 

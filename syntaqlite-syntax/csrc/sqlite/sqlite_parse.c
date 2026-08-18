@@ -223,6 +223,52 @@ static inline SyntaqliteJoinType synq_join_type(const SynqParseToken* a,
   return SYNTAQLITE_JOIN_TYPE_INNER;
 }
 
+// ON / USING need a left-hand term to join to (build.c
+// sqlite3SrcListAppendFromTerm).
+static inline void synq_reject_dangling_on_using(SynqParseCtx* pCtx,
+                                                 SynqOnUsingValue n) {
+  if (n.on_expr != SYNTAQLITE_NULL_NODE ||
+      n.using_cols != SYNTAQLITE_NULL_NODE) {
+    pCtx->error = 1;
+  }
+}
+
+#define SYNQ_SORTORDER_NONE 2
+
+static inline SyntaqliteSortOrder synq_sortorder(int v) {
+  return v == SYNQ_SORTORDER_NONE ? SYNTAQLITE_SORT_ORDER_ASC
+                                  : (SyntaqliteSortOrder)v;
+}
+
+static inline int synq_is_digit(char c) {
+  return c >= '0' && c <= '9';
+}
+
+static inline int synq_is_xdigit(char c) {
+  return synq_is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+// Port of sqlite3DequoteNumber's separator validation (util.c): every '_' must
+// sit between two digits, or two hex digits for an 0x literal.
+static inline int synq_qnumber_is_valid(const char* z, uint32_t n) {
+  int is_hex = n > 1 && z[0] == '0' && (z[1] == 'x' || z[1] == 'X');
+  for (uint32_t i = 0; i < n; i++) {
+    if (z[i] != '_')
+      continue;
+    if (i == 0 || i + 1 >= n)
+      return 0;
+    char prev = z[i - 1], next = z[i + 1];
+    if (is_hex) {
+      if (!synq_is_xdigit(prev) || !synq_is_xdigit(next))
+        return 0;
+    } else {
+      if (!synq_is_digit(prev) || !synq_is_digit(next))
+        return 0;
+    }
+  }
+  return 1;
+}
+
 // Map parser error bookkeeping to a best-effort source span.
 static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
   if (pCtx->error_offset == 0xFFFFFFFF || pCtx->error_length == 0) {
@@ -8097,7 +8143,7 @@ static YYACTIONTYPE yy_reduce(
       yymsp[-4].minor.yy150.node = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_PRIMARY_KEY, SYNQ_NO_SPAN,
           (SyntaqliteConflictAction)yymsp[-1].minor.yy320,
-          (SyntaqliteSortOrder)yymsp[-2].minor.yy277,
+          synq_sortorder(yymsp[-2].minor.yy277),
           (SyntaqliteBool)yymsp[0].minor.yy320, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8207,6 +8253,10 @@ static YYACTIONTYPE yy_reduce(
       if (yymsp[0].minor.yy0.n == 6 &&
           SYNQ_STRNCASECMP(yymsp[0].minor.yy0.z, "stored", 6) == 0) {
         storage = SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED;
+      } else if (!(yymsp[0].minor.yy0.n == 7 &&
+                   SYNQ_STRNCASECMP(yymsp[0].minor.yy0.z, "virtual", 7) == 0)) {
+        // Quoted spellings land here too, and upstream rejects those as well.
+        pCtx->error = 1;
       }
       yymsp[-3].minor.yy150.node = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED, SYNQ_NO_SPAN,
@@ -8507,8 +8557,10 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 133: /* eidlist ::= nm collate sortorder */
     {
-      (void)yymsp[-1].minor.yy320;
-      (void)yymsp[0].minor.yy277;
+      if (yymsp[-1].minor.yy320 ||
+          yymsp[0].minor.yy277 != SYNQ_SORTORDER_NONE) {
+        pCtx->error = 1;
+      }
       uint32_t col = synq_parse_column_ref(
           pCtx, synq_span_dequote(pCtx, yymsp[-2].minor.yy0), SYNQ_NO_SPAN,
           SYNQ_NO_SPAN);
@@ -8518,8 +8570,10 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 134: /* eidlist ::= eidlist COMMA nm collate sortorder */
     {
-      (void)yymsp[-1].minor.yy320;
-      (void)yymsp[0].minor.yy277;
+      if (yymsp[-1].minor.yy320 ||
+          yymsp[0].minor.yy277 != SYNQ_SORTORDER_NONE) {
+        pCtx->error = 1;
+      }
       uint32_t col = synq_parse_column_ref(
           pCtx, synq_span_dequote(pCtx, yymsp[-2].minor.yy0), SYNQ_NO_SPAN,
           SYNQ_NO_SPAN);
@@ -9104,6 +9158,9 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 206: /* term ::= QNUMBER */
     {
+      if (!synq_qnumber_is_valid(yymsp[0].minor.yy0.z, yymsp[0].minor.yy0.n)) {
+        pCtx->error = 1;
+      }
       yylhsminor.yy277 =
           synq_parse_literal(pCtx, SYNTAQLITE_LITERAL_TYPE_QNUMBER,
                              synq_span(pCtx, yymsp[0].minor.yy0));
@@ -9120,6 +9177,12 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 208: /* expr ::= VARIABLE */
     {
+      // `#N` names a VM register and is only legal in a nested parse, which we
+      // never do.
+      if (yymsp[0].minor.yy0.n >= 2 && yymsp[0].minor.yy0.z[0] == '#' &&
+          yymsp[0].minor.yy0.z[1] >= '0' && yymsp[0].minor.yy0.z[1] <= '9') {
+        pCtx->error = 1;
+      }
       yylhsminor.yy277 =
           synq_parse_variable(pCtx, synq_span(pCtx, yymsp[0].minor.yy0));
     }
@@ -9134,10 +9197,9 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 210: /* sortlist ::= sortlist COMMA expr sortorder nulls */
     {
-      uint32_t term =
-          synq_parse_ordering_term(pCtx, yymsp[-2].minor.yy277,
-                                   (SyntaqliteSortOrder)yymsp[-1].minor.yy277,
-                                   (SyntaqliteNullsOrder)yymsp[0].minor.yy277);
+      uint32_t term = synq_parse_ordering_term(
+          pCtx, yymsp[-2].minor.yy277, synq_sortorder(yymsp[-1].minor.yy277),
+          (SyntaqliteNullsOrder)yymsp[0].minor.yy277);
       yylhsminor.yy277 =
           synq_parse_order_by_list(pCtx, yymsp[-4].minor.yy277, term);
     }
@@ -9145,10 +9207,9 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 211: /* sortlist ::= expr sortorder nulls */
     {
-      uint32_t term =
-          synq_parse_ordering_term(pCtx, yymsp[-2].minor.yy277,
-                                   (SyntaqliteSortOrder)yymsp[-1].minor.yy277,
-                                   (SyntaqliteNullsOrder)yymsp[0].minor.yy277);
+      uint32_t term = synq_parse_ordering_term(
+          pCtx, yymsp[-2].minor.yy277, synq_sortorder(yymsp[-1].minor.yy277),
+          (SyntaqliteNullsOrder)yymsp[0].minor.yy277);
       yylhsminor.yy277 =
           synq_parse_order_by_list(pCtx, SYNTAQLITE_NULL_NODE, term);
     }
@@ -9162,18 +9223,20 @@ static YYACTIONTYPE yy_reduce(
       }
       break;
     case 214: /* sortorder ::= */
+    {
+      yymsp[1].minor.yy277 = SYNQ_SORTORDER_NONE;
+    } break;
+    case 216: /* nulls ::= NULLS LAST */
+    {
+      yymsp[-1].minor.yy277 = 2;
+    } break;
     case 217: /* nulls ::= */
-      yytestcase(yyruleno == 217);
     case 269: /* distinct ::= */
       yytestcase(yyruleno == 269);
       {
         yymsp[1].minor.yy277 = 0;
       }
       break;
-    case 216: /* nulls ::= NULLS LAST */
-    {
-      yymsp[-1].minor.yy277 = 2;
-    } break;
     case 218: /* expr ::= RAISE LP IGNORE RP */
     {
       yymsp[-3].minor.yy277 = synq_parse_raise_expr(
@@ -9443,6 +9506,7 @@ static YYACTIONTYPE yy_reduce(
           pCtx, table_name, schema, SYNTAQLITE_BOOL_FALSE, alias,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
       if (yymsp[-4].minor.yy277 == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, yymsp[0].minor.yy632);
         yymsp[-4].minor.yy277 = tref;
       } else {
         SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-4].minor.yy277);
@@ -9471,6 +9535,7 @@ static YYACTIONTYPE yy_reduce(
           pCtx, table_name, schema, SYNTAQLITE_BOOL_FALSE, alias,
           SYNTAQLITE_NULL_NODE, ih, synq_span(pCtx, yymsp[-1].minor.yy0));
       if (yymsp[-5].minor.yy277 == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, yymsp[0].minor.yy632);
         yymsp[-5].minor.yy277 = tref;
       } else {
         SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-5].minor.yy277);
@@ -9495,6 +9560,7 @@ static YYACTIONTYPE yy_reduce(
           pCtx, table_name, schema, SYNTAQLITE_BOOL_TRUE, alias,
           yymsp[-3].minor.yy277, SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
       if (yymsp[-7].minor.yy277 == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, yymsp[0].minor.yy632);
         yymsp[-7].minor.yy277 = tref;
       } else {
         SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-7].minor.yy277);
@@ -9510,6 +9576,7 @@ static YYACTIONTYPE yy_reduce(
       uint32_t sub =
           synq_parse_subquery_table_source(pCtx, yymsp[-3].minor.yy277, alias);
       if (yymsp[-5].minor.yy277 == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, yymsp[0].minor.yy632);
         yymsp[-5].minor.yy277 = sub;
       } else {
         SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-5].minor.yy277);
@@ -9529,6 +9596,7 @@ static YYACTIONTYPE yy_reduce(
         uint32_t paren = synq_parse_paren_table_source(
             pCtx, yymsp[-3].minor.yy277, yymsp[-1].minor.yy277);
         if (yymsp[-5].minor.yy277 == SYNTAQLITE_NULL_NODE) {
+          synq_reject_dangling_on_using(pCtx, yymsp[0].minor.yy632);
           yymsp[-5].minor.yy277 = paren;
         } else {
           SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-5].minor.yy277);
@@ -9624,6 +9692,11 @@ static YYACTIONTYPE yy_reduce(
       SyntaqliteTextSpan trig_schema =
           yymsp[-6].minor.yy0.z ? synq_span(pCtx, yymsp[-7].minor.yy0)
                                 : SYNQ_NO_SPAN;
+      // yylhsminor.yy277 TEMP trigger always lives in the temp schema, so it
+      // cannot be qualified.
+      if (yymsp[-10].minor.yy320 && yymsp[-6].minor.yy0.z) {
+        pCtx->error = 1;
+      }
       yylhsminor.yy277 = synq_parse_create_trigger_stmt(
           pCtx, trig_name, trig_schema, (SyntaqliteBool)yymsp[-10].minor.yy320,
           (SyntaqliteBool)yymsp[-8].minor.yy320,
@@ -9749,6 +9822,9 @@ static YYACTIONTYPE yy_reduce(
           pCtx, synq_span(pCtx, yymsp[-4].minor.yy0), SYNQ_NO_SPAN,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
+      if (yymsp[-1].minor.yy352.returning != SYNTAQLITE_NULL_NODE) {
+        pCtx->error = 1;
+      }
       yymsp[-7].minor.yy277 = synq_parse_insert_stmt(
           pCtx, SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
           (SyntaqliteConflictAction)yymsp[-6].minor.yy320, tbl,

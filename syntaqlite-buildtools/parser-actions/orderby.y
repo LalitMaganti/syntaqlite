@@ -17,12 +17,12 @@
 // ============ Sort List (ORDER BY) ============
 
 sortlist(A) ::= sortlist(B) COMMA expr(C) sortorder(D) nulls(E). {
-    uint32_t term = synq_parse_ordering_term(pCtx, C, (SyntaqliteSortOrder)D, (SyntaqliteNullsOrder)E);
+    uint32_t term = synq_parse_ordering_term(pCtx, C, synq_sortorder(D), (SyntaqliteNullsOrder)E);
     A = synq_parse_order_by_list(pCtx, B, term);
 }
 
 sortlist(A) ::= expr(B) sortorder(C) nulls(D). {
-    uint32_t term = synq_parse_ordering_term(pCtx, B, (SyntaqliteSortOrder)C, (SyntaqliteNullsOrder)D);
+    uint32_t term = synq_parse_ordering_term(pCtx, B, synq_sortorder(C), (SyntaqliteNullsOrder)D);
     A = synq_parse_order_by_list(pCtx, SYNTAQLITE_NULL_NODE, term);
 }
 
@@ -36,8 +36,10 @@ sortorder(A) ::= DESC. {
     A = 1;
 }
 
+// Distinct from ASC so eidlist can tell an explicit sort order from none;
+// every other consumer normalises it back to ASC.
 sortorder(A) ::= . {
-    A = 0;
+    A = SYNQ_SORTORDER_NONE;
 }
 
 // ============ Nulls Order ============

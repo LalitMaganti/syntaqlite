@@ -75,7 +75,9 @@ eidlist_opt(A) ::= LP eidlist(X) RP. {
 }
 
 eidlist(A) ::= nm(Y) collate(C) sortorder(Z). {
-    (void)C; (void)Z;
+    if (C || Z != SYNQ_SORTORDER_NONE) {
+        pCtx->error = 1;
+    }
     uint32_t col = synq_parse_column_ref(pCtx,
         synq_span_dequote(pCtx, Y),
         SYNQ_NO_SPAN,
@@ -84,7 +86,9 @@ eidlist(A) ::= nm(Y) collate(C) sortorder(Z). {
 }
 
 eidlist(A) ::= eidlist(A) COMMA nm(Y) collate(C) sortorder(Z). {
-    (void)C; (void)Z;
+    if (C || Z != SYNQ_SORTORDER_NONE) {
+        pCtx->error = 1;
+    }
     uint32_t col = synq_parse_column_ref(pCtx,
         synq_span_dequote(pCtx, Y),
         SYNQ_NO_SPAN,

@@ -213,6 +213,44 @@ static inline SyntaqliteJoinType synq_join_type(const SynqParseToken* a,
   return SYNTAQLITE_JOIN_TYPE_INNER;
 }
 
+// ON / USING need a left-hand term to join to (build.c
+// sqlite3SrcListAppendFromTerm).
+static inline void synq_reject_dangling_on_using(SynqParseCtx* pCtx,
+                                                 SynqOnUsingValue n) {
+  if (n.on_expr != SYNTAQLITE_NULL_NODE || n.using_cols != SYNTAQLITE_NULL_NODE) {
+    pCtx->error = 1;
+  }
+}
+
+#define SYNQ_SORTORDER_NONE 2
+
+static inline SyntaqliteSortOrder synq_sortorder(int v) {
+  return v == SYNQ_SORTORDER_NONE ? SYNTAQLITE_SORT_ORDER_ASC : (SyntaqliteSortOrder)v;
+}
+
+static inline int synq_is_digit(char c) { return c >= '0' && c <= '9'; }
+
+static inline int synq_is_xdigit(char c) {
+  return synq_is_digit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+}
+
+// Port of sqlite3DequoteNumber's separator validation (util.c): every '_' must
+// sit between two digits, or two hex digits for an 0x literal.
+static inline int synq_qnumber_is_valid(const char* z, uint32_t n) {
+  int is_hex = n > 1 && z[0] == '0' && (z[1] == 'x' || z[1] == 'X');
+  for (uint32_t i = 0; i < n; i++) {
+    if (z[i] != '_') continue;
+    if (i == 0 || i + 1 >= n) return 0;
+    char prev = z[i - 1], next = z[i + 1];
+    if (is_hex) {
+      if (!synq_is_xdigit(prev) || !synq_is_xdigit(next)) return 0;
+    } else {
+      if (!synq_is_digit(prev) || !synq_is_digit(next)) return 0;
+    }
+  }
+  return 1;
+}
+
 // Map parser error bookkeeping to a best-effort source span.
 static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
   if (pCtx->error_offset == 0xFFFFFFFF || pCtx->error_length == 0) {
