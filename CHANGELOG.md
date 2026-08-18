@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0
+
+**Bug fixes:**
+- `ALTER TABLE ... ADD COLUMN` no longer drops everything after the column name ([#317](https://github.com/LalitMaganti/syntaqlite/issues/317)).
+- Many parser and formatter fixes from an audit of every rule in SQLite's grammar, bringing syntaqlite closer to matching SQLite exactly.
+
+**C library:**
+- The shared library now exports the complete public C surface.
+- Corrected the documented C API contract.
+- The generated parser no longer depends on libc `strncasecmp`, so it loads in environments that link a restricted symbol set.
+
 ## 0.8.0
 
 **Validation:**
