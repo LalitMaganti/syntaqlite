@@ -904,6 +904,9 @@ impl AggregateFunctionCallFlags {
     pub fn distinct(&self) -> bool {
         self.0 & 1 != 0
     }
+    pub fn all(&self) -> bool {
+        self.0 & 4 != 0
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -936,6 +939,9 @@ impl FunctionCallFlags {
     pub fn star(&self) -> bool {
         self.0 & 2 != 0
     }
+    pub fn all(&self) -> bool {
+        self.0 & 4 != 0
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -961,6 +967,9 @@ impl SelectStmtFlags {
     }
     pub fn distinct(&self) -> bool {
         self.0 & 1 != 0
+    }
+    pub fn all(&self) -> bool {
+        self.0 & 4 != 0
     }
 }
 

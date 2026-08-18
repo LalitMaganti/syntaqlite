@@ -1,4 +1,4 @@
-flags FunctionCallFlags { DISTINCT = 1 STAR = 2 }
+flags FunctionCallFlags { DISTINCT = 1 STAR = 2 ALL = 4 }
 
 node FunctionCall {
   func_name: inline SyntaqliteTextSpan
@@ -14,6 +14,7 @@ node FunctionCall {
     group {
       "("
       if_flag(flags.distinct) { "DISTINCT" space }
+      if_flag(flags.all) { "ALL" space }
       if_flag(flags.star) { "*" } else {
         if_set(args) { nest { softline child(args) } }
       }

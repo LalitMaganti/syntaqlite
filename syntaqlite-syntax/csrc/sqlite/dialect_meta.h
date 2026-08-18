@@ -207,6 +207,8 @@ static const char* const display_frame_exclude[] = {
 
 static const char* const display_aggregate_function_call_flags[] = {
     "DISTINCT",
+    "",
+    "ALL",
 };
 
 static const char* const display_create_table_stmt_flags[] = {
@@ -217,6 +219,7 @@ static const char* const display_create_table_stmt_flags[] = {
 static const char* const display_function_call_flags[] = {
     "DISTINCT",
     "STAR",
+    "ALL",
 };
 
 static const char* const display_result_column_flags[] = {
@@ -225,6 +228,8 @@ static const char* const display_result_column_flags[] = {
 
 static const char* const display_select_stmt_flags[] = {
     "DISTINCT",
+    "",
+    "ALL",
 };
 
 static const SyntaqliteFieldMeta field_meta_aggregate_function_call[] = {

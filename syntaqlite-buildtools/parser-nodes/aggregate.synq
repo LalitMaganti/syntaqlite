@@ -1,4 +1,4 @@
-flags AggregateFunctionCallFlags { DISTINCT = 1 }
+flags AggregateFunctionCallFlags { DISTINCT = 1 ALL = 4 }
 
 node AggregateFunctionCall {
   func_name: inline SyntaqliteTextSpan
@@ -15,6 +15,7 @@ node AggregateFunctionCall {
     group {
       "("
       if_flag(flags.distinct) { "DISTINCT" space }
+      if_flag(flags.all) { "ALL" space }
       if_set(args) { nest { softline child(args) } }
       if_set(orderby) { space "ORDER" "BY" space child(orderby) }
       softline ")"
@@ -39,6 +40,7 @@ node OrderedSetFunctionCall {
     group {
       "("
       if_flag(flags.distinct) { "DISTINCT" space }
+      if_flag(flags.all) { "ALL" space }
       if_set(args) { nest { softline child(args) } }
       softline ")"
     }

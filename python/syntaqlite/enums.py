@@ -350,6 +350,7 @@ class FrameExclude(IntEnum):
 
 class AggregateFunctionCallFlags(IntFlag):
     DISTINCT = 1
+    ALL = 4
 
 
 class CreateTableStmtFlags(IntFlag):
@@ -360,6 +361,7 @@ class CreateTableStmtFlags(IntFlag):
 class FunctionCallFlags(IntFlag):
     DISTINCT = 1
     STAR = 2
+    ALL = 4
 
 
 class ResultColumnFlags(IntFlag):
@@ -368,5 +370,6 @@ class ResultColumnFlags(IntFlag):
 
 class SelectStmtFlags(IntFlag):
     DISTINCT = 1
+    ALL = 4
 
 

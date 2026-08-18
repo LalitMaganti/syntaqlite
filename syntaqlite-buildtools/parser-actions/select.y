@@ -84,7 +84,9 @@ distinct(A) ::= DISTINCT. {
 }
 
 distinct(A) ::= ALL. {
-    A = 0;
+    // Bit 2 is STAR in FunctionCallFlags, so ALL takes bit 4 in every set
+    // that this value is cast into.
+    A = 4;
 }
 
 distinct(A) ::= . {
