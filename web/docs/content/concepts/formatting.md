@@ -103,13 +103,57 @@ By default, the formatter appends a semicolon after every statement. This can
 be disabled with `--semicolons=false` (CLI) or `.with_semicolons(false)` (Rust
 API).
 
+## Canonical spellings
+
+SQLite accepts several pairs of spellings that mean exactly the same thing to
+its parser. The formatter picks one spelling for each pair, so the same query
+always formats the same way regardless of which spelling you wrote.
+
+Optional keywords that carry no meaning are dropped:
+
+| you write | you get |
+|---|---|
+| `CREATE TRIGGER ... FOR EACH ROW` | `CREATE TRIGGER ...` |
+| `BEGIN TRANSACTION`, `COMMIT TRANSACTION` | `BEGIN`, `COMMIT` |
+| `ATTACH DATABASE`, `DETACH DATABASE` | `ATTACH`, `DETACH` |
+| `a AS (expr) VIRTUAL` | `a AS (expr)` |
+| `ORDER BY a ASC`, `CREATE INDEX i ON t(a ASC)` | `ORDER BY a`, `CREATE INDEX i ON t(a)` |
+
+Optional keywords are added where they make the statement read unambiguously:
+
+| you write | you get |
+|---|---|
+| `CREATE TRIGGER tr INSERT ON t` | `CREATE TRIGGER tr BEFORE INSERT ON t` |
+| `ALTER TABLE t RENAME a TO b` | `ALTER TABLE t RENAME COLUMN a TO b` |
+| `RELEASE sp`, `ROLLBACK TO sp` | `RELEASE SAVEPOINT sp`, `ROLLBACK TO SAVEPOINT sp` |
+
+And where SQLite has two names for one thing, the shorter is used:
+
+| you write | you get |
+|---|---|
+| `END`, `END TRANSACTION` | `COMMIT` |
+| `a <> b` | `a != b` |
+| `CREATE TEMPORARY TABLE` | `CREATE TEMP TABLE` |
+| `INSERT OR REPLACE INTO t` | `REPLACE INTO t` |
+
+Every one of these is semantically inert: the two spellings compile to identical
+bytecode, and where the keyword is added it matches the default SQLite would
+have applied anyway. A trigger with no timing keyword really is a `BEFORE`
+trigger, and an index column with no sort order really is `ASC`.
+
+> **Note:** SQLite stores the original text of `CREATE` statements in
+> `sqlite_master.sql`. Reformatting a schema therefore changes what a later
+> `SELECT sql FROM sqlite_master` returns, in the same way that changing
+> whitespace or keyword casing does. The schema itself is unaffected.
+
 ## What the formatter does *not* do
 
 The formatter pretty-prints the AST as-is. It does not:
 
 - Rewrite queries (e.g., converting implicit joins to explicit `JOIN`)
 - Reorder clauses
-- Normalize expressions (e.g., `a = 1` vs `1 = a`)
+- Normalize expressions (e.g., `a = 1` vs `1 = a`) beyond the
+  [canonical spellings](#canonical-spellings) above
 - Add or remove aliases
 - Change quoting style on identifiers
 
