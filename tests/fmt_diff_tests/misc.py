@@ -828,3 +828,92 @@ class ParenBreakFormat(TestSuite):
                 ) DO NOTHING;
             """,
         )
+
+class CanonicalSpellingFormat(TestSuite):
+    """Equivalent spellings SQLite accepts collapse onto one form.
+
+    Each pair below was verified to compile to identical bytecode, so the
+    rewrite is semantically inert. See concepts/formatting.md.
+    """
+
+    def test_trigger_drops_for_each_row(self):
+        return DiffTestBlueprint(
+            sql="create trigger tr after insert on t for each row begin select 1; end",
+            out="""\
+                CREATE TRIGGER tr AFTER INSERT ON t
+                BEGIN
+                  SELECT 1;
+                END;
+            """,
+        )
+
+    def test_trigger_gains_default_timing(self):
+        return DiffTestBlueprint(
+            sql="create trigger tr insert on t begin select 1; end",
+            out="""\
+                CREATE TRIGGER tr BEFORE INSERT ON t
+                BEGIN
+                  SELECT 1;
+                END;
+            """,
+        )
+
+    def test_begin_commit_drop_transaction(self):
+        return DiffTestBlueprint(
+            sql="begin transaction; commit transaction;",
+            out="BEGIN;\n\nCOMMIT;",
+        )
+
+    def test_end_becomes_commit(self):
+        return DiffTestBlueprint(
+            sql="end transaction;",
+            out="COMMIT;",
+        )
+
+    def test_attach_detach_drop_database(self):
+        return DiffTestBlueprint(
+            sql="attach database 'f' as x; detach database x;",
+            out="ATTACH 'f' AS x;\n\nDETACH x;",
+        )
+
+    def test_rename_gains_column(self):
+        return DiffTestBlueprint(
+            sql="alter table t rename a to b",
+            out="ALTER TABLE t RENAME COLUMN a TO b;",
+        )
+
+    def test_savepoint_keyword_added(self):
+        return DiffTestBlueprint(
+            sql="release sp; rollback to sp;",
+            out="RELEASE SAVEPOINT sp;\n\nROLLBACK TO SAVEPOINT sp;",
+        )
+
+    def test_generated_column_drops_virtual(self):
+        return DiffTestBlueprint(
+            sql="create table g(k, a as (1) virtual)",
+            out="CREATE TABLE g(k, a AS (1));",
+        )
+
+    def test_explicit_asc_dropped(self):
+        return DiffTestBlueprint(
+            sql="select a from t order by a asc",
+            out="SELECT a FROM t ORDER BY a;",
+        )
+
+    def test_ne_operator_canonicalised(self):
+        return DiffTestBlueprint(
+            sql="select * from t where a <> 1",
+            out="SELECT * FROM t WHERE a != 1;",
+        )
+
+    def test_temporary_becomes_temp(self):
+        return DiffTestBlueprint(
+            sql="create temporary table x(a)",
+            out="CREATE TEMP TABLE x(a);",
+        )
+
+    def test_insert_or_replace_becomes_replace(self):
+        return DiffTestBlueprint(
+            sql="insert or replace into t values(1)",
+            out="REPLACE INTO t VALUES (1);",
+        )
