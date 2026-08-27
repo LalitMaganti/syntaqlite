@@ -92,6 +92,8 @@ def main() -> int:
     ])
     env["PATH"] = path_prepend + os.pathsep + env.get("PATH", "")
     env["EM_CONFIG"] = os.path.join(emscripten_dir, "emscripten_config")
+    # Keep native CC overrides from replacing Emscripten for target C sources.
+    env["CC_wasm32_unknown_emscripten"] = "emcc"
 
     em_cache_dir = env.get("EM_CACHE", os.path.join(ROOT_DIR, ".cache", "emscripten-cache"))
     os.makedirs(em_cache_dir, exist_ok=True)

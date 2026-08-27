@@ -50,6 +50,11 @@ def _verbose_log(verbose: bool, msg: str) -> None:
         print(msg, file=sys.stderr, flush=True)
 
 
+def _normalize_public_api(output: str) -> str:
+    """Normalize rustdoc paths that vary across nightly toolchains."""
+    return output.replace("core::io::write::Write", "std::io::Write")
+
+
 def _run_public_api(crate_name: str, features: str | None, verbose: bool) -> tuple[bool, str]:
     """Run cargo public-api for *crate_name* and return (ok, output_or_error)."""
     cmd = [sys.executable, _cargo_path(), "public-api", "-p", crate_name]
@@ -73,7 +78,7 @@ def _run_public_api(crate_name: str, features: str | None, verbose: bool) -> tup
             verbose,
             f"[check-public-api] {crate_name}: success, stdout lines={len(proc.stdout.splitlines())}",
         )
-        lines = sorted(dict.fromkeys(proc.stdout.splitlines()))
+        lines = sorted(dict.fromkeys(_normalize_public_api(proc.stdout).splitlines()))
         return True, "\n".join(lines) + ("\n" if lines else "")
 
 

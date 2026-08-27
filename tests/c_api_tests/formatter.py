@@ -126,11 +126,11 @@ CREATE TABLE t (a INTEGER, b TEXT NOT NULL, c REAL DEFAULT 0);
 """,
             expected="""\
 create ok
-format ok len=78
+format ok len=76
 CREATE TABLE t(
     a INTEGER,
     b TEXT NOT NULL,
-    c REAL DEFAULT (0)
+    c REAL DEFAULT 0
 );
 .
 """,
