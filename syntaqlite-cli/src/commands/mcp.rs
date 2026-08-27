@@ -8,6 +8,11 @@
     clippy::needless_pass_by_value,
     reason = "rmcp #[tool(aggr)] requires by-value params"
 )]
+#![allow(unknown_lints)]
+#![allow(
+    clippy::unused_async_trait_impl,
+    reason = "rmcp generates async trait methods from synchronous tool handlers"
+)]
 
 use std::fmt::Write;
 use std::ops::Deref;

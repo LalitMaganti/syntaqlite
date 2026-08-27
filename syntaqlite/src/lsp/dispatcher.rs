@@ -731,7 +731,9 @@ fn handle_semantic_tokens(req: Request, host: &mut LspHost) -> Response {
     let uri = params.text_document.uri.as_str();
     let encoded = host.semantic_tokens_encoded(uri, None);
     let data: Vec<lsp_types::SemanticToken> = encoded
-        .chunks_exact(5)
+        .as_chunks::<5>()
+        .0
+        .iter()
         .map(|c| lsp_types::SemanticToken {
             delta_line: c[0],
             delta_start: c[1],
@@ -766,7 +768,9 @@ fn handle_semantic_tokens_range(req: Request, host: &mut LspHost) -> Response {
     });
     let encoded = host.semantic_tokens_encoded(uri, range);
     let data: Vec<lsp_types::SemanticToken> = encoded
-        .chunks_exact(5)
+        .as_chunks::<5>()
+        .0
+        .iter()
         .map(|c| lsp_types::SemanticToken {
             delta_line: c[0],
             delta_start: c[1],
