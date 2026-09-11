@@ -14,8 +14,8 @@
 
 %type scantok {SynqParseToken}
 %type autoinc {int}
-%type refargs {SynqRefArgsValue}
-%type refarg {SynqRefArgValue}
+%type refargs {uint32_t}
+%type refarg {uint32_t}
 %type refact {int}
 %type defer_subclause {SynqDeferValue}
 %type init_deferred_pred_opt {int}
@@ -272,8 +272,7 @@ ccons(A) ::= CHECK LP expr(X) RP. {
 // REFERENCES nm eidlist_opt refargs
 ccons(A) ::= REFERENCES nm(T) eidlist_opt(TA) refargs(R). {
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
-        synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
-        R.on_insert,
+        synq_span(pCtx, T), TA, R,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET);
     A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
@@ -375,44 +374,31 @@ autoinc(A) ::= AUTOINCR. {
 // SQLite ignores MATCH semantically, but the text still has to survive.
 
 refargs(A) ::= . {
-    A.on_delete = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
-    A.on_update = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
-    A.on_insert = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
-    A.match_name = SYNQ_NO_SPAN;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 refargs(A) ::= refargs(A) refarg(Y). {
-    switch (Y.kind) {
-        case SYNQ_REFARG_DELETE: A.on_delete = Y.action; break;
-        case SYNQ_REFARG_UPDATE: A.on_update = Y.action; break;
-        case SYNQ_REFARG_INSERT: A.on_insert = Y.action; break;
-        case SYNQ_REFARG_MATCH:  A.match_name = Y.match_name; break;
-        default: break;
-    }
+    A = synq_parse_foreign_key_option_list(pCtx, A, Y);
 }
 
 refarg(A) ::= MATCH nm(X). {
-    A.kind = SYNQ_REFARG_MATCH;
-    A.action = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
-    A.match_name = synq_span(pCtx, X);
+    A = synq_parse_foreign_key_option(pCtx, SYNTAQLITE_FOREIGN_KEY_OPTION_KIND_MATCH,
+        SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET, synq_span(pCtx, X));
 }
 
 refarg(A) ::= ON INSERT refact(X). {
-    A.kind = SYNQ_REFARG_INSERT;
-    A.action = (SyntaqliteForeignKeyAction)X;
-    A.match_name = SYNQ_NO_SPAN;
+    A = synq_parse_foreign_key_option(pCtx, SYNTAQLITE_FOREIGN_KEY_OPTION_KIND_ON_INSERT,
+        (SyntaqliteForeignKeyAction)X, SYNQ_NO_SPAN);
 }
 
 refarg(A) ::= ON DELETE refact(X). {
-    A.kind = SYNQ_REFARG_DELETE;
-    A.action = (SyntaqliteForeignKeyAction)X;
-    A.match_name = SYNQ_NO_SPAN;
+    A = synq_parse_foreign_key_option(pCtx, SYNTAQLITE_FOREIGN_KEY_OPTION_KIND_ON_DELETE,
+        (SyntaqliteForeignKeyAction)X, SYNQ_NO_SPAN);
 }
 
 refarg(A) ::= ON UPDATE refact(X). {
-    A.kind = SYNQ_REFARG_UPDATE;
-    A.action = (SyntaqliteForeignKeyAction)X;
-    A.match_name = SYNQ_NO_SPAN;
+    A = synq_parse_foreign_key_option(pCtx, SYNTAQLITE_FOREIGN_KEY_OPTION_KIND_ON_UPDATE,
+        (SyntaqliteForeignKeyAction)X, SYNQ_NO_SPAN);
 }
 
 // refact returns ForeignKeyAction enum values
@@ -519,8 +505,7 @@ tcons(A) ::= CHECK LP expr(E) RP onconf(R). {
 
 tcons(A) ::= FOREIGN KEY LP eidlist(FA) RP REFERENCES nm(T) eidlist_opt(TA) refargs(R) defer_subclause_opt(D). {
     uint32_t fk = synq_parse_foreign_key_clause(pCtx,
-        synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
-        R.on_insert,
+        synq_span(pCtx, T), TA, R,
         D.deferrable, D.initial);
     A = synq_parse_table_constraint(pCtx,
         SYNTAQLITE_TABLE_CONSTRAINT_TYPE_FOREIGN_KEY,

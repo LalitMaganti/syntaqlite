@@ -875,10 +875,7 @@ class ColumnConstraintReferences(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
-                              match_name: (none)
-                              on_delete: UNSET
-                              on_update: UNSET
-                              on_insert: UNSET
+                              options: (none)
                               deferrable: UNSET
                               initial_defer: UNSET
               table_constraints: (none)
@@ -928,10 +925,12 @@ class ColumnConstraintReferences(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
-                              match_name: (none)
-                              on_delete: CASCADE
-                              on_update: UNSET
-                              on_insert: UNSET
+                              options:
+                                ForeignKeyOptionList [1 items]
+                                  ForeignKeyOption
+                                    kind: ON_DELETE
+                                    action: CASCADE
+                                    match_name: (none)
                               deferrable: UNSET
                               initial_defer: UNSET
               table_constraints: (none)
@@ -981,16 +980,81 @@ class ColumnConstraintReferences(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
-                              match_name: (none)
-                              on_delete: UNSET
-                              on_update: SET_NULL
-                              on_insert: UNSET
+                              options:
+                                ForeignKeyOptionList [1 items]
+                                  ForeignKeyOption
+                                    kind: ON_UPDATE
+                                    action: SET_NULL
+                                    match_name: (none)
                               deferrable: UNSET
                               initial_defer: UNSET
               table_constraints: (none)
               as_select: (none)
 """,
         )
+
+    def test_references_preserve_repeated_options(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a REFERENCES u ON DELETE CASCADE MATCH first ON DELETE RESTRICT MATCH last)",
+            out="""\
+            CreateTableStmt
+              table_name: "t"
+              schema: (none)
+              is_temp: FALSE
+              if_not_exists: FALSE
+              flags: (none)
+              columns:
+                ColumnDefList [1 items]
+                  ColumnDef
+                    column_name:
+                      IdentName
+                        source: "a"
+                    type_name: (none)
+                    constraints:
+                      ColumnConstraintList [1 items]
+                        ColumnConstraint
+                          kind: REFERENCES
+                          onconf: DEFAULT
+                          sort_order: ASC
+                          is_autoincrement: FALSE
+                          collation_name: (none)
+                          generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
+                          default_has_parens: FALSE
+                          generated_always: FALSE
+                          default_expr: (none)
+                          check_expr: (none)
+                          generated_expr: (none)
+                          fk_clause:
+                            ForeignKeyClause
+                              ref_table: "u"
+                              ref_columns: (none)
+                              options:
+                                ForeignKeyOptionList [4 items]
+                                  ForeignKeyOption
+                                    kind: ON_DELETE
+                                    action: CASCADE
+                                    match_name: (none)
+                                  ForeignKeyOption
+                                    kind: MATCH
+                                    action: UNSET
+                                    match_name: "first"
+                                  ForeignKeyOption
+                                    kind: ON_DELETE
+                                    action: RESTRICT
+                                    match_name: (none)
+                                  ForeignKeyOption
+                                    kind: MATCH
+                                    action: UNSET
+                                    match_name: "last"
+                              deferrable: UNSET
+                              initial_defer: UNSET
+              table_constraints: (none)
+              as_select: (none)
+""",
+        )
+
 
 
 class ColumnConstraintCollate(TestSuite):
@@ -1461,10 +1525,7 @@ class TableConstraintForeignKey(TestSuite):
                                 column: "id"
                                 table: (none)
                                 schema: (none)
-                          match_name: (none)
-                          on_delete: UNSET
-                          on_update: UNSET
-                          on_insert: UNSET
+                          options: (none)
                           deferrable: UNSET
                           initial_defer: UNSET
               as_select: (none)
@@ -1513,10 +1574,16 @@ class TableConstraintForeignKey(TestSuite):
                                 column: "id"
                                 table: (none)
                                 schema: (none)
-                          match_name: (none)
-                          on_delete: CASCADE
-                          on_update: SET_NULL
-                          on_insert: UNSET
+                          options:
+                            ForeignKeyOptionList [2 items]
+                              ForeignKeyOption
+                                kind: ON_DELETE
+                                action: CASCADE
+                                match_name: (none)
+                              ForeignKeyOption
+                                kind: ON_UPDATE
+                                action: SET_NULL
+                                match_name: (none)
                           deferrable: UNSET
                           initial_defer: UNSET
               as_select: (none)
@@ -1565,10 +1632,7 @@ class TableConstraintForeignKey(TestSuite):
                                 column: "id"
                                 table: (none)
                                 schema: (none)
-                          match_name: (none)
-                          on_delete: UNSET
-                          on_update: UNSET
-                          on_insert: UNSET
+                          options: (none)
                           deferrable: DEFERRABLE
                           initial_defer: DEFERRED
               as_select: (none)
@@ -1621,10 +1685,12 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
-                              match_name: (none)
-                              on_delete: SET_DEFAULT
-                              on_update: UNSET
-                              on_insert: UNSET
+                              options:
+                                ForeignKeyOptionList [1 items]
+                                  ForeignKeyOption
+                                    kind: ON_DELETE
+                                    action: SET_DEFAULT
+                                    match_name: (none)
                               deferrable: UNSET
                               initial_defer: UNSET
               table_constraints: (none)
@@ -1674,10 +1740,12 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
-                              match_name: (none)
-                              on_delete: RESTRICT
-                              on_update: UNSET
-                              on_insert: UNSET
+                              options:
+                                ForeignKeyOptionList [1 items]
+                                  ForeignKeyOption
+                                    kind: ON_DELETE
+                                    action: RESTRICT
+                                    match_name: (none)
                               deferrable: UNSET
                               initial_defer: UNSET
               table_constraints: (none)
@@ -1727,10 +1795,12 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
-                              match_name: (none)
-                              on_delete: UNSET
-                              on_update: SET_DEFAULT
-                              on_insert: UNSET
+                              options:
+                                ForeignKeyOptionList [1 items]
+                                  ForeignKeyOption
+                                    kind: ON_UPDATE
+                                    action: SET_DEFAULT
+                                    match_name: (none)
                               deferrable: UNSET
                               initial_defer: UNSET
               table_constraints: (none)
@@ -1780,10 +1850,12 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                                     column: "id"
                                     table: (none)
                                     schema: (none)
-                              match_name: (none)
-                              on_delete: UNSET
-                              on_update: RESTRICT
-                              on_insert: UNSET
+                              options:
+                                ForeignKeyOptionList [1 items]
+                                  ForeignKeyOption
+                                    kind: ON_UPDATE
+                                    action: RESTRICT
+                                    match_name: (none)
                               deferrable: UNSET
                               initial_defer: UNSET
               table_constraints: (none)
@@ -2210,10 +2282,7 @@ class NamedTableConstraints(TestSuite):
                                 column: "id"
                                 table: (none)
                                 schema: (none)
-                          match_name: (none)
-                          on_delete: UNSET
-                          on_update: UNSET
-                          on_insert: UNSET
+                          options: (none)
                           deferrable: UNSET
                           initial_defer: UNSET
               as_select: (none)

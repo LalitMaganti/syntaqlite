@@ -86,27 +86,6 @@ typedef struct SynqUpsertValue {
   uint32_t returning;
 } SynqUpsertValue;
 
-// refarg / refargs: MATCH carries an identifier, so this cannot be a packed
-// int.
-#define SYNQ_REFARG_NONE 0
-#define SYNQ_REFARG_DELETE 1
-#define SYNQ_REFARG_UPDATE 2
-#define SYNQ_REFARG_MATCH 3
-#define SYNQ_REFARG_INSERT 4
-
-typedef struct SynqRefArgValue {
-  int kind;
-  SyntaqliteForeignKeyAction action;
-  SyntaqliteTextSpan match_name;
-} SynqRefArgValue;
-
-typedef struct SynqRefArgsValue {
-  SyntaqliteForeignKeyAction on_delete;
-  SyntaqliteForeignKeyAction on_update;
-  SyntaqliteForeignKeyAction on_insert;
-  SyntaqliteTextSpan match_name;
-} SynqRefArgsValue;
-
 // paren_exprlist: optional `LP exprlist RP` tail. Tracks whether the
 // parens were present so callers can distinguish `foo` (has_parens=0)
 // from `foo()` (has_parens=1, args=NULL_NODE) — relevant for table /
@@ -543,7 +522,6 @@ static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
 typedef union {
   int yyinit;
   SynqSqliteParseTOKENTYPE yy0;
-  SynqRefArgValue yy76;
   SyntaqliteJoinType yy81;
   SynqWhereRetValue yy119;
   SynqConstraintGroups yy177;
@@ -552,7 +530,6 @@ typedef union {
   SynqUpsertValue yy352;
   SynqDeferValue yy519;
   SynqWithValue yy541;
-  SynqRefArgsValue yy603;
   SynqParenExprlistValue yy618;
   SynqOnUsingValue yy632;
   SynqColumnNameValue yy640;
@@ -7833,6 +7810,8 @@ static YYACTIONTYPE yy_reduce(
       yytestcase(yyruleno == 56);
     case 69: /* carglist ::= */
       yytestcase(yyruleno == 69);
+    case 90: /* refargs ::= */
+      yytestcase(yyruleno == 90);
     case 106: /* conslist_opt ::= */
       yytestcase(yyruleno == 106);
     case 131: /* eidlist_opt ::= */
@@ -8138,9 +8117,8 @@ static YYACTIONTYPE yy_reduce(
     {
       uint32_t fk = synq_parse_foreign_key_clause(
           pCtx, synq_span(pCtx, yymsp[-2].minor.yy0), yymsp[-1].minor.yy277,
-          yymsp[0].minor.yy603.match_name, yymsp[0].minor.yy603.on_delete,
-          yymsp[0].minor.yy603.on_update, yymsp[0].minor.yy603.on_insert,
-          SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET);
+          yymsp[0].minor.yy277, SYNTAQLITE_DEFERRABLE_UNSET,
+          SYNTAQLITE_INITIAL_DEFER_MODE_UNSET);
       yymsp[-3].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
@@ -8232,58 +8210,35 @@ static YYACTIONTYPE yy_reduce(
         yymsp[0].minor.yy320 = 1;
       }
       break;
-    case 90: /* refargs ::= */
-    {
-      yymsp[1].minor.yy603.on_delete = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
-      yymsp[1].minor.yy603.on_update = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
-      yymsp[1].minor.yy603.on_insert = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
-      yymsp[1].minor.yy603.match_name = SYNQ_NO_SPAN;
-    } break;
     case 91: /* refargs ::= refargs refarg */
     {
-      switch (yymsp[0].minor.yy76.kind) {
-        case SYNQ_REFARG_DELETE:
-          yymsp[-1].minor.yy603.on_delete = yymsp[0].minor.yy76.action;
-          break;
-        case SYNQ_REFARG_UPDATE:
-          yymsp[-1].minor.yy603.on_update = yymsp[0].minor.yy76.action;
-          break;
-        case SYNQ_REFARG_INSERT:
-          yymsp[-1].minor.yy603.on_insert = yymsp[0].minor.yy76.action;
-          break;
-        case SYNQ_REFARG_MATCH:
-          yymsp[-1].minor.yy603.match_name = yymsp[0].minor.yy76.match_name;
-          break;
-        default:
-          break;
-      }
+      yymsp[-1].minor.yy277 = synq_parse_foreign_key_option_list(
+          pCtx, yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
     } break;
     case 92: /* refarg ::= MATCH nm */
     {
-      yymsp[-1].minor.yy76.kind = SYNQ_REFARG_MATCH;
-      yymsp[-1].minor.yy76.action = SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET;
-      yymsp[-1].minor.yy76.match_name = synq_span(pCtx, yymsp[0].minor.yy0);
+      yymsp[-1].minor.yy277 = synq_parse_foreign_key_option(
+          pCtx, SYNTAQLITE_FOREIGN_KEY_OPTION_KIND_MATCH,
+          SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET,
+          synq_span(pCtx, yymsp[0].minor.yy0));
     } break;
     case 93: /* refarg ::= ON INSERT refact */
     {
-      yymsp[-2].minor.yy76.kind = SYNQ_REFARG_INSERT;
-      yymsp[-2].minor.yy76.action =
-          (SyntaqliteForeignKeyAction)yymsp[0].minor.yy320;
-      yymsp[-2].minor.yy76.match_name = SYNQ_NO_SPAN;
+      yymsp[-2].minor.yy277 = synq_parse_foreign_key_option(
+          pCtx, SYNTAQLITE_FOREIGN_KEY_OPTION_KIND_ON_INSERT,
+          (SyntaqliteForeignKeyAction)yymsp[0].minor.yy320, SYNQ_NO_SPAN);
     } break;
     case 94: /* refarg ::= ON DELETE refact */
     {
-      yymsp[-2].minor.yy76.kind = SYNQ_REFARG_DELETE;
-      yymsp[-2].minor.yy76.action =
-          (SyntaqliteForeignKeyAction)yymsp[0].minor.yy320;
-      yymsp[-2].minor.yy76.match_name = SYNQ_NO_SPAN;
+      yymsp[-2].minor.yy277 = synq_parse_foreign_key_option(
+          pCtx, SYNTAQLITE_FOREIGN_KEY_OPTION_KIND_ON_DELETE,
+          (SyntaqliteForeignKeyAction)yymsp[0].minor.yy320, SYNQ_NO_SPAN);
     } break;
     case 95: /* refarg ::= ON UPDATE refact */
     {
-      yymsp[-2].minor.yy76.kind = SYNQ_REFARG_UPDATE;
-      yymsp[-2].minor.yy76.action =
-          (SyntaqliteForeignKeyAction)yymsp[0].minor.yy320;
-      yymsp[-2].minor.yy76.match_name = SYNQ_NO_SPAN;
+      yymsp[-2].minor.yy277 = synq_parse_foreign_key_option(
+          pCtx, SYNTAQLITE_FOREIGN_KEY_OPTION_KIND_ON_UPDATE,
+          (SyntaqliteForeignKeyAction)yymsp[0].minor.yy320, SYNQ_NO_SPAN);
     } break;
     case 96: /* refact ::= SET NULL */
     {
@@ -8400,9 +8355,8 @@ static YYACTIONTYPE yy_reduce(
     {
       uint32_t fk = synq_parse_foreign_key_clause(
           pCtx, synq_span(pCtx, yymsp[-3].minor.yy0), yymsp[-2].minor.yy277,
-          yymsp[-1].minor.yy603.match_name, yymsp[-1].minor.yy603.on_delete,
-          yymsp[-1].minor.yy603.on_update, yymsp[-1].minor.yy603.on_insert,
-          yymsp[0].minor.yy519.deferrable, yymsp[0].minor.yy519.initial);
+          yymsp[-1].minor.yy277, yymsp[0].minor.yy519.deferrable,
+          yymsp[0].minor.yy519.initial);
       yymsp[-9].minor.yy277 = synq_parse_table_constraint(
           pCtx, SYNTAQLITE_TABLE_CONSTRAINT_TYPE_FOREIGN_KEY,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_BOOL_FALSE,

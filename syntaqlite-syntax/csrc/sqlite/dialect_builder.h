@@ -197,14 +197,25 @@ static inline uint32_t synq_parse_case_when(SynqParseCtx* ctx,
       (uint32_t)sizeof(SyntaqliteCaseWhen));
 }
 
+static inline uint32_t synq_parse_foreign_key_option(
+    SynqParseCtx* ctx,
+    SyntaqliteForeignKeyOptionKind kind,
+    SyntaqliteForeignKeyAction action,
+    SyntaqliteTextSpan match_name) {
+  return synq_parse_build(
+      ctx,
+      &(SyntaqliteForeignKeyOption){.tag = SYNTAQLITE_NODE_FOREIGN_KEY_OPTION,
+                                    .kind = kind,
+                                    .action = action,
+                                    .match_name = match_name},
+      (uint32_t)sizeof(SyntaqliteForeignKeyOption));
+}
+
 static inline uint32_t synq_parse_foreign_key_clause(
     SynqParseCtx* ctx,
     SyntaqliteTextSpan ref_table,
     uint32_t ref_columns,
-    SyntaqliteTextSpan match_name,
-    SyntaqliteForeignKeyAction on_delete,
-    SyntaqliteForeignKeyAction on_update,
-    SyntaqliteForeignKeyAction on_insert,
+    uint32_t options,
     SyntaqliteDeferrable deferrable,
     SyntaqliteInitialDeferMode initial_defer) {
   return synq_parse_build(
@@ -212,10 +223,7 @@ static inline uint32_t synq_parse_foreign_key_clause(
       &(SyntaqliteForeignKeyClause){.tag = SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE,
                                     .ref_table = ref_table,
                                     .ref_columns = ref_columns,
-                                    .match_name = match_name,
-                                    .on_delete = on_delete,
-                                    .on_update = on_update,
-                                    .on_insert = on_insert,
+                                    .options = options,
                                     .deferrable = deferrable,
                                     .initial_defer = initial_defer},
       (uint32_t)sizeof(SyntaqliteForeignKeyClause));
@@ -1038,6 +1046,13 @@ static inline uint32_t synq_parse_case_when_list(SynqParseCtx* ctx,
                                                  uint32_t child) {
   return synq_parse_list_append(ctx, SYNTAQLITE_NODE_CASE_WHEN_LIST, list_id,
                                 child);
+}
+
+static inline uint32_t synq_parse_foreign_key_option_list(SynqParseCtx* ctx,
+                                                          uint32_t list_id,
+                                                          uint32_t child) {
+  return synq_parse_list_append(ctx, SYNTAQLITE_NODE_FOREIGN_KEY_OPTION_LIST,
+                                list_id, child);
 }
 
 static inline uint32_t synq_parse_column_constraint_list(SynqParseCtx* ctx,

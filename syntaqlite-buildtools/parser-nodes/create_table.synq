@@ -7,13 +7,38 @@ enum TableConstraintType { PRIMARY_KEY UNIQUE CHECK FOREIGN_KEY }
 
 flags CreateTableStmtFlags { WITHOUT_ROWID = 1 STRICT = 2 }
 
+enum ForeignKeyOptionKind { MATCH ON_DELETE ON_UPDATE ON_INSERT }
+
+node ForeignKeyOption {
+  kind: inline ForeignKeyOptionKind
+  action: inline ForeignKeyAction
+  match_name: inline SyntaqliteTextSpan
+
+  fmt {
+    if_enum(kind, MATCH) { "MATCH" space span(match_name) } else {
+      "ON" space enum_display(kind, {
+        MATCH="" ON_DELETE="DELETE" ON_UPDATE="UPDATE" ON_INSERT="INSERT"
+      })
+      space switch(action) {
+        NO_ACTION { "NO" "ACTION" }
+        SET_NULL { "SET" "NULL" }
+        SET_DEFAULT { "SET" "DEFAULT" }
+        CASCADE { "CASCADE" }
+        RESTRICT { "RESTRICT" }
+      }
+    }
+  }
+}
+
+list ForeignKeyOptionList {
+  ForeignKeyOption
+  fmt { for_each(sep: line) { child(_item) } }
+}
+
 node ForeignKeyClause {
   ref_table: inline SyntaqliteTextSpan
   ref_columns: index ExprList
-  match_name: inline SyntaqliteTextSpan
-  on_delete: inline ForeignKeyAction
-  on_update: inline ForeignKeyAction
-  on_insert: inline ForeignKeyAction
+  options: index ForeignKeyOptionList
   deferrable: inline Deferrable
   initial_defer: inline InitialDeferMode
 
@@ -22,28 +47,7 @@ node ForeignKeyClause {
       if_span(ref_table) { "REFERENCES" space span(ref_table) }
       if_set(ref_columns) { group { "(" nest { softline child(ref_columns) } softline ")" } }
       nest {
-        if_span(match_name) { line "MATCH" space span(match_name) }
-        switch(on_delete) {
-          NO_ACTION   { line "ON" "DELETE" "NO" "ACTION" }
-          SET_NULL    { line "ON" "DELETE" "SET" "NULL" }
-          SET_DEFAULT { line "ON" "DELETE" "SET" "DEFAULT" }
-          CASCADE     { line "ON" "DELETE" "CASCADE" }
-          RESTRICT    { line "ON" "DELETE" "RESTRICT" }
-        }
-        switch(on_update) {
-          NO_ACTION   { line "ON" "UPDATE" "NO" "ACTION" }
-          SET_NULL    { line "ON" "UPDATE" "SET" "NULL" }
-          SET_DEFAULT { line "ON" "UPDATE" "SET" "DEFAULT" }
-          CASCADE     { line "ON" "UPDATE" "CASCADE" }
-          RESTRICT    { line "ON" "UPDATE" "RESTRICT" }
-        }
-        switch(on_insert) {
-          NO_ACTION   { line "ON" "INSERT" "NO" "ACTION" }
-          SET_NULL    { line "ON" "INSERT" "SET" "NULL" }
-          SET_DEFAULT { line "ON" "INSERT" "SET" "DEFAULT" }
-          CASCADE     { line "ON" "INSERT" "CASCADE" }
-          RESTRICT    { line "ON" "INSERT" "RESTRICT" }
-        }
+        if_set(options) { line child(options) }
         switch(deferrable) {
           NOT_DEFERRABLE { line "NOT" "DEFERRABLE" }
           DEFERRABLE     { line "DEFERRABLE" }
