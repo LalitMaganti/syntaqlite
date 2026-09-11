@@ -13,11 +13,41 @@
 pub struct ParserConfig {
     trace: bool,
     collect_tokens: bool,
+    comment_packets: bool,
     macro_fallback: bool,
     collect_node_extents: bool,
+    collect_source_bindings: bool,
 }
 
 impl ParserConfig {
+    /// Parser-time attachment: consecutive comments form a packet.
+    /// The first comment attaches backwards when it starts on the preceding
+    /// token's line; otherwise the packet leads the next token. A blank line
+    /// starts another packet. Requires token collection; defaults to false.
+    pub fn comment_packets(&self) -> bool {
+        self.comment_packets
+    }
+
+    /// Opt into comment packet attachment without forward token lookahead.
+    #[must_use]
+    pub fn with_comment_packets(mut self, enabled: bool) -> Self {
+        self.comment_packets = enabled;
+        self
+    }
+
+    /// Whether current syntax-role token ranges are collected during parsing.
+    /// Requires token collection; defaults to false.
+    pub fn collect_source_bindings(&self) -> bool {
+        self.collect_source_bindings
+    }
+
+    /// Collect AST-associated syntax bindings without retaining reduction history.
+    #[must_use]
+    pub fn with_collect_source_bindings(mut self, enabled: bool) -> Self {
+        self.collect_source_bindings = enabled;
+        self
+    }
+
     /// Whether parser debug trace logging is enabled. Default: `false`.
     ///
     /// Useful when debugging parser behavior; usually disabled in production.

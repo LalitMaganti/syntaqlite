@@ -265,6 +265,10 @@ impl<G: TypedDialect> TypedParser<G> {
         unsafe {
             raw.as_mut().set_trace(u32::from(config.trace()));
             raw.as_mut()
+                .set_collect_source_bindings(u32::from(config.collect_source_bindings()));
+            raw.as_mut()
+                .set_comment_packets(u32::from(config.comment_packets()));
+            raw.as_mut()
                 .set_collect_tokens(u32::from(config.collect_tokens()));
             raw.as_mut()
                 .set_macro_fallback(u32::from(config.macro_fallback()));
@@ -1001,6 +1005,49 @@ impl<'a> AnyParsedStatement<'a> {
                 c.layer_id,
             )
         })
+    }
+
+    /// End of the source-token run owned by a live formatting anchor.
+    /// `None` as input selects the start-of-statement anchor. Returns `None`
+    /// for retired/invalid tokens or when source bindings were not collected.
+    pub fn syntax_anchor_end(&self, token: Option<TokenIdx>) -> Option<TokenIdx> {
+        // SAFETY: self owns a live parse result for this borrow.
+        unsafe {
+            self.raw
+                .as_ref()
+                .source_anchor_end(token.map_or(u32::MAX, TokenIdx::as_u32))
+        }
+    }
+
+    /// Original leading comments of a source token, unaffected by retirement.
+    pub fn leading_comments(&self, token: TokenIdx) -> impl Iterator<Item = Comment<'a>> {
+        let source = self.text();
+        let parser = self.raw;
+        // SAFETY: parser and returned comment slice are valid for 'a.
+        let raw: &'a [ffi::CComment] = unsafe { parser.as_ref().token_leading_comments(token) };
+        raw.iter().map(move |c| ffi_comment(parser, source, c))
+    }
+
+    /// Original trailing comments of a source token, unaffected by retirement.
+    pub fn trailing_comments(&self, token: TokenIdx) -> impl Iterator<Item = Comment<'a>> {
+        let source = self.text();
+        let parser = self.raw;
+        // SAFETY: parser and returned comment slice are valid for 'a.
+        let raw: &'a [ffi::CComment] = unsafe { parser.as_ref().token_trailing_comments(token) };
+        raw.iter().map(move |c| ffi_comment(parser, source, c))
+    }
+
+    /// Resolve a grammar syntax role to a half-open token range.
+    /// An empty range denotes an explicitly absent source occurrence; `None`
+    /// means the role was not recorded. Requires source binding collection.
+    pub fn syntax_role_range(
+        &self,
+        node: AnyNodeId,
+        role: u32,
+    ) -> Option<std::ops::Range<TokenIdx>> {
+        // SAFETY: self owns a live parse result for this borrow.
+        let (first, end) = unsafe { self.raw.as_ref().source_range(node.0, role) }?;
+        Some(TokenIdx::from_raw(first)..TokenIdx::from_raw(end))
     }
 
     /// The inclusive `[first, last]` token indices the parser fed to

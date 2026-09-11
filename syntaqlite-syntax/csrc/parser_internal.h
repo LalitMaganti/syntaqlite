@@ -226,6 +226,7 @@ struct SyntaqliteParser {
   int32_t last_status;               // Last SYNTAQLITE_PARSE_* status returned.
   uint32_t trace;
   uint32_t collect_tokens;
+  uint32_t comment_packets;
   uint32_t sealed;
   uint32_t pending_reset;  // 1 after feed_token signals completion;
                            // cleared on next feed_token call.

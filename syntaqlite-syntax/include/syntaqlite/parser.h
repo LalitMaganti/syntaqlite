@@ -125,12 +125,38 @@ SYNTAQLITE_API void syntaqlite_parser_destroy(SyntaqliteParser* p);
 // Configuration — call after create(), before the first reset()
 // ---------------------------------------------------------------------------
 
+// Opt-in comment packet attachment. Requires collect_tokens. Consecutive
+// comments inherit the first comment's side, with blank lines separating
+// packets. No scan of following tokens is needed. Default: disabled.
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_comment_packets(SyntaqliteParser* p, uint32_t enable);
+
 // Enable token/comment collection for result_tokens/result_comments.
 // Default: off (0), in which case those arrays are empty.
 // Returns SYNTAQLITE_OK on success, SYNTAQLITE_ERR_ALREADY_USED if the
 // parser has already been used.
 SYNTAQLITE_API int32_t syntaqlite_parser_set_collect_tokens(SyntaqliteParser* p,
                                                             uint32_t enable);
+
+// Collect current AST syntax-role bindings during Lemon reductions. Requires
+// token collection; defaults off. No reduction history is retained.
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_collect_source_bindings(SyntaqliteParser* p,
+                                              uint32_t enable);
+// Resolve a syntax role to a half-open token range. Returns 0 if unavailable.
+// Both endpoints UINT32_MAX denote an explicit empty (introduced) role.
+SYNTAQLITE_API int32_t syntaqlite_parser_source_range(const SyntaqliteParser* p,
+                                                      uint32_t node,
+                                                      uint32_t role,
+                                                      uint32_t* first,
+                                                      uint32_t* end);
+
+// End of the source-token run owned by a live formatting anchor. UINT32_MAX
+// token selects the start-of-statement anchor. Returns UINT32_MAX when
+// disabled, invalid or retired; otherwise the next live token index (token
+// count at EOF).
+SYNTAQLITE_API uint32_t
+syntaqlite_parser_source_anchor_end(const SyntaqliteParser*, uint32_t token);
 
 // Enable parser trace output (debug builds only). Default: off (0).
 // Returns SYNTAQLITE_OK on success, SYNTAQLITE_ERR_ALREADY_USED if the

@@ -1063,11 +1063,15 @@ pub fn syntaqlite_syntax::ParseOutcome<T, E>::map<U>(self, impl core::ops::funct
 pub fn syntaqlite_syntax::ParseOutcome<T, E>::map_err<F>(self, impl core::ops::function::FnOnce(E) -> F) -> syntaqlite_syntax::ParseOutcome<T, F>
 pub fn syntaqlite_syntax::ParseOutcome<T, E>::transpose(self) -> core::result::Result<core::option::Option<T>, E>
 pub fn syntaqlite_syntax::ParserConfig::collect_node_extents(&self) -> bool
+pub fn syntaqlite_syntax::ParserConfig::collect_source_bindings(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::collect_tokens(&self) -> bool
+pub fn syntaqlite_syntax::ParserConfig::comment_packets(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::macro_fallback(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::trace(&self) -> bool
 pub fn syntaqlite_syntax::ParserConfig::with_collect_node_extents(self, bool) -> Self
+pub fn syntaqlite_syntax::ParserConfig::with_collect_source_bindings(self, bool) -> Self
 pub fn syntaqlite_syntax::ParserConfig::with_collect_tokens(self, bool) -> Self
+pub fn syntaqlite_syntax::ParserConfig::with_comment_packets(self, bool) -> Self
 pub fn syntaqlite_syntax::ParserConfig::with_macro_fallback(self, bool) -> Self
 pub fn syntaqlite_syntax::ParserConfig::with_trace(self, bool) -> Self
 pub fn syntaqlite_syntax::ParserToken<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1204,6 +1208,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_ident_text(&se
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::is_macro_free(&self) -> bool
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::leading_comments(&self, syntaqlite_syntax::source::TokenIdx) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::list_children(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a [syntaqlite_syntax::any::AnyNodeId]>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::macro_rewrites(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::MacroRewrite<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::name_field_text(&self, &syntaqlite_syntax::any::NodeFields, u8) -> core::option::Option<&'a str>
@@ -1225,9 +1230,12 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_ident_text(&self, sy
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text(&self, syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::StmtOffset)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::span_text_abs(&self, syntaqlite_syntax::any::TextSpan) -> (&'a str, syntaqlite_syntax::source::DocRange)
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::statement_base(&self) -> syntaqlite_syntax::source::StatementBase
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::syntax_anchor_end(&self, core::option::Option<syntaqlite_syntax::source::TokenIdx>) -> core::option::Option<syntaqlite_syntax::source::TokenIdx>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::syntax_role_range(&self, syntaqlite_syntax::any::AnyNodeId, u32) -> core::option::Option<core::ops::range::Range<syntaqlite_syntax::source::TokenIdx>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::text(&self) -> &'a syntaqlite_syntax::source::StmtText
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::tokens(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::AnyParserToken<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::traceback(&mut self, syntaqlite_syntax::any::AnyNodeId, u8) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::any::TracebackFrame<'a>> + use<'_, 'a>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::trailing_comments(&self, syntaqlite_syntax::source::TokenIdx) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>>
 pub fn syntaqlite_syntax::any::AnyTokenType::from(syntaqlite_syntax::TokenType) -> syntaqlite_syntax::any::AnyTokenType
 pub fn syntaqlite_syntax::any::AnyTokenType::from_raw(u32) -> Self
 pub fn syntaqlite_syntax::any::AnyTokenType::from_token_type(syntaqlite_syntax::any::AnyTokenType) -> core::option::Option<Self>

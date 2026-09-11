@@ -2672,6 +2672,44 @@ mod tests {
     }
 
     #[test]
+    fn contained_comments_belong_to_their_opaque_token() {
+        let parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_comment_packets(true)
+                .with_macro_fallback(true),
+        );
+        for sql in [
+            "SELECT f!(a /* inside */);",
+            "SELECT /* outside */ f!(a /* inside */);",
+            "SELECT f!(/* inside */ a) /* outside */;",
+            "SELECT f!(a -- inside\n);",
+            "SELECT f!(a /* inside */\n\n/* inside */ b);",
+        ] {
+            let mut session = parser.parse(sql);
+            let stmt = ok_stmt!(session);
+            let comments: Vec<_> = stmt.comments().collect();
+            let indexed_count: usize = stmt
+                .tokens()
+                .enumerate()
+                .map(|(i, _)| {
+                    let index = TokenIdx::from_raw(u32::try_from(i).expect("token index"));
+                    stmt.leading_comments(index).count() + stmt.trailing_comments(index).count()
+                })
+                .sum();
+            assert_eq!(indexed_count, comments.len(), "{sql}");
+            for comment in comments.iter().filter(|c| c.text().contains("inside")) {
+                let owner = stmt
+                    .tokens()
+                    .nth(comment.token_idx().as_usize())
+                    .expect("owning token");
+                assert!(owner.text().contains(comment.text()), "{sql}");
+                assert_eq!(comment.side(), crate::CommentSide::Leading);
+            }
+        }
+    }
+
+    #[test]
     fn comment_layer_id_is_zero_for_authored_source() {
         let parser = Parser::with_config(&ParserConfig::default().with_collect_tokens(true));
         let mut session = parser.parse("-- h\nSELECT 1 /* mid */ FROM t; -- tail");
@@ -3117,6 +3155,175 @@ mod tests {
         let seg = &foo_segs[0];
         assert_eq!(seg.body_offset(), LayerOffset::from_raw(0));
         assert_eq!(seg.body_length(), LayerLen::from_raw(2));
+    }
+    #[test]
+    fn comment_packets_keep_one_owner_until_a_blank_line() {
+        use crate::CommentSide::{Leading, Trailing};
+        let parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_comment_packets(true),
+        );
+        let mut session =
+            parser.parse("SELECT /* first */ -- second\n/* third */\n\n/* fourth */ 1;");
+        let stmt = ok_stmt!(session);
+        let got: Vec<_> = stmt
+            .comments()
+            .map(|c| (c.text(), c.token_idx().as_usize(), c.side()))
+            .collect();
+        assert_eq!(
+            got,
+            vec![
+                ("/* first */", 0, Trailing),
+                ("-- second", 0, Trailing),
+                ("/* third */", 0, Trailing),
+                ("/* fourth */", 1, Leading)
+            ]
+        );
+        assert_eq!(stmt.trailing_comments(TokenIdx::from_raw(0)).count(), 3);
+        assert_eq!(stmt.leading_comments(TokenIdx::from_raw(1)).count(), 1);
+    }
+
+    #[test]
+    fn packet_mode_without_collection_does_not_allocate_comment_results() {
+        let parser = Parser::with_config(&ParserConfig::default().with_comment_packets(true));
+        let mut session = parser.parse("SELECT /* first */ 1; -- last\n/* continuation */");
+        let stmt = ok_stmt!(session);
+        assert_eq!(stmt.tokens().count(), 0);
+        assert_eq!(stmt.comments().count(), 0);
+    }
+    #[test]
+    fn source_bindings_distinguish_authored_and_introduced_alias_prefixes() {
+        for enabled in [false, true] {
+            let parser = Parser::with_config(
+                &ParserConfig::default()
+                    .with_collect_tokens(true)
+                    .with_collect_source_bindings(enabled),
+            );
+            // Reuse the parser, so stale bindings from the preceding statement
+            // would be observable when the arena starts reusing node IDs.
+            for sql in ["SELECT 1 AS x, 2 y", "SELECT 1 z"] {
+                let mut session = parser.parse(sql);
+                let stmt = ok_stmt!(session);
+                let reader = stmt.erase();
+                let mut nodes = vec![reader.root_id()];
+                let mut ranges = Vec::new();
+                while let Some(node) = nodes.pop() {
+                    if node.is_null() {
+                        continue;
+                    }
+                    if let Some(range) = reader.syntax_role_range(node, 0) {
+                        ranges.push((range.start.as_u32(), range.end.as_u32()));
+                    }
+                    if let Some(children) = reader.list_children(node) {
+                        nodes.extend_from_slice(children);
+                    } else if let Some((_, fields)) = reader.extract_fields(node) {
+                        for i in 0..fields.len() {
+                            if let crate::ast::FieldValue::NodeId(child) = fields[i] {
+                                nodes.push(child);
+                            }
+                        }
+                    }
+                }
+                ranges.sort_unstable();
+                if !enabled {
+                    assert!(ranges.is_empty());
+                } else if sql.contains("AS") {
+                    assert_eq!(ranges, vec![(2, 3), (u32::MAX, u32::MAX)]);
+                } else {
+                    assert_eq!(ranges, vec![(u32::MAX, u32::MAX)]);
+                }
+            }
+        }
+    }
+    #[test]
+    fn source_anchor_runs_partition_tokens_without_changing_original_comments() {
+        for enabled in [false, true] {
+            let parser = Parser::with_config(
+                &ParserConfig::default()
+                    .with_collect_tokens(true)
+                    .with_comment_packets(true)
+                    .with_collect_source_bindings(enabled),
+            );
+            for sql in [
+                "SELECT x FROM t ORDER BY x ASC /* retired */, y DESC, z ASC -- late\n;",
+                "SELECT x FROM t ORDER BY x;",
+            ] {
+                let mut session = parser.parse(sql);
+                let stmt = ok_stmt!(session);
+                let reader = stmt.erase();
+                let tokens: Vec<_> = reader.tokens().collect();
+                assert_eq!(
+                    reader.syntax_anchor_end(None).map(TokenIdx::as_usize),
+                    enabled.then_some(0)
+                );
+                let mut run_end = 0;
+                for (index, token) in tokens.iter().enumerate() {
+                    let end = reader.syntax_anchor_end(Some(TokenIdx::from_raw(
+                        u32::try_from(index).expect("parser token index fits u32"),
+                    )));
+                    if !enabled || token.text() == "ASC" {
+                        assert!(end.is_none());
+                    } else {
+                        assert_eq!(run_end, index);
+                        run_end = end.unwrap().as_usize();
+                        assert!(run_end > index && run_end <= tokens.len());
+                        assert!(tokens[index + 1..run_end].iter().all(|t| t.text() == "ASC"));
+                    }
+                }
+                if enabled {
+                    assert_eq!(run_end, tokens.len());
+                }
+                for c in reader.comments() {
+                    // Layout ownership is separate from the original source
+                    // attachment, even when the comment arrived after reduction.
+                    assert_eq!(tokens[c.token_idx().as_usize()].text(), "ASC");
+                }
+            }
+        }
+    }
+    #[test]
+    fn source_anchors_survive_incomplete_input_and_parser_reuse() {
+        let parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_tokens(true)
+                .with_collect_source_bindings(true),
+        );
+        for sql in [
+            "SELECT a AS x FROM t ORDER BY y ASC /* late */;",
+            "CREATE TABLE t(a, b AS (a + 1) VIRTUAL);",
+            "CREATE TRIGGER tr BEFORE INSERT ON t FOR EACH ROW BEGIN SELECT 1; END;",
+            "BEGIN DEFERRED TRANSACTION;",
+        ] {
+            for end in 0..=sql.len() {
+                let mut session = parser.parse(&sql[..end]);
+                let mut steps = 0;
+                loop {
+                    steps += 1;
+                    assert!(steps <= end + 2, "parser did not finish: {}", &sql[..end]);
+                    match session.next() {
+                        ParseOutcome::Ok(stmt) => {
+                            let reader = stmt.erase();
+                            let count = reader.tokens().count();
+                            let mut index = reader.syntax_anchor_end(None).unwrap().as_usize();
+                            while index < count {
+                                let next = reader
+                                    .syntax_anchor_end(Some(TokenIdx::from_raw(
+                                        u32::try_from(index).unwrap(),
+                                    )))
+                                    .unwrap()
+                                    .as_usize();
+                                assert!(next > index && next <= count);
+                                index = next;
+                            }
+                            assert_eq!(index, count);
+                        }
+                        ParseOutcome::Err(_) => {}
+                        ParseOutcome::Done => break,
+                    }
+                }
+            }
+        }
     }
     #[test]
     fn join_modifier_sets_reject_invalid_combinations() {

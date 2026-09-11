@@ -34,6 +34,7 @@ expr(A) ::= LP expr(B) RP. {
 expr(A) ::= expr(L) PLUS|MINUS(OP) expr(R). {
     SyntaqliteBinaryOp op = (OP.type == SYNTAQLITE_TK_PLUS) ? SYNTAQLITE_BINARY_OP_PLUS : SYNTAQLITE_BINARY_OP_MINUS;
     A = synq_parse_binary_expr(pCtx, op, L, R);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 1, 2);
 }
 
 expr(A) ::= expr(L) STAR|SLASH|REM(OP) expr(R). {
@@ -44,6 +45,7 @@ expr(A) ::= expr(L) STAR|SLASH|REM(OP) expr(R). {
         default:       op = SYNTAQLITE_BINARY_OP_REM; break;
     }
     A = synq_parse_binary_expr(pCtx, op, L, R);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 1, 2);
 }
 
 expr(A) ::= expr(L) LT|GT|GE|LE(OP) expr(R). {
@@ -55,19 +57,23 @@ expr(A) ::= expr(L) LT|GT|GE|LE(OP) expr(R). {
         default:    op = SYNTAQLITE_BINARY_OP_GE; break;
     }
     A = synq_parse_binary_expr(pCtx, op, L, R);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 1, 2);
 }
 
 expr(A) ::= expr(L) EQ|NE(OP) expr(R). {
     SyntaqliteBinaryOp op = (OP.type == SYNTAQLITE_TK_EQ) ? SYNTAQLITE_BINARY_OP_EQ : SYNTAQLITE_BINARY_OP_NE;
     A = synq_parse_binary_expr(pCtx, op, L, R);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 1, 2);
 }
 
 expr(A) ::= expr(L) AND expr(R). {
     A = synq_parse_binary_expr(pCtx, SYNTAQLITE_BINARY_OP_AND, L, R);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 1, 2);
 }
 
 expr(A) ::= expr(L) OR expr(R). {
     A = synq_parse_binary_expr(pCtx, SYNTAQLITE_BINARY_OP_OR, L, R);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 1, 2);
 }
 
 expr(A) ::= expr(L) BITAND|BITOR|LSHIFT|RSHIFT(OP) expr(R). {
@@ -79,15 +85,18 @@ expr(A) ::= expr(L) BITAND|BITOR|LSHIFT|RSHIFT(OP) expr(R). {
         default:        op = SYNTAQLITE_BINARY_OP_RSHIFT; break;
     }
     A = synq_parse_binary_expr(pCtx, op, L, R);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 1, 2);
 }
 
 expr(A) ::= expr(L) CONCAT expr(R). {
     A = synq_parse_binary_expr(pCtx, SYNTAQLITE_BINARY_OP_CONCAT, L, R);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 1, 2);
 }
 
 expr(A) ::= expr(L) PTR(OP) expr(R). {
     SyntaqliteBinaryOp op = (OP.n == 3) ? SYNTAQLITE_BINARY_OP_PTR2 : SYNTAQLITE_BINARY_OP_PTR;
     A = synq_parse_binary_expr(pCtx, op, L, R);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 1, 2);
 }
 
 // ============ Unary Expressions ============

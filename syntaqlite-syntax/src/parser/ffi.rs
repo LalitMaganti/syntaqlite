@@ -217,6 +217,30 @@ impl CParser {
         unsafe { syntaqlite_parser_set_trace(self, enable) }
     }
 
+    pub(crate) unsafe fn set_collect_source_bindings(&mut self, enable: u32) -> i32 {
+        // SAFETY: same configuration preconditions as other setters.
+        unsafe { syntaqlite_parser_set_collect_source_bindings(self, enable) }
+    }
+    pub(crate) unsafe fn source_anchor_end(&self, token: u32) -> Option<TokenIdx> {
+        // SAFETY: parser is live; the getter validates the token index.
+        let end = unsafe { syntaqlite_parser_source_anchor_end(self, token) };
+        (end != u32::MAX).then(|| TokenIdx::from_raw(end))
+    }
+    pub(crate) unsafe fn source_range(&self, node: u32, role: u32) -> Option<(u32, u32)> {
+        let mut first = 0;
+        let mut end = 0;
+        // SAFETY: parser is live; both out pointers refer to initialized locals.
+        let found = unsafe {
+            syntaqlite_parser_source_range(self, node, role, &raw mut first, &raw mut end)
+        };
+        (found != 0).then_some((first, end))
+    }
+
+    pub(crate) unsafe fn set_comment_packets(&mut self, enable: u32) -> i32 {
+        // SAFETY: same preconditions as other parser configuration setters.
+        unsafe { syntaqlite_parser_set_comment_packets(self, enable) }
+    }
+
     pub(crate) unsafe fn set_collect_tokens(&mut self, enable: u32) -> i32 {
         // SAFETY: self is a valid, non-null CParser pointer owned by the caller.
         unsafe { syntaqlite_parser_set_collect_tokens(self, enable) }
@@ -852,6 +876,16 @@ unsafe extern "C" {
 
     // Configuration
     fn syntaqlite_parser_set_trace(p: *mut CParser, enable: u32) -> i32;
+    fn syntaqlite_parser_set_collect_source_bindings(p: *mut CParser, enable: u32) -> i32;
+    fn syntaqlite_parser_source_anchor_end(p: *const CParser, token: u32) -> u32;
+    fn syntaqlite_parser_source_range(
+        p: *const CParser,
+        node: u32,
+        role: u32,
+        first: *mut u32,
+        end: *mut u32,
+    ) -> i32;
+    fn syntaqlite_parser_set_comment_packets(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_collect_tokens(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_macro_fallback(p: *mut CParser, enable: u32) -> i32;
     fn syntaqlite_parser_set_collect_node_extents(p: *mut CParser, enable: u32) -> i32;

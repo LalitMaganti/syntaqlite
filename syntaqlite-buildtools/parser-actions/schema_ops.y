@@ -79,6 +79,7 @@ cmd(A) ::= ALTER TABLE fullname(X) RENAME kwcolumn_opt nmorerr(Y) TO nmorerr(Z).
         Z,
         Y,
         SYNTAQLITE_NULL_NODE);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_PREFIX, 4, 5);
 }
 
 cmd(A) ::= ALTER TABLE fullname(X) DROP kwcolumn_opt nmorerr(Y). {
@@ -87,6 +88,7 @@ cmd(A) ::= ALTER TABLE fullname(X) DROP kwcolumn_opt nmorerr(Y). {
         SYNTAQLITE_NULL_NODE,
         Y,
         SYNTAQLITE_NULL_NODE);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_PREFIX, 4, 5);
 }
 
 cmd(A) ::= ALTER TABLE add_column_fullname(F) ADD kwcolumn_opt columnname(Y) carglist(CG). {
@@ -96,6 +98,7 @@ cmd(A) ::= ALTER TABLE add_column_fullname(F) ADD kwcolumn_opt columnname(Y) car
         SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE,
         col);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_PREFIX, 4, 5);
 }
 
 // ============ ALTER TABLE support rules ============
@@ -125,6 +128,7 @@ cmd(A) ::= BEGIN transtype(Y) trans_opt(T). {
         SYNTAQLITE_TRANSACTION_OP_BEGIN,
         (SyntaqliteTransactionType)Y,
         T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 0, 1);
 }
 
 cmd(A) ::= COMMIT|END trans_opt(T). {
@@ -132,6 +136,7 @@ cmd(A) ::= COMMIT|END trans_opt(T). {
         SYNTAQLITE_TRANSACTION_OP_COMMIT,
         SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
         T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 0, 1);
 }
 
 cmd(A) ::= ROLLBACK trans_opt(T). {
@@ -139,6 +144,7 @@ cmd(A) ::= ROLLBACK trans_opt(T). {
         SYNTAQLITE_TRANSACTION_OP_ROLLBACK,
         SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
         T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_OPERATOR, 0, 1);
 }
 
 // ============ Transaction type ============
@@ -148,6 +154,7 @@ transtype(A) ::= . {
 }
 
 transtype(A) ::= DEFERRED. {
+    synq_source_retire_rhs(pCtx, 0, 1);
     A = (int)SYNTAQLITE_TRANSACTION_TYPE_DEFERRED;
 }
 
@@ -166,6 +173,7 @@ trans_opt(A) ::= . {
 }
 
 trans_opt(A) ::= TRANSACTION. {
+    synq_source_retire_rhs(pCtx, 0, 1);
     A.z = NULL; A.n = 0;
 }
 
@@ -193,10 +201,12 @@ cmd(A) ::= RELEASE savepoint_opt nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_RELEASE,
         X, SYNQ_NO_SPAN);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_PREFIX, 1, 2);
 }
 
 cmd(A) ::= ROLLBACK trans_opt(T) TO savepoint_opt nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO,
         X, T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_PREFIX, 3, 4);
 }

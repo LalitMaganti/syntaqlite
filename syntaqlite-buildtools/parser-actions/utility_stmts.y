@@ -147,7 +147,7 @@ cmd(A) ::= DETACH database_kw_opt expr(D). {
 }
 
 database_kw_opt ::= DATABASE. {
-    // Keyword consumed, no value needed
+    synq_source_retire_rhs(pCtx, 0, 1);
 }
 
 database_kw_opt ::= . {

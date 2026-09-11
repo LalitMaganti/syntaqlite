@@ -350,6 +350,9 @@ generated(A) ::= LP expr(E) RP ID(TYPE). {
         // Quoted spellings land here too, and upstream rejects those as well.
         pCtx->error = 1;
     }
+    if (storage == SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL) {
+        synq_source_retire_rhs(pCtx, 3, 4);
+    }
     A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,

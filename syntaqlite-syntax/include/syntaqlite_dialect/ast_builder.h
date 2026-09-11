@@ -161,6 +161,7 @@ typedef struct SynqParseCtx {
   SYNQ_VEC(SynqNodeExpandedExtent) expanded_stack;
   SYNQ_VEC(SynqNodeExpandedExtent) node_expanded_extents;
   uint32_t collect_node_extents;
+  struct SynqSourceBindings* source_bindings;
   uint32_t macro_root_start;
   uint32_t macro_root_end;
   uint32_t macro_root_layer;    // Outermost expansion layer idx (set on entry).
@@ -212,6 +213,46 @@ static inline void synq_parse_list_flush_top(SynqParseCtx* ctx) {
   (void)syntaqlite_vec_pop(&ctx->list_stack);
 }
 
+// Optional current syntax bindings, separate from AST payloads. A role names a
+// piece of authored syntax, not a keyword spelling. No reduction history is
+// kept.
+#define SYNQ_SOURCE_PREFIX 0u
+#define SYNQ_SOURCE_OPERATOR 1u
+SYNTAQLITE_DIALECT_API void synq_source_enable(SynqParseCtx*, uint32_t enable);
+SYNTAQLITE_DIALECT_API void synq_source_clear(SynqParseCtx*);
+SYNTAQLITE_DIALECT_API void synq_source_bind_rhs_impl(SynqParseCtx*,
+                                                      uint32_t node,
+                                                      uint32_t role,
+                                                      uint32_t first,
+                                                      uint32_t end);
+SYNTAQLITE_DIALECT_API int32_t synq_source_range(const SynqParseCtx*,
+                                                 uint32_t node,
+                                                 uint32_t role,
+                                                 uint32_t* first,
+                                                 uint32_t* end);
+
+SYNTAQLITE_DIALECT_API void synq_source_record_token(SynqParseCtx*);
+SYNTAQLITE_DIALECT_API uint32_t synq_source_anchor_end(const SynqParseCtx*,
+                                                       uint32_t);
+SYNTAQLITE_DIALECT_API void synq_source_retire_rhs_impl(SynqParseCtx*,
+                                                        uint32_t,
+                                                        uint32_t);
+static inline void synq_source_retire_rhs(SynqParseCtx* ctx,
+                                          uint32_t first,
+                                          uint32_t end) {
+  if (ctx->source_bindings)
+    synq_source_retire_rhs_impl(ctx, first, end);
+}
+
+static inline void synq_source_bind_rhs(SynqParseCtx* ctx,
+                                        uint32_t node,
+                                        uint32_t role,
+                                        uint32_t first,
+                                        uint32_t end) {
+  if (ctx->source_bindings)
+    synq_source_bind_rhs_impl(ctx, node, role, first, end);
+}
+
 static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
                                        SyntaqliteMemMethods mem) {
   ctx->mem = mem;
@@ -223,6 +264,7 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   syntaqlite_vec_init(&ctx->expanded_stack);
   syntaqlite_vec_init(&ctx->node_expanded_extents);
   ctx->collect_node_extents = 0;
+  ctx->source_bindings = NULL;
   ctx->macro_root_start = 0;
   ctx->macro_root_end = 0;
   ctx->macro_root_layer = 0;
@@ -233,6 +275,7 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
 }
 
 static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
+  synq_source_enable(ctx, 0);
   syntaqlite_vec_free(&ctx->child_buf, ctx->mem);
   syntaqlite_vec_free(&ctx->list_stack, ctx->mem);
   syntaqlite_vec_free(&ctx->extent_stack, ctx->mem);
@@ -245,6 +288,8 @@ static inline void synq_parse_ctx_free(SynqParseCtx* ctx) {
 
 // Reset to empty state, keeping allocated memory for reuse.
 static inline void synq_parse_ctx_clear(SynqParseCtx* ctx) {
+  if (ctx->source_bindings)
+    synq_source_clear(ctx);
   syntaqlite_vec_clear(&ctx->child_buf);
   syntaqlite_vec_clear(&ctx->list_stack);
   syntaqlite_vec_clear(&ctx->extent_stack);

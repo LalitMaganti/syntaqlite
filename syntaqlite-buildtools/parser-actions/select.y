@@ -67,10 +67,12 @@ scanpt(A) ::= . {
 // as is optional alias
 as(A) ::= AS nmorerr(B). {
     A = synq_pass(pCtx, B);
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_PREFIX, 0, 1);
 }
 
 as(A) ::= ids(B). {
     A = synq_parse_ident_name(pCtx, synq_span_dequote(pCtx, B));
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_PREFIX, 0, 0);
 }
 
 as(A) ::= . {

@@ -29,6 +29,9 @@ sortlist(A) ::= expr(B) sortorder(C) nulls(D). {
 // ============ Sort Order ============
 
 sortorder(A) ::= ASC. {
+    // Canonical ordering omits ASC. Transfer its anchor to the preceding live
+    // token while Lemon is reducing; original comments remain source-faithful.
+    synq_source_retire_rhs(pCtx, 0, 1);
     A = 0;
 }
 

@@ -47,6 +47,7 @@ trigger_decl(A) ::= temp(T) TRIGGER ifnotexists(NOERR) nm(B) dbnm(Z)
         E,
         G,
         SYNTAQLITE_NULL_NODE);  // body filled in by cmd rule
+    synq_source_bind_rhs(pCtx, A, SYNQ_SOURCE_PREFIX, 5, 6);
 }
 
 // ============ Trigger timing ============
@@ -90,7 +91,7 @@ foreach_clause ::= . {
 }
 
 foreach_clause ::= FOR EACH ROW. {
-    // consumed
+    synq_source_retire_rhs(pCtx, 0, 3);
 }
 
 // ============ WHEN clause ============

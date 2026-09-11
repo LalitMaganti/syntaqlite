@@ -6,8 +6,203 @@
 // part of the AST builder, split into its own file to keep ast_builder.h
 // declaration-only.
 
+#include <assert.h>
+
 #include "syntaqlite_dialect/ast_builder.h"
 #include "syntaqlite_dialect/extent_hooks.h"
+
+// Token ranges on the live Lemon stack and a snapshot of the current RHS.
+// AST-associated bindings are mutable current state, never immutable overlays.
+typedef struct SynqSourceRange {
+  uint32_t first, end;
+} SynqSourceRange;
+typedef struct SynqSourceBinding {
+  uint32_t role, next;
+  SynqSourceRange range;
+} SynqSourceBinding;
+// Live neighbours define a partition of the original token stream. A live
+// token owns [itself, next); retiring it joins that interval to its
+// predecessor. Original comment metadata remains valid, including comments
+// recorded later.
+typedef struct SynqSourceAnchor {
+  uint32_t prev, next;
+} SynqSourceAnchor;
+struct SynqSourceBindings {
+  SYNQ_VEC(SynqSourceAnchor) anchors;
+  uint32_t first_anchor, last_anchor;
+  SYNQ_VEC(SynqSourceRange) stack;
+  SYNQ_VEC(SynqSourceRange) rhs;
+  SYNQ_VEC(uint32_t) heads;
+  SYNQ_VEC(SynqSourceBinding) bindings;
+};
+
+void synq_source_enable(SynqParseCtx* ctx, uint32_t enable) {
+  struct SynqSourceBindings* s = ctx->source_bindings;
+  if (enable) {
+    if (s)
+      return;
+    s = ctx->mem.xMalloc(sizeof(*s));
+    syntaqlite_vec_init(&s->anchors);
+    s->first_anchor = s->last_anchor = UINT32_MAX;
+    syntaqlite_vec_init(&s->stack);
+    syntaqlite_vec_init(&s->rhs);
+    syntaqlite_vec_init(&s->heads);
+    syntaqlite_vec_init(&s->bindings);
+    ctx->source_bindings = s;
+  } else if (s) {
+    syntaqlite_vec_free(&s->anchors, ctx->mem);
+    syntaqlite_vec_free(&s->stack, ctx->mem);
+    syntaqlite_vec_free(&s->rhs, ctx->mem);
+    syntaqlite_vec_free(&s->heads, ctx->mem);
+    syntaqlite_vec_free(&s->bindings, ctx->mem);
+    ctx->mem.xFree(s);
+    ctx->source_bindings = NULL;
+  }
+}
+
+void synq_source_clear(SynqParseCtx* ctx) {
+  struct SynqSourceBindings* s = ctx->source_bindings;
+  syntaqlite_vec_clear(&s->anchors);
+  s->first_anchor = s->last_anchor = UINT32_MAX;
+  syntaqlite_vec_clear(&s->stack);
+  syntaqlite_vec_clear(&s->rhs);
+  syntaqlite_vec_clear(&s->heads);
+  syntaqlite_vec_clear(&s->bindings);
+}
+
+// Called when a token is recorded, before feeding Lemon. A lookahead token
+// can already exist when a reduction retires an earlier token.
+void synq_source_record_token(SynqParseCtx* ctx) {
+  struct SynqSourceBindings* s = ctx->source_bindings;
+  uint32_t index = syntaqlite_vec_len(&s->anchors);
+  SynqSourceAnchor anchor = {s->last_anchor, UINT32_MAX};
+  if (s->last_anchor != UINT32_MAX)
+    syntaqlite_vec_at(&s->anchors, s->last_anchor).next = index;
+  else
+    s->first_anchor = index;
+  syntaqlite_vec_push(&s->anchors, anchor, ctx->mem);
+  s->last_anchor = index;
+}
+
+uint32_t synq_source_anchor_end(const SynqParseCtx* ctx, uint32_t token) {
+  const struct SynqSourceBindings* s = ctx->source_bindings;
+  if (!s)
+    return UINT32_MAX;
+  uint32_t count = syntaqlite_vec_len(&s->anchors);
+  uint32_t next;
+  if (token == UINT32_MAX) {
+    next = s->first_anchor;
+  } else {
+    if (token >= count)
+      return UINT32_MAX;
+    next = syntaqlite_vec_at(&s->anchors, token).next;
+    if (next == token)
+      return UINT32_MAX;  // retired
+  }
+  return next == UINT32_MAX ? count : next;
+}
+
+void synq_source_retire_rhs_impl(SynqParseCtx* ctx,
+                                 uint32_t first,
+                                 uint32_t end) {
+  struct SynqSourceBindings* s = ctx->source_bindings;
+  if (!s)
+    return;
+  assert(first <= end && end <= syntaqlite_vec_len(&s->rhs));
+  for (uint32_t i = first; i < end; ++i) {
+    SynqSourceRange range = syntaqlite_vec_at(&s->rhs, i);
+    for (uint32_t token = range.first; token < range.end; ++token) {
+      SynqSourceAnchor* a = &syntaqlite_vec_at(&s->anchors, token);
+      // Grammar ownership declarations must be disjoint. Each authored token
+      // is retired once, keeping the total work linear in the token count.
+      assert(a->next != token);
+      if (a->prev != UINT32_MAX)
+        syntaqlite_vec_at(&s->anchors, a->prev).next = a->next;
+      else
+        s->first_anchor = a->next;
+      if (a->next != UINT32_MAX)
+        syntaqlite_vec_at(&s->anchors, a->next).prev = a->prev;
+      else
+        s->last_anchor = a->prev;
+      a->next = token;
+    }
+  }
+}
+
+static void synq_source_merge(SynqSourceRange* into, SynqSourceRange from) {
+  if (from.first == UINT32_MAX)
+    return;
+  if (into->first == UINT32_MAX || from.first < into->first)
+    into->first = from.first;
+  if (into->end == UINT32_MAX || from.end > into->end)
+    into->end = from.end;
+}
+
+static void synq_source_reduce(SynqParseCtx* ctx, uint32_t nrhs) {
+  struct SynqSourceBindings* s = ctx->source_bindings;
+  uint32_t n = syntaqlite_vec_len(&s->stack);
+  assert(n >= nrhs);
+  syntaqlite_vec_clear(&s->rhs);
+  SynqSourceRange merged = {UINT32_MAX, UINT32_MAX};
+  for (uint32_t i = n - nrhs; i < n; ++i) {
+    SynqSourceRange r = syntaqlite_vec_at(&s->stack, i);
+    syntaqlite_vec_push(&s->rhs, r, ctx->mem);
+    synq_source_merge(&merged, r);
+  }
+  syntaqlite_vec_truncate(&s->stack, n - nrhs);
+  syntaqlite_vec_push(&s->stack, merged, ctx->mem);
+}
+
+void synq_source_bind_rhs_impl(SynqParseCtx* ctx,
+                               uint32_t node,
+                               uint32_t role,
+                               uint32_t first,
+                               uint32_t end) {
+  struct SynqSourceBindings* s = ctx->source_bindings;
+  if (!s || node == SYNTAQLITE_NULL_NODE)
+    return;
+  assert(first <= end && end <= syntaqlite_vec_len(&s->rhs));
+  SynqSourceRange range = {UINT32_MAX, UINT32_MAX};
+  for (uint32_t i = first; i < end; ++i)
+    synq_source_merge(&range, syntaqlite_vec_at(&s->rhs, i));
+  while (syntaqlite_vec_len(&s->heads) <= node)
+    syntaqlite_vec_push(&s->heads, UINT32_MAX, ctx->mem);
+  // Each node has a bounded set of named grammar roles. Rebinding a role
+  // replaces its current range instead of allocating historical occurrences.
+  uint32_t head = syntaqlite_vec_at(&s->heads, node);
+  for (uint32_t i = head; i != UINT32_MAX;
+       i = syntaqlite_vec_at(&s->bindings, i).next) {
+    SynqSourceBinding* b = &syntaqlite_vec_at(&s->bindings, i);
+    if (b->role == role) {
+      b->range = range;
+      return;
+    }
+  }
+  uint32_t id = syntaqlite_vec_len(&s->bindings);
+  SynqSourceBinding binding = {role, head, range};
+  syntaqlite_vec_push(&s->bindings, binding, ctx->mem);
+  syntaqlite_vec_at(&s->heads, node) = id;
+}
+
+int32_t synq_source_range(const SynqParseCtx* ctx,
+                          uint32_t node,
+                          uint32_t role,
+                          uint32_t* first,
+                          uint32_t* end) {
+  struct SynqSourceBindings* s = ctx->source_bindings;
+  if (!s || node >= syntaqlite_vec_len(&s->heads))
+    return 0;
+  for (uint32_t i = syntaqlite_vec_at(&s->heads, node); i != UINT32_MAX;
+       i = syntaqlite_vec_at(&s->bindings, i).next) {
+    const SynqSourceBinding* b = &syntaqlite_vec_at(&s->bindings, i);
+    if (b->role == role) {
+      *first = b->range.first;
+      *end = b->range.end;
+      return 1;
+    }
+  }
+  return 0;
+}
 
 // ---------------------------------------------------------------------------
 // Per-node extent tracking hooks
@@ -112,6 +307,12 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
                           unsigned int major,
                           const SynqParseToken* token) {
   (void)major;
+  if (pCtx->source_bindings) {
+    SynqSourceRange range = {token->token_idx, token->token_idx == UINT32_MAX
+                                                   ? UINT32_MAX
+                                                   : token->token_idx + 1};
+    syntaqlite_vec_push(&pCtx->source_bindings->stack, range, pCtx->mem);
+  }
 
   pCtx->lemon_depth++;
 
@@ -154,6 +355,8 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
 }
 
 void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
+  if (pCtx->source_bindings)
+    synq_source_reduce(pCtx, nrhs);
   // Reduce pops nrhs symbols and pushes 1: net change = 1 - nrhs.
   pCtx->lemon_depth = pCtx->lemon_depth + 1 - nrhs;
 
@@ -207,6 +410,13 @@ void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
 }
 
 void synq_extent_fold_below_into_top(SynqParseCtx* pCtx) {
+  if (pCtx->source_bindings) {
+    struct SynqSourceBindings* s = pCtx->source_bindings;
+    uint32_t n = syntaqlite_vec_len(&s->stack);
+    if (n >= 2)
+      synq_source_merge(&syntaqlite_vec_at(&s->stack, n - 1),
+                        syntaqlite_vec_at(&s->stack, n - 2));
+  }
   if (!pCtx->collect_node_extents) {
     return;
   }

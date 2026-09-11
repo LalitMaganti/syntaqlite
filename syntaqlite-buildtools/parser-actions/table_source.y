@@ -144,6 +144,8 @@ seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
     if (A == SYNTAQLITE_NULL_NODE && Z == SYNTAQLITE_NULL_NODE
         && N.on_expr == SYNTAQLITE_NULL_NODE
         && N.using_cols == SYNTAQLITE_NULL_NODE) {
+        synq_source_retire_rhs(pCtx, 1, 2);
+        synq_source_retire_rhs(pCtx, 3, 4);
         A = synq_pass(pCtx, F);
     } else {
         uint32_t paren = synq_parse_paren_table_source(pCtx, F, Z);

@@ -252,6 +252,28 @@ int synq_parser_shift_token(SyntaqliteParser* p,
     SyntaqliteParserToken tp = {layer_offset, len, token_type, 0, layer_id};
     syntaqlite_vec_push(&p->tokens, tp, p->mem);
     tidx = syntaqlite_vec_len(&p->tokens) - 1;
+    if (p->ctx.source_bindings)
+      synq_source_record_token(&p->ctx);
+    // An opaque token can contain comments collected before it was shifted.
+    // Such comments belong to this token, even when the packet classifier
+    // initially attached them to its predecessor. Move only that contained
+    // suffix; each comment can move once, and ordinary tokens stop immediately.
+    if (p->comment_packets && tidx > 0) {
+      SynqTokenComments* prev =
+          &syntaqlite_vec_at(&p->token_comments, tidx - 1);
+      while (prev->trailing_count > 0) {
+        uint32_t ci = prev->trailing_first + prev->trailing_count - 1;
+        SyntaqliteComment* c = &syntaqlite_vec_at(&p->comments, ci);
+        if (c->layer_id != layer_id || c->offset < layer_offset ||
+            c->offset + c->length > layer_offset + len)
+          break;
+        prev->trailing_count--;
+        c->token_idx = tidx;
+        c->side = SYNQ_COMMENT_LEADING;
+        p->pending_orphan_leading.leading_first = ci;
+        p->pending_orphan_leading.leading_count++;
+      }
+    }
     // Pair the new token with its comment-index entry.  Seed from
     // `pending_orphan_leading` so comments whose predicted owner was
     // this about-to-be-pushed token land at the right slot, then
@@ -446,11 +468,37 @@ void synq_parser_record_comment(SyntaqliteParser* p,
   const unsigned char* z = (const unsigned char*)p->ctx.source;
   int is_block = (z[offset] != '-');
 
+  // Packet continuation can be decided using the preceding comment alone.
+  // Inspect each whitespace gap once, not the accumulated prefix of a packet.
+  int packet_gap = 0;
+  int packet_continues = 0;
+  int packet_trailing = 0;
+  if (p->comment_packets && syntaqlite_vec_len(&p->comments)) {
+    const SyntaqliteComment* prev =
+        &syntaqlite_vec_at(&p->comments, syntaqlite_vec_len(&p->comments) - 1);
+    uint32_t prev_end =
+        prev->offset + prev->length + (layer == 0 ? p->stmt_start_offset : 0);
+    uint32_t token_count = syntaqlite_vec_len(&p->tokens);
+    int adjacent = prev->side == SYNQ_COMMENT_TRAILING
+                       ? prev->token_idx + 1 == token_count
+                       : prev->token_idx == token_count;
+    if (prev->layer_id == layer && adjacent && prev_end <= offset) {
+      unsigned lines = 0;
+      for (uint32_t i = prev_end; i < offset && lines < 2; ++i)
+        lines += z[i] == '\n';
+      packet_gap = 1;
+      packet_continues = lines < 2;
+      packet_trailing = prev->side == SYNQ_COMMENT_TRAILING;
+    }
+  }
+
   // ── Same-line with previous token? ───────────────────────────────────────
   int same_line_with_prev = 0;
-  if (p->last_pushed_token_layer == layer &&
-      p->last_pushed_token_ctx_end != UINT32_MAX &&
-      p->last_pushed_token_ctx_end <= offset) {
+  if (packet_gap) {
+    same_line_with_prev = packet_continues && packet_trailing;
+  } else if (p->last_pushed_token_layer == layer &&
+             p->last_pushed_token_ctx_end != UINT32_MAX &&
+             p->last_pushed_token_ctx_end <= offset) {
     same_line_with_prev = memchr(z + p->last_pushed_token_ctx_end, '\n',
                                  offset - p->last_pushed_token_ctx_end) == NULL;
   }
@@ -478,7 +526,9 @@ void synq_parser_record_comment(SyntaqliteParser* p,
   //    is on a different line.  Line comments always satisfy the latter
   //    (they consume the rest of their line).
   int is_trailing = 0;
-  if (same_line_with_prev) {
+  if (p->comment_packets) {
+    is_trailing = same_line_with_prev;
+  } else if (same_line_with_prev) {
     if (!is_block) {
       is_trailing = 1;
     } else {
@@ -709,9 +759,11 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
     if (main_rc == 1 && (p->ctx.root != SYNTAQLITE_NULL_NODE || p->had_error)) {
       // Eagerly consume same-line trailing comments after the statement
       // terminator so they attach to this statement's last token instead
-      // of the next statement's first.  Stop at the first newline or
-      // non-skip token; own-line comments belong to the next statement.
+      // of the next statement's first. Normally stop at the first newline.
+      // Packet mode finishes a suffix packet across single newlines, using
+      // the same blank-line boundary as comment attachment above.
       uint32_t scan = p->offset;
+      int suffix_packet = 0;
       while (scan < p->source_len && z[scan] != '\0') {
         uint32_t tt = 0;
         int64_t tl =
@@ -719,7 +771,10 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
         if (tl <= 0)
           break;
         if (tt == SYNTAQLITE_TK_SPACE) {
-          if (memchr(z + scan, '\n', (size_t)tl) != NULL)
+          unsigned lines = 0;
+          for (uint32_t i = 0; i < (uint32_t)tl && lines < 2; ++i)
+            lines += z[scan + i] == '\n';
+          if (lines >= (p->comment_packets && suffix_packet ? 2u : 1u))
             break;
           scan += (uint32_t)tl;
           continue;
@@ -727,6 +782,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
         if (tt == SYNTAQLITE_TK_COMMENT) {
           if (p->collect_tokens)
             synq_parser_record_comment(p, scan, (uint32_t)tl);
+          suffix_packet = 1;
           scan += (uint32_t)tl;
           p->offset = scan;
           continue;
@@ -1265,6 +1321,31 @@ SYNTAQLITE_API int32_t syntaqlite_parser_finish(SyntaqliteParser* p) {
 // Configuration
 // ---------------------------------------------------------------------------
 
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_collect_source_bindings(SyntaqliteParser* p,
+                                              uint32_t enable) {
+  if (p->sealed)
+    return SYNTAQLITE_ERR_ALREADY_USED;
+  synq_source_enable(&p->ctx, enable);
+  return SYNTAQLITE_OK;
+}
+SYNTAQLITE_API int32_t syntaqlite_parser_source_range(const SyntaqliteParser* p,
+                                                      uint32_t node,
+                                                      uint32_t role,
+                                                      uint32_t* first,
+                                                      uint32_t* end) {
+  if (!p->collect_tokens)
+    return 0;
+  return synq_source_range(&p->ctx, node, role, first, end);
+}
+
+SYNTAQLITE_API uint32_t
+syntaqlite_parser_source_anchor_end(const SyntaqliteParser* p, uint32_t token) {
+  if (!p->collect_tokens)
+    return UINT32_MAX;
+  return synq_source_anchor_end(&p->ctx, token);
+}
+
 SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
                                                    uint32_t enable) {
   if (p->sealed)
@@ -1275,6 +1356,14 @@ SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
   } else {
     SYNQ_PARSER_TRACE(p->dialect.tmpl, NULL, NULL);
   }
+  return SYNTAQLITE_OK;
+}
+
+SYNTAQLITE_API int32_t
+syntaqlite_parser_set_comment_packets(SyntaqliteParser* p, uint32_t enable) {
+  if (p->sealed)
+    return SYNTAQLITE_ERR_ALREADY_USED;
+  p->comment_packets = enable;
   return SYNTAQLITE_OK;
 }
 
