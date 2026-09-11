@@ -49,18 +49,11 @@ typedef struct SynqColumnNameValue {
   SyntaqliteTextSpan typetoken;
 } SynqColumnNameValue;
 
-// tcons: a table constraint node + pending constraint name.
-typedef struct SynqConstraintValue {
-  uint32_t node;
-  SyntaqliteTextSpan pending_name;
-} SynqConstraintValue;
-
-// conslist: accumulated table constraint list + pending name for next.
-typedef struct SynqConstraintListValue {
+// conslist: completed comma-separated groups and the group still being built.
+typedef struct SynqConstraintGroups {
   uint32_t list;
-  SyntaqliteTextSpan pending_name;
-  uint32_t last_node;
-} SynqConstraintListValue;
+  uint32_t group;
+} SynqConstraintGroups;
 
 // defer_subclause: DEFERRABLE / NOT DEFERRABLE plus the INITIALLY mode.
 typedef struct SynqDeferValue {

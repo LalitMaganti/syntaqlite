@@ -269,11 +269,10 @@ class ColumnDef:
 class TableConstraint:
     """AST node: TableConstraint"""
 
-    __slots__ = ("kind", "constraint_name", "onconf", "is_autoincrement", "pk_columns", "fk_columns", "check_expr", "fk_clause")
+    __slots__ = ("kind", "onconf", "is_autoincrement", "pk_columns", "fk_columns", "check_expr", "fk_clause")
 
     def __init__(self, d: dict):
         self.kind: TableConstraintType = TableConstraintType[d["kind"]]
-        self.constraint_name: str | None = d.get("constraint_name")
         self.onconf: ConflictAction = ConflictAction[d["onconf"]]
         self.is_autoincrement: bool = d["is_autoincrement"]
         self.pk_columns: list[OrderingTerm] | None = _wrap(d.get("pk_columns"))
@@ -297,7 +296,7 @@ class CreateTableStmt:
         self.if_not_exists: bool = d["if_not_exists"]
         self.flags: CreateTableStmtFlags = _flags(CreateTableStmtFlags, d["flags"])
         self.columns: list[ColumnDef] | None = _wrap(d.get("columns"))
-        self.table_constraints: list[TableConstraint] | None = _wrap(d.get("table_constraints"))
+        self.table_constraints: list[TableConstraintGroup] | None = _wrap(d.get("table_constraints"))
         self.as_select: Select | None = _wrap(d.get("as_select"))
 
     def __repr__(self):

@@ -37,67 +37,68 @@ pub enum NodeTag {
     ColumnDef = 19,
     ColumnDefList = 20,
     TableConstraint = 21,
-    TableConstraintList = 22,
-    CreateTableStmt = 23,
-    CteDefinition = 24,
-    CteList = 25,
-    WithClause = 26,
-    UpsertClause = 27,
-    UpsertClauseList = 28,
-    DeleteStmt = 29,
-    SetClause = 30,
-    SetClauseList = 31,
-    UpdateStmt = 32,
-    InsertStmt = 33,
-    BinaryExpr = 34,
-    UnaryExpr = 35,
-    Literal = 36,
-    ParenExpr = 37,
-    IdentName = 38,
-    Error = 39,
-    RowValue = 40,
-    ExprList = 41,
-    FunctionCall = 42,
-    Variable = 43,
-    CollateExpr = 44,
-    RaiseExpr = 45,
-    QualifiedName = 46,
-    DropStmt = 47,
-    AlterTableStmt = 48,
-    TransactionStmt = 49,
-    SavepointStmt = 50,
-    ResultColumn = 51,
-    ResultColumnList = 52,
-    SelectStmt = 53,
-    OrderingTerm = 54,
-    OrderByList = 55,
-    LimitClause = 56,
-    TableRef = 57,
-    SubqueryTableSource = 58,
-    ParenTableSource = 59,
-    JoinClause = 60,
-    JoinPrefix = 61,
-    TriggerEvent = 62,
-    TriggerCmdList = 63,
-    CreateTriggerStmt = 64,
-    CreateVirtualTableStmt = 65,
-    PragmaStmt = 66,
-    AnalyzeOrReindexStmt = 67,
-    AttachStmt = 68,
-    DetachStmt = 69,
-    VacuumStmt = 70,
-    ExplainStmt = 71,
-    CreateIndexStmt = 72,
-    CreateViewStmt = 73,
-    ValuesRowList = 74,
-    ValuesClause = 75,
-    FrameBound = 76,
-    FrameSpec = 77,
-    WindowDef = 78,
-    WindowDefList = 79,
-    NamedWindowDef = 80,
-    NamedWindowDefList = 81,
-    FilterOver = 82,
+    TableConstraintGroup = 22,
+    TableConstraintList = 23,
+    CreateTableStmt = 24,
+    CteDefinition = 25,
+    CteList = 26,
+    WithClause = 27,
+    UpsertClause = 28,
+    UpsertClauseList = 29,
+    DeleteStmt = 30,
+    SetClause = 31,
+    SetClauseList = 32,
+    UpdateStmt = 33,
+    InsertStmt = 34,
+    BinaryExpr = 35,
+    UnaryExpr = 36,
+    Literal = 37,
+    ParenExpr = 38,
+    IdentName = 39,
+    Error = 40,
+    RowValue = 41,
+    ExprList = 42,
+    FunctionCall = 43,
+    Variable = 44,
+    CollateExpr = 45,
+    RaiseExpr = 46,
+    QualifiedName = 47,
+    DropStmt = 48,
+    AlterTableStmt = 49,
+    TransactionStmt = 50,
+    SavepointStmt = 51,
+    ResultColumn = 52,
+    ResultColumnList = 53,
+    SelectStmt = 54,
+    OrderingTerm = 55,
+    OrderByList = 56,
+    LimitClause = 57,
+    TableRef = 58,
+    SubqueryTableSource = 59,
+    ParenTableSource = 60,
+    JoinClause = 61,
+    JoinPrefix = 62,
+    TriggerEvent = 63,
+    TriggerCmdList = 64,
+    CreateTriggerStmt = 65,
+    CreateVirtualTableStmt = 66,
+    PragmaStmt = 67,
+    AnalyzeOrReindexStmt = 68,
+    AttachStmt = 69,
+    DetachStmt = 70,
+    VacuumStmt = 71,
+    ExplainStmt = 72,
+    CreateIndexStmt = 73,
+    CreateViewStmt = 74,
+    ValuesRowList = 75,
+    ValuesClause = 76,
+    FrameBound = 77,
+    FrameSpec = 78,
+    WindowDef = 79,
+    WindowDefList = 80,
+    NamedWindowDef = 81,
+    NamedWindowDefList = 82,
+    FilterOver = 83,
 }
 
 impl From<NodeTag> for crate::any::AnyNodeTag {
@@ -131,67 +132,68 @@ impl NodeTag {
             19 => Some(NodeTag::ColumnDef),
             20 => Some(NodeTag::ColumnDefList),
             21 => Some(NodeTag::TableConstraint),
-            22 => Some(NodeTag::TableConstraintList),
-            23 => Some(NodeTag::CreateTableStmt),
-            24 => Some(NodeTag::CteDefinition),
-            25 => Some(NodeTag::CteList),
-            26 => Some(NodeTag::WithClause),
-            27 => Some(NodeTag::UpsertClause),
-            28 => Some(NodeTag::UpsertClauseList),
-            29 => Some(NodeTag::DeleteStmt),
-            30 => Some(NodeTag::SetClause),
-            31 => Some(NodeTag::SetClauseList),
-            32 => Some(NodeTag::UpdateStmt),
-            33 => Some(NodeTag::InsertStmt),
-            34 => Some(NodeTag::BinaryExpr),
-            35 => Some(NodeTag::UnaryExpr),
-            36 => Some(NodeTag::Literal),
-            37 => Some(NodeTag::ParenExpr),
-            38 => Some(NodeTag::IdentName),
-            39 => Some(NodeTag::Error),
-            40 => Some(NodeTag::RowValue),
-            41 => Some(NodeTag::ExprList),
-            42 => Some(NodeTag::FunctionCall),
-            43 => Some(NodeTag::Variable),
-            44 => Some(NodeTag::CollateExpr),
-            45 => Some(NodeTag::RaiseExpr),
-            46 => Some(NodeTag::QualifiedName),
-            47 => Some(NodeTag::DropStmt),
-            48 => Some(NodeTag::AlterTableStmt),
-            49 => Some(NodeTag::TransactionStmt),
-            50 => Some(NodeTag::SavepointStmt),
-            51 => Some(NodeTag::ResultColumn),
-            52 => Some(NodeTag::ResultColumnList),
-            53 => Some(NodeTag::SelectStmt),
-            54 => Some(NodeTag::OrderingTerm),
-            55 => Some(NodeTag::OrderByList),
-            56 => Some(NodeTag::LimitClause),
-            57 => Some(NodeTag::TableRef),
-            58 => Some(NodeTag::SubqueryTableSource),
-            59 => Some(NodeTag::ParenTableSource),
-            60 => Some(NodeTag::JoinClause),
-            61 => Some(NodeTag::JoinPrefix),
-            62 => Some(NodeTag::TriggerEvent),
-            63 => Some(NodeTag::TriggerCmdList),
-            64 => Some(NodeTag::CreateTriggerStmt),
-            65 => Some(NodeTag::CreateVirtualTableStmt),
-            66 => Some(NodeTag::PragmaStmt),
-            67 => Some(NodeTag::AnalyzeOrReindexStmt),
-            68 => Some(NodeTag::AttachStmt),
-            69 => Some(NodeTag::DetachStmt),
-            70 => Some(NodeTag::VacuumStmt),
-            71 => Some(NodeTag::ExplainStmt),
-            72 => Some(NodeTag::CreateIndexStmt),
-            73 => Some(NodeTag::CreateViewStmt),
-            74 => Some(NodeTag::ValuesRowList),
-            75 => Some(NodeTag::ValuesClause),
-            76 => Some(NodeTag::FrameBound),
-            77 => Some(NodeTag::FrameSpec),
-            78 => Some(NodeTag::WindowDef),
-            79 => Some(NodeTag::WindowDefList),
-            80 => Some(NodeTag::NamedWindowDef),
-            81 => Some(NodeTag::NamedWindowDefList),
-            82 => Some(NodeTag::FilterOver),
+            22 => Some(NodeTag::TableConstraintGroup),
+            23 => Some(NodeTag::TableConstraintList),
+            24 => Some(NodeTag::CreateTableStmt),
+            25 => Some(NodeTag::CteDefinition),
+            26 => Some(NodeTag::CteList),
+            27 => Some(NodeTag::WithClause),
+            28 => Some(NodeTag::UpsertClause),
+            29 => Some(NodeTag::UpsertClauseList),
+            30 => Some(NodeTag::DeleteStmt),
+            31 => Some(NodeTag::SetClause),
+            32 => Some(NodeTag::SetClauseList),
+            33 => Some(NodeTag::UpdateStmt),
+            34 => Some(NodeTag::InsertStmt),
+            35 => Some(NodeTag::BinaryExpr),
+            36 => Some(NodeTag::UnaryExpr),
+            37 => Some(NodeTag::Literal),
+            38 => Some(NodeTag::ParenExpr),
+            39 => Some(NodeTag::IdentName),
+            40 => Some(NodeTag::Error),
+            41 => Some(NodeTag::RowValue),
+            42 => Some(NodeTag::ExprList),
+            43 => Some(NodeTag::FunctionCall),
+            44 => Some(NodeTag::Variable),
+            45 => Some(NodeTag::CollateExpr),
+            46 => Some(NodeTag::RaiseExpr),
+            47 => Some(NodeTag::QualifiedName),
+            48 => Some(NodeTag::DropStmt),
+            49 => Some(NodeTag::AlterTableStmt),
+            50 => Some(NodeTag::TransactionStmt),
+            51 => Some(NodeTag::SavepointStmt),
+            52 => Some(NodeTag::ResultColumn),
+            53 => Some(NodeTag::ResultColumnList),
+            54 => Some(NodeTag::SelectStmt),
+            55 => Some(NodeTag::OrderingTerm),
+            56 => Some(NodeTag::OrderByList),
+            57 => Some(NodeTag::LimitClause),
+            58 => Some(NodeTag::TableRef),
+            59 => Some(NodeTag::SubqueryTableSource),
+            60 => Some(NodeTag::ParenTableSource),
+            61 => Some(NodeTag::JoinClause),
+            62 => Some(NodeTag::JoinPrefix),
+            63 => Some(NodeTag::TriggerEvent),
+            64 => Some(NodeTag::TriggerCmdList),
+            65 => Some(NodeTag::CreateTriggerStmt),
+            66 => Some(NodeTag::CreateVirtualTableStmt),
+            67 => Some(NodeTag::PragmaStmt),
+            68 => Some(NodeTag::AnalyzeOrReindexStmt),
+            69 => Some(NodeTag::AttachStmt),
+            70 => Some(NodeTag::DetachStmt),
+            71 => Some(NodeTag::VacuumStmt),
+            72 => Some(NodeTag::ExplainStmt),
+            73 => Some(NodeTag::CreateIndexStmt),
+            74 => Some(NodeTag::CreateViewStmt),
+            75 => Some(NodeTag::ValuesRowList),
+            76 => Some(NodeTag::ValuesClause),
+            77 => Some(NodeTag::FrameBound),
+            78 => Some(NodeTag::FrameSpec),
+            79 => Some(NodeTag::WindowDef),
+            80 => Some(NodeTag::WindowDefList),
+            81 => Some(NodeTag::NamedWindowDef),
+            82 => Some(NodeTag::NamedWindowDefList),
+            83 => Some(NodeTag::FilterOver),
             _ => None,
         }
     }
@@ -1157,6 +1159,63 @@ impl From<ColumnConstraintItemId> for AnyNodeId {
 
 impl TypedNodeId for ColumnConstraintItemId {
     type Node<'a> = ColumnConstraintItem<'a>;
+}
+
+/// Abstract `TableConstraintItem` — pattern-match to access the concrete type.
+#[derive(Debug, Clone, Copy)]
+pub enum TableConstraintItem<'a> {
+    ConstraintNameDeclaration(ConstraintNameDeclaration<'a>),
+    TableConstraint(TableConstraint<'a>),
+}
+
+impl<'a> TableConstraintItem<'a> {
+    /// The typed node ID of this node.
+    pub fn node_id(&self) -> TableConstraintItemId {
+        match self {
+            TableConstraintItem::ConstraintNameDeclaration(n) => {
+                TableConstraintItemId(n.node_id().into())
+            }
+            TableConstraintItem::TableConstraint(n) => TableConstraintItemId(n.node_id().into()),
+        }
+    }
+}
+
+impl<'a> GrammarNodeType<'a> for TableConstraintItem<'a> {
+    fn from_result(stmt_result: &'a AnyParsedStatement<'a>, id: AnyNodeId) -> Option<Self> {
+        let node = Node::resolve(stmt_result, id)?;
+        match node {
+            Node::ConstraintNameDeclaration(n) => {
+                Some(TableConstraintItem::ConstraintNameDeclaration(n))
+            }
+            Node::TableConstraint(n) => Some(TableConstraintItem::TableConstraint(n)),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct TableConstraintItemId(AnyNodeId);
+
+impl TableConstraintItemId {
+    pub fn into_inner(self) -> AnyNodeId {
+        self.0
+    }
+}
+
+impl<'a> From<TableConstraintItem<'a>> for TableConstraintItemId {
+    fn from(n: TableConstraintItem<'a>) -> Self {
+        n.node_id()
+    }
+}
+
+impl From<TableConstraintItemId> for AnyNodeId {
+    fn from(id: TableConstraintItemId) -> AnyNodeId {
+        id.0
+    }
+}
+
+impl TypedNodeId for TableConstraintItemId {
+    type Node<'a> = TableConstraintItem<'a>;
 }
 
 /// Abstract `Name` — pattern-match to access the concrete type.
@@ -2862,10 +2921,6 @@ impl<'a> TableConstraint<'a> {
     }
     pub fn kind(&self) -> TableConstraintType {
         self.raw.kind
-    }
-    pub fn constraint_name(&self) -> &'a str {
-        self.stmt_result
-            .span_expanded_text(self.raw.constraint_name)
     }
     pub fn onconf(&self) -> ConflictAction {
         self.raw.onconf
@@ -6866,8 +6921,38 @@ impl TypedNodeId for ColumnDefListId {
     type Node<'a> = ColumnDefList<'a>;
 }
 
-/// Typed list of `TableConstraint`.
-pub type TableConstraintList<'a> = TypedNodeList<'a, super::dialect::Dialect, TableConstraint<'a>>;
+/// Typed list of `TableConstraintItem`.
+pub type TableConstraintGroup<'a> =
+    TypedNodeList<'a, super::dialect::Dialect, TableConstraintItem<'a>>;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct TableConstraintGroupId(AnyNodeId);
+
+impl TableConstraintGroupId {
+    pub fn into_inner(self) -> AnyNodeId {
+        self.0
+    }
+}
+
+impl<'a> From<TableConstraintGroup<'a>> for TableConstraintGroupId {
+    fn from(n: TableConstraintGroup<'a>) -> Self {
+        TableConstraintGroupId(n.node_id().into())
+    }
+}
+
+impl From<TableConstraintGroupId> for AnyNodeId {
+    fn from(id: TableConstraintGroupId) -> AnyNodeId {
+        id.0
+    }
+}
+
+impl TypedNodeId for TableConstraintGroupId {
+    type Node<'a> = TableConstraintGroup<'a>;
+}
+
+/// Typed list of `TableConstraintGroup`.
+pub type TableConstraintList<'a> =
+    TypedNodeList<'a, super::dialect::Dialect, TableConstraintGroup<'a>>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct TableConstraintListId(AnyNodeId);
@@ -7201,7 +7286,9 @@ pub enum Node<'a> {
     /// List of [`ColumnDef`].
     ColumnDefList(ColumnDefList<'a>),
     TableConstraint(TableConstraint<'a>),
-    /// List of [`TableConstraint`].
+    /// List of [`TableConstraintItem`].
+    TableConstraintGroup(TableConstraintGroup<'a>),
+    /// List of [`TableConstraintGroup`].
     TableConstraintList(TableConstraintList<'a>),
     CreateTableStmt(CreateTableStmt<'a>),
     CteDefinition(CteDefinition<'a>),
@@ -7401,6 +7488,9 @@ impl<'a> Node<'a> {
                     stmt_result,
                     id,
                 }),
+                NodeTag::TableConstraintGroup => Node::TableConstraintGroup(
+                    TypedNodeList::from_result(stmt_result, id).expect("list tag invariant"),
+                ),
                 NodeTag::TableConstraintList => Node::TableConstraintList(
                     TypedNodeList::from_result(stmt_result, id).expect("list tag invariant"),
                 ),
@@ -7730,6 +7820,7 @@ impl<'a> Node<'a> {
             Node::ColumnDef(..) => NodeTag::ColumnDef,
             Node::ColumnDefList(..) => NodeTag::ColumnDefList,
             Node::TableConstraint(..) => NodeTag::TableConstraint,
+            Node::TableConstraintGroup(..) => NodeTag::TableConstraintGroup,
             Node::TableConstraintList(..) => NodeTag::TableConstraintList,
             Node::CreateTableStmt(..) => NodeTag::CreateTableStmt,
             Node::CteDefinition(..) => NodeTag::CteDefinition,
@@ -7819,6 +7910,7 @@ impl<'a> Node<'a> {
             Node::ColumnDef(n) => NodeId(n.node_id().into()),
             Node::ColumnDefList(n) => NodeId(n.node_id().into()),
             Node::TableConstraint(n) => NodeId(n.node_id().into()),
+            Node::TableConstraintGroup(n) => NodeId(n.node_id().into()),
             Node::TableConstraintList(n) => NodeId(n.node_id().into()),
             Node::CreateTableStmt(n) => NodeId(n.node_id().into()),
             Node::CteDefinition(n) => NodeId(n.node_id().into()),

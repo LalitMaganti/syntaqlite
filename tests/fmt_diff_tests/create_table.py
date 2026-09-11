@@ -543,10 +543,7 @@ class ConstraintNamePropagation(TestSuite):
     def test_name_applies_to_every_table_constraint(self):
         return DiffTestBlueprint(
             sql="create table t(a, b, constraint two check(b<10) check(a>0))",
-            out=(
-                "CREATE TABLE t(a, b, CONSTRAINT two CHECK(b < 10), "
-                "CONSTRAINT two CHECK(a > 0));"
-            ),
+            out="CREATE TABLE t(a, b, CONSTRAINT two CHECK(b < 10) CHECK(a > 0));",
         )
 
     def test_comma_clears_the_pending_name(self):
@@ -566,7 +563,7 @@ class ConstraintNamePropagation(TestSuite):
         not clear the name a column left pending."""
         return DiffTestBlueprint(
             sql="create table t(a, b constraint xyz, check(a>0))",
-            out="CREATE TABLE t(a, b CONSTRAINT xyz, CONSTRAINT xyz CHECK(a > 0));",
+            out="CREATE TABLE t(a, b CONSTRAINT xyz, CHECK(a > 0));",
         )
 
     def test_unnamed_table_constraint_after_plain_column(self):
@@ -582,17 +579,17 @@ class ConstraintNamePropagation(TestSuite):
             out="CREATE TABLE t(a CONSTRAINT c);",
         )
 
-    def test_dangling_table_constraint_name_is_dropped(self):
+    def test_dangling_table_constraint_name_is_preserved(self):
         return DiffTestBlueprint(
             sql="create table t(a, constraint foo)",
-            out="CREATE TABLE t(a);",
+            out="CREATE TABLE t(a, CONSTRAINT foo);",
         )
 
     def test_dangling_name_before_a_comma_does_not_name_what_follows(self):
         """The comma clears it, so the CHECK stays unnamed — as in SQLite."""
         return DiffTestBlueprint(
             sql="create table t(a, constraint foo, check(a>0))",
-            out="CREATE TABLE t(a, CHECK(a > 0));",
+            out="CREATE TABLE t(a, CONSTRAINT foo, CHECK(a > 0));",
         )
 
 
@@ -700,4 +697,38 @@ class ColumnConstraintDeclarationsFormat(TestSuite):
         return DiffTestBlueprint(
             sql="ALTER TABLE t ADD COLUMN a CONSTRAINT old CONSTRAINT c CHECK(a) CHECK(a > 0)",
             out="ALTER TABLE t ADD COLUMN a CONSTRAINT old CONSTRAINT c CHECK(a) CHECK(a > 0);",
+        )
+
+
+class TableConstraintDeclarationsFormat(TestSuite):
+    def test_name_and_comment_are_emitted_once(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a, CONSTRAINT c /* note */ CHECK(a > 0) CHECK(a < 9))",
+            out="""\
+            CREATE TABLE t(
+              a,
+              CONSTRAINT c
+              /* note */ CHECK(a > 0)
+              CHECK(a < 9)
+            );
+""",
+        )
+
+    def test_overwritten_name_and_comment_are_preserved(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a, CONSTRAINT old /* note */ CONSTRAINT c CHECK(a))",
+            out="""\
+            CREATE TABLE t(
+              a,
+              CONSTRAINT old
+              /* note */ CONSTRAINT c
+              CHECK(a)
+            );
+""",
+        )
+
+    def test_unused_name_before_comma_is_preserved(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a, CONSTRAINT unused, CHECK(a))",
+            out="CREATE TABLE t(a, CONSTRAINT unused, CHECK(a));",
         )

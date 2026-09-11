@@ -25,8 +25,9 @@
 %type onconf {int}
 %type ccons {uint32_t}
 %type carglist {uint32_t}
-%type tcons {SynqConstraintValue}
-%type conslist {SynqConstraintListValue}
+%type tcons {uint32_t}
+%type conslist {SynqConstraintGroups}
+%type tconscomma {int}
 %type generated {uint32_t}
 
 // ============ CREATE TABLE top-level ============
@@ -135,8 +136,6 @@ carglist(A) ::= . {
 ccons(A) ::= CONSTRAINT nm(X). {
     SyntaqliteTextSpan name = synq_span(pCtx, X);
     A = synq_parse_constraint_name_declaration(pCtx, name);
-    // Table constraints still consume SQLite's pending name slot.
-    pCtx->constraint_name = name;
 }
 
 // DEFAULT scantok term
@@ -468,81 +467,54 @@ conslist_opt(A) ::= . {
 }
 
 conslist_opt(A) ::= COMMA conslist(L). {
-    A = L.list;
+    A = synq_parse_table_constraint_list(pCtx, L.list, L.group);
 }
 
-conslist(A) ::= conslist(L) tconscomma tcons(TC). {
-    // If comma separator was present, clear pending constraint name
-    SyntaqliteTextSpan pending = pCtx->constraint_name;
-    if (TC.node != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *node = AST_NODE(&pCtx->ast, TC.node);
-        node->table_constraint.constraint_name = pending;
-        if (L.list == SYNTAQLITE_NULL_NODE) {
-            A.list = synq_parse_table_constraint_list(pCtx, SYNTAQLITE_NULL_NODE, TC.node);
-        } else {
-            A.list = synq_parse_table_constraint_list(pCtx, L.list, TC.node);
-        }
-        A.pending_name = pending;
-        A.last_node = TC.node;
-    } else if (TC.pending_name.length > 0) {
-        A.list = L.list;
-        A.pending_name = TC.pending_name;
-        A.last_node = L.last_node;
-    } else {
-        A = L;
+conslist(A) ::= conslist(L) tconscomma(C) tcons(TC). {
+    A.list = L.list;
+    uint32_t group = L.group;
+    if (C) {
+        A.list = synq_parse_table_constraint_list(pCtx, L.list, L.group);
+        group = SYNTAQLITE_NULL_NODE;
     }
+    A.group = synq_parse_list_append_from_children(pCtx,
+        SYNTAQLITE_NODE_TABLE_CONSTRAINT_GROUP, group, TC);
 }
 
 conslist(A) ::= tcons(TC). {
-    if (TC.node != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *node = AST_NODE(&pCtx->ast, TC.node);
-        node->table_constraint.constraint_name = pCtx->constraint_name;
-        A.list = synq_parse_table_constraint_list(pCtx, SYNTAQLITE_NULL_NODE, TC.node);
-        A.pending_name = pCtx->constraint_name;
-        A.last_node = TC.node;
-    } else {
-        A.list = SYNTAQLITE_NULL_NODE;
-        A.pending_name = TC.pending_name;
-        A.last_node = SYNTAQLITE_NULL_NODE;
-    }
+    A.list = SYNTAQLITE_NULL_NODE;
+    A.group = synq_parse_list_append_from_children(pCtx,
+        SYNTAQLITE_NODE_TABLE_CONSTRAINT_GROUP, SYNTAQLITE_NULL_NODE, TC);
 }
 
-tconscomma ::= COMMA. { pCtx->constraint_name = SYNQ_NO_SPAN; }
-tconscomma ::= . { }
+tconscomma(A) ::= COMMA. { A = 1; }
+tconscomma(A) ::= . { A = 0; }
 
 // ============ Table constraints (tcons) ============
 
 tcons(A) ::= CONSTRAINT nm(X). {
-    A.node = SYNTAQLITE_NULL_NODE;
-    A.pending_name = synq_span(pCtx, X);
-    pCtx->constraint_name = A.pending_name;
+    A = synq_parse_constraint_name_declaration(pCtx, synq_span(pCtx, X));
 }
 
 tcons(A) ::= PRIMARY KEY LP sortlist(X) autoinc(I) RP onconf(R). {
-    A.node = synq_parse_table_constraint(pCtx,
+    A = synq_parse_table_constraint(pCtx,
         SYNTAQLITE_TABLE_CONSTRAINT_TYPE_PRIMARY_KEY,
-        SYNQ_NO_SPAN,
         (SyntaqliteConflictAction)R, (SyntaqliteBool)I,
         X, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 tcons(A) ::= UNIQUE LP sortlist(X) RP onconf(R). {
-    A.node = synq_parse_table_constraint(pCtx,
+    A = synq_parse_table_constraint(pCtx,
         SYNTAQLITE_TABLE_CONSTRAINT_TYPE_UNIQUE,
-        SYNQ_NO_SPAN,
         (SyntaqliteConflictAction)R, SYNTAQLITE_BOOL_FALSE,
         X, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 tcons(A) ::= CHECK LP expr(E) RP onconf(R). {
-    A.node = synq_parse_table_constraint(pCtx,
+    A = synq_parse_table_constraint(pCtx,
         SYNTAQLITE_TABLE_CONSTRAINT_TYPE_CHECK,
-        SYNQ_NO_SPAN,
         (SyntaqliteConflictAction)R, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, E, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 tcons(A) ::= FOREIGN KEY LP eidlist(FA) RP REFERENCES nm(T) eidlist_opt(TA) refargs(R) defer_subclause_opt(D). {
@@ -550,12 +522,10 @@ tcons(A) ::= FOREIGN KEY LP eidlist(FA) RP REFERENCES nm(T) eidlist_opt(TA) refa
         synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
         R.on_insert,
         D.deferrable, D.initial);
-    A.node = synq_parse_table_constraint(pCtx,
+    A = synq_parse_table_constraint(pCtx,
         SYNTAQLITE_TABLE_CONSTRAINT_TYPE_FOREIGN_KEY,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, FA, SYNTAQLITE_NULL_NODE, fk);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // ============ Defer subclause opt ============
