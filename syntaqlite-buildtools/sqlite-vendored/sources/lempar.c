@@ -272,7 +272,7 @@ void ParseTrace(FILE *TraceFILE, char *zTracePrompt){
 }
 #endif /* NDEBUG */
 
-#if defined(YYCOVERAGE) || !defined(NDEBUG)
+#if 1 /* Prototype: retain grammar identities in release builds. */
 /* For tracing shifts, the names of all terminals and nonterminals
 ** are required.  The following table supplies these names */
 static const char *const yyTokenName[] = { 
@@ -280,13 +280,24 @@ static const char *const yyTokenName[] = {
 };
 #endif /* defined(YYCOVERAGE) || !defined(NDEBUG) */
 
-#ifndef NDEBUG
+#if 1 /* Prototype: retain grammar identities in release builds. */
 /* For tracing reduce actions, the names of all rules are required.
 */
 static const char *const yyRuleName[] = {
 %%
 };
 #endif /* NDEBUG */
+
+
+/* Isolated prototype bridge. Thread-local registration, no production API. */
+typedef void (*ParseLayoutCallback)(void*, unsigned, const char*, unsigned,
+                                    const char*, unsigned);
+static _Thread_local ParseLayoutCallback prototype_callback;
+static _Thread_local void* prototype_context;
+void ParseLayoutSet(void* context, ParseLayoutCallback callback) {
+  prototype_context = context;
+  prototype_callback = callback;
+}
 
 
 #if YYGROWABLESTACK
@@ -701,6 +712,7 @@ static void yy_shift(
   yytos->stateno = yyNewState;
   yytos->major = yyMajor;
   yytos->minor.yy0 = yyMinor;
+  if (prototype_callback) prototype_callback(prototype_context, 0, yyTokenName[yyMajor], yyMinor.n ? (unsigned)(yyMinor.z - yypParser->pCtx->source) : 0, yyMinor.z, yyMinor.n);
   yyTraceShift(yypParser, yyNewState, "Shift");
 }
 
@@ -743,6 +755,7 @@ static YYACTIONTYPE yy_reduce(
   (void)yyLookahead;
   (void)yyLookaheadToken;
   yymsp = yypParser->yytos;
+  if (prototype_callback) prototype_callback(prototype_context, 1, yyRuleName[yyruleno], (unsigned)(-yyRuleInfoNRhs[yyruleno]), 0, 0);
 
   switch( yyruleno ){
   /* Beginning here are the reduction cases.  A typical example

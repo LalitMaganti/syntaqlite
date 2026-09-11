@@ -190,9 +190,9 @@ fn bench_formatter(c: &mut Criterion) {
     for f in &fixtures {
         group.throughput(Throughput::Bytes(f.sql.len() as u64));
         group.bench_with_input(BenchmarkId::from_parameter(f.name), &f.sql, |b, sql| {
-            let mut fmt = syntaqlite::Formatter::new();
+            let mut fmt = syntaqlite::fmt::token_layout_prototype::TokenFormatter::default();
             b.iter(|| {
-                black_box(fmt.format(black_box(sql)).unwrap());
+                black_box(fmt.format(black_box(sql), 80).unwrap());
             });
         });
     }

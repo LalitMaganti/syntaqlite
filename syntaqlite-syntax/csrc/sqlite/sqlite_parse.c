@@ -5192,7 +5192,7 @@ void SynqSqliteParseTrace(FILE* TraceFILE, char* zTracePrompt) {
 }
 #endif /* NDEBUG */
 
-#if defined(YYCOVERAGE) || !defined(NDEBUG)
+#if 1 /* Prototype: retain grammar identities in release builds. */
 /* For tracing shifts, the names of all terminals and nonterminals
 ** are required.  The following table supplies these names */
 static const char* const yyTokenName[] = {
@@ -5525,7 +5525,7 @@ static const char* const yyTokenName[] = {
 };
 #endif /* defined(YYCOVERAGE) || !defined(NDEBUG) */
 
-#ifndef NDEBUG
+#if 1 /* Prototype: retain grammar identities in release builds. */
 /* For tracing reduce actions, the names of all rules are required.
  */
 static const char* const yyRuleName[] = {
@@ -5986,6 +5986,21 @@ static const char* const yyRuleName[] = {
 };
 #endif /* NDEBUG */
 
+/* Isolated prototype bridge. Thread-local registration, no production API. */
+typedef void (*SynqSqliteParseLayoutCallback)(void*,
+                                              unsigned,
+                                              const char*,
+                                              unsigned,
+                                              const char*,
+                                              unsigned);
+static _Thread_local SynqSqliteParseLayoutCallback prototype_callback;
+static _Thread_local void* prototype_context;
+void SynqSqliteParseLayoutSet(void* context,
+                              SynqSqliteParseLayoutCallback callback) {
+  prototype_context = context;
+  prototype_callback = callback;
+}
+
 #if YYGROWABLESTACK
 /*
 ** Try to increase the size of the parser stack.  Return the number
@@ -6410,6 +6425,11 @@ static void yy_shift(
   yytos->major = yyMajor;
   yytos->minor.yy0 = yyMinor;
   synq_on_shift(yypParser, yyMajor, &yyMinor);
+  if (prototype_callback)
+    prototype_callback(
+        prototype_context, 0, yyTokenName[yyMajor],
+        yyMinor.n ? (unsigned)(yyMinor.z - yypParser->pCtx->source) : 0,
+        yyMinor.z, yyMinor.n);
   yyTraceShift(yypParser, yyNewState, "Shift");
 }
 
@@ -7331,6 +7351,9 @@ static YYACTIONTYPE yy_reduce(
   (void)yyLookaheadToken;
   yymsp = yypParser->yytos;
   synq_on_reduce(yypParser, yyruleno);
+  if (prototype_callback)
+    prototype_callback(prototype_context, 1, yyRuleName[yyruleno],
+                       (unsigned)(-yyRuleInfoNRhs[yyruleno]), 0, 0);
 
   switch (yyruleno) {
     /* Beginning here are the reduction cases.  A typical example
