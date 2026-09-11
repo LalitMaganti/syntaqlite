@@ -490,7 +490,7 @@ mod tests {
         let model = AstModel::new(&all_items);
         let enums = model.generate_python_enums();
         assert!(
-            enums.contains("SELECT_STMT = 52"),
+            enums.contains("SELECT_STMT = 53"),
             "enums missing SELECT_STMT"
         );
     }

@@ -218,11 +218,10 @@ class ForeignKeyClause:
 class ColumnConstraint:
     """AST node: ColumnConstraint"""
 
-    __slots__ = ("kind", "constraint_name", "onconf", "sort_order", "is_autoincrement", "collation_name", "generated_storage", "deferrable", "initial_defer", "default_has_parens", "generated_always", "default_expr", "check_expr", "generated_expr", "fk_clause")
+    __slots__ = ("kind", "onconf", "sort_order", "is_autoincrement", "collation_name", "generated_storage", "deferrable", "initial_defer", "default_has_parens", "generated_always", "default_expr", "check_expr", "generated_expr", "fk_clause")
 
     def __init__(self, d: dict):
         self.kind: ColumnConstraintType = ColumnConstraintType[d["kind"]]
-        self.constraint_name: str | None = d.get("constraint_name")
         self.onconf: ConflictAction = ConflictAction[d["onconf"]]
         self.sort_order: SortOrder = SortOrder[d["sort_order"]]
         self.is_autoincrement: bool = d["is_autoincrement"]
@@ -241,6 +240,18 @@ class ColumnConstraint:
         return "ColumnConstraint(...)"
 
 
+class ConstraintNameDeclaration:
+    """AST node: ConstraintNameDeclaration"""
+
+    __slots__ = ("name")
+
+    def __init__(self, d: dict):
+        self.name: str | None = d.get("name")
+
+    def __repr__(self):
+        return "ConstraintNameDeclaration(...)"
+
+
 class ColumnDef:
     """AST node: ColumnDef"""
 
@@ -249,7 +260,7 @@ class ColumnDef:
     def __init__(self, d: dict):
         self.column_name: Name | None = _wrap(d.get("column_name"))
         self.type_name: str | None = d.get("type_name")
-        self.constraints: list[ColumnConstraint] | None = _wrap(d.get("constraints"))
+        self.constraints: list[ColumnConstraintItem] | None = _wrap(d.get("constraints"))
 
     def __repr__(self):
         return "ColumnDef(...)"
@@ -1025,6 +1036,7 @@ _NODE_MAP: dict[str, type] = {
     "CaseWhen": CaseWhen,
     "ForeignKeyClause": ForeignKeyClause,
     "ColumnConstraint": ColumnConstraint,
+    "ConstraintNameDeclaration": ConstraintNameDeclaration,
     "ColumnDef": ColumnDef,
     "TableConstraint": TableConstraint,
     "CreateTableStmt": CreateTableStmt,

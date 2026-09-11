@@ -49,13 +49,13 @@ typedef struct SynqColumnNameValue {
   SyntaqliteTextSpan typetoken;
 } SynqColumnNameValue;
 
-// ccons / tcons / generated: a constraint node + pending constraint name.
+// tcons: a table constraint node + pending constraint name.
 typedef struct SynqConstraintValue {
   uint32_t node;
   SyntaqliteTextSpan pending_name;
 } SynqConstraintValue;
 
-// carglist / conslist: accumulated constraint list + pending name for next.
+// conslist: accumulated table constraint list + pending name for next.
 typedef struct SynqConstraintListValue {
   uint32_t list;
   SyntaqliteTextSpan pending_name;

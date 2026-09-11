@@ -50,13 +50,13 @@ typedef struct SynqColumnNameValue {
   SyntaqliteTextSpan typetoken;
 } SynqColumnNameValue;
 
-// ccons / tcons / generated: a constraint node + pending constraint name.
+// tcons: a table constraint node + pending constraint name.
 typedef struct SynqConstraintValue {
   uint32_t node;
   SyntaqliteTextSpan pending_name;
 } SynqConstraintValue;
 
-// carglist / conslist: accumulated constraint list + pending name for next.
+// conslist: accumulated table constraint list + pending name for next.
 typedef struct SynqConstraintListValue {
   uint32_t list;
   SyntaqliteTextSpan pending_name;
@@ -7834,6 +7834,8 @@ static YYACTIONTYPE yy_reduce(
     case 54: /* case_else ::= */
     case 56: /* case_operand ::= */
       yytestcase(yyruleno == 56);
+    case 69: /* carglist ::= */
+      yytestcase(yyruleno == 69);
     case 106: /* conslist_opt ::= */
       yytestcase(yyruleno == 106);
     case 131: /* eidlist_opt ::= */
@@ -7986,7 +7988,7 @@ static YYACTIONTYPE yy_reduce(
     {
       uint32_t col = synq_parse_column_def(pCtx, yymsp[-1].minor.yy640.name,
                                            yymsp[-1].minor.yy640.typetoken,
-                                           yymsp[0].minor.yy430.list);
+                                           yymsp[0].minor.yy277);
       yylhsminor.yy277 =
           synq_parse_column_def_list(pCtx, yymsp[-3].minor.yy277, col);
     }
@@ -7996,7 +7998,7 @@ static YYACTIONTYPE yy_reduce(
     {
       uint32_t col = synq_parse_column_def(pCtx, yymsp[-1].minor.yy640.name,
                                            yymsp[-1].minor.yy640.typetoken,
-                                           yymsp[0].minor.yy430.list);
+                                           yymsp[0].minor.yy277);
       yylhsminor.yy277 =
           synq_parse_column_def_list(pCtx, SYNTAQLITE_NULL_NODE, col);
     }
@@ -8004,99 +8006,67 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 68: /* carglist ::= carglist ccons */
     {
-      if (yymsp[0].minor.yy150.node != SYNTAQLITE_NULL_NODE) {
-        // The name stays pending: SQLite reads it without clearing, so it
-        // names every constraint until a new column or a tconscomma.
-        SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[0].minor.yy150.node);
-        node->column_constraint.constraint_name = pCtx->constraint_name;
-        if (yymsp[-1].minor.yy430.list == SYNTAQLITE_NULL_NODE) {
-          yylhsminor.yy430.list = synq_parse_column_constraint_list(
-              pCtx, SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy150.node);
-        } else {
-          yylhsminor.yy430.list = synq_parse_column_constraint_list(
-              pCtx, yymsp[-1].minor.yy430.list, yymsp[0].minor.yy150.node);
-        }
-        yylhsminor.yy430.pending_name = yymsp[-1].minor.yy430.pending_name;
-        yylhsminor.yy430.last_node = yymsp[0].minor.yy150.node;
-      } else if (yymsp[0].minor.yy150.pending_name.length > 0) {
-        // CONSTRAINT nm — store pending name for next constraint
-        yylhsminor.yy430.list = yymsp[-1].minor.yy430.list;
-        yylhsminor.yy430.pending_name = yymsp[0].minor.yy150.pending_name;
-        yylhsminor.yy430.last_node = yymsp[-1].minor.yy430.last_node;
-      } else {
-        yylhsminor.yy430 = yymsp[-1].minor.yy430;
-      }
+      yylhsminor.yy277 = synq_parse_column_constraint_list(
+          pCtx, yymsp[-1].minor.yy277, yymsp[0].minor.yy277);
     }
-      yymsp[-1].minor.yy430 = yylhsminor.yy430;
+      yymsp[-1].minor.yy277 = yylhsminor.yy277;
       break;
-    case 69: /* carglist ::= */
+    case 70: /* ccons ::= CONSTRAINT nm */
     {
-      yymsp[1].minor.yy430.list = SYNTAQLITE_NULL_NODE;
-      yymsp[1].minor.yy430.pending_name = SYNQ_NO_SPAN;
-      yymsp[1].minor.yy430.last_node = SYNTAQLITE_NULL_NODE;
+      SyntaqliteTextSpan name = synq_span(pCtx, yymsp[0].minor.yy0);
+      yymsp[-1].minor.yy277 =
+          synq_parse_constraint_name_declaration(pCtx, name);
+      // Table constraints still consume SQLite's pending name slot.
+      pCtx->constraint_name = name;
     } break;
-    case 70:  /* ccons ::= CONSTRAINT nm */
-    case 112: /* tcons ::= CONSTRAINT nm */
-      yytestcase(yyruleno == 112);
-      {
-        yymsp[-1].minor.yy150.node = SYNTAQLITE_NULL_NODE;
-        yymsp[-1].minor.yy150.pending_name =
-            synq_span(pCtx, yymsp[0].minor.yy0);
-        pCtx->constraint_name = yymsp[-1].minor.yy150.pending_name;
-      }
-      break;
     case 71: /* ccons ::= DEFAULT scantok term */
     {
-      yymsp[-2].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT, SYNQ_NO_SPAN,
+      yymsp[-2].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, yymsp[0].minor.yy277,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-2].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 72: /* ccons ::= DEFAULT LP expr RP */
     {
-      yymsp[-3].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT, SYNQ_NO_SPAN,
+      yymsp[-3].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_TRUE, SYNTAQLITE_BOOL_FALSE, yymsp[-1].minor.yy277,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 73: /* ccons ::= DEFAULT PLUS scantok term */
     {
       uint32_t pos = synq_parse_unary_expr(pCtx, SYNTAQLITE_UNARY_OP_PLUS,
                                            yymsp[0].minor.yy277);
-      yymsp[-3].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT, SYNQ_NO_SPAN,
+      yymsp[-3].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, pos,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 74: /* ccons ::= DEFAULT MINUS scantok term */
     {
       // Create a unary minus wrapping the term
       uint32_t neg = synq_parse_unary_expr(pCtx, SYNTAQLITE_UNARY_OP_MINUS,
                                            yymsp[0].minor.yy277);
-      yymsp[-3].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT, SYNQ_NO_SPAN,
+      yymsp[-3].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, neg,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 75: /* ccons ::= DEFAULT scantok ID|INDEXED */
     {
@@ -8104,44 +8074,41 @@ static YYACTIONTYPE yy_reduce(
       // a column reference: as an expression it would not be constant.
       uint32_t ref = synq_parse_literal(pCtx, SYNTAQLITE_LITERAL_TYPE_STRING,
                                         synq_span(pCtx, yymsp[0].minor.yy0));
-      yymsp[-2].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT, SYNQ_NO_SPAN,
+      yymsp[-2].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, ref,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-2].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 76: /* ccons ::= NULL onconf */
     {
-      yymsp[-1].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NULL, SYNQ_NO_SPAN,
+      yymsp[-1].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NULL,
           (SyntaqliteConflictAction)yymsp[0].minor.yy320,
           SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-1].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 77: /* ccons ::= NOT NULL onconf */
     {
-      yymsp[-2].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NOT_NULL, SYNQ_NO_SPAN,
+      yymsp[-2].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NOT_NULL,
           (SyntaqliteConflictAction)yymsp[0].minor.yy320,
           SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-2].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 78: /* ccons ::= PRIMARY KEY sortorder onconf autoinc */
     {
-      yymsp[-4].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_PRIMARY_KEY, SYNQ_NO_SPAN,
+      yymsp[-4].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_PRIMARY_KEY,
           (SyntaqliteConflictAction)yymsp[-1].minor.yy320,
           synq_sortorder(yymsp[-2].minor.yy277),
           (SyntaqliteBool)yymsp[0].minor.yy320, SYNQ_NO_SPAN,
@@ -8149,31 +8116,28 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-4].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 79: /* ccons ::= UNIQUE onconf */
     {
-      yymsp[-1].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_UNIQUE, SYNQ_NO_SPAN,
+      yymsp[-1].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_UNIQUE,
           (SyntaqliteConflictAction)yymsp[0].minor.yy320,
           SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-1].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 80: /* ccons ::= CHECK LP expr RP */
     {
-      yymsp[-3].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_CHECK, SYNQ_NO_SPAN,
+      yymsp[-3].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_CHECK,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           yymsp[-1].minor.yy277, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 81: /* ccons ::= REFERENCES nm eidlist_opt refargs */
     {
@@ -8182,69 +8146,65 @@ static YYACTIONTYPE yy_reduce(
           yymsp[0].minor.yy603.match_name, yymsp[0].minor.yy603.on_delete,
           yymsp[0].minor.yy603.on_update, yymsp[0].minor.yy603.on_insert,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET);
-      yymsp[-3].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES, SYNQ_NO_SPAN,
+      yymsp[-3].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, fk);
-      yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 82: /* ccons ::= defer_subclause */
     {
-      yylhsminor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFERRABLE, SYNQ_NO_SPAN,
+      yylhsminor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFERRABLE,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           yymsp[0].minor.yy519.deferrable, yymsp[0].minor.yy519.initial,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yylhsminor.yy150.pending_name = SYNQ_NO_SPAN;
     }
-      yymsp[0].minor.yy150 = yylhsminor.yy150;
+      yymsp[0].minor.yy277 = yylhsminor.yy277;
       break;
     case 83: /* ccons ::= COLLATE ID|STRING */
     {
-      yymsp[-1].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_COLLATE, SYNQ_NO_SPAN, 0, 0,
-          0, synq_span(pCtx, yymsp[0].minor.yy0),
+      yymsp[-1].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_COLLATE, 0, 0, 0,
+          synq_span(pCtx, yymsp[0].minor.yy0),
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-      yymsp[-1].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 84: /* ccons ::= GENERATED ALWAYS AS generated */
     {
-      yymsp[-3].minor.yy150 = yymsp[0].minor.yy150;
-      if (yymsp[-3].minor.yy150.node != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[-3].minor.yy150.node);
+      yymsp[-3].minor.yy277 = yymsp[0].minor.yy277;
+      if (yymsp[-3].minor.yy277 != SYNTAQLITE_NULL_NODE) {
+        SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[-3].minor.yy277);
         node->column_constraint.generated_always = SYNTAQLITE_BOOL_TRUE;
       }
     } break;
     case 85: /* ccons ::= AS generated */
     {
-      yymsp[-1].minor.yy150 = yymsp[0].minor.yy150;
-      if (yymsp[-1].minor.yy150.node != SYNTAQLITE_NULL_NODE &&
+      yymsp[-1].minor.yy277 = yymsp[0].minor.yy277;
+      if (yymsp[-1].minor.yy277 != SYNTAQLITE_NULL_NODE &&
           pCtx->generated_always) {
-        SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[-1].minor.yy150.node);
+        SyntaqliteNode* node = AST_NODE(&pCtx->ast, yymsp[-1].minor.yy277);
         node->column_constraint.generated_always = SYNTAQLITE_BOOL_TRUE;
       }
     } break;
     case 86: /* generated ::= LP expr RP */
     {
-      yymsp[-2].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED, SYNQ_NO_SPAN,
+      yymsp[-2].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, yymsp[-1].minor.yy277, SYNTAQLITE_NULL_NODE);
-      yymsp[-2].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 87: /* generated ::= LP expr RP ID */
     {
@@ -8258,14 +8218,13 @@ static YYACTIONTYPE yy_reduce(
         // Quoted spellings land here too, and upstream rejects those as well.
         pCtx->error = 1;
       }
-      yymsp[-3].minor.yy150.node = synq_parse_column_constraint(
-          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED, SYNQ_NO_SPAN,
+      yymsp[-3].minor.yy277 = synq_parse_column_constraint(
+          pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED,
           SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN, storage,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, yymsp[-2].minor.yy277, SYNTAQLITE_NULL_NODE);
-      yymsp[-3].minor.yy150.pending_name = SYNQ_NO_SPAN;
     } break;
     case 89:  /* autoinc ::= AUTOINCR */
     case 237: /* kwcolumn_opt ::= COLUMNKW */
@@ -8428,6 +8387,12 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 111: /* tconscomma ::= */
     {
+    } break;
+    case 112: /* tcons ::= CONSTRAINT nm */
+    {
+      yymsp[-1].minor.yy150.node = SYNTAQLITE_NULL_NODE;
+      yymsp[-1].minor.yy150.pending_name = synq_span(pCtx, yymsp[0].minor.yy0);
+      pCtx->constraint_name = yymsp[-1].minor.yy150.pending_name;
     } break;
     case 113: /* tcons ::= PRIMARY KEY LP sortlist autoinc RP onconf */
     {
@@ -9322,7 +9287,7 @@ static YYACTIONTYPE yy_reduce(
     {
       uint32_t col = synq_parse_column_def(pCtx, yymsp[-1].minor.yy640.name,
                                            yymsp[-1].minor.yy640.typetoken,
-                                           yymsp[0].minor.yy430.list);
+                                           yymsp[0].minor.yy277);
       yymsp[-6].minor.yy277 = synq_parse_alter_table_stmt(
           pCtx, SYNTAQLITE_ALTER_OP_ADD_COLUMN, yymsp[-4].minor.yy277,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, col);

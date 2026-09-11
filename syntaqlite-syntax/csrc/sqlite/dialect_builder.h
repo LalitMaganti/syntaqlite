@@ -224,7 +224,6 @@ static inline uint32_t synq_parse_foreign_key_clause(
 static inline uint32_t synq_parse_column_constraint(
     SynqParseCtx* ctx,
     SyntaqliteColumnConstraintType kind,
-    SyntaqliteTextSpan constraint_name,
     SyntaqliteConflictAction onconf,
     SyntaqliteSortOrder sort_order,
     SyntaqliteBool is_autoincrement,
@@ -242,7 +241,6 @@ static inline uint32_t synq_parse_column_constraint(
       ctx,
       &(SyntaqliteColumnConstraint){.tag = SYNTAQLITE_NODE_COLUMN_CONSTRAINT,
                                     .kind = kind,
-                                    .constraint_name = constraint_name,
                                     .onconf = onconf,
                                     .sort_order = sort_order,
                                     .is_autoincrement = is_autoincrement,
@@ -257,6 +255,16 @@ static inline uint32_t synq_parse_column_constraint(
                                     .generated_expr = generated_expr,
                                     .fk_clause = fk_clause},
       (uint32_t)sizeof(SyntaqliteColumnConstraint));
+}
+
+static inline uint32_t synq_parse_constraint_name_declaration(
+    SynqParseCtx* ctx,
+    SyntaqliteTextSpan name) {
+  return synq_parse_build(
+      ctx,
+      &(SyntaqliteConstraintNameDeclaration){
+          .tag = SYNTAQLITE_NODE_CONSTRAINT_NAME_DECLARATION, .name = name},
+      (uint32_t)sizeof(SyntaqliteConstraintNameDeclaration));
 }
 
 static inline uint32_t synq_parse_column_def(SynqParseCtx* ctx,

@@ -59,7 +59,6 @@ node ForeignKeyClause {
 
 node ColumnConstraint {
   kind: inline ColumnConstraintType
-  constraint_name: inline SyntaqliteTextSpan
   onconf: inline ConflictAction
   sort_order: inline SortOrder
   is_autoincrement: inline Bool
@@ -80,7 +79,6 @@ node ColumnConstraint {
   fk_clause: index ForeignKeyClause
 
   fmt {
-    if_span(constraint_name) { "CONSTRAINT" space span(constraint_name) space }
     switch(kind) {
       PRIMARY_KEY {
         "PRIMARY" "KEY"
@@ -154,8 +152,20 @@ node ColumnConstraint {
   }
 }
 
+// Each authored declaration occurs once, even if another declaration replaces
+// it before a constraint. The effective name is the latest declaration in the
+// column's ordered sequence; it is not duplicated onto each constraint.
+node ConstraintNameDeclaration {
+  name: inline SyntaqliteTextSpan
+  fmt { "CONSTRAINT" space span(name) }
+}
+
+abstract ColumnConstraintItem {
+  ConstraintNameDeclaration ColumnConstraint
+}
+
 list ColumnConstraintList {
-  ColumnConstraint
+  ColumnConstraintItem
   fmt { for_each(sep: line) { child(_item) } }
 }
 

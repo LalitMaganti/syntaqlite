@@ -537,7 +537,7 @@ class ConstraintNamePropagation(TestSuite):
     def test_name_applies_to_every_column_constraint(self):
         return DiffTestBlueprint(
             sql="create table t(a constraint c check(a>0) check(a<9))",
-            out="CREATE TABLE t(a CONSTRAINT c CHECK(a > 0) CONSTRAINT c CHECK(a < 9));",
+            out="CREATE TABLE t(a CONSTRAINT c CHECK(a > 0) CHECK(a < 9));",
         )
 
     def test_name_applies_to_every_table_constraint(self):
@@ -566,7 +566,7 @@ class ConstraintNamePropagation(TestSuite):
         not clear the name a column left pending."""
         return DiffTestBlueprint(
             sql="create table t(a, b constraint xyz, check(a>0))",
-            out="CREATE TABLE t(a, b, CONSTRAINT xyz CHECK(a > 0));",
+            out="CREATE TABLE t(a, b CONSTRAINT xyz, CONSTRAINT xyz CHECK(a > 0));",
         )
 
     def test_unnamed_table_constraint_after_plain_column(self):
@@ -575,16 +575,11 @@ class ConstraintNamePropagation(TestSuite):
             out="CREATE TABLE t(a, b, CHECK(a > 0));",
         )
 
-    def test_dangling_column_constraint_name_is_dropped(self):
-        """A CONSTRAINT that names nothing is inert, so it is not re-emitted.
-
-        SQLite accepts it and keeps the bytes in sqlite_schema, but it creates
-        nothing and cannot affect a later constraint, so dropping it is a
-        deliberate normalisation rather than a loss.
-        """
+    def test_dangling_column_constraint_name_is_preserved(self):
+        """Semantic inactivity does not erase an authored declaration."""
         return DiffTestBlueprint(
             sql="create table t(a constraint c)",
-            out="CREATE TABLE t(a);",
+            out="CREATE TABLE t(a CONSTRAINT c);",
         )
 
     def test_dangling_table_constraint_name_is_dropped(self):
@@ -679,4 +674,30 @@ class GeneratedColumnKeywords(TestSuite):
         return DiffTestBlueprint(
             sql="create table t(a int not null generated always as (1) stored)",
             out="CREATE TABLE t(a int NOT NULL GENERATED ALWAYS AS (1) STORED);",
+        )
+
+
+class ColumnConstraintDeclarationsFormat(TestSuite):
+    def test_shared_name_is_not_duplicated(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a CONSTRAINT c CHECK(a > 0) CHECK(a < 9))",
+            out="CREATE TABLE t(a CONSTRAINT c CHECK(a > 0) CHECK(a < 9));",
+        )
+
+    def test_overwritten_and_unused_names_are_preserved(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a CONSTRAINT old CONSTRAINT c CHECK(a) CONSTRAINT unused)",
+            out="CREATE TABLE t(a CONSTRAINT old CONSTRAINT c CHECK(a) CONSTRAINT unused);",
+        )
+
+    def test_unused_name_is_preserved_without_constraints(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a CONSTRAINT unused, b CHECK(b))",
+            out="CREATE TABLE t(a CONSTRAINT unused, b CHECK(b));",
+        )
+
+    def test_alter_add_column_keeps_declarations(self):
+        return DiffTestBlueprint(
+            sql="ALTER TABLE t ADD COLUMN a CONSTRAINT old CONSTRAINT c CHECK(a) CHECK(a > 0)",
+            out="ALTER TABLE t ADD COLUMN a CONSTRAINT old CONSTRAINT c CHECK(a) CHECK(a > 0);",
         )

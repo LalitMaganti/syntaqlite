@@ -343,71 +343,72 @@ typedef enum SyntaqliteNodeTag {
   SYNTAQLITE_NODE_CASE_WHEN_LIST = 14,
   SYNTAQLITE_NODE_FOREIGN_KEY_CLAUSE = 15,
   SYNTAQLITE_NODE_COLUMN_CONSTRAINT = 16,
-  SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST = 17,
-  SYNTAQLITE_NODE_COLUMN_DEF = 18,
-  SYNTAQLITE_NODE_COLUMN_DEF_LIST = 19,
-  SYNTAQLITE_NODE_TABLE_CONSTRAINT = 20,
-  SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST = 21,
-  SYNTAQLITE_NODE_CREATE_TABLE_STMT = 22,
-  SYNTAQLITE_NODE_CTE_DEFINITION = 23,
-  SYNTAQLITE_NODE_CTE_LIST = 24,
-  SYNTAQLITE_NODE_WITH_CLAUSE = 25,
-  SYNTAQLITE_NODE_UPSERT_CLAUSE = 26,
-  SYNTAQLITE_NODE_UPSERT_CLAUSE_LIST = 27,
-  SYNTAQLITE_NODE_DELETE_STMT = 28,
-  SYNTAQLITE_NODE_SET_CLAUSE = 29,
-  SYNTAQLITE_NODE_SET_CLAUSE_LIST = 30,
-  SYNTAQLITE_NODE_UPDATE_STMT = 31,
-  SYNTAQLITE_NODE_INSERT_STMT = 32,
-  SYNTAQLITE_NODE_BINARY_EXPR = 33,
-  SYNTAQLITE_NODE_UNARY_EXPR = 34,
-  SYNTAQLITE_NODE_LITERAL = 35,
-  SYNTAQLITE_NODE_PAREN_EXPR = 36,
-  SYNTAQLITE_NODE_IDENT_NAME = 37,
-  SYNTAQLITE_NODE_ERROR = 38,
-  SYNTAQLITE_NODE_ROW_VALUE = 39,
-  SYNTAQLITE_NODE_EXPR_LIST = 40,
-  SYNTAQLITE_NODE_FUNCTION_CALL = 41,
-  SYNTAQLITE_NODE_VARIABLE = 42,
-  SYNTAQLITE_NODE_COLLATE_EXPR = 43,
-  SYNTAQLITE_NODE_RAISE_EXPR = 44,
-  SYNTAQLITE_NODE_QUALIFIED_NAME = 45,
-  SYNTAQLITE_NODE_DROP_STMT = 46,
-  SYNTAQLITE_NODE_ALTER_TABLE_STMT = 47,
-  SYNTAQLITE_NODE_TRANSACTION_STMT = 48,
-  SYNTAQLITE_NODE_SAVEPOINT_STMT = 49,
-  SYNTAQLITE_NODE_RESULT_COLUMN = 50,
-  SYNTAQLITE_NODE_RESULT_COLUMN_LIST = 51,
-  SYNTAQLITE_NODE_SELECT_STMT = 52,
-  SYNTAQLITE_NODE_ORDERING_TERM = 53,
-  SYNTAQLITE_NODE_ORDER_BY_LIST = 54,
-  SYNTAQLITE_NODE_LIMIT_CLAUSE = 55,
-  SYNTAQLITE_NODE_TABLE_REF = 56,
-  SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE = 57,
-  SYNTAQLITE_NODE_PAREN_TABLE_SOURCE = 58,
-  SYNTAQLITE_NODE_JOIN_CLAUSE = 59,
-  SYNTAQLITE_NODE_JOIN_PREFIX = 60,
-  SYNTAQLITE_NODE_TRIGGER_EVENT = 61,
-  SYNTAQLITE_NODE_TRIGGER_CMD_LIST = 62,
-  SYNTAQLITE_NODE_CREATE_TRIGGER_STMT = 63,
-  SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT = 64,
-  SYNTAQLITE_NODE_PRAGMA_STMT = 65,
-  SYNTAQLITE_NODE_ANALYZE_OR_REINDEX_STMT = 66,
-  SYNTAQLITE_NODE_ATTACH_STMT = 67,
-  SYNTAQLITE_NODE_DETACH_STMT = 68,
-  SYNTAQLITE_NODE_VACUUM_STMT = 69,
-  SYNTAQLITE_NODE_EXPLAIN_STMT = 70,
-  SYNTAQLITE_NODE_CREATE_INDEX_STMT = 71,
-  SYNTAQLITE_NODE_CREATE_VIEW_STMT = 72,
-  SYNTAQLITE_NODE_VALUES_ROW_LIST = 73,
-  SYNTAQLITE_NODE_VALUES_CLAUSE = 74,
-  SYNTAQLITE_NODE_FRAME_BOUND = 75,
-  SYNTAQLITE_NODE_FRAME_SPEC = 76,
-  SYNTAQLITE_NODE_WINDOW_DEF = 77,
-  SYNTAQLITE_NODE_WINDOW_DEF_LIST = 78,
-  SYNTAQLITE_NODE_NAMED_WINDOW_DEF = 79,
-  SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST = 80,
-  SYNTAQLITE_NODE_FILTER_OVER = 81,
+  SYNTAQLITE_NODE_CONSTRAINT_NAME_DECLARATION = 17,
+  SYNTAQLITE_NODE_COLUMN_CONSTRAINT_LIST = 18,
+  SYNTAQLITE_NODE_COLUMN_DEF = 19,
+  SYNTAQLITE_NODE_COLUMN_DEF_LIST = 20,
+  SYNTAQLITE_NODE_TABLE_CONSTRAINT = 21,
+  SYNTAQLITE_NODE_TABLE_CONSTRAINT_LIST = 22,
+  SYNTAQLITE_NODE_CREATE_TABLE_STMT = 23,
+  SYNTAQLITE_NODE_CTE_DEFINITION = 24,
+  SYNTAQLITE_NODE_CTE_LIST = 25,
+  SYNTAQLITE_NODE_WITH_CLAUSE = 26,
+  SYNTAQLITE_NODE_UPSERT_CLAUSE = 27,
+  SYNTAQLITE_NODE_UPSERT_CLAUSE_LIST = 28,
+  SYNTAQLITE_NODE_DELETE_STMT = 29,
+  SYNTAQLITE_NODE_SET_CLAUSE = 30,
+  SYNTAQLITE_NODE_SET_CLAUSE_LIST = 31,
+  SYNTAQLITE_NODE_UPDATE_STMT = 32,
+  SYNTAQLITE_NODE_INSERT_STMT = 33,
+  SYNTAQLITE_NODE_BINARY_EXPR = 34,
+  SYNTAQLITE_NODE_UNARY_EXPR = 35,
+  SYNTAQLITE_NODE_LITERAL = 36,
+  SYNTAQLITE_NODE_PAREN_EXPR = 37,
+  SYNTAQLITE_NODE_IDENT_NAME = 38,
+  SYNTAQLITE_NODE_ERROR = 39,
+  SYNTAQLITE_NODE_ROW_VALUE = 40,
+  SYNTAQLITE_NODE_EXPR_LIST = 41,
+  SYNTAQLITE_NODE_FUNCTION_CALL = 42,
+  SYNTAQLITE_NODE_VARIABLE = 43,
+  SYNTAQLITE_NODE_COLLATE_EXPR = 44,
+  SYNTAQLITE_NODE_RAISE_EXPR = 45,
+  SYNTAQLITE_NODE_QUALIFIED_NAME = 46,
+  SYNTAQLITE_NODE_DROP_STMT = 47,
+  SYNTAQLITE_NODE_ALTER_TABLE_STMT = 48,
+  SYNTAQLITE_NODE_TRANSACTION_STMT = 49,
+  SYNTAQLITE_NODE_SAVEPOINT_STMT = 50,
+  SYNTAQLITE_NODE_RESULT_COLUMN = 51,
+  SYNTAQLITE_NODE_RESULT_COLUMN_LIST = 52,
+  SYNTAQLITE_NODE_SELECT_STMT = 53,
+  SYNTAQLITE_NODE_ORDERING_TERM = 54,
+  SYNTAQLITE_NODE_ORDER_BY_LIST = 55,
+  SYNTAQLITE_NODE_LIMIT_CLAUSE = 56,
+  SYNTAQLITE_NODE_TABLE_REF = 57,
+  SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE = 58,
+  SYNTAQLITE_NODE_PAREN_TABLE_SOURCE = 59,
+  SYNTAQLITE_NODE_JOIN_CLAUSE = 60,
+  SYNTAQLITE_NODE_JOIN_PREFIX = 61,
+  SYNTAQLITE_NODE_TRIGGER_EVENT = 62,
+  SYNTAQLITE_NODE_TRIGGER_CMD_LIST = 63,
+  SYNTAQLITE_NODE_CREATE_TRIGGER_STMT = 64,
+  SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT = 65,
+  SYNTAQLITE_NODE_PRAGMA_STMT = 66,
+  SYNTAQLITE_NODE_ANALYZE_OR_REINDEX_STMT = 67,
+  SYNTAQLITE_NODE_ATTACH_STMT = 68,
+  SYNTAQLITE_NODE_DETACH_STMT = 69,
+  SYNTAQLITE_NODE_VACUUM_STMT = 70,
+  SYNTAQLITE_NODE_EXPLAIN_STMT = 71,
+  SYNTAQLITE_NODE_CREATE_INDEX_STMT = 72,
+  SYNTAQLITE_NODE_CREATE_VIEW_STMT = 73,
+  SYNTAQLITE_NODE_VALUES_ROW_LIST = 74,
+  SYNTAQLITE_NODE_VALUES_CLAUSE = 75,
+  SYNTAQLITE_NODE_FRAME_BOUND = 76,
+  SYNTAQLITE_NODE_FRAME_SPEC = 77,
+  SYNTAQLITE_NODE_WINDOW_DEF = 78,
+  SYNTAQLITE_NODE_WINDOW_DEF_LIST = 79,
+  SYNTAQLITE_NODE_NAMED_WINDOW_DEF = 80,
+  SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST = 81,
+  SYNTAQLITE_NODE_FILTER_OVER = 82,
   SYNTAQLITE_NODE_COUNT
 } SyntaqliteNodeTag;
 SYNQ_STATIC_ASSERT(sizeof(SyntaqliteNodeTag) == sizeof(uint32_t),
@@ -534,7 +535,6 @@ typedef struct SyntaqliteForeignKeyClause {
 typedef struct SyntaqliteColumnConstraint {
   SyntaqliteNodeTag tag;
   SyntaqliteColumnConstraintType kind;
-  SyntaqliteTextSpan constraint_name;
   SyntaqliteConflictAction onconf;
   SyntaqliteSortOrder sort_order;
   SyntaqliteBool is_autoincrement;
@@ -550,7 +550,12 @@ typedef struct SyntaqliteColumnConstraint {
   uint32_t fk_clause;
 } SyntaqliteColumnConstraint;
 
-// List of ColumnConstraint
+typedef struct SyntaqliteConstraintNameDeclaration {
+  SyntaqliteNodeTag tag;
+  SyntaqliteTextSpan name;
+} SyntaqliteConstraintNameDeclaration;
+
+// List of ColumnConstraintItem
 typedef struct SyntaqliteColumnConstraintList {
   uint32_t tag;
   uint32_t count;
@@ -1065,6 +1070,7 @@ typedef union SyntaqliteNode {
   SyntaqliteCaseWhenList case_when_list;
   SyntaqliteForeignKeyClause foreign_key_clause;
   SyntaqliteColumnConstraint column_constraint;
+  SyntaqliteConstraintNameDeclaration constraint_name_declaration;
   SyntaqliteColumnConstraintList column_constraint_list;
   SyntaqliteColumnDef column_def;
   SyntaqliteColumnDefList column_def_list;
@@ -1250,6 +1256,41 @@ syntaqlite_in_expr_source_as_values_clause(const SyntaqliteInExprSource* node) {
 static inline const SyntaqliteTableRef* syntaqlite_in_expr_source_as_table_ref(
     const SyntaqliteInExprSource* node) {
   return node->tag == SYNTAQLITE_NODE_TABLE_REF ? &node->table_ref : NULL;
+}
+
+// ============ Abstract Type: ColumnConstraintItem ============
+
+typedef union SyntaqliteColumnConstraintItem {
+  SyntaqliteNodeTag tag;
+  SyntaqliteConstraintNameDeclaration constraint_name_declaration;
+  SyntaqliteColumnConstraint column_constraint;
+} SyntaqliteColumnConstraintItem;
+
+static inline int syntaqlite_is_column_constraint_item(SyntaqliteNodeTag tag) {
+  switch (tag) {
+    case SYNTAQLITE_NODE_CONSTRAINT_NAME_DECLARATION:
+      return 1;
+    case SYNTAQLITE_NODE_COLUMN_CONSTRAINT:
+      return 1;
+    default:
+      return 0;
+  }
+}
+
+static inline const SyntaqliteConstraintNameDeclaration*
+syntaqlite_column_constraint_item_as_constraint_name_declaration(
+    const SyntaqliteColumnConstraintItem* node) {
+  return node->tag == SYNTAQLITE_NODE_CONSTRAINT_NAME_DECLARATION
+             ? &node->constraint_name_declaration
+             : NULL;
+}
+
+static inline const SyntaqliteColumnConstraint*
+syntaqlite_column_constraint_item_as_column_constraint(
+    const SyntaqliteColumnConstraintItem* node) {
+  return node->tag == SYNTAQLITE_NODE_COLUMN_CONSTRAINT
+             ? &node->column_constraint
+             : NULL;
 }
 
 // ============ Abstract Type: Name ============
@@ -1825,6 +1866,12 @@ template <>
 struct NodeTag<SyntaqliteColumnConstraint> {
   static constexpr bool kHasTag = true;
   static constexpr uint32_t kValue = SYNTAQLITE_NODE_COLUMN_CONSTRAINT;
+};
+template <>
+struct NodeTag<SyntaqliteConstraintNameDeclaration> {
+  static constexpr bool kHasTag = true;
+  static constexpr uint32_t kValue =
+      SYNTAQLITE_NODE_CONSTRAINT_NAME_DECLARATION;
 };
 template <>
 struct NodeTag<SyntaqliteColumnConstraintList> {

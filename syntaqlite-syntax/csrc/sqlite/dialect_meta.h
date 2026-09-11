@@ -401,8 +401,6 @@ static const SyntaqliteFieldMeta field_meta_column_constraint[] = {
      display_column_constraint_type,
      sizeof(display_column_constraint_type) /
          sizeof(display_column_constraint_type[0])},
-    {offsetof(SyntaqliteColumnConstraint, constraint_name),
-     SYNTAQLITE_FIELD_SPAN, "constraint_name", NULL, 0},
     {offsetof(SyntaqliteColumnConstraint, onconf), SYNTAQLITE_FIELD_ENUM,
      "onconf", display_conflict_action,
      sizeof(display_conflict_action) / sizeof(display_conflict_action[0])},
@@ -440,6 +438,11 @@ static const SyntaqliteFieldMeta field_meta_column_constraint[] = {
      SYNTAQLITE_FIELD_NODE_ID, "generated_expr", NULL, 0},
     {offsetof(SyntaqliteColumnConstraint, fk_clause), SYNTAQLITE_FIELD_NODE_ID,
      "fk_clause", NULL, 0},
+};
+
+static const SyntaqliteFieldMeta field_meta_constraint_name_declaration[] = {
+    {offsetof(SyntaqliteConstraintNameDeclaration, name), SYNTAQLITE_FIELD_SPAN,
+     "name", NULL, 0},
 };
 
 static const SyntaqliteFieldMeta field_meta_column_def[] = {
@@ -1062,8 +1065,12 @@ static const SyntaqliteFieldRangeMeta range_meta_foreign_key_clause[] = {
 };
 
 static const SyntaqliteFieldRangeMeta range_meta_column_constraint[] = {
-    {offsetof(SyntaqliteColumnConstraint, constraint_name), 1},
     {offsetof(SyntaqliteColumnConstraint, collation_name), 1},
+};
+
+static const SyntaqliteFieldRangeMeta range_meta_constraint_name_declaration[] =
+    {
+        {offsetof(SyntaqliteConstraintNameDeclaration, name), 1},
 };
 
 static const SyntaqliteFieldRangeMeta range_meta_column_def[] = {
@@ -1204,6 +1211,7 @@ static const char* const ast_meta_node_names[] = {
     "CaseWhenList",
     "ForeignKeyClause",
     "ColumnConstraint",
+    "ConstraintNameDeclaration",
     "ColumnConstraintList",
     "ColumnDef",
     "ColumnDefList",
@@ -1274,88 +1282,89 @@ static const char* const ast_meta_node_names[] = {
 // ============ Field Meta Dispatch ============
 
 static const SyntaqliteFieldMeta* const ast_meta_field_meta[] = {
-    NULL,                                 /* Null */
-    field_meta_aggregate_function_call,   /* AggregateFunctionCall */
-    field_meta_ordered_set_function_call, /* OrderedSetFunctionCall */
-    field_meta_cast_expr,                 /* CastExpr */
-    field_meta_column_ref,                /* ColumnRef */
-    field_meta_compound_select,           /* CompoundSelect */
-    field_meta_subquery_expr,             /* SubqueryExpr */
-    field_meta_exists_expr,               /* ExistsExpr */
-    field_meta_in_expr,                   /* InExpr */
-    field_meta_is_expr,                   /* IsExpr */
-    field_meta_between_expr,              /* BetweenExpr */
-    field_meta_like_expr,                 /* LikeExpr */
-    field_meta_case_expr,                 /* CaseExpr */
-    field_meta_case_when,                 /* CaseWhen */
-    NULL,                                 /* CaseWhenList */
-    field_meta_foreign_key_clause,        /* ForeignKeyClause */
-    field_meta_column_constraint,         /* ColumnConstraint */
-    NULL,                                 /* ColumnConstraintList */
-    field_meta_column_def,                /* ColumnDef */
-    NULL,                                 /* ColumnDefList */
-    field_meta_table_constraint,          /* TableConstraint */
-    NULL,                                 /* TableConstraintList */
-    field_meta_create_table_stmt,         /* CreateTableStmt */
-    field_meta_cte_definition,            /* CteDefinition */
-    NULL,                                 /* CteList */
-    field_meta_with_clause,               /* WithClause */
-    field_meta_upsert_clause,             /* UpsertClause */
-    NULL,                                 /* UpsertClauseList */
-    field_meta_delete_stmt,               /* DeleteStmt */
-    field_meta_set_clause,                /* SetClause */
-    NULL,                                 /* SetClauseList */
-    field_meta_update_stmt,               /* UpdateStmt */
-    field_meta_insert_stmt,               /* InsertStmt */
-    field_meta_binary_expr,               /* BinaryExpr */
-    field_meta_unary_expr,                /* UnaryExpr */
-    field_meta_literal,                   /* Literal */
-    field_meta_paren_expr,                /* ParenExpr */
-    field_meta_ident_name,                /* IdentName */
-    field_meta_error,                     /* Error */
-    field_meta_row_value,                 /* RowValue */
-    NULL,                                 /* ExprList */
-    field_meta_function_call,             /* FunctionCall */
-    field_meta_variable,                  /* Variable */
-    field_meta_collate_expr,              /* CollateExpr */
-    field_meta_raise_expr,                /* RaiseExpr */
-    field_meta_qualified_name,            /* QualifiedName */
-    field_meta_drop_stmt,                 /* DropStmt */
-    field_meta_alter_table_stmt,          /* AlterTableStmt */
-    field_meta_transaction_stmt,          /* TransactionStmt */
-    field_meta_savepoint_stmt,            /* SavepointStmt */
-    field_meta_result_column,             /* ResultColumn */
-    NULL,                                 /* ResultColumnList */
-    field_meta_select_stmt,               /* SelectStmt */
-    field_meta_ordering_term,             /* OrderingTerm */
-    NULL,                                 /* OrderByList */
-    field_meta_limit_clause,              /* LimitClause */
-    field_meta_table_ref,                 /* TableRef */
-    field_meta_subquery_table_source,     /* SubqueryTableSource */
-    field_meta_paren_table_source,        /* ParenTableSource */
-    field_meta_join_clause,               /* JoinClause */
-    field_meta_join_prefix,               /* JoinPrefix */
-    field_meta_trigger_event,             /* TriggerEvent */
-    NULL,                                 /* TriggerCmdList */
-    field_meta_create_trigger_stmt,       /* CreateTriggerStmt */
-    field_meta_create_virtual_table_stmt, /* CreateVirtualTableStmt */
-    field_meta_pragma_stmt,               /* PragmaStmt */
-    field_meta_analyze_or_reindex_stmt,   /* AnalyzeOrReindexStmt */
-    field_meta_attach_stmt,               /* AttachStmt */
-    field_meta_detach_stmt,               /* DetachStmt */
-    field_meta_vacuum_stmt,               /* VacuumStmt */
-    field_meta_explain_stmt,              /* ExplainStmt */
-    field_meta_create_index_stmt,         /* CreateIndexStmt */
-    field_meta_create_view_stmt,          /* CreateViewStmt */
-    NULL,                                 /* ValuesRowList */
-    field_meta_values_clause,             /* ValuesClause */
-    field_meta_frame_bound,               /* FrameBound */
-    field_meta_frame_spec,                /* FrameSpec */
-    field_meta_window_def,                /* WindowDef */
-    NULL,                                 /* WindowDefList */
-    field_meta_named_window_def,          /* NamedWindowDef */
-    NULL,                                 /* NamedWindowDefList */
-    field_meta_filter_over,               /* FilterOver */
+    NULL,                                   /* Null */
+    field_meta_aggregate_function_call,     /* AggregateFunctionCall */
+    field_meta_ordered_set_function_call,   /* OrderedSetFunctionCall */
+    field_meta_cast_expr,                   /* CastExpr */
+    field_meta_column_ref,                  /* ColumnRef */
+    field_meta_compound_select,             /* CompoundSelect */
+    field_meta_subquery_expr,               /* SubqueryExpr */
+    field_meta_exists_expr,                 /* ExistsExpr */
+    field_meta_in_expr,                     /* InExpr */
+    field_meta_is_expr,                     /* IsExpr */
+    field_meta_between_expr,                /* BetweenExpr */
+    field_meta_like_expr,                   /* LikeExpr */
+    field_meta_case_expr,                   /* CaseExpr */
+    field_meta_case_when,                   /* CaseWhen */
+    NULL,                                   /* CaseWhenList */
+    field_meta_foreign_key_clause,          /* ForeignKeyClause */
+    field_meta_column_constraint,           /* ColumnConstraint */
+    field_meta_constraint_name_declaration, /* ConstraintNameDeclaration */
+    NULL,                                   /* ColumnConstraintList */
+    field_meta_column_def,                  /* ColumnDef */
+    NULL,                                   /* ColumnDefList */
+    field_meta_table_constraint,            /* TableConstraint */
+    NULL,                                   /* TableConstraintList */
+    field_meta_create_table_stmt,           /* CreateTableStmt */
+    field_meta_cte_definition,              /* CteDefinition */
+    NULL,                                   /* CteList */
+    field_meta_with_clause,                 /* WithClause */
+    field_meta_upsert_clause,               /* UpsertClause */
+    NULL,                                   /* UpsertClauseList */
+    field_meta_delete_stmt,                 /* DeleteStmt */
+    field_meta_set_clause,                  /* SetClause */
+    NULL,                                   /* SetClauseList */
+    field_meta_update_stmt,                 /* UpdateStmt */
+    field_meta_insert_stmt,                 /* InsertStmt */
+    field_meta_binary_expr,                 /* BinaryExpr */
+    field_meta_unary_expr,                  /* UnaryExpr */
+    field_meta_literal,                     /* Literal */
+    field_meta_paren_expr,                  /* ParenExpr */
+    field_meta_ident_name,                  /* IdentName */
+    field_meta_error,                       /* Error */
+    field_meta_row_value,                   /* RowValue */
+    NULL,                                   /* ExprList */
+    field_meta_function_call,               /* FunctionCall */
+    field_meta_variable,                    /* Variable */
+    field_meta_collate_expr,                /* CollateExpr */
+    field_meta_raise_expr,                  /* RaiseExpr */
+    field_meta_qualified_name,              /* QualifiedName */
+    field_meta_drop_stmt,                   /* DropStmt */
+    field_meta_alter_table_stmt,            /* AlterTableStmt */
+    field_meta_transaction_stmt,            /* TransactionStmt */
+    field_meta_savepoint_stmt,              /* SavepointStmt */
+    field_meta_result_column,               /* ResultColumn */
+    NULL,                                   /* ResultColumnList */
+    field_meta_select_stmt,                 /* SelectStmt */
+    field_meta_ordering_term,               /* OrderingTerm */
+    NULL,                                   /* OrderByList */
+    field_meta_limit_clause,                /* LimitClause */
+    field_meta_table_ref,                   /* TableRef */
+    field_meta_subquery_table_source,       /* SubqueryTableSource */
+    field_meta_paren_table_source,          /* ParenTableSource */
+    field_meta_join_clause,                 /* JoinClause */
+    field_meta_join_prefix,                 /* JoinPrefix */
+    field_meta_trigger_event,               /* TriggerEvent */
+    NULL,                                   /* TriggerCmdList */
+    field_meta_create_trigger_stmt,         /* CreateTriggerStmt */
+    field_meta_create_virtual_table_stmt,   /* CreateVirtualTableStmt */
+    field_meta_pragma_stmt,                 /* PragmaStmt */
+    field_meta_analyze_or_reindex_stmt,     /* AnalyzeOrReindexStmt */
+    field_meta_attach_stmt,                 /* AttachStmt */
+    field_meta_detach_stmt,                 /* DetachStmt */
+    field_meta_vacuum_stmt,                 /* VacuumStmt */
+    field_meta_explain_stmt,                /* ExplainStmt */
+    field_meta_create_index_stmt,           /* CreateIndexStmt */
+    field_meta_create_view_stmt,            /* CreateViewStmt */
+    NULL,                                   /* ValuesRowList */
+    field_meta_values_clause,               /* ValuesClause */
+    field_meta_frame_bound,                 /* FrameBound */
+    field_meta_frame_spec,                  /* FrameSpec */
+    field_meta_window_def,                  /* WindowDef */
+    NULL,                                   /* WindowDefList */
+    field_meta_named_window_def,            /* NamedWindowDef */
+    NULL,                                   /* NamedWindowDefList */
+    field_meta_filter_over,                 /* FilterOver */
 };
 
 static const uint8_t ast_meta_field_meta_counts[] = {
@@ -1375,7 +1384,8 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* CaseWhen */
     0,  /* CaseWhenList */
     8,  /* ForeignKeyClause */
-    15, /* ColumnConstraint */
+    14, /* ColumnConstraint */
+    1,  /* ConstraintNameDeclaration */
     0,  /* ColumnConstraintList */
     3,  /* ColumnDef */
     0,  /* ColumnDefList */
@@ -1463,6 +1473,7 @@ static const uint8_t ast_meta_list_tags[] = {
     1, /* CaseWhenList */
     0, /* ForeignKeyClause */
     0, /* ColumnConstraint */
+    0, /* ConstraintNameDeclaration */
     1, /* ColumnConstraintList */
     0, /* ColumnDef */
     1, /* ColumnDefList */
@@ -1533,88 +1544,89 @@ static const uint8_t ast_meta_list_tags[] = {
 // ============ Range Meta Dispatch ============
 
 static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
-    {NULL, 0},                                 /* Null */
-    {range_meta_aggregate_function_call, 1},   /* AggregateFunctionCall */
-    {range_meta_ordered_set_function_call, 1}, /* OrderedSetFunctionCall */
-    {range_meta_cast_expr, 1},                 /* CastExpr */
-    {range_meta_column_ref, 3},                /* ColumnRef */
-    {NULL, 0},                                 /* CompoundSelect */
-    {NULL, 0},                                 /* SubqueryExpr */
-    {NULL, 0},                                 /* ExistsExpr */
-    {NULL, 0},                                 /* InExpr */
-    {NULL, 0},                                 /* IsExpr */
-    {NULL, 0},                                 /* BetweenExpr */
-    {NULL, 0},                                 /* LikeExpr */
-    {NULL, 0},                                 /* CaseExpr */
-    {NULL, 0},                                 /* CaseWhen */
-    {NULL, 0},                                 /* CaseWhenList */
-    {range_meta_foreign_key_clause, 2},        /* ForeignKeyClause */
-    {range_meta_column_constraint, 2},         /* ColumnConstraint */
-    {NULL, 0},                                 /* ColumnConstraintList */
-    {range_meta_column_def, 1},                /* ColumnDef */
-    {NULL, 0},                                 /* ColumnDefList */
-    {range_meta_table_constraint, 1},          /* TableConstraint */
-    {NULL, 0},                                 /* TableConstraintList */
-    {range_meta_create_table_stmt, 2},         /* CreateTableStmt */
-    {range_meta_cte_definition, 1},            /* CteDefinition */
-    {NULL, 0},                                 /* CteList */
-    {NULL, 0},                                 /* WithClause */
-    {NULL, 0},                                 /* UpsertClause */
-    {NULL, 0},                                 /* UpsertClauseList */
-    {range_meta_delete_stmt, 1},               /* DeleteStmt */
-    {range_meta_set_clause, 1},                /* SetClause */
-    {NULL, 0},                                 /* SetClauseList */
-    {range_meta_update_stmt, 1},               /* UpdateStmt */
-    {NULL, 0},                                 /* InsertStmt */
-    {NULL, 0},                                 /* BinaryExpr */
-    {NULL, 0},                                 /* UnaryExpr */
-    {range_meta_literal, 1},                   /* Literal */
-    {NULL, 0},                                 /* ParenExpr */
-    {range_meta_ident_name, 1},                /* IdentName */
-    {range_meta_error, 1},                     /* Error */
-    {NULL, 0},                                 /* RowValue */
-    {NULL, 0},                                 /* ExprList */
-    {range_meta_function_call, 1},             /* FunctionCall */
-    {range_meta_variable, 1},                  /* Variable */
-    {range_meta_collate_expr, 1},              /* CollateExpr */
-    {NULL, 0},                                 /* RaiseExpr */
-    {NULL, 0},                                 /* QualifiedName */
-    {NULL, 0},                                 /* DropStmt */
-    {NULL, 0},                                 /* AlterTableStmt */
-    {range_meta_transaction_stmt, 1},          /* TransactionStmt */
-    {range_meta_savepoint_stmt, 1},            /* SavepointStmt */
-    {NULL, 0},                                 /* ResultColumn */
-    {NULL, 0},                                 /* ResultColumnList */
-    {NULL, 0},                                 /* SelectStmt */
-    {NULL, 0},                                 /* OrderingTerm */
-    {NULL, 0},                                 /* OrderByList */
-    {NULL, 0},                                 /* LimitClause */
-    {range_meta_table_ref, 3},                 /* TableRef */
-    {NULL, 0},                                 /* SubqueryTableSource */
-    {NULL, 0},                                 /* ParenTableSource */
-    {NULL, 0},                                 /* JoinClause */
-    {NULL, 0},                                 /* JoinPrefix */
-    {NULL, 0},                                 /* TriggerEvent */
-    {NULL, 0},                                 /* TriggerCmdList */
-    {range_meta_create_trigger_stmt, 2},       /* CreateTriggerStmt */
-    {range_meta_create_virtual_table_stmt, 4}, /* CreateVirtualTableStmt */
-    {range_meta_pragma_stmt, 3},               /* PragmaStmt */
-    {range_meta_analyze_or_reindex_stmt, 2},   /* AnalyzeOrReindexStmt */
-    {NULL, 0},                                 /* AttachStmt */
-    {NULL, 0},                                 /* DetachStmt */
-    {range_meta_vacuum_stmt, 1},               /* VacuumStmt */
-    {NULL, 0},                                 /* ExplainStmt */
-    {range_meta_create_index_stmt, 3},         /* CreateIndexStmt */
-    {range_meta_create_view_stmt, 2},          /* CreateViewStmt */
-    {NULL, 0},                                 /* ValuesRowList */
-    {NULL, 0},                                 /* ValuesClause */
-    {NULL, 0},                                 /* FrameBound */
-    {NULL, 0},                                 /* FrameSpec */
-    {range_meta_window_def, 2},                /* WindowDef */
-    {NULL, 0},                                 /* WindowDefList */
-    {range_meta_named_window_def, 1},          /* NamedWindowDef */
-    {NULL, 0},                                 /* NamedWindowDefList */
-    {range_meta_filter_over, 1},               /* FilterOver */
+    {NULL, 0},                                   /* Null */
+    {range_meta_aggregate_function_call, 1},     /* AggregateFunctionCall */
+    {range_meta_ordered_set_function_call, 1},   /* OrderedSetFunctionCall */
+    {range_meta_cast_expr, 1},                   /* CastExpr */
+    {range_meta_column_ref, 3},                  /* ColumnRef */
+    {NULL, 0},                                   /* CompoundSelect */
+    {NULL, 0},                                   /* SubqueryExpr */
+    {NULL, 0},                                   /* ExistsExpr */
+    {NULL, 0},                                   /* InExpr */
+    {NULL, 0},                                   /* IsExpr */
+    {NULL, 0},                                   /* BetweenExpr */
+    {NULL, 0},                                   /* LikeExpr */
+    {NULL, 0},                                   /* CaseExpr */
+    {NULL, 0},                                   /* CaseWhen */
+    {NULL, 0},                                   /* CaseWhenList */
+    {range_meta_foreign_key_clause, 2},          /* ForeignKeyClause */
+    {range_meta_column_constraint, 1},           /* ColumnConstraint */
+    {range_meta_constraint_name_declaration, 1}, /* ConstraintNameDeclaration */
+    {NULL, 0},                                   /* ColumnConstraintList */
+    {range_meta_column_def, 1},                  /* ColumnDef */
+    {NULL, 0},                                   /* ColumnDefList */
+    {range_meta_table_constraint, 1},            /* TableConstraint */
+    {NULL, 0},                                   /* TableConstraintList */
+    {range_meta_create_table_stmt, 2},           /* CreateTableStmt */
+    {range_meta_cte_definition, 1},              /* CteDefinition */
+    {NULL, 0},                                   /* CteList */
+    {NULL, 0},                                   /* WithClause */
+    {NULL, 0},                                   /* UpsertClause */
+    {NULL, 0},                                   /* UpsertClauseList */
+    {range_meta_delete_stmt, 1},                 /* DeleteStmt */
+    {range_meta_set_clause, 1},                  /* SetClause */
+    {NULL, 0},                                   /* SetClauseList */
+    {range_meta_update_stmt, 1},                 /* UpdateStmt */
+    {NULL, 0},                                   /* InsertStmt */
+    {NULL, 0},                                   /* BinaryExpr */
+    {NULL, 0},                                   /* UnaryExpr */
+    {range_meta_literal, 1},                     /* Literal */
+    {NULL, 0},                                   /* ParenExpr */
+    {range_meta_ident_name, 1},                  /* IdentName */
+    {range_meta_error, 1},                       /* Error */
+    {NULL, 0},                                   /* RowValue */
+    {NULL, 0},                                   /* ExprList */
+    {range_meta_function_call, 1},               /* FunctionCall */
+    {range_meta_variable, 1},                    /* Variable */
+    {range_meta_collate_expr, 1},                /* CollateExpr */
+    {NULL, 0},                                   /* RaiseExpr */
+    {NULL, 0},                                   /* QualifiedName */
+    {NULL, 0},                                   /* DropStmt */
+    {NULL, 0},                                   /* AlterTableStmt */
+    {range_meta_transaction_stmt, 1},            /* TransactionStmt */
+    {range_meta_savepoint_stmt, 1},              /* SavepointStmt */
+    {NULL, 0},                                   /* ResultColumn */
+    {NULL, 0},                                   /* ResultColumnList */
+    {NULL, 0},                                   /* SelectStmt */
+    {NULL, 0},                                   /* OrderingTerm */
+    {NULL, 0},                                   /* OrderByList */
+    {NULL, 0},                                   /* LimitClause */
+    {range_meta_table_ref, 3},                   /* TableRef */
+    {NULL, 0},                                   /* SubqueryTableSource */
+    {NULL, 0},                                   /* ParenTableSource */
+    {NULL, 0},                                   /* JoinClause */
+    {NULL, 0},                                   /* JoinPrefix */
+    {NULL, 0},                                   /* TriggerEvent */
+    {NULL, 0},                                   /* TriggerCmdList */
+    {range_meta_create_trigger_stmt, 2},         /* CreateTriggerStmt */
+    {range_meta_create_virtual_table_stmt, 4},   /* CreateVirtualTableStmt */
+    {range_meta_pragma_stmt, 3},                 /* PragmaStmt */
+    {range_meta_analyze_or_reindex_stmt, 2},     /* AnalyzeOrReindexStmt */
+    {NULL, 0},                                   /* AttachStmt */
+    {NULL, 0},                                   /* DetachStmt */
+    {range_meta_vacuum_stmt, 1},                 /* VacuumStmt */
+    {NULL, 0},                                   /* ExplainStmt */
+    {range_meta_create_index_stmt, 3},           /* CreateIndexStmt */
+    {range_meta_create_view_stmt, 2},            /* CreateViewStmt */
+    {NULL, 0},                                   /* ValuesRowList */
+    {NULL, 0},                                   /* ValuesClause */
+    {NULL, 0},                                   /* FrameBound */
+    {NULL, 0},                                   /* FrameSpec */
+    {range_meta_window_def, 2},                  /* WindowDef */
+    {NULL, 0},                                   /* WindowDefList */
+    {range_meta_named_window_def, 1},            /* NamedWindowDef */
+    {NULL, 0},                                   /* NamedWindowDefList */
+    {range_meta_filter_over, 1},                 /* FilterOver */
 };
 
 #endif  // SYNTAQLITE_DIALECT_META_H

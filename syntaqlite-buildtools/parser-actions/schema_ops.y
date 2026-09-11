@@ -90,7 +90,7 @@ cmd(A) ::= ALTER TABLE fullname(X) DROP kwcolumn_opt nmorerr(Y). {
 }
 
 cmd(A) ::= ALTER TABLE add_column_fullname(F) ADD kwcolumn_opt columnname(Y) carglist(CG). {
-    uint32_t col = synq_parse_column_def(pCtx, Y.name, Y.typetoken, CG.list);
+    uint32_t col = synq_parse_column_def(pCtx, Y.name, Y.typetoken, CG);
     A = synq_parse_alter_table_stmt(pCtx,
         SYNTAQLITE_ALTER_OP_ADD_COLUMN, F,
         SYNTAQLITE_NULL_NODE,

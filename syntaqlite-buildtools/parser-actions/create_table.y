@@ -23,11 +23,11 @@
 %type table_option_set {int}
 %type table_option {int}
 %type onconf {int}
-%type ccons {SynqConstraintValue}
-%type carglist {SynqConstraintListValue}
+%type ccons {uint32_t}
+%type carglist {uint32_t}
 %type tcons {SynqConstraintValue}
 %type conslist {SynqConstraintListValue}
-%type generated {SynqConstraintValue}
+%type generated {uint32_t}
 
 // ============ CREATE TABLE top-level ============
 
@@ -107,12 +107,12 @@ table_option(A) ::= nm(X). {
 // ============ Column list ============
 
 columnlist(A) ::= columnlist(L) COMMA columnname(CN) carglist(CG). {
-    uint32_t col = synq_parse_column_def(pCtx, CN.name, CN.typetoken, CG.list);
+    uint32_t col = synq_parse_column_def(pCtx, CN.name, CN.typetoken, CG);
     A = synq_parse_column_def_list(pCtx, L, col);
 }
 
 columnlist(A) ::= columnname(CN) carglist(CG). {
-    uint32_t col = synq_parse_column_def(pCtx, CN.name, CN.typetoken, CG.list);
+    uint32_t col = synq_parse_column_def(pCtx, CN.name, CN.typetoken, CG);
     A = synq_parse_column_def_list(pCtx, SYNTAQLITE_NULL_NODE, col);
 }
 
@@ -122,100 +122,72 @@ columnlist(A) ::= columnname(CN) carglist(CG). {
 // ============ Column constraint list (carglist) ============
 
 carglist(A) ::= carglist(L) ccons(C). {
-    if (C.node != SYNTAQLITE_NULL_NODE) {
-        // The name stays pending: SQLite reads it without clearing, so it
-        // names every constraint until a new column or a tconscomma.
-        SyntaqliteNode *node = AST_NODE(&pCtx->ast, C.node);
-        node->column_constraint.constraint_name = pCtx->constraint_name;
-        if (L.list == SYNTAQLITE_NULL_NODE) {
-            A.list = synq_parse_column_constraint_list(pCtx, SYNTAQLITE_NULL_NODE, C.node);
-        } else {
-            A.list = synq_parse_column_constraint_list(pCtx, L.list, C.node);
-        }
-        A.pending_name = L.pending_name;
-        A.last_node = C.node;
-    } else if (C.pending_name.length > 0) {
-        // CONSTRAINT nm — store pending name for next constraint
-        A.list = L.list;
-        A.pending_name = C.pending_name;
-        A.last_node = L.last_node;
-    } else {
-        A = L;
-    }
+    A = synq_parse_column_constraint_list(pCtx, L, C);
 }
 
 carglist(A) ::= . {
-    A.list = SYNTAQLITE_NULL_NODE;
-    A.pending_name = SYNQ_NO_SPAN;
-    A.last_node = SYNTAQLITE_NULL_NODE;
+    A = SYNTAQLITE_NULL_NODE;
 }
 
 // ============ Column constraints (ccons) ============
 
-// CONSTRAINT name - returns pending name for next constraint
+// Preserve the declaration itself, rather than copying it onto each constraint.
 ccons(A) ::= CONSTRAINT nm(X). {
-    A.node = SYNTAQLITE_NULL_NODE;
-    A.pending_name = synq_span(pCtx, X);
-    pCtx->constraint_name = A.pending_name;
+    SyntaqliteTextSpan name = synq_span(pCtx, X);
+    A = synq_parse_constraint_name_declaration(pCtx, name);
+    // Table constraints still consume SQLite's pending name slot.
+    pCtx->constraint_name = name;
 }
 
 // DEFAULT scantok term
 ccons(A) ::= DEFAULT scantok term(X). {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         X, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // DEFAULT LP expr RP
 ccons(A) ::= DEFAULT LP expr(X) RP. {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_TRUE, SYNTAQLITE_BOOL_FALSE,
         X, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // DEFAULT PLUS scantok term
 ccons(A) ::= DEFAULT PLUS scantok term(X). {
     uint32_t pos = synq_parse_unary_expr(pCtx, SYNTAQLITE_UNARY_OP_PLUS, X);
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         pos, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // DEFAULT MINUS scantok term
 ccons(A) ::= DEFAULT MINUS scantok term(X). {
     // Create a unary minus wrapping the term
     uint32_t neg = synq_parse_unary_expr(pCtx, SYNTAQLITE_UNARY_OP_MINUS, X);
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         neg, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // DEFAULT scantok id (TRUE/FALSE/CURRENT_TIMESTAMP/identifier default)
@@ -228,86 +200,74 @@ ccons(A) ::= DEFAULT scantok id(X). {
     // a column reference: as an expression it would not be constant.
     uint32_t ref = synq_parse_literal(pCtx, SYNTAQLITE_LITERAL_TYPE_STRING,
                                       synq_span(pCtx, X));
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         ref, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // NULL onconf
 ccons(A) ::= NULL onconf(R). {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NULL,
-        SYNQ_NO_SPAN,
         (SyntaqliteConflictAction)R, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // NOT NULL onconf
 ccons(A) ::= NOT NULL onconf(R). {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NOT_NULL,
-        SYNQ_NO_SPAN,
         (SyntaqliteConflictAction)R, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // PRIMARY KEY sortorder onconf autoinc
 ccons(A) ::= PRIMARY KEY sortorder(Z) onconf(R) autoinc(I). {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_PRIMARY_KEY,
-        SYNQ_NO_SPAN,
         (SyntaqliteConflictAction)R, synq_sortorder(Z), (SyntaqliteBool)I,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // UNIQUE onconf
 ccons(A) ::= UNIQUE onconf(R). {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_UNIQUE,
-        SYNQ_NO_SPAN,
         (SyntaqliteConflictAction)R, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // CHECK LP expr RP
 ccons(A) ::= CHECK LP expr(X) RP. {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_CHECK,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, X, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // REFERENCES nm eidlist_opt refargs
@@ -316,24 +276,21 @@ ccons(A) ::= REFERENCES nm(T) eidlist_opt(TA) refargs(R). {
         synq_span(pCtx, T), TA, R.match_name, R.on_delete, R.on_update,
         R.on_insert,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET);
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, fk);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // SQLite applies this to the table's most recent FK, not to the constraint
 // before it, so it is kept as its own node rather than folded into one.
 ccons(A) ::= defer_subclause(D). {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFERRABLE,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
@@ -341,28 +298,25 @@ ccons(A) ::= defer_subclause(D). {
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // COLLATE ids
 ccons(A) ::= COLLATE ids(C). {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_COLLATE,
-        SYNQ_NO_SPAN,
         0, 0, 0,
         synq_span(pCtx, C),
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // GENERATED ALWAYS AS generated
 ccons(A) ::= GENERATED ALWAYS AS generated(G). {
     A = G;
-    if (A.node != SYNTAQLITE_NULL_NODE) {
-        SyntaqliteNode *node = AST_NODE(&pCtx->ast, A.node);
+    if (A != SYNTAQLITE_NULL_NODE) {
+        SyntaqliteNode *node = AST_NODE(&pCtx->ast, A);
         node->column_constraint.generated_always = SYNTAQLITE_BOOL_TRUE;
     }
 }
@@ -370,8 +324,8 @@ ccons(A) ::= GENERATED ALWAYS AS generated(G). {
 // AS generated
 ccons(A) ::= AS generated(G). {
     A = G;
-    if (A.node != SYNTAQLITE_NULL_NODE && pCtx->generated_always) {
-        SyntaqliteNode *node = AST_NODE(&pCtx->ast, A.node);
+    if (A != SYNTAQLITE_NULL_NODE && pCtx->generated_always) {
+        SyntaqliteNode *node = AST_NODE(&pCtx->ast, A);
         node->column_constraint.generated_always = SYNTAQLITE_BOOL_TRUE;
     }
 }
@@ -380,16 +334,14 @@ ccons(A) ::= AS generated(G). {
 // ============ Generated column ============
 
 generated(A) ::= LP expr(E) RP. {
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, E, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 generated(A) ::= LP expr(E) RP ID(TYPE). {
@@ -400,16 +352,14 @@ generated(A) ::= LP expr(E) RP ID(TYPE). {
         // Quoted spellings land here too, and upstream rejects those as well.
         pCtx->error = 1;
     }
-    A.node = synq_parse_column_constraint(pCtx,
+    A = synq_parse_column_constraint(pCtx,
         SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED,
-        SYNQ_NO_SPAN,
         SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE,
         SYNQ_NO_SPAN,
         storage,
         SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
         SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, E, SYNTAQLITE_NULL_NODE);
-    A.pending_name = SYNQ_NO_SPAN;
 }
 
 // ============ AUTOINCREMENT ============
