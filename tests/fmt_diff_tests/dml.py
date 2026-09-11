@@ -74,7 +74,7 @@ class DmlFormat(TestSuite):
     def test_insert_or_replace(self):
         return DiffTestBlueprint(
             sql="insert or replace into t values (1)",
-            out="REPLACE INTO t VALUES (1);",
+            out="INSERT OR REPLACE INTO t VALUES (1);",
         )
 
     def test_replace(self):

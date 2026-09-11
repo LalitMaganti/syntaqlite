@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, Deferrable, DropObjectType, ExplainMode, ForeignKeyAction, ForeignKeyOptionKind, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, InitialDeferMode, IsOp, JoinModifierKind, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TemporaryQualifier, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
+from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, Deferrable, DropObjectType, ExplainMode, ForeignKeyAction, ForeignKeyOptionKind, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, InitialDeferMode, InsertKeyword, IsOp, JoinModifierKind, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TemporaryQualifier, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
 
 
 class AggregateFunctionCall:
@@ -419,11 +419,12 @@ class UpdateStmt:
 class InsertStmt:
     """AST node: InsertStmt"""
 
-    __slots__ = ("with_ctes", "with_recursive", "conflict_action", "table", "columns", "source", "upsert", "returning")
+    __slots__ = ("with_ctes", "with_recursive", "keyword", "conflict_action", "table", "columns", "source", "upsert", "returning")
 
     def __init__(self, d: dict):
         self.with_ctes: list[CteDefinition] | None = _wrap(d.get("with_ctes"))
         self.with_recursive: bool = d["with_recursive"]
+        self.keyword: InsertKeyword = InsertKeyword[d["keyword"]]
         self.conflict_action: ConflictAction = ConflictAction[d["conflict_action"]]
         self.table: TableRef | None = _wrap(d.get("table"))
         self.columns: list[Expr] | None = _wrap(d.get("columns"))

@@ -613,6 +613,22 @@ impl IndexHint {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
+pub enum InsertKeyword {
+    Insert = 0,
+    Replace = 1,
+}
+
+impl InsertKeyword {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            InsertKeyword::Insert => "INSERT",
+            InsertKeyword::Replace => "REPLACE",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
 pub enum RaiseType {
     Ignore = 0,
     Rollback = 1,
@@ -3743,6 +3759,9 @@ impl<'a> InsertStmt<'a> {
     }
     pub fn with_recursive(&self) -> bool {
         self.raw.with_recursive == super::ffi::Bool::True
+    }
+    pub fn keyword(&self) -> InsertKeyword {
+        self.raw.keyword
     }
     pub fn conflict_action(&self) -> ConflictAction {
         self.raw.conflict_action

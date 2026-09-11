@@ -15,7 +15,7 @@
 // - Non-terminals are u32 node IDs
 
 %type with {SynqWithValue}
-%type insert_cmd {int}
+%type insert_cmd {SynqInsertCmdValue}
 %type orconf {int}
 %type resolvetype {int}
 %type indexed_opt {SynqParseToken}
@@ -86,24 +86,26 @@ cmd(A) ::= with(W) insert_cmd(R) INTO xfullname(X) idlist_opt(F) select(S) upser
     A = synq_parse_insert_stmt(pCtx,
         W.cte_list,
         W.is_recursive ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
-        (SyntaqliteConflictAction)R, X, F, S, U.clauses, U.returning);
+        R.keyword, R.conflict_action, X, F, S, U.clauses, U.returning);
 }
 
 cmd(A) ::= with(W) insert_cmd(R) INTO xfullname(X) idlist_opt(F) DEFAULT VALUES returning(V). {
     A = synq_parse_insert_stmt(pCtx,
         W.cte_list,
         W.is_recursive ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
-        (SyntaqliteConflictAction)R, X, F, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, V);
+        R.keyword, R.conflict_action, X, F, SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, V);
 }
 
 // ============ INSERT command type ============
 
 insert_cmd(A) ::= INSERT orconf(R). {
-    A = R;
+    A.keyword = SYNTAQLITE_INSERT_KEYWORD_INSERT;
+    A.conflict_action = (SyntaqliteConflictAction)R;
 }
 
 insert_cmd(A) ::= REPLACE. {
-    A = (int)SYNTAQLITE_CONFLICT_ACTION_REPLACE;
+    A.keyword = SYNTAQLITE_INSERT_KEYWORD_REPLACE;
+    A.conflict_action = SYNTAQLITE_CONFLICT_ACTION_REPLACE;
 }
 
 // ============ OR conflict resolution ============

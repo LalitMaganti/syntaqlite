@@ -43,6 +43,7 @@
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::GeneratedColumnStorage
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::IndexHint
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::InitialDeferMode
+#[repr(u32)] pub enum syntaqlite_syntax::nodes::InsertKeyword
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::IsOp
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::JoinModifierKind
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::JoinType
@@ -484,6 +485,7 @@ impl syntaqlite_syntax::nodes::InExprId
 impl syntaqlite_syntax::nodes::InExprSourceId
 impl syntaqlite_syntax::nodes::IndexHint
 impl syntaqlite_syntax::nodes::InitialDeferMode
+impl syntaqlite_syntax::nodes::InsertKeyword
 impl syntaqlite_syntax::nodes::InsertStmtId
 impl syntaqlite_syntax::nodes::IsExprId
 impl syntaqlite_syntax::nodes::IsOp
@@ -1640,10 +1642,12 @@ pub fn syntaqlite_syntax::nodes::InExprSourceId::from(syntaqlite_syntax::nodes::
 pub fn syntaqlite_syntax::nodes::InExprSourceId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::IndexHint::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::InitialDeferMode::as_str(&self) -> &'static str
+pub fn syntaqlite_syntax::nodes::InsertKeyword::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::InsertStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::conflict_action(&self) -> syntaqlite_syntax::nodes::ConflictAction
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::keyword(&self) -> syntaqlite_syntax::nodes::InsertKeyword
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::InsertStmtId
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::returning(&self) -> core::option::Option<syntaqlite_syntax::nodes::ResultColumnList<'a>>
 pub fn syntaqlite_syntax::nodes::InsertStmt<'a>::source(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
@@ -2730,6 +2734,8 @@ pub syntaqlite_syntax::nodes::IndexHint::NotIndexed = 1
 pub syntaqlite_syntax::nodes::InitialDeferMode::Deferred = 1
 pub syntaqlite_syntax::nodes::InitialDeferMode::Immediate = 2
 pub syntaqlite_syntax::nodes::InitialDeferMode::Unset = 0
+pub syntaqlite_syntax::nodes::InsertKeyword::Insert = 0
+pub syntaqlite_syntax::nodes::InsertKeyword::Replace = 1
 pub syntaqlite_syntax::nodes::IsOp::Is = 0
 pub syntaqlite_syntax::nodes::IsOp::IsDistinct = 5
 pub syntaqlite_syntax::nodes::IsOp::IsNot = 1

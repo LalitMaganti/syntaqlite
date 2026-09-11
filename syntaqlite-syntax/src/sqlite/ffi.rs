@@ -299,6 +299,7 @@ pub(crate) struct InsertStmt {
     pub(crate) tag: u32,
     pub(crate) with_ctes: AnyNodeId,
     pub(crate) with_recursive: Bool,
+    pub(crate) keyword: super::ast::InsertKeyword,
     pub(crate) conflict_action: super::ast::ConflictAction,
     pub(crate) table: AnyNodeId,
     pub(crate) columns: AnyNodeId,

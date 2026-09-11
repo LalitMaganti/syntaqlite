@@ -86,6 +86,12 @@ typedef struct SynqUpsertValue {
   uint32_t returning;
 } SynqUpsertValue;
 
+// Keep the authored INSERT/REPLACE form separate from conflict semantics.
+typedef struct SynqInsertCmdValue {
+  SyntaqliteInsertKeyword keyword;
+  SyntaqliteConflictAction conflict_action;
+} SynqInsertCmdValue;
+
 // Keep the authored modifier sequence alongside its semantic join type.
 typedef struct SynqJoinOpValue {
   SyntaqliteJoinType join_type;
@@ -555,6 +561,7 @@ typedef union {
   SynqUpsertValue yy352;
   SynqDeferValue yy519;
   SynqWithValue yy541;
+  SynqInsertCmdValue yy606;
   SynqParenExprlistValue yy618;
   SynqOnUsingValue yy632;
   SynqColumnNameValue yy640;
@@ -8575,7 +8582,7 @@ static YYACTIONTYPE yy_reduce(
           pCtx, yymsp[-6].minor.yy541.cte_list,
           yymsp[-6].minor.yy541.is_recursive ? SYNTAQLITE_BOOL_TRUE
                                              : SYNTAQLITE_BOOL_FALSE,
-          (SyntaqliteConflictAction)yymsp[-5].minor.yy320,
+          yymsp[-5].minor.yy606.keyword, yymsp[-5].minor.yy606.conflict_action,
           yymsp[-3].minor.yy277, yymsp[-2].minor.yy277, yymsp[-1].minor.yy277,
           yymsp[0].minor.yy352.clauses, yymsp[0].minor.yy352.returning);
     }
@@ -8588,26 +8595,28 @@ static YYACTIONTYPE yy_reduce(
           pCtx, yymsp[-7].minor.yy541.cte_list,
           yymsp[-7].minor.yy541.is_recursive ? SYNTAQLITE_BOOL_TRUE
                                              : SYNTAQLITE_BOOL_FALSE,
-          (SyntaqliteConflictAction)yymsp[-6].minor.yy320,
+          yymsp[-6].minor.yy606.keyword, yymsp[-6].minor.yy606.conflict_action,
           yymsp[-4].minor.yy277, yymsp[-3].minor.yy277, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277);
     }
       yymsp[-7].minor.yy277 = yylhsminor.yy277;
       break;
     case 144: /* insert_cmd ::= INSERT orconf */
+    {
+      yymsp[-1].minor.yy606.keyword = SYNTAQLITE_INSERT_KEYWORD_INSERT;
+      yymsp[-1].minor.yy606.conflict_action =
+          (SyntaqliteConflictAction)yymsp[0].minor.yy320;
+    } break;
+    case 145: /* insert_cmd ::= REPLACE */
+    {
+      yymsp[0].minor.yy606.keyword = SYNTAQLITE_INSERT_KEYWORD_REPLACE;
+      yymsp[0].minor.yy606.conflict_action = SYNTAQLITE_CONFLICT_ACTION_REPLACE;
+    } break;
     case 147: /* orconf ::= OR resolvetype */
-      yytestcase(yyruleno == 147);
     case 404: /* frame_exclude_opt ::= EXCLUDE frame_exclude */
       yytestcase(yyruleno == 404);
       {
         yymsp[-1].minor.yy320 = yymsp[0].minor.yy320;
-      }
-      break;
-    case 145: /* insert_cmd ::= REPLACE */
-    case 150: /* resolvetype ::= REPLACE */
-      yytestcase(yyruleno == 150);
-      {
-        yymsp[0].minor.yy320 = (int)SYNTAQLITE_CONFLICT_ACTION_REPLACE;
       }
       break;
     case 148: /* resolvetype ::= raisetype */
@@ -8622,6 +8631,10 @@ static YYACTIONTYPE yy_reduce(
     case 149: /* resolvetype ::= IGNORE */
     {
       yymsp[0].minor.yy320 = (int)SYNTAQLITE_CONFLICT_ACTION_IGNORE;
+    } break;
+    case 150: /* resolvetype ::= REPLACE */
+    {
+      yymsp[0].minor.yy320 = (int)SYNTAQLITE_CONFLICT_ACTION_REPLACE;
     } break;
     case 151: /* xfullname ::= nm */
     {
@@ -9750,8 +9763,8 @@ static YYACTIONTYPE yy_reduce(
       }
       yymsp[-7].minor.yy277 = synq_parse_insert_stmt(
           pCtx, SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
-          (SyntaqliteConflictAction)yymsp[-6].minor.yy320, tbl,
-          yymsp[-3].minor.yy277, yymsp[-2].minor.yy277,
+          yymsp[-6].minor.yy606.keyword, yymsp[-6].minor.yy606.conflict_action,
+          tbl, yymsp[-3].minor.yy277, yymsp[-2].minor.yy277,
           yymsp[-1].minor.yy352.clauses, yymsp[-1].minor.yy352.returning);
     } break;
     case 323: /* trigger_cmd ::= DELETE FROM trnm tridxby where_opt scanpt */

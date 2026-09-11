@@ -167,7 +167,7 @@ trigger_cmd(A) ::= scanpt insert_cmd(R) INTO trnm(X) idlist_opt(F) select(S) ups
     }
     A = synq_parse_insert_stmt(pCtx,
         SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE,
-        (SyntaqliteConflictAction)R, tbl, F, S,
+        R.keyword, R.conflict_action, tbl, F, S,
         U.clauses, U.returning);
 }
 
