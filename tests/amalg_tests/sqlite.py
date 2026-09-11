@@ -90,7 +90,7 @@ class SqliteAmalgBasic(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:

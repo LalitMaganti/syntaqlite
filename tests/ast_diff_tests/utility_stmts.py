@@ -557,7 +557,7 @@ class CreateViewStmts(TestSuite):
             CreateViewStmt
               view_name: "v"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               column_names: (none)
               select:
@@ -594,7 +594,7 @@ class CreateViewStmts(TestSuite):
             CreateViewStmt
               view_name: "v"
               schema: (none)
-              is_temp: TRUE
+              temporary: TEMP
               if_not_exists: FALSE
               column_names: (none)
               select:
@@ -631,7 +631,7 @@ class CreateViewStmts(TestSuite):
             CreateViewStmt
               view_name: "v"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: TRUE
               column_names: (none)
               select:
@@ -668,7 +668,7 @@ class CreateViewStmts(TestSuite):
             CreateViewStmt
               view_name: "v"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               column_names:
                 ExprList [2 items]

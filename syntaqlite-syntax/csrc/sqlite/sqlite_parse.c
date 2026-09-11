@@ -550,6 +550,7 @@ typedef union {
   SynqConstraintGroups yy177;
   SynqJoinOpValue yy200;
   uint32_t yy277;
+  SyntaqliteTemporaryQualifier yy300;
   int yy320;
   SynqUpsertValue yy352;
   SynqDeferValue yy519;
@@ -7888,7 +7889,8 @@ static YYACTIONTYPE yy_reduce(
       args_node->create_table_stmt.table_name =
           ct_node->create_table_stmt.table_name;
       args_node->create_table_stmt.schema = ct_node->create_table_stmt.schema;
-      args_node->create_table_stmt.is_temp = ct_node->create_table_stmt.is_temp;
+      args_node->create_table_stmt.temporary =
+          ct_node->create_table_stmt.temporary;
       args_node->create_table_stmt.if_not_exists =
           ct_node->create_table_stmt.if_not_exists;
       yylhsminor.yy277 = synq_pass(pCtx, yymsp[0].minor.yy277);
@@ -7904,7 +7906,7 @@ static YYACTIONTYPE yy_reduce(
           yymsp[0].minor.yy0.z ? synq_span_dequote(pCtx, yymsp[-1].minor.yy0)
                                : SYNQ_NO_SPAN;
       yymsp[-5].minor.yy277 = synq_parse_create_table_stmt(
-          pCtx, tbl_name, tbl_schema, (SyntaqliteBool)yymsp[-4].minor.yy320,
+          pCtx, tbl_name, tbl_schema, yymsp[-4].minor.yy300,
           (SyntaqliteBool)yymsp[-2].minor.yy320,
           (SyntaqliteCreateTableStmtFlags){.raw = 0}, SYNTAQLITE_NULL_NODE,
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE);
@@ -7913,7 +7915,7 @@ static YYACTIONTYPE yy_reduce(
                 table_option_set */
     {
       yymsp[-4].minor.yy277 = synq_parse_create_table_stmt(
-          pCtx, SYNQ_NO_SPAN, SYNQ_NO_SPAN, SYNTAQLITE_BOOL_FALSE,
+          pCtx, SYNQ_NO_SPAN, SYNQ_NO_SPAN, SYNTAQLITE_TEMPORARY_QUALIFIER_NONE,
           SYNTAQLITE_BOOL_FALSE,
           (SyntaqliteCreateTableStmtFlags){
               .raw = (uint8_t)(yymsp[0].minor.yy320 & 0xFF)},
@@ -7922,7 +7924,7 @@ static YYACTIONTYPE yy_reduce(
     case 60: /* create_table_args ::= AS select */
     {
       yymsp[-1].minor.yy277 = synq_parse_create_table_stmt(
-          pCtx, SYNQ_NO_SPAN, SYNQ_NO_SPAN, SYNTAQLITE_BOOL_FALSE,
+          pCtx, SYNQ_NO_SPAN, SYNQ_NO_SPAN, SYNTAQLITE_TEMPORARY_QUALIFIER_NONE,
           SYNTAQLITE_BOOL_FALSE, (SyntaqliteCreateTableStmtFlags){.raw = 0},
           SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE, yymsp[0].minor.yy277);
     } break;
@@ -7941,8 +7943,6 @@ static YYACTIONTYPE yy_reduce(
       yytestcase(yyruleno == 359);
     case 360: /* ifnotexists ::= */
       yytestcase(yyruleno == 360);
-    case 365: /* temp ::= */
-      yytestcase(yyruleno == 365);
       {
         yymsp[1].minor.yy320 = 0;
       }
@@ -8228,8 +8228,6 @@ static YYACTIONTYPE yy_reduce(
       yytestcase(yyruleno == 237);
     case 358: /* uniqueflag ::= UNIQUE */
       yytestcase(yyruleno == 358);
-    case 364: /* temp ::= TEMP */
-      yytestcase(yyruleno == 364);
       {
         yymsp[0].minor.yy320 = 1;
       }
@@ -9618,11 +9616,12 @@ static YYACTIONTYPE yy_reduce(
                                 : SYNQ_NO_SPAN;
       // yylhsminor.yy277 TEMP trigger always lives in the temp schema, so it
       // cannot be qualified.
-      if (yymsp[-10].minor.yy320 && yymsp[-6].minor.yy0.z) {
+      if (yymsp[-10].minor.yy300 != SYNTAQLITE_TEMPORARY_QUALIFIER_NONE &&
+          yymsp[-6].minor.yy0.z) {
         pCtx->error = 1;
       }
       yylhsminor.yy277 = synq_parse_create_trigger_stmt(
-          pCtx, trig_name, trig_schema, (SyntaqliteBool)yymsp[-10].minor.yy320,
+          pCtx, trig_name, trig_schema, yymsp[-10].minor.yy300,
           (SyntaqliteBool)yymsp[-8].minor.yy320,
           (SyntaqliteTriggerTiming)yymsp[-5].minor.yy320, yymsp[-4].minor.yy277,
           yymsp[-2].minor.yy277, yymsp[0].minor.yy277,
@@ -9929,9 +9928,22 @@ static YYACTIONTYPE yy_reduce(
           yymsp[-3].minor.yy0.z ? synq_span(pCtx, yymsp[-4].minor.yy0)
                                 : SYNQ_NO_SPAN;
       yymsp[-8].minor.yy277 = synq_parse_create_view_stmt(
-          pCtx, view_name, view_schema, (SyntaqliteBool)yymsp[-7].minor.yy320,
+          pCtx, view_name, view_schema, yymsp[-7].minor.yy300,
           (SyntaqliteBool)yymsp[-5].minor.yy320, yymsp[-2].minor.yy277,
           yymsp[0].minor.yy277);
+    } break;
+    case 364: /* temp ::= TEMP */
+    {
+      // SQLite maps both spellings to TEMP; retain the authored choice here.
+      yylhsminor.yy300 = yymsp[0].minor.yy0.n == 4
+                             ? SYNTAQLITE_TEMPORARY_QUALIFIER_TEMP
+                             : SYNTAQLITE_TEMPORARY_QUALIFIER_TEMPORARY;
+    }
+      yymsp[0].minor.yy300 = yylhsminor.yy300;
+      break;
+    case 365: /* temp ::= */
+    {
+      yymsp[1].minor.yy300 = SYNTAQLITE_TEMPORARY_QUALIFIER_NONE;
     } break;
     case 366: /* values ::= VALUES LP nexprlist RP */
     {

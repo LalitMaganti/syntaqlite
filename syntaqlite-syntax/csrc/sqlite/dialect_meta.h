@@ -51,6 +51,12 @@ static const char* const display_like_keyword[] = {
     "REGEXP",
 };
 
+static const char* const display_temporary_qualifier[] = {
+    "NONE",
+    "TEMP",
+    "TEMPORARY",
+};
+
 static const char* const display_foreign_key_action[] = {
     "UNSET", "NO_ACTION", "SET_NULL", "SET_DEFAULT", "CASCADE", "RESTRICT",
 };
@@ -492,8 +498,10 @@ static const SyntaqliteFieldMeta field_meta_create_table_stmt[] = {
      "table_name", NULL, 0},
     {offsetof(SyntaqliteCreateTableStmt, schema), SYNTAQLITE_FIELD_SPAN,
      "schema", NULL, 0},
-    {offsetof(SyntaqliteCreateTableStmt, is_temp), SYNTAQLITE_FIELD_BOOL,
-     "is_temp", display_bool, sizeof(display_bool) / sizeof(display_bool[0])},
+    {offsetof(SyntaqliteCreateTableStmt, temporary), SYNTAQLITE_FIELD_ENUM,
+     "temporary", display_temporary_qualifier,
+     sizeof(display_temporary_qualifier) /
+         sizeof(display_temporary_qualifier[0])},
     {offsetof(SyntaqliteCreateTableStmt, if_not_exists), SYNTAQLITE_FIELD_BOOL,
      "if_not_exists", display_bool,
      sizeof(display_bool) / sizeof(display_bool[0])},
@@ -889,8 +897,10 @@ static const SyntaqliteFieldMeta field_meta_create_trigger_stmt[] = {
      "trigger_name", NULL, 0},
     {offsetof(SyntaqliteCreateTriggerStmt, schema), SYNTAQLITE_FIELD_SPAN,
      "schema", NULL, 0},
-    {offsetof(SyntaqliteCreateTriggerStmt, is_temp), SYNTAQLITE_FIELD_BOOL,
-     "is_temp", display_bool, sizeof(display_bool) / sizeof(display_bool[0])},
+    {offsetof(SyntaqliteCreateTriggerStmt, temporary), SYNTAQLITE_FIELD_ENUM,
+     "temporary", display_temporary_qualifier,
+     sizeof(display_temporary_qualifier) /
+         sizeof(display_temporary_qualifier[0])},
     {offsetof(SyntaqliteCreateTriggerStmt, if_not_exists),
      SYNTAQLITE_FIELD_BOOL, "if_not_exists", display_bool,
      sizeof(display_bool) / sizeof(display_bool[0])},
@@ -996,8 +1006,10 @@ static const SyntaqliteFieldMeta field_meta_create_view_stmt[] = {
      "view_name", NULL, 0},
     {offsetof(SyntaqliteCreateViewStmt, schema), SYNTAQLITE_FIELD_SPAN,
      "schema", NULL, 0},
-    {offsetof(SyntaqliteCreateViewStmt, is_temp), SYNTAQLITE_FIELD_BOOL,
-     "is_temp", display_bool, sizeof(display_bool) / sizeof(display_bool[0])},
+    {offsetof(SyntaqliteCreateViewStmt, temporary), SYNTAQLITE_FIELD_ENUM,
+     "temporary", display_temporary_qualifier,
+     sizeof(display_temporary_qualifier) /
+         sizeof(display_temporary_qualifier[0])},
     {offsetof(SyntaqliteCreateViewStmt, if_not_exists), SYNTAQLITE_FIELD_BOOL,
      "if_not_exists", display_bool,
      sizeof(display_bool) / sizeof(display_bool[0])},

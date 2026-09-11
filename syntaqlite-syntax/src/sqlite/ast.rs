@@ -371,6 +371,24 @@ impl LikeKeyword {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
+pub enum TemporaryQualifier {
+    None = 0,
+    Temp = 1,
+    Temporary = 2,
+}
+
+impl TemporaryQualifier {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TemporaryQualifier::None => "NONE",
+            TemporaryQualifier::Temp => "TEMP",
+            TemporaryQualifier::Temporary => "TEMPORARY",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
 pub enum ForeignKeyAction {
     Unset = 0,
     NoAction = 1,
@@ -3132,8 +3150,8 @@ impl<'a> CreateTableStmt<'a> {
     pub fn schema(&self) -> &'a str {
         self.stmt_result.span_expanded_text(self.raw.schema)
     }
-    pub fn is_temp(&self) -> bool {
-        self.raw.is_temp == super::ffi::Bool::True
+    pub fn temporary(&self) -> TemporaryQualifier {
+        self.raw.temporary
     }
     pub fn if_not_exists(&self) -> bool {
         self.raw.if_not_exists == super::ffi::Bool::True
@@ -5830,8 +5848,8 @@ impl<'a> CreateTriggerStmt<'a> {
     pub fn schema(&self) -> &'a str {
         self.stmt_result.span_expanded_text(self.raw.schema)
     }
-    pub fn is_temp(&self) -> bool {
-        self.raw.is_temp == super::ffi::Bool::True
+    pub fn temporary(&self) -> TemporaryQualifier {
+        self.raw.temporary
     }
     pub fn if_not_exists(&self) -> bool {
         self.raw.if_not_exists == super::ffi::Bool::True
@@ -6532,8 +6550,8 @@ impl<'a> CreateViewStmt<'a> {
     pub fn schema(&self) -> &'a str {
         self.stmt_result.span_expanded_text(self.raw.schema)
     }
-    pub fn is_temp(&self) -> bool {
-        self.raw.is_temp == super::ffi::Bool::True
+    pub fn temporary(&self) -> TemporaryQualifier {
+        self.raw.temporary
     }
     pub fn if_not_exists(&self) -> bool {
         self.raw.if_not_exists == super::ffi::Bool::True

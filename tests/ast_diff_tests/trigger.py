@@ -16,7 +16,7 @@ class CreateTriggerBasic(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -60,7 +60,7 @@ class CreateTriggerBasic(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: AFTER
               event:
@@ -104,7 +104,7 @@ class CreateTriggerBasic(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: INSTEAD_OF
               event:
@@ -148,7 +148,7 @@ class CreateTriggerBasic(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -196,7 +196,7 @@ class CreateTriggerOptions(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: TRUE
+              temporary: TEMP
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -240,7 +240,7 @@ class CreateTriggerOptions(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: TRUE
               timing: BEFORE
               event:
@@ -284,7 +284,7 @@ class CreateTriggerOptions(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: "main"
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -328,7 +328,7 @@ class CreateTriggerOptions(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -381,7 +381,7 @@ class CreateTriggerOptions(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -429,7 +429,7 @@ class CreateTriggerWhen(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -484,7 +484,7 @@ class CreateTriggerWhen(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -532,7 +532,7 @@ class CreateTriggerBody(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -587,7 +587,7 @@ class CreateTriggerBody(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -637,7 +637,7 @@ class CreateTriggerBody(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:
@@ -692,7 +692,7 @@ class CreateTriggerBody(TestSuite):
             CreateTriggerStmt
               trigger_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: INSTEAD_OF
               event:
@@ -736,7 +736,7 @@ class CreateTriggerBody(TestSuite):
             CreateTriggerStmt
               trigger_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: INSTEAD_OF
               event:
@@ -780,7 +780,7 @@ class CreateTriggerBody(TestSuite):
             CreateTriggerStmt
               trigger_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: AFTER
               event:
@@ -833,7 +833,7 @@ class CreateTriggerBody(TestSuite):
             CreateTriggerStmt
               trigger_name: "tr"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               timing: BEFORE
               event:

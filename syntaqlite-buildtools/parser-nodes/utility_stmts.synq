@@ -100,7 +100,7 @@ node CreateIndexStmt {
 node CreateViewStmt {
   view_name: inline SyntaqliteTextSpan
   schema: inline SyntaqliteTextSpan
-  is_temp: inline Bool
+  temporary: inline TemporaryQualifier
   if_not_exists: inline Bool
   column_names: index ExprList
   select: index Select
@@ -110,7 +110,10 @@ node CreateViewStmt {
   fmt {
     group {
       "CREATE"
-      if_flag(is_temp) { space "TEMP" }
+      switch(temporary) {
+        TEMP { space "TEMP" }
+        TEMPORARY { space "TEMPORARY" }
+      }
       space "VIEW"
       if_flag(if_not_exists) { space "IF" "NOT" "EXISTS" }
       space

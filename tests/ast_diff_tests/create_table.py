@@ -16,7 +16,7 @@ class CreateTableBasic(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -39,7 +39,7 @@ class CreateTableBasic(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -74,7 +74,7 @@ class CreateTableBasic(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -109,7 +109,7 @@ class CreateTableBasic(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -142,7 +142,7 @@ class CreateTableModifiers(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: TRUE
+              temporary: TEMP
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -165,7 +165,7 @@ class CreateTableModifiers(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: TRUE
               flags: (none)
               columns:
@@ -188,7 +188,7 @@ class CreateTableModifiers(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: "main"
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -215,7 +215,7 @@ class CreateTableOptions(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: WITHOUT_ROWID
               columns:
@@ -254,7 +254,7 @@ class CreateTableOptions(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: STRICT
               columns:
@@ -277,7 +277,7 @@ class CreateTableOptions(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: WITHOUT_ROWID STRICT
               columns:
@@ -320,7 +320,7 @@ class CreateTableAsSelect(TestSuite):
             CreateTableStmt
               table_name: "t2"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns: (none)
@@ -363,7 +363,7 @@ class ColumnConstraintDefault(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -405,7 +405,7 @@ class ColumnConstraintDefault(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -447,7 +447,7 @@ class ColumnConstraintDefault(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -492,7 +492,7 @@ class ColumnConstraintDefault(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -541,7 +541,7 @@ class ColumnConstraintDefault(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -587,7 +587,7 @@ class ColumnConstraintKeys(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -626,7 +626,7 @@ class ColumnConstraintKeys(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -665,7 +665,7 @@ class ColumnConstraintKeys(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -704,7 +704,7 @@ class ColumnConstraintKeys(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -743,7 +743,7 @@ class ColumnConstraintKeys(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -786,7 +786,7 @@ class ColumnConstraintCheck(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -840,7 +840,7 @@ class ColumnConstraintReferences(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -890,7 +890,7 @@ class ColumnConstraintReferences(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -945,7 +945,7 @@ class ColumnConstraintReferences(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1000,7 +1000,7 @@ class ColumnConstraintReferences(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1067,7 +1067,7 @@ class ColumnConstraintCollate(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1110,7 +1110,7 @@ class ColumnConstraintGenerated(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1166,7 +1166,7 @@ class ColumnConstraintGenerated(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1226,7 +1226,7 @@ class ColumnConstraintName(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1271,7 +1271,7 @@ class TableConstraintPrimaryKey(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1327,7 +1327,7 @@ class TableConstraintPrimaryKey(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1375,7 +1375,7 @@ class TableConstraintUnique(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1435,7 +1435,7 @@ class TableConstraintCheck(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1490,7 +1490,7 @@ class TableConstraintForeignKey(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1539,7 +1539,7 @@ class TableConstraintForeignKey(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1597,7 +1597,7 @@ class TableConstraintForeignKey(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1650,7 +1650,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1705,7 +1705,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1760,7 +1760,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1815,7 +1815,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1874,7 +1874,7 @@ class OnConflictClause(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1913,7 +1913,7 @@ class OnConflictClause(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1952,7 +1952,7 @@ class OnConflictClause(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -1991,7 +1991,7 @@ class OnConflictClause(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2033,7 +2033,7 @@ class OnConflictClause(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2079,7 +2079,7 @@ class MultipleColumnConstraints(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2155,7 +2155,7 @@ class NamedTableConstraints(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2199,7 +2199,7 @@ class NamedTableConstraints(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2245,7 +2245,7 @@ class NamedTableConstraints(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2300,7 +2300,7 @@ class GeneratedColumn(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2360,7 +2360,7 @@ class ColumnConstraintNull(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2403,7 +2403,7 @@ class ColumnConstraintDeclarations(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2481,7 +2481,7 @@ class ColumnConstraintDeclarations(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2530,7 +2530,7 @@ class ColumnConstraintDeclarations(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2658,7 +2658,7 @@ class TableConstraintDeclarations(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:
@@ -2746,7 +2746,7 @@ class TableConstraintDeclarations(TestSuite):
             CreateTableStmt
               table_name: "t"
               schema: (none)
-              is_temp: FALSE
+              temporary: NONE
               if_not_exists: FALSE
               flags: (none)
               columns:

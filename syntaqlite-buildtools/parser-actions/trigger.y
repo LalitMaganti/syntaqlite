@@ -34,13 +34,13 @@ trigger_decl(A) ::= temp(T) TRIGGER ifnotexists(NOERR) nm(B) dbnm(Z)
     SyntaqliteTextSpan trig_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, B);
     SyntaqliteTextSpan trig_schema = Z.z ? synq_span(pCtx, B) : SYNQ_NO_SPAN;
     // A TEMP trigger always lives in the temp schema, so it cannot be qualified.
-    if (T && Z.z) {
+    if (T != SYNTAQLITE_TEMPORARY_QUALIFIER_NONE && Z.z) {
         pCtx->error = 1;
     }
     A = synq_parse_create_trigger_stmt(pCtx,
         trig_name,
         trig_schema,
-        (SyntaqliteBool)T,
+        T,
         (SyntaqliteBool)NOERR,
         (SyntaqliteTriggerTiming)C,
         D,
