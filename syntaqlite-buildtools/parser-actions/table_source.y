@@ -15,14 +15,14 @@
 // - Non-terminals are u32 node IDs
 
 %type on_using {SynqOnUsingValue}
-%type joinop {SyntaqliteJoinType}
+%type joinop {SynqJoinOpValue}
 %type indexed_by {SynqParseToken}
 
 // ============ FROM clause table sources ============
 
 // stl_prefix carries the accumulated seltablist plus pending join type
 stl_prefix(A) ::= seltablist(A) joinop(Y). {
-    A = synq_parse_join_prefix(pCtx, A, Y);
+    A = synq_parse_join_prefix(pCtx, A, Y.join_type, Y.modifiers);
 }
 
 stl_prefix(A) ::= . {
@@ -52,6 +52,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
         SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
         A = synq_parse_join_clause(pCtx,
             pfx->join_prefix.join_type,
+            pfx->join_prefix.modifiers,
             pfx->join_prefix.source,
             tref, N.on_expr, N.using_cols);
     }
@@ -83,6 +84,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
         SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
         A = synq_parse_join_clause(pCtx,
             pfx->join_prefix.join_type,
+            pfx->join_prefix.modifiers,
             pfx->join_prefix.source,
             tref, N.on_expr, N.using_cols);
     }
@@ -113,6 +115,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N
         SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
         A = synq_parse_join_clause(pCtx,
             pfx->join_prefix.join_type,
+            pfx->join_prefix.modifiers,
             pfx->join_prefix.source,
             tref, N.on_expr, N.using_cols);
     }
@@ -130,6 +133,7 @@ seltablist(A) ::= stl_prefix(A) LP select(S) RP as(Z) on_using(N). {
         SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
         A = synq_parse_join_clause(pCtx,
             pfx->join_prefix.join_type,
+            pfx->join_prefix.modifiers,
             pfx->join_prefix.source,
             sub, N.on_expr, N.using_cols);
     }
@@ -150,6 +154,7 @@ seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
             SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
             A = synq_parse_join_clause(pCtx,
                 pfx->join_prefix.join_type,
+                pfx->join_prefix.modifiers,
                 pfx->join_prefix.source,
                 paren, N.on_expr, N.using_cols);
         }
@@ -159,21 +164,22 @@ seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
 // ============ Join operators ============
 
 joinop(X) ::= COMMA|JOIN(OP). {
-    X = (OP.type == SYNTAQLITE_TK_COMMA)
+    X.join_type = (OP.type == SYNTAQLITE_TK_COMMA)
         ? SYNTAQLITE_JOIN_TYPE_COMMA
         : SYNTAQLITE_JOIN_TYPE_INNER;
+    X.modifiers = SYNTAQLITE_NULL_NODE;
 }
 
 joinop(X) ::= JOIN_KW(A) JOIN. {
-    X = synq_join_type(&A, NULL, NULL);
+    X = synq_join_operator(pCtx, &A, NULL, NULL);
 }
 
 joinop(X) ::= JOIN_KW(A) nm(B) JOIN. {
-    X = synq_join_type(&A, &B, NULL);
+    X = synq_join_operator(pCtx, &A, &B, NULL);
 }
 
 joinop(X) ::= JOIN_KW(A) nm(B) nm(C) JOIN. {
-    X = synq_join_type(&A, &B, &C);
+    X = synq_join_operator(pCtx, &A, &B, &C);
 }
 
 // ============ ON / USING clauses ============

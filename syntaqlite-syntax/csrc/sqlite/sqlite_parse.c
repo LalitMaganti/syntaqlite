@@ -86,6 +86,12 @@ typedef struct SynqUpsertValue {
   uint32_t returning;
 } SynqUpsertValue;
 
+// Keep the authored modifier sequence alongside its semantic join type.
+typedef struct SynqJoinOpValue {
+  SyntaqliteJoinType join_type;
+  uint32_t modifiers;
+} SynqJoinOpValue;
+
 // paren_exprlist: optional `LP exprlist RP` tail. Tracks whether the
 // parens were present so callers can distinguish `foo` (has_parens=0)
 // from `foo()` (has_parens=1, args=NULL_NODE) — relevant for table /
@@ -126,7 +132,7 @@ static inline int synq_trim_generated_always(SynqParseToken* t) {
   return 1;
 }
 
-// Join keywords are an unordered set, not a sequence; see sqlite3JoinType().
+// Semantic join type depends on the set of keywords; see sqlite3JoinType().
 #define SYNQ_JT_INNER 0x01
 #define SYNQ_JT_CROSS 0x02
 #define SYNQ_JT_NATURAL 0x04
@@ -135,42 +141,47 @@ static inline int synq_trim_generated_always(SynqParseToken* t) {
 #define SYNQ_JT_OUTER 0x20
 #define SYNQ_JT_ERROR 0x40
 
-static inline int synq_join_keyword_mask(const SynqParseToken* p) {
+static inline int synq_append_join_modifier(SynqParseCtx* ctx,
+                                            uint32_t* modifiers,
+                                            const SynqParseToken* token) {
   static const struct {
     const char* text;
     unsigned char len;
-    unsigned char code;
-  } kw[] = {
-      {"natural", 7, SYNQ_JT_NATURAL},
-      {"left", 4, SYNQ_JT_LEFT | SYNQ_JT_OUTER},
-      {"outer", 5, SYNQ_JT_OUTER},
-      {"right", 5, SYNQ_JT_RIGHT | SYNQ_JT_OUTER},
-      {"full", 4, SYNQ_JT_LEFT | SYNQ_JT_RIGHT | SYNQ_JT_OUTER},
-      {"inner", 5, SYNQ_JT_INNER},
-      {"cross", 5, SYNQ_JT_INNER | SYNQ_JT_CROSS},
+    unsigned char mask;
+    SyntaqliteJoinModifierKind kind;
+  } keywords[] = {
+      {"natural", 7, SYNQ_JT_NATURAL, SYNTAQLITE_JOIN_MODIFIER_KIND_NATURAL},
+      {"left", 4, SYNQ_JT_LEFT | SYNQ_JT_OUTER,
+       SYNTAQLITE_JOIN_MODIFIER_KIND_LEFT},
+      {"outer", 5, SYNQ_JT_OUTER, SYNTAQLITE_JOIN_MODIFIER_KIND_OUTER},
+      {"right", 5, SYNQ_JT_RIGHT | SYNQ_JT_OUTER,
+       SYNTAQLITE_JOIN_MODIFIER_KIND_RIGHT},
+      {"full", 4, SYNQ_JT_LEFT | SYNQ_JT_RIGHT | SYNQ_JT_OUTER,
+       SYNTAQLITE_JOIN_MODIFIER_KIND_FULL},
+      {"inner", 5, SYNQ_JT_INNER, SYNTAQLITE_JOIN_MODIFIER_KIND_INNER},
+      {"cross", 5, SYNQ_JT_INNER | SYNQ_JT_CROSS,
+       SYNTAQLITE_JOIN_MODIFIER_KIND_CROSS},
   };
-  if (p == NULL || p->z == NULL) {
+  if (token == NULL)
     return 0;
-  }
-  for (unsigned j = 0; j < sizeof(kw) / sizeof(kw[0]); j++) {
-    if (p->n == kw[j].len && SYNQ_STRNCASECMP(p->z, kw[j].text, p->n) == 0) {
-      return kw[j].code;
+  for (unsigned i = 0; i < sizeof(keywords) / sizeof(keywords[0]); ++i) {
+    if (token->n == keywords[i].len &&
+        SYNQ_STRNCASECMP(token->z, keywords[i].text, token->n) == 0) {
+      uint32_t modifier = synq_parse_join_modifier(ctx, keywords[i].kind);
+      *modifiers = synq_parse_join_modifier_list(ctx, *modifiers, modifier);
+      return keywords[i].mask;
     }
   }
   return SYNQ_JT_ERROR;
 }
 
-// Invalid combinations collapse to INNER, as sqlite3JoinType() does after
-// erroring.
-static inline SyntaqliteJoinType synq_join_type(const SynqParseToken* a,
-                                                const SynqParseToken* b,
-                                                const SynqParseToken* c) {
-  int m = synq_join_keyword_mask(a) | synq_join_keyword_mask(b) |
-          synq_join_keyword_mask(c);
+// SQLite reports invalid modifier sets before falling back internally.
+static inline SyntaqliteJoinType synq_join_type(SynqParseCtx* ctx, int m) {
   if ((m & (SYNQ_JT_INNER | SYNQ_JT_OUTER)) ==
           (SYNQ_JT_INNER | SYNQ_JT_OUTER) ||
       (m & SYNQ_JT_ERROR) != 0 ||
       (m & (SYNQ_JT_OUTER | SYNQ_JT_LEFT | SYNQ_JT_RIGHT)) == SYNQ_JT_OUTER) {
+    ctx->error = 1;
     return SYNTAQLITE_JOIN_TYPE_INNER;
   }
   if (m & SYNQ_JT_NATURAL) {
@@ -193,6 +204,19 @@ static inline SyntaqliteJoinType synq_join_type(const SynqParseToken* a,
   if (m & SYNQ_JT_RIGHT)
     return SYNTAQLITE_JOIN_TYPE_RIGHT;
   return SYNTAQLITE_JOIN_TYPE_INNER;
+}
+
+static inline SynqJoinOpValue synq_join_operator(SynqParseCtx* ctx,
+                                                 const SynqParseToken* a,
+                                                 const SynqParseToken* b,
+                                                 const SynqParseToken* c) {
+  const SynqParseToken* tokens[] = {a, b, c};
+  uint32_t modifiers = SYNTAQLITE_NULL_NODE;
+  int mask = 0;
+  for (unsigned i = 0; i < sizeof(tokens) / sizeof(tokens[0]); ++i) {
+    mask |= synq_append_join_modifier(ctx, &modifiers, tokens[i]);
+  }
+  return (SynqJoinOpValue){synq_join_type(ctx, mask), modifiers};
 }
 
 // ON / USING need a left-hand term to join to (build.c
@@ -522,9 +546,9 @@ static inline SyntaqliteTextSpan synq_error_span(SynqParseCtx* pCtx) {
 typedef union {
   int yyinit;
   SynqSqliteParseTOKENTYPE yy0;
-  SyntaqliteJoinType yy81;
   SynqWhereRetValue yy119;
   SynqConstraintGroups yy177;
+  SynqJoinOpValue yy200;
   uint32_t yy277;
   int yy320;
   SynqUpsertValue yy352;
@@ -9378,7 +9402,8 @@ static YYACTIONTYPE yy_reduce(
     case 284: /* stl_prefix ::= seltablist joinop */
     {
       yymsp[-1].minor.yy277 = synq_parse_join_prefix(
-          pCtx, yymsp[-1].minor.yy277, yymsp[0].minor.yy81);
+          pCtx, yymsp[-1].minor.yy277, yymsp[0].minor.yy200.join_type,
+          yymsp[0].minor.yy200.modifiers);
     } break;
     case 286: /* seltablist ::= stl_prefix nm dbnm as on_using */
     {
@@ -9401,8 +9426,9 @@ static YYACTIONTYPE yy_reduce(
       } else {
         SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-4].minor.yy277);
         yymsp[-4].minor.yy277 = synq_parse_join_clause(
-            pCtx, pfx->join_prefix.join_type, pfx->join_prefix.source, tref,
-            yymsp[0].minor.yy632.on_expr, yymsp[0].minor.yy632.using_cols);
+            pCtx, pfx->join_prefix.join_type, pfx->join_prefix.modifiers,
+            pfx->join_prefix.source, tref, yymsp[0].minor.yy632.on_expr,
+            yymsp[0].minor.yy632.using_cols);
       }
     } break;
     case 287: /* seltablist ::= stl_prefix nm dbnm as indexed_by on_using */
@@ -9430,8 +9456,9 @@ static YYACTIONTYPE yy_reduce(
       } else {
         SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-5].minor.yy277);
         yymsp[-5].minor.yy277 = synq_parse_join_clause(
-            pCtx, pfx->join_prefix.join_type, pfx->join_prefix.source, tref,
-            yymsp[0].minor.yy632.on_expr, yymsp[0].minor.yy632.using_cols);
+            pCtx, pfx->join_prefix.join_type, pfx->join_prefix.modifiers,
+            pfx->join_prefix.source, tref, yymsp[0].minor.yy632.on_expr,
+            yymsp[0].minor.yy632.using_cols);
       }
     } break;
     case 288: /* seltablist ::= stl_prefix nm dbnm LP exprlist RP as on_using */
@@ -9455,8 +9482,9 @@ static YYACTIONTYPE yy_reduce(
       } else {
         SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-7].minor.yy277);
         yymsp[-7].minor.yy277 = synq_parse_join_clause(
-            pCtx, pfx->join_prefix.join_type, pfx->join_prefix.source, tref,
-            yymsp[0].minor.yy632.on_expr, yymsp[0].minor.yy632.using_cols);
+            pCtx, pfx->join_prefix.join_type, pfx->join_prefix.modifiers,
+            pfx->join_prefix.source, tref, yymsp[0].minor.yy632.on_expr,
+            yymsp[0].minor.yy632.using_cols);
       }
     } break;
     case 289: /* seltablist ::= stl_prefix LP select RP as on_using */
@@ -9471,8 +9499,9 @@ static YYACTIONTYPE yy_reduce(
       } else {
         SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-5].minor.yy277);
         yymsp[-5].minor.yy277 = synq_parse_join_clause(
-            pCtx, pfx->join_prefix.join_type, pfx->join_prefix.source, sub,
-            yymsp[0].minor.yy632.on_expr, yymsp[0].minor.yy632.using_cols);
+            pCtx, pfx->join_prefix.join_type, pfx->join_prefix.modifiers,
+            pfx->join_prefix.source, sub, yymsp[0].minor.yy632.on_expr,
+            yymsp[0].minor.yy632.using_cols);
       }
     } break;
     case 290: /* seltablist ::= stl_prefix LP seltablist RP as on_using */
@@ -9491,38 +9520,43 @@ static YYACTIONTYPE yy_reduce(
         } else {
           SyntaqliteNode* pfx = AST_NODE(&pCtx->ast, yymsp[-5].minor.yy277);
           yymsp[-5].minor.yy277 = synq_parse_join_clause(
-              pCtx, pfx->join_prefix.join_type, pfx->join_prefix.source, paren,
-              yymsp[0].minor.yy632.on_expr, yymsp[0].minor.yy632.using_cols);
+              pCtx, pfx->join_prefix.join_type, pfx->join_prefix.modifiers,
+              pfx->join_prefix.source, paren, yymsp[0].minor.yy632.on_expr,
+              yymsp[0].minor.yy632.using_cols);
         }
       }
     } break;
     case 291: /* joinop ::= COMMA|JOIN */
     {
-      yylhsminor.yy81 = (yymsp[0].minor.yy0.type == SYNTAQLITE_TK_COMMA)
-                            ? SYNTAQLITE_JOIN_TYPE_COMMA
-                            : SYNTAQLITE_JOIN_TYPE_INNER;
+      yylhsminor.yy200.join_type =
+          (yymsp[0].minor.yy0.type == SYNTAQLITE_TK_COMMA)
+              ? SYNTAQLITE_JOIN_TYPE_COMMA
+              : SYNTAQLITE_JOIN_TYPE_INNER;
+      yylhsminor.yy200.modifiers = SYNTAQLITE_NULL_NODE;
     }
-      yymsp[0].minor.yy81 = yylhsminor.yy81;
+      yymsp[0].minor.yy200 = yylhsminor.yy200;
       break;
     case 292: /* joinop ::= JOIN_KW JOIN */
     {
-      yylhsminor.yy81 = synq_join_type(&yymsp[-1].minor.yy0, NULL, NULL);
+      yylhsminor.yy200 =
+          synq_join_operator(pCtx, &yymsp[-1].minor.yy0, NULL, NULL);
     }
-      yymsp[-1].minor.yy81 = yylhsminor.yy81;
+      yymsp[-1].minor.yy200 = yylhsminor.yy200;
       break;
     case 293: /* joinop ::= JOIN_KW nm JOIN */
     {
-      yylhsminor.yy81 =
-          synq_join_type(&yymsp[-2].minor.yy0, &yymsp[-1].minor.yy0, NULL);
+      yylhsminor.yy200 = synq_join_operator(pCtx, &yymsp[-2].minor.yy0,
+                                            &yymsp[-1].minor.yy0, NULL);
     }
-      yymsp[-2].minor.yy81 = yylhsminor.yy81;
+      yymsp[-2].minor.yy200 = yylhsminor.yy200;
       break;
     case 294: /* joinop ::= JOIN_KW nm nm JOIN */
     {
-      yylhsminor.yy81 = synq_join_type(
-          &yymsp[-3].minor.yy0, &yymsp[-2].minor.yy0, &yymsp[-1].minor.yy0);
+      yylhsminor.yy200 =
+          synq_join_operator(pCtx, &yymsp[-3].minor.yy0, &yymsp[-2].minor.yy0,
+                             &yymsp[-1].minor.yy0);
     }
-      yymsp[-3].minor.yy81 = yylhsminor.yy81;
+      yymsp[-3].minor.yy200 = yylhsminor.yy200;
       break;
     case 295: /* on_using ::= ON expr */
     {

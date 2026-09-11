@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, Deferrable, DropObjectType, ExplainMode, ForeignKeyAction, ForeignKeyOptionKind, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, InitialDeferMode, IsOp, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
+from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, Deferrable, DropObjectType, ExplainMode, ForeignKeyAction, ForeignKeyOptionKind, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, InitialDeferMode, IsOp, JoinModifierKind, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
 
 
 class AggregateFunctionCall:
@@ -709,6 +709,18 @@ class LimitClause:
         return "LimitClause(...)"
 
 
+class JoinModifier:
+    """AST node: JoinModifier"""
+
+    __slots__ = ("kind")
+
+    def __init__(self, d: dict):
+        self.kind: JoinModifierKind = JoinModifierKind[d["kind"]]
+
+    def __repr__(self):
+        return "JoinModifier(...)"
+
+
 class TableRef:
     """AST node: TableRef"""
 
@@ -756,10 +768,11 @@ class ParenTableSource:
 class JoinClause:
     """AST node: JoinClause"""
 
-    __slots__ = ("join_type", "left", "right", "on_expr", "using_columns")
+    __slots__ = ("join_type", "modifiers", "left", "right", "on_expr", "using_columns")
 
     def __init__(self, d: dict):
         self.join_type: JoinType = JoinType[d["join_type"]]
+        self.modifiers: list[JoinModifier] | None = _wrap(d.get("modifiers"))
         self.left: TableSource | None = _wrap(d.get("left"))
         self.right: TableSource | None = _wrap(d.get("right"))
         self.on_expr: Expr | None = _wrap(d.get("on_expr"))
@@ -772,11 +785,12 @@ class JoinClause:
 class JoinPrefix:
     """AST node: JoinPrefix"""
 
-    __slots__ = ("source", "join_type")
+    __slots__ = ("source", "join_type", "modifiers")
 
     def __init__(self, d: dict):
         self.source: TableSource | None = _wrap(d.get("source"))
         self.join_type: JoinType = JoinType[d["join_type"]]
+        self.modifiers: list[JoinModifier] | None = _wrap(d.get("modifiers"))
 
     def __repr__(self):
         return "JoinPrefix(...)"
@@ -1078,6 +1092,7 @@ _NODE_MAP: dict[str, type] = {
     "SelectStmt": SelectStmt,
     "OrderingTerm": OrderingTerm,
     "LimitClause": LimitClause,
+    "JoinModifier": JoinModifier,
     "TableRef": TableRef,
     "SubqueryTableSource": SubqueryTableSource,
     "ParenTableSource": ParenTableSource,

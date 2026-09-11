@@ -211,7 +211,7 @@ class JoinFormat(TestSuite):
             out="""\
                 SELECT *
                 FROM a
-                NATURAL LEFT JOIN b;
+                NATURAL LEFT OUTER JOIN b;
             """,
         )
 
@@ -225,35 +225,24 @@ class JoinFormat(TestSuite):
             """,
         )
 
-    def test_join_keywords_are_a_set_not_a_sequence(self):
-        # Keywords are a set, so this is exactly NATURAL LEFT OUTER JOIN.
+    def test_join_modifier_sequence_is_preserved(self):
+        # SQLite interprets a set of modifiers; formatting retains authored order.
         return DiffTestBlueprint(
             sql="select * from a outer left natural join b",
             out="""\
                 SELECT *
                 FROM a
-                NATURAL LEFT JOIN b;
+                OUTER LEFT NATURAL JOIN b;
             """,
         )
 
-    def test_cross_natural_join_reordered(self):
+    def test_cross_natural_join_preserves_order(self):
         return DiffTestBlueprint(
             sql="select * from a cross natural join b",
             out="""\
                 SELECT *
                 FROM a
-                NATURAL CROSS JOIN b;
-            """,
-        )
-
-    def test_unknown_join_type_falls_back_to_inner(self):
-        # sqlite3JoinType() falls back to JT_INNER after erroring; we match that.
-        return DiffTestBlueprint(
-            sql="select * from a left bogus join b",
-            out="""\
-                SELECT *
-                FROM a
-                JOIN b;
+                CROSS NATURAL JOIN b;
             """,
         )
 

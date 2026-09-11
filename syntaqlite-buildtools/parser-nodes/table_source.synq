@@ -3,6 +3,24 @@ enum JoinType {
   NATURAL_INNER NATURAL_LEFT NATURAL_RIGHT NATURAL_FULL NATURAL_CROSS
 }
 
+enum JoinModifierKind { NATURAL LEFT OUTER RIGHT FULL INNER CROSS }
+
+node JoinModifier {
+  kind: inline JoinModifierKind
+
+  fmt {
+    enum_display(kind, {
+      NATURAL="NATURAL" LEFT="LEFT" OUTER="OUTER" RIGHT="RIGHT"
+      FULL="FULL" INNER="INNER" CROSS="CROSS"
+    })
+  }
+}
+
+list JoinModifierList {
+  JoinModifier
+  fmt { for_each(sep: space) { child(_item) } }
+}
+
 node TableRef {
   table_name: inline SyntaqliteTextSpan
   schema: inline SyntaqliteTextSpan
@@ -55,6 +73,7 @@ node ParenTableSource {
 
 node JoinClause {
   join_type: inline JoinType
+  modifiers: index JoinModifierList
   left: index TableSource
   right: index TableSource
   on_expr: index Expr
@@ -70,19 +89,8 @@ node JoinClause {
       default {
         child(left) hardline
         group {
-          switch(join_type) {
-            INNER         { "JOIN" }
-            LEFT          { "LEFT" "JOIN" }
-            RIGHT         { "RIGHT" "JOIN" }
-            FULL          { "FULL" "JOIN" }
-            CROSS         { "CROSS" "JOIN" }
-            NATURAL_INNER { "NATURAL" "JOIN" }
-            NATURAL_LEFT  { "NATURAL" "LEFT" "JOIN" }
-            NATURAL_RIGHT { "NATURAL" "RIGHT" "JOIN" }
-            NATURAL_FULL  { "NATURAL" "FULL" "JOIN" }
-            NATURAL_CROSS { "NATURAL" "CROSS" "JOIN" }
-            COMMA         { "," }
-          }
+          if_set(modifiers) { child(modifiers) space }
+          "JOIN"
           space child(right)
           if_set(on_expr) { nest { line "ON" space child(on_expr) } }
           if_set(using_columns) { group { space "USING" space "(" nest { softline child(using_columns) } softline ")" } }
@@ -95,6 +103,7 @@ node JoinClause {
 node JoinPrefix {
   source: index TableSource
   join_type: inline JoinType
+  modifiers: index JoinModifierList
 
   fmt { child(source) }
 }

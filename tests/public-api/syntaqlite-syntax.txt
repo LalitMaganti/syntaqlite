@@ -44,6 +44,7 @@
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::IndexHint
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::InitialDeferMode
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::IsOp
+#[repr(u32)] pub enum syntaqlite_syntax::nodes::JoinModifierKind
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::JoinType
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::LikeKeyword
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::LiteralType
@@ -134,6 +135,8 @@ impl core::convert::From<syntaqlite_syntax::nodes::InExprSourceId> for syntaqlit
 impl core::convert::From<syntaqlite_syntax::nodes::InsertStmtId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::IsExprId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::JoinClauseId> for syntaqlite_syntax::any::AnyNodeId
+impl core::convert::From<syntaqlite_syntax::nodes::JoinModifierId> for syntaqlite_syntax::any::AnyNodeId
+impl core::convert::From<syntaqlite_syntax::nodes::JoinModifierListId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::JoinPrefixId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::LikeExprId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::LimitClauseId> for syntaqlite_syntax::any::AnyNodeId
@@ -232,6 +235,7 @@ impl core::fmt::Debug for syntaqlite_syntax::nodes::InExpr<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::InsertStmt<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::IsExpr<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::JoinClause<'_>
+impl core::fmt::Debug for syntaqlite_syntax::nodes::JoinModifier<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::JoinPrefix<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::LikeExpr<'_>
 impl core::fmt::Debug for syntaqlite_syntax::nodes::LimitClause<'_>
@@ -317,6 +321,7 @@ impl core::fmt::Display for syntaqlite_syntax::nodes::InExpr<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::InsertStmt<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::IsExpr<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::JoinClause<'_>
+impl core::fmt::Display for syntaqlite_syntax::nodes::JoinModifier<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::JoinPrefix<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::LikeExpr<'_>
 impl core::fmt::Display for syntaqlite_syntax::nodes::LimitClause<'_>
@@ -482,6 +487,9 @@ impl syntaqlite_syntax::nodes::InsertStmtId
 impl syntaqlite_syntax::nodes::IsExprId
 impl syntaqlite_syntax::nodes::IsOp
 impl syntaqlite_syntax::nodes::JoinClauseId
+impl syntaqlite_syntax::nodes::JoinModifierId
+impl syntaqlite_syntax::nodes::JoinModifierKind
+impl syntaqlite_syntax::nodes::JoinModifierListId
 impl syntaqlite_syntax::nodes::JoinPrefixId
 impl syntaqlite_syntax::nodes::JoinType
 impl syntaqlite_syntax::nodes::LikeExprId
@@ -618,6 +626,8 @@ impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::InExprS
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::InsertStmtId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::IsExprId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::JoinClauseId
+impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::JoinModifierId
+impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::JoinModifierListId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::JoinPrefixId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::LikeExprId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::LimitClauseId
@@ -715,6 +725,7 @@ impl<'a> core::convert::From<syntaqlite_syntax::nodes::InExprSource<'a>> for syn
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::InsertStmt<'a>> for syntaqlite_syntax::nodes::InsertStmtId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::IsExpr<'a>> for syntaqlite_syntax::nodes::IsExprId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::JoinClause<'a>> for syntaqlite_syntax::nodes::JoinClauseId
+impl<'a> core::convert::From<syntaqlite_syntax::nodes::JoinModifier<'a>> for syntaqlite_syntax::nodes::JoinModifierId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::JoinPrefix<'a>> for syntaqlite_syntax::nodes::JoinPrefixId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::LikeExpr<'a>> for syntaqlite_syntax::nodes::LikeExprId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::LimitClause<'a>> for syntaqlite_syntax::nodes::LimitClauseId
@@ -758,6 +769,7 @@ impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaql
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::CteDefinition<'a>>> for syntaqlite_syntax::nodes::CteListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Expr<'a>>> for syntaqlite_syntax::nodes::ExprListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ForeignKeyOption<'a>>> for syntaqlite_syntax::nodes::ForeignKeyOptionListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::JoinModifier<'a>>> for syntaqlite_syntax::nodes::JoinModifierListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::NamedWindowDef<'a>>> for syntaqlite_syntax::nodes::NamedWindowDefListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::OrderingTerm<'a>>> for syntaqlite_syntax::nodes::OrderByListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ResultColumn<'a>>> for syntaqlite_syntax::nodes::ResultColumnListId
@@ -814,6 +826,7 @@ impl<'a> syntaqlite_syntax::nodes::InExprSource<'a>
 impl<'a> syntaqlite_syntax::nodes::InsertStmt<'a>
 impl<'a> syntaqlite_syntax::nodes::IsExpr<'a>
 impl<'a> syntaqlite_syntax::nodes::JoinClause<'a>
+impl<'a> syntaqlite_syntax::nodes::JoinModifier<'a>
 impl<'a> syntaqlite_syntax::nodes::JoinPrefix<'a>
 impl<'a> syntaqlite_syntax::nodes::LikeExpr<'a>
 impl<'a> syntaqlite_syntax::nodes::LimitClause<'a>
@@ -893,6 +906,7 @@ impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::no
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::InsertStmt<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::IsExpr<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::JoinClause<'a>
+impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::JoinModifier<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::JoinPrefix<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::LikeExpr<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::LimitClause<'a>
@@ -1125,6 +1139,8 @@ pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::InExprS
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::InsertStmtId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::IsExprId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::JoinClauseId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::JoinModifierId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::JoinModifierListId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::JoinPrefixId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::LikeExprId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::LimitClauseId) -> syntaqlite_syntax::any::AnyNodeId
@@ -1648,15 +1664,26 @@ pub fn syntaqlite_syntax::nodes::JoinClause<'_>::fmt(&self, &mut core::fmt::Form
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::join_type(&self) -> syntaqlite_syntax::nodes::JoinType
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::left(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableSource<'a>>
+pub fn syntaqlite_syntax::nodes::JoinClause<'a>::modifiers(&self) -> core::option::Option<syntaqlite_syntax::nodes::JoinModifierList<'a>>
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::JoinClauseId
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::on_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::right(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableSource<'a>>
 pub fn syntaqlite_syntax::nodes::JoinClause<'a>::using_columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::JoinClauseId::from(syntaqlite_syntax::nodes::JoinClause<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::JoinClauseId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::nodes::JoinModifier<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::JoinModifier<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::JoinModifier<'a>::kind(&self) -> syntaqlite_syntax::nodes::JoinModifierKind
+pub fn syntaqlite_syntax::nodes::JoinModifier<'a>::node_id(&self) -> syntaqlite_syntax::nodes::JoinModifierId
+pub fn syntaqlite_syntax::nodes::JoinModifierId::from(syntaqlite_syntax::nodes::JoinModifier<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::JoinModifierId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::nodes::JoinModifierKind::as_str(&self) -> &'static str
+pub fn syntaqlite_syntax::nodes::JoinModifierListId::from(syntaqlite_syntax::nodes::JoinModifierList<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::JoinModifierListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::JoinPrefix<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::join_type(&self) -> syntaqlite_syntax::nodes::JoinType
+pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::modifiers(&self) -> core::option::Option<syntaqlite_syntax::nodes::JoinModifierList<'a>>
 pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::node_id(&self) -> syntaqlite_syntax::nodes::JoinPrefixId
 pub fn syntaqlite_syntax::nodes::JoinPrefix<'a>::source(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableSource<'a>>
 pub fn syntaqlite_syntax::nodes::JoinPrefixId::from(syntaqlite_syntax::nodes::JoinPrefix<'a>) -> Self
@@ -2254,6 +2281,9 @@ pub struct syntaqlite_syntax::nodes::IsExpr<'a>
 pub struct syntaqlite_syntax::nodes::IsExprId(_)
 pub struct syntaqlite_syntax::nodes::JoinClause<'a>
 pub struct syntaqlite_syntax::nodes::JoinClauseId(_)
+pub struct syntaqlite_syntax::nodes::JoinModifier<'a>
+pub struct syntaqlite_syntax::nodes::JoinModifierId(_)
+pub struct syntaqlite_syntax::nodes::JoinModifierListId(_)
 pub struct syntaqlite_syntax::nodes::JoinPrefix<'a>
 pub struct syntaqlite_syntax::nodes::JoinPrefixId(_)
 pub struct syntaqlite_syntax::nodes::LikeExpr<'a>
@@ -2703,6 +2733,13 @@ pub syntaqlite_syntax::nodes::IsOp::IsNot = 1
 pub syntaqlite_syntax::nodes::IsOp::IsNotDistinct = 4
 pub syntaqlite_syntax::nodes::IsOp::IsNull = 2
 pub syntaqlite_syntax::nodes::IsOp::NotNull = 3
+pub syntaqlite_syntax::nodes::JoinModifierKind::Cross = 6
+pub syntaqlite_syntax::nodes::JoinModifierKind::Full = 4
+pub syntaqlite_syntax::nodes::JoinModifierKind::Inner = 5
+pub syntaqlite_syntax::nodes::JoinModifierKind::Left = 1
+pub syntaqlite_syntax::nodes::JoinModifierKind::Natural = 0
+pub syntaqlite_syntax::nodes::JoinModifierKind::Outer = 2
+pub syntaqlite_syntax::nodes::JoinModifierKind::Right = 3
 pub syntaqlite_syntax::nodes::JoinType::Comma = 0
 pub syntaqlite_syntax::nodes::JoinType::Cross = 5
 pub syntaqlite_syntax::nodes::JoinType::Full = 4
@@ -2774,6 +2811,8 @@ pub syntaqlite_syntax::nodes::Node::InExpr(syntaqlite_syntax::nodes::InExpr<'a>)
 pub syntaqlite_syntax::nodes::Node::InsertStmt(syntaqlite_syntax::nodes::InsertStmt<'a>)
 pub syntaqlite_syntax::nodes::Node::IsExpr(syntaqlite_syntax::nodes::IsExpr<'a>)
 pub syntaqlite_syntax::nodes::Node::JoinClause(syntaqlite_syntax::nodes::JoinClause<'a>)
+pub syntaqlite_syntax::nodes::Node::JoinModifier(syntaqlite_syntax::nodes::JoinModifier<'a>)
+pub syntaqlite_syntax::nodes::Node::JoinModifierList(syntaqlite_syntax::nodes::JoinModifierList<'a>)
 pub syntaqlite_syntax::nodes::Node::JoinPrefix(syntaqlite_syntax::nodes::JoinPrefix<'a>)
 pub syntaqlite_syntax::nodes::Node::LikeExpr(syntaqlite_syntax::nodes::LikeExpr<'a>)
 pub syntaqlite_syntax::nodes::Node::LimitClause(syntaqlite_syntax::nodes::LimitClause<'a>)
@@ -2820,8 +2859,8 @@ pub syntaqlite_syntax::nodes::Node::WindowDefList(syntaqlite_syntax::nodes::Wind
 pub syntaqlite_syntax::nodes::Node::WithClause(syntaqlite_syntax::nodes::WithClause<'a>)
 pub syntaqlite_syntax::nodes::NodeTag::AggregateFunctionCall = 1
 pub syntaqlite_syntax::nodes::NodeTag::AlterTableStmt = 51
-pub syntaqlite_syntax::nodes::NodeTag::AnalyzeOrReindexStmt = 70
-pub syntaqlite_syntax::nodes::NodeTag::AttachStmt = 71
+pub syntaqlite_syntax::nodes::NodeTag::AnalyzeOrReindexStmt = 72
+pub syntaqlite_syntax::nodes::NodeTag::AttachStmt = 73
 pub syntaqlite_syntax::nodes::NodeTag::BetweenExpr = 10
 pub syntaqlite_syntax::nodes::NodeTag::BinaryExpr = 37
 pub syntaqlite_syntax::nodes::NodeTag::CaseExpr = 12
@@ -2836,45 +2875,47 @@ pub syntaqlite_syntax::nodes::NodeTag::ColumnDefList = 22
 pub syntaqlite_syntax::nodes::NodeTag::ColumnRef = 4
 pub syntaqlite_syntax::nodes::NodeTag::CompoundSelect = 5
 pub syntaqlite_syntax::nodes::NodeTag::ConstraintNameDeclaration = 19
-pub syntaqlite_syntax::nodes::NodeTag::CreateIndexStmt = 75
+pub syntaqlite_syntax::nodes::NodeTag::CreateIndexStmt = 77
 pub syntaqlite_syntax::nodes::NodeTag::CreateTableStmt = 26
-pub syntaqlite_syntax::nodes::NodeTag::CreateTriggerStmt = 67
-pub syntaqlite_syntax::nodes::NodeTag::CreateViewStmt = 76
-pub syntaqlite_syntax::nodes::NodeTag::CreateVirtualTableStmt = 68
+pub syntaqlite_syntax::nodes::NodeTag::CreateTriggerStmt = 69
+pub syntaqlite_syntax::nodes::NodeTag::CreateViewStmt = 78
+pub syntaqlite_syntax::nodes::NodeTag::CreateVirtualTableStmt = 70
 pub syntaqlite_syntax::nodes::NodeTag::CteDefinition = 27
 pub syntaqlite_syntax::nodes::NodeTag::CteList = 28
 pub syntaqlite_syntax::nodes::NodeTag::DeleteStmt = 32
-pub syntaqlite_syntax::nodes::NodeTag::DetachStmt = 72
+pub syntaqlite_syntax::nodes::NodeTag::DetachStmt = 74
 pub syntaqlite_syntax::nodes::NodeTag::DropStmt = 50
 pub syntaqlite_syntax::nodes::NodeTag::Error = 42
 pub syntaqlite_syntax::nodes::NodeTag::ExistsExpr = 7
-pub syntaqlite_syntax::nodes::NodeTag::ExplainStmt = 74
+pub syntaqlite_syntax::nodes::NodeTag::ExplainStmt = 76
 pub syntaqlite_syntax::nodes::NodeTag::ExprList = 44
-pub syntaqlite_syntax::nodes::NodeTag::FilterOver = 85
+pub syntaqlite_syntax::nodes::NodeTag::FilterOver = 87
 pub syntaqlite_syntax::nodes::NodeTag::ForeignKeyClause = 17
 pub syntaqlite_syntax::nodes::NodeTag::ForeignKeyOption = 15
 pub syntaqlite_syntax::nodes::NodeTag::ForeignKeyOptionList = 16
-pub syntaqlite_syntax::nodes::NodeTag::FrameBound = 79
-pub syntaqlite_syntax::nodes::NodeTag::FrameSpec = 80
+pub syntaqlite_syntax::nodes::NodeTag::FrameBound = 81
+pub syntaqlite_syntax::nodes::NodeTag::FrameSpec = 82
 pub syntaqlite_syntax::nodes::NodeTag::FunctionCall = 45
 pub syntaqlite_syntax::nodes::NodeTag::IdentName = 41
 pub syntaqlite_syntax::nodes::NodeTag::InExpr = 8
 pub syntaqlite_syntax::nodes::NodeTag::InsertStmt = 36
 pub syntaqlite_syntax::nodes::NodeTag::IsExpr = 9
-pub syntaqlite_syntax::nodes::NodeTag::JoinClause = 63
-pub syntaqlite_syntax::nodes::NodeTag::JoinPrefix = 64
+pub syntaqlite_syntax::nodes::NodeTag::JoinClause = 65
+pub syntaqlite_syntax::nodes::NodeTag::JoinModifier = 60
+pub syntaqlite_syntax::nodes::NodeTag::JoinModifierList = 61
+pub syntaqlite_syntax::nodes::NodeTag::JoinPrefix = 66
 pub syntaqlite_syntax::nodes::NodeTag::LikeExpr = 11
 pub syntaqlite_syntax::nodes::NodeTag::LimitClause = 59
 pub syntaqlite_syntax::nodes::NodeTag::Literal = 39
-pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDef = 83
-pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDefList = 84
+pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDef = 85
+pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDefList = 86
 pub syntaqlite_syntax::nodes::NodeTag::Null = 0
 pub syntaqlite_syntax::nodes::NodeTag::OrderByList = 58
 pub syntaqlite_syntax::nodes::NodeTag::OrderedSetFunctionCall = 2
 pub syntaqlite_syntax::nodes::NodeTag::OrderingTerm = 57
 pub syntaqlite_syntax::nodes::NodeTag::ParenExpr = 40
-pub syntaqlite_syntax::nodes::NodeTag::ParenTableSource = 62
-pub syntaqlite_syntax::nodes::NodeTag::PragmaStmt = 69
+pub syntaqlite_syntax::nodes::NodeTag::ParenTableSource = 64
+pub syntaqlite_syntax::nodes::NodeTag::PragmaStmt = 71
 pub syntaqlite_syntax::nodes::NodeTag::QualifiedName = 49
 pub syntaqlite_syntax::nodes::NodeTag::RaiseExpr = 48
 pub syntaqlite_syntax::nodes::NodeTag::ResultColumn = 54
@@ -2885,24 +2926,24 @@ pub syntaqlite_syntax::nodes::NodeTag::SelectStmt = 56
 pub syntaqlite_syntax::nodes::NodeTag::SetClause = 33
 pub syntaqlite_syntax::nodes::NodeTag::SetClauseList = 34
 pub syntaqlite_syntax::nodes::NodeTag::SubqueryExpr = 6
-pub syntaqlite_syntax::nodes::NodeTag::SubqueryTableSource = 61
+pub syntaqlite_syntax::nodes::NodeTag::SubqueryTableSource = 63
 pub syntaqlite_syntax::nodes::NodeTag::TableConstraint = 23
 pub syntaqlite_syntax::nodes::NodeTag::TableConstraintGroup = 24
 pub syntaqlite_syntax::nodes::NodeTag::TableConstraintList = 25
-pub syntaqlite_syntax::nodes::NodeTag::TableRef = 60
+pub syntaqlite_syntax::nodes::NodeTag::TableRef = 62
 pub syntaqlite_syntax::nodes::NodeTag::TransactionStmt = 52
-pub syntaqlite_syntax::nodes::NodeTag::TriggerCmdList = 66
-pub syntaqlite_syntax::nodes::NodeTag::TriggerEvent = 65
+pub syntaqlite_syntax::nodes::NodeTag::TriggerCmdList = 68
+pub syntaqlite_syntax::nodes::NodeTag::TriggerEvent = 67
 pub syntaqlite_syntax::nodes::NodeTag::UnaryExpr = 38
 pub syntaqlite_syntax::nodes::NodeTag::UpdateStmt = 35
 pub syntaqlite_syntax::nodes::NodeTag::UpsertClause = 30
 pub syntaqlite_syntax::nodes::NodeTag::UpsertClauseList = 31
-pub syntaqlite_syntax::nodes::NodeTag::VacuumStmt = 73
-pub syntaqlite_syntax::nodes::NodeTag::ValuesClause = 78
-pub syntaqlite_syntax::nodes::NodeTag::ValuesRowList = 77
+pub syntaqlite_syntax::nodes::NodeTag::VacuumStmt = 75
+pub syntaqlite_syntax::nodes::NodeTag::ValuesClause = 80
+pub syntaqlite_syntax::nodes::NodeTag::ValuesRowList = 79
 pub syntaqlite_syntax::nodes::NodeTag::Variable = 46
-pub syntaqlite_syntax::nodes::NodeTag::WindowDef = 81
-pub syntaqlite_syntax::nodes::NodeTag::WindowDefList = 82
+pub syntaqlite_syntax::nodes::NodeTag::WindowDef = 83
+pub syntaqlite_syntax::nodes::NodeTag::WindowDefList = 84
 pub syntaqlite_syntax::nodes::NodeTag::WithClause = 29
 pub syntaqlite_syntax::nodes::NullsOrder::First = 1
 pub syntaqlite_syntax::nodes::NullsOrder::Last = 2
@@ -3115,6 +3156,9 @@ pub type syntaqlite_syntax::nodes::InExprSourceId::Node<'a> = syntaqlite_syntax:
 pub type syntaqlite_syntax::nodes::InsertStmtId::Node<'a> = syntaqlite_syntax::nodes::InsertStmt<'a>
 pub type syntaqlite_syntax::nodes::IsExprId::Node<'a> = syntaqlite_syntax::nodes::IsExpr<'a>
 pub type syntaqlite_syntax::nodes::JoinClauseId::Node<'a> = syntaqlite_syntax::nodes::JoinClause<'a>
+pub type syntaqlite_syntax::nodes::JoinModifierId::Node<'a> = syntaqlite_syntax::nodes::JoinModifier<'a>
+pub type syntaqlite_syntax::nodes::JoinModifierList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::JoinModifier<'a>>
+pub type syntaqlite_syntax::nodes::JoinModifierListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::JoinModifier<'a>>
 pub type syntaqlite_syntax::nodes::JoinPrefixId::Node<'a> = syntaqlite_syntax::nodes::JoinPrefix<'a>
 pub type syntaqlite_syntax::nodes::LikeExprId::Node<'a> = syntaqlite_syntax::nodes::LikeExpr<'a>
 pub type syntaqlite_syntax::nodes::LimitClauseId::Node<'a> = syntaqlite_syntax::nodes::LimitClause<'a>

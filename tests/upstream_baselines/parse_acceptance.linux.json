@@ -1,11 +1,11 @@
 {
   "total": 395694,
-  "parse_ok": 290591,
-  "parse_error": 105103,
+  "parse_ok": 290585,
+  "parse_error": 105109,
   "both_accept": 288972,
-  "both_reject": 105925,
+  "both_reject": 105931,
   "false_positive": 231,
-  "gap": 566,
+  "gap": 560,
   "false_positive_categories": {
     "unknown column": 10,
     "unknown function: fts3_tokenizer": 12,
@@ -117,7 +117,6 @@
     "unknown datatype for N.a: ?": 1,
     "unknown datatype for N.f: ?": 2,
     "unknown function: ?": 2,
-    "unknown join type: ?": 6,
     "unsafe use of N()": 2,
     "view N already exists": 5,
     "view N cannot reference objects in database aux": 2,

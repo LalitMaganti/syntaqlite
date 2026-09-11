@@ -574,8 +574,8 @@ mod tests {
         assert_eq!(model.tag_for("ParenExpr"), 40);
         assert_eq!(model.tag_for("RowValue"), 43);
         assert_eq!(model.tag_for("SelectStmt"), 56);
-        assert_eq!(model.tag_for("ParenTableSource"), 62);
-        assert_eq!(model.tag_for("FilterOver"), 85);
-        assert_eq!(model.base_tag_count(), 85);
+        assert_eq!(model.tag_for("ParenTableSource"), 64);
+        assert_eq!(model.tag_for("FilterOver"), 87);
+        assert_eq!(model.base_tag_count(), 87);
     }
 }

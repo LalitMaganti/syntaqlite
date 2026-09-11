@@ -719,6 +719,16 @@ static inline uint32_t synq_parse_limit_clause(SynqParseCtx* ctx,
       (uint32_t)sizeof(SyntaqliteLimitClause));
 }
 
+static inline uint32_t synq_parse_join_modifier(
+    SynqParseCtx* ctx,
+    SyntaqliteJoinModifierKind kind) {
+  return synq_parse_build(
+      ctx,
+      &(SyntaqliteJoinModifier){.tag = SYNTAQLITE_NODE_JOIN_MODIFIER,
+                                .kind = kind},
+      (uint32_t)sizeof(SyntaqliteJoinModifier));
+}
+
 static inline uint32_t synq_parse_table_ref(SynqParseCtx* ctx,
                                             SyntaqliteTextSpan table_name,
                                             SyntaqliteTextSpan schema,
@@ -764,6 +774,7 @@ static inline uint32_t synq_parse_paren_table_source(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_join_clause(SynqParseCtx* ctx,
                                               SyntaqliteJoinType join_type,
+                                              uint32_t modifiers,
                                               uint32_t left,
                                               uint32_t right,
                                               uint32_t on_expr,
@@ -772,6 +783,7 @@ static inline uint32_t synq_parse_join_clause(SynqParseCtx* ctx,
       ctx,
       &(SyntaqliteJoinClause){.tag = SYNTAQLITE_NODE_JOIN_CLAUSE,
                               .join_type = join_type,
+                              .modifiers = modifiers,
                               .left = left,
                               .right = right,
                               .on_expr = on_expr,
@@ -781,12 +793,14 @@ static inline uint32_t synq_parse_join_clause(SynqParseCtx* ctx,
 
 static inline uint32_t synq_parse_join_prefix(SynqParseCtx* ctx,
                                               uint32_t source,
-                                              SyntaqliteJoinType join_type) {
+                                              SyntaqliteJoinType join_type,
+                                              uint32_t modifiers) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteJoinPrefix){.tag = SYNTAQLITE_NODE_JOIN_PREFIX,
                               .source = source,
-                              .join_type = join_type},
+                              .join_type = join_type,
+                              .modifiers = modifiers},
       (uint32_t)sizeof(SyntaqliteJoinPrefix));
 }
 
@@ -1121,6 +1135,13 @@ static inline uint32_t synq_parse_order_by_list(SynqParseCtx* ctx,
                                                 uint32_t child) {
   return synq_parse_list_append(ctx, SYNTAQLITE_NODE_ORDER_BY_LIST, list_id,
                                 child);
+}
+
+static inline uint32_t synq_parse_join_modifier_list(SynqParseCtx* ctx,
+                                                     uint32_t list_id,
+                                                     uint32_t child) {
+  return synq_parse_list_append(ctx, SYNTAQLITE_NODE_JOIN_MODIFIER_LIST,
+                                list_id, child);
 }
 
 static inline uint32_t synq_parse_trigger_cmd_list(SynqParseCtx* ctx,
