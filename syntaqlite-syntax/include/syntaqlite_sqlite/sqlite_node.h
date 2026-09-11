@@ -235,6 +235,16 @@ typedef enum SyntaqliteJoinType {
   SYNTAQLITE_JOIN_TYPE_NATURAL_CROSS = 10
 } SyntaqliteJoinType;
 
+typedef enum SyntaqliteJoinModifierKind {
+  SYNTAQLITE_JOIN_MODIFIER_KIND_NATURAL = 0,
+  SYNTAQLITE_JOIN_MODIFIER_KIND_LEFT = 1,
+  SYNTAQLITE_JOIN_MODIFIER_KIND_OUTER = 2,
+  SYNTAQLITE_JOIN_MODIFIER_KIND_RIGHT = 3,
+  SYNTAQLITE_JOIN_MODIFIER_KIND_FULL = 4,
+  SYNTAQLITE_JOIN_MODIFIER_KIND_INNER = 5,
+  SYNTAQLITE_JOIN_MODIFIER_KIND_CROSS = 6
+} SyntaqliteJoinModifierKind;
+
 typedef enum SyntaqliteTriggerTiming {
   SYNTAQLITE_TRIGGER_TIMING_BEFORE = 0,
   SYNTAQLITE_TRIGGER_TIMING_AFTER = 1,
@@ -393,32 +403,34 @@ typedef enum SyntaqliteNodeTag {
   SYNTAQLITE_NODE_ORDERING_TERM = 57,
   SYNTAQLITE_NODE_ORDER_BY_LIST = 58,
   SYNTAQLITE_NODE_LIMIT_CLAUSE = 59,
-  SYNTAQLITE_NODE_TABLE_REF = 60,
-  SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE = 61,
-  SYNTAQLITE_NODE_PAREN_TABLE_SOURCE = 62,
-  SYNTAQLITE_NODE_JOIN_CLAUSE = 63,
-  SYNTAQLITE_NODE_JOIN_PREFIX = 64,
-  SYNTAQLITE_NODE_TRIGGER_EVENT = 65,
-  SYNTAQLITE_NODE_TRIGGER_CMD_LIST = 66,
-  SYNTAQLITE_NODE_CREATE_TRIGGER_STMT = 67,
-  SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT = 68,
-  SYNTAQLITE_NODE_PRAGMA_STMT = 69,
-  SYNTAQLITE_NODE_ANALYZE_OR_REINDEX_STMT = 70,
-  SYNTAQLITE_NODE_ATTACH_STMT = 71,
-  SYNTAQLITE_NODE_DETACH_STMT = 72,
-  SYNTAQLITE_NODE_VACUUM_STMT = 73,
-  SYNTAQLITE_NODE_EXPLAIN_STMT = 74,
-  SYNTAQLITE_NODE_CREATE_INDEX_STMT = 75,
-  SYNTAQLITE_NODE_CREATE_VIEW_STMT = 76,
-  SYNTAQLITE_NODE_VALUES_ROW_LIST = 77,
-  SYNTAQLITE_NODE_VALUES_CLAUSE = 78,
-  SYNTAQLITE_NODE_FRAME_BOUND = 79,
-  SYNTAQLITE_NODE_FRAME_SPEC = 80,
-  SYNTAQLITE_NODE_WINDOW_DEF = 81,
-  SYNTAQLITE_NODE_WINDOW_DEF_LIST = 82,
-  SYNTAQLITE_NODE_NAMED_WINDOW_DEF = 83,
-  SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST = 84,
-  SYNTAQLITE_NODE_FILTER_OVER = 85,
+  SYNTAQLITE_NODE_JOIN_MODIFIER = 60,
+  SYNTAQLITE_NODE_JOIN_MODIFIER_LIST = 61,
+  SYNTAQLITE_NODE_TABLE_REF = 62,
+  SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE = 63,
+  SYNTAQLITE_NODE_PAREN_TABLE_SOURCE = 64,
+  SYNTAQLITE_NODE_JOIN_CLAUSE = 65,
+  SYNTAQLITE_NODE_JOIN_PREFIX = 66,
+  SYNTAQLITE_NODE_TRIGGER_EVENT = 67,
+  SYNTAQLITE_NODE_TRIGGER_CMD_LIST = 68,
+  SYNTAQLITE_NODE_CREATE_TRIGGER_STMT = 69,
+  SYNTAQLITE_NODE_CREATE_VIRTUAL_TABLE_STMT = 70,
+  SYNTAQLITE_NODE_PRAGMA_STMT = 71,
+  SYNTAQLITE_NODE_ANALYZE_OR_REINDEX_STMT = 72,
+  SYNTAQLITE_NODE_ATTACH_STMT = 73,
+  SYNTAQLITE_NODE_DETACH_STMT = 74,
+  SYNTAQLITE_NODE_VACUUM_STMT = 75,
+  SYNTAQLITE_NODE_EXPLAIN_STMT = 76,
+  SYNTAQLITE_NODE_CREATE_INDEX_STMT = 77,
+  SYNTAQLITE_NODE_CREATE_VIEW_STMT = 78,
+  SYNTAQLITE_NODE_VALUES_ROW_LIST = 79,
+  SYNTAQLITE_NODE_VALUES_CLAUSE = 80,
+  SYNTAQLITE_NODE_FRAME_BOUND = 81,
+  SYNTAQLITE_NODE_FRAME_SPEC = 82,
+  SYNTAQLITE_NODE_WINDOW_DEF = 83,
+  SYNTAQLITE_NODE_WINDOW_DEF_LIST = 84,
+  SYNTAQLITE_NODE_NAMED_WINDOW_DEF = 85,
+  SYNTAQLITE_NODE_NAMED_WINDOW_DEF_LIST = 86,
+  SYNTAQLITE_NODE_FILTER_OVER = 87,
   SYNTAQLITE_NODE_COUNT
 } SyntaqliteNodeTag;
 SYNQ_STATIC_ASSERT(sizeof(SyntaqliteNodeTag) == sizeof(uint32_t),
@@ -882,6 +894,18 @@ typedef struct SyntaqliteLimitClause {
   uint32_t offset;
 } SyntaqliteLimitClause;
 
+typedef struct SyntaqliteJoinModifier {
+  SyntaqliteNodeTag tag;
+  SyntaqliteJoinModifierKind kind;
+} SyntaqliteJoinModifier;
+
+// List of JoinModifier
+typedef struct SyntaqliteJoinModifierList {
+  uint32_t tag;
+  uint32_t count;
+  uint32_t children[SYNTAQLITE_FLEXIBLE_ARRAY];
+} SyntaqliteJoinModifierList;
+
 typedef struct SyntaqliteTableRef {
   SyntaqliteNodeTag tag;
   SyntaqliteTextSpan table_name;
@@ -908,6 +932,7 @@ typedef struct SyntaqliteParenTableSource {
 typedef struct SyntaqliteJoinClause {
   SyntaqliteNodeTag tag;
   SyntaqliteJoinType join_type;
+  uint32_t modifiers;
   uint32_t left;
   uint32_t right;
   uint32_t on_expr;
@@ -918,6 +943,7 @@ typedef struct SyntaqliteJoinPrefix {
   SyntaqliteNodeTag tag;
   uint32_t source;
   SyntaqliteJoinType join_type;
+  uint32_t modifiers;
 } SyntaqliteJoinPrefix;
 
 typedef struct SyntaqliteTriggerEvent {
@@ -1140,6 +1166,8 @@ typedef union SyntaqliteNode {
   SyntaqliteOrderingTerm ordering_term;
   SyntaqliteOrderByList order_by_list;
   SyntaqliteLimitClause limit_clause;
+  SyntaqliteJoinModifier join_modifier;
+  SyntaqliteJoinModifierList join_modifier_list;
   SyntaqliteTableRef table_ref;
   SyntaqliteSubqueryTableSource subquery_table_source;
   SyntaqliteParenTableSource paren_table_source;
@@ -2146,6 +2174,16 @@ template <>
 struct NodeTag<SyntaqliteLimitClause> {
   static constexpr bool kHasTag = true;
   static constexpr uint32_t kValue = SYNTAQLITE_NODE_LIMIT_CLAUSE;
+};
+template <>
+struct NodeTag<SyntaqliteJoinModifier> {
+  static constexpr bool kHasTag = true;
+  static constexpr uint32_t kValue = SYNTAQLITE_NODE_JOIN_MODIFIER;
+};
+template <>
+struct NodeTag<SyntaqliteJoinModifierList> {
+  static constexpr bool kHasTag = true;
+  static constexpr uint32_t kValue = SYNTAQLITE_NODE_JOIN_MODIFIER_LIST;
 };
 template <>
 struct NodeTag<SyntaqliteTableRef> {

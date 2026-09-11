@@ -85,6 +85,12 @@ typedef struct SynqUpsertValue {
   uint32_t returning;
 } SynqUpsertValue;
 
+// Keep the authored modifier sequence alongside its semantic join type.
+typedef struct SynqJoinOpValue {
+  SyntaqliteJoinType join_type;
+  uint32_t modifiers;
+} SynqJoinOpValue;
+
 // paren_exprlist: optional `LP exprlist RP` tail. Tracks whether the
 // parens were present so callers can distinguish `foo` (has_parens=0)
 // from `foo()` (has_parens=1, args=NULL_NODE) — relevant for table /
@@ -125,7 +131,7 @@ static inline int synq_trim_generated_always(SynqParseToken* t) {
   return 1;
 }
 
-// Join keywords are an unordered set, not a sequence; see sqlite3JoinType().
+// Semantic join type depends on the set of keywords; see sqlite3JoinType().
 #define SYNQ_JT_INNER   0x01
 #define SYNQ_JT_CROSS   0x02
 #define SYNQ_JT_NATURAL 0x04
@@ -134,40 +140,41 @@ static inline int synq_trim_generated_always(SynqParseToken* t) {
 #define SYNQ_JT_OUTER   0x20
 #define SYNQ_JT_ERROR   0x40
 
-static inline int synq_join_keyword_mask(const SynqParseToken* p) {
+static inline int synq_append_join_modifier(SynqParseCtx* ctx,
+                                             uint32_t* modifiers,
+                                             const SynqParseToken* token) {
   static const struct {
     const char* text;
     unsigned char len;
-    unsigned char code;
-  } kw[] = {
-      {"natural", 7, SYNQ_JT_NATURAL},
-      {"left", 4, SYNQ_JT_LEFT | SYNQ_JT_OUTER},
-      {"outer", 5, SYNQ_JT_OUTER},
-      {"right", 5, SYNQ_JT_RIGHT | SYNQ_JT_OUTER},
-      {"full", 4, SYNQ_JT_LEFT | SYNQ_JT_RIGHT | SYNQ_JT_OUTER},
-      {"inner", 5, SYNQ_JT_INNER},
-      {"cross", 5, SYNQ_JT_INNER | SYNQ_JT_CROSS},
+    unsigned char mask;
+    SyntaqliteJoinModifierKind kind;
+  } keywords[] = {
+    {"natural", 7, SYNQ_JT_NATURAL, SYNTAQLITE_JOIN_MODIFIER_KIND_NATURAL},
+    {"left", 4, SYNQ_JT_LEFT | SYNQ_JT_OUTER, SYNTAQLITE_JOIN_MODIFIER_KIND_LEFT},
+    {"outer", 5, SYNQ_JT_OUTER, SYNTAQLITE_JOIN_MODIFIER_KIND_OUTER},
+    {"right", 5, SYNQ_JT_RIGHT | SYNQ_JT_OUTER, SYNTAQLITE_JOIN_MODIFIER_KIND_RIGHT},
+    {"full", 4, SYNQ_JT_LEFT | SYNQ_JT_RIGHT | SYNQ_JT_OUTER, SYNTAQLITE_JOIN_MODIFIER_KIND_FULL},
+    {"inner", 5, SYNQ_JT_INNER, SYNTAQLITE_JOIN_MODIFIER_KIND_INNER},
+    {"cross", 5, SYNQ_JT_INNER | SYNQ_JT_CROSS, SYNTAQLITE_JOIN_MODIFIER_KIND_CROSS},
   };
-  if (p == NULL || p->z == NULL) {
-    return 0;
-  }
-  for (unsigned j = 0; j < sizeof(kw) / sizeof(kw[0]); j++) {
-    if (p->n == kw[j].len && SYNQ_STRNCASECMP(p->z, kw[j].text, p->n) == 0) {
-      return kw[j].code;
+  if (token == NULL) return 0;
+  for (unsigned i = 0; i < sizeof(keywords) / sizeof(keywords[0]); ++i) {
+    if (token->n == keywords[i].len &&
+        SYNQ_STRNCASECMP(token->z, keywords[i].text, token->n) == 0) {
+      uint32_t modifier = synq_parse_join_modifier(ctx, keywords[i].kind);
+      *modifiers = synq_parse_join_modifier_list(ctx, *modifiers, modifier);
+      return keywords[i].mask;
     }
   }
   return SYNQ_JT_ERROR;
 }
 
-// Invalid combinations collapse to INNER, as sqlite3JoinType() does after erroring.
-static inline SyntaqliteJoinType synq_join_type(const SynqParseToken* a,
-                                                const SynqParseToken* b,
-                                                const SynqParseToken* c) {
-  int m = synq_join_keyword_mask(a) | synq_join_keyword_mask(b) |
-          synq_join_keyword_mask(c);
+// SQLite reports invalid modifier sets before falling back internally.
+static inline SyntaqliteJoinType synq_join_type(SynqParseCtx* ctx, int m) {
   if ((m & (SYNQ_JT_INNER | SYNQ_JT_OUTER)) == (SYNQ_JT_INNER | SYNQ_JT_OUTER) ||
       (m & SYNQ_JT_ERROR) != 0 ||
       (m & (SYNQ_JT_OUTER | SYNQ_JT_LEFT | SYNQ_JT_RIGHT)) == SYNQ_JT_OUTER) {
+    ctx->error = 1;
     return SYNTAQLITE_JOIN_TYPE_INNER;
   }
   if (m & SYNQ_JT_NATURAL) {
@@ -184,6 +191,19 @@ static inline SyntaqliteJoinType synq_join_type(const SynqParseToken* a,
   if (m & SYNQ_JT_LEFT) return SYNTAQLITE_JOIN_TYPE_LEFT;
   if (m & SYNQ_JT_RIGHT) return SYNTAQLITE_JOIN_TYPE_RIGHT;
   return SYNTAQLITE_JOIN_TYPE_INNER;
+}
+
+static inline SynqJoinOpValue synq_join_operator(SynqParseCtx* ctx,
+                                                const SynqParseToken* a,
+                                                const SynqParseToken* b,
+                                                const SynqParseToken* c) {
+  const SynqParseToken* tokens[] = {a, b, c};
+  uint32_t modifiers = SYNTAQLITE_NULL_NODE;
+  int mask = 0;
+  for (unsigned i = 0; i < sizeof(tokens) / sizeof(tokens[0]); ++i) {
+    mask |= synq_append_join_modifier(ctx, &modifiers, tokens[i]);
+  }
+  return (SynqJoinOpValue){synq_join_type(ctx, mask), modifiers};
 }
 
 // ON / USING need a left-hand term to join to (build.c

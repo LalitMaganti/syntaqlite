@@ -75,32 +75,34 @@ pub enum NodeTag {
     OrderingTerm = 57,
     OrderByList = 58,
     LimitClause = 59,
-    TableRef = 60,
-    SubqueryTableSource = 61,
-    ParenTableSource = 62,
-    JoinClause = 63,
-    JoinPrefix = 64,
-    TriggerEvent = 65,
-    TriggerCmdList = 66,
-    CreateTriggerStmt = 67,
-    CreateVirtualTableStmt = 68,
-    PragmaStmt = 69,
-    AnalyzeOrReindexStmt = 70,
-    AttachStmt = 71,
-    DetachStmt = 72,
-    VacuumStmt = 73,
-    ExplainStmt = 74,
-    CreateIndexStmt = 75,
-    CreateViewStmt = 76,
-    ValuesRowList = 77,
-    ValuesClause = 78,
-    FrameBound = 79,
-    FrameSpec = 80,
-    WindowDef = 81,
-    WindowDefList = 82,
-    NamedWindowDef = 83,
-    NamedWindowDefList = 84,
-    FilterOver = 85,
+    JoinModifier = 60,
+    JoinModifierList = 61,
+    TableRef = 62,
+    SubqueryTableSource = 63,
+    ParenTableSource = 64,
+    JoinClause = 65,
+    JoinPrefix = 66,
+    TriggerEvent = 67,
+    TriggerCmdList = 68,
+    CreateTriggerStmt = 69,
+    CreateVirtualTableStmt = 70,
+    PragmaStmt = 71,
+    AnalyzeOrReindexStmt = 72,
+    AttachStmt = 73,
+    DetachStmt = 74,
+    VacuumStmt = 75,
+    ExplainStmt = 76,
+    CreateIndexStmt = 77,
+    CreateViewStmt = 78,
+    ValuesRowList = 79,
+    ValuesClause = 80,
+    FrameBound = 81,
+    FrameSpec = 82,
+    WindowDef = 83,
+    WindowDefList = 84,
+    NamedWindowDef = 85,
+    NamedWindowDefList = 86,
+    FilterOver = 87,
 }
 
 impl From<NodeTag> for crate::any::AnyNodeTag {
@@ -172,32 +174,34 @@ impl NodeTag {
             57 => Some(NodeTag::OrderingTerm),
             58 => Some(NodeTag::OrderByList),
             59 => Some(NodeTag::LimitClause),
-            60 => Some(NodeTag::TableRef),
-            61 => Some(NodeTag::SubqueryTableSource),
-            62 => Some(NodeTag::ParenTableSource),
-            63 => Some(NodeTag::JoinClause),
-            64 => Some(NodeTag::JoinPrefix),
-            65 => Some(NodeTag::TriggerEvent),
-            66 => Some(NodeTag::TriggerCmdList),
-            67 => Some(NodeTag::CreateTriggerStmt),
-            68 => Some(NodeTag::CreateVirtualTableStmt),
-            69 => Some(NodeTag::PragmaStmt),
-            70 => Some(NodeTag::AnalyzeOrReindexStmt),
-            71 => Some(NodeTag::AttachStmt),
-            72 => Some(NodeTag::DetachStmt),
-            73 => Some(NodeTag::VacuumStmt),
-            74 => Some(NodeTag::ExplainStmt),
-            75 => Some(NodeTag::CreateIndexStmt),
-            76 => Some(NodeTag::CreateViewStmt),
-            77 => Some(NodeTag::ValuesRowList),
-            78 => Some(NodeTag::ValuesClause),
-            79 => Some(NodeTag::FrameBound),
-            80 => Some(NodeTag::FrameSpec),
-            81 => Some(NodeTag::WindowDef),
-            82 => Some(NodeTag::WindowDefList),
-            83 => Some(NodeTag::NamedWindowDef),
-            84 => Some(NodeTag::NamedWindowDefList),
-            85 => Some(NodeTag::FilterOver),
+            60 => Some(NodeTag::JoinModifier),
+            61 => Some(NodeTag::JoinModifierList),
+            62 => Some(NodeTag::TableRef),
+            63 => Some(NodeTag::SubqueryTableSource),
+            64 => Some(NodeTag::ParenTableSource),
+            65 => Some(NodeTag::JoinClause),
+            66 => Some(NodeTag::JoinPrefix),
+            67 => Some(NodeTag::TriggerEvent),
+            68 => Some(NodeTag::TriggerCmdList),
+            69 => Some(NodeTag::CreateTriggerStmt),
+            70 => Some(NodeTag::CreateVirtualTableStmt),
+            71 => Some(NodeTag::PragmaStmt),
+            72 => Some(NodeTag::AnalyzeOrReindexStmt),
+            73 => Some(NodeTag::AttachStmt),
+            74 => Some(NodeTag::DetachStmt),
+            75 => Some(NodeTag::VacuumStmt),
+            76 => Some(NodeTag::ExplainStmt),
+            77 => Some(NodeTag::CreateIndexStmt),
+            78 => Some(NodeTag::CreateViewStmt),
+            79 => Some(NodeTag::ValuesRowList),
+            80 => Some(NodeTag::ValuesClause),
+            81 => Some(NodeTag::FrameBound),
+            82 => Some(NodeTag::FrameSpec),
+            83 => Some(NodeTag::WindowDef),
+            84 => Some(NodeTag::WindowDefList),
+            85 => Some(NodeTag::NamedWindowDef),
+            86 => Some(NodeTag::NamedWindowDefList),
+            87 => Some(NodeTag::FilterOver),
             _ => None,
         }
     }
@@ -767,6 +771,32 @@ impl JoinType {
             JoinType::NaturalRight => "NATURAL_RIGHT",
             JoinType::NaturalFull => "NATURAL_FULL",
             JoinType::NaturalCross => "NATURAL_CROSS",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum JoinModifierKind {
+    Natural = 0,
+    Left = 1,
+    Outer = 2,
+    Right = 3,
+    Full = 4,
+    Inner = 5,
+    Cross = 6,
+}
+
+impl JoinModifierKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            JoinModifierKind::Natural => "NATURAL",
+            JoinModifierKind::Left => "LEFT",
+            JoinModifierKind::Outer => "OUTER",
+            JoinModifierKind::Right => "RIGHT",
+            JoinModifierKind::Full => "FULL",
+            JoinModifierKind::Inner => "INNER",
+            JoinModifierKind::Cross => "CROSS",
         }
     }
 }
@@ -5236,6 +5266,75 @@ impl TypedNodeId for LimitClauseId {
 }
 
 #[derive(Clone, Copy)]
+pub struct JoinModifier<'a> {
+    raw: &'a super::ffi::JoinModifier,
+    stmt_result: &'a AnyParsedStatement<'a>,
+    id: AnyNodeId,
+}
+
+impl std::fmt::Debug for JoinModifier<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.raw.fmt(f)
+    }
+}
+
+impl std::fmt::Display for JoinModifier<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        AnyNode {
+            id: self.id,
+            stmt_result: self.stmt_result,
+        }
+        .fmt(f)
+    }
+}
+
+impl<'a> JoinModifier<'a> {
+    /// The typed node ID of this node.
+    pub fn node_id(&self) -> JoinModifierId {
+        JoinModifierId(self.id)
+    }
+    pub fn kind(&self) -> JoinModifierKind {
+        self.raw.kind
+    }
+}
+
+impl<'a> GrammarNodeType<'a> for JoinModifier<'a> {
+    fn from_result(stmt_result: &'a AnyParsedStatement<'a>, id: AnyNodeId) -> Option<Self> {
+        let raw = stmt_result.resolve_as::<super::ffi::JoinModifier>(id)?;
+        Some(JoinModifier {
+            raw,
+            stmt_result,
+            id,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct JoinModifierId(AnyNodeId);
+
+impl JoinModifierId {
+    pub fn into_inner(self) -> AnyNodeId {
+        self.0
+    }
+}
+
+impl<'a> From<JoinModifier<'a>> for JoinModifierId {
+    fn from(n: JoinModifier<'a>) -> Self {
+        n.node_id()
+    }
+}
+
+impl From<JoinModifierId> for AnyNodeId {
+    fn from(id: JoinModifierId) -> AnyNodeId {
+        id.0
+    }
+}
+
+impl TypedNodeId for JoinModifierId {
+    type Node<'a> = JoinModifier<'a>;
+}
+
+#[derive(Clone, Copy)]
 pub struct TableRef<'a> {
     raw: &'a super::ffi::TableRef,
     stmt_result: &'a AnyParsedStatement<'a>,
@@ -5497,6 +5596,9 @@ impl<'a> JoinClause<'a> {
     pub fn join_type(&self) -> JoinType {
         self.raw.join_type
     }
+    pub fn modifiers(&self) -> Option<JoinModifierList<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.modifiers)
+    }
     pub fn left(&self) -> Option<TableSource<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.left)
     }
@@ -5580,6 +5682,9 @@ impl<'a> JoinPrefix<'a> {
     }
     pub fn join_type(&self) -> JoinType {
         self.raw.join_type
+    }
+    pub fn modifiers(&self) -> Option<JoinModifierList<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.modifiers)
     }
 }
 
@@ -7266,6 +7371,34 @@ impl TypedNodeId for OrderByListId {
     type Node<'a> = OrderByList<'a>;
 }
 
+/// Typed list of `JoinModifier`.
+pub type JoinModifierList<'a> = TypedNodeList<'a, super::dialect::Dialect, JoinModifier<'a>>;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct JoinModifierListId(AnyNodeId);
+
+impl JoinModifierListId {
+    pub fn into_inner(self) -> AnyNodeId {
+        self.0
+    }
+}
+
+impl<'a> From<JoinModifierList<'a>> for JoinModifierListId {
+    fn from(n: JoinModifierList<'a>) -> Self {
+        JoinModifierListId(n.node_id().into())
+    }
+}
+
+impl From<JoinModifierListId> for AnyNodeId {
+    fn from(id: JoinModifierListId) -> AnyNodeId {
+        id.0
+    }
+}
+
+impl TypedNodeId for JoinModifierListId {
+    type Node<'a> = JoinModifierList<'a>;
+}
+
 /// Typed list of `Stmt`.
 pub type TriggerCmdList<'a> = TypedNodeList<'a, super::dialect::Dialect, Stmt<'a>>;
 
@@ -7452,6 +7585,9 @@ pub enum Node<'a> {
     /// List of [`OrderingTerm`].
     OrderByList(OrderByList<'a>),
     LimitClause(LimitClause<'a>),
+    JoinModifier(JoinModifier<'a>),
+    /// List of [`JoinModifier`].
+    JoinModifierList(JoinModifierList<'a>),
     TableRef(TableRef<'a>),
     SubqueryTableSource(SubqueryTableSource<'a>),
     ParenTableSource(ParenTableSource<'a>),
@@ -7782,6 +7918,14 @@ impl<'a> Node<'a> {
                     stmt_result,
                     id,
                 }),
+                NodeTag::JoinModifier => Node::JoinModifier(JoinModifier {
+                    raw: &*ptr.cast::<super::ffi::JoinModifier>(),
+                    stmt_result,
+                    id,
+                }),
+                NodeTag::JoinModifierList => Node::JoinModifierList(
+                    TypedNodeList::from_result(stmt_result, id).expect("list tag invariant"),
+                ),
                 NodeTag::TableRef => Node::TableRef(TableRef {
                     raw: &*ptr.cast::<super::ffi::TableRef>(),
                     stmt_result,
@@ -7988,6 +8132,8 @@ impl<'a> Node<'a> {
             Node::OrderingTerm(..) => NodeTag::OrderingTerm,
             Node::OrderByList(..) => NodeTag::OrderByList,
             Node::LimitClause(..) => NodeTag::LimitClause,
+            Node::JoinModifier(..) => NodeTag::JoinModifier,
+            Node::JoinModifierList(..) => NodeTag::JoinModifierList,
             Node::TableRef(..) => NodeTag::TableRef,
             Node::SubqueryTableSource(..) => NodeTag::SubqueryTableSource,
             Node::ParenTableSource(..) => NodeTag::ParenTableSource,
@@ -8080,6 +8226,8 @@ impl<'a> Node<'a> {
             Node::OrderingTerm(n) => NodeId(n.node_id().into()),
             Node::OrderByList(n) => NodeId(n.node_id().into()),
             Node::LimitClause(n) => NodeId(n.node_id().into()),
+            Node::JoinModifier(n) => NodeId(n.node_id().into()),
+            Node::JoinModifierList(n) => NodeId(n.node_id().into()),
             Node::TableRef(n) => NodeId(n.node_id().into()),
             Node::SubqueryTableSource(n) => NodeId(n.node_id().into()),
             Node::ParenTableSource(n) => NodeId(n.node_id().into()),

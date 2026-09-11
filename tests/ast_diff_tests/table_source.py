@@ -184,6 +184,7 @@ class JoinBasic(TestSuite):
               from_clause:
                 JoinClause
                   join_type: COMMA
+                  modifiers: (none)
                   left:
                     TableRef
                       table_name: "a"
@@ -228,9 +229,11 @@ class JoinBasic(TestSuite):
               from_clause:
                 JoinClause
                   join_type: COMMA
+                  modifiers: (none)
                   left:
                     JoinClause
                       join_type: COMMA
+                      modifiers: (none)
                       left:
                         TableRef
                           table_name: "a"
@@ -286,6 +289,7 @@ class JoinBasic(TestSuite):
               from_clause:
                 JoinClause
                   join_type: INNER
+                  modifiers: (none)
                   left:
                     TableRef
                       table_name: "a"
@@ -342,6 +346,10 @@ class JoinBasic(TestSuite):
               from_clause:
                 JoinClause
                   join_type: LEFT
+                  modifiers:
+                    JoinModifierList [1 items]
+                      JoinModifier
+                        kind: LEFT
                   left:
                     TableRef
                       table_name: "a"
@@ -398,6 +406,10 @@ class JoinBasic(TestSuite):
               from_clause:
                 JoinClause
                   join_type: RIGHT
+                  modifiers:
+                    JoinModifierList [1 items]
+                      JoinModifier
+                        kind: RIGHT
                   left:
                     TableRef
                       table_name: "a"
@@ -454,6 +466,10 @@ class JoinBasic(TestSuite):
               from_clause:
                 JoinClause
                   join_type: CROSS
+                  modifiers:
+                    JoinModifierList [1 items]
+                      JoinModifier
+                        kind: CROSS
                   left:
                     TableRef
                       table_name: "a"
@@ -498,6 +514,10 @@ class JoinBasic(TestSuite):
               from_clause:
                 JoinClause
                   join_type: FULL
+                  modifiers:
+                    JoinModifierList [1 items]
+                      JoinModifier
+                        kind: FULL
                   left:
                     TableRef
                       table_name: "a"
@@ -554,6 +574,12 @@ class JoinBasic(TestSuite):
               from_clause:
                 JoinClause
                   join_type: LEFT
+                  modifiers:
+                    JoinModifierList [2 items]
+                      JoinModifier
+                        kind: LEFT
+                      JoinModifier
+                        kind: OUTER
                   left:
                     TableRef
                       table_name: "a"
@@ -614,6 +640,10 @@ class JoinNatural(TestSuite):
               from_clause:
                 JoinClause
                   join_type: NATURAL_INNER
+                  modifiers:
+                    JoinModifierList [1 items]
+                      JoinModifier
+                        kind: NATURAL
                   left:
                     TableRef
                       table_name: "a"
@@ -658,6 +688,12 @@ class JoinNatural(TestSuite):
               from_clause:
                 JoinClause
                   join_type: NATURAL_LEFT
+                  modifiers:
+                    JoinModifierList [2 items]
+                      JoinModifier
+                        kind: NATURAL
+                      JoinModifier
+                        kind: LEFT
                   left:
                     TableRef
                       table_name: "a"
@@ -702,6 +738,12 @@ class JoinNatural(TestSuite):
               from_clause:
                 JoinClause
                   join_type: NATURAL_RIGHT
+                  modifiers:
+                    JoinModifierList [2 items]
+                      JoinModifier
+                        kind: NATURAL
+                      JoinModifier
+                        kind: RIGHT
                   left:
                     TableRef
                       table_name: "a"
@@ -746,6 +788,12 @@ class JoinNatural(TestSuite):
               from_clause:
                 JoinClause
                   join_type: NATURAL_FULL
+                  modifiers:
+                    JoinModifierList [2 items]
+                      JoinModifier
+                        kind: NATURAL
+                      JoinModifier
+                        kind: FULL
                   left:
                     TableRef
                       table_name: "a"
@@ -794,6 +842,7 @@ class JoinUsing(TestSuite):
               from_clause:
                 JoinClause
                   join_type: INNER
+                  modifiers: (none)
                   left:
                     TableRef
                       table_name: "a"
@@ -843,6 +892,7 @@ class JoinUsing(TestSuite):
               from_clause:
                 JoinClause
                   join_type: INNER
+                  modifiers: (none)
                   left:
                     TableRef
                       table_name: "a"
@@ -900,9 +950,14 @@ class JoinMultiple(TestSuite):
               from_clause:
                 JoinClause
                   join_type: LEFT
+                  modifiers:
+                    JoinModifierList [1 items]
+                      JoinModifier
+                        kind: LEFT
                   left:
                     JoinClause
                       join_type: INNER
+                      modifiers: (none)
                       left:
                         TableRef
                           table_name: "a"
@@ -1148,6 +1203,7 @@ class TableValuedFunction(TestSuite):
               from_clause:
                 JoinClause
                   join_type: INNER
+                  modifiers: (none)
                   left:
                     TableRef
                       table_name: "t"

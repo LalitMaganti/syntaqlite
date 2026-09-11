@@ -3118,4 +3118,58 @@ mod tests {
         assert_eq!(seg.body_offset(), LayerOffset::from_raw(0));
         assert_eq!(seg.body_length(), LayerLen::from_raw(2));
     }
+    #[test]
+    fn join_modifier_sets_reject_invalid_combinations() {
+        let parser = Parser::new();
+        for modifiers in ["LEFT bogus", "INNER OUTER", "OUTER"] {
+            let sql = format!("SELECT * FROM a {modifiers} JOIN b");
+            assert!(
+                matches!(parser.parse(&sql).next(), ParseOutcome::Err(_)),
+                "{sql}"
+            );
+        }
+        for modifiers in ["OUTER LEFT NATURAL", "CROSS NATURAL", "LEFT LEFT"] {
+            let sql = format!("SELECT * FROM a {modifiers} JOIN b");
+            assert!(
+                matches!(parser.parse(&sql).next(), ParseOutcome::Ok(_)),
+                "{sql}"
+            );
+        }
+    }
+
+    #[test]
+    fn join_modifier_lists_preserve_order_and_repetitions() {
+        use crate::sqlite::ast::{JoinModifierKind as K, JoinType, Stmt, TableSource};
+        let parser = Parser::new();
+        let cases: &[(&str, JoinType, &[K])] = &[
+            ("JOIN", JoinType::Inner, &[]),
+            (",", JoinType::Comma, &[]),
+            ("LEFT JOIN", JoinType::Left, &[K::Left]),
+            ("LEFT LEFT JOIN", JoinType::Left, &[K::Left, K::Left]),
+            (
+                "OUTER LEFT NATURAL JOIN",
+                JoinType::NaturalLeft,
+                &[K::Outer, K::Left, K::Natural],
+            ),
+        ];
+        for &(operator, expected_type, expected_modifiers) in cases {
+            let sql = format!("SELECT * FROM a {operator} b");
+            let mut session = parser.parse(&sql);
+            let ParseOutcome::Ok(stmt) = session.next() else {
+                panic!("{sql}")
+            };
+            let Some(Stmt::SelectStmt(select)) = stmt.root() else {
+                panic!("{sql}")
+            };
+            let Some(TableSource::JoinClause(join)) = select.from_clause() else {
+                panic!("{sql}")
+            };
+            assert_eq!(join.join_type(), expected_type, "{sql}");
+            let modifiers: Vec<_> = join
+                .modifiers()
+                .map(|list| list.iter().map(|modifier| modifier.kind()).collect())
+                .unwrap_or_default();
+            assert_eq!(modifiers, expected_modifiers, "{sql}");
+        }
+    }
 }

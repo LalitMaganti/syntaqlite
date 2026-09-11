@@ -168,6 +168,10 @@ static const char* const display_join_type[] = {
     "NATURAL_RIGHT", "NATURAL_FULL", "NATURAL_CROSS",
 };
 
+static const char* const display_join_modifier_kind[] = {
+    "NATURAL", "LEFT", "OUTER", "RIGHT", "FULL", "INNER", "CROSS",
+};
+
 static const char* const display_trigger_timing[] = {
     "BEFORE",
     "AFTER",
@@ -805,6 +809,13 @@ static const SyntaqliteFieldMeta field_meta_limit_clause[] = {
      "offset", NULL, 0},
 };
 
+static const SyntaqliteFieldMeta field_meta_join_modifier[] = {
+    {offsetof(SyntaqliteJoinModifier, kind), SYNTAQLITE_FIELD_ENUM, "kind",
+     display_join_modifier_kind,
+     sizeof(display_join_modifier_kind) /
+         sizeof(display_join_modifier_kind[0])},
+};
+
 static const SyntaqliteFieldMeta field_meta_table_ref[] = {
     {offsetof(SyntaqliteTableRef, table_name), SYNTAQLITE_FIELD_SPAN,
      "table_name", NULL, 0},
@@ -842,6 +853,8 @@ static const SyntaqliteFieldMeta field_meta_join_clause[] = {
     {offsetof(SyntaqliteJoinClause, join_type), SYNTAQLITE_FIELD_ENUM,
      "join_type", display_join_type,
      sizeof(display_join_type) / sizeof(display_join_type[0])},
+    {offsetof(SyntaqliteJoinClause, modifiers), SYNTAQLITE_FIELD_NODE_ID,
+     "modifiers", NULL, 0},
     {offsetof(SyntaqliteJoinClause, left), SYNTAQLITE_FIELD_NODE_ID, "left",
      NULL, 0},
     {offsetof(SyntaqliteJoinClause, right), SYNTAQLITE_FIELD_NODE_ID, "right",
@@ -858,6 +871,8 @@ static const SyntaqliteFieldMeta field_meta_join_prefix[] = {
     {offsetof(SyntaqliteJoinPrefix, join_type), SYNTAQLITE_FIELD_ENUM,
      "join_type", display_join_type,
      sizeof(display_join_type) / sizeof(display_join_type[0])},
+    {offsetof(SyntaqliteJoinPrefix, modifiers), SYNTAQLITE_FIELD_NODE_ID,
+     "modifiers", NULL, 0},
 };
 
 static const SyntaqliteFieldMeta field_meta_trigger_event[] = {
@@ -1259,6 +1274,8 @@ static const char* const ast_meta_node_names[] = {
     "OrderingTerm",
     "OrderByList",
     "LimitClause",
+    "JoinModifier",
+    "JoinModifierList",
     "TableRef",
     "SubqueryTableSource",
     "ParenTableSource",
@@ -1350,6 +1367,8 @@ static const SyntaqliteFieldMeta* const ast_meta_field_meta[] = {
     field_meta_ordering_term,               /* OrderingTerm */
     NULL,                                   /* OrderByList */
     field_meta_limit_clause,                /* LimitClause */
+    field_meta_join_modifier,               /* JoinModifier */
+    NULL,                                   /* JoinModifierList */
     field_meta_table_ref,                   /* TableRef */
     field_meta_subquery_table_source,       /* SubqueryTableSource */
     field_meta_paren_table_source,          /* ParenTableSource */
@@ -1439,11 +1458,13 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* OrderingTerm */
     0,  /* OrderByList */
     2,  /* LimitClause */
+    1,  /* JoinModifier */
+    0,  /* JoinModifierList */
     7,  /* TableRef */
     2,  /* SubqueryTableSource */
     2,  /* ParenTableSource */
-    5,  /* JoinClause */
-    2,  /* JoinPrefix */
+    6,  /* JoinClause */
+    3,  /* JoinPrefix */
     2,  /* TriggerEvent */
     0,  /* TriggerCmdList */
     9,  /* CreateTriggerStmt */
@@ -1530,6 +1551,8 @@ static const uint8_t ast_meta_list_tags[] = {
     0, /* OrderingTerm */
     1, /* OrderByList */
     0, /* LimitClause */
+    0, /* JoinModifier */
+    1, /* JoinModifierList */
     0, /* TableRef */
     0, /* SubqueryTableSource */
     0, /* ParenTableSource */
@@ -1621,6 +1644,8 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                   /* OrderingTerm */
     {NULL, 0},                                   /* OrderByList */
     {NULL, 0},                                   /* LimitClause */
+    {NULL, 0},                                   /* JoinModifier */
+    {NULL, 0},                                   /* JoinModifierList */
     {range_meta_table_ref, 3},                   /* TableRef */
     {NULL, 0},                                   /* SubqueryTableSource */
     {NULL, 0},                                   /* ParenTableSource */
