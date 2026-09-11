@@ -27,7 +27,7 @@ list TriggerCmdList {
 node CreateTriggerStmt {
   trigger_name: inline SyntaqliteTextSpan
   schema: inline SyntaqliteTextSpan
-  is_temp: inline Bool
+  temporary: inline TemporaryQualifier
   if_not_exists: inline Bool
   timing: inline TriggerTiming
   event: index TriggerEvent
@@ -39,7 +39,10 @@ node CreateTriggerStmt {
 
   fmt {
     "CREATE"
-    if_flag(is_temp) { space "TEMP" }
+    switch(temporary) {
+        TEMP { space "TEMP" }
+        TEMPORARY { space "TEMPORARY" }
+      }
     space "TRIGGER"
     if_flag(if_not_exists) { space "IF" "NOT" "EXISTS" }
     space

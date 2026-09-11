@@ -881,10 +881,10 @@ class CanonicalSpellingFormat(TestSuite):
             out="SELECT * FROM t WHERE a != 1;",
         )
 
-    def test_temporary_becomes_temp(self):
+    def test_temporary_spelling_is_preserved(self):
         return DiffTestBlueprint(
             sql="create temporary table x(a)",
-            out="CREATE TEMP TABLE x(a);",
+            out="CREATE TEMPORARY TABLE x(a);",
         )
 
     def test_insert_or_replace_becomes_replace(self):

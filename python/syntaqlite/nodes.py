@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, Deferrable, DropObjectType, ExplainMode, ForeignKeyAction, ForeignKeyOptionKind, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, InitialDeferMode, IsOp, JoinModifierKind, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
+from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, Deferrable, DropObjectType, ExplainMode, ForeignKeyAction, ForeignKeyOptionKind, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, InitialDeferMode, IsOp, JoinModifierKind, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TemporaryQualifier, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
 
 
 class AggregateFunctionCall:
@@ -298,12 +298,12 @@ class TableConstraint:
 class CreateTableStmt:
     """AST node: CreateTableStmt"""
 
-    __slots__ = ("table_name", "schema", "is_temp", "if_not_exists", "flags", "columns", "table_constraints", "as_select")
+    __slots__ = ("table_name", "schema", "temporary", "if_not_exists", "flags", "columns", "table_constraints", "as_select")
 
     def __init__(self, d: dict):
         self.table_name: str | None = d.get("table_name")
         self.schema: str | None = d.get("schema")
-        self.is_temp: bool = d["is_temp"]
+        self.temporary: TemporaryQualifier = TemporaryQualifier[d["temporary"]]
         self.if_not_exists: bool = d["if_not_exists"]
         self.flags: CreateTableStmtFlags = _flags(CreateTableStmtFlags, d["flags"])
         self.columns: list[ColumnDef] | None = _wrap(d.get("columns"))
@@ -812,12 +812,12 @@ class TriggerEvent:
 class CreateTriggerStmt:
     """AST node: CreateTriggerStmt"""
 
-    __slots__ = ("trigger_name", "schema", "is_temp", "if_not_exists", "timing", "event", "table", "when_expr", "body")
+    __slots__ = ("trigger_name", "schema", "temporary", "if_not_exists", "timing", "event", "table", "when_expr", "body")
 
     def __init__(self, d: dict):
         self.trigger_name: str | None = d.get("trigger_name")
         self.schema: str | None = d.get("schema")
-        self.is_temp: bool = d["is_temp"]
+        self.temporary: TemporaryQualifier = TemporaryQualifier[d["temporary"]]
         self.if_not_exists: bool = d["if_not_exists"]
         self.timing: TriggerTiming = TriggerTiming[d["timing"]]
         self.event: TriggerEvent | None = _wrap(d.get("event"))
@@ -947,12 +947,12 @@ class CreateIndexStmt:
 class CreateViewStmt:
     """AST node: CreateViewStmt"""
 
-    __slots__ = ("view_name", "schema", "is_temp", "if_not_exists", "column_names", "select")
+    __slots__ = ("view_name", "schema", "temporary", "if_not_exists", "column_names", "select")
 
     def __init__(self, d: dict):
         self.view_name: str | None = d.get("view_name")
         self.schema: str | None = d.get("schema")
-        self.is_temp: bool = d["is_temp"]
+        self.temporary: TemporaryQualifier = TemporaryQualifier[d["temporary"]]
         self.if_not_exists: bool = d["if_not_exists"]
         self.column_names: list[Expr] | None = _wrap(d.get("column_names"))
         self.select: Select | None = _wrap(d.get("select"))

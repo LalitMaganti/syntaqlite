@@ -167,6 +167,12 @@ class LikeKeyword(IntEnum):
     REGEXP = 3
 
 
+class TemporaryQualifier(IntEnum):
+    NONE = 0
+    TEMP = 1
+    TEMPORARY = 2
+
+
 class ForeignKeyAction(IntEnum):
     UNSET = 0
     NO_ACTION = 1

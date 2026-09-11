@@ -20,7 +20,7 @@
 %type minus_num {SynqParseToken}
 %type nmnum {SynqParseToken}
 %type ifnotexists {int}
-%type temp {int}
+%type temp {SyntaqliteTemporaryQualifier}
 %type uniqueflag {int}
 %type explain {int}
 
@@ -240,7 +240,7 @@ cmd(A) ::= createkw temp(T) VIEW ifnotexists(E) nm(Y) dbnm(Z) eidlist_opt(C) AS 
     A = synq_parse_create_view_stmt(pCtx,
         view_name,
         view_schema,
-        (SyntaqliteBool)T,
+        T,
         (SyntaqliteBool)E,
         C,
         S);
@@ -252,10 +252,12 @@ createkw(A) ::= CREATE(A). {
     // Token passthrough
 }
 
-temp(A) ::= TEMP. {
-    A = 1;
+temp(A) ::= TEMP(X). {
+    // SQLite maps both spellings to TEMP; retain the authored choice here.
+    A = X.n == 4 ? SYNTAQLITE_TEMPORARY_QUALIFIER_TEMP
+                 : SYNTAQLITE_TEMPORARY_QUALIFIER_TEMPORARY;
 }
 
 temp(A) ::= . {
-    A = 0;
+    A = SYNTAQLITE_TEMPORARY_QUALIFIER_NONE;
 }

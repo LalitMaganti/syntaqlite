@@ -92,6 +92,12 @@ typedef enum SyntaqliteLikeKeyword {
   SYNTAQLITE_LIKE_KEYWORD_REGEXP = 3
 } SyntaqliteLikeKeyword;
 
+typedef enum SyntaqliteTemporaryQualifier {
+  SYNTAQLITE_TEMPORARY_QUALIFIER_NONE = 0,
+  SYNTAQLITE_TEMPORARY_QUALIFIER_TEMP = 1,
+  SYNTAQLITE_TEMPORARY_QUALIFIER_TEMPORARY = 2
+} SyntaqliteTemporaryQualifier;
+
 typedef enum SyntaqliteForeignKeyAction {
   SYNTAQLITE_FOREIGN_KEY_ACTION_UNSET = 0,
   SYNTAQLITE_FOREIGN_KEY_ACTION_NO_ACTION = 1,
@@ -638,7 +644,7 @@ typedef struct SyntaqliteCreateTableStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteTextSpan table_name;
   SyntaqliteTextSpan schema;
-  SyntaqliteBool is_temp;
+  SyntaqliteTemporaryQualifier temporary;
   SyntaqliteBool if_not_exists;
   SyntaqliteCreateTableStmtFlags flags;
   uint32_t columns;
@@ -963,7 +969,7 @@ typedef struct SyntaqliteCreateTriggerStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteTextSpan trigger_name;
   SyntaqliteTextSpan schema;
-  SyntaqliteBool is_temp;
+  SyntaqliteTemporaryQualifier temporary;
   SyntaqliteBool if_not_exists;
   SyntaqliteTriggerTiming timing;
   uint32_t event;
@@ -1035,7 +1041,7 @@ typedef struct SyntaqliteCreateViewStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteTextSpan view_name;
   SyntaqliteTextSpan schema;
-  SyntaqliteBool is_temp;
+  SyntaqliteTemporaryQualifier temporary;
   SyntaqliteBool if_not_exists;
   uint32_t column_names;
   uint32_t select;

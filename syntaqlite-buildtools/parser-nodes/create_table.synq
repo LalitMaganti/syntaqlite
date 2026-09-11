@@ -1,3 +1,6 @@
+// Authored temporary qualifier; NONE means a persistent object.
+enum TemporaryQualifier { NONE TEMP TEMPORARY }
+
 enum ForeignKeyAction { UNSET NO_ACTION SET_NULL SET_DEFAULT CASCADE RESTRICT }
 enum Deferrable { UNSET NOT_DEFERRABLE DEFERRABLE }
 enum InitialDeferMode { UNSET DEFERRED IMMEDIATE }
@@ -260,7 +263,7 @@ list TableConstraintList {
 node CreateTableStmt {
   table_name: inline SyntaqliteTextSpan
   schema: inline SyntaqliteTextSpan
-  is_temp: inline Bool
+  temporary: inline TemporaryQualifier
   if_not_exists: inline Bool
   flags: inline CreateTableStmtFlags
   columns: index ColumnDefList
@@ -272,7 +275,10 @@ node CreateTableStmt {
   fmt {
     group {
       "CREATE"
-      if_flag(is_temp) { space "TEMP" }
+      switch(temporary) {
+        TEMP { space "TEMP" }
+        TEMPORARY { space "TEMPORARY" }
+      }
       space "TABLE"
       if_flag(if_not_exists) { space "IF" "NOT" "EXISTS" }
       space

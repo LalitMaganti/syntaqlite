@@ -56,6 +56,7 @@
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::SavepointOp
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::SortOrder
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::TableConstraintType
+#[repr(u32)] pub enum syntaqlite_syntax::nodes::TemporaryQualifier
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::TransactionOp
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::TransactionType
 #[repr(u32)] pub enum syntaqlite_syntax::nodes::TriggerEventType
@@ -535,6 +536,7 @@ impl syntaqlite_syntax::nodes::TableConstraintListId
 impl syntaqlite_syntax::nodes::TableConstraintType
 impl syntaqlite_syntax::nodes::TableRefId
 impl syntaqlite_syntax::nodes::TableSourceId
+impl syntaqlite_syntax::nodes::TemporaryQualifier
 impl syntaqlite_syntax::nodes::TransactionOp
 impl syntaqlite_syntax::nodes::TransactionStmtId
 impl syntaqlite_syntax::nodes::TransactionType
@@ -1441,11 +1443,11 @@ pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::columns(&self) -> core::op
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::flags(&self) -> syntaqlite_syntax::nodes::CreateTableStmtFlags
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::if_not_exists(&self) -> bool
-pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::is_temp(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CreateTableStmtId
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::table_constraints(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableConstraintList<'a>>
 pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::table_name(&self) -> &'a str
+pub fn syntaqlite_syntax::nodes::CreateTableStmt<'a>::temporary(&self) -> syntaqlite_syntax::nodes::TemporaryQualifier
 pub fn syntaqlite_syntax::nodes::CreateTableStmtFlags::bits(self) -> u8
 pub fn syntaqlite_syntax::nodes::CreateTableStmtFlags::strict(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTableStmtFlags::without_rowid(&self) -> bool
@@ -1456,10 +1458,10 @@ pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::body(&self) -> core::opt
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::event(&self) -> core::option::Option<syntaqlite_syntax::nodes::TriggerEvent<'a>>
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::if_not_exists(&self) -> bool
-pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::is_temp(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CreateTriggerStmtId
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::table(&self) -> core::option::Option<syntaqlite_syntax::nodes::QualifiedName<'a>>
+pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::temporary(&self) -> syntaqlite_syntax::nodes::TemporaryQualifier
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::timing(&self) -> syntaqlite_syntax::nodes::TriggerTiming
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::trigger_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::when_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
@@ -1469,10 +1471,10 @@ pub fn syntaqlite_syntax::nodes::CreateViewStmt<'_>::fmt(&self, &mut core::fmt::
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::column_names(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::if_not_exists(&self) -> bool
-pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::is_temp(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CreateViewStmtId
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::schema(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
+pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::temporary(&self) -> syntaqlite_syntax::nodes::TemporaryQualifier
 pub fn syntaqlite_syntax::nodes::CreateViewStmt<'a>::view_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateViewStmtId::from(syntaqlite_syntax::nodes::CreateViewStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::CreateViewStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
@@ -1908,6 +1910,7 @@ pub fn syntaqlite_syntax::nodes::TableSource<'a>::from_result(&'a syntaqlite_syn
 pub fn syntaqlite_syntax::nodes::TableSource<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TableSourceId
 pub fn syntaqlite_syntax::nodes::TableSourceId::from(syntaqlite_syntax::nodes::TableSource<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TableSourceId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::nodes::TemporaryQualifier::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::TransactionOp::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
@@ -2997,6 +3000,9 @@ pub syntaqlite_syntax::nodes::TableSource::JoinPrefix(syntaqlite_syntax::nodes::
 pub syntaqlite_syntax::nodes::TableSource::ParenTableSource(syntaqlite_syntax::nodes::ParenTableSource<'a>)
 pub syntaqlite_syntax::nodes::TableSource::SubqueryTableSource(syntaqlite_syntax::nodes::SubqueryTableSource<'a>)
 pub syntaqlite_syntax::nodes::TableSource::TableRef(syntaqlite_syntax::nodes::TableRef<'a>)
+pub syntaqlite_syntax::nodes::TemporaryQualifier::None = 0
+pub syntaqlite_syntax::nodes::TemporaryQualifier::Temp = 1
+pub syntaqlite_syntax::nodes::TemporaryQualifier::Temporary = 2
 pub syntaqlite_syntax::nodes::TransactionOp::Begin = 0
 pub syntaqlite_syntax::nodes::TransactionOp::Commit = 1
 pub syntaqlite_syntax::nodes::TransactionOp::Rollback = 2
