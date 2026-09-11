@@ -223,7 +223,7 @@ class FrameSpecFormat(TestSuite):
     def test_rows_single_bound(self):
         return DiffTestBlueprint(
             sql="select sum(x) over (order by y rows 2 preceding) from t",
-            out="SELECT sum(x) OVER (ORDER BY y ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) FROM t;",
+            out="SELECT sum(x) OVER (ORDER BY y ROWS 2 PRECEDING) FROM t;",
         )
 
     def test_frame_only_no_orderby(self):

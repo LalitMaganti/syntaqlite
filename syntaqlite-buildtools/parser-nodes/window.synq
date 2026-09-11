@@ -21,6 +21,7 @@ node FrameSpec {
   frame_type: inline FrameType
   exclude: inline FrameExclude
   start_bound: index FrameBound
+  // Absent for shorthand; SQLite supplies CURRENT ROW semantically.
   end_bound: index FrameBound
 
   fmt {
@@ -29,7 +30,12 @@ node FrameSpec {
       ROWS   { "ROWS" }
       GROUPS { "GROUPS" }
     }
-    space "BETWEEN" space child(start_bound) space "AND" space child(end_bound)
+    space
+    if_set(end_bound) {
+      "BETWEEN" space child(start_bound) space "AND" space child(end_bound)
+    } else {
+      child(start_bound)
+    }
     switch(exclude) {
       NO_OTHERS   { space "EXCLUDE" "NO" "OTHERS" }
       CURRENT_ROW { space "EXCLUDE" "CURRENT" "ROW" }
