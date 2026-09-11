@@ -159,7 +159,9 @@ impl core::convert::From<syntaqlite_syntax::nodes::SetClauseListId> for syntaqli
 impl core::convert::From<syntaqlite_syntax::nodes::StmtId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::SubqueryExprId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::SubqueryTableSourceId> for syntaqlite_syntax::any::AnyNodeId
+impl core::convert::From<syntaqlite_syntax::nodes::TableConstraintGroupId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::TableConstraintId> for syntaqlite_syntax::any::AnyNodeId
+impl core::convert::From<syntaqlite_syntax::nodes::TableConstraintItemId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::TableConstraintListId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::TableRefId> for syntaqlite_syntax::any::AnyNodeId
 impl core::convert::From<syntaqlite_syntax::nodes::TableSourceId> for syntaqlite_syntax::any::AnyNodeId
@@ -510,7 +512,9 @@ impl syntaqlite_syntax::nodes::SortOrder
 impl syntaqlite_syntax::nodes::StmtId
 impl syntaqlite_syntax::nodes::SubqueryExprId
 impl syntaqlite_syntax::nodes::SubqueryTableSourceId
+impl syntaqlite_syntax::nodes::TableConstraintGroupId
 impl syntaqlite_syntax::nodes::TableConstraintId
+impl syntaqlite_syntax::nodes::TableConstraintItemId
 impl syntaqlite_syntax::nodes::TableConstraintListId
 impl syntaqlite_syntax::nodes::TableConstraintType
 impl syntaqlite_syntax::nodes::TableRefId
@@ -631,7 +635,9 @@ impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::SetClau
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::StmtId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::SubqueryExprId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::SubqueryTableSourceId
+impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::TableConstraintGroupId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::TableConstraintId
+impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::TableConstraintItemId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::TableConstraintListId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::TableRefId
 impl syntaqlite_syntax::typed::TypedNodeId for syntaqlite_syntax::nodes::TableSourceId
@@ -722,6 +728,7 @@ impl<'a> core::convert::From<syntaqlite_syntax::nodes::Stmt<'a>> for syntaqlite_
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::SubqueryExpr<'a>> for syntaqlite_syntax::nodes::SubqueryExprId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::SubqueryTableSource<'a>> for syntaqlite_syntax::nodes::SubqueryTableSourceId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::TableConstraint<'a>> for syntaqlite_syntax::nodes::TableConstraintId
+impl<'a> core::convert::From<syntaqlite_syntax::nodes::TableConstraintItem<'a>> for syntaqlite_syntax::nodes::TableConstraintItemId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::TableRef<'a>> for syntaqlite_syntax::nodes::TableRefId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::TableSource<'a>> for syntaqlite_syntax::nodes::TableSourceId
 impl<'a> core::convert::From<syntaqlite_syntax::nodes::TransactionStmt<'a>> for syntaqlite_syntax::nodes::TransactionStmtId
@@ -744,10 +751,11 @@ impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaql
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::ResultColumn<'a>>> for syntaqlite_syntax::nodes::ResultColumnListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::SetClause<'a>>> for syntaqlite_syntax::nodes::SetClauseListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Stmt<'a>>> for syntaqlite_syntax::nodes::TriggerCmdListId
-impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraint<'a>>> for syntaqlite_syntax::nodes::TableConstraintListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraintItem<'a>>> for syntaqlite_syntax::nodes::TableConstraintGroupId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::UpsertClause<'a>>> for syntaqlite_syntax::nodes::UpsertClauseListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::WindowDef<'a>>> for syntaqlite_syntax::nodes::WindowDefListId
 impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::Expr<'a>>>> for syntaqlite_syntax::nodes::ValuesRowListId
+impl<'a> core::convert::From<syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraintItem<'a>>>> for syntaqlite_syntax::nodes::TableConstraintListId
 impl<'a> syntaqlite_syntax::Comment<'a>
 impl<'a> syntaqlite_syntax::ParserToken<'a>
 impl<'a> syntaqlite_syntax::any::AnyParsedStatement<'a>
@@ -817,6 +825,7 @@ impl<'a> syntaqlite_syntax::nodes::Stmt<'a>
 impl<'a> syntaqlite_syntax::nodes::SubqueryExpr<'a>
 impl<'a> syntaqlite_syntax::nodes::SubqueryTableSource<'a>
 impl<'a> syntaqlite_syntax::nodes::TableConstraint<'a>
+impl<'a> syntaqlite_syntax::nodes::TableConstraintItem<'a>
 impl<'a> syntaqlite_syntax::nodes::TableRef<'a>
 impl<'a> syntaqlite_syntax::nodes::TableSource<'a>
 impl<'a> syntaqlite_syntax::nodes::TransactionStmt<'a>
@@ -894,6 +903,7 @@ impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::no
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::SubqueryExpr<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::SubqueryTableSource<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::TableConstraint<'a>
+impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::TableConstraintItem<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::TableRef<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::TableSource<'a>
 impl<'a> syntaqlite_syntax::typed::GrammarNodeType<'a> for syntaqlite_syntax::nodes::TransactionStmt<'a>
@@ -985,6 +995,7 @@ pub enum syntaqlite_syntax::nodes::Name<'a>
 pub enum syntaqlite_syntax::nodes::Node<'a>
 pub enum syntaqlite_syntax::nodes::Select<'a>
 pub enum syntaqlite_syntax::nodes::Stmt<'a>
+pub enum syntaqlite_syntax::nodes::TableConstraintItem<'a>
 pub enum syntaqlite_syntax::nodes::TableSource<'a>
 pub enum syntaqlite_syntax::typed::ParseOutcome<T, E>
 pub fn str::eq(&self, &syntaqlite_syntax::source::DocText) -> bool
@@ -1125,7 +1136,9 @@ pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SetClau
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::StmtId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SubqueryExprId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::SubqueryTableSourceId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableConstraintGroupId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableConstraintId) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableConstraintItemId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableConstraintListId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableRefId) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::any::AnyNodeId::from(syntaqlite_syntax::nodes::TableSourceId) -> syntaqlite_syntax::any::AnyNodeId
@@ -1809,7 +1822,6 @@ pub fn syntaqlite_syntax::nodes::SubqueryTableSourceId::from(syntaqlite_syntax::
 pub fn syntaqlite_syntax::nodes::SubqueryTableSourceId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::TableConstraint<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::check_expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
-pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::constraint_name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::fk_clause(&self) -> core::option::Option<syntaqlite_syntax::nodes::ForeignKeyClause<'a>>
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::fk_columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
@@ -1818,8 +1830,14 @@ pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::kind(&self) -> syntaqlite_
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TableConstraintId
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::onconf(&self) -> syntaqlite_syntax::nodes::ConflictAction
 pub fn syntaqlite_syntax::nodes::TableConstraint<'a>::pk_columns(&self) -> core::option::Option<syntaqlite_syntax::nodes::OrderByList<'a>>
+pub fn syntaqlite_syntax::nodes::TableConstraintGroupId::from(syntaqlite_syntax::nodes::TableConstraintGroup<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::TableConstraintGroupId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::TableConstraintId::from(syntaqlite_syntax::nodes::TableConstraint<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TableConstraintId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
+pub fn syntaqlite_syntax::nodes::TableConstraintItem<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::TableConstraintItem<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TableConstraintItemId
+pub fn syntaqlite_syntax::nodes::TableConstraintItemId::from(syntaqlite_syntax::nodes::TableConstraintItem<'a>) -> Self
+pub fn syntaqlite_syntax::nodes::TableConstraintItemId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::TableConstraintListId::from(syntaqlite_syntax::nodes::TableConstraintList<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::TableConstraintListId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::TableConstraintType::as_str(&self) -> &'static str
@@ -2256,7 +2274,9 @@ pub struct syntaqlite_syntax::nodes::SubqueryExprId(_)
 pub struct syntaqlite_syntax::nodes::SubqueryTableSource<'a>
 pub struct syntaqlite_syntax::nodes::SubqueryTableSourceId(_)
 pub struct syntaqlite_syntax::nodes::TableConstraint<'a>
+pub struct syntaqlite_syntax::nodes::TableConstraintGroupId(_)
 pub struct syntaqlite_syntax::nodes::TableConstraintId(_)
+pub struct syntaqlite_syntax::nodes::TableConstraintItemId(_)
 pub struct syntaqlite_syntax::nodes::TableConstraintListId(_)
 pub struct syntaqlite_syntax::nodes::TableRef<'a>
 pub struct syntaqlite_syntax::nodes::TableRefId(_)
@@ -2748,6 +2768,7 @@ pub syntaqlite_syntax::nodes::Node::SetClauseList(syntaqlite_syntax::nodes::SetC
 pub syntaqlite_syntax::nodes::Node::SubqueryExpr(syntaqlite_syntax::nodes::SubqueryExpr<'a>)
 pub syntaqlite_syntax::nodes::Node::SubqueryTableSource(syntaqlite_syntax::nodes::SubqueryTableSource<'a>)
 pub syntaqlite_syntax::nodes::Node::TableConstraint(syntaqlite_syntax::nodes::TableConstraint<'a>)
+pub syntaqlite_syntax::nodes::Node::TableConstraintGroup(syntaqlite_syntax::nodes::TableConstraintGroup<'a>)
 pub syntaqlite_syntax::nodes::Node::TableConstraintList(syntaqlite_syntax::nodes::TableConstraintList<'a>)
 pub syntaqlite_syntax::nodes::Node::TableRef(syntaqlite_syntax::nodes::TableRef<'a>)
 pub syntaqlite_syntax::nodes::Node::TransactionStmt(syntaqlite_syntax::nodes::TransactionStmt<'a>)
@@ -2765,16 +2786,16 @@ pub syntaqlite_syntax::nodes::Node::WindowDef(syntaqlite_syntax::nodes::WindowDe
 pub syntaqlite_syntax::nodes::Node::WindowDefList(syntaqlite_syntax::nodes::WindowDefList<'a>)
 pub syntaqlite_syntax::nodes::Node::WithClause(syntaqlite_syntax::nodes::WithClause<'a>)
 pub syntaqlite_syntax::nodes::NodeTag::AggregateFunctionCall = 1
-pub syntaqlite_syntax::nodes::NodeTag::AlterTableStmt = 48
-pub syntaqlite_syntax::nodes::NodeTag::AnalyzeOrReindexStmt = 67
-pub syntaqlite_syntax::nodes::NodeTag::AttachStmt = 68
+pub syntaqlite_syntax::nodes::NodeTag::AlterTableStmt = 49
+pub syntaqlite_syntax::nodes::NodeTag::AnalyzeOrReindexStmt = 68
+pub syntaqlite_syntax::nodes::NodeTag::AttachStmt = 69
 pub syntaqlite_syntax::nodes::NodeTag::BetweenExpr = 10
-pub syntaqlite_syntax::nodes::NodeTag::BinaryExpr = 34
+pub syntaqlite_syntax::nodes::NodeTag::BinaryExpr = 35
 pub syntaqlite_syntax::nodes::NodeTag::CaseExpr = 12
 pub syntaqlite_syntax::nodes::NodeTag::CaseWhen = 13
 pub syntaqlite_syntax::nodes::NodeTag::CaseWhenList = 14
 pub syntaqlite_syntax::nodes::NodeTag::CastExpr = 3
-pub syntaqlite_syntax::nodes::NodeTag::CollateExpr = 44
+pub syntaqlite_syntax::nodes::NodeTag::CollateExpr = 45
 pub syntaqlite_syntax::nodes::NodeTag::ColumnConstraint = 16
 pub syntaqlite_syntax::nodes::NodeTag::ColumnConstraintList = 18
 pub syntaqlite_syntax::nodes::NodeTag::ColumnDef = 19
@@ -2782,71 +2803,72 @@ pub syntaqlite_syntax::nodes::NodeTag::ColumnDefList = 20
 pub syntaqlite_syntax::nodes::NodeTag::ColumnRef = 4
 pub syntaqlite_syntax::nodes::NodeTag::CompoundSelect = 5
 pub syntaqlite_syntax::nodes::NodeTag::ConstraintNameDeclaration = 17
-pub syntaqlite_syntax::nodes::NodeTag::CreateIndexStmt = 72
-pub syntaqlite_syntax::nodes::NodeTag::CreateTableStmt = 23
-pub syntaqlite_syntax::nodes::NodeTag::CreateTriggerStmt = 64
-pub syntaqlite_syntax::nodes::NodeTag::CreateViewStmt = 73
-pub syntaqlite_syntax::nodes::NodeTag::CreateVirtualTableStmt = 65
-pub syntaqlite_syntax::nodes::NodeTag::CteDefinition = 24
-pub syntaqlite_syntax::nodes::NodeTag::CteList = 25
-pub syntaqlite_syntax::nodes::NodeTag::DeleteStmt = 29
-pub syntaqlite_syntax::nodes::NodeTag::DetachStmt = 69
-pub syntaqlite_syntax::nodes::NodeTag::DropStmt = 47
-pub syntaqlite_syntax::nodes::NodeTag::Error = 39
+pub syntaqlite_syntax::nodes::NodeTag::CreateIndexStmt = 73
+pub syntaqlite_syntax::nodes::NodeTag::CreateTableStmt = 24
+pub syntaqlite_syntax::nodes::NodeTag::CreateTriggerStmt = 65
+pub syntaqlite_syntax::nodes::NodeTag::CreateViewStmt = 74
+pub syntaqlite_syntax::nodes::NodeTag::CreateVirtualTableStmt = 66
+pub syntaqlite_syntax::nodes::NodeTag::CteDefinition = 25
+pub syntaqlite_syntax::nodes::NodeTag::CteList = 26
+pub syntaqlite_syntax::nodes::NodeTag::DeleteStmt = 30
+pub syntaqlite_syntax::nodes::NodeTag::DetachStmt = 70
+pub syntaqlite_syntax::nodes::NodeTag::DropStmt = 48
+pub syntaqlite_syntax::nodes::NodeTag::Error = 40
 pub syntaqlite_syntax::nodes::NodeTag::ExistsExpr = 7
-pub syntaqlite_syntax::nodes::NodeTag::ExplainStmt = 71
-pub syntaqlite_syntax::nodes::NodeTag::ExprList = 41
-pub syntaqlite_syntax::nodes::NodeTag::FilterOver = 82
+pub syntaqlite_syntax::nodes::NodeTag::ExplainStmt = 72
+pub syntaqlite_syntax::nodes::NodeTag::ExprList = 42
+pub syntaqlite_syntax::nodes::NodeTag::FilterOver = 83
 pub syntaqlite_syntax::nodes::NodeTag::ForeignKeyClause = 15
-pub syntaqlite_syntax::nodes::NodeTag::FrameBound = 76
-pub syntaqlite_syntax::nodes::NodeTag::FrameSpec = 77
-pub syntaqlite_syntax::nodes::NodeTag::FunctionCall = 42
-pub syntaqlite_syntax::nodes::NodeTag::IdentName = 38
+pub syntaqlite_syntax::nodes::NodeTag::FrameBound = 77
+pub syntaqlite_syntax::nodes::NodeTag::FrameSpec = 78
+pub syntaqlite_syntax::nodes::NodeTag::FunctionCall = 43
+pub syntaqlite_syntax::nodes::NodeTag::IdentName = 39
 pub syntaqlite_syntax::nodes::NodeTag::InExpr = 8
-pub syntaqlite_syntax::nodes::NodeTag::InsertStmt = 33
+pub syntaqlite_syntax::nodes::NodeTag::InsertStmt = 34
 pub syntaqlite_syntax::nodes::NodeTag::IsExpr = 9
-pub syntaqlite_syntax::nodes::NodeTag::JoinClause = 60
-pub syntaqlite_syntax::nodes::NodeTag::JoinPrefix = 61
+pub syntaqlite_syntax::nodes::NodeTag::JoinClause = 61
+pub syntaqlite_syntax::nodes::NodeTag::JoinPrefix = 62
 pub syntaqlite_syntax::nodes::NodeTag::LikeExpr = 11
-pub syntaqlite_syntax::nodes::NodeTag::LimitClause = 56
-pub syntaqlite_syntax::nodes::NodeTag::Literal = 36
-pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDef = 80
-pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDefList = 81
+pub syntaqlite_syntax::nodes::NodeTag::LimitClause = 57
+pub syntaqlite_syntax::nodes::NodeTag::Literal = 37
+pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDef = 81
+pub syntaqlite_syntax::nodes::NodeTag::NamedWindowDefList = 82
 pub syntaqlite_syntax::nodes::NodeTag::Null = 0
-pub syntaqlite_syntax::nodes::NodeTag::OrderByList = 55
+pub syntaqlite_syntax::nodes::NodeTag::OrderByList = 56
 pub syntaqlite_syntax::nodes::NodeTag::OrderedSetFunctionCall = 2
-pub syntaqlite_syntax::nodes::NodeTag::OrderingTerm = 54
-pub syntaqlite_syntax::nodes::NodeTag::ParenExpr = 37
-pub syntaqlite_syntax::nodes::NodeTag::ParenTableSource = 59
-pub syntaqlite_syntax::nodes::NodeTag::PragmaStmt = 66
-pub syntaqlite_syntax::nodes::NodeTag::QualifiedName = 46
-pub syntaqlite_syntax::nodes::NodeTag::RaiseExpr = 45
-pub syntaqlite_syntax::nodes::NodeTag::ResultColumn = 51
-pub syntaqlite_syntax::nodes::NodeTag::ResultColumnList = 52
-pub syntaqlite_syntax::nodes::NodeTag::RowValue = 40
-pub syntaqlite_syntax::nodes::NodeTag::SavepointStmt = 50
-pub syntaqlite_syntax::nodes::NodeTag::SelectStmt = 53
-pub syntaqlite_syntax::nodes::NodeTag::SetClause = 30
-pub syntaqlite_syntax::nodes::NodeTag::SetClauseList = 31
+pub syntaqlite_syntax::nodes::NodeTag::OrderingTerm = 55
+pub syntaqlite_syntax::nodes::NodeTag::ParenExpr = 38
+pub syntaqlite_syntax::nodes::NodeTag::ParenTableSource = 60
+pub syntaqlite_syntax::nodes::NodeTag::PragmaStmt = 67
+pub syntaqlite_syntax::nodes::NodeTag::QualifiedName = 47
+pub syntaqlite_syntax::nodes::NodeTag::RaiseExpr = 46
+pub syntaqlite_syntax::nodes::NodeTag::ResultColumn = 52
+pub syntaqlite_syntax::nodes::NodeTag::ResultColumnList = 53
+pub syntaqlite_syntax::nodes::NodeTag::RowValue = 41
+pub syntaqlite_syntax::nodes::NodeTag::SavepointStmt = 51
+pub syntaqlite_syntax::nodes::NodeTag::SelectStmt = 54
+pub syntaqlite_syntax::nodes::NodeTag::SetClause = 31
+pub syntaqlite_syntax::nodes::NodeTag::SetClauseList = 32
 pub syntaqlite_syntax::nodes::NodeTag::SubqueryExpr = 6
-pub syntaqlite_syntax::nodes::NodeTag::SubqueryTableSource = 58
+pub syntaqlite_syntax::nodes::NodeTag::SubqueryTableSource = 59
 pub syntaqlite_syntax::nodes::NodeTag::TableConstraint = 21
-pub syntaqlite_syntax::nodes::NodeTag::TableConstraintList = 22
-pub syntaqlite_syntax::nodes::NodeTag::TableRef = 57
-pub syntaqlite_syntax::nodes::NodeTag::TransactionStmt = 49
-pub syntaqlite_syntax::nodes::NodeTag::TriggerCmdList = 63
-pub syntaqlite_syntax::nodes::NodeTag::TriggerEvent = 62
-pub syntaqlite_syntax::nodes::NodeTag::UnaryExpr = 35
-pub syntaqlite_syntax::nodes::NodeTag::UpdateStmt = 32
-pub syntaqlite_syntax::nodes::NodeTag::UpsertClause = 27
-pub syntaqlite_syntax::nodes::NodeTag::UpsertClauseList = 28
-pub syntaqlite_syntax::nodes::NodeTag::VacuumStmt = 70
-pub syntaqlite_syntax::nodes::NodeTag::ValuesClause = 75
-pub syntaqlite_syntax::nodes::NodeTag::ValuesRowList = 74
-pub syntaqlite_syntax::nodes::NodeTag::Variable = 43
-pub syntaqlite_syntax::nodes::NodeTag::WindowDef = 78
-pub syntaqlite_syntax::nodes::NodeTag::WindowDefList = 79
-pub syntaqlite_syntax::nodes::NodeTag::WithClause = 26
+pub syntaqlite_syntax::nodes::NodeTag::TableConstraintGroup = 22
+pub syntaqlite_syntax::nodes::NodeTag::TableConstraintList = 23
+pub syntaqlite_syntax::nodes::NodeTag::TableRef = 58
+pub syntaqlite_syntax::nodes::NodeTag::TransactionStmt = 50
+pub syntaqlite_syntax::nodes::NodeTag::TriggerCmdList = 64
+pub syntaqlite_syntax::nodes::NodeTag::TriggerEvent = 63
+pub syntaqlite_syntax::nodes::NodeTag::UnaryExpr = 36
+pub syntaqlite_syntax::nodes::NodeTag::UpdateStmt = 33
+pub syntaqlite_syntax::nodes::NodeTag::UpsertClause = 28
+pub syntaqlite_syntax::nodes::NodeTag::UpsertClauseList = 29
+pub syntaqlite_syntax::nodes::NodeTag::VacuumStmt = 71
+pub syntaqlite_syntax::nodes::NodeTag::ValuesClause = 76
+pub syntaqlite_syntax::nodes::NodeTag::ValuesRowList = 75
+pub syntaqlite_syntax::nodes::NodeTag::Variable = 44
+pub syntaqlite_syntax::nodes::NodeTag::WindowDef = 79
+pub syntaqlite_syntax::nodes::NodeTag::WindowDefList = 80
+pub syntaqlite_syntax::nodes::NodeTag::WithClause = 27
 pub syntaqlite_syntax::nodes::NullsOrder::First = 1
 pub syntaqlite_syntax::nodes::NullsOrder::Last = 2
 pub syntaqlite_syntax::nodes::NullsOrder::None = 0
@@ -2888,6 +2910,8 @@ pub syntaqlite_syntax::nodes::Stmt::UpdateStmt(syntaqlite_syntax::nodes::UpdateS
 pub syntaqlite_syntax::nodes::Stmt::VacuumStmt(syntaqlite_syntax::nodes::VacuumStmt<'a>)
 pub syntaqlite_syntax::nodes::Stmt::ValuesClause(syntaqlite_syntax::nodes::ValuesClause<'a>)
 pub syntaqlite_syntax::nodes::Stmt::WithClause(syntaqlite_syntax::nodes::WithClause<'a>)
+pub syntaqlite_syntax::nodes::TableConstraintItem::ConstraintNameDeclaration(syntaqlite_syntax::nodes::ConstraintNameDeclaration<'a>)
+pub syntaqlite_syntax::nodes::TableConstraintItem::TableConstraint(syntaqlite_syntax::nodes::TableConstraint<'a>)
 pub syntaqlite_syntax::nodes::TableConstraintType::Check = 2
 pub syntaqlite_syntax::nodes::TableConstraintType::ForeignKey = 3
 pub syntaqlite_syntax::nodes::TableConstraintType::PrimaryKey = 0
@@ -3084,9 +3108,12 @@ pub type syntaqlite_syntax::nodes::SetClauseListId::Node<'a> = syntaqlite_syntax
 pub type syntaqlite_syntax::nodes::StmtId::Node<'a> = syntaqlite_syntax::nodes::Stmt<'a>
 pub type syntaqlite_syntax::nodes::SubqueryExprId::Node<'a> = syntaqlite_syntax::nodes::SubqueryExpr<'a>
 pub type syntaqlite_syntax::nodes::SubqueryTableSourceId::Node<'a> = syntaqlite_syntax::nodes::SubqueryTableSource<'a>
+pub type syntaqlite_syntax::nodes::TableConstraintGroup<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraintItem<'a>>
+pub type syntaqlite_syntax::nodes::TableConstraintGroupId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraintItem<'a>>
 pub type syntaqlite_syntax::nodes::TableConstraintId::Node<'a> = syntaqlite_syntax::nodes::TableConstraint<'a>
-pub type syntaqlite_syntax::nodes::TableConstraintList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraint<'a>>
-pub type syntaqlite_syntax::nodes::TableConstraintListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraint<'a>>
+pub type syntaqlite_syntax::nodes::TableConstraintItemId::Node<'a> = syntaqlite_syntax::nodes::TableConstraintItem<'a>
+pub type syntaqlite_syntax::nodes::TableConstraintList<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraintGroup<'a>>
+pub type syntaqlite_syntax::nodes::TableConstraintListId::Node<'a> = syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::typed::TypedNodeList<'a, syntaqlite_syntax::typed::Dialect, syntaqlite_syntax::nodes::TableConstraintItem<'a>>>
 pub type syntaqlite_syntax::nodes::TableRefId::Node<'a> = syntaqlite_syntax::nodes::TableRef<'a>
 pub type syntaqlite_syntax::nodes::TableSourceId::Node<'a> = syntaqlite_syntax::nodes::TableSource<'a>
 pub type syntaqlite_syntax::nodes::TransactionStmtId::Node<'a> = syntaqlite_syntax::nodes::TransactionStmt<'a>

@@ -90,6 +90,24 @@ static void synq_expanded_merge(SynqNodeExpandedExtent* acc,
   acc->length = end - start;
 }
 
+void synq_extent_record_list_append(SynqParseCtx* ctx,
+                                    uint32_t list_id,
+                                    uint32_t child) {
+  if (!ctx->collect_node_extents)
+    return;
+  SynqExtentRange range = syntaqlite_vec_at(&ctx->node_extents, child);
+  SynqNodeExpandedExtent expanded =
+      syntaqlite_vec_at(&ctx->node_expanded_extents, child);
+  if (list_id < syntaqlite_vec_len(&ctx->node_extents)) {
+    synq_extent_merge(&syntaqlite_vec_at(&ctx->node_extents, list_id), range);
+    synq_expanded_merge(
+        &syntaqlite_vec_at(&ctx->node_expanded_extents, list_id), expanded);
+  } else {
+    syntaqlite_vec_push(&ctx->node_extents, range, ctx->mem);
+    syntaqlite_vec_push(&ctx->node_expanded_extents, expanded, ctx->mem);
+  }
+}
+
 void synq_extent_on_shift(SynqParseCtx* pCtx,
                           unsigned int major,
                           const SynqParseToken* token) {

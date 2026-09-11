@@ -1013,6 +1013,64 @@ mod tests {
     }
 
     #[test]
+    fn table_constraint_group_extents_cover_only_their_members() {
+        for collect in [false, true] {
+            let parser =
+                Parser::with_config(&ParserConfig::default().with_collect_node_extents(collect));
+            let mut session = parser.parse(
+                "CREATE TABLE t(a, CONSTRAINT c CHECK(a > 0) CHECK(a < 9), CONSTRAINT unused, CHECK(a = 1));",
+            );
+            let stmt = ok_stmt!(session);
+            let Some(crate::sqlite::ast::Stmt::CreateTableStmt(table)) = stmt.root() else {
+                panic!("expected CREATE TABLE");
+            };
+            let groups = table.table_constraints().expect("table constraint groups");
+            assert_eq!(groups.len(), 3);
+            for (group, expected) in groups.iter().zip([
+                "CONSTRAINT c CHECK(a > 0) CHECK(a < 9)",
+                "CONSTRAINT unused",
+                "CHECK(a = 1)",
+            ]) {
+                let id = group.node_id().into();
+                assert_eq!(
+                    stmt.node_text(id).map(|(text, _)| text),
+                    collect.then_some(expected)
+                );
+                assert_eq!(stmt.node_expanded_text(id), collect.then_some(expected));
+            }
+        }
+    }
+
+    #[test]
+    fn table_constraint_group_extents_keep_interior_macro_layers() {
+        let mut parser = Parser::with_config(
+            &ParserConfig::default()
+                .with_collect_node_extents(true)
+                .with_macro_fallback(true),
+        );
+        let mut registry = TestMacroRegistry::new();
+        registry.register("bounded", &[], "CHECK(a > 0)");
+        parser.set_macro_lookup(Some(Box::new(registry)));
+        let mut session =
+            parser.parse("CREATE TABLE t(a, CONSTRAINT c bounded!() CHECK(a < 9), CHECK(a > 1));");
+        let stmt = ok_stmt!(session);
+        let Some(crate::sqlite::ast::Stmt::CreateTableStmt(table)) = stmt.root() else {
+            panic!("expected CREATE TABLE");
+        };
+        let groups = table.table_constraints().expect("table constraint groups");
+        let group = groups.get(0).expect("first group");
+        let id = group.node_id().into();
+        assert_eq!(
+            stmt.node_text(id).map(|(text, _)| text),
+            Some("CONSTRAINT c bounded!() CHECK(a < 9)")
+        );
+        let expanded = stmt.node_expanded_text(id).expect("expanded group text");
+        assert!(expanded.contains("CHECK(a > 0)"), "{expanded}");
+        assert!(!expanded.contains("bounded!"), "{expanded}");
+        assert!(!expanded.contains("CHECK(a > 1)"), "{expanded}");
+    }
+
+    #[test]
     fn parser_collect_node_extents_expanded_text_is_source_for_root_nodes() {
         // For nodes built entirely from root-layer tokens,
         // `node_expanded_text` and `node_text` both return slices of

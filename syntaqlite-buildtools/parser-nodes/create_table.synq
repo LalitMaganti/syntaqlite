@@ -192,7 +192,6 @@ list ColumnDefList {
 
 node TableConstraint {
   kind: inline TableConstraintType
-  constraint_name: inline SyntaqliteTextSpan
   onconf: inline ConflictAction
   is_autoincrement: inline Bool
   pk_columns: index OrderByList
@@ -201,7 +200,6 @@ node TableConstraint {
   fk_clause: index ForeignKeyClause
 
   fmt {
-    if_span(constraint_name) { "CONSTRAINT" space span(constraint_name) space }
     switch(kind) {
       PRIMARY_KEY {
         group { "PRIMARY" "KEY(" nest { softline child(pk_columns) } softline ")" }
@@ -238,8 +236,20 @@ node TableConstraint {
   }
 }
 
+abstract TableConstraintItem {
+  ConstraintNameDeclaration TableConstraint
+}
+
+// Within table constraints, a comma ends the pending-name scope. The first
+// group can inherit the last column's name. Keep authored groups instead of
+// inserting commas and repeating the effective name on each item.
+list TableConstraintGroup {
+  TableConstraintItem
+  fmt { group { for_each(sep: line) { child(_item) } } }
+}
+
 list TableConstraintList {
-  TableConstraint
+  TableConstraintGroup
   fmt { for_each(sep: "," line) { child(_item) } }
 }
 

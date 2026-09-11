@@ -459,8 +459,6 @@ static const SyntaqliteFieldMeta field_meta_table_constraint[] = {
      display_table_constraint_type,
      sizeof(display_table_constraint_type) /
          sizeof(display_table_constraint_type[0])},
-    {offsetof(SyntaqliteTableConstraint, constraint_name),
-     SYNTAQLITE_FIELD_SPAN, "constraint_name", NULL, 0},
     {offsetof(SyntaqliteTableConstraint, onconf), SYNTAQLITE_FIELD_ENUM,
      "onconf", display_conflict_action,
      sizeof(display_conflict_action) / sizeof(display_conflict_action[0])},
@@ -1077,10 +1075,6 @@ static const SyntaqliteFieldRangeMeta range_meta_column_def[] = {
     {offsetof(SyntaqliteColumnDef, type_name), 1},
 };
 
-static const SyntaqliteFieldRangeMeta range_meta_table_constraint[] = {
-    {offsetof(SyntaqliteTableConstraint, constraint_name), 1},
-};
-
 static const SyntaqliteFieldRangeMeta range_meta_create_table_stmt[] = {
     {offsetof(SyntaqliteCreateTableStmt, table_name), 1},
     {offsetof(SyntaqliteCreateTableStmt, schema), 1},
@@ -1216,6 +1210,7 @@ static const char* const ast_meta_node_names[] = {
     "ColumnDef",
     "ColumnDefList",
     "TableConstraint",
+    "TableConstraintGroup",
     "TableConstraintList",
     "CreateTableStmt",
     "CteDefinition",
@@ -1304,6 +1299,7 @@ static const SyntaqliteFieldMeta* const ast_meta_field_meta[] = {
     field_meta_column_def,                  /* ColumnDef */
     NULL,                                   /* ColumnDefList */
     field_meta_table_constraint,            /* TableConstraint */
+    NULL,                                   /* TableConstraintGroup */
     NULL,                                   /* TableConstraintList */
     field_meta_create_table_stmt,           /* CreateTableStmt */
     field_meta_cte_definition,              /* CteDefinition */
@@ -1389,7 +1385,8 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     0,  /* ColumnConstraintList */
     3,  /* ColumnDef */
     0,  /* ColumnDefList */
-    8,  /* TableConstraint */
+    7,  /* TableConstraint */
+    0,  /* TableConstraintGroup */
     0,  /* TableConstraintList */
     8,  /* CreateTableStmt */
     4,  /* CteDefinition */
@@ -1478,6 +1475,7 @@ static const uint8_t ast_meta_list_tags[] = {
     0, /* ColumnDef */
     1, /* ColumnDefList */
     0, /* TableConstraint */
+    1, /* TableConstraintGroup */
     1, /* TableConstraintList */
     0, /* CreateTableStmt */
     0, /* CteDefinition */
@@ -1565,7 +1563,8 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                   /* ColumnConstraintList */
     {range_meta_column_def, 1},                  /* ColumnDef */
     {NULL, 0},                                   /* ColumnDefList */
-    {range_meta_table_constraint, 1},            /* TableConstraint */
+    {NULL, 0},                                   /* TableConstraint */
+    {NULL, 0},                                   /* TableConstraintGroup */
     {NULL, 0},                                   /* TableConstraintList */
     {range_meta_create_table_stmt, 2},           /* CreateTableStmt */
     {range_meta_cte_definition, 1},              /* CteDefinition */

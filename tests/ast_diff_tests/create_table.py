@@ -1226,32 +1226,32 @@ class TableConstraintPrimaryKey(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: PRIMARY_KEY
-                    constraint_name: (none)
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns:
-                      OrderByList [2 items]
-                        OrderingTerm
-                          expr:
-                            ColumnRef
-                              column: "a"
-                              table: (none)
-                              schema: (none)
-                          sort_order: ASC
-                          nulls_order: NONE
-                        OrderingTerm
-                          expr:
-                            ColumnRef
-                              column: "b"
-                              table: (none)
-                              schema: (none)
-                          sort_order: ASC
-                          nulls_order: NONE
-                    fk_columns: (none)
-                    check_expr: (none)
-                    fk_clause: (none)
+                  TableConstraintGroup [1 items]
+                    TableConstraint
+                      kind: PRIMARY_KEY
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns:
+                        OrderByList [2 items]
+                          OrderingTerm
+                            expr:
+                              ColumnRef
+                                column: "a"
+                                table: (none)
+                                schema: (none)
+                            sort_order: ASC
+                            nulls_order: NONE
+                          OrderingTerm
+                            expr:
+                              ColumnRef
+                                column: "b"
+                                table: (none)
+                                schema: (none)
+                            sort_order: ASC
+                            nulls_order: NONE
+                      fk_columns: (none)
+                      check_expr: (none)
+                      fk_clause: (none)
               as_select: (none)
 """,
         )
@@ -1276,24 +1276,26 @@ class TableConstraintPrimaryKey(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: PRIMARY_KEY
-                    constraint_name: "pk"
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns:
-                      OrderByList [1 items]
-                        OrderingTerm
-                          expr:
-                            ColumnRef
-                              column: "a"
-                              table: (none)
-                              schema: (none)
-                          sort_order: ASC
-                          nulls_order: NONE
-                    fk_columns: (none)
-                    check_expr: (none)
-                    fk_clause: (none)
+                  TableConstraintGroup [2 items]
+                    ConstraintNameDeclaration
+                      name: "pk"
+                    TableConstraint
+                      kind: PRIMARY_KEY
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns:
+                        OrderByList [1 items]
+                          OrderingTerm
+                            expr:
+                              ColumnRef
+                                column: "a"
+                                table: (none)
+                                schema: (none)
+                            sort_order: ASC
+                            nulls_order: NONE
+                      fk_columns: (none)
+                      check_expr: (none)
+                      fk_clause: (none)
               as_select: (none)
 """,
         )
@@ -1328,32 +1330,32 @@ class TableConstraintUnique(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: UNIQUE
-                    constraint_name: (none)
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns:
-                      OrderByList [2 items]
-                        OrderingTerm
-                          expr:
-                            ColumnRef
-                              column: "a"
-                              table: (none)
-                              schema: (none)
-                          sort_order: ASC
-                          nulls_order: NONE
-                        OrderingTerm
-                          expr:
-                            ColumnRef
-                              column: "b"
-                              table: (none)
-                              schema: (none)
-                          sort_order: ASC
-                          nulls_order: NONE
-                    fk_columns: (none)
-                    check_expr: (none)
-                    fk_clause: (none)
+                  TableConstraintGroup [1 items]
+                    TableConstraint
+                      kind: UNIQUE
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns:
+                        OrderByList [2 items]
+                          OrderingTerm
+                            expr:
+                              ColumnRef
+                                column: "a"
+                                table: (none)
+                                schema: (none)
+                            sort_order: ASC
+                            nulls_order: NONE
+                          OrderingTerm
+                            expr:
+                              ColumnRef
+                                column: "b"
+                                table: (none)
+                                schema: (none)
+                            sort_order: ASC
+                            nulls_order: NONE
+                      fk_columns: (none)
+                      check_expr: (none)
+                      fk_clause: (none)
               as_select: (none)
 """,
         )
@@ -1388,27 +1390,27 @@ class TableConstraintCheck(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: CHECK
-                    constraint_name: (none)
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns: (none)
-                    fk_columns: (none)
-                    check_expr:
-                      BinaryExpr
-                        op: GT
-                        left:
-                          ColumnRef
-                            column: "a"
-                            table: (none)
-                            schema: (none)
-                        right:
-                          ColumnRef
-                            column: "b"
-                            table: (none)
-                            schema: (none)
-                    fk_clause: (none)
+                  TableConstraintGroup [1 items]
+                    TableConstraint
+                      kind: CHECK
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns: (none)
+                      check_expr:
+                        BinaryExpr
+                          op: GT
+                          left:
+                            ColumnRef
+                              column: "a"
+                              table: (none)
+                              schema: (none)
+                          right:
+                            ColumnRef
+                              column: "b"
+                              table: (none)
+                              schema: (none)
+                      fk_clause: (none)
               as_select: (none)
 """,
         )
@@ -1437,34 +1439,34 @@ class TableConstraintForeignKey(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: FOREIGN_KEY
-                    constraint_name: (none)
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns: (none)
-                    fk_columns:
-                      ExprList [1 items]
-                        ColumnRef
-                          column: "a"
-                          table: (none)
-                          schema: (none)
-                    check_expr: (none)
-                    fk_clause:
-                      ForeignKeyClause
-                        ref_table: "other"
-                        ref_columns:
-                          ExprList [1 items]
-                            ColumnRef
-                              column: "id"
-                              table: (none)
-                              schema: (none)
-                        match_name: (none)
-                        on_delete: UNSET
-                        on_update: UNSET
-                        on_insert: UNSET
-                        deferrable: UNSET
-                        initial_defer: UNSET
+                  TableConstraintGroup [1 items]
+                    TableConstraint
+                      kind: FOREIGN_KEY
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns:
+                        ExprList [1 items]
+                          ColumnRef
+                            column: "a"
+                            table: (none)
+                            schema: (none)
+                      check_expr: (none)
+                      fk_clause:
+                        ForeignKeyClause
+                          ref_table: "other"
+                          ref_columns:
+                            ExprList [1 items]
+                              ColumnRef
+                                column: "id"
+                                table: (none)
+                                schema: (none)
+                          match_name: (none)
+                          on_delete: UNSET
+                          on_update: UNSET
+                          on_insert: UNSET
+                          deferrable: UNSET
+                          initial_defer: UNSET
               as_select: (none)
 """,
         )
@@ -1489,34 +1491,34 @@ class TableConstraintForeignKey(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: FOREIGN_KEY
-                    constraint_name: (none)
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns: (none)
-                    fk_columns:
-                      ExprList [1 items]
-                        ColumnRef
-                          column: "a"
-                          table: (none)
-                          schema: (none)
-                    check_expr: (none)
-                    fk_clause:
-                      ForeignKeyClause
-                        ref_table: "other"
-                        ref_columns:
-                          ExprList [1 items]
-                            ColumnRef
-                              column: "id"
-                              table: (none)
-                              schema: (none)
-                        match_name: (none)
-                        on_delete: CASCADE
-                        on_update: SET_NULL
-                        on_insert: UNSET
-                        deferrable: UNSET
-                        initial_defer: UNSET
+                  TableConstraintGroup [1 items]
+                    TableConstraint
+                      kind: FOREIGN_KEY
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns:
+                        ExprList [1 items]
+                          ColumnRef
+                            column: "a"
+                            table: (none)
+                            schema: (none)
+                      check_expr: (none)
+                      fk_clause:
+                        ForeignKeyClause
+                          ref_table: "other"
+                          ref_columns:
+                            ExprList [1 items]
+                              ColumnRef
+                                column: "id"
+                                table: (none)
+                                schema: (none)
+                          match_name: (none)
+                          on_delete: CASCADE
+                          on_update: SET_NULL
+                          on_insert: UNSET
+                          deferrable: UNSET
+                          initial_defer: UNSET
               as_select: (none)
 """,
         )
@@ -1541,34 +1543,34 @@ class TableConstraintForeignKey(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: FOREIGN_KEY
-                    constraint_name: (none)
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns: (none)
-                    fk_columns:
-                      ExprList [1 items]
-                        ColumnRef
-                          column: "a"
-                          table: (none)
-                          schema: (none)
-                    check_expr: (none)
-                    fk_clause:
-                      ForeignKeyClause
-                        ref_table: "other"
-                        ref_columns:
-                          ExprList [1 items]
-                            ColumnRef
-                              column: "id"
-                              table: (none)
-                              schema: (none)
-                        match_name: (none)
-                        on_delete: UNSET
-                        on_update: UNSET
-                        on_insert: UNSET
-                        deferrable: DEFERRABLE
-                        initial_defer: DEFERRED
+                  TableConstraintGroup [1 items]
+                    TableConstraint
+                      kind: FOREIGN_KEY
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns:
+                        ExprList [1 items]
+                          ColumnRef
+                            column: "a"
+                            table: (none)
+                            schema: (none)
+                      check_expr: (none)
+                      fk_clause:
+                        ForeignKeyClause
+                          ref_table: "other"
+                          ref_columns:
+                            ExprList [1 items]
+                              ColumnRef
+                                column: "id"
+                                table: (none)
+                                schema: (none)
+                          match_name: (none)
+                          on_delete: UNSET
+                          on_update: UNSET
+                          on_insert: UNSET
+                          deferrable: DEFERRABLE
+                          initial_defer: DEFERRED
               as_select: (none)
 """,
         )
@@ -1930,24 +1932,24 @@ class OnConflictClause(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: PRIMARY_KEY
-                    constraint_name: (none)
-                    onconf: IGNORE
-                    is_autoincrement: FALSE
-                    pk_columns:
-                      OrderByList [1 items]
-                        OrderingTerm
-                          expr:
-                            ColumnRef
-                              column: "a"
-                              table: (none)
-                              schema: (none)
-                          sort_order: ASC
-                          nulls_order: NONE
-                    fk_columns: (none)
-                    check_expr: (none)
-                    fk_clause: (none)
+                  TableConstraintGroup [1 items]
+                    TableConstraint
+                      kind: PRIMARY_KEY
+                      onconf: IGNORE
+                      is_autoincrement: FALSE
+                      pk_columns:
+                        OrderByList [1 items]
+                          OrderingTerm
+                            expr:
+                              ColumnRef
+                                column: "a"
+                                table: (none)
+                                schema: (none)
+                            sort_order: ASC
+                            nulls_order: NONE
+                      fk_columns: (none)
+                      check_expr: (none)
+                      fk_clause: (none)
               as_select: (none)
 """,
         )
@@ -1972,24 +1974,24 @@ class OnConflictClause(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: UNIQUE
-                    constraint_name: (none)
-                    onconf: REPLACE
-                    is_autoincrement: FALSE
-                    pk_columns:
-                      OrderByList [1 items]
-                        OrderingTerm
-                          expr:
-                            ColumnRef
-                              column: "a"
-                              table: (none)
-                              schema: (none)
-                          sort_order: ASC
-                          nulls_order: NONE
-                    fk_columns: (none)
-                    check_expr: (none)
-                    fk_clause: (none)
+                  TableConstraintGroup [1 items]
+                    TableConstraint
+                      kind: UNIQUE
+                      onconf: REPLACE
+                      is_autoincrement: FALSE
+                      pk_columns:
+                        OrderByList [1 items]
+                          OrderingTerm
+                            expr:
+                              ColumnRef
+                                column: "a"
+                                table: (none)
+                                schema: (none)
+                            sort_order: ASC
+                            nulls_order: NONE
+                      fk_columns: (none)
+                      check_expr: (none)
+                      fk_clause: (none)
               as_select: (none)
 """,
         )
@@ -2094,24 +2096,26 @@ class NamedTableConstraints(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: UNIQUE
-                    constraint_name: "uq"
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns:
-                      OrderByList [1 items]
-                        OrderingTerm
-                          expr:
-                            ColumnRef
-                              column: "a"
-                              table: (none)
-                              schema: (none)
-                          sort_order: ASC
-                          nulls_order: NONE
-                    fk_columns: (none)
-                    check_expr: (none)
-                    fk_clause: (none)
+                  TableConstraintGroup [2 items]
+                    ConstraintNameDeclaration
+                      name: "uq"
+                    TableConstraint
+                      kind: UNIQUE
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns:
+                        OrderByList [1 items]
+                          OrderingTerm
+                            expr:
+                              ColumnRef
+                                column: "a"
+                                table: (none)
+                                schema: (none)
+                            sort_order: ASC
+                            nulls_order: NONE
+                      fk_columns: (none)
+                      check_expr: (none)
+                      fk_clause: (none)
               as_select: (none)
 """,
         )
@@ -2136,26 +2140,28 @@ class NamedTableConstraints(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: CHECK
-                    constraint_name: "chk"
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns: (none)
-                    fk_columns: (none)
-                    check_expr:
-                      BinaryExpr
-                        op: GT
-                        left:
-                          ColumnRef
-                            column: "a"
-                            table: (none)
-                            schema: (none)
-                        right:
-                          Literal
-                            literal_type: INTEGER
-                            source: "0"
-                    fk_clause: (none)
+                  TableConstraintGroup [2 items]
+                    ConstraintNameDeclaration
+                      name: "chk"
+                    TableConstraint
+                      kind: CHECK
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns: (none)
+                      check_expr:
+                        BinaryExpr
+                          op: GT
+                          left:
+                            ColumnRef
+                              column: "a"
+                              table: (none)
+                              schema: (none)
+                          right:
+                            Literal
+                              literal_type: INTEGER
+                              source: "0"
+                      fk_clause: (none)
               as_select: (none)
 """,
         )
@@ -2180,34 +2186,36 @@ class NamedTableConstraints(TestSuite):
                     constraints: (none)
               table_constraints:
                 TableConstraintList [1 items]
-                  TableConstraint
-                    kind: FOREIGN_KEY
-                    constraint_name: "fk"
-                    onconf: DEFAULT
-                    is_autoincrement: FALSE
-                    pk_columns: (none)
-                    fk_columns:
-                      ExprList [1 items]
-                        ColumnRef
-                          column: "a"
-                          table: (none)
-                          schema: (none)
-                    check_expr: (none)
-                    fk_clause:
-                      ForeignKeyClause
-                        ref_table: "b"
-                        ref_columns:
-                          ExprList [1 items]
-                            ColumnRef
-                              column: "id"
-                              table: (none)
-                              schema: (none)
-                        match_name: (none)
-                        on_delete: UNSET
-                        on_update: UNSET
-                        on_insert: UNSET
-                        deferrable: UNSET
-                        initial_defer: UNSET
+                  TableConstraintGroup [2 items]
+                    ConstraintNameDeclaration
+                      name: "fk"
+                    TableConstraint
+                      kind: FOREIGN_KEY
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns:
+                        ExprList [1 items]
+                          ColumnRef
+                            column: "a"
+                            table: (none)
+                            schema: (none)
+                      check_expr: (none)
+                      fk_clause:
+                        ForeignKeyClause
+                          ref_table: "b"
+                          ref_columns:
+                            ExprList [1 items]
+                              ColumnRef
+                                column: "id"
+                                table: (none)
+                                schema: (none)
+                          match_name: (none)
+                          on_delete: UNSET
+                          on_update: UNSET
+                          on_insert: UNSET
+                          deferrable: UNSET
+                          initial_defer: UNSET
               as_select: (none)
 """,
         )
@@ -2569,5 +2577,136 @@ class ColumnConstraintDeclarations(TestSuite):
                                 source: "0"
                         generated_expr: (none)
                         fk_clause: (none)
+""",
+        )
+
+
+class TableConstraintDeclarations(TestSuite):
+    def test_groups_preserve_declarations_and_commas(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a, CONSTRAINT c CHECK(a > 0) CHECK(a < 9), CONSTRAINT unused, CHECK(a = 1))",
+            out="""\
+            CreateTableStmt
+              table_name: "t"
+              schema: (none)
+              is_temp: FALSE
+              if_not_exists: FALSE
+              flags: (none)
+              columns:
+                ColumnDefList [1 items]
+                  ColumnDef
+                    column_name:
+                      IdentName
+                        source: "a"
+                    type_name: (none)
+                    constraints: (none)
+              table_constraints:
+                TableConstraintList [3 items]
+                  TableConstraintGroup [3 items]
+                    ConstraintNameDeclaration
+                      name: "c"
+                    TableConstraint
+                      kind: CHECK
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns: (none)
+                      check_expr:
+                        BinaryExpr
+                          op: GT
+                          left:
+                            ColumnRef
+                              column: "a"
+                              table: (none)
+                              schema: (none)
+                          right:
+                            Literal
+                              literal_type: INTEGER
+                              source: "0"
+                      fk_clause: (none)
+                    TableConstraint
+                      kind: CHECK
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns: (none)
+                      check_expr:
+                        BinaryExpr
+                          op: LT
+                          left:
+                            ColumnRef
+                              column: "a"
+                              table: (none)
+                              schema: (none)
+                          right:
+                            Literal
+                              literal_type: INTEGER
+                              source: "9"
+                      fk_clause: (none)
+                  TableConstraintGroup [1 items]
+                    ConstraintNameDeclaration
+                      name: "unused"
+                  TableConstraintGroup [1 items]
+                    TableConstraint
+                      kind: CHECK
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns: (none)
+                      check_expr:
+                        BinaryExpr
+                          op: EQ
+                          left:
+                            ColumnRef
+                              column: "a"
+                              table: (none)
+                              schema: (none)
+                          right:
+                            Literal
+                              literal_type: INTEGER
+                              source: "1"
+                      fk_clause: (none)
+              as_select: (none)
+""",
+        )
+
+    def test_overwritten_names_are_authored_items(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a, CONSTRAINT old CONSTRAINT current CHECK(a))",
+            out="""\
+            CreateTableStmt
+              table_name: "t"
+              schema: (none)
+              is_temp: FALSE
+              if_not_exists: FALSE
+              flags: (none)
+              columns:
+                ColumnDefList [1 items]
+                  ColumnDef
+                    column_name:
+                      IdentName
+                        source: "a"
+                    type_name: (none)
+                    constraints: (none)
+              table_constraints:
+                TableConstraintList [1 items]
+                  TableConstraintGroup [3 items]
+                    ConstraintNameDeclaration
+                      name: "old"
+                    ConstraintNameDeclaration
+                      name: "current"
+                    TableConstraint
+                      kind: CHECK
+                      onconf: DEFAULT
+                      is_autoincrement: FALSE
+                      pk_columns: (none)
+                      fk_columns: (none)
+                      check_expr:
+                        ColumnRef
+                          column: "a"
+                          table: (none)
+                          schema: (none)
+                      fk_clause: (none)
+              as_select: (none)
 """,
         )

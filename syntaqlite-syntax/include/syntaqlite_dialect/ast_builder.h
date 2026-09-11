@@ -22,6 +22,7 @@
 #include "syntaqlite/parser.h"
 #include "syntaqlite/types.h"
 #include "syntaqlite_dialect/arena.h"
+#include "syntaqlite_dialect/dialect_abi.h"
 #include "syntaqlite_dialect/vec.h"
 
 #define SYNQ_NO_SPAN ((SyntaqliteTextSpan){0})
@@ -166,9 +167,6 @@ typedef struct SynqParseCtx {
   uint32_t has_macro_straddle;  // Sticky flag set during reduce.
   uint32_t lemon_depth;  // Lemon stack depth (always tracked, for lazy init).
   SYNQ_VEC(uint32_t) straddle_stack;  // Lazily initialized on first macro use.
-  // Name from `CONSTRAINT nm`, naming every constraint until the next column
-  // or comma clears it. Mirrors Parse.u1.cr.constraintName.
-  SyntaqliteTextSpan constraint_name;
   // Set when `GENERATED ALWAYS` was trimmed off a column's type name, so the
   // `AS` production can still emit the keywords.
   uint32_t generated_always;
@@ -231,7 +229,6 @@ static inline void synq_parse_ctx_init(SynqParseCtx* ctx,
   ctx->has_macro_straddle = 0;
   ctx->lemon_depth = 0;
   syntaqlite_vec_init(&ctx->straddle_stack);
-  ctx->constraint_name = SYNQ_NO_SPAN;
   ctx->generated_always = 0;
 }
 
@@ -310,10 +307,18 @@ static inline uint32_t synq_parse_build(SynqParseCtx* ctx,
   return node_id;
 }
 
-static inline uint32_t synq_parse_list_append(SynqParseCtx* ctx,
-                                              uint32_t tag,
-                                              uint32_t list_id,
-                                              uint32_t child) {
+// Record a list's extent as the union of its members, instead of the current
+// grammar reduction. This is useful for semantic sublists assembled inside a
+// larger left-recursive reduction. Expanded-layer merging includes every child.
+SYNTAQLITE_DIALECT_API void synq_extent_record_list_append(SynqParseCtx* ctx,
+                                                           uint32_t list_id,
+                                                           uint32_t child);
+
+static inline uint32_t synq_parse_list_append_impl(SynqParseCtx* ctx,
+                                                   uint32_t tag,
+                                                   uint32_t list_id,
+                                                   uint32_t child,
+                                                   int child_extents) {
   if (list_id == SYNTAQLITE_NULL_NODE) {
     SynqListDesc desc;
     desc.node_id = synq_arena_reserve_id(&ctx->ast, ctx->mem);
@@ -321,7 +326,11 @@ static inline uint32_t synq_parse_list_append(SynqParseCtx* ctx,
     desc.tag = tag;
     syntaqlite_vec_push(&ctx->list_stack, desc, ctx->mem);
     syntaqlite_vec_push(&ctx->child_buf, child, ctx->mem);
-    synq_extent_record(ctx, desc.node_id);
+    if (child_extents) {
+      if (ctx->collect_node_extents)
+        synq_extent_record_list_append(ctx, desc.node_id, child);
+    } else
+      synq_extent_record(ctx, desc.node_id);
     return desc.node_id;
   }
 
@@ -332,8 +341,26 @@ static inline uint32_t synq_parse_list_append(SynqParseCtx* ctx,
     synq_parse_list_flush_top(ctx);
   }
   syntaqlite_vec_push(&ctx->child_buf, child, ctx->mem);
-  synq_extent_record(ctx, list_id);
+  if (child_extents) {
+    if (ctx->collect_node_extents)
+      synq_extent_record_list_append(ctx, list_id, child);
+  } else
+    synq_extent_record(ctx, list_id);
   return list_id;
+}
+
+static inline uint32_t synq_parse_list_append(SynqParseCtx* ctx,
+                                              uint32_t tag,
+                                              uint32_t list_id,
+                                              uint32_t child) {
+  return synq_parse_list_append_impl(ctx, tag, list_id, child, 0);
+}
+
+static inline uint32_t synq_parse_list_append_from_children(SynqParseCtx* ctx,
+                                                            uint32_t tag,
+                                                            uint32_t list_id,
+                                                            uint32_t child) {
+  return synq_parse_list_append_impl(ctx, tag, list_id, child, 1);
 }
 
 // Like list_append, but inserts the child at the front of the list.

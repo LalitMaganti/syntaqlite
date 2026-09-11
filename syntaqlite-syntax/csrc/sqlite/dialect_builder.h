@@ -283,7 +283,6 @@ static inline uint32_t synq_parse_column_def(SynqParseCtx* ctx,
 static inline uint32_t synq_parse_table_constraint(
     SynqParseCtx* ctx,
     SyntaqliteTableConstraintType kind,
-    SyntaqliteTextSpan constraint_name,
     SyntaqliteConflictAction onconf,
     SyntaqliteBool is_autoincrement,
     uint32_t pk_columns,
@@ -294,7 +293,6 @@ static inline uint32_t synq_parse_table_constraint(
       ctx,
       &(SyntaqliteTableConstraint){.tag = SYNTAQLITE_NODE_TABLE_CONSTRAINT,
                                    .kind = kind,
-                                   .constraint_name = constraint_name,
                                    .onconf = onconf,
                                    .is_autoincrement = is_autoincrement,
                                    .pk_columns = pk_columns,
@@ -1054,6 +1052,13 @@ static inline uint32_t synq_parse_column_def_list(SynqParseCtx* ctx,
                                                   uint32_t child) {
   return synq_parse_list_append(ctx, SYNTAQLITE_NODE_COLUMN_DEF_LIST, list_id,
                                 child);
+}
+
+static inline uint32_t synq_parse_table_constraint_group(SynqParseCtx* ctx,
+                                                         uint32_t list_id,
+                                                         uint32_t child) {
+  return synq_parse_list_append(ctx, SYNTAQLITE_NODE_TABLE_CONSTRAINT_GROUP,
+                                list_id, child);
 }
 
 static inline uint32_t synq_parse_table_constraint_list(SynqParseCtx* ctx,
