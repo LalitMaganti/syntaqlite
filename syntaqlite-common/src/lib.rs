@@ -498,6 +498,10 @@ pub mod fmt {
             /// `c` = `is_right` (0 or 1).
             /// Like `CHILD_PREC` but the parent's precedence is fixed (not from an enum field).
             pub const CHILD_PREC_FIXED: u8 = 25;
+            /// Begin syntax-role binding: a=child field (255=self), b=role.
+            pub const SOURCE_START: u8 = 26;
+            /// End the current syntax-role binding.
+            pub const SOURCE_END: u8 = 27;
         }
 
         /// A compiled op in its binary encoding: 6 bytes total.

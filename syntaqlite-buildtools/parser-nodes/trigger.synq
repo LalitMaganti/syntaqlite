@@ -48,10 +48,12 @@ node CreateTriggerStmt {
     space
     if_span(schema) { span(schema) "." }
     span(trigger_name) space
+    source(prefix, _self) {
     switch(timing) {
       BEFORE     { "BEFORE" }
       AFTER      { "AFTER" }
       INSTEAD_OF { "INSTEAD" "OF" }
+    }
     }
     space child(event) space "ON" space child(table)
     if_set(when_expr) { hardline "WHEN" space child(when_expr) }

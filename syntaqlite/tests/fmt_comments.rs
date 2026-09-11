@@ -201,3 +201,207 @@ fn issue_354_named_deferred_foreign_key_between_columns() {
     );
     assert_eq!(fmt(&out), out);
 }
+
+/// Every emitted terminal, including a list separator, must handle comments
+/// before advancing its source cursor. These packets straddle the separator.
+#[test]
+fn comments_on_both_sides_of_list_separators() {
+    let cases = [
+        "SELECT a /* before */, -- after\n b;",
+        "SELECT f(a /* before */, -- after\n b);",
+        "SELECT a IN (1 /* before */, -- after\n 2);",
+        "SELECT a FROM t ORDER BY a /* before */, -- after\n b;",
+        "VALUES (1 /* before */, -- after\n 2);",
+        "UPDATE t SET a = 1 /* before */, -- after\n b = 2;",
+        "CREATE TABLE t(a CONSTRAINT unused /* before */, -- after\n b CHECK(b));",
+    ];
+    for input in cases {
+        let out = fmt(input);
+        eprintln!("=== input ===\n{input}\n=== actual ===\n{out}=== end ===");
+        assert_eq!(out.matches("/* before */").count(), 1, "{input}");
+        assert_eq!(out.matches("-- after").count(), 1, "{input}");
+        let separator = out.find(',').expect("separator preserved");
+        assert!(
+            out.find("/* before */")
+                .expect("comment before separator preserved")
+                < separator
+        );
+        assert!(
+            separator
+                < out
+                    .find("-- after")
+                    .expect("comment after separator preserved")
+        );
+        assert_eq!(fmt(&out), out, "{input}");
+    }
+}
+
+/// Name declarations own their source occurrence once, including declarations
+/// that are superseded or never applied to a constraint.
+#[test]
+fn comments_on_authored_constraint_name_declarations() {
+    for input in [
+        "CREATE TABLE t(a CONSTRAINT c /* first */ CHECK(a > 0) CHECK(a < 9));",
+        "CREATE TABLE t(a CONSTRAINT old /* first */ CONSTRAINT c CHECK(a));",
+        "CREATE TABLE t(a CONSTRAINT c /* first */);",
+        "ALTER TABLE t ADD COLUMN a CONSTRAINT c /* first */ CHECK(a > 0) CHECK(a < 9);",
+    ] {
+        let out = fmt(input);
+        eprintln!("=== input ===\n{input}\n=== actual ===\n{out}=== end ===");
+        assert_eq!(out.matches("/* first */").count(), 1, "{input}");
+        assert_eq!(out.matches("CONSTRAINT c").count(), 1, "{input}");
+        assert_eq!(fmt(&out), out, "{input}");
+    }
+}
+
+#[test]
+fn parser_provenance_places_comments_on_canonical_and_retired_syntax() {
+    for (input, expected) in [
+        (
+            "SELECT a == /* operator */ b;",
+            "SELECT a = /* operator */ b;\n",
+        ),
+        (
+            "SELECT a /* value */ alias;",
+            "SELECT a /* value */ AS alias;\n",
+        ),
+        (
+            "SELECT a FROM t ORDER BY a ASC /* direction */, b;",
+            "SELECT a FROM t ORDER BY a /* direction */, b;\n",
+        ),
+        (
+            "CREATE TABLE t(a CHECK /* keyword */ ( /* open */ a > 0));",
+            "CREATE TABLE t(a CHECK /* keyword */ ( /* open */ a > 0));\n",
+        ),
+    ] {
+        let out = fmt(input);
+        eprintln!("=== input ===\n{input}\n=== actual ===\n{out}=== end ===");
+        assert_eq!(out, expected);
+        assert_eq!(fmt(&out), out);
+    }
+}
+
+/// Exercise the public formatter at every lexical boundary, independently of
+/// the formatter's templates. Comments must neither change SQL tokens nor
+/// disappear, and a second formatting pass must be stable.
+#[test]
+fn production_comment_ownership_at_every_token_boundary() {
+    use syntaqlite::FormatConfig;
+    use syntaqlite_syntax::Tokenizer;
+    let tokenizer = Tokenizer::new();
+    let sql_tokens = |sql: &str| {
+        tokenizer
+            .tokenize(sql)
+            .filter(|t| !t.text().trim().is_empty() && !t.text().contains("ownership_probe"))
+            .map(|t| t.text().to_owned())
+            .collect::<Vec<_>>()
+    };
+    for sql in [
+        "SELECT a == b, c != d FROM t ORDER BY a ASC, b DESC;",
+        "SELECT (a + b) * c value FROM t WHERE a IS NOT NULL;",
+        "SELECT count(DISTINCT a), CAST(b AS TEXT) FROM t GROUP BY b HAVING count(*) > 1;",
+        "SELECT CASE WHEN a THEN b ELSE c END FROM t LIMIT 2 OFFSET 1;",
+        "WITH x(a) AS (SELECT 1) SELECT a FROM x UNION ALL SELECT 2;",
+        "SELECT a FROM t LEFT OUTER JOIN u ON t.id = u.id;",
+        "SELECT * FROM t OUTER LEFT NATURAL JOIN u;",
+        "SELECT * FROM t LEFT LEFT JOIN u ON t.id = u.id;",
+        "SELECT * FROM t CROSS NATURAL JOIN u;",
+        "SELECT sum(a) OVER (PARTITION BY b ORDER BY c ROWS 1 PRECEDING) FROM t;",
+        "CREATE TABLE t(a CONSTRAINT c CHECK(a > 0), b REFERENCES u(id) ON UPDATE CASCADE ON DELETE RESTRICT);",
+        "CREATE TABLE t(a, CONSTRAINT c UNIQUE(a) CHECK(a > 0));",
+        "CREATE TEMPORARY VIEW v AS SELECT a FROM t;",
+        "INSERT OR REPLACE INTO t(a) VALUES(1),(2) RETURNING a;",
+        "UPDATE t SET a = 1, b = 2 WHERE c = 3 RETURNING a;",
+        "DELETE FROM t WHERE a IN (1,2) RETURNING a;",
+        "CREATE TRIGGER tr AFTER INSERT ON t BEGIN UPDATE t SET a = 1; SELECT 2; END;",
+        "CREATE INDEX idx ON t(a DESC, b COLLATE nocase) WHERE a > 0;",
+        "SELECT NOT a BETWEEN 1 AND 2, a NOTNULL, a NOT IN (1,2) FROM t;",
+        "PRAGMA cache_size = -10;",
+        "SELECT a ISNULL, a IS NOT DISTINCT FROM b, a NOT LIKE b ESCAPE c FROM t;",
+        "SELECT a ->> '$.x', a GLOB b, a COLLATE nocase FROM t;",
+        "SELECT * FROM (SELECT 1) x, t INDEXED BY idx;",
+        "SELECT * FROM t NOT INDEXED JOIN u USING(id);",
+        "SELECT sum(a) FILTER (WHERE b) OVER win FROM t WINDOW win AS (ORDER BY c RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW);",
+        "INSERT INTO t VALUES(1) ON CONFLICT(a) DO UPDATE SET a = excluded.a RETURNING *;",
+        "CREATE TABLE t(a INTEGER PRIMARY KEY AUTOINCREMENT, b TEXT DEFAULT 'x' NOT NULL) STRICT;",
+        "CREATE VIRTUAL TABLE t USING fts5(a, b);",
+        "ALTER TABLE t RENAME COLUMN a TO b;",
+        "DROP TABLE IF EXISTS t;",
+        "ATTACH DATABASE 'x.db' AS aux;",
+        "DETACH DATABASE aux;",
+        "VACUUM main INTO 'copy.db';",
+        "REINDEX idx;",
+        "ANALYZE main;",
+        "BEGIN IMMEDIATE TRANSACTION; SAVEPOINT x; ROLLBACK TO SAVEPOINT x; RELEASE SAVEPOINT x; COMMIT;",
+        "SELECT 1; SELECT 2;",
+    ] {
+        let mut gaps = vec![0];
+        gaps.extend(
+            tokenizer
+                .tokenize(sql)
+                .filter(|t| !t.text().trim().is_empty())
+                .map(|t| t.text().as_ptr() as usize - sql.as_ptr() as usize + t.text().len()),
+        );
+        for width in [30, 80] {
+            let mut formatter =
+                Formatter::with_config(&FormatConfig::default().with_line_width(width));
+            let canonical = formatter.format(sql).expect("valid seed");
+            for offset in &gaps {
+                for comment in [" /* ownership_probe */ ", " -- ownership_probe\n"] {
+                    let input = format!("{}{comment}{}", &sql[..*offset], &sql[*offset..]);
+                    let output = formatter
+                        .format(&input)
+                        .unwrap_or_else(|e| panic!("{input}\n{e}"));
+                    assert_eq!(
+                        output.matches("ownership_probe").count(),
+                        1,
+                        "{input}\n{output}"
+                    );
+                    assert_eq!(
+                        sql_tokens(&output),
+                        sql_tokens(&canonical),
+                        "{input}\n{output}"
+                    );
+                    assert_eq!(
+                        formatter.format(&output).expect("valid formatted SQL"),
+                        output,
+                        "{input}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// A source span owns its interior comments; its boundary attachments are
+/// emitted separately. Reusing the formatter must also clear both paths.
+#[test]
+fn verbatim_comments_and_comment_free_reuse() {
+    let mut formatter = Formatter::new();
+    for input in [
+        "CREATE VIRTUAL TABLE t USING fts5( /* inside */ a, b /* inside2 */) /* after */;",
+        "SELECT 1;",
+        "SELECT a /* before */ + b /* after */;",
+        "SELECT 2;",
+    ] {
+        let output = formatter.format(input).expect("valid test SQL");
+        eprintln!("=== input ===\n{input}\n=== actual ===\n{output}=== end ===");
+        for marker in [
+            "/* inside */",
+            "/* inside2 */",
+            "/* before */",
+            "/* after */",
+        ] {
+            assert_eq!(
+                output.matches(marker).count(),
+                input.matches(marker).count(),
+                "{input}"
+            );
+        }
+        assert_eq!(
+            formatter.format(&output).expect("valid formatted SQL"),
+            output,
+            "{input}"
+        );
+    }
+}

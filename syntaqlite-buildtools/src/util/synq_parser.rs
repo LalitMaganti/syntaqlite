@@ -231,6 +231,11 @@ pub(crate) enum Fmt {
     Space,
     Group(Vec<Self>),
     Nest(Vec<Self>),
+    Source {
+        role: String,
+        field: String,
+        body: Vec<Self>,
+    },
     IfSet {
         field: String,
         then: Vec<Self>,
@@ -984,6 +989,19 @@ impl Parser {
                 "space" => {
                     self.advance();
                     Ok(Fmt::Space)
+                }
+                "source" => {
+                    self.advance();
+                    self.expect(&Token::LParen)?;
+                    let role = self.ident()?;
+                    self.expect(&Token::Comma)?;
+                    let field = self.ident()?;
+                    self.expect(&Token::RParen)?;
+                    Ok(Fmt::Source {
+                        role,
+                        field,
+                        body: self.braced()?,
+                    })
                 }
                 "group" => {
                     self.advance();

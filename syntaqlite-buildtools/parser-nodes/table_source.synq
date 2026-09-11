@@ -40,7 +40,7 @@ node TableRef {
     } else {
       if_flag(has_parens) { "()" }
     }
-    if_set(alias) { space "AS" space child(alias) }
+    if_set(alias) { space source(prefix, alias) { "AS" } space child(alias) }
     switch(index_hint) {
       INDEXED { space "INDEXED" "BY" space span(index_name) }
       NOT_INDEXED { space "NOT" "INDEXED" }
@@ -56,7 +56,7 @@ node SubqueryTableSource {
 
   fmt {
     group { "(" nest { softline child(select) } softline ")" }
-    if_set(alias) { space "AS" space child(alias) }
+    if_set(alias) { space source(prefix, alias) { "AS" } space child(alias) }
   }
 }
 
@@ -67,7 +67,7 @@ node ParenTableSource {
 
   fmt {
     group { "(" nest { softline child(source) } softline ")" }
-    if_set(alias) { space "AS" space child(alias) }
+    if_set(alias) { space source(prefix, alias) { "AS" } space child(alias) }
   }
 }
 

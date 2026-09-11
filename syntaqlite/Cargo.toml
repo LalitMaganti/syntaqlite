@@ -47,4 +47,3 @@ libloading = { version = "0.8", optional = true }
 glob = { version = "0.3", optional = true }
 lsp-server = { version = "0.7", optional = true }
 lsp-types = { version = "0.97", optional = true }
-

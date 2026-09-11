@@ -26,6 +26,7 @@ use syntaqlite_common::fmt::bytecode::opcodes;
 pub(crate) enum FmtCompileError {
     FieldIndexTooLarge(u16),
     UnknownField(String),
+    UnknownSourceRole(String),
     NonEnumField { field: String, type_name: String },
     UnknownEnumVariant { field: String, variant: String },
     MissingFlagBitName(String),
@@ -38,6 +39,7 @@ impl Display for FmtCompileError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::FieldIndexTooLarge(idx) => write!(f, "field index {idx} too large for bytecode"),
+            Self::UnknownSourceRole(name) => write!(f, "unknown source role: {name}"),
             Self::UnknownField(name) => write!(f, "unknown field: {name}"),
             Self::NonEnumField { field, type_name } => {
                 write!(f, "field {field} has non-enum type {type_name}")
@@ -387,6 +389,21 @@ fn compile_one(
         Fmt::Space => {
             let sid = ctx.strings.intern(" ");
             ops.push(opab(opcodes::KEYWORD, 0, sid));
+        }
+        Fmt::Source { role, field, body } => {
+            let role = match role.as_str() {
+                "prefix" => 0,
+                "operator" => 1,
+                _ => return Err(FmtCompileError::UnknownSourceRole(role.clone())),
+            };
+            let field = if field == "_self" {
+                255
+            } else {
+                idx_u8(ctx.field(field)?.idx)?
+            };
+            ops.push(opab(opcodes::SOURCE_START, field, role));
+            compile_seq(body, ctx, ops)?;
+            ops.push(op0(opcodes::SOURCE_END));
         }
         Fmt::Group(body) => {
             ops.push(op0(opcodes::GROUP_START));
@@ -913,6 +930,8 @@ mod tests {
 
     fn raw_op_to_string(op: RawOp) -> String {
         match op.opcode {
+            opcodes::SOURCE_START => format!("FmtOp::SourceStart({}, {})", op.a, op.b),
+            opcodes::SOURCE_END => "FmtOp::SourceEnd".to_string(),
             opcodes::KEYWORD => format!("FmtOp::Keyword({})", op.b),
             opcodes::SPAN => format!("FmtOp::Span({})", op.a),
             opcodes::CHILD => format!("FmtOp::Child({})", op.a),

@@ -717,12 +717,7 @@ class TableConstraintDeclarationsFormat(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a, CONSTRAINT c /* note */ CHECK(a > 0) CHECK(a < 9))",
             out="""\
-            CREATE TABLE t(
-              a,
-              CONSTRAINT c
-              /* note */ CHECK(a > 0)
-              CHECK(a < 9)
-            );
+            CREATE TABLE t(a, CONSTRAINT c /* note */ CHECK(a > 0) CHECK(a < 9));
 """,
         )
 
@@ -730,12 +725,7 @@ class TableConstraintDeclarationsFormat(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a, CONSTRAINT old /* note */ CONSTRAINT c CHECK(a))",
             out="""\
-            CREATE TABLE t(
-              a,
-              CONSTRAINT old
-              /* note */ CONSTRAINT c
-              CHECK(a)
-            );
+            CREATE TABLE t(a, CONSTRAINT old /* note */ CONSTRAINT c CHECK(a));
 """,
         )
 

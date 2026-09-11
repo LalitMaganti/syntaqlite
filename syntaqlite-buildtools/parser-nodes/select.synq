@@ -17,7 +17,7 @@ node ResultColumn {
     } else {
       child_paren_list(expr)
     }
-    if_set(alias) { space "AS" space child(alias) }
+    if_set(alias) { space source(prefix, alias) { "AS" } space child(alias) }
   }
 }
 

@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtRange, StmtText};
 use syntaqlite_syntax::{CommentKind, CommentSide};
@@ -16,6 +16,7 @@ pub(crate) struct CommentEntry {
     pub length: StmtLen,
     pub kind: CommentKind,
     pub side: CommentSide,
+    pub inside_token: bool,
 }
 
 impl CommentEntry {
@@ -31,8 +32,11 @@ impl CommentEntry {
 /// A collected token entry with pre-computed byte offset and length.
 #[derive(Clone, Copy)]
 pub(crate) struct TokenEntry {
+    pub source_index: u32,
     pub offset: StmtOffset,
     pub length: StmtLen,
+    /// End of the comment batch attached before this surviving token.
+    pub comment_end: u32,
 }
 
 impl TokenEntry {
@@ -45,15 +49,16 @@ impl TokenEntry {
     }
 }
 
-/// Result of draining comment items. Trailing docs (e.g. `LineSuffix` for
+/// Document layout for an explicit batch of parser attachments. Trailing docs (e.g. `LineSuffix` for
 /// end-of-line comments) go BEFORE any pending line break. Leading docs
 /// (comments on their own line) go AFTER any pending line break.
-pub(crate) struct DrainResult {
+pub(crate) struct CommentDocs {
     pub trailing: DocId,
     pub leading: DocId,
+    pub force_break: bool,
 }
 
-/// Two cursors advancing monotonically through sorted comment and token arrays.
+/// Parser attachments indexed at surviving token boundaries.
 /// Shared via `&` across iterative formatting traversal; interior mutability is
 /// required because interpreter state carries a shared `&CommentCtx`.
 ///
@@ -61,8 +66,13 @@ pub(crate) struct DrainResult {
 pub(crate) struct CommentCtx {
     comments: Vec<CommentEntry>,
     tokens: Vec<TokenEntry>,
-    cursor: Cell<usize>,
+    boundary_claimed: Cell<bool>,
+    verbatim_end: Cell<StmtOffset>,
+    verbatim_start: Cell<StmtOffset>,
     token_cursor: Cell<usize>,
+    bindings: RefCell<Vec<std::ops::Range<usize>>>,
+    error: RefCell<Option<String>>,
+    after_block: Cell<bool>,
 }
 
 impl CommentCtx {
@@ -70,8 +80,13 @@ impl CommentCtx {
         CommentCtx {
             comments,
             tokens,
-            cursor: Cell::new(0),
+            boundary_claimed: Cell::new(false),
+            verbatim_end: Cell::new(StmtOffset::default()),
+            verbatim_start: Cell::new(StmtOffset::default()),
             token_cursor: Cell::new(0),
+            bindings: RefCell::new(Vec::new()),
+            error: RefCell::new(None),
+            after_block: Cell::new(false),
         }
     }
 
@@ -99,42 +114,77 @@ impl CommentCtx {
         }
     }
 
-    /// Drain all comments with offset < `before`.
-    ///
-    /// Stops early if there is non-whitespace source text (i.e. a keyword)
-    /// between a comment and `before`.
-    pub(crate) fn drain_before<'a>(
+    fn boundary_range(&self) -> std::ops::Range<usize> {
+        let index = self.token_cursor.get();
+        let end = self
+            .tokens
+            .get(index)
+            .map_or(self.comments.len(), |t| t.comment_end as usize);
+        let start = index
+            .checked_sub(1)
+            .map_or(0, |i| self.tokens[i].comment_end as usize);
+        start..end
+    }
+
+    fn take_boundary(&self) -> std::ops::Range<usize> {
+        if self.boundary_claimed.replace(true) {
+            return 0..0;
+        }
+        self.boundary_range()
+    }
+
+    /// Emit the batch already assigned to this token boundary. No source-offset
+    /// search or ownership decisions are made during document interpretation.
+    pub(crate) fn attachments<'a>(
         &self,
-        before: StmtOffset,
         source: &'a StmtText,
         arena: &mut DocArena<'a>,
-    ) -> DrainResult {
-        self.drain_impl(before, source, arena, false)
+    ) -> CommentDocs {
+        self.layout(self.take_boundary(), source, arena)
+    }
+
+    pub(crate) fn verbatim_attachments<'a>(
+        &self,
+        start: StmtOffset,
+        end: StmtOffset,
+        source: &'a StmtText,
+        arena: &mut DocArena<'a>,
+    ) -> CommentDocs {
+        self.verbatim_start.set(start);
+        self.verbatim_end.set(end);
+        self.attachments(source, arena)
     }
 
     #[expect(clippy::too_many_lines)]
-    fn drain_impl<'a>(
+    fn layout<'a>(
         &self,
-        before: StmtOffset,
+        range: std::ops::Range<usize>,
         source: &'a StmtText,
         arena: &mut DocArena<'a>,
-        skip_text_check: bool,
-    ) -> DrainResult {
+    ) -> CommentDocs {
+        if range.is_empty() {
+            return CommentDocs {
+                trailing: NIL_DOC,
+                leading: NIL_DOC,
+                force_break: false,
+            };
+        }
+        let mut force_break = false;
         let mut trailing = NIL_DOC;
         let mut leading = NIL_DOC;
-        let mut cursor = self.cursor.get();
+        let before = self
+            .tokens
+            .get(self.token_cursor.get())
+            .map_or(StmtOffset::default() + source.byte_len(), |t| t.offset);
         let mut last_end = self.prev_token_end();
         let source_end = StmtOffset::default() + source.byte_len();
-        while cursor < self.comments.len() && self.comments[cursor].offset < before {
+        for cursor in range.clone() {
             let t = &self.comments[cursor];
-
-            if !skip_text_check {
-                let scan_end = before.min(source_end);
-                if t.end() < scan_end
-                    && has_intervening_emitted_token(source, t.end(), scan_end, &self.tokens)
-                {
-                    break;
-                }
+            // A verbatim atom already contains these comments in its text.
+            if t.inside_token
+                || (t.offset >= self.verbatim_start.get() && t.offset < self.verbatim_end.get())
+            {
+                continue;
             }
 
             let text = &source[t.range()];
@@ -157,7 +207,7 @@ impl CommentCtx {
                         let next_offset = self
                             .comments
                             .get(cursor + 1)
-                            .filter(|n| n.offset < before)
+                            .filter(|_| cursor + 1 < range.end)
                             .map_or(before, |n| n.offset);
                         let tail_gap = StmtRange {
                             start: t.end().min(source_end),
@@ -207,6 +257,7 @@ impl CommentCtx {
                         let chunk = arena.cats(&[prefix, comment_doc, trailing]);
                         leading = arena.cat(leading, chunk);
                     } else {
+                        force_break = true;
                         let space = arena.text(" ");
                         let comment = arena.text(text);
                         let inner = arena.cat(space, comment);
@@ -215,6 +266,14 @@ impl CommentCtx {
                         let chunk = arena.cat(ls, bp);
                         trailing = if trailing == NIL_DOC {
                             chunk
+                        } else if cursor > 0 && self.comments[cursor - 1].kind == CommentKind::Line
+                        {
+                            // Continuations occupy their own physical lines; a
+                            // second LineSuffix would otherwise migrate to SQL
+                            // after an elided adjacent document break.
+                            let boundary = arena.comment_break();
+                            let text = arena.text(text);
+                            arena.cats(&[trailing, boundary, text, boundary])
                         } else {
                             arena.cat(trailing, chunk)
                         };
@@ -244,71 +303,99 @@ impl CommentCtx {
                 }
             }
 
+            self.after_block
+                .set(t.kind == CommentKind::Block && t.side == CommentSide::Trailing);
             last_end = t.end();
-            cursor += 1;
         }
 
-        self.cursor.set(cursor);
-
-        DrainResult { trailing, leading }
+        CommentDocs {
+            trailing,
+            leading,
+            force_break,
+        }
     }
 
-    /// Find the next occurrence of a keyword in the token stream, starting
-    /// from the current token cursor.
-    ///
-    /// Verifies each token's text matches the corresponding keyword word
-    /// (case-insensitive). If the keyword starts at the current cursor
-    /// position, returns immediately. Otherwise, scans forward up to
-    /// `MAX_SCAN` tokens to handle untracked tokens (e.g. `(` and `)` from
-    /// dialect-level syntax that no fmt opcode covers).
-    ///
-    /// On match, the token cursor is advanced past any skipped tokens so it
-    /// points to the first word of the keyword. Returns `None` if the
-    /// keyword is not present in the source (e.g., an inserted `AS`).
-    pub(crate) fn peek_keyword_tokens(
-        &self,
-        kw_text: &str,
-        source: &StmtText,
-    ) -> Option<(StmtOffset, usize)> {
-        const MAX_SCAN: usize = 8;
-        let start_idx = self.token_cursor.get();
+    /// Block comments separate atoms, except before closing punctuation.
+    /// Template whitespace already supplies the separator when present.
+    pub(crate) fn block_separator(&self, next: &str) -> bool {
+        self.after_block.replace(false)
+            && next.as_bytes().first().is_some_and(|c| {
+                !c.is_ascii_whitespace() && !matches!(c, b',' | b';' | b')' | b']')
+            })
+    }
 
-        for scan in 0..MAX_SCAN {
-            let first_idx = start_idx + scan;
-            if first_idx >= self.tokens.len() {
-                return None;
-            }
-            let mut word_count = 0usize;
-            let mut matched = true;
-            for word in kw_text.split_whitespace() {
-                let tok_idx = first_idx + word_count;
-                if tok_idx >= self.tokens.len() {
-                    matched = false;
-                    break;
-                }
-                let tok = &self.tokens[tok_idx];
-                let tok_text = &source[tok.range()];
-                if !tok_text.eq_ignore_ascii_case(word) {
-                    matched = false;
-                    break;
-                }
-                word_count += 1;
-            }
-            if matched && word_count > 0 {
-                // Advance past any skipped tokens.
-                if scan > 0 {
-                    self.token_cursor.set(first_idx);
-                }
-                let first_offset = self.tokens[first_idx].offset;
-                return Some((first_offset, word_count));
-            }
+    pub(crate) fn push_binding(&self, range: Option<std::ops::Range<usize>>) {
+        if let Some(range) = range {
+            self.bindings.borrow_mut().push(range);
+        } else {
+            self.fail("formatter syntax role is missing".into());
+            self.bindings.borrow_mut().push(0..0);
         }
-        None
+    }
+
+    pub(crate) fn pop_binding(&self) {
+        self.bindings
+            .borrow_mut()
+            .pop()
+            .expect("balanced source bytecode");
+    }
+
+    fn fail(&self, message: String) {
+        self.error.borrow_mut().get_or_insert(message);
+    }
+
+    pub(crate) fn take_error(&self) -> Option<String> {
+        self.error.borrow_mut().take()
+    }
+
+    /// Resolve exactly the next authored terminal. A declared source role
+    /// permits canonical spelling; an empty role denotes inserted syntax.
+    /// There is no forward search or skipped-token recovery.
+    pub(crate) fn terminal(&self, text: &str, source: &StmtText) -> Option<StmtOffset> {
+        let bindings = self.bindings.borrow();
+        let bound = bindings.last();
+        if bound.is_some_and(std::ops::Range::is_empty) {
+            return None;
+        }
+        let Some(token) = self.tokens.get(self.token_cursor.get()) else {
+            self.fail(format!("formatter introduced an unbound terminal: {text}"));
+            return None;
+        };
+        if bound.is_some_and(|range| !range.contains(&(token.source_index as usize)))
+            || (bound.is_none() && !source[token.range()].eq_ignore_ascii_case(text))
+        {
+            self.fail(format!(
+                "formatter source mismatch: expected {text}, got {}",
+                &source[token.range()]
+            ));
+            return None;
+        }
+        Some(token.offset)
+    }
+
+    /// A source span may cover several tokens, but must not skip a live anchor.
+    pub(crate) fn check_span_start(&self, start: StmtOffset) {
+        if self
+            .tokens
+            .get(self.token_cursor.get())
+            .is_some_and(|t| t.offset < start)
+        {
+            self.fail("formatter span skipped an unconsumed source anchor".into());
+        }
+    }
+
+    /// Statement terminators are emitted by Formatter, outside AST bytecode.
+    pub(crate) fn finish(&self, source: &StmtText) {
+        let remaining = &self.tokens[self.token_cursor.get()..];
+        if !(remaining.is_empty() || remaining.len() == 1 && &source[remaining[0].range()] == ";") {
+            self.fail("formatter left unconsumed source anchors".into());
+        }
     }
 
     /// Advance the token cursor by `n` positions.
     pub(crate) fn advance_token_cursor(&self, n: usize) {
         self.token_cursor.set(self.token_cursor.get() + n);
+        self.boundary_claimed.set(false);
     }
 
     /// Advance the token cursor past all tokens whose offset is `< end_offset`.
@@ -317,34 +404,51 @@ impl CommentCtx {
         while idx < self.tokens.len() && self.tokens[idx].offset < end_offset {
             idx += 1;
         }
-        self.token_cursor.set(idx);
-    }
-
-    /// Mark comments with offset `< end_offset` as consumed. Use after
-    /// emitting a verbatim source range (e.g. the body of a `span()` op)
-    /// that already contains the comment text — otherwise the comments
-    /// stay in the queue and a later `drain_remaining` will slice a
-    /// reversed `[prev_token_end, comment_offset)` range and panic.
-    pub(crate) fn discard_comments_before(&self, end_offset: StmtOffset) {
-        let mut idx = self.cursor.get();
-        while idx < self.comments.len() && self.comments[idx].offset < end_offset {
-            idx += 1;
+        if idx != self.token_cursor.get() {
+            self.boundary_claimed.set(false);
+            self.token_cursor.set(idx);
         }
-        self.cursor.set(idx);
     }
 
-    /// Peek at the next undrained comment without advancing the cursor.
-    pub(crate) fn peek_comment(&self) -> Option<&CommentEntry> {
-        let idx = self.cursor.get();
-        self.comments.get(idx)
+    /// Verbatim atoms consume whole token ranges, including their interior
+    /// attachments. Those batches are skipped with the tokens, not searched.
+    pub(crate) fn consume_verbatim(&self, end: StmtOffset) {
+        self.advance_past(end);
+        self.verbatim_end.set(end);
     }
 
-    /// Advance the comment cursor by one.
-    pub(crate) fn advance_comment(&self) {
-        let idx = self.cursor.get();
-        if idx < self.comments.len() {
-            self.cursor.set(idx + 1);
+    /// Statement-leading attachments use the surrounding statement layout.
+    pub(crate) fn header<'a>(&self, source: &'a StmtText, arena: &mut DocArena<'a>) -> DocId {
+        let range = self.take_boundary();
+        let next_token = self
+            .tokens
+            .first()
+            .map_or(StmtOffset::default() + source.byte_len(), |t| t.offset);
+        let mut doc = NIL_DOC;
+        for index in range.clone() {
+            let c = self.comments[index];
+            if c.inside_token {
+                continue;
+            }
+            let text = arena.text(&source[c.range()]);
+            let line = arena.hardline();
+            doc = arena.cats(&[doc, text, line]);
+            let next = self
+                .comments
+                .get(index + 1)
+                .filter(|_| index + 1 < range.end)
+                .map_or(next_token, |c| c.offset);
+            if c.end() < next
+                && source[StmtRange {
+                    start: c.end(),
+                    end: next,
+                }]
+                .contains("\n\n")
+            {
+                doc = arena.cat(doc, line);
+            }
         }
+        doc
     }
 
     /// Peek at the next token's offset and length without advancing.
@@ -353,49 +457,15 @@ impl CommentCtx {
         self.tokens.get(idx).map(|tp| (tp.offset, tp.length))
     }
 
-    /// Flush all remaining comments.  Bypasses the `has_non_comment_text`
-    /// guard because, at end-of-statement drain, every remaining comment
-    /// is a trailing comment that this statement owns; the guard's check
-    /// for "syntax text past the comment" would spuriously fire when the
-    /// source text continues into the next statement.
-    pub(crate) fn drain_remaining<'a>(
-        &self,
-        source: &'a StmtText,
-        arena: &mut DocArena<'a>,
-    ) -> DocId {
-        let drain = self.drain_impl(StmtOffset::from_raw(u32::MAX), source, arena, true);
-        arena.cat(drain.trailing, drain.leading)
+    /// Emit the statement's final attachments, including those on its terminator.
+    pub(crate) fn footer<'a>(&self, source: &'a StmtText, arena: &mut DocArena<'a>) -> DocId {
+        let boundary = self.boundary_range();
+        let start = if self.boundary_claimed.get() {
+            boundary.end
+        } else {
+            boundary.start
+        };
+        let docs = self.layout(start..self.comments.len(), source, arena);
+        arena.cat(docs.trailing, docs.leading)
     }
-}
-
-/// Returns true if the token stream contains a token in `[start, end)` that
-/// the formatter will emit — i.e. any token other than a vestigial `(` / `)`.
-///
-/// The parser rule `expr ::= LP expr RP` is erased via `synq_pass`
-/// (parser-actions/expressions.y:30), so the inner `(` and `)` tokens remain
-/// in the token stream without any corresponding fmt opcode consuming them.
-/// They're not obstacles between a comment and its drain target; the drain
-/// must be allowed to step over them. All other token kinds (keywords,
-/// identifiers, operators, and paren tokens in tracked positions like
-/// function calls / IN / CAST) either sit at the drain target or will be
-/// emitted by some fmt opcode, so they *do* block a cross-drain.
-fn has_intervening_emitted_token(
-    source: &StmtText,
-    start: StmtOffset,
-    end: StmtOffset,
-    tokens: &[TokenEntry],
-) -> bool {
-    // Tokens are sorted by offset; binary-search for the first one that could
-    // overlap [start, end) to keep this O(log n + k) per call.
-    let first = tokens.partition_point(|t| t.end() <= start);
-    for tok in &tokens[first..] {
-        if tok.offset >= end {
-            break;
-        }
-        let text = &source[tok.range()];
-        if text != "(" && text != ")" {
-            return true;
-        }
-    }
-    false
 }

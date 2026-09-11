@@ -8,7 +8,7 @@ use syntaqlite_syntax::any::{
 };
 use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtText};
 
-use super::comment::{CommentCtx, DrainResult};
+use super::comment::{CommentCtx, CommentDocs};
 use super::doc::{DocArena, DocId, NIL_DOC};
 use super::formatter::Formatter;
 use crate::dialect::AnyDialect;
@@ -89,7 +89,7 @@ enum ReturnAction {
     CatOntoRunning,
     /// Wrap child output in parentheses before appending to parent.
     WrapInParens,
-    Discard,
+    Replace(DocId),
 }
 
 impl Formatter {
@@ -157,6 +157,21 @@ pub(super) fn interpret_core<'a>(
         macro_rules! push_call_frame {
             ($child_id:expr, $child_ops_bytes:expr, $child_ops_len:expr,
          $child_fields:expr, $return_action_val:expr) => {{
+                if let Some(cctx) = ctx.comment_ctx.as_ref() {
+                    let docs = cctx.attachments(source, arena);
+                    apply_attachments(&docs, &mut pending, &mut running, arena);
+                }
+                // Precedence parentheses are introduced atoms, so resolve
+                // comment spacing before the wrapper, not inside its child.
+                if $return_action_val == ReturnAction::WrapInParens
+                    && ctx
+                        .comment_ctx
+                        .as_ref()
+                        .is_some_and(|c| c.block_separator("("))
+                {
+                    let space = arena.keyword(" ");
+                    running = arena.cat(running, space);
+                }
                 let frame = CallFrame {
                     ip: ip + 1,
                     node_id: cur_node_id,
@@ -225,7 +240,9 @@ pub(super) fn interpret_core<'a>(
                         let grouped = arena.group(wrapped);
                         running = arena.cat(running, grouped);
                     }
-                    ReturnAction::Discard => {}
+                    ReturnAction::Replace(doc) => {
+                        running = arena.cat(running, doc);
+                    }
                 }
                 continue;
             }
@@ -235,20 +252,15 @@ pub(super) fn interpret_core<'a>(
                 FmtOp::Keyword(sid) => {
                     let kw_text = ctx.dialect.fmt_string(sid);
 
-                    if let Some(ref cctx) = ctx.comment_ctx {
-                        if let Some((tok_offset, word_count)) =
-                            cctx.peek_keyword_tokens(kw_text, source)
-                        {
-                            let drain = cctx.drain_before(tok_offset, source, arena);
-                            flush_drain(&drain, &mut pending, &mut running, arena);
-                            cctx.advance_token_cursor(word_count);
-                        } else {
-                            running = arena.cat(running, pending);
-                            pending = NIL_DOC;
-                        }
-                    }
-                    let kw = arena.keyword(kw_text);
-                    running = arena.cat(running, kw);
+                    emit_terminal(
+                        ctx.comment_ctx.as_ref(),
+                        kw_text,
+                        macro_tokenizer,
+                        source,
+                        &mut pending,
+                        &mut running,
+                        arena,
+                    );
                 }
                 FmtOp::Span(idx) => {
                     // INVARIANT: Span ops only target Span fields.
@@ -268,7 +280,7 @@ pub(super) fn interpret_core<'a>(
                             // extends one byte past (the closing quote).
                             let span_len =
                                 StmtLen::from_raw(u32::try_from(s.len()).unwrap_or(u32::MAX));
-                            let drain_offset = if quoted {
+                            let token_start = if quoted {
                                 span_start - StmtLen::from_raw(1)
                             } else {
                                 span_start
@@ -278,16 +290,20 @@ pub(super) fn interpret_core<'a>(
                             } else {
                                 span_len
                             };
-                            let drain = cctx.drain_before(drain_offset, source, arena);
-                            flush_drain(&drain, &mut pending, &mut running, arena);
-                            let span_end = drain_offset + token_len;
-                            cctx.advance_past(span_end);
-                            // The span emits its source range verbatim,
-                            // so any comments inside it are already in
-                            // the output. Drop them from the queue —
-                            // otherwise a later `drain_remaining` slices
-                            // [prev_token_end, comment_offset) reversed.
-                            cctx.discard_comments_before(span_end);
+                            cctx.check_span_start(token_start);
+                            let has_spacing = pending != NIL_DOC;
+                            let docs = cctx.verbatim_attachments(
+                                token_start,
+                                token_start + token_len,
+                                source,
+                                arena,
+                            );
+                            apply_attachments(&docs, &mut pending, &mut running, arena);
+                            if cctx.block_separator(s) && !has_spacing {
+                                let space = arena.keyword(" ");
+                                running = arena.cat(running, space);
+                            }
+                            cctx.consume_verbatim(token_start + token_len);
                         }
                         if quoted {
                             // Quoted identifiers are canonicalized to
@@ -316,14 +332,6 @@ pub(super) fn interpret_core<'a>(
                     };
 
                     if !child_id.is_null() {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
-                            arena,
-                        );
-
                         let mut return_action = ReturnAction::CatOntoRunning;
                         if !ctx.macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
@@ -335,8 +343,7 @@ pub(super) fn interpret_core<'a>(
                                 child_id,
                             )
                         {
-                            running = arena.cat(running, doc);
-                            return_action = ReturnAction::Discard;
+                            return_action = ReturnAction::Replace(doc);
                         }
 
                         if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
@@ -353,6 +360,29 @@ pub(super) fn interpret_core<'a>(
                         }
                     }
                 }
+                FmtOp::SourceStart(field, role) => {
+                    if let Some(cctx) = &ctx.comment_ctx {
+                        let owner = if field == 255 {
+                            cur_node_id
+                        } else {
+                            let FieldValue::NodeId(owner) = fields[usize::from(field)] else {
+                                panic!("source owner must be a node");
+                            };
+                            owner
+                        };
+                        cctx.push_binding(
+                            ctx.reader
+                                .syntax_role_range(owner, u32::from(role))
+                                .map(|r| r.start.as_usize()..r.end.as_usize()),
+                        );
+                    }
+                }
+                FmtOp::SourceEnd => {
+                    if let Some(cctx) = &ctx.comment_ctx {
+                        cctx.pop_binding();
+                    }
+                }
+                FmtOp::EndIf => {}
                 FmtOp::Line | FmtOp::SoftLine | FmtOp::HardLine => {
                     let doc = match op {
                         FmtOp::Line => arena.line(),
@@ -410,7 +440,6 @@ pub(super) fn interpret_core<'a>(
                 FmtOp::Else(skip) => {
                     ip += skip as usize;
                 }
-                FmtOp::EndIf => {}
                 FmtOp::ForEachStart(idx) => {
                     // INVARIANT: ForEachStart ops only target NodeId fields.
                     let FieldValue::NodeId(list_id) = fields[idx as usize] else {
@@ -462,22 +491,11 @@ pub(super) fn interpret_core<'a>(
                             running = saved_running;
                             pending = saved_pending;
                         }
-                        return_action = ReturnAction::Discard;
+                        return_action = ReturnAction::Replace(NIL_DOC);
+                    } else if let Some(verbatim) = macro_doc {
+                        return_action = ReturnAction::Replace(verbatim);
                     } else {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
-                            arena,
-                        );
-
-                        if let Some(verbatim) = macro_doc {
-                            running = arena.cat(running, verbatim);
-                            return_action = ReturnAction::Discard;
-                        } else {
-                            return_action = ReturnAction::CatOntoRunning;
-                        }
+                        return_action = ReturnAction::CatOntoRunning;
                     }
 
                     if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
@@ -500,16 +518,19 @@ pub(super) fn interpret_core<'a>(
                         .expect("ForEachSep outside ForEach");
                     let children = ctx.reader.list_children(state.list_id).unwrap_or(&[]);
                     if state.index < children.len() - 1 {
-                        state.sep_checkpoint = Some((running, pending));
                         let sep_text = ctx.dialect.fmt_string(sid);
-                        if let Some(ref cctx) = ctx.comment_ctx
-                            && let Some((_, word_count)) =
-                                cctx.peek_keyword_tokens(sep_text, source)
-                        {
-                            cctx.advance_token_cursor(word_count);
-                        }
-                        let sep = arena.text(sep_text);
-                        running = arena.cat(running, sep);
+                        emit_terminal(
+                            ctx.comment_ctx.as_ref(),
+                            sep_text,
+                            macro_tokenizer,
+                            source,
+                            &mut pending,
+                            &mut running,
+                            arena,
+                        );
+                        // Rolling back an omitted separator must retain comments
+                        // already emitted before that separator.
+                        state.sep_checkpoint = Some((running, pending));
                     } else {
                         ip = skip_to_foreach_end(ops, ops_count, ip);
                         continue;
@@ -576,20 +597,15 @@ pub(super) fn interpret_core<'a>(
                         .dialect
                         .fmt_enum_display_val(base as usize + ordinal as usize);
                     let kw_text = ctx.dialect.fmt_string(string_id);
-                    if let Some(ref cctx) = ctx.comment_ctx {
-                        if let Some((tok_offset, word_count)) =
-                            cctx.peek_keyword_tokens(kw_text, source)
-                        {
-                            let drain = cctx.drain_before(tok_offset, source, arena);
-                            flush_drain(&drain, &mut pending, &mut running, arena);
-                            cctx.advance_token_cursor(word_count);
-                        } else {
-                            running = arena.cat(running, pending);
-                            pending = NIL_DOC;
-                        }
-                    }
-                    let kw = arena.keyword(kw_text);
-                    running = arena.cat(running, kw);
+                    emit_terminal(
+                        ctx.comment_ctx.as_ref(),
+                        kw_text,
+                        macro_tokenizer,
+                        source,
+                        &mut pending,
+                        &mut running,
+                        arena,
+                    );
                 }
                 FmtOp::ForEachSelfStart => {
                     let children = ctx
@@ -623,14 +639,6 @@ pub(super) fn interpret_core<'a>(
                     };
 
                     if !child_id.is_null() {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
-                            arena,
-                        );
-
                         let mut return_action = ReturnAction::CatOntoRunning;
                         if !ctx.macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
@@ -642,15 +650,15 @@ pub(super) fn interpret_core<'a>(
                                 child_id,
                             )
                         {
-                            running = arena.cat(running, doc);
-                            return_action = ReturnAction::Discard;
+                            return_action = ReturnAction::Replace(doc);
                         }
 
                         if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
                             && let Some((child_ops_bytes, child_ops_len)) =
                                 ctx.dialect.fmt_dispatch(ctag)
                         {
-                            if return_action != ReturnAction::Discard && parent_prec > 0 {
+                            if !matches!(return_action, ReturnAction::Replace(_)) && parent_prec > 0
+                            {
                                 return_action = child_prec_action(
                                     ctx,
                                     parent_prec,
@@ -676,14 +684,6 @@ pub(super) fn interpret_core<'a>(
                     };
 
                     if !child_id.is_null() {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
-                            arena,
-                        );
-
                         let mut return_action = ReturnAction::CatOntoRunning;
                         if !ctx.macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
@@ -695,15 +695,16 @@ pub(super) fn interpret_core<'a>(
                                 child_id,
                             )
                         {
-                            running = arena.cat(running, doc);
-                            return_action = ReturnAction::Discard;
+                            return_action = ReturnAction::Replace(doc);
                         }
 
                         if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
                             && let Some((child_ops_bytes, child_ops_len)) =
                                 ctx.dialect.fmt_dispatch(ctag)
                         {
-                            if return_action != ReturnAction::Discard && ctx.dialect.is_list(ctag) {
+                            if !matches!(return_action, ReturnAction::Replace(_))
+                                && ctx.dialect.is_list(ctag)
+                            {
                                 return_action = ReturnAction::WrapInParens;
                             }
                             push_call_frame!(
@@ -726,14 +727,6 @@ pub(super) fn interpret_core<'a>(
                     };
 
                     if !child_id.is_null() {
-                        drain_comments_before_child(
-                            ctx.comment_ctx.as_ref(),
-                            source,
-                            &mut pending,
-                            &mut running,
-                            arena,
-                        );
-
                         let mut return_action = ReturnAction::CatOntoRunning;
                         if !ctx.macro_rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
@@ -745,15 +738,15 @@ pub(super) fn interpret_core<'a>(
                                 child_id,
                             )
                         {
-                            running = arena.cat(running, doc);
-                            return_action = ReturnAction::Discard;
+                            return_action = ReturnAction::Replace(doc);
                         }
 
                         if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
                             && let Some((child_ops_bytes, child_ops_len)) =
                                 ctx.dialect.fmt_dispatch(ctag)
                         {
-                            if return_action != ReturnAction::Discard && parent_prec > 0 {
+                            if !matches!(return_action, ReturnAction::Replace(_)) && parent_prec > 0
+                            {
                                 return_action = child_prec_action(
                                     ctx,
                                     parent_prec,
@@ -858,50 +851,74 @@ fn child_prec_action(
     ReturnAction::CatOntoRunning
 }
 
-// ── Comment drain helpers ───────────────────────────────────────────────
+// ── Attachment layout helpers ───────────────────────────────────────────────
 
 #[inline]
-fn flush_drain(
-    drain: &DrainResult,
+fn apply_attachments(
+    docs: &CommentDocs,
     pending: &mut DocId,
     running: &mut DocId,
     arena: &mut DocArena,
 ) {
-    if drain.trailing != NIL_DOC {
-        *running = arena.cat(*running, drain.trailing);
+    if docs.trailing != NIL_DOC {
+        *running = arena.cat(*running, docs.trailing);
     }
-    if drain.leading == NIL_DOC {
+    if docs.force_break {
+        let boundary = arena.comment_break();
+        *running = arena.cat(*running, boundary);
+    }
+    if docs.leading == NIL_DOC {
         *running = arena.cat(*running, *pending);
         *pending = NIL_DOC;
     } else {
         *pending = NIL_DOC;
-        *running = arena.cat(*running, drain.leading);
+        *running = arena.cat(*running, docs.leading);
     }
 }
 
-#[inline]
-fn drain_comments_before_child<'a>(
+/// Emit template terminals individually so comments can occur between any
+/// two tokens, including punctuation within a multi-token literal.
+fn emit_terminal<'a>(
     comment_ctx: Option<&CommentCtx>,
+    text: &'static str,
+    tokenizer: &AnyTokenizer,
     source: &'a StmtText,
     pending: &mut DocId,
     running: &mut DocId,
     arena: &mut DocArena<'a>,
 ) {
-    if let Some(cctx) = comment_ctx {
-        if let Some((offset, _)) = cctx.peek_next_token() {
-            let drain = cctx.drain_before(offset, source, arena);
-            flush_drain(&drain, pending, running, arena);
-        } else {
-            *running = arena.cat(*running, *pending);
-            *pending = NIL_DOC;
+    let Some(cctx) = comment_ctx else {
+        let doc = arena.keyword(text);
+        *running = arena.cat(*running, doc);
+        return;
+    };
+    for token in tokenizer.tokenize(text) {
+        let piece = token.text();
+        if piece.trim().is_empty() {
+            let space = arena.keyword(piece);
+            *pending = arena.cat(*pending, space);
+            continue;
         }
+        let has_spacing = *pending != NIL_DOC;
+        let authored = cctx.terminal(piece, source).is_some();
+        let docs = cctx.attachments(source, arena);
+        apply_attachments(&docs, pending, running, arena);
+        if authored {
+            cctx.advance_token_cursor(1);
+        }
+        if cctx.block_separator(piece) && !has_spacing {
+            let space = arena.keyword(" ");
+            *running = arena.cat(*running, space);
+        }
+        let doc = arena.keyword(piece);
+        *running = arena.cat(*running, doc);
     }
 }
 
 // ── Bytecode helpers ────────────────────────────────────────────────────
 
 #[inline]
-fn op_at(ops: &[u8], ip: usize) -> FmtOp {
+pub(super) fn op_at(ops: &[u8], ip: usize) -> FmtOp {
     let base = ip * 6;
     let opcode = ops[base];
     let a = ops[base + 1];
@@ -910,7 +927,7 @@ fn op_at(ops: &[u8], ip: usize) -> FmtOp {
     FmtOp::decode(opcode, a, b, c)
 }
 
-fn skip_to_foreach_end(ops: &[u8], ops_count: usize, from_ip: usize) -> usize {
+pub(super) fn skip_to_foreach_end(ops: &[u8], ops_count: usize, from_ip: usize) -> usize {
     let mut depth = 1u32;
     let mut ip = from_ip + 1;
     while ip < ops_count {
@@ -936,7 +953,9 @@ type FieldIdx = u16;
 type SkipCount = u16;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum FmtOp {
+pub(super) enum FmtOp {
+    SourceStart(u16, u16),
+    SourceEnd,
     Keyword(StringId),
     Span(FieldIdx),
     Child(FieldIdx),
@@ -972,6 +991,8 @@ impl FmtOp {
     #[inline]
     pub(crate) fn decode(opcode: u8, a: u8, b: u16, c: u16) -> Self {
         match opcode {
+            opcodes::SOURCE_START => FmtOp::SourceStart(a.into(), b),
+            opcodes::SOURCE_END => FmtOp::SourceEnd,
             opcodes::KEYWORD => FmtOp::Keyword(b),
             opcodes::SPAN => FmtOp::Span(a.into()),
             opcodes::CHILD => FmtOp::Child(a.into()),

@@ -128,17 +128,20 @@ impl Formatter {
             syntax.clone(),
             &ParserConfig::default()
                 .with_collect_tokens(true)
+                .with_collect_source_bindings(true)
+                .with_comment_packets(true)
                 .with_macro_fallback(has_macros)
                 .with_collect_node_extents(has_macros),
         );
-        // The mini-parser always needs node extents (used by
-        // `find_descendant_by_extent` to locate each arg's expression
-        // subtree) and macro fallback (so nested `foo!(...)` inside
-        // an arg parses as a TK_ID rather than a syntax error).
+        // Macro arguments are parsed through a SELECT wrapper; the argument's
+        // ResultColumn is located by walking that wrapper's AST structure.
+        // Macro fallback lets nested `foo!(...)` calls parse as TK_ID tokens.
         let mini_parser = AnyParser::with_config(
             syntax,
             &ParserConfig::default()
                 .with_collect_tokens(true)
+                .with_collect_source_bindings(true)
+                .with_comment_packets(true)
                 .with_collect_node_extents(true)
                 .with_macro_fallback(has_macros),
         );
@@ -164,25 +167,6 @@ impl Formatter {
     fn collect_side_channels(&mut self, erased: &AnyParsedStatement<'_>) {
         self.macro_rewrites.clear();
         self.comment_entries.clear();
-        self.comment_entries
-            .extend(erased.comment_spans().map(|c| CommentEntry {
-                offset: c.offset(),
-                length: c.length(),
-                kind: c.kind(),
-                side: c.side(),
-            }));
-        self.token_entries.clear();
-        // `stmt_range` drills expansion-layer tokens up to their
-        // authored call-site range, so every token contributes an
-        // entry in statement coordinates — the same coordinate system
-        // the formatter emits in.
-        self.token_entries.extend(erased.tokens().map(|t| {
-            let range = t.stmt_range();
-            TokenEntry {
-                offset: range.start,
-                length: range.len(),
-            }
-        }));
         // Only top-level fallback rewrites are meaningful here:
         // - `parent().is_none()` keeps offsets in the statement
         //   coordinate system the formatter compares against.
@@ -202,6 +186,68 @@ impl Formatter {
                     )
                 }),
         );
+        self.token_entries.clear();
+        if self.macro_rewrites.is_empty() && erased.comment_spans().next().is_none() {
+            return;
+        }
+        self.token_entries
+            .extend(erased.tokens().enumerate().filter_map(|(index, t)| {
+                erased.syntax_anchor_end(Some(syntaqlite_syntax::source::TokenIdx::from_raw(
+                    u32::try_from(index).expect("parser token index fits u32"),
+                )))?;
+                let range = t.stmt_range();
+                Some(TokenEntry {
+                    source_index: u32::try_from(index).expect("parser token index fits u32"),
+                    offset: range.start,
+                    length: range.len(),
+                    comment_end: 0,
+                })
+            }));
+        // Parser owners are monotone. Merge them with the surviving anchors once
+        // to index each attachment batch; no token/source search is needed later.
+        let mut owner = 0;
+        let mut boundary = 0;
+        for c in erased.comment_spans() {
+            let original = c.token_idx().as_u32();
+            while owner + 1 < self.token_entries.len()
+                && self.token_entries[owner + 1].source_index <= original
+            {
+                owner += 1;
+            }
+            let token = self.token_entries.get(owner).copied();
+            let live_owner = token.is_some_and(|t| t.source_index == original);
+            let side = if live_owner {
+                c.side()
+            } else {
+                syntaqlite_syntax::CommentSide::Trailing
+            };
+            let target = if token.is_none_or(|t| original < t.source_index) {
+                0
+            } else if live_owner && side == syntaqlite_syntax::CommentSide::Leading {
+                owner
+            } else {
+                owner + 1
+            };
+            while boundary < target {
+                self.token_entries[boundary].comment_end =
+                    u32::try_from(self.comment_entries.len())
+                        .expect("parser comment count fits u32");
+                boundary += 1;
+            }
+            self.comment_entries.push(CommentEntry {
+                offset: c.offset(),
+                length: c.length(),
+                kind: c.kind(),
+                side,
+                inside_token: token.is_some_and(|t| {
+                    t.offset <= c.offset() && c.offset() + c.length() <= t.offset + t.length
+                }),
+            });
+        }
+        for token in &mut self.token_entries[boundary..] {
+            token.comment_end =
+                u32::try_from(self.comment_entries.len()).expect("parser comment count fits u32");
+        }
     }
 
     /// Format SQL source text. Handles multiple statements and preserves comments.
@@ -276,10 +322,8 @@ impl Formatter {
                     &mut arena,
                     &mut self.parts,
                 );
-            } else if let Some(cctx) = comment_ctx.as_ref()
-                && let Some((next_offset, _)) = cctx.peek_next_token()
-            {
-                drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
+            } else if let Some(cctx) = comment_ctx.as_ref() {
+                self.parts.push(cctx.header(stmt_source, &mut arena));
             }
 
             // Stage 1.5: Pre-compute a structured `DocId` per top-level
@@ -308,6 +352,12 @@ impl Formatter {
                 macro_docs,
             };
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
+            if let Some(cctx) = &ctx.comment_ctx {
+                cctx.finish(stmt_source);
+            }
+            if let Some(message) = ctx.comment_ctx.as_ref().and_then(CommentCtx::take_error) {
+                return Err(FormatError::new(message, None));
+            }
             self.parts.push(interpreted);
 
             // Emit this statement's terminator.  Trailing comments now
@@ -321,8 +371,7 @@ impl Formatter {
             }
 
             if let Some(cctx) = ctx.comment_ctx.as_ref() {
-                self.parts
-                    .push(cctx.drain_remaining(stmt_source, &mut arena));
+                self.parts.push(cctx.footer(stmt_source, &mut arena));
             }
 
             // Stage 3: Render Docs via the Wadler-style group/flat/break algorithm.
@@ -529,10 +578,8 @@ impl Formatter {
                     &mut arena,
                     &mut self.parts,
                 );
-            } else if let Some(cctx) = comment_ctx.as_ref()
-                && let Some((next_offset, _)) = cctx.peek_next_token()
-            {
-                drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
+            } else if let Some(cctx) = comment_ctx.as_ref() {
+                self.parts.push(cctx.header(stmt_source, &mut arena));
             }
 
             let macro_docs = macro_structured::compute_macro_docs(
@@ -552,11 +599,16 @@ impl Formatter {
                 macro_docs,
             };
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
+            if let Some(cctx) = &ctx.comment_ctx {
+                cctx.finish(stmt_source);
+            }
+            if let Some(message) = ctx.comment_ctx.as_ref().and_then(CommentCtx::take_error) {
+                return Err(FormatError::new(message, None));
+            }
             self.parts.push(interpreted);
 
             if let Some(cctx) = ctx.comment_ctx.as_ref() {
-                self.parts
-                    .push(cctx.drain_remaining(stmt_source, &mut arena));
+                self.parts.push(cctx.footer(stmt_source, &mut arena));
             }
 
             let doc = arena.cats(&self.parts);
@@ -589,43 +641,8 @@ fn emit_stmt_separator<'a>(
 ) {
     parts.push(arena.hardline());
     parts.push(arena.hardline());
-    if let Some(cctx) = comment_ctx
-        && let Some((next_offset, _)) = cctx.peek_next_token()
-    {
-        drain_gap_comments(cctx, next_offset, source, arena, parts);
-    }
-}
-
-fn drain_gap_comments<'a>(
-    ctx: &CommentCtx,
-    before: StmtOffset,
-    source: &'a StmtText,
-    arena: &mut DocArena<'a>,
-    parts: &mut Vec<DocId>,
-) {
-    let source_end = StmtOffset::default() + source.byte_len();
-    while let Some(c) = ctx.peek_comment() {
-        if c.offset >= before {
-            break;
-        }
-        let text = &source[StmtRange::from_offset_len(c.offset, c.length)];
-        let end = c.offset + c.length;
-        parts.push(arena.text(text));
-        parts.push(arena.hardline());
-        ctx.advance_comment();
-        // If the source had a blank line between this comment and
-        // whatever follows — the next comment or the drain target —
-        // preserve it with an extra hardline. One check covers both
-        // "between comment blocks" and "between last block and next
-        // statement".
-        let next = ctx.peek_comment().map_or(before, |n| n.offset);
-        let gap = StmtRange {
-            start: end.min(source_end),
-            end: next.min(source_end),
-        };
-        if !gap.is_empty() && source[gap].contains("\n\n") {
-            parts.push(arena.hardline());
-        }
+    if let Some(cctx) = comment_ctx {
+        parts.push(cctx.header(source, arena));
     }
 }
 
@@ -638,7 +655,7 @@ fn drain_gap_comments<'a>(
 /// this).  Emits only at a node whose bytecode-emitted content is
 /// exactly the macro call: any additional content the node would emit
 /// (keywords, aliases, siblings) would be silently dropped by
-/// `ReturnAction::Discard` in the caller.
+/// `ReturnAction::Replace` in the caller.
 ///
 /// The position check boils down to:
 /// - `tok_offset == r_start`: the next unconsumed token *is* the
@@ -653,7 +670,7 @@ fn drain_gap_comments<'a>(
 ///
 /// Deliberately does NOT advance the cctx cursor — the child frame's
 /// `Span` op advances it when the fallback `TK_ID` emits, so trailing
-/// comments drain against the outer frame rather than the inner group.
+/// attachments belong to the outer frame rather than the inner group.
 pub(crate) fn try_macro<'a>(
     ctx: &FmtCtx<'a>,
     arena: &mut DocArena<'a>,
@@ -840,9 +857,9 @@ mod tests {
     }
 
     #[test]
-    fn emit_stmt_separator_drains_leading_block_comment_after_break() {
+    fn emit_stmt_separator_places_header_after_break() {
         // emit_stmt_separator now only handles the inter-statement break
-        // and drains LEADING comments of the next statement.  The
+        // and emits the header comments of the next statement.  The
         // statement terminator (`;`) and any TRAILING comments on it are
         // emitted by per-statement processing in `format`, not here.
         let source = StmtText::new("/*x*/SELECT");
@@ -852,10 +869,13 @@ mod tests {
                 length: StmtLen::from_raw(5),
                 kind: CommentKind::Block,
                 side: CommentSide::Leading,
+                inside_token: false,
             }],
             vec![TokenEntry {
+                source_index: 0,
                 offset: StmtOffset::from_raw(5),
                 length: StmtLen::from_raw(6),
+                comment_end: 1,
             }],
         );
         let mut arena = DocArena::new();
@@ -865,7 +885,7 @@ mod tests {
     }
 
     #[test]
-    fn drain_gap_comments_writes_each_comment_on_own_line() {
+    fn header_writes_each_comment_on_own_line() {
         let source = StmtText::new("--a\n/*b*/SELECT");
         let ctx = CommentCtx::new(
             vec![
@@ -874,28 +894,25 @@ mod tests {
                     length: StmtLen::from_raw(3),
                     kind: CommentKind::Line,
                     side: CommentSide::Leading,
+                    inside_token: false,
                 },
                 CommentEntry {
                     offset: StmtOffset::from_raw(4),
                     length: StmtLen::from_raw(5),
                     kind: CommentKind::Block,
                     side: CommentSide::Leading,
+                    inside_token: false,
                 },
             ],
             vec![TokenEntry {
+                source_index: 0,
                 offset: StmtOffset::from_raw(9),
                 length: StmtLen::from_raw(6),
+                comment_end: 2,
             }],
         );
         let mut arena = DocArena::new();
-        let mut parts = Vec::new();
-        drain_gap_comments(
-            &ctx,
-            StmtOffset::from_raw(9),
-            source,
-            &mut arena,
-            &mut parts,
-        );
+        let parts = vec![ctx.header(source, &mut arena)];
         assert_eq!(render_parts(&mut arena, &parts), "--a\n/*b*/\n");
     }
 }

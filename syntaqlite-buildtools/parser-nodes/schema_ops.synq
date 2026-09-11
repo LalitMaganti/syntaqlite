@@ -43,9 +43,9 @@ node AlterTableStmt {
     if_set(target) { child(target) space }
     switch(op) {
       RENAME_TABLE  { "RENAME" "TO" space child(new_name) }
-      RENAME_COLUMN { "RENAME" "COLUMN" space child(old_name) space "TO" space child(new_name) }
-      DROP_COLUMN   { "DROP" "COLUMN" space child(old_name) }
-      ADD_COLUMN    { "ADD" "COLUMN" space child(column) }
+      RENAME_COLUMN { "RENAME" space source(prefix, _self) { "COLUMN" } space child(old_name) space "TO" space child(new_name) }
+      DROP_COLUMN   { "DROP" space source(prefix, _self) { "COLUMN" } space child(old_name) }
+      ADD_COLUMN    { "ADD" space source(prefix, _self) { "COLUMN" } space child(column) }
     }
   }
 }
@@ -58,12 +58,12 @@ node TransactionStmt {
   fmt {
     switch(op) {
       BEGIN {
-        "BEGIN"
+        source(operator, _self) { "BEGIN" }
         if_enum(trans_type, IMMEDIATE) { space "IMMEDIATE" }
         if_enum(trans_type, EXCLUSIVE) { space "EXCLUSIVE" }
       }
-      COMMIT   { "COMMIT" }
-      ROLLBACK { "ROLLBACK" }
+      COMMIT   { source(operator, _self) { "COMMIT" } }
+      ROLLBACK { source(operator, _self) { "ROLLBACK" } }
     }
     if_span(name) { space "TRANSACTION" space span(name) }
   }
@@ -77,11 +77,11 @@ node SavepointStmt {
   fmt {
     switch(op) {
       SAVEPOINT   { "SAVEPOINT" space child(savepoint_name) }
-      RELEASE     { "RELEASE" "SAVEPOINT" space child(savepoint_name) }
+      RELEASE     { "RELEASE" space source(prefix, _self) { "SAVEPOINT" } space child(savepoint_name) }
       ROLLBACK_TO {
         "ROLLBACK"
         if_span(transaction_name) { space "TRANSACTION" space span(transaction_name) }
-        space "TO" "SAVEPOINT" space child(savepoint_name)
+        space "TO" space source(prefix, _self) { "SAVEPOINT" } space child(savepoint_name)
       }
     }
   }

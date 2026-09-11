@@ -104,6 +104,8 @@ class LeadingLineComment(TestSuite):
 
 
 class BlockComment(TestSuite):
+    # Inline packets belong to the preceding parser anchor; they do not force
+    # a document break merely because their next token is a keyword.
     def test_before_statement(self):
         return DiffTestBlueprint(
             sql="/* count */ SELECT count(*) FROM t",
@@ -116,32 +118,19 @@ class BlockComment(TestSuite):
     def test_trailing_block(self):
         return DiffTestBlueprint(
             sql="SELECT a /* col */ FROM t",
-            out="""\
-                SELECT a
-                /* col */ FROM t;
-            """,
+            out='SELECT a /* col */ FROM t;',
         )
 
     def test_trailing_block_after_from(self):
         return DiffTestBlueprint(
             sql="SELECT 1 FROM t /* block */ WHERE x = 1",
-            out="""\
-                SELECT 1
-                FROM t
-                /* block */ WHERE
-                  x = 1;
-            """,
+            out='SELECT 1 FROM t /* block */ WHERE x = 1;',
         )
 
     def test_inline_block_comments(self):
         return DiffTestBlueprint(
             sql="SELECT /* c1 */ a, /* c2 */ b /* c3 */ FROM t",
-            out="""\
-                SELECT
-                  /* c1 */ a,
-                  /* c2 */ b
-                /* c3 */ FROM t;
-            """,
+            out='SELECT /* c1 */ a, /* c2 */ b /* c3 */ FROM t;',
         )
 
 
@@ -460,13 +449,7 @@ class JoinComment(TestSuite):
     def test_block_inside_left_join(self):
         return DiffTestBlueprint(
             sql="SELECT 1 FROM t1 a LEFT /* mid */ JOIN t2 b ON a.id = b.id",
-            out="""\
-                SELECT 1
-                FROM t1 AS a
-                LEFT
-                /* mid */ JOIN t2 AS b
-                  ON a.id = b.id;
-            """,
+            out='SELECT 1\nFROM t1 AS a\nLEFT /* mid */ JOIN t2 AS b\n  ON a.id = b.id;',
         )
 
     def test_inside_right_join(self):
@@ -647,12 +630,7 @@ class TableAliasComment(TestSuite):
                 -- c
                 o
             """,
-            out="""\
-                SELECT 1
-                FROM orders AS
-                -- c
-                o;
-            """,
+            out='SELECT 1\nFROM orders\n-- c\nAS o;',
         )
 
     def test_between_as_and_alias(self):

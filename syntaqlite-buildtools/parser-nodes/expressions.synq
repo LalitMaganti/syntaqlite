@@ -5,17 +5,17 @@ node BinaryExpr {
 
   fmt {
     switch(op) {
-      AND { child_prec(left, op) line "AND" space child_prec(right, op, right) }
-      OR  { child_prec(left, op) line "OR" space  child_prec(right, op, right) }
+      AND { child_prec(left, op) line source(operator, _self) { "AND" } space child_prec(right, op, right) }
+      OR  { child_prec(left, op) line source(operator, _self) { "OR" } space  child_prec(right, op, right) }
       default {
         group {
           child_prec(left, op) line
-          enum_display(op, {
+          source(operator, _self) { enum_display(op, {
             PLUS="+" MINUS="-" STAR="*" SLASH="/" REM="%"
             LT="<" GT=">" LE="<=" GE=">=" EQ="=" NE="!="
             AND="AND" OR="OR" BIT_AND="&" BIT_OR="|"
             LSHIFT="<<" RSHIFT=">>" CONCAT="||" PTR="->" PTR2="->>"
-          })
+          }) }
           space child_prec(right, op, right)
         }
       }
