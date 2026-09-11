@@ -118,6 +118,11 @@ static const char* const display_index_hint[] = {
     "INDEXED",
 };
 
+static const char* const display_insert_keyword[] = {
+    "INSERT",
+    "REPLACE",
+};
+
 static const char* const display_raise_type[] = {
     "IGNORE",
     "ROLLBACK",
@@ -620,6 +625,9 @@ static const SyntaqliteFieldMeta field_meta_insert_stmt[] = {
     {offsetof(SyntaqliteInsertStmt, with_recursive), SYNTAQLITE_FIELD_BOOL,
      "with_recursive", display_bool,
      sizeof(display_bool) / sizeof(display_bool[0])},
+    {offsetof(SyntaqliteInsertStmt, keyword), SYNTAQLITE_FIELD_ENUM, "keyword",
+     display_insert_keyword,
+     sizeof(display_insert_keyword) / sizeof(display_insert_keyword[0])},
     {offsetof(SyntaqliteInsertStmt, conflict_action), SYNTAQLITE_FIELD_ENUM,
      "conflict_action", display_conflict_action,
      sizeof(display_conflict_action) / sizeof(display_conflict_action[0])},
@@ -1446,7 +1454,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* SetClause */
     0,  /* SetClauseList */
     12, /* UpdateStmt */
-    8,  /* InsertStmt */
+    9,  /* InsertStmt */
     3,  /* BinaryExpr */
     2,  /* UnaryExpr */
     2,  /* Literal */

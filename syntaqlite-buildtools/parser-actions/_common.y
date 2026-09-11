@@ -85,6 +85,12 @@ typedef struct SynqUpsertValue {
   uint32_t returning;
 } SynqUpsertValue;
 
+// Keep the authored INSERT/REPLACE form separate from conflict semantics.
+typedef struct SynqInsertCmdValue {
+  SyntaqliteInsertKeyword keyword;
+  SyntaqliteConflictAction conflict_action;
+} SynqInsertCmdValue;
+
 // Keep the authored modifier sequence alongside its semantic join type.
 typedef struct SynqJoinOpValue {
   SyntaqliteJoinType join_type;

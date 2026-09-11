@@ -252,6 +252,11 @@ class IndexHint(IntEnum):
     INDEXED = 2
 
 
+class InsertKeyword(IntEnum):
+    INSERT = 0
+    REPLACE = 1
+
+
 class RaiseType(IntEnum):
     IGNORE = 0
     ROLLBACK = 1

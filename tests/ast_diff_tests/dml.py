@@ -254,6 +254,7 @@ class InsertBasic(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -291,6 +292,7 @@ class InsertBasic(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -334,6 +336,7 @@ class InsertBasic(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -381,6 +384,7 @@ class InsertBasic(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -409,6 +413,7 @@ class InsertConflict(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: REPLACE
               table:
                 TableRef
@@ -440,6 +445,7 @@ class InsertConflict(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: REPLACE
               conflict_action: REPLACE
               table:
                 TableRef
@@ -471,6 +477,7 @@ class InsertConflict(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: ROLLBACK
               table:
                 TableRef
@@ -502,6 +509,7 @@ class InsertConflict(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: ABORT
               table:
                 TableRef
@@ -533,6 +541,7 @@ class InsertConflict(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: FAIL
               table:
                 TableRef
@@ -564,6 +573,7 @@ class InsertConflict(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: IGNORE
               table:
                 TableRef
@@ -995,6 +1005,7 @@ class InsertMultipleRows(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1071,6 +1082,7 @@ class DmlWithCte(TestSuite):
                         limit_clause: (none)
                         window_clause: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1301,6 +1313,7 @@ class DmlWithCte(TestSuite):
                         limit_clause: (none)
                         window_clause: (none)
               with_recursive: TRUE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1549,6 +1562,7 @@ class ReturningClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1592,6 +1606,7 @@ class ReturningClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1625,6 +1640,7 @@ class UpsertClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1663,6 +1679,7 @@ class UpsertClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1709,6 +1726,7 @@ class UpsertClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1756,6 +1774,7 @@ class UpsertClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1824,6 +1843,7 @@ class UpsertClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1901,6 +1921,7 @@ class UpsertClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -1944,6 +1965,7 @@ class UpsertClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef
@@ -2017,6 +2039,7 @@ class UpsertClause(TestSuite):
             InsertStmt
               with_ctes: (none)
               with_recursive: FALSE
+              keyword: INSERT
               conflict_action: DEFAULT
               table:
                 TableRef

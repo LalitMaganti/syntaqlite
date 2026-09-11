@@ -887,8 +887,8 @@ class CanonicalSpellingFormat(TestSuite):
             out="CREATE TEMPORARY TABLE x(a);",
         )
 
-    def test_insert_or_replace_becomes_replace(self):
+    def test_insert_or_replace_is_preserved(self):
         return DiffTestBlueprint(
             sql="insert or replace into t values(1)",
-            out="REPLACE INTO t VALUES (1);",
+            out="INSERT OR REPLACE INTO t VALUES (1);",
         )

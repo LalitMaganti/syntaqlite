@@ -177,6 +177,11 @@ typedef enum SyntaqliteIndexHint {
   SYNTAQLITE_INDEX_HINT_INDEXED = 2
 } SyntaqliteIndexHint;
 
+typedef enum SyntaqliteInsertKeyword {
+  SYNTAQLITE_INSERT_KEYWORD_INSERT = 0,
+  SYNTAQLITE_INSERT_KEYWORD_REPLACE = 1
+} SyntaqliteInsertKeyword;
+
 typedef enum SyntaqliteRaiseType {
   SYNTAQLITE_RAISE_TYPE_IGNORE = 0,
   SYNTAQLITE_RAISE_TYPE_ROLLBACK = 1,
@@ -737,6 +742,7 @@ typedef struct SyntaqliteInsertStmt {
   SyntaqliteNodeTag tag;
   uint32_t with_ctes;
   SyntaqliteBool with_recursive;
+  SyntaqliteInsertKeyword keyword;
   SyntaqliteConflictAction conflict_action;
   uint32_t table;
   uint32_t columns;

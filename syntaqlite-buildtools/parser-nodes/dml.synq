@@ -125,9 +125,12 @@ node UpdateStmt {
   }
 }
 
+enum InsertKeyword { INSERT REPLACE }
+
 node InsertStmt {
   with_ctes: index CteList
   with_recursive: inline Bool
+  keyword: inline InsertKeyword
   conflict_action: inline ConflictAction
   table: index TableRef
   columns: index ExprList
@@ -143,13 +146,14 @@ node InsertStmt {
         if_flag(with_recursive) { "WITH" "RECURSIVE" } else { "WITH" }
         group { nest { line child(with_ctes) } } hardline
       }
-      if_enum(conflict_action, REPLACE) { "REPLACE" } else {
+      if_enum(keyword, REPLACE) { "REPLACE" } else {
         "INSERT"
         switch(conflict_action) {
           ROLLBACK { space "OR" "ROLLBACK" }
           ABORT    { space "OR" "ABORT" }
           FAIL     { space "OR" "FAIL" }
           IGNORE   { space "OR" "IGNORE" }
+          REPLACE  { space "OR" "REPLACE" }
         }
       }
       space "INTO" space child(table)

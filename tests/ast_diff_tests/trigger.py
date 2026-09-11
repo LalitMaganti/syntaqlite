@@ -606,6 +606,7 @@ class CreateTriggerBody(TestSuite):
                   InsertStmt
                     with_ctes: (none)
                     with_recursive: FALSE
+                    keyword: INSERT
                     conflict_action: DEFAULT
                     table:
                       TableRef
