@@ -292,7 +292,7 @@ class ForeignKeyFormat(TestSuite):
             ),
             out=(
                 "CREATE TABLE t(a int REFERENCES other(id) "
-                "ON DELETE CASCADE ON INSERT SET NULL);"
+                "ON INSERT SET NULL ON DELETE CASCADE);"
             ),
         )
 
@@ -311,14 +311,26 @@ class ForeignKeyFormat(TestSuite):
             ),
         )
 
-    def test_references_match_after_actions_is_canonicalized(self):
-        # refargs may appear in any order; the formatter emits MATCH first.
+    def test_references_match_after_actions_preserves_order(self):
+        # Preserve authored option order, including repeated declarations.
         return DiffTestBlueprint(
             sql="create table t(a int references other(id) on delete cascade match partial)",
             out=(
-                "CREATE TABLE t(a int REFERENCES other(id) MATCH partial "
-                "ON DELETE CASCADE);"
+                "CREATE TABLE t(a int REFERENCES other(id) ON DELETE CASCADE "
+                "MATCH partial);"
             ),
+        )
+
+    def test_repeated_options_are_preserved(self):
+        return DiffTestBlueprint(
+            sql="create table t(a references u on delete cascade on delete restrict)",
+            out="CREATE TABLE t(a REFERENCES u ON DELETE CASCADE ON DELETE RESTRICT);",
+        )
+
+    def test_repeated_match_is_preserved(self):
+        return DiffTestBlueprint(
+            sql="create table t(a references u match first match last)",
+            out="CREATE TABLE t(a REFERENCES u MATCH first MATCH last);",
         )
 
     def test_foreign_key_constraint_match(self):

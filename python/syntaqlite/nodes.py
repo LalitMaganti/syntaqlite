@@ -5,7 +5,7 @@
 
 from __future__ import annotations
 
-from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, Deferrable, DropObjectType, ExplainMode, ForeignKeyAction, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, InitialDeferMode, IsOp, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
+from .enums import AggregateFunctionCallFlags, AlterOp, AnalyzeOrReindexOp, BinaryOp, Bool, ColumnConstraintType, CompoundOp, ConflictAction, CreateTableStmtFlags, Deferrable, DropObjectType, ExplainMode, ForeignKeyAction, ForeignKeyOptionKind, FrameBoundType, FrameExclude, FrameType, FunctionCallFlags, GeneratedColumnStorage, IndexHint, InitialDeferMode, IsOp, JoinType, LikeKeyword, LiteralType, Materialized, NullsOrder, PragmaForm, RaiseType, ResultColumnFlags, SavepointOp, SelectStmtFlags, SortOrder, TableConstraintType, TransactionOp, TransactionType, TriggerEventType, TriggerTiming, UnaryOp, UpsertAction
 
 
 class AggregateFunctionCall:
@@ -196,18 +196,29 @@ class CaseWhen:
         return "CaseWhen(...)"
 
 
+class ForeignKeyOption:
+    """AST node: ForeignKeyOption"""
+
+    __slots__ = ("kind", "action", "match_name")
+
+    def __init__(self, d: dict):
+        self.kind: ForeignKeyOptionKind = ForeignKeyOptionKind[d["kind"]]
+        self.action: ForeignKeyAction = ForeignKeyAction[d["action"]]
+        self.match_name: str | None = d.get("match_name")
+
+    def __repr__(self):
+        return "ForeignKeyOption(...)"
+
+
 class ForeignKeyClause:
     """AST node: ForeignKeyClause"""
 
-    __slots__ = ("ref_table", "ref_columns", "match_name", "on_delete", "on_update", "on_insert", "deferrable", "initial_defer")
+    __slots__ = ("ref_table", "ref_columns", "options", "deferrable", "initial_defer")
 
     def __init__(self, d: dict):
         self.ref_table: str | None = d.get("ref_table")
         self.ref_columns: list[Expr] | None = _wrap(d.get("ref_columns"))
-        self.match_name: str | None = d.get("match_name")
-        self.on_delete: ForeignKeyAction = ForeignKeyAction[d["on_delete"]]
-        self.on_update: ForeignKeyAction = ForeignKeyAction[d["on_update"]]
-        self.on_insert: ForeignKeyAction = ForeignKeyAction[d["on_insert"]]
+        self.options: list[ForeignKeyOption] | None = _wrap(d.get("options"))
         self.deferrable: Deferrable = Deferrable[d["deferrable"]]
         self.initial_defer: InitialDeferMode = InitialDeferMode[d["initial_defer"]]
 
@@ -1033,6 +1044,7 @@ _NODE_MAP: dict[str, type] = {
     "LikeExpr": LikeExpr,
     "CaseExpr": CaseExpr,
     "CaseWhen": CaseWhen,
+    "ForeignKeyOption": ForeignKeyOption,
     "ForeignKeyClause": ForeignKeyClause,
     "ColumnConstraint": ColumnConstraint,
     "ConstraintNameDeclaration": ConstraintNameDeclaration,

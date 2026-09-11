@@ -84,6 +84,13 @@ static const char* const display_table_constraint_type[] = {
     "FOREIGN_KEY",
 };
 
+static const char* const display_foreign_key_option_kind[] = {
+    "MATCH",
+    "ON_DELETE",
+    "ON_UPDATE",
+    "ON_INSERT",
+};
+
 static const char* const display_materialized[] = {
     "DEFAULT",
     "MATERIALIZED",
@@ -368,25 +375,26 @@ static const SyntaqliteFieldMeta field_meta_case_when[] = {
      "then_expr", NULL, 0},
 };
 
+static const SyntaqliteFieldMeta field_meta_foreign_key_option[] = {
+    {offsetof(SyntaqliteForeignKeyOption, kind), SYNTAQLITE_FIELD_ENUM, "kind",
+     display_foreign_key_option_kind,
+     sizeof(display_foreign_key_option_kind) /
+         sizeof(display_foreign_key_option_kind[0])},
+    {offsetof(SyntaqliteForeignKeyOption, action), SYNTAQLITE_FIELD_ENUM,
+     "action", display_foreign_key_action,
+     sizeof(display_foreign_key_action) /
+         sizeof(display_foreign_key_action[0])},
+    {offsetof(SyntaqliteForeignKeyOption, match_name), SYNTAQLITE_FIELD_SPAN,
+     "match_name", NULL, 0},
+};
+
 static const SyntaqliteFieldMeta field_meta_foreign_key_clause[] = {
     {offsetof(SyntaqliteForeignKeyClause, ref_table), SYNTAQLITE_FIELD_SPAN,
      "ref_table", NULL, 0},
     {offsetof(SyntaqliteForeignKeyClause, ref_columns),
      SYNTAQLITE_FIELD_NODE_ID, "ref_columns", NULL, 0},
-    {offsetof(SyntaqliteForeignKeyClause, match_name), SYNTAQLITE_FIELD_SPAN,
-     "match_name", NULL, 0},
-    {offsetof(SyntaqliteForeignKeyClause, on_delete), SYNTAQLITE_FIELD_ENUM,
-     "on_delete", display_foreign_key_action,
-     sizeof(display_foreign_key_action) /
-         sizeof(display_foreign_key_action[0])},
-    {offsetof(SyntaqliteForeignKeyClause, on_update), SYNTAQLITE_FIELD_ENUM,
-     "on_update", display_foreign_key_action,
-     sizeof(display_foreign_key_action) /
-         sizeof(display_foreign_key_action[0])},
-    {offsetof(SyntaqliteForeignKeyClause, on_insert), SYNTAQLITE_FIELD_ENUM,
-     "on_insert", display_foreign_key_action,
-     sizeof(display_foreign_key_action) /
-         sizeof(display_foreign_key_action[0])},
+    {offsetof(SyntaqliteForeignKeyClause, options), SYNTAQLITE_FIELD_NODE_ID,
+     "options", NULL, 0},
     {offsetof(SyntaqliteForeignKeyClause, deferrable), SYNTAQLITE_FIELD_ENUM,
      "deferrable", display_deferrable,
      sizeof(display_deferrable) / sizeof(display_deferrable[0])},
@@ -1057,9 +1065,12 @@ static const SyntaqliteFieldRangeMeta range_meta_column_ref[] = {
     {offsetof(SyntaqliteColumnRef, schema), 1},
 };
 
+static const SyntaqliteFieldRangeMeta range_meta_foreign_key_option[] = {
+    {offsetof(SyntaqliteForeignKeyOption, match_name), 1},
+};
+
 static const SyntaqliteFieldRangeMeta range_meta_foreign_key_clause[] = {
     {offsetof(SyntaqliteForeignKeyClause, ref_table), 1},
-    {offsetof(SyntaqliteForeignKeyClause, match_name), 1},
 };
 
 static const SyntaqliteFieldRangeMeta range_meta_column_constraint[] = {
@@ -1203,6 +1214,8 @@ static const char* const ast_meta_node_names[] = {
     "CaseExpr",
     "CaseWhen",
     "CaseWhenList",
+    "ForeignKeyOption",
+    "ForeignKeyOptionList",
     "ForeignKeyClause",
     "ColumnConstraint",
     "ConstraintNameDeclaration",
@@ -1292,6 +1305,8 @@ static const SyntaqliteFieldMeta* const ast_meta_field_meta[] = {
     field_meta_case_expr,                   /* CaseExpr */
     field_meta_case_when,                   /* CaseWhen */
     NULL,                                   /* CaseWhenList */
+    field_meta_foreign_key_option,          /* ForeignKeyOption */
+    NULL,                                   /* ForeignKeyOptionList */
     field_meta_foreign_key_clause,          /* ForeignKeyClause */
     field_meta_column_constraint,           /* ColumnConstraint */
     field_meta_constraint_name_declaration, /* ConstraintNameDeclaration */
@@ -1379,7 +1394,9 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* CaseExpr */
     2,  /* CaseWhen */
     0,  /* CaseWhenList */
-    8,  /* ForeignKeyClause */
+    3,  /* ForeignKeyOption */
+    0,  /* ForeignKeyOptionList */
+    5,  /* ForeignKeyClause */
     14, /* ColumnConstraint */
     1,  /* ConstraintNameDeclaration */
     0,  /* ColumnConstraintList */
@@ -1468,6 +1485,8 @@ static const uint8_t ast_meta_list_tags[] = {
     0, /* CaseExpr */
     0, /* CaseWhen */
     1, /* CaseWhenList */
+    0, /* ForeignKeyOption */
+    1, /* ForeignKeyOptionList */
     0, /* ForeignKeyClause */
     0, /* ColumnConstraint */
     0, /* ConstraintNameDeclaration */
@@ -1557,7 +1576,9 @@ static const SyntaqliteRangeMetaEntry ast_meta_range_meta[] = {
     {NULL, 0},                                   /* CaseExpr */
     {NULL, 0},                                   /* CaseWhen */
     {NULL, 0},                                   /* CaseWhenList */
-    {range_meta_foreign_key_clause, 2},          /* ForeignKeyClause */
+    {range_meta_foreign_key_option, 1},          /* ForeignKeyOption */
+    {NULL, 0},                                   /* ForeignKeyOptionList */
+    {range_meta_foreign_key_clause, 1},          /* ForeignKeyClause */
     {range_meta_column_constraint, 1},           /* ColumnConstraint */
     {range_meta_constraint_name_declaration, 1}, /* ConstraintNameDeclaration */
     {NULL, 0},                                   /* ColumnConstraintList */

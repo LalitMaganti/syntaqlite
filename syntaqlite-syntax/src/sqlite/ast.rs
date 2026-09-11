@@ -30,75 +30,77 @@ pub enum NodeTag {
     CaseExpr = 12,
     CaseWhen = 13,
     CaseWhenList = 14,
-    ForeignKeyClause = 15,
-    ColumnConstraint = 16,
-    ConstraintNameDeclaration = 17,
-    ColumnConstraintList = 18,
-    ColumnDef = 19,
-    ColumnDefList = 20,
-    TableConstraint = 21,
-    TableConstraintGroup = 22,
-    TableConstraintList = 23,
-    CreateTableStmt = 24,
-    CteDefinition = 25,
-    CteList = 26,
-    WithClause = 27,
-    UpsertClause = 28,
-    UpsertClauseList = 29,
-    DeleteStmt = 30,
-    SetClause = 31,
-    SetClauseList = 32,
-    UpdateStmt = 33,
-    InsertStmt = 34,
-    BinaryExpr = 35,
-    UnaryExpr = 36,
-    Literal = 37,
-    ParenExpr = 38,
-    IdentName = 39,
-    Error = 40,
-    RowValue = 41,
-    ExprList = 42,
-    FunctionCall = 43,
-    Variable = 44,
-    CollateExpr = 45,
-    RaiseExpr = 46,
-    QualifiedName = 47,
-    DropStmt = 48,
-    AlterTableStmt = 49,
-    TransactionStmt = 50,
-    SavepointStmt = 51,
-    ResultColumn = 52,
-    ResultColumnList = 53,
-    SelectStmt = 54,
-    OrderingTerm = 55,
-    OrderByList = 56,
-    LimitClause = 57,
-    TableRef = 58,
-    SubqueryTableSource = 59,
-    ParenTableSource = 60,
-    JoinClause = 61,
-    JoinPrefix = 62,
-    TriggerEvent = 63,
-    TriggerCmdList = 64,
-    CreateTriggerStmt = 65,
-    CreateVirtualTableStmt = 66,
-    PragmaStmt = 67,
-    AnalyzeOrReindexStmt = 68,
-    AttachStmt = 69,
-    DetachStmt = 70,
-    VacuumStmt = 71,
-    ExplainStmt = 72,
-    CreateIndexStmt = 73,
-    CreateViewStmt = 74,
-    ValuesRowList = 75,
-    ValuesClause = 76,
-    FrameBound = 77,
-    FrameSpec = 78,
-    WindowDef = 79,
-    WindowDefList = 80,
-    NamedWindowDef = 81,
-    NamedWindowDefList = 82,
-    FilterOver = 83,
+    ForeignKeyOption = 15,
+    ForeignKeyOptionList = 16,
+    ForeignKeyClause = 17,
+    ColumnConstraint = 18,
+    ConstraintNameDeclaration = 19,
+    ColumnConstraintList = 20,
+    ColumnDef = 21,
+    ColumnDefList = 22,
+    TableConstraint = 23,
+    TableConstraintGroup = 24,
+    TableConstraintList = 25,
+    CreateTableStmt = 26,
+    CteDefinition = 27,
+    CteList = 28,
+    WithClause = 29,
+    UpsertClause = 30,
+    UpsertClauseList = 31,
+    DeleteStmt = 32,
+    SetClause = 33,
+    SetClauseList = 34,
+    UpdateStmt = 35,
+    InsertStmt = 36,
+    BinaryExpr = 37,
+    UnaryExpr = 38,
+    Literal = 39,
+    ParenExpr = 40,
+    IdentName = 41,
+    Error = 42,
+    RowValue = 43,
+    ExprList = 44,
+    FunctionCall = 45,
+    Variable = 46,
+    CollateExpr = 47,
+    RaiseExpr = 48,
+    QualifiedName = 49,
+    DropStmt = 50,
+    AlterTableStmt = 51,
+    TransactionStmt = 52,
+    SavepointStmt = 53,
+    ResultColumn = 54,
+    ResultColumnList = 55,
+    SelectStmt = 56,
+    OrderingTerm = 57,
+    OrderByList = 58,
+    LimitClause = 59,
+    TableRef = 60,
+    SubqueryTableSource = 61,
+    ParenTableSource = 62,
+    JoinClause = 63,
+    JoinPrefix = 64,
+    TriggerEvent = 65,
+    TriggerCmdList = 66,
+    CreateTriggerStmt = 67,
+    CreateVirtualTableStmt = 68,
+    PragmaStmt = 69,
+    AnalyzeOrReindexStmt = 70,
+    AttachStmt = 71,
+    DetachStmt = 72,
+    VacuumStmt = 73,
+    ExplainStmt = 74,
+    CreateIndexStmt = 75,
+    CreateViewStmt = 76,
+    ValuesRowList = 77,
+    ValuesClause = 78,
+    FrameBound = 79,
+    FrameSpec = 80,
+    WindowDef = 81,
+    WindowDefList = 82,
+    NamedWindowDef = 83,
+    NamedWindowDefList = 84,
+    FilterOver = 85,
 }
 
 impl From<NodeTag> for crate::any::AnyNodeTag {
@@ -125,75 +127,77 @@ impl NodeTag {
             12 => Some(NodeTag::CaseExpr),
             13 => Some(NodeTag::CaseWhen),
             14 => Some(NodeTag::CaseWhenList),
-            15 => Some(NodeTag::ForeignKeyClause),
-            16 => Some(NodeTag::ColumnConstraint),
-            17 => Some(NodeTag::ConstraintNameDeclaration),
-            18 => Some(NodeTag::ColumnConstraintList),
-            19 => Some(NodeTag::ColumnDef),
-            20 => Some(NodeTag::ColumnDefList),
-            21 => Some(NodeTag::TableConstraint),
-            22 => Some(NodeTag::TableConstraintGroup),
-            23 => Some(NodeTag::TableConstraintList),
-            24 => Some(NodeTag::CreateTableStmt),
-            25 => Some(NodeTag::CteDefinition),
-            26 => Some(NodeTag::CteList),
-            27 => Some(NodeTag::WithClause),
-            28 => Some(NodeTag::UpsertClause),
-            29 => Some(NodeTag::UpsertClauseList),
-            30 => Some(NodeTag::DeleteStmt),
-            31 => Some(NodeTag::SetClause),
-            32 => Some(NodeTag::SetClauseList),
-            33 => Some(NodeTag::UpdateStmt),
-            34 => Some(NodeTag::InsertStmt),
-            35 => Some(NodeTag::BinaryExpr),
-            36 => Some(NodeTag::UnaryExpr),
-            37 => Some(NodeTag::Literal),
-            38 => Some(NodeTag::ParenExpr),
-            39 => Some(NodeTag::IdentName),
-            40 => Some(NodeTag::Error),
-            41 => Some(NodeTag::RowValue),
-            42 => Some(NodeTag::ExprList),
-            43 => Some(NodeTag::FunctionCall),
-            44 => Some(NodeTag::Variable),
-            45 => Some(NodeTag::CollateExpr),
-            46 => Some(NodeTag::RaiseExpr),
-            47 => Some(NodeTag::QualifiedName),
-            48 => Some(NodeTag::DropStmt),
-            49 => Some(NodeTag::AlterTableStmt),
-            50 => Some(NodeTag::TransactionStmt),
-            51 => Some(NodeTag::SavepointStmt),
-            52 => Some(NodeTag::ResultColumn),
-            53 => Some(NodeTag::ResultColumnList),
-            54 => Some(NodeTag::SelectStmt),
-            55 => Some(NodeTag::OrderingTerm),
-            56 => Some(NodeTag::OrderByList),
-            57 => Some(NodeTag::LimitClause),
-            58 => Some(NodeTag::TableRef),
-            59 => Some(NodeTag::SubqueryTableSource),
-            60 => Some(NodeTag::ParenTableSource),
-            61 => Some(NodeTag::JoinClause),
-            62 => Some(NodeTag::JoinPrefix),
-            63 => Some(NodeTag::TriggerEvent),
-            64 => Some(NodeTag::TriggerCmdList),
-            65 => Some(NodeTag::CreateTriggerStmt),
-            66 => Some(NodeTag::CreateVirtualTableStmt),
-            67 => Some(NodeTag::PragmaStmt),
-            68 => Some(NodeTag::AnalyzeOrReindexStmt),
-            69 => Some(NodeTag::AttachStmt),
-            70 => Some(NodeTag::DetachStmt),
-            71 => Some(NodeTag::VacuumStmt),
-            72 => Some(NodeTag::ExplainStmt),
-            73 => Some(NodeTag::CreateIndexStmt),
-            74 => Some(NodeTag::CreateViewStmt),
-            75 => Some(NodeTag::ValuesRowList),
-            76 => Some(NodeTag::ValuesClause),
-            77 => Some(NodeTag::FrameBound),
-            78 => Some(NodeTag::FrameSpec),
-            79 => Some(NodeTag::WindowDef),
-            80 => Some(NodeTag::WindowDefList),
-            81 => Some(NodeTag::NamedWindowDef),
-            82 => Some(NodeTag::NamedWindowDefList),
-            83 => Some(NodeTag::FilterOver),
+            15 => Some(NodeTag::ForeignKeyOption),
+            16 => Some(NodeTag::ForeignKeyOptionList),
+            17 => Some(NodeTag::ForeignKeyClause),
+            18 => Some(NodeTag::ColumnConstraint),
+            19 => Some(NodeTag::ConstraintNameDeclaration),
+            20 => Some(NodeTag::ColumnConstraintList),
+            21 => Some(NodeTag::ColumnDef),
+            22 => Some(NodeTag::ColumnDefList),
+            23 => Some(NodeTag::TableConstraint),
+            24 => Some(NodeTag::TableConstraintGroup),
+            25 => Some(NodeTag::TableConstraintList),
+            26 => Some(NodeTag::CreateTableStmt),
+            27 => Some(NodeTag::CteDefinition),
+            28 => Some(NodeTag::CteList),
+            29 => Some(NodeTag::WithClause),
+            30 => Some(NodeTag::UpsertClause),
+            31 => Some(NodeTag::UpsertClauseList),
+            32 => Some(NodeTag::DeleteStmt),
+            33 => Some(NodeTag::SetClause),
+            34 => Some(NodeTag::SetClauseList),
+            35 => Some(NodeTag::UpdateStmt),
+            36 => Some(NodeTag::InsertStmt),
+            37 => Some(NodeTag::BinaryExpr),
+            38 => Some(NodeTag::UnaryExpr),
+            39 => Some(NodeTag::Literal),
+            40 => Some(NodeTag::ParenExpr),
+            41 => Some(NodeTag::IdentName),
+            42 => Some(NodeTag::Error),
+            43 => Some(NodeTag::RowValue),
+            44 => Some(NodeTag::ExprList),
+            45 => Some(NodeTag::FunctionCall),
+            46 => Some(NodeTag::Variable),
+            47 => Some(NodeTag::CollateExpr),
+            48 => Some(NodeTag::RaiseExpr),
+            49 => Some(NodeTag::QualifiedName),
+            50 => Some(NodeTag::DropStmt),
+            51 => Some(NodeTag::AlterTableStmt),
+            52 => Some(NodeTag::TransactionStmt),
+            53 => Some(NodeTag::SavepointStmt),
+            54 => Some(NodeTag::ResultColumn),
+            55 => Some(NodeTag::ResultColumnList),
+            56 => Some(NodeTag::SelectStmt),
+            57 => Some(NodeTag::OrderingTerm),
+            58 => Some(NodeTag::OrderByList),
+            59 => Some(NodeTag::LimitClause),
+            60 => Some(NodeTag::TableRef),
+            61 => Some(NodeTag::SubqueryTableSource),
+            62 => Some(NodeTag::ParenTableSource),
+            63 => Some(NodeTag::JoinClause),
+            64 => Some(NodeTag::JoinPrefix),
+            65 => Some(NodeTag::TriggerEvent),
+            66 => Some(NodeTag::TriggerCmdList),
+            67 => Some(NodeTag::CreateTriggerStmt),
+            68 => Some(NodeTag::CreateVirtualTableStmt),
+            69 => Some(NodeTag::PragmaStmt),
+            70 => Some(NodeTag::AnalyzeOrReindexStmt),
+            71 => Some(NodeTag::AttachStmt),
+            72 => Some(NodeTag::DetachStmt),
+            73 => Some(NodeTag::VacuumStmt),
+            74 => Some(NodeTag::ExplainStmt),
+            75 => Some(NodeTag::CreateIndexStmt),
+            76 => Some(NodeTag::CreateViewStmt),
+            77 => Some(NodeTag::ValuesRowList),
+            78 => Some(NodeTag::ValuesClause),
+            79 => Some(NodeTag::FrameBound),
+            80 => Some(NodeTag::FrameSpec),
+            81 => Some(NodeTag::WindowDef),
+            82 => Some(NodeTag::WindowDefList),
+            83 => Some(NodeTag::NamedWindowDef),
+            84 => Some(NodeTag::NamedWindowDefList),
+            85 => Some(NodeTag::FilterOver),
             _ => None,
         }
     }
@@ -485,6 +489,26 @@ impl TableConstraintType {
             TableConstraintType::Unique => "UNIQUE",
             TableConstraintType::Check => "CHECK",
             TableConstraintType::ForeignKey => "FOREIGN_KEY",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum ForeignKeyOptionKind {
+    Match = 0,
+    OnDelete = 1,
+    OnUpdate = 2,
+    OnInsert = 3,
+}
+
+impl ForeignKeyOptionKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ForeignKeyOptionKind::Match => "MATCH",
+            ForeignKeyOptionKind::OnDelete => "ON_DELETE",
+            ForeignKeyOptionKind::OnUpdate => "ON_UPDATE",
+            ForeignKeyOptionKind::OnInsert => "ON_INSERT",
         }
     }
 }
@@ -2550,6 +2574,81 @@ impl TypedNodeId for CaseWhenId {
 }
 
 #[derive(Clone, Copy)]
+pub struct ForeignKeyOption<'a> {
+    raw: &'a super::ffi::ForeignKeyOption,
+    stmt_result: &'a AnyParsedStatement<'a>,
+    id: AnyNodeId,
+}
+
+impl std::fmt::Debug for ForeignKeyOption<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.raw.fmt(f)
+    }
+}
+
+impl std::fmt::Display for ForeignKeyOption<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        AnyNode {
+            id: self.id,
+            stmt_result: self.stmt_result,
+        }
+        .fmt(f)
+    }
+}
+
+impl<'a> ForeignKeyOption<'a> {
+    /// The typed node ID of this node.
+    pub fn node_id(&self) -> ForeignKeyOptionId {
+        ForeignKeyOptionId(self.id)
+    }
+    pub fn kind(&self) -> ForeignKeyOptionKind {
+        self.raw.kind
+    }
+    pub fn action(&self) -> ForeignKeyAction {
+        self.raw.action
+    }
+    pub fn match_name(&self) -> &'a str {
+        self.stmt_result.span_expanded_text(self.raw.match_name)
+    }
+}
+
+impl<'a> GrammarNodeType<'a> for ForeignKeyOption<'a> {
+    fn from_result(stmt_result: &'a AnyParsedStatement<'a>, id: AnyNodeId) -> Option<Self> {
+        let raw = stmt_result.resolve_as::<super::ffi::ForeignKeyOption>(id)?;
+        Some(ForeignKeyOption {
+            raw,
+            stmt_result,
+            id,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ForeignKeyOptionId(AnyNodeId);
+
+impl ForeignKeyOptionId {
+    pub fn into_inner(self) -> AnyNodeId {
+        self.0
+    }
+}
+
+impl<'a> From<ForeignKeyOption<'a>> for ForeignKeyOptionId {
+    fn from(n: ForeignKeyOption<'a>) -> Self {
+        n.node_id()
+    }
+}
+
+impl From<ForeignKeyOptionId> for AnyNodeId {
+    fn from(id: ForeignKeyOptionId) -> AnyNodeId {
+        id.0
+    }
+}
+
+impl TypedNodeId for ForeignKeyOptionId {
+    type Node<'a> = ForeignKeyOption<'a>;
+}
+
+#[derive(Clone, Copy)]
 pub struct ForeignKeyClause<'a> {
     raw: &'a super::ffi::ForeignKeyClause,
     stmt_result: &'a AnyParsedStatement<'a>,
@@ -2583,17 +2682,8 @@ impl<'a> ForeignKeyClause<'a> {
     pub fn ref_columns(&self) -> Option<ExprList<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.ref_columns)
     }
-    pub fn match_name(&self) -> &'a str {
-        self.stmt_result.span_expanded_text(self.raw.match_name)
-    }
-    pub fn on_delete(&self) -> ForeignKeyAction {
-        self.raw.on_delete
-    }
-    pub fn on_update(&self) -> ForeignKeyAction {
-        self.raw.on_update
-    }
-    pub fn on_insert(&self) -> ForeignKeyAction {
-        self.raw.on_insert
+    pub fn options(&self) -> Option<ForeignKeyOptionList<'a>> {
+        GrammarNodeType::from_result(self.stmt_result, self.raw.options)
     }
     pub fn deferrable(&self) -> Deferrable {
         self.raw.deferrable
@@ -6864,6 +6954,35 @@ impl TypedNodeId for CaseWhenListId {
     type Node<'a> = CaseWhenList<'a>;
 }
 
+/// Typed list of `ForeignKeyOption`.
+pub type ForeignKeyOptionList<'a> =
+    TypedNodeList<'a, super::dialect::Dialect, ForeignKeyOption<'a>>;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct ForeignKeyOptionListId(AnyNodeId);
+
+impl ForeignKeyOptionListId {
+    pub fn into_inner(self) -> AnyNodeId {
+        self.0
+    }
+}
+
+impl<'a> From<ForeignKeyOptionList<'a>> for ForeignKeyOptionListId {
+    fn from(n: ForeignKeyOptionList<'a>) -> Self {
+        ForeignKeyOptionListId(n.node_id().into())
+    }
+}
+
+impl From<ForeignKeyOptionListId> for AnyNodeId {
+    fn from(id: ForeignKeyOptionListId) -> AnyNodeId {
+        id.0
+    }
+}
+
+impl TypedNodeId for ForeignKeyOptionListId {
+    type Node<'a> = ForeignKeyOptionList<'a>;
+}
+
 /// Typed list of `ColumnConstraintItem`.
 pub type ColumnConstraintList<'a> =
     TypedNodeList<'a, super::dialect::Dialect, ColumnConstraintItem<'a>>;
@@ -7277,6 +7396,9 @@ pub enum Node<'a> {
     CaseWhen(CaseWhen<'a>),
     /// List of [`CaseWhen`].
     CaseWhenList(CaseWhenList<'a>),
+    ForeignKeyOption(ForeignKeyOption<'a>),
+    /// List of [`ForeignKeyOption`].
+    ForeignKeyOptionList(ForeignKeyOptionList<'a>),
     ForeignKeyClause(ForeignKeyClause<'a>),
     ColumnConstraint(ColumnConstraint<'a>),
     ConstraintNameDeclaration(ConstraintNameDeclaration<'a>),
@@ -7453,6 +7575,14 @@ impl<'a> Node<'a> {
                     id,
                 }),
                 NodeTag::CaseWhenList => Node::CaseWhenList(
+                    TypedNodeList::from_result(stmt_result, id).expect("list tag invariant"),
+                ),
+                NodeTag::ForeignKeyOption => Node::ForeignKeyOption(ForeignKeyOption {
+                    raw: &*ptr.cast::<super::ffi::ForeignKeyOption>(),
+                    stmt_result,
+                    id,
+                }),
+                NodeTag::ForeignKeyOptionList => Node::ForeignKeyOptionList(
                     TypedNodeList::from_result(stmt_result, id).expect("list tag invariant"),
                 ),
                 NodeTag::ForeignKeyClause => Node::ForeignKeyClause(ForeignKeyClause {
@@ -7813,6 +7943,8 @@ impl<'a> Node<'a> {
             Node::CaseExpr(..) => NodeTag::CaseExpr,
             Node::CaseWhen(..) => NodeTag::CaseWhen,
             Node::CaseWhenList(..) => NodeTag::CaseWhenList,
+            Node::ForeignKeyOption(..) => NodeTag::ForeignKeyOption,
+            Node::ForeignKeyOptionList(..) => NodeTag::ForeignKeyOptionList,
             Node::ForeignKeyClause(..) => NodeTag::ForeignKeyClause,
             Node::ColumnConstraint(..) => NodeTag::ColumnConstraint,
             Node::ConstraintNameDeclaration(..) => NodeTag::ConstraintNameDeclaration,
@@ -7903,6 +8035,8 @@ impl<'a> Node<'a> {
             Node::CaseExpr(n) => NodeId(n.node_id().into()),
             Node::CaseWhen(n) => NodeId(n.node_id().into()),
             Node::CaseWhenList(n) => NodeId(n.node_id().into()),
+            Node::ForeignKeyOption(n) => NodeId(n.node_id().into()),
+            Node::ForeignKeyOptionList(n) => NodeId(n.node_id().into()),
             Node::ForeignKeyClause(n) => NodeId(n.node_id().into()),
             Node::ColumnConstraint(n) => NodeId(n.node_id().into()),
             Node::ConstraintNameDeclaration(n) => NodeId(n.node_id().into()),
