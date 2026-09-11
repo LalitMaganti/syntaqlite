@@ -959,10 +959,7 @@ class FrameSpecification(TestSuite):
                                       Literal
                                         literal_type: INTEGER
                                         source: "2"
-                                end_bound:
-                                  FrameBound
-                                    bound_type: CURRENT_ROW
-                                    expr: (none)
+                                end_bound: (none)
               from_clause:
                 TableRef
                   table_name: "t"

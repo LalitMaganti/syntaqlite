@@ -10079,13 +10079,12 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 394: /* frame_opt ::= range_or_rows frame_bound_s frame_exclude_opt */
     {
-      // Single bound: start=yymsp[-1].minor.yy277, end=CURRENT ROW (implicit)
-      uint32_t end_bound = synq_parse_frame_bound(
-          pCtx, SYNTAQLITE_FRAME_BOUND_TYPE_CURRENT_ROW, SYNTAQLITE_NULL_NODE);
+      // Preserve shorthand: the semantic end is CURRENT ROW, but no end-bound
+      // syntax was authored, so do not manufacture a node for it.
       yylhsminor.yy277 = synq_parse_frame_spec(
           pCtx, (SyntaqliteFrameType)yymsp[-2].minor.yy320,
           (SyntaqliteFrameExclude)yymsp[0].minor.yy320, yymsp[-1].minor.yy277,
-          end_bound);
+          SYNTAQLITE_NULL_NODE);
     }
       yymsp[-2].minor.yy277 = yylhsminor.yy277;
       break;

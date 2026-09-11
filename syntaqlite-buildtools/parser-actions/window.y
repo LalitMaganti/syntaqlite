@@ -99,15 +99,13 @@ frame_opt(A) ::= . {
 }
 
 frame_opt(A) ::= range_or_rows(B) frame_bound_s(C) frame_exclude_opt(D). {
-    // Single bound: start=C, end=CURRENT ROW (implicit)
-    uint32_t end_bound = synq_parse_frame_bound(pCtx,
-        SYNTAQLITE_FRAME_BOUND_TYPE_CURRENT_ROW,
-        SYNTAQLITE_NULL_NODE);
+    // Preserve shorthand: the semantic end is CURRENT ROW, but no end-bound
+    // syntax was authored, so do not manufacture a node for it.
     A = synq_parse_frame_spec(pCtx,
         (SyntaqliteFrameType)B,
         (SyntaqliteFrameExclude)D,
         C,
-        end_bound);
+        SYNTAQLITE_NULL_NODE);
 }
 
 frame_opt(A) ::= range_or_rows(B) BETWEEN frame_bound_s(C) AND frame_bound_e(D) frame_exclude_opt(E). {
