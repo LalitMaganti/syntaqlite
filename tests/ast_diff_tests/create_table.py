@@ -229,7 +229,6 @@ class CreateTableOptions(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: PRIMARY_KEY
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -292,7 +291,6 @@ class CreateTableOptions(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: PRIMARY_KEY
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -379,7 +377,6 @@ class ColumnConstraintDefault(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: DEFAULT
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -422,7 +419,6 @@ class ColumnConstraintDefault(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: DEFAULT
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -465,7 +461,6 @@ class ColumnConstraintDefault(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: DEFAULT
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -511,7 +506,6 @@ class ColumnConstraintDefault(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: DEFAULT
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -561,7 +555,6 @@ class ColumnConstraintDefault(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: DEFAULT
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -608,7 +601,6 @@ class ColumnConstraintKeys(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: PRIMARY_KEY
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -648,7 +640,6 @@ class ColumnConstraintKeys(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: PRIMARY_KEY
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: TRUE
@@ -688,7 +679,6 @@ class ColumnConstraintKeys(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: PRIMARY_KEY
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: DESC
                           is_autoincrement: FALSE
@@ -728,7 +718,6 @@ class ColumnConstraintKeys(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: NOT_NULL
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -768,7 +757,6 @@ class ColumnConstraintKeys(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: UNIQUE
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -812,7 +800,6 @@ class ColumnConstraintCheck(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: CHECK
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -867,7 +854,6 @@ class ColumnConstraintReferences(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: REFERENCES
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -921,7 +907,6 @@ class ColumnConstraintReferences(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: REFERENCES
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -975,7 +960,6 @@ class ColumnConstraintReferences(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: REFERENCES
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1033,7 +1017,6 @@ class ColumnConstraintCollate(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: COLLATE
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1083,7 +1066,6 @@ class ColumnConstraintGenerated(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: GENERATED
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1140,7 +1122,6 @@ class ColumnConstraintGenerated(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: GENERATED
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1192,10 +1173,11 @@ class ColumnConstraintName(TestSuite):
                         source: "a"
                     type_name: "INT"
                     constraints:
-                      ColumnConstraintList [1 items]
+                      ColumnConstraintList [2 items]
+                        ConstraintNameDeclaration
+                          name: "nn"
                         ColumnConstraint
                           kind: NOT_NULL
-                          constraint_name: "nn"
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1616,7 +1598,6 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: REFERENCES
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1670,7 +1651,6 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: REFERENCES
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1724,7 +1704,6 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: REFERENCES
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1778,7 +1757,6 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: REFERENCES
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1836,7 +1814,6 @@ class OnConflictClause(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: PRIMARY_KEY
-                          constraint_name: (none)
                           onconf: ROLLBACK
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1876,7 +1853,6 @@ class OnConflictClause(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: NOT_NULL
-                          constraint_name: (none)
                           onconf: ABORT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -1916,7 +1892,6 @@ class OnConflictClause(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: UNIQUE
-                          constraint_name: (none)
                           onconf: FAIL
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -2044,7 +2019,6 @@ class MultipleColumnConstraints(TestSuite):
                       ColumnConstraintList [3 items]
                         ColumnConstraint
                           kind: NOT_NULL
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -2060,7 +2034,6 @@ class MultipleColumnConstraints(TestSuite):
                           fk_clause: (none)
                         ColumnConstraint
                           kind: DEFAULT
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -2079,7 +2052,6 @@ class MultipleColumnConstraints(TestSuite):
                           fk_clause: (none)
                         ColumnConstraint
                           kind: UNIQUE
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -2271,7 +2243,6 @@ class GeneratedColumn(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: GENERATED
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -2326,7 +2297,6 @@ class ColumnConstraintNull(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: NULL
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -2342,5 +2312,262 @@ class ColumnConstraintNull(TestSuite):
                           fk_clause: (none)
               table_constraints: (none)
               as_select: (none)
+""",
+        )
+
+
+class ColumnConstraintDeclarations(TestSuite):
+    """Authored declarations are ordered items, including unused declarations."""
+
+    def test_shared_name_is_one_declaration(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a CONSTRAINT c CHECK(a > 0) CHECK(a < 9))",
+            out="""\
+            CreateTableStmt
+              table_name: "t"
+              schema: (none)
+              is_temp: FALSE
+              if_not_exists: FALSE
+              flags: (none)
+              columns:
+                ColumnDefList [1 items]
+                  ColumnDef
+                    column_name:
+                      IdentName
+                        source: "a"
+                    type_name: (none)
+                    constraints:
+                      ColumnConstraintList [3 items]
+                        ConstraintNameDeclaration
+                          name: "c"
+                        ColumnConstraint
+                          kind: CHECK
+                          onconf: DEFAULT
+                          sort_order: ASC
+                          is_autoincrement: FALSE
+                          collation_name: (none)
+                          generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
+                          default_has_parens: FALSE
+                          generated_always: FALSE
+                          default_expr: (none)
+                          check_expr:
+                            BinaryExpr
+                              op: GT
+                              left:
+                                ColumnRef
+                                  column: "a"
+                                  table: (none)
+                                  schema: (none)
+                              right:
+                                Literal
+                                  literal_type: INTEGER
+                                  source: "0"
+                          generated_expr: (none)
+                          fk_clause: (none)
+                        ColumnConstraint
+                          kind: CHECK
+                          onconf: DEFAULT
+                          sort_order: ASC
+                          is_autoincrement: FALSE
+                          collation_name: (none)
+                          generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
+                          default_has_parens: FALSE
+                          generated_always: FALSE
+                          default_expr: (none)
+                          check_expr:
+                            BinaryExpr
+                              op: LT
+                              left:
+                                ColumnRef
+                                  column: "a"
+                                  table: (none)
+                                  schema: (none)
+                              right:
+                                Literal
+                                  literal_type: INTEGER
+                                  source: "9"
+                          generated_expr: (none)
+                          fk_clause: (none)
+              table_constraints: (none)
+              as_select: (none)
+""",
+        )
+
+    def test_overwritten_and_unused_names(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a CONSTRAINT old CONSTRAINT c CHECK(a) CONSTRAINT unused)",
+            out="""\
+            CreateTableStmt
+              table_name: "t"
+              schema: (none)
+              is_temp: FALSE
+              if_not_exists: FALSE
+              flags: (none)
+              columns:
+                ColumnDefList [1 items]
+                  ColumnDef
+                    column_name:
+                      IdentName
+                        source: "a"
+                    type_name: (none)
+                    constraints:
+                      ColumnConstraintList [4 items]
+                        ConstraintNameDeclaration
+                          name: "old"
+                        ConstraintNameDeclaration
+                          name: "c"
+                        ColumnConstraint
+                          kind: CHECK
+                          onconf: DEFAULT
+                          sort_order: ASC
+                          is_autoincrement: FALSE
+                          collation_name: (none)
+                          generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
+                          default_has_parens: FALSE
+                          generated_always: FALSE
+                          default_expr: (none)
+                          check_expr:
+                            ColumnRef
+                              column: "a"
+                              table: (none)
+                              schema: (none)
+                          generated_expr: (none)
+                          fk_clause: (none)
+                        ConstraintNameDeclaration
+                          name: "unused"
+              table_constraints: (none)
+              as_select: (none)
+""",
+        )
+
+    def test_declarations_stay_in_their_column(self):
+        return DiffTestBlueprint(
+            sql="CREATE TABLE t(a CONSTRAINT unused, b CHECK(b))",
+            out="""\
+            CreateTableStmt
+              table_name: "t"
+              schema: (none)
+              is_temp: FALSE
+              if_not_exists: FALSE
+              flags: (none)
+              columns:
+                ColumnDefList [2 items]
+                  ColumnDef
+                    column_name:
+                      IdentName
+                        source: "a"
+                    type_name: (none)
+                    constraints:
+                      ColumnConstraintList [1 items]
+                        ConstraintNameDeclaration
+                          name: "unused"
+                  ColumnDef
+                    column_name:
+                      IdentName
+                        source: "b"
+                    type_name: (none)
+                    constraints:
+                      ColumnConstraintList [1 items]
+                        ColumnConstraint
+                          kind: CHECK
+                          onconf: DEFAULT
+                          sort_order: ASC
+                          is_autoincrement: FALSE
+                          collation_name: (none)
+                          generated_storage: VIRTUAL
+                          deferrable: UNSET
+                          initial_defer: UNSET
+                          default_has_parens: FALSE
+                          generated_always: FALSE
+                          default_expr: (none)
+                          check_expr:
+                            ColumnRef
+                              column: "b"
+                              table: (none)
+                              schema: (none)
+                          generated_expr: (none)
+                          fk_clause: (none)
+              table_constraints: (none)
+              as_select: (none)
+""",
+        )
+
+    def test_alter_add_column_declarations(self):
+        return DiffTestBlueprint(
+            sql="ALTER TABLE t ADD COLUMN a CONSTRAINT old CONSTRAINT c CHECK(a) CHECK(a > 0)",
+            out="""\
+            AlterTableStmt
+              op: ADD_COLUMN
+              target:
+                QualifiedName
+                  object_name:
+                    IdentName
+                      source: "t"
+                  schema: (none)
+              new_name: (none)
+              old_name: (none)
+              column:
+                ColumnDef
+                  column_name:
+                    IdentName
+                      source: "a"
+                  type_name: (none)
+                  constraints:
+                    ColumnConstraintList [4 items]
+                      ConstraintNameDeclaration
+                        name: "old"
+                      ConstraintNameDeclaration
+                        name: "c"
+                      ColumnConstraint
+                        kind: CHECK
+                        onconf: DEFAULT
+                        sort_order: ASC
+                        is_autoincrement: FALSE
+                        collation_name: (none)
+                        generated_storage: VIRTUAL
+                        deferrable: UNSET
+                        initial_defer: UNSET
+                        default_has_parens: FALSE
+                        generated_always: FALSE
+                        default_expr: (none)
+                        check_expr:
+                          ColumnRef
+                            column: "a"
+                            table: (none)
+                            schema: (none)
+                        generated_expr: (none)
+                        fk_clause: (none)
+                      ColumnConstraint
+                        kind: CHECK
+                        onconf: DEFAULT
+                        sort_order: ASC
+                        is_autoincrement: FALSE
+                        collation_name: (none)
+                        generated_storage: VIRTUAL
+                        deferrable: UNSET
+                        initial_defer: UNSET
+                        default_has_parens: FALSE
+                        generated_always: FALSE
+                        default_expr: (none)
+                        check_expr:
+                          BinaryExpr
+                            op: GT
+                            left:
+                              ColumnRef
+                                column: "a"
+                                table: (none)
+                                schema: (none)
+                            right:
+                              Literal
+                                literal_type: INTEGER
+                                source: "0"
+                        generated_expr: (none)
+                        fk_clause: (none)
 """,
         )

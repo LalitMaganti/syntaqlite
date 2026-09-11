@@ -321,7 +321,6 @@ class AlterTableDropAdd(TestSuite):
                     ColumnConstraintList [2 items]
                       ColumnConstraint
                         kind: NOT_NULL
-                        constraint_name: (none)
                         onconf: DEFAULT
                         sort_order: ASC
                         is_autoincrement: FALSE
@@ -337,7 +336,6 @@ class AlterTableDropAdd(TestSuite):
                         fk_clause: (none)
                       ColumnConstraint
                         kind: DEFAULT
-                        constraint_name: (none)
                         onconf: DEFAULT
                         sort_order: ASC
                         is_autoincrement: FALSE

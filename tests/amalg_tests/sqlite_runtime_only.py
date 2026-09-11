@@ -59,7 +59,6 @@ class SqliteAmalgRuntimeOnly(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: PRIMARY_KEY
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE
@@ -82,7 +81,6 @@ class SqliteAmalgRuntimeOnly(TestSuite):
                       ColumnConstraintList [1 items]
                         ColumnConstraint
                           kind: NOT_NULL
-                          constraint_name: (none)
                           onconf: DEFAULT
                           sort_order: ASC
                           is_autoincrement: FALSE

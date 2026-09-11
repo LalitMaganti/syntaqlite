@@ -187,3 +187,17 @@ fn leading_comment_inside_untracked_parens() {
     let second_pass = fmt(&out);
     assert_eq!(out, second_pass, "formatting is not idempotent");
 }
+
+/// Issue #354: the authored name is a declaration, not a repeated span on
+/// REFERENCES and DEFERRABLE. An unused name on the next column is retained.
+#[test]
+fn issue_354_named_deferred_foreign_key_between_columns() {
+    let input = "CREATE TABLE t (\n    a integer constraint c1 references r(id) deferrable,\n    -- comment\n    b text constraint c2\n);";
+    let out = fmt(input);
+    eprintln!("=== actual ===\n{out}=== end ===");
+    assert_eq!(
+        out,
+        "CREATE TABLE t(\n  a integer CONSTRAINT c1 REFERENCES r(id) DEFERRABLE,\n  -- comment\n  b text CONSTRAINT c2\n);\n"
+    );
+    assert_eq!(fmt(&out), out);
+}
