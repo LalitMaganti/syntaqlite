@@ -5,7 +5,7 @@ node RaiseExpr {
   error_message: index Expr
 
   fmt {
-    "RAISE("
+    "RAISE" "("
     switch(raise_type) {
       IGNORE   { "IGNORE" }
       ROLLBACK { "ROLLBACK" }

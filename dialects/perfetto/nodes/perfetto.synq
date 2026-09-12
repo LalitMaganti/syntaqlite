@@ -7,7 +7,7 @@ node PerfettoArgDef {
 
   fmt {
     child(arg_name) space span(arg_type)
-    if_flag(is_variadic) { "..." }
+    if_flag(is_variadic) { "." "." "." }
   }
 }
 
@@ -55,7 +55,7 @@ node PerfettoReturnType {
       SCALAR { span(scalar_type) }
       TABLE  {
         group {
-          "TABLE("
+          "TABLE" "("
           nest {
             softline
             child(table_columns)

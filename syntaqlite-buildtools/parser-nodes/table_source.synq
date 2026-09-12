@@ -39,7 +39,7 @@ node TableRef {
     if_set(args) {
       group { "(" nest { softline child(args) } softline ")" }
     } else {
-      if_flag(has_parens) { "()" }
+      if_flag(has_parens) { "(" ")" }
     }
     if_set(alias) {
       if_flag(alias_as) { space "AS" space child(alias) } else { space child(alias) }

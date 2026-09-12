@@ -14,7 +14,7 @@ node ResultColumn {
 
   fmt {
     if_flag(flags.star) {
-      if_set(expr) { child_paren_list(expr) ".*" } else { "*" }
+      if_set(expr) { child_paren_list(expr) "." "*" } else { "*" }
     } else {
       child_paren_list(expr)
     }
