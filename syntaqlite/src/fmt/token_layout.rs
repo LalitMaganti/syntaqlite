@@ -8,6 +8,7 @@ use super::doc::{DocArena, DocId, NIL_DOC};
 use super::{FormatError, Formatter};
 use std::ffi::{CStr, c_char, c_void};
 use syntaqlite_syntax::any::{AnyTokenizer, ParseOutcome, TokenCategory};
+use syntaqlite_syntax::source::{DocLen, DocOffset, DocRange};
 
 #[path = "token_layout_rules.rs"]
 mod rules;
@@ -46,40 +47,67 @@ unsafe extern "C" {
     fn synq_parse_layout_set(context: *mut c_void, callback: Option<Callback>);
 }
 #[derive(Clone, Copy)]
-struct Fragment<'a> {
+struct Fragment {
     doc: DocId,
     gap: Gap,
     shape: Shape,
     trailing_prefix: bool,
-    first: &'a str,
-    last: &'a str,
+    first: DocRange,
+    last: DocRange,
     symbol: &'static str,
 }
-impl Fragment<'_> {
+impl Fragment {
     fn empty(symbol: &'static str) -> Self {
         Self {
             doc: NIL_DOC,
             gap: Gap::EMPTY,
             shape: Shape::Atom,
             trailing_prefix: false,
-            first: "",
-            last: "",
+            first: DocRange::default(),
+            last: DocRange::default(),
             symbol,
         }
     }
 }
-struct State<'a> {
+pub(super) struct State<'a> {
     source: &'a str,
     tokenizer: AnyTokenizer,
     tokens: Vec<(usize, DocId, u32)>,
     terminator: Option<DocId>,
     end: usize,
     arena: DocArena<'a>,
-    stack: Vec<Fragment<'a>>,
-    scratch: Vec<Fragment<'a>>,
+    stack: Vec<Fragment>,
+    scratch: Vec<Fragment>,
     error: Option<String>,
 }
-impl<'a> State<'a> {
+impl State<'_> {
+    pub(super) fn new(tokenizer: AnyTokenizer) -> Self {
+        Self {
+            source: "",
+            tokenizer,
+            tokens: Vec::new(),
+            terminator: None,
+            end: 0,
+            arena: DocArena::with_capacity(256),
+            stack: Vec::new(),
+            scratch: Vec::new(),
+            error: None,
+        }
+    }
+    fn recycle(mut self, source: &str) -> State<'_> {
+        self.tokens.clear();
+        self.stack.clear();
+        self.scratch.clear();
+        State {
+            source,
+            arena: DocArena::recycle(self.arena),
+            end: 0,
+            terminator: None,
+            error: None,
+            ..self
+        }
+    }
+
     // Only trivia is read between lexer-provided token spans. SQL is never
     // recognized here: structural context comes exclusively from reductions.
     fn trivia(&mut self, end: usize) -> Gap {
@@ -125,7 +153,10 @@ impl<'a> State<'a> {
         }
     }
 
-    fn shift(&mut self, symbol: &'static str, start: usize, len: usize) {
+    fn shift(&mut self, symbol: &'static str, start: u32, len: u32) {
+        let span = DocRange::from_offset_len(DocOffset::from_raw(start), DocLen::from_raw(len));
+        let start = start as usize;
+        let len = len as usize;
         if len == 0 {
             self.stack.push(Fragment::empty(symbol));
             return;
@@ -140,11 +171,7 @@ impl<'a> State<'a> {
         // Tokens are placeholders until statement completion supplies the parser
         // flags distinguishing keywords from names.
         let token = self.arena.text(text);
-        self.tokens.push((
-            start,
-            token,
-            u32::try_from(len).expect("parser token length fits u32"),
-        ));
+        self.tokens.push((start, token, span.len().as_u32()));
         self.terminator = (symbol == "SEMI").then_some(token);
         let doc = token;
         self.stack.push(Fragment {
@@ -152,22 +179,17 @@ impl<'a> State<'a> {
             gap: prefix,
             shape: Shape::Atom,
             trailing_prefix: false,
-            first: text,
-            last: text,
+            first: span,
+            last: span,
             symbol,
         });
         self.end = start + len;
     }
-    fn verbatim(
-        &mut self,
-        lhs: &'static str,
-        children: &[Fragment<'a>],
-        keywords: bool,
-    ) -> Fragment<'a> {
+    fn verbatim(&mut self, lhs: &'static str, children: &[Fragment], keywords: bool) -> Fragment {
         let mut result = children[0];
         result.last = children.last().expect("nonempty production").last;
-        let start = result.first.as_ptr() as usize - self.source.as_ptr() as usize;
-        let end = result.last.as_ptr() as usize - self.source.as_ptr() as usize + result.last.len();
+        let start = result.first.start.as_usize();
+        let end = result.last.end.as_usize();
         if keywords {
             // Preserve type spelling/spacing, but keep keyword placeholders live:
             // semantic disambiguation can remove keywords from the type span.
@@ -211,7 +233,7 @@ impl<'a> State<'a> {
             }
         }
     }
-    fn content(&mut self, child: Fragment<'a>, enclosing: Shape) -> DocId {
+    fn content(&mut self, child: Fragment, enclosing: Shape) -> DocId {
         if child.shape == Shape::Atom || child.shape == enclosing {
             child.doc
         } else {
@@ -225,11 +247,11 @@ impl<'a> State<'a> {
     }
     fn append(
         &mut self,
-        left: Fragment<'a>,
-        right: Fragment<'a>,
+        left: Fragment,
+        right: Fragment,
         boundary: Break,
         shape: Shape,
-    ) -> Fragment<'a> {
+    ) -> Fragment {
         if right.doc == NIL_DOC {
             return left;
         }
@@ -252,31 +274,26 @@ impl<'a> State<'a> {
             ..left
         }
     }
-    fn sequence(
-        &mut self,
-        lhs: &'static str,
-        children: &[Fragment<'a>],
-        shape: Shape,
-    ) -> Fragment<'a> {
+    fn sequence(&mut self, lhs: &'static str, children: &[Fragment], shape: Shape) -> Fragment {
         let mut out = Fragment::empty(lhs);
         for (index, &child) in children.iter().enumerate() {
             let boundary = if index == 0 {
                 Break::Tight
             } else {
-                rules::boundary(lhs, children, index, shape)
+                rules::boundary(self.source, lhs, children, index, shape)
             };
             out = self.append(out, child, boundary, shape);
         }
         out.symbol = lhs;
         out
     }
-    fn grouped(&mut self, mut fragment: Fragment<'a>) -> Fragment<'a> {
+    fn grouped(&mut self, mut fragment: Fragment) -> Fragment {
         fragment.doc = self.arena.group(fragment.doc);
         fragment.shape = Shape::Atom;
         fragment
     }
     // Hanging layout belongs to a syntactic owner, never to recursive list steps.
-    fn hanging(&mut self, head: Fragment<'a>, body: Fragment<'a>) -> Fragment<'a> {
+    fn hanging(&mut self, head: Fragment, body: Fragment) -> Fragment {
         if head.doc == NIL_DOC {
             return self.grouped(body);
         }
@@ -297,7 +314,7 @@ impl<'a> State<'a> {
     }
     // A suffix chooses its break using the actual final column of its head.
     // A multiline head must not force a short alias onto another line.
-    fn suffix(&mut self, head: Fragment<'a>, body: Fragment<'a>) -> Fragment<'a> {
+    fn suffix(&mut self, head: Fragment, body: Fragment) -> Fragment {
         if head.doc == NIL_DOC {
             return self.grouped(body);
         }
@@ -319,11 +336,11 @@ impl<'a> State<'a> {
     // synthesized. The body owns one indentation level and the closing gap.
     fn enclosure(
         &mut self,
-        open: Fragment<'a>,
-        body: Fragment<'a>,
-        close: Fragment<'a>,
+        open: Fragment,
+        body: Fragment,
+        close: Fragment,
         hard: bool,
-    ) -> Fragment<'a> {
+    ) -> Fragment {
         if body.doc == NIL_DOC {
             return self.append(open, close, Break::Tight, Shape::Atom);
         }
@@ -344,7 +361,7 @@ impl<'a> State<'a> {
         };
         self.grouped(result)
     }
-    fn delimiters(&mut self, children: &mut Vec<Fragment<'a>>) {
+    fn delimiters(&mut self, children: &mut Vec<Fragment>) {
         let mut index = 0;
         while index < children.len() {
             if children[index].symbol != "LP" {
@@ -417,7 +434,7 @@ unsafe extern "C" fn event(
             .to_str()
             .expect("grammar ASCII");
         if kind == 0 {
-            state.shift(name, count as usize, len as usize);
+            state.shift(name, count, len);
         } else {
             state.reduce(name, count as usize);
         }
@@ -434,32 +451,40 @@ impl Drop for Registration {
     }
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "keep the parse, classify and render lifecycle together"
-)]
 pub(super) fn format(
     owner: &mut Formatter,
     source: &str,
     dump: bool,
 ) -> Result<String, FormatError> {
-    let mut state = State {
-        source,
-        tokenizer: AnyTokenizer::new((*owner.dialect).clone()),
-        tokens: Vec::new(),
-        terminator: None,
-        end: 0,
-        arena: DocArena::recycle(std::mem::replace(&mut owner.arena, DocArena::new())),
-        stack: Vec::new(),
-        scratch: Vec::new(),
-        error: None,
-    };
+    let mut state = owner
+        .layout
+        .take()
+        .expect("formatter is not reentrant")
+        .recycle(source);
+    let result = format_inner(owner, &mut state, dump);
+    // Reclaim buffers on errors too. No references to this input survive reuse.
+    owner.layout = Some(state.recycle(""));
+    result
+}
+
+#[expect(
+    clippy::too_many_lines,
+    reason = "keep the parse, classify and render lifecycle together"
+)]
+fn format_inner(
+    owner: &mut Formatter,
+    state: &mut State<'_>,
+    dump: bool,
+) -> Result<String, FormatError> {
+    let source = state.source;
     let mut session = owner.parser.parse(source);
     let mut root = Fragment::empty("input");
     loop {
         // SAFETY: The observer borrows stationary state only during next(). It
         // is removed before macro mini-parses or any other Rust work resumes.
-        unsafe { synq_parse_layout_set((&raw mut state).cast(), Some(event)) };
+        unsafe {
+            synq_parse_layout_set(std::ptr::from_mut::<State<'_>>(state).cast(), Some(event));
+        };
         let registration = Registration;
         let outcome = session.next();
         drop(registration);
@@ -494,35 +519,34 @@ pub(super) fn format(
                     .classify_token(token.token_type(), token.flags())
                     == TokenCategory::Keyword
             {
-                let range = token.stmt_range();
-                let end = range.end.to_doc(base).as_usize();
-                let keyword = state.arena.keyword(&source[start..end]);
-                state.arena.replace(doc, keyword);
+                state.arena.mark_keyword(doc);
             }
         }
-        owner.collect_side_channels(&erased);
-        let macro_docs = super::macro_structured::compute_macro_docs(
-            &owner.mini_parser,
-            &owner.dialect,
-            &erased,
-            &owner.macro_tokenizer,
-            &owner.comment_entries,
-            &mut state.arena,
-        );
-        for ((offset, len), replacement) in owner.macro_rewrites.iter().zip(macro_docs) {
-            let start = offset.to_doc(base).as_usize();
-            if let Ok(index) = state
-                .tokens
-                .binary_search_by_key(&start, |(offset, ..)| *offset)
-            {
-                let replacement = replacement.unwrap_or_else(|| {
-                    super::formatter::reindent_macro(
-                        &source[start..start + len.as_usize()],
-                        &owner.macro_tokenizer,
-                        &mut state.arena,
-                    )
-                });
-                state.arena.replace(state.tokens[index].1, replacement);
+        if erased.macro_rewrites().next().is_some() {
+            owner.collect_side_channels(&erased);
+            let macro_docs = super::macro_structured::compute_macro_docs(
+                &owner.mini_parser,
+                &owner.dialect,
+                &erased,
+                &owner.macro_tokenizer,
+                &owner.comment_entries,
+                &mut state.arena,
+            );
+            for ((offset, len), replacement) in owner.macro_rewrites.iter().zip(macro_docs) {
+                let start = offset.to_doc(base).as_usize();
+                if let Ok(index) = state
+                    .tokens
+                    .binary_search_by_key(&start, |(offset, ..)| *offset)
+                {
+                    let replacement = replacement.unwrap_or_else(|| {
+                        super::formatter::reindent_macro(
+                            &source[start..start + len.as_usize()],
+                            &owner.macro_tokenizer,
+                            &mut state.arena,
+                        )
+                    });
+                    state.arena.replace(state.tokens[index].1, replacement);
+                }
             }
         }
         let stack = std::mem::take(&mut state.stack);
@@ -558,18 +582,16 @@ pub(super) fn format(
         .arena
         .cats(&[root.gap.doc, header, root.doc, tail.doc, footer]);
     if dump {
-        let output = state.arena.dump(document);
-        owner.arena = DocArena::recycle(state.arena);
-        return Ok(output);
+        return Ok(state.arena.dump(document));
     }
     owner.render_bufs.clear();
     state
         .arena
         .render_into(document, &owner.config, &mut owner.render_bufs);
-    let mut output = owner.render_bufs.out.trim_end().to_owned();
+    let output = &mut owner.render_bufs.out;
+    output.truncate(output.trim_end().len());
     if !output.is_empty() {
         output.push('\n');
     }
-    owner.arena = DocArena::recycle(state.arena);
-    Ok(output)
+    Ok(output.clone())
 }

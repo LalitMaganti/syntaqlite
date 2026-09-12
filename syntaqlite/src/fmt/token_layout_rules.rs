@@ -48,19 +48,27 @@ fn clause(symbol: &str) -> bool {
             | "selectnowith"
     )
 }
-pub(super) fn boundary(lhs: &str, children: &[Fragment<'_>], index: usize, shape: Shape) -> Break {
+pub(super) fn boundary(
+    source: &str,
+    lhs: &str,
+    children: &[Fragment],
+    index: usize,
+    shape: Shape,
+) -> Break {
     let left = children[index - 1];
     let right = children[index];
-    if matches!(right.first, "," | ")" | ";" | ".") || left.last == "." {
+    let first = &source[right.first.start.as_usize()..right.first.end.as_usize()];
+    let last = &source[left.last.start.as_usize()..left.last.end.as_usize()];
+    if matches!(first, "," | ")" | ";" | ".") || last == "." {
         return Break::Tight;
     }
-    if left.last == "(" {
+    if last == "(" {
         return Break::Tight;
     }
-    if left.last == "," {
+    if last == "," {
         return Break::Line;
     }
-    if right.first == "(" {
+    if first == "(" {
         // Calls and authored name-column lists bind tightly; SQL grouping uses
         // a space. The distinction is supplied by the grammar, not token search.
         if (lhs == "cmd" && left.symbol == "nm")
@@ -79,13 +87,13 @@ pub(super) fn boundary(lhs: &str, children: &[Fragment<'_>], index: usize, shape
     }
     if matches!(left.symbol, "PLUS" | "MINUS" | "BITNOT") && (lhs != "expr" || index == 1) {
         // Adjacent minus signs would become a line-comment token.
-        return if left.last == "-" && right.first == "-" {
+        return if last == "-" && first == "-" {
             Break::Space
         } else {
             Break::Tight
         };
     }
-    if lhs == "trigger_cmd_list" && left.last == ";" {
+    if lhs == "trigger_cmd_list" && last == ";" {
         return Break::Hard;
     }
     if lhs == "refargs" {
@@ -113,7 +121,7 @@ pub(super) fn boundary(lhs: &str, children: &[Fragment<'_>], index: usize, shape
     Break::Space
 }
 
-fn header<'a>(state: &mut State<'a>, lhs: &'static str, children: &[Fragment<'a>]) -> Fragment<'a> {
+fn header(state: &mut State<'_>, lhs: &'static str, children: &[Fragment]) -> Fragment {
     let name = children.iter().position(|f| {
         matches!(
             f.symbol,
@@ -132,7 +140,7 @@ fn header<'a>(state: &mut State<'a>, lhs: &'static str, children: &[Fragment<'a>
         let body = state.sequence(lhs, &children[name..end], Shape::Atom);
         let mut result = state.hanging(prefix, body);
         for index in end..children.len() {
-            let boundary = boundary(lhs, children, index, Shape::Atom);
+            let boundary = boundary(state.source, lhs, children, index, Shape::Atom);
             result = state.append(result, children[index], boundary, Shape::Atom);
         }
         return state.grouped(result);
@@ -141,11 +149,7 @@ fn header<'a>(state: &mut State<'a>, lhs: &'static str, children: &[Fragment<'a>
     state.grouped(sequence)
 }
 
-fn sections<'a>(
-    state: &mut State<'a>,
-    lhs: &'static str,
-    children: &[Fragment<'a>],
-) -> Fragment<'a> {
+fn sections(state: &mut State<'_>, lhs: &'static str, children: &[Fragment]) -> Fragment {
     let mut result = Fragment::empty(lhs);
     let mut start = 0;
     for index in 0..=children.len() {
@@ -177,12 +181,12 @@ fn sections<'a>(
     clippy::too_many_lines,
     reason = "grammar layout dispatch is deliberately kept together"
 )]
-pub(super) fn layout<'a>(
-    state: &mut State<'a>,
+pub(super) fn layout(
+    state: &mut State<'_>,
     lhs: &'static str,
     rule: &'static str,
-    children: &mut Vec<Fragment<'a>>,
-) -> Fragment<'a> {
+    children: &mut Vec<Fragment>,
+) -> Fragment {
     if children.is_empty() {
         return Fragment::empty(lhs);
     }

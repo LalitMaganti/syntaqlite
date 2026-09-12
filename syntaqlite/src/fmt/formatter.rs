@@ -69,7 +69,7 @@ pub struct Formatter {
     pub(super) mini_parser: AnyParser,
     pub(super) config: FormatConfig,
     // Statement-scoped state cached on the formatter to avoid per-statement allocations.
-    pub(super) arena: DocArena<'static>,
+    pub(super) layout: Option<super::token_layout::State<'static>>,
     pub(super) render_bufs: RenderBuffers,
     /// Byte ranges (offset, length) of macro calls in the source.  The
     /// formatter only needs positions to decide when to emit a call
@@ -139,11 +139,13 @@ impl Formatter {
         );
         let macro_tokenizer = AnyTokenizer::new((*dialect).clone());
         Formatter {
+            layout: Some(super::token_layout::State::new(AnyTokenizer::new(
+                (*dialect).clone(),
+            ))),
             dialect,
             parser,
             mini_parser,
             config: format_config.clone(),
-            arena: DocArena::with_capacity(256),
             render_bufs: RenderBuffers::new(),
             macro_rewrites: Vec::with_capacity(32),
             comment_entries: Vec::with_capacity(64),

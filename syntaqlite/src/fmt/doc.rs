@@ -106,6 +106,14 @@ impl<'a> DocArena<'a> {
         self.docs[target as usize] = self.docs[replacement as usize].clone();
     }
 
+    /// Classify a shifted token without allocating another document node.
+    pub(super) fn mark_keyword(&mut self, id: DocId) {
+        let Doc::Text(text) = self.get(id) else {
+            unreachable!("keyword placeholder must be text");
+        };
+        self.docs[id as usize] = Doc::Keyword(text.clone());
+    }
+
     pub(crate) fn text(&mut self, s: &'a str) -> DocId {
         self.push(Doc::Text(Cow::Borrowed(s)))
     }

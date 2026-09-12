@@ -1,6 +1,6 @@
 # Token-preserving production formatter
 
-`Formatter::format`, the CLI, LSP formatting, and the C formatter entry point use the same parser-driven layout implementation. `dump_doc_tree` exposes the document that this implementation renders. The experimental formatter and private implementation-copying harness have been removed. The public Rust API is unchanged. Against main (`ec045e4e`), production changes total **1,544 added/deleted lines**, including the generated parser and excluding test modules, test infrastructure, fixtures and documentation.
+`Formatter::format`, the CLI, LSP formatting, and the C formatter entry point use the same parser-driven layout implementation. `dump_doc_tree` exposes the document that this implementation renders. The experimental formatter and private implementation-copying harness have been removed. The public Rust API is unchanged. Against main (`ec045e4e`), production changes total **1,584 added/deleted lines**, including the generated parser and excluding test modules, test infrastructure, fixtures and documentation.
 
 ## How it works
 
@@ -8,7 +8,8 @@
 2. Shifted tokens become document placeholders. Reductions combine the corresponding stack fragments in source order. Lists and equal-precedence operator chains stay open until their owner establishes grouping and indentation; no CST is retained.
 3. At statement completion, parser token flags distinguish keywords from identifiers, function names, and type names. Keyword placeholders receive the configured casing. Statement terminators follow `FormatConfig`; internal trigger terminators remain intact.
 4. Comments stay between their original neighboring tokens, before discretionary layout breaks. A line comment defers its mandatory newline to the receiving boundary, so closing delimiters get their enclosure's indentation. Blank lines around comments become one paragraph break.
-5. The existing Wadler/Lindig renderer chooses line breaks using the configured width and indentation. SQL-specific whitespace policy is in `token_layout_rules.rs`; document composition and parser integration are in `token_layout.rs`.
+5. The formatter retains its tokenizer, token slots, reduction stack, scratch vector and document arena across calls, including parse errors. Scratch records use document ranges rather than source borrows. Keyword classification updates placeholders in place, and ordinary SQL skips macro side-data collection.
+6. The existing Wadler/Lindig renderer chooses line breaks using the configured width and indentation. SQL-specific whitespace policy is in `token_layout_rules.rs`; document composition and parser integration are in `token_layout.rs`.
 
 Authored syntax is preserved: explicit ASC, implicit aliases, operator spellings, identifier quoting, parentheses, and comma-style LIMIT are not normalized away. This intentionally changes previous formatting snapshots. Type declarations preserve their spelling and spacing while retaining keyword placeholders for semantic disambiguation (such as GENERATED ALWAYS). Virtual-table arguments and wildcard grammar captures remain opaque source spans, since those strings can be interpreted by another language or extension.
 
@@ -32,18 +33,24 @@ The normal parser still builds its AST. Layout retains its document arena for th
 
 Width is a soft target for indivisible tokens and opaque source spans. Parser recovery takes priority over observer errors so formatting diagnostics retain their original source locations.
 
+### Allocations
+
+A test-only Rust allocator counts allocations and reallocations after warming up the public formatter. Simple SELECT, commented SQL, generated columns and a 128-statement input each make **one allocation per call**, for the returned `String`, including after a parse error. Before reuse, these cases made 8–12 allocations per call, or 11–23 after errors. Buffers retain their high-water capacity; larger inputs can still grow them. This counts Rust allocations, not C `malloc` calls. Structured macro arguments retain their existing temporary allocations.
+
 ### Measurements
 
-Release Criterion measurements compare this production implementation with main at `ec045e4e`, using the unchanged fixtures and reused formatter instances. Two runs use opposite binary order, with 30 samples, 0.3 s warmup and 2 s measurement. No builds or test suites ran during measurement.
+Release Criterion measurements compare main (`ec045e4e`), the previous PR commit (`45442dba`), and allocation reuse, using unchanged fixtures and reused formatter instances. Two runs use opposite binary order, with 30 samples, 0.3 s warmup and 2 s measurement. No builds or test suites ran during measurement.
 
-| Fixture | Main | Production | Time ratio |
-|---|---:|---:|---:|
-| large | 1.993 ms | 2.817 ms | 1.41× |
-| large_commented | 2.284 ms | 2.864 ms | 1.25× |
-| medium | 17.183 µs | 26.418 µs | 1.54× |
-| small | 2.287 µs | 3.772 µs | 1.65× |
+| Fixture | Main | Before reuse | After reuse | After / main |
+|---|---:|---:|---:|---:|
+| large | 2.026 ms | 2.826 ms | 2.803 ms | 1.38× |
+| large_commented | 2.343 ms | 2.938 ms | 2.921 ms | 1.25× |
+| medium | 17.519 µs | 26.239 µs | 25.074 µs | 1.43× |
+| small | 2.377 µs | 3.689 µs | 3.386 µs | 1.42× |
 
-This is a 25–65% performance regression, not a speed improvement. The formatting policy and retained syntax differ from main.
+Reuse improves the small and medium cases by approximately 8% and 4%. Large-case differences are below 1%, so no meaningful improvement is claimed there. The branch remains 25–43% slower than main; its formatting policy and retained syntax differ from main.
+
+Earlier sequence-scaling measurements, before allocation reuse:
 
 | Sequence | 256 elements | 512 elements | 1,024 elements | Doubling ratios |
 |---|---:|---:|---:|---:|
@@ -57,7 +64,7 @@ These sizes show approximately linear scaling; they do not establish a worst-cas
 
 ```bash
 CC=clang CXX=clang++ tools/pre-push
-cargo test -p syntaqlite --features lsp,dynload --test token_layout
+cargo test -p syntaqlite --features lsp,dynload --test token_layout --test formatter_allocations
 python3 -m unittest python.dev.diff_tests.runner_test
 tools/run-integration-tests --suite sql-idempotency
 cargo bench -p benches --bench main -- '^formatter/'
