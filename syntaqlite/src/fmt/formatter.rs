@@ -331,7 +331,18 @@ impl Formatter {
             let mut bufs = std::mem::take(&mut self.render_bufs);
             bufs.clear();
             arena.render_into(doc, &self.config, &mut bufs);
-            result.push_str(&bufs.out);
+            // An empty statement has no root, so it contributes its comments
+            // and nothing else: it neither ends a line of its own nor claims
+            // a slot in the output when it carries no comments either.
+            let rendered = if root_id.is_null() {
+                bufs.out.trim_end()
+            } else {
+                bufs.out.as_str()
+            };
+            if !rendered.trim().is_empty() {
+                result.push_str(rendered);
+                stmt_num += 1;
+            }
             self.render_bufs = bufs;
 
             // Stage 4: Recover and recycle statement-scoped buffers.
@@ -344,8 +355,6 @@ impl Formatter {
 
             // Recycle the arena, releasing all Doc borrows from this iteration.
             self.arena = DocArena::recycle(arena);
-
-            stmt_num += 1;
         }
 
         if stmt_num == 0 {

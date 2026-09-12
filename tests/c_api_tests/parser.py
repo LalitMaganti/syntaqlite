@@ -56,7 +56,7 @@ parse_one done root=0 recovery=0
 """,
         )
 
-    def test_bare_semicolons_done(self):
+    def test_bare_semicolons(self):
         return CApiScenario(
             input="""\
 create
@@ -64,10 +64,18 @@ reset
 ;; ;;
 .
 parse_one
+parse_one
+parse_one
+parse_one
+parse_one
 """,
             expected="""\
 create ok
 reset ok len=5
+parse_one ok root=0 recovery=0
+parse_one ok root=0 recovery=0
+parse_one ok root=0 recovery=0
+parse_one ok root=0 recovery=0
 parse_one done root=0 recovery=0
 """,
         )

@@ -906,3 +906,31 @@ class CanonicalSpellingFormat(TestSuite):
             sql="insert or replace into t values(1)",
             out="INSERT OR REPLACE INTO t VALUES (1);",
         )
+
+
+class EmptyStatementFormat(TestSuite):
+    def test_between_statements(self):
+        return DiffTestBlueprint(
+            sql="select 1;; select 2",
+            out="""\
+                SELECT 1;
+
+                SELECT 2;""",
+        )
+
+    def test_leading(self):
+        return DiffTestBlueprint(
+            sql="; select 1",
+            out="SELECT 1;",
+        )
+
+    def test_comment_survives(self):
+        return DiffTestBlueprint(
+            sql="select 1;\n-- standalone\n;\nselect 2",
+            out="""\
+                SELECT 1;
+
+                -- standalone
+
+                SELECT 2;""",
+        )

@@ -568,23 +568,24 @@ fn high_level_api_still_works() {
     assert!(matches!(session.next(), ParseOutcome::Done));
 }
 
-/// Batch parser: bare semicolons are skipped, real statements are returned.
+/// Batch parser: bare semicolons are statements with no root.
 #[test]
 fn batch_parse_bare_semicolons() {
     let parser = Parser::new();
     let mut session = parser.parse("; SELECT 1; ; SELECT 2; ;");
 
-    let ParseOutcome::Ok(stmt1) = session.next() else {
-        panic!("expected Ok for stmt 1")
-    };
-    assert!(matches!(stmt1.root(), Some(Stmt::SelectStmt(_))));
+    let mut roots = Vec::new();
+    let mut texts = Vec::new();
+    loop {
+        let ParseOutcome::Ok(stmt) = session.next() else {
+            break;
+        };
+        roots.push(matches!(stmt.root(), Some(Stmt::SelectStmt(_))));
+        texts.push(stmt.text().to_string());
+    }
 
-    let ParseOutcome::Ok(stmt2) = session.next() else {
-        panic!("expected Ok for stmt 2")
-    };
-    assert!(matches!(stmt2.root(), Some(Stmt::SelectStmt(_))));
-
-    assert!(matches!(session.next(), ParseOutcome::Done));
+    assert_eq!(roots, [false, true, false, true, false]);
+    assert_eq!(texts, [";", "SELECT 1;", ";", "SELECT 2;", ";"]);
 }
 
 /// Batch parser: EXPLAIN followed by a normal statement.
