@@ -53,6 +53,15 @@ pub(crate) struct DrainResult {
     pub leading: DocId,
 }
 
+impl Default for DrainResult {
+    fn default() -> Self {
+        DrainResult {
+            trailing: NIL_DOC,
+            leading: NIL_DOC,
+        }
+    }
+}
+
 /// Two cursors advancing monotonically through sorted comment and token arrays.
 /// Shared via `&` across iterative formatting traversal; interior mutability is
 /// required because interpreter state carries a shared `&CommentCtx`.
@@ -253,62 +262,49 @@ impl CommentCtx {
         DrainResult { trailing, leading }
     }
 
-    /// Find the next occurrence of a keyword in the token stream, starting
-    /// from the current token cursor.
+    /// The tokens one keyword atom covers, as `(start offset, count)`.
     ///
-    /// Verifies each token's text matches the corresponding keyword word
-    /// (case-insensitive). If the keyword starts at the current cursor
-    /// position, returns immediately. Otherwise, scans forward up to
-    /// `MAX_SCAN` tokens to handle untracked tokens (e.g. `(` and `)` from
-    /// dialect-level syntax that no fmt opcode covers).
+    /// Every fmt atom corresponds to one source token, so the atom stream and
+    /// the token stream step together: the atom's word count is how many
+    /// tokens it covers, and the cursor is where they are. The comparison is
+    /// not a search, it is the check that the two are still in step.
     ///
-    /// On match, the token cursor is advanced past any skipped tokens so it
-    /// points to the first word of the keyword. Returns `None` if the
-    /// keyword is not present in the source (e.g., an inserted `AS`).
-    pub(crate) fn peek_keyword_tokens(
-        &self,
-        kw_text: &str,
-        source: &StmtText,
-    ) -> Option<(StmtOffset, usize)> {
-        const MAX_SCAN: usize = 8;
-        let start_idx = self.token_cursor.get();
-
-        for scan in 0..MAX_SCAN {
-            let first_idx = start_idx + scan;
-            if first_idx >= self.tokens.len() {
+    /// `None` for an atom that covers no token: one the source does not
+    /// contain, and whitespace atoms, which are pure layout.
+    fn keyword_at_cursor(&self, kw_text: &str, source: &StmtText) -> Option<(StmtOffset, usize)> {
+        let first = self.token_cursor.get();
+        let mut words = 0usize;
+        for word in kw_text.split_whitespace() {
+            let tok = self.tokens.get(first + words)?;
+            if !source[tok.range()].eq_ignore_ascii_case(word) {
                 return None;
             }
-            let mut word_count = 0usize;
-            let mut matched = true;
-            for word in kw_text.split_whitespace() {
-                let tok_idx = first_idx + word_count;
-                if tok_idx >= self.tokens.len() {
-                    matched = false;
-                    break;
-                }
-                let tok = &self.tokens[tok_idx];
-                let tok_text = &source[tok.range()];
-                if !tok_text.eq_ignore_ascii_case(word) {
-                    matched = false;
-                    break;
-                }
-                word_count += 1;
-            }
-            if matched && word_count > 0 {
-                // Advance past any skipped tokens.
-                if scan > 0 {
-                    self.token_cursor.set(first_idx);
-                }
-                let first_offset = self.tokens[first_idx].offset;
-                return Some((first_offset, word_count));
-            }
+            words += 1;
         }
-        None
+        (words > 0).then(|| (self.tokens[first].offset, words))
     }
 
-    /// Advance the token cursor by `n` positions.
-    pub(crate) fn advance_token_cursor(&self, n: usize) {
-        self.token_cursor.set(self.token_cursor.get() + n);
+    /// Consume the tokens one keyword atom covers, draining the comments that
+    /// precede them. Draining reads the cursor, so it happens first.
+    pub(crate) fn drain_before_keyword<'a>(
+        &self,
+        kw_text: &str,
+        source: &'a StmtText,
+        arena: &mut DocArena<'a>,
+    ) -> DrainResult {
+        let Some((offset, words)) = self.keyword_at_cursor(kw_text, source) else {
+            return DrainResult::default();
+        };
+        let drain = self.drain_before(offset, source, arena);
+        self.token_cursor.set(self.token_cursor.get() + words);
+        drain
+    }
+
+    /// Consume the tokens one keyword atom covers, leaving comments alone.
+    pub(crate) fn skip_keyword(&self, kw_text: &str, source: &StmtText) {
+        if let Some((_, words)) = self.keyword_at_cursor(kw_text, source) {
+            self.token_cursor.set(self.token_cursor.get() + words);
+        }
     }
 
     /// Advance the token cursor past all tokens whose offset is `< end_offset`.
