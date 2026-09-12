@@ -545,6 +545,27 @@ static inline void synq_mark_as_type(SynqParseCtx* ctx, SynqParseToken tok) {
   tv->data[tok.token_idx].flags |= SYNQ_TOKEN_FLAG_AS_TYPE;
 }
 
+// Resolve a token span as keywords after semantic disambiguation. This also
+// overrides earlier name/type roles; token_idx bounds the scan to this span.
+static inline void synq_mark_as_keyword(SynqParseCtx* ctx, SynqParseToken tok) {
+  if (!ctx->tokens || tok.token_idx == UINT32_MAX)
+    return;
+  typedef struct {
+    SyntaqliteParserToken* data;
+    uint32_t count;
+    uint32_t capacity;
+  } TokenVec;
+  TokenVec* tv = (TokenVec*)ctx->tokens;
+  for (uint32_t i = tok.token_idx; i < tv->count; ++i) {
+    SyntaqliteParserToken* t = &tv->data[i];
+    if (t->_layer_id != tok.layer_id ||
+        t->offset >= tok.offset + (uint32_t)tok.n)
+      break;
+    if (t->offset >= tok.offset)
+      t->flags = SYNQ_TOKEN_FLAG_AS_KEYWORD;
+  }
+}
+
 // Range field metadata types (SyntaqliteFieldRangeMeta,
 // SyntaqliteRangeMetaEntry) are defined in syntaqlite/dialect.h.
 

@@ -658,9 +658,12 @@ pub(crate) fn generate_codegen_artifacts(
         .map_err(|e: CFmtCodegenError| e.to_string())?;
     let token_defines = extract_token_defines(&parse_h);
     // Build keyword set from the base mkkeywordhash table + dialect extra keywords.
-    let mut keyword_names = base_keyword_token_names();
+    let mut keyword_names: std::collections::HashSet<_> = base_keyword_token_names()
+        .iter()
+        .map(|name| normalize_token_name(name))
+        .collect();
     for kw in request.extra_keywords {
-        keyword_names.insert(kw.to_uppercase());
+        keyword_names.insert(normalize_token_name(&kw.to_uppercase()));
     }
     let dialect_tokens_h = generate_token_categories_header(&token_defines, Some(&keyword_names));
     let parse_api_h = generate_parse_h(request.dialect.name());

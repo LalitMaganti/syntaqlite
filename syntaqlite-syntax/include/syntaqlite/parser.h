@@ -229,6 +229,9 @@ typedef uint32_t SyntaqliteParserTokenFlags;
 #define SYNQ_TOKEN_FLAG_AS_TYPE \
   ((SyntaqliteParserTokenFlags)4)  // Consumed as type name.
 
+#define SYNQ_TOKEN_FLAG_AS_KEYWORD \
+  ((SyntaqliteParserTokenFlags)8)  // Resolved as a contextual keyword.
+
 // A non-whitespace, non-comment token position captured during parsing.
 //
 // For tokens produced by macro expansion, `offset` is a byte position in

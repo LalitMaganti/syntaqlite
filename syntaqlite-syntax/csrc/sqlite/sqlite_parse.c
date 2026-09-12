@@ -173,6 +173,7 @@ static inline int synq_append_join_modifier(SynqParseCtx* ctx,
   for (unsigned i = 0; i < sizeof(keywords) / sizeof(keywords[0]); ++i) {
     if (token->n == keywords[i].len &&
         SYNQ_STRNCASECMP(token->z, keywords[i].text, token->n) == 0) {
+      synq_mark_as_keyword(ctx, *token);
       uint32_t modifier = synq_parse_join_modifier(ctx, keywords[i].kind);
       *modifiers = synq_parse_join_modifier_list(ctx, *modifiers, modifier);
       return keywords[i].mask;
@@ -7977,6 +7978,7 @@ static YYACTIONTYPE yy_reduce(
       // WITHOUT ROWID = bit 0
       if (yymsp[0].minor.yy0.n == 5 &&
           SYNQ_STRNCASECMP(yymsp[0].minor.yy0.z, "rowid", 5) == 0) {
+        synq_mark_as_keyword(pCtx, yymsp[0].minor.yy0);
         yymsp[-1].minor.yy320 = 1;
       } else {
         yymsp[-1].minor.yy320 = 0;
@@ -7988,6 +7990,7 @@ static YYACTIONTYPE yy_reduce(
       // STRICT = bit 1
       if (yymsp[0].minor.yy0.n == 6 &&
           SYNQ_STRNCASECMP(yymsp[0].minor.yy0.z, "strict", 6) == 0) {
+        synq_mark_as_keyword(pCtx, yymsp[0].minor.yy0);
         yylhsminor.yy320 = 2;
       } else {
         yylhsminor.yy320 = 0;
@@ -8217,6 +8220,7 @@ static YYACTIONTYPE yy_reduce(
     } break;
     case 87: /* generated ::= LP expr RP ID */
     {
+      synq_mark_as_keyword(pCtx, yymsp[0].minor.yy0);
       SyntaqliteGeneratedColumnStorage storage =
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL;
       if (yymsp[0].minor.yy0.n == 6 &&
@@ -9262,7 +9266,13 @@ static YYACTIONTYPE yy_reduce(
     case 238: /* columnname ::= nmorerr typetoken */
     {
       yylhsminor.yy640.name = yymsp[-1].minor.yy277;
+      SynqParseToken original_type = yymsp[0].minor.yy0;
       pCtx->generated_always = synq_trim_generated_always(&yymsp[0].minor.yy0);
+      if (pCtx->generated_always) {
+        original_type.offset += yymsp[0].minor.yy0.n;
+        original_type.n -= yymsp[0].minor.yy0.n;
+        synq_mark_as_keyword(pCtx, original_type);
+      }
       yylhsminor.yy640.typetoken =
           (yymsp[0].minor.yy0.z && yymsp[0].minor.yy0.n)
               ? synq_span(pCtx, yymsp[0].minor.yy0)

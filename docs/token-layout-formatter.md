@@ -1,16 +1,16 @@
 # Token-preserving production formatter
 
-`Formatter::format`, the CLI, LSP formatting, and the C formatter entry point use the same parser-driven layout implementation. `dump_doc_tree` exposes the document that this implementation renders. The experimental formatter and private implementation-copying harness have been removed. The public Rust API is unchanged. Against main (`ec045e4e`), production changes total **1,459 added/deleted lines**, including the generated parser and excluding test modules, test infrastructure, fixtures and documentation.
+`Formatter::format`, the CLI, LSP formatting, and the C formatter entry point use the same parser-driven layout implementation. `dump_doc_tree` exposes the document that this implementation renders. The experimental formatter and private implementation-copying harness have been removed. The public Rust API is unchanged. Against main (`ec045e4e`), production changes total **1,544 added/deleted lines**, including the generated parser and excluding test modules, test infrastructure, fixtures and documentation.
 
 ## How it works
 
 1. A scoped observer is installed for one synchronous parser call. Lemon reports shifted token spans and reductions through the parse context, so generated dialects use the same mechanism. Ordinary parsing has no observer and builds no layout documents.
 2. Shifted tokens become document placeholders. Reductions combine the corresponding stack fragments in source order. Lists and equal-precedence operator chains stay open until their owner establishes grouping and indentation; no CST is retained.
-3. At statement completion, existing parser token flags distinguish keywords from identifiers, function names, and type names. Keyword placeholders receive the configured casing. Statement terminators follow `FormatConfig`; internal trigger terminators remain intact.
+3. At statement completion, parser token flags distinguish keywords from identifiers, function names, and type names. Keyword placeholders receive the configured casing. Statement terminators follow `FormatConfig`; internal trigger terminators remain intact.
 4. Comments stay between their original neighboring tokens, before discretionary layout breaks. A line comment defers its mandatory newline to the receiving boundary, so closing delimiters get their enclosure's indentation. Blank lines around comments become one paragraph break.
 5. The existing Wadler/Lindig renderer chooses line breaks using the configured width and indentation. SQL-specific whitespace policy is in `token_layout_rules.rs`; document composition and parser integration are in `token_layout.rs`.
 
-Authored syntax is preserved: explicit ASC, implicit aliases, operator spellings, identifier quoting, parentheses, and comma-style LIMIT are not normalized away. This intentionally changes previous formatting snapshots. Type declarations, virtual-table arguments and wildcard grammar captures preserve their opaque source spans, since those strings can be interpreted by another language or extension.
+Authored syntax is preserved: explicit ASC, implicit aliases, operator spellings, identifier quoting, parentheses, and comma-style LIMIT are not normalized away. This intentionally changes previous formatting snapshots. Type declarations preserve their spelling and spacing while retaining keyword placeholders for semantic disambiguation (such as GENERATED ALWAYS). Virtual-table arguments and wildcard grammar captures remain opaque source spans, since those strings can be interpreted by another language or extension.
 
 Normal statement layout now follows grammar policy rather than `.synq` AST-formatting bytecode. The existing bytecode remains relevant to the macro helper and bytecode debug command. Custom dialects must be regenerated with the current parser template. A dialect that produces no layout events fails explicitly rather than returning incomplete SQL. Macro calls retain the existing structured-argument and verbatim-reindent helpers, including their existing argument-normalization behavior. The token-preservation corpus covers SQLite statements, not normalization inside these macro helpers. The bytecode subtree interpreter remains for those structured arguments and the bytecode debug command; ordinary statements no longer traverse the AST for layout or drain comments through that interpreter.
 
@@ -19,6 +19,7 @@ Normal statement layout now follows grammar policy rather than `.synq` AST-forma
 The tests exercise the production API, rather than an alternate implementation:
 
 - 24 reviewed layout fixtures check exact whitespace, width, token preservation and second-pass stability.
+- Upper/lower casing regressions cover contextual keywords, identifiers that share keyword spellings, and comments and opaque arguments.
 - Additional Rust tests cover comments at every token boundary of 16 seeds, sequences up to 1,024 elements, configuration, internal versus outer semicolons, error locations, reuse after errors, and concurrent formatter instances.
 - Every SQLite and Perfetto formatter snapshot now requires an identical second formatting pass. Snapshot updates preserve all original inputs, options and test bodies.
 - All eleven former parentheses-related opt-outs are re-enabled. The semantic suite compares parsed ASTs and available SQLite EXPLAIN bytecode. It treats keyword NULL casing as lexical metadata and fails if formatting valid input returns an error.

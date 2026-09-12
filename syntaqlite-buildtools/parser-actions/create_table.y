@@ -88,6 +88,7 @@ table_option_set(A) ::= table_option_set(X) COMMA table_option(Y). {
 table_option(A) ::= WITHOUT nm(X). {
     // WITHOUT ROWID = bit 0
     if (X.n == 5 && SYNQ_STRNCASECMP(X.z, "rowid", 5) == 0) {
+        synq_mark_as_keyword(pCtx, X);
         A = 1;
     } else {
         A = 0;
@@ -98,6 +99,7 @@ table_option(A) ::= WITHOUT nm(X). {
 table_option(A) ::= nm(X). {
     // STRICT = bit 1
     if (X.n == 6 && SYNQ_STRNCASECMP(X.z, "strict", 6) == 0) {
+        synq_mark_as_keyword(pCtx, X);
         A = 2;
     } else {
         A = 0;
@@ -343,6 +345,7 @@ generated(A) ::= LP expr(E) RP. {
 }
 
 generated(A) ::= LP expr(E) RP ID(TYPE). {
+    synq_mark_as_keyword(pCtx, TYPE);
     SyntaqliteGeneratedColumnStorage storage = SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL;
     if (TYPE.n == 6 && SYNQ_STRNCASECMP(TYPE.z, "stored", 6) == 0) {
         storage = SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED;

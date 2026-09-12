@@ -167,6 +167,7 @@ static inline int synq_append_join_modifier(SynqParseCtx* ctx,
   for (unsigned i = 0; i < sizeof(keywords) / sizeof(keywords[0]); ++i) {
     if (token->n == keywords[i].len &&
         SYNQ_STRNCASECMP(token->z, keywords[i].text, token->n) == 0) {
+      synq_mark_as_keyword(ctx, *token);
       uint32_t modifier = synq_parse_join_modifier(ctx, keywords[i].kind);
       *modifiers = synq_parse_join_modifier_list(ctx, *modifiers, modifier);
       return keywords[i].mask;

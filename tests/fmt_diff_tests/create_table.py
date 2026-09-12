@@ -50,19 +50,19 @@ class CreateTableFormat(TestSuite):
     def test_without_rowid(self):
         return DiffTestBlueprint(
             sql="create table t(a int primary key) without rowid",
-            out='CREATE TABLE t (a int PRIMARY KEY) WITHOUT rowid;',
+            out='CREATE TABLE t (a int PRIMARY KEY) WITHOUT ROWID;',
         )
 
     def test_strict(self):
         return DiffTestBlueprint(
             sql="create table t(a int) strict",
-            out='CREATE TABLE t (a int) strict;',
+            out='CREATE TABLE t (a int) STRICT;',
         )
 
     def test_without_rowid_strict(self):
         return DiffTestBlueprint(
             sql="create table t(a int primary key) without rowid, strict",
-            out='CREATE TABLE t (a int PRIMARY KEY) WITHOUT rowid, strict;',
+            out='CREATE TABLE t (a int PRIMARY KEY) WITHOUT ROWID, STRICT;',
         )
 
 
@@ -169,7 +169,7 @@ class ColumnConstraintFormat(TestSuite):
     def test_generated_stored(self):
         return DiffTestBlueprint(
             sql="create table t(a int, b int as (a * 2) stored)",
-            out='CREATE TABLE t (a int, b int AS (a * 2) stored);',
+            out='CREATE TABLE t (a int, b int AS (a * 2) STORED);',
         )
 
     def test_generated_virtual(self):
@@ -661,7 +661,7 @@ class GeneratedColumnKeywords(TestSuite):
         """
         return DiffTestBlueprint(
             sql="create table t(a int generated always as (1))",
-            out='CREATE TABLE t (a int generated always AS (1));',
+            out='CREATE TABLE t (a int GENERATED ALWAYS AS (1));',
         )
 
     def test_bare_as_is_not_expanded(self):
@@ -673,7 +673,7 @@ class GeneratedColumnKeywords(TestSuite):
     def test_generated_always_stored(self):
         return DiffTestBlueprint(
             sql="create table t(a int not null generated always as (1) stored)",
-            out='CREATE TABLE t (a int NOT NULL GENERATED ALWAYS AS (1) stored);',
+            out='CREATE TABLE t (a int NOT NULL GENERATED ALWAYS AS (1) STORED);',
         )
 
 

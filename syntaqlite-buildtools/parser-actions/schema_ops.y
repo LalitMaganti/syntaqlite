@@ -114,7 +114,13 @@ kwcolumn_opt(A) ::= COLUMNKW. {
 
 columnname(A) ::= nmorerr(X) typetoken(Y). {
     A.name = X;
+    SynqParseToken original_type = Y;
     pCtx->generated_always = synq_trim_generated_always(&Y);
+    if (pCtx->generated_always) {
+        original_type.offset += Y.n;
+        original_type.n -= Y.n;
+        synq_mark_as_keyword(pCtx, original_type);
+    }
     A.typetoken = (Y.z && Y.n) ? synq_span(pCtx, Y) : SYNQ_NO_SPAN;
 }
 

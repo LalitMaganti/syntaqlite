@@ -161,6 +161,7 @@ impl ParserTokenFlags {
     const AS_ID: u8 = 1;
     const AS_FUNCTION: u8 = 2;
     const AS_TYPE: u8 = 4;
+    const AS_KEYWORD: u8 = 8;
 
     /// Returns the underlying flag bits.
     pub fn bits(self) -> u8 {
@@ -406,7 +407,9 @@ impl AnyDialect {
         token_type: AnyTokenType,
         flags: ParserTokenFlags,
     ) -> TokenCategory {
-        if flags.used_as_function() {
+        if flags.bits() & ParserTokenFlags::AS_KEYWORD != 0 {
+            TokenCategory::Keyword
+        } else if flags.used_as_function() {
             TokenCategory::Function
         } else if flags.used_as_type() {
             TokenCategory::Type

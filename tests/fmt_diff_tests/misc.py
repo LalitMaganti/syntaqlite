@@ -157,32 +157,32 @@ class JoinFormat(TestSuite):
         # NATURAL CROSS JOIN joins on common columns; CROSS JOIN does not.
         return DiffTestBlueprint(
             sql="select * from a natural cross join b",
-            out='SELECT * FROM a NATURAL cross JOIN b;',
+            out='SELECT * FROM a NATURAL CROSS JOIN b;',
         )
 
     def test_natural_left_outer_join(self):
         return DiffTestBlueprint(
             sql="select * from a natural left outer join b",
-            out='SELECT * FROM a NATURAL left outer JOIN b;',
+            out='SELECT * FROM a NATURAL LEFT OUTER JOIN b;',
         )
 
     def test_natural_full_join(self):
         return DiffTestBlueprint(
             sql="select * from a natural full join b",
-            out='SELECT * FROM a NATURAL full JOIN b;',
+            out='SELECT * FROM a NATURAL FULL JOIN b;',
         )
 
     def test_join_modifier_sequence_is_preserved(self):
         # SQLite interprets a set of modifiers; formatting retains authored order.
         return DiffTestBlueprint(
             sql="select * from a outer left natural join b",
-            out='SELECT * FROM a OUTER left natural JOIN b;',
+            out='SELECT * FROM a OUTER LEFT NATURAL JOIN b;',
         )
 
     def test_cross_natural_join_preserves_order(self):
         return DiffTestBlueprint(
             sql="select * from a cross natural join b",
-            out='SELECT * FROM a CROSS natural JOIN b;',
+            out='SELECT * FROM a CROSS NATURAL JOIN b;',
         )
 
     def test_join_using(self):

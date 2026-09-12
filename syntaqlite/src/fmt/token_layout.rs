@@ -71,7 +71,7 @@ impl Fragment<'_> {
 struct State<'a> {
     source: &'a str,
     tokenizer: AnyTokenizer,
-    tokens: Vec<(usize, DocId)>,
+    tokens: Vec<(usize, DocId, u32)>,
     terminator: Option<DocId>,
     end: usize,
     arena: DocArena<'a>,
@@ -140,7 +140,11 @@ impl<'a> State<'a> {
         // Tokens are placeholders until statement completion supplies the parser
         // flags distinguishing keywords from names.
         let token = self.arena.text(text);
-        self.tokens.push((start, token));
+        self.tokens.push((
+            start,
+            token,
+            u32::try_from(len).expect("parser token length fits u32"),
+        ));
         self.terminator = (symbol == "SEMI").then_some(token);
         let doc = token;
         self.stack.push(Fragment {
@@ -154,12 +158,35 @@ impl<'a> State<'a> {
         });
         self.end = start + len;
     }
-    fn verbatim(&mut self, lhs: &'static str, children: &[Fragment<'a>]) -> Fragment<'a> {
+    fn verbatim(
+        &mut self,
+        lhs: &'static str,
+        children: &[Fragment<'a>],
+        keywords: bool,
+    ) -> Fragment<'a> {
         let mut result = children[0];
         result.last = children.last().expect("nonempty production").last;
         let start = result.first.as_ptr() as usize - self.source.as_ptr() as usize;
         let end = result.last.as_ptr() as usize - self.source.as_ptr() as usize + result.last.len();
-        result.doc = self.arena.text(&self.source[start..end]);
+        if keywords {
+            // Preserve type spelling/spacing, but keep keyword placeholders live:
+            // semantic disambiguation can remove keywords from the type span.
+            let first = self.tokens.partition_point(|(offset, ..)| *offset < start);
+            let mut cursor = start;
+            let mut doc = NIL_DOC;
+            for &(offset, token, token_len) in &self.tokens[first..] {
+                if offset >= end {
+                    break;
+                }
+                let gap = self.arena.text(&self.source[cursor..offset]);
+                doc = self.arena.cats(&[doc, gap, token]);
+                cursor = offset + token_len as usize;
+            }
+            let tail = self.arena.text(&self.source[cursor..end]);
+            result.doc = self.arena.cat(doc, tail);
+        } else {
+            result.doc = self.arena.text(&self.source[start..end]);
+        }
         result.symbol = lhs;
         result.shape = Shape::Atom;
         result
@@ -457,10 +484,10 @@ pub(super) fn format(
         let mut slots = state.tokens.iter().peekable();
         for token in erased.tokens() {
             let start = token.stmt_range().start.to_doc(base).as_usize();
-            while slots.peek().is_some_and(|(offset, _)| *offset < start) {
+            while slots.peek().is_some_and(|(offset, ..)| *offset < start) {
                 slots.next();
             }
-            if let Some(&(offset, doc)) = slots.peek().copied()
+            if let Some(&(offset, doc, _)) = slots.peek().copied()
                 && offset == start
                 && owner
                     .dialect
@@ -486,7 +513,7 @@ pub(super) fn format(
             let start = offset.to_doc(base).as_usize();
             if let Ok(index) = state
                 .tokens
-                .binary_search_by_key(&start, |(offset, _)| *offset)
+                .binary_search_by_key(&start, |(offset, ..)| *offset)
             {
                 let replacement = replacement.unwrap_or_else(|| {
                     super::formatter::reindent_macro(

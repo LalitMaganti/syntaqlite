@@ -190,7 +190,7 @@ pub(super) fn layout<'a>(
     // declarations and module arguments have observable spelling, and ANY
     // delegates its contents to an extension language. Preserve their spans.
     if matches!(lhs, "typetoken" | "vtabarglist") || rule.ends_with(" ANY") {
-        return state.verbatim(lhs, children);
+        return state.verbatim(lhs, children, lhs == "typetoken");
     }
     // Grammar wrappers add no group or indentation. List wrappers retain their
     // open sequence so left recursion cannot accumulate nesting or fits work.
