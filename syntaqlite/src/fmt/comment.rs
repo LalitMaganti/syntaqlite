@@ -8,8 +8,7 @@ use syntaqlite_syntax::{CommentKind, CommentSide};
 
 use super::doc::{DocArena, DocId, NIL_DOC};
 
-/// A collected comment entry with pre-computed byte offset, length, and
-/// parser-supplied attachment (`side` + `token_idx`).
+/// A comment, with the side the parser attached it to.
 #[derive(Clone, Copy)]
 pub(crate) struct CommentEntry {
     pub offset: StmtOffset,
@@ -28,7 +27,7 @@ impl CommentEntry {
     }
 }
 
-/// A collected token entry with pre-computed byte offset and length.
+/// One source token's extent.
 #[derive(Clone, Copy)]
 pub(crate) struct TokenEntry {
     pub offset: StmtOffset,
@@ -62,11 +61,9 @@ impl Default for DrainResult {
     }
 }
 
-/// Two cursors advancing monotonically through sorted comment and token arrays.
-/// Shared via `&` across iterative formatting traversal; interior mutability is
-/// required because interpreter state carries a shared `&CommentCtx`.
+/// One walk over a statement's tokens, emitting the comments it passes.
 ///
-/// Owns its comment and token data (no lifetime parameter).
+/// The interpreter holds this shared, hence the `Cell` cursors.
 pub(crate) struct CommentCtx {
     comments: Vec<CommentEntry>,
     tokens: Vec<TokenEntry>,
@@ -84,15 +81,12 @@ impl CommentCtx {
         }
     }
 
-    /// Return owned storage so callers can recycle vector allocations.
+    /// Give the vectors back so the formatter can reuse the allocations.
     pub(crate) fn into_parts(self) -> (Vec<CommentEntry>, Vec<TokenEntry>) {
         (self.comments, self.tokens)
     }
 
-    /// Borrow the comment entries. The slice stays valid for the life
-    /// of `self`; callers that need to pass the comments to a helper
-    /// (e.g. `compute_macro_docs`) while still owning the `CommentCtx`
-    /// use this instead of re-moving the vec out.
+    /// Every comment, emitted or not.
     pub(crate) fn comments(&self) -> &[CommentEntry] {
         &self.comments
     }
@@ -114,139 +108,85 @@ impl CommentCtx {
         source: &'a StmtText,
         arena: &mut DocArena<'a>,
     ) -> DrainResult {
-        let mut trailing = NIL_DOC;
-        let mut leading = NIL_DOC;
+        let mut out = DrainResult::default();
         let mut cursor = self.cursor.get();
         let mut last_end = self.prev_token_end();
-        let source_end = StmtOffset::default() + source.byte_len();
+
         while cursor < self.comments.len() && self.comments[cursor].offset < before {
-            let t = &self.comments[cursor];
+            let c = self.comments[cursor];
+            let text = &source[c.range()];
 
-            let text = &source[t.range()];
+            // Which side a comment sits on is fixed at parse time; the source
+            // around it is read only to decide which blank lines survive.
+            match (c.kind, c.side) {
+                (CommentKind::Line, CommentSide::Leading) => {
+                    let next = self
+                        .comments
+                        .get(cursor + 1)
+                        .filter(|n| n.offset < before)
+                        .map_or(before, |n| n.offset);
+                    let after = gap(source, c.end(), next);
+                    let blank_after = after.contains("\n\n");
+                    // A comment on the next line brings its own separator.
+                    let joined = next != before && !blank_after && after.contains('\n');
+                    let blank_before = gap(source, last_end, c.offset).contains("\n\n");
 
-            // Leading vs trailing is fixed at parse time
-            // (see synq_parser_record_comment).  The gap text is still
-            // scanned below for blank-line preservation between adjacent
-            // leading comments.
-            let gap = StmtRange {
-                start: last_end.min(source_end),
-                end: t.offset.min(source_end),
-            };
-            let is_leading = matches!(t.side, CommentSide::Leading);
-
-            match t.kind {
-                CommentKind::Line => {
-                    if is_leading {
-                        // Source gaps on both sides of this comment —
-                        // used to detect blank lines that must survive.
-                        let next_offset = self
-                            .comments
-                            .get(cursor + 1)
-                            .filter(|n| n.offset < before)
-                            .map_or(before, |n| n.offset);
-                        let tail_gap = StmtRange {
-                            start: t.end().min(source_end),
-                            end: next_offset.min(source_end),
-                        };
-                        let has_blank_before = !gap.is_empty() && source[gap].contains("\n\n");
-                        let has_blank_after =
-                            !tail_gap.is_empty() && source[tail_gap].contains("\n\n");
-                        let next_is_contiguous_comment = !has_blank_after
-                            && next_offset != before
-                            && !tail_gap.is_empty()
-                            && source[tail_gap].contains('\n');
-
-                        // Prefix: `CommentBreak` so it elides when a
-                        // surrounding fmt op already emitted a break.
-                        // Chunks after the first prepend a `HardLine` to
-                        // preserve a blank line between comment blocks —
-                        // the `HardLine` elides against the prior chunk's
-                        // trailing `CommentBreak`, clearing both render
-                        // flags so the `CommentBreak` here still fires.
-                        let cb_prefix = arena.comment_break();
-                        let prefix = if has_blank_before && leading != NIL_DOC {
-                            let hl = arena.hardline();
-                            arena.cat(hl, cb_prefix)
-                        } else {
-                            cb_prefix
-                        };
-
-                        // Trailing: depends on what follows in source.
-                        //   contiguous next comment → no trailing (its
-                        //     own prefix provides the separator)
-                        //   blank line before the next event → `HardLine`
-                        //     always emits the blank line, `CommentBreak`
-                        //     still silences any break from the next op
-                        //   otherwise → plain `CommentBreak`
-                        let trailing = if next_is_contiguous_comment {
-                            NIL_DOC
-                        } else if has_blank_after {
-                            let hl = arena.hardline();
-                            let cb = arena.comment_break();
-                            arena.cat(hl, cb)
-                        } else {
-                            arena.comment_break()
-                        };
-
-                        let comment_doc = arena.text(text);
-                        let chunk = arena.cats(&[prefix, comment_doc, trailing]);
-                        leading = arena.cat(leading, chunk);
+                    // `CommentBreak` elides against a break a surrounding op
+                    // already emitted, on either side, so the chunk carries one
+                    // at each end without stacking into a blank line.
+                    let prefix = if blank_before && out.leading != NIL_DOC {
+                        arena.blank_line()
                     } else {
-                        let space = arena.text(" ");
-                        let comment = arena.text(text);
-                        let inner = arena.cat(space, comment);
-                        let ls = arena.line_suffix(inner);
-                        let bp = arena.break_parent();
-                        let chunk = arena.cat(ls, bp);
-                        trailing = if trailing == NIL_DOC {
-                            chunk
-                        } else {
-                            arena.cat(trailing, chunk)
-                        };
-                    }
+                        arena.comment_break()
+                    };
+                    let suffix = if joined {
+                        NIL_DOC
+                    } else if blank_after {
+                        arena.blank_line()
+                    } else {
+                        arena.comment_break()
+                    };
+                    let doc = arena.text(text);
+                    let chunk = arena.cats(&[prefix, doc, suffix]);
+                    out.leading = arena.cat(out.leading, chunk);
                 }
-                CommentKind::Block => {
-                    if is_leading {
-                        let hl = arena.hardline();
-                        let comment_doc = arena.text(text);
-                        let sp = arena.text(" ");
-                        let chunk = arena.cats(&[hl, comment_doc, sp]);
-                        leading = if leading == NIL_DOC {
-                            chunk
-                        } else {
-                            arena.cat(leading, chunk)
-                        };
-                    } else {
-                        let sp = arena.text(" ");
-                        let comment_doc = arena.text(text);
-                        let chunk = arena.cat(sp, comment_doc);
-                        trailing = if trailing == NIL_DOC {
-                            chunk
-                        } else {
-                            arena.cat(trailing, chunk)
-                        };
-                    }
+                (CommentKind::Line, CommentSide::Trailing) => {
+                    let sp = arena.text(" ");
+                    let doc = arena.text(text);
+                    let inner = arena.cat(sp, doc);
+                    let ls = arena.line_suffix(inner);
+                    let bp = arena.break_parent();
+                    let chunk = arena.cat(ls, bp);
+                    out.trailing = arena.cat(out.trailing, chunk);
+                }
+                (CommentKind::Block, CommentSide::Leading) => {
+                    let hl = arena.hardline();
+                    let doc = arena.text(text);
+                    let sp = arena.text(" ");
+                    let chunk = arena.cats(&[hl, doc, sp]);
+                    out.leading = arena.cat(out.leading, chunk);
+                }
+                (CommentKind::Block, CommentSide::Trailing) => {
+                    let sp = arena.text(" ");
+                    let doc = arena.text(text);
+                    let chunk = arena.cat(sp, doc);
+                    out.trailing = arena.cat(out.trailing, chunk);
                 }
             }
 
-            last_end = t.end();
+            last_end = c.end();
             cursor += 1;
         }
 
         self.cursor.set(cursor);
-
-        DrainResult { trailing, leading }
+        out
     }
 
     /// The tokens one keyword atom covers, as `(start offset, count)`.
     ///
-    /// Every fmt atom corresponds to one source token, so the atom stream and
-    /// the token stream step together: the atom's word count is how many
-    /// tokens it covers, and the cursor is where they are. The comparison is
-    /// not a search, it is the check that the two are still in step.
-    ///
-    /// `None` for an atom that covers no token: one the source does not
-    /// contain, and whitespace atoms, which are pure layout.
+    /// One word is one token, so the comparison is not a search: it checks
+    /// that the atom stream and the token stream are still in step. `None`
+    /// when they are not, and for whitespace atoms, which cover no token.
     fn keyword_at_cursor(&self, kw_text: &str, source: &StmtText) -> Option<(StmtOffset, usize)> {
         let first = self.token_cursor.get();
         let mut words = 0usize;
@@ -272,8 +212,7 @@ impl CommentCtx {
         }
     }
 
-    /// Step over the tokens one keyword atom covers, emitting the comments
-    /// the step passes. Emitting reads the cursor, so it happens first.
+    /// Step over a keyword atom, emitting the comments the step passes.
     pub(crate) fn take_keyword<'a>(
         &self,
         kw_text: &str,
@@ -307,35 +246,32 @@ impl CommentCtx {
         drain
     }
 
-    /// Step past everything before `offset`, emitting nothing. For a caller
-    /// that has already written that source range out verbatim, comments
-    /// included.
+    /// Step past everything before `offset` without emitting: the caller has
+    /// already written that source range out verbatim, comments included.
     pub(crate) fn skip_upto(&self, offset: StmtOffset) {
         self.seek_tokens(offset);
-        self.cursor
-            .set(advance_to(&self.comments, self.cursor.get(), offset, |c| {
-                c.offset
-            }));
+        let mut idx = self.cursor.get();
+        while self.comments.get(idx).is_some_and(|c| c.offset < offset) {
+            idx += 1;
+        }
+        self.cursor.set(idx);
     }
 
-    /// Move the token cursor forward to `offset`. Motion is forward-only, so
-    /// a target behind the cursor leaves the cursor where it is.
+    /// Motion is forward-only: a target behind the cursor moves nothing.
     fn seek_tokens(&self, offset: StmtOffset) {
-        self.token_cursor.set(advance_to(
-            &self.tokens,
-            self.token_cursor.get(),
-            offset,
-            |t| t.offset,
-        ));
+        let mut idx = self.token_cursor.get();
+        while self.tokens.get(idx).is_some_and(|t| t.offset < offset) {
+            idx += 1;
+        }
+        self.token_cursor.set(idx);
     }
 
-    /// Peek at the next unemitted comment without advancing the cursor.
+    /// The next unemitted comment.
     pub(crate) fn peek_comment(&self) -> Option<&CommentEntry> {
-        let idx = self.cursor.get();
-        self.comments.get(idx)
+        self.comments.get(self.cursor.get())
     }
 
-    /// Advance the comment cursor by one.
+    /// Mark the next unemitted comment as emitted.
     pub(crate) fn advance_comment(&self) {
         let idx = self.cursor.get();
         if idx < self.comments.len() {
@@ -359,16 +295,12 @@ impl CommentCtx {
     }
 }
 
-/// First index at or after `from` whose entry starts at or after `offset`.
-fn advance_to<T>(
-    items: &[T],
-    from: usize,
-    offset: StmtOffset,
-    start: impl Fn(&T) -> StmtOffset,
-) -> usize {
-    let mut idx = from;
-    while idx < items.len() && start(&items[idx]) < offset {
-        idx += 1;
+/// Source text between two offsets, empty if they do not span anything.
+fn gap(source: &StmtText, from: StmtOffset, to: StmtOffset) -> &str {
+    let limit = StmtOffset::default() + source.byte_len();
+    let (start, end) = (from.min(limit), to.min(limit));
+    if start >= end {
+        return "";
     }
-    idx
+    &source[StmtRange { start, end }]
 }
