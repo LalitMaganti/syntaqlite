@@ -276,10 +276,8 @@ impl Formatter {
                     &mut arena,
                     &mut self.parts,
                 );
-            } else if let Some(cctx) = comment_ctx.as_ref()
-                && let Some((next_offset, _)) = cctx.peek_next_token()
-            {
-                drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
+            } else if let Some(cctx) = comment_ctx.as_ref() {
+                drain_gap_comments(cctx, stmt_source, &mut arena, &mut self.parts);
             }
 
             // Stage 1.5: Pre-compute a structured `DocId` per top-level
@@ -538,10 +536,8 @@ impl Formatter {
                     &mut arena,
                     &mut self.parts,
                 );
-            } else if let Some(cctx) = comment_ctx.as_ref()
-                && let Some((next_offset, _)) = cctx.peek_next_token()
-            {
-                drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
+            } else if let Some(cctx) = comment_ctx.as_ref() {
+                drain_gap_comments(cctx, stmt_source, &mut arena, &mut self.parts);
             }
 
             let macro_docs = macro_structured::compute_macro_docs(
@@ -598,20 +594,21 @@ fn emit_stmt_separator<'a>(
 ) {
     parts.push(arena.hardline());
     parts.push(arena.hardline());
-    if let Some(cctx) = comment_ctx
-        && let Some((next_offset, _)) = cctx.peek_next_token()
-    {
-        drain_gap_comments(cctx, next_offset, source, arena, parts);
+    if let Some(cctx) = comment_ctx {
+        drain_gap_comments(cctx, source, arena, parts);
     }
 }
 
+/// Emit the comments sitting before the cursor as statement-level lines.
 fn drain_gap_comments<'a>(
     ctx: &CommentCtx,
-    before: StmtOffset,
     source: &'a StmtText,
     arena: &mut DocArena<'a>,
     parts: &mut Vec<DocId>,
 ) {
+    let Some(before) = ctx.cursor_offset() else {
+        return;
+    };
     let source_end = StmtOffset::default() + source.byte_len();
     while let Some(c) = ctx.peek_comment() {
         if c.offset >= before {
@@ -671,7 +668,7 @@ pub(crate) fn try_macro<'a>(
     child_id: AnyNodeId,
 ) -> Option<DocId> {
     let cctx = ctx.comment_ctx.as_ref()?;
-    let (tok_offset, _) = cctx.peek_next_token()?;
+    let tok_offset = cctx.cursor_offset()?;
     let source = ctx.text();
 
     let (node_text, node_off) = ctx.reader.node_text(child_id)?;
@@ -898,13 +895,7 @@ mod tests {
         );
         let mut arena = DocArena::new();
         let mut parts = Vec::new();
-        drain_gap_comments(
-            &ctx,
-            StmtOffset::from_raw(9),
-            source,
-            &mut arena,
-            &mut parts,
-        );
+        drain_gap_comments(&ctx, source, &mut arena, &mut parts);
         assert_eq!(render_parts(&mut arena, &parts), "--a\n/*b*/\n");
     }
 }

@@ -213,7 +213,7 @@ pub(super) fn interpret_core<'a>(
                     let kw_text = ctx.dialect.fmt_string(sid);
 
                     if let Some(ref cctx) = ctx.comment_ctx {
-                        let drain = cctx.drain_before_keyword(kw_text, source, arena);
+                        let drain = cctx.take_keyword(kw_text, source, arena);
                         flush_drain(&drain, &mut pending, &mut running, arena);
                     }
                     let kw = arena.keyword(kw_text);
@@ -247,16 +247,12 @@ pub(super) fn interpret_core<'a>(
                             } else {
                                 span_len
                             };
-                            let drain = cctx.drain_before(drain_offset, source, arena);
+                            let drain = cctx.take_upto(drain_offset, source, arena);
                             flush_drain(&drain, &mut pending, &mut running, arena);
-                            let span_end = drain_offset + token_len;
-                            cctx.advance_past(span_end);
-                            // The span emits its source range verbatim,
-                            // so any comments inside it are already in
-                            // the output. Drop them from the queue —
-                            // otherwise a later `drain_remaining` slices
-                            // [prev_token_end, comment_offset) reversed.
-                            cctx.discard_comments_before(span_end);
+                            // The span writes its source range out verbatim,
+                            // comments included, so the step over it emits
+                            // nothing of its own.
+                            cctx.skip_upto(drain_offset + token_len);
                         }
                         if quoted {
                             // Keep the authored quote style. Rewriting `[x]`
@@ -549,7 +545,7 @@ pub(super) fn interpret_core<'a>(
                         .fmt_enum_display_val(base as usize + ordinal as usize);
                     let kw_text = ctx.dialect.fmt_string(string_id);
                     if let Some(ref cctx) = ctx.comment_ctx {
-                        let drain = cctx.drain_before_keyword(kw_text, source, arena);
+                        let drain = cctx.take_keyword(kw_text, source, arena);
                         flush_drain(&drain, &mut pending, &mut running, arena);
                     }
                     let kw = arena.keyword(kw_text);
@@ -852,13 +848,8 @@ fn drain_comments_before_child<'a>(
     arena: &mut DocArena<'a>,
 ) {
     if let Some(cctx) = comment_ctx {
-        if let Some((offset, _)) = cctx.peek_next_token() {
-            let drain = cctx.drain_before(offset, source, arena);
-            flush_drain(&drain, pending, running, arena);
-        } else {
-            *running = arena.cat(*running, *pending);
-            *pending = NIL_DOC;
-        }
+        let drain = cctx.take_comments(source, arena);
+        flush_drain(&drain, pending, running, arena);
     }
 }
 

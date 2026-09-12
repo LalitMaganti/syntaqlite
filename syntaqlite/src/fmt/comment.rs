@@ -97,9 +97,8 @@ impl CommentCtx {
         &self.comments
     }
 
-    /// End offset of the token just before the current token cursor position.
-    /// Returns 0 if the cursor is at the start.
-    pub(crate) fn prev_token_end(&self) -> StmtOffset {
+    /// End offset of the token just before the cursor, or 0 at the start.
+    fn prev_token_end(&self) -> StmtOffset {
         let idx = self.token_cursor.get();
         if idx > 0 {
             self.tokens[idx - 1].end()
@@ -108,26 +107,12 @@ impl CommentCtx {
         }
     }
 
-    /// Drain all comments with offset < `before`.
-    ///
-    /// Stops early if there is non-whitespace source text (i.e. a keyword)
-    /// between a comment and `before`.
-    pub(crate) fn drain_before<'a>(
+    /// Emit every comment lying before `before` that is still unemitted.
+    fn emit_comments_before<'a>(
         &self,
         before: StmtOffset,
         source: &'a StmtText,
         arena: &mut DocArena<'a>,
-    ) -> DrainResult {
-        self.drain_impl(before, source, arena, false)
-    }
-
-    #[expect(clippy::too_many_lines)]
-    fn drain_impl<'a>(
-        &self,
-        before: StmtOffset,
-        source: &'a StmtText,
-        arena: &mut DocArena<'a>,
-        skip_text_check: bool,
     ) -> DrainResult {
         let mut trailing = NIL_DOC;
         let mut leading = NIL_DOC;
@@ -136,15 +121,6 @@ impl CommentCtx {
         let source_end = StmtOffset::default() + source.byte_len();
         while cursor < self.comments.len() && self.comments[cursor].offset < before {
             let t = &self.comments[cursor];
-
-            if !skip_text_check {
-                let scan_end = before.min(source_end);
-                if t.end() < scan_end
-                    && has_intervening_emitted_token(source, t.end(), scan_end, &self.tokens)
-                {
-                    break;
-                }
-            }
 
             let text = &source[t.range()];
 
@@ -284,9 +260,21 @@ impl CommentCtx {
         (words > 0).then(|| (self.tokens[first].offset, words))
     }
 
-    /// Consume the tokens one keyword atom covers, draining the comments that
-    /// precede them. Draining reads the cursor, so it happens first.
-    pub(crate) fn drain_before_keyword<'a>(
+    /// Emit the comments sitting before the token at the cursor.
+    pub(crate) fn take_comments<'a>(
+        &self,
+        source: &'a StmtText,
+        arena: &mut DocArena<'a>,
+    ) -> DrainResult {
+        match self.tokens.get(self.token_cursor.get()) {
+            Some(tok) => self.emit_comments_before(tok.offset, source, arena),
+            None => DrainResult::default(),
+        }
+    }
+
+    /// Step over the tokens one keyword atom covers, emitting the comments
+    /// the step passes. Emitting reads the cursor, so it happens first.
+    pub(crate) fn take_keyword<'a>(
         &self,
         kw_text: &str,
         source: &'a StmtText,
@@ -295,41 +283,53 @@ impl CommentCtx {
         let Some((offset, words)) = self.keyword_at_cursor(kw_text, source) else {
             return DrainResult::default();
         };
-        let drain = self.drain_before(offset, source, arena);
+        let drain = self.emit_comments_before(offset, source, arena);
         self.token_cursor.set(self.token_cursor.get() + words);
         drain
     }
 
-    /// Consume the tokens one keyword atom covers, leaving comments alone.
+    /// Step over the tokens one keyword atom covers without emitting anything.
     pub(crate) fn skip_keyword(&self, kw_text: &str, source: &StmtText) {
         if let Some((_, words)) = self.keyword_at_cursor(kw_text, source) {
             self.token_cursor.set(self.token_cursor.get() + words);
         }
     }
 
-    /// Advance the token cursor past all tokens whose offset is `< end_offset`.
-    pub(crate) fn advance_past(&self, end_offset: StmtOffset) {
-        let mut idx = self.token_cursor.get();
-        while idx < self.tokens.len() && self.tokens[idx].offset < end_offset {
-            idx += 1;
-        }
-        self.token_cursor.set(idx);
+    /// Step onto the token at `offset`, emitting the comments the step passes.
+    pub(crate) fn take_upto<'a>(
+        &self,
+        offset: StmtOffset,
+        source: &'a StmtText,
+        arena: &mut DocArena<'a>,
+    ) -> DrainResult {
+        let drain = self.emit_comments_before(offset, source, arena);
+        self.seek_tokens(offset);
+        drain
     }
 
-    /// Mark comments with offset `< end_offset` as consumed. Use after
-    /// emitting a verbatim source range (e.g. the body of a `span()` op)
-    /// that already contains the comment text — otherwise the comments
-    /// stay in the queue and a later `drain_remaining` will slice a
-    /// reversed `[prev_token_end, comment_offset)` range and panic.
-    pub(crate) fn discard_comments_before(&self, end_offset: StmtOffset) {
-        let mut idx = self.cursor.get();
-        while idx < self.comments.len() && self.comments[idx].offset < end_offset {
-            idx += 1;
-        }
-        self.cursor.set(idx);
+    /// Step past everything before `offset`, emitting nothing. For a caller
+    /// that has already written that source range out verbatim, comments
+    /// included.
+    pub(crate) fn skip_upto(&self, offset: StmtOffset) {
+        self.seek_tokens(offset);
+        self.cursor
+            .set(advance_to(&self.comments, self.cursor.get(), offset, |c| {
+                c.offset
+            }));
     }
 
-    /// Peek at the next undrained comment without advancing the cursor.
+    /// Move the token cursor forward to `offset`. Motion is forward-only, so
+    /// a target behind the cursor leaves the cursor where it is.
+    fn seek_tokens(&self, offset: StmtOffset) {
+        self.token_cursor.set(advance_to(
+            &self.tokens,
+            self.token_cursor.get(),
+            offset,
+            |t| t.offset,
+        ));
+    }
+
+    /// Peek at the next unemitted comment without advancing the cursor.
     pub(crate) fn peek_comment(&self) -> Option<&CommentEntry> {
         let idx = self.cursor.get();
         self.comments.get(idx)
@@ -343,55 +343,32 @@ impl CommentCtx {
         }
     }
 
-    /// Peek at the next token's offset and length without advancing.
-    pub(crate) fn peek_next_token(&self) -> Option<(StmtOffset, StmtLen)> {
-        let idx = self.token_cursor.get();
-        self.tokens.get(idx).map(|tp| (tp.offset, tp.length))
+    /// Where the cursor is, or `None` once it is past the last token.
+    pub(crate) fn cursor_offset(&self) -> Option<StmtOffset> {
+        self.tokens.get(self.token_cursor.get()).map(|t| t.offset)
     }
 
-    /// Flush all remaining comments.  Bypasses the `has_non_comment_text`
-    /// guard because, at end-of-statement drain, every remaining comment
-    /// is a trailing comment that this statement owns; the guard's check
-    /// for "syntax text past the comment" would spuriously fire when the
-    /// source text continues into the next statement.
+    /// Flush every comment this statement still owns.
     pub(crate) fn drain_remaining<'a>(
         &self,
         source: &'a StmtText,
         arena: &mut DocArena<'a>,
     ) -> DocId {
-        let drain = self.drain_impl(StmtOffset::from_raw(u32::MAX), source, arena, true);
+        let drain = self.emit_comments_before(StmtOffset::from_raw(u32::MAX), source, arena);
         arena.cat(drain.trailing, drain.leading)
     }
 }
 
-/// Returns true if the token stream contains a token in `[start, end)` that
-/// the formatter will emit — i.e. any token other than a vestigial `(` / `)`.
-///
-/// The parser rule `expr ::= LP expr RP` is erased via `synq_pass`
-/// (parser-actions/expressions.y:30), so the inner `(` and `)` tokens remain
-/// in the token stream without any corresponding fmt opcode consuming them.
-/// They're not obstacles between a comment and its drain target; the drain
-/// must be allowed to step over them. All other token kinds (keywords,
-/// identifiers, operators, and paren tokens in tracked positions like
-/// function calls / IN / CAST) either sit at the drain target or will be
-/// emitted by some fmt opcode, so they *do* block a cross-drain.
-fn has_intervening_emitted_token(
-    source: &StmtText,
-    start: StmtOffset,
-    end: StmtOffset,
-    tokens: &[TokenEntry],
-) -> bool {
-    // Tokens are sorted by offset; binary-search for the first one that could
-    // overlap [start, end) to keep this O(log n + k) per call.
-    let first = tokens.partition_point(|t| t.end() <= start);
-    for tok in &tokens[first..] {
-        if tok.offset >= end {
-            break;
-        }
-        let text = &source[tok.range()];
-        if text != "(" && text != ")" {
-            return true;
-        }
+/// First index at or after `from` whose entry starts at or after `offset`.
+fn advance_to<T>(
+    items: &[T],
+    from: usize,
+    offset: StmtOffset,
+    start: impl Fn(&T) -> StmtOffset,
+) -> usize {
+    let mut idx = from;
+    while idx < items.len() && start(&items[idx]) < offset {
+        idx += 1;
     }
-    false
+    idx
 }
