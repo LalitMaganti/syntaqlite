@@ -240,6 +240,7 @@ tools/run-integration-tests --list         # list available suites
 | `grammar` | Grammar token-ID ordering invariants |
 | `sql-idempotency` | Verify formatting preserves AST semantics |
 | `upstream-sqlite` | Upstream SQLite TCL test compatibility (parser + validator vs real SQLite) |
+| `token-preservation` | Which authored constructs the AST cannot reproduce (formatter round-trip) |
 
 #### Prerequisites
 
@@ -261,6 +262,32 @@ cargo build -p syntaqlite-cli
 | `--list` | List available suites and exit |
 | `--analyze-only` | Skip running tests; analyze existing logs from a previous run |
 | `--validate` | Enable semantic validation (upstream-sqlite suite) |
+
+### Token preservation
+
+The formatter prints from the AST, so any syntax the AST does not model is
+lost on the way out. The `token-preservation` suite makes that loss
+measurable: it formats a corpus harvested from the `ast` and `fmt` suites,
+compares the token stream before and after, and groups every difference by
+the construct that caused it.
+
+```sh
+tools/run-integration-tests --suite token-preservation
+tools/run-integration-tests --suite token-preservation --rebaseline
+```
+
+Keyword casing and the statement terminator are `FormatConfig` choices rather
+than lost information, so they are normalised before comparing. Everything
+else compares exactly, including identifier case and quoting style.
+
+Each run writes `tests/token_preservation/triage.md` (gitignored): the
+constructs that did not round-trip, ranked by how often they occur, with
+example SQL. That file is the work queue — model the construct in `.synq` so
+the formatter can print it back, in the style of PRs #356-#361.
+
+`tests/token_preservation/baseline.json` is checked in and ratchets one count
+per category. A category that grows past its baseline fails the suite;
+lowering counts needs a `--rebaseline` to lock the improvement in.
 
 ### Upstream SQLite tests
 
