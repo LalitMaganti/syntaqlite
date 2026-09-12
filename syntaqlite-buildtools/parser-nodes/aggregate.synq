@@ -45,7 +45,7 @@ node OrderedSetFunctionCall {
       softline ")"
     }
     space "WITHIN" "GROUP" space
-    group { "(ORDER" "BY" space nest { softline child(orderby_expr) } softline ")" }
+    group { "(" "ORDER" "BY" space nest { softline child(orderby_expr) } softline ")" }
     if_set(filter_clause) { group { space "FILTER" space "(" nest { softline "WHERE" space child(filter_clause) } softline ")" } }
     if_set(over_clause) { space "OVER" space child(over_clause) }
   }

@@ -120,7 +120,7 @@ node ColumnConstraint {
           REPLACE  { space "ON" "CONFLICT" "REPLACE" }
         }
       }
-      CHECK     { group { "CHECK(" nest { softline child(check_expr) } softline ")" } }
+      CHECK     { group { "CHECK" "(" nest { softline child(check_expr) } softline ")" } }
       DEFAULT {
         "DEFAULT" space
         if_flag(default_has_parens) {
@@ -211,7 +211,7 @@ node TableConstraint {
   fmt {
     switch(kind) {
       PRIMARY_KEY {
-        group { "PRIMARY" "KEY(" nest { softline child(pk_columns) } softline ")" }
+        group { "PRIMARY" "KEY" "(" nest { softline child(pk_columns) } softline ")" }
         switch(onconf) {
           ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
           ABORT    { space "ON" "CONFLICT" "ABORT" }
@@ -221,7 +221,7 @@ node TableConstraint {
         }
       }
       UNIQUE {
-        group { "UNIQUE(" nest { softline child(pk_columns) } softline ")" }
+        group { "UNIQUE" "(" nest { softline child(pk_columns) } softline ")" }
         switch(onconf) {
           ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
           ABORT    { space "ON" "CONFLICT" "ABORT" }
@@ -231,7 +231,7 @@ node TableConstraint {
         }
       }
       CHECK {
-        group { "CHECK(" nest { softline child(check_expr) } softline ")" }
+        group { "CHECK" "(" nest { softline child(check_expr) } softline ")" }
         switch(onconf) {
           ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }
           ABORT    { space "ON" "CONFLICT" "ABORT" }
@@ -240,7 +240,7 @@ node TableConstraint {
           REPLACE  { space "ON" "CONFLICT" "REPLACE" }
         }
       }
-      FOREIGN_KEY { group { "FOREIGN" "KEY(" nest { softline child(fk_columns) } softline ")" } space child(fk_clause) }
+      FOREIGN_KEY { group { "FOREIGN" "KEY" "(" nest { softline child(fk_columns) } softline ")" } space child(fk_clause) }
     }
   }
 }
