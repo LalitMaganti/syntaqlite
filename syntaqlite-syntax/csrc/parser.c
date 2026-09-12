@@ -117,15 +117,11 @@ static void reset_stmt(SyntaqliteParser* p) {
 
 // Handle a statement boundary after shift_token returns 1.
 // Reinitializes Lemon and classifies the completed statement:
-//   SYNTAQLITE_PARSE_OK    — successful statement (root is set)
+//   SYNTAQLITE_PARSE_OK    — successful statement; a bare semicolon is one,
+//                            with a null root
 //   SYNTAQLITE_PARSE_ERROR — statement with syntax error(s)
-//   SYNTAQLITE_PARSE_DONE  — bare semicolon (no statement produced)
 static int32_t stmt_boundary(SyntaqliteParser* p) {
   lemon_reinit(p);
-
-  // Bare semicolon — no statement produced.
-  if (p->ctx.root == SYNTAQLITE_NULL_NODE && !p->had_error)
-    return SYNTAQLITE_PARSE_DONE;
 
 #ifndef SYNTAQLITE_OMIT_MACROS
   if (synq_parser_check_macro_straddle(p) < 0)
@@ -349,12 +345,8 @@ static int finish_input(SyntaqliteParser* p) {
   if (p->last_token_type != SYNTAQLITE_TK_SEMI) {
     int rc = shift_token(p, SYNTAQLITE_TK_SEMI, NULL, 0, 0);
     if (rc == 1) {
-      int32_t status = stmt_boundary(p);
-      if (status != SYNTAQLITE_PARSE_DONE) {
-        p->finished = 1;
-        return set_result_status(p, status);
-      }
-      // bare semicolon — fall through to EOF
+      p->finished = 1;
+      return set_result_status(p, stmt_boundary(p));
     }
   }
 
@@ -697,16 +689,20 @@ SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
 #endif
 
     // Normal token (or macro fallthrough): shift into Lemon.
-    // After parse_failure Lemon stops reducing — force a boundary on
-    // SEMI so errors don't bleed into the next statement.  And filter
-    // bare-semicolon rc==1 (no root, no error) so the main loop keeps
-    // tokenizing instead of closing an empty statement.
+    //
+    // `ecmd ::= SEMI` (an empty statement) and `ecmd ::= error SEMI`
+    // (recovery) both reduce only once the *next* token arrives as the
+    // LALR(1) lookahead, by which point Lemon has swallowed the first
+    // token of the following statement.  Close the statement on the
+    // semicolon instead; lemon_reinit discards the pending reduction.
+    int at_stmt_start = p->last_token_type == 0;
     uint32_t main_layer_offset = cur_offset - p->stmt_start_offset;
     int main_rc = shift_token(p, cur_type, p->source + cur_offset,
                               (uint32_t)cur_len, main_layer_offset);
-    if (p->had_error && main_rc == 0 && cur_type == SYNTAQLITE_TK_SEMI)
+    if (main_rc == 0 && cur_type == SYNTAQLITE_TK_SEMI &&
+        (at_stmt_start || p->had_error))
       main_rc = 1;
-    if (main_rc == 1 && (p->ctx.root != SYNTAQLITE_NULL_NODE || p->had_error)) {
+    if (main_rc == 1) {
       // Eagerly consume same-line trailing comments after the statement
       // terminator so they attach to this statement's last token instead
       // of the next statement's first.  Stop at the first newline or
