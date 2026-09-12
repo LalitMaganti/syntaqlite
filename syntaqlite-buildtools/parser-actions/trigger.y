@@ -15,6 +15,7 @@
 // - Non-terminals are u32 node IDs
 
 %type trigger_time {int}
+%type foreach_clause {int}
 %type trnm {SynqParseToken}
 
 // ============ CREATE TRIGGER ============
@@ -30,7 +31,7 @@ cmd(A) ::= createkw trigger_decl(D) BEGIN trigger_cmd_list(S) END. {
 // trigger_decl builds a partial CreateTriggerStmt (without body)
 trigger_decl(A) ::= temp(T) TRIGGER ifnotexists(NOERR) nm(B) dbnm(Z)
                     trigger_time(C) trigger_event(D)
-                    ON fullname(E) foreach_clause when_clause(G). {
+                    ON fullname(E) foreach_clause(FE) when_clause(G). {
     SyntaqliteTextSpan trig_name = Z.z ? synq_span(pCtx, Z) : synq_span(pCtx, B);
     SyntaqliteTextSpan trig_schema = Z.z ? synq_span(pCtx, B) : SYNQ_NO_SPAN;
     // A TEMP trigger always lives in the temp schema, so it cannot be qualified.
@@ -43,6 +44,7 @@ trigger_decl(A) ::= temp(T) TRIGGER ifnotexists(NOERR) nm(B) dbnm(Z)
         T,
         (SyntaqliteBool)NOERR,
         (SyntaqliteTriggerTiming)C,
+        FE ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
         D,
         E,
         G,
@@ -61,7 +63,7 @@ trigger_time(A) ::= INSTEAD OF. {
 }
 
 trigger_time(A) ::= . {
-    A = (int)SYNTAQLITE_TRIGGER_TIMING_BEFORE;
+    A = (int)SYNTAQLITE_TRIGGER_TIMING_NONE;
 }
 
 // ============ Trigger event ============
@@ -85,12 +87,12 @@ trigger_event(A) ::= UPDATE OF idlist(X). {
 
 // ============ FOR EACH ROW (consumed, no value) ============
 
-foreach_clause ::= . {
-    // empty
+foreach_clause(A) ::= . {
+    A = 0;
 }
 
-foreach_clause ::= FOR EACH ROW. {
-    // consumed
+foreach_clause(A) ::= FOR EACH ROW. {
+    A = 1;
 }
 
 // ============ WHEN clause ============

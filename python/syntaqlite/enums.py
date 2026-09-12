@@ -135,6 +135,7 @@ class BinaryOp(IntEnum):
     CONCAT = 17
     PTR = 18
     PTR2 = 19
+    NE_ANGLE = 20
 
 
 class UnaryOp(IntEnum):
@@ -195,8 +196,9 @@ class InitialDeferMode(IntEnum):
 
 
 class GeneratedColumnStorage(IntEnum):
-    VIRTUAL = 0
-    STORED = 1
+    NONE = 0
+    VIRTUAL = 1
+    STORED = 2
 
 
 class ColumnConstraintType(IntEnum):
@@ -288,6 +290,7 @@ class TransactionOp(IntEnum):
     BEGIN = 0
     COMMIT = 1
     ROLLBACK = 2
+    END = 3
 
 
 class SavepointOp(IntEnum):
@@ -297,8 +300,9 @@ class SavepointOp(IntEnum):
 
 
 class SortOrder(IntEnum):
-    ASC = 0
-    DESC = 1
+    NONE = 0
+    ASC = 1
+    DESC = 2
 
 
 class NullsOrder(IntEnum):
@@ -332,9 +336,10 @@ class JoinModifierKind(IntEnum):
 
 
 class TriggerTiming(IntEnum):
-    BEFORE = 0
-    AFTER = 1
-    INSTEAD_OF = 2
+    NONE = 0
+    BEFORE = 1
+    AFTER = 2
+    INSTEAD_OF = 3
 
 
 class TriggerEventType(IntEnum):

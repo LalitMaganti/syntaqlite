@@ -40,7 +40,7 @@ class WindowFunctionBasic(TestSuite):
                                       column: "id"
                                       table: (none)
                                       schema: (none)
-                                  sort_order: ASC
+                                  sort_order: NONE
                                   nulls_order: NONE
                             frame: (none)
               from_clause:
@@ -173,7 +173,7 @@ class WindowFunctionBasic(TestSuite):
                                   column: "x"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                         frame: (none)
 """,
@@ -270,7 +270,7 @@ class WindowFunctionBasic(TestSuite):
                                       column: "b"
                                       table: (none)
                                       schema: (none)
-                                  sort_order: ASC
+                                  sort_order: NONE
                                   nulls_order: NONE
                             frame: (none)
               from_clause:
@@ -337,7 +337,7 @@ class WindowFunctionBasic(TestSuite):
                                       column: "c"
                                       table: (none)
                                       schema: (none)
-                                  sort_order: ASC
+                                  sort_order: NONE
                                   nulls_order: NONE
                             frame: (none)
               from_clause:
@@ -522,7 +522,7 @@ class FilterClause(TestSuite):
                                       column: "y"
                                       table: (none)
                                       schema: (none)
-                                  sort_order: ASC
+                                  sort_order: NONE
                                   nulls_order: NONE
                             frame: (none)
               from_clause:
@@ -584,7 +584,7 @@ class FrameSpecification(TestSuite):
                                       column: "y"
                                       table: (none)
                                       schema: (none)
-                                  sort_order: ASC
+                                  sort_order: NONE
                                   nulls_order: NONE
                             frame:
                               FrameSpec
@@ -659,7 +659,7 @@ class FrameSpecification(TestSuite):
                                       column: "y"
                                       table: (none)
                                       schema: (none)
-                                  sort_order: ASC
+                                  sort_order: NONE
                                   nulls_order: NONE
                             frame:
                               FrameSpec
@@ -728,7 +728,7 @@ class FrameSpecification(TestSuite):
                                       column: "y"
                                       table: (none)
                                       schema: (none)
-                                  sort_order: ASC
+                                  sort_order: NONE
                                   nulls_order: NONE
                             frame:
                               FrameSpec
@@ -977,7 +977,7 @@ class FrameSpecification(TestSuite):
                                       column: "y"
                                       table: (none)
                                       schema: (none)
-                                  sort_order: ASC
+                                  sort_order: NONE
                                   nulls_order: NONE
                             frame:
                               FrameSpec
@@ -1059,7 +1059,7 @@ class WindowClause(TestSuite):
                                   column: "x"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                         frame: (none)
 """,
@@ -1149,7 +1149,7 @@ class WindowClause(TestSuite):
                                   column: "a"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                         frame: (none)
                   NamedWindowDef
@@ -1172,7 +1172,7 @@ class WindowClause(TestSuite):
                                   column: "c"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                         frame: (none)
 """,
@@ -1215,7 +1215,7 @@ class AggregateWithWindowFunction(TestSuite):
                                   column: "y"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                         filter_clause:
                           BinaryExpr

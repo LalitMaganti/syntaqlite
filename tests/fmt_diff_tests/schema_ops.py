@@ -70,7 +70,7 @@ class AlterTableFormat(TestSuite):
     def test_add_column_no_keyword(self):
         return DiffTestBlueprint(
             sql="alter table t add c1",
-            out="ALTER TABLE t ADD COLUMN c1;",
+            out="ALTER TABLE t ADD c1;",
         )
 
     def test_add_column_with_type(self):
@@ -98,10 +98,11 @@ class AlterTableFormat(TestSuite):
                 "check(c1 <> '') references u(x) on delete cascade"
             ),
             out="""\
-ALTER TABLE t ADD COLUMN c1 text
-  COLLATE nocase
-  CHECK(c1 != '')
-  REFERENCES u(x) ON DELETE CASCADE;""",
+                ALTER TABLE t ADD COLUMN c1 text
+                  COLLATE nocase
+                  CHECK(c1 <> '')
+                  REFERENCES u(x) ON DELETE CASCADE;
+            """,
         )
 
     def test_add_column_generated_stored(self):
@@ -139,7 +140,7 @@ class TransactionFormat(TestSuite):
     def test_end(self):
         return DiffTestBlueprint(
             sql="end",
-            out="COMMIT;",
+            out="END;",
         )
 
     def test_rollback(self):
@@ -151,7 +152,7 @@ class TransactionFormat(TestSuite):
     def test_begin_transaction_unnamed(self):
         return DiffTestBlueprint(
             sql="begin transaction",
-            out="BEGIN;",
+            out="BEGIN TRANSACTION;",
         )
 
     def test_begin_transaction_named(self):
@@ -189,7 +190,7 @@ class SavepointFormat(TestSuite):
     def test_release(self):
         return DiffTestBlueprint(
             sql="release sp1",
-            out="RELEASE SAVEPOINT sp1;",
+            out="RELEASE sp1;",
         )
 
     def test_release_savepoint(self):
@@ -201,7 +202,7 @@ class SavepointFormat(TestSuite):
     def test_rollback_to(self):
         return DiffTestBlueprint(
             sql="rollback to sp1",
-            out="ROLLBACK TO SAVEPOINT sp1;",
+            out="ROLLBACK TO sp1;",
         )
 
     def test_rollback_to_savepoint(self):

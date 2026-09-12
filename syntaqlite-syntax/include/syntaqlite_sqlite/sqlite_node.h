@@ -59,7 +59,8 @@ typedef enum SyntaqliteBinaryOp {
   SYNTAQLITE_BINARY_OP_RSHIFT = 16,
   SYNTAQLITE_BINARY_OP_CONCAT = 17,
   SYNTAQLITE_BINARY_OP_PTR = 18,
-  SYNTAQLITE_BINARY_OP_PTR2 = 19
+  SYNTAQLITE_BINARY_OP_PTR2 = 19,
+  SYNTAQLITE_BINARY_OP_NE_ANGLE = 20
 } SyntaqliteBinaryOp;
 
 typedef enum SyntaqliteUnaryOp {
@@ -120,8 +121,9 @@ typedef enum SyntaqliteInitialDeferMode {
 } SyntaqliteInitialDeferMode;
 
 typedef enum SyntaqliteGeneratedColumnStorage {
-  SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL = 0,
-  SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED = 1
+  SYNTAQLITE_GENERATED_COLUMN_STORAGE_NONE = 0,
+  SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL = 1,
+  SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED = 2
 } SyntaqliteGeneratedColumnStorage;
 
 typedef enum SyntaqliteColumnConstraintType {
@@ -212,7 +214,8 @@ typedef enum SyntaqliteTransactionType {
 typedef enum SyntaqliteTransactionOp {
   SYNTAQLITE_TRANSACTION_OP_BEGIN = 0,
   SYNTAQLITE_TRANSACTION_OP_COMMIT = 1,
-  SYNTAQLITE_TRANSACTION_OP_ROLLBACK = 2
+  SYNTAQLITE_TRANSACTION_OP_ROLLBACK = 2,
+  SYNTAQLITE_TRANSACTION_OP_END = 3
 } SyntaqliteTransactionOp;
 
 typedef enum SyntaqliteSavepointOp {
@@ -222,8 +225,9 @@ typedef enum SyntaqliteSavepointOp {
 } SyntaqliteSavepointOp;
 
 typedef enum SyntaqliteSortOrder {
-  SYNTAQLITE_SORT_ORDER_ASC = 0,
-  SYNTAQLITE_SORT_ORDER_DESC = 1
+  SYNTAQLITE_SORT_ORDER_NONE = 0,
+  SYNTAQLITE_SORT_ORDER_ASC = 1,
+  SYNTAQLITE_SORT_ORDER_DESC = 2
 } SyntaqliteSortOrder;
 
 typedef enum SyntaqliteNullsOrder {
@@ -257,9 +261,10 @@ typedef enum SyntaqliteJoinModifierKind {
 } SyntaqliteJoinModifierKind;
 
 typedef enum SyntaqliteTriggerTiming {
-  SYNTAQLITE_TRIGGER_TIMING_BEFORE = 0,
-  SYNTAQLITE_TRIGGER_TIMING_AFTER = 1,
-  SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF = 2
+  SYNTAQLITE_TRIGGER_TIMING_NONE = 0,
+  SYNTAQLITE_TRIGGER_TIMING_BEFORE = 1,
+  SYNTAQLITE_TRIGGER_TIMING_AFTER = 2,
+  SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF = 3
 } SyntaqliteTriggerTiming;
 
 typedef enum SyntaqliteTriggerEventType {
@@ -839,6 +844,7 @@ typedef struct SyntaqliteDropStmt {
 typedef struct SyntaqliteAlterTableStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteAlterOp op;
+  SyntaqliteBool has_column_kw;
   uint32_t target;
   uint32_t new_name;
   uint32_t old_name;
@@ -849,6 +855,7 @@ typedef struct SyntaqliteTransactionStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteTransactionOp op;
   SyntaqliteTransactionType trans_type;
+  SyntaqliteBool has_transaction;
   SyntaqliteTextSpan name;
 } SyntaqliteTransactionStmt;
 
@@ -856,6 +863,8 @@ typedef struct SyntaqliteSavepointStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteSavepointOp op;
   uint32_t savepoint_name;
+  SyntaqliteBool has_savepoint;
+  SyntaqliteBool has_transaction;
   SyntaqliteTextSpan transaction_name;
 } SyntaqliteSavepointStmt;
 
@@ -982,6 +991,7 @@ typedef struct SyntaqliteCreateTriggerStmt {
   SyntaqliteTemporaryQualifier temporary;
   SyntaqliteBool if_not_exists;
   SyntaqliteTriggerTiming timing;
+  SyntaqliteBool for_each_row;
   uint32_t event;
   uint32_t table;
   uint32_t when_expr;
@@ -1014,6 +1024,7 @@ typedef struct SyntaqliteAnalyzeOrReindexStmt {
 
 typedef struct SyntaqliteAttachStmt {
   SyntaqliteNodeTag tag;
+  SyntaqliteBool has_database;
   uint32_t filename;
   uint32_t db_name;
   uint32_t key;
@@ -1021,6 +1032,7 @@ typedef struct SyntaqliteAttachStmt {
 
 typedef struct SyntaqliteDetachStmt {
   SyntaqliteNodeTag tag;
+  SyntaqliteBool has_database;
   uint32_t db_name;
 } SyntaqliteDetachStmt;
 

@@ -212,39 +212,39 @@ class CreateTableOptions(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT PRIMARY KEY) WITHOUT ROWID",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: WITHOUT_ROWID
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: WITHOUT_ROWID
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_strict(self):
@@ -274,39 +274,39 @@ class CreateTableOptions(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT PRIMARY KEY) WITHOUT ROWID, STRICT",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: WITHOUT_ROWID STRICT
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: WITHOUT_ROWID STRICT
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -362,220 +362,220 @@ class ColumnConstraintDefault(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT DEFAULT 42)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: DEFAULT
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr:
-                            Literal
-                              literal_type: INTEGER
-                              source: "42"
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: DEFAULT
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr:
+                                Literal
+                                  literal_type: INTEGER
+                                  source: "42"
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_default_string(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a TEXT DEFAULT 'hello')",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "TEXT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: DEFAULT
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr:
-                            Literal
-                              literal_type: STRING
-                              source: "'hello'"
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "TEXT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: DEFAULT
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr:
+                                Literal
+                                  literal_type: STRING
+                                  source: "'hello'"
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_default_negative(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT DEFAULT -1)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: DEFAULT
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr:
-                            UnaryExpr
-                              op: MINUS
-                              operand:
-                                Literal
-                                  literal_type: INTEGER
-                                  source: "1"
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: DEFAULT
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr:
+                                UnaryExpr
+                                  op: MINUS
+                                  operand:
+                                    Literal
+                                      literal_type: INTEGER
+                                      source: "1"
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_default_expr(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT DEFAULT (1 + 2))",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: DEFAULT
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: TRUE
-                          generated_always: FALSE
-                          default_expr:
-                            BinaryExpr
-                              op: PLUS
-                              left:
-                                Literal
-                                  literal_type: INTEGER
-                                  source: "1"
-                              right:
-                                Literal
-                                  literal_type: INTEGER
-                                  source: "2"
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: DEFAULT
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: TRUE
+                              generated_always: FALSE
+                              default_expr:
+                                BinaryExpr
+                                  op: PLUS
+                                  left:
+                                    Literal
+                                      literal_type: INTEGER
+                                      source: "1"
+                                  right:
+                                    Literal
+                                      literal_type: INTEGER
+                                      source: "2"
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_default_true(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT DEFAULT TRUE)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: DEFAULT
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr:
-                            Literal
-                              literal_type: STRING
-                              source: "TRUE"
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: DEFAULT
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr:
+                                Literal
+                                  literal_type: STRING
+                                  source: "TRUE"
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -586,195 +586,195 @@ class ColumnConstraintKeys(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT PRIMARY KEY)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_primary_key_autoincrement(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INTEGER PRIMARY KEY AUTOINCREMENT)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INTEGER"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: TRUE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INTEGER"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: TRUE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_primary_key_desc(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT PRIMARY KEY DESC)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: DESC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: DESC
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_not_null(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a TEXT NOT NULL)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "TEXT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: NOT_NULL
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "TEXT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: NOT_NULL
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_unique(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a TEXT UNIQUE)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "TEXT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: UNIQUE
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "TEXT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: UNIQUE
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -785,50 +785,50 @@ class ColumnConstraintCheck(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT CHECK(a > 0))",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: CHECK
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr:
-                            BinaryExpr
-                              op: GT
-                              left:
-                                ColumnRef
-                                  column: "a"
-                                  table: (none)
-                                  schema: (none)
-                              right:
-                                Literal
-                                  literal_type: INTEGER
-                                  source: "0"
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: CHECK
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr:
+                                BinaryExpr
+                                  op: GT
+                                  left:
+                                    ColumnRef
+                                      column: "a"
+                                      table: (none)
+                                      schema: (none)
+                                  right:
+                                    Literal
+                                      literal_type: INTEGER
+                                      source: "0"
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -839,222 +839,222 @@ class ColumnConstraintReferences(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT REFERENCES other(id))",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: REFERENCES
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause:
-                            ForeignKeyClause
-                              ref_table: "other"
-                              ref_columns:
-                                ExprList [1 items]
-                                  ColumnRef
-                                    column: "id"
-                                    table: (none)
-                                    schema: (none)
-                              options: (none)
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: REFERENCES
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
-              table_constraints: (none)
-              as_select: (none)
-""",
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause:
+                                ForeignKeyClause
+                                  ref_table: "other"
+                                  ref_columns:
+                                    ExprList [1 items]
+                                      ColumnRef
+                                        column: "id"
+                                        table: (none)
+                                        schema: (none)
+                                  options: (none)
+                                  deferrable: UNSET
+                                  initial_defer: UNSET
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_references_on_delete_cascade(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT REFERENCES other(id) ON DELETE CASCADE)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: REFERENCES
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause:
-                            ForeignKeyClause
-                              ref_table: "other"
-                              ref_columns:
-                                ExprList [1 items]
-                                  ColumnRef
-                                    column: "id"
-                                    table: (none)
-                                    schema: (none)
-                              options:
-                                ForeignKeyOptionList [1 items]
-                                  ForeignKeyOption
-                                    kind: ON_DELETE
-                                    action: CASCADE
-                                    match_name: (none)
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: REFERENCES
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
-              table_constraints: (none)
-              as_select: (none)
-""",
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause:
+                                ForeignKeyClause
+                                  ref_table: "other"
+                                  ref_columns:
+                                    ExprList [1 items]
+                                      ColumnRef
+                                        column: "id"
+                                        table: (none)
+                                        schema: (none)
+                                  options:
+                                    ForeignKeyOptionList [1 items]
+                                      ForeignKeyOption
+                                        kind: ON_DELETE
+                                        action: CASCADE
+                                        match_name: (none)
+                                  deferrable: UNSET
+                                  initial_defer: UNSET
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_references_on_update_set_null(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT REFERENCES other(id) ON UPDATE SET NULL)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: REFERENCES
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause:
-                            ForeignKeyClause
-                              ref_table: "other"
-                              ref_columns:
-                                ExprList [1 items]
-                                  ColumnRef
-                                    column: "id"
-                                    table: (none)
-                                    schema: (none)
-                              options:
-                                ForeignKeyOptionList [1 items]
-                                  ForeignKeyOption
-                                    kind: ON_UPDATE
-                                    action: SET_NULL
-                                    match_name: (none)
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: REFERENCES
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
-              table_constraints: (none)
-              as_select: (none)
-""",
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause:
+                                ForeignKeyClause
+                                  ref_table: "other"
+                                  ref_columns:
+                                    ExprList [1 items]
+                                      ColumnRef
+                                        column: "id"
+                                        table: (none)
+                                        schema: (none)
+                                  options:
+                                    ForeignKeyOptionList [1 items]
+                                      ForeignKeyOption
+                                        kind: ON_UPDATE
+                                        action: SET_NULL
+                                        match_name: (none)
+                                  deferrable: UNSET
+                                  initial_defer: UNSET
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_references_preserve_repeated_options(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a REFERENCES u ON DELETE CASCADE MATCH first ON DELETE RESTRICT MATCH last)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: (none)
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: REFERENCES
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause:
-                            ForeignKeyClause
-                              ref_table: "u"
-                              ref_columns: (none)
-                              options:
-                                ForeignKeyOptionList [4 items]
-                                  ForeignKeyOption
-                                    kind: ON_DELETE
-                                    action: CASCADE
-                                    match_name: (none)
-                                  ForeignKeyOption
-                                    kind: MATCH
-                                    action: UNSET
-                                    match_name: "first"
-                                  ForeignKeyOption
-                                    kind: ON_DELETE
-                                    action: RESTRICT
-                                    match_name: (none)
-                                  ForeignKeyOption
-                                    kind: MATCH
-                                    action: UNSET
-                                    match_name: "last"
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: (none)
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: REFERENCES
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
-              table_constraints: (none)
-              as_select: (none)
-""",
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause:
+                                ForeignKeyClause
+                                  ref_table: "u"
+                                  ref_columns: (none)
+                                  options:
+                                    ForeignKeyOptionList [4 items]
+                                      ForeignKeyOption
+                                        kind: ON_DELETE
+                                        action: CASCADE
+                                        match_name: (none)
+                                      ForeignKeyOption
+                                        kind: MATCH
+                                        action: UNSET
+                                        match_name: "first"
+                                      ForeignKeyOption
+                                        kind: ON_DELETE
+                                        action: RESTRICT
+                                        match_name: (none)
+                                      ForeignKeyOption
+                                        kind: MATCH
+                                        action: UNSET
+                                        match_name: "last"
+                                  deferrable: UNSET
+                                  initial_defer: UNSET
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -1066,39 +1066,39 @@ class ColumnConstraintCollate(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a TEXT COLLATE NOCASE)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "TEXT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: COLLATE
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: "NOCASE"
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "TEXT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: COLLATE
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: "NOCASE"
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -1109,112 +1109,112 @@ class ColumnConstraintGenerated(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT, b INT AS (a * 2) STORED)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [2 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints: (none)
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "b"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: GENERATED
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: STORED
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr:
-                            BinaryExpr
-                              op: STAR
-                              left:
-                                ColumnRef
-                                  column: "a"
-                                  table: (none)
-                                  schema: (none)
-                              right:
-                                Literal
-                                  literal_type: INTEGER
-                                  source: "2"
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [2 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints: (none)
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "b"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: GENERATED
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: STORED
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr:
+                                BinaryExpr
+                                  op: STAR
+                                  left:
+                                    ColumnRef
+                                      column: "a"
+                                      table: (none)
+                                      schema: (none)
+                                  right:
+                                    Literal
+                                      literal_type: INTEGER
+                                      source: "2"
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_generated_virtual(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT, b INT AS (a + 1))",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [2 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints: (none)
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "b"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: GENERATED
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr:
-                            BinaryExpr
-                              op: PLUS
-                              left:
-                                ColumnRef
-                                  column: "a"
-                                  table: (none)
-                                  schema: (none)
-                              right:
-                                Literal
-                                  literal_type: INTEGER
-                                  source: "1"
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [2 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints: (none)
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "b"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: GENERATED
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr:
+                                BinaryExpr
+                                  op: PLUS
+                                  left:
+                                    ColumnRef
+                                      column: "a"
+                                      table: (none)
+                                      schema: (none)
+                                  right:
+                                    Literal
+                                      literal_type: INTEGER
+                                      source: "1"
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -1225,41 +1225,41 @@ class ColumnConstraintName(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT CONSTRAINT nn NOT NULL)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [2 items]
-                        ConstraintNameDeclaration
-                          name: "nn"
-                        ColumnConstraint
-                          kind: NOT_NULL
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [2 items]
+                            ConstraintNameDeclaration
+                              name: "nn"
+                            ColumnConstraint
+                              kind: NOT_NULL
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -1305,7 +1305,7 @@ class TableConstraintPrimaryKey(TestSuite):
                                 column: "a"
                                 table: (none)
                                 schema: (none)
-                            sort_order: ASC
+                            sort_order: NONE
                             nulls_order: NONE
                           OrderingTerm
                             expr:
@@ -1313,7 +1313,7 @@ class TableConstraintPrimaryKey(TestSuite):
                                 column: "b"
                                 table: (none)
                                 schema: (none)
-                            sort_order: ASC
+                            sort_order: NONE
                             nulls_order: NONE
                       fk_columns: (none)
                       check_expr: (none)
@@ -1357,7 +1357,7 @@ class TableConstraintPrimaryKey(TestSuite):
                                 column: "a"
                                 table: (none)
                                 schema: (none)
-                            sort_order: ASC
+                            sort_order: NONE
                             nulls_order: NONE
                       fk_columns: (none)
                       check_expr: (none)
@@ -1409,7 +1409,7 @@ class TableConstraintUnique(TestSuite):
                                 column: "a"
                                 table: (none)
                                 schema: (none)
-                            sort_order: ASC
+                            sort_order: NONE
                             nulls_order: NONE
                           OrderingTerm
                             expr:
@@ -1417,7 +1417,7 @@ class TableConstraintUnique(TestSuite):
                                 column: "b"
                                 table: (none)
                                 schema: (none)
-                            sort_order: ASC
+                            sort_order: NONE
                             nulls_order: NONE
                       fk_columns: (none)
                       check_expr: (none)
@@ -1649,220 +1649,220 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT REFERENCES other(id) ON DELETE SET DEFAULT)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: REFERENCES
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause:
-                            ForeignKeyClause
-                              ref_table: "other"
-                              ref_columns:
-                                ExprList [1 items]
-                                  ColumnRef
-                                    column: "id"
-                                    table: (none)
-                                    schema: (none)
-                              options:
-                                ForeignKeyOptionList [1 items]
-                                  ForeignKeyOption
-                                    kind: ON_DELETE
-                                    action: SET_DEFAULT
-                                    match_name: (none)
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: REFERENCES
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
-              table_constraints: (none)
-              as_select: (none)
-""",
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause:
+                                ForeignKeyClause
+                                  ref_table: "other"
+                                  ref_columns:
+                                    ExprList [1 items]
+                                      ColumnRef
+                                        column: "id"
+                                        table: (none)
+                                        schema: (none)
+                                  options:
+                                    ForeignKeyOptionList [1 items]
+                                      ForeignKeyOption
+                                        kind: ON_DELETE
+                                        action: SET_DEFAULT
+                                        match_name: (none)
+                                  deferrable: UNSET
+                                  initial_defer: UNSET
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_fk_on_delete_restrict(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT REFERENCES other(id) ON DELETE RESTRICT)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: REFERENCES
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause:
-                            ForeignKeyClause
-                              ref_table: "other"
-                              ref_columns:
-                                ExprList [1 items]
-                                  ColumnRef
-                                    column: "id"
-                                    table: (none)
-                                    schema: (none)
-                              options:
-                                ForeignKeyOptionList [1 items]
-                                  ForeignKeyOption
-                                    kind: ON_DELETE
-                                    action: RESTRICT
-                                    match_name: (none)
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: REFERENCES
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
-              table_constraints: (none)
-              as_select: (none)
-""",
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause:
+                                ForeignKeyClause
+                                  ref_table: "other"
+                                  ref_columns:
+                                    ExprList [1 items]
+                                      ColumnRef
+                                        column: "id"
+                                        table: (none)
+                                        schema: (none)
+                                  options:
+                                    ForeignKeyOptionList [1 items]
+                                      ForeignKeyOption
+                                        kind: ON_DELETE
+                                        action: RESTRICT
+                                        match_name: (none)
+                                  deferrable: UNSET
+                                  initial_defer: UNSET
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_fk_on_update_set_default(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT REFERENCES other(id) ON UPDATE SET DEFAULT)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: REFERENCES
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause:
-                            ForeignKeyClause
-                              ref_table: "other"
-                              ref_columns:
-                                ExprList [1 items]
-                                  ColumnRef
-                                    column: "id"
-                                    table: (none)
-                                    schema: (none)
-                              options:
-                                ForeignKeyOptionList [1 items]
-                                  ForeignKeyOption
-                                    kind: ON_UPDATE
-                                    action: SET_DEFAULT
-                                    match_name: (none)
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: REFERENCES
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
-              table_constraints: (none)
-              as_select: (none)
-""",
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause:
+                                ForeignKeyClause
+                                  ref_table: "other"
+                                  ref_columns:
+                                    ExprList [1 items]
+                                      ColumnRef
+                                        column: "id"
+                                        table: (none)
+                                        schema: (none)
+                                  options:
+                                    ForeignKeyOptionList [1 items]
+                                      ForeignKeyOption
+                                        kind: ON_UPDATE
+                                        action: SET_DEFAULT
+                                        match_name: (none)
+                                  deferrable: UNSET
+                                  initial_defer: UNSET
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_fk_on_update_restrict(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT REFERENCES other(id) ON UPDATE RESTRICT)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: REFERENCES
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause:
-                            ForeignKeyClause
-                              ref_table: "other"
-                              ref_columns:
-                                ExprList [1 items]
-                                  ColumnRef
-                                    column: "id"
-                                    table: (none)
-                                    schema: (none)
-                              options:
-                                ForeignKeyOptionList [1 items]
-                                  ForeignKeyOption
-                                    kind: ON_UPDATE
-                                    action: RESTRICT
-                                    match_name: (none)
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: REFERENCES
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
-              table_constraints: (none)
-              as_select: (none)
-""",
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause:
+                                ForeignKeyClause
+                                  ref_table: "other"
+                                  ref_columns:
+                                    ExprList [1 items]
+                                      ColumnRef
+                                        column: "id"
+                                        table: (none)
+                                        schema: (none)
+                                  options:
+                                    ForeignKeyOptionList [1 items]
+                                      ForeignKeyOption
+                                        kind: ON_UPDATE
+                                        action: RESTRICT
+                                        match_name: (none)
+                                  deferrable: UNSET
+                                  initial_defer: UNSET
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -1873,117 +1873,117 @@ class OnConflictClause(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT PRIMARY KEY ON CONFLICT ROLLBACK)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: ROLLBACK
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: ROLLBACK
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_on_conflict_column_not_null(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT NOT NULL ON CONFLICT ABORT)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: NOT_NULL
-                          onconf: ABORT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: NOT_NULL
+                              onconf: ABORT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_on_conflict_column_unique(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT UNIQUE ON CONFLICT FAIL)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: UNIQUE
-                          onconf: FAIL
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: UNIQUE
+                              onconf: FAIL
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_on_conflict_table_pk(self):
@@ -2019,7 +2019,7 @@ class OnConflictClause(TestSuite):
                                 column: "a"
                                 table: (none)
                                 schema: (none)
-                            sort_order: ASC
+                            sort_order: NONE
                             nulls_order: NONE
                       fk_columns: (none)
                       check_expr: (none)
@@ -2061,7 +2061,7 @@ class OnConflictClause(TestSuite):
                                 column: "a"
                                 table: (none)
                                 schema: (none)
-                            sort_order: ASC
+                            sort_order: NONE
                             nulls_order: NONE
                       fk_columns: (none)
                       check_expr: (none)
@@ -2078,72 +2078,72 @@ class MultipleColumnConstraints(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT NOT NULL DEFAULT 0 UNIQUE)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [3 items]
-                        ColumnConstraint
-                          kind: NOT_NULL
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-                        ColumnConstraint
-                          kind: DEFAULT
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr:
-                            Literal
-                              literal_type: INTEGER
-                              source: "0"
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-                        ColumnConstraint
-                          kind: UNIQUE
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [3 items]
+                            ColumnConstraint
+                              kind: NOT_NULL
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                            ColumnConstraint
+                              kind: DEFAULT
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr:
+                                Literal
+                                  literal_type: INTEGER
+                                  source: "0"
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                            ColumnConstraint
+                              kind: UNIQUE
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -2185,7 +2185,7 @@ class NamedTableConstraints(TestSuite):
                                 column: "a"
                                 table: (none)
                                 schema: (none)
-                            sort_order: ASC
+                            sort_order: NONE
                             nulls_order: NONE
                       fk_columns: (none)
                       check_expr: (none)
@@ -2299,56 +2299,56 @@ class GeneratedColumn(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT, b GENERATED ALWAYS AS (a * 2) STORED)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [2 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints: (none)
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "b"
-                    type_name: (none)
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: GENERATED
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: STORED
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: TRUE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr:
-                            BinaryExpr
-                              op: STAR
-                              left:
-                                ColumnRef
-                                  column: "a"
-                                  table: (none)
-                                  schema: (none)
-                              right:
-                                Literal
-                                  literal_type: INTEGER
-                                  source: "2"
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [2 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints: (none)
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "b"
+                        type_name: (none)
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: GENERATED
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: STORED
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: TRUE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr:
+                                BinaryExpr
+                                  op: STAR
+                                  left:
+                                    ColumnRef
+                                      column: "a"
+                                      table: (none)
+                                      schema: (none)
+                                  right:
+                                    Literal
+                                      literal_type: INTEGER
+                                      source: "2"
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -2359,39 +2359,39 @@ class ColumnConstraintNull(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT NULL)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: NULL
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: NULL
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -2402,253 +2402,254 @@ class ColumnConstraintDeclarations(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a CONSTRAINT c CHECK(a > 0) CHECK(a < 9))",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: (none)
-                    constraints:
-                      ColumnConstraintList [3 items]
-                        ConstraintNameDeclaration
-                          name: "c"
-                        ColumnConstraint
-                          kind: CHECK
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr:
-                            BinaryExpr
-                              op: GT
-                              left:
-                                ColumnRef
-                                  column: "a"
-                                  table: (none)
-                                  schema: (none)
-                              right:
-                                Literal
-                                  literal_type: INTEGER
-                                  source: "0"
-                          generated_expr: (none)
-                          fk_clause: (none)
-                        ColumnConstraint
-                          kind: CHECK
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr:
-                            BinaryExpr
-                              op: LT
-                              left:
-                                ColumnRef
-                                  column: "a"
-                                  table: (none)
-                                  schema: (none)
-                              right:
-                                Literal
-                                  literal_type: INTEGER
-                                  source: "9"
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: (none)
+                        constraints:
+                          ColumnConstraintList [3 items]
+                            ConstraintNameDeclaration
+                              name: "c"
+                            ColumnConstraint
+                              kind: CHECK
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr:
+                                BinaryExpr
+                                  op: GT
+                                  left:
+                                    ColumnRef
+                                      column: "a"
+                                      table: (none)
+                                      schema: (none)
+                                  right:
+                                    Literal
+                                      literal_type: INTEGER
+                                      source: "0"
+                              generated_expr: (none)
+                              fk_clause: (none)
+                            ColumnConstraint
+                              kind: CHECK
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr:
+                                BinaryExpr
+                                  op: LT
+                                  left:
+                                    ColumnRef
+                                      column: "a"
+                                      table: (none)
+                                      schema: (none)
+                                  right:
+                                    Literal
+                                      literal_type: INTEGER
+                                      source: "9"
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_overwritten_and_unused_names(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a CONSTRAINT old CONSTRAINT c CHECK(a) CONSTRAINT unused)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: (none)
-                    constraints:
-                      ColumnConstraintList [4 items]
-                        ConstraintNameDeclaration
-                          name: "old"
-                        ConstraintNameDeclaration
-                          name: "c"
-                        ColumnConstraint
-                          kind: CHECK
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr:
-                            ColumnRef
-                              column: "a"
-                              table: (none)
-                              schema: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-                        ConstraintNameDeclaration
-                          name: "unused"
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: (none)
+                        constraints:
+                          ColumnConstraintList [4 items]
+                            ConstraintNameDeclaration
+                              name: "old"
+                            ConstraintNameDeclaration
+                              name: "c"
+                            ColumnConstraint
+                              kind: CHECK
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr:
+                                ColumnRef
+                                  column: "a"
+                                  table: (none)
+                                  schema: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                            ConstraintNameDeclaration
+                              name: "unused"
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_declarations_stay_in_their_column(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a CONSTRAINT unused, b CHECK(b))",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [2 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: (none)
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ConstraintNameDeclaration
-                          name: "unused"
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "b"
-                    type_name: (none)
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: CHECK
-                          onconf: DEFAULT
-                          sort_order: ASC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr:
-                            ColumnRef
-                              column: "b"
-                              table: (none)
-                              schema: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [2 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: (none)
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ConstraintNameDeclaration
+                              name: "unused"
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "b"
+                        type_name: (none)
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: CHECK
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr:
+                                ColumnRef
+                                  column: "b"
+                                  table: (none)
+                                  schema: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_alter_add_column_declarations(self):
         return DiffTestBlueprint(
             sql="ALTER TABLE t ADD COLUMN a CONSTRAINT old CONSTRAINT c CHECK(a) CHECK(a > 0)",
             out="""\
-            AlterTableStmt
-              op: ADD_COLUMN
-              target:
-                QualifiedName
-                  object_name:
-                    IdentName
-                      source: "t"
-                  schema: (none)
-              new_name: (none)
-              old_name: (none)
-              column:
-                ColumnDef
-                  column_name:
-                    IdentName
-                      source: "a"
-                  type_name: (none)
-                  constraints:
-                    ColumnConstraintList [4 items]
-                      ConstraintNameDeclaration
-                        name: "old"
-                      ConstraintNameDeclaration
-                        name: "c"
-                      ColumnConstraint
-                        kind: CHECK
-                        onconf: DEFAULT
-                        sort_order: ASC
-                        is_autoincrement: FALSE
-                        collation_name: (none)
-                        generated_storage: VIRTUAL
-                        deferrable: UNSET
-                        initial_defer: UNSET
-                        default_has_parens: FALSE
-                        generated_always: FALSE
-                        default_expr: (none)
-                        check_expr:
-                          ColumnRef
-                            column: "a"
-                            table: (none)
-                            schema: (none)
-                        generated_expr: (none)
-                        fk_clause: (none)
-                      ColumnConstraint
-                        kind: CHECK
-                        onconf: DEFAULT
-                        sort_order: ASC
-                        is_autoincrement: FALSE
-                        collation_name: (none)
-                        generated_storage: VIRTUAL
-                        deferrable: UNSET
-                        initial_defer: UNSET
-                        default_has_parens: FALSE
-                        generated_always: FALSE
-                        default_expr: (none)
-                        check_expr:
-                          BinaryExpr
-                            op: GT
-                            left:
+                AlterTableStmt
+                  op: ADD_COLUMN
+                  has_column_kw: TRUE
+                  target:
+                    QualifiedName
+                      object_name:
+                        IdentName
+                          source: "t"
+                      schema: (none)
+                  new_name: (none)
+                  old_name: (none)
+                  column:
+                    ColumnDef
+                      column_name:
+                        IdentName
+                          source: "a"
+                      type_name: (none)
+                      constraints:
+                        ColumnConstraintList [4 items]
+                          ConstraintNameDeclaration
+                            name: "old"
+                          ConstraintNameDeclaration
+                            name: "c"
+                          ColumnConstraint
+                            kind: CHECK
+                            onconf: DEFAULT
+                            sort_order: NONE
+                            is_autoincrement: FALSE
+                            collation_name: (none)
+                            generated_storage: NONE
+                            deferrable: UNSET
+                            initial_defer: UNSET
+                            default_has_parens: FALSE
+                            generated_always: FALSE
+                            default_expr: (none)
+                            check_expr:
                               ColumnRef
                                 column: "a"
                                 table: (none)
                                 schema: (none)
-                            right:
-                              Literal
-                                literal_type: INTEGER
-                                source: "0"
-                        generated_expr: (none)
-                        fk_clause: (none)
-""",
+                            generated_expr: (none)
+                            fk_clause: (none)
+                          ColumnConstraint
+                            kind: CHECK
+                            onconf: DEFAULT
+                            sort_order: NONE
+                            is_autoincrement: FALSE
+                            collation_name: (none)
+                            generated_storage: NONE
+                            deferrable: UNSET
+                            initial_defer: UNSET
+                            default_has_parens: FALSE
+                            generated_always: FALSE
+                            default_expr: (none)
+                            check_expr:
+                              BinaryExpr
+                                op: GT
+                                left:
+                                  ColumnRef
+                                    column: "a"
+                                    table: (none)
+                                    schema: (none)
+                                right:
+                                  Literal
+                                    literal_type: INTEGER
+                                    source: "0"
+                            generated_expr: (none)
+                            fk_clause: (none)
+            """,
         )
 
 

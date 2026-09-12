@@ -39,7 +39,7 @@ class AggregateFunctionOrderBy(TestSuite):
                                   column: "name"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                         filter_clause: (none)
                         over_clause: (none)
@@ -148,7 +148,7 @@ class AggregateFunctionOrderBy(TestSuite):
                                   column: "name"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                         filter_clause: (none)
                         over_clause: (none)
@@ -245,7 +245,7 @@ class AggregateFunctionOrderBy(TestSuite):
                                   column: "last_name"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                             OrderingTerm
                               expr:
@@ -253,7 +253,7 @@ class AggregateFunctionOrderBy(TestSuite):
                                   column: "first_name"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                         filter_clause: (none)
                         over_clause: (none)

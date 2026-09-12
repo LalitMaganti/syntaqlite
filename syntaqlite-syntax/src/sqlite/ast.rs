@@ -256,6 +256,7 @@ pub enum BinaryOp {
     Concat = 17,
     Ptr = 18,
     Ptr2 = 19,
+    NeAngle = 20,
 }
 
 impl BinaryOp {
@@ -281,6 +282,7 @@ impl BinaryOp {
             BinaryOp::Concat => "CONCAT",
             BinaryOp::Ptr => "PTR",
             BinaryOp::Ptr2 => "PTR2",
+            BinaryOp::NeAngle => "NE_ANGLE",
         }
     }
 }
@@ -450,13 +452,15 @@ impl InitialDeferMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum GeneratedColumnStorage {
-    Virtual = 0,
-    Stored = 1,
+    None = 0,
+    Virtual = 1,
+    Stored = 2,
 }
 
 impl GeneratedColumnStorage {
     pub fn as_str(&self) -> &'static str {
         match self {
+            GeneratedColumnStorage::None => "NONE",
             GeneratedColumnStorage::Virtual => "VIRTUAL",
             GeneratedColumnStorage::Stored => "STORED",
         }
@@ -711,6 +715,7 @@ pub enum TransactionOp {
     Begin = 0,
     Commit = 1,
     Rollback = 2,
+    End = 3,
 }
 
 impl TransactionOp {
@@ -719,6 +724,7 @@ impl TransactionOp {
             TransactionOp::Begin => "BEGIN",
             TransactionOp::Commit => "COMMIT",
             TransactionOp::Rollback => "ROLLBACK",
+            TransactionOp::End => "END",
         }
     }
 }
@@ -744,13 +750,15 @@ impl SavepointOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum SortOrder {
-    Asc = 0,
-    Desc = 1,
+    None = 0,
+    Asc = 1,
+    Desc = 2,
 }
 
 impl SortOrder {
     pub fn as_str(&self) -> &'static str {
         match self {
+            SortOrder::None => "NONE",
             SortOrder::Asc => "ASC",
             SortOrder::Desc => "DESC",
         }
@@ -838,14 +846,16 @@ impl JoinModifierKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum TriggerTiming {
-    Before = 0,
-    After = 1,
-    InsteadOf = 2,
+    None = 0,
+    Before = 1,
+    After = 2,
+    InsteadOf = 3,
 }
 
 impl TriggerTiming {
     pub fn as_str(&self) -> &'static str {
         match self {
+            TriggerTiming::None => "NONE",
             TriggerTiming::Before => "BEFORE",
             TriggerTiming::After => "AFTER",
             TriggerTiming::InsteadOf => "INSTEAD_OF",
@@ -4786,6 +4796,9 @@ impl<'a> AlterTableStmt<'a> {
     pub fn op(&self) -> AlterOp {
         self.raw.op
     }
+    pub fn has_column_kw(&self) -> bool {
+        self.raw.has_column_kw == super::ffi::Bool::True
+    }
     pub fn target(&self) -> Option<QualifiedName<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.target)
     }
@@ -4870,6 +4883,9 @@ impl<'a> TransactionStmt<'a> {
     pub fn trans_type(&self) -> TransactionType {
         self.raw.trans_type
     }
+    pub fn has_transaction(&self) -> bool {
+        self.raw.has_transaction == super::ffi::Bool::True
+    }
     pub fn name(&self) -> &'a str {
         self.stmt_result.span_expanded_text(self.raw.name)
     }
@@ -4944,6 +4960,12 @@ impl<'a> SavepointStmt<'a> {
     }
     pub fn savepoint_name(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.savepoint_name)
+    }
+    pub fn has_savepoint(&self) -> bool {
+        self.raw.has_savepoint == super::ffi::Bool::True
+    }
+    pub fn has_transaction(&self) -> bool {
+        self.raw.has_transaction == super::ffi::Bool::True
     }
     pub fn transaction_name(&self) -> &'a str {
         self.stmt_result
@@ -5888,6 +5910,9 @@ impl<'a> CreateTriggerStmt<'a> {
     pub fn timing(&self) -> TriggerTiming {
         self.raw.timing
     }
+    pub fn for_each_row(&self) -> bool {
+        self.raw.for_each_row == super::ffi::Bool::True
+    }
     pub fn event(&self) -> Option<TriggerEvent<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.event)
     }
@@ -6200,6 +6225,9 @@ impl<'a> AttachStmt<'a> {
     pub fn node_id(&self) -> AttachStmtId {
         AttachStmtId(self.id)
     }
+    pub fn has_database(&self) -> bool {
+        self.raw.has_database == super::ffi::Bool::True
+    }
     pub fn filename(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.filename)
     }
@@ -6274,6 +6302,9 @@ impl<'a> DetachStmt<'a> {
     /// The typed node ID of this node.
     pub fn node_id(&self) -> DetachStmtId {
         DetachStmtId(self.id)
+    }
+    pub fn has_database(&self) -> bool {
+        self.raw.has_database == super::ffi::Bool::True
     }
     pub fn db_name(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.db_name)

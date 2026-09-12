@@ -614,6 +614,7 @@ static inline uint32_t synq_parse_drop_stmt(
 
 static inline uint32_t synq_parse_alter_table_stmt(SynqParseCtx* ctx,
                                                    SyntaqliteAlterOp op,
+                                                   SyntaqliteBool has_column_kw,
                                                    uint32_t target,
                                                    uint32_t new_name,
                                                    uint32_t old_name,
@@ -622,6 +623,7 @@ static inline uint32_t synq_parse_alter_table_stmt(SynqParseCtx* ctx,
       ctx,
       &(SyntaqliteAlterTableStmt){.tag = SYNTAQLITE_NODE_ALTER_TABLE_STMT,
                                   .op = op,
+                                  .has_column_kw = has_column_kw,
                                   .target = target,
                                   .new_name = new_name,
                                   .old_name = old_name,
@@ -633,12 +635,14 @@ static inline uint32_t synq_parse_transaction_stmt(
     SynqParseCtx* ctx,
     SyntaqliteTransactionOp op,
     SyntaqliteTransactionType trans_type,
+    SyntaqliteBool has_transaction,
     SyntaqliteTextSpan name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteTransactionStmt){.tag = SYNTAQLITE_NODE_TRANSACTION_STMT,
                                    .op = op,
                                    .trans_type = trans_type,
+                                   .has_transaction = has_transaction,
                                    .name = name},
       (uint32_t)sizeof(SyntaqliteTransactionStmt));
 }
@@ -647,12 +651,16 @@ static inline uint32_t synq_parse_savepoint_stmt(
     SynqParseCtx* ctx,
     SyntaqliteSavepointOp op,
     uint32_t savepoint_name,
+    SyntaqliteBool has_savepoint,
+    SyntaqliteBool has_transaction,
     SyntaqliteTextSpan transaction_name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteSavepointStmt){.tag = SYNTAQLITE_NODE_SAVEPOINT_STMT,
                                  .op = op,
                                  .savepoint_name = savepoint_name,
+                                 .has_savepoint = has_savepoint,
+                                 .has_transaction = has_transaction,
                                  .transaction_name = transaction_name},
       (uint32_t)sizeof(SyntaqliteSavepointStmt));
 }
@@ -834,6 +842,7 @@ static inline uint32_t synq_parse_create_trigger_stmt(
     SyntaqliteTemporaryQualifier temporary,
     SyntaqliteBool if_not_exists,
     SyntaqliteTriggerTiming timing,
+    SyntaqliteBool for_each_row,
     uint32_t event,
     uint32_t table,
     uint32_t when_expr,
@@ -846,6 +855,7 @@ static inline uint32_t synq_parse_create_trigger_stmt(
                                      .temporary = temporary,
                                      .if_not_exists = if_not_exists,
                                      .timing = timing,
+                                     .for_each_row = for_each_row,
                                      .event = event,
                                      .table = table,
                                      .when_expr = when_expr,
@@ -902,12 +912,14 @@ static inline uint32_t synq_parse_analyze_or_reindex_stmt(
 }
 
 static inline uint32_t synq_parse_attach_stmt(SynqParseCtx* ctx,
+                                              SyntaqliteBool has_database,
                                               uint32_t filename,
                                               uint32_t db_name,
                                               uint32_t key) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteAttachStmt){.tag = SYNTAQLITE_NODE_ATTACH_STMT,
+                              .has_database = has_database,
                               .filename = filename,
                               .db_name = db_name,
                               .key = key},
@@ -915,10 +927,12 @@ static inline uint32_t synq_parse_attach_stmt(SynqParseCtx* ctx,
 }
 
 static inline uint32_t synq_parse_detach_stmt(SynqParseCtx* ctx,
+                                              SyntaqliteBool has_database,
                                               uint32_t db_name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteDetachStmt){.tag = SYNTAQLITE_NODE_DETACH_STMT,
+                              .has_database = has_database,
                               .db_name = db_name},
       (uint32_t)sizeof(SyntaqliteDetachStmt));
 }

@@ -736,7 +736,7 @@ class ParenBreakFormat(TestSuite):
                   CHECK(
                     a > 0
                     AND b > 0
-                    AND a != b
+                    AND a <> b
                   )
                 );
             """,
@@ -815,7 +815,7 @@ class CanonicalSpellingFormat(TestSuite):
         return DiffTestBlueprint(
             sql="create trigger tr after insert on t for each row begin select 1; end",
             out="""\
-                CREATE TRIGGER tr AFTER INSERT ON t
+                CREATE TRIGGER tr AFTER INSERT ON t FOR EACH ROW
                 BEGIN
                   SELECT 1;
                 END;
@@ -826,7 +826,7 @@ class CanonicalSpellingFormat(TestSuite):
         return DiffTestBlueprint(
             sql="create trigger tr insert on t begin select 1; end",
             out="""\
-                CREATE TRIGGER tr BEFORE INSERT ON t
+                CREATE TRIGGER tr INSERT ON t
                 BEGIN
                   SELECT 1;
                 END;
@@ -836,49 +836,61 @@ class CanonicalSpellingFormat(TestSuite):
     def test_begin_commit_drop_transaction(self):
         return DiffTestBlueprint(
             sql="begin transaction; commit transaction;",
-            out="BEGIN;\n\nCOMMIT;",
+            out="""\
+                BEGIN TRANSACTION;
+
+                COMMIT TRANSACTION;
+            """,
         )
 
     def test_end_becomes_commit(self):
         return DiffTestBlueprint(
             sql="end transaction;",
-            out="COMMIT;",
+            out="END TRANSACTION;",
         )
 
     def test_attach_detach_drop_database(self):
         return DiffTestBlueprint(
             sql="attach database 'f' as x; detach database x;",
-            out="ATTACH 'f' AS x;\n\nDETACH x;",
+            out="""\
+                ATTACH DATABASE 'f' AS x;
+
+                DETACH DATABASE x;
+            """,
         )
 
     def test_rename_gains_column(self):
         return DiffTestBlueprint(
             sql="alter table t rename a to b",
-            out="ALTER TABLE t RENAME COLUMN a TO b;",
+            out="ALTER TABLE t RENAME a TO b;",
         )
 
     def test_savepoint_keyword_added(self):
         return DiffTestBlueprint(
             sql="release sp; rollback to sp;",
-            out="RELEASE SAVEPOINT sp;\n\nROLLBACK TO SAVEPOINT sp;",
+            out="""\
+                RELEASE sp;
+
+                ROLLBACK TO sp;
+            """,
         )
 
     def test_generated_column_drops_virtual(self):
         return DiffTestBlueprint(
             sql="create table g(k, a as (1) virtual)",
-            out="CREATE TABLE g(k, a AS (1));",
+            out="CREATE TABLE g(k, a AS (1) VIRTUAL);",
         )
 
     def test_explicit_asc_dropped(self):
         return DiffTestBlueprint(
             sql="select a from t order by a asc",
-            out="SELECT a FROM t ORDER BY a;",
+            out="SELECT a FROM t ORDER BY a ASC;",
         )
 
     def test_ne_operator_canonicalised(self):
         return DiffTestBlueprint(
             sql="select * from t where a <> 1",
-            out="SELECT * FROM t WHERE a != 1;",
+            out="SELECT * FROM t WHERE a <> 1;",
         )
 
     def test_temporary_spelling_is_preserved(self):

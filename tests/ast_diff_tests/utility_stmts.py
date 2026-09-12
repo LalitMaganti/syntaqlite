@@ -147,62 +147,66 @@ class AttachDetachStmts(TestSuite):
         return DiffTestBlueprint(
             sql="ATTACH 'file.db' AS db2",
             out="""\
-            AttachStmt
-              filename:
-                Literal
-                  literal_type: STRING
-                  source: "'file.db'"
-              db_name:
-                ColumnRef
-                  column: "db2"
-                  table: (none)
-                  schema: (none)
-              key: (none)
-""",
+                AttachStmt
+                  has_database: FALSE
+                  filename:
+                    Literal
+                      literal_type: STRING
+                      source: "'file.db'"
+                  db_name:
+                    ColumnRef
+                      column: "db2"
+                      table: (none)
+                      schema: (none)
+                  key: (none)
+            """,
         )
 
     def test_attach_database(self):
         return DiffTestBlueprint(
             sql="ATTACH DATABASE 'file.db' AS db2",
             out="""\
-            AttachStmt
-              filename:
-                Literal
-                  literal_type: STRING
-                  source: "'file.db'"
-              db_name:
-                ColumnRef
-                  column: "db2"
-                  table: (none)
-                  schema: (none)
-              key: (none)
-""",
+                AttachStmt
+                  has_database: TRUE
+                  filename:
+                    Literal
+                      literal_type: STRING
+                      source: "'file.db'"
+                  db_name:
+                    ColumnRef
+                      column: "db2"
+                      table: (none)
+                      schema: (none)
+                  key: (none)
+            """,
         )
 
     def test_detach(self):
         return DiffTestBlueprint(
             sql="DETACH db2",
             out="""\
-            DetachStmt
-              db_name:
-                ColumnRef
-                  column: "db2"
-                  table: (none)
-                  schema: (none)
-""",
+                DetachStmt
+                  has_database: FALSE
+                  db_name:
+                    ColumnRef
+                      column: "db2"
+                      table: (none)
+                      schema: (none)
+            """,
         )
 
     def test_detach_database(self):
         return DiffTestBlueprint(
             sql="DETACH DATABASE db2",
             out="""\
-            DetachStmt
-              db_name:
-                ColumnRef
-                  column: "db2"
-                  table: (none)
-                  schema: (none)
-""",
+                DetachStmt
+                  has_database: TRUE
+                  db_name:
+                    ColumnRef
+                      column: "db2"
+                      table: (none)
+                      schema: (none)
+            """,
         )
 
 
@@ -374,7 +378,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -398,7 +402,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -422,7 +426,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -446,7 +450,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause:
                 BinaryExpr
@@ -481,7 +485,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -512,7 +516,7 @@ class CreateIndexStmts(TestSuite):
                               schema: (none)
                         filter_clause: (none)
                         over_clause: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -536,7 +540,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
                   OrderingTerm
                     expr:

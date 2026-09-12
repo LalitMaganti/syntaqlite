@@ -17,7 +17,7 @@
 %type columnname {SynqColumnNameValue}
 %type ifexists {int}
 %type transtype {int}
-%type trans_opt {SynqParseToken}
+%type trans_opt {SynqTransOptValue}
 %type savepoint_opt {int}
 %type kwcolumn_opt {int}
 
@@ -67,32 +67,35 @@ cmd(A) ::= DROP TRIGGER ifexists(NOERR) fullname(X). {
 
 cmd(A) ::= ALTER TABLE fullname(X) RENAME TO nmorerr(Z). {
     A = synq_parse_alter_table_stmt(pCtx,
-        SYNTAQLITE_ALTER_OP_RENAME_TABLE, X,
+        SYNTAQLITE_ALTER_OP_RENAME_TABLE, SYNTAQLITE_BOOL_FALSE, X,
         Z,
         SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE);
 }
 
-cmd(A) ::= ALTER TABLE fullname(X) RENAME kwcolumn_opt nmorerr(Y) TO nmorerr(Z). {
+cmd(A) ::= ALTER TABLE fullname(X) RENAME kwcolumn_opt(KW) nmorerr(Y) TO nmorerr(Z). {
     A = synq_parse_alter_table_stmt(pCtx,
-        SYNTAQLITE_ALTER_OP_RENAME_COLUMN, X,
+        SYNTAQLITE_ALTER_OP_RENAME_COLUMN,
+        KW ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE, X,
         Z,
         Y,
         SYNTAQLITE_NULL_NODE);
 }
 
-cmd(A) ::= ALTER TABLE fullname(X) DROP kwcolumn_opt nmorerr(Y). {
+cmd(A) ::= ALTER TABLE fullname(X) DROP kwcolumn_opt(KW) nmorerr(Y). {
     A = synq_parse_alter_table_stmt(pCtx,
-        SYNTAQLITE_ALTER_OP_DROP_COLUMN, X,
+        SYNTAQLITE_ALTER_OP_DROP_COLUMN,
+        KW ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE, X,
         SYNTAQLITE_NULL_NODE,
         Y,
         SYNTAQLITE_NULL_NODE);
 }
 
-cmd(A) ::= ALTER TABLE add_column_fullname(F) ADD kwcolumn_opt columnname(Y) carglist(CG). {
+cmd(A) ::= ALTER TABLE add_column_fullname(F) ADD kwcolumn_opt(KW) columnname(Y) carglist(CG). {
     uint32_t col = synq_parse_column_def(pCtx, Y.name, Y.typetoken, CG);
     A = synq_parse_alter_table_stmt(pCtx,
-        SYNTAQLITE_ALTER_OP_ADD_COLUMN, F,
+        SYNTAQLITE_ALTER_OP_ADD_COLUMN,
+        KW ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE, F,
         SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE,
         col);
@@ -124,21 +127,26 @@ cmd(A) ::= BEGIN transtype(Y) trans_opt(T). {
     A = synq_parse_transaction_stmt(pCtx,
         SYNTAQLITE_TRANSACTION_OP_BEGIN,
         (SyntaqliteTransactionType)Y,
-        T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+        T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }
 
-cmd(A) ::= COMMIT|END trans_opt(T). {
+cmd(A) ::= COMMIT|END(X) trans_opt(T). {
+    // END and COMMIT mean the same thing to SQLite but are different text.
     A = synq_parse_transaction_stmt(pCtx,
-        SYNTAQLITE_TRANSACTION_OP_COMMIT,
+        X.type == SYNTAQLITE_TK_END ? SYNTAQLITE_TRANSACTION_OP_END
+                                    : SYNTAQLITE_TRANSACTION_OP_COMMIT,
         SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
-        T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+        T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }
 
 cmd(A) ::= ROLLBACK trans_opt(T). {
     A = synq_parse_transaction_stmt(pCtx,
         SYNTAQLITE_TRANSACTION_OP_ROLLBACK,
         SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
-        T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+        T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }
 
 // ============ Transaction type ============
@@ -162,21 +170,24 @@ transtype(A) ::= EXCLUSIVE. {
 // ============ Transaction option ============
 
 trans_opt(A) ::= . {
-    A.z = NULL; A.n = 0;
+    A.has_transaction = 0;
+    A.name.z = NULL; A.name.n = 0;
 }
 
 trans_opt(A) ::= TRANSACTION. {
-    A.z = NULL; A.n = 0;
+    A.has_transaction = 1;
+    A.name.z = NULL; A.name.n = 0;
 }
 
 trans_opt(A) ::= TRANSACTION nm(X). {
-    A = X;
+    A.has_transaction = 1;
+    A.name = X;
 }
 
 // ============ Savepoint ============
 
 savepoint_opt(A) ::= SAVEPOINT. {
-    A = 0;
+    A = 1;
 }
 
 savepoint_opt(A) ::= . {
@@ -186,17 +197,20 @@ savepoint_opt(A) ::= . {
 cmd(A) ::= SAVEPOINT nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT,
-        X, SYNQ_NO_SPAN);
+        X, SYNTAQLITE_BOOL_TRUE, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN);
 }
 
-cmd(A) ::= RELEASE savepoint_opt nmorerr(X). {
+cmd(A) ::= RELEASE savepoint_opt(S) nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_RELEASE,
-        X, SYNQ_NO_SPAN);
+        X, S ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN);
 }
 
-cmd(A) ::= ROLLBACK trans_opt(T) TO savepoint_opt nmorerr(X). {
+cmd(A) ::= ROLLBACK trans_opt(T) TO savepoint_opt(S) nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO,
-        X, T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+        X, S ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }

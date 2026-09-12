@@ -12,7 +12,7 @@ node BinaryExpr {
           child_prec(left, op) line
           enum_display(op, {
             PLUS="+" MINUS="-" STAR="*" SLASH="/" REM="%"
-            LT="<" GT=">" LE="<=" GE=">=" EQ="=" NE="!="
+            LT="<" GT=">" LE="<=" GE=">=" EQ="=" NE="!=" NE_ANGLE="<>"
             AND="AND" OR="OR" BIT_AND="&" BIT_OR="|"
             LSHIFT="<<" RSHIFT=">>" CONCAT="||" PTR="->" PTR2="->>"
           })

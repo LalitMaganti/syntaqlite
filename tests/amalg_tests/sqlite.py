@@ -108,10 +108,10 @@ class SqliteAmalgBasic(TestSuite):
                         ColumnConstraint
                           kind: PRIMARY_KEY
                           onconf: DEFAULT
-                          sort_order: ASC
+                          sort_order: NONE
                           is_autoincrement: FALSE
                           collation_name: (none)
-                          generated_storage: VIRTUAL
+                          generated_storage: NONE
                           deferrable: UNSET
                           initial_defer: UNSET
                           default_has_parens: FALSE
@@ -130,10 +130,10 @@ class SqliteAmalgBasic(TestSuite):
                         ColumnConstraint
                           kind: NOT_NULL
                           onconf: DEFAULT
-                          sort_order: ASC
+                          sort_order: NONE
                           is_autoincrement: FALSE
                           collation_name: (none)
-                          generated_storage: VIRTUAL
+                          generated_storage: NONE
                           deferrable: UNSET
                           initial_defer: UNSET
                           default_has_parens: FALSE
