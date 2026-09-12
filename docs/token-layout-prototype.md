@@ -1,6 +1,6 @@
 # Token-preserving layout prototype
 
-This is an isolated architecture experiment on branch `prototype-token-layout`, based on formatter PR #364 (`fe511add`). It is not wired into the production Formatter and has not been pushed. The prototype is compiled only by private test, example, and benchmark harnesses; it adds no library API. The original working checkout and PR stack are untouched.
+This is an isolated architecture experiment on branch `prototype-grammar-token-layout`, based directly on main (`ec045e4e`). It replaces the direction explored in PRs #363 and #364 without including their parser attachment API or formatter changes. It is not wired into the production Formatter. The prototype is compiled only by private test, example, and benchmark harnesses; it adds no Rust library API.
 
 ## Mechanism
 
@@ -46,14 +46,14 @@ LIMIT 20, 10;
 - The corpora overlap and contain duplicate inputs. Together, the passing checks represent **19,174 distinct SQL inputs / 38,348 distinct SQL-and-width pairs**, not 49,276 independent SQL programs.
 - Every accepted check compares the complete lexer token sequence, including comments and exact spelling, with the input. It also reparses/reformats the output and requires an identical second pass.
 - 328 library unit tests and six prototype tests pass. The prototype tests include injected comments at every token boundary of 16 seeds, 24 reviewed exact-layout fixtures, comment-boundary indentation, and recursive lists/chains of 64, 256 and 1,024 elements. The reviewed fixtures require exact output, width compliance, token preservation and second-pass stability.
-- Strict Clippy passes for the prototype, tests, example, and benchmark. The earlier public API mismatch was removed by compiling the shared prototype source privately in its harnesses. The public API check now passes with the baseline unchanged. The remaining pre-push checks passed except amalgamation under the default GCC compiler; rerunning that suite with `CC=clang CXX=clang++` passed all 32 tests.
-- A standalone before/after gallery is available at `/tmp/syntaqlite-token-layout-results/layout/gallery.html`.
+- The standalone replacement branch passes `CC=clang CXX=clang++ tools/pre-push`: formatting, strict Clippy, dead-code checks, C checks, unchanged public API snapshots, workspace tests, AST/formatter/amalgamation/Perfetto/grammar integration suites, and the web build. Prototype types are compiled privately in their harnesses.
+- The committed reviewed fixtures are in `syntaqlite/tests/fixtures/token_layout_cases.rs`. The broader historical corpus and before/after gallery are local development artifacts, not part of this checkout.
 
 These checks establish token preservation and stability for those inputs. They do not establish desirable layout in every context, full dialect/macro support, or agreement with existing formatting snapshots.
 
 ## Performance
 
-Criterion release runs use the unchanged four benchmark inputs, reused formatter instances, 30 samples, 0.3 s warmup, and 2 s measurement. Two runs use opposite binary orders. Values below average the run means. Main is the `ec045e4e` snapshot; before is the initial prototype `bf8fa706`. No compilation or test suites ran during measurement.
+Criterion release runs use the unchanged four benchmark inputs, reused formatter instances, 30 samples, 0.3 s warmup, and 2 s measurement. Two runs use opposite binary orders. These historical measurements were collected before rebasing the prototype directly onto main; they are not timings of the replacement PR branch. Values below average the run means. Main is the `ec045e4e` snapshot; before is the initial prototype `bf8fa706`. No compilation or test suites ran during measurement.
 
 | Fixture | Main | Before layout fixes | After layout fixes | After vs main | After vs before |
 |---|---:|---:|---:|---:|---:|
@@ -85,13 +85,13 @@ These measurements are consistent with approximately linear growth for these lis
 
 ## Reproduce
 
-From `/tmp/syntaqlite-token-layout-prototype`:
+From the repository root:
 
 ```bash
 cargo test -p syntaqlite --test token_layout_prototype
 cargo build -p syntaqlite --example token_layout --features serde-json
-python3 /tmp/syntaqlite-token-layout-results/check.py
-python3 /tmp/syntaqlite-token-layout-results/broad_check.py
+cargo bench -p benches --bench main -- '^formatter/'
+cargo bench -p benches --bench main -- '^token_layout_scaling/'
 ```
 
 The `token_layout` example reads one JSON object per line (`sql`, optional `width` and `cflags`) and returns output, token-equality and shift/reduction counters. The external results directory holds input corpus snapshots, complete results, benchmark binaries, and scripts. The modified `tests/benches/benches/main.rs` selects the prototype for formatter benchmarks; it must not be merged as a production benchmark replacement.
