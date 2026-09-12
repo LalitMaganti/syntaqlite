@@ -1,6 +1,6 @@
 enum DropObjectType { TABLE INDEX VIEW TRIGGER }
 enum AlterOp { RENAME_TABLE RENAME_COLUMN DROP_COLUMN ADD_COLUMN }
-enum TransactionType { DEFERRED IMMEDIATE EXCLUSIVE }
+enum TransactionType { NONE DEFERRED IMMEDIATE EXCLUSIVE }
 enum TransactionOp { BEGIN COMMIT ROLLBACK END }
 enum SavepointOp { SAVEPOINT RELEASE ROLLBACK_TO }
 
@@ -73,6 +73,7 @@ node TransactionStmt {
     switch(op) {
       BEGIN {
         "BEGIN"
+        if_enum(trans_type, DEFERRED) { space "DEFERRED" }
         if_enum(trans_type, IMMEDIATE) { space "IMMEDIATE" }
         if_enum(trans_type, EXCLUSIVE) { space "EXCLUSIVE" }
       }

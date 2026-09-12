@@ -41,7 +41,8 @@ static const char* const display_compound_op[] = {
 };
 
 static const char* const display_is_op[] = {
-    "IS", "IS_NOT", "IS_NULL", "NOT_NULL", "IS_NOT_DISTINCT", "IS_DISTINCT",
+    "IS",          "IS_NOT",          "IS_NULL", "NOT_NULL", "IS_NOT_DISTINCT",
+    "IS_DISTINCT", "NOT_NULL_SPACED",
 };
 
 static const char* const display_like_keyword[] = {
@@ -146,6 +147,7 @@ static const char* const display_alter_op[] = {
 };
 
 static const char* const display_transaction_type[] = {
+    "NONE",
     "DEFERRED",
     "IMMEDIATE",
     "EXCLUSIVE",
@@ -841,6 +843,9 @@ static const SyntaqliteFieldMeta field_meta_limit_clause[] = {
      NULL, 0},
     {offsetof(SyntaqliteLimitClause, offset), SYNTAQLITE_FIELD_NODE_ID,
      "offset", NULL, 0},
+    {offsetof(SyntaqliteLimitClause, comma_form), SYNTAQLITE_FIELD_BOOL,
+     "comma_form", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
 };
 
 static const SyntaqliteFieldMeta field_meta_join_modifier[] = {
@@ -1510,7 +1515,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     9,  /* SelectStmt */
     3,  /* OrderingTerm */
     0,  /* OrderByList */
-    2,  /* LimitClause */
+    3,  /* LimitClause */
     1,  /* JoinModifier */
     0,  /* JoinModifierList */
     8,  /* TableRef */

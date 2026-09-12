@@ -225,35 +225,39 @@ class ColumnRefQuoting(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT 'x' FROM ('x')",
             out="""\
-            SelectStmt
-              flags: (none)
-              columns:
-                ResultColumnList [1 items]
-                  ResultColumn
-                    flags: (none)
-                    alias: (none)
-                    alias_as: FALSE
-                    expr:
-                      Literal
-                        literal_type: STRING
-                        source: "'x'"
-              from_clause:
-                TableRef
-                  table_name: "x"
-                  schema: (none)
-                  has_parens: FALSE
-                  alias: (none)
-                  alias_as: FALSE
-                  args: (none)
-                  index_hint: DEFAULT
-                  index_name: (none)
-              where_clause: (none)
-              groupby: (none)
-              having: (none)
-              orderby: (none)
-              limit_clause: (none)
-              window_clause: (none)
-""",
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: (none)
+                        alias: (none)
+                        alias_as: FALSE
+                        expr:
+                          Literal
+                            literal_type: STRING
+                            source: "'x'"
+                  from_clause:
+                    ParenTableSource
+                      source:
+                        TableRef
+                          table_name: "x"
+                          schema: (none)
+                          has_parens: FALSE
+                          alias: (none)
+                          alias_as: FALSE
+                          args: (none)
+                          index_hint: DEFAULT
+                          index_name: (none)
+                      alias: (none)
+                      alias_as: FALSE
+                  where_clause: (none)
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause: (none)
+                  window_clause: (none)
+            """,
         )
 
     def test_escaped_quotes_dump_identifier_value(self):

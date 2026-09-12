@@ -73,30 +73,30 @@ class IsExprBasic(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT 1 NOT NULL",
             out="""\
-            SelectStmt
-              flags: (none)
-              columns:
-                ResultColumnList [1 items]
-                  ResultColumn
-                    flags: (none)
-                    alias: (none)
-                    alias_as: FALSE
-                    expr:
-                      IsExpr
-                        op: NOT_NULL
-                        left:
-                          Literal
-                            literal_type: INTEGER
-                            source: "1"
-                        right: (none)
-              from_clause: (none)
-              where_clause: (none)
-              groupby: (none)
-              having: (none)
-              orderby: (none)
-              limit_clause: (none)
-              window_clause: (none)
-""",
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: (none)
+                        alias: (none)
+                        alias_as: FALSE
+                        expr:
+                          IsExpr
+                            op: NOT_NULL_SPACED
+                            left:
+                              Literal
+                                literal_type: INTEGER
+                                source: "1"
+                            right: (none)
+                  from_clause: (none)
+                  where_clause: (none)
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause: (none)
+                  window_clause: (none)
+            """,
         )
 
     def test_is_null(self):

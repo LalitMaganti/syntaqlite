@@ -705,11 +705,12 @@ class OrderingTerm:
 class LimitClause:
     """AST node: LimitClause"""
 
-    __slots__ = ("limit", "offset")
+    __slots__ = ("limit", "offset", "comma_form")
 
     def __init__(self, d: dict):
         self.limit: Expr | None = _wrap(d.get("limit"))
         self.offset: Expr | None = _wrap(d.get("offset"))
+        self.comma_form: bool = d["comma_form"]
 
     def __repr__(self):
         return "LimitClause(...)"

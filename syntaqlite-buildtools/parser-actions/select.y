@@ -147,13 +147,14 @@ limit_opt(A) ::= . {
 }
 
 limit_opt(A) ::= LIMIT expr(B). {
-    A = synq_parse_limit_clause(pCtx, B, SYNTAQLITE_NULL_NODE);
+    A = synq_parse_limit_clause(pCtx, B, SYNTAQLITE_NULL_NODE,
+                                SYNTAQLITE_BOOL_FALSE);
 }
 
 limit_opt(A) ::= LIMIT expr(B) OFFSET expr(C). {
-    A = synq_parse_limit_clause(pCtx, B, C);
+    A = synq_parse_limit_clause(pCtx, B, C, SYNTAQLITE_BOOL_FALSE);
 }
 
 limit_opt(A) ::= LIMIT expr(B) COMMA expr(C). {
-    A = synq_parse_limit_clause(pCtx, C, B);
+    A = synq_parse_limit_clause(pCtx, C, B, SYNTAQLITE_BOOL_TRUE);
 }

@@ -370,12 +370,12 @@ class TransactionControl(TestSuite):
         return DiffTestBlueprint(
             sql="BEGIN",
             out="""\
-            TransactionStmt
-              op: BEGIN
-              trans_type: DEFERRED
-              has_transaction: FALSE
-              name: (none)
-""",
+                TransactionStmt
+                  op: BEGIN
+                  trans_type: NONE
+                  has_transaction: FALSE
+                  name: (none)
+            """,
         )
 
     def test_begin_deferred(self):
@@ -418,36 +418,36 @@ class TransactionControl(TestSuite):
         return DiffTestBlueprint(
             sql="COMMIT",
             out="""\
-            TransactionStmt
-              op: COMMIT
-              trans_type: DEFERRED
-              has_transaction: FALSE
-              name: (none)
-""",
+                TransactionStmt
+                  op: COMMIT
+                  trans_type: NONE
+                  has_transaction: FALSE
+                  name: (none)
+            """,
         )
 
     def test_end(self):
         return DiffTestBlueprint(
             sql="END",
             out="""\
-            TransactionStmt
-              op: END
-              trans_type: DEFERRED
-              has_transaction: FALSE
-              name: (none)
-""",
+                TransactionStmt
+                  op: END
+                  trans_type: NONE
+                  has_transaction: FALSE
+                  name: (none)
+            """,
         )
 
     def test_rollback(self):
         return DiffTestBlueprint(
             sql="ROLLBACK",
             out="""\
-            TransactionStmt
-              op: ROLLBACK
-              trans_type: DEFERRED
-              has_transaction: FALSE
-              name: (none)
-""",
+                TransactionStmt
+                  op: ROLLBACK
+                  trans_type: NONE
+                  has_transaction: FALSE
+                  name: (none)
+            """,
         )
 
 
