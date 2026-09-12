@@ -48,10 +48,15 @@ _BASELINE_NAME = "baseline.json"
 _TRIAGE_NAME = "triage.md"
 
 
-def _harvest(root_dir: Path, filter_pattern: Optional[str]) -> List[Tuple[str, str]]:
-    """Collect (name, sql) from the source suites, deduplicated by SQL text."""
+def _harvest(root_dir: Path, filter_pattern: Optional[str]) -> List[dict]:
+    """Collect corpus entries from the source suites, deduplicated by SQL.
+
+    A blueprint's cflags and version travel with its SQL: without them a
+    statement that needs, say, ordered-set aggregates looks like a parse
+    failure rather than a measurement.
+    """
     seen = set()
-    corpus: List[Tuple[str, str]] = []
+    corpus: List[dict] = []
     for test_dir in _SOURCE_DIRS:
         tag = test_dir.rsplit("/", 1)[-1].replace("_diff_tests", "")
         for name, blueprint in load_all_tests(root_dir, filter_pattern=None, test_dir=test_dir):
@@ -59,10 +64,15 @@ def _harvest(root_dir: Path, filter_pattern: Optional[str]) -> List[Tuple[str, s
             if not sql or sql in seen:
                 continue
             seen.add(sql)
-            corpus.append((f"{tag}/{name}", sql))
+            entry = {"name": f"{tag}/{name}", "sql": sql}
+            if getattr(blueprint, "cflags", None):
+                entry["cflags"] = list(blueprint.cflags)
+            if getattr(blueprint, "version", None):
+                entry["version"] = blueprint.version
+            corpus.append(entry)
     if filter_pattern:
         pat = re.compile(filter_pattern, re.IGNORECASE)
-        corpus = [(n, s) for n, s in corpus if pat.search(n)]
+        corpus = [e for e in corpus if pat.search(e["name"])]
     return corpus
 
 
@@ -184,8 +194,8 @@ def main(argv: List[str]) -> int:
 
     corpus_path = out_dir / "corpus.jsonl"
     with corpus_path.open("w", encoding="utf-8") as handle:
-        for name, sql in corpus:
-            handle.write(json.dumps({"name": name, "sql": sql}) + "\n")
+        for entry in corpus:
+            handle.write(json.dumps(entry) + "\n")
 
     records, summary = _run_harness(root_dir, corpus_path)
     if summary:
