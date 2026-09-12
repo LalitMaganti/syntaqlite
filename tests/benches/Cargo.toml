@@ -26,4 +26,5 @@ harness = false
 syntaqlite = { path = "../../syntaqlite", features = ["lsp"] }
 
 [dev-dependencies]
+syntaqlite-syntax = { path = "../../syntaqlite-syntax" }
 criterion = "0.5"

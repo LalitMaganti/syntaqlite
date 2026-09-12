@@ -1,6 +1,8 @@
 //! Structural token-layout experiment: preserve lexical identity and converge.
 #![cfg(all(feature = "fmt", feature = "sqlite"))]
-use syntaqlite::fmt::token_layout_prototype::TokenFormatter;
+#[path = "support/token_layout.rs"]
+mod fmt;
+use fmt::token_layout_prototype::TokenFormatter;
 use syntaqlite_syntax::Tokenizer;
 
 fn tokens(sql: &str) -> Vec<String> {

@@ -6,6 +6,9 @@ use std::fmt::Write;
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
 use syntaqlite::ParseOutcome;
 
+#[path = "../../../syntaqlite/tests/support/token_layout.rs"]
+mod fmt;
+
 // ── SQL fixtures ────────────────────────────────────────────────────────
 
 /// ~45 B — single simple SELECT
@@ -190,7 +193,7 @@ fn bench_formatter(c: &mut Criterion) {
     for f in &fixtures {
         group.throughput(Throughput::Bytes(f.sql.len() as u64));
         group.bench_with_input(BenchmarkId::from_parameter(f.name), &f.sql, |b, sql| {
-            let mut fmt = syntaqlite::fmt::token_layout_prototype::TokenFormatter::default();
+            let mut fmt = fmt::token_layout_prototype::TokenFormatter::default();
             b.iter(|| {
                 black_box(fmt.format(black_box(sql), 80).unwrap());
             });
@@ -258,7 +261,7 @@ fn bench_token_layout_scaling(c: &mut Criterion) {
                 _ => format!("SELECT {};", vec!["column_name"; count].join(" + ")),
             };
             group.throughput(Throughput::Bytes(sql.len() as u64));
-            let mut formatter = syntaqlite::fmt::token_layout_prototype::TokenFormatter::default();
+            let mut formatter = fmt::token_layout_prototype::TokenFormatter::default();
             group.bench_with_input(BenchmarkId::new(kind, count), &sql, |b, sql| {
                 b.iter(|| {
                     black_box(

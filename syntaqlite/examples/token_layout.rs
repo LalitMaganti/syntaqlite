@@ -1,7 +1,9 @@
 //! Batch harness for the isolated token layout experiment.
 #![allow(clippy::all, clippy::pedantic)]
 use std::io::{self, BufRead};
-use syntaqlite::fmt::token_layout_prototype::TokenFormatter;
+#[path = "../tests/support/token_layout.rs"]
+mod fmt;
+use fmt::token_layout_prototype::TokenFormatter;
 fn main() {
     let mut formatter = TokenFormatter::default();
     for line in io::stdin().lock().lines() {

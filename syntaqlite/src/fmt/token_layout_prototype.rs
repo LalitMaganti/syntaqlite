@@ -69,10 +69,10 @@ impl Fragment<'_> {
     }
 }
 #[derive(Default, Debug, Clone, Copy)]
-pub struct Stats {
-    pub shifts: usize,
-    pub reductions: usize,
-    pub max_stack: usize,
+pub(crate) struct Stats {
+    pub(crate) shifts: usize,
+    pub(crate) reductions: usize,
+    pub(crate) max_stack: usize,
 }
 struct State<'a> {
     source: &'a str,
@@ -399,7 +399,7 @@ impl Drop for Registration {
     }
 }
 
-pub struct TokenFormatter {
+pub(crate) struct TokenFormatter {
     parser: TypedParser<Dialect>,
     tokenizer: Tokenizer,
     buffers: RenderBuffers,
@@ -416,7 +416,7 @@ impl Default for TokenFormatter {
     }
 }
 impl TokenFormatter {
-    pub fn with_dialect(dialect: Dialect) -> Self {
+    pub(crate) fn with_dialect(dialect: Dialect) -> Self {
         Self {
             parser: TypedParser::new(dialect),
             tokenizer: Tokenizer::new(),
@@ -424,7 +424,7 @@ impl TokenFormatter {
             arena: None,
         }
     }
-    pub fn format(&mut self, source: &str, width: u32) -> Result<(String, Stats), String> {
+    pub(crate) fn format(&mut self, source: &str, width: u32) -> Result<(String, Stats), String> {
         let arena = self
             .arena
             .take()

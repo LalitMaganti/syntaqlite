@@ -94,6 +94,7 @@ version = "0.9.0"
 dependencies = [
  "criterion",
  "syntaqlite",
+ "syntaqlite-syntax",
 ]
 
 [[package]]

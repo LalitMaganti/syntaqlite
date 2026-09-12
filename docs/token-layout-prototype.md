@@ -1,6 +1,6 @@
 # Token-preserving layout prototype
 
-This is an isolated architecture experiment on branch `prototype-token-layout`, based on formatter PR #364 (`fe511add`). It is not wired into the production Formatter and has not been pushed. The original working checkout and PR stack are untouched.
+This is an isolated architecture experiment on branch `prototype-token-layout`, based on formatter PR #364 (`fe511add`). It is not wired into the production Formatter and has not been pushed. The prototype is compiled only by private test, example, and benchmark harnesses; it adds no library API. The original working checkout and PR stack are untouched.
 
 ## Mechanism
 
@@ -46,7 +46,7 @@ LIMIT 20, 10;
 - The corpora overlap and contain duplicate inputs. Together, the passing checks represent **19,174 distinct SQL inputs / 38,348 distinct SQL-and-width pairs**, not 49,276 independent SQL programs.
 - Every accepted check compares the complete lexer token sequence, including comments and exact spelling, with the input. It also reparses/reformats the output and requires an identical second pass.
 - 328 library unit tests and six prototype tests pass. The prototype tests include injected comments at every token boundary of 16 seeds, 24 reviewed exact-layout fixtures, comment-boundary indentation, and recursive lists/chains of 64, 256 and 1,024 elements. The reviewed fixtures require exact output, width compliance, token preservation and second-pass stability.
-- Strict Clippy passes for the prototype, tests, example, and benchmark. Repository autofix completed formatting and Clippy. The pre-push gate then stopped at the public API snapshot: the isolated prototype exposes experimental types not present in the production baseline. That baseline was deliberately left unchanged.
+- Strict Clippy passes for the prototype, tests, example, and benchmark. The earlier public API mismatch was removed by compiling the shared prototype source privately in its harnesses. The public API check now passes with the baseline unchanged. The remaining pre-push checks passed except amalgamation under the default GCC compiler; rerunning that suite with `CC=clang CXX=clang++` passed all 32 tests.
 - A standalone before/after gallery is available at `/tmp/syntaqlite-token-layout-results/layout/gallery.html`.
 
 These checks establish token preservation and stability for those inputs. They do not establish desirable layout in every context, full dialect/macro support, or agreement with existing formatting snapshots.
