@@ -1,4 +1,4 @@
-enum SortOrder { ASC DESC }
+enum SortOrder { NONE ASC DESC }
 enum NullsOrder { NONE FIRST LAST }
 
 flags ResultColumnFlags { STAR = 1 }
@@ -63,6 +63,7 @@ node OrderingTerm {
 
   fmt {
     child_paren_list(expr)
+    if_enum(sort_order, ASC) { space "ASC" }
     if_enum(sort_order, DESC) { space "DESC" }
     if_enum(nulls_order, FIRST) { space "NULLS" "FIRST" }
     if_enum(nulls_order, LAST) { space "NULLS" "LAST" }

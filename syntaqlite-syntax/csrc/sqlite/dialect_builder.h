@@ -633,12 +633,14 @@ static inline uint32_t synq_parse_transaction_stmt(
     SynqParseCtx* ctx,
     SyntaqliteTransactionOp op,
     SyntaqliteTransactionType trans_type,
+    SyntaqliteBool has_transaction,
     SyntaqliteTextSpan name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteTransactionStmt){.tag = SYNTAQLITE_NODE_TRANSACTION_STMT,
                                    .op = op,
                                    .trans_type = trans_type,
+                                   .has_transaction = has_transaction,
                                    .name = name},
       (uint32_t)sizeof(SyntaqliteTransactionStmt));
 }
@@ -647,12 +649,16 @@ static inline uint32_t synq_parse_savepoint_stmt(
     SynqParseCtx* ctx,
     SyntaqliteSavepointOp op,
     uint32_t savepoint_name,
+    SyntaqliteBool has_savepoint,
+    SyntaqliteBool has_transaction,
     SyntaqliteTextSpan transaction_name) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteSavepointStmt){.tag = SYNTAQLITE_NODE_SAVEPOINT_STMT,
                                  .op = op,
                                  .savepoint_name = savepoint_name,
+                                 .has_savepoint = has_savepoint,
+                                 .has_transaction = has_transaction,
                                  .transaction_name = transaction_name},
       (uint32_t)sizeof(SyntaqliteSavepointStmt));
 }

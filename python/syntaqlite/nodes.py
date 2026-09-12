@@ -624,11 +624,12 @@ class AlterTableStmt:
 class TransactionStmt:
     """AST node: TransactionStmt"""
 
-    __slots__ = ("op", "trans_type", "name")
+    __slots__ = ("op", "trans_type", "has_transaction", "name")
 
     def __init__(self, d: dict):
         self.op: TransactionOp = TransactionOp[d["op"]]
         self.trans_type: TransactionType = TransactionType[d["trans_type"]]
+        self.has_transaction: bool = d["has_transaction"]
         self.name: str | None = d.get("name")
 
     def __repr__(self):
@@ -638,11 +639,13 @@ class TransactionStmt:
 class SavepointStmt:
     """AST node: SavepointStmt"""
 
-    __slots__ = ("op", "savepoint_name", "transaction_name")
+    __slots__ = ("op", "savepoint_name", "has_savepoint", "has_transaction", "transaction_name")
 
     def __init__(self, d: dict):
         self.op: SavepointOp = SavepointOp[d["op"]]
         self.savepoint_name: Name | None = _wrap(d.get("savepoint_name"))
+        self.has_savepoint: bool = d["has_savepoint"]
+        self.has_transaction: bool = d["has_transaction"]
         self.transaction_name: str | None = d.get("transaction_name")
 
     def __repr__(self):

@@ -89,6 +89,7 @@ node ColumnConstraint {
     switch(kind) {
       PRIMARY_KEY {
         "PRIMARY" "KEY"
+        if_enum(sort_order, ASC) { space "ASC" }
         if_enum(sort_order, DESC) { space "DESC" }
         switch(onconf) {
           ROLLBACK { space "ON" "CONFLICT" "ROLLBACK" }

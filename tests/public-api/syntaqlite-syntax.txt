@@ -1824,6 +1824,8 @@ pub fn syntaqlite_syntax::nodes::RowValueId::into_inner(self) -> syntaqlite_synt
 pub fn syntaqlite_syntax::nodes::SavepointOp::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::has_savepoint(&self) -> bool
+pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::has_transaction(&self) -> bool
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::SavepointStmtId
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::op(&self) -> syntaqlite_syntax::nodes::SavepointOp
 pub fn syntaqlite_syntax::nodes::SavepointStmt<'a>::savepoint_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
@@ -1922,6 +1924,7 @@ pub fn syntaqlite_syntax::nodes::TemporaryQualifier::as_str(&self) -> &'static s
 pub fn syntaqlite_syntax::nodes::TransactionOp::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::has_transaction(&self) -> bool
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::name(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::TransactionStmtId
 pub fn syntaqlite_syntax::nodes::TransactionStmt<'a>::op(&self) -> syntaqlite_syntax::nodes::TransactionOp
@@ -2639,6 +2642,7 @@ pub syntaqlite_syntax::nodes::BinaryOp::Lshift = 15
 pub syntaqlite_syntax::nodes::BinaryOp::Lt = 5
 pub syntaqlite_syntax::nodes::BinaryOp::Minus = 1
 pub syntaqlite_syntax::nodes::BinaryOp::Ne = 10
+pub syntaqlite_syntax::nodes::BinaryOp::NeAngle = 20
 pub syntaqlite_syntax::nodes::BinaryOp::Or = 12
 pub syntaqlite_syntax::nodes::BinaryOp::Plus = 0
 pub syntaqlite_syntax::nodes::BinaryOp::Ptr = 18
@@ -2975,8 +2979,9 @@ pub syntaqlite_syntax::nodes::Select::CompoundSelect(syntaqlite_syntax::nodes::C
 pub syntaqlite_syntax::nodes::Select::SelectStmt(syntaqlite_syntax::nodes::SelectStmt<'a>)
 pub syntaqlite_syntax::nodes::Select::ValuesClause(syntaqlite_syntax::nodes::ValuesClause<'a>)
 pub syntaqlite_syntax::nodes::Select::WithClause(syntaqlite_syntax::nodes::WithClause<'a>)
-pub syntaqlite_syntax::nodes::SortOrder::Asc = 0
-pub syntaqlite_syntax::nodes::SortOrder::Desc = 1
+pub syntaqlite_syntax::nodes::SortOrder::Asc = 1
+pub syntaqlite_syntax::nodes::SortOrder::Desc = 2
+pub syntaqlite_syntax::nodes::SortOrder::None = 0
 pub syntaqlite_syntax::nodes::Stmt::AlterTableStmt(syntaqlite_syntax::nodes::AlterTableStmt<'a>)
 pub syntaqlite_syntax::nodes::Stmt::AnalyzeOrReindexStmt(syntaqlite_syntax::nodes::AnalyzeOrReindexStmt<'a>)
 pub syntaqlite_syntax::nodes::Stmt::AttachStmt(syntaqlite_syntax::nodes::AttachStmt<'a>)
@@ -3015,6 +3020,7 @@ pub syntaqlite_syntax::nodes::TemporaryQualifier::Temp = 1
 pub syntaqlite_syntax::nodes::TemporaryQualifier::Temporary = 2
 pub syntaqlite_syntax::nodes::TransactionOp::Begin = 0
 pub syntaqlite_syntax::nodes::TransactionOp::Commit = 1
+pub syntaqlite_syntax::nodes::TransactionOp::End = 3
 pub syntaqlite_syntax::nodes::TransactionOp::Rollback = 2
 pub syntaqlite_syntax::nodes::TransactionType::Deferred = 0
 pub syntaqlite_syntax::nodes::TransactionType::Exclusive = 2

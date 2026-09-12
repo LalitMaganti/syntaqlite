@@ -1819,7 +1819,7 @@ class UpsertClause(TestSuite):
                               column: "id"
                               table: (none)
                               schema: (none)
-                          sort_order: ASC
+                          sort_order: NONE
                           nulls_order: NONE
                     target_where: (none)
                     action: NOTHING
@@ -1880,7 +1880,7 @@ class UpsertClause(TestSuite):
                               column: "id"
                               table: (none)
                               schema: (none)
-                          sort_order: ASC
+                          sort_order: NONE
                           nulls_order: NONE
                     target_where: (none)
                     action: UPDATE
@@ -1938,7 +1938,7 @@ class UpsertClause(TestSuite):
                               column: "id"
                               table: (none)
                               schema: (none)
-                          sort_order: ASC
+                          sort_order: NONE
                           nulls_order: NONE
                     target_where:
                       BinaryExpr
@@ -2063,7 +2063,7 @@ class UpsertClause(TestSuite):
                               column: "id"
                               table: (none)
                               schema: (none)
-                          sort_order: ASC
+                          sort_order: NONE
                           nulls_order: NONE
                     target_where: (none)
                     action: UPDATE
@@ -2140,7 +2140,7 @@ class UpsertClause(TestSuite):
                               column: "a"
                               table: (none)
                               schema: (none)
-                          sort_order: ASC
+                          sort_order: NONE
                           nulls_order: NONE
                     target_where: (none)
                     action: UPDATE
@@ -2163,7 +2163,7 @@ class UpsertClause(TestSuite):
                               column: "b"
                               table: (none)
                               schema: (none)
-                          sort_order: ASC
+                          sort_order: NONE
                           nulls_order: NONE
                     target_where: (none)
                     action: NOTHING

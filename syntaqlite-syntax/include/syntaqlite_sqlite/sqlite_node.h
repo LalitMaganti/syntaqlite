@@ -59,7 +59,8 @@ typedef enum SyntaqliteBinaryOp {
   SYNTAQLITE_BINARY_OP_RSHIFT = 16,
   SYNTAQLITE_BINARY_OP_CONCAT = 17,
   SYNTAQLITE_BINARY_OP_PTR = 18,
-  SYNTAQLITE_BINARY_OP_PTR2 = 19
+  SYNTAQLITE_BINARY_OP_PTR2 = 19,
+  SYNTAQLITE_BINARY_OP_NE_ANGLE = 20
 } SyntaqliteBinaryOp;
 
 typedef enum SyntaqliteUnaryOp {
@@ -212,7 +213,8 @@ typedef enum SyntaqliteTransactionType {
 typedef enum SyntaqliteTransactionOp {
   SYNTAQLITE_TRANSACTION_OP_BEGIN = 0,
   SYNTAQLITE_TRANSACTION_OP_COMMIT = 1,
-  SYNTAQLITE_TRANSACTION_OP_ROLLBACK = 2
+  SYNTAQLITE_TRANSACTION_OP_ROLLBACK = 2,
+  SYNTAQLITE_TRANSACTION_OP_END = 3
 } SyntaqliteTransactionOp;
 
 typedef enum SyntaqliteSavepointOp {
@@ -222,8 +224,9 @@ typedef enum SyntaqliteSavepointOp {
 } SyntaqliteSavepointOp;
 
 typedef enum SyntaqliteSortOrder {
-  SYNTAQLITE_SORT_ORDER_ASC = 0,
-  SYNTAQLITE_SORT_ORDER_DESC = 1
+  SYNTAQLITE_SORT_ORDER_NONE = 0,
+  SYNTAQLITE_SORT_ORDER_ASC = 1,
+  SYNTAQLITE_SORT_ORDER_DESC = 2
 } SyntaqliteSortOrder;
 
 typedef enum SyntaqliteNullsOrder {
@@ -849,6 +852,7 @@ typedef struct SyntaqliteTransactionStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteTransactionOp op;
   SyntaqliteTransactionType trans_type;
+  SyntaqliteBool has_transaction;
   SyntaqliteTextSpan name;
 } SyntaqliteTransactionStmt;
 
@@ -856,6 +860,8 @@ typedef struct SyntaqliteSavepointStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteSavepointOp op;
   uint32_t savepoint_name;
+  SyntaqliteBool has_savepoint;
+  SyntaqliteBool has_transaction;
   SyntaqliteTextSpan transaction_name;
 } SyntaqliteSavepointStmt;
 

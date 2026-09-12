@@ -17,7 +17,7 @@
 %type columnname {SynqColumnNameValue}
 %type ifexists {int}
 %type transtype {int}
-%type trans_opt {SynqParseToken}
+%type trans_opt {SynqTransOptValue}
 %type savepoint_opt {int}
 %type kwcolumn_opt {int}
 
@@ -124,21 +124,26 @@ cmd(A) ::= BEGIN transtype(Y) trans_opt(T). {
     A = synq_parse_transaction_stmt(pCtx,
         SYNTAQLITE_TRANSACTION_OP_BEGIN,
         (SyntaqliteTransactionType)Y,
-        T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+        T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }
 
-cmd(A) ::= COMMIT|END trans_opt(T). {
+cmd(A) ::= COMMIT|END(X) trans_opt(T). {
+    // END and COMMIT mean the same thing to SQLite but are different text.
     A = synq_parse_transaction_stmt(pCtx,
-        SYNTAQLITE_TRANSACTION_OP_COMMIT,
+        X.type == SYNTAQLITE_TK_END ? SYNTAQLITE_TRANSACTION_OP_END
+                                    : SYNTAQLITE_TRANSACTION_OP_COMMIT,
         SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
-        T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+        T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }
 
 cmd(A) ::= ROLLBACK trans_opt(T). {
     A = synq_parse_transaction_stmt(pCtx,
         SYNTAQLITE_TRANSACTION_OP_ROLLBACK,
         SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
-        T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+        T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }
 
 // ============ Transaction type ============
@@ -162,21 +167,24 @@ transtype(A) ::= EXCLUSIVE. {
 // ============ Transaction option ============
 
 trans_opt(A) ::= . {
-    A.z = NULL; A.n = 0;
+    A.has_transaction = 0;
+    A.name.z = NULL; A.name.n = 0;
 }
 
 trans_opt(A) ::= TRANSACTION. {
-    A.z = NULL; A.n = 0;
+    A.has_transaction = 1;
+    A.name.z = NULL; A.name.n = 0;
 }
 
 trans_opt(A) ::= TRANSACTION nm(X). {
-    A = X;
+    A.has_transaction = 1;
+    A.name = X;
 }
 
 // ============ Savepoint ============
 
 savepoint_opt(A) ::= SAVEPOINT. {
-    A = 0;
+    A = 1;
 }
 
 savepoint_opt(A) ::= . {
@@ -186,17 +194,20 @@ savepoint_opt(A) ::= . {
 cmd(A) ::= SAVEPOINT nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT,
-        X, SYNQ_NO_SPAN);
+        X, SYNTAQLITE_BOOL_TRUE, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN);
 }
 
-cmd(A) ::= RELEASE savepoint_opt nmorerr(X). {
+cmd(A) ::= RELEASE savepoint_opt(S) nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_RELEASE,
-        X, SYNQ_NO_SPAN);
+        X, S ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN);
 }
 
-cmd(A) ::= ROLLBACK trans_opt(T) TO savepoint_opt nmorerr(X). {
+cmd(A) ::= ROLLBACK trans_opt(T) TO savepoint_opt(S) nmorerr(X). {
     A = synq_parse_savepoint_stmt(pCtx,
         SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO,
-        X, T.z ? synq_span(pCtx, T) : SYNQ_NO_SPAN);
+        X, S ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+        T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }

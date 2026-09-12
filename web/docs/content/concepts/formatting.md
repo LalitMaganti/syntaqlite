@@ -105,41 +105,25 @@ API).
 
 ## Canonical spellings
 
-SQLite accepts several pairs of spellings that mean exactly the same thing to
-its parser. The formatter picks one spelling for each pair, so the same query
-always formats the same way regardless of which spelling you wrote.
+The formatter aims to reproduce the syntax you wrote. Where SQLite accepts two
+spellings that mean the same thing, it keeps yours: `ORDER BY a ASC` stays
+`ASC`, `BEGIN TRANSACTION` keeps `TRANSACTION`, `END` stays `END`, `a <> b`
+stays `<>`, and an alias written without `AS` keeps it that way.
 
-Optional keywords that carry no meaning are dropped:
+A few normalisations remain, and are being removed as the AST learns to
+represent the syntax they discard:
 
 | you write | you get |
 |---|---|
 | `CREATE TRIGGER ... FOR EACH ROW` | `CREATE TRIGGER ...` |
-| `BEGIN TRANSACTION`, `COMMIT TRANSACTION` | `BEGIN`, `COMMIT` |
-| `ATTACH DATABASE`, `DETACH DATABASE` | `ATTACH`, `DETACH` |
-| `a AS (expr) VIRTUAL` | `a AS (expr)` |
-| `ORDER BY a ASC`, `CREATE INDEX i ON t(a ASC)` | `ORDER BY a`, `CREATE INDEX i ON t(a)` |
-
-Optional keywords are added where they make the statement read unambiguously:
-
-| you write | you get |
-|---|---|
 | `CREATE TRIGGER tr INSERT ON t` | `CREATE TRIGGER tr BEFORE INSERT ON t` |
+| `ATTACH DATABASE`, `DETACH DATABASE` | `ATTACH`, `DETACH` |
 | `ALTER TABLE t RENAME a TO b` | `ALTER TABLE t RENAME COLUMN a TO b` |
-| `RELEASE sp`, `ROLLBACK TO sp` | `RELEASE SAVEPOINT sp`, `ROLLBACK TO SAVEPOINT sp` |
+| `a AS (expr) VIRTUAL` | `a AS (expr)` |
 
-And where SQLite has two names for one thing, the shorter is used:
-
-| you write | you get |
-|---|---|
-| `END`, `END TRANSACTION` | `COMMIT` |
-| `a <> b` | `a != b` |
-| `CREATE TEMPORARY TABLE` | `CREATE TEMP TABLE` |
-| `INSERT OR REPLACE INTO t` | `REPLACE INTO t` |
-
-Every one of these is semantically inert: the two spellings compile to identical
-bytecode, and where the keyword is added it matches the default SQLite would
-have applied anyway. A trigger with no timing keyword really is a `BEFORE`
-trigger, and an index column with no sort order really is `ASC`.
+Each is semantically inert: the two spellings compile to identical bytecode,
+and where a keyword is added it matches the default SQLite would have applied
+anyway. A trigger with no timing keyword really is a `BEFORE` trigger.
 
 > **Note:** SQLite stores the original text of `CREATE` statements in
 > `sqlite_master.sql`. Reformatting a schema therefore changes what a later

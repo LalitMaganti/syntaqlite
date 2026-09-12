@@ -1,7 +1,7 @@
 enum DropObjectType { TABLE INDEX VIEW TRIGGER }
 enum AlterOp { RENAME_TABLE RENAME_COLUMN DROP_COLUMN ADD_COLUMN }
 enum TransactionType { DEFERRED IMMEDIATE EXCLUSIVE }
-enum TransactionOp { BEGIN COMMIT ROLLBACK }
+enum TransactionOp { BEGIN COMMIT ROLLBACK END }
 enum SavepointOp { SAVEPOINT RELEASE ROLLBACK_TO }
 
 node QualifiedName {
@@ -53,6 +53,7 @@ node AlterTableStmt {
 node TransactionStmt {
   op: inline TransactionOp
   trans_type: inline TransactionType
+  has_transaction: inline Bool
   name: inline SyntaqliteTextSpan
 
   fmt {
@@ -64,24 +65,35 @@ node TransactionStmt {
       }
       COMMIT   { "COMMIT" }
       ROLLBACK { "ROLLBACK" }
+      END      { "END" }
     }
-    if_span(name) { space "TRANSACTION" space span(name) }
+    if_flag(has_transaction) { space "TRANSACTION" }
+    if_span(name) { space span(name) }
   }
 }
 
 node SavepointStmt {
   op: inline SavepointOp
   savepoint_name: index Name
+  has_savepoint: inline Bool
+  has_transaction: inline Bool
   transaction_name: inline SyntaqliteTextSpan
 
   fmt {
     switch(op) {
       SAVEPOINT   { "SAVEPOINT" space child(savepoint_name) }
-      RELEASE     { "RELEASE" "SAVEPOINT" space child(savepoint_name) }
+      RELEASE     {
+        "RELEASE"
+        if_flag(has_savepoint) { space "SAVEPOINT" }
+        space child(savepoint_name)
+      }
       ROLLBACK_TO {
         "ROLLBACK"
-        if_span(transaction_name) { space "TRANSACTION" space span(transaction_name) }
-        space "TO" "SAVEPOINT" space child(savepoint_name)
+        if_flag(has_transaction) { space "TRANSACTION" }
+        if_span(transaction_name) { space span(transaction_name) }
+        space "TO"
+        if_flag(has_savepoint) { space "SAVEPOINT" }
+        space child(savepoint_name)
       }
     }
   }

@@ -111,7 +111,7 @@ class WindowFunctionFormat(TestSuite):
             out="""\
                 SELECT
                   row_number() OVER (
-                    ORDER BY some_really_long_column_name DESC, another_long_column_name
+                    ORDER BY some_really_long_column_name DESC, another_long_column_name ASC
                   )
                 FROM t;
             """,
@@ -125,7 +125,7 @@ class WindowFunctionFormat(TestSuite):
                   row_number() OVER (
                     ORDER BY
                       some_really_long_column_name DESC,
-                      another_really_long_column_name_here
+                      another_really_long_column_name_here ASC
                   )
                 FROM t;
             """,

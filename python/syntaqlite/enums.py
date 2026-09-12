@@ -135,6 +135,7 @@ class BinaryOp(IntEnum):
     CONCAT = 17
     PTR = 18
     PTR2 = 19
+    NE_ANGLE = 20
 
 
 class UnaryOp(IntEnum):
@@ -288,6 +289,7 @@ class TransactionOp(IntEnum):
     BEGIN = 0
     COMMIT = 1
     ROLLBACK = 2
+    END = 3
 
 
 class SavepointOp(IntEnum):
@@ -297,8 +299,9 @@ class SavepointOp(IntEnum):
 
 
 class SortOrder(IntEnum):
-    ASC = 0
-    DESC = 1
+    NONE = 0
+    ASC = 1
+    DESC = 2
 
 
 class NullsOrder(IntEnum):

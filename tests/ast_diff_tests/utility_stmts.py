@@ -374,7 +374,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -398,7 +398,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -422,7 +422,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -446,7 +446,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause:
                 BinaryExpr
@@ -481,7 +481,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -512,7 +512,7 @@ class CreateIndexStmts(TestSuite):
                               schema: (none)
                         filter_clause: (none)
                         over_clause: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               where_clause: (none)
 """,
@@ -536,7 +536,7 @@ class CreateIndexStmts(TestSuite):
                         column: "x"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
                   OrderingTerm
                     expr:

@@ -343,7 +343,7 @@ class CompoundSelect(TestSuite):
                       Literal
                         literal_type: INTEGER
                         source: "1"
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               limit_clause: (none)
 """,

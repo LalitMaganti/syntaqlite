@@ -256,6 +256,7 @@ pub enum BinaryOp {
     Concat = 17,
     Ptr = 18,
     Ptr2 = 19,
+    NeAngle = 20,
 }
 
 impl BinaryOp {
@@ -281,6 +282,7 @@ impl BinaryOp {
             BinaryOp::Concat => "CONCAT",
             BinaryOp::Ptr => "PTR",
             BinaryOp::Ptr2 => "PTR2",
+            BinaryOp::NeAngle => "NE_ANGLE",
         }
     }
 }
@@ -711,6 +713,7 @@ pub enum TransactionOp {
     Begin = 0,
     Commit = 1,
     Rollback = 2,
+    End = 3,
 }
 
 impl TransactionOp {
@@ -719,6 +722,7 @@ impl TransactionOp {
             TransactionOp::Begin => "BEGIN",
             TransactionOp::Commit => "COMMIT",
             TransactionOp::Rollback => "ROLLBACK",
+            TransactionOp::End => "END",
         }
     }
 }
@@ -744,13 +748,15 @@ impl SavepointOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum SortOrder {
-    Asc = 0,
-    Desc = 1,
+    None = 0,
+    Asc = 1,
+    Desc = 2,
 }
 
 impl SortOrder {
     pub fn as_str(&self) -> &'static str {
         match self {
+            SortOrder::None => "NONE",
             SortOrder::Asc => "ASC",
             SortOrder::Desc => "DESC",
         }
@@ -4870,6 +4876,9 @@ impl<'a> TransactionStmt<'a> {
     pub fn trans_type(&self) -> TransactionType {
         self.raw.trans_type
     }
+    pub fn has_transaction(&self) -> bool {
+        self.raw.has_transaction == super::ffi::Bool::True
+    }
     pub fn name(&self) -> &'a str {
         self.stmt_result.span_expanded_text(self.raw.name)
     }
@@ -4944,6 +4953,12 @@ impl<'a> SavepointStmt<'a> {
     }
     pub fn savepoint_name(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.savepoint_name)
+    }
+    pub fn has_savepoint(&self) -> bool {
+        self.raw.has_savepoint == super::ffi::Bool::True
+    }
+    pub fn has_transaction(&self) -> bool {
+        self.raw.has_transaction == super::ffi::Bool::True
     }
     pub fn transaction_name(&self) -> &'a str {
         self.stmt_result

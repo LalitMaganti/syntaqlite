@@ -301,58 +301,58 @@ class AlterTableDropAdd(TestSuite):
         return DiffTestBlueprint(
             sql="ALTER TABLE t ADD COLUMN c1 INT NOT NULL DEFAULT 0",
             out="""\
-            AlterTableStmt
-              op: ADD_COLUMN
-              target:
-                QualifiedName
-                  object_name:
-                    IdentName
-                      source: "t"
-                  schema: (none)
-              new_name: (none)
-              old_name: (none)
-              column:
-                ColumnDef
-                  column_name:
-                    IdentName
-                      source: "c1"
-                  type_name: "INT"
-                  constraints:
-                    ColumnConstraintList [2 items]
-                      ColumnConstraint
-                        kind: NOT_NULL
-                        onconf: DEFAULT
-                        sort_order: ASC
-                        is_autoincrement: FALSE
-                        collation_name: (none)
-                        generated_storage: VIRTUAL
-                        deferrable: UNSET
-                        initial_defer: UNSET
-                        default_has_parens: FALSE
-                        generated_always: FALSE
-                        default_expr: (none)
-                        check_expr: (none)
-                        generated_expr: (none)
-                        fk_clause: (none)
-                      ColumnConstraint
-                        kind: DEFAULT
-                        onconf: DEFAULT
-                        sort_order: ASC
-                        is_autoincrement: FALSE
-                        collation_name: (none)
-                        generated_storage: VIRTUAL
-                        deferrable: UNSET
-                        initial_defer: UNSET
-                        default_has_parens: FALSE
-                        generated_always: FALSE
-                        default_expr:
-                          Literal
-                            literal_type: INTEGER
-                            source: "0"
-                        check_expr: (none)
-                        generated_expr: (none)
-                        fk_clause: (none)
-""",
+                AlterTableStmt
+                  op: ADD_COLUMN
+                  target:
+                    QualifiedName
+                      object_name:
+                        IdentName
+                          source: "t"
+                      schema: (none)
+                  new_name: (none)
+                  old_name: (none)
+                  column:
+                    ColumnDef
+                      column_name:
+                        IdentName
+                          source: "c1"
+                      type_name: "INT"
+                      constraints:
+                        ColumnConstraintList [2 items]
+                          ColumnConstraint
+                            kind: NOT_NULL
+                            onconf: DEFAULT
+                            sort_order: NONE
+                            is_autoincrement: FALSE
+                            collation_name: (none)
+                            generated_storage: VIRTUAL
+                            deferrable: UNSET
+                            initial_defer: UNSET
+                            default_has_parens: FALSE
+                            generated_always: FALSE
+                            default_expr: (none)
+                            check_expr: (none)
+                            generated_expr: (none)
+                            fk_clause: (none)
+                          ColumnConstraint
+                            kind: DEFAULT
+                            onconf: DEFAULT
+                            sort_order: NONE
+                            is_autoincrement: FALSE
+                            collation_name: (none)
+                            generated_storage: VIRTUAL
+                            deferrable: UNSET
+                            initial_defer: UNSET
+                            default_has_parens: FALSE
+                            generated_always: FALSE
+                            default_expr:
+                              Literal
+                                literal_type: INTEGER
+                                source: "0"
+                            check_expr: (none)
+                            generated_expr: (none)
+                            fk_clause: (none)
+            """,
         )
 
 
@@ -366,6 +366,7 @@ class TransactionControl(TestSuite):
             TransactionStmt
               op: BEGIN
               trans_type: DEFERRED
+              has_transaction: FALSE
               name: (none)
 """,
         )
@@ -377,6 +378,7 @@ class TransactionControl(TestSuite):
             TransactionStmt
               op: BEGIN
               trans_type: DEFERRED
+              has_transaction: FALSE
               name: (none)
 """,
         )
@@ -388,6 +390,7 @@ class TransactionControl(TestSuite):
             TransactionStmt
               op: BEGIN
               trans_type: IMMEDIATE
+              has_transaction: TRUE
               name: (none)
 """,
         )
@@ -399,6 +402,7 @@ class TransactionControl(TestSuite):
             TransactionStmt
               op: BEGIN
               trans_type: EXCLUSIVE
+              has_transaction: FALSE
               name: (none)
 """,
         )
@@ -410,6 +414,7 @@ class TransactionControl(TestSuite):
             TransactionStmt
               op: COMMIT
               trans_type: DEFERRED
+              has_transaction: FALSE
               name: (none)
 """,
         )
@@ -419,8 +424,9 @@ class TransactionControl(TestSuite):
             sql="END",
             out="""\
             TransactionStmt
-              op: COMMIT
+              op: END
               trans_type: DEFERRED
+              has_transaction: FALSE
               name: (none)
 """,
         )
@@ -432,6 +438,7 @@ class TransactionControl(TestSuite):
             TransactionStmt
               op: ROLLBACK
               trans_type: DEFERRED
+              has_transaction: FALSE
               name: (none)
 """,
         )
@@ -449,6 +456,8 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              has_savepoint: TRUE
+              has_transaction: FALSE
               transaction_name: (none)
 """,
         )
@@ -462,6 +471,8 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              has_savepoint: FALSE
+              has_transaction: FALSE
               transaction_name: (none)
 """,
         )
@@ -475,6 +486,8 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              has_savepoint: TRUE
+              has_transaction: FALSE
               transaction_name: (none)
 """,
         )
@@ -488,6 +501,8 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              has_savepoint: FALSE
+              has_transaction: FALSE
               transaction_name: (none)
 """,
         )
@@ -501,6 +516,8 @@ class SavepointControl(TestSuite):
               savepoint_name:
                 IdentName
                   source: "sp1"
+              has_savepoint: TRUE
+              has_transaction: FALSE
               transaction_name: (none)
 """,
         )

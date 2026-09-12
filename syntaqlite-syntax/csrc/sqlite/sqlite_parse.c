@@ -56,6 +56,13 @@ typedef struct SynqConstraintGroups {
   uint32_t group;
 } SynqConstraintGroups;
 
+// trans_opt: whether the optional TRANSACTION keyword was written, plus the
+// optional name that may follow it.
+typedef struct SynqTransOptValue {
+  int has_transaction;
+  SynqParseToken name;
+} SynqTransOptValue;
+
 // as: an optional alias plus whether the AS keyword was authored.  Without
 // the second field `SELECT a x` and `SELECT a AS x` are indistinguishable.
 typedef struct SynqAliasValue {
@@ -242,12 +249,10 @@ static inline void synq_reject_dangling_on_using(SynqParseCtx* pCtx,
   }
 }
 
-#define SYNQ_SORTORDER_NONE 2
-
-static inline SyntaqliteSortOrder synq_sortorder(int v) {
-  return v == SYNQ_SORTORDER_NONE ? SYNTAQLITE_SORT_ORDER_ASC
-                                  : (SyntaqliteSortOrder)v;
-}
+// An authored ASC is not the same as no sort order: SQLite treats them
+// identically but they are different text, so the AST keeps them apart. NONE
+// is zero so a node with no sort order at all gets it by default.
+#define SYNQ_SORTORDER_NONE 0
 
 static inline int synq_is_digit(char c) {
   return c >= '0' && c <= '9';
@@ -567,6 +572,7 @@ typedef union {
   SyntaqliteTemporaryQualifier yy300;
   int yy320;
   SynqUpsertValue yy352;
+  SynqTransOptValue yy396;
   SynqDeferValue yy519;
   SynqWithValue yy541;
   SynqInsertCmdValue yy606;
@@ -7732,13 +7738,10 @@ static YYACTIONTYPE yy_reduce(
     }
       yymsp[-4].minor.yy277 = yylhsminor.yy277;
       break;
-    case 43:  /* between_op ::= BETWEEN */
-    case 212: /* sortorder ::= ASC */
-      yytestcase(yyruleno == 212);
-      {
-        yymsp[0].minor.yy277 = 0;
-      }
-      break;
+    case 43: /* between_op ::= BETWEEN */
+    {
+      yymsp[0].minor.yy277 = 0;
+    } break;
     case 44:  /* between_op ::= NOT BETWEEN */
     case 215: /* nulls ::= NULLS FIRST */
       yytestcase(yyruleno == 215);
@@ -8033,7 +8036,7 @@ static YYACTIONTYPE yy_reduce(
     {
       yymsp[-2].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8044,7 +8047,7 @@ static YYACTIONTYPE yy_reduce(
     {
       yymsp[-3].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8057,7 +8060,7 @@ static YYACTIONTYPE yy_reduce(
                                            yymsp[0].minor.yy277);
       yymsp[-3].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8071,7 +8074,7 @@ static YYACTIONTYPE yy_reduce(
                                            yymsp[0].minor.yy277);
       yymsp[-3].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8086,7 +8089,7 @@ static YYACTIONTYPE yy_reduce(
                                         synq_span(pCtx, yymsp[0].minor.yy0));
       yymsp[-2].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFAULT,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8098,7 +8101,7 @@ static YYACTIONTYPE yy_reduce(
       yymsp[-1].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NULL,
           (SyntaqliteConflictAction)yymsp[0].minor.yy320,
-          SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
+          SYNTAQLITE_SORT_ORDER_NONE, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
@@ -8109,7 +8112,7 @@ static YYACTIONTYPE yy_reduce(
       yymsp[-2].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_NOT_NULL,
           (SyntaqliteConflictAction)yymsp[0].minor.yy320,
-          SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
+          SYNTAQLITE_SORT_ORDER_NONE, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
@@ -8120,7 +8123,7 @@ static YYACTIONTYPE yy_reduce(
       yymsp[-4].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_PRIMARY_KEY,
           (SyntaqliteConflictAction)yymsp[-1].minor.yy320,
-          synq_sortorder(yymsp[-2].minor.yy277),
+          (SyntaqliteSortOrder)yymsp[-2].minor.yy277,
           (SyntaqliteBool)yymsp[0].minor.yy320, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8132,7 +8135,7 @@ static YYACTIONTYPE yy_reduce(
       yymsp[-1].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_UNIQUE,
           (SyntaqliteConflictAction)yymsp[0].minor.yy320,
-          SYNTAQLITE_SORT_ORDER_ASC, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
+          SYNTAQLITE_SORT_ORDER_NONE, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
@@ -8142,7 +8145,7 @@ static YYACTIONTYPE yy_reduce(
     {
       yymsp[-3].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_CHECK,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8157,7 +8160,7 @@ static YYACTIONTYPE yy_reduce(
           SYNTAQLITE_INITIAL_DEFER_MODE_UNSET);
       yymsp[-3].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_REFERENCES,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8168,7 +8171,7 @@ static YYACTIONTYPE yy_reduce(
     {
       yylhsminor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_DEFERRABLE,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           yymsp[0].minor.yy519.deferrable, yymsp[0].minor.yy519.initial,
@@ -8208,7 +8211,7 @@ static YYACTIONTYPE yy_reduce(
     {
       yymsp[-2].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN,
           SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
@@ -8229,7 +8232,7 @@ static YYACTIONTYPE yy_reduce(
       }
       yymsp[-3].minor.yy277 = synq_parse_column_constraint(
           pCtx, SYNTAQLITE_COLUMN_CONSTRAINT_TYPE_GENERATED,
-          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_ASC,
+          SYNTAQLITE_CONFLICT_ACTION_DEFAULT, SYNTAQLITE_SORT_ORDER_NONE,
           SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN, storage,
           SYNTAQLITE_DEFERRABLE_UNSET, SYNTAQLITE_INITIAL_DEFER_MODE_UNSET,
           SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
@@ -8238,6 +8241,8 @@ static YYACTIONTYPE yy_reduce(
     case 89:  /* autoinc ::= AUTOINCR */
     case 237: /* kwcolumn_opt ::= COLUMNKW */
       yytestcase(yyruleno == 237);
+    case 249: /* savepoint_opt ::= SAVEPOINT */
+      yytestcase(yyruleno == 249);
     case 358: /* uniqueflag ::= UNIQUE */
       yytestcase(yyruleno == 358);
       {
@@ -8416,8 +8421,6 @@ static YYACTIONTYPE yy_reduce(
     case 121: /* scantok ::= */
     case 155: /* indexed_opt ::= */
       yytestcase(yyruleno == 155);
-    case 246: /* trans_opt ::= */
-      yytestcase(yyruleno == 246);
     case 263: /* scanpt ::= */
       yytestcase(yyruleno == 263);
       {
@@ -8882,9 +8885,15 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 181: /* expr ::= expr EQ|NE expr */
     {
-      SyntaqliteBinaryOp op = (yymsp[-1].minor.yy0.type == SYNTAQLITE_TK_EQ)
-                                  ? SYNTAQLITE_BINARY_OP_EQ
-                                  : SYNTAQLITE_BINARY_OP_NE;
+      SyntaqliteBinaryOp op;
+      if (yymsp[-1].minor.yy0.type == SYNTAQLITE_TK_EQ) {
+        op = SYNTAQLITE_BINARY_OP_EQ;
+      } else {
+        // `<>` and `!=` share one token type but are different text.
+        op = (yymsp[-1].minor.yy0.n == 2 && yymsp[-1].minor.yy0.z[0] == '<')
+                 ? SYNTAQLITE_BINARY_OP_NE_ANGLE
+                 : SYNTAQLITE_BINARY_OP_NE;
+      }
       yylhsminor.yy277 = synq_parse_binary_expr(pCtx, op, yymsp[-2].minor.yy277,
                                                 yymsp[0].minor.yy277);
     }
@@ -9127,9 +9136,10 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 210: /* sortlist ::= sortlist COMMA expr sortorder nulls */
     {
-      uint32_t term = synq_parse_ordering_term(
-          pCtx, yymsp[-2].minor.yy277, synq_sortorder(yymsp[-1].minor.yy277),
-          (SyntaqliteNullsOrder)yymsp[0].minor.yy277);
+      uint32_t term =
+          synq_parse_ordering_term(pCtx, yymsp[-2].minor.yy277,
+                                   (SyntaqliteSortOrder)yymsp[-1].minor.yy277,
+                                   (SyntaqliteNullsOrder)yymsp[0].minor.yy277);
       yylhsminor.yy277 =
           synq_parse_order_by_list(pCtx, yymsp[-4].minor.yy277, term);
     }
@@ -9137,21 +9147,26 @@ static YYACTIONTYPE yy_reduce(
       break;
     case 211: /* sortlist ::= expr sortorder nulls */
     {
-      uint32_t term = synq_parse_ordering_term(
-          pCtx, yymsp[-2].minor.yy277, synq_sortorder(yymsp[-1].minor.yy277),
-          (SyntaqliteNullsOrder)yymsp[0].minor.yy277);
+      uint32_t term =
+          synq_parse_ordering_term(pCtx, yymsp[-2].minor.yy277,
+                                   (SyntaqliteSortOrder)yymsp[-1].minor.yy277,
+                                   (SyntaqliteNullsOrder)yymsp[0].minor.yy277);
       yylhsminor.yy277 =
           synq_parse_order_by_list(pCtx, SYNTAQLITE_NULL_NODE, term);
     }
       yymsp[-2].minor.yy277 = yylhsminor.yy277;
       break;
-    case 213: /* sortorder ::= DESC */
+    case 212: /* sortorder ::= ASC */
     case 267: /* distinct ::= DISTINCT */
       yytestcase(yyruleno == 267);
       {
         yymsp[0].minor.yy277 = 1;
       }
       break;
+    case 213: /* sortorder ::= DESC */
+    {
+      yymsp[0].minor.yy277 = 2;
+    } break;
     case 214: /* sortorder ::= */
     {
       yymsp[1].minor.yy277 = SYNQ_SORTORDER_NONE;
@@ -9273,24 +9288,39 @@ static YYACTIONTYPE yy_reduce(
       yymsp[-2].minor.yy277 = synq_parse_transaction_stmt(
           pCtx, SYNTAQLITE_TRANSACTION_OP_BEGIN,
           (SyntaqliteTransactionType)yymsp[-1].minor.yy320,
-          yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[0].minor.yy0)
-                               : SYNQ_NO_SPAN);
+          yymsp[0].minor.yy396.has_transaction ? SYNTAQLITE_BOOL_TRUE
+                                               : SYNTAQLITE_BOOL_FALSE,
+          yymsp[0].minor.yy396.name.z
+              ? synq_span(pCtx, yymsp[0].minor.yy396.name)
+              : SYNQ_NO_SPAN);
     } break;
     case 240: /* cmd ::= COMMIT|END trans_opt */
     {
-      yymsp[-1].minor.yy277 = synq_parse_transaction_stmt(
-          pCtx, SYNTAQLITE_TRANSACTION_OP_COMMIT,
+      // END and COMMIT mean the same thing to SQLite but are different text.
+      yylhsminor.yy277 = synq_parse_transaction_stmt(
+          pCtx,
+          yymsp[-1].minor.yy0.type == SYNTAQLITE_TK_END
+              ? SYNTAQLITE_TRANSACTION_OP_END
+              : SYNTAQLITE_TRANSACTION_OP_COMMIT,
           SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
-          yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[0].minor.yy0)
-                               : SYNQ_NO_SPAN);
-    } break;
+          yymsp[0].minor.yy396.has_transaction ? SYNTAQLITE_BOOL_TRUE
+                                               : SYNTAQLITE_BOOL_FALSE,
+          yymsp[0].minor.yy396.name.z
+              ? synq_span(pCtx, yymsp[0].minor.yy396.name)
+              : SYNQ_NO_SPAN);
+    }
+      yymsp[-1].minor.yy277 = yylhsminor.yy277;
+      break;
     case 241: /* cmd ::= ROLLBACK trans_opt */
     {
       yymsp[-1].minor.yy277 = synq_parse_transaction_stmt(
           pCtx, SYNTAQLITE_TRANSACTION_OP_ROLLBACK,
           SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
-          yymsp[0].minor.yy0.z ? synq_span(pCtx, yymsp[0].minor.yy0)
-                               : SYNQ_NO_SPAN);
+          yymsp[0].minor.yy396.has_transaction ? SYNTAQLITE_BOOL_TRUE
+                                               : SYNTAQLITE_BOOL_FALSE,
+          yymsp[0].minor.yy396.name.z
+              ? synq_span(pCtx, yymsp[0].minor.yy396.name)
+              : SYNQ_NO_SPAN);
     } break;
     case 242: /* transtype ::= */
     {
@@ -9308,40 +9338,46 @@ static YYACTIONTYPE yy_reduce(
     {
       yymsp[0].minor.yy320 = (int)SYNTAQLITE_TRANSACTION_TYPE_EXCLUSIVE;
     } break;
+    case 246: /* trans_opt ::= */
+    {
+      yymsp[1].minor.yy396.has_transaction = 0;
+      yymsp[1].minor.yy396.name.z = NULL;
+      yymsp[1].minor.yy396.name.n = 0;
+    } break;
     case 247: /* trans_opt ::= TRANSACTION */
     {
-      yymsp[0].minor.yy0.z = NULL;
-      yymsp[0].minor.yy0.n = 0;
+      yymsp[0].minor.yy396.has_transaction = 1;
+      yymsp[0].minor.yy396.name.z = NULL;
+      yymsp[0].minor.yy396.name.n = 0;
     } break;
     case 248: /* trans_opt ::= TRANSACTION nm */
-    case 335: /* plus_num ::= PLUS INTEGER|FLOAT */
-      yytestcase(yyruleno == 335);
-      {
-        yymsp[-1].minor.yy0 = yymsp[0].minor.yy0;
-      }
-      break;
-    case 249: /* savepoint_opt ::= SAVEPOINT */
     {
-      yymsp[0].minor.yy320 = 0;
+      yymsp[-1].minor.yy396.has_transaction = 1;
+      yymsp[-1].minor.yy396.name = yymsp[0].minor.yy0;
     } break;
     case 251: /* cmd ::= SAVEPOINT nmorerr */
     {
-      yymsp[-1].minor.yy277 =
-          synq_parse_savepoint_stmt(pCtx, SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT,
-                                    yymsp[0].minor.yy277, SYNQ_NO_SPAN);
+      yymsp[-1].minor.yy277 = synq_parse_savepoint_stmt(
+          pCtx, SYNTAQLITE_SAVEPOINT_OP_SAVEPOINT, yymsp[0].minor.yy277,
+          SYNTAQLITE_BOOL_TRUE, SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN);
     } break;
     case 252: /* cmd ::= RELEASE savepoint_opt nmorerr */
     {
-      yymsp[-2].minor.yy277 =
-          synq_parse_savepoint_stmt(pCtx, SYNTAQLITE_SAVEPOINT_OP_RELEASE,
-                                    yymsp[0].minor.yy277, SYNQ_NO_SPAN);
+      yymsp[-2].minor.yy277 = synq_parse_savepoint_stmt(
+          pCtx, SYNTAQLITE_SAVEPOINT_OP_RELEASE, yymsp[0].minor.yy277,
+          yymsp[-1].minor.yy320 ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+          SYNTAQLITE_BOOL_FALSE, SYNQ_NO_SPAN);
     } break;
     case 253: /* cmd ::= ROLLBACK trans_opt TO savepoint_opt nmorerr */
     {
       yymsp[-4].minor.yy277 = synq_parse_savepoint_stmt(
           pCtx, SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO, yymsp[0].minor.yy277,
-          yymsp[-3].minor.yy0.z ? synq_span(pCtx, yymsp[-3].minor.yy0)
-                                : SYNQ_NO_SPAN);
+          yymsp[-1].minor.yy320 ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
+          yymsp[-3].minor.yy396.has_transaction ? SYNTAQLITE_BOOL_TRUE
+                                                : SYNTAQLITE_BOOL_FALSE,
+          yymsp[-3].minor.yy396.name.z
+              ? synq_span(pCtx, yymsp[-3].minor.yy396.name)
+              : SYNQ_NO_SPAN);
     } break;
     case 257: /* oneselect ::= SELECT distinct selcollist from where_opt
                  groupby_opt having_opt orderby_opt limit_opt */
@@ -9855,6 +9891,10 @@ static YYACTIONTYPE yy_reduce(
             SYNTAQLITE_PRAGMA_FORM_CALL);
       }
       break;
+    case 335: /* plus_num ::= PLUS INTEGER|FLOAT */
+    {
+      yymsp[-1].minor.yy0 = yymsp[0].minor.yy0;
+    } break;
     case 337: /* minus_num ::= MINUS INTEGER|FLOAT */
     {
       // Build a token that spans from the MINUS sign through the number

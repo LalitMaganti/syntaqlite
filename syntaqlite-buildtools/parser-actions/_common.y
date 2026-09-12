@@ -55,6 +55,13 @@ typedef struct SynqConstraintGroups {
   uint32_t group;
 } SynqConstraintGroups;
 
+// trans_opt: whether the optional TRANSACTION keyword was written, plus the
+// optional name that may follow it.
+typedef struct SynqTransOptValue {
+  int has_transaction;
+  SynqParseToken name;
+} SynqTransOptValue;
+
 // as: an optional alias plus whether the AS keyword was authored.  Without
 // the second field `SELECT a x` and `SELECT a AS x` are indistinguishable.
 typedef struct SynqAliasValue {
@@ -228,11 +235,10 @@ static inline void synq_reject_dangling_on_using(SynqParseCtx* pCtx,
   }
 }
 
-#define SYNQ_SORTORDER_NONE 2
-
-static inline SyntaqliteSortOrder synq_sortorder(int v) {
-  return v == SYNQ_SORTORDER_NONE ? SYNTAQLITE_SORT_ORDER_ASC : (SyntaqliteSortOrder)v;
-}
+// An authored ASC is not the same as no sort order: SQLite treats them
+// identically but they are different text, so the AST keeps them apart. NONE
+// is zero so a node with no sort order at all gets it by default.
+#define SYNQ_SORTORDER_NONE 0
 
 static inline int synq_is_digit(char c) { return c >= '0' && c <= '9'; }
 

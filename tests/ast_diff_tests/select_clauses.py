@@ -215,7 +215,7 @@ class SelectOrderBy(TestSuite):
                       Literal
                         literal_type: INTEGER
                         source: "1"
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               limit_clause: (none)
               window_clause: (none)
@@ -283,7 +283,7 @@ class SelectOrderBy(TestSuite):
                       Literal
                         literal_type: INTEGER
                         source: "1"
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: FIRST
               limit_clause: (none)
               window_clause: (none)
@@ -537,7 +537,7 @@ class SelectWindow(TestSuite):
                                   column: "x"
                                   table: (none)
                                   schema: (none)
-                              sort_order: ASC
+                              sort_order: NONE
                               nulls_order: NONE
                         frame: (none)
 """,
@@ -584,7 +584,7 @@ class SelectCombined(TestSuite):
                       Literal
                         literal_type: INTEGER
                         source: "1"
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               limit_clause:
                 LimitClause
@@ -664,7 +664,7 @@ class SelectCombined(TestSuite):
                         column: "a"
                         table: (none)
                         schema: (none)
-                    sort_order: ASC
+                    sort_order: NONE
                     nulls_order: NONE
               limit_clause:
                 LimitClause

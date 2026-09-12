@@ -23,7 +23,7 @@ static const char* const display_literal_type[] = {
 static const char* const display_binary_op[] = {
     "PLUS",   "MINUS",  "STAR",   "SLASH",  "REM", "LT",   "GT",
     "LE",     "GE",     "EQ",     "NE",     "AND", "OR",   "BIT_AND",
-    "BIT_OR", "LSHIFT", "RSHIFT", "CONCAT", "PTR", "PTR2",
+    "BIT_OR", "LSHIFT", "RSHIFT", "CONCAT", "PTR", "PTR2", "NE_ANGLE",
 };
 
 static const char* const display_unary_op[] = {
@@ -154,6 +154,7 @@ static const char* const display_transaction_op[] = {
     "BEGIN",
     "COMMIT",
     "ROLLBACK",
+    "END",
 };
 
 static const char* const display_savepoint_op[] = {
@@ -163,6 +164,7 @@ static const char* const display_savepoint_op[] = {
 };
 
 static const char* const display_sort_order[] = {
+    "NONE",
     "ASC",
     "DESC",
 };
@@ -760,6 +762,9 @@ static const SyntaqliteFieldMeta field_meta_transaction_stmt[] = {
     {offsetof(SyntaqliteTransactionStmt, trans_type), SYNTAQLITE_FIELD_ENUM,
      "trans_type", display_transaction_type,
      sizeof(display_transaction_type) / sizeof(display_transaction_type[0])},
+    {offsetof(SyntaqliteTransactionStmt, has_transaction),
+     SYNTAQLITE_FIELD_BOOL, "has_transaction", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteTransactionStmt, name), SYNTAQLITE_FIELD_SPAN, "name",
      NULL, 0},
 };
@@ -770,6 +775,12 @@ static const SyntaqliteFieldMeta field_meta_savepoint_stmt[] = {
      sizeof(display_savepoint_op) / sizeof(display_savepoint_op[0])},
     {offsetof(SyntaqliteSavepointStmt, savepoint_name),
      SYNTAQLITE_FIELD_NODE_ID, "savepoint_name", NULL, 0},
+    {offsetof(SyntaqliteSavepointStmt, has_savepoint), SYNTAQLITE_FIELD_BOOL,
+     "has_savepoint", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
+    {offsetof(SyntaqliteSavepointStmt, has_transaction), SYNTAQLITE_FIELD_BOOL,
+     "has_transaction", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteSavepointStmt, transaction_name), SYNTAQLITE_FIELD_SPAN,
      "transaction_name", NULL, 0},
 };
@@ -1478,8 +1489,8 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* QualifiedName */
     3,  /* DropStmt */
     5,  /* AlterTableStmt */
-    3,  /* TransactionStmt */
-    3,  /* SavepointStmt */
+    4,  /* TransactionStmt */
+    5,  /* SavepointStmt */
     4,  /* ResultColumn */
     0,  /* ResultColumnList */
     9,  /* SelectStmt */
