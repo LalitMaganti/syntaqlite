@@ -195,6 +195,7 @@ impl core::convert::From<syntaqlite_syntax::source::StmtLen> for syntaqlite_synt
 impl core::convert::From<syntaqlite_syntax::source::StmtLen> for syntaqlite_syntax::source::LayerLen
 impl core::convert::From<syntaqlite_syntax::typed::Dialect> for syntaqlite_syntax::any::AnyDialect
 impl core::convert::From<syntaqlite_syntax::typed::TypedIncrementalParseSession<syntaqlite_syntax::typed::Dialect>> for syntaqlite_syntax::IncrementalParseSession
+impl core::default::Default for syntaqlite_syntax::any::NodeFields
 impl core::fmt::Debug for syntaqlite_syntax::ParserToken<'_>
 impl core::fmt::Debug for syntaqlite_syntax::any::AnyDialect
 impl core::fmt::Debug for syntaqlite_syntax::any::AnyNode<'_>
@@ -1200,6 +1201,7 @@ pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comment_spans(&self) -> i
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::comments(&self) -> impl core::iter::traits::iterator::Iterator<Item = syntaqlite_syntax::Comment<'a>> + use<'_, 'a>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::expanded_text(&self) -> &'a str
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<(syntaqlite_syntax::any::AnyNodeTag, syntaqlite_syntax::any::NodeFields)>
+pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::extract_fields_into(&self, syntaqlite_syntax::any::AnyNodeId, &mut syntaqlite_syntax::any::NodeFields) -> core::option::Option<syntaqlite_syntax::any::AnyNodeTag>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_ident_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<alloc::borrow::Cow<'a, str>>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::first_span_text(&self, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<&'a str>
 pub fn syntaqlite_syntax::any::AnyParsedStatement<'a>::full_text(&self) -> &'a syntaqlite_syntax::source::DocText
@@ -1264,6 +1266,7 @@ pub fn syntaqlite_syntax::any::MacroRewrite<'a>::is_fallback(&self) -> bool
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::name(&self) -> &'a str
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::parent(&self) -> core::option::Option<syntaqlite_syntax::source::RewriteIdx>
 pub fn syntaqlite_syntax::any::MacroRewrite<'a>::parent_buffer(&self) -> &'a syntaqlite_syntax::source::LayerText
+pub fn syntaqlite_syntax::any::NodeFields::default() -> Self
 pub fn syntaqlite_syntax::any::NodeFields::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::any::NodeFields::index(&self, usize) -> &syntaqlite_syntax::any::FieldValue
 pub fn syntaqlite_syntax::any::NodeFields::is_empty(&self) -> bool

@@ -1068,15 +1068,30 @@ impl<'a> AnyParsedStatement<'a> {
 
     /// Extract reflective node data (`tag` + field values) for `id`.
     pub fn extract_fields(&self, id: AnyNodeId) -> Option<(AnyNodeTag, crate::ast::NodeFields)> {
-        let (ptr, tag) = self.node_ptr(id)?;
         let mut fields = crate::ast::NodeFields::new();
+        let tag = self.extract_fields_into(id, &mut fields)?;
+        Some((tag, fields))
+    }
+
+    /// Reflect one node's fields into `out`, replacing whatever it held.
+    ///
+    /// [`NodeFields`](crate::ast::NodeFields) is a few hundred bytes wide, so
+    /// a caller walking a tree refills one buffer instead of taking a copy
+    /// per node.
+    pub fn extract_fields_into(
+        &self,
+        id: AnyNodeId,
+        out: &mut crate::ast::NodeFields,
+    ) -> Option<AnyNodeTag> {
+        let (ptr, tag) = self.node_ptr(id)?;
+        out.clear();
         for meta in self.dialect.field_meta(tag) {
             // SAFETY: ptr is a valid arena node pointer; meta describes a
             // field within that node's struct layout.
             let val = unsafe { extract_field_value(ptr, &meta) };
-            fields.push(val);
+            out.push(val);
         }
-        Some((tag, fields))
+        Some(tag)
     }
 
     // ── Field-shaped convenience accessors ──────────────────────────────

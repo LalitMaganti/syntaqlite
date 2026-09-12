@@ -1,7 +1,7 @@
 // Copyright 2025 The syntaqlite Authors. All rights reserved.
 // Licensed under the Apache License, Version 2.0.
 
-use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, AnyTokenizer, FieldValue};
+use syntaqlite_syntax::any::{AnyNodeId, AnyParsedStatement, AnyTokenizer, FieldValue, NodeFields};
 use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtText};
 
 use super::comment::{CommentCtx, DrainResult};
@@ -37,6 +37,9 @@ pub(super) struct InterpretScratch {
     group_nest: Vec<GroupNestFrame>,
     calls: Vec<CallFrame>,
     for_each: Vec<ForEachState>,
+    /// The current node's reflected fields. A few hundred bytes wide, so it
+    /// is refilled in place as the walk descends rather than copied per node.
+    fields: NodeFields,
 }
 
 impl InterpretScratch {
@@ -45,6 +48,7 @@ impl InterpretScratch {
             group_nest: Vec::new(),
             calls: Vec::new(),
             for_each: Vec::new(),
+            fields: NodeFields::default(),
         }
     }
 }
@@ -110,7 +114,8 @@ pub(super) fn interpret_core<'a>(
         }
 
         let source = ctx.text();
-        let Some((tag, fields)) = ctx.reader.extract_fields(root_id) else {
+        let fields = &mut scratch.fields;
+        let Some(tag) = ctx.reader.extract_fields_into(root_id, fields) else {
             return NIL_DOC;
         };
         let Some((ops_bytes, ops_len)) = ctx.dialect.fmt_dispatch(tag) else {
@@ -123,7 +128,6 @@ pub(super) fn interpret_core<'a>(
         let mut cur_node_id: AnyNodeId = root_id;
         let mut ops: &[u8] = &ops_bytes[..ops_len * 6];
         let mut ops_count: usize = ops_len;
-        let mut fields = fields;
         let mut running: DocId = NIL_DOC;
         let mut pending: DocId = NIL_DOC;
         let mut gn_save = scratch.group_nest.len();
@@ -131,9 +135,19 @@ pub(super) fn interpret_core<'a>(
         let mut ip: usize = 0;
         let has_comments = ctx.comment_ctx.is_some();
 
+        // `fields` is one buffer holding whichever node the walk is on, so
+        // reflecting a child overwrites the parent's. Descending is the commit
+        // point and never returns here; every other path has to put the
+        // parent's fields back before its own ops resume.
+        macro_rules! restore_parent_fields {
+            () => {{
+                ctx.reader.extract_fields_into(cur_node_id, fields);
+            }};
+        }
+
         macro_rules! push_call_frame {
             ($child_id:expr, $child_ops_bytes:expr, $child_ops_len:expr,
-         $child_fields:expr, $return_action_val:expr) => {{
+         $return_action_val:expr) => {{
                 let frame = CallFrame {
                     ip: ip + 1,
                     node_id: cur_node_id,
@@ -148,7 +162,6 @@ pub(super) fn interpret_core<'a>(
                 cur_node_id = $child_id;
                 ops = &$child_ops_bytes[..$child_ops_len * 6];
                 ops_count = $child_ops_len;
-                fields = $child_fields;
                 running = NIL_DOC;
                 pending = NIL_DOC;
                 gn_save = scratch.group_nest.len();
@@ -174,8 +187,7 @@ pub(super) fn interpret_core<'a>(
                     .expect("call_stack must contain a parent frame");
                 cur_node_id = frame.node_id;
                 ip = frame.ip;
-                let Some((restored_tag, restored_fields)) = ctx.reader.extract_fields(cur_node_id)
-                else {
+                let Some(restored_tag) = ctx.reader.extract_fields_into(cur_node_id, fields) else {
                     panic!("restored node must resolve to fields");
                 };
                 let Some((restored_ops, restored_ops_len)) = ctx.dialect.fmt_dispatch(restored_tag)
@@ -184,7 +196,6 @@ pub(super) fn interpret_core<'a>(
                 };
                 ops = &restored_ops[..restored_ops_len * 6];
                 ops_count = restored_ops_len;
-                fields = restored_fields;
                 running = frame.running;
                 pending = frame.pending;
                 gn_save = frame.gn_save;
@@ -310,7 +321,7 @@ pub(super) fn interpret_core<'a>(
                             return_action = ReturnAction::Discard;
                         }
 
-                        if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
+                        if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
                             && let Some((child_ops_bytes, child_ops_len)) =
                                 ctx.dialect.fmt_dispatch(ctag)
                         {
@@ -318,10 +329,10 @@ pub(super) fn interpret_core<'a>(
                                 child_id,
                                 child_ops_bytes,
                                 child_ops_len,
-                                child_fields,
                                 return_action
                             );
                         }
+                        restore_parent_fields!();
                     }
                 }
                 FmtOp::Line | FmtOp::SoftLine | FmtOp::HardLine => {
@@ -451,18 +462,13 @@ pub(super) fn interpret_core<'a>(
                         }
                     }
 
-                    if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
+                    if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
                         && let Some((child_ops_bytes, child_ops_len)) =
                             ctx.dialect.fmt_dispatch(ctag)
                     {
-                        push_call_frame!(
-                            child_id,
-                            child_ops_bytes,
-                            child_ops_len,
-                            child_fields,
-                            return_action
-                        );
+                        push_call_frame!(child_id, child_ops_bytes, child_ops_len, return_action);
                     }
+                    restore_parent_fields!();
                 }
                 FmtOp::ForEachSep(sid) => {
                     let state = scratch
@@ -606,7 +612,7 @@ pub(super) fn interpret_core<'a>(
                             return_action = ReturnAction::Discard;
                         }
 
-                        if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
+                        if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
                             && let Some((child_ops_bytes, child_ops_len)) =
                                 ctx.dialect.fmt_dispatch(ctag)
                         {
@@ -617,17 +623,17 @@ pub(super) fn interpret_core<'a>(
                                     parent_group_and_flags,
                                     is_right,
                                     ctag,
-                                    &child_fields,
+                                    fields,
                                 );
                             }
                             push_call_frame!(
                                 child_id,
                                 child_ops_bytes,
                                 child_ops_len,
-                                child_fields,
                                 return_action
                             );
                         }
+                        restore_parent_fields!();
                     }
                 }
                 FmtOp::ChildParenList(child_idx) => {
@@ -659,7 +665,7 @@ pub(super) fn interpret_core<'a>(
                             return_action = ReturnAction::Discard;
                         }
 
-                        if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
+                        if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
                             && let Some((child_ops_bytes, child_ops_len)) =
                                 ctx.dialect.fmt_dispatch(ctag)
                         {
@@ -670,10 +676,10 @@ pub(super) fn interpret_core<'a>(
                                 child_id,
                                 child_ops_bytes,
                                 child_ops_len,
-                                child_fields,
                                 return_action
                             );
                         }
+                        restore_parent_fields!();
                     }
                 }
                 FmtOp::ChildPrecFixed(child_idx, packed_b, is_right_flag) => {
@@ -709,7 +715,7 @@ pub(super) fn interpret_core<'a>(
                             return_action = ReturnAction::Discard;
                         }
 
-                        if let Some((ctag, child_fields)) = ctx.reader.extract_fields(child_id)
+                        if let Some(ctag) = ctx.reader.extract_fields_into(child_id, fields)
                             && let Some((child_ops_bytes, child_ops_len)) =
                                 ctx.dialect.fmt_dispatch(ctag)
                         {
@@ -720,17 +726,17 @@ pub(super) fn interpret_core<'a>(
                                     parent_group_and_flags,
                                     is_right,
                                     ctag,
-                                    &child_fields,
+                                    fields,
                                 );
                             }
                             push_call_frame!(
                                 child_id,
                                 child_ops_bytes,
                                 child_ops_len,
-                                child_fields,
                                 return_action
                             );
                         }
+                        restore_parent_fields!();
                     }
                 }
             }
@@ -761,7 +767,7 @@ fn child_prec_action(
     parent_group_and_flags: u8,
     is_right: bool,
     child_tag: syntaqlite_syntax::any::AnyNodeTag,
-    child_fields: &syntaqlite_syntax::any::NodeFields,
+    child_fields: &NodeFields,
 ) -> ReturnAction {
     // Check if child carries operator precedence info.
     if let Some((child_op_field_idx, child_prec_base)) = ctx.dialect.fmt_expr_meta(child_tag) {

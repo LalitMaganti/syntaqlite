@@ -235,6 +235,12 @@ pub struct NodeFields {
     len: usize,
 }
 
+impl Default for NodeFields {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NodeFields {
     /// Create an empty `NodeFields`.
     pub(crate) fn new() -> Self {
@@ -242,6 +248,11 @@ impl NodeFields {
             buf: [const { std::mem::MaybeUninit::uninit() }; 16],
             len: 0,
         }
+    }
+
+    /// Drop every field, keeping the buffer for the next node.
+    pub(crate) fn clear(&mut self) {
+        self.len = 0;
     }
 
     /// Append a field value.
