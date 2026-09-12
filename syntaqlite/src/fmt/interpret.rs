@@ -14,15 +14,13 @@ use syntaqlite_common::fmt::bytecode::opcodes;
 pub(crate) struct FmtCtx<'a> {
     pub dialect: AnyDialect,
     pub reader: AnyParsedStatement<'a>,
-    /// Owned comment context — no lifetime needed since `CommentCtx` owns its data.
+    /// Absent when the statement has no comments and no macros.
     pub comment_ctx: Option<CommentCtx>,
-    /// `(call_offset, call_length)` for each macro call in the source.
-    /// Full `MacroRewrite` records are not needed here since the
-    /// formatter only uses positions to decide verbatim emission.
+    /// `(call_offset, call_length)` per macro call: position is all the
+    /// formatter needs to decide verbatim emission.
     pub macro_rewrites: Vec<(StmtOffset, StmtLen)>,
-    /// Pre-computed structured `DocId` per entry in `macro_rewrites`,
-    /// or `None` to fall through to verbatim emission.  Index-aligned
-    /// with `macro_rewrites`.
+    /// Index-aligned with `macro_rewrites`; `None` falls through to
+    /// verbatim emission.
     pub macro_docs: Vec<Option<DocId>>,
 }
 
@@ -94,11 +92,10 @@ impl Formatter {
     }
 }
 
-/// Bytecode-driven formatting traversal.  Pulled out of
-/// [`Formatter::interpret_node`] as a free function so subtree
-/// formatting (which doesn't have `&mut Formatter` available) can
-/// re-enter the interpreter with local `scratch` and `consumed`
-/// buffers.
+/// Bytecode-driven formatting traversal.
+///
+/// A free function rather than a method so subtree formatting, which has no
+/// `&mut Formatter`, can re-enter it with its own scratch buffers.
 #[expect(clippy::too_many_lines)]
 pub(super) fn interpret_core<'a>(
     ctx: &FmtCtx<'a>,
@@ -135,10 +132,9 @@ pub(super) fn interpret_core<'a>(
         let mut ip: usize = 0;
         let has_comments = ctx.comment_ctx.is_some();
 
-        // `fields` is one buffer holding whichever node the walk is on, so
-        // reflecting a child overwrites the parent's. Descending is the commit
-        // point and never returns here; every other path has to put the
-        // parent's fields back before its own ops resume.
+        // `fields` holds whichever node the walk is on, so reflecting a child
+        // overwrites the parent's. Descending never returns here; not
+        // descending has to put the parent's back.
         macro_rules! restore_parent_fields {
             () => {{
                 ctx.reader.extract_fields_into(cur_node_id, fields);
@@ -231,7 +227,6 @@ pub(super) fn interpret_core<'a>(
                     running = arena.cat(running, kw);
                 }
                 FmtOp::Span(idx) => {
-                    // INVARIANT: Span ops only target Span fields.
                     let FieldValue::Span(span) = fields[idx as usize] else {
                         panic!("Span: field {idx} is not a Span");
                     };
@@ -260,19 +255,15 @@ pub(super) fn interpret_core<'a>(
                             };
                             let drain = cctx.take_upto(drain_offset, source, arena);
                             flush_drain(&drain, &mut pending, &mut running, arena);
-                            // The span writes its source range out verbatim,
-                            // comments included, so the step over it emits
-                            // nothing of its own.
+                            // The range is already written out verbatim,
+                            // comments included.
                             cctx.skip_upto(drain_offset + token_len);
                         }
                         if quoted {
-                            // Keep the authored quote style. Rewriting `[x]`
-                            // or `` `x` `` to `"x"` is not semantics
-                            // preserving: a double-quoted token that matches
-                            // no identifier falls back to a string literal,
-                            // while the other styles always fail loudly.
-                            // The span text is the source's own inner text,
-                            // so it round-trips with its escaping intact.
+                            // Requoting is not semantics preserving: a
+                            // double-quoted token matching no identifier
+                            // falls back to a string literal, where every
+                            // other style fails loudly.
                             let (open, close) = match span.quote_char() {
                                 Some('[') => ("[", "]"),
                                 Some('`') => ("`", "`"),
@@ -292,7 +283,6 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::Child(idx) => {
-                    // INVARIANT: Child ops only target NodeId fields.
                     let FieldValue::NodeId(child_id) = fields[idx as usize] else {
                         panic!("Child: field {idx} is not a NodeId");
                     };
@@ -381,7 +371,6 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::IfSet(idx, skip) => {
-                    // INVARIANT: IfSet ops only target NodeId fields.
                     let FieldValue::NodeId(id) = fields[idx as usize] else {
                         panic!("IfSet: field {idx} is not a NodeId");
                     };
@@ -394,7 +383,6 @@ pub(super) fn interpret_core<'a>(
                 }
                 FmtOp::EndIf => {}
                 FmtOp::ForEachStart(idx) => {
-                    // INVARIANT: ForEachStart ops only target NodeId fields.
                     let FieldValue::NodeId(list_id) = fields[idx as usize] else {
                         panic!("ForEachStart: field {idx} is not a NodeId");
                     };
@@ -503,7 +491,6 @@ pub(super) fn interpret_core<'a>(
                     scratch.for_each.pop();
                 }
                 FmtOp::IfBool(idx, skip) => {
-                    // INVARIANT: IfBool ops only target Bool fields.
                     let FieldValue::Bool(val) = fields[idx as usize] else {
                         panic!("IfBool: field {idx} is not a Bool");
                     };
@@ -512,7 +499,6 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::IfFlag(idx, mask, skip) => {
-                    // INVARIANT: IfFlag ops only target Flags fields.
                     let FieldValue::Flags(f) = fields[idx as usize] else {
                         panic!("IfFlag: field {idx} is not Flags");
                     };
@@ -521,7 +507,6 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::IfEnum(idx, ordinal, skip) => {
-                    // INVARIANT: IfEnum ops only target Enum fields.
                     let FieldValue::Enum(val) = fields[idx as usize] else {
                         panic!("IfEnum: field {idx} is not an Enum");
                     };
@@ -530,7 +515,6 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::IfSpan(idx, skip) => {
-                    // INVARIANT: IfSpan ops only target Span fields.
                     let FieldValue::Span(span) = fields[idx as usize] else {
                         panic!("IfSpan: field {idx} is not a Span");
                     };
@@ -542,7 +526,6 @@ pub(super) fn interpret_core<'a>(
                     }
                 }
                 FmtOp::EnumDisplay(idx, base) => {
-                    // INVARIANT: EnumDisplay ops only target Enum fields.
                     let FieldValue::Enum(ordinal) = fields[idx as usize] else {
                         panic!("EnumDisplay: field {idx} is not an Enum");
                     };
@@ -577,7 +560,6 @@ pub(super) fn interpret_core<'a>(
                     let op_field_idx = (packed_c >> 8) as usize;
                     let is_right = (packed_c & 0xFF) != 0;
 
-                    // Read the parent's operator ordinal.
                     let FieldValue::Enum(parent_op_ordinal) = fields[op_field_idx] else {
                         panic!("ChildPrec: op field {op_field_idx} is not an Enum");
                     };
@@ -827,22 +809,21 @@ fn child_prec_action(
 // ── Comment drain helpers ───────────────────────────────────────────────
 
 #[inline]
+/// Trailing comments go before any pending line break; leading ones replace
+/// it, since each carries its own.
 fn flush_drain(
     drain: &DrainResult,
     pending: &mut DocId,
     running: &mut DocId,
     arena: &mut DocArena,
 ) {
-    if drain.trailing != NIL_DOC {
-        *running = arena.cat(*running, drain.trailing);
-    }
-    if drain.leading == NIL_DOC {
-        *running = arena.cat(*running, *pending);
-        *pending = NIL_DOC;
+    let tail = if drain.leading == NIL_DOC {
+        *pending
     } else {
-        *pending = NIL_DOC;
-        *running = arena.cat(*running, drain.leading);
-    }
+        drain.leading
+    };
+    *pending = NIL_DOC;
+    *running = arena.cats(&[*running, drain.trailing, tail]);
 }
 
 #[inline]

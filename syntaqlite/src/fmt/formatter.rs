@@ -131,10 +131,8 @@ impl Formatter {
                 .with_macro_fallback(has_macros)
                 .with_collect_node_extents(has_macros),
         );
-        // The mini-parser always needs node extents (used by
-        // `find_descendant_by_extent` to locate each arg's expression
-        // subtree) and macro fallback (so nested `foo!(...)` inside
-        // an arg parses as a TK_ID rather than a syntax error).
+        // Extents locate each arg's subtree; macro fallback keeps a nested
+        // `foo!(...)` inside an arg parsing as a TK_ID rather than an error.
         let mini_parser = AnyParser::with_config(
             syntax,
             &ParserConfig::default()
@@ -172,10 +170,8 @@ impl Formatter {
                 side: c.side(),
             }));
         self.token_entries.clear();
-        // `stmt_range` drills expansion-layer tokens up to their
-        // authored call-site range, so every token contributes an
-        // entry in statement coordinates — the same coordinate system
-        // the formatter emits in.
+        // `stmt_range` drills expansion-layer tokens up to their authored
+        // call site, so every entry is in the coordinates the formatter emits.
         self.token_entries.extend(erased.tokens().map(|t| {
             let range = t.stmt_range();
             TokenEntry {
@@ -183,14 +179,8 @@ impl Formatter {
                 length: range.len(),
             }
         }));
-        // Only top-level fallback rewrites are meaningful here:
-        // - `parent().is_none()` keeps offsets in the statement
-        //   coordinate system the formatter compares against.
-        // - `is_fallback()` keeps only calls kept verbatim as a
-        //   `TK_ID` — those are the ones the formatter sees as a
-        //   single token range and may restructure or emit verbatim.
-        //   Expanded macros don't appear at the call site's byte
-        //   range; their tokens come from the expansion buffer.
+        // Only top-level fallback rewrites are addressable here: an expanded
+        // macro's tokens live in the expansion buffer, not at the call site.
         self.macro_rewrites.extend(
             erased
                 .macro_rewrites()
@@ -249,22 +239,17 @@ impl Formatter {
             let stmt_source = erased.text();
 
             let root_id = erased.root_id();
-            let semicolons = self.config.semicolons;
-            let has_comments = !self.comment_entries.is_empty();
-            let has_macros = !self.macro_rewrites.is_empty();
-            let needs_token_ctx = has_comments || has_macros;
+            // Reclaimed after render; nothing to track when the statement has
+            // neither comments nor macros.
+            let comment_ctx = (!self.comment_entries.is_empty() || !self.macro_rewrites.is_empty())
+                .then(|| {
+                    CommentCtx::new(
+                        std::mem::take(&mut self.comment_entries),
+                        std::mem::take(&mut self.token_entries),
+                    )
+                });
 
-            let comment_ctx = if needs_token_ctx {
-                // Move buffers into CommentCtx for this statement, then reclaim them after render.
-                Some(CommentCtx::new(
-                    std::mem::take(&mut self.comment_entries),
-                    std::mem::take(&mut self.token_entries),
-                ))
-            } else {
-                None
-            };
-
-            // Fresh arena for this statement — drops borrows from the previous iteration.
+            // A fresh arena drops the previous statement's borrows.
             let prev_arena = std::mem::replace(&mut self.arena, DocArena::new());
             let mut arena = DocArena::recycle(prev_arena);
             self.parts.clear();
@@ -280,14 +265,9 @@ impl Formatter {
                 drain_gap_comments(cctx, stmt_source, &mut arena, &mut self.parts);
             }
 
-            // Stage 1.5: Pre-compute a structured `DocId` per top-level
-            // fallback macro call whose args can be parsed as
-            // expressions.  Calls with interior comments or unparseable
-            // args get `None` and fall through to the existing verbatim
-            // path in `try_macro`. The comment slice comes from
-            // `comment_ctx` — `self.comment_entries` was moved into it
-            // above, so reading it directly would see an empty vec and
-            // miss the interior-comment bail.
+            // Macro calls whose args parse as expressions get a structured
+            // doc; the rest fall through to verbatim emission in `try_macro`.
+            // Comments come from `comment_ctx`, which owns them by now.
             let macro_docs = macro_structured::compute_macro_docs(
                 &self.mini_parser,
                 &self.dialect,
@@ -297,7 +277,6 @@ impl Formatter {
                 &mut arena,
             );
 
-            // Stage 2: Interpret bytecode for this AST into Doc fragments.
             let ctx = FmtCtx {
                 dialect: self.dialect.clone(),
                 reader: erased,
@@ -308,12 +287,10 @@ impl Formatter {
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
             self.parts.push(interpreted);
 
-            // Emit this statement's terminator.  Trailing comments now
-            // live on the SEMI's token attachment, so they belong in the
-            // *same* render cycle as the SEMI; the previous design that
-            // added the SEMI in the next statement's emit_stmt_separator
-            // would render the trailing line_suffix in the wrong cycle.
-            if semicolons && !root_id.is_null() {
+            // The terminator renders in this cycle, not the next statement's:
+            // comments attached to the SEMI are line suffixes, and a line
+            // suffix only lands on the line its cycle emitted.
+            if self.config.semicolons && !root_id.is_null() {
                 let semi = arena.text(";");
                 self.parts.push(semi);
             }
@@ -323,15 +300,14 @@ impl Formatter {
                     .push(cctx.drain_remaining(stmt_source, &mut arena));
             }
 
-            // Stage 3: Render Docs via the Wadler-style group/flat/break algorithm.
-            // Rendering happens here while `erased`/`ctx` still borrow parser session data.
+            // Render here, while `erased` and `ctx` still borrow the session.
             let doc = arena.cats(&self.parts);
             let mut bufs = std::mem::take(&mut self.render_bufs);
             bufs.clear();
             arena.render_into(doc, &self.config, &mut bufs);
-            // An empty statement has no root, so it contributes its comments
-            // and nothing else: it neither ends a line of its own nor claims
-            // a slot in the output when it carries no comments either.
+            // An empty statement contributes its comments and nothing else,
+            // so it ends no line of its own and claims no slot when it has
+            // no comments either.
             let rendered = if root_id.is_null() {
                 bufs.out.trim_end()
             } else {
@@ -343,7 +319,6 @@ impl Formatter {
             }
             self.render_bufs = bufs;
 
-            // Stage 4: Recover and recycle statement-scoped buffers.
             if let Some(cctx) = ctx.comment_ctx {
                 let (comments, tokens) = cctx.into_parts();
                 self.comment_entries = comments;
@@ -619,11 +594,8 @@ fn drain_gap_comments<'a>(
         parts.push(arena.text(text));
         parts.push(arena.hardline());
         ctx.advance_comment();
-        // If the source had a blank line between this comment and
-        // whatever follows — the next comment or the drain target —
-        // preserve it with an extra hardline. One check covers both
-        // "between comment blocks" and "between last block and next
-        // statement".
+        // Preserve a blank line the source had after this comment, whether
+        // what follows is another comment or the next statement.
         let next = ctx.peek_comment().map_or(before, |n| n.offset);
         let gap = StmtRange {
             start: end.min(source_end),
@@ -732,10 +704,7 @@ fn reindent_macro<'a>(
         return arena.text(macro_text);
     }
 
-    // Step 1: Tokenize the inner body to compute paren depth at each newline.
-    // depth_at_newline[i] = depth after processing all tokens up to and
-    // including the (i+1)-th newline. We start at depth 1 because we're
-    // inside the `!(` paren.
+    // Paren depth after each newline, starting at 1 for the `!(` itself.
     let mut depth: i32 = 1;
     let mut depth_at_newline: Vec<i32> = Vec::new();
 
@@ -743,16 +712,15 @@ fn reindent_macro<'a>(
         let tt: u32 = tok.token_type().into();
         let tok_text = tok.text();
 
-        // LP/RP update depth. Tokens like strings and comments never produce
-        // LP/RP, so parens inside them are automatically ignored.
+        // Strings and comments never tokenize as LP/RP, so their parens
+        // are ignored for free.
         if tt == TK_LP {
             depth += 1;
         } else if tt == TK_RP {
             depth -= 1;
         }
 
-        // Record depth at each newline boundary. Newlines appear in Space
-        // tokens (and occasionally block-comment tokens).
+        // Newlines arrive inside Space tokens, and block comments.
         for _ in tok_text.bytes().filter(|&b| b == b'\n') {
             depth_at_newline.push(depth);
         }
@@ -772,18 +740,15 @@ fn reindent_macro<'a>(
             continue;
         }
 
-        // Depth at the start of this line (before any tokens on this line).
-        // Line 0 starts at depth 1 (inside `!(`).
-        // Subsequent lines start at the depth recorded at the preceding newline.
+        // Line 0 is inside `!(`; the rest start at the preceding newline.
         let line_depth = if i == 0 {
             1
         } else {
             depth_at_newline.get(i - 1).copied().unwrap_or(0)
         };
 
-        // Leading `)` chars reduce indent for this line. Safe to count raw
-        // characters here: a `)` at position 0 of trimmed text is always an
-        // actual RP token (strings start with `'`, comments with `--`/`/*`).
+        // A `)` at the start of trimmed text is always an RP token, never
+        // the inside of a string or comment, so raw counting is safe.
         let leading_close =
             i32::try_from(trimmed.bytes().take_while(|&b| b == b')').count()).unwrap_or(i32::MAX);
         let indent = i16::try_from((line_depth - leading_close).max(0)).unwrap_or(i16::MAX);
@@ -847,10 +812,9 @@ mod tests {
 
     #[test]
     fn emit_stmt_separator_drains_leading_block_comment_after_break() {
-        // emit_stmt_separator now only handles the inter-statement break
-        // and drains LEADING comments of the next statement.  The
-        // statement terminator (`;`) and any TRAILING comments on it are
-        // emitted by per-statement processing in `format`, not here.
+        // The separator only breaks and drains the next statement's leading
+        // comments; the terminator and its trailing comments come from
+        // `format`.
         let source = StmtText::new("/*x*/SELECT");
         let ctx = CommentCtx::new(
             vec![CommentEntry {

@@ -175,6 +175,13 @@ impl<'a> DocArena<'a> {
 
     /// A hardline that elides itself if followed immediately by another
     /// break at render time. See `Doc::CommentBreak` for rationale.
+    /// A blank line that survives next to a comment break.
+    pub(crate) fn blank_line(&mut self) -> DocId {
+        let hl = self.hardline();
+        let cb = self.comment_break();
+        self.cat(hl, cb)
+    }
+
     pub(crate) fn comment_break(&mut self) -> DocId {
         self.push(Doc::CommentBreak)
     }
