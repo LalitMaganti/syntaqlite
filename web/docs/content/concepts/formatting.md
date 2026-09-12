@@ -111,7 +111,7 @@ The formatter pretty-prints the AST as-is. It does not:
 - Reorder clauses
 - Normalize expressions (e.g., `a = 1` vs `1 = a`)
 - Add or remove aliases
-- Change quoting style on identifiers
+- Change quoting style on identifiers: `` `a` ``, `[a]` and `"a"` each come back as written
 
 If the SQL parses, the formatted output is semantically identical.
 
