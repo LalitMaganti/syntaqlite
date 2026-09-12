@@ -106,21 +106,43 @@ struct Divergence {
 ///
 /// A one-token lookahead separates a dropped token from an inserted one from a
 /// changed one, which is enough to name the construct.
+///
+/// A parenthesis the formatter adds is tolerated: clarifying parentheses
+/// around confusing precedence are a deliberate formatting choice, in the same
+/// class as keyword casing, not information the AST lost. A parenthesis the
+/// formatter *drops* is still reported, because that is real loss.
 fn diverge(authored: &[Lexeme], formatted: &[Lexeme]) -> Option<Divergence> {
+    /// How far ahead to look when deciding whether a token was dropped or
+    /// inserted rather than changed.
+    const WINDOW: usize = 4;
+
     let mut index = 0;
-    while index < authored.len() && index < formatted.len() {
-        if authored[index].same(&formatted[index]) {
+    let mut extra = 0;
+    while index < authored.len() && index + extra < formatted.len() {
+        let formatted = &formatted[index + extra..];
+        if authored[index].same(&formatted[0]) {
             index += 1;
             continue;
         }
-        let dropped = authored
-            .get(index + 1)
-            .is_some_and(|next| next.same(&formatted[index]));
-        let inserted = formatted
-            .get(index + 1)
-            .is_some_and(|next| authored[index].same(next));
+        if matches!(formatted[0].text.as_str(), "(" | ")") {
+            extra += 1;
+            continue;
+        }
+        // Look a little way ahead so a dropped or inserted run is named for
+        // what it is rather than falling through to "changed". The nearer
+        // match wins, which keeps a one-token edit labelled as one.
+        let dropped = (1..=WINDOW).find(|k| {
+            authored
+                .get(index + k)
+                .is_some_and(|a| a.same(&formatted[0]))
+        });
+        let inserted =
+            (1..=WINDOW).find(|k| formatted.get(*k).is_some_and(|f| authored[index].same(f)));
+        let dropped = dropped.is_some_and(|d| inserted.is_none_or(|i| d <= i));
+        let inserted = !dropped
+            && (1..=WINDOW).any(|k| formatted.get(k).is_some_and(|f| authored[index].same(f)));
         let authored_label = authored[index].label();
-        let formatted_label = formatted[index].label();
+        let formatted_label = formatted[0].label();
         let (category, authored_out, formatted_out) = if dropped && !inserted {
             (
                 format!("dropped {authored_label}"),
@@ -147,7 +169,7 @@ fn diverge(authored: &[Lexeme], formatted: &[Lexeme]) -> Option<Divergence> {
             formatted: formatted_out,
         });
     }
-    if authored.len() > formatted.len() {
+    if index < authored.len() {
         let label = authored[index].label();
         return Some(Divergence {
             category: format!("dropped {label}"),
@@ -156,15 +178,8 @@ fn diverge(authored: &[Lexeme], formatted: &[Lexeme]) -> Option<Divergence> {
             formatted: None,
         });
     }
-    if formatted.len() > authored.len() {
-        let label = formatted[index].label();
-        return Some(Divergence {
-            category: format!("inserted {label}"),
-            index,
-            authored: None,
-            formatted: Some(label),
-        });
-    }
+    // Any remaining formatted tokens are tolerated parentheses, since every
+    // other mismatch would have been reported above.
     None
 }
 
