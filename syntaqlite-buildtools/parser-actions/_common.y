@@ -55,6 +55,13 @@ typedef struct SynqConstraintGroups {
   uint32_t group;
 } SynqConstraintGroups;
 
+// as: an optional alias plus whether the AS keyword was authored.  Without
+// the second field `SELECT a x` and `SELECT a AS x` are indistinguishable.
+typedef struct SynqAliasValue {
+  uint32_t name;
+  int has_as;
+} SynqAliasValue;
+
 // defer_subclause: DEFERRABLE / NOT DEFERRABLE plus the INITIALLY mode.
 typedef struct SynqDeferValue {
   SyntaqliteDeferrable deferrable;

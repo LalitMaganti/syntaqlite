@@ -398,9 +398,9 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM t1 AS a
+                FROM t1 a
                 -- c
-                JOIN t2 AS b
+                JOIN t2 b
                   ON a.id = b.id;
             """,
         )
@@ -414,8 +414,8 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM t1 AS a
-                JOIN t2 AS b
+                FROM t1 a
+                JOIN t2 b
                   -- c
                   ON a.id = b.id;
             """,
@@ -449,10 +449,10 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM t1 AS a
+                FROM t1 a
                 LEFT
                 -- c
-                JOIN t2 AS b
+                JOIN t2 b
                   ON a.id = b.id;
             """,
         )
@@ -462,9 +462,9 @@ class JoinComment(TestSuite):
             sql="SELECT 1 FROM t1 a LEFT /* mid */ JOIN t2 b ON a.id = b.id",
             out="""\
                 SELECT 1
-                FROM t1 AS a
+                FROM t1 a
                 LEFT
-                /* mid */ JOIN t2 AS b
+                /* mid */ JOIN t2 b
                   ON a.id = b.id;
             """,
         )
@@ -478,10 +478,10 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM t1 AS a
+                FROM t1 a
                 RIGHT
                 -- c
-                JOIN t2 AS b
+                JOIN t2 b
                   ON a.id = b.id;
             """,
         )
@@ -495,10 +495,10 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM t1 AS a
+                FROM t1 a
                 FULL
                 -- c
-                JOIN t2 AS b
+                JOIN t2 b
                   ON a.id = b.id;
             """,
         )
@@ -512,10 +512,10 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM t1 AS a
+                FROM t1 a
                 CROSS
                 -- c
-                JOIN t2 AS b;
+                JOIN t2 b;
             """,
         )
 
@@ -528,10 +528,10 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM t1 AS a
+                FROM t1 a
                 NATURAL
                 -- c
-                JOIN t2 AS b;
+                JOIN t2 b;
             """,
         )
 
@@ -545,10 +545,10 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM t1 AS a
+                FROM t1 a
                 NATURAL LEFT
                 -- c
-                JOIN t2 AS b
+                JOIN t2 b
                   ON a.id = b.id;
             """,
         )
@@ -566,12 +566,12 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM t1 AS a
+                FROM t1 a
                 -- c1
-                JOIN t2 AS b
+                JOIN t2 b
                   ON a.id = b.id
                 -- c2
-                LEFT JOIN t3 AS c
+                LEFT JOIN t3 c
                   ON c.id = a.id
                 -- c3
                 WHERE
@@ -597,14 +597,14 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM orders AS o
+                FROM orders o
                 -- foo
-                JOIN order_line_items AS li
+                JOIN order_line_items li
                   -- z
                   ON li.order_id = o.order_id
                 LEFT
                 -- foo
-                JOIN customers AS c
+                JOIN customers c
                   -- x
                   ON c.customer_id = o.customer_id;
             """,
@@ -624,13 +624,13 @@ class JoinComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM orders AS o
+                FROM orders o
                 -- foo
-                JOIN order_line_items AS li
+                JOIN order_line_items li
                   ON li.order_id = o.order_id
                 LEFT
                 -- bar
-                JOIN customers AS c
+                JOIN customers c
                   ON c.customer_id = o.customer_id;
             """,
         )
@@ -649,7 +649,7 @@ class TableAliasComment(TestSuite):
             """,
             out="""\
                 SELECT 1
-                FROM orders AS
+                FROM orders
                 -- c
                 o;
             """,

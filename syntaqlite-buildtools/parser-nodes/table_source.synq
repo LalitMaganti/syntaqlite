@@ -26,6 +26,7 @@ node TableRef {
   schema: inline SyntaqliteTextSpan
   has_parens: inline Bool
   alias: index Name
+  alias_as: inline Bool
   args: index ExprList
   index_hint: inline IndexHint
   index_name: inline SyntaqliteTextSpan
@@ -40,7 +41,9 @@ node TableRef {
     } else {
       if_flag(has_parens) { "()" }
     }
-    if_set(alias) { space "AS" space child(alias) }
+    if_set(alias) {
+      if_flag(alias_as) { space "AS" space child(alias) } else { space child(alias) }
+    }
     switch(index_hint) {
       INDEXED { space "INDEXED" "BY" space span(index_name) }
       NOT_INDEXED { space "NOT" "INDEXED" }
@@ -51,12 +54,15 @@ node TableRef {
 node SubqueryTableSource {
   select: index Select
   alias: index Name
+  alias_as: inline Bool
 
   semantic { scoped_source(body: select, alias: alias) }
 
   fmt {
     group { "(" nest { softline child(select) } softline ")" }
-    if_set(alias) { space "AS" space child(alias) }
+    if_set(alias) {
+      if_flag(alias_as) { space "AS" space child(alias) } else { space child(alias) }
+    }
   }
 }
 
@@ -64,10 +70,13 @@ node SubqueryTableSource {
 node ParenTableSource {
   source: index TableSource
   alias: index Name
+  alias_as: inline Bool
 
   fmt {
     group { "(" nest { softline child(source) } softline ")" }
-    if_set(alias) { space "AS" space child(alias) }
+    if_set(alias) {
+      if_flag(alias_as) { space "AS" space child(alias) } else { space child(alias) }
+    }
   }
 }
 

@@ -447,6 +447,7 @@ pub(crate) struct ResultColumn {
     pub(crate) tag: u32,
     pub(crate) flags: super::ast::ResultColumnFlags,
     pub(crate) alias: AnyNodeId,
+    pub(crate) alias_as: Bool,
     pub(crate) expr: AnyNodeId,
 }
 
@@ -497,6 +498,7 @@ pub(crate) struct TableRef {
     pub(crate) schema: TextSpan,
     pub(crate) has_parens: Bool,
     pub(crate) alias: AnyNodeId,
+    pub(crate) alias_as: Bool,
     pub(crate) args: AnyNodeId,
     pub(crate) index_hint: super::ast::IndexHint,
     pub(crate) index_name: TextSpan,
@@ -508,6 +510,7 @@ pub(crate) struct SubqueryTableSource {
     pub(crate) tag: u32,
     pub(crate) select: AnyNodeId,
     pub(crate) alias: AnyNodeId,
+    pub(crate) alias_as: Bool,
 }
 
 #[derive(Debug, Clone)]
@@ -516,6 +519,7 @@ pub(crate) struct ParenTableSource {
     pub(crate) tag: u32,
     pub(crate) source: AnyNodeId,
     pub(crate) alias: AnyNodeId,
+    pub(crate) alias_as: Bool,
 }
 
 #[derive(Debug, Clone)]

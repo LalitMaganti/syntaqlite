@@ -661,12 +661,14 @@ static inline uint32_t synq_parse_result_column(
     SynqParseCtx* ctx,
     SyntaqliteResultColumnFlags flags,
     uint32_t alias,
+    SyntaqliteBool alias_as,
     uint32_t expr) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteResultColumn){.tag = SYNTAQLITE_NODE_RESULT_COLUMN,
                                 .flags = flags,
                                 .alias = alias,
+                                .alias_as = alias_as,
                                 .expr = expr},
       (uint32_t)sizeof(SyntaqliteResultColumn));
 }
@@ -736,6 +738,7 @@ static inline uint32_t synq_parse_table_ref(SynqParseCtx* ctx,
                                             SyntaqliteTextSpan schema,
                                             SyntaqliteBool has_parens,
                                             uint32_t alias,
+                                            SyntaqliteBool alias_as,
                                             uint32_t args,
                                             SyntaqliteIndexHint index_hint,
                                             SyntaqliteTextSpan index_name) {
@@ -746,31 +749,37 @@ static inline uint32_t synq_parse_table_ref(SynqParseCtx* ctx,
                             .schema = schema,
                             .has_parens = has_parens,
                             .alias = alias,
+                            .alias_as = alias_as,
                             .args = args,
                             .index_hint = index_hint,
                             .index_name = index_name},
       (uint32_t)sizeof(SyntaqliteTableRef));
 }
 
-static inline uint32_t synq_parse_subquery_table_source(SynqParseCtx* ctx,
-                                                        uint32_t select,
-                                                        uint32_t alias) {
+static inline uint32_t synq_parse_subquery_table_source(
+    SynqParseCtx* ctx,
+    uint32_t select,
+    uint32_t alias,
+    SyntaqliteBool alias_as) {
   return synq_parse_build(ctx,
                           &(SyntaqliteSubqueryTableSource){
                               .tag = SYNTAQLITE_NODE_SUBQUERY_TABLE_SOURCE,
                               .select = select,
-                              .alias = alias},
+                              .alias = alias,
+                              .alias_as = alias_as},
                           (uint32_t)sizeof(SyntaqliteSubqueryTableSource));
 }
 
 static inline uint32_t synq_parse_paren_table_source(SynqParseCtx* ctx,
                                                      uint32_t source,
-                                                     uint32_t alias) {
+                                                     uint32_t alias,
+                                                     SyntaqliteBool alias_as) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteParenTableSource){.tag = SYNTAQLITE_NODE_PAREN_TABLE_SOURCE,
                                     .source = source,
-                                    .alias = alias},
+                                    .alias = alias,
+                                    .alias_as = alias_as},
       (uint32_t)sizeof(SyntaqliteParenTableSource));
 }
 

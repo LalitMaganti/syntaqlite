@@ -20,6 +20,7 @@ class TableRefBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -27,6 +28,7 @@ class TableRefBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -50,6 +52,7 @@ class TableRefBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -59,6 +62,7 @@ class TableRefBasic(TestSuite):
                   alias:
                     IdentName
                       source: "x"
+                  alias_as: TRUE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -82,6 +86,7 @@ class TableRefBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -91,6 +96,7 @@ class TableRefBasic(TestSuite):
                   alias:
                     IdentName
                       source: "x"
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -114,6 +120,7 @@ class TableRefBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -121,6 +128,7 @@ class TableRefBasic(TestSuite):
                   schema: "main"
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -144,6 +152,7 @@ class TableRefBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -153,6 +162,7 @@ class TableRefBasic(TestSuite):
                   alias:
                     IdentName
                       source: "x"
+                  alias_as: TRUE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -180,6 +190,7 @@ class JoinBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -191,6 +202,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -200,6 +212,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -225,6 +238,7 @@ class JoinBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -240,6 +254,7 @@ class JoinBasic(TestSuite):
                           schema: (none)
                           has_parens: FALSE
                           alias: (none)
+                          alias_as: FALSE
                           args: (none)
                           index_hint: DEFAULT
                           index_name: (none)
@@ -249,6 +264,7 @@ class JoinBasic(TestSuite):
                           schema: (none)
                           has_parens: FALSE
                           alias: (none)
+                          alias_as: FALSE
                           args: (none)
                           index_hint: DEFAULT
                           index_name: (none)
@@ -260,6 +276,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -285,6 +302,7 @@ class JoinBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -296,6 +314,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -305,6 +324,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -342,6 +362,7 @@ class JoinBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -356,6 +377,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -365,6 +387,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -402,6 +425,7 @@ class JoinBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -416,6 +440,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -425,6 +450,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -462,6 +488,7 @@ class JoinBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -476,6 +503,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -485,6 +513,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -510,6 +539,7 @@ class JoinBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -524,6 +554,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -533,6 +564,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -570,6 +602,7 @@ class JoinBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -586,6 +619,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -595,6 +629,7 @@ class JoinBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -636,6 +671,7 @@ class JoinNatural(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -650,6 +686,7 @@ class JoinNatural(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -659,6 +696,7 @@ class JoinNatural(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -684,6 +722,7 @@ class JoinNatural(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -700,6 +739,7 @@ class JoinNatural(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -709,6 +749,7 @@ class JoinNatural(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -734,6 +775,7 @@ class JoinNatural(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -750,6 +792,7 @@ class JoinNatural(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -759,6 +802,7 @@ class JoinNatural(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -784,6 +828,7 @@ class JoinNatural(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -800,6 +845,7 @@ class JoinNatural(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -809,6 +855,7 @@ class JoinNatural(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -838,6 +885,7 @@ class JoinUsing(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -849,6 +897,7 @@ class JoinUsing(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -858,6 +907,7 @@ class JoinUsing(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -888,6 +938,7 @@ class JoinUsing(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -899,6 +950,7 @@ class JoinUsing(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -908,6 +960,7 @@ class JoinUsing(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -946,6 +999,7 @@ class JoinMultiple(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -964,6 +1018,7 @@ class JoinMultiple(TestSuite):
                           schema: (none)
                           has_parens: FALSE
                           alias: (none)
+                          alias_as: FALSE
                           args: (none)
                           index_hint: DEFAULT
                           index_name: (none)
@@ -973,6 +1028,7 @@ class JoinMultiple(TestSuite):
                           schema: (none)
                           has_parens: FALSE
                           alias: (none)
+                          alias_as: FALSE
                           args: (none)
                           index_hint: DEFAULT
                           index_name: (none)
@@ -996,6 +1052,7 @@ class JoinMultiple(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -1037,6 +1094,7 @@ class SubqueryTableSource(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 SubqueryTableSource
@@ -1048,6 +1106,7 @@ class SubqueryTableSource(TestSuite):
                           ResultColumn
                             flags: (none)
                             alias: (none)
+                            alias_as: FALSE
                             expr:
                               Literal
                                 literal_type: INTEGER
@@ -1062,6 +1121,7 @@ class SubqueryTableSource(TestSuite):
                   alias:
                     IdentName
                       source: "t"
+                  alias_as: TRUE
               where_clause: (none)
               groupby: (none)
               having: (none)
@@ -1086,6 +1146,7 @@ class TableValuedFunction(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -1093,6 +1154,7 @@ class TableValuedFunction(TestSuite):
                   schema: (none)
                   has_parens: TRUE
                   alias: (none)
+                  alias_as: FALSE
                   args:
                     ExprList [2 items]
                       Literal
@@ -1123,6 +1185,7 @@ class TableValuedFunction(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -1132,6 +1195,7 @@ class TableValuedFunction(TestSuite):
                   alias:
                     IdentName
                       source: "j"
+                  alias_as: TRUE
                   args:
                     ExprList [1 items]
                       Literal
@@ -1159,6 +1223,7 @@ class TableValuedFunction(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -1166,6 +1231,7 @@ class TableValuedFunction(TestSuite):
                   schema: (none)
                   has_parens: TRUE
                   alias: (none)
+                  alias_as: FALSE
                   args:
                     ExprList [3 items]
                       Literal
@@ -1199,6 +1265,7 @@ class TableValuedFunction(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 JoinClause
@@ -1210,6 +1277,7 @@ class TableValuedFunction(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -1221,6 +1289,7 @@ class TableValuedFunction(TestSuite):
                       alias:
                         IdentName
                           source: "j"
+                      alias_as: TRUE
                       args:
                         ExprList [1 items]
                           ColumnRef

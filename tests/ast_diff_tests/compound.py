@@ -23,6 +23,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -42,6 +43,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -72,6 +74,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -91,6 +94,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -121,6 +125,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -140,6 +145,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -170,6 +176,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -189,6 +196,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -223,6 +231,7 @@ class CompoundSelect(TestSuite):
                           ResultColumn
                             flags: (none)
                             alias: (none)
+                            alias_as: FALSE
                             expr:
                               Literal
                                 literal_type: INTEGER
@@ -242,6 +251,7 @@ class CompoundSelect(TestSuite):
                           ResultColumn
                             flags: (none)
                             alias: (none)
+                            alias_as: FALSE
                             expr:
                               Literal
                                 literal_type: INTEGER
@@ -263,6 +273,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -293,6 +304,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -312,6 +324,7 @@ class CompoundSelect(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -351,6 +364,7 @@ class SubqueryExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       SubqueryExpr
                         select:
@@ -361,6 +375,7 @@ class SubqueryExpr(TestSuite):
                                 ResultColumn
                                   flags: (none)
                                   alias: (none)
+                                  alias_as: FALSE
                                   expr:
                                     Literal
                                       literal_type: INTEGER
@@ -393,6 +408,7 @@ class SubqueryExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ExistsExpr
                         select:
@@ -403,6 +419,7 @@ class SubqueryExpr(TestSuite):
                                 ResultColumn
                                   flags: (none)
                                   alias: (none)
+                                  alias_as: FALSE
                                   expr:
                                     Literal
                                       literal_type: INTEGER
@@ -436,6 +453,7 @@ class SubqueryExpr(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -443,6 +461,7 @@ class SubqueryExpr(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -459,6 +478,7 @@ class SubqueryExpr(TestSuite):
                               ResultColumn
                                 flags: (none)
                                 alias: (none)
+                                alias_as: FALSE
                                 expr:
                                   Literal
                                     literal_type: INTEGER
@@ -469,6 +489,7 @@ class SubqueryExpr(TestSuite):
                               schema: (none)
                               has_parens: FALSE
                               alias: (none)
+                              alias_as: FALSE
                               args: (none)
                               index_hint: DEFAULT
                               index_name: (none)
@@ -501,6 +522,7 @@ class InExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       InExpr
                         negated: FALSE
@@ -541,6 +563,7 @@ class InExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       InExpr
                         negated: TRUE
@@ -581,6 +604,7 @@ class InExpr(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -588,6 +612,7 @@ class InExpr(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -608,6 +633,7 @@ class InExpr(TestSuite):
                           ResultColumn
                             flags: (none)
                             alias: (none)
+                            alias_as: FALSE
                             expr:
                               ColumnRef
                                 column: "id"
@@ -619,6 +645,7 @@ class InExpr(TestSuite):
                           schema: (none)
                           has_parens: FALSE
                           alias: (none)
+                          alias_as: FALSE
                           args: (none)
                           index_hint: DEFAULT
                           index_name: (none)
@@ -647,6 +674,7 @@ class InExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       InExpr
                         negated: FALSE
@@ -663,6 +691,7 @@ class InExpr(TestSuite):
                                 ResultColumn
                                   flags: (none)
                                   alias: (none)
+                                  alias_as: FALSE
                                   expr:
                                     Literal
                                       literal_type: INTEGER

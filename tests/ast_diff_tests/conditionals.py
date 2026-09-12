@@ -20,6 +20,7 @@ class IsExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IsExpr
                         op: IS_NULL
@@ -49,6 +50,7 @@ class IsExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IsExpr
                         op: NOT_NULL
@@ -78,6 +80,7 @@ class IsExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IsExpr
                         op: NOT_NULL
@@ -107,6 +110,7 @@ class IsExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IsExpr
                         op: IS
@@ -139,6 +143,7 @@ class IsExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IsExpr
                         op: IS_NOT
@@ -171,6 +176,7 @@ class IsExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IsExpr
                         op: IS
@@ -203,6 +209,7 @@ class IsExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IsExpr
                         op: IS_NOT
@@ -235,6 +242,7 @@ class IsExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IsExpr
                         op: IS_NOT_DISTINCT
@@ -267,6 +275,7 @@ class IsExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IsExpr
                         op: IS_DISTINCT
@@ -303,6 +312,7 @@ class BetweenExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BetweenExpr
                         negated: FALSE
@@ -339,6 +349,7 @@ class BetweenExprBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -346,6 +357,7 @@ class BetweenExprBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -400,6 +412,7 @@ class BetweenExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BetweenExpr
                         negated: TRUE
@@ -440,6 +453,7 @@ class LikeExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       LikeExpr
                         negated: FALSE
@@ -474,6 +488,7 @@ class LikeExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       LikeExpr
                         negated: TRUE
@@ -508,6 +523,7 @@ class LikeExprBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -515,6 +531,7 @@ class LikeExprBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -552,6 +569,7 @@ class LikeExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       LikeExpr
                         negated: FALSE
@@ -593,6 +611,7 @@ class CaseExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CaseExpr
                         operand: (none)
@@ -632,6 +651,7 @@ class CaseExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CaseExpr
                         operand:
@@ -680,6 +700,7 @@ class CaseExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CaseExpr
                         operand: (none)
@@ -716,6 +737,7 @@ class CaseExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CaseExpr
                         operand: (none)
@@ -785,6 +807,7 @@ class CaseExprBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CaseExpr
                         operand: (none)

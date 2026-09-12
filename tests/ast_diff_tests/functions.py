@@ -20,6 +20,7 @@ class FunctionCallBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "random"
@@ -48,6 +49,7 @@ class FunctionCallBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "abs"
@@ -80,6 +82,7 @@ class FunctionCallBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "max"
@@ -118,6 +121,7 @@ class FunctionCallBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "count"
@@ -146,6 +150,7 @@ class FunctionCallBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "count"
@@ -178,6 +183,7 @@ class FunctionCallBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "count"
@@ -202,6 +208,7 @@ class FunctionCallBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -225,6 +232,7 @@ class FunctionCallBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "abs"
@@ -264,6 +272,7 @@ class FunctionCallBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "abs"

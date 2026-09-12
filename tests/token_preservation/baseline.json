@@ -26,7 +26,6 @@
   "dropped VIRTUAL": 1,
   "format error": 7,
   "inserted (": 10,
-  "inserted AS": 16,
   "inserted BEFORE": 2,
   "inserted COLUMN": 3,
   "inserted SAVEPOINT": 5

@@ -20,6 +20,7 @@ class CastExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CastExpr
                         expr:
@@ -48,6 +49,7 @@ class CastExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CastExpr
                         expr:
@@ -76,6 +78,7 @@ class CastExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CastExpr
                         expr:
@@ -104,6 +107,7 @@ class CastExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CastExpr
                         expr:
@@ -133,6 +137,7 @@ class CastExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CastExpr
                         expr:
@@ -162,6 +167,7 @@ class CastExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CastExpr
                         expr:
@@ -191,6 +197,7 @@ class CastExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       CastExpr
                         expr:
@@ -223,6 +230,7 @@ class PtrExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: PTR
@@ -255,6 +263,7 @@ class PtrExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: PTR
@@ -289,6 +298,7 @@ class PtrExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: PTR2
@@ -322,6 +332,7 @@ class PtrExpr(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: PTR2
@@ -366,6 +377,7 @@ class QnumberLiteral(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: QNUMBER
@@ -391,6 +403,7 @@ class QnumberLiteral(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: QNUMBER
@@ -420,6 +433,7 @@ class RowValue(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       RowValue
                         items:
@@ -451,6 +465,7 @@ class RowValue(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       RowValue
                         items:
