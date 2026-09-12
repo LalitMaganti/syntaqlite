@@ -69,6 +69,9 @@ node CreateVirtualTableStmt {
   schema: inline SyntaqliteTextSpan
   module_name: inline SyntaqliteTextSpan
   if_not_exists: inline Bool
+  // `USING m()` has parentheses but no arguments, so their presence cannot be
+  // inferred from the span being empty.
+  has_module_args: inline Bool
   module_args: inline SyntaqliteTextSpan
 
   fmt {
@@ -78,7 +81,7 @@ node CreateVirtualTableStmt {
     if_span(schema) { span(schema) "." }
     span(table_name)
     space "USING" space span(module_name)
-    if_span(module_args) { "(" span(module_args) ")" }
+    if_flag(has_module_args) { "(" span(module_args) ")" }
   }
 
   semantic { define_table(name: table_name) }

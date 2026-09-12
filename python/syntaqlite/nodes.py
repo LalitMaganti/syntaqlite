@@ -843,13 +843,14 @@ class CreateTriggerStmt:
 class CreateVirtualTableStmt:
     """AST node: CreateVirtualTableStmt"""
 
-    __slots__ = ("table_name", "schema", "module_name", "if_not_exists", "module_args")
+    __slots__ = ("table_name", "schema", "module_name", "if_not_exists", "has_module_args", "module_args")
 
     def __init__(self, d: dict):
         self.table_name: str | None = d.get("table_name")
         self.schema: str | None = d.get("schema")
         self.module_name: str | None = d.get("module_name")
         self.if_not_exists: bool = d["if_not_exists"]
+        self.has_module_args: bool = d["has_module_args"]
         self.module_args: str | None = d.get("module_args")
 
     def __repr__(self):

@@ -20,12 +20,12 @@
 //! cargo run --release --features serde-json --example token_preservation -- corpus.jsonl
 //! ```
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, BufReader, Read, Write};
 
-use syntaqlite::Formatter;
 use syntaqlite::any::{AnyDialect, AnyTokenType, AnyTokenizer, TokenCategory};
-use syntaqlite::sqlite_dialect;
+use syntaqlite::util::{SqliteFlag, SqliteFlags, SqliteVersion};
+use syntaqlite::{Formatter, sqlite_dialect};
 
 /// One token as the oracle compares it.
 struct Lexeme {
@@ -100,6 +100,14 @@ fn lex(
             })
         })
         .collect();
+    // Normalise statement terminators. A run of them, or one at either end,
+    // delimits empty statements that carry no syntax, and whether a final `;`
+    // is printed at all is a FormatConfig choice. Terminators *between*
+    // statements are kept, so losing one inside a trigger body still shows up.
+    lexemes.dedup_by(|a, b| a.text == ";" && b.text == ";");
+    if lexemes.first().is_some_and(|first| first.text == ";") {
+        lexemes.remove(0);
+    }
     if lexemes.last().is_some_and(|last| last.text == ";") {
         lexemes.pop();
     }
@@ -222,6 +230,30 @@ fn check(
     }
 }
 
+/// A formatter for one corpus configuration.
+///
+/// # Panics
+/// On an unknown flag name or an unparseable version, which would silently
+/// measure the wrong dialect.
+fn build_formatter(version: &str, cflags: &[String]) -> Formatter {
+    let mut dialect = sqlite_dialect();
+    if !version.is_empty() {
+        let parsed = SqliteVersion::parse(version)
+            .unwrap_or_else(|| panic!("corpus version {version} is not a SQLite version"));
+        dialect = dialect.with_version(parsed);
+    }
+    if !cflags.is_empty() {
+        let mut flags = SqliteFlags::default();
+        for name in cflags {
+            let flag = SqliteFlag::from_name(name)
+                .unwrap_or_else(|| panic!("corpus cflag {name} is not a known flag"));
+            flags = flags.with(flag);
+        }
+        dialect = dialect.with_cflags(flags);
+    }
+    Formatter::with_dialect_config(dialect, &syntaqlite::FormatConfig::default())
+}
+
 fn main() {
     let mut args = std::env::args().skip(1);
     let mut input = String::new();
@@ -239,7 +271,10 @@ fn main() {
     let tokenizer = AnyTokenizer::new((*dialect).clone());
     let keywords: HashSet<AnyTokenType> =
         dialect.keywords().map(|entry| entry.token_type()).collect();
-    let mut formatter = Formatter::new();
+    // A corpus entry may need compile-time flags or an emulated version, the
+    // same way its source test does. Formatters are cached per configuration
+    // so the common case still builds one.
+    let mut formatters: HashMap<(String, String), Formatter> = HashMap::new();
 
     let stdout = std::io::stdout();
     let mut out = std::io::BufWriter::new(stdout.lock());
@@ -262,7 +297,27 @@ fn main() {
             .expect("corpus entry has a sql field");
         total += 1;
 
-        let record = match check(&mut formatter, &tokenizer, &dialect, &keywords, sql) {
+        let version = entry
+            .get("version")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        let cflags: Vec<String> = entry
+            .get("cflags")
+            .and_then(serde_json::Value::as_array)
+            .map(|flags| {
+                flags
+                    .iter()
+                    .filter_map(|f| f.as_str().map(str::to_owned))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let key = (version.clone(), cflags.join(","));
+        let formatter = formatters
+            .entry(key)
+            .or_insert_with(|| build_formatter(&version, &cflags));
+
+        let record = match check(formatter, &tokenizer, &dialect, &keywords, sql) {
             Outcome::Reproduced => {
                 reproduced += 1;
                 continue;

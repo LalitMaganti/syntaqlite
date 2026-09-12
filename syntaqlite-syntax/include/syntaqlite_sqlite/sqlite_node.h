@@ -60,7 +60,8 @@ typedef enum SyntaqliteBinaryOp {
   SYNTAQLITE_BINARY_OP_CONCAT = 17,
   SYNTAQLITE_BINARY_OP_PTR = 18,
   SYNTAQLITE_BINARY_OP_PTR2 = 19,
-  SYNTAQLITE_BINARY_OP_NE_ANGLE = 20
+  SYNTAQLITE_BINARY_OP_NE_ANGLE = 20,
+  SYNTAQLITE_BINARY_OP_EQ_DOUBLE = 21
 } SyntaqliteBinaryOp;
 
 typedef enum SyntaqliteUnaryOp {
@@ -1007,6 +1008,7 @@ typedef struct SyntaqliteCreateVirtualTableStmt {
   SyntaqliteTextSpan schema;
   SyntaqliteTextSpan module_name;
   SyntaqliteBool if_not_exists;
+  SyntaqliteBool has_module_args;
   SyntaqliteTextSpan module_args;
 } SyntaqliteCreateVirtualTableStmt;
 

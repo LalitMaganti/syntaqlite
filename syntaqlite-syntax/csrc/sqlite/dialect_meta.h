@@ -21,9 +21,10 @@ static const char* const display_literal_type[] = {
 };
 
 static const char* const display_binary_op[] = {
-    "PLUS",   "MINUS",  "STAR",   "SLASH",  "REM", "LT",   "GT",
-    "LE",     "GE",     "EQ",     "NE",     "AND", "OR",   "BIT_AND",
-    "BIT_OR", "LSHIFT", "RSHIFT", "CONCAT", "PTR", "PTR2", "NE_ANGLE",
+    "PLUS", "MINUS",   "STAR",     "SLASH",     "REM",    "LT",
+    "GT",   "LE",      "GE",       "EQ",        "NE",     "AND",
+    "OR",   "BIT_AND", "BIT_OR",   "LSHIFT",    "RSHIFT", "CONCAT",
+    "PTR",  "PTR2",    "NE_ANGLE", "EQ_DOUBLE",
 };
 
 static const char* const display_unary_op[] = {
@@ -967,6 +968,9 @@ static const SyntaqliteFieldMeta field_meta_create_virtual_table_stmt[] = {
     {offsetof(SyntaqliteCreateVirtualTableStmt, if_not_exists),
      SYNTAQLITE_FIELD_BOOL, "if_not_exists", display_bool,
      sizeof(display_bool) / sizeof(display_bool[0])},
+    {offsetof(SyntaqliteCreateVirtualTableStmt, has_module_args),
+     SYNTAQLITE_FIELD_BOOL, "has_module_args", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteCreateVirtualTableStmt, module_args),
      SYNTAQLITE_FIELD_SPAN, "module_args", NULL, 0},
 };
@@ -1526,7 +1530,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* TriggerEvent */
     0,  /* TriggerCmdList */
     10, /* CreateTriggerStmt */
-    5,  /* CreateVirtualTableStmt */
+    6,  /* CreateVirtualTableStmt */
     4,  /* PragmaStmt */
     3,  /* AnalyzeOrReindexStmt */
     4,  /* AttachStmt */

@@ -44,14 +44,24 @@ _SOURCE_DIRS = [
 ]
 
 _OUT_DIR_REL = "tests/token_preservation"
+
+# Logs written by the upstream-sqlite suite, when it has been run. They hold
+# every statement SQLite's own test files execute, which is a far broader
+# corpus than the curated suites but is not checked in.
+_UPSTREAM_LOGS_REL = "tests/upstream_baselines/logs"
 _BASELINE_NAME = "baseline.json"
 _TRIAGE_NAME = "triage.md"
 
 
-def _harvest(root_dir: Path, filter_pattern: Optional[str]) -> List[Tuple[str, str]]:
-    """Collect (name, sql) from the source suites, deduplicated by SQL text."""
-    seen = set()
-    corpus: List[Tuple[str, str]] = []
+def _harvest(root_dir: Path, filter_pattern: Optional[str], seen: set) -> List[dict]:
+    """Collect corpus entries from the source suites, deduplicated by SQL.
+
+    A blueprint's cflags and version travel with its SQL: without them a
+    statement that needs, say, ordered-set aggregates looks like a parse
+    failure rather than a measurement.
+    """
+    seen: set = set()
+    corpus: List[dict] = []
     for test_dir in _SOURCE_DIRS:
         tag = test_dir.rsplit("/", 1)[-1].replace("_diff_tests", "")
         for name, blueprint in load_all_tests(root_dir, filter_pattern=None, test_dir=test_dir):
@@ -59,10 +69,45 @@ def _harvest(root_dir: Path, filter_pattern: Optional[str]) -> List[Tuple[str, s
             if not sql or sql in seen:
                 continue
             seen.add(sql)
-            corpus.append((f"{tag}/{name}", sql))
+            entry = {"name": f"{tag}/{name}", "sql": sql}
+            if getattr(blueprint, "cflags", None):
+                entry["cflags"] = list(blueprint.cflags)
+            if getattr(blueprint, "version", None):
+                entry["version"] = blueprint.version
+            corpus.append(entry)
     if filter_pattern:
         pat = re.compile(filter_pattern, re.IGNORECASE)
-        corpus = [(n, s) for n, s in corpus if pat.search(n)]
+        corpus = [e for e in corpus if pat.search(e["name"])]
+    return corpus
+
+
+def _harvest_upstream(root_dir: Path, seen: set) -> List[dict]:
+    """Collect statements from the upstream-sqlite logs, if they exist.
+
+    Only statements both engines accepted are useful here: the harness asks
+    what the formatter does with valid SQL, not how it reports errors.
+    """
+    logs = root_dir / _UPSTREAM_LOGS_REL
+    if not logs.is_dir():
+        return []
+    corpus: List[dict] = []
+    for path in sorted(logs.glob("*.jsonl")):
+        name = path.stem
+        for index, line in enumerate(path.read_text(errors="replace").splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                record = json.loads(line)
+            except ValueError:
+                continue
+            if str(record.get("parse_ok")) != "True" or str(record.get("sqlite_ok")) != "True":
+                continue
+            sql = (record.get("sql") or "").strip()
+            if not sql or sql in seen:
+                continue
+            seen.add(sql)
+            corpus.append({"name": f"upstream/{name}:{index}", "sql": sql})
     return corpus
 
 
@@ -169,6 +214,11 @@ def _check_baseline(baseline_path: Path, counts: Counter, rebaseline: bool) -> i
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--filter", dest="filter_pattern", help="Only corpus entries matching this pattern")
+    parser.add_argument(
+        "--upstream", action="store_true",
+        help="Also measure every statement in the upstream-sqlite logs (much broader, "
+             "needs that suite to have been run at least once)",
+    )
     parser.add_argument("--rebaseline", action="store_true", help="Rewrite the baseline from this run")
     parser.add_argument("-v", "--verbose", action="count", default=0)
     args = parser.parse_args(argv)
@@ -177,15 +227,24 @@ def main(argv: List[str]) -> int:
     out_dir = root_dir / _OUT_DIR_REL
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    corpus = _harvest(root_dir, args.filter_pattern)
+    seen: set = set()
+    corpus = _harvest(root_dir, args.filter_pattern, seen)
+    if args.upstream:
+        upstream = _harvest_upstream(root_dir, seen)
+        if not upstream:
+            print(
+                f"no upstream logs in {_UPSTREAM_LOGS_REL}; "
+                "run the upstream-sqlite suite first"
+            )
+        corpus += upstream
     if not corpus:
         print("no corpus entries matched")
         return 0
 
     corpus_path = out_dir / "corpus.jsonl"
     with corpus_path.open("w", encoding="utf-8") as handle:
-        for name, sql in corpus:
-            handle.write(json.dumps({"name": name, "sql": sql}) + "\n")
+        for entry in corpus:
+            handle.write(json.dumps(entry) + "\n")
 
     records, summary = _run_harness(root_dir, corpus_path)
     if summary:
@@ -197,6 +256,12 @@ def main(argv: List[str]) -> int:
             print(f"  {count:5d}  {category}")
     print(f"triage written to {_OUT_DIR_REL}/{_TRIAGE_NAME}")
 
+    if args.upstream:
+        # The upstream logs are gitignored and depend on a prior run of that
+        # suite, so this corpus is not the same from machine to machine. Report
+        # it, but leave the ratchet to the reproducible corpus.
+        print("upstream corpus included; baseline not checked")
+        return 0
     return _check_baseline(out_dir / _BASELINE_NAME, counts, args.rebaseline)
 
 

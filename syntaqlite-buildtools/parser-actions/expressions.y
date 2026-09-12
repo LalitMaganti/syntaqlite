@@ -60,7 +60,8 @@ expr(A) ::= expr(L) LT|GT|GE|LE(OP) expr(R). {
 expr(A) ::= expr(L) EQ|NE(OP) expr(R). {
     SyntaqliteBinaryOp op;
     if (OP.type == SYNTAQLITE_TK_EQ) {
-        op = SYNTAQLITE_BINARY_OP_EQ;
+        // `==` and `=` share one token type but are different text.
+        op = (OP.n == 2) ? SYNTAQLITE_BINARY_OP_EQ_DOUBLE : SYNTAQLITE_BINARY_OP_EQ;
     } else {
         // `<>` and `!=` share one token type but are different text.
         op = (OP.n == 2 && OP.z[0] == '<') ? SYNTAQLITE_BINARY_OP_NE_ANGLE
