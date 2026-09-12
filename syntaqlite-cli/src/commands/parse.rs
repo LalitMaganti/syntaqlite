@@ -63,6 +63,8 @@ fn parse_source(
         let mut session = parser.parse(fragment.sql_text());
         loop {
             match session.next() {
+                // An empty statement (a bare `;`) has no AST to report.
+                ParseOutcome::Ok(stmt) if stmt.root().is_none() => {}
                 ParseOutcome::Ok(stmt) => sink.on_stmt(StmtView { inner: stmt }),
                 ParseOutcome::Err(err) => {
                     let start = err.offset().unwrap_or_default();
