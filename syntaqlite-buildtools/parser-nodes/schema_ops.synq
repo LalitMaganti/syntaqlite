@@ -31,6 +31,7 @@ node DropStmt {
 
 node AlterTableStmt {
   op: inline AlterOp
+  has_column_kw: inline Bool
   target: index QualifiedName
   new_name: index Name
   old_name: index Name
@@ -43,9 +44,21 @@ node AlterTableStmt {
     if_set(target) { child(target) space }
     switch(op) {
       RENAME_TABLE  { "RENAME" "TO" space child(new_name) }
-      RENAME_COLUMN { "RENAME" "COLUMN" space child(old_name) space "TO" space child(new_name) }
-      DROP_COLUMN   { "DROP" "COLUMN" space child(old_name) }
-      ADD_COLUMN    { "ADD" "COLUMN" space child(column) }
+      RENAME_COLUMN {
+        "RENAME"
+        if_flag(has_column_kw) { space "COLUMN" }
+        space child(old_name) space "TO" space child(new_name)
+      }
+      DROP_COLUMN {
+        "DROP"
+        if_flag(has_column_kw) { space "COLUMN" }
+        space child(old_name)
+      }
+      ADD_COLUMN {
+        "ADD"
+        if_flag(has_column_kw) { space "COLUMN" }
+        space child(column)
+      }
     }
   }
 }

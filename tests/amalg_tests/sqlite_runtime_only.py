@@ -64,7 +64,7 @@ class SqliteAmalgRuntimeOnly(TestSuite):
                           sort_order: NONE
                           is_autoincrement: FALSE
                           collation_name: (none)
-                          generated_storage: VIRTUAL
+                          generated_storage: NONE
                           deferrable: UNSET
                           initial_defer: UNSET
                           default_has_parens: FALSE
@@ -86,7 +86,7 @@ class SqliteAmalgRuntimeOnly(TestSuite):
                           sort_order: NONE
                           is_autoincrement: FALSE
                           collation_name: (none)
-                          generated_storage: VIRTUAL
+                          generated_storage: NONE
                           deferrable: UNSET
                           initial_defer: UNSET
                           default_has_parens: FALSE

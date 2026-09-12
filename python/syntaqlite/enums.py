@@ -196,8 +196,9 @@ class InitialDeferMode(IntEnum):
 
 
 class GeneratedColumnStorage(IntEnum):
-    VIRTUAL = 0
-    STORED = 1
+    NONE = 0
+    VIRTUAL = 1
+    STORED = 2
 
 
 class ColumnConstraintType(IntEnum):
@@ -335,9 +336,10 @@ class JoinModifierKind(IntEnum):
 
 
 class TriggerTiming(IntEnum):
-    BEFORE = 0
-    AFTER = 1
-    INSTEAD_OF = 2
+    NONE = 0
+    BEFORE = 1
+    AFTER = 2
+    INSTEAD_OF = 3
 
 
 class TriggerEventType(IntEnum):

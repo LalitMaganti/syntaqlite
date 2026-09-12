@@ -15,11 +15,6 @@
   "changed strict -> STRICT": 1,
   "dropped (": 2,
   "dropped 5": 1,
-  "dropped DATABASE": 3,
   "dropped DEFERRED": 1,
-  "dropped FOR": 2,
-  "dropped VIRTUAL": 1,
-  "format error": 7,
-  "inserted BEFORE": 2,
-  "inserted COLUMN": 3
+  "format error": 7
 }

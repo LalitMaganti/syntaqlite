@@ -815,7 +815,7 @@ class CanonicalSpellingFormat(TestSuite):
         return DiffTestBlueprint(
             sql="create trigger tr after insert on t for each row begin select 1; end",
             out="""\
-                CREATE TRIGGER tr AFTER INSERT ON t
+                CREATE TRIGGER tr AFTER INSERT ON t FOR EACH ROW
                 BEGIN
                   SELECT 1;
                 END;
@@ -826,7 +826,7 @@ class CanonicalSpellingFormat(TestSuite):
         return DiffTestBlueprint(
             sql="create trigger tr insert on t begin select 1; end",
             out="""\
-                CREATE TRIGGER tr BEFORE INSERT ON t
+                CREATE TRIGGER tr INSERT ON t
                 BEGIN
                   SELECT 1;
                 END;
@@ -852,13 +852,17 @@ class CanonicalSpellingFormat(TestSuite):
     def test_attach_detach_drop_database(self):
         return DiffTestBlueprint(
             sql="attach database 'f' as x; detach database x;",
-            out="ATTACH 'f' AS x;\n\nDETACH x;",
+            out="""\
+                ATTACH DATABASE 'f' AS x;
+
+                DETACH DATABASE x;
+            """,
         )
 
     def test_rename_gains_column(self):
         return DiffTestBlueprint(
             sql="alter table t rename a to b",
-            out="ALTER TABLE t RENAME COLUMN a TO b;",
+            out="ALTER TABLE t RENAME a TO b;",
         )
 
     def test_savepoint_keyword_added(self):
@@ -874,7 +878,7 @@ class CanonicalSpellingFormat(TestSuite):
     def test_generated_column_drops_virtual(self):
         return DiffTestBlueprint(
             sql="create table g(k, a as (1) virtual)",
-            out="CREATE TABLE g(k, a AS (1));",
+            out="CREATE TABLE g(k, a AS (1) VIRTUAL);",
         )
 
     def test_explicit_asc_dropped(self):

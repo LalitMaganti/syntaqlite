@@ -121,8 +121,9 @@ typedef enum SyntaqliteInitialDeferMode {
 } SyntaqliteInitialDeferMode;
 
 typedef enum SyntaqliteGeneratedColumnStorage {
-  SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL = 0,
-  SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED = 1
+  SYNTAQLITE_GENERATED_COLUMN_STORAGE_NONE = 0,
+  SYNTAQLITE_GENERATED_COLUMN_STORAGE_VIRTUAL = 1,
+  SYNTAQLITE_GENERATED_COLUMN_STORAGE_STORED = 2
 } SyntaqliteGeneratedColumnStorage;
 
 typedef enum SyntaqliteColumnConstraintType {
@@ -260,9 +261,10 @@ typedef enum SyntaqliteJoinModifierKind {
 } SyntaqliteJoinModifierKind;
 
 typedef enum SyntaqliteTriggerTiming {
-  SYNTAQLITE_TRIGGER_TIMING_BEFORE = 0,
-  SYNTAQLITE_TRIGGER_TIMING_AFTER = 1,
-  SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF = 2
+  SYNTAQLITE_TRIGGER_TIMING_NONE = 0,
+  SYNTAQLITE_TRIGGER_TIMING_BEFORE = 1,
+  SYNTAQLITE_TRIGGER_TIMING_AFTER = 2,
+  SYNTAQLITE_TRIGGER_TIMING_INSTEAD_OF = 3
 } SyntaqliteTriggerTiming;
 
 typedef enum SyntaqliteTriggerEventType {
@@ -842,6 +844,7 @@ typedef struct SyntaqliteDropStmt {
 typedef struct SyntaqliteAlterTableStmt {
   SyntaqliteNodeTag tag;
   SyntaqliteAlterOp op;
+  SyntaqliteBool has_column_kw;
   uint32_t target;
   uint32_t new_name;
   uint32_t old_name;
@@ -988,6 +991,7 @@ typedef struct SyntaqliteCreateTriggerStmt {
   SyntaqliteTemporaryQualifier temporary;
   SyntaqliteBool if_not_exists;
   SyntaqliteTriggerTiming timing;
+  SyntaqliteBool for_each_row;
   uint32_t event;
   uint32_t table;
   uint32_t when_expr;
@@ -1020,6 +1024,7 @@ typedef struct SyntaqliteAnalyzeOrReindexStmt {
 
 typedef struct SyntaqliteAttachStmt {
   SyntaqliteNodeTag tag;
+  SyntaqliteBool has_database;
   uint32_t filename;
   uint32_t db_name;
   uint32_t key;
@@ -1027,6 +1032,7 @@ typedef struct SyntaqliteAttachStmt {
 
 typedef struct SyntaqliteDetachStmt {
   SyntaqliteNodeTag tag;
+  SyntaqliteBool has_database;
   uint32_t db_name;
 } SyntaqliteDetachStmt;
 

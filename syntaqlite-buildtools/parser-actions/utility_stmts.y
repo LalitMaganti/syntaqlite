@@ -14,6 +14,7 @@
 // - Terminals are SynqParseToken with .z (pointer) and .n (length)
 // - Non-terminals are u32 node IDs
 
+%type database_kw_opt {int}
 %type createkw {SynqParseToken}
 %type signed {SynqParseToken}
 %type plus_num {SynqParseToken}
@@ -138,20 +139,22 @@ cmd(A) ::= REINDEX nm(X) dbnm(Y). {
 
 // ============ ATTACH / DETACH ============
 
-cmd(A) ::= ATTACH database_kw_opt expr(F) AS expr(D) key_opt(K). {
-    A = synq_parse_attach_stmt(pCtx, F, D, K);
+cmd(A) ::= ATTACH database_kw_opt(B) expr(F) AS expr(D) key_opt(K). {
+    A = synq_parse_attach_stmt(pCtx,
+        B ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE, F, D, K);
 }
 
-cmd(A) ::= DETACH database_kw_opt expr(D). {
-    A = synq_parse_detach_stmt(pCtx, D);
+cmd(A) ::= DETACH database_kw_opt(B) expr(D). {
+    A = synq_parse_detach_stmt(pCtx,
+        B ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE, D);
 }
 
-database_kw_opt ::= DATABASE. {
-    // Keyword consumed, no value needed
+database_kw_opt(A) ::= DATABASE. {
+    A = 1;
 }
 
-database_kw_opt ::= . {
-    // Empty
+database_kw_opt(A) ::= . {
+    A = 0;
 }
 
 key_opt(A) ::= . {

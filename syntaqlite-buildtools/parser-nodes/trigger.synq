@@ -1,4 +1,4 @@
-enum TriggerTiming { BEFORE AFTER INSTEAD_OF }
+enum TriggerTiming { NONE BEFORE AFTER INSTEAD_OF }
 enum TriggerEventType { DELETE INSERT UPDATE }
 
 node TriggerEvent {
@@ -30,6 +30,7 @@ node CreateTriggerStmt {
   temporary: inline TemporaryQualifier
   if_not_exists: inline Bool
   timing: inline TriggerTiming
+  for_each_row: inline Bool
   event: index TriggerEvent
   table: index QualifiedName
   when_expr: index Expr
@@ -49,11 +50,13 @@ node CreateTriggerStmt {
     if_span(schema) { span(schema) "." }
     span(trigger_name) space
     switch(timing) {
-      BEFORE     { "BEFORE" }
-      AFTER      { "AFTER" }
-      INSTEAD_OF { "INSTEAD" "OF" }
+      NONE       { }
+      BEFORE     { space "BEFORE" }
+      AFTER      { space "AFTER" }
+      INSTEAD_OF { space "INSTEAD" "OF" }
     }
     space child(event) space "ON" space child(table)
+    if_flag(for_each_row) { space "FOR" "EACH" "ROW" }
     if_set(when_expr) { hardline "WHEN" space child(when_expr) }
     hardline "BEGIN"
     if_set(body) { nest { hardline child(body) } }

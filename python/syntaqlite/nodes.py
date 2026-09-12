@@ -608,10 +608,11 @@ class DropStmt:
 class AlterTableStmt:
     """AST node: AlterTableStmt"""
 
-    __slots__ = ("op", "target", "new_name", "old_name", "column")
+    __slots__ = ("op", "has_column_kw", "target", "new_name", "old_name", "column")
 
     def __init__(self, d: dict):
         self.op: AlterOp = AlterOp[d["op"]]
+        self.has_column_kw: bool = d["has_column_kw"]
         self.target: QualifiedName | None = _wrap(d.get("target"))
         self.new_name: Name | None = _wrap(d.get("new_name"))
         self.old_name: Name | None = _wrap(d.get("old_name"))
@@ -820,7 +821,7 @@ class TriggerEvent:
 class CreateTriggerStmt:
     """AST node: CreateTriggerStmt"""
 
-    __slots__ = ("trigger_name", "schema", "temporary", "if_not_exists", "timing", "event", "table", "when_expr", "body")
+    __slots__ = ("trigger_name", "schema", "temporary", "if_not_exists", "timing", "for_each_row", "event", "table", "when_expr", "body")
 
     def __init__(self, d: dict):
         self.trigger_name: str | None = d.get("trigger_name")
@@ -828,6 +829,7 @@ class CreateTriggerStmt:
         self.temporary: TemporaryQualifier = TemporaryQualifier[d["temporary"]]
         self.if_not_exists: bool = d["if_not_exists"]
         self.timing: TriggerTiming = TriggerTiming[d["timing"]]
+        self.for_each_row: bool = d["for_each_row"]
         self.event: TriggerEvent | None = _wrap(d.get("event"))
         self.table: QualifiedName | None = _wrap(d.get("table"))
         self.when_expr: Expr | None = _wrap(d.get("when_expr"))
@@ -885,9 +887,10 @@ class AnalyzeOrReindexStmt:
 class AttachStmt:
     """AST node: AttachStmt"""
 
-    __slots__ = ("filename", "db_name", "key")
+    __slots__ = ("has_database", "filename", "db_name", "key")
 
     def __init__(self, d: dict):
+        self.has_database: bool = d["has_database"]
         self.filename: Expr | None = _wrap(d.get("filename"))
         self.db_name: Expr | None = _wrap(d.get("db_name"))
         self.key: Expr | None = _wrap(d.get("key"))
@@ -899,9 +902,10 @@ class AttachStmt:
 class DetachStmt:
     """AST node: DetachStmt"""
 
-    __slots__ = ("db_name")
+    __slots__ = ("has_database", "db_name")
 
     def __init__(self, d: dict):
+        self.has_database: bool = d["has_database"]
         self.db_name: Expr | None = _wrap(d.get("db_name"))
 
     def __repr__(self):

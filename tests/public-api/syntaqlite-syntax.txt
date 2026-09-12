@@ -1292,6 +1292,7 @@ pub fn syntaqlite_syntax::nodes::AlterOp::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::column(&self) -> core::option::Option<syntaqlite_syntax::nodes::ColumnDef<'a>>
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::has_column_kw(&self) -> bool
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::new_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::AlterTableStmtId
 pub fn syntaqlite_syntax::nodes::AlterTableStmt<'a>::old_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
@@ -1312,6 +1313,7 @@ pub fn syntaqlite_syntax::nodes::AttachStmt<'_>::fmt(&self, &mut core::fmt::Form
 pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::db_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::filename(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::has_database(&self) -> bool
 pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::key(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::AttachStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::AttachStmtId
 pub fn syntaqlite_syntax::nodes::AttachStmtId::from(syntaqlite_syntax::nodes::AttachStmt<'a>) -> Self
@@ -1458,6 +1460,7 @@ pub fn syntaqlite_syntax::nodes::CreateTableStmtId::into_inner(self) -> syntaqli
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::body(&self) -> core::option::Option<syntaqlite_syntax::nodes::TriggerCmdList<'a>>
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::event(&self) -> core::option::Option<syntaqlite_syntax::nodes::TriggerEvent<'a>>
+pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::for_each_row(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::if_not_exists(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateTriggerStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::CreateTriggerStmtId
@@ -1519,6 +1522,7 @@ pub fn syntaqlite_syntax::nodes::DeleteStmtId::into_inner(self) -> syntaqlite_sy
 pub fn syntaqlite_syntax::nodes::DetachStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::DetachStmt<'a>::db_name(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::DetachStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::DetachStmt<'a>::has_database(&self) -> bool
 pub fn syntaqlite_syntax::nodes::DetachStmt<'a>::node_id(&self) -> syntaqlite_syntax::nodes::DetachStmtId
 pub fn syntaqlite_syntax::nodes::DetachStmtId::from(syntaqlite_syntax::nodes::DetachStmt<'a>) -> Self
 pub fn syntaqlite_syntax::nodes::DetachStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
@@ -2727,8 +2731,9 @@ pub syntaqlite_syntax::nodes::FrameType::Groups = 3
 pub syntaqlite_syntax::nodes::FrameType::None = 0
 pub syntaqlite_syntax::nodes::FrameType::Range = 1
 pub syntaqlite_syntax::nodes::FrameType::Rows = 2
-pub syntaqlite_syntax::nodes::GeneratedColumnStorage::Stored = 1
-pub syntaqlite_syntax::nodes::GeneratedColumnStorage::Virtual = 0
+pub syntaqlite_syntax::nodes::GeneratedColumnStorage::None = 0
+pub syntaqlite_syntax::nodes::GeneratedColumnStorage::Stored = 2
+pub syntaqlite_syntax::nodes::GeneratedColumnStorage::Virtual = 1
 pub syntaqlite_syntax::nodes::InExprSource::CompoundSelect(syntaqlite_syntax::nodes::CompoundSelect<'a>)
 pub syntaqlite_syntax::nodes::InExprSource::ExprList(syntaqlite_syntax::nodes::ExprList<'a>)
 pub syntaqlite_syntax::nodes::InExprSource::SelectStmt(syntaqlite_syntax::nodes::SelectStmt<'a>)
@@ -3028,9 +3033,10 @@ pub syntaqlite_syntax::nodes::TransactionType::Immediate = 1
 pub syntaqlite_syntax::nodes::TriggerEventType::Delete = 0
 pub syntaqlite_syntax::nodes::TriggerEventType::Insert = 1
 pub syntaqlite_syntax::nodes::TriggerEventType::Update = 2
-pub syntaqlite_syntax::nodes::TriggerTiming::After = 1
-pub syntaqlite_syntax::nodes::TriggerTiming::Before = 0
-pub syntaqlite_syntax::nodes::TriggerTiming::InsteadOf = 2
+pub syntaqlite_syntax::nodes::TriggerTiming::After = 2
+pub syntaqlite_syntax::nodes::TriggerTiming::Before = 1
+pub syntaqlite_syntax::nodes::TriggerTiming::InsteadOf = 3
+pub syntaqlite_syntax::nodes::TriggerTiming::None = 0
 pub syntaqlite_syntax::nodes::UnaryOp::BitNot = 2
 pub syntaqlite_syntax::nodes::UnaryOp::Minus = 0
 pub syntaqlite_syntax::nodes::UnaryOp::Not = 3

@@ -4,7 +4,7 @@ enum TemporaryQualifier { NONE TEMP TEMPORARY }
 enum ForeignKeyAction { UNSET NO_ACTION SET_NULL SET_DEFAULT CASCADE RESTRICT }
 enum Deferrable { UNSET NOT_DEFERRABLE DEFERRABLE }
 enum InitialDeferMode { UNSET DEFERRED IMMEDIATE }
-enum GeneratedColumnStorage { VIRTUAL STORED }
+enum GeneratedColumnStorage { NONE VIRTUAL STORED }
 enum ColumnConstraintType { DEFAULT NOT_NULL PRIMARY_KEY UNIQUE CHECK REFERENCES COLLATE GENERATED NULL DEFERRABLE }
 enum TableConstraintType { PRIMARY_KEY UNIQUE CHECK FOREIGN_KEY }
 
@@ -134,6 +134,7 @@ node ColumnConstraint {
       GENERATED {
         if_flag(generated_always) { "GENERATED" "ALWAYS" space }
         group { "AS" space "(" nest { softline child(generated_expr) } softline ")" }
+        if_enum(generated_storage, VIRTUAL) { space "VIRTUAL" }
         if_enum(generated_storage, STORED) { space "STORED" }
       }
       NULL {

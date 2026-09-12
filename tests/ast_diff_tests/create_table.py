@@ -212,39 +212,39 @@ class CreateTableOptions(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT PRIMARY KEY) WITHOUT ROWID",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: WITHOUT_ROWID
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: NONE
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: WITHOUT_ROWID
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_strict(self):
@@ -274,39 +274,39 @@ class CreateTableOptions(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT PRIMARY KEY) WITHOUT ROWID, STRICT",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: WITHOUT_ROWID STRICT
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: NONE
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: WITHOUT_ROWID STRICT
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
 
@@ -383,7 +383,7 @@ class ColumnConstraintDefault(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -425,7 +425,7 @@ class ColumnConstraintDefault(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -467,7 +467,7 @@ class ColumnConstraintDefault(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -512,7 +512,7 @@ class ColumnConstraintDefault(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: TRUE
@@ -561,7 +561,7 @@ class ColumnConstraintDefault(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -586,117 +586,117 @@ class ColumnConstraintKeys(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT PRIMARY KEY)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: NONE
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_primary_key_autoincrement(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INTEGER PRIMARY KEY AUTOINCREMENT)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INTEGER"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: NONE
-                          is_autoincrement: TRUE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INTEGER"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: NONE
+                              is_autoincrement: TRUE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_primary_key_desc(self):
         return DiffTestBlueprint(
             sql="CREATE TABLE t(a INT PRIMARY KEY DESC)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: DEFAULT
-                          sort_order: DESC
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: DEFAULT
+                              sort_order: DESC
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_not_null(self):
@@ -724,7 +724,7 @@ class ColumnConstraintKeys(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -763,7 +763,7 @@ class ColumnConstraintKeys(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -806,7 +806,7 @@ class ColumnConstraintCheck(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -860,7 +860,7 @@ class ColumnConstraintReferences(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -910,7 +910,7 @@ class ColumnConstraintReferences(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -965,7 +965,7 @@ class ColumnConstraintReferences(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1020,7 +1020,7 @@ class ColumnConstraintReferences(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1087,7 +1087,7 @@ class ColumnConstraintCollate(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: "NOCASE"
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1192,7 +1192,7 @@ class ColumnConstraintGenerated(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1248,7 +1248,7 @@ class ColumnConstraintName(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1670,7 +1670,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1725,7 +1725,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1780,7 +1780,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1835,7 +1835,7 @@ class ForeignKeyActionSetDefaultRestrict(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1873,39 +1873,39 @@ class OnConflictClause(TestSuite):
         return DiffTestBlueprint(
             sql="CREATE TABLE t (a INT PRIMARY KEY ON CONFLICT ROLLBACK)",
             out="""\
-            CreateTableStmt
-              table_name: "t"
-              schema: (none)
-              temporary: NONE
-              if_not_exists: FALSE
-              flags: (none)
-              columns:
-                ColumnDefList [1 items]
-                  ColumnDef
-                    column_name:
-                      IdentName
-                        source: "a"
-                    type_name: "INT"
-                    constraints:
-                      ColumnConstraintList [1 items]
-                        ColumnConstraint
-                          kind: PRIMARY_KEY
-                          onconf: ROLLBACK
-                          sort_order: NONE
-                          is_autoincrement: FALSE
-                          collation_name: (none)
-                          generated_storage: VIRTUAL
-                          deferrable: UNSET
-                          initial_defer: UNSET
-                          default_has_parens: FALSE
-                          generated_always: FALSE
-                          default_expr: (none)
-                          check_expr: (none)
-                          generated_expr: (none)
-                          fk_clause: (none)
-              table_constraints: (none)
-              as_select: (none)
-""",
+                CreateTableStmt
+                  table_name: "t"
+                  schema: (none)
+                  temporary: NONE
+                  if_not_exists: FALSE
+                  flags: (none)
+                  columns:
+                    ColumnDefList [1 items]
+                      ColumnDef
+                        column_name:
+                          IdentName
+                            source: "a"
+                        type_name: "INT"
+                        constraints:
+                          ColumnConstraintList [1 items]
+                            ColumnConstraint
+                              kind: PRIMARY_KEY
+                              onconf: ROLLBACK
+                              sort_order: NONE
+                              is_autoincrement: FALSE
+                              collation_name: (none)
+                              generated_storage: NONE
+                              deferrable: UNSET
+                              initial_defer: UNSET
+                              default_has_parens: FALSE
+                              generated_always: FALSE
+                              default_expr: (none)
+                              check_expr: (none)
+                              generated_expr: (none)
+                              fk_clause: (none)
+                  table_constraints: (none)
+                  as_select: (none)
+            """,
         )
 
     def test_on_conflict_column_not_null(self):
@@ -1933,7 +1933,7 @@ class OnConflictClause(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -1972,7 +1972,7 @@ class OnConflictClause(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -2099,7 +2099,7 @@ class MultipleColumnConstraints(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -2114,7 +2114,7 @@ class MultipleColumnConstraints(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -2132,7 +2132,7 @@ class MultipleColumnConstraints(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -2380,7 +2380,7 @@ class ColumnConstraintNull(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -2425,7 +2425,7 @@ class ColumnConstraintDeclarations(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -2451,7 +2451,7 @@ class ColumnConstraintDeclarations(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -2505,7 +2505,7 @@ class ColumnConstraintDeclarations(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -2559,7 +2559,7 @@ class ColumnConstraintDeclarations(TestSuite):
                               sort_order: NONE
                               is_autoincrement: FALSE
                               collation_name: (none)
-                              generated_storage: VIRTUAL
+                              generated_storage: NONE
                               deferrable: UNSET
                               initial_defer: UNSET
                               default_has_parens: FALSE
@@ -2583,6 +2583,7 @@ class ColumnConstraintDeclarations(TestSuite):
             out="""\
                 AlterTableStmt
                   op: ADD_COLUMN
+                  has_column_kw: TRUE
                   target:
                     QualifiedName
                       object_name:
@@ -2609,7 +2610,7 @@ class ColumnConstraintDeclarations(TestSuite):
                             sort_order: NONE
                             is_autoincrement: FALSE
                             collation_name: (none)
-                            generated_storage: VIRTUAL
+                            generated_storage: NONE
                             deferrable: UNSET
                             initial_defer: UNSET
                             default_has_parens: FALSE
@@ -2628,7 +2629,7 @@ class ColumnConstraintDeclarations(TestSuite):
                             sort_order: NONE
                             is_autoincrement: FALSE
                             collation_name: (none)
-                            generated_storage: VIRTUAL
+                            generated_storage: NONE
                             deferrable: UNSET
                             initial_defer: UNSET
                             default_has_parens: FALSE

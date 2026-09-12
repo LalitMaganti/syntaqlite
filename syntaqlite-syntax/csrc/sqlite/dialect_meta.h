@@ -74,6 +74,7 @@ static const char* const display_initial_defer_mode[] = {
 };
 
 static const char* const display_generated_column_storage[] = {
+    "NONE",
     "VIRTUAL",
     "STORED",
 };
@@ -186,6 +187,7 @@ static const char* const display_join_modifier_kind[] = {
 };
 
 static const char* const display_trigger_timing[] = {
+    "NONE",
     "BEFORE",
     "AFTER",
     "INSTEAD_OF",
@@ -745,6 +747,9 @@ static const SyntaqliteFieldMeta field_meta_drop_stmt[] = {
 static const SyntaqliteFieldMeta field_meta_alter_table_stmt[] = {
     {offsetof(SyntaqliteAlterTableStmt, op), SYNTAQLITE_FIELD_ENUM, "op",
      display_alter_op, sizeof(display_alter_op) / sizeof(display_alter_op[0])},
+    {offsetof(SyntaqliteAlterTableStmt, has_column_kw), SYNTAQLITE_FIELD_BOOL,
+     "has_column_kw", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteAlterTableStmt, target), SYNTAQLITE_FIELD_NODE_ID,
      "target", NULL, 0},
     {offsetof(SyntaqliteAlterTableStmt, new_name), SYNTAQLITE_FIELD_NODE_ID,
@@ -934,6 +939,9 @@ static const SyntaqliteFieldMeta field_meta_create_trigger_stmt[] = {
     {offsetof(SyntaqliteCreateTriggerStmt, timing), SYNTAQLITE_FIELD_ENUM,
      "timing", display_trigger_timing,
      sizeof(display_trigger_timing) / sizeof(display_trigger_timing[0])},
+    {offsetof(SyntaqliteCreateTriggerStmt, for_each_row), SYNTAQLITE_FIELD_BOOL,
+     "for_each_row", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteCreateTriggerStmt, event), SYNTAQLITE_FIELD_NODE_ID,
      "event", NULL, 0},
     {offsetof(SyntaqliteCreateTriggerStmt, table), SYNTAQLITE_FIELD_NODE_ID,
@@ -982,6 +990,9 @@ static const SyntaqliteFieldMeta field_meta_analyze_or_reindex_stmt[] = {
 };
 
 static const SyntaqliteFieldMeta field_meta_attach_stmt[] = {
+    {offsetof(SyntaqliteAttachStmt, has_database), SYNTAQLITE_FIELD_BOOL,
+     "has_database", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteAttachStmt, filename), SYNTAQLITE_FIELD_NODE_ID,
      "filename", NULL, 0},
     {offsetof(SyntaqliteAttachStmt, db_name), SYNTAQLITE_FIELD_NODE_ID,
@@ -991,6 +1002,9 @@ static const SyntaqliteFieldMeta field_meta_attach_stmt[] = {
 };
 
 static const SyntaqliteFieldMeta field_meta_detach_stmt[] = {
+    {offsetof(SyntaqliteDetachStmt, has_database), SYNTAQLITE_FIELD_BOOL,
+     "has_database", display_bool,
+     sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteDetachStmt, db_name), SYNTAQLITE_FIELD_NODE_ID,
      "db_name", NULL, 0},
 };
@@ -1488,7 +1502,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* RaiseExpr */
     2,  /* QualifiedName */
     3,  /* DropStmt */
-    5,  /* AlterTableStmt */
+    6,  /* AlterTableStmt */
     4,  /* TransactionStmt */
     5,  /* SavepointStmt */
     4,  /* ResultColumn */
@@ -1506,12 +1520,12 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     3,  /* JoinPrefix */
     2,  /* TriggerEvent */
     0,  /* TriggerCmdList */
-    9,  /* CreateTriggerStmt */
+    10, /* CreateTriggerStmt */
     5,  /* CreateVirtualTableStmt */
     4,  /* PragmaStmt */
     3,  /* AnalyzeOrReindexStmt */
-    3,  /* AttachStmt */
-    1,  /* DetachStmt */
+    4,  /* AttachStmt */
+    2,  /* DetachStmt */
     2,  /* VacuumStmt */
     2,  /* ExplainStmt */
     7,  /* CreateIndexStmt */

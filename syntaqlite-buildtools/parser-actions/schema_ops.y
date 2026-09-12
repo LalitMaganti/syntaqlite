@@ -67,32 +67,35 @@ cmd(A) ::= DROP TRIGGER ifexists(NOERR) fullname(X). {
 
 cmd(A) ::= ALTER TABLE fullname(X) RENAME TO nmorerr(Z). {
     A = synq_parse_alter_table_stmt(pCtx,
-        SYNTAQLITE_ALTER_OP_RENAME_TABLE, X,
+        SYNTAQLITE_ALTER_OP_RENAME_TABLE, SYNTAQLITE_BOOL_FALSE, X,
         Z,
         SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE);
 }
 
-cmd(A) ::= ALTER TABLE fullname(X) RENAME kwcolumn_opt nmorerr(Y) TO nmorerr(Z). {
+cmd(A) ::= ALTER TABLE fullname(X) RENAME kwcolumn_opt(KW) nmorerr(Y) TO nmorerr(Z). {
     A = synq_parse_alter_table_stmt(pCtx,
-        SYNTAQLITE_ALTER_OP_RENAME_COLUMN, X,
+        SYNTAQLITE_ALTER_OP_RENAME_COLUMN,
+        KW ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE, X,
         Z,
         Y,
         SYNTAQLITE_NULL_NODE);
 }
 
-cmd(A) ::= ALTER TABLE fullname(X) DROP kwcolumn_opt nmorerr(Y). {
+cmd(A) ::= ALTER TABLE fullname(X) DROP kwcolumn_opt(KW) nmorerr(Y). {
     A = synq_parse_alter_table_stmt(pCtx,
-        SYNTAQLITE_ALTER_OP_DROP_COLUMN, X,
+        SYNTAQLITE_ALTER_OP_DROP_COLUMN,
+        KW ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE, X,
         SYNTAQLITE_NULL_NODE,
         Y,
         SYNTAQLITE_NULL_NODE);
 }
 
-cmd(A) ::= ALTER TABLE add_column_fullname(F) ADD kwcolumn_opt columnname(Y) carglist(CG). {
+cmd(A) ::= ALTER TABLE add_column_fullname(F) ADD kwcolumn_opt(KW) columnname(Y) carglist(CG). {
     uint32_t col = synq_parse_column_def(pCtx, Y.name, Y.typetoken, CG);
     A = synq_parse_alter_table_stmt(pCtx,
-        SYNTAQLITE_ALTER_OP_ADD_COLUMN, F,
+        SYNTAQLITE_ALTER_OP_ADD_COLUMN,
+        KW ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE, F,
         SYNTAQLITE_NULL_NODE,
         SYNTAQLITE_NULL_NODE,
         col);

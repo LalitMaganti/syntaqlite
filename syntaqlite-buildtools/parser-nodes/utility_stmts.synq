@@ -35,20 +35,28 @@ node AnalyzeOrReindexStmt {
 }
 
 node AttachStmt {
+  has_database: inline Bool
   filename: index Expr
   db_name: index Expr
   key: index Expr
 
   fmt {
-    "ATTACH" space child(filename) space "AS" space child(db_name)
+    "ATTACH"
+    if_flag(has_database) { space "DATABASE" }
+    space child(filename) space "AS" space child(db_name)
     if_set(key) { space "KEY" space child(key) }
   }
 }
 
 node DetachStmt {
+  has_database: inline Bool
   db_name: index Expr
 
-  fmt { "DETACH" space child(db_name) }
+  fmt {
+    "DETACH"
+    if_flag(has_database) { space "DATABASE" }
+    space child(db_name)
+  }
 }
 
 node VacuumStmt {

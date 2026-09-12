@@ -417,6 +417,7 @@ pub(crate) struct DropStmt {
 pub(crate) struct AlterTableStmt {
     pub(crate) tag: u32,
     pub(crate) op: super::ast::AlterOp,
+    pub(crate) has_column_kw: Bool,
     pub(crate) target: AnyNodeId,
     pub(crate) new_name: AnyNodeId,
     pub(crate) old_name: AnyNodeId,
@@ -563,6 +564,7 @@ pub(crate) struct CreateTriggerStmt {
     pub(crate) temporary: super::ast::TemporaryQualifier,
     pub(crate) if_not_exists: Bool,
     pub(crate) timing: super::ast::TriggerTiming,
+    pub(crate) for_each_row: Bool,
     pub(crate) event: AnyNodeId,
     pub(crate) table: AnyNodeId,
     pub(crate) when_expr: AnyNodeId,
@@ -603,6 +605,7 @@ pub(crate) struct AnalyzeOrReindexStmt {
 #[repr(C)]
 pub(crate) struct AttachStmt {
     pub(crate) tag: u32,
+    pub(crate) has_database: Bool,
     pub(crate) filename: AnyNodeId,
     pub(crate) db_name: AnyNodeId,
     pub(crate) key: AnyNodeId,
@@ -612,6 +615,7 @@ pub(crate) struct AttachStmt {
 #[repr(C)]
 pub(crate) struct DetachStmt {
     pub(crate) tag: u32,
+    pub(crate) has_database: Bool,
     pub(crate) db_name: AnyNodeId,
 }
 

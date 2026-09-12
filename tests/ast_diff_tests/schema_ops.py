@@ -167,86 +167,90 @@ class AlterTableRename(TestSuite):
         return DiffTestBlueprint(
             sql="ALTER TABLE t RENAME TO t2",
             out="""\
-            AlterTableStmt
-              op: RENAME_TABLE
-              target:
-                QualifiedName
-                  object_name:
+                AlterTableStmt
+                  op: RENAME_TABLE
+                  has_column_kw: FALSE
+                  target:
+                    QualifiedName
+                      object_name:
+                        IdentName
+                          source: "t"
+                      schema: (none)
+                  new_name:
                     IdentName
-                      source: "t"
-                  schema: (none)
-              new_name:
-                IdentName
-                  source: "t2"
-              old_name: (none)
-              column: (none)
-""",
+                      source: "t2"
+                  old_name: (none)
+                  column: (none)
+            """,
         )
 
     def test_rename_table_with_schema(self):
         return DiffTestBlueprint(
             sql="ALTER TABLE main.t RENAME TO t2",
             out="""\
-            AlterTableStmt
-              op: RENAME_TABLE
-              target:
-                QualifiedName
-                  object_name:
+                AlterTableStmt
+                  op: RENAME_TABLE
+                  has_column_kw: FALSE
+                  target:
+                    QualifiedName
+                      object_name:
+                        IdentName
+                          source: "t"
+                      schema:
+                        IdentName
+                          source: "main"
+                  new_name:
                     IdentName
-                      source: "t"
-                  schema:
-                    IdentName
-                      source: "main"
-              new_name:
-                IdentName
-                  source: "t2"
-              old_name: (none)
-              column: (none)
-""",
+                      source: "t2"
+                  old_name: (none)
+                  column: (none)
+            """,
         )
 
     def test_rename_column(self):
         return DiffTestBlueprint(
             sql="ALTER TABLE t RENAME COLUMN c1 TO c2",
             out="""\
-            AlterTableStmt
-              op: RENAME_COLUMN
-              target:
-                QualifiedName
-                  object_name:
+                AlterTableStmt
+                  op: RENAME_COLUMN
+                  has_column_kw: TRUE
+                  target:
+                    QualifiedName
+                      object_name:
+                        IdentName
+                          source: "t"
+                      schema: (none)
+                  new_name:
                     IdentName
-                      source: "t"
-                  schema: (none)
-              new_name:
-                IdentName
-                  source: "c2"
-              old_name:
-                IdentName
-                  source: "c1"
-              column: (none)
-""",
+                      source: "c2"
+                  old_name:
+                    IdentName
+                      source: "c1"
+                  column: (none)
+            """,
         )
 
     def test_rename_column_no_keyword(self):
         return DiffTestBlueprint(
             sql="ALTER TABLE t RENAME c1 TO c2",
             out="""\
-            AlterTableStmt
-              op: RENAME_COLUMN
-              target:
-                QualifiedName
-                  object_name:
+                AlterTableStmt
+                  op: RENAME_COLUMN
+                  has_column_kw: FALSE
+                  target:
+                    QualifiedName
+                      object_name:
+                        IdentName
+                          source: "t"
+                      schema: (none)
+                  new_name:
                     IdentName
-                      source: "t"
-                  schema: (none)
-              new_name:
-                IdentName
-                  source: "c2"
-              old_name:
-                IdentName
-                  source: "c1"
-              column: (none)
-""",
+                      source: "c2"
+                  old_name:
+                    IdentName
+                      source: "c1"
+                  column: (none)
+            """,
         )
 
 
@@ -257,44 +261,46 @@ class AlterTableDropAdd(TestSuite):
         return DiffTestBlueprint(
             sql="ALTER TABLE t DROP COLUMN c1",
             out="""\
-            AlterTableStmt
-              op: DROP_COLUMN
-              target:
-                QualifiedName
-                  object_name:
+                AlterTableStmt
+                  op: DROP_COLUMN
+                  has_column_kw: TRUE
+                  target:
+                    QualifiedName
+                      object_name:
+                        IdentName
+                          source: "t"
+                      schema: (none)
+                  new_name: (none)
+                  old_name:
                     IdentName
-                      source: "t"
-                  schema: (none)
-              new_name: (none)
-              old_name:
-                IdentName
-                  source: "c1"
-              column: (none)
-""",
+                      source: "c1"
+                  column: (none)
+            """,
         )
 
     def test_add_column(self):
         return DiffTestBlueprint(
             sql="ALTER TABLE t ADD COLUMN c1",
             out="""\
-            AlterTableStmt
-              op: ADD_COLUMN
-              target:
-                QualifiedName
-                  object_name:
-                    IdentName
-                      source: "t"
-                  schema: (none)
-              new_name: (none)
-              old_name: (none)
-              column:
-                ColumnDef
-                  column_name:
-                    IdentName
-                      source: "c1"
-                  type_name: (none)
-                  constraints: (none)
-""",
+                AlterTableStmt
+                  op: ADD_COLUMN
+                  has_column_kw: TRUE
+                  target:
+                    QualifiedName
+                      object_name:
+                        IdentName
+                          source: "t"
+                      schema: (none)
+                  new_name: (none)
+                  old_name: (none)
+                  column:
+                    ColumnDef
+                      column_name:
+                        IdentName
+                          source: "c1"
+                      type_name: (none)
+                      constraints: (none)
+            """,
         )
 
     def test_add_column_with_type_and_constraints(self):
@@ -303,6 +309,7 @@ class AlterTableDropAdd(TestSuite):
             out="""\
                 AlterTableStmt
                   op: ADD_COLUMN
+                  has_column_kw: TRUE
                   target:
                     QualifiedName
                       object_name:
@@ -325,7 +332,7 @@ class AlterTableDropAdd(TestSuite):
                             sort_order: NONE
                             is_autoincrement: FALSE
                             collation_name: (none)
-                            generated_storage: VIRTUAL
+                            generated_storage: NONE
                             deferrable: UNSET
                             initial_defer: UNSET
                             default_has_parens: FALSE
@@ -340,7 +347,7 @@ class AlterTableDropAdd(TestSuite):
                             sort_order: NONE
                             is_autoincrement: FALSE
                             collation_name: (none)
-                            generated_storage: VIRTUAL
+                            generated_storage: NONE
                             deferrable: UNSET
                             initial_defer: UNSET
                             default_has_parens: FALSE

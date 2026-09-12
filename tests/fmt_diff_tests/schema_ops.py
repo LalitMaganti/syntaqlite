@@ -70,7 +70,7 @@ class AlterTableFormat(TestSuite):
     def test_add_column_no_keyword(self):
         return DiffTestBlueprint(
             sql="alter table t add c1",
-            out="ALTER TABLE t ADD COLUMN c1;",
+            out="ALTER TABLE t ADD c1;",
         )
 
     def test_add_column_with_type(self):

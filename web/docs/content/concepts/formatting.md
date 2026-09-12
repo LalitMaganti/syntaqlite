@@ -103,42 +103,19 @@ By default, the formatter appends a semicolon after every statement. This can
 be disabled with `--semicolons=false` (CLI) or `.with_semicolons(false)` (Rust
 API).
 
-## Canonical spellings
-
-The formatter aims to reproduce the syntax you wrote. Where SQLite accepts two
-spellings that mean the same thing, it keeps yours: `ORDER BY a ASC` stays
-`ASC`, `BEGIN TRANSACTION` keeps `TRANSACTION`, `END` stays `END`, `a <> b`
-stays `<>`, and an alias written without `AS` keeps it that way.
-
-A few normalisations remain, and are being removed as the AST learns to
-represent the syntax they discard:
-
-| you write | you get |
-|---|---|
-| `CREATE TRIGGER ... FOR EACH ROW` | `CREATE TRIGGER ...` |
-| `CREATE TRIGGER tr INSERT ON t` | `CREATE TRIGGER tr BEFORE INSERT ON t` |
-| `ATTACH DATABASE`, `DETACH DATABASE` | `ATTACH`, `DETACH` |
-| `ALTER TABLE t RENAME a TO b` | `ALTER TABLE t RENAME COLUMN a TO b` |
-| `a AS (expr) VIRTUAL` | `a AS (expr)` |
-
-Each is semantically inert: the two spellings compile to identical bytecode,
-and where a keyword is added it matches the default SQLite would have applied
-anyway. A trigger with no timing keyword really is a `BEFORE` trigger.
-
-> **Note:** SQLite stores the original text of `CREATE` statements in
-> `sqlite_master.sql`. Reformatting a schema therefore changes what a later
-> `SELECT sql FROM sqlite_master` returns, in the same way that changing
-> whitespace or keyword casing does. The schema itself is unaffected.
-
 ## What the formatter does *not* do
 
 The formatter pretty-prints the AST as-is. It does not:
 
 - Rewrite queries (e.g., converting implicit joins to explicit `JOIN`)
 - Reorder clauses
-- Normalize expressions (e.g., `a = 1` vs `1 = a`) beyond the
-  [canonical spellings](#canonical-spellings) above
+- Normalize expressions (e.g., `a = 1` vs `1 = a`)
 - Add or remove aliases
 - Change quoting style on identifiers
 
 If the SQL parses, the formatted output is semantically identical.
+
+> **Note:** SQLite stores the original text of `CREATE` statements in
+> `sqlite_master.sql`. Reformatting a schema therefore changes what a later
+> `SELECT sql FROM sqlite_master` returns, in the same way that changing
+> whitespace or keyword casing does. The schema itself is unaffected.
