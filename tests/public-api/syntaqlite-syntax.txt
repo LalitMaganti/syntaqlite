@@ -1771,6 +1771,7 @@ pub fn syntaqlite_syntax::nodes::ParenExprId::from(syntaqlite_syntax::nodes::Par
 pub fn syntaqlite_syntax::nodes::ParenExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::ParenTableSource<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::ParenTableSource<'a>::alias(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
+pub fn syntaqlite_syntax::nodes::ParenTableSource<'a>::alias_as(&self) -> bool
 pub fn syntaqlite_syntax::nodes::ParenTableSource<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::ParenTableSource<'a>::node_id(&self) -> syntaqlite_syntax::nodes::ParenTableSourceId
 pub fn syntaqlite_syntax::nodes::ParenTableSource<'a>::source(&self) -> core::option::Option<syntaqlite_syntax::nodes::TableSource<'a>>
@@ -1803,6 +1804,7 @@ pub fn syntaqlite_syntax::nodes::RaiseExprId::into_inner(self) -> syntaqlite_syn
 pub fn syntaqlite_syntax::nodes::RaiseType::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::ResultColumn<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::alias(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
+pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::alias_as(&self) -> bool
 pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::expr(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::flags(&self) -> syntaqlite_syntax::nodes::ResultColumnFlags
 pub fn syntaqlite_syntax::nodes::ResultColumn<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
@@ -1872,6 +1874,7 @@ pub fn syntaqlite_syntax::nodes::SubqueryExprId::from(syntaqlite_syntax::nodes::
 pub fn syntaqlite_syntax::nodes::SubqueryExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::alias(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
+pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::alias_as(&self) -> bool
 pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::node_id(&self) -> syntaqlite_syntax::nodes::SubqueryTableSourceId
 pub fn syntaqlite_syntax::nodes::SubqueryTableSource<'a>::select(&self) -> core::option::Option<syntaqlite_syntax::nodes::Select<'a>>
@@ -1900,6 +1903,7 @@ pub fn syntaqlite_syntax::nodes::TableConstraintListId::into_inner(self) -> synt
 pub fn syntaqlite_syntax::nodes::TableConstraintType::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::TableRef<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::alias(&self) -> core::option::Option<syntaqlite_syntax::nodes::Name<'a>>
+pub fn syntaqlite_syntax::nodes::TableRef<'a>::alias_as(&self) -> bool
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::args(&self) -> core::option::Option<syntaqlite_syntax::nodes::ExprList<'a>>
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::TableRef<'a>::has_parens(&self) -> bool

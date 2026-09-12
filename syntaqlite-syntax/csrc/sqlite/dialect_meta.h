@@ -781,6 +781,8 @@ static const SyntaqliteFieldMeta field_meta_result_column[] = {
          sizeof(display_result_column_flags[0])},
     {offsetof(SyntaqliteResultColumn, alias), SYNTAQLITE_FIELD_NODE_ID, "alias",
      NULL, 0},
+    {offsetof(SyntaqliteResultColumn, alias_as), SYNTAQLITE_FIELD_BOOL,
+     "alias_as", display_bool, sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteResultColumn, expr), SYNTAQLITE_FIELD_NODE_ID, "expr",
      NULL, 0},
 };
@@ -842,6 +844,8 @@ static const SyntaqliteFieldMeta field_meta_table_ref[] = {
      sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteTableRef, alias), SYNTAQLITE_FIELD_NODE_ID, "alias",
      NULL, 0},
+    {offsetof(SyntaqliteTableRef, alias_as), SYNTAQLITE_FIELD_BOOL, "alias_as",
+     display_bool, sizeof(display_bool) / sizeof(display_bool[0])},
     {offsetof(SyntaqliteTableRef, args), SYNTAQLITE_FIELD_NODE_ID, "args", NULL,
      0},
     {offsetof(SyntaqliteTableRef, index_hint), SYNTAQLITE_FIELD_ENUM,
@@ -856,6 +860,8 @@ static const SyntaqliteFieldMeta field_meta_subquery_table_source[] = {
      "select", NULL, 0},
     {offsetof(SyntaqliteSubqueryTableSource, alias), SYNTAQLITE_FIELD_NODE_ID,
      "alias", NULL, 0},
+    {offsetof(SyntaqliteSubqueryTableSource, alias_as), SYNTAQLITE_FIELD_BOOL,
+     "alias_as", display_bool, sizeof(display_bool) / sizeof(display_bool[0])},
 };
 
 static const SyntaqliteFieldMeta field_meta_paren_table_source[] = {
@@ -863,6 +869,8 @@ static const SyntaqliteFieldMeta field_meta_paren_table_source[] = {
      "source", NULL, 0},
     {offsetof(SyntaqliteParenTableSource, alias), SYNTAQLITE_FIELD_NODE_ID,
      "alias", NULL, 0},
+    {offsetof(SyntaqliteParenTableSource, alias_as), SYNTAQLITE_FIELD_BOOL,
+     "alias_as", display_bool, sizeof(display_bool) / sizeof(display_bool[0])},
 };
 
 static const SyntaqliteFieldMeta field_meta_join_clause[] = {
@@ -1472,7 +1480,7 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     5,  /* AlterTableStmt */
     3,  /* TransactionStmt */
     3,  /* SavepointStmt */
-    3,  /* ResultColumn */
+    4,  /* ResultColumn */
     0,  /* ResultColumnList */
     9,  /* SelectStmt */
     3,  /* OrderingTerm */
@@ -1480,9 +1488,9 @@ static const uint8_t ast_meta_field_meta_counts[] = {
     2,  /* LimitClause */
     1,  /* JoinModifier */
     0,  /* JoinModifierList */
-    7,  /* TableRef */
-    2,  /* SubqueryTableSource */
-    2,  /* ParenTableSource */
+    8,  /* TableRef */
+    3,  /* SubqueryTableSource */
+    3,  /* ParenTableSource */
     6,  /* JoinClause */
     3,  /* JoinPrefix */
     2,  /* TriggerEvent */

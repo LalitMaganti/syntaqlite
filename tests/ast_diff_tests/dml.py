@@ -22,6 +22,7 @@ class DeleteBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -47,6 +48,7 @@ class DeleteBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -83,6 +85,7 @@ class DeleteBasic(TestSuite):
                   schema: "main"
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -108,6 +111,7 @@ class DeleteBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -144,6 +148,7 @@ class DeleteBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -185,6 +190,7 @@ class UpdateIndexedBy(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -221,6 +227,7 @@ class UpdateIndexedBy(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -262,6 +269,7 @@ class InsertBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -300,6 +308,7 @@ class InsertBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -344,6 +353,7 @@ class InsertBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -356,6 +366,7 @@ class InsertBasic(TestSuite):
                       ResultColumn
                         flags: STAR
                         alias: (none)
+                        alias_as: FALSE
                         expr: (none)
                   from_clause:
                     TableRef
@@ -363,6 +374,7 @@ class InsertBasic(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -392,6 +404,7 @@ class InsertBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -421,6 +434,7 @@ class InsertConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -453,6 +467,7 @@ class InsertConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -485,6 +500,7 @@ class InsertConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -517,6 +533,7 @@ class InsertConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -549,6 +566,7 @@ class InsertConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -581,6 +599,7 @@ class InsertConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -616,6 +635,7 @@ class UpdateBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -652,6 +672,7 @@ class UpdateBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -706,6 +727,7 @@ class UpdateBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -746,6 +768,7 @@ class UpdateFrom(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -769,6 +792,7 @@ class UpdateFrom(TestSuite):
                   alias:
                     IdentName
                       source: "o"
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -809,6 +833,7 @@ class UpdateConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -845,6 +870,7 @@ class UpdateConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -881,6 +907,7 @@ class UpdateConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -917,6 +944,7 @@ class UpdateConflict(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -957,6 +985,7 @@ class UpdateSetClauseMultiColumn(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1013,6 +1042,7 @@ class InsertMultipleRows(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1070,6 +1100,7 @@ class DmlWithCte(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -1090,6 +1121,7 @@ class DmlWithCte(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1102,6 +1134,7 @@ class DmlWithCte(TestSuite):
                       ResultColumn
                         flags: STAR
                         alias: (none)
+                        alias_as: FALSE
                         expr: (none)
                   from_clause:
                     TableRef
@@ -1109,6 +1142,7 @@ class DmlWithCte(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -1142,6 +1176,7 @@ class DmlWithCte(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 ColumnRef
                                   column: "id"
@@ -1153,6 +1188,7 @@ class DmlWithCte(TestSuite):
                             schema: (none)
                             has_parens: FALSE
                             alias: (none)
+                            alias_as: FALSE
                             args: (none)
                             index_hint: DEFAULT
                             index_name: (none)
@@ -1169,6 +1205,7 @@ class DmlWithCte(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1191,6 +1228,7 @@ class DmlWithCte(TestSuite):
                           ResultColumn
                             flags: (none)
                             alias: (none)
+                            alias_as: FALSE
                             expr:
                               ColumnRef
                                 column: "id"
@@ -1202,6 +1240,7 @@ class DmlWithCte(TestSuite):
                           schema: (none)
                           has_parens: FALSE
                           alias: (none)
+                          alias_as: FALSE
                           args: (none)
                           index_hint: DEFAULT
                           index_name: (none)
@@ -1236,6 +1275,7 @@ class DmlWithCte(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -1255,6 +1295,7 @@ class DmlWithCte(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1301,6 +1342,7 @@ class DmlWithCte(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -1321,6 +1363,7 @@ class DmlWithCte(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1338,6 +1381,7 @@ class DmlWithCte(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           ColumnRef
                             column: "n"
@@ -1349,6 +1393,7 @@ class DmlWithCte(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -1380,6 +1425,7 @@ class ReturningClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1404,6 +1450,7 @@ class ReturningClause(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
 """,
         )
@@ -1421,6 +1468,7 @@ class ReturningClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1434,6 +1482,7 @@ class ReturningClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "id"
@@ -1442,6 +1491,7 @@ class ReturningClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "name"
@@ -1464,6 +1514,7 @@ class ReturningClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1487,6 +1538,7 @@ class ReturningClause(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
 """,
         )
@@ -1505,6 +1557,7 @@ class ReturningClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1539,6 +1592,7 @@ class ReturningClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "id"
@@ -1547,6 +1601,7 @@ class ReturningClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "x"
@@ -1570,6 +1625,7 @@ class ReturningClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1591,6 +1647,7 @@ class ReturningClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "id"
@@ -1614,6 +1671,7 @@ class ReturningClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1625,6 +1683,7 @@ class ReturningClause(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
 """,
         )
@@ -1648,6 +1707,7 @@ class UpsertClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1687,6 +1747,7 @@ class UpsertClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1734,6 +1795,7 @@ class UpsertClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1782,6 +1844,7 @@ class UpsertClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1851,6 +1914,7 @@ class UpsertClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1929,6 +1993,7 @@ class UpsertClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1954,6 +2019,7 @@ class UpsertClause(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
 """,
         )
@@ -1973,6 +2039,7 @@ class UpsertClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -2015,6 +2082,7 @@ class UpsertClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "id"
@@ -2023,6 +2091,7 @@ class UpsertClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "x"
@@ -2047,6 +2116,7 @@ class UpsertClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)

@@ -5021,6 +5021,9 @@ impl<'a> ResultColumn<'a> {
     pub fn alias(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.alias)
     }
+    pub fn alias_as(&self) -> bool {
+        self.raw.alias_as == super::ffi::Bool::True
+    }
     pub fn expr(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.expr)
     }
@@ -5411,6 +5414,9 @@ impl<'a> TableRef<'a> {
     pub fn alias(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.alias)
     }
+    pub fn alias_as(&self) -> bool {
+        self.raw.alias_as == super::ffi::Bool::True
+    }
     pub fn args(&self) -> Option<ExprList<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.args)
     }
@@ -5492,6 +5498,9 @@ impl<'a> SubqueryTableSource<'a> {
     pub fn alias(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.alias)
     }
+    pub fn alias_as(&self) -> bool {
+        self.raw.alias_as == super::ffi::Bool::True
+    }
 }
 
 impl<'a> GrammarNodeType<'a> for SubqueryTableSource<'a> {
@@ -5563,6 +5572,9 @@ impl<'a> ParenTableSource<'a> {
     }
     pub fn alias(&self) -> Option<Name<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.alias)
+    }
+    pub fn alias_as(&self) -> bool {
+        self.raw.alias_as == super::ffi::Bool::True
     }
 }
 

@@ -20,6 +20,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "x"
@@ -46,6 +47,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "x"
@@ -72,6 +74,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "x"
@@ -98,6 +101,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "a"
@@ -106,6 +110,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "b"
@@ -114,6 +119,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "c"
@@ -140,6 +146,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       IdentName
                         source: "t"
@@ -164,6 +171,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "a"
@@ -172,6 +180,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "b"
@@ -180,6 +189,7 @@ class ColumnRefBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: PLUS
@@ -222,6 +232,7 @@ class ColumnRefQuoting(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: STRING
@@ -232,6 +243,7 @@ class ColumnRefQuoting(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -255,6 +267,7 @@ class ColumnRefQuoting(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "a"b"
@@ -266,6 +279,7 @@ class ColumnRefQuoting(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)

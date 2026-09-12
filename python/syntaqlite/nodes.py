@@ -652,11 +652,12 @@ class SavepointStmt:
 class ResultColumn:
     """AST node: ResultColumn"""
 
-    __slots__ = ("flags", "alias", "expr")
+    __slots__ = ("flags", "alias", "alias_as", "expr")
 
     def __init__(self, d: dict):
         self.flags: ResultColumnFlags = _flags(ResultColumnFlags, d["flags"])
         self.alias: Name | None = _wrap(d.get("alias"))
+        self.alias_as: bool = d["alias_as"]
         self.expr: Expr | None = _wrap(d.get("expr"))
 
     def __repr__(self):
@@ -725,13 +726,14 @@ class JoinModifier:
 class TableRef:
     """AST node: TableRef"""
 
-    __slots__ = ("table_name", "schema", "has_parens", "alias", "args", "index_hint", "index_name")
+    __slots__ = ("table_name", "schema", "has_parens", "alias", "alias_as", "args", "index_hint", "index_name")
 
     def __init__(self, d: dict):
         self.table_name: str | None = d.get("table_name")
         self.schema: str | None = d.get("schema")
         self.has_parens: bool = d["has_parens"]
         self.alias: Name | None = _wrap(d.get("alias"))
+        self.alias_as: bool = d["alias_as"]
         self.args: list[Expr] | None = _wrap(d.get("args"))
         self.index_hint: IndexHint = IndexHint[d["index_hint"]]
         self.index_name: str | None = d.get("index_name")
@@ -743,11 +745,12 @@ class TableRef:
 class SubqueryTableSource:
     """AST node: SubqueryTableSource"""
 
-    __slots__ = ("select", "alias")
+    __slots__ = ("select", "alias", "alias_as")
 
     def __init__(self, d: dict):
         self.select: Select | None = _wrap(d.get("select"))
         self.alias: Name | None = _wrap(d.get("alias"))
+        self.alias_as: bool = d["alias_as"]
 
     def __repr__(self):
         return "SubqueryTableSource(...)"
@@ -756,11 +759,12 @@ class SubqueryTableSource:
 class ParenTableSource:
     """AST node: ParenTableSource"""
 
-    __slots__ = ("source", "alias")
+    __slots__ = ("source", "alias", "alias_as")
 
     def __init__(self, d: dict):
         self.source: TableSource | None = _wrap(d.get("source"))
         self.alias: Name | None = _wrap(d.get("alias"))
+        self.alias_as: bool = d["alias_as"]
 
     def __repr__(self):
         return "ParenTableSource(...)"

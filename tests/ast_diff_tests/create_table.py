@@ -333,6 +333,7 @@ class CreateTableAsSelect(TestSuite):
                       ResultColumn
                         flags: STAR
                         alias: (none)
+                        alias_as: FALSE
                         expr: (none)
                   from_clause:
                     TableRef
@@ -340,6 +341,7 @@ class CreateTableAsSelect(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)

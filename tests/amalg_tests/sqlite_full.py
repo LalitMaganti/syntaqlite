@@ -24,6 +24,7 @@ class SqliteAmalgFull(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -49,6 +50,7 @@ class SqliteAmalgFull(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "a"
@@ -60,6 +62,7 @@ class SqliteAmalgFull(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -94,6 +97,7 @@ class SqliteAmalgFull(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -113,6 +117,7 @@ class SqliteAmalgFull(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER

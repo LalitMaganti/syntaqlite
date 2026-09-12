@@ -20,6 +20,7 @@ class SelectWhere(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -59,6 +60,7 @@ class SelectGroupBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -88,6 +90,7 @@ class SelectGroupBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "a"
@@ -96,6 +99,7 @@ class SelectGroupBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "b"
@@ -104,6 +108,7 @@ class SelectGroupBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "count"
@@ -117,6 +122,7 @@ class SelectGroupBy(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -149,6 +155,7 @@ class SelectGroupBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -192,6 +199,7 @@ class SelectOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -225,6 +233,7 @@ class SelectOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -258,6 +267,7 @@ class SelectOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -291,6 +301,7 @@ class SelectOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -324,6 +335,7 @@ class SelectOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -368,6 +380,7 @@ class SelectLimit(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -399,6 +412,7 @@ class SelectLimit(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -433,6 +447,7 @@ class SelectLimit(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -471,6 +486,7 @@ class SelectWindow(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -495,6 +511,7 @@ class SelectWindow(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -541,6 +558,7 @@ class SelectCombined(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -590,6 +608,7 @@ class SelectCombined(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "a"
@@ -601,6 +620,7 @@ class SelectCombined(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)

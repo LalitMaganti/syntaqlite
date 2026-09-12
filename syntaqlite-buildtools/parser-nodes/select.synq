@@ -7,6 +7,7 @@ flags SelectStmtFlags { DISTINCT = 1 ALL = 4 }
 node ResultColumn {
   flags: inline ResultColumnFlags
   alias: index Name
+  alias_as: inline Bool
   expr: index Expr
 
   semantic { result_column(flags: flags, alias: alias, expr: expr) }
@@ -17,7 +18,9 @@ node ResultColumn {
     } else {
       child_paren_list(expr)
     }
-    if_set(alias) { space "AS" space child(alias) }
+    if_set(alias) {
+      if_flag(alias_as) { space "AS" space child(alias) } else { space child(alias) }
+    }
   }
 }
 

@@ -138,7 +138,7 @@ xfullname(A) ::= nm(X). {
     A = synq_parse_table_ref(pCtx,
         synq_span_dequote(pCtx, X), SYNQ_NO_SPAN,
         SYNTAQLITE_BOOL_FALSE,
-        SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
+        SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
                                          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
 }
 
@@ -146,7 +146,7 @@ xfullname(A) ::= nm(X) DOT nm(Y). {
     A = synq_parse_table_ref(pCtx,
         synq_span_dequote(pCtx, Y), synq_span_dequote(pCtx, X),
         SYNTAQLITE_BOOL_FALSE,
-        SYNTAQLITE_NULL_NODE, SYNTAQLITE_NULL_NODE,
+        SYNTAQLITE_NULL_NODE, SYNTAQLITE_BOOL_FALSE, SYNTAQLITE_NULL_NODE,
                                          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
 }
 
@@ -155,7 +155,7 @@ xfullname(A) ::= nm(X) DOT nm(Y) AS nm(Z). {
     A = synq_parse_table_ref(pCtx,
         synq_span_dequote(pCtx, Y), synq_span_dequote(pCtx, X),
         SYNTAQLITE_BOOL_FALSE,
-        alias, SYNTAQLITE_NULL_NODE,
+        alias, SYNTAQLITE_BOOL_TRUE, SYNTAQLITE_NULL_NODE,
                                          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
 }
 
@@ -164,7 +164,7 @@ xfullname(A) ::= nm(X) AS nm(Z). {
     A = synq_parse_table_ref(pCtx,
         synq_span_dequote(pCtx, X), SYNQ_NO_SPAN,
         SYNTAQLITE_BOOL_FALSE,
-        alias, SYNTAQLITE_NULL_NODE,
+        alias, SYNTAQLITE_BOOL_TRUE, SYNTAQLITE_NULL_NODE,
                                          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
 }
 

@@ -20,6 +20,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER
@@ -45,6 +46,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: FLOAT
@@ -70,6 +72,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: STRING
@@ -95,6 +98,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: NULL
@@ -120,6 +124,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: PLUS
@@ -152,6 +157,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: STAR
@@ -184,6 +190,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: LT
@@ -216,6 +223,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: EQ
@@ -248,6 +256,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: AND
@@ -280,6 +289,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: OR
@@ -312,6 +322,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: CONCAT
@@ -344,6 +355,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       UnaryExpr
                         op: MINUS
@@ -372,6 +384,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       UnaryExpr
                         op: NOT
@@ -402,6 +415,7 @@ class SelectBasic(TestSuite):
                     alias:
                       IdentName
                         source: "x"
+                    alias_as: TRUE
                     expr:
                       ColumnRef
                         column: "a"
@@ -412,6 +426,7 @@ class SelectBasic(TestSuite):
                     alias:
                       IdentName
                         source: "y"
+                    alias_as: TRUE
                     expr:
                       ColumnRef
                         column: "b"
@@ -423,6 +438,7 @@ class SelectBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -448,6 +464,7 @@ class SelectBasic(TestSuite):
                     alias:
                       IdentName
                         source: "x"
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "a"
@@ -459,6 +476,7 @@ class SelectBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -482,6 +500,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "x"
@@ -493,6 +512,7 @@ class SelectBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -516,6 +536,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "a"
@@ -524,6 +545,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       ColumnRef
                         column: "b"
@@ -535,6 +557,7 @@ class SelectBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -558,6 +581,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -565,6 +589,7 @@ class SelectBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -588,6 +613,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: BLOB
@@ -613,6 +639,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: PLUS
@@ -652,6 +679,7 @@ class SelectBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: STAR
@@ -697,6 +725,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: MINUS
@@ -729,6 +758,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: SLASH
@@ -761,6 +791,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: REM
@@ -793,6 +824,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: LE
@@ -825,6 +857,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: GE
@@ -857,6 +890,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: NE
@@ -889,6 +923,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: BIT_AND
@@ -921,6 +956,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: BIT_OR
@@ -953,6 +989,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: LSHIFT
@@ -985,6 +1022,7 @@ class BinaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       BinaryExpr
                         op: RSHIFT
@@ -1021,6 +1059,7 @@ class UnaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       UnaryExpr
                         op: PLUS
@@ -1049,6 +1088,7 @@ class UnaryOps(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       UnaryExpr
                         op: BIT_NOT

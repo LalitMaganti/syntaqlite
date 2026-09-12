@@ -20,6 +20,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       AggregateFunctionCall
                         func_name: "GROUP_CONCAT"
@@ -48,6 +49,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -71,6 +73,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       AggregateFunctionCall
                         func_name: "GROUP_CONCAT"
@@ -102,6 +105,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -125,6 +129,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       AggregateFunctionCall
                         func_name: "GROUP_CONCAT"
@@ -153,6 +158,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -177,6 +183,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "group_concat"
@@ -195,6 +202,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -218,6 +226,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       AggregateFunctionCall
                         func_name: "group_concat"
@@ -254,6 +263,7 @@ class AggregateFunctionOrderBy(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -281,6 +291,7 @@ class RaiseExpression(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       RaiseExpr
                         raise_type: IGNORE
@@ -306,6 +317,7 @@ class RaiseExpression(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       RaiseExpr
                         raise_type: ROLLBACK
@@ -334,6 +346,7 @@ class RaiseExpression(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       RaiseExpr
                         raise_type: ABORT
@@ -362,6 +375,7 @@ class RaiseExpression(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       RaiseExpr
                         raise_type: FAIL
@@ -401,6 +415,7 @@ class OrderedSetFunctionCall(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       OrderedSetFunctionCall
                         func_name: "percentile_cont"
@@ -423,6 +438,7 @@ class OrderedSetFunctionCall(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -447,6 +463,7 @@ class OrderedSetFunctionCall(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       OrderedSetFunctionCall
                         func_name: "percentile_cont"
@@ -469,6 +486,7 @@ class OrderedSetFunctionCall(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -493,6 +511,7 @@ class OrderedSetFunctionCall(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       OrderedSetFunctionCall
                         func_name: "percentile_cont"
@@ -526,6 +545,7 @@ class OrderedSetFunctionCall(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -550,6 +570,7 @@ class OrderedSetFunctionCall(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       OrderedSetFunctionCall
                         func_name: "percentile_cont"
@@ -578,6 +599,7 @@ class OrderedSetFunctionCall(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)

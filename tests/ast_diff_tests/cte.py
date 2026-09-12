@@ -29,6 +29,7 @@ class WithClause(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -48,6 +49,7 @@ class WithClause(TestSuite):
                       ResultColumn
                         flags: STAR
                         alias: (none)
+                        alias_as: FALSE
                         expr: (none)
                   from_clause:
                     TableRef
@@ -55,6 +57,7 @@ class WithClause(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -96,6 +99,7 @@ class WithClause(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -103,6 +107,7 @@ class WithClause(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -122,6 +127,7 @@ class WithClause(TestSuite):
                       ResultColumn
                         flags: STAR
                         alias: (none)
+                        alias_as: FALSE
                         expr: (none)
                   from_clause:
                     TableRef
@@ -129,6 +135,7 @@ class WithClause(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -169,6 +176,7 @@ class WithClause(TestSuite):
                                 ResultColumn
                                   flags: (none)
                                   alias: (none)
+                                  alias_as: FALSE
                                   expr:
                                     Literal
                                       literal_type: INTEGER
@@ -188,6 +196,7 @@ class WithClause(TestSuite):
                                 ResultColumn
                                   flags: (none)
                                   alias: (none)
+                                  alias_as: FALSE
                                   expr:
                                     BinaryExpr
                                       op: PLUS
@@ -206,6 +215,7 @@ class WithClause(TestSuite):
                                 schema: (none)
                                 has_parens: FALSE
                                 alias: (none)
+                                alias_as: FALSE
                                 args: (none)
                                 index_hint: DEFAULT
                                 index_name: (none)
@@ -225,6 +235,7 @@ class WithClause(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           ColumnRef
                             column: "x"
@@ -236,6 +247,7 @@ class WithClause(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -268,6 +280,7 @@ class WithClause(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -291,6 +304,7 @@ class WithClause(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -310,6 +324,7 @@ class WithClause(TestSuite):
                       ResultColumn
                         flags: STAR
                         alias: (none)
+                        alias_as: FALSE
                         expr: (none)
                   from_clause:
                     TableRef
@@ -317,6 +332,7 @@ class WithClause(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -349,6 +365,7 @@ class WithClause(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -368,6 +385,7 @@ class WithClause(TestSuite):
                       ResultColumn
                         flags: STAR
                         alias: (none)
+                        alias_as: FALSE
                         expr: (none)
                   from_clause:
                     TableRef
@@ -375,6 +393,7 @@ class WithClause(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -407,6 +426,7 @@ class WithClause(TestSuite):
                             ResultColumn
                               flags: (none)
                               alias: (none)
+                              alias_as: FALSE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -426,6 +446,7 @@ class WithClause(TestSuite):
                       ResultColumn
                         flags: STAR
                         alias: (none)
+                        alias_as: FALSE
                         expr: (none)
                   from_clause:
                     TableRef
@@ -433,6 +454,7 @@ class WithClause(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -476,6 +498,7 @@ class WithClause(TestSuite):
                       ResultColumn
                         flags: STAR
                         alias: (none)
+                        alias_as: FALSE
                         expr: (none)
                   from_clause:
                     TableRef
@@ -483,6 +506,7 @@ class WithClause(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)
@@ -517,6 +541,7 @@ class WithClause(TestSuite):
                               alias:
                                 IdentName
                                   source: "x"
+                              alias_as: TRUE
                               expr:
                                 Literal
                                   literal_type: INTEGER
@@ -539,6 +564,7 @@ class WithClause(TestSuite):
                           ResultColumn
                             flags: STAR
                             alias: (none)
+                            alias_as: FALSE
                             expr: (none)
                       from_clause:
                         TableRef
@@ -546,6 +572,7 @@ class WithClause(TestSuite):
                           schema: (none)
                           has_parens: FALSE
                           alias: (none)
+                          alias_as: FALSE
                           args: (none)
                           index_hint: DEFAULT
                           index_name: (none)
@@ -563,6 +590,7 @@ class WithClause(TestSuite):
                           ResultColumn
                             flags: (none)
                             alias: (none)
+                            alias_as: FALSE
                             expr:
                               Literal
                                 literal_type: INTEGER
@@ -607,6 +635,7 @@ class WithClause(TestSuite):
                                 ResultColumn
                                   flags: (none)
                                   alias: (none)
+                                  alias_as: FALSE
                                   expr:
                                     Literal
                                       literal_type: INTEGER
@@ -626,6 +655,7 @@ class WithClause(TestSuite):
                                 ResultColumn
                                   flags: (none)
                                   alias: (none)
+                                  alias_as: FALSE
                                   expr:
                                     BinaryExpr
                                       op: PLUS
@@ -644,6 +674,7 @@ class WithClause(TestSuite):
                                 schema: (none)
                                 has_parens: FALSE
                                 alias: (none)
+                                alias_as: FALSE
                                 args: (none)
                                 index_hint: DEFAULT
                                 index_name: (none)
@@ -674,6 +705,7 @@ class WithClause(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           ColumnRef
                             column: "x"
@@ -685,6 +717,7 @@ class WithClause(TestSuite):
                       schema: (none)
                       has_parens: FALSE
                       alias: (none)
+                      alias_as: FALSE
                       args: (none)
                       index_hint: DEFAULT
                       index_name: (none)

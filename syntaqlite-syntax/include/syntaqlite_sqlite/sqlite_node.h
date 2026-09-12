@@ -863,6 +863,7 @@ typedef struct SyntaqliteResultColumn {
   SyntaqliteNodeTag tag;
   SyntaqliteResultColumnFlags flags;
   uint32_t alias;
+  SyntaqliteBool alias_as;
   uint32_t expr;
 } SyntaqliteResultColumn;
 
@@ -924,6 +925,7 @@ typedef struct SyntaqliteTableRef {
   SyntaqliteTextSpan schema;
   SyntaqliteBool has_parens;
   uint32_t alias;
+  SyntaqliteBool alias_as;
   uint32_t args;
   SyntaqliteIndexHint index_hint;
   SyntaqliteTextSpan index_name;
@@ -933,12 +935,14 @@ typedef struct SyntaqliteSubqueryTableSource {
   SyntaqliteNodeTag tag;
   uint32_t select;
   uint32_t alias;
+  SyntaqliteBool alias_as;
 } SyntaqliteSubqueryTableSource;
 
 typedef struct SyntaqliteParenTableSource {
   SyntaqliteNodeTag tag;
   uint32_t source;
   uint32_t alias;
+  SyntaqliteBool alias_as;
 } SyntaqliteParenTableSource;
 
 typedef struct SyntaqliteJoinClause {

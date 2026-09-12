@@ -33,6 +33,7 @@ class PerfettoExtension(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -65,6 +66,7 @@ class PerfettoExtension(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -99,6 +101,7 @@ class PerfettoExtension(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -145,6 +148,7 @@ class PerfettoExtension(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -182,6 +186,7 @@ class PerfettoExtension(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -218,6 +223,7 @@ class PerfettoExtension(TestSuite):
                       ResultColumn
                         flags: (none)
                         alias: (none)
+                        alias_as: FALSE
                         expr:
                           Literal
                             literal_type: INTEGER
@@ -340,6 +346,7 @@ class PerfettoExtension(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       Literal
                         literal_type: INTEGER

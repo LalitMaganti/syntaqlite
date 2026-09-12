@@ -31,7 +31,8 @@ stl_prefix(A) ::= . {
 
 // Simple table reference: FROM t, FROM t AS x, FROM schema.t
 seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
-    uint32_t alias = Z;
+    uint32_t alias = Z.name;
+    SyntaqliteBool alias_as = Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
     SyntaqliteTextSpan table_name;
     SyntaqliteTextSpan schema;
     if (D.z != NULL) {
@@ -43,7 +44,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
     }
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
                                          SYNTAQLITE_BOOL_FALSE,
-                                         alias, SYNTAQLITE_NULL_NODE,
+                                         alias, alias_as, SYNTAQLITE_NULL_NODE,
                                          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
     if (A == SYNTAQLITE_NULL_NODE) {
         synq_reject_dangling_on_using(pCtx, N);
@@ -60,7 +61,8 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) on_using(N). {
 
 // The hint constrains the planner and errors on a missing index, so it must survive.
 seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
-    uint32_t alias = Z;
+    uint32_t alias = Z.name;
+    SyntaqliteBool alias_as = Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
     SyntaqliteTextSpan table_name;
     SyntaqliteTextSpan schema;
     if (D.z != NULL) {
@@ -75,7 +77,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
                            :                 SYNTAQLITE_INDEX_HINT_DEFAULT;
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
                                          SYNTAQLITE_BOOL_FALSE,
-                                         alias, SYNTAQLITE_NULL_NODE,
+                                         alias, alias_as, SYNTAQLITE_NULL_NODE,
                                          ih, synq_span(pCtx, I));
     if (A == SYNTAQLITE_NULL_NODE) {
         synq_reject_dangling_on_using(pCtx, N);
@@ -94,7 +96,8 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) as(Z) indexed_by(I) on_using(N). {
 // empty-args call `FROM t()` round-trips as `FROM t()`, distinct
 // from the bare `FROM t` form.
 seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N). {
-    uint32_t alias = Z;
+    uint32_t alias = Z.name;
+    SyntaqliteBool alias_as = Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
     SyntaqliteTextSpan table_name;
     SyntaqliteTextSpan schema;
     if (D.z != NULL) {
@@ -106,7 +109,7 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N
     }
     uint32_t tref = synq_parse_table_ref(pCtx, table_name, schema,
                                          SYNTAQLITE_BOOL_TRUE,
-                                         alias, E,
+                                         alias, alias_as, E,
                                          SYNTAQLITE_INDEX_HINT_DEFAULT, SYNQ_NO_SPAN);
     if (A == SYNTAQLITE_NULL_NODE) {
         synq_reject_dangling_on_using(pCtx, N);
@@ -124,8 +127,9 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dbnm(D) LP exprlist(E) RP as(Z) on_using(N
 // Subquery table source: FROM (SELECT ...) AS t
 seltablist(A) ::= stl_prefix(A) LP select(S) RP as(Z) on_using(N). {
     pCtx->saw_subquery = 1;
-    uint32_t alias = Z;
-    uint32_t sub = synq_parse_subquery_table_source(pCtx, S, alias);
+    uint32_t alias = Z.name;
+    SyntaqliteBool alias_as = Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE;
+    uint32_t sub = synq_parse_subquery_table_source(pCtx, S, alias, alias_as);
     if (A == SYNTAQLITE_NULL_NODE) {
         synq_reject_dangling_on_using(pCtx, N);
         A = sub;
@@ -141,12 +145,14 @@ seltablist(A) ::= stl_prefix(A) LP select(S) RP as(Z) on_using(N). {
 
 // Upstream drops these only for a whole-FROM term with no alias or ON/USING.
 seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
-    if (A == SYNTAQLITE_NULL_NODE && Z == SYNTAQLITE_NULL_NODE
+    if (A == SYNTAQLITE_NULL_NODE && Z.name == SYNTAQLITE_NULL_NODE
         && N.on_expr == SYNTAQLITE_NULL_NODE
         && N.using_cols == SYNTAQLITE_NULL_NODE) {
         A = synq_pass(pCtx, F);
     } else {
-        uint32_t paren = synq_parse_paren_table_source(pCtx, F, Z);
+        uint32_t paren = synq_parse_paren_table_source(
+            pCtx, F, Z.name,
+            Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE);
         if (A == SYNTAQLITE_NULL_NODE) {
             synq_reject_dangling_on_using(pCtx, N);
             A = paren;

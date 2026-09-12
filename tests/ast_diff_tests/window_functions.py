@@ -20,6 +20,7 @@ class WindowFunctionBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "row_number"
@@ -48,6 +49,7 @@ class WindowFunctionBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -71,6 +73,7 @@ class WindowFunctionBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "count"
@@ -95,6 +98,7 @@ class WindowFunctionBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -118,6 +122,7 @@ class WindowFunctionBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -142,6 +147,7 @@ class WindowFunctionBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -185,6 +191,7 @@ class WindowFunctionBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -209,6 +216,7 @@ class WindowFunctionBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -232,6 +240,7 @@ class WindowFunctionBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -270,6 +279,7 @@ class WindowFunctionBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -293,6 +303,7 @@ class WindowFunctionBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -335,6 +346,7 @@ class WindowFunctionBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -358,6 +370,7 @@ class WindowFunctionBasic(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -391,6 +404,7 @@ class WindowFunctionBasic(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -418,6 +432,7 @@ class FilterClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -447,6 +462,7 @@ class FilterClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -470,6 +486,7 @@ class FilterClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -514,6 +531,7 @@ class FilterClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -541,6 +559,7 @@ class FrameSpecification(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -591,6 +610,7 @@ class FrameSpecification(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -614,6 +634,7 @@ class FrameSpecification(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -658,6 +679,7 @@ class FrameSpecification(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -681,6 +703,7 @@ class FrameSpecification(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -725,6 +748,7 @@ class FrameSpecification(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -748,6 +772,7 @@ class FrameSpecification(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -783,6 +808,7 @@ class FrameSpecification(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -806,6 +832,7 @@ class FrameSpecification(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -841,6 +868,7 @@ class FrameSpecification(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -864,6 +892,7 @@ class FrameSpecification(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -899,6 +928,7 @@ class FrameSpecification(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -922,6 +952,7 @@ class FrameSpecification(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -966,6 +997,7 @@ class FrameSpecification(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -993,6 +1025,7 @@ class WindowClause(TestSuite):
                   ResultColumn
                     flags: STAR
                     alias: (none)
+                    alias_as: FALSE
                     expr: (none)
               from_clause:
                 TableRef
@@ -1000,6 +1033,7 @@ class WindowClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1042,6 +1076,7 @@ class WindowClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "sum"
@@ -1063,6 +1098,7 @@ class WindowClause(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       FunctionCall
                         func_name: "avg"
@@ -1087,6 +1123,7 @@ class WindowClause(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
@@ -1156,6 +1193,7 @@ class AggregateWithWindowFunction(TestSuite):
                   ResultColumn
                     flags: (none)
                     alias: (none)
+                    alias_as: FALSE
                     expr:
                       AggregateFunctionCall
                         func_name: "group_concat"
@@ -1209,6 +1247,7 @@ class AggregateWithWindowFunction(TestSuite):
                   schema: (none)
                   has_parens: FALSE
                   alias: (none)
+                  alias_as: FALSE
                   args: (none)
                   index_hint: DEFAULT
                   index_name: (none)
