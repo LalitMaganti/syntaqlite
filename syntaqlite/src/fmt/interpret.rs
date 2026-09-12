@@ -842,7 +842,14 @@ fn drain_comments_before_child<'a>(
 
 // ── Bytecode helpers ────────────────────────────────────────────────────
 
-#[inline]
+/// Always inlined: the interpreter matches on the result, so inlining lets
+/// the two dispatches on the opcode collapse into one. `#[inline]` alone did
+/// not take it.
+#[expect(
+    clippy::inline_always,
+    reason = "measured: collapses the double dispatch on every opcode"
+)]
+#[inline(always)]
 fn op_at(ops: &[u8], ip: usize) -> FmtOp {
     let base = ip * 6;
     let opcode = ops[base];
@@ -911,7 +918,11 @@ enum FmtOp {
 }
 
 impl FmtOp {
-    #[inline]
+    #[expect(
+        clippy::inline_always,
+        reason = "measured: collapses the double dispatch on every opcode"
+    )]
+    #[inline(always)]
     pub(crate) fn decode(opcode: u8, a: u8, b: u16, c: u16) -> Self {
         match opcode {
             opcodes::KEYWORD => FmtOp::Keyword(b),
