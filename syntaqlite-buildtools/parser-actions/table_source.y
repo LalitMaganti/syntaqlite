@@ -143,27 +143,22 @@ seltablist(A) ::= stl_prefix(A) LP select(S) RP as(Z) on_using(N). {
     }
 }
 
-// Upstream drops these only for a whole-FROM term with no alias or ON/USING.
+// Upstream folds these away for a whole-FROM term with no alias or ON/USING,
+// but the parentheses are still text the author wrote, so keep the node.
 seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP as(Z) on_using(N). {
-    if (A == SYNTAQLITE_NULL_NODE && Z.name == SYNTAQLITE_NULL_NODE
-        && N.on_expr == SYNTAQLITE_NULL_NODE
-        && N.using_cols == SYNTAQLITE_NULL_NODE) {
-        A = synq_pass(pCtx, F);
+    uint32_t paren = synq_parse_paren_table_source(
+        pCtx, F, Z.name,
+        Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE);
+    if (A == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, N);
+        A = paren;
     } else {
-        uint32_t paren = synq_parse_paren_table_source(
-            pCtx, F, Z.name,
-            Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE);
-        if (A == SYNTAQLITE_NULL_NODE) {
-            synq_reject_dangling_on_using(pCtx, N);
-            A = paren;
-        } else {
-            SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
-            A = synq_parse_join_clause(pCtx,
-                pfx->join_prefix.join_type,
-                pfx->join_prefix.modifiers,
-                pfx->join_prefix.source,
-                paren, N.on_expr, N.using_cols);
-        }
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
+        A = synq_parse_join_clause(pCtx,
+            pfx->join_prefix.join_type,
+            pfx->join_prefix.modifiers,
+            pfx->join_prefix.source,
+            paren, N.on_expr, N.using_cols);
     }
 }
 

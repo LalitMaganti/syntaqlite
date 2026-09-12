@@ -297,7 +297,7 @@ class ParenthesizedFromFormat(TestSuite):
         # Upstream discards these: whole FROM clause, no alias, no ON/USING.
         return DiffTestBlueprint(
             sql="select * from (t1,t2)",
-            out="SELECT * FROM t1, t2;",
+            out="SELECT * FROM (t1, t2);",
         )
 
     def test_cosmetic_parens_around_join_are_dropped(self):
@@ -305,8 +305,10 @@ class ParenthesizedFromFormat(TestSuite):
             sql="select * from (a join b on a.x=b.x)",
             out="""\
                 SELECT *
-                FROM a
-                JOIN b ON a.x = b.x;
+                FROM (
+                  a
+                  JOIN b ON a.x = b.x
+                );
             """,
         )
 
