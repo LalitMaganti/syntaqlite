@@ -264,37 +264,37 @@ class TableValuedFunctionFormat(TestSuite):
     def test_backtick_table_normalizes_to_double_quote(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM `set`",
-            out='SELECT * FROM "set";',
+            out="SELECT * FROM `set`;",
         )
 
     def test_bracket_table_normalizes_to_double_quote(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM [set]",
-            out='SELECT * FROM "set";',
+            out="SELECT * FROM [set];",
         )
 
     def test_backtick_column_normalizes_to_double_quote(self):
         return DiffTestBlueprint(
             sql="SELECT `set` FROM t",
-            out='SELECT "set" FROM t;',
+            out="SELECT `set` FROM t;",
         )
 
     def test_bracket_column_normalizes_to_double_quote(self):
         return DiffTestBlueprint(
             sql="SELECT [set] FROM t",
-            out='SELECT "set" FROM t;',
+            out="SELECT [set] FROM t;",
         )
 
     def test_single_quoted_table_normalizes_to_double_quote(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM 'set'",
-            out='SELECT * FROM "set";',
+            out="SELECT * FROM 'set';",
         )
 
     def test_single_quoted_alias_normalizes_to_double_quote(self):
         return DiffTestBlueprint(
             sql="SELECT 1 AS 'a'",
-            out='SELECT 1 AS "a";',
+            out="SELECT 1 AS 'a';",
         )
 
     def test_single_quoted_string_literal_stays_single_quoted(self):
@@ -310,19 +310,19 @@ class TableValuedFunctionFormat(TestSuite):
     def test_single_quoted_escape_rewritten_for_double_quotes(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM 'a''b'",
-            out='SELECT * FROM "a\'b";',
+            out="SELECT * FROM 'a''b';",
         )
 
     def test_backtick_escape_rewritten_for_double_quotes(self):
         return DiffTestBlueprint(
             sql="SELECT `a``b` FROM t",
-            out='SELECT "a`b" FROM t;',
+            out="SELECT `a``b` FROM t;",
         )
 
     def test_bracket_inner_double_quote_reescaped(self):
         return DiffTestBlueprint(
             sql='SELECT [a"b] FROM t',
-            out='SELECT "a""b" FROM t;',
+            out="SELECT [a\"b] FROM t;",
         )
 
     def test_double_quoted_escape_preserved(self):
