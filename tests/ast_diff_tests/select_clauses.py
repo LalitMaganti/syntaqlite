@@ -373,102 +373,105 @@ class SelectLimit(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT 1 LIMIT 10",
             out="""\
-            SelectStmt
-              flags: (none)
-              columns:
-                ResultColumnList [1 items]
-                  ResultColumn
-                    flags: (none)
-                    alias: (none)
-                    alias_as: FALSE
-                    expr:
-                      Literal
-                        literal_type: INTEGER
-                        source: "1"
-              from_clause: (none)
-              where_clause: (none)
-              groupby: (none)
-              having: (none)
-              orderby: (none)
-              limit_clause:
-                LimitClause
-                  limit:
-                    Literal
-                      literal_type: INTEGER
-                      source: "10"
-                  offset: (none)
-              window_clause: (none)
-""",
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: (none)
+                        alias: (none)
+                        alias_as: FALSE
+                        expr:
+                          Literal
+                            literal_type: INTEGER
+                            source: "1"
+                  from_clause: (none)
+                  where_clause: (none)
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause:
+                    LimitClause
+                      limit:
+                        Literal
+                          literal_type: INTEGER
+                          source: "10"
+                      offset: (none)
+                      comma_form: FALSE
+                  window_clause: (none)
+            """,
         )
 
     def test_limit_offset(self):
         return DiffTestBlueprint(
             sql="SELECT 1 LIMIT 10 OFFSET 5",
             out="""\
-            SelectStmt
-              flags: (none)
-              columns:
-                ResultColumnList [1 items]
-                  ResultColumn
-                    flags: (none)
-                    alias: (none)
-                    alias_as: FALSE
-                    expr:
-                      Literal
-                        literal_type: INTEGER
-                        source: "1"
-              from_clause: (none)
-              where_clause: (none)
-              groupby: (none)
-              having: (none)
-              orderby: (none)
-              limit_clause:
-                LimitClause
-                  limit:
-                    Literal
-                      literal_type: INTEGER
-                      source: "10"
-                  offset:
-                    Literal
-                      literal_type: INTEGER
-                      source: "5"
-              window_clause: (none)
-""",
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: (none)
+                        alias: (none)
+                        alias_as: FALSE
+                        expr:
+                          Literal
+                            literal_type: INTEGER
+                            source: "1"
+                  from_clause: (none)
+                  where_clause: (none)
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause:
+                    LimitClause
+                      limit:
+                        Literal
+                          literal_type: INTEGER
+                          source: "10"
+                      offset:
+                        Literal
+                          literal_type: INTEGER
+                          source: "5"
+                      comma_form: FALSE
+                  window_clause: (none)
+            """,
         )
 
     def test_limit_comma(self):
         return DiffTestBlueprint(
             sql="SELECT 1 LIMIT 5, 10",
             out="""\
-            SelectStmt
-              flags: (none)
-              columns:
-                ResultColumnList [1 items]
-                  ResultColumn
-                    flags: (none)
-                    alias: (none)
-                    alias_as: FALSE
-                    expr:
-                      Literal
-                        literal_type: INTEGER
-                        source: "1"
-              from_clause: (none)
-              where_clause: (none)
-              groupby: (none)
-              having: (none)
-              orderby: (none)
-              limit_clause:
-                LimitClause
-                  limit:
-                    Literal
-                      literal_type: INTEGER
-                      source: "10"
-                  offset:
-                    Literal
-                      literal_type: INTEGER
-                      source: "5"
-              window_clause: (none)
-""",
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: (none)
+                        alias: (none)
+                        alias_as: FALSE
+                        expr:
+                          Literal
+                            literal_type: INTEGER
+                            source: "1"
+                  from_clause: (none)
+                  where_clause: (none)
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause:
+                    LimitClause
+                      limit:
+                        Literal
+                          literal_type: INTEGER
+                          source: "10"
+                      offset:
+                        Literal
+                          literal_type: INTEGER
+                          source: "5"
+                      comma_form: TRUE
+                  window_clause: (none)
+            """,
         )
 
 
@@ -551,131 +554,133 @@ class SelectCombined(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT 1 WHERE 1 > 0 ORDER BY 1 LIMIT 10",
             out="""\
-            SelectStmt
-              flags: (none)
-              columns:
-                ResultColumnList [1 items]
-                  ResultColumn
-                    flags: (none)
-                    alias: (none)
-                    alias_as: FALSE
-                    expr:
-                      Literal
-                        literal_type: INTEGER
-                        source: "1"
-              from_clause: (none)
-              where_clause:
-                BinaryExpr
-                  op: GT
-                  left:
-                    Literal
-                      literal_type: INTEGER
-                      source: "1"
-                  right:
-                    Literal
-                      literal_type: INTEGER
-                      source: "0"
-              groupby: (none)
-              having: (none)
-              orderby:
-                OrderByList [1 items]
-                  OrderingTerm
-                    expr:
-                      Literal
-                        literal_type: INTEGER
-                        source: "1"
-                    sort_order: NONE
-                    nulls_order: NONE
-              limit_clause:
-                LimitClause
-                  limit:
-                    Literal
-                      literal_type: INTEGER
-                      source: "10"
-                  offset: (none)
-              window_clause: (none)
-""",
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: (none)
+                        alias: (none)
+                        alias_as: FALSE
+                        expr:
+                          Literal
+                            literal_type: INTEGER
+                            source: "1"
+                  from_clause: (none)
+                  where_clause:
+                    BinaryExpr
+                      op: GT
+                      left:
+                        Literal
+                          literal_type: INTEGER
+                          source: "1"
+                      right:
+                        Literal
+                          literal_type: INTEGER
+                          source: "0"
+                  groupby: (none)
+                  having: (none)
+                  orderby:
+                    OrderByList [1 items]
+                      OrderingTerm
+                        expr:
+                          Literal
+                            literal_type: INTEGER
+                            source: "1"
+                        sort_order: NONE
+                        nulls_order: NONE
+                  limit_clause:
+                    LimitClause
+                      limit:
+                        Literal
+                          literal_type: INTEGER
+                          source: "10"
+                      offset: (none)
+                      comma_form: FALSE
+                  window_clause: (none)
+            """,
         )
 
     def test_all_clauses(self):
         return DiffTestBlueprint(
             sql="SELECT a FROM t WHERE x > 0 GROUP BY a HAVING count(*) > 1 ORDER BY a LIMIT 10 OFFSET 5",
             out="""\
-            SelectStmt
-              flags: (none)
-              columns:
-                ResultColumnList [1 items]
-                  ResultColumn
-                    flags: (none)
-                    alias: (none)
-                    alias_as: FALSE
-                    expr:
-                      ColumnRef
-                        column: "a"
-                        table: (none)
-                        schema: (none)
-              from_clause:
-                TableRef
-                  table_name: "t"
-                  schema: (none)
-                  has_parens: FALSE
-                  alias: (none)
-                  alias_as: FALSE
-                  args: (none)
-                  index_hint: DEFAULT
-                  index_name: (none)
-              where_clause:
-                BinaryExpr
-                  op: GT
-                  left:
-                    ColumnRef
-                      column: "x"
-                      table: (none)
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: (none)
+                        alias: (none)
+                        alias_as: FALSE
+                        expr:
+                          ColumnRef
+                            column: "a"
+                            table: (none)
+                            schema: (none)
+                  from_clause:
+                    TableRef
+                      table_name: "t"
                       schema: (none)
-                  right:
-                    Literal
-                      literal_type: INTEGER
-                      source: "0"
-              groupby:
-                ExprList [1 items]
-                  ColumnRef
-                    column: "a"
-                    table: (none)
-                    schema: (none)
-              having:
-                BinaryExpr
-                  op: GT
-                  left:
-                    FunctionCall
-                      func_name: "count"
-                      flags: STAR
+                      has_parens: FALSE
+                      alias: (none)
+                      alias_as: FALSE
                       args: (none)
-                      filter_clause: (none)
-                      over_clause: (none)
-                  right:
-                    Literal
-                      literal_type: INTEGER
-                      source: "1"
-              orderby:
-                OrderByList [1 items]
-                  OrderingTerm
-                    expr:
+                      index_hint: DEFAULT
+                      index_name: (none)
+                  where_clause:
+                    BinaryExpr
+                      op: GT
+                      left:
+                        ColumnRef
+                          column: "x"
+                          table: (none)
+                          schema: (none)
+                      right:
+                        Literal
+                          literal_type: INTEGER
+                          source: "0"
+                  groupby:
+                    ExprList [1 items]
                       ColumnRef
                         column: "a"
                         table: (none)
                         schema: (none)
-                    sort_order: NONE
-                    nulls_order: NONE
-              limit_clause:
-                LimitClause
-                  limit:
-                    Literal
-                      literal_type: INTEGER
-                      source: "10"
-                  offset:
-                    Literal
-                      literal_type: INTEGER
-                      source: "5"
-              window_clause: (none)
-""",
+                  having:
+                    BinaryExpr
+                      op: GT
+                      left:
+                        FunctionCall
+                          func_name: "count"
+                          flags: STAR
+                          args: (none)
+                          filter_clause: (none)
+                          over_clause: (none)
+                      right:
+                        Literal
+                          literal_type: INTEGER
+                          source: "1"
+                  orderby:
+                    OrderByList [1 items]
+                      OrderingTerm
+                        expr:
+                          ColumnRef
+                            column: "a"
+                            table: (none)
+                            schema: (none)
+                        sort_order: NONE
+                        nulls_order: NONE
+                  limit_clause:
+                    LimitClause
+                      limit:
+                        Literal
+                          literal_type: INTEGER
+                          source: "10"
+                      offset:
+                        Literal
+                          literal_type: INTEGER
+                          source: "5"
+                      comma_form: FALSE
+                  window_clause: (none)
+            """,
         )

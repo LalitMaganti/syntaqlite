@@ -75,9 +75,15 @@ list OrderByList { OrderingTerm }
 node LimitClause {
   limit: index Expr
   offset: index Expr
+  // `LIMIT offset, limit` is the same clause written the other way round.
+  comma_form: inline Bool
 
   fmt {
-    child(limit)
-    if_set(offset) { space "OFFSET" space child(offset) }
+    if_flag(comma_form) {
+      child(offset) "," space child(limit)
+    } else {
+      child(limit)
+      if_set(offset) { space "OFFSET" space child(offset) }
+    }
   }
 }

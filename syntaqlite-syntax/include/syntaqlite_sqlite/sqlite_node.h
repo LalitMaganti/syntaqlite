@@ -83,7 +83,8 @@ typedef enum SyntaqliteIsOp {
   SYNTAQLITE_IS_OP_IS_NULL = 2,
   SYNTAQLITE_IS_OP_NOT_NULL = 3,
   SYNTAQLITE_IS_OP_IS_NOT_DISTINCT = 4,
-  SYNTAQLITE_IS_OP_IS_DISTINCT = 5
+  SYNTAQLITE_IS_OP_IS_DISTINCT = 5,
+  SYNTAQLITE_IS_OP_NOT_NULL_SPACED = 6
 } SyntaqliteIsOp;
 
 typedef enum SyntaqliteLikeKeyword {
@@ -206,9 +207,10 @@ typedef enum SyntaqliteAlterOp {
 } SyntaqliteAlterOp;
 
 typedef enum SyntaqliteTransactionType {
-  SYNTAQLITE_TRANSACTION_TYPE_DEFERRED = 0,
-  SYNTAQLITE_TRANSACTION_TYPE_IMMEDIATE = 1,
-  SYNTAQLITE_TRANSACTION_TYPE_EXCLUSIVE = 2
+  SYNTAQLITE_TRANSACTION_TYPE_NONE = 0,
+  SYNTAQLITE_TRANSACTION_TYPE_DEFERRED = 1,
+  SYNTAQLITE_TRANSACTION_TYPE_IMMEDIATE = 2,
+  SYNTAQLITE_TRANSACTION_TYPE_EXCLUSIVE = 3
 } SyntaqliteTransactionType;
 
 typedef enum SyntaqliteTransactionOp {
@@ -914,6 +916,7 @@ typedef struct SyntaqliteLimitClause {
   SyntaqliteNodeTag tag;
   uint32_t limit;
   uint32_t offset;
+  SyntaqliteBool comma_form;
 } SyntaqliteLimitClause;
 
 typedef struct SyntaqliteJoinModifier {

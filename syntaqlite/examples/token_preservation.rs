@@ -34,14 +34,27 @@ struct Lexeme {
 }
 
 impl Lexeme {
+    /// Whether this lexeme is a quoted identifier or a literal, whose text the
+    /// formatter emits from the source span verbatim.
+    fn verbatim(&self) -> bool {
+        matches!(
+            self.text.as_bytes().first(),
+            Some(b'"' | b'`' | b'[' | b'\'')
+        )
+    }
+
     /// Whether two lexemes are the same authored syntax.
     ///
-    /// Keywords may be recased by `KeywordCase`; nothing else may change.
+    /// A case-only difference can only come from a keyword: the formatter
+    /// prints identifiers and literals straight out of their source span, so
+    /// the only text it ever recases is a keyword literal from the bytecode.
+    /// That covers contextual keywords such as STRICT and ROWID, which the
+    /// tokenizer sees as identifiers. Quoted text must still match exactly.
     fn same(&self, other: &Self) -> bool {
-        if self.keyword && other.keyword {
-            self.text.eq_ignore_ascii_case(&other.text)
-        } else {
+        if self.verbatim() || other.verbatim() {
             self.text == other.text
+        } else {
+            self.text.eq_ignore_ascii_case(&other.text)
         }
     }
 

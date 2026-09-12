@@ -1,4 +1,4 @@
-enum IsOp { IS IS_NOT IS_NULL NOT_NULL IS_NOT_DISTINCT IS_DISTINCT }
+enum IsOp { IS IS_NOT IS_NULL NOT_NULL IS_NOT_DISTINCT IS_DISTINCT NOT_NULL_SPACED }
 
 node IsExpr {
   op: inline IsOp
@@ -12,6 +12,7 @@ node IsExpr {
     switch(op) {
       IS_NULL         { child_prec_fixed(left) space "ISNULL" }
       NOT_NULL        { child_prec_fixed(left) space "NOTNULL" }
+      NOT_NULL_SPACED { child_prec_fixed(left) space "NOT" "NULL" }
       IS              { child_prec_fixed(left) space "IS" space child_prec_fixed(right, right) }
       IS_NOT          { child_prec_fixed(left) space "IS" "NOT" space child_prec_fixed(right, right) }
       IS_NOT_DISTINCT { child_prec_fixed(left) space "IS" "NOT" "DISTINCT" "FROM" space child_prec_fixed(right, right) }

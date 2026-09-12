@@ -1711,6 +1711,7 @@ pub fn syntaqlite_syntax::nodes::LikeExprId::from(syntaqlite_syntax::nodes::Like
 pub fn syntaqlite_syntax::nodes::LikeExprId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::LikeKeyword::as_str(&self) -> &'static str
 pub fn syntaqlite_syntax::nodes::LimitClause<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+pub fn syntaqlite_syntax::nodes::LimitClause<'a>::comma_form(&self) -> bool
 pub fn syntaqlite_syntax::nodes::LimitClause<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
 pub fn syntaqlite_syntax::nodes::LimitClause<'a>::limit(&self) -> core::option::Option<syntaqlite_syntax::nodes::Expr<'a>>
 pub fn syntaqlite_syntax::nodes::LimitClause<'a>::node_id(&self) -> syntaqlite_syntax::nodes::LimitClauseId
@@ -2755,6 +2756,7 @@ pub syntaqlite_syntax::nodes::IsOp::IsNot = 1
 pub syntaqlite_syntax::nodes::IsOp::IsNotDistinct = 4
 pub syntaqlite_syntax::nodes::IsOp::IsNull = 2
 pub syntaqlite_syntax::nodes::IsOp::NotNull = 3
+pub syntaqlite_syntax::nodes::IsOp::NotNullSpaced = 6
 pub syntaqlite_syntax::nodes::JoinModifierKind::Cross = 6
 pub syntaqlite_syntax::nodes::JoinModifierKind::Full = 4
 pub syntaqlite_syntax::nodes::JoinModifierKind::Inner = 5
@@ -3027,9 +3029,10 @@ pub syntaqlite_syntax::nodes::TransactionOp::Begin = 0
 pub syntaqlite_syntax::nodes::TransactionOp::Commit = 1
 pub syntaqlite_syntax::nodes::TransactionOp::End = 3
 pub syntaqlite_syntax::nodes::TransactionOp::Rollback = 2
-pub syntaqlite_syntax::nodes::TransactionType::Deferred = 0
-pub syntaqlite_syntax::nodes::TransactionType::Exclusive = 2
-pub syntaqlite_syntax::nodes::TransactionType::Immediate = 1
+pub syntaqlite_syntax::nodes::TransactionType::Deferred = 1
+pub syntaqlite_syntax::nodes::TransactionType::Exclusive = 3
+pub syntaqlite_syntax::nodes::TransactionType::Immediate = 2
+pub syntaqlite_syntax::nodes::TransactionType::None = 0
 pub syntaqlite_syntax::nodes::TriggerEventType::Delete = 0
 pub syntaqlite_syntax::nodes::TriggerEventType::Insert = 1
 pub syntaqlite_syntax::nodes::TriggerEventType::Update = 2

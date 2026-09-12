@@ -485,6 +485,7 @@ pub(crate) struct LimitClause {
     pub(crate) tag: u32,
     pub(crate) limit: AnyNodeId,
     pub(crate) offset: AnyNodeId,
+    pub(crate) comma_form: Bool,
 }
 
 #[derive(Debug, Clone)]

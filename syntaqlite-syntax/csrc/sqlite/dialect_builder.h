@@ -722,12 +722,14 @@ static inline uint32_t synq_parse_ordering_term(
 
 static inline uint32_t synq_parse_limit_clause(SynqParseCtx* ctx,
                                                uint32_t limit,
-                                               uint32_t offset) {
+                                               uint32_t offset,
+                                               SyntaqliteBool comma_form) {
   return synq_parse_build(
       ctx,
       &(SyntaqliteLimitClause){.tag = SYNTAQLITE_NODE_LIMIT_CLAUSE,
                                .limit = limit,
-                               .offset = offset},
+                               .offset = offset,
+                               .comma_form = comma_form},
       (uint32_t)sizeof(SyntaqliteLimitClause));
 }
 

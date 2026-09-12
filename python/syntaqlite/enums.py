@@ -159,6 +159,7 @@ class IsOp(IntEnum):
     NOT_NULL = 3
     IS_NOT_DISTINCT = 4
     IS_DISTINCT = 5
+    NOT_NULL_SPACED = 6
 
 
 class LikeKeyword(IntEnum):
@@ -281,9 +282,10 @@ class AlterOp(IntEnum):
 
 
 class TransactionType(IntEnum):
-    DEFERRED = 0
-    IMMEDIATE = 1
-    EXCLUSIVE = 2
+    NONE = 0
+    DEFERRED = 1
+    IMMEDIATE = 2
+    EXCLUSIVE = 3
 
 
 class TransactionOp(IntEnum):

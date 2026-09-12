@@ -336,6 +336,7 @@ pub enum IsOp {
     NotNull = 3,
     IsNotDistinct = 4,
     IsDistinct = 5,
+    NotNullSpaced = 6,
 }
 
 impl IsOp {
@@ -347,6 +348,7 @@ impl IsOp {
             IsOp::NotNull => "NOT_NULL",
             IsOp::IsNotDistinct => "IS_NOT_DISTINCT",
             IsOp::IsDistinct => "IS_DISTINCT",
+            IsOp::NotNullSpaced => "NOT_NULL_SPACED",
         }
     }
 }
@@ -694,14 +696,16 @@ impl AlterOp {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum TransactionType {
-    Deferred = 0,
-    Immediate = 1,
-    Exclusive = 2,
+    None = 0,
+    Deferred = 1,
+    Immediate = 2,
+    Exclusive = 3,
 }
 
 impl TransactionType {
     pub fn as_str(&self) -> &'static str {
         match self {
+            TransactionType::None => "NONE",
             TransactionType::Deferred => "DEFERRED",
             TransactionType::Immediate => "IMMEDIATE",
             TransactionType::Exclusive => "EXCLUSIVE",
@@ -5288,6 +5292,9 @@ impl<'a> LimitClause<'a> {
     }
     pub fn offset(&self) -> Option<Expr<'a>> {
         GrammarNodeType::from_result(self.stmt_result, self.raw.offset)
+    }
+    pub fn comma_form(&self) -> bool {
+        self.raw.comma_form == super::ffi::Bool::True
     }
 }
 

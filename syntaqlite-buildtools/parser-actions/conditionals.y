@@ -24,7 +24,9 @@ expr(A) ::= expr(B) ISNULL|NOTNULL(E). {
 }
 
 expr(A) ::= expr(B) NOT NULL. {
-    A = synq_parse_is_expr(pCtx, SYNTAQLITE_IS_OP_NOT_NULL, B, SYNTAQLITE_NULL_NODE);
+    // `NOT NULL` and `NOTNULL` mean the same thing but are different text.
+    A = synq_parse_is_expr(pCtx, SYNTAQLITE_IS_OP_NOT_NULL_SPACED, B,
+                           SYNTAQLITE_NULL_NODE);
 }
 
 expr(A) ::= expr(B) IS expr(C). {

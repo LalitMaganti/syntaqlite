@@ -136,7 +136,7 @@ cmd(A) ::= COMMIT|END(X) trans_opt(T). {
     A = synq_parse_transaction_stmt(pCtx,
         X.type == SYNTAQLITE_TK_END ? SYNTAQLITE_TRANSACTION_OP_END
                                     : SYNTAQLITE_TRANSACTION_OP_COMMIT,
-        SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
+        SYNTAQLITE_TRANSACTION_TYPE_NONE,
         T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
         T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }
@@ -144,7 +144,7 @@ cmd(A) ::= COMMIT|END(X) trans_opt(T). {
 cmd(A) ::= ROLLBACK trans_opt(T). {
     A = synq_parse_transaction_stmt(pCtx,
         SYNTAQLITE_TRANSACTION_OP_ROLLBACK,
-        SYNTAQLITE_TRANSACTION_TYPE_DEFERRED,
+        SYNTAQLITE_TRANSACTION_TYPE_NONE,
         T.has_transaction ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE,
         T.name.z ? synq_span(pCtx, T.name) : SYNQ_NO_SPAN);
 }
@@ -152,7 +152,7 @@ cmd(A) ::= ROLLBACK trans_opt(T). {
 // ============ Transaction type ============
 
 transtype(A) ::= . {
-    A = (int)SYNTAQLITE_TRANSACTION_TYPE_DEFERRED;
+    A = (int)SYNTAQLITE_TRANSACTION_TYPE_NONE;
 }
 
 transtype(A) ::= DEFERRED. {
