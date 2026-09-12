@@ -245,11 +245,40 @@ fn bench_lsp_host(c: &mut Criterion) {
 
 // ── Criterion setup ─────────────────────────────────────────────────────
 
+fn bench_token_layout_scaling(c: &mut Criterion) {
+    let mut group = c.benchmark_group("token_layout_scaling");
+    for kind in ["projection", "boolean", "arithmetic"] {
+        for count in [256, 512, 1024] {
+            let sql = match kind {
+                "projection" => format!("SELECT {};", vec!["column_name"; count].join(", ")),
+                "boolean" => format!(
+                    "SELECT a FROM t WHERE {};",
+                    vec!["column_name = 1"; count].join(" AND ")
+                ),
+                _ => format!("SELECT {};", vec!["column_name"; count].join(" + ")),
+            };
+            group.throughput(Throughput::Bytes(sql.len() as u64));
+            let mut formatter = syntaqlite::fmt::token_layout_prototype::TokenFormatter::default();
+            group.bench_with_input(BenchmarkId::new(kind, count), &sql, |b, sql| {
+                b.iter(|| {
+                    black_box(
+                        formatter
+                            .format(black_box(sql), 40)
+                            .expect("valid benchmark SQL"),
+                    )
+                });
+            });
+        }
+    }
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_tokenizer,
     bench_parser,
     bench_formatter,
     bench_lsp_host,
+    bench_token_layout_scaling,
 );
 criterion_main!(benches);

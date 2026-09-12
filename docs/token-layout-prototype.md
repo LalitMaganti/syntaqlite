@@ -10,21 +10,28 @@ This is an isolated architecture experiment on branch `prototype-token-layout`, 
 
 There is no AST traversal, `source(...)` annotation, output-keyword matching, node-range ownership search, or global comment-draining cursor in this path. The ordinary parser still constructs its AST; this experiment simply does not use it for formatting.
 
-The prototype has explicit layout choices: punctuation spacing, break opportunities at list separators and SELECT clause boundaries, expression breaks, and nesting for expression/list productions. These use grammar-symbol identities. They do not contain SQL reproducer-specific fixes. They are deliberately incomplete style rules, not a finished formatter specification.
+Layout policy is isolated in `syntaqlite/src/fmt/token_layout_rules.rs`. It uses grammar symbols to select shared document operations: sequences, hanging headers/bodies, independent suffix groups, and enclosures. The document interpreter is unchanged.
+
+Recursive lists and same-precedence operator chains accumulate as open sequences. A clause, item, or enclosure establishes their group and indentation once. Grammar wrappers add no groups. This prevents each recursive reduction from adding indentation and repeated fit checks. Different-precedence chains retain their structural grouping.
+
+The policy covers SELECT clauses and compounds, joins, aliases, function arguments and window clauses, CASE and BETWEEN, assignments and RETURNING, column definitions and constraints, declaration headers, and trigger bodies. These are explicit SQL style decisions, not generic punctuation heuristics or reproducer-specific text matches. This remains a prototype, not a complete formatter specification.
 
 ## Behavioral scope
 
 All authored tokens, including `==`, `ASC`, optional `AS`, `NOT NULL`, and comma-style LIMIT, are retained in their original order and spelling. Keyword casing is preserved. The prototype does not normalize syntax or emit absent semicolons.
 
-Comment policy is deliberately simple: comments stay between their original neighboring tokens, are placed backwards before a discretionary layout break, and line comments always terminate before SQL resumes. Original blank lines and own-line versus trailing-comment distinctions are not preserved. This avoids classification changing after a first formatting pass, but is a product behavior change that still needs review.
+Comment policy is deliberately simple: comments stay between their original neighboring tokens, are placed backwards before a discretionary layout break, and line comments always terminate before SQL resumes. Blank lines around comments are retained as one paragraph break; whitespace-only gaps between SQL tokens are normalized. Leading comments occupy a header line. Other own-line versus trailing-comment distinctions are not retained. A line comment carries a pending mandatory break until the receiving boundary places it: a closing parenthesis therefore returns to its enclosure indentation. Separate statements receive a blank line. These are explicit style choices that still need product review.
 
 At width 40:
 
 ```sql
-SELECT first_column, second_column,
+SELECT
+  first_column,
+  second_column,
   third_column
 FROM some_table
-WHERE first_column > 1
+WHERE
+  first_column > 1
   AND second_column < 20
 ORDER BY third_column ASC
 LIMIT 20, 10;
@@ -38,34 +45,43 @@ LIMIT 20, 10;
 - Broad historical inputs: 45,940 accepted checks pass. Another 42 checks are 21 invalid `LEFT BOGUS JOIN` inputs at both widths; the independent production parser rejects all 21 as well. Required SQLite compile flags are honored by the harness.
 - The corpora overlap and contain duplicate inputs. Together, the passing checks represent **19,174 distinct SQL inputs / 38,348 distinct SQL-and-width pairs**, not 49,276 independent SQL programs.
 - Every accepted check compares the complete lexer token sequence, including comments and exact spelling, with the input. It also reparses/reformats the output and requires an identical second pass.
-- `cargo check` and strict Clippy pass with `lsp,dynload`; 328 library unit tests pass. The full pre-push run was not completed after its autofix stage reported the manually corrected lint findings.
-- Two committed Rust tests exercise syntax retention and injected block/line comments at every token boundary of 16 seeds, including empty statements and the earlier crash categories.
+- 328 library unit tests and six prototype tests pass. The prototype tests include injected comments at every token boundary of 16 seeds, 24 reviewed exact-layout fixtures, comment-boundary indentation, and recursive lists/chains of 64, 256 and 1,024 elements. The reviewed fixtures require exact output, width compliance, token preservation and second-pass stability.
+- Strict Clippy passes for the prototype, tests, example, and benchmark. Repository autofix completed formatting and Clippy. The pre-push gate then stopped at the public API snapshot: the isolated prototype exposes experimental types not present in the production baseline. That baseline was deliberately left unchanged.
+- A standalone before/after gallery is available at `/tmp/syntaqlite-token-layout-results/layout/gallery.html`.
 
 These checks establish token preservation and stability for those inputs. They do not establish desirable layout in every context, full dialect/macro support, or agreement with existing formatting snapshots.
 
 ## Performance
 
-Criterion release runs use the unchanged four benchmark inputs, reused formatter instances, 30 samples, 0.3 s warmup, and 2 s measurement. Two runs use opposite binary orders. Values below average the run means. Main is the `ec045e4e` snapshot; current PR is `fe511add`. No compilation or test suites ran during measurement.
+Criterion release runs use the unchanged four benchmark inputs, reused formatter instances, 30 samples, 0.3 s warmup, and 2 s measurement. Two runs use opposite binary orders. Values below average the run means. Main is the `ec045e4e` snapshot; before is the initial prototype `bf8fa706`. No compilation or test suites ran during measurement.
 
-| Fixture | Main | Current PR | Prototype | Prototype time vs main |
+| Fixture | Main | Before layout fixes | After layout fixes | After vs main | After vs before |
+|---|---:|---:|---:|---:|---:|
+| Small SELECT | 2.359 µs | 2.810 µs | 3.232 µs | +37.0% | +15.0% |
+| Multi-join SELECT | 17.489 µs | 21.656 µs | 24.400 µs | +39.5% | +12.7% |
+| 500 statements | 2.042 ms | 2.032 ms | 2.668 ms | +30.7% | +31.3% |
+| 500 commented statements | 2.308 ms | 2.119 ms | 2.772 ms | +20.1% | +30.8% |
+
+The fuller layout policy regresses performance by 13–31% against the initial prototype on these fixtures. It is 20–40% slower than the main snapshot. These are not equivalent-feature comparisons: the prototype preserves original syntax and casing, and now produces different documents and layouts. This is a layout improvement, not a performance win. Raw measurements and binaries are under `/tmp/syntaqlite-token-layout-results/layout`.
+
+Long-sequence benchmarks use width 40 and the same Criterion sampling parameters (one run):
+
+| Sequence | 256 elements | 512 elements | 1,024 elements | Doubling ratios |
 |---|---:|---:|---:|---:|
-| Small SELECT | 2.416 µs | 2.372 µs | 2.782 µs | +15.1% |
-| Multi-join SELECT | 17.115 µs | 17.454 µs | 21.387 µs | +25.0% |
-| 500 statements | 1.999 ms | 2.014 ms | 2.001 ms | +0.1% |
-| 500 commented statements | 2.242 ms | 2.424 ms | 2.103 ms | -6.2% |
+| projection | 125.4 µs | 260.4 µs | 503.2 µs | 2.08×, 1.93× |
+| boolean | 184.3 µs | 352.4 µs | 708.8 µs | 1.91×, 2.01× |
+| arithmetic | 81.2 µs | 159.6 µs | 317.5 µs | 1.97×, 1.99× |
 
-These are not equivalent-feature comparisons: the prototype preserves syntax and casing and has a smaller layout policy. The commented fixture is about 13% faster than the current PR, but the small/medium fixtures are slower. This is promising evidence, not an overall performance win.
-
-The first implementation was 22–67% slower than main. Reusing the trivia tokenizer and rendering buffers, and skipping whitespace-only gaps, removed avoidable allocation work. Raw initial and final measurements are retained in `/tmp/syntaqlite-token-layout-results`.
+These measurements are consistent with approximately linear growth for these lists and chains; they are not a proof for every grammar shape or deeply nested input. Peak memory remains unmeasured.
 
 ## Remaining engineering work
 
 - Comments currently come from lexing gaps between shifted tokens, using the existing tokenizer. SQL ownership is not inferred from gap text. A proper lexer-event bridge could supply comments directly and remove this duplicate trivia lexing.
 - Reduction callbacks use generated rule-name strings and a thread-local C-to-Rust bridge with a panic guard. Production code could use generated numeric layout dispatch. No stable API is proposed here.
 - The grammar stack contains document fragments, not a full CST. However, the parser still allocates its AST and the prototype retains the document arena for the whole input, unlike the production formatter's per-statement rendering. **Peak memory has not been benchmarked; no memory improvement is claimed.**
-- Long recursive lists/expressions, indentation, multiline literals/comments, blank lines, and statement spacing need deliberate layout work. There is no claim of full layout or worst-case renderer-performance coverage.
+- The reviewed fixtures exercise layout, but token-preservation sweeps are not a visual oracle. Unreviewed grammar combinations may still have undesirable whitespace. Width is a soft target: indivisible tokens and authored multiline literals/comments can exceed it. There is no claim of exhaustive layout or worst-case renderer-performance coverage.
 - Macro expansion and alternate dialects are outside the prototype's verified scope. Non-authored/non-monotone shifted spans produce an explicit error.
-- Semicolon handling includes a provisional verbatim tail because the parser runtime can consume a terminator without a normal shift. A complete token-event interface should cover that directly.
+- The parser runtime can consume a terminator without a normal shift. The final gap is tokenized and emitted through the same trivia/boundary mechanism; a complete token-event interface should cover these terminators directly.
 
 ## Reproduce
 

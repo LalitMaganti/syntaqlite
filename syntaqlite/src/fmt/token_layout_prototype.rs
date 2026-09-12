@@ -9,6 +9,38 @@ use std::ffi::{CStr, c_char, c_void};
 use syntaqlite_syntax::typed::{Dialect, TypedParser, dialect};
 use syntaqlite_syntax::{ParseOutcome, Tokenizer};
 
+#[path = "token_layout_rules.rs"]
+mod rules;
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Shape {
+    Atom,
+    List,
+    Chain(&'static str),
+}
+#[derive(Clone, Copy)]
+enum Break {
+    Tight,
+    Space,
+    Line,
+    Soft,
+    Hard,
+    Blank,
+}
+#[derive(Clone, Copy)]
+struct Gap {
+    doc: DocId,
+    ends_line: bool,
+    blank_line: bool,
+}
+impl Gap {
+    const EMPTY: Self = Self {
+        doc: NIL_DOC,
+        ends_line: false,
+        blank_line: false,
+    };
+}
+
 type Callback = unsafe extern "C" fn(*mut c_void, u32, *const c_char, u32, *const c_char, u32);
 unsafe extern "C" {
     fn SynqSqliteParseLayoutSet(context: *mut c_void, callback: Option<Callback>);
@@ -16,7 +48,9 @@ unsafe extern "C" {
 #[derive(Clone, Copy)]
 struct Fragment<'a> {
     doc: DocId,
-    gap: DocId,
+    gap: Gap,
+    shape: Shape,
+    trailing_prefix: bool,
     first: &'a str,
     last: &'a str,
     symbol: &'static str,
@@ -25,7 +59,9 @@ impl Fragment<'_> {
     fn empty(symbol: &'static str) -> Self {
         Self {
             doc: NIL_DOC,
-            gap: NIL_DOC,
+            gap: Gap::EMPTY,
+            shape: Shape::Atom,
+            trailing_prefix: false,
             first: "",
             last: "",
             symbol,
@@ -51,37 +87,46 @@ struct State<'a> {
 impl<'a> State<'a> {
     // Only trivia is read between lexer-provided token spans. SQL is never
     // recognized here: structural context comes exclusively from reductions.
-    fn trivia(&mut self, end: usize) -> DocId {
+    fn trivia(&mut self, end: usize) -> Gap {
         let gap = &self.source[self.end..end];
         if gap.bytes().all(|b| b.is_ascii_whitespace()) {
             self.end = end;
-            return NIL_DOC;
+            return Gap::EMPTY;
         }
         let mut doc = NIL_DOC;
+        let mut ends_line = false;
+        let mut newlines = 0;
         for token in self.tokenizer.tokenize(gap) {
             let text = token.text();
             if text.trim().is_empty() {
+                newlines += text.bytes().filter(|b| *b == b'\n').count();
                 continue;
             }
-            let sep = if self.end == 0 && doc == NIL_DOC {
+            let separator = if self.end == 0 && doc == NIL_DOC {
                 NIL_DOC
+            } else if newlines >= 2 {
+                let line = self.arena.hardline();
+                self.arena.cat(line, line)
+            } else if ends_line {
+                self.arena.hardline()
             } else {
                 self.arena.text(" ")
             };
             let comment = self.arena.text(text);
-            doc = self.arena.cats(&[doc, sep, comment]);
-            // A line comment must end before any following SQL, independently
-            // of which grammar production eventually wraps this fragment.
-            let after = if text.starts_with("--") {
-                self.arena.comment_break()
-            } else {
-                NIL_DOC
-            };
-            doc = self.arena.cat(doc, after);
+            doc = self.arena.cats(&[doc, separator, comment]);
+            // Defer the final mandatory break to the receiving layout boundary.
+            // That boundary, not the preceding token, owns the next indentation.
+            ends_line = text.starts_with("--");
+            newlines = 0;
         }
         self.end = end;
-        doc
+        Gap {
+            doc,
+            ends_line,
+            blank_line: newlines >= 2 && doc != NIL_DOC,
+        }
     }
+
     fn shift(&mut self, symbol: &'static str, start: usize, len: usize) {
         self.stats.shifts += 1;
         if len == 0 {
@@ -101,6 +146,8 @@ impl<'a> State<'a> {
         self.stack.push(Fragment {
             doc,
             gap: prefix,
+            shape: Shape::Atom,
+            trailing_prefix: false,
             first: text,
             last: text,
             symbol,
@@ -108,34 +155,189 @@ impl<'a> State<'a> {
         self.end = start + len;
         self.stats.max_stack = self.stats.max_stack.max(self.stack.len());
     }
-    fn separator(&mut self, left: Fragment<'a>, right: Fragment<'a>, lhs: &str) -> DocId {
-        if [",", ")", ";", "."].contains(&right.first) || left.last == "." {
-            return NIL_DOC;
+    fn break_doc(&mut self, boundary: Break, gap: Gap) -> DocId {
+        if gap.blank_line || matches!(boundary, Break::Blank) {
+            let line = self.arena.hardline();
+            return self.arena.cat(line, line);
         }
-        if left.last == "(" || right.first == "(" {
-            return NIL_DOC;
+        if gap.ends_line {
+            return self.arena.hardline();
         }
-        // Lists and clauses supply break opportunities based on grammar slots.
-        // These are layout choices, not mappings between source and output.
-        if left.last == ","
-            || (lhs == "oneselect"
-                && matches!(
-                    right.symbol,
-                    "from"
-                        | "where_opt"
-                        | "groupby_opt"
-                        | "having_opt"
-                        | "window_clause"
-                        | "orderby_opt"
-                        | "limit_opt"
-                ))
-        {
-            return self.arena.line();
+        match boundary {
+            Break::Tight => NIL_DOC,
+            Break::Space => self.arena.text(" "),
+            Break::Line => self.arena.line(),
+            Break::Soft => self.arena.softline(),
+            Break::Hard => self.arena.hardline(),
+            Break::Blank => {
+                let a = self.arena.hardline();
+                self.arena.cat(a, a)
+            }
         }
-        if lhs == "expr" && left.symbol == "expr" && right.symbol != "expr" {
-            return self.arena.line();
+    }
+    fn content(&mut self, child: Fragment<'a>, enclosing: Shape) -> DocId {
+        if child.shape == Shape::Atom || child.shape == enclosing {
+            child.doc
+        } else {
+            let doc = if matches!((child.shape, enclosing), (Shape::Chain(_), Shape::Chain(_))) {
+                self.arena.nest(1, child.doc)
+            } else {
+                child.doc
+            };
+            self.arena.group(doc)
         }
-        self.arena.text(" ")
+    }
+    fn append(
+        &mut self,
+        left: Fragment<'a>,
+        right: Fragment<'a>,
+        boundary: Break,
+        shape: Shape,
+    ) -> Fragment<'a> {
+        if right.doc == NIL_DOC {
+            return left;
+        }
+        if left.doc == NIL_DOC {
+            return Fragment {
+                doc: self.content(right, shape),
+                shape,
+                ..right
+            };
+        }
+        let separator = self.break_doc(boundary, right.gap);
+        let right_doc = self.content(right, shape);
+        Fragment {
+            doc: self
+                .arena
+                .cats(&[left.doc, right.gap.doc, separator, right_doc]),
+            last: right.last,
+            trailing_prefix: right.trailing_prefix,
+            shape,
+            ..left
+        }
+    }
+    fn sequence(
+        &mut self,
+        lhs: &'static str,
+        children: &[Fragment<'a>],
+        shape: Shape,
+    ) -> Fragment<'a> {
+        let mut out = Fragment::empty(lhs);
+        for (index, &child) in children.iter().enumerate() {
+            let boundary = if index == 0 {
+                Break::Tight
+            } else {
+                rules::boundary(lhs, children, index, shape)
+            };
+            out = self.append(out, child, boundary, shape);
+        }
+        out.symbol = lhs;
+        out
+    }
+    fn grouped(&mut self, mut fragment: Fragment<'a>) -> Fragment<'a> {
+        fragment.doc = self.arena.group(fragment.doc);
+        fragment.shape = Shape::Atom;
+        fragment
+    }
+    // Hanging layout belongs to a syntactic owner, never to recursive list steps.
+    fn hanging(&mut self, head: Fragment<'a>, body: Fragment<'a>) -> Fragment<'a> {
+        if head.doc == NIL_DOC {
+            return self.grouped(body);
+        }
+        if body.doc == NIL_DOC {
+            return self.grouped(head);
+        }
+        let line = self.break_doc(Break::Line, body.gap);
+        let contents = self.arena.cats(&[line, body.doc]);
+        let nested = self.arena.nest(1, contents);
+        let doc = self.arena.cats(&[head.doc, body.gap.doc, nested]);
+        let out = Fragment {
+            doc,
+            last: body.last,
+            shape: Shape::Atom,
+            ..head
+        };
+        self.grouped(out)
+    }
+    // A suffix chooses its break using the actual final column of its head.
+    // A multiline head must not force a short alias onto another line.
+    fn suffix(&mut self, head: Fragment<'a>, body: Fragment<'a>) -> Fragment<'a> {
+        if head.doc == NIL_DOC {
+            return self.grouped(body);
+        }
+        if body.doc == NIL_DOC {
+            return self.grouped(head);
+        }
+        let line = self.break_doc(Break::Line, body.gap);
+        let tail = self.arena.cats(&[line, body.doc]);
+        let tail = self.arena.nest(1, tail);
+        let tail = self.arena.group(tail);
+        Fragment {
+            doc: self.arena.cats(&[head.doc, body.gap.doc, tail]),
+            last: body.last,
+            shape: Shape::Atom,
+            ..head
+        }
+    }
+    // An enclosure consumes original opening/closing tokens. No delimiters are
+    // synthesized. The body owns one indentation level and the closing gap.
+    fn enclosure(
+        &mut self,
+        open: Fragment<'a>,
+        body: Fragment<'a>,
+        close: Fragment<'a>,
+        hard: bool,
+    ) -> Fragment<'a> {
+        if body.doc == NIL_DOC {
+            return self.append(open, close, Break::Tight, Shape::Atom);
+        }
+        let boundary = if hard { Break::Hard } else { Break::Soft };
+        let before = self.break_doc(boundary, body.gap);
+        let after = self.break_doc(boundary, close.gap);
+        let inside = self.arena.cats(&[before, body.doc, close.gap.doc]);
+        let nested = self.arena.nest(1, inside);
+        let doc = self
+            .arena
+            .cats(&[open.doc, body.gap.doc, nested, after, close.doc]);
+        let result = Fragment {
+            doc,
+            last: close.last,
+            symbol: "enclosure",
+            shape: Shape::Atom,
+            ..open
+        };
+        self.grouped(result)
+    }
+    fn delimiters(&mut self, children: &mut Vec<Fragment<'a>>) {
+        let mut index = 0;
+        while index < children.len() {
+            if children[index].symbol != "LP" {
+                index += 1;
+                continue;
+            }
+            let mut depth = 1;
+            let mut end = index + 1;
+            while end < children.len() {
+                if children[end].symbol == "LP" {
+                    depth += 1;
+                }
+                if children[end].symbol == "RP" {
+                    depth -= 1;
+                }
+                if depth == 0 {
+                    break;
+                }
+                end += 1;
+            }
+            if end == children.len() {
+                index += 1;
+                continue;
+            }
+            let body = self.sequence("enclosure", &children[index + 1..end], Shape::List);
+            let enclosed = self.enclosure(children[index], body, children[end], false);
+            children.splice(index..=end, [enclosed]);
+            index += 1;
+        }
     }
     fn reduce(&mut self, rule: &'static str, count: usize) {
         self.stats.reductions += 1;
@@ -144,41 +346,19 @@ impl<'a> State<'a> {
             return;
         }
         let lhs = rule.split_once(" ::=").map_or(rule, |(lhs, _)| lhs);
-        self.scratch.clear();
-        self.scratch
-            .extend(self.stack.drain(self.stack.len() - count..));
-        let mut result = Fragment::empty(lhs);
-        // Collapse each reduction directly to a document: no reduction tree.
-        for index in 0..self.scratch.len() {
-            let child = self.scratch[index];
-            if child.doc == NIL_DOC {
-                continue;
-            }
-            if result.doc == NIL_DOC {
-                result = Fragment {
-                    symbol: lhs,
-                    ..child
-                };
-            } else {
-                let previous = self.scratch[..index]
-                    .iter()
-                    .rev()
-                    .find(|f| f.doc != NIL_DOC)
-                    .copied()
-                    .expect("nonempty result has a preceding nonempty fragment");
-                let sep = self.separator(previous, child, lhs);
-                result.doc = self.arena.cats(&[result.doc, child.gap, sep, child.doc]);
-                result.last = child.last;
-            }
-        }
-        if count > 1 && result.doc != NIL_DOC {
-            // Nest only expression/list bodies, not every grammar wrapper.
-            if matches!(lhs, "expr" | "selcollist" | "exprlist" | "sortlist") {
-                result.doc = self.arena.nest(1, result.doc);
-            }
-            result.doc = self.arena.group(result.doc);
-        }
+        let mut children = std::mem::take(&mut self.scratch);
+        children.clear();
+        children.extend(
+            self.stack
+                .drain(self.stack.len() - count..)
+                .filter(|f| f.doc != NIL_DOC),
+        );
+        self.delimiters(&mut children);
+        let mut result = rules::layout(self, lhs, rule, &mut children);
+        result.symbol = lhs;
         self.stack.push(result);
+        children.clear();
+        self.scratch = children;
     }
 }
 unsafe extern "C" fn event(
@@ -264,15 +444,24 @@ impl TokenFormatter {
         unsafe { SynqSqliteParseLayoutSet((&raw mut state).cast(), Some(event)) };
         let registration = Registration;
         let mut session = self.parser.parse(source);
-        let mut root = NIL_DOC;
+        let mut root = Fragment::empty("input");
         loop {
             match session.next() {
                 ParseOutcome::Ok(_) => {
                     // The runtime restarts Lemon after each statement. Concatenate
                     // the remaining stack documents in their original order.
-                    for fragment in &state.stack {
-                        root = state.arena.cats(&[root, fragment.gap, fragment.doc]);
+                    let mut statement = Fragment::empty("statement");
+                    let stack = std::mem::take(&mut state.stack);
+                    for &fragment in &stack {
+                        let boundary = if statement.last == ";" && fragment.first != ";" {
+                            Break::Blank
+                        } else {
+                            Break::Tight
+                        };
+                        statement = state.append(statement, fragment, boundary, Shape::Atom);
                     }
+                    root = state.append(root, statement, Break::Blank, Shape::Atom);
+                    state.stack = stack;
                     state.stack.clear();
                 }
                 ParseOutcome::Done => break,
@@ -289,16 +478,30 @@ impl TokenFormatter {
         if let Some(error) = state.error {
             return Err(error);
         }
-        for fragment in &state.stack {
-            root = state.arena.cats(&[root, fragment.gap, fragment.doc]);
+        let remaining = std::mem::take(&mut state.stack);
+        for fragment in remaining {
+            root = state.append(root, fragment, Break::Tight, Shape::Atom);
         }
         // A statement terminator may be consumed by the runtime without shifting
         // into Lemon. Preserve any such remaining lexical text verbatim here.
-        let tail = state.arena.text(&source[state.end..]);
-        root = state.arena.cat(root, tail);
+        let tail = state.trivia(source.len());
+        let header = state.break_doc(
+            if root.gap.doc == NIL_DOC {
+                Break::Tight
+            } else {
+                Break::Hard
+            },
+            root.gap,
+        );
+        let footer = state.break_doc(Break::Tight, tail);
+        let document = state
+            .arena
+            .cats(&[root.gap.doc, header, root.doc, tail.doc, footer]);
         let config = FormatConfig::default().with_line_width(width as usize);
         self.buffers.clear();
-        state.arena.render_into(root, &config, &mut self.buffers);
+        state
+            .arena
+            .render_into(document, &config, &mut self.buffers);
         let output = self.buffers.out.clone();
         self.arena = Some(DocArena::recycle(state.arena));
         Ok((output, state.stats))
