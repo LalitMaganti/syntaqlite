@@ -66,28 +66,6 @@ pub(crate) struct CommentCtx {
 }
 
 impl CommentCtx {
-    pub(crate) fn new(comments: Vec<CommentEntry>, tokens: Vec<TokenEntry>) -> Self {
-        CommentCtx {
-            comments,
-            tokens,
-            cursor: Cell::new(0),
-            token_cursor: Cell::new(0),
-        }
-    }
-
-    /// Return owned storage so callers can recycle vector allocations.
-    pub(crate) fn into_parts(self) -> (Vec<CommentEntry>, Vec<TokenEntry>) {
-        (self.comments, self.tokens)
-    }
-
-    /// Borrow the comment entries. The slice stays valid for the life
-    /// of `self`; callers that need to pass the comments to a helper
-    /// (e.g. `compute_macro_docs`) while still owning the `CommentCtx`
-    /// use this instead of re-moving the vec out.
-    pub(crate) fn comments(&self) -> &[CommentEntry] {
-        &self.comments
-    }
-
     /// End offset of the token just before the current token cursor position.
     /// Returns 0 if the cursor is at the start.
     pub(crate) fn prev_token_end(&self) -> StmtOffset {
@@ -323,8 +301,7 @@ impl CommentCtx {
     /// Mark comments with offset `< end_offset` as consumed. Use after
     /// emitting a verbatim source range (e.g. the body of a `span()` op)
     /// that already contains the comment text — otherwise the comments
-    /// stay in the queue and a later `drain_remaining` will slice a
-    /// reversed `[prev_token_end, comment_offset)` range and panic.
+    /// would otherwise be emitted twice by the subtree interpreter.
     pub(crate) fn discard_comments_before(&self, end_offset: StmtOffset) {
         let mut idx = self.cursor.get();
         while idx < self.comments.len() && self.comments[idx].offset < end_offset {
@@ -333,38 +310,10 @@ impl CommentCtx {
         self.cursor.set(idx);
     }
 
-    /// Peek at the next undrained comment without advancing the cursor.
-    pub(crate) fn peek_comment(&self) -> Option<&CommentEntry> {
-        let idx = self.cursor.get();
-        self.comments.get(idx)
-    }
-
-    /// Advance the comment cursor by one.
-    pub(crate) fn advance_comment(&self) {
-        let idx = self.cursor.get();
-        if idx < self.comments.len() {
-            self.cursor.set(idx + 1);
-        }
-    }
-
     /// Peek at the next token's offset and length without advancing.
     pub(crate) fn peek_next_token(&self) -> Option<(StmtOffset, StmtLen)> {
         let idx = self.token_cursor.get();
         self.tokens.get(idx).map(|tp| (tp.offset, tp.length))
-    }
-
-    /// Flush all remaining comments.  Bypasses the `has_non_comment_text`
-    /// guard because, at end-of-statement drain, every remaining comment
-    /// is a trailing comment that this statement owns; the guard's check
-    /// for "syntax text past the comment" would spuriously fire when the
-    /// source text continues into the next statement.
-    pub(crate) fn drain_remaining<'a>(
-        &self,
-        source: &'a StmtText,
-        arena: &mut DocArena<'a>,
-    ) -> DocId {
-        let drain = self.drain_impl(StmtOffset::from_raw(u32::MAX), source, arena, true);
-        arena.cat(drain.trailing, drain.leading)
     }
 }
 

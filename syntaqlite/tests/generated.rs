@@ -56,7 +56,7 @@ fn format_idempotent() {
         // Other statement types
         "DELETE FROM t WHERE x = 1",
         "UPDATE t SET a = 1 WHERE x = 2",
-        "CREATE TABLE t(a INTEGER, b TEXT)",
+        "CREATE TABLE t (a INTEGER, b TEXT)",
         "DROP TABLE t",
         "DROP TABLE IF EXISTS t",
     ];
@@ -141,7 +141,7 @@ fn insert_many_values_breaks() {
     );
     assert_eq!(
         result,
-        "INSERT INTO t(a, b)\nVALUES\n  (1, 2),\n  (3, 4),\n  (5, 6),\n  (7, 8)"
+        "INSERT INTO t(a, b)\nVALUES (1, 2),\n  (3, 4),\n  (5, 6),\n  (7, 8)"
     );
 }
 
@@ -152,7 +152,7 @@ fn comment_leading_before_column() {
     let config = FormatConfig::default().with_line_width(20);
     assert_eq!(
         format_sql_with("SELECT\n  -- comment\n  a\nFROM t", &config),
-        "SELECT\n  -- comment\n  a\nFROM t"
+        "SELECT -- comment\n  a\nFROM t"
     );
 }
 
@@ -161,7 +161,7 @@ fn comment_between_columns() {
     let config = FormatConfig::default().with_line_width(20);
     assert_eq!(
         format_sql_with("SELECT\n  a,\n  -- about b\n  b\nFROM t", &config),
-        "SELECT\n  a,\n  -- about b\n  b\nFROM t"
+        "SELECT\n  a, -- about b\n  b\nFROM t"
     );
 }
 

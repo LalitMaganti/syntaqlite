@@ -52,43 +52,43 @@ class AlterTableFormat(TestSuite):
     def test_rename_column(self):
         return DiffTestBlueprint(
             sql="alter table t rename column c1 to c2",
-            out="ALTER TABLE t RENAME COLUMN c1 TO c2;",
+            out='ALTER TABLE t RENAME column c1 TO c2;',
         )
 
     def test_drop_column(self):
         return DiffTestBlueprint(
             sql="alter table t drop column c1",
-            out="ALTER TABLE t DROP COLUMN c1;",
+            out='ALTER TABLE t DROP column c1;',
         )
 
     def test_add_column(self):
         return DiffTestBlueprint(
             sql="alter table t add column c1",
-            out="ALTER TABLE t ADD COLUMN c1;",
+            out='ALTER TABLE t ADD column c1;',
         )
 
     def test_add_column_no_keyword(self):
         return DiffTestBlueprint(
             sql="alter table t add c1",
-            out="ALTER TABLE t ADD COLUMN c1;",
+            out='ALTER TABLE t ADD c1;',
         )
 
     def test_add_column_with_type(self):
         return DiffTestBlueprint(
             sql="alter table t add column c1 varchar(10)",
-            out="ALTER TABLE t ADD COLUMN c1 varchar(10);",
+            out='ALTER TABLE t ADD column c1 varchar(10);',
         )
 
     def test_add_column_not_null_default(self):
         return DiffTestBlueprint(
             sql="alter table t add column c1 text not null default ''",
-            out="ALTER TABLE t ADD COLUMN c1 text NOT NULL DEFAULT '';",
+            out="ALTER TABLE t ADD column c1 text NOT NULL DEFAULT '';",
         )
 
     def test_add_column_named_constraint(self):
         return DiffTestBlueprint(
             sql="alter table t add column c1 int constraint nn not null",
-            out="ALTER TABLE t ADD COLUMN c1 int CONSTRAINT nn NOT NULL;",
+            out='ALTER TABLE t ADD column c1 int CONSTRAINT nn NOT NULL;',
         )
 
     def test_add_column_collate_check_references(self):
@@ -98,16 +98,16 @@ class AlterTableFormat(TestSuite):
                 "check(c1 <> '') references u(x) on delete cascade"
             ),
             out="""\
-ALTER TABLE t ADD COLUMN c1 text
-  COLLATE nocase
-  CHECK(c1 != '')
-  REFERENCES u(x) ON DELETE CASCADE;""",
+            ALTER TABLE t ADD column c1 text COLLATE nocase
+            CHECK (c1 <> '')
+            REFERENCES u(x) ON DELETE CASCADE;
+            """,
         )
 
     def test_add_column_generated_stored(self):
         return DiffTestBlueprint(
             sql="alter table t add column c1 as (a+b) stored",
-            out="ALTER TABLE t ADD COLUMN c1 AS (a + b) STORED;",
+            out='ALTER TABLE t ADD column c1 AS (a + b) stored;',
         )
 
 
@@ -139,7 +139,7 @@ class TransactionFormat(TestSuite):
     def test_end(self):
         return DiffTestBlueprint(
             sql="end",
-            out="COMMIT;",
+            out='END;',
         )
 
     def test_rollback(self):
@@ -151,7 +151,7 @@ class TransactionFormat(TestSuite):
     def test_begin_transaction_unnamed(self):
         return DiffTestBlueprint(
             sql="begin transaction",
-            out="BEGIN;",
+            out='BEGIN TRANSACTION;',
         )
 
     def test_begin_transaction_named(self):
@@ -189,7 +189,7 @@ class SavepointFormat(TestSuite):
     def test_release(self):
         return DiffTestBlueprint(
             sql="release sp1",
-            out="RELEASE SAVEPOINT sp1;",
+            out='RELEASE sp1;',
         )
 
     def test_release_savepoint(self):
@@ -201,7 +201,7 @@ class SavepointFormat(TestSuite):
     def test_rollback_to(self):
         return DiffTestBlueprint(
             sql="rollback to sp1",
-            out="ROLLBACK TO SAVEPOINT sp1;",
+            out='ROLLBACK TO sp1;',
         )
 
     def test_rollback_to_savepoint(self):

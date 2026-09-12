@@ -86,6 +86,12 @@ def _run_binary(
     return proc.returncode, proc.stdout, proc.stderr
 
 
+def _normalize_ast(ast: str) -> str:
+    """NULL is a case-insensitive keyword; its retained source is not semantics."""
+    return re.sub(r'(literal_type: NULL\n\s+source: ")null(")',
+                  r'\1NULL\2', ast.strip(), flags=re.IGNORECASE)
+
+
 def _can_explain(sql: str) -> bool:
     """Whether this SQL is suitable for EXPLAIN bytecode comparison."""
     stripped = sql.strip().rstrip(';').strip().upper()
@@ -177,8 +183,8 @@ def _run_idempotency_check(args: tuple) -> IdempotencyResult:
         if rc != 0:
             elapsed = int((time.monotonic() - t0) * 1000)
             return IdempotencyResult(
-                name=name, passed=True, elapsed_ms=elapsed, sql=sql,
-                error=f"skip: formatter error: {stderr.strip()}"
+                name=name, passed=False, elapsed_ms=elapsed, sql=sql,
+                error=f"formatter error: {stderr.strip()}"
             )
 
         # Step 3: get AST of formatted SQL.
@@ -194,8 +200,8 @@ def _run_idempotency_check(args: tuple) -> IdempotencyResult:
             )
 
         # Step 4: compare ASTs.
-        ast_before = ast_before.strip()
-        ast_after = ast_after.strip()
+        ast_before = _normalize_ast(ast_before)
+        ast_after = _normalize_ast(ast_after)
         passed = ast_before == ast_after
 
         if not passed:

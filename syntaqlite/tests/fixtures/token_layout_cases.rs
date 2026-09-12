@@ -162,7 +162,7 @@ FROM events;",
         "index",
         40,
         r"CREATE INDEX idx ON table_name(first_column DESC, second_column COLLATE nocase) WHERE first_column > 0;",
-        r"CREATE INDEX idx ON table_name (
+        r"CREATE INDEX idx ON table_name(
   first_column DESC,
   second_column COLLATE nocase
 )
@@ -234,7 +234,7 @@ SELECT 2;",
         40,
         r"CREATE TABLE t(a DECIMAL(10,2) DEFAULT -1, b VARCHAR(100));",
         r"CREATE TABLE t (
-  a DECIMAL(10, 2) DEFAULT -1,
+  a DECIMAL(10,2) DEFAULT -1,
   b VARCHAR(100)
 );",
     ),

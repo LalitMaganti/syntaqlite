@@ -33,11 +33,9 @@ class WindowFunctionFormat(TestSuite):
         return DiffTestBlueprint(
             sql="select sum(x) over w1, avg(y) over w2 from t window w1 as (order by a), w2 as (partition by b order by c)",
             out="""\
-                SELECT sum(x) OVER w1, avg(y) OVER w2
-                FROM t
-                WINDOW
-                  w1 AS (ORDER BY a),
-                  w2 AS (PARTITION BY b ORDER BY c);
+            SELECT sum(x) OVER w1, avg(y) OVER w2
+            FROM t
+            WINDOW w1 AS (ORDER BY a), w2 AS (PARTITION BY b ORDER BY c);
             """,
         )
 
@@ -56,20 +54,21 @@ class WindowFunctionFormat(TestSuite):
                   order_total > 0;
             """,
             out="""\
-                SELECT
-                  customer_id,
-                  order_id,
-                  order_total,
-                  rank() OVER (
-                    PARTITION BY
-                      customer_iddffkjllfjksljdfdklsfjklsfjkljfdklsdsjklfjkslfjljskdfjkl
-                    ORDER BY order_total DESC
-                  ) AS customer_rank,
-                  dense_rank() OVER (PARTITION BY customer_id ORDER BY order_total DESC) AS customer_dense_rank,
-                  count(*) OVER (PARTITION BY customer_id) AS customer_order_count
-                FROM orders
-                WHERE
-                  order_total > 0;
+            SELECT
+              customer_id,
+              order_id,
+              order_total,
+              rank()
+                OVER (
+                  PARTITION BY
+                    customer_iddffkjllfjksljdfdklsfjklsfjkljfdklsdsjklfjkslfjljskdfjkl
+                  ORDER BY order_total DESC
+                ) AS customer_rank,
+              dense_rank() OVER (PARTITION BY customer_id ORDER BY order_total DESC)
+                AS customer_dense_rank,
+              count(*) OVER (PARTITION BY customer_id) AS customer_order_count
+            FROM orders
+            WHERE order_total > 0;
             """,
         )
 
@@ -109,11 +108,12 @@ class WindowFunctionFormat(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT row_number() OVER (ORDER BY some_really_long_column_name DESC, another_long_column_name ASC) FROM t",
             out="""\
-                SELECT
-                  row_number() OVER (
-                    ORDER BY some_really_long_column_name DESC, another_long_column_name
-                  )
-                FROM t;
+            SELECT
+              row_number()
+                OVER (
+                  ORDER BY some_really_long_column_name DESC, another_long_column_name ASC
+                )
+            FROM t;
             """,
         )
 
@@ -121,13 +121,14 @@ class WindowFunctionFormat(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT row_number() OVER (ORDER BY some_really_long_column_name DESC, another_really_long_column_name_here ASC) FROM t",
             out="""\
-                SELECT
-                  row_number() OVER (
-                    ORDER BY
-                      some_really_long_column_name DESC,
-                      another_really_long_column_name_here
-                  )
-                FROM t;
+            SELECT
+              row_number()
+                OVER (
+                  ORDER BY
+                    some_really_long_column_name DESC,
+                    another_really_long_column_name_here ASC
+                )
+            FROM t;
             """,
         )
 
@@ -141,14 +142,14 @@ class WindowFunctionFormat(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT SUM(x) OVER (PARTITION BY dept ORDER BY hire_date ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) FROM emp",
             out="""\
-                SELECT
-                  SUM(x) OVER (
-                    PARTITION BY
-                      dept
-                    ORDER BY hire_date
-                    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-                  )
-                FROM emp;
+            SELECT
+              SUM(x)
+                OVER (
+                  PARTITION BY dept
+                  ORDER BY hire_date
+                  ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+                )
+            FROM emp;
             """,
         )
 
@@ -211,12 +212,13 @@ class FrameSpecFormat(TestSuite):
         return DiffTestBlueprint(
             sql="select sum(x) over (order by y groups between unbounded preceding and unbounded following exclude ties) from t",
             out="""\
-                SELECT
-                  sum(x) OVER (
-                    ORDER BY y
-                    GROUPS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING EXCLUDE TIES
-                  )
-                FROM t;
+            SELECT
+              sum(x)
+                OVER (
+                  ORDER BY y
+                  GROUPS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING EXCLUDE TIES
+                )
+            FROM t;
             """,
         )
 
@@ -236,12 +238,12 @@ class FrameSpecFormat(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT SUM(x) OVER (ORDER BY y ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING EXCLUDE CURRENT ROW) FROM t",
             out="""\
-                SELECT
-                  SUM(x) OVER (
-                    ORDER BY y
-                    ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING EXCLUDE CURRENT ROW
-                  )
-                FROM t;
+            SELECT
+              SUM(x)
+                OVER (
+                  ORDER BY y ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING EXCLUDE CURRENT ROW
+                )
+            FROM t;
             """,
         )
 
@@ -249,12 +251,10 @@ class FrameSpecFormat(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT SUM(x) OVER (ORDER BY y ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING EXCLUDE NO OTHERS) FROM t",
             out="""\
-                SELECT
-                  SUM(x) OVER (
-                    ORDER BY y
-                    ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING EXCLUDE NO OTHERS
-                  )
-                FROM t;
+            SELECT
+              SUM(x)
+                OVER (ORDER BY y ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING EXCLUDE NO OTHERS)
+            FROM t;
             """,
         )
 
@@ -302,10 +302,9 @@ class WindowBaseName(TestSuite):
         return DiffTestBlueprint(
             sql="select sum(x) over (w1 rows between 1 preceding and current row) from t window w1 as (order by b)",
             out="""\
-                SELECT sum(x) OVER (w1 ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
-                FROM t
-                WINDOW
-                  w1 AS (ORDER BY b);
+            SELECT sum(x) OVER (w1 ROWS BETWEEN 1 PRECEDING AND CURRENT ROW)
+            FROM t
+            WINDOW w1 AS (ORDER BY b);
             """,
         )
 

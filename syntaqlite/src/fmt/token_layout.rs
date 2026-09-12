@@ -1,13 +1,13 @@
-//! Isolated experiment: documents from Lemon reductions, text from shifted tokens.
+//! Documents from grammar reductions and authored token spans.
 //! No AST traversal, emitted-keyword matching, or source-role annotations.
-#![allow(clippy::all, clippy::pedantic, missing_docs, unsafe_code)]
-use super::{
-    FormatConfig,
-    doc::{DocArena, DocId, NIL_DOC, RenderBuffers},
-};
+#![expect(
+    unsafe_code,
+    reason = "scoped C parser observer; pointer invariants are documented at each call"
+)]
+use super::doc::{DocArena, DocId, NIL_DOC};
+use super::{FormatError, Formatter};
 use std::ffi::{CStr, c_char, c_void};
-use syntaqlite_syntax::typed::{Dialect, TypedParser, dialect};
-use syntaqlite_syntax::{ParseOutcome, Tokenizer};
+use syntaqlite_syntax::any::{AnyTokenizer, ParseOutcome, TokenCategory};
 
 #[path = "token_layout_rules.rs"]
 mod rules;
@@ -43,7 +43,7 @@ impl Gap {
 
 type Callback = unsafe extern "C" fn(*mut c_void, u32, *const c_char, u32, *const c_char, u32);
 unsafe extern "C" {
-    fn SynqSqliteParseLayoutSet(context: *mut c_void, callback: Option<Callback>);
+    fn synq_parse_layout_set(context: *mut c_void, callback: Option<Callback>);
 }
 #[derive(Clone, Copy)]
 struct Fragment<'a> {
@@ -68,21 +68,16 @@ impl Fragment<'_> {
         }
     }
 }
-#[derive(Default, Debug, Clone, Copy)]
-pub(crate) struct Stats {
-    pub(crate) shifts: usize,
-    pub(crate) reductions: usize,
-    pub(crate) max_stack: usize,
-}
 struct State<'a> {
     source: &'a str,
-    tokenizer: &'a Tokenizer,
+    tokenizer: AnyTokenizer,
+    tokens: Vec<(usize, DocId)>,
+    terminator: Option<DocId>,
     end: usize,
     arena: DocArena<'a>,
     stack: Vec<Fragment<'a>>,
     scratch: Vec<Fragment<'a>>,
     error: Option<String>,
-    stats: Stats,
 }
 impl<'a> State<'a> {
     // Only trivia is read between lexer-provided token spans. SQL is never
@@ -98,6 +93,9 @@ impl<'a> State<'a> {
         let mut newlines = 0;
         for token in self.tokenizer.tokenize(gap) {
             let text = token.text();
+            if text == ";" {
+                continue;
+            }
             if text.trim().is_empty() {
                 newlines += text.bytes().filter(|b| *b == b'\n').count();
                 continue;
@@ -128,20 +126,22 @@ impl<'a> State<'a> {
     }
 
     fn shift(&mut self, symbol: &'static str, start: usize, len: usize) {
-        self.stats.shifts += 1;
         if len == 0 {
             self.stack.push(Fragment::empty(symbol));
             return;
         }
         if start + len > self.source.len() || start < self.end {
-            self.error = Some("non-authored or non-monotone token: outside prototype scope".into());
+            self.error =
+                Some("non-authored or non-monotone token: invalid parser layout span".into());
             return;
         }
         let prefix = self.trivia(start);
         let text = &self.source[start..start + len];
-        // Preserve spelling as well as order in this experiment. Keyword casing
-        // would need parser-resolved keyword/identifier classification.
+        // Tokens are placeholders until statement completion supplies the parser
+        // flags distinguishing keywords from names.
         let token = self.arena.text(text);
+        self.tokens.push((start, token));
+        self.terminator = (symbol == "SEMI").then_some(token);
         let doc = token;
         self.stack.push(Fragment {
             doc,
@@ -153,7 +153,16 @@ impl<'a> State<'a> {
             symbol,
         });
         self.end = start + len;
-        self.stats.max_stack = self.stats.max_stack.max(self.stack.len());
+    }
+    fn verbatim(&mut self, lhs: &'static str, children: &[Fragment<'a>]) -> Fragment<'a> {
+        let mut result = children[0];
+        result.last = children.last().expect("nonempty production").last;
+        let start = result.first.as_ptr() as usize - self.source.as_ptr() as usize;
+        let end = result.last.as_ptr() as usize - self.source.as_ptr() as usize + result.last.len();
+        result.doc = self.arena.text(&self.source[start..end]);
+        result.symbol = lhs;
+        result.shape = Shape::Atom;
+        result
     }
     fn break_doc(&mut self, boundary: Break, gap: Gap) -> DocId {
         if gap.blank_line || matches!(boundary, Break::Blank) {
@@ -340,7 +349,6 @@ impl<'a> State<'a> {
         }
     }
     fn reduce(&mut self, rule: &'static str, count: usize) {
-        self.stats.reductions += 1;
         if count > self.stack.len() {
             self.error = Some(format!("shadow stack underflow: {rule}"));
             return;
@@ -388,122 +396,153 @@ unsafe extern "C" fn event(
         }
     }));
     if result.is_err() {
-        state.error = Some("prototype callback panicked".into());
+        state.error = Some("parser layout callback panicked".into());
     }
 }
 struct Registration;
 impl Drop for Registration {
     fn drop(&mut self) {
         // SAFETY: Clearing the thread-local callback retains no Rust pointer.
-        unsafe { SynqSqliteParseLayoutSet(std::ptr::null_mut(), None) }
+        unsafe { synq_parse_layout_set(std::ptr::null_mut(), None) }
     }
 }
 
-pub(crate) struct TokenFormatter {
-    parser: TypedParser<Dialect>,
-    tokenizer: Tokenizer,
-    buffers: RenderBuffers,
-    arena: Option<DocArena<'static>>,
-}
-impl Default for TokenFormatter {
-    fn default() -> Self {
-        Self {
-            parser: TypedParser::new(dialect()),
-            tokenizer: Tokenizer::new(),
-            buffers: RenderBuffers::new(),
-            arena: None,
-        }
-    }
-}
-impl TokenFormatter {
-    pub(crate) fn with_dialect(dialect: Dialect) -> Self {
-        Self {
-            parser: TypedParser::new(dialect),
-            tokenizer: Tokenizer::new(),
-            buffers: RenderBuffers::new(),
-            arena: None,
-        }
-    }
-    pub(crate) fn format(&mut self, source: &str, width: u32) -> Result<(String, Stats), String> {
-        let arena = self
-            .arena
-            .take()
-            .map_or_else(DocArena::new, DocArena::recycle);
-        let mut state = State {
-            source,
-            tokenizer: &self.tokenizer,
-            end: 0,
-            arena,
-            stack: Vec::new(),
-            scratch: Vec::new(),
-            error: None,
-            stats: Stats::default(),
-        };
-        // SAFETY: State remains live and stationary during synchronous parsing.
-        // Registration clears the callback before state can be dropped.
-        unsafe { SynqSqliteParseLayoutSet((&raw mut state).cast(), Some(event)) };
+#[expect(
+    clippy::too_many_lines,
+    reason = "keep the parse, classify and render lifecycle together"
+)]
+pub(super) fn format(
+    owner: &mut Formatter,
+    source: &str,
+    dump: bool,
+) -> Result<String, FormatError> {
+    let mut state = State {
+        source,
+        tokenizer: AnyTokenizer::new((*owner.dialect).clone()),
+        tokens: Vec::new(),
+        terminator: None,
+        end: 0,
+        arena: DocArena::recycle(std::mem::replace(&mut owner.arena, DocArena::new())),
+        stack: Vec::new(),
+        scratch: Vec::new(),
+        error: None,
+    };
+    let mut session = owner.parser.parse(source);
+    let mut root = Fragment::empty("input");
+    loop {
+        // SAFETY: The observer borrows stationary state only during next(). It
+        // is removed before macro mini-parses or any other Rust work resumes.
+        unsafe { synq_parse_layout_set((&raw mut state).cast(), Some(event)) };
         let registration = Registration;
-        let mut session = self.parser.parse(source);
-        let mut root = Fragment::empty("input");
-        loop {
-            match session.next() {
-                ParseOutcome::Ok(_) => {
-                    // The runtime restarts Lemon after each statement. Concatenate
-                    // the remaining stack documents in their original order.
-                    let mut statement = Fragment::empty("statement");
-                    let stack = std::mem::take(&mut state.stack);
-                    for &fragment in &stack {
-                        let boundary = if statement.last == ";" && fragment.first != ";" {
-                            Break::Blank
-                        } else {
-                            Break::Tight
-                        };
-                        statement = state.append(statement, fragment, boundary, Shape::Atom);
-                    }
-                    root = state.append(root, statement, Break::Blank, Shape::Atom);
-                    state.stack = stack;
-                    state.stack.clear();
-                }
-                ParseOutcome::Done => break,
-                ParseOutcome::Err(e) => {
-                    state.error = Some(e.message().to_owned());
-                    break;
-                }
-            }
-            if state.error.is_some() {
-                break;
-            }
-        }
+        let outcome = session.next();
         drop(registration);
-        if let Some(error) = state.error {
-            return Err(error);
+        let stmt = match outcome {
+            ParseOutcome::Done => break,
+            ParseOutcome::Err(error) => {
+                return Err(super::formatter::parse_error_to_format_error(&error));
+            }
+            ParseOutcome::Ok(stmt) => stmt,
+        };
+        if let Some(error) = state.error.take() {
+            return Err(FormatError::new(error, None));
         }
-        let remaining = std::mem::take(&mut state.stack);
-        for fragment in remaining {
-            root = state.append(root, fragment, Break::Tight, Shape::Atom);
+        let erased = stmt.erase();
+        if state.stack.is_empty() && !erased.root_id().is_null() {
+            return Err(FormatError::new(
+                "dialect parser has no layout events; regenerate the dialect".into(),
+                None,
+            ));
         }
-        // A statement terminator may be consumed by the runtime without shifting
-        // into Lemon. Preserve any such remaining lexical text verbatim here.
-        let tail = state.trivia(source.len());
-        let header = state.break_doc(
-            if root.gap.doc == NIL_DOC {
-                Break::Tight
-            } else {
-                Break::Hard
-            },
-            root.gap,
+        let base = erased.statement_base();
+        let mut slots = state.tokens.iter().peekable();
+        for token in erased.tokens() {
+            let start = token.stmt_range().start.to_doc(base).as_usize();
+            while slots.peek().is_some_and(|(offset, _)| *offset < start) {
+                slots.next();
+            }
+            if let Some(&(offset, doc)) = slots.peek().copied()
+                && offset == start
+                && owner
+                    .dialect
+                    .classify_token(token.token_type(), token.flags())
+                    == TokenCategory::Keyword
+            {
+                let range = token.stmt_range();
+                let end = range.end.to_doc(base).as_usize();
+                let keyword = state.arena.keyword(&source[start..end]);
+                state.arena.replace(doc, keyword);
+            }
+        }
+        owner.collect_side_channels(&erased);
+        let macro_docs = super::macro_structured::compute_macro_docs(
+            &owner.mini_parser,
+            &owner.dialect,
+            &erased,
+            &owner.macro_tokenizer,
+            &owner.comment_entries,
+            &mut state.arena,
         );
-        let footer = state.break_doc(Break::Tight, tail);
-        let document = state
-            .arena
-            .cats(&[root.gap.doc, header, root.doc, tail.doc, footer]);
-        let config = FormatConfig::default().with_line_width(width as usize);
-        self.buffers.clear();
-        state
-            .arena
-            .render_into(document, &config, &mut self.buffers);
-        let output = self.buffers.out.clone();
-        self.arena = Some(DocArena::recycle(state.arena));
-        Ok((output, state.stats))
+        for ((offset, len), replacement) in owner.macro_rewrites.iter().zip(macro_docs) {
+            let start = offset.to_doc(base).as_usize();
+            if let Ok(index) = state
+                .tokens
+                .binary_search_by_key(&start, |(offset, _)| *offset)
+            {
+                let replacement = replacement.unwrap_or_else(|| {
+                    super::formatter::reindent_macro(
+                        &source[start..start + len.as_usize()],
+                        &owner.macro_tokenizer,
+                        &mut state.arena,
+                    )
+                });
+                state.arena.replace(state.tokens[index].1, replacement);
+            }
+        }
+        let stack = std::mem::take(&mut state.stack);
+        let mut statement = Fragment::empty("statement");
+        for &fragment in &stack {
+            statement = state.append(statement, fragment, Break::Tight, Shape::Atom);
+        }
+        if let Some(terminator) = state.terminator.take() {
+            if !owner.config.semicolons() {
+                let empty = state.arena.text("");
+                state.arena.replace(terminator, empty);
+            }
+        } else if owner.config.semicolons() && !erased.root_id().is_null() {
+            let semi = state.arena.text(";");
+            statement.doc = state.arena.cat(statement.doc, semi);
+        }
+        root = state.append(root, statement, Break::Blank, Shape::Atom);
+        state.stack = stack;
+        state.stack.clear();
+        state.tokens.clear();
     }
+    let tail = state.trivia(source.len());
+    let header = state.break_doc(
+        if root.gap.doc == NIL_DOC {
+            Break::Tight
+        } else {
+            Break::Hard
+        },
+        root.gap,
+    );
+    let footer = state.break_doc(Break::Tight, tail);
+    let document = state
+        .arena
+        .cats(&[root.gap.doc, header, root.doc, tail.doc, footer]);
+    if dump {
+        let output = state.arena.dump(document);
+        owner.arena = DocArena::recycle(state.arena);
+        return Ok(output);
+    }
+    owner.render_bufs.clear();
+    state
+        .arena
+        .render_into(document, &owner.config, &mut owner.render_bufs);
+    let mut output = owner.render_bufs.out.trim_end().to_owned();
+    if !output.is_empty() {
+        output.push('\n');
+    }
+    owner.arena = DocArena::recycle(state.arena);
+    Ok(output)
 }

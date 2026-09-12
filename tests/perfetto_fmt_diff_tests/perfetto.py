@@ -22,11 +22,7 @@ class PerfettoMacroFormat(TestSuite):
             sql="""\
                 CREATE PERFETTO MACRO m(x TableOrSubquery) RETURNS TableOrSubquery AS x
             """,
-            out="""\
-                CREATE PERFETTO MACRO m(x TableOrSubquery)
-                RETURNS TableOrSubquery
-                AS x
-            """,
+            out='CREATE PERFETTO MACRO m(x TableOrSubquery) RETURNS TableOrSubquery AS x',
         )
 
     def test_create_perfetto_macro_body_select(self):
@@ -35,9 +31,8 @@ class PerfettoMacroFormat(TestSuite):
                 CREATE PERFETTO MACRO my_macro(t TableOrSubquery) RETURNS TableOrSubquery AS (SELECT * FROM $t)
             """,
             out="""\
-                CREATE PERFETTO MACRO my_macro(t TableOrSubquery)
-                RETURNS TableOrSubquery
-                AS (SELECT * FROM $t)
+            CREATE PERFETTO MACRO my_macro(t TableOrSubquery)
+            RETURNS TableOrSubquery AS (SELECT * FROM $t)
             """,
         )
 
@@ -47,12 +42,11 @@ class PerfettoMacroFormat(TestSuite):
                 CREATE PERFETTO MACRO _viz_flamegraph_filter_frames(source TableOrSubquery, show_from_frame_bits Expr) RETURNS TableOrSubquery AS $source
             """,
             out="""\
-                CREATE PERFETTO MACRO _viz_flamegraph_filter_frames(
-                  source TableOrSubquery,
-                  show_from_frame_bits Expr
-                )
-                RETURNS TableOrSubquery
-                AS $source
+            CREATE PERFETTO MACRO _viz_flamegraph_filter_frames(
+              source TableOrSubquery,
+              show_from_frame_bits Expr
+            )
+            RETURNS TableOrSubquery AS $source
             """,
         )
 
@@ -61,11 +55,7 @@ class PerfettoMacroFormat(TestSuite):
             sql="""\
                 CREATE OR REPLACE PERFETTO MACRO m(x Expr) RETURNS Expr AS $x
             """,
-            out="""\
-                CREATE OR REPLACE PERFETTO MACRO m(x Expr)
-                RETURNS Expr
-                AS $x
-            """,
+            out='CREATE OR REPLACE PERFETTO MACRO m(x Expr) RETURNS Expr AS $x',
         )
 
     def test_create_perfetto_macro_body_with_leading_line_comment(self):
@@ -82,12 +72,13 @@ class PerfettoMacroFormat(TestSuite):
                 ")\n"
             ),
             out=(
-                "CREATE PERFETTO MACRO m()\n"
-                "RETURNS Expr\n"
-                "AS (\n"
-                "  -- leading comment inside macro body\n"
-                "  SELECT 1\n"
-                ")\n"
+                """\
+            CREATE PERFETTO MACRO m()
+            RETURNS Expr AS (
+              -- leading comment inside macro body
+              SELECT 1
+            )
+            """
             ),
         )
 
@@ -263,10 +254,7 @@ class PerfettoMacroCallFormat(TestSuite):
     def test_macro_call_in_cte(self):
         return DiffTestBlueprint(
             sql="WITH c AS (SELECT cast_int!(value) AS x FROM t) SELECT * FROM c",
-            out="""\
-                WITH c AS (SELECT cast_int!(value) AS x FROM t)
-                SELECT * FROM c
-            """,
+            out='WITH c AS (SELECT cast_int!(value) AS x FROM t) SELECT * FROM c',
         )
 
     # ── Similar-style risks: trailing keywords/spans on the macro's parent ──
@@ -361,12 +349,7 @@ class PerfettoMacroCallFormat(TestSuite):
     def test_macro_call_with_block_comment_before_alias(self):
         return DiffTestBlueprint(
             sql="SELECT cast_int!(value) /* inline */ AS x FROM t",
-            out="""\
-                SELECT
-                  cast_int!(value)
-                  /* inline */ AS x
-                FROM t
-            """,
+            out='SELECT cast_int!(value) /* inline */ AS x FROM t',
         )
 
     # ── Comments inside a fallback macro call ──
@@ -386,12 +369,15 @@ class PerfettoMacroCallFormat(TestSuite):
                 ")\n"
             ),
             out=(
-                "SELECT *\n"
-                "FROM my_macro!(\n"
-                "  -- docs for first arg\n"
-                "  first_arg,\n"
-                "  second_arg\n"
-                ")\n"
+                """\
+            SELECT *
+            FROM
+              my_macro!(
+                -- docs for first arg
+                first_arg,
+                second_arg
+              )
+            """
             ),
         )
 
@@ -406,12 +392,15 @@ class PerfettoMacroCallFormat(TestSuite):
                 ")\n"
             ),
             out=(
-                "SELECT *\n"
-                "FROM my_macro!(\n"
-                "  first_arg,\n"
-                "  -- docs for second arg\n"
-                "  second_arg\n"
-                ")\n"
+                """\
+            SELECT *
+            FROM
+              my_macro!(
+                first_arg,
+                -- docs for second arg
+                second_arg
+              )
+            """
             ),
         )
 
@@ -426,11 +415,14 @@ class PerfettoMacroCallFormat(TestSuite):
                 ")\n"
             ),
             out=(
-                "SELECT *\n"
-                "FROM my_macro!(\n"
-                "  first_arg,\n"
-                "  second_arg  -- EOL comment\n"
-                ")\n"
+                """\
+            SELECT *
+            FROM
+              my_macro!(
+                first_arg,
+                second_arg  -- EOL comment
+              )
+            """
             ),
         )
 
@@ -447,11 +439,14 @@ class PerfettoMacroCallFormat(TestSuite):
                 ")\n"
             ),
             out=(
-                "SELECT *\n"
-                "FROM my_macro!(\n"
-                "  /* block comment */\n"
-                "  first_arg\n"
-                ")\n"
+                """\
+            SELECT *
+            FROM
+              my_macro!(
+                /* block comment */
+                first_arg
+              )
+            """
             ),
         )
 
@@ -472,15 +467,18 @@ class PerfettoMacroCallFormat(TestSuite):
                 ")\n"
             ),
             out=(
-                "SELECT *\n"
-                "FROM _mipmap_buckets_table!(\n"
-                "  -- Source table for time range\n"
-                "  (SELECT ts, dur, id FROM t),\n"
-                "  -- Partitioning column\n"
-                "  bucket_id,\n"
-                "  -- Bucket duration in nanoseconds\n"
-                "  1e6  -- 1ms buckets\n"
-                ")\n"
+                """\
+            SELECT *
+            FROM
+              _mipmap_buckets_table!(
+                -- Source table for time range
+                (SELECT ts, dur, id FROM t),
+                -- Partitioning column
+                bucket_id,
+                -- Bucket duration in nanoseconds
+                1e6  -- 1ms buckets
+              )
+            """
             ),
         )
 
@@ -502,12 +500,15 @@ class PerfettoMacroCallFormat(TestSuite):
                 ")\n"
             ),
             out=(
-                "SELECT *\n"
-                "FROM my_macro!(\n"
-                "  -- leading comment\n"
-                "  arg1,\n"
-                "  arg2\n"
-                ")\n"
+                """\
+            SELECT *
+            FROM
+              my_macro!(
+                -- leading comment
+                arg1,
+                arg2
+              )
+            """
             ),
         )
 
@@ -523,12 +524,10 @@ class PerfettoMacroCallFormat(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT count() OVER (ORDER BY ts RANGE BETWEEN CURRENT ROW AND my_macro!(x) FOLLOWING) FROM t",
             out="""\
-                SELECT
-                  count() OVER (
-                    ORDER BY ts
-                    RANGE BETWEEN CURRENT ROW AND my_macro!(x) FOLLOWING
-                  )
-                FROM t
+            SELECT
+              count()
+                OVER (ORDER BY ts RANGE BETWEEN CURRENT ROW AND my_macro!(x) FOLLOWING)
+            FROM t
             """,
         )
 
@@ -563,15 +562,14 @@ class PerfettoMacroCallFormat(TestSuite):
                 ) FROM thread
             """,
             out="""\
-                SELECT
-                  last_value(thread.start_ts) OVER (
-                    PARTITION BY
-                      upid,
-                      android_standardize_thread_name(thread.name)
-                    ORDER BY thread.start_ts
-                    RANGE BETWEEN CURRENT ROW AND cast_int!($sliding_window_dur) FOLLOWING
-                  )
-                FROM thread
+            SELECT
+              last_value(thread.start_ts)
+                OVER (
+                  PARTITION BY upid, android_standardize_thread_name(thread.name)
+                  ORDER BY thread.start_ts
+                  RANGE BETWEEN CURRENT ROW AND cast_int!($sliding_window_dur) FOLLOWING
+                )
+            FROM thread
             """,
         )
 
@@ -584,9 +582,8 @@ class PerfettoFunctionFormat(TestSuite):
                 SELECT count(*) FROM slice WHERE cpu = $cpu AND dur >= $min_dur;
             """,
             out="""\
-                CREATE PERFETTO FUNCTION top_slice_count(cpu INT, min_dur INT)
-                RETURNS INT
-                AS
-                SELECT count(*) FROM slice WHERE cpu = $cpu AND dur >= $min_dur
+            CREATE PERFETTO FUNCTION top_slice_count(cpu INT, min_dur INT)
+            RETURNS INT AS
+            SELECT count(*) FROM slice WHERE cpu = $cpu AND dur >= $min_dur
             """,
         )

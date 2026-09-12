@@ -5,19 +5,18 @@ use syntaqlite_syntax::ParserConfig;
 use syntaqlite_syntax::any::{
     AnyNodeId, AnyParseError, AnyParsedStatement, AnyParser, AnyTokenizer, ParseOutcome,
 };
-use syntaqlite_syntax::source::{DocLen, DocRange, StmtLen, StmtOffset, StmtRange, StmtText};
+use syntaqlite_syntax::source::{DocLen, DocRange, StmtLen, StmtOffset, StmtRange};
 
 use super::FormatConfig;
 use super::FormatError;
-use super::comment::{CommentCtx, CommentEntry, TokenEntry};
+use super::comment::CommentEntry;
 use super::doc::{DocArena, DocId, NIL_DOC, RenderBuffers};
-use super::interpret::{FmtCtx, InterpretScratch};
-use super::macro_structured;
+use super::interpret::FmtCtx;
 use crate::dialect::AnyDialect;
 
 /// Convert a parse error (statement-relative offsets) to a
 /// [`FormatError`] with a document-absolute range.
-fn parse_error_to_format_error(e: &AnyParseError<'_>) -> FormatError {
+pub(super) fn parse_error_to_format_error(e: &AnyParseError<'_>) -> FormatError {
     let base = e.statement_base();
     let range = match (e.offset(), e.length()) {
         (Some(off), Some(len)) => Some(DocRange::from_offset_len(off.to_doc(base), len.into())),
@@ -71,7 +70,6 @@ pub struct Formatter {
     pub(super) config: FormatConfig,
     // Statement-scoped state cached on the formatter to avoid per-statement allocations.
     pub(super) arena: DocArena<'static>,
-    pub(super) interpret_scratch: InterpretScratch,
     pub(super) render_bufs: RenderBuffers,
     /// Byte ranges (offset, length) of macro calls in the source.  The
     /// formatter only needs positions to decide when to emit a call
@@ -79,9 +77,6 @@ pub struct Formatter {
     /// the statement lifetime and prevent reuse across statements.
     pub(super) macro_rewrites: Vec<(StmtOffset, StmtLen)>,
     pub(super) comment_entries: Vec<CommentEntry>,
-    pub(super) token_entries: Vec<TokenEntry>,
-    pub(super) parts: Vec<DocId>,
-    pub(super) consumed_regions: Vec<bool>,
     /// Reusable tokenizer for macro body re-indentation.
     pub(super) macro_tokenizer: AnyTokenizer,
 }
@@ -149,19 +144,15 @@ impl Formatter {
             mini_parser,
             config: format_config.clone(),
             arena: DocArena::with_capacity(256),
-            interpret_scratch: InterpretScratch::new(),
             render_bufs: RenderBuffers::new(),
             macro_rewrites: Vec::with_capacity(32),
             comment_entries: Vec::with_capacity(64),
-            token_entries: Vec::with_capacity(256),
-            parts: Vec::with_capacity(64),
-            consumed_regions: Vec::with_capacity(32),
             macro_tokenizer,
         }
     }
 
     /// Populate side-channel buffers (comments, tokens, macro regions) from an erased statement.
-    fn collect_side_channels(&mut self, erased: &AnyParsedStatement<'_>) {
+    pub(super) fn collect_side_channels(&mut self, erased: &AnyParsedStatement<'_>) {
         self.macro_rewrites.clear();
         self.comment_entries.clear();
         self.comment_entries
@@ -171,18 +162,6 @@ impl Formatter {
                 kind: c.kind(),
                 side: c.side(),
             }));
-        self.token_entries.clear();
-        // `stmt_range` drills expansion-layer tokens up to their
-        // authored call-site range, so every token contributes an
-        // entry in statement coordinates — the same coordinate system
-        // the formatter emits in.
-        self.token_entries.extend(erased.tokens().map(|t| {
-            let range = t.stmt_range();
-            TokenEntry {
-                offset: range.start,
-                length: range.len(),
-            }
-        }));
         // Only top-level fallback rewrites are meaningful here:
         // - `parent().is_none()` keeps offsets in the statement
         //   coordinate system the formatter compares against.
@@ -231,130 +210,7 @@ impl Formatter {
     /// assert!(out.contains("SELECT 2"));
     /// ```
     pub fn format(&mut self, source: &str) -> Result<String, FormatError> {
-        let mut session = self.parser.parse(source);
-        let mut result = String::with_capacity(source.len());
-        let mut stmt_num: usize = 0;
-
-        loop {
-            let stmt = match session.next() {
-                ParseOutcome::Done => break,
-                ParseOutcome::Ok(stmt) => stmt,
-                ParseOutcome::Err(e) => {
-                    return Err(parse_error_to_format_error(&e));
-                }
-            };
-
-            let erased = stmt.erase();
-            self.collect_side_channels(&erased);
-            let stmt_source = erased.text();
-
-            let root_id = erased.root_id();
-            let semicolons = self.config.semicolons;
-            let has_comments = !self.comment_entries.is_empty();
-            let has_macros = !self.macro_rewrites.is_empty();
-            let needs_token_ctx = has_comments || has_macros;
-
-            let comment_ctx = if needs_token_ctx {
-                // Move buffers into CommentCtx for this statement, then reclaim them after render.
-                Some(CommentCtx::new(
-                    std::mem::take(&mut self.comment_entries),
-                    std::mem::take(&mut self.token_entries),
-                ))
-            } else {
-                None
-            };
-
-            // Fresh arena for this statement — drops borrows from the previous iteration.
-            let prev_arena = std::mem::replace(&mut self.arena, DocArena::new());
-            let mut arena = DocArena::recycle(prev_arena);
-            self.parts.clear();
-
-            if stmt_num > 0 {
-                emit_stmt_separator(
-                    comment_ctx.as_ref(),
-                    stmt_source,
-                    &mut arena,
-                    &mut self.parts,
-                );
-            } else if let Some(cctx) = comment_ctx.as_ref()
-                && let Some((next_offset, _)) = cctx.peek_next_token()
-            {
-                drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
-            }
-
-            // Stage 1.5: Pre-compute a structured `DocId` per top-level
-            // fallback macro call whose args can be parsed as
-            // expressions.  Calls with interior comments or unparseable
-            // args get `None` and fall through to the existing verbatim
-            // path in `try_macro`. The comment slice comes from
-            // `comment_ctx` — `self.comment_entries` was moved into it
-            // above, so reading it directly would see an empty vec and
-            // miss the interior-comment bail.
-            let macro_docs = macro_structured::compute_macro_docs(
-                &self.mini_parser,
-                &self.dialect,
-                &erased,
-                &self.macro_tokenizer,
-                comment_ctx.as_ref().map_or(&[][..], |c| c.comments()),
-                &mut arena,
-            );
-
-            // Stage 2: Interpret bytecode for this AST into Doc fragments.
-            let ctx = FmtCtx {
-                dialect: self.dialect.clone(),
-                reader: erased,
-                comment_ctx,
-                macro_rewrites: std::mem::take(&mut self.macro_rewrites),
-                macro_docs,
-            };
-            let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
-            self.parts.push(interpreted);
-
-            // Emit this statement's terminator.  Trailing comments now
-            // live on the SEMI's token attachment, so they belong in the
-            // *same* render cycle as the SEMI; the previous design that
-            // added the SEMI in the next statement's emit_stmt_separator
-            // would render the trailing line_suffix in the wrong cycle.
-            if semicolons && !root_id.is_null() {
-                let semi = arena.text(";");
-                self.parts.push(semi);
-            }
-
-            if let Some(cctx) = ctx.comment_ctx.as_ref() {
-                self.parts
-                    .push(cctx.drain_remaining(stmt_source, &mut arena));
-            }
-
-            // Stage 3: Render Docs via the Wadler-style group/flat/break algorithm.
-            // Rendering happens here while `erased`/`ctx` still borrow parser session data.
-            let doc = arena.cats(&self.parts);
-            let mut bufs = std::mem::take(&mut self.render_bufs);
-            bufs.clear();
-            arena.render_into(doc, &self.config, &mut bufs);
-            result.push_str(&bufs.out);
-            self.render_bufs = bufs;
-
-            // Stage 4: Recover and recycle statement-scoped buffers.
-            if let Some(cctx) = ctx.comment_ctx {
-                let (comments, tokens) = cctx.into_parts();
-                self.comment_entries = comments;
-                self.token_entries = tokens;
-            }
-            self.macro_rewrites = ctx.macro_rewrites;
-
-            // Recycle the arena, releasing all Doc borrows from this iteration.
-            self.arena = DocArena::recycle(arena);
-
-            stmt_num += 1;
-        }
-
-        if stmt_num == 0 {
-            return Ok(String::new());
-        }
-
-        result.push('\n');
-
-        Ok(result)
+        super::token_layout::format(self, source, false)
     }
 
     /// Dump the raw interpreter bytecode for each statement.
@@ -475,157 +331,13 @@ impl Formatter {
         Ok(result)
     }
 
-    /// Dump the Wadler-Lindig document tree after bytecode interpretation.
+    /// Dump the document tree used by the production formatter.
     ///
     /// # Errors
     ///
     /// Returns `FormatError` if the source cannot be parsed.
     pub fn dump_doc_tree(&mut self, source: &str) -> Result<String, FormatError> {
-        use std::fmt::Write;
-        let mut session = self.parser.parse(source);
-        let mut result = String::new();
-        let mut stmt_num = 0usize;
-
-        loop {
-            let stmt = match session.next() {
-                ParseOutcome::Done => break,
-                ParseOutcome::Ok(stmt) => stmt,
-                ParseOutcome::Err(e) => {
-                    return Err(parse_error_to_format_error(&e));
-                }
-            };
-
-            let erased = stmt.erase();
-            self.collect_side_channels(&erased);
-            let root_id = erased.root_id();
-
-            if let Some((tag, _)) = erased.extract_fields(root_id) {
-                let node_name = self.dialect.syntax_dialect().node_name(tag);
-                let _ = writeln!(result, "=== {node_name} ===");
-            }
-
-            let has_comments = !self.comment_entries.is_empty();
-            let has_macros = !self.macro_rewrites.is_empty();
-            let needs_token_ctx = has_comments || has_macros;
-
-            let comment_ctx = if needs_token_ctx {
-                Some(CommentCtx::new(
-                    std::mem::take(&mut self.comment_entries),
-                    std::mem::take(&mut self.token_entries),
-                ))
-            } else {
-                None
-            };
-
-            let prev_arena = std::mem::replace(&mut self.arena, DocArena::new());
-            let mut arena = DocArena::recycle(prev_arena);
-            self.parts.clear();
-
-            let stmt_source = erased.text();
-            if stmt_num > 0 {
-                emit_stmt_separator(
-                    comment_ctx.as_ref(),
-                    stmt_source,
-                    &mut arena,
-                    &mut self.parts,
-                );
-            } else if let Some(cctx) = comment_ctx.as_ref()
-                && let Some((next_offset, _)) = cctx.peek_next_token()
-            {
-                drain_gap_comments(cctx, next_offset, stmt_source, &mut arena, &mut self.parts);
-            }
-
-            let macro_docs = macro_structured::compute_macro_docs(
-                &self.mini_parser,
-                &self.dialect,
-                &erased,
-                &self.macro_tokenizer,
-                comment_ctx.as_ref().map_or(&[][..], |c| c.comments()),
-                &mut arena,
-            );
-
-            let ctx = FmtCtx {
-                dialect: self.dialect.clone(),
-                reader: erased,
-                comment_ctx,
-                macro_rewrites: std::mem::take(&mut self.macro_rewrites),
-                macro_docs,
-            };
-            let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
-            self.parts.push(interpreted);
-
-            if let Some(cctx) = ctx.comment_ctx.as_ref() {
-                self.parts
-                    .push(cctx.drain_remaining(stmt_source, &mut arena));
-            }
-
-            let doc = arena.cats(&self.parts);
-            result.push_str(&arena.dump(doc));
-            result.push('\n');
-
-            // Recycle buffers.
-            if let Some(cctx) = ctx.comment_ctx {
-                let (comments, tokens) = cctx.into_parts();
-                self.comment_entries = comments;
-                self.token_entries = tokens;
-            }
-            self.macro_rewrites = ctx.macro_rewrites;
-            self.arena = DocArena::recycle(arena);
-
-            stmt_num += 1;
-        }
-
-        Ok(result)
-    }
-}
-
-// ── Multi-statement helpers ─────────────────────────────────────────────
-
-fn emit_stmt_separator<'a>(
-    comment_ctx: Option<&CommentCtx>,
-    source: &'a StmtText,
-    arena: &mut DocArena<'a>,
-    parts: &mut Vec<DocId>,
-) {
-    parts.push(arena.hardline());
-    parts.push(arena.hardline());
-    if let Some(cctx) = comment_ctx
-        && let Some((next_offset, _)) = cctx.peek_next_token()
-    {
-        drain_gap_comments(cctx, next_offset, source, arena, parts);
-    }
-}
-
-fn drain_gap_comments<'a>(
-    ctx: &CommentCtx,
-    before: StmtOffset,
-    source: &'a StmtText,
-    arena: &mut DocArena<'a>,
-    parts: &mut Vec<DocId>,
-) {
-    let source_end = StmtOffset::default() + source.byte_len();
-    while let Some(c) = ctx.peek_comment() {
-        if c.offset >= before {
-            break;
-        }
-        let text = &source[StmtRange::from_offset_len(c.offset, c.length)];
-        let end = c.offset + c.length;
-        parts.push(arena.text(text));
-        parts.push(arena.hardline());
-        ctx.advance_comment();
-        // If the source had a blank line between this comment and
-        // whatever follows — the next comment or the drain target —
-        // preserve it with an extra hardline. One check covers both
-        // "between comment blocks" and "between last block and next
-        // statement".
-        let next = ctx.peek_comment().map_or(before, |n| n.offset);
-        let gap = StmtRange {
-            start: end.min(source_end),
-            end: next.min(source_end),
-        };
-        if !gap.is_empty() && source[gap].contains("\n\n") {
-            parts.push(arena.hardline());
-        }
+        super::token_layout::format(self, source, true)
     }
 }
 
@@ -708,7 +420,7 @@ const TK_RP: u32 = 115;
 /// Paren depth is computed by tokenizing the macro body with the dialect's
 /// tokenizer, so parentheses inside strings, comments, and quoted identifiers
 /// are correctly ignored.
-fn reindent_macro<'a>(
+pub(super) fn reindent_macro<'a>(
     macro_text: &'a str,
     tokenizer: &AnyTokenizer,
     arena: &mut DocArena<'a>,
@@ -807,7 +519,6 @@ fn reindent_macro<'a>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use syntaqlite_syntax::{CommentKind, CommentSide};
 
     /// Verify that `Formatter` stores an `AnyParser` derived from the dialect,
     /// not a hardcoded `SQLite` `Parser`.
@@ -823,79 +534,5 @@ mod tests {
         let fmt = Formatter::with_dialect_config(dialect, &FormatConfig::default());
         // Type assertion: fails to compile if fmt.parser is Parser, not AnyParser.
         let _: &AnyParser = &fmt.parser;
-    }
-
-    fn render_parts(arena: &mut DocArena<'_>, parts: &[DocId]) -> String {
-        let root = arena.cats(parts);
-        arena.render(root, &FormatConfig::default())
-    }
-
-    #[test]
-    fn emit_stmt_separator_without_comments_emits_blank_line() {
-        let source = StmtText::new("SELECT 1");
-        let mut arena = DocArena::new();
-        let mut parts = Vec::new();
-        emit_stmt_separator(None, source, &mut arena, &mut parts);
-        assert_eq!(render_parts(&mut arena, &parts), "\n\n");
-    }
-
-    #[test]
-    fn emit_stmt_separator_drains_leading_block_comment_after_break() {
-        // emit_stmt_separator now only handles the inter-statement break
-        // and drains LEADING comments of the next statement.  The
-        // statement terminator (`;`) and any TRAILING comments on it are
-        // emitted by per-statement processing in `format`, not here.
-        let source = StmtText::new("/*x*/SELECT");
-        let ctx = CommentCtx::new(
-            vec![CommentEntry {
-                offset: StmtOffset::from_raw(0),
-                length: StmtLen::from_raw(5),
-                kind: CommentKind::Block,
-                side: CommentSide::Leading,
-            }],
-            vec![TokenEntry {
-                offset: StmtOffset::from_raw(5),
-                length: StmtLen::from_raw(6),
-            }],
-        );
-        let mut arena = DocArena::new();
-        let mut parts = Vec::new();
-        emit_stmt_separator(Some(&ctx), source, &mut arena, &mut parts);
-        assert_eq!(render_parts(&mut arena, &parts), "\n\n/*x*/\n");
-    }
-
-    #[test]
-    fn drain_gap_comments_writes_each_comment_on_own_line() {
-        let source = StmtText::new("--a\n/*b*/SELECT");
-        let ctx = CommentCtx::new(
-            vec![
-                CommentEntry {
-                    offset: StmtOffset::from_raw(0),
-                    length: StmtLen::from_raw(3),
-                    kind: CommentKind::Line,
-                    side: CommentSide::Leading,
-                },
-                CommentEntry {
-                    offset: StmtOffset::from_raw(4),
-                    length: StmtLen::from_raw(5),
-                    kind: CommentKind::Block,
-                    side: CommentSide::Leading,
-                },
-            ],
-            vec![TokenEntry {
-                offset: StmtOffset::from_raw(9),
-                length: StmtLen::from_raw(6),
-            }],
-        );
-        let mut arena = DocArena::new();
-        let mut parts = Vec::new();
-        drain_gap_comments(
-            &ctx,
-            StmtOffset::from_raw(9),
-            source,
-            &mut arena,
-            &mut parts,
-        );
-        assert_eq!(render_parts(&mut arena, &parts), "--a\n/*b*/\n");
     }
 }

@@ -101,6 +101,11 @@ impl<'a> DocArena<'a> {
 
     // -- Builder methods --
 
+    /// Replace a token placeholder once parser classification is available.
+    pub(super) fn replace(&mut self, target: DocId, replacement: DocId) {
+        self.docs[target as usize] = self.docs[replacement as usize].clone();
+    }
+
     pub(crate) fn text(&mut self, s: &'a str) -> DocId {
         self.push(Doc::Text(Cow::Borrowed(s)))
     }

@@ -105,62 +105,46 @@ def _apply_rebaseline(root_dir: Path, test_dir: str, results: List[TestResult]) 
 
 
 def _rewrite_test_file(file_path: str, updates: list) -> int:
-    """Rewrite out= blocks in a single test file. Returns count of rewrites."""
-    import inspect
+    """Replace only the Python string literal belonging to each test's out field."""
+    import ast
 
-    with open(file_path) as f:
-        lines = f.readlines()
-
-    # Collect (0-indexed start line, method, actual) and sort bottom-to-top
-    # so replacements don't shift line numbers for earlier entries.
-    located = []
-    for method, actual in updates:
-        _, start_line = inspect.getsourcelines(method)
-        located.append((start_line - 1, method, actual))  # 1-indexed → 0-indexed
-    located.sort(key=lambda x: x[0], reverse=True)
-
-    count = 0
-    for start_idx, method, actual in located:
-        # Find `out="""\` within the next 50 lines of the method.
-        out_start = None
-        for i in range(start_idx, min(start_idx + 50, len(lines))):
-            if 'out="""\\\n' in lines[i]:
-                out_start = i
-                break
-        if out_start is None:
-            print(f"Warning: no out block found for {method.__qualname__}", file=sys.stderr)
-            continue
-
-        # Detect indentation of the `out="""` line.
-        indent = len(lines[out_start]) - len(lines[out_start].lstrip())
-        indent_str = " " * indent
-
-        # Find the closing `""",` line (unindented, at column 0).
-        out_end = None
-        for i in range(out_start + 1, len(lines)):
-            if lines[i].rstrip("\n") == '""",':
-                out_end = i
-                break
-        if out_end is None:
-            print(f"Warning: no end of out block found for {method.__qualname__}", file=sys.stderr)
-            continue
-
-        # Build replacement lines.
-        # Backslashes must be doubled so Python reads them back correctly
-        # when the out block is a triple-quoted string in the test file.
-        new_lines = [f'{indent_str}out="""\\\n']
-        for line in actual.splitlines():
-            escaped = line.replace('\\', '\\\\')
-            new_lines.append(f'{indent_str}{escaped}\n' if line else '\n')
-        new_lines.append('""",\n')
-
-        lines[out_start:out_end + 1] = new_lines
-        count += 1
-
-    with open(file_path, "w") as f:
-        f.writelines(lines)
-
-    return count
+    source = Path(file_path).read_bytes()
+    lines = source.splitlines(keepends=True)
+    offsets = [0]
+    for line in lines:
+        offsets.append(offsets[-1] + len(line))
+    requested = {method.__qualname__: actual for method, actual in updates}
+    replacements = []
+    tree = ast.parse(source)
+    for cls in (node for node in ast.walk(tree) if isinstance(node, ast.ClassDef)):
+        for method in cls.body:
+            if not isinstance(method, ast.FunctionDef):
+                continue
+            name = f"{cls.name}.{method.name}"
+            if name not in requested:
+                continue
+            values = [kw.value for call in ast.walk(method) if isinstance(call, ast.Call)
+                      for kw in call.keywords if kw.arg == "out"]
+            if len(values) != 1 or not isinstance(values[0], ast.Constant):
+                raise ValueError(f"Expected one literal out field in {name}")
+            value = values[0]
+            actual = requested[name]
+            if "\n" in actual:
+                indent = " " * method.body[0].col_offset + "    "
+                escaped = actual.replace("\\", "\\\\").replace('"""', '\\"""')
+                replacement = '"""\\\n' + "\n".join(indent + line if line else "" for line in escaped.splitlines()) + "\n" + indent + '"""'
+            else:
+                replacement = repr(actual)
+            start = offsets[value.lineno - 1] + value.col_offset
+            end = offsets[value.end_lineno - 1] + value.end_col_offset
+            replacements.append((start, end, replacement.encode()))
+    if len(replacements) != len(requested):
+        raise ValueError(f"Could not locate all out fields in {file_path}")
+    for start, end, replacement in sorted(replacements, reverse=True):
+        source = source[:start] + replacement + source[end:]
+    ast.parse(source)
+    Path(file_path).write_bytes(source)
+    return len(replacements)
 
 
 def main(argv: Optional[List[str]] = None) -> int:

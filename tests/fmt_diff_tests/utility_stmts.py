@@ -106,19 +106,13 @@ class ExplainFormat(TestSuite):
     def test_explain(self):
         return DiffTestBlueprint(
             sql="explain select 1",
-            out="""\
-                EXPLAIN
-                SELECT 1;
-            """,
+            out='EXPLAIN SELECT 1;',
         )
 
     def test_explain_query_plan(self):
         return DiffTestBlueprint(
             sql="explain query plan select * from t",
-            out="""\
-                EXPLAIN QUERY PLAN
-                SELECT * FROM t;
-            """,
+            out='EXPLAIN QUERY PLAN SELECT * FROM t;',
         )
 
 
@@ -126,31 +120,31 @@ class CreateIndexFormat(TestSuite):
     def test_create_index(self):
         return DiffTestBlueprint(
             sql="create index idx on t(x)",
-            out="CREATE INDEX idx ON t (x);",
+            out='CREATE INDEX idx ON t(x);',
         )
 
     def test_create_unique_index(self):
         return DiffTestBlueprint(
             sql="create unique index idx on t(x)",
-            out="CREATE UNIQUE INDEX idx ON t (x);",
+            out='CREATE UNIQUE INDEX idx ON t(x);',
         )
 
     def test_create_index_if_not_exists(self):
         return DiffTestBlueprint(
             sql="create index if not exists idx on t(x)",
-            out="CREATE INDEX IF NOT EXISTS idx ON t (x);",
+            out='CREATE INDEX IF NOT EXISTS idx ON t(x);',
         )
 
     def test_create_index_with_schema(self):
         return DiffTestBlueprint(
             sql="create index main.idx on t(x)",
-            out="CREATE INDEX main.idx ON t (x);",
+            out='CREATE INDEX main.idx ON t(x);',
         )
 
     def test_create_index_multi_column(self):
         return DiffTestBlueprint(
             sql="create index idx on t(x, y desc)",
-            out="CREATE INDEX idx ON t (x, y DESC);",
+            out='CREATE INDEX idx ON t(x, y DESC);',
         )
 
     def test_create_index_multiline_columns(self):
@@ -160,13 +154,13 @@ class CreateIndexFormat(TestSuite):
                 dur,
                 track_id)
             """,
-            out="CREATE INDEX idx_hot_slices ON hot_slices (ts, dur, track_id);",
+            out='CREATE INDEX idx_hot_slices ON hot_slices(ts, dur, track_id);',
         )
 
     def test_create_index_with_where(self):
         return DiffTestBlueprint(
             sql="create index idx on t(x) where x > 0",
-            out="CREATE INDEX idx ON t (x) WHERE x > 0;",
+            out='CREATE INDEX idx ON t(x) WHERE x > 0;',
         )
 
 
@@ -174,35 +168,23 @@ class CreateViewFormat(TestSuite):
     def test_create_view(self):
         return DiffTestBlueprint(
             sql="create view v as select * from t",
-            out="""\
-                CREATE VIEW v AS
-                SELECT * FROM t;
-            """,
+            out='CREATE VIEW v AS SELECT * FROM t;',
         )
 
     def test_create_temp_view(self):
         return DiffTestBlueprint(
             sql="create temp view v as select * from t",
-            out="""\
-                CREATE TEMP VIEW v AS
-                SELECT * FROM t;
-            """,
+            out='CREATE TEMP VIEW v AS SELECT * FROM t;',
         )
 
     def test_create_view_if_not_exists(self):
         return DiffTestBlueprint(
             sql="create view if not exists v as select * from t",
-            out="""\
-                CREATE VIEW IF NOT EXISTS v AS
-                SELECT * FROM t;
-            """,
+            out='CREATE VIEW IF NOT EXISTS v AS SELECT * FROM t;',
         )
 
     def test_create_view_with_columns(self):
         return DiffTestBlueprint(
             sql="create view v(a, b) as select x, y from t",
-            out="""\
-                CREATE VIEW v(a, b) AS
-                SELECT x, y FROM t;
-            """,
+            out='CREATE VIEW v(a, b) AS SELECT x, y FROM t;',
         )

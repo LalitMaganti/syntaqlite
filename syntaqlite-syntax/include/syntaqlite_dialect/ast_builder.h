@@ -90,6 +90,16 @@ typedef struct SynqNodeExpandedExtent {
 // Parse context — threaded through grammar actions via %extra_argument
 // ---------------------------------------------------------------------------
 
+typedef void (*SynqLayoutCallback)(void*,
+                                   unsigned,
+                                   const char*,
+                                   unsigned,
+                                   const char*,
+                                   unsigned);
+
+// Internal formatter registration, scoped to a synchronous parser call.
+void synq_parse_layout_set(void* context, SynqLayoutCallback callback);
+
 typedef struct SynqParseCtx {
   // AST storage
   SyntaqliteMemMethods mem;
@@ -170,6 +180,9 @@ typedef struct SynqParseCtx {
   // Set when `GENERATED ALWAYS` was trimmed off a column's type name, so the
   // `AS` production can still emit the keywords.
   uint32_t generated_always;
+  // Borrowed for one synchronous parser_next call; null for ordinary parsing.
+  SynqLayoutCallback layout_callback;
+  void* layout_context;
 } SynqParseCtx;
 
 // Common header for all list nodes in the arena.

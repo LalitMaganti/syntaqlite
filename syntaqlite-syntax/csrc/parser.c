@@ -23,6 +23,15 @@
 #include "csrc/parser_internal.h"
 
 // ---------------------------------------------------------------------------
+// Private formatter bridge. The registration is scoped to one synchronous next
+// call. Copy it into the parse context so every dialect uses the same observer.
+static _Thread_local SynqLayoutCallback layout_callback;
+static _Thread_local void* layout_context;
+void synq_parse_layout_set(void* context, SynqLayoutCallback callback) {
+  layout_context = context;
+  layout_callback = callback;
+}
+
 // Forward declarations of file-local helpers
 // ---------------------------------------------------------------------------
 
@@ -631,6 +640,8 @@ static uint32_t synq_analyze_filter(SyntaqliteParser* p,
 }
 
 SYNTAQLITE_API int32_t syntaqlite_parser_next(SyntaqliteParser* p) {
+  p->ctx.layout_callback = layout_callback;
+  p->ctx.layout_context = layout_context;
   reset_stmt(p);
 
   if (p->finished)

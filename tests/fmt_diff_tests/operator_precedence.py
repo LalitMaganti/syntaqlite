@@ -20,19 +20,18 @@ from python.dev.diff_tests.testing import DiffTestBlueprint, TestSuite
 #                 REM, CONCAT, PTR, IS, LIKE, BETWEEN, IN, COLLATE
 #   BITWISE  (1): BIT_AND, BIT_OR, LSHIFT, RSHIFT
 #
-# Paren boundary: AND has the paren_boundary flag. When AND appears as a child
-# of a different-precedence operator in the same group, readability parens are
-# added. This gives us `(a AND b) OR c` without adding parens everywhere.
+# The formatter retains authored operators and parentheses. These cases verify
+# that layout does not reconstruct or change precedence; all participate in the
+# AST and SQLite-bytecode preservation suite.
 
 
 class OrAndPrecedence(TestSuite):
-    """OR (prec 1) vs AND (prec 2): AND has paren_boundary."""
+    """OR (prec 1) vs AND (prec 2): authored grouping is retained."""
 
-    def test_and_in_or_gets_parens(self):
+    def test_and_in_or_preserves_authored_grouping(self):
         return DiffTestBlueprint(
             sql="SELECT a AND b OR c AND d",
-            out="SELECT (a AND b) OR (c AND d);",
-            idempotent=False,
+            out='SELECT a AND b OR c AND d;',
         )
 
     def test_or_in_and_left(self):
@@ -69,8 +68,7 @@ class OrAndPrecedence(TestSuite):
         """a AND b AND c OR d → only one set of parens around the AND chain."""
         return DiffTestBlueprint(
             sql="SELECT a AND b AND c OR d",
-            out="SELECT (a AND b AND c) OR d;",
-            idempotent=False,
+            out='SELECT a AND b AND c OR d;',
         )
 
 
@@ -252,13 +250,12 @@ class BitwiseOpsPrecedence(TestSuite):
 
 
 class BitwiseVsStandardPrecedence(TestSuite):
-    """Bitwise (group 1) vs standard (group 0): cross-group, parens added."""
+    """Bitwise (group 1) vs standard (group 0): authored grouping is retained."""
 
-    def test_add_in_bitand_gets_parens(self):
+    def test_add_in_bitand_preserves_authored_grouping(self):
         return DiffTestBlueprint(
             sql="SELECT a + b & c + d",
-            out="SELECT (a + b) & (c + d);",
-            idempotent=False,
+            out='SELECT a + b & c + d;',
         )
 
     def test_bitand_in_add(self):
@@ -267,11 +264,10 @@ class BitwiseVsStandardPrecedence(TestSuite):
             out="SELECT (a & b) + c;",
         )
 
-    def test_mul_in_bitor_gets_parens(self):
+    def test_mul_in_bitor_preserves_authored_grouping(self):
         return DiffTestBlueprint(
             sql="SELECT a * b | c * d",
-            out="SELECT (a * b) | (c * d);",
-            idempotent=False,
+            out='SELECT a * b | c * d;',
         )
 
     def test_lshift_in_mul(self):
@@ -283,15 +279,13 @@ class BitwiseVsStandardPrecedence(TestSuite):
     def test_concat_in_bitand(self):
         return DiffTestBlueprint(
             sql="SELECT a || b & c || d",
-            out="SELECT (a || b) & (c || d);",
-            idempotent=False,
+            out='SELECT a || b & c || d;',
         )
 
-    def test_bitand_in_gt_gets_parens(self):
+    def test_bitand_in_gt_preserves_authored_grouping(self):
         return DiffTestBlueprint(
             sql="SELECT a & b < c & d",
-            out="SELECT (a & b) < (c & d);",
-            idempotent=False,
+            out='SELECT a & b < c & d;',
         )
 
     def test_lt_in_bitor(self):
@@ -439,14 +433,14 @@ class IsExprPrecedence(TestSuite):
             out="SELECT a IS NULL OR b IS NOT NULL;",
         )
 
-    def test_or_in_is_gets_parens(self):
+    def test_or_in_is_preserves_authored_grouping(self):
         """OR (prec 1) inside IS (prec 3) needs correctness parens."""
         return DiffTestBlueprint(
             sql="SELECT (a OR b) IS NULL",
             out="SELECT (a OR b) IS NULL;",
         )
 
-    def test_and_in_is_gets_parens(self):
+    def test_and_in_is_preserves_authored_grouping(self):
         """AND (prec 2) inside IS (prec 3) needs correctness parens."""
         return DiffTestBlueprint(
             sql="SELECT (a AND b) IS NOT NULL",
@@ -482,14 +476,14 @@ class LikeExprPrecedence(TestSuite):
             out="SELECT a LIKE 'foo' OR b LIKE 'bar';",
         )
 
-    def test_or_in_like_gets_parens(self):
+    def test_or_in_like_preserves_authored_grouping(self):
         """OR (prec 1) inside LIKE (prec 3) needs correctness parens."""
         return DiffTestBlueprint(
             sql="SELECT (a OR b) LIKE 'foo'",
             out="SELECT (a OR b) LIKE 'foo';",
         )
 
-    def test_and_in_like_gets_parens(self):
+    def test_and_in_like_preserves_authored_grouping(self):
         return DiffTestBlueprint(
             sql="SELECT (a AND b) LIKE 'foo'",
             out="SELECT (a AND b) LIKE 'foo';",
@@ -536,7 +530,7 @@ class BetweenExprPrecedence(TestSuite):
             out="SELECT a BETWEEN 1 AND 10 OR b BETWEEN 20 AND 30;",
         )
 
-    def test_or_in_between_gets_parens(self):
+    def test_or_in_between_preserves_authored_grouping(self):
         return DiffTestBlueprint(
             sql="SELECT (a OR b) BETWEEN 1 AND 10",
             out="SELECT (a OR b) BETWEEN 1 AND 10;",
@@ -570,7 +564,7 @@ class InExprPrecedence(TestSuite):
             out="SELECT a IN (1, 2) OR b IN (3, 4);",
         )
 
-    def test_or_in_in_gets_parens(self):
+    def test_or_in_in_preserves_authored_grouping(self):
         return DiffTestBlueprint(
             sql="SELECT (a OR b) IN (1, 2)",
             out="SELECT (a OR b) IN (1, 2);",
@@ -716,7 +710,7 @@ class CollateExprPrecedence(TestSuite):
             out="SELECT a COLLATE nocase = b COLLATE nocase;",
         )
 
-    def test_add_in_collate_gets_parens(self):
+    def test_add_in_collate_preserves_authored_grouping(self):
         """Arithmetic (prec 6) inside COLLATE (prec 9) needs correctness parens."""
         return DiffTestBlueprint(
             sql="SELECT (a + b) COLLATE nocase",
@@ -730,7 +724,7 @@ class CollateExprPrecedence(TestSuite):
             out="SELECT a COLLATE nocase + b;",
         )
 
-    def test_concat_in_collate_gets_parens(self):
+    def test_concat_in_collate_preserves_authored_grouping(self):
         """Concat (prec 8) inside COLLATE (prec 9) needs correctness parens."""
         return DiffTestBlueprint(
             sql="SELECT (a || b) COLLATE nocase",
@@ -750,8 +744,7 @@ class DeepNesting(TestSuite):
     def test_or_and_eq_add_mul(self):
         return DiffTestBlueprint(
             sql="SELECT a * b + c = d AND e OR f",
-            out="SELECT (a * b + c = d AND e) OR f;",
-            idempotent=False,
+            out='SELECT a * b + c = d AND e OR f;',
         )
 
     def test_complex_parens_preserved(self):
@@ -763,22 +756,19 @@ class DeepNesting(TestSuite):
     def test_bitwise_in_comparison_in_and(self):
         return DiffTestBlueprint(
             sql="SELECT a & b > 0 AND c | d < 10",
-            out="SELECT (a & b) > 0 AND (c | d) < 10;",
-            idempotent=False,
+            out='SELECT a & b > 0 AND c | d < 10;',
         )
 
     def test_all_levels(self):
         return DiffTestBlueprint(
             sql="SELECT a || b * c + d & e > f = g AND h OR i",
-            out="SELECT (((a || b * c + d) & e) > f = g AND h) OR i;",
-            idempotent=False,
+            out='SELECT a || b * c + d & e > f = g AND h OR i;',
         )
 
     def test_like_and_between_in_or(self):
         return DiffTestBlueprint(
             sql="SELECT a LIKE 'foo' AND b BETWEEN 1 AND 10 OR c IN (1, 2)",
-            out="SELECT (a LIKE 'foo' AND b BETWEEN 1 AND 10) OR c IN (1, 2);",
-            idempotent=False,
+            out="SELECT a LIKE 'foo' AND b BETWEEN 1 AND 10 OR c IN (1, 2);",
         )
 
 

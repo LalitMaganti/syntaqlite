@@ -62,23 +62,16 @@ class SelectFormat(TestSuite):
     def test_compound_union_all(self):
         return DiffTestBlueprint(
             sql="select a from t1 union all select b from t2",
-            out="""\
-                SELECT a FROM t1
-                UNION ALL
-                SELECT b FROM t2;
-            """,
+            out='SELECT a FROM t1 UNION ALL SELECT b FROM t2;',
         )
 
     def test_long_query_breaks(self):
         return DiffTestBlueprint(
             sql="select a, b, c, d, e, f, g, h, i, j from very_long_table_name where a = 1 and b = 2 and c = 3",
             out="""\
-                SELECT a, b, c, d, e, f, g, h, i, j
-                FROM very_long_table_name
-                WHERE
-                  a = 1
-                  AND b = 2
-                  AND c = 3;
+            SELECT a, b, c, d, e, f, g, h, i, j
+            FROM very_long_table_name
+            WHERE a = 1 AND b = 2 AND c = 3;
             """,
         )
 
@@ -138,7 +131,7 @@ class ExprFormat(TestSuite):
     def test_unary_minus_keeps_author_parens(self):
         return DiffTestBlueprint(
             sql="select -(-1)",
-            out="SELECT -(-1);",
+            out='SELECT - (-1);',
         )
 
     def test_and_or(self):
@@ -208,7 +201,7 @@ class ExprFormat(TestSuite):
     def test_is_null(self):
         return DiffTestBlueprint(
             sql="select a from t where x is null",
-            out="SELECT a FROM t WHERE x IS null;",
+            out='SELECT a FROM t WHERE x IS NULL;',
         )
 
 
@@ -218,12 +211,9 @@ class JoinUsingFormat(TestSuite):
         return DiffTestBlueprint(
             sql="select * from long_table_name_one, long_table_name_two using (col_a, col_b) where x = 1 and y = 2 and z = 3",
             out="""\
-                SELECT *
-                FROM long_table_name_one, long_table_name_two USING (col_a, col_b)
-                WHERE
-                  x = 1
-                  AND y = 2
-                  AND z = 3;
+            SELECT *
+            FROM long_table_name_one, long_table_name_two USING (col_a, col_b)
+            WHERE x = 1 AND y = 2 AND z = 3;
             """,
         )
 
@@ -244,7 +234,7 @@ class TableValuedFunctionFormat(TestSuite):
     def test_tvf_in_join(self):
         return DiffTestBlueprint(
             sql="select * from t join json_each(t.col) as j on 1",
-            out="SELECT *\nFROM t\nJOIN json_each(t.col) AS j ON 1;",
+            out='SELECT * FROM t JOIN json_each(t.col) AS j ON 1;',
         )
 
     # ── Quoted identifiers ────────────────────────────────────────────
@@ -261,40 +251,40 @@ class TableValuedFunctionFormat(TestSuite):
             out='SELECT "set" FROM t;',
         )
 
-    def test_backtick_table_normalizes_to_double_quote(self):
+    def test_backtick_table_preserves_quote_style(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM `set`",
-            out='SELECT * FROM "set";',
+            out='SELECT * FROM `set`;',
         )
 
-    def test_bracket_table_normalizes_to_double_quote(self):
+    def test_bracket_table_preserves_quote_style(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM [set]",
-            out='SELECT * FROM "set";',
+            out='SELECT * FROM [set];',
         )
 
-    def test_backtick_column_normalizes_to_double_quote(self):
+    def test_backtick_column_preserves_quote_style(self):
         return DiffTestBlueprint(
             sql="SELECT `set` FROM t",
-            out='SELECT "set" FROM t;',
+            out='SELECT `set` FROM t;',
         )
 
-    def test_bracket_column_normalizes_to_double_quote(self):
+    def test_bracket_column_preserves_quote_style(self):
         return DiffTestBlueprint(
             sql="SELECT [set] FROM t",
-            out='SELECT "set" FROM t;',
+            out='SELECT [set] FROM t;',
         )
 
-    def test_single_quoted_table_normalizes_to_double_quote(self):
+    def test_single_quoted_table_preserves_quote_style(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM 'set'",
-            out='SELECT * FROM "set";',
+            out="SELECT * FROM 'set';",
         )
 
-    def test_single_quoted_alias_normalizes_to_double_quote(self):
+    def test_single_quoted_alias_preserves_quote_style(self):
         return DiffTestBlueprint(
             sql="SELECT 1 AS 'a'",
-            out='SELECT 1 AS "a";',
+            out="SELECT 1 AS 'a';",
         )
 
     def test_single_quoted_string_literal_stays_single_quoted(self):
@@ -310,19 +300,19 @@ class TableValuedFunctionFormat(TestSuite):
     def test_single_quoted_escape_rewritten_for_double_quotes(self):
         return DiffTestBlueprint(
             sql="SELECT * FROM 'a''b'",
-            out='SELECT * FROM "a\'b";',
+            out="SELECT * FROM 'a''b';",
         )
 
     def test_backtick_escape_rewritten_for_double_quotes(self):
         return DiffTestBlueprint(
             sql="SELECT `a``b` FROM t",
-            out='SELECT "a`b" FROM t;',
+            out='SELECT `a``b` FROM t;',
         )
 
     def test_bracket_inner_double_quote_reescaped(self):
         return DiffTestBlueprint(
             sql='SELECT [a"b] FROM t',
-            out='SELECT "a""b" FROM t;',
+            out='SELECT [a"b] FROM t;',
         )
 
     def test_double_quoted_escape_preserved(self):

@@ -56,46 +56,31 @@ class CteFormat(TestSuite):
     def test_basic_cte(self):
         return DiffTestBlueprint(
             sql="with cte as (select 1) select * from cte",
-            out="""\
-                WITH cte AS (SELECT 1)
-                SELECT * FROM cte;
-            """,
+            out='WITH cte AS (SELECT 1) SELECT * FROM cte;',
         )
 
     def test_recursive_cte(self):
         return DiffTestBlueprint(
             sql="with recursive cte as (select 1) select * from cte",
-            out="""\
-                WITH RECURSIVE cte AS (SELECT 1)
-                SELECT * FROM cte;
-            """,
+            out='WITH RECURSIVE cte AS (SELECT 1) SELECT * FROM cte;',
         )
 
     def test_cte_with_columns(self):
         return DiffTestBlueprint(
             sql="with cte(a, b) as (select 1, 2) select * from cte",
-            out="""\
-                WITH cte(a, b) AS (SELECT 1, 2)
-                SELECT * FROM cte;
-            """,
+            out='WITH cte(a, b) AS (SELECT 1, 2) SELECT * FROM cte;',
         )
 
     def test_materialized_cte(self):
         return DiffTestBlueprint(
             sql="with cte as materialized (select 1) select * from cte",
-            out="""\
-                WITH cte AS MATERIALIZED (SELECT 1)
-                SELECT * FROM cte;
-            """,
+            out='WITH cte AS MATERIALIZED (SELECT 1) SELECT * FROM cte;',
         )
 
     def test_not_materialized_cte(self):
         return DiffTestBlueprint(
             sql="with cte as not materialized (select 1) select * from cte",
-            out="""\
-                WITH cte AS NOT MATERIALIZED (SELECT 1)
-                SELECT * FROM cte;
-            """,
+            out='WITH cte AS NOT MATERIALIZED (SELECT 1) SELECT * FROM cte;',
         )
 
     def test_cte_body_indented(self):
@@ -109,15 +94,13 @@ class CteFormat(TestSuite):
                 SELECT * FROM cte
             """,
             out="""\
-                WITH
-                  cte AS (
-                    SELECT a, b, c, d, e, f, g, h, i, j, k
-                    FROM some_table
-                    WHERE
-                      some_column = 1
-                      AND another_col = 2
-                  )
-                SELECT * FROM cte;
+            WITH
+              cte AS (
+                SELECT a, b, c, d, e, f, g, h, i, j, k
+                FROM some_table
+                WHERE some_column = 1 AND another_col = 2
+              )
+            SELECT * FROM cte;
             """,
         )
 
@@ -133,22 +116,14 @@ class CteFormat(TestSuite):
                 SELECT id, name FROM users WHERE id IN (SELECT id FROM c) ORDER BY name
             """,
             out="""\
-                WITH
-                  a AS (SELECT id, name FROM users WHERE active = 1),
-                  b AS (SELECT customer_id AS id FROM orders),
-                  c AS (
-                    SELECT id FROM a
-                    INTERSECT
-                    SELECT id FROM b
-                  ),
-                  d AS (
-                    SELECT id FROM a
-                    EXCEPT
-                    SELECT id FROM c
-                  )
-                SELECT id, name FROM users WHERE id IN (SELECT id FROM d)
-                UNION ALL
-                SELECT id, name FROM users WHERE id IN (SELECT id FROM c) ORDER BY name;
+            WITH
+              a AS (SELECT id, name FROM users WHERE active = 1),
+              b AS (SELECT customer_id AS id FROM orders),
+              c AS (SELECT id FROM a INTERSECT SELECT id FROM b),
+              d AS (SELECT id FROM a EXCEPT SELECT id FROM c)
+            SELECT id, name FROM users WHERE id IN (SELECT id FROM d)
+            UNION ALL
+            SELECT id, name FROM users WHERE id IN (SELECT id FROM c) ORDER BY name;
             """,
         )
 
@@ -157,103 +132,63 @@ class JoinFormat(TestSuite):
     def test_inner_join(self):
         return DiffTestBlueprint(
             sql="select * from a join b on a.id = b.id",
-            out="""\
-                SELECT *
-                FROM a
-                JOIN b ON a.id = b.id;
-            """,
+            out='SELECT * FROM a JOIN b ON a.id = b.id;',
         )
 
     def test_left_join(self):
         return DiffTestBlueprint(
             sql="select * from a left join b on a.id = b.id",
-            out="""\
-                SELECT *
-                FROM a
-                LEFT JOIN b ON a.id = b.id;
-            """,
+            out='SELECT * FROM a LEFT JOIN b ON a.id = b.id;',
         )
 
     def test_cross_join(self):
         return DiffTestBlueprint(
             sql="select * from a cross join b",
-            out="""\
-                SELECT *
-                FROM a
-                CROSS JOIN b;
-            """,
+            out='SELECT * FROM a CROSS JOIN b;',
         )
 
     def test_natural_join(self):
         return DiffTestBlueprint(
             sql="select * from a natural join b",
-            out="""\
-                SELECT *
-                FROM a
-                NATURAL JOIN b;
-            """,
+            out='SELECT * FROM a NATURAL JOIN b;',
         )
 
     def test_natural_cross_join(self):
         # NATURAL CROSS JOIN joins on common columns; CROSS JOIN does not.
         return DiffTestBlueprint(
             sql="select * from a natural cross join b",
-            out="""\
-                SELECT *
-                FROM a
-                NATURAL CROSS JOIN b;
-            """,
+            out='SELECT * FROM a NATURAL cross JOIN b;',
         )
 
     def test_natural_left_outer_join(self):
         return DiffTestBlueprint(
             sql="select * from a natural left outer join b",
-            out="""\
-                SELECT *
-                FROM a
-                NATURAL LEFT OUTER JOIN b;
-            """,
+            out='SELECT * FROM a NATURAL left outer JOIN b;',
         )
 
     def test_natural_full_join(self):
         return DiffTestBlueprint(
             sql="select * from a natural full join b",
-            out="""\
-                SELECT *
-                FROM a
-                NATURAL FULL JOIN b;
-            """,
+            out='SELECT * FROM a NATURAL full JOIN b;',
         )
 
     def test_join_modifier_sequence_is_preserved(self):
         # SQLite interprets a set of modifiers; formatting retains authored order.
         return DiffTestBlueprint(
             sql="select * from a outer left natural join b",
-            out="""\
-                SELECT *
-                FROM a
-                OUTER LEFT NATURAL JOIN b;
-            """,
+            out='SELECT * FROM a OUTER left natural JOIN b;',
         )
 
     def test_cross_natural_join_preserves_order(self):
         return DiffTestBlueprint(
             sql="select * from a cross natural join b",
-            out="""\
-                SELECT *
-                FROM a
-                CROSS NATURAL JOIN b;
-            """,
+            out='SELECT * FROM a CROSS natural JOIN b;',
         )
 
     def test_join_using(self):
         return DiffTestBlueprint(
             sql="select * from a join b using (id)",
-            out="""\
-                SELECT *
-                FROM a
-                JOIN b USING (id);
-            """,
+            out='SELECT * FROM a JOIN b USING (id);',
         )
 
     def test_comma_join(self):
@@ -270,15 +205,7 @@ class ParenthesizedFromFormat(TestSuite):
         # Flattened, the trailing ON has nothing to attach to and will not parse.
         return DiffTestBlueprint(
             sql="select count(*) from a left join (b join c on b.x=c.x) on a.x=b.x",
-            out="""\
-                SELECT count(*)
-                FROM a
-                LEFT JOIN (
-                  b
-                  JOIN c ON b.x = c.x
-                )
-                  ON a.x = b.x;
-            """,
+            out='SELECT count(*) FROM a LEFT JOIN (b JOIN c ON b.x = c.x) ON a.x = b.x;',
         )
 
     def test_alias_on_table_list(self):
@@ -297,17 +224,13 @@ class ParenthesizedFromFormat(TestSuite):
         # Upstream discards these: whole FROM clause, no alias, no ON/USING.
         return DiffTestBlueprint(
             sql="select * from (t1,t2)",
-            out="SELECT * FROM t1, t2;",
+            out='SELECT * FROM (t1, t2);',
         )
 
     def test_cosmetic_parens_around_join_are_dropped(self):
         return DiffTestBlueprint(
             sql="select * from (a join b on a.x=b.x)",
-            out="""\
-                SELECT *
-                FROM a
-                JOIN b ON a.x = b.x;
-            """,
+            out='SELECT * FROM (a JOIN b ON a.x = b.x);',
         )
 
 
@@ -341,14 +264,13 @@ class SubqueryFormat(TestSuite):
             sql="SELECT * FROM (SELECT a, b FROM t WHERE x = 1 AND y = 2) AS sub",
             line_width=30,
             out="""\
-                SELECT *
-                FROM (
-                  SELECT a, b
-                  FROM t
-                  WHERE
-                    x = 1
-                    AND y = 2
-                ) AS sub;
+            SELECT *
+            FROM
+              (
+                SELECT a, b
+                FROM t
+                WHERE x = 1 AND y = 2
+              ) AS sub;
             """,
         )
 
@@ -357,14 +279,13 @@ class SubqueryFormat(TestSuite):
             sql="SELECT * FROM (SELECT a, b FROM t WHERE x = 1 AND y = 2)",
             line_width=30,
             out="""\
-                SELECT *
-                FROM (
-                  SELECT a, b
-                  FROM t
-                  WHERE
-                    x = 1
-                    AND y = 2
-                );
+            SELECT *
+            FROM
+              (
+                SELECT a, b
+                FROM t
+                WHERE x = 1 AND y = 2
+              );
             """,
         )
 
@@ -519,11 +440,10 @@ class TriggerFormat(TestSuite):
         return DiffTestBlueprint(
             sql="create trigger tr before insert on t when new.x > 0 begin select 1; end",
             out="""\
-                CREATE TRIGGER tr BEFORE INSERT ON t
-                WHEN new.x > 0
-                BEGIN
-                  SELECT 1;
-                END;
+            CREATE TRIGGER tr BEFORE INSERT ON t WHEN new.x > 0
+            BEGIN
+              SELECT 1;
+            END;
             """,
         )
 
@@ -555,7 +475,7 @@ class VirtualTableFormat(TestSuite):
     def test_basic_virtual_table(self):
         return DiffTestBlueprint(
             sql="create virtual table vt using fts5(content)",
-            out="CREATE VIRTUAL TABLE vt USING fts5(content);",
+            out='CREATE VIRTUAL TABLE vt USING fts5 (content);',
         )
 
     def test_no_args(self):
@@ -567,7 +487,7 @@ class VirtualTableFormat(TestSuite):
     def test_if_not_exists(self):
         return DiffTestBlueprint(
             sql="create virtual table if not exists vt using fts5(content)",
-            out="CREATE VIRTUAL TABLE IF NOT EXISTS vt USING fts5(content);",
+            out='CREATE VIRTUAL TABLE IF NOT EXISTS vt USING fts5 (content);',
         )
 
     def test_schema_qualified(self):
@@ -599,11 +519,11 @@ class IndentWidthFormat(TestSuite):
             indent_width=4,
             line_width=30,
             out="""\
-                CREATE TABLE t(
-                    a INTEGER NOT NULL,
-                    b TEXT,
-                    c REAL
-                );
+            CREATE TABLE t (
+                a INTEGER NOT NULL,
+                b TEXT,
+                c REAL
+            );
             """,
         )
 
@@ -631,15 +551,13 @@ class IndentWidthFormat(TestSuite):
             """,
             indent_width=4,
             out="""\
-                WITH
-                    cte AS (
-                        SELECT a, b, c, d, e, f, g, h, i, j, k
-                        FROM some_table
-                        WHERE
-                            some_column = 1
-                            AND another_col = 2
-                    )
-                SELECT * FROM cte;
+            WITH
+                cte AS (
+                    SELECT a, b, c, d, e, f, g, h, i, j, k
+                    FROM some_table
+                    WHERE some_column = 1 AND another_col = 2
+                )
+            SELECT * FROM cte;
             """,
         )
 
@@ -664,10 +582,10 @@ class IndentWidthFormat(TestSuite):
             indent_width=8,
             line_width=20,
             out="""\
-                CREATE TABLE t(
-                        a INTEGER,
-                        b TEXT
-                );
+            CREATE TABLE t (
+                    a INTEGER,
+                    b TEXT
+            );
             """,
         )
 
@@ -680,16 +598,16 @@ class ParenBreakFormat(TestSuite):
             sql="CREATE TABLE t (a INT, b INT, c INT, PRIMARY KEY(a_col, b_col, c_col))",
             line_width=30,
             out="""\
-                CREATE TABLE t(
-                  a INT,
-                  b INT,
-                  c INT,
-                  PRIMARY KEY(
-                    a_col,
-                    b_col,
-                    c_col
-                  )
-                );
+            CREATE TABLE t (
+              a INT,
+              b INT,
+              c INT,
+              PRIMARY KEY (
+                a_col,
+                b_col,
+                c_col
+              )
+            );
             """,
         )
 
@@ -698,15 +616,15 @@ class ParenBreakFormat(TestSuite):
             sql="CREATE TABLE t (a INT, b INT, UNIQUE(first_name, last_name, email))",
             line_width=30,
             out="""\
-                CREATE TABLE t(
-                  a INT,
-                  b INT,
-                  UNIQUE(
-                    first_name,
-                    last_name,
-                    email
-                  )
-                );
+            CREATE TABLE t (
+              a INT,
+              b INT,
+              UNIQUE (
+                first_name,
+                last_name,
+                email
+              )
+            );
             """,
         )
 
@@ -715,13 +633,13 @@ class ParenBreakFormat(TestSuite):
             sql="CREATE TABLE t (a INT, FOREIGN KEY(col_a, col_b) REFERENCES other(x, y))",
             line_width=30,
             out="""\
-                CREATE TABLE t(
-                  a INT,
-                  FOREIGN KEY(col_a, col_b) REFERENCES other(
-                    x,
-                    y
-                  )
-                );
+            CREATE TABLE t (
+              a INT,
+              FOREIGN KEY (col_a, col_b) REFERENCES other(
+                x,
+                y
+              )
+            );
             """,
         )
 
@@ -730,15 +648,13 @@ class ParenBreakFormat(TestSuite):
             sql="CREATE TABLE t (a INT, b INT, CHECK(a > 0 AND b > 0 AND a <> b))",
             line_width=30,
             out="""\
-                CREATE TABLE t(
-                  a INT,
-                  b INT,
-                  CHECK(
-                    a > 0
-                    AND b > 0
-                    AND a != b
-                  )
-                );
+            CREATE TABLE t (
+              a INT,
+              b INT,
+              CHECK (
+                a > 0 AND b > 0 AND a <> b
+              )
+            );
             """,
         )
 
@@ -747,12 +663,12 @@ class ParenBreakFormat(TestSuite):
             sql="CREATE INDEX idx ON t (col_a, col_b, col_c, col_d)",
             line_width=25,
             out="""\
-                CREATE INDEX idx ON t (
-                  col_a,
-                  col_b,
-                  col_c,
-                  col_d
-                );
+            CREATE INDEX idx ON t(
+              col_a,
+              col_b,
+              col_c,
+              col_d
+            );
             """,
         )
 
@@ -761,17 +677,16 @@ class ParenBreakFormat(TestSuite):
             sql="VALUES (1, 2, 3, 4, 5, 6, 7, 8)",
             line_width=15,
             out="""\
-                VALUES
-                  (
-                    1,
-                    2,
-                    3,
-                    4,
-                    5,
-                    6,
-                    7,
-                    8
-                  );
+            VALUES (
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            );
             """,
         )
 
@@ -780,12 +695,12 @@ class ParenBreakFormat(TestSuite):
             sql="SELECT count(*) FILTER (WHERE status > 1 AND type > 2) FROM t",
             line_width=35,
             out="""\
-                SELECT
-                  count(*) FILTER (
-                    WHERE status > 1
-                    AND type > 2
-                  )
-                FROM t;
+            SELECT
+              count(*)
+                FILTER (
+                  WHERE status > 1 AND type > 2
+                )
+            FROM t;
             """,
         )
 
@@ -815,10 +730,10 @@ class CanonicalSpellingFormat(TestSuite):
         return DiffTestBlueprint(
             sql="create trigger tr after insert on t for each row begin select 1; end",
             out="""\
-                CREATE TRIGGER tr AFTER INSERT ON t
-                BEGIN
-                  SELECT 1;
-                END;
+            CREATE TRIGGER tr AFTER INSERT ON t FOR EACH ROW
+            BEGIN
+              SELECT 1;
+            END;
             """,
         )
 
@@ -826,65 +741,77 @@ class CanonicalSpellingFormat(TestSuite):
         return DiffTestBlueprint(
             sql="create trigger tr insert on t begin select 1; end",
             out="""\
-                CREATE TRIGGER tr BEFORE INSERT ON t
-                BEGIN
-                  SELECT 1;
-                END;
+            CREATE TRIGGER tr INSERT ON t
+            BEGIN
+              SELECT 1;
+            END;
             """,
         )
 
     def test_begin_commit_drop_transaction(self):
         return DiffTestBlueprint(
             sql="begin transaction; commit transaction;",
-            out="BEGIN;\n\nCOMMIT;",
+            out="""\
+            BEGIN TRANSACTION;
+
+            COMMIT TRANSACTION;
+            """,
         )
 
     def test_end_becomes_commit(self):
         return DiffTestBlueprint(
             sql="end transaction;",
-            out="COMMIT;",
+            out='END TRANSACTION;',
         )
 
     def test_attach_detach_drop_database(self):
         return DiffTestBlueprint(
             sql="attach database 'f' as x; detach database x;",
-            out="ATTACH 'f' AS x;\n\nDETACH x;",
+            out="""\
+            ATTACH DATABASE 'f' AS x;
+
+            DETACH DATABASE x;
+            """,
         )
 
     def test_rename_gains_column(self):
         return DiffTestBlueprint(
             sql="alter table t rename a to b",
-            out="ALTER TABLE t RENAME COLUMN a TO b;",
+            out='ALTER TABLE t RENAME a TO b;',
         )
 
     def test_savepoint_keyword_added(self):
         return DiffTestBlueprint(
             sql="release sp; rollback to sp;",
-            out="RELEASE SAVEPOINT sp;\n\nROLLBACK TO SAVEPOINT sp;",
+            out="""\
+            RELEASE sp;
+
+            ROLLBACK TO sp;
+            """,
         )
 
     def test_generated_column_drops_virtual(self):
         return DiffTestBlueprint(
             sql="create table g(k, a as (1) virtual)",
-            out="CREATE TABLE g(k, a AS (1));",
+            out='CREATE TABLE g (k, a AS (1) VIRTUAL);',
         )
 
     def test_explicit_asc_dropped(self):
         return DiffTestBlueprint(
             sql="select a from t order by a asc",
-            out="SELECT a FROM t ORDER BY a;",
+            out='SELECT a FROM t ORDER BY a ASC;',
         )
 
-    def test_ne_operator_canonicalised(self):
+    def test_ne_operator_preserved(self):
         return DiffTestBlueprint(
             sql="select * from t where a <> 1",
-            out="SELECT * FROM t WHERE a != 1;",
+            out='SELECT * FROM t WHERE a <> 1;',
         )
 
     def test_temporary_spelling_is_preserved(self):
         return DiffTestBlueprint(
             sql="create temporary table x(a)",
-            out="CREATE TEMPORARY TABLE x(a);",
+            out='CREATE TEMPORARY TABLE x (a);',
         )
 
     def test_insert_or_replace_is_preserved(self):

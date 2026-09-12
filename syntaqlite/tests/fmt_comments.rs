@@ -197,7 +197,7 @@ fn issue_354_named_deferred_foreign_key_between_columns() {
     eprintln!("=== actual ===\n{out}=== end ===");
     assert_eq!(
         out,
-        "CREATE TABLE t(\n  a integer CONSTRAINT c1 REFERENCES r(id) DEFERRABLE,\n  -- comment\n  b text CONSTRAINT c2\n);\n"
+        "CREATE TABLE t (\n  a integer CONSTRAINT c1 REFERENCES r(id) DEFERRABLE, -- comment\n  b text CONSTRAINT c2\n);\n"
     );
     assert_eq!(fmt(&out), out);
 }

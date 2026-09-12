@@ -4,8 +4,8 @@
 //! SQL formatter.
 //!
 //! Pretty-prints SQL source text with consistent style. The formatter parses
-//! each statement, runs a bytecode interpreter over the AST, and renders the
-//! result with a Wadler-style document renderer.
+//! each statement, builds layout documents from parser reductions, and renders
+//! them with a Wadler-style document renderer. Authored syntax is preserved.
 //!
 //! The most commonly used types ([`Formatter`], [`FormatConfig`],
 //! [`KeywordCase`]) are re-exported at the crate root. This module also
@@ -34,6 +34,7 @@ pub(crate) mod ffi;
 pub(crate) mod formatter;
 mod interpret;
 mod macro_structured;
+mod token_layout;
 
 #[doc(inline)]
 pub use formatter::Formatter;

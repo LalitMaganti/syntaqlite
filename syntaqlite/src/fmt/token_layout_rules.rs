@@ -57,10 +57,14 @@ pub(super) fn boundary(lhs: &str, children: &[Fragment<'_>], index: usize, shape
     if left.last == "(" {
         return Break::Tight;
     }
+    if left.last == "," {
+        return Break::Line;
+    }
     if right.first == "(" {
         // Calls and authored name-column lists bind tightly; SQL grouping uses
         // a space. The distinction is supplied by the grammar, not token search.
-        if lhs == "typetoken"
+        if (lhs == "cmd" && left.symbol == "nm")
+            || lhs == "typetoken"
             || (lhs == "table_source" && matches!(left.symbol, "nm" | "dbnm"))
             || (lhs == "expr"
                 && matches!(left.symbol, "ID" | "INDEXED" | "JOIN_KW" | "CAST" | "RAISE"))
@@ -80,9 +84,6 @@ pub(super) fn boundary(lhs: &str, children: &[Fragment<'_>], index: usize, shape
         } else {
             Break::Tight
         };
-    }
-    if left.last == "," {
-        return Break::Line;
     }
     if lhs == "trigger_cmd_list" && left.last == ";" {
         return Break::Hard;
@@ -151,7 +152,7 @@ fn sections<'a>(
         if index != children.len()
             && (index == start
                 || (!clause(children[index].symbol)
-                    && !matches!(children[index].symbol, "SET" | "RETURNING")))
+                    && !matches!(children[index].symbol, "SET" | "RETURNING" | "RETURNS")))
         {
             continue;
         }
@@ -172,6 +173,10 @@ fn sections<'a>(
     state.grouped(result)
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "grammar layout dispatch is deliberately kept together"
+)]
 pub(super) fn layout<'a>(
     state: &mut State<'a>,
     lhs: &'static str,
@@ -181,10 +186,20 @@ pub(super) fn layout<'a>(
     if children.is_empty() {
         return Fragment::empty(lhs);
     }
+    // These grammar captures carry opaque text, not a SQL expression: type
+    // declarations and module arguments have observable spelling, and ANY
+    // delegates its contents to an extension language. Preserve their spans.
+    if matches!(lhs, "typetoken" | "vtabarglist") || rule.ends_with(" ANY") {
+        return state.verbatim(lhs, children);
+    }
     // Grammar wrappers add no group or indentation. List wrappers retain their
     // open sequence so left recursion cannot accumulate nesting or fits work.
     if children.len() == 1 {
         let mut child = children[0];
+        if lhs == "oneselect" && child.shape == Shape::List {
+            child.doc = state.arena.nest(1, child.doc);
+            return state.grouped(child);
+        }
         if list(lhs) {
             child.shape = Shape::List;
         }
@@ -358,11 +373,7 @@ pub(super) fn layout<'a>(
             .iter()
             .position(|f| f.symbol == "RETURNING")
             .expect("returning clause");
-        let head = state.sequence(
-            "returning",
-            &children[returning..returning + 1],
-            Shape::Atom,
-        );
+        let head = state.sequence("returning", &children[returning..=returning], Shape::Atom);
         let body = state.sequence("returning", &children[returning + 1..], Shape::List);
         let result = state.hanging(head, body);
         if returning == 0 {

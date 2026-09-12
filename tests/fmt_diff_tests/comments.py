@@ -91,11 +91,9 @@ class LeadingLineComment(TestSuite):
                 WHERE x = 1
             """,
             out="""\
-                SELECT a
-                -- apply filter
-                FROM t
-                WHERE
-                  x = 1;
+            SELECT a -- apply filter
+            FROM t
+            WHERE x = 1;
             """,
         )
 
@@ -116,32 +114,19 @@ class BlockComment(TestSuite):
     def test_trailing_block(self):
         return DiffTestBlueprint(
             sql="SELECT a /* col */ FROM t",
-            out="""\
-                SELECT a
-                /* col */ FROM t;
-            """,
+            out='SELECT a /* col */ FROM t;',
         )
 
     def test_trailing_block_after_from(self):
         return DiffTestBlueprint(
             sql="SELECT 1 FROM t /* block */ WHERE x = 1",
-            out="""\
-                SELECT 1
-                FROM t
-                /* block */ WHERE
-                  x = 1;
-            """,
+            out='SELECT 1 FROM t /* block */ WHERE x = 1;',
         )
 
     def test_inline_block_comments(self):
         return DiffTestBlueprint(
             sql="SELECT /* c1 */ a, /* c2 */ b /* c3 */ FROM t",
-            out="""\
-                SELECT
-                  /* c1 */ a,
-                  /* c2 */ b
-                /* c3 */ FROM t;
-            """,
+            out='SELECT /* c1 */ a, /* c2 */ b /* c3 */ FROM t;',
         )
 
 
@@ -180,9 +165,8 @@ class SelectClauseComment(TestSuite):
                 FROM t
             """,
             out="""\
-                SELECT 1
-                -- c
-                FROM t;
+            SELECT 1 -- c
+            FROM t;
             """,
         )
 
@@ -194,10 +178,9 @@ class SelectClauseComment(TestSuite):
                 a FROM t
             """,
             out="""\
-                SELECT
-                  -- c
-                  a
-                FROM t;
+            SELECT -- c
+              a
+            FROM t;
             """,
         )
 
@@ -209,11 +192,9 @@ class SelectClauseComment(TestSuite):
                 WHERE x = 1
             """,
             out="""\
-                SELECT 1
-                FROM t
-                -- c
-                WHERE
-                  x = 1;
+            SELECT 1
+            FROM t -- c
+            WHERE x = 1;
             """,
         )
 
@@ -225,11 +206,11 @@ class SelectClauseComment(TestSuite):
                 x = 1
             """,
             out="""\
-                SELECT a
-                FROM t
-                WHERE
-                  -- c
-                  x = 1;
+            SELECT a
+            FROM t
+            WHERE -- c
+              x
+              = 1;
             """,
         )
 
@@ -241,13 +222,12 @@ class SelectClauseComment(TestSuite):
                 y = 2
             """,
             out="""\
-                SELECT a
-                FROM t
-                WHERE
-                  x = 1
-                  AND
-                  -- c
-                  y = 2;
+            SELECT a
+            FROM t
+            WHERE
+              x = 1
+              AND -- c
+              y = 2;
             """,
         )
 
@@ -259,11 +239,9 @@ class SelectClauseComment(TestSuite):
                 GROUP BY a
             """,
             out="""\
-                SELECT a, count(*)
-                FROM t
-                -- c
-                GROUP BY
-                  a;
+            SELECT a, count(*)
+            FROM t -- c
+            GROUP BY a;
             """,
         )
 
@@ -275,11 +253,10 @@ class SelectClauseComment(TestSuite):
                 a
             """,
             out="""\
-                SELECT a
-                FROM t
-                GROUP BY
-                  -- c
-                  a;
+            SELECT a
+            FROM t
+            GROUP BY -- c
+              a;
             """,
         )
 
@@ -291,13 +268,10 @@ class SelectClauseComment(TestSuite):
                 HAVING count(*) > 1
             """,
             out="""\
-                SELECT a, count(*)
-                FROM t
-                GROUP BY
-                  a
-                -- c
-                HAVING
-                  count(*) > 1;
+            SELECT a, count(*)
+            FROM t
+            GROUP BY a -- c
+            HAVING count(*) > 1;
             """,
         )
 
@@ -309,11 +283,9 @@ class SelectClauseComment(TestSuite):
                 ORDER BY a
             """,
             out="""\
-                SELECT a
-                FROM t
-                -- c
-                ORDER BY
-                  a;
+            SELECT a
+            FROM t -- c
+            ORDER BY a;
             """,
         )
 
@@ -325,11 +297,10 @@ class SelectClauseComment(TestSuite):
                 a DESC
             """,
             out="""\
-                SELECT a
-                FROM t
-                ORDER BY
-                  -- c
-                  a DESC;
+            SELECT a
+            FROM t
+            ORDER BY -- c
+              a DESC;
             """,
         )
 
@@ -341,10 +312,9 @@ class SelectClauseComment(TestSuite):
                 LIMIT 10
             """,
             out="""\
-                SELECT a
-                FROM t
-                -- c
-                LIMIT 10;
+            SELECT a
+            FROM t -- c
+            LIMIT 10;
             """,
         )
 
@@ -356,11 +326,11 @@ class SelectClauseComment(TestSuite):
                 x FROM t
             """,
             out="""\
-                SELECT
-                  a AS
-                  -- c
-                  x
-                FROM t;
+            SELECT
+              a
+                AS -- c
+                x
+            FROM t;
             """,
         )
 
@@ -374,11 +344,9 @@ class SelectClauseComment(TestSuite):
                 SELECT 2
             """,
             out="""\
-                SELECT 1
-                -- c1
-                UNION ALL
-                -- c2
-                SELECT 2;
+            SELECT 1 -- c1
+            UNION ALL -- c2
+            SELECT 2;
             """,
         )
 
@@ -397,11 +365,10 @@ class JoinComment(TestSuite):
                 JOIN t2 b ON a.id = b.id
             """,
             out="""\
-                SELECT 1
-                FROM t1 AS a
-                -- c
-                JOIN t2 AS b
-                  ON a.id = b.id;
+            SELECT 1
+            FROM
+              t1 a -- c
+              JOIN t2 b ON a.id = b.id;
             """,
         )
 
@@ -413,11 +380,11 @@ class JoinComment(TestSuite):
                 ON a.id = b.id
             """,
             out="""\
-                SELECT 1
-                FROM t1 AS a
-                JOIN t2 AS b
-                  -- c
-                  ON a.id = b.id;
+            SELECT 1
+            FROM
+              t1 a
+              JOIN t2 b -- c
+                ON a.id = b.id;
             """,
         )
 
@@ -429,13 +396,12 @@ class JoinComment(TestSuite):
                 (id)
             """,
             out="""\
-                SELECT 1
-                FROM t1
-                JOIN t2 USING
-                -- c
-                (
-                  id
-                );
+            SELECT 1
+            FROM
+              t1
+              JOIN t2
+                USING -- c
+                (id);
             """,
         )
 
@@ -448,25 +414,18 @@ class JoinComment(TestSuite):
                 JOIN t2 b ON a.id = b.id
             """,
             out="""\
-                SELECT 1
-                FROM t1 AS a
-                LEFT
-                -- c
-                JOIN t2 AS b
-                  ON a.id = b.id;
+            SELECT 1
+            FROM
+              t1 a
+              LEFT -- c
+              JOIN t2 b ON a.id = b.id;
             """,
         )
 
     def test_block_inside_left_join(self):
         return DiffTestBlueprint(
             sql="SELECT 1 FROM t1 a LEFT /* mid */ JOIN t2 b ON a.id = b.id",
-            out="""\
-                SELECT 1
-                FROM t1 AS a
-                LEFT
-                /* mid */ JOIN t2 AS b
-                  ON a.id = b.id;
-            """,
+            out='SELECT 1 FROM t1 a LEFT /* mid */ JOIN t2 b ON a.id = b.id;',
         )
 
     def test_inside_right_join(self):
@@ -477,12 +436,11 @@ class JoinComment(TestSuite):
                 JOIN t2 b ON a.id = b.id
             """,
             out="""\
-                SELECT 1
-                FROM t1 AS a
-                RIGHT
-                -- c
-                JOIN t2 AS b
-                  ON a.id = b.id;
+            SELECT 1
+            FROM
+              t1 a
+              RIGHT -- c
+              JOIN t2 b ON a.id = b.id;
             """,
         )
 
@@ -494,12 +452,11 @@ class JoinComment(TestSuite):
                 JOIN t2 b ON a.id = b.id
             """,
             out="""\
-                SELECT 1
-                FROM t1 AS a
-                FULL
-                -- c
-                JOIN t2 AS b
-                  ON a.id = b.id;
+            SELECT 1
+            FROM
+              t1 a
+              FULL -- c
+              JOIN t2 b ON a.id = b.id;
             """,
         )
 
@@ -511,11 +468,11 @@ class JoinComment(TestSuite):
                 JOIN t2 b
             """,
             out="""\
-                SELECT 1
-                FROM t1 AS a
-                CROSS
-                -- c
-                JOIN t2 AS b;
+            SELECT 1
+            FROM
+              t1 a
+              CROSS -- c
+              JOIN t2 b;
             """,
         )
 
@@ -527,11 +484,11 @@ class JoinComment(TestSuite):
                 JOIN t2 b
             """,
             out="""\
-                SELECT 1
-                FROM t1 AS a
-                NATURAL
-                -- c
-                JOIN t2 AS b;
+            SELECT 1
+            FROM
+              t1 a
+              NATURAL -- c
+              JOIN t2 b;
             """,
         )
 
@@ -544,12 +501,11 @@ class JoinComment(TestSuite):
                 JOIN t2 b ON a.id = b.id
             """,
             out="""\
-                SELECT 1
-                FROM t1 AS a
-                NATURAL LEFT
-                -- c
-                JOIN t2 AS b
-                  ON a.id = b.id;
+            SELECT 1
+            FROM
+              t1 a
+              NATURAL LEFT -- c
+              JOIN t2 b ON a.id = b.id;
             """,
         )
 
@@ -565,17 +521,12 @@ class JoinComment(TestSuite):
                 WHERE a.x = 1
             """,
             out="""\
-                SELECT 1
-                FROM t1 AS a
-                -- c1
-                JOIN t2 AS b
-                  ON a.id = b.id
-                -- c2
-                LEFT JOIN t3 AS c
-                  ON c.id = a.id
-                -- c3
-                WHERE
-                  a.x = 1;
+            SELECT 1
+            FROM
+              t1 a -- c1
+              JOIN t2 b ON a.id = b.id -- c2
+              LEFT JOIN t3 c ON c.id = a.id -- c3
+            WHERE a.x = 1;
             """,
         )
 
@@ -596,17 +547,14 @@ class JoinComment(TestSuite):
                 ON c.customer_id = o.customer_id
             """,
             out="""\
-                SELECT 1
-                FROM orders AS o
-                -- foo
-                JOIN order_line_items AS li
-                  -- z
-                  ON li.order_id = o.order_id
-                LEFT
-                -- foo
-                JOIN customers AS c
-                  -- x
-                  ON c.customer_id = o.customer_id;
+            SELECT 1
+            FROM
+              orders o -- foo
+              JOIN order_line_items li -- z
+                ON li.order_id = o.order_id
+              LEFT -- foo
+              JOIN customers c -- x
+                ON c.customer_id = o.customer_id;
             """,
         )
 
@@ -623,15 +571,12 @@ class JoinComment(TestSuite):
                 JOIN customers c ON c.customer_id = o.customer_id
             """,
             out="""\
-                SELECT 1
-                FROM orders AS o
-                -- foo
-                JOIN order_line_items AS li
-                  ON li.order_id = o.order_id
-                LEFT
-                -- bar
-                JOIN customers AS c
-                  ON c.customer_id = o.customer_id;
+            SELECT 1
+            FROM
+              orders o -- foo
+              JOIN order_line_items li ON li.order_id = o.order_id
+              LEFT -- bar
+              JOIN customers c ON c.customer_id = o.customer_id;
             """,
         )
 
@@ -648,9 +593,9 @@ class TableAliasComment(TestSuite):
                 o
             """,
             out="""\
-                SELECT 1
-                FROM orders AS
-                -- c
+            SELECT 1
+            FROM
+              orders -- c
                 o;
             """,
         )
@@ -663,9 +608,10 @@ class TableAliasComment(TestSuite):
                 o
             """,
             out="""\
-                SELECT 1
-                FROM orders AS
-                -- c
+            SELECT 1
+            FROM
+              orders
+                AS -- c
                 o;
             """,
         )
@@ -683,10 +629,8 @@ class DeleteComment(TestSuite):
                 WHERE x = 1
             """,
             out="""\
-                DELETE FROM t
-                -- c
-                WHERE
-                  x = 1;
+            DELETE FROM t -- c
+            WHERE x = 1;
             """,
         )
 
@@ -700,10 +644,9 @@ class UpdateComment(TestSuite):
                 x = 1
             """,
             out="""\
-                UPDATE t
-                SET
-                  -- c
-                  x = 1;
+            UPDATE t
+            SET -- c
+              x = 1;
             """,
         )
 
@@ -715,12 +658,9 @@ class UpdateComment(TestSuite):
                 WHERE y = 2
             """,
             out="""\
-                UPDATE t
-                SET
-                  x = 1
-                -- c
-                WHERE
-                  y = 2;
+            UPDATE t
+            SET x = 1 -- c
+            WHERE y = 2;
             """,
         )
 
@@ -734,9 +674,8 @@ class InsertComment(TestSuite):
                 VALUES (1)
             """,
             out="""\
-                INSERT INTO t
-                -- c
-                VALUES (1);
+            INSERT INTO t -- c
+            VALUES (1);
             """,
         )
 
@@ -748,9 +687,8 @@ class InsertComment(TestSuite):
                 VALUES (1, 2)
             """,
             out="""\
-                INSERT INTO t(a, b)
-                -- c
-                VALUES (1, 2);
+            INSERT INTO t(a, b) -- c
+            VALUES (1, 2);
             """,
         )
 
@@ -767,13 +705,11 @@ class ExprComment(TestSuite):
                 NOT x = 1
             """,
             out="""\
-                SELECT a
-                FROM t
-                WHERE
-                  -- c
-                  NOT (x = 1);
+            SELECT a
+            FROM t
+            WHERE -- c
+              NOT x = 1;
             """,
-            idempotent=False,
         )
 
     def test_leading_comment_before_case_when(self):
@@ -790,15 +726,13 @@ class ExprComment(TestSuite):
                 FROM t
             """,
             out="""\
-                SELECT
-                  CASE value
-                    -- Display.STATE_OFF
-                    WHEN 1 THEN 'off'
-                    -- Display.STATE_ON
-                    WHEN 2 THEN 'on'
-                    ELSE 'unknown'
-                  END AS name
-                FROM t;
+            SELECT
+              CASE value -- Display.STATE_OFF
+                WHEN 1 THEN 'off' -- Display.STATE_ON
+                WHEN 2 THEN 'on'
+                ELSE 'unknown'
+              END AS name
+            FROM t;
             """,
         )
 
@@ -815,11 +749,10 @@ class CreateTableComment(TestSuite):
                 a int, b text)
             """,
             out="""\
-                CREATE TABLE t(
-                  -- c
-                  a int,
-                  b text
-                );
+            CREATE TABLE t ( -- c
+              a int,
+              b text
+            );
             """,
         )
 
@@ -882,10 +815,11 @@ class CommentBlockSpacing(TestSuite):
                 SELECT 2
             """,
             out="""\
-                SELECT 1
-                UNION ALL
-                -- part two
-                SELECT 2;
+            SELECT 1
+            UNION ALL
+
+            -- part two
+            SELECT 2;
             """,
         )
 
@@ -921,10 +855,10 @@ class CommentBlockSpacing(TestSuite):
                 1)
             """,
             out="""\
-                SELECT
-                  (
-                  -- c
-                  1);
+            SELECT
+              ( -- c
+                1
+              );
             """,
         )
 
@@ -961,12 +895,11 @@ class ListCommentSpacing(TestSuite):
                 b text)
             """,
             out="""\
-                CREATE TABLE t(
-                  -- line 1
-                  -- line 2
-                  a int,
-                  b text
-                );
+            CREATE TABLE t ( -- line 1
+            -- line 2
+              a int,
+              b text
+            );
             """,
         )
 
@@ -981,12 +914,11 @@ class ListCommentSpacing(TestSuite):
                 FROM t
             """,
             out="""\
-                SELECT
-                  a,
-                  -- comment line 1
-                  -- comment line 2
-                  b
-                FROM t;
+            SELECT
+              a, -- comment line 1
+              -- comment line 2
+              b
+            FROM t;
             """,
         )
 
@@ -1003,9 +935,8 @@ class StarColumnComment(TestSuite):
                 FROM t
             """,
             out="""\
-                SELECT *
-                -- about from
-                FROM t;
+            SELECT * -- about from
+            FROM t;
             """,
         )
 
@@ -1032,12 +963,10 @@ class StarColumnComment(TestSuite):
                 where c = 1
             """,
             out="""\
-                SELECT a, b
-                -- y
-                FROM t -- x
-                -- z
-                WHERE
-                  c = 1;
+            SELECT a, b -- y
+            FROM t -- x
+            -- z
+            WHERE c = 1;
             """,
         )
 
@@ -1054,10 +983,10 @@ class SimpleJoinComment(TestSuite):
                 JOIN track
             """,
             out="""\
-                SELECT a
-                FROM slice
-                -- before join
-                JOIN track;
+            SELECT a
+            FROM
+              slice -- before join
+              JOIN track;
             """,
         )
 
@@ -1080,10 +1009,9 @@ class MultiStatementComment(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT 1;\n-- between\nSELECT 2",
             out="""\
-                SELECT 1;
+            SELECT 1; -- between
 
-                -- between
-                SELECT 2;
+            SELECT 2;
             """,
         )
 
@@ -1110,14 +1038,13 @@ class MultiStatementComment(TestSuite):
         return DiffTestBlueprint(
             sql="SELECT 1;\n\n-- foo\nselect\n-- foo bar\n1\n-- foo\nfrom slice;",
             out="""\
-                SELECT 1;
+            SELECT 1;
 
-                -- foo
-                SELECT
-                  -- foo bar
-                  1
-                -- foo
-                FROM slice;
+            -- foo
+
+            SELECT -- foo bar
+              1 -- foo
+            FROM slice;
             """,
         )
 
@@ -1132,12 +1059,9 @@ class CteComment(TestSuite):
                 SELECT * FROM cte
             """,
             out="""\
-                WITH
-                  cte AS
-                  -- c
-                  (
-                    SELECT 1
-                  )
-                SELECT * FROM cte;
+            WITH
+              cte AS -- c
+              (SELECT 1)
+            SELECT * FROM cte;
             """,
         )

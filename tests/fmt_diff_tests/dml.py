@@ -101,12 +101,9 @@ class DmlFormat(TestSuite):
         return DiffTestBlueprint(
             sql="update t set (a, b, c) = (1, 2, 3) where some_really_long_condition = 1 and another_long_condition = 2",
             out="""\
-                UPDATE t
-                SET
-                  (a, b, c) = (1, 2, 3)
-                WHERE
-                  some_really_long_condition = 1
-                  AND another_long_condition = 2;
+            UPDATE t
+            SET (a, b, c) = (1, 2, 3)
+            WHERE some_really_long_condition = 1 AND another_long_condition = 2;
             """,
         )
 
@@ -159,13 +156,13 @@ class ReturningFormat(TestSuite):
                 RETURNING sku, qty AS new_qty, TYPEOF(price) AS price_type
             """,
             out="""\
-                INSERT INTO inventory(sku, warehouse, qty, price)
-                VALUES ('ABC-123', 'WH-EAST', 50, 19.99)
-                ON CONFLICT (sku, warehouse) DO UPDATE
-                SET
-                  qty = inventory.qty + excluded.qty
-                ON CONFLICT (sku) WHERE warehouse IS NULL DO NOTHING
-                RETURNING sku, qty AS new_qty, TYPEOF(price) AS price_type;
+            INSERT INTO inventory(sku, warehouse, qty, price)
+            VALUES ('ABC-123', 'WH-EAST', 50, 19.99)
+            ON CONFLICT (sku, warehouse) DO UPDATE
+            SET qty = inventory.qty + excluded.qty
+            ON CONFLICT (sku)
+            WHERE warehouse IS NULL DO NOTHING
+            RETURNING sku, qty AS new_qty, TYPEOF(price) AS price_type;
             """,
         )
 
@@ -222,7 +219,11 @@ class UpsertFormat(TestSuite):
     def test_multi_on_conflict_order_preserved(self):
         return DiffTestBlueprint(
             sql="insert into t values (1) on conflict(a, b) do update set x = 1 on conflict(a) do nothing",
-            out="INSERT INTO t\nVALUES (1)\nON CONFLICT (a, b) DO UPDATE\nSET\n  x = 1\nON CONFLICT (a) DO NOTHING;",
+            out="""\
+            INSERT INTO t
+            VALUES (1)
+            ON CONFLICT (a, b) DO UPDATE SET x = 1 ON CONFLICT (a) DO NOTHING;
+            """,
         )
 
 
@@ -278,11 +279,7 @@ class IndexedByFormat(TestSuite):
     def test_select_indexed_by_both_sides_of_join(self):
         return DiffTestBlueprint(
             sql="select * from t indexed by i1 join u indexed by i2 on t.a = u.a",
-            out="""\
-                SELECT *
-                FROM t INDEXED BY i1
-                JOIN u INDEXED BY i2 ON t.a = u.a;
-            """,
+            out='SELECT * FROM t INDEXED BY i1 JOIN u INDEXED BY i2 ON t.a = u.a;',
         )
 
 
@@ -292,31 +289,37 @@ class DmlWithCte(TestSuite):
     def test_with_delete(self):
         return DiffTestBlueprint(
             sql="with stale as (select id from s) delete from s where id in (select id from stale)",
-            out="WITH stale AS (SELECT id FROM s)\nDELETE FROM s\nWHERE\n  id IN (SELECT id FROM stale);",
+            out="""\
+            WITH stale AS (SELECT id FROM s) DELETE FROM s
+            WHERE id IN (SELECT id FROM stale);
+            """,
         )
 
     def test_with_update(self):
         return DiffTestBlueprint(
             sql="with x as (select 1) update t set a = 1",
-            out="WITH x AS (SELECT 1)\nUPDATE t\nSET\n  a = 1;",
+            out='WITH x AS (SELECT 1) UPDATE t SET a = 1;',
         )
 
     def test_with_insert(self):
         return DiffTestBlueprint(
             sql="with cte as (select 1) insert into t select * from cte",
-            out="WITH cte AS (SELECT 1)\nINSERT INTO t\nSELECT * FROM cte;",
+            out='WITH cte AS (SELECT 1) INSERT INTO t SELECT * FROM cte;',
         )
 
     def test_with_recursive_insert(self):
         return DiffTestBlueprint(
             sql="with recursive c(n) as (select 1) insert into t(x) select n from c",
-            out="WITH RECURSIVE c(n) AS (SELECT 1)\nINSERT INTO t(x)\nSELECT n FROM c;",
+            out='WITH RECURSIVE c(n) AS (SELECT 1) INSERT INTO t(x) SELECT n FROM c;',
         )
 
     def test_with_delete_returning(self):
         return DiffTestBlueprint(
             sql="with x as (select id from s) delete from s where id in (select id from x) returning id",
-            out="WITH x AS (SELECT id FROM s)\nDELETE FROM s\nWHERE\n  id IN (SELECT id FROM x)\nRETURNING id;",
+            out="""\
+            WITH x AS (SELECT id FROM s) DELETE FROM s
+            WHERE id IN (SELECT id FROM x) RETURNING id;
+            """,
         )
 
     def test_with_delete_long_cte_breaks(self):
@@ -329,14 +332,14 @@ class DmlWithCte(TestSuite):
                 "returning id, user_id"
             ),
             out=(
-                "WITH\n"
-                "  stale AS (\n"
-                "    SELECT id FROM sessions WHERE last_active < DATETIME('now', '-30 days')\n"
-                "  )\n"
-                "DELETE FROM sessions\n"
-                "WHERE\n"
-                "  id IN (SELECT id FROM stale)\n"
-                "RETURNING id, user_id;"
+                """\
+            WITH
+              stale AS (
+                SELECT id FROM sessions WHERE last_active < DATETIME('now', '-30 days')
+              ) DELETE FROM
+              sessions
+            WHERE id IN (SELECT id FROM stale) RETURNING id, user_id;
+            """
             ),
         )
 

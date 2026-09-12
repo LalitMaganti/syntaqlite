@@ -110,6 +110,20 @@ def execute_test(
             sql=blueprint.sql
         )
 
+    # Exercise the public formatter a second time for every formatter fixture,
+    # including custom dialects. A baseline update cannot hide instability.
+    if subcommand == "fmt" and proc.returncode == 0:
+        try:
+            second = subprocess.run(cmd, input=proc.stdout, capture_output=True,
+                                    text=True, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            return TestResult(name=name, passed=False, sql=blueprint.sql,
+                              error="Second formatting pass timed out")
+        if second.returncode != 0 or second.stdout != proc.stdout:
+            return TestResult(name=name, passed=False, sql=blueprint.sql,
+                              error="Formatting is not idempotent: " + second.stderr,
+                              actual=second.stdout, expected=proc.stdout)
+
     actual = normalize_output(proc.stderr if use_stderr else proc.stdout)
     expected = normalize_output(blueprint.out)
 

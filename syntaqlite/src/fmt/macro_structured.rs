@@ -34,13 +34,13 @@ use crate::dialect::AnyDialect;
 /// `SELECT arg;` mini-parses.  It must be distinct from the parser
 /// driving the outer render (each parser instance holds a single
 /// `ParserInner`, and the outer session still owns it at this point).
-pub(super) fn compute_macro_docs<'a>(
+pub(super) fn compute_macro_docs(
     mini_parser: &AnyParser,
     dialect: &AnyDialect,
-    erased: &AnyParsedStatement<'a>,
+    erased: &AnyParsedStatement<'_>,
     tokenizer: &AnyTokenizer,
     comments: &[CommentEntry],
-    arena: &mut DocArena<'a>,
+    arena: &mut DocArena<'_>,
 ) -> Vec<Option<DocId>> {
     erased
         .macro_rewrites()

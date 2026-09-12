@@ -10,7 +10,6 @@ use syntaqlite_syntax::source::{StmtLen, StmtOffset, StmtText};
 
 use super::comment::{CommentCtx, DrainResult};
 use super::doc::{DocArena, DocId, NIL_DOC};
-use super::formatter::Formatter;
 use crate::dialect::AnyDialect;
 use syntaqlite_common::fmt::bytecode::opcodes;
 
@@ -92,32 +91,7 @@ enum ReturnAction {
     Discard,
 }
 
-impl Formatter {
-    pub(super) fn interpret_node<'a>(
-        &mut self,
-        ctx: &FmtCtx<'a>,
-        root_id: AnyNodeId,
-        arena: &mut DocArena<'a>,
-    ) -> DocId {
-        self.consumed_regions.clear();
-        self.consumed_regions
-            .resize(ctx.macro_rewrites.len(), false);
-        interpret_core(
-            ctx,
-            root_id,
-            arena,
-            &mut self.interpret_scratch,
-            &mut self.consumed_regions,
-            &self.macro_tokenizer,
-        )
-    }
-}
-
-/// Bytecode-driven formatting traversal.  Pulled out of
-/// [`Formatter::interpret_node`] as a free function so subtree
-/// formatting (which doesn't have `&mut Formatter` available) can
-/// re-enter the interpreter with local `scratch` and `consumed`
-/// buffers.
+/// Bytecode traversal retained for formatting structured macro arguments.
 #[expect(clippy::too_many_lines)]
 pub(super) fn interpret_core<'a>(
     ctx: &FmtCtx<'a>,
