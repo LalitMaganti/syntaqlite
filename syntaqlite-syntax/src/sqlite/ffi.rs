@@ -580,6 +580,7 @@ pub(crate) struct CreateVirtualTableStmt {
     pub(crate) schema: TextSpan,
     pub(crate) module_name: TextSpan,
     pub(crate) if_not_exists: Bool,
+    pub(crate) has_module_args: Bool,
     pub(crate) module_args: TextSpan,
 }
 

@@ -15,6 +15,8 @@ baseline; a category that grows past its baseline fails the run.
     tools/run-integration-tests --suite token-preservation --rebaseline
 """
 
+import os
+
 from python.dev.integration_tests.suite import SuiteContext
 
 NAME = "token-preservation"
@@ -28,6 +30,8 @@ def run(ctx: SuiteContext) -> int:
     argv = []
     if ctx.filter_pattern:
         argv += ["--filter", ctx.filter_pattern]
+    if os.environ.get("SYNQ_TOKEN_PRESERVATION_UPSTREAM"):
+        argv.append("--upstream")
     if ctx.rebaseline:
         argv.append("--rebaseline")
     if ctx.verbose >= 1:

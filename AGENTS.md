@@ -289,6 +289,11 @@ the formatter can print it back, in the style of PRs #356-#361.
 per category. A category that grows past its baseline fails the suite;
 lowering counts needs a `--rebaseline` to lock the improvement in.
 
+For a much broader check, set `SYNQ_TOKEN_PRESERVATION_UPSTREAM=1` to add every
+statement in the `upstream-sqlite` logs, around 78,000 rather than 937. Those
+logs are gitignored and only exist once that suite has been run, so this corpus
+differs between machines and the run reports without touching the ratchet.
+
 ### Upstream SQLite tests
 
 The `upstream-sqlite` suite runs 1,174 SQLite TCL test files through our parser

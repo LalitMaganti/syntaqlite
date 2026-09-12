@@ -136,6 +136,7 @@ class BinaryOp(IntEnum):
     PTR = 18
     PTR2 = 19
     NE_ANGLE = 20
+    EQ_DOUBLE = 21
 
 
 class UnaryOp(IntEnum):

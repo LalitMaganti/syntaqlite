@@ -8894,7 +8894,9 @@ static YYACTIONTYPE yy_reduce(
     {
       SyntaqliteBinaryOp op;
       if (yymsp[-1].minor.yy0.type == SYNTAQLITE_TK_EQ) {
-        op = SYNTAQLITE_BINARY_OP_EQ;
+        // `==` and `=` share one token type but are different text.
+        op = (yymsp[-1].minor.yy0.n == 2) ? SYNTAQLITE_BINARY_OP_EQ_DOUBLE
+                                          : SYNTAQLITE_BINARY_OP_EQ;
       } else {
         // `<>` and `!=` share one token type but are different text.
         op = (yymsp[-1].minor.yy0.n == 2 && yymsp[-1].minor.yy0.z[0] == '<')
@@ -10049,6 +10051,7 @@ static YYACTIONTYPE yy_reduce(
       SyntaqliteNode* vtab = AST_NODE(&pCtx->ast, yymsp[-3].minor.yy277);
       uint32_t args_start = yymsp[-2].minor.yy0.offset + yymsp[-2].minor.yy0.n;
       uint32_t args_end = yymsp[0].minor.yy0.offset;
+      vtab->create_virtual_table_stmt.has_module_args = SYNTAQLITE_BOOL_TRUE;
       vtab->create_virtual_table_stmt.module_args = (SyntaqliteTextSpan){
           .offset = args_start,
           .length = args_end - args_start,
@@ -10070,7 +10073,7 @@ static YYACTIONTYPE yy_reduce(
                                           : SYNQ_NO_SPAN;
       yymsp[-7].minor.yy277 = synq_parse_create_virtual_table_stmt(
           pCtx, tbl_name, tbl_schema, synq_span(pCtx, yymsp[0].minor.yy0),
-          (SyntaqliteBool)yymsp[-4].minor.yy320,
+          (SyntaqliteBool)yymsp[-4].minor.yy320, SYNTAQLITE_BOOL_FALSE,
           SYNQ_NO_SPAN);  // module_args = none by default
     } break;
     case 374: /* vtabarglist ::= vtabarg */

@@ -100,6 +100,14 @@ fn lex(
             })
         })
         .collect();
+    // Normalise statement terminators. A run of them, or one at either end,
+    // delimits empty statements that carry no syntax, and whether a final `;`
+    // is printed at all is a FormatConfig choice. Terminators *between*
+    // statements are kept, so losing one inside a trigger body still shows up.
+    lexemes.dedup_by(|a, b| a.text == ";" && b.text == ";");
+    if lexemes.first().is_some_and(|first| first.text == ";") {
+        lexemes.remove(0);
+    }
     if lexemes.last().is_some_and(|last| last.text == ";") {
         lexemes.pop();
     }

@@ -871,6 +871,7 @@ static inline uint32_t synq_parse_create_virtual_table_stmt(
     SyntaqliteTextSpan schema,
     SyntaqliteTextSpan module_name,
     SyntaqliteBool if_not_exists,
+    SyntaqliteBool has_module_args,
     SyntaqliteTextSpan module_args) {
   return synq_parse_build(ctx,
                           &(SyntaqliteCreateVirtualTableStmt){
@@ -879,6 +880,7 @@ static inline uint32_t synq_parse_create_virtual_table_stmt(
                               .schema = schema,
                               .module_name = module_name,
                               .if_not_exists = if_not_exists,
+                              .has_module_args = has_module_args,
                               .module_args = module_args},
                           (uint32_t)sizeof(SyntaqliteCreateVirtualTableStmt));
 }

@@ -1485,6 +1485,7 @@ pub fn syntaqlite_syntax::nodes::CreateViewStmtId::from(syntaqlite_syntax::nodes
 pub fn syntaqlite_syntax::nodes::CreateViewStmtId::into_inner(self) -> syntaqlite_syntax::any::AnyNodeId
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'_>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::from_result(&'a syntaqlite_syntax::any::AnyParsedStatement<'a>, syntaqlite_syntax::any::AnyNodeId) -> core::option::Option<Self>
+pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::has_module_args(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::if_not_exists(&self) -> bool
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::module_args(&self) -> &'a str
 pub fn syntaqlite_syntax::nodes::CreateVirtualTableStmt<'a>::module_name(&self) -> &'a str
@@ -2640,6 +2641,7 @@ pub syntaqlite_syntax::nodes::BinaryOp::BitAnd = 13
 pub syntaqlite_syntax::nodes::BinaryOp::BitOr = 14
 pub syntaqlite_syntax::nodes::BinaryOp::Concat = 17
 pub syntaqlite_syntax::nodes::BinaryOp::Eq = 9
+pub syntaqlite_syntax::nodes::BinaryOp::EqDouble = 21
 pub syntaqlite_syntax::nodes::BinaryOp::Ge = 8
 pub syntaqlite_syntax::nodes::BinaryOp::Gt = 6
 pub syntaqlite_syntax::nodes::BinaryOp::Le = 7

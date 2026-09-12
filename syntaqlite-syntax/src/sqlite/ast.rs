@@ -257,6 +257,7 @@ pub enum BinaryOp {
     Ptr = 18,
     Ptr2 = 19,
     NeAngle = 20,
+    EqDouble = 21,
 }
 
 impl BinaryOp {
@@ -283,6 +284,7 @@ impl BinaryOp {
             BinaryOp::Ptr => "PTR",
             BinaryOp::Ptr2 => "PTR2",
             BinaryOp::NeAngle => "NE_ANGLE",
+            BinaryOp::EqDouble => "EQ_DOUBLE",
         }
     }
 }
@@ -6009,6 +6011,9 @@ impl<'a> CreateVirtualTableStmt<'a> {
     }
     pub fn if_not_exists(&self) -> bool {
         self.raw.if_not_exists == super::ffi::Bool::True
+    }
+    pub fn has_module_args(&self) -> bool {
+        self.raw.has_module_args == super::ffi::Bool::True
     }
     pub fn module_args(&self) -> &'a str {
         self.stmt_result.span_expanded_text(self.raw.module_args)
