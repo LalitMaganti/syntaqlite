@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.10.0
+
+**Formatter:**
+- Preserve authored constraint names and table-constraint placement, fixing a crash when formatting named deferred foreign keys with comments ([#355](https://github.com/LalitMaganti/syntaqlite/pull/355), [#356](https://github.com/LalitMaganti/syntaqlite/pull/356)).
+- Preserve foreign-key option order, JOIN modifier order, `TEMPORARY` and `INSERT OR REPLACE` spelling, and window-frame shorthand ([#357](https://github.com/LalitMaganti/syntaqlite/pull/357), [#358](https://github.com/LalitMaganti/syntaqlite/pull/358), [#359](https://github.com/LalitMaganti/syntaqlite/pull/359), [#360](https://github.com/LalitMaganti/syntaqlite/pull/360), [#361](https://github.com/LalitMaganti/syntaqlite/pull/361)).
+- Preserve omitted `AS`, keyword and operator spellings, and backtick and bracket identifier quoting ([#368](https://github.com/LalitMaganti/syntaqlite/pull/368), [#371](https://github.com/LalitMaganti/syntaqlite/pull/371), [#372](https://github.com/LalitMaganti/syntaqlite/pull/372)).
+- Preserve `NOT NULL`, explicit `BEGIN DEFERRED`, comma-style `LIMIT`, and parentheses around FROM terms ([#373](https://github.com/LalitMaganti/syntaqlite/pull/373)).
+
+**Parser and CLI:**
+- Accept bare semicolons as empty statements; the `parse` command skips them ([#380](https://github.com/LalitMaganti/syntaqlite/pull/380), [#383](https://github.com/LalitMaganti/syntaqlite/pull/383)).
+
+**C library:**
+- Export `synq_extent_record_list_append` so dialect plugins can link against the shared library ([#377](https://github.com/LalitMaganti/syntaqlite/pull/377)).
+
+**Breaking:**
+- AST node types and fields changed to represent authored syntax. Consumers of the Rust, C, or Python AST APIs should update to the new shapes and regenerate custom dialects ([#355](https://github.com/LalitMaganti/syntaqlite/pull/355), [#358](https://github.com/LalitMaganti/syntaqlite/pull/358), [#371](https://github.com/LalitMaganti/syntaqlite/pull/371), [#373](https://github.com/LalitMaganti/syntaqlite/pull/373)).
+
 ## 0.9.0
 
 **Bug fixes:**
