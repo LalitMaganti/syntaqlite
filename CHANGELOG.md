@@ -2,6 +2,9 @@
 
 ## 0.10.0
 
+**Performance:**
+- Reduced formatting time by roughly 18–19% versus 0.9.0 across four benchmark inputs, from a single SELECT to 500-statement scripts, through token and comment cursor improvements, reused node-field buffers, and faster opcode dispatch ([#381](https://github.com/LalitMaganti/syntaqlite/pull/381), [#384](https://github.com/LalitMaganti/syntaqlite/pull/384), [#385](https://github.com/LalitMaganti/syntaqlite/pull/385), [#388](https://github.com/LalitMaganti/syntaqlite/pull/388)).
+
 **Formatter:**
 - Preserve authored constraint names and table-constraint placement, fixing a crash when formatting named deferred foreign keys with comments ([#355](https://github.com/LalitMaganti/syntaqlite/pull/355), [#356](https://github.com/LalitMaganti/syntaqlite/pull/356)).
 - Preserve foreign-key option order, JOIN modifier order, `TEMPORARY` and `INSERT OR REPLACE` spelling, and window-frame shorthand ([#357](https://github.com/LalitMaganti/syntaqlite/pull/357), [#358](https://github.com/LalitMaganti/syntaqlite/pull/358), [#359](https://github.com/LalitMaganti/syntaqlite/pull/359), [#360](https://github.com/LalitMaganti/syntaqlite/pull/360), [#361](https://github.com/LalitMaganti/syntaqlite/pull/361)).
