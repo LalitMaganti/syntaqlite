@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.1
+
+**Formatter:**
+- Macro calls that overflow the line width now break one argument per line with the closing paren at the opener's indent, instead of wrapping inside an argument's expression ([#390](https://github.com/LalitMaganti/syntaqlite/pull/390)).
+- `ORDER BY` and `LIMIT` on a compound `SELECT` now move to their own lines when the last arm spans multiple lines, instead of trailing the arm's final clause ([#390](https://github.com/LalitMaganti/syntaqlite/pull/390)).
+
 ## 0.10.0
 
 **Performance:**
