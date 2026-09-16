@@ -21,7 +21,7 @@ use syntaqlite_syntax::any::{
 use syntaqlite_syntax::source::{StmtLen, StmtOffset};
 
 use super::comment::CommentEntry;
-use super::doc::{DocArena, DocId, NIL_DOC};
+use super::doc::{DocArena, DocId};
 use super::interpret::{FmtCtx, InterpretScratch, interpret_core};
 use crate::dialect::AnyDialect;
 
@@ -95,28 +95,41 @@ fn compute_one(
     // we own-copy it anyway to keep `macro_structured` independent of
     // the caller's buffer-lifetime story.
     //
-    // The arg run is wrapped in `nest(1)` so that a break inside an
-    // arg (e.g. a binary expression that won't fit flat) indents by
-    // one level relative to the `!(` opener. This matches the
-    // `reindent_macro` verbatim path — which sees depth-1 content
+    // The args form a group shaped like every other bracketed list
+    // the dialects emit (`SubqueryExpr`, function calls, the macro
+    // definition's own parameter list): flat as `name!(a, b)` when
+    // the call fits, otherwise one arg per line with the closing
+    // paren back at the opener's indent.  Without the group the args
+    // could only wrap wherever an arg's own expression happened to
+    // break, splitting `a != b` across lines while the commas stayed
+    // put.
+    //
+    // The arg run is wrapped in `nest(1)` so that the broken layout
+    // indents by one level relative to the `!(` opener. This matches
+    // the `reindent_macro` verbatim path — which sees depth-1 content
     // after the opening `!(` and emits it at `nest(1)` — so a
     // formatter-broken macro call round-trips idempotently whether
     // the next pass runs the structured or verbatim path.
     let name_doc = arena.own_text(r.name());
     let open = arena.text("!(");
     let close = arena.text(")");
-    let sep = arena.text(", ");
-    let mut body = NIL_DOC;
+    let comma = arena.text(",");
+    let mut body = arena.softline();
     for (i, ad) in arg_docs.iter().enumerate() {
         if i > 0 {
+            let sep = arena.line();
+            body = arena.cat(body, comma);
             body = arena.cat(body, sep);
         }
         body = arena.cat(body, *ad);
     }
     let nested = arena.nest(1, body);
+    let close_break = arena.softline();
     let prefix = arena.cat(name_doc, open);
     let with_body = arena.cat(prefix, nested);
-    Some(arena.cat(with_body, close))
+    let with_break = arena.cat(with_body, close_break);
+    let call = arena.cat(with_break, close);
+    Some(arena.group(call))
 }
 
 /// Parse `arg_text` as an expression via a synthetic `SELECT arg;`

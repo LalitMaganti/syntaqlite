@@ -153,6 +153,60 @@ class CteFormat(TestSuite):
         )
 
 
+class CompoundFormat(TestSuite):
+    def test_order_by_stays_on_flat_last_arm(self):
+        return DiffTestBlueprint(
+            sql="SELECT a FROM t UNION ALL SELECT b FROM u ORDER BY x LIMIT 10",
+            out="""\
+                SELECT a FROM t
+                UNION ALL
+                SELECT b FROM u ORDER BY x LIMIT 10;
+            """,
+        )
+
+    def test_order_by_breaks_after_broken_last_arm(self):
+        # Once the last arm spans several lines, ORDER BY and LIMIT get
+        # their own lines rather than trailing the arm's final clause.
+        return DiffTestBlueprint(
+            sql="SELECT a FROM t UNION ALL SELECT b FROM u LEFT JOIN v ON v.id = u.id ORDER BY x LIMIT 10",
+            out="""\
+                SELECT a FROM t
+                UNION ALL
+                SELECT b
+                FROM u
+                LEFT JOIN v ON v.id = u.id
+                ORDER BY
+                  x
+                LIMIT 10;
+            """,
+        )
+
+    def test_order_by_breaks_after_broken_last_arm_in_cte(self):
+        return DiffTestBlueprint(
+            sql="""\
+                WITH x AS (
+                  SELECT a FROM t
+                  UNION ALL
+                  SELECT spans.id, spans.ts FROM spans LEFT JOIN slice AS sl ON sl.id = spans.slice_id ORDER BY depth
+                )
+                SELECT * FROM x
+            """,
+            out="""\
+                WITH
+                  x AS (
+                    SELECT a FROM t
+                    UNION ALL
+                    SELECT spans.id, spans.ts
+                    FROM spans
+                    LEFT JOIN slice AS sl ON sl.id = spans.slice_id
+                    ORDER BY
+                      depth
+                  )
+                SELECT * FROM x;
+            """,
+        )
+
+
 class JoinFormat(TestSuite):
     def test_inner_join(self):
         return DiffTestBlueprint(
