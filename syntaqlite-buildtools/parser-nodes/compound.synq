@@ -23,8 +23,14 @@ node CompoundSelect {
       INTERSECT   { "INTERSECT" }
       EXCEPT      { "EXCEPT" }
     }
-    hardline child(right)
+    hardline
+    // The last arm shares a group with the trailing clauses so ORDER BY
+    // and LIMIT stay on the arm's line only when the whole arm is flat.
+    // A broken arm (multi-line FROM, joins, ...) breaks the group, which
+    // puts the clauses on their own lines instead of gluing them onto
+    // whatever the arm ended with.
     group {
+      child(right)
       clause("ORDER", "BY", orderby)
       if_set(limit_clause) { line "LIMIT" space child(limit_clause) }
     }

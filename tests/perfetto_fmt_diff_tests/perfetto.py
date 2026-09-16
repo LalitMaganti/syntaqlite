@@ -174,6 +174,63 @@ class PerfettoMacroCallFormat(TestSuite):
             """,
         )
 
+    def test_macro_args_break_one_per_line_when_too_long(self):
+        # A call that overflows the line width breaks between args,
+        # one per line, with the closing paren back at the opener's
+        # indent.  It never wraps inside an arg's expression.
+        return DiffTestBlueprint(
+            sql="""\
+                SELECT CAST(_bitmask8!(idle_0 != deepest.idle, idle_1 != deepest.idle, idle_2 != deepest.idle, idle_3 != deepest.idle) AS INTEGER) AS cpus_on_mask
+            """,
+            out="""\
+                SELECT
+                  CAST(_bitmask8!(
+                    idle_0 != deepest.idle,
+                    idle_1 != deepest.idle,
+                    idle_2 != deepest.idle,
+                    idle_3 != deepest.idle
+                  ) AS INTEGER) AS cpus_on_mask
+            """,
+        )
+
+    def test_macro_args_break_keeps_short_row_values_flat(self):
+        # Only the outer arg list breaks; a row-value arg that fits on
+        # its own line stays flat rather than exploding one item per
+        # line.
+        return DiffTestBlueprint(
+            sql="""\
+                SELECT * FROM _intervals_fill_gaps!((machine_id), (simple_screen_state, short_screen_state, screen_state), mapped_names)
+            """,
+            out="""\
+                SELECT *
+                FROM _intervals_fill_gaps!(
+                  (machine_id),
+                  (simple_screen_state, short_screen_state, screen_state),
+                  mapped_names
+                )
+            """,
+        )
+
+    def test_macro_long_subquery_arg_gets_own_line(self):
+        # A single subquery arg that overflows breaks the call first, so
+        # the subquery's parens sit on their own lines one level in.
+        return DiffTestBlueprint(
+            sql="""\
+                SELECT * FROM counter_leading_intervals!((SELECT id, ts, 0 AS track_id, value FROM some_very_long_counter_table_name WHERE value > 0))
+            """,
+            out="""\
+                SELECT *
+                FROM counter_leading_intervals!(
+                  (
+                    SELECT id, ts, 0 AS track_id, value
+                    FROM some_very_long_counter_table_name
+                    WHERE
+                      value > 0
+                  )
+                )
+            """,
+        )
+
     def test_macro_parens_in_strings_ignored(self):
         # String literals containing `(` characters don't confuse the
         # arg tokenizer — the mini-parse treats them as string content.
@@ -535,9 +592,11 @@ class PerfettoMacroCallFormat(TestSuite):
 
     def test_macro_arg_binary_expr_wraps_with_one_nest_level(self):
         # When a macro's sole arg is a binary expression too long to
-        # fit, the continuation indents by exactly one level relative
-        # to the `!(` opener. This matches the verbatim re-indent path
-        # so the second formatter pass is idempotent.
+        # fit, the call breaks first: the arg moves to its own line one
+        # level in from the `!(` opener, its continuation shares that
+        # level, and the closing paren returns to the opener's indent.
+        # This matches the verbatim re-indent path so the second
+        # formatter pass is idempotent.
         return DiffTestBlueprint(
             sql=(
                 "SELECT\n"
@@ -547,8 +606,10 @@ class PerfettoMacroCallFormat(TestSuite):
             ),
             out=(
                 "SELECT\n"
-                "  cast_int!(SUM(ii.dur * freq / 1000)\n"
-                "    / (SUM(CASE WHEN freq IS NOT NULL THEN ii.dur END) / 1000)) AS avg_freq\n"
+                "  cast_int!(\n"
+                "    SUM(ii.dur * freq / 1000)\n"
+                "    / (SUM(CASE WHEN freq IS NOT NULL THEN ii.dur END) / 1000)\n"
+                "  ) AS avg_freq\n"
                 "FROM t\n"
             ),
         )
