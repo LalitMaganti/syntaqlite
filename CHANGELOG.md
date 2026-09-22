@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.2
+
+**Custom dialects:**
+- Add fixed operator tokens such as `|>` using separate `.tokens` files and the repeatable `--tokens-file` option. Tokens are available to `.y` grammar rules without becoming SQL keywords ([#392](https://github.com/LalitMaganti/syntaqlite/pull/392)).
+
 ## 0.10.1
 
 **Formatter:**
