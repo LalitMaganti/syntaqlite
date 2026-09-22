@@ -18,6 +18,7 @@ use crate::dialect_codegen::rust_dialect::{
     generate_rust_lib,
 };
 use crate::dialect_codegen::semantic_roles_codegen::generate_c_roles_h;
+use crate::parser_tools::literal_tokens::LiteralTokens;
 use crate::parser_tools::{
     keyword_hash, mkkeyword, parser_pipeline, sqlite_fragments, tokenizer_assembly,
 };
@@ -273,6 +274,8 @@ pub(crate) struct CodegenRequest<'a> {
     pub y_files: &'a [(String, String)],
     /// AST definition `.synq` files as `(filename, content)` pairs.
     pub synq_files: &'a [(String, String)],
+    /// Literal operator spellings for the generated tokenizer.
+    pub literal_tokens: &'a LiteralTokens,
     /// Additional keywords from extension grammars.
     pub extra_keywords: &'a [String],
     /// Lemon parser symbol prefix (e.g. `"SynqSqliteParse"`).
@@ -313,6 +316,7 @@ pub struct DialectCodegenJob<'a> {
     y_files: &'a [(String, String)],
     synq_files: &'a [(String, String)],
     extra_keywords: Vec<String>,
+    literal_tokens: LiteralTokens,
     base_synq_files: Option<&'a [(&'a str, &'a str)]>,
     include_rust: bool,
     open_for_extension: bool,
@@ -354,6 +358,7 @@ impl<'a> DialectCodegenJob<'a> {
             y_files,
             synq_files,
             extra_keywords,
+            literal_tokens: LiteralTokens::default(),
             base_synq_files: None,
             include_rust: false,
             open_for_extension: false,
@@ -361,6 +366,17 @@ impl<'a> DialectCodegenJob<'a> {
             macro_style: MacroStyle::None,
             include_python: false,
         }
+    }
+
+    /// Add fixed operator spellings from named `.tokens` files.
+    ///
+    /// # Errors
+    /// Returns a file/line diagnostic for invalid or duplicate declarations.
+    pub fn with_token_files(mut self, files: &[(String, String)]) -> Result<Self, String> {
+        self.literal_tokens = LiteralTokens::parse(files)?;
+        self.extra_keywords
+            .retain(|name| !self.literal_tokens.contains(name));
+        Ok(self)
     }
 
     /// Set the macro invocation style.
@@ -411,9 +427,16 @@ impl<'a> DialectCodegenJob<'a> {
         write_file: &impl Fn(&std::path::Path, &str) -> Result<(), String>,
     ) -> Result<(), String> {
         let parser_prefix = self.dialect.parser_symbol_prefix();
+        let mut y_files = self.y_files.to_vec();
+        // Append after the merged grammar to preserve all base token IDs.
+        y_files.push((
+            "literal-tokens.y".into(),
+            self.literal_tokens.declarations(),
+        ));
         let request = CodegenRequest {
             dialect: self.dialect,
-            y_files: self.y_files,
+            y_files: &y_files,
+            literal_tokens: &self.literal_tokens,
             synq_files: self.synq_files,
             extra_keywords: &self.extra_keywords,
             parser_symbol_prefix: Some(&parser_prefix),
@@ -632,12 +655,16 @@ pub(crate) fn generate_codegen_artifacts(
     let parse_c = fs::read_to_string(work_dir.path().join("parse.c"))
         .map_err(|e| format!("Failed to read parse.c: {e}"))?;
 
+    let token_defines = extract_token_defines(&parse_h);
+    request.literal_tokens.validate_ids(&token_defines)?;
+
     // Assemble tokenizer and keyword hash from pre-extracted fragments.
     let fragments = sqlite_fragments::load();
     let (tokenize_c, extract_result) = tokenizer_assembly::assemble(
         &fragments,
         request.dialect.name(),
         &request.dialect_c_includes,
+        request.literal_tokens,
     )?;
     let keyword_c = keyword_hash::generate(
         &extract_result,
@@ -656,7 +683,6 @@ pub(crate) fn generate_codegen_artifacts(
     let dialect_fmt_h = ast_model
         .generate_c_fmt_tables(request.dialect.name())
         .map_err(|e: CFmtCodegenError| e.to_string())?;
-    let token_defines = extract_token_defines(&parse_h);
     // Build keyword set from the base mkkeywordhash table + dialect extra keywords.
     let mut keyword_names = base_keyword_token_names();
     for kw in request.extra_keywords {

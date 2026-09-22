@@ -48,6 +48,26 @@ node CreatePerfettoMacroStmt {
 rules into the base SQLite grammar; simple dialects that only add functions
 or reserved words may not need any.
 
+### Custom operator tokens
+
+Define fixed operator spellings in a separate `.tokens` file:
+
+```text
+# operators.tokens
+PIPE = "|>";
+```
+
+Pass `--tokens-file operators.tokens` to `syntaqlite dialect generate` (repeatable).
+Use `PIPE` in your `.y` productions and precedence declarations; `.synq` continues
+to define AST nodes and formatting. The word `PIPE` does not become a keyword.
+
+Declarations use one `NAME = "operator";` per line; blank lines and whole-line
+`#` comments are allowed. Names start with an uppercase ASCII letter and contain
+uppercase letters, digits, or underscores. Spellings use only `+-*/%<>=!|&~^`.
+Existing SQLite spellings, `!`, and comment prefixes (`--`, `/*`) are reserved.
+Names cannot replace base SQLite tokens; duplicate names or spellings are errors.
+The longest matching operator wins, and strings and comments remain intact.
+
 ## 2. Generate C sources
 
 `syntaqlite dialect generate` reads your `.synq` files and any optional `.y`

@@ -26,6 +26,7 @@ pub(crate) fn assemble(
     fragments: &SqliteFragments,
     dialect: &str,
     includes: &DialectCIncludes<'_>,
+    literals: &super::literal_tokens::LiteralTokens,
 ) -> Result<(String, TokenizerExtractResult), String> {
     let combined = {
         let mut w = CWriter::new();
@@ -68,7 +69,7 @@ pub(crate) fn assemble(
         .map_err(|e| format!("Failed to assemble tokenizer for dialect `{dialect}`: {e}"))?;
 
     Ok((
-        output,
+        literals.wrap(output, &get_token_name),
         TokenizerExtractResult {
             char_map: fragments.char_map.to_string(),
             upper_to_lower: fragments.upper_to_lower.to_string(),

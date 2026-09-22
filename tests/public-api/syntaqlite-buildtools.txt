@@ -25,6 +25,7 @@ pub fn syntaqlite_buildtools::base_files::write_runtime_headers_to_dir(&std::pat
 pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::new(&'a syntaqlite_buildtools::codegen_api::DialectNaming, &'a [(alloc::string::String, alloc::string::String)], &'a [(alloc::string::String, alloc::string::String)]) -> Self
 pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::open_for_extension(self) -> Self
 pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_rust(self, &str) -> Self
+pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::with_token_files(self, &[(alloc::string::String, alloc::string::String)]) -> core::result::Result<Self, alloc::string::String>
 pub fn syntaqlite_buildtools::codegen_api::DialectCodegenJob<'a>::write_to(&self, &syntaqlite_buildtools::output_resolver::OutputLayout, &impl core::ops::function::Fn(&std::path::Path) -> core::result::Result<(), alloc::string::String>, &impl core::ops::function::Fn(&std::path::Path, &str) -> core::result::Result<(), alloc::string::String>) -> core::result::Result<(), alloc::string::String>
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_header_name(&self) -> alloc::string::String
 pub fn syntaqlite_buildtools::codegen_api::DialectNaming::dialect_struct_type(&self) -> alloc::string::String

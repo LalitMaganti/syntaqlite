@@ -52,6 +52,10 @@ pub(crate) struct DialectArgs {
     #[arg(long)]
     nodes_dir: Option<String>,
 
+    /// File of literal token declarations (repeatable).
+    #[arg(long)]
+    tokens_file: Vec<String>,
+
     /// Output type.
     #[arg(long, value_enum, default_value_t = OutputType::TypedDialectEnv)]
     output_type: OutputType,
@@ -94,6 +98,15 @@ pub(crate) enum ToolCommand {
 }
 
 pub(crate) fn generate(args: &DialectArgs) -> Result<(), String> {
+    let tokens = args
+        .tokens_file
+        .iter()
+        .map(|path| {
+            fs::read_to_string(path)
+                .map(|s| (path.clone(), s))
+                .map_err(|e| format!("reading {path}: {e}"))
+        })
+        .collect::<Result<NamedFiles, String>>()?;
     let name = &args.name;
     let actions_dir = args.actions_dir.as_deref();
     let nodes_dir = args.nodes_dir.as_deref();
@@ -112,15 +125,16 @@ pub(crate) fn generate(args: &DialectArgs) -> Result<(), String> {
             name,
             actions_dir,
             nodes_dir,
+            &tokens,
             &require_output_dir("dialect")?,
-            &args.runtime_header,
-            &args.ext_header,
+            (&args.runtime_header, &args.ext_header),
             macro_style,
         ),
         OutputType::Raw => generate_dialect_raw(
             name,
             actions_dir,
             nodes_dir,
+            &tokens,
             &require_output_dir("raw")?,
             macro_style,
         ),
@@ -128,6 +142,7 @@ pub(crate) fn generate(args: &DialectArgs) -> Result<(), String> {
             name,
             actions_dir,
             nodes_dir,
+            &tokens,
             &require_output_dir("full")?,
             macro_style,
         ),
@@ -146,17 +161,18 @@ fn generate_dialect(
     dialect: &str,
     actions_dir: Option<&str>,
     nodes_dir: Option<&str>,
+    tokens: &NamedFiles,
     output_dir: &str,
-    runtime_header: &str,
-    ext_header: &str,
+    headers: (&str, &str),
     macro_style: MacroStyle,
 ) -> Result<(), String> {
     use syntaqlite_buildtools::amalgamate;
 
+    let (runtime_header, ext_header) = headers;
     let temp_dir = tempfile::TempDir::new().map_err(|e| format!("creating temp directory: {e}"))?;
     let temp = temp_dir.path();
     let (merged_y, merged_synq) = load_extensions(actions_dir, nodes_dir)?;
-    codegen_to_dir(&merged_y, &merged_synq, temp, dialect, macro_style)?;
+    codegen_to_dir(&merged_y, &merged_synq, tokens, temp, dialect, macro_style)?;
 
     let out = Path::new(output_dir);
     ensure_dir(out, "output dir")?;
@@ -172,6 +188,7 @@ fn generate_dialect_full(
     dialect: &str,
     actions_dir: Option<&str>,
     nodes_dir: Option<&str>,
+    tokens: &NamedFiles,
     output_dir: &str,
     macro_style: MacroStyle,
 ) -> Result<(), String> {
@@ -188,6 +205,7 @@ fn generate_dialect_full(
     codegen_to_dir(
         &merged_y,
         &merged_synq,
+        tokens,
         dialect_temp.path(),
         dialect,
         macro_style,
@@ -233,6 +251,7 @@ fn generate_dialect_raw(
     dialect: &str,
     actions_dir: Option<&str>,
     nodes_dir: Option<&str>,
+    tokens: &NamedFiles,
     output_dir: &str,
     macro_style: MacroStyle,
 ) -> Result<(), String> {
@@ -247,6 +266,7 @@ fn generate_dialect_raw(
         &dialect_spec.include_dir_name(),
     );
     DialectCodegenJob::new(&dialect_spec, &merged_y, &merged_synq)
+        .with_token_files(tokens)?
         .with_base_synq(syntaqlite_buildtools::base_files::base_synq_files())
         .with_macro_style(macro_style)
         .write_to(
@@ -286,6 +306,7 @@ fn load_extensions(
 fn codegen_to_dir(
     y_files: &NamedFiles,
     synq_files: &NamedFiles,
+    tokens: &NamedFiles,
     temp_root: &Path,
     dialect_name: &str,
     macro_style: MacroStyle,
@@ -297,6 +318,7 @@ fn codegen_to_dir(
     let layout =
         OutputLayout::for_amalg_temp(temp_root, dialect_name, &dialect_spec.include_dir_name());
     DialectCodegenJob::new(&dialect_spec, y_files, synq_files)
+        .with_token_files(tokens)?
         .with_base_synq(syntaqlite_buildtools::base_files::base_synq_files())
         .with_macro_style(macro_style)
         .write_to(
