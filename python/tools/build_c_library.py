@@ -181,7 +181,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if not BASELINE.exists():
         print(
-            "build-c-library: missing C API manifest; run tools/check-c-api --rebaseline",
+            "build-c-library: missing C API manifest (tests/c_api/api-manifest.json)",
             file=sys.stderr,
         )
         return 1
