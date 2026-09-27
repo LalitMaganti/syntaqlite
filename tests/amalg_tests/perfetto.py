@@ -334,6 +334,301 @@ class PerfettoExtension(TestSuite):
 
     # -- Base SQLite still works --
 
+    # -- Pipelines and node expansion --
+
+    def test_pipeline_statement_is_not_expanded(self):
+        """A pipeline on its own is a statement, not a node to expand."""
+        return DiffTestBlueprint(
+            sql="FROM t |> DROP a, b",
+            out="""\
+            PerfettoPipeline
+              from:
+                PerfettoPipeSource
+                  table_name: "t"
+                  schema: (none)
+                  select: (none)
+                  alias: (none)
+                  alias_as: FALSE
+              stages:
+                PerfettoPipeStageList [1 items]
+                  PerfettoPipeDrop
+                    columns:
+                      PerfettoPipeNameList [2 items]
+                        PerfettoPipeName
+                          name: "a"
+                        PerfettoPipeName
+                          name: "b"
+""",
+        )
+
+    def test_pipeline_subquery_is_expanded(self):
+        """A pipeline in a FROM clause is replaced by the expander."""
+        return DiffTestBlueprint(
+            sql="SELECT x.c FROM (FROM t |> DROP a) AS x",
+            out="""\
+            SelectStmt
+              flags: (none)
+              columns:
+                ResultColumnList [1 items]
+                  ResultColumn
+                    flags: (none)
+                    alias: (none)
+                    alias_as: FALSE
+                    expr:
+                      ColumnRef
+                        column: "c"
+                        table: "x"
+                        schema: (none)
+              from_clause:
+                SubqueryTableSource
+                  select:
+                    PerfettoPipeline
+                      from:
+                        PerfettoPipeSource
+                          table_name: "t"
+                          schema: (none)
+                          select: (none)
+                          alias: (none)
+                          alias_as: FALSE
+                      stages:
+                        PerfettoPipeStageList [1 items]
+                          PerfettoPipeDrop
+                            columns:
+                              PerfettoPipeNameList [1 items]
+                                PerfettoPipeName
+                                  name: "a"
+                  alias:
+                    IdentName
+                      source: "x"
+                  alias_as: TRUE
+              where_clause: (none)
+              groupby: (none)
+              having: (none)
+              orderby: (none)
+              limit_clause: (none)
+              window_clause: (none)
+            expanded pipeline in source: "FROM t |> DROP a" -> "SELECT * FROM expanded_1"
+""",
+        )
+
+    def test_pipeline_cte_is_expanded(self):
+        """A pipeline as a CTE is replaced by the expander."""
+        return DiffTestBlueprint(
+            sql="WITH p AS (FROM t |> DROP a) SELECT * FROM p",
+            out="""\
+            WithClause
+              recursive: FALSE
+              ctes:
+                CteList [1 items]
+                  CteDefinition
+                    cte_name: "p"
+                    materialized: DEFAULT
+                    columns: (none)
+                    select:
+                      PerfettoPipeline
+                        from:
+                          PerfettoPipeSource
+                            table_name: "t"
+                            schema: (none)
+                            select: (none)
+                            alias: (none)
+                            alias_as: FALSE
+                        stages:
+                          PerfettoPipeStageList [1 items]
+                            PerfettoPipeDrop
+                              columns:
+                                PerfettoPipeNameList [1 items]
+                                  PerfettoPipeName
+                                    name: "a"
+              select:
+                SelectStmt
+                  flags: (none)
+                  columns:
+                    ResultColumnList [1 items]
+                      ResultColumn
+                        flags: STAR
+                        alias: (none)
+                        alias_as: FALSE
+                        expr: (none)
+                  from_clause:
+                    TableRef
+                      table_name: "p"
+                      schema: (none)
+                      has_parens: FALSE
+                      alias: (none)
+                      alias_as: FALSE
+                      args: (none)
+                      index_hint: DEFAULT
+                      index_name: (none)
+                  where_clause: (none)
+                  groupby: (none)
+                  having: (none)
+                  orderby: (none)
+                  limit_clause: (none)
+                  window_clause: (none)
+            expanded pipeline in source: "FROM t |> DROP a" -> "SELECT * FROM expanded_1"
+""",
+        )
+
+    def test_pipeline_source_is_expanded_inside_pipeline(self):
+        """A pipeline read by another pipeline is expanded first; the outer
+        expansion covers it."""
+        return DiffTestBlueprint(
+            sql="SELECT * FROM (FROM (FROM t |> DROP a) |> DROP b)",
+            out="""\
+            SelectStmt
+              flags: (none)
+              columns:
+                ResultColumnList [1 items]
+                  ResultColumn
+                    flags: STAR
+                    alias: (none)
+                    alias_as: FALSE
+                    expr: (none)
+              from_clause:
+                SubqueryTableSource
+                  select:
+                    PerfettoPipeline
+                      from:
+                        PerfettoPipeSource
+                          table_name: (none)
+                          schema: (none)
+                          select:
+                            PerfettoPipeline
+                              from:
+                                PerfettoPipeSource
+                                  table_name: "t"
+                                  schema: (none)
+                                  select: (none)
+                                  alias: (none)
+                                  alias_as: FALSE
+                              stages:
+                                PerfettoPipeStageList [1 items]
+                                  PerfettoPipeDrop
+                                    columns:
+                                      PerfettoPipeNameList [1 items]
+                                        PerfettoPipeName
+                                          name: "a"
+                          alias: (none)
+                          alias_as: FALSE
+                      stages:
+                        PerfettoPipeStageList [1 items]
+                          PerfettoPipeDrop
+                            columns:
+                              PerfettoPipeNameList [1 items]
+                                PerfettoPipeName
+                                  name: "b"
+                  alias: (none)
+                  alias_as: FALSE
+              where_clause: (none)
+              groupby: (none)
+              having: (none)
+              orderby: (none)
+              limit_clause: (none)
+              window_clause: (none)
+            expanded pipeline in source: "FROM t |> DROP a" -> "SELECT * FROM expanded_1"
+            expanded pipeline in source: "FROM (FROM t |> DROP a) |> DROP b" -> "SELECT * FROM expanded_2"
+""",
+        )
+
+    def test_pipeline_after_join_is_expanded(self):
+        """Pipelines joined to other sources are each expanded where written."""
+        return DiffTestBlueprint(
+            sql="SELECT * FROM t JOIN (FROM u) AS a USING (id) JOIN (FROM v) AS b USING (id)",
+            out="""\
+            SelectStmt
+              flags: (none)
+              columns:
+                ResultColumnList [1 items]
+                  ResultColumn
+                    flags: STAR
+                    alias: (none)
+                    alias_as: FALSE
+                    expr: (none)
+              from_clause:
+                JoinClause
+                  join_type: INNER
+                  modifiers: (none)
+                  left:
+                    JoinClause
+                      join_type: INNER
+                      modifiers: (none)
+                      left:
+                        TableRef
+                          table_name: "t"
+                          schema: (none)
+                          has_parens: FALSE
+                          alias: (none)
+                          alias_as: FALSE
+                          args: (none)
+                          index_hint: DEFAULT
+                          index_name: (none)
+                      right:
+                        SubqueryTableSource
+                          select:
+                            PerfettoPipeline
+                              from:
+                                PerfettoPipeSource
+                                  table_name: "u"
+                                  schema: (none)
+                                  select: (none)
+                                  alias: (none)
+                                  alias_as: FALSE
+                              stages: (none)
+                          alias:
+                            IdentName
+                              source: "a"
+                          alias_as: TRUE
+                      on_expr: (none)
+                      using_columns:
+                        ExprList [1 items]
+                          ColumnRef
+                            column: "id"
+                            table: (none)
+                            schema: (none)
+                  right:
+                    SubqueryTableSource
+                      select:
+                        PerfettoPipeline
+                          from:
+                            PerfettoPipeSource
+                              table_name: "v"
+                              schema: (none)
+                              select: (none)
+                              alias: (none)
+                              alias_as: FALSE
+                          stages: (none)
+                      alias:
+                        IdentName
+                          source: "b"
+                      alias_as: TRUE
+                  on_expr: (none)
+                  using_columns:
+                    ExprList [1 items]
+                      ColumnRef
+                        column: "id"
+                        table: (none)
+                        schema: (none)
+              where_clause: (none)
+              groupby: (none)
+              having: (none)
+              orderby: (none)
+              limit_clause: (none)
+              window_clause: (none)
+            expanded pipeline in source: "FROM u" -> "SELECT * FROM expanded_1"
+            expanded pipeline in source: "FROM v" -> "SELECT * FROM expanded_2"
+""",
+        )
+
+    def test_pipeline_expansion_failure_fails_the_parse(self):
+        """A failed expansion fails the parse, naming what was expanded."""
+        return DiffTestBlueprint(
+            sql="SELECT * FROM (FROM (FROM unexpandable) |> DROP a)",
+            out="""\
+            parse error: expanding pipeline failed
+""",
+        )
+
     def test_base_select_still_works(self):
         """Base SQLite syntax must still work in an extended dialect."""
         return DiffTestBlueprint(

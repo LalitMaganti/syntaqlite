@@ -259,3 +259,104 @@ cmd(A) ::= DROP PERFETTO INDEX nm(N) ON nm(T). {
         synq_span(pCtx, N),
         synq_span(pCtx, T));
 }
+
+// ---------- Pipelines ----------
+//
+// Enough of Perfetto's pipeline syntax to exercise node expansion: a source,
+// DROP stages, and a pipeline in a FROM clause or CTE.
+
+// `|>` is not a token the SQLite tokenizer knows, so a pipe is `|` directly
+// followed by `>`.
+%type perfetto_pipe {int}
+perfetto_pipe(A) ::= BITOR(B) GT(G). {
+    if (B.layer_id != G.layer_id || B.offset + B.n != G.offset) {
+        pCtx->error = 1;
+    }
+    A = 0;
+}
+
+%type perfetto_pipe_source {uint32_t}
+perfetto_pipe_source(A) ::= nm(N) dbnm(D) as(Z). {
+    SyntaqliteTextSpan table_name;
+    SyntaqliteTextSpan schema;
+    if (D.z != NULL) {
+        table_name = synq_span_dequote(pCtx, D);
+        schema = synq_span_dequote(pCtx, N);
+    } else {
+        table_name = synq_span_dequote(pCtx, N);
+        schema = SYNQ_NO_SPAN;
+    }
+    A = synq_parse_perfetto_pipe_source(pCtx, table_name, schema,
+        SYNTAQLITE_NULL_NODE, Z.name,
+        Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE);
+}
+perfetto_pipe_source(A) ::= LP select(S) RP as(Z). {
+    A = synq_parse_perfetto_pipe_source(pCtx, SYNQ_NO_SPAN, SYNQ_NO_SPAN,
+        S, Z.name, Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE);
+}
+perfetto_pipe_source(A) ::= LP perfetto_subquery_pipeline(P) RP as(Z). {
+    A = synq_parse_perfetto_pipe_source(pCtx, SYNQ_NO_SPAN, SYNQ_NO_SPAN,
+        P, Z.name, Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE);
+}
+
+%type perfetto_pipe_name_list {uint32_t}
+perfetto_pipe_name_list(A) ::= nm(N). {
+    A = synq_parse_perfetto_pipe_name_list(pCtx, SYNTAQLITE_NULL_NODE,
+        synq_parse_perfetto_pipe_name(pCtx, synq_span_dequote(pCtx, N)));
+}
+perfetto_pipe_name_list(A) ::= perfetto_pipe_name_list(L) COMMA nm(N). {
+    A = synq_parse_perfetto_pipe_name_list(pCtx, L,
+        synq_parse_perfetto_pipe_name(pCtx, synq_span_dequote(pCtx, N)));
+}
+
+%type perfetto_pipe_stage {uint32_t}
+perfetto_pipe_stage(A) ::= DROP perfetto_pipe_name_list(L). {
+    A = synq_parse_perfetto_pipe_drop(pCtx, L);
+}
+
+%type perfetto_pipe_stage_list {uint32_t}
+perfetto_pipe_stage_list(A) ::= . { A = SYNTAQLITE_NULL_NODE; }
+perfetto_pipe_stage_list(A) ::= perfetto_pipe_stage_list(L) perfetto_pipe
+                                perfetto_pipe_stage(S). {
+    A = synq_parse_perfetto_pipe_stage_list(pCtx, L, S);
+}
+
+%type perfetto_pipeline {uint32_t}
+perfetto_pipeline(A) ::= FROM perfetto_pipe_source(F)
+                         perfetto_pipe_stage_list(S). {
+    A = synq_parse_perfetto_pipeline(pCtx, F, S);
+}
+
+cmd(A) ::= perfetto_pipeline(P). { A = P; }
+
+// A pipeline in parentheses reads like any other subquery. It's handed to the
+// host's node expander, which replaces it with SQL.
+%type perfetto_subquery_pipeline {uint32_t}
+perfetto_subquery_pipeline(A) ::= perfetto_pipeline(P). {
+    A = P;
+    synq_parser_expand_node(pCtx, P, "pipeline", 8);
+}
+
+seltablist(A) ::= stl_prefix(A) LP perfetto_subquery_pipeline(P) RP as(Z)
+                  on_using(N). {
+    pCtx->saw_subquery = 1;
+    uint32_t sub = synq_parse_subquery_table_source(
+        pCtx, P, Z.name,
+        Z.has_as ? SYNTAQLITE_BOOL_TRUE : SYNTAQLITE_BOOL_FALSE);
+    if (A == SYNTAQLITE_NULL_NODE) {
+        synq_reject_dangling_on_using(pCtx, N);
+        A = sub;
+    } else {
+        SyntaqliteNode *pfx = AST_NODE(&pCtx->ast, A);
+        A = synq_parse_join_clause(pCtx,
+            pfx->join_prefix.join_type,
+            pfx->join_prefix.modifiers,
+            pfx->join_prefix.source,
+            sub, N.on_expr, N.using_cols);
+    }
+}
+wqitem(A) ::= withnm(X) eidlist_opt(Y) wqas(M) LP perfetto_subquery_pipeline(P)
+              RP. {
+    A = synq_parse_cte_definition(pCtx, synq_span_dequote(pCtx, X),
+                                  (SyntaqliteMaterialized)M, Y, P);
+}

@@ -250,3 +250,68 @@ node DropPerfettoIndexStmt {
     "DROP" "PERFETTO" "INDEX" space span(index_name) space "ON" space span(table_name)
   }
 }
+
+// ---------- Pipelines ----------
+//
+// Enough of Perfetto's pipeline syntax to exercise node expansion: a source,
+// DROP stages, and a pipeline in a FROM clause or CTE.
+
+// What a pipeline starts from: a table, or a subquery in parentheses.
+node PerfettoPipeSource {
+  table_name: inline SyntaqliteTextSpan
+  schema: inline SyntaqliteTextSpan
+  select: index Select
+  alias: index Name
+  alias_as: inline Bool
+
+  fmt {
+    if_set(select) {
+      group { "(" nest { softline child(select) } softline ")" }
+    } else {
+      if_span(schema) { span(schema) "." }
+      span(table_name)
+    }
+    if_set(alias) {
+      if_flag(alias_as) { space "AS" space child(alias) } else { space child(alias) }
+    }
+  }
+}
+
+// A bare column name, as listed by DROP.
+node PerfettoPipeName {
+  name: inline SyntaqliteTextSpan
+
+  fmt { span(name) }
+}
+
+list PerfettoPipeNameList {
+  PerfettoPipeName
+  fmt { for_each(sep: "," line) { child(_item) } }
+}
+
+// `DROP name, ...`: removes columns from the row.
+node PerfettoPipeDrop {
+  columns: index PerfettoPipeNameList
+
+  fmt { group { "DROP" nest { line child(columns) } } }
+}
+
+abstract PerfettoPipeStage {
+  PerfettoPipeDrop
+}
+
+list PerfettoPipeStageList {
+  PerfettoPipeStage
+  fmt { for_each(sep: hardline "|>" space) { child(_item) } }
+}
+
+// A pipeline: a source followed by `|>` stages.
+node PerfettoPipeline {
+  from: index PerfettoPipeSource
+  stages: index PerfettoPipeStageList
+
+  fmt {
+    "FROM" space child(from)
+    if_set(stages) { hardline "|>" space child(stages) }
+  }
+}

@@ -250,7 +250,7 @@ pub fn sqlite_dialect() -> Dialect {
 /// ```
 pub mod parse {
     #[doc(inline)]
-    pub use syntaqlite_syntax::any::Rewrite;
+    pub use syntaqlite_syntax::any::{Rewrite, RewriteKind};
     #[doc(inline)]
     pub use syntaqlite_syntax::{CommentKind, ParserConfig, ParserTokenFlags};
     #[doc(inline)]

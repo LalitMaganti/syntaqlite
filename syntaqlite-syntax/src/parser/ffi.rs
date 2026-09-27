@@ -140,6 +140,8 @@ pub(crate) struct CRewrite {
     /// 1 if this rewrite is a fallback (unregistered name! kept as a
     /// `TK_ID` with no expansion); 0 for registered macros.
     pub(crate) is_fallback: u32,
+    /// A `SyntaqliteRewriteKind`.
+    pub(crate) kind: u32,
 }
 
 /// One $param substitution within a macro expansion.

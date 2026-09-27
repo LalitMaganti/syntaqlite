@@ -110,6 +110,7 @@ def _compile_perfetto_dialect(cli_binary: Path, work_dir: Path) -> Path:
         str(csrc_dir / "syntaqlite_perfetto.c"),
         str(parser_sys / "csrc" / "parser.c"),
         str(parser_sys / "csrc" / "parser_macros.c"),
+        str(parser_sys / "csrc" / "parser_node_expansion.c"),
         str(parser_sys / "csrc" / "parser_spans.c"),
         str(parser_sys / "csrc" / "parser_extents.c"),
         str(parser_sys / "csrc" / "parser_dump.c"),

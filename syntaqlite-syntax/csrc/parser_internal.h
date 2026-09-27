@@ -141,9 +141,30 @@ typedef struct SynqExpansionLayer {
   uint32_t body_call_length;
 
   uint32_t parent_layer_id;  // Layer containing the call (0 = source).
+
+  // A SyntaqliteRewriteKind.
+  uint32_t kind;
 } SynqExpansionLayer;
 
 typedef SYNQ_VEC(SynqExpansionLayer) SynqExpansionLayerVec;
+
+// Finds the layer a node was written in (the innermost one containing both its
+// first and last tokens; 0 is the source) and the node's [start, end) within
+// it. Returns 0 if extents aren't being collected or the node has no tokens.
+int synq_node_site(SyntaqliteParser* p,
+                   uint32_t node_id,
+                   uint32_t* layer,
+                   uint32_t* start,
+                   uint32_t* end);
+
+// Maps a call in `parent`'s expansion back to its position in `parent`'s
+// authored body. If the call came from a substituted $param argument, both
+// outputs are set to SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL.
+void synq_body_call_range(const SynqExpansionLayer* parent,
+                          uint32_t call_offset,
+                          uint32_t call_length,
+                          uint32_t* body_offset,
+                          uint32_t* body_length);
 
 // Macro expansion state: the lookup callback, the invocation in progress and
 // its scratch.  The layers macro calls add live in `SynqRewriteState`.
@@ -170,6 +191,16 @@ typedef struct SynqMacroState {
   uint32_t depth;
 
 } SynqMacroState;
+
+// State for node expansion: the host's callback and the node currently being
+// expanded.
+typedef struct SynqNodeExpansionState {
+  SyntaqliteNodeExpandFn expander;
+  void* user_data;
+  // Layer of the node currently being expanded, or 0 if none. It's hidden from
+  // the rewrite list until the expander has set its text.
+  uint32_t pending_layer;
+} SynqNodeExpansionState;
 
 // The rewrites recorded for the current statement, each a layer of text
 // replacing a range of its parent's: a macro call's expansion, for one.
@@ -258,6 +289,7 @@ struct SyntaqliteParser {
   // SYNTAQLITE_OMIT_MACROS) ─────────────────────────────────────────────
 #ifndef SYNTAQLITE_OMIT_MACROS
   SynqMacroState macro;
+  SynqNodeExpansionState node_expansion;
   SynqRewriteState rewrites;
 #endif
 };

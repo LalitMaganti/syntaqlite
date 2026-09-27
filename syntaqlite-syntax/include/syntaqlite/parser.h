@@ -326,10 +326,19 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_node_trailing_comments(
 // consumers should descend through the matching arg segment instead."
 #define SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL UINT32_MAX
 
-// A rewrite recorded during parsing: a range of text replaced by other
-// text.  Each is currently a macro call replaced by its expansion.  Enough
-// information to reconstruct a source-to-expanded rewrite tree (e.g. to
-// drive Perfetto's SqlSource::Rewriter or an equivalent).
+// The kind of thing a rewrite replaced.
+typedef enum SyntaqliteRewriteKind {
+  // A `name!(...)` macro call, replaced by the macro's expansion.
+  SYNTAQLITE_REWRITE_MACRO_CALL = 0,
+  // A parsed node, replaced by text from the host's node expander (see
+  // `syntaqlite_parser_set_node_expander`).
+  SYNTAQLITE_REWRITE_NODE_EXPANSION = 1,
+} SyntaqliteRewriteKind;
+
+// A rewrite recorded during parsing: a range of text replaced by other text,
+// either a macro call or an expanded node (see `kind`).  Enough information
+// to reconstruct a source-to-expanded rewrite tree (e.g. to drive Perfetto's
+// SqlSource::Rewriter or an equivalent).
 //
 // Entries are reported in insertion order: outer rewrites appear before
 // the nested rewrites they contain, and rewrites at the same nesting level
@@ -401,6 +410,11 @@ typedef struct SyntaqliteRewrite {
   // also a useful tell (0 for fallback), but this flag is the
   // authoritative signal.
   uint32_t is_fallback;
+  // A SyntaqliteRewriteKind. For node expansions, the call is the node's text
+  // and the expansion is the host's replacement; macro-specific fields other
+  // than `name` are zero. Macro calls inside the node are still recorded, but
+  // when rewrites are applied the outer one wins.
+  uint32_t kind;
 } SyntaqliteRewrite;
 
 // Number of rewrites recorded for the current statement.
@@ -670,6 +684,34 @@ static inline int syntaqlite_span_is_macro_free(
 //
 // Requires `syntaqlite_parser_set_collect_node_extents(p, 1)` before the
 // first `reset()`.
+// Where a node was written: the layer containing it and the node's range in
+// that layer.
+//
+// The layer is the innermost one containing both the node's first and last
+// tokens. If some of the node's tokens come from macro calls in that layer, the
+// range covers those calls, so it's always a contiguous piece of the layer's
+// text.
+typedef struct SyntaqliteNodeSite {
+  // The rewrite whose expansion contains the node, or
+  // SYNTAQLITE_REWRITE_PARENT_SOURCE if the node is in the statement's own
+  // text.
+  uint32_t parent_idx;
+  // Uses the same coordinates as a rewrite's `call_offset`: relative to the
+  // statement for the source, otherwise relative to the parent's expansion.
+  SyntaqliteLayerOffset offset;
+  SyntaqliteLength length;
+} SyntaqliteNodeSite;
+
+// Looks up where `node_id` was written and stores it in `*out`. Returns 1 on
+// success, or 0 if node extents aren't being collected or the node has no
+// tokens.
+//
+// Requires `syntaqlite_parser_set_collect_node_extents(p, 1)` before the
+// first `reset()`.
+SYNTAQLITE_API int syntaqlite_parser_node_site(SyntaqliteParser* p,
+                                               uint32_t node_id,
+                                               SyntaqliteNodeSite* out);
+
 SYNTAQLITE_API int syntaqlite_node_is_macro_free(SyntaqliteParser* p,
                                                  uint32_t node_id);
 

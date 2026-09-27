@@ -1020,6 +1020,7 @@ pub enum syntaqlite_syntax::ParseOutcome<T, E>
 pub enum syntaqlite_syntax::any::ArgOrigin
 pub enum syntaqlite_syntax::any::FieldValue
 pub enum syntaqlite_syntax::any::ParseOutcome<T, E>
+pub enum syntaqlite_syntax::any::RewriteKind
 pub enum syntaqlite_syntax::any::TokenCategory
 pub enum syntaqlite_syntax::nodes::ColumnConstraintItem<'a>
 pub enum syntaqlite_syntax::nodes::Expr<'a>
@@ -1269,6 +1270,7 @@ pub fn syntaqlite_syntax::any::Rewrite<'a>::def_col(&self) -> syntaqlite_syntax:
 pub fn syntaqlite_syntax::any::Rewrite<'a>::def_line(&self) -> syntaqlite_syntax::source::LineNumber
 pub fn syntaqlite_syntax::any::Rewrite<'a>::expansion(&self) -> &'a syntaqlite_syntax::source::LayerText
 pub fn syntaqlite_syntax::any::Rewrite<'a>::is_fallback(&self) -> bool
+pub fn syntaqlite_syntax::any::Rewrite<'a>::kind(&self) -> syntaqlite_syntax::any::RewriteKind
 pub fn syntaqlite_syntax::any::Rewrite<'a>::name(&self) -> &'a str
 pub fn syntaqlite_syntax::any::Rewrite<'a>::parent(&self) -> core::option::Option<syntaqlite_syntax::source::RewriteIdx>
 pub fn syntaqlite_syntax::any::Rewrite<'a>::parent_buffer(&self) -> &'a syntaqlite_syntax::source::LayerText
@@ -2616,6 +2618,8 @@ pub syntaqlite_syntax::any::FieldValue::Span(syntaqlite_syntax::any::TextSpan)
 pub syntaqlite_syntax::any::ParseOutcome::Done
 pub syntaqlite_syntax::any::ParseOutcome::Err(E)
 pub syntaqlite_syntax::any::ParseOutcome::Ok(T)
+pub syntaqlite_syntax::any::RewriteKind::MacroCall
+pub syntaqlite_syntax::any::RewriteKind::NodeExpansion
 pub syntaqlite_syntax::any::TokenCategory::Comment
 pub syntaqlite_syntax::any::TokenCategory::Function
 pub syntaqlite_syntax::any::TokenCategory::Identifier

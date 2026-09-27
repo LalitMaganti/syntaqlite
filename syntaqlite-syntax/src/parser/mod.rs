@@ -37,7 +37,7 @@ pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken
 pub use types::{
     AnyParserToken, ArgOrigin, Comment, CommentKind, CommentSide, CommentSpan, CompletionContext,
     MACRO_BODY_CALL_ARG_INTERNAL, MacroArgSegment, MacroCallArg, ParseOutcome, ParserTokenFlags,
-    Rewrite, TracebackFrame, TypedParserToken,
+    Rewrite, RewriteKind, TracebackFrame, TypedParserToken,
 };
 
 /// A single macro argument as presented to the lookup callback.
@@ -742,6 +742,11 @@ impl<'a> AnyParsedStatement<'a> {
                 body_call_length: LayerLen::from_raw(r.body_call_length),
                 parent_buffer,
                 is_fallback: r.is_fallback != 0,
+                kind: if r.kind == 1 {
+                    RewriteKind::NodeExpansion
+                } else {
+                    RewriteKind::MacroCall
+                },
                 parser: self.raw,
                 _lifetime: PhantomData,
             }
