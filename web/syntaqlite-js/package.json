@@ -1,6 +1,6 @@
 {
   "name": "syntaqlite",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "description": "JavaScript and WebAssembly API for libsyntaqlite: parse, format, and statically analyze SQLite SQL",
   "license": "Apache-2.0",
   "repository": {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.2
+
+**Parser:**
+- `syntaqlite_parser_node_site` now places an `EXPLAIN` statement where the `EXPLAIN` is written, instead of by the rest of the statement alone, which could put it inside a macro's expansion ([#400](https://github.com/LalitMaganti/syntaqlite/pull/400)).
+
 ## 0.11.1
 
 **C library:**
