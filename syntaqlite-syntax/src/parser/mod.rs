@@ -36,8 +36,8 @@ pub use incremental::{AnyIncrementalParseSession, TypedIncrementalParseSession};
 pub use session::{ParseError, ParseSession, ParsedStatement, Parser, ParserToken};
 pub use types::{
     AnyParserToken, ArgOrigin, Comment, CommentKind, CommentSide, CommentSpan, CompletionContext,
-    MACRO_BODY_CALL_ARG_INTERNAL, MacroArgSegment, MacroCallArg, MacroRewrite, ParseOutcome,
-    ParserTokenFlags, TracebackFrame, TypedParserToken,
+    MACRO_BODY_CALL_ARG_INTERNAL, MacroArgSegment, MacroCallArg, ParseOutcome, ParserTokenFlags,
+    Rewrite, TracebackFrame, TypedParserToken,
 };
 
 /// A single macro argument as presented to the lookup callback.
@@ -667,18 +667,18 @@ impl<'a> AnyParsedStatement<'a> {
     /// all tokens came from the original source text.
     pub fn is_macro_free(&self) -> bool {
         // SAFETY: self.raw is valid for 'a.
-        unsafe { self.raw.as_ref().result_macro_count() == 0 }
+        unsafe { self.raw.as_ref().result_rewrite_count() == 0 }
     }
 
-    /// Macro rewrites recorded during parsing.  See [`MacroRewrite`] for
+    /// Rewrites recorded during parsing.  See [`Rewrite`] for
     /// the shape of each entry.
-    pub fn macro_rewrites(&self) -> impl Iterator<Item = MacroRewrite<'a>> + use<'_, 'a> {
+    pub fn rewrites(&self) -> impl Iterator<Item = Rewrite<'a>> + use<'_, 'a> {
         // SAFETY: self.raw is valid for 'a; the indexed accessor is stable
         // until the next parser_next / reset / destroy call.
-        let count = unsafe { self.raw.as_ref().result_macro_count() };
+        let count = unsafe { self.raw.as_ref().result_rewrite_count() };
         (0..count).map(move |i| {
             // SAFETY: i < count, so the C side returns a valid rewrite.
-            let r = unsafe { self.raw.as_ref().result_macro_rewrite_at(i) };
+            let r = unsafe { self.raw.as_ref().result_rewrite_at(i) };
             // `expansion` and `name` borrow from parser memory valid for
             // 'a (until the next parser_next / reset / destroy, which
             // requires ending the 'a-tied statement borrow).
@@ -729,9 +729,9 @@ impl<'a> AnyParsedStatement<'a> {
                 };
                 LayerText::new(s)
             };
-            MacroRewrite {
+            Rewrite {
                 parent,
-                rewrite_idx: RewriteIdx::from_raw(i),
+                idx: RewriteIdx::from_raw(i),
                 call_offset: LayerOffset::from_raw(r.call_offset),
                 call_length: LayerLen::from_raw(r.call_length),
                 expansion,
@@ -1458,14 +1458,14 @@ impl<'a, G: TypedDialect> TypedParsedStatement<'a, G> {
         self.any.expanded_text()
     }
 
-    /// Macro rewrites recorded during parsing.
+    /// Rewrites recorded during parsing.
     ///
-    /// Each [`MacroRewrite`] describes a macro invocation and its
+    /// Each [`Rewrite`] describes a macro invocation and its
     /// expansion — enough to reconstruct a source-to-expanded rewrite
-    /// tree (see [`MacroRewrite`] for details).  Populated automatically
+    /// tree (see [`Rewrite`] for details).  Populated automatically
     /// when the dialect's `macro_style` is set.
-    pub fn macro_rewrites(&self) -> impl Iterator<Item = MacroRewrite<'a>> + use<'_, 'a, G> {
-        self.any.macro_rewrites()
+    pub fn rewrites(&self) -> impl Iterator<Item = Rewrite<'a>> + use<'_, 'a, G> {
+        self.any.rewrites()
     }
 
     /// Token stream for this parse result.  Yields every token fed

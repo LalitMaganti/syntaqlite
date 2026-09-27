@@ -342,13 +342,13 @@ int main(void) {
       syntaqlite_parser_set_macro_lookup(p, NULL, NULL);
       printf("macro_clear_registry ok\n");
     } else if (strcmp(verb, "dump_macros") == 0) {
-      uint32_t count = syntaqlite_result_macro_count(p);
+      uint32_t count = syntaqlite_result_rewrite_count(p);
       printf("macros count=%u\n", count);
       for (uint32_t i = 0; i < count; i++) {
-        SyntaqliteMacroRewrite r = syntaqlite_result_macro_rewrite_at(p, i);
+        SyntaqliteRewrite r = syntaqlite_result_rewrite_at(p, i);
         const char* parent_str =
-            r.parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE ? "source" : "idx";
-        if (r.parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE) {
+            r.parent_idx == SYNTAQLITE_REWRITE_PARENT_SOURCE ? "source" : "idx";
+        if (r.parent_idx == SYNTAQLITE_REWRITE_PARENT_SOURCE) {
           printf(
               "mac[%u] parent=%s call_off=%u call_len=%u is_fallback=%u "
               "name=\"%.*s\"\n",

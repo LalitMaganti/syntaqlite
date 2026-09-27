@@ -102,12 +102,12 @@ pub(crate) struct CToken {
     pub(crate) type_: u32,
 }
 
-/// A recorded macro rewrite.
+/// A recorded rewrite.
 ///
-/// Mirrors C `SyntaqliteMacroRewrite` from `include/syntaqlite/parser.h`.
+/// Mirrors C `SyntaqliteRewrite` from `include/syntaqlite/parser.h`.
 #[derive(Debug, Clone, Copy)]
 #[repr(C)]
-pub(crate) struct CMacroRewrite {
+pub(crate) struct CRewrite {
     /// Index of the parent rewrite (`u32::MAX` = authored source).
     pub(crate) parent_idx: u32,
     /// Byte offset of the macro call in the parent's text.
@@ -623,19 +623,17 @@ impl CParser {
         unsafe { std::slice::from_raw_parts(ptr, count as usize) }
     }
 
-    pub(crate) unsafe fn result_macro_count(&self) -> u32 {
+    pub(crate) unsafe fn result_rewrite_count(&self) -> u32 {
         // SAFETY: self is a valid, non-null CParser pointer; result
         // accessors are valid after `next()` returns a non-DONE code.
-        unsafe { syntaqlite_result_macro_count(std::ptr::from_ref::<Self>(self).cast_mut()) }
+        unsafe { syntaqlite_result_rewrite_count(std::ptr::from_ref::<Self>(self).cast_mut()) }
     }
 
-    pub(crate) unsafe fn result_macro_rewrite_at(&self, idx: u32) -> CMacroRewrite {
+    pub(crate) unsafe fn result_rewrite_at(&self, idx: u32) -> CRewrite {
         // SAFETY: self is a valid, non-null CParser pointer; result
         // accessors are valid after `next()` returns a non-DONE code.
         // The C side clamps out-of-range indices to a zero-initialized rewrite.
-        unsafe {
-            syntaqlite_result_macro_rewrite_at(std::ptr::from_ref::<Self>(self).cast_mut(), idx)
-        }
+        unsafe { syntaqlite_result_rewrite_at(std::ptr::from_ref::<Self>(self).cast_mut(), idx) }
     }
 
     pub(crate) unsafe fn macro_rewrite_arg_segment_count(&self, rewrite_idx: RewriteIdx) -> u32 {
@@ -814,8 +812,8 @@ unsafe extern "C" {
         node_id: u32,
         count: *mut u32,
     ) -> *const CComment;
-    fn syntaqlite_result_macro_count(p: *mut CParser) -> u32;
-    fn syntaqlite_result_macro_rewrite_at(p: *mut CParser, idx: u32) -> CMacroRewrite;
+    fn syntaqlite_result_rewrite_count(p: *mut CParser) -> u32;
+    fn syntaqlite_result_rewrite_at(p: *mut CParser, idx: u32) -> CRewrite;
     fn syntaqlite_macro_rewrite_arg_segment_count(p: *mut CParser, rewrite_idx: u32) -> u32;
     fn syntaqlite_macro_rewrite_arg_segment_at(
         p: *mut CParser,
@@ -1473,10 +1471,10 @@ mod tests {
         assert_eq!(rc, PARSE_OK);
 
         // SAFETY: CParser wraps a valid C parser handle.
-        let count = unsafe { parser.result_macro_count() };
+        let count = unsafe { parser.result_rewrite_count() };
         assert_eq!(count, 1, "expected one macro region");
         // SAFETY: idx < count.
-        let r = unsafe { parser.result_macro_rewrite_at(0) };
+        let r = unsafe { parser.result_rewrite_at(0) };
         #[expect(clippy::cast_possible_truncation)]
         let call_start = sql.find("foo!").unwrap() as u32;
         assert_eq!(r.call_offset, call_start);
@@ -1550,10 +1548,10 @@ mod tests {
         );
 
         // SAFETY: CParser wraps a valid C parser handle.
-        let count = unsafe { parser.result_macro_count() };
+        let count = unsafe { parser.result_rewrite_count() };
         assert_eq!(count, 1);
         // SAFETY: idx < count.
-        let r = unsafe { parser.result_macro_rewrite_at(0) };
+        let r = unsafe { parser.result_rewrite_at(0) };
         let call_text = &sql[r.call_offset as usize..(r.call_offset + r.call_length) as usize];
         assert!(
             call_text.starts_with("graph!(") && call_text.ends_with(')'),

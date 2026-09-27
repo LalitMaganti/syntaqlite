@@ -389,10 +389,10 @@ impl<'a> ParsedStatement<'a> {
         self.0.any.is_macro_free()
     }
 
-    /// Macro rewrites recorded during parsing.  See [`super::MacroRewrite`]
+    /// Rewrites recorded during parsing.  See [`super::Rewrite`]
     /// for the shape of each entry.
-    pub fn macro_rewrites(&self) -> impl Iterator<Item = super::MacroRewrite<'a>> + use<'_, 'a> {
-        self.0.macro_rewrites()
+    pub fn rewrites(&self) -> impl Iterator<Item = super::Rewrite<'a>> + use<'_, 'a> {
+        self.0.rewrites()
     }
 
     /// Dump the AST as indented text into `out`.
@@ -1291,7 +1291,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 1, "expected exactly one macro rewrite");
         let r = &rewrites[0];
         assert_eq!(r.parent(), None, "top-level rewrite");
@@ -1330,7 +1330,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 2, "mwrap + mpass");
 
         // mwrap is top-level; call_offset/call_length are into `source`.
@@ -1375,7 +1375,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 1);
         let r = &rewrites[0];
         let segs: Vec<_> = r.arg_segments().collect();
@@ -1421,7 +1421,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 2, "m + n");
 
         let outer = &rewrites[0];
@@ -1468,7 +1468,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 2, "wrap + leaf");
         let inner = &rewrites[1];
         assert_eq!(inner.name(), "leaf");
@@ -1503,7 +1503,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 2, "wrap + leaf");
         let inner = &rewrites[1];
         assert_eq!(inner.name(), "leaf");
@@ -1542,7 +1542,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 2);
 
         // m's arg segment points into the authored source; origin_offset
@@ -2404,7 +2404,7 @@ mod tests {
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 1);
         let r = &rewrites[0];
         assert!(r.is_fallback(), "unregistered call should be fallback");
@@ -2436,7 +2436,7 @@ mod tests {
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 1);
         let r = &rewrites[0];
         assert!(!r.is_fallback());
@@ -2457,7 +2457,7 @@ mod tests {
             ParseOutcome::Done => panic!("expected statement"),
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 1);
         assert!(rewrites[0].is_fallback());
         assert_eq!(rewrites[0].args().count(), 0);
@@ -2478,7 +2478,7 @@ mod tests {
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
         let stmt_text = stmt.text();
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         let r = &rewrites[0];
         assert_eq!(r.parent_buffer().as_str(), stmt_text.as_str());
     }
@@ -2497,7 +2497,7 @@ mod tests {
             ParseOutcome::Done => panic!("expected statement"),
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         let r = &rewrites[0];
         let pb = r.parent_buffer();
         for a in r.args() {
@@ -2535,7 +2535,7 @@ mod tests {
             ParseOutcome::Err(e) => panic!("unexpected error: {}", e.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 2, "mwrap + mpass");
         let outer = &rewrites[0];
         let inner = &rewrites[1];
@@ -3089,7 +3089,7 @@ mod tests {
             ParseOutcome::Err(err) => panic!("unexpected error: {}", err.message()),
         };
 
-        let rewrites: Vec<_> = stmt.macro_rewrites().collect();
+        let rewrites: Vec<_> = stmt.rewrites().collect();
         assert_eq!(rewrites.len(), 2, "bar + foo");
 
         // Rewrites are recorded in push order, root-down.

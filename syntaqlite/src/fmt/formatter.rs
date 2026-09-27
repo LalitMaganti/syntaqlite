@@ -75,9 +75,9 @@ pub struct Formatter {
     pub(super) render_bufs: RenderBuffers,
     /// Byte ranges (offset, length) of macro calls in the source.  The
     /// formatter only needs positions to decide when to emit a call
-    /// verbatim; full `MacroRewrite` records would tie this buffer to
+    /// verbatim; full `Rewrite` records would tie this buffer to
     /// the statement lifetime and prevent reuse across statements.
-    pub(super) macro_rewrites: Vec<(StmtOffset, StmtLen)>,
+    pub(super) rewrites: Vec<(StmtOffset, StmtLen)>,
     pub(super) comment_entries: Vec<CommentEntry>,
     pub(super) token_entries: Vec<TokenEntry>,
     pub(super) parts: Vec<DocId>,
@@ -149,7 +149,7 @@ impl Formatter {
             arena: DocArena::with_capacity(256),
             interpret_scratch: InterpretScratch::new(),
             render_bufs: RenderBuffers::new(),
-            macro_rewrites: Vec::with_capacity(32),
+            rewrites: Vec::with_capacity(32),
             comment_entries: Vec::with_capacity(64),
             token_entries: Vec::with_capacity(256),
             parts: Vec::with_capacity(64),
@@ -160,7 +160,7 @@ impl Formatter {
 
     /// Populate side-channel buffers (comments, tokens, macro regions) from an erased statement.
     fn collect_side_channels(&mut self, erased: &AnyParsedStatement<'_>) {
-        self.macro_rewrites.clear();
+        self.rewrites.clear();
         self.comment_entries.clear();
         self.comment_entries
             .extend(erased.comment_spans().map(|c| CommentEntry {
@@ -181,9 +181,9 @@ impl Formatter {
         }));
         // Only top-level fallback rewrites are addressable here: an expanded
         // macro's tokens live in the expansion buffer, not at the call site.
-        self.macro_rewrites.extend(
+        self.rewrites.extend(
             erased
-                .macro_rewrites()
+                .rewrites()
                 .filter(|r| r.parent().is_none() && r.is_fallback())
                 .map(|r| {
                     (
@@ -241,8 +241,8 @@ impl Formatter {
             let root_id = erased.root_id();
             // Reclaimed after render; nothing to track when the statement has
             // neither comments nor macros.
-            let comment_ctx = (!self.comment_entries.is_empty() || !self.macro_rewrites.is_empty())
-                .then(|| {
+            let comment_ctx =
+                (!self.comment_entries.is_empty() || !self.rewrites.is_empty()).then(|| {
                     CommentCtx::new(
                         std::mem::take(&mut self.comment_entries),
                         std::mem::take(&mut self.token_entries),
@@ -281,7 +281,7 @@ impl Formatter {
                 dialect: self.dialect.clone(),
                 reader: erased,
                 comment_ctx,
-                macro_rewrites: std::mem::take(&mut self.macro_rewrites),
+                rewrites: std::mem::take(&mut self.rewrites),
                 macro_docs,
             };
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
@@ -324,7 +324,7 @@ impl Formatter {
                 self.comment_entries = comments;
                 self.token_entries = tokens;
             }
-            self.macro_rewrites = ctx.macro_rewrites;
+            self.rewrites = ctx.rewrites;
 
             // Recycle the arena, releasing all Doc borrows from this iteration.
             self.arena = DocArena::recycle(arena);
@@ -487,7 +487,7 @@ impl Formatter {
             }
 
             let has_comments = !self.comment_entries.is_empty();
-            let has_macros = !self.macro_rewrites.is_empty();
+            let has_macros = !self.rewrites.is_empty();
             let needs_token_ctx = has_comments || has_macros;
 
             let comment_ctx = if needs_token_ctx {
@@ -528,7 +528,7 @@ impl Formatter {
                 dialect: self.dialect.clone(),
                 reader: erased,
                 comment_ctx,
-                macro_rewrites: std::mem::take(&mut self.macro_rewrites),
+                rewrites: std::mem::take(&mut self.rewrites),
                 macro_docs,
             };
             let interpreted = self.interpret_node(&ctx, root_id, &mut arena);
@@ -549,7 +549,7 @@ impl Formatter {
                 self.comment_entries = comments;
                 self.token_entries = tokens;
             }
-            self.macro_rewrites = ctx.macro_rewrites;
+            self.rewrites = ctx.rewrites;
             self.arena = DocArena::recycle(arena);
 
             stmt_num += 1;
@@ -650,7 +650,7 @@ pub(crate) fn try_macro<'a>(
     );
     let node_end = node_off + node_len;
 
-    for (i, &(r_start, r_len)) in ctx.macro_rewrites.iter().enumerate() {
+    for (i, &(r_start, r_len)) in ctx.rewrites.iter().enumerate() {
         let r_end = r_start + r_len;
         if tok_offset != r_start || node_end != r_end {
             continue;

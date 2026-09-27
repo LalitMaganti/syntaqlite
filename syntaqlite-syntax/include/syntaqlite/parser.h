@@ -141,7 +141,7 @@ SYNTAQLITE_API int32_t syntaqlite_parser_set_trace(SyntaqliteParser* p,
 // Enable macro fallback: when the dialect uses SYNQ_MACRO_STYLE_RUST and a
 // name!(args) call is encountered but the name is NOT in the macro registry,
 // consume the entire name!(args) as a single TK_ID token instead of raising
-// a parse error. A MacroRewrite is recorded so the formatter can emit the
+// a parse error. A Rewrite is recorded so the formatter can emit the
 // call verbatim. Default: off (0).
 // Returns SYNTAQLITE_OK on success, SYNTAQLITE_ERR_ALREADY_USED if the
 // parser has already been used, SYNTAQLITE_ERR_OMITTED if macros are
@@ -315,26 +315,27 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_node_trailing_comments(
     uint32_t node_id,
     uint32_t* count);
 
-// Sentinel value for `SyntaqliteMacroRewrite::parent_idx` meaning "this
+// Sentinel value for `SyntaqliteRewrite::parent_idx` meaning "this
 // rewrite applies directly to the authored source" (i.e. the rewrite is
-// not nested inside another macro's expansion).
-#define SYNTAQLITE_MACRO_PARENT_SOURCE UINT32_MAX
+// not nested inside another rewrite's expansion).
+#define SYNTAQLITE_REWRITE_PARENT_SOURCE UINT32_MAX
 
-// Sentinel value for `SyntaqliteMacroRewrite::body_call_offset` and
+// Sentinel value for `SyntaqliteRewrite::body_call_offset` and
 // `body_call_length` meaning "this call was tokenized from a $param
 // substitution — it has no position in the parent's authored body;
 // consumers should descend through the matching arg segment instead."
 #define SYNTAQLITE_MACRO_BODY_CALL_ARG_INTERNAL UINT32_MAX
 
-// A recorded macro invocation — enough information to reconstruct a
-// source-to-expanded rewrite tree (e.g. to drive Perfetto's
-// SqlSource::Rewriter or an equivalent).
+// A rewrite recorded during parsing: a range of text replaced by other
+// text.  Each is currently a macro call replaced by its expansion.  Enough
+// information to reconstruct a source-to-expanded rewrite tree (e.g. to
+// drive Perfetto's SqlSource::Rewriter or an equivalent).
 //
-// Entries are reported in insertion order: outer macros appear before the
-// nested macros they contain, and macros at the same nesting level appear
-// in source order.
+// Entries are reported in insertion order: outer rewrites appear before
+// the nested rewrites they contain, and rewrites at the same nesting level
+// appear in source order.
 //
-// `parent_idx` is either SYNTAQLITE_MACRO_PARENT_SOURCE (the rewrite
+// `parent_idx` is either SYNTAQLITE_REWRITE_PARENT_SOURCE (the rewrite
 // replaces a range in the authored source) or the index of another entry
 // in this same flat list (the rewrite replaces a range in that entry's
 // `expansion` buffer).
@@ -358,9 +359,9 @@ SYNTAQLITE_API const SyntaqliteComment* syntaqlite_node_trailing_comments(
 // Pointers (`expansion`, `name`) are owned by the parser and remain valid
 // until the next `syntaqlite_parser_next`, `syntaqlite_parser_reset`, or
 // `syntaqlite_parser_destroy` call.
-typedef struct SyntaqliteMacroRewrite {
+typedef struct SyntaqliteRewrite {
   uint32_t parent_idx;
-  // Statement-relative when parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE,
+  // Statement-relative when parent_idx == SYNTAQLITE_REWRITE_PARENT_SOURCE,
   // otherwise relative to the parent entry's `expansion` buffer.
   SyntaqliteLayerOffset call_offset;
   SyntaqliteLength call_length;
@@ -377,14 +378,14 @@ typedef struct SyntaqliteMacroRewrite {
   // text (no meaningful body position) and consumers should descend
   // through the matching arg segment instead.
   //
-  // For top-level rewrites (parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE)
+  // For top-level rewrites (parent_idx == SYNTAQLITE_REWRITE_PARENT_SOURCE)
   // the parent is the authored source, so these equal call_offset /
   // call_length.
   SyntaqliteLayerOffset body_call_offset;
   SyntaqliteLength body_call_length;
   // The buffer the `call_offset` — and every arg offset returned by
   // syntaqlite_macro_rewrite_arg_at — indexes into.  For top-level
-  // rewrites (parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE) this is
+  // rewrites (parent_idx == SYNTAQLITE_REWRITE_PARENT_SOURCE) this is
   // the current statement source slice; for nested rewrites it is
   // the parent entry's `expansion` buffer.  Consumers can slice the
   // call text as `parent_buffer + call_offset` and the arg texts
@@ -400,15 +401,15 @@ typedef struct SyntaqliteMacroRewrite {
   // also a useful tell (0 for fallback), but this flag is the
   // authoritative signal.
   uint32_t is_fallback;
-} SyntaqliteMacroRewrite;
+} SyntaqliteRewrite;
 
-// Number of macro rewrites recorded for the current statement.
-SYNTAQLITE_API uint32_t syntaqlite_result_macro_count(SyntaqliteParser* p);
+// Number of rewrites recorded for the current statement.
+SYNTAQLITE_API uint32_t syntaqlite_result_rewrite_count(SyntaqliteParser* p);
 
 // Returns the rewrite at `idx` (0-based).  Returns a zero-initialized
-// struct if `idx >= syntaqlite_result_macro_count(p)`.
-SYNTAQLITE_API SyntaqliteMacroRewrite
-syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx);
+// struct if `idx >= syntaqlite_result_rewrite_count(p)`.
+SYNTAQLITE_API SyntaqliteRewrite
+syntaqlite_result_rewrite_at(SyntaqliteParser* p, uint32_t idx);
 
 // One $param substitution within a macro expansion.
 //
@@ -421,7 +422,7 @@ syntaqlite_result_macro_rewrite_at(SyntaqliteParser* p, uint32_t idx);
 //
 // `origin_parent_idx` + `origin_offset` + `origin_length` locate the
 // arg text where it was authored — either in the original source
-// (`origin_parent_idx == SYNTAQLITE_MACRO_PARENT_SOURCE`) or in another
+// (`origin_parent_idx == SYNTAQLITE_REWRITE_PARENT_SOURCE`) or in another
 // rewrite's `expansion` buffer (rewrite index).  Consumers walk the
 // chain of $param substitutions by recursing into the origin rewrite's
 // arg segments.

@@ -344,14 +344,15 @@ impl<'a, G: TypedDialect> TypedParserToken<'a, G> {
 /// Parser-token alias for dialect-independent pipelines.
 pub type AnyParserToken<'a> = TypedParserToken<'a, crate::dialect::AnyDialect>;
 
-/// A macro rewrite recorded during parsing.
+/// A rewrite recorded during parsing: a range of text replaced by other
+/// text.  Each is currently a macro call replaced by its expansion.
 ///
 /// Carries enough information to reconstruct a source-to-expanded rewrite
 /// tree (e.g. to drive Perfetto's `SqlSource::Rewriter` or an equivalent).
 ///
-/// Entries are reported in insertion order: outer macros appear before the
-/// nested macros they contain, and macros at the same nesting level appear
-/// in source order.  Nesting is expressed via [`parent`](Self::parent): a
+/// Entries are reported in insertion order: outer rewrites appear before
+/// the nested rewrites they contain, and rewrites at the same nesting level
+/// appear in source order.  Nesting is expressed via [`parent`](Self::parent): a
 /// rewrite with `parent() == None` replaces a range in the authored
 /// source; a rewrite with `parent() == Some(i)` replaces a range in the
 /// `i`-th entry's [`expansion`](Self::expansion) buffer.
@@ -360,11 +361,11 @@ pub type AnyParserToken<'a> = TypedParserToken<'a, crate::dialect::AnyDialect>;
 /// parser-owned memory — they are valid for the lifetime of the
 /// originating parsed statement.
 ///
-/// Returned by [`super::AnyParsedStatement::macro_rewrites`].
+/// Returned by [`super::AnyParsedStatement::rewrites`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct MacroRewrite<'a> {
+pub struct Rewrite<'a> {
     pub(crate) parent: Option<RewriteIdx>,
-    pub(crate) rewrite_idx: RewriteIdx,
+    pub(crate) idx: RewriteIdx,
     pub(crate) call_offset: LayerOffset,
     pub(crate) call_length: LayerLen,
     pub(crate) expansion: &'a LayerText,
@@ -382,13 +383,13 @@ pub struct MacroRewrite<'a> {
     pub(crate) _lifetime: std::marker::PhantomData<&'a ()>,
 }
 
-/// Sentinel value for [`MacroRewrite::body_call_offset`] /
-/// [`MacroRewrite::body_call_length`] meaning "this call was tokenized
+/// Sentinel value for [`Rewrite::body_call_offset`] /
+/// [`Rewrite::body_call_length`] meaning "this call was tokenized
 /// from a `$param` substitution; descend through the matching arg
 /// segment instead of indexing into the parent's body."
 pub const MACRO_BODY_CALL_ARG_INTERNAL: LayerOffset = LayerOffset::from_raw(u32::MAX);
 
-impl<'a> MacroRewrite<'a> {
+impl<'a> Rewrite<'a> {
     /// Index of the parent rewrite, or `None` if this rewrite applies
     /// directly to the authored source.
     pub fn parent(&self) -> Option<RewriteIdx> {
@@ -403,7 +404,7 @@ impl<'a> MacroRewrite<'a> {
         self.call_length
     }
     /// The replacement text for the macro call.  Nested macro calls that
-    /// appear in this buffer are reported as separate [`MacroRewrite`]
+    /// appear in this buffer are reported as separate [`Rewrite`]
     /// entries whose [`parent`](Self::parent) refers back to this one.
     ///
     /// Returned as a [`LayerText`], slicable by [`LayerRange`] for
@@ -491,12 +492,8 @@ impl<'a> MacroRewrite<'a> {
         // SAFETY: the parser pointer is live for 'a (the parsed
         // statement's lifetime); the C accessors clamp out-of-range
         // indices so count is authoritative.
-        let count = unsafe {
-            self.parser
-                .as_ref()
-                .macro_rewrite_arg_count(self.rewrite_idx)
-        };
-        let rewrite_idx = self.rewrite_idx;
+        let count = unsafe { self.parser.as_ref().macro_rewrite_arg_count(self.idx) };
+        let rewrite_idx = self.idx;
         let parser = self.parser;
         let buffer = self.parent_buffer;
         (0..count).map(move |i| {
@@ -518,9 +515,9 @@ impl<'a> MacroRewrite<'a> {
         let count = unsafe {
             self.parser
                 .as_ref()
-                .macro_rewrite_arg_segment_count(self.rewrite_idx)
+                .macro_rewrite_arg_segment_count(self.idx)
         };
-        let rewrite_idx = self.rewrite_idx;
+        let rewrite_idx = self.idx;
         let parser = self.parser;
         (0..count).map(move |i| {
             // SAFETY: i < count; the C side returns a valid segment.
@@ -546,7 +543,7 @@ impl<'a> MacroRewrite<'a> {
 
 /// One top-level argument of a macro call, at the call site.
 ///
-/// Produced by [`MacroRewrite::args`] for both registered (expanded)
+/// Produced by [`Rewrite::args`] for both registered (expanded)
 /// and fallback calls — the parser scans `name!(a, b, c)` the same
 /// way regardless of whether `name` resolved to a registered macro.
 /// Leading and trailing whitespace and comments are trimmed from the
@@ -554,7 +551,7 @@ impl<'a> MacroRewrite<'a> {
 ///
 /// The arg carries the buffer it indexes into ([`buffer`](Self::buffer),
 /// always equal to the enclosing rewrite's
-/// [`parent_buffer`](MacroRewrite::parent_buffer)), so callers can
+/// [`parent_buffer`](Rewrite::parent_buffer)), so callers can
 /// slice the text directly via [`text`](Self::text) without having
 /// to walk the rewrite's parent chain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -575,7 +572,7 @@ impl<'a> MacroCallArg<'a> {
         self.length
     }
     /// The buffer the arg's offset indexes into — the enclosing
-    /// rewrite's [`parent_buffer`](MacroRewrite::parent_buffer).
+    /// rewrite's [`parent_buffer`](Rewrite::parent_buffer).
     pub fn buffer(&self) -> &'a LayerText {
         self.buffer
     }
@@ -599,7 +596,7 @@ pub enum ArgOrigin {
     Rewrite(RewriteIdx),
 }
 
-/// One `$param` substitution recorded on a [`MacroRewrite`].
+/// One `$param` substitution recorded on a [`Rewrite`].
 ///
 /// Enables downstream tracebacks to anchor each substitution back to the
 /// authored source, possibly via a chain of earlier substitutions.
@@ -627,7 +624,7 @@ impl MacroArgSegment<'_> {
         self.body_length
     }
     /// Byte offset of the substituted arg text in the rewrite's
-    /// [`expansion`](MacroRewrite::expansion) buffer.
+    /// [`expansion`](Rewrite::expansion) buffer.
     pub fn expansion_offset(&self) -> LayerOffset {
         self.expansion_offset
     }

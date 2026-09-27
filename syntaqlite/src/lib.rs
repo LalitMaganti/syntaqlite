@@ -230,7 +230,7 @@ pub fn sqlite_dialect() -> Dialect {
 /// - [`ParserTokenFlags`](self::parse::ParserTokenFlags) — parser-inferred
 ///   semantic flags for individual tokens.
 /// - [`CommentKind`](self::parse::CommentKind) — SQL comment style.
-/// - [`MacroRewrite`](self::parse::MacroRewrite) — recorded macro call
+/// - [`Rewrite`](self::parse::Rewrite) — recorded macro call
 ///   and its expansion, used by the embedded SQL extractor and downstream
 ///   rewriters.
 ///
@@ -250,7 +250,7 @@ pub fn sqlite_dialect() -> Dialect {
 /// ```
 pub mod parse {
     #[doc(inline)]
-    pub use syntaqlite_syntax::any::MacroRewrite;
+    pub use syntaqlite_syntax::any::Rewrite;
     #[doc(inline)]
     pub use syntaqlite_syntax::{CommentKind, ParserConfig, ParserTokenFlags};
     #[doc(inline)]
