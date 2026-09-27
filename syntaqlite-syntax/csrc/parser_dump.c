@@ -120,7 +120,7 @@ static void dump_node_recursive(DumpBuf* b,
 #else
               sp._layer_id == 0
                   ? p->stmt_source
-                  : p->macro.layers.data[sp._layer_id].expansion_data;
+                  : p->rewrites.layers.data[sp._layer_id].expansion_data;
 #endif
           const char* text = base + sp.offset;
           char q = syntaqlite_span_quote_char(sp);

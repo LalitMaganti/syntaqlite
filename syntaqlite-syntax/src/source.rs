@@ -299,7 +299,7 @@ define_u32_newtype! {
     /// snippet, or a parent rewrite's expansion text.
     ///
     /// Used by APIs whose offsets are interpreted relative to a buffer
-    /// identified by a sibling field (e.g. `MacroRewrite`'s `parent`,
+    /// identified by a sibling field (e.g. `Rewrite`'s `parent`,
     /// `MacroArgSegment`'s `origin`).  Distinct from [`StmtOffset`] and
     /// [`DocOffset`] at the type level so callers can't accidentally use
     /// one in place of another.
@@ -441,8 +441,8 @@ define_u32_newtype! {
 define_u32_newtype! {
     /// A 0-based index into a statement's macro-rewrite list.
     ///
-    /// Identifies a specific `MacroRewrite` within the flat list emitted by
-    /// `AnyParsedStatement::macro_rewrites`.  Distinct from byte offsets
+    /// Identifies a specific `Rewrite` within the flat list emitted by
+    /// `AnyParsedStatement::rewrites`.  Distinct from byte offsets
     /// and token indices at the type level.
     RewriteIdx
 }

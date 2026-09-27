@@ -145,9 +145,8 @@ typedef struct SynqExpansionLayer {
 
 typedef SYNQ_VEC(SynqExpansionLayer) SynqExpansionLayerVec;
 
-// All macro-related parser state, including layer tree and scratch buffers.
-// Factored into a single sub-struct so the parser struct has one guarded
-// field: `SynqMacroState macro;`.
+// Macro expansion state: the lookup callback, the invocation in progress and
+// its scratch.  The layers macro calls add live in `SynqRewriteState`.
 typedef struct SynqMacroState {
   // ── Configuration ──────────────────────────────────────────────────────
   uint32_t macro_fallback;  // 1 = unregistered name!(args) becomes TK_ID.
@@ -170,9 +169,14 @@ typedef struct SynqMacroState {
   // ── Nesting depth (0 = not in macro) ───────────────────────────────────
   uint32_t depth;
 
+} SynqMacroState;
+
+// The rewrites recorded for the current statement, each a layer of text
+// replacing a range of its parent's: a macro call's expansion, for one.
+typedef struct SynqRewriteState {
   // ── Layer tree ─────────────────────────────────────────────────────────
   // Entry 0 is a sentinel representing the original source; actual
-  // expansions start at index 1.  `_layer_id` on AST spans indexes
+  // rewrites start at index 1.  `_layer_id` on AST spans indexes
   // directly into this vector.
   SynqExpansionLayerVec layers;
 
@@ -181,7 +185,7 @@ typedef struct SynqMacroState {
   SYNQ_VEC(SyntaqliteTracebackFrame) traceback_buf;
   // Scratch for `syntaqlite_parser_node_expanded_text`.
   SYNQ_VEC(uint8_t) node_expanded_buf;
-} SynqMacroState;
+} SynqRewriteState;
 
 #endif  // !SYNTAQLITE_OMIT_MACROS
 
@@ -250,9 +254,11 @@ struct SyntaqliteParser {
   // non-empty: trailing comments always have a previous token.
   SynqTokenComments pending_orphan_leading;
 
-  // ── Macro expansion state (compiled out with SYNTAQLITE_OMIT_MACROS) ───
+  // ── Macro expansion and rewrite state (compiled out with
+  // SYNTAQLITE_OMIT_MACROS) ─────────────────────────────────────────────
 #ifndef SYNTAQLITE_OMIT_MACROS
   SynqMacroState macro;
+  SynqRewriteState rewrites;
 #endif
 };
 
@@ -344,6 +350,10 @@ void synq_macro_state_init(SynqMacroState* m);
 
 // Free all macro state buffers.
 void synq_macro_state_free(SynqMacroState* m, SyntaqliteMemMethods mem);
+
+// Initialize and free the rewrite layer tree and its scratch.
+void synq_rewrite_state_init(SynqRewriteState* r);
+void synq_rewrite_state_free(SynqRewriteState* r, SyntaqliteMemMethods mem);
 
 // Free owned expansion data and arg segments on layers 1..N (skip sentinel).
 void synq_layers_free_owned(SynqExpansionLayerVec* layers,

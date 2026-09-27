@@ -16,7 +16,7 @@
 //! mini-parse.  No per-statement mini-parse state leaks out.
 
 use syntaqlite_syntax::any::{
-    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, MacroRewrite, ParseOutcome,
+    AnyNodeId, AnyParsedStatement, AnyParser, AnyTokenizer, FieldValue, ParseOutcome, Rewrite,
 };
 use syntaqlite_syntax::source::{StmtLen, StmtOffset};
 
@@ -43,7 +43,7 @@ pub(super) fn compute_macro_docs<'a>(
     arena: &mut DocArena<'a>,
 ) -> Vec<Option<DocId>> {
     erased
-        .macro_rewrites()
+        .rewrites()
         .filter(|r| r.parent().is_none() && r.is_fallback())
         .map(|r| compute_one(mini_parser, dialect, &r, tokenizer, comments, arena))
         .collect()
@@ -52,7 +52,7 @@ pub(super) fn compute_macro_docs<'a>(
 fn compute_one(
     mini_parser: &AnyParser,
     dialect: &AnyDialect,
-    r: &MacroRewrite<'_>,
+    r: &Rewrite<'_>,
     tokenizer: &AnyTokenizer,
     comments: &[CommentEntry],
     arena: &mut DocArena<'_>,
@@ -162,7 +162,7 @@ fn format_arg(
         dialect: dialect.clone(),
         reader: stmt,
         comment_ctx: None,
-        macro_rewrites: Vec::new(),
+        rewrites: Vec::new(),
         macro_docs: Vec::new(),
     };
     let mut scratch = InterpretScratch::new();

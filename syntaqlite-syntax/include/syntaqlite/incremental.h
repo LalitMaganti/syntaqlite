@@ -41,8 +41,8 @@
 // done:
 //   syntaqlite_parser_destroy(p);
 //
-// Read accumulated macro rewrites via syntaqlite_result_macro_count() /
-// syntaqlite_result_macro_rewrite_at() after parsing.
+// Read accumulated rewrites via syntaqlite_result_rewrite_count() /
+// syntaqlite_result_rewrite_at() after parsing.
 
 #ifndef SYNTAQLITE_INCREMENTAL_PARSER_H
 #define SYNTAQLITE_INCREMENTAL_PARSER_H

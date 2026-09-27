@@ -90,7 +90,7 @@ pub mod any {
     #[doc(inline)]
     pub use crate::parser::{
         AnyIncrementalParseSession, AnyParseError, AnyParseSession, AnyParsedStatement, AnyParser,
-        AnyParserToken, ArgOrigin, MacroArgSegment, MacroCallArg, MacroRewrite, ParseOutcome,
+        AnyParserToken, ArgOrigin, MacroArgSegment, MacroCallArg, ParseOutcome, Rewrite,
         TracebackFrame,
     };
     #[doc(inline)]

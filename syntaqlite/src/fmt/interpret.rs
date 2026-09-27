@@ -18,8 +18,8 @@ pub(crate) struct FmtCtx<'a> {
     pub comment_ctx: Option<CommentCtx>,
     /// `(call_offset, call_length)` per macro call: position is all the
     /// formatter needs to decide verbatim emission.
-    pub macro_rewrites: Vec<(StmtOffset, StmtLen)>,
-    /// Index-aligned with `macro_rewrites`; `None` falls through to
+    pub rewrites: Vec<(StmtOffset, StmtLen)>,
+    /// Index-aligned with `rewrites`; `None` falls through to
     /// verbatim emission.
     pub macro_docs: Vec<Option<DocId>>,
 }
@@ -79,8 +79,7 @@ impl Formatter {
         arena: &mut DocArena<'a>,
     ) -> DocId {
         self.consumed_regions.clear();
-        self.consumed_regions
-            .resize(ctx.macro_rewrites.len(), false);
+        self.consumed_regions.resize(ctx.rewrites.len(), false);
         interpret_core(
             ctx,
             root_id,
@@ -297,7 +296,7 @@ pub(super) fn interpret_core<'a>(
                         );
 
                         let mut return_action = ReturnAction::CatOntoRunning;
-                        if !ctx.macro_rewrites.is_empty()
+                        if !ctx.rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
                             && let Some(doc) = super::formatter::try_macro(
                                 ctx,
@@ -408,7 +407,7 @@ pub(super) fn interpret_core<'a>(
                     let children = ctx.reader.list_children(state.list_id).unwrap_or(&[]);
                     let child_id = children[state.index];
 
-                    let macro_doc = if !ctx.macro_rewrites.is_empty()
+                    let macro_doc = if !ctx.rewrites.is_empty()
                         && ctx.reader.list_children(child_id).is_none()
                     {
                         super::formatter::try_macro(
@@ -580,7 +579,7 @@ pub(super) fn interpret_core<'a>(
                         );
 
                         let mut return_action = ReturnAction::CatOntoRunning;
-                        if !ctx.macro_rewrites.is_empty()
+                        if !ctx.rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
                             && let Some(doc) = super::formatter::try_macro(
                                 ctx,
@@ -633,7 +632,7 @@ pub(super) fn interpret_core<'a>(
                         );
 
                         let mut return_action = ReturnAction::CatOntoRunning;
-                        if !ctx.macro_rewrites.is_empty()
+                        if !ctx.rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
                             && let Some(doc) = super::formatter::try_macro(
                                 ctx,
@@ -683,7 +682,7 @@ pub(super) fn interpret_core<'a>(
                         );
 
                         let mut return_action = ReturnAction::CatOntoRunning;
-                        if !ctx.macro_rewrites.is_empty()
+                        if !ctx.rewrites.is_empty()
                             && ctx.reader.list_children(child_id).is_none()
                             && let Some(doc) = super::formatter::try_macro(
                                 ctx,
