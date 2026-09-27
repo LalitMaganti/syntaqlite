@@ -304,7 +304,8 @@ def _classify(changed: set[str] | None) -> dict[str, bool]:
 
     for path in changed:
         is_rust = path.endswith(".rs") or path.endswith("Cargo.toml") or path == "Cargo.lock"
-        is_c = path.endswith(".c") or path.endswith(".h")
+        is_c = (path.endswith(".c") or path.endswith(".h")
+                or path == "tests/c_api/api-manifest.json")
         is_synq = path.endswith(".synq")
 
         if is_rust:
@@ -453,7 +454,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
     if fix:
         # Fix mode: parallel lanes, then a sequential tail.
         #   Lane A — clippy --fix --all-features (isolated target dir)
-        #   Lane B — format-c (fix) + check-c-deps (no cargo lock needed)
+        #   Lane B — format-c (fix) + check-c-deps + check-c-exports (no cargo lock)
         lint_lanes = []
         if need_rust:
             lint_lanes.append([
@@ -469,6 +470,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
             lint_lanes.append([
                 ("tools/format-c", [_tool("format-c")]),
                 ("tools/check-c-deps", [_tool("check-c-deps")]),
+                ("tools/check-c-exports", [_tool("check-c-exports")]),
             ])
         else:
             _skip("tools/format-c")
@@ -496,7 +498,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
         # Check mode: up to three parallel lanes.
         #   Lane A — clippy --all-features (isolated target dir)
         #   Lane B — clippy default → clippy no-default (shared target dir)
-        #   Lane C — format-c --check + check-c-deps (no cargo)
+        #   Lane C — format-c --check + check-c-deps + check-c-exports (no cargo)
         lint_lanes = []
         if need_rust:
             lint_lanes.append([
@@ -519,6 +521,7 @@ def _run(fix: bool, verbosity: int, run_all: bool, cargo: Callable[..., list[str
             lint_lanes.append([
                 ("tools/format-c --check", [_tool("format-c"), "--check"]),
                 ("tools/check-c-deps", [_tool("check-c-deps")]),
+                ("tools/check-c-exports", [_tool("check-c-exports")]),
             ])
         else:
             _skip("tools/format-c --check")

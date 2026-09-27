@@ -122,6 +122,7 @@ The `.synq` DSL defines the AST node types, enums, flags, and formatter instruct
 | `tools/run-integration-tests` | Unified integration test runner for all suites or a selected subset (see below) |
 | `tools/format-c` | Run clang-format on C sources (`--check` to verify without modifying) |
 | `tools/check-c-deps` | Verify C header dependency boundaries between crates |
+| `tools/check-c-exports` | Verify the C library exports exactly the functions the public headers declare |
 | `tools/pre-push` | Run pre-push checks, skipping anything not affected by changed files. Use `--fix` to auto-fix formatting and clippy warnings. Use `--all` to run all checks unconditionally. |
 | `tools/install-build-deps` | Install platform-specific build deps (clang-format, SQLite sources) |
 | `tools/build-web-playground` | Build WASM web playground |
