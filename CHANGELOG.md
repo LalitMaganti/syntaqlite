@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0
+
+**Custom dialects:**
+- Nodes marked for expansion are now expanded once their statement is parsed, not while it is still being parsed, so the host can see the whole statement, such as the CTEs a node reads. A node that can't be placed fails its statement instead of being silently skipped ([#404](https://github.com/LalitMaganti/syntaqlite/pull/404)).
+- Generating a dialect gives the same keyword tables on every run ([#403](https://github.com/LalitMaganti/syntaqlite/pull/403)).
+
 ## 0.11.2
 
 **Parser:**
