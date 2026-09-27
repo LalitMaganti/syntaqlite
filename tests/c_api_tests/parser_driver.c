@@ -30,6 +30,8 @@
 //   node_comments <id>    Leading + trailing comments for node boundaries
 //                         (needs extents).
 //   node_text <id>        Authored text slice for node (needs extents).
+//   node_site <id>        Layer and range a node was written in (needs
+//                         extents).
 //   error_info            error_msg/off/len/recovery_root dump.
 //   macro_fallback 0|1    Configure (must be before first reset).
 //   macro_register NAME   Register a lookup-template body (until `.`).
@@ -289,6 +291,19 @@ int main(void) {
         fwrite(t, 1, len, stdout);
         if (len == 0 || t[len - 1] != '\n') fputc('\n', stdout);
         printf(".\n");
+      }
+    } else if (strcmp(verb, "node_site") == 0) {
+      if (argc < 2) { printf("node_site err bad_arg\n"); continue; }
+      uint32_t id = (uint32_t)strtoul(argv[1], NULL, 10);
+      SyntaqliteNodeSite site;
+      if (!syntaqlite_parser_node_site(p, id, &site)) {
+        printf("node_site none\n");
+      } else if (site.parent_idx == SYNTAQLITE_REWRITE_PARENT_SOURCE) {
+        printf("node_site id=%u parent=source off=%u len=%u\n", id,
+               site.offset, site.length);
+      } else {
+        printf("node_site id=%u parent=%u off=%u len=%u\n", id,
+               site.parent_idx, site.offset, site.length);
       }
     } else if (strcmp(verb, "macro_fallback") == 0) {
       if (argc < 2) { printf("macro_fallback err bad_arg\n"); continue; }
