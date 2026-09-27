@@ -93,9 +93,6 @@ static void synq_expanded_merge(SynqNodeExpandedExtent* acc,
 // Children are merged left to right: the first child with tokens sets the start
 // and the last one sets the end.
 static void synq_bounds_merge(SynqNodeBounds* acc, SynqNodeBounds e) {
-  if (e.first_node < acc->first_node) {
-    acc->first_node = e.first_node;
-  }
   if (e.first_layer == SYNQ_NO_BOUNDS) {
     return;
   }
@@ -116,9 +113,6 @@ void synq_extent_record_list_append(SynqParseCtx* ctx,
   SynqNodeExpandedExtent expanded =
       syntaqlite_vec_at(&ctx->node_expanded_extents, child);
   SynqNodeBounds bounds = syntaqlite_vec_at(&ctx->node_bounds, child);
-  if (list_id < bounds.first_node) {
-    bounds.first_node = list_id;
-  }
   if (list_id < syntaqlite_vec_len(&ctx->node_extents)) {
     synq_extent_merge(&syntaqlite_vec_at(&ctx->node_extents, list_id), range);
     synq_expanded_merge(
@@ -179,7 +173,6 @@ void synq_extent_on_shift(SynqParseCtx* pCtx,
       .first_offset = token->offset,
       .last_layer = token->layer_id,
       .last_end = token->offset + token->n,
-      .first_node = UINT32_MAX,
   };
   syntaqlite_vec_push(&pCtx->bounds_stack, b, pCtx->mem);
 }
@@ -236,8 +229,7 @@ void synq_extent_on_reduce(SynqParseCtx* pCtx, unsigned int nrhs) {
   syntaqlite_vec_truncate(&pCtx->expanded_stack, len - nrhs);
   syntaqlite_vec_push(&pCtx->expanded_stack, exp_merged, pCtx->mem);
 
-  SynqNodeBounds bounds_merged = {SYNQ_NO_BOUNDS, 0, SYNQ_NO_BOUNDS, 0,
-                                  UINT32_MAX};
+  SynqNodeBounds bounds_merged = {SYNQ_NO_BOUNDS, 0, SYNQ_NO_BOUNDS, 0};
   for (uint32_t i = len - nrhs; i < len; i++) {
     synq_bounds_merge(&bounds_merged,
                       syntaqlite_vec_at(&pCtx->bounds_stack, i));

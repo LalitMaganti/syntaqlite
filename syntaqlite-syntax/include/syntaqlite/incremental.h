@@ -126,8 +126,9 @@ syntaqlite_parser_set_macro_lookup(SyntaqliteParser* p,
 //
 // Macros replace text before it's parsed. Node expansion works the other way
 // around: some dialect syntax is parsed as normal, then the host compiles it
-// into SQL. The grammar marks which nodes this applies to and, once one is
-// parsed, calls the host's expander to replace it.
+// into SQL. The grammar marks which nodes this applies to and, once their
+// statement is parsed, the host's expander replaces each of them. The host
+// sees the whole statement while it does, such as the CTEs a node can read.
 //
 // The replacement is recorded as a rewrite (see
 // `syntaqlite_result_rewrite_at`), just like a macro call, so it also works
@@ -138,17 +139,20 @@ syntaqlite_parser_set_macro_lookup(SyntaqliteParser* p,
 #define SYNTAQLITE_NODE_EXPAND_OK 0
 #define SYNTAQLITE_NODE_EXPAND_ERROR (-1)
 
-// Called once `node_id` and everything inside it has been parsed, while the
-// rest of the statement is still being parsed. It should call
-// `syntaqlite_node_expansion_set_result` and return SYNTAQLITE_NODE_EXPAND_OK,
-// or return SYNTAQLITE_NODE_EXPAND_ERROR to fail the parse.
+// Called for each node the grammar marked, once the statement is parsed, so
+// the whole statement can be read; a node inside another is expanded first.
+// It should call `syntaqlite_node_expansion_set_result` and return
+// SYNTAQLITE_NODE_EXPAND_OK, or return SYNTAQLITE_NODE_EXPAND_ERROR to fail the
+// statement.
 typedef int (*SyntaqliteNodeExpandFn)(void* user_data,
                                       SyntaqliteParser* parser,
                                       uint32_t node_id);
 
-// Sets the callback which expands nodes the grammar marks. Returns
-// SYNTAQLITE_OK on success, or SYNTAQLITE_ERR_OMITTED if macros are compiled
-// out, since node expansion needs the same rewrite machinery.
+// Sets the callback which expands nodes the grammar marks. Needs node extents
+// (`syntaqlite_parser_set_collect_node_extents`), which place each node:
+// without them every expansion fails its statement. Returns SYNTAQLITE_OK on
+// success, or SYNTAQLITE_ERR_OMITTED if macros are compiled out, since node
+// expansion needs the same rewrite machinery.
 SYNTAQLITE_API int32_t
 syntaqlite_parser_set_node_expander(SyntaqliteParser* p,
                                     SyntaqliteNodeExpandFn fn,

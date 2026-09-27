@@ -46,11 +46,17 @@ static void synq_open_statement(SyntaqliteParser* p, uint32_t offset) {
 }
 
 int32_t synq_parser_set_result_status(SyntaqliteParser* p, int32_t rc) {
-  p->last_status = rc;
   if (p->stmt_start_offset != UINT32_MAX) {
     p->stmt_end_offset =
         p->offset > p->stmt_start_offset ? p->offset : p->stmt_start_offset;
   }
+#ifndef SYNTAQLITE_OMIT_MACROS
+  // The statement is whole now, so the nodes it marked can be expanded.
+  if (rc == SYNTAQLITE_PARSE_OK && !synq_parser_expand_nodes(p)) {
+    rc = SYNTAQLITE_PARSE_ERROR;
+  }
+#endif
+  p->last_status = rc;
   return rc;
 }
 
@@ -149,7 +155,6 @@ SYNTAQLITE_API SyntaqliteParser* syntaqlite_parser_create_with_dialect(
   p->dialect = dialect;
   p->lemon = SYNQ_PARSER_ALLOC(dialect.tmpl, m.xMalloc, &p->ctx);
   synq_parse_ctx_init(&p->ctx, m);
-  p->ctx.parser = p;
   syntaqlite_vec_init(&p->comments);
   syntaqlite_vec_init(&p->tokens);
   syntaqlite_vec_init(&p->token_comments);
@@ -913,15 +918,6 @@ SYNTAQLITE_API void syntaqlite_node_expansion_set_result(SyntaqliteParser* p,
   (void)text;
   (void)len;
 }
-void synq_parser_expand_node(SynqParseCtx* ctx,
-                             uint32_t node_id,
-                             const char* name,
-                             uint32_t name_len) {
-  (void)ctx;
-  (void)node_id;
-  (void)name;
-  (void)name_len;
-}
 SYNTAQLITE_API SyntaqliteRewrite
 syntaqlite_result_rewrite_at(SyntaqliteParser* p, uint32_t idx) {
   (void)p;
@@ -964,10 +960,6 @@ syntaqlite_macro_rewrite_arg_at(SyntaqliteParser* p,
 #else
 SYNTAQLITE_API uint32_t syntaqlite_result_rewrite_count(SyntaqliteParser* p) {
   uint32_t total = syntaqlite_vec_len(&p->rewrites.layers);
-  // Don't report the layer of a node that's still being expanded: it has no
-  // text yet.
-  if (p->node_expansion.pending_layer && total > 1)
-    total--;
   // Entry 0 is the source sentinel; real expansion layers start at 1.
   return total <= 1 ? 0 : total - 1;
 }
@@ -1117,12 +1109,9 @@ SYNTAQLITE_API const char* syntaqlite_parser_full_text(SyntaqliteParser* p,
 SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
                                                   uint32_t* out_offset,
                                                   uint32_t* out_len) {
-  // If we're still in the middle of parsing the statement (e.g. during node
-  // expansion), use how far the tokenizer has got as the end.
-  uint32_t stmt_end =
-      p->stmt_end_offset > p->offset ? p->stmt_end_offset : p->offset;
-  if (p->stmt_start_offset == UINT32_MAX || stmt_end <= p->stmt_start_offset ||
-      stmt_end > p->source_len) {
+  if (p->stmt_start_offset == UINT32_MAX ||
+      p->stmt_end_offset <= p->stmt_start_offset ||
+      p->stmt_end_offset > p->source_len) {
     if (out_offset)
       *out_offset = 0;
     if (out_len)
@@ -1132,7 +1121,7 @@ SYNTAQLITE_API const char* syntaqlite_parser_text(SyntaqliteParser* p,
   if (out_offset)
     *out_offset = p->stmt_start_offset;
   if (out_len)
-    *out_len = stmt_end - p->stmt_start_offset;
+    *out_len = p->stmt_end_offset - p->stmt_start_offset;
   return p->stmt_source;
 }
 
@@ -1359,11 +1348,9 @@ SYNTAQLITE_API const char* syntaqlite_parser_node_text(SyntaqliteParser* p,
     return NULL;
   }
   SynqExtentRange r = syntaqlite_vec_at(&p->ctx.node_extents, node_id);
-  // Sentinel `(UINT32_MAX, 0)` → not recorded.  Mid-parse (e.g. during node
-  // expansion) we don't know where the statement ends yet, so bound it by
-  // the end of the input instead.
-  uint32_t stmt_len = p->source_len > p->stmt_start_offset
-                          ? p->source_len - p->stmt_start_offset
+  // Sentinel `(UINT32_MAX, 0)` → not recorded.
+  uint32_t stmt_len = p->stmt_end_offset > p->stmt_start_offset
+                          ? p->stmt_end_offset - p->stmt_start_offset
                           : 0;
   if (r.root_start > r.root_end || r.root_end > stmt_len) {
     return NULL;
