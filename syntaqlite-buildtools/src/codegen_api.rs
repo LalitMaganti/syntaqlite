@@ -501,7 +501,9 @@ pub(crate) fn extract_terminals_from_y(
         }
     }
 
-    let mut terminals: HashSet<String> = HashSet::new();
+    // Sorted, so the keyword table generated from them is the same on every
+    // run: keywords sharing text are ordered by their position in this list.
+    let mut terminals: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
 
     for content in extension_y_contents {
         let Ok(grammar) = util::grammar_parser::LemonGrammar::parse(content) else {
@@ -827,6 +829,16 @@ cmd ::= CREATE PERFETTO MACRO ID LP RP AS ANY.
         .collect();
         assert_eq!(got, want);
         assert!(!got.contains("ID"));
+    }
+
+    #[test]
+    fn extract_terminals_are_sorted() {
+        let y = r"
+%token ZEBRA PERFETTO PER MODULE ALPHA.
+cmd ::= ZEBRA PERFETTO PER MODULE ALPHA.
+";
+        let got = super::extract_terminals_from_y(&[y], &[], &[y]);
+        assert_eq!(got, ["ALPHA", "MODULE", "PER", "PERFETTO", "ZEBRA"]);
     }
 
     #[test]
