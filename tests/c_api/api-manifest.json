@@ -303,6 +303,10 @@
       "SYNTAQLITE_RELATION_TABLE": 0,
       "SYNTAQLITE_RELATION_VIEW": 1
     },
+    "SyntaqliteRewriteKind": {
+      "SYNTAQLITE_REWRITE_MACRO_CALL": 0,
+      "SYNTAQLITE_REWRITE_NODE_EXPANSION": 1
+    },
     "SyntaqliteSavepointOp": {
       "SYNTAQLITE_SAVEPOINT_OP_RELEASE": 1,
       "SYNTAQLITE_SAVEPOINT_OP_ROLLBACK_TO": 2,
@@ -752,6 +756,10 @@
       "linkage": "internal",
       "type": "const SyntaqliteIdentName *(const SyntaqliteName *)"
     },
+    "syntaqlite_node_expansion_set_result": {
+      "linkage": "external",
+      "type": "void (SyntaqliteParser *, const char *, SyntaqliteLength)"
+    },
     "syntaqlite_node_is_macro_free": {
       "linkage": "external",
       "type": "int (SyntaqliteParser *, uint32_t)"
@@ -828,6 +836,10 @@
       "linkage": "external",
       "type": "const char *(SyntaqliteParser *, uint32_t, SyntaqliteLength *)"
     },
+    "syntaqlite_parser_node_site": {
+      "linkage": "external",
+      "type": "int (SyntaqliteParser *, uint32_t, SyntaqliteNodeSite *)"
+    },
     "syntaqlite_parser_node_text": {
       "linkage": "external",
       "type": "const char *(SyntaqliteParser *, uint32_t, SyntaqliteLength *, SyntaqliteStmtOffset *)"
@@ -851,6 +863,10 @@
     "syntaqlite_parser_set_macro_lookup": {
       "linkage": "external",
       "type": "int32_t (SyntaqliteParser *, SyntaqliteMacroLookupFn, void *)"
+    },
+    "syntaqlite_parser_set_node_expander": {
+      "linkage": "external",
+      "type": "int32_t (SyntaqliteParser *, SyntaqliteNodeExpandFn, void *)"
     },
     "syntaqlite_parser_set_trace": {
       "linkage": "external",
@@ -888,15 +904,15 @@
       "linkage": "external",
       "type": "SyntaqliteStmtOffset (SyntaqliteParser *)"
     },
-    "syntaqlite_result_macro_count": {
+    "syntaqlite_result_recovery_root": {
       "linkage": "external",
       "type": "uint32_t (SyntaqliteParser *)"
     },
-    "syntaqlite_result_macro_rewrite_at": {
+    "syntaqlite_result_rewrite_at": {
       "linkage": "external",
-      "type": "SyntaqliteMacroRewrite (SyntaqliteParser *, uint32_t)"
+      "type": "SyntaqliteRewrite (SyntaqliteParser *, uint32_t)"
     },
-    "syntaqlite_result_recovery_root": {
+    "syntaqlite_result_rewrite_count": {
       "linkage": "external",
       "type": "uint32_t (SyntaqliteParser *)"
     },
@@ -1204,6 +1220,9 @@
         "size": 4
       },
       "SyntaqliteRelationKind": {
+        "size": 4
+      },
+      "SyntaqliteRewriteKind": {
         "size": 4
       },
       "SyntaqliteSavepointOp": {
@@ -1951,26 +1970,6 @@
         },
         "size": 8
       },
-      "SyntaqliteMacroRewrite": {
-        "align": 8,
-        "fields": {
-          "body_call_length": 56,
-          "body_call_offset": 52,
-          "call_length": 8,
-          "call_offset": 4,
-          "def_col": 48,
-          "def_line": 44,
-          "expansion": 16,
-          "expansion_len": 24,
-          "is_fallback": 76,
-          "name": 32,
-          "name_len": 40,
-          "parent_buffer": 64,
-          "parent_buffer_len": 72,
-          "parent_idx": 0
-        },
-        "size": 80
-      },
       "SyntaqliteMemMethods": {
         "align": 8,
         "fields": {
@@ -2092,6 +2091,15 @@
           "with_clause": 0
         },
         "size": 72
+      },
+      "SyntaqliteNodeSite": {
+        "align": 4,
+        "fields": {
+          "length": 8,
+          "offset": 4,
+          "parent_idx": 0
+        },
+        "size": 12
       },
       "SyntaqliteOrderByList": {
         "align": 4,
@@ -2223,6 +2231,27 @@
           "tag": 0
         },
         "size": 8
+      },
+      "SyntaqliteRewrite": {
+        "align": 8,
+        "fields": {
+          "body_call_length": 56,
+          "body_call_offset": 52,
+          "call_length": 8,
+          "call_offset": 4,
+          "def_col": 48,
+          "def_line": 44,
+          "expansion": 16,
+          "expansion_len": 24,
+          "is_fallback": 76,
+          "kind": 80,
+          "name": 32,
+          "name_len": 40,
+          "parent_buffer": 64,
+          "parent_buffer_len": 72,
+          "parent_idx": 0
+        },
+        "size": 88
       },
       "SyntaqliteSavepointStmt": {
         "align": 4,
@@ -2608,14 +2637,16 @@
     "SYNTAQLITE_MACRO_LOOKUP_ERROR": "(-2)",
     "SYNTAQLITE_MACRO_LOOKUP_NOT_FOUND": "(-1)",
     "SYNTAQLITE_MACRO_LOOKUP_OK": "0",
-    "SYNTAQLITE_MACRO_PARENT_SOURCE": "UINT32_MAX",
     "SYNTAQLITE_MEM_METHODS_DEFAULT": "((SyntaqliteMemMethods){malloc, realloc, free})",
     "SYNTAQLITE_NODE(p,Type,id)": "((id) == SYNTAQLITE_NULL_NODE ? (const Type*)0 : (const Type*)syntaqlite_parser_node((p), (id)))",
+    "SYNTAQLITE_NODE_EXPAND_ERROR": "(-1)",
+    "SYNTAQLITE_NODE_EXPAND_OK": "0",
     "SYNTAQLITE_NULL_NODE": "0xFFFFFFFFu",
     "SYNTAQLITE_OK": "0",
     "SYNTAQLITE_PARSE_DONE": "0",
     "SYNTAQLITE_PARSE_ERROR": "(-1)",
     "SYNTAQLITE_PARSE_OK": "1",
+    "SYNTAQLITE_REWRITE_PARENT_SOURCE": "UINT32_MAX",
     "SYNTAQLITE_SPAN_FLAG_QUOTE_BACKTICK": "((uint32_t)2u)",
     "SYNTAQLITE_SPAN_FLAG_QUOTE_BRACKET": "((uint32_t)4u)",
     "SYNTAQLITE_SPAN_FLAG_QUOTE_DOUBLE": "((uint32_t)1u)",
@@ -4609,67 +4640,6 @@
       ],
       "kind": "struct"
     },
-    "SyntaqliteMacroRewrite": {
-      "fields": [
-        {
-          "name": "parent_idx",
-          "type": "uint32_t"
-        },
-        {
-          "name": "call_offset",
-          "type": "SyntaqliteLayerOffset"
-        },
-        {
-          "name": "call_length",
-          "type": "SyntaqliteLength"
-        },
-        {
-          "name": "expansion",
-          "type": "const char *"
-        },
-        {
-          "name": "expansion_len",
-          "type": "SyntaqliteLength"
-        },
-        {
-          "name": "name",
-          "type": "const char *"
-        },
-        {
-          "name": "name_len",
-          "type": "SyntaqliteLength"
-        },
-        {
-          "name": "def_line",
-          "type": "SyntaqliteLineNumber"
-        },
-        {
-          "name": "def_col",
-          "type": "SyntaqliteColumnNumber"
-        },
-        {
-          "name": "body_call_offset",
-          "type": "SyntaqliteLayerOffset"
-        },
-        {
-          "name": "body_call_length",
-          "type": "SyntaqliteLength"
-        },
-        {
-          "name": "parent_buffer",
-          "type": "const char *"
-        },
-        {
-          "name": "parent_buffer_len",
-          "type": "SyntaqliteLength"
-        },
-        {
-          "name": "is_fallback",
-          "type": "uint32_t"
-        }
-      ],
-      "kind": "struct"
-    },
     "SyntaqliteMemMethods": {
       "fields": [
         {
@@ -5063,6 +5033,23 @@
       ],
       "kind": "union"
     },
+    "SyntaqliteNodeSite": {
+      "fields": [
+        {
+          "name": "parent_idx",
+          "type": "uint32_t"
+        },
+        {
+          "name": "offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "length",
+          "type": "SyntaqliteLength"
+        }
+      ],
+      "kind": "struct"
+    },
     "SyntaqliteOrderByList": {
       "fields": [
         {
@@ -5317,6 +5304,71 @@
         {
           "name": "children",
           "type": "uint32_t[]"
+        }
+      ],
+      "kind": "struct"
+    },
+    "SyntaqliteRewrite": {
+      "fields": [
+        {
+          "name": "parent_idx",
+          "type": "uint32_t"
+        },
+        {
+          "name": "call_offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "call_length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "expansion",
+          "type": "const char *"
+        },
+        {
+          "name": "expansion_len",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "name",
+          "type": "const char *"
+        },
+        {
+          "name": "name_len",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "def_line",
+          "type": "SyntaqliteLineNumber"
+        },
+        {
+          "name": "def_col",
+          "type": "SyntaqliteColumnNumber"
+        },
+        {
+          "name": "body_call_offset",
+          "type": "SyntaqliteLayerOffset"
+        },
+        {
+          "name": "body_call_length",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "parent_buffer",
+          "type": "const char *"
+        },
+        {
+          "name": "parent_buffer_len",
+          "type": "SyntaqliteLength"
+        },
+        {
+          "name": "is_fallback",
+          "type": "uint32_t"
+        },
+        {
+          "name": "kind",
+          "type": "uint32_t"
         }
       ],
       "kind": "struct"
@@ -6181,7 +6233,6 @@
     "SyntaqliteMacroArgSegment": "struct SyntaqliteMacroArgSegment",
     "SyntaqliteMacroCallArg": "struct SyntaqliteMacroCallArg",
     "SyntaqliteMacroLookupFn": "int (*)(void *, SyntaqliteParser *, const char *, SyntaqliteLength, const SyntaqliteToken *, uint32_t)",
-    "SyntaqliteMacroRewrite": "struct SyntaqliteMacroRewrite",
     "SyntaqliteMacroStyle": "enum SyntaqliteMacroStyle",
     "SyntaqliteMaterialized": "enum SyntaqliteMaterialized",
     "SyntaqliteMemMethods": "struct SyntaqliteMemMethods",
@@ -6190,6 +6241,8 @@
     "SyntaqliteNamedWindowDef": "struct SyntaqliteNamedWindowDef",
     "SyntaqliteNamedWindowDefList": "struct SyntaqliteNamedWindowDefList",
     "SyntaqliteNode": "union SyntaqliteNode",
+    "SyntaqliteNodeExpandFn": "int (*)(void *, SyntaqliteParser *, uint32_t)",
+    "SyntaqliteNodeSite": "struct SyntaqliteNodeSite",
     "SyntaqliteNodeTag": "enum SyntaqliteNodeTag",
     "SyntaqliteNullsOrder": "enum SyntaqliteNullsOrder",
     "SyntaqliteOrderByList": "struct SyntaqliteOrderByList",
@@ -6212,6 +6265,8 @@
     "SyntaqliteResultColumn": "struct SyntaqliteResultColumn",
     "SyntaqliteResultColumnFlags": "union SyntaqliteResultColumnFlags",
     "SyntaqliteResultColumnList": "struct SyntaqliteResultColumnList",
+    "SyntaqliteRewrite": "struct SyntaqliteRewrite",
+    "SyntaqliteRewriteKind": "enum SyntaqliteRewriteKind",
     "SyntaqliteRpc": "struct SyntaqliteRpc",
     "SyntaqliteSavepointOp": "enum SyntaqliteSavepointOp",
     "SyntaqliteSavepointStmt": "struct SyntaqliteSavepointStmt",
