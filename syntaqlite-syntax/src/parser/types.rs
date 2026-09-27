@@ -344,8 +344,18 @@ impl<'a, G: TypedDialect> TypedParserToken<'a, G> {
 /// Parser-token alias for dialect-independent pipelines.
 pub type AnyParserToken<'a> = TypedParserToken<'a, crate::dialect::AnyDialect>;
 
+/// The kind of thing a [`Rewrite`] replaced.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RewriteKind {
+    /// A `name!(...)` macro call, replaced by the macro's expansion.
+    MacroCall,
+    /// A parsed node, replaced by text from the host's node expander. The call is the node's text,
+    /// and macro-specific fields other than [`name`](Rewrite::name) are empty.
+    NodeExpansion,
+}
+
 /// A rewrite recorded during parsing: a range of text replaced by other
-/// text.  Each is currently a macro call replaced by its expansion.
+/// text: either a macro call or an expanded node (see [`kind`](Rewrite::kind)).
 ///
 /// Carries enough information to reconstruct a source-to-expanded rewrite
 /// tree (e.g. to drive Perfetto's `SqlSource::Rewriter` or an equivalent).
@@ -379,6 +389,7 @@ pub struct Rewrite<'a> {
     /// top-level rewrites, parent rewrite's expansion otherwise.
     pub(crate) parent_buffer: &'a LayerText,
     pub(crate) is_fallback: bool,
+    pub(crate) kind: RewriteKind,
     pub(crate) parser: std::ptr::NonNull<crate::parser::ffi::CParser>,
     pub(crate) _lifetime: std::marker::PhantomData<&'a ()>,
 }
@@ -452,6 +463,11 @@ impl<'a> Rewrite<'a> {
     /// theoretically expand to the empty string.
     pub fn is_fallback(&self) -> bool {
         self.is_fallback
+    }
+
+    /// The kind of thing this rewrite replaced.
+    pub fn kind(&self) -> RewriteKind {
+        self.kind
     }
 
     /// The buffer that [`call_offset`](Self::call_offset) and every

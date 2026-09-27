@@ -53,6 +53,10 @@ pub const RUNTIME_CSRC: &[(&str, &str)] = &[
     ),
     ("parser.c", include_str!("../csrc/parser.c")),
     ("parser_macros.c", include_str!("../csrc/parser_macros.c")),
+    (
+        "parser_node_expansion.c",
+        include_str!("../csrc/parser_node_expansion.c"),
+    ),
     ("parser_spans.c", include_str!("../csrc/parser_spans.c")),
     ("parser_extents.c", include_str!("../csrc/parser_extents.c")),
     ("parser_dump.c", include_str!("../csrc/parser_dump.c")),

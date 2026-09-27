@@ -433,6 +433,7 @@ pub use syntaqlite::parse::ParserConfig
 pub use syntaqlite::parse::ParserToken
 pub use syntaqlite::parse::ParserTokenFlags
 pub use syntaqlite::parse::Rewrite
+pub use syntaqlite::parse::RewriteKind
 pub use syntaqlite::parse::TokenType
 pub use syntaqlite::source::<<syntaqlite_syntax::source::*>>
 pub use syntaqlite::typed::<<syntaqlite_syntax::typed::*>>
