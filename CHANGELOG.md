@@ -3,7 +3,7 @@
 ## 0.11.2
 
 **Parser:**
-- `syntaqlite_parser_node_site` now places an `EXPLAIN` statement where the `EXPLAIN` is written, instead of by the rest of the statement alone, which could put it inside a macro's expansion ([#400](https://github.com/LalitMaganti/syntaqlite/pull/400)).
+- Fix `syntaqlite_parser_node_site` for statements that start with `EXPLAIN`. It ignored the `EXPLAIN` keyword when working out where a statement was written, so for `EXPLAIN QUERY PLAN my_macro!()` it said the statement was inside the macro's expansion rather than in the text you wrote ([#400](https://github.com/LalitMaganti/syntaqlite/pull/400)).
 
 ## 0.11.1
 
