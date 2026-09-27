@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.1
+
+**C library:**
+- Fix the macOS and Windows release builds, which failed to link because the exported symbol list still used the names removed in 0.11.0. The C library now also exports the node expansion functions ([#397](https://github.com/LalitMaganti/syntaqlite/pull/397)).
+
 ## 0.11.0
 
 **Breaking: macro rewrites renamed to rewrites** ([#395](https://github.com/LalitMaganti/syntaqlite/pull/395)):
