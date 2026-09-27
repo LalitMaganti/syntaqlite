@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.11.0
+
+**Breaking: macro rewrites renamed to rewrites** ([#395](https://github.com/LalitMaganti/syntaqlite/pull/395)):
+
+| Before | After |
+|---|---|
+| `SyntaqliteMacroRewrite` | `SyntaqliteRewrite` |
+| `syntaqlite_result_macro_count` | `syntaqlite_result_rewrite_count` |
+| `syntaqlite_result_macro_rewrite_at` | `syntaqlite_result_rewrite_at` |
+| `SYNTAQLITE_MACRO_PARENT_SOURCE` | `SYNTAQLITE_REWRITE_PARENT_SOURCE` |
+| Rust `MacroRewrite` | `Rewrite` |
+| Rust `macro_rewrites()` | `rewrites()` |
+
+**Custom dialects:**
+- Dialects can now have the host replace a parsed node with its own SQL. Call `synq_parser_expand_node` from a grammar action and set a callback with `syntaqlite_parser_set_node_expander`. The replacement shows up as a rewrite, and `Rewrite::kind()` tells node expansions apart from macro calls ([#394](https://github.com/LalitMaganti/syntaqlite/pull/394)).
+
 ## 0.10.2
 
 **Custom dialects:**
